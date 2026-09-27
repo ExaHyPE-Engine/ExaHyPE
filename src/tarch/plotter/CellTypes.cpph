@@ -5,7 +5,8 @@
  * Returns metadata for a raw VTK cell-type code, or nullptr if the code is
  * unknown.
  */
-INLINE_METHOD constexpr const tarch::plotter::CellTypeInfo* tarch::plotter::lookupCellType(const int vtkCode) {
+INLINE_METHOD constexpr const tarch::plotter::CellTypeInfo*
+tarch::plotter::lookupCellType(const int vtkCode) {
   for (const auto& cellType : tarch::plotter::CellTypes) {
     if (static_cast<int>(cellType.type) == vtkCode) {
       return &cellType;
@@ -14,16 +15,16 @@ INLINE_METHOD constexpr const tarch::plotter::CellTypeInfo* tarch::plotter::look
   return nullptr;
 }
 
-INLINE_METHOD constexpr const tarch::plotter::CellTypeInfo* tarch::plotter::lookupCellType(
-  const tarch::plotter::CellType type
-) {
+INLINE_METHOD constexpr const tarch::plotter::CellTypeInfo*
+tarch::plotter::lookupCellType(const tarch::plotter::CellType type) {
   return tarch::plotter::lookupCellType(static_cast<int>(type));
 }
 
 /**
  * Returns the number of corner nodes, or -1 if the cell type is unknown.
  */
-INLINE_METHOD constexpr int tarch::plotter::nodesOf(const tarch::plotter::CellType type) {
+INLINE_METHOD constexpr int
+tarch::plotter::getNumberOfNodesOf(const tarch::plotter::CellType type) {
   for (const auto& cellType : tarch::plotter::CellTypes) {
     if (cellType.type == type) {
       return cellType.nodes;
@@ -36,6 +37,7 @@ INLINE_METHOD constexpr int tarch::plotter::nodesOf(const tarch::plotter::CellTy
  * Variable-length XDMF poly topologies use codes one through three and
  * require an explicit node count in mixed-topology streams.
  */
-INLINE_METHOD constexpr bool tarch::plotter::xdmfTypeNeedsNodeCount(const int xdmfType) {
+INLINE_METHOD constexpr bool
+tarch::plotter::xdmfTypeNeedsNodeCount(const int xdmfType) {
   return xdmfType >= 1 and xdmfType <= 3;
 }

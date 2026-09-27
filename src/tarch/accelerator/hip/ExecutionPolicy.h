@@ -28,10 +28,10 @@ public:
   ExecutionPolicy(int gridSize, int blockSize, std::size_t sharedMemBytes, hipStream_t stream);
   ~ExecutionPolicy() = default;
 
-  int         getConfigState() const;
-  int         getGridSize() const;
-  int         getBlockSize() const;
-  int         getMaxBlockSize() const;
+  int getConfigState() const;
+  int getGridSize() const;
+  int getBlockSize() const;
+  int getMaxBlockSize() const;
   std::size_t getSharedMemBytes() const;
   hipStream_t getStream() const;
 
@@ -53,7 +53,7 @@ public:
       return hipSuccess;
     }
 
-    const hipDeviceProp_t* properties              = &DevicePropertiesCache::get();
+    const hipDeviceProp_t* properties              = &DevicePropertiesCache::getProperties();
     const int              numberOfMultiprocessors = properties->multiProcessorCount;
 
     if ((configurationState & ExecutionPolicy::BlockSize) == 0) {

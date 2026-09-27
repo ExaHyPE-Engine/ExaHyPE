@@ -25,7 +25,8 @@ namespace {
   }
 } // namespace
 
-tarch::StackSizeLimit tarch::StackSizeLimit::detect() {
+tarch::StackSizeLimit
+tarch::StackSizeLimit::detect() {
   StackSizeLimit result;
 
 #if defined(_WIN32)
@@ -45,7 +46,8 @@ tarch::StackSizeLimit tarch::StackSizeLimit::detect() {
 #endif
 }
 
-std::string tarch::detectStackSizeLimit() {
+std::string
+tarch::detectStackSizeLimit() {
   const auto& stackSizeLimit = getCachedStackSizeLimit();
 #if defined(_WIN32)
   logWarning("Stack size limit detection is not implemented on Windows");

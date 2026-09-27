@@ -44,7 +44,7 @@ public:
      * Names of the netCDF variables holding the coordinates, one per field dimension, in the order
      * the sampling routines expect their position argument in.
      */
-    std::array<std::string, FieldDimensions> key = defaultCoordinateKeys();
+    std::array<std::string, FieldDimensions> key = getDefaultCoordinateKeys();
   };
 
   /**
@@ -59,7 +59,7 @@ public:
 
   /**
    * A file that carries its own coordinates needs no extent, and a simulation coordinate is then
-   * read as a coordinate of the stored mesh instead of being mapped onto it.
+   * a coordinate of the stored mesh.
    */
   explicit NetCDFFieldSampler(std::initializer_list<FieldDescription> fields);
 
@@ -108,8 +108,7 @@ public:
 private:
   struct Field {
     std::vector<double> values;
-    // std::size_t(0) rather than a plain 0, which is also a null pointer constant and would make
-    // the call ambiguous with Vector's pointer constructor.
+    // The explicit std::size_t keeps the call off the pointer constructor of Vector.
     tarch::la::Vector<FieldDimensions, std::size_t> length =
       tarch::la::Vector<FieldDimensions, std::size_t>(std::size_t(0));
     tarch::la::Vector<FieldDimensions, double> firstElement = tarch::la::Vector<FieldDimensions, double>(0.0);
@@ -128,7 +127,7 @@ private:
   std::optional<tarch::la::Vector<FieldDimensions, double>> _lengthOfSimulationDomain;
   std::optional<tarch::la::Vector<FieldDimensions, double>> _offsetOfSimulationDomain;
 
-  static std::array<std::string, FieldDimensions> defaultCoordinateKeys();
+  static std::array<std::string, FieldDimensions> getDefaultCoordinateKeys();
 
   void parseFieldFile(const FieldDescription& fieldDescription);
 

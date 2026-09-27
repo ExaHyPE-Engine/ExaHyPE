@@ -3,6 +3,7 @@
 #pragma once
 
 #include "peano4/sfc/Grammar.h"
+#include "tarch/accelerator/accelerator.h"
 
 namespace peano4::sfc {
   struct PeanoGrammar;
@@ -19,6 +20,7 @@ namespace peano4::sfc {
  * two-dimensional productions along axis 2: The production of its own symbol,
  * the one of the symbol reflected along both other axes, and its own again.
  */
+TARGET_DECLARE
 struct peano4::sfc::PeanoGrammar final : peano4::sfc::Grammar {
   static constexpr std::string_view Name{"Peano"};
 
@@ -87,3 +89,4 @@ struct peano4::sfc::PeanoGrammar final : peano4::sfc::Grammar {
 #endif
   // clang-format on
 };
+TARGET_DECLARE_END

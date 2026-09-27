@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/Assertions.h"
+#include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelRegion.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
@@ -12,7 +13,6 @@
 #include "tarch/accelerator/kokkos/Device.h"
 #elif defined(PEANO_WITH_GPU_BACKEND_CUDA)
 #if defined(__CUDACC__)
-#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/cuda/Device.h"
 #include "tarch/accelerator/cuda/ErrorCheck.h"
 
@@ -21,7 +21,6 @@
 #endif
 #elif defined(PEANO_WITH_GPU_BACKEND_HIP)
 #if defined(__HIPCC__)
-#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/hip/Device.h"
 #include "tarch/accelerator/hip/ErrorCheck.h"
 
@@ -32,8 +31,6 @@
 #include "tarch/accelerator/sycl/Device.h"
 
 #include <sycl/sycl.hpp>
-#elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
-#include "tarch/accelerator/ParallelFor.h"
 #endif
 
 namespace tarch::accelerator {

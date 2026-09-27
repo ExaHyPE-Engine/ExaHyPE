@@ -33,7 +33,7 @@ protected:
   // time into the name (<filename>-<time>) so each snapshot is a distinct file.
   // A writer that keeps all time steps in one file (VTKHDF) overrides this to
   // return the stable base name unchanged.
-  virtual std::string snapshotName(const std::string& filename, const double time) const;
+  virtual std::string getSnapshotName(const std::string& filename, const double time) const;
 
   struct Snapshot {
     double      time;

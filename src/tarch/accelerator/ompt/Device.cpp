@@ -13,18 +13,26 @@ namespace {
   int numberOfDevices = 0;
 } // namespace
 
-bool tarch::accelerator::Device::init() {
+bool
+tarch::accelerator::Device::init() {
   numberOfDevices = omp_get_num_devices();
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() {
+void
+tarch::accelerator::Device::shutdown() {
 #pragma omp taskwait
   numberOfDevices = 0;
 }
 
-bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
+bool
+tarch::accelerator::Device::isInitialised() const {
+  return numberOfDevices > 0;
+}
 
-int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
+int
+tarch::accelerator::Device::getNumberOfDevices() const {
+  return numberOfDevices;
+}
 
 #endif // defined(PEANO_WITH_GPU_BACKEND_OMPT)

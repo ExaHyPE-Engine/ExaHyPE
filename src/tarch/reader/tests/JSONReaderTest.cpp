@@ -31,12 +31,14 @@ namespace {
 tarch::reader::tests::JSONReaderTest::JSONReaderTest() :
   tarch::tests::TestCase("tarch::reader::tests::JSONReaderTest") {}
 
-void tarch::reader::tests::JSONReaderTest::run() {
+void
+tarch::reader::tests::JSONReaderTest::run() {
   testMethod(testReadPrimitivesAndArrays);
   testMethod(testUnusedKeys);
 }
 
-void tarch::reader::tests::JSONReaderTest::testReadPrimitivesAndArrays() {
+void
+tarch::reader::tests::JSONReaderTest::testReadPrimitivesAndArrays() {
   const std::string path = writeTempFile(
     "peano-json-reader-valid",
     R"({
@@ -94,7 +96,8 @@ void tarch::reader::tests::JSONReaderTest::testReadPrimitivesAndArrays() {
   std::filesystem::remove(path);
 }
 
-void tarch::reader::tests::JSONReaderTest::testUnusedKeys() {
+void
+tarch::reader::tests::JSONReaderTest::testUnusedKeys() {
   const std::string path = writeTempFile("peano-json-reader-unused", R"({ "alpha": 1, "beta": 2, "gamma": 3 })");
 
   {

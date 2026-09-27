@@ -1,0 +1,115 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+{% for include in SOLVER_INCLUDES_WITHOUT_PATH %}
+#include "{{include}}"
+{%- endfor %}
+{% for include in SOLVER_INCLUDES_WITH_PATH %}
+#include "{{include}}"
+{%- endfor %}
+
+namespace {{NAMESPACE | join("::")}} {
+  class {{SOLVER_NAME}};
+  class {{CLASSNAME}};
+} // namespace {{NAMESPACE | join("::")}}
+
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public {{SOLVER_FAMILY_CLASS}} {
+public:
+  using SolverFamily = {{SOLVER_FAMILY_CLASS}};
+{%- if SOLVER_FAMILY_CONSTANTS %}
+{% for line in SOLVER_FAMILY_CONSTANTS %}
+  {{line}}
+{%- endfor %}
+{%- endif %}
+{%- if USE_VARIABLE_SHORTCUTS %}
+
+  /**
+   * Names the variable indices, so Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first variable.
+   */
+  using Shortcuts = ::{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}VariableShortcuts;
+{%- endif %}
+{%- for table_class in OPERATOR_TABLES | default([]) %}
+
+  template <typename Precision>
+  using {{table_class.name}} = ::{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}{{table_class.name}}<Precision>;
+{%- endfor %}
+
+  static constexpr std::bitset<DIMENSIONS> PeriodicBoundaries{ {{PERIODIC_BOUNDARIES}}ULL };
+{%- if INITIALISE_PATCHES is defined %}
+
+  /** The initial condition fills every node of a cell in one call. */
+  static constexpr bool InitialisesPatches = {{ "true" if INITIALISE_PATCHES else "false" }};
+{%- endif %}
+
+  /** The initial condition runs on the host and the cells are uploaded afterwards. */
+  static constexpr bool InitialisesOnHost = {{ "true" if INITIALISE_ON_HOST else "false" }};
+{%- if NUMBER_OF_DMP_OBSERVABLES is defined and NUMBER_OF_DMP_OBSERVABLES > 0 %}
+
+  static constexpr int NumberOfDMPObservables = {{NUMBER_OF_DMP_OBSERVABLES}};
+{%- endif %}
+{%- if ERROR_MEASUREMENT %}
+
+  static constexpr std::array<int, {{MEASURED_UNKNOWNS | length}}> MeasuredUnknowns{ {{MEASURED_UNKNOWNS | join(", ")}} };
+{%- endif %}
+
+  {{CLASSNAME}}();
+  {{CLASSNAME}}(const {{CLASSNAME}}& other)            = delete;
+  {{CLASSNAME}}({{CLASSNAME}}&& other)                 = delete;
+  {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
+  {{CLASSNAME}}& operator=({{CLASSNAME}}&& other)      = delete;
+  ~{{CLASSNAME}}()                                     = default;
+
+  void startSimulation();
+  void finishSimulation();
+{%- if START_TIME_STEP_IMPLEMENTATION.strip() or FINISH_TIME_STEP_IMPLEMENTATION.strip() or TRACERS %}
+  void performTimeStep(const peano4::Partition& partition, ::exahype2::RefinementRequests& requests);
+{%- endif %}
+{%- if START_GRID_INITIALISATION_IMPLEMENTATION.strip() or TRACERS %}
+  void initialise(const peano4::Partition& partition, ::exahype2::RefinementRequests& requests);
+{%- endif %}
+{%- if TRACERS %}
+  void regrid(
+    const peano4::Partition&        partition,
+    const peano4::Regrid&           regrid,
+    ::exahype2::RefinementRequests& requests
+  );
+  void                                  release();
+  [[nodiscard]] ::tarch::AllocatedBytes getAllocatedBytes() const;
+  void                                  appendTracerStatistics(
+    std::vector<::exahype2::runner::SolverStatistic>& statistics
+  ) const;
+{%- endif %}
+{%- if SOLVER_BASE_USER_DECLARATIONS.strip() %}
+
+  {{SOLVER_BASE_USER_DECLARATIONS.strip()}}
+{%- endif %}
+{%- if TRACERS %}
+
+private:
+{%- for tracer in TRACERS %}
+  ::exahype2::particles::ParticleSet<{{tracer.NUMBER_OF_DATA}}> _{{tracer.NAME}}{};
+  ::exahype2::particles::Forces _{{tracer.NAME}}Forces{
+    ::exahype2::particles::InterpolationScheme::{{tracer.FORCES.INTERPOLATION}},
+    ::exahype2::particles::IntegrationScheme::{{tracer.FORCES.INTEGRATION}},
+    {{tracer.FORCES.FORCE_METHOD}},
+    {{tracer.FORCES.GRAVITATIONAL_PARAMETER}},
+    {{tracer.FORCES.GRAVITY_MAGNITUDE}},
+    {{tracer.FORCES.DYNAMIC_VISCOSITY}}
+  };
+  bool _{{tracer.NAME}}Inserted{false};
+{%- if tracer.DATABASE %}
+  ::exahype2::particles::TrajectoryDatabase _{{tracer.NAME}}Database{
+    {{tracer.DATABASE.POSITION_DELTA}},
+    {{tracer.DATABASE.TIME_DELTA}},
+    {{tracer.DATABASE.USE_RELATIVE_DELTAS}}
+  };
+{%- endif %}
+{%- if tracer.ERROR %}
+  ::exahype2::ErrorMeasurement _{{tracer.NAME}}ErrorMeasurement{};
+{%- endif %}
+{%- endfor %}
+
+  void insertTracers(const peano4::Partition& partition);
+  void traceTracers(const peano4::Partition& partition, double timeStepSize, bool initialisation);
+{%- endif %}
+};

@@ -129,7 +129,7 @@ problem on 1, 2 and 4 ranks (one thread per rank, so the measurement is pure
 MPI), reads the `Average Time per Time Step` the solver prints (with plotting
 off, `-ns 0`, to time pure compute), and plots the speedup against the ideal
 linear line. The gap is the usual strong-scaling reality - halo exchange between
-the subdomains, load imbalance and the serial fraction of the traversal.
+the subdomains, load imbalance and the serial fraction of the time step.
 
 # Exercise - Launch a Shear Wave
 

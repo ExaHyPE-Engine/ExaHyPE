@@ -127,7 +127,8 @@ namespace {
 tarch::reader::tests::NetCDFFieldSamplerTest::NetCDFFieldSamplerTest() :
   tarch::tests::TestCase("tarch::reader::tests::NetCDFFieldSamplerTest") {}
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::run() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::run() {
   testMethod(testPiecewiseConstantSampleSingleField);
   testMethod(testOutOfDomainReturnsZero);
   testMethod(testMultipleNamedFields);
@@ -139,7 +140,8 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::run() {
   testMethod(testThreeDimensionalBilinearSampling);
 }
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::testPiecewiseConstantSampleSingleField() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testPiecewiseConstantSampleSingleField() {
   const std::string path = writeTempNetCDFFile(
     "peano-netcdf-sampler-single",
     {0.0, 5.0, 10.0},
@@ -161,7 +163,8 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testPiecewiseConstantSampleSi
   std::filesystem::remove(path);
 }
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::testOutOfDomainReturnsZero() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testOutOfDomainReturnsZero() {
   const std::string path =
     writeTempNetCDFFile("peano-netcdf-sampler-range", {0.0, 10.0}, {0.0, 10.0}, {1.0, 2.0, 3.0, 4.0});
 
@@ -178,7 +181,8 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testOutOfDomainReturnsZero() 
   std::filesystem::remove(path);
 }
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::testMultipleNamedFields() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testMultipleNamedFields() {
   const std::string bathymetryPath =
     writeTempNetCDFFile("peano-netcdf-sampler-bathymetry", {0.0, 1.0}, {0.0, 1.0}, {1.0, 2.0, 3.0, 4.0});
   const std::string displacementPath =
@@ -203,7 +207,8 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testMultipleNamedFields() {
   std::filesystem::remove(displacementPath);
 }
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::testDisplacementUsesItsOwnCoordinateRange() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testDisplacementUsesItsOwnCoordinateRange() {
   const std::string bathymetryPath = writeTempNetCDFFile(
     "peano-netcdf-sampler-topology-range",
     {0.0, 1.0, 2.0},
@@ -235,7 +240,8 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testDisplacementUsesItsOwnCoo
   std::filesystem::remove(displacementPath);
 }
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::testSamplingWithSimulationOffset() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testSamplingWithSimulationOffset() {
   const std::string path = writeTempNetCDFFile(
     "peano-netcdf-sampler-offset",
     {100.0, 105.0, 110.0},
@@ -255,7 +261,8 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testSamplingWithSimulationOff
   std::filesystem::remove(path);
 }
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::testSamplingWithFileExtent() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testSamplingWithFileExtent() {
   const std::string path = writeTempNetCDFFile(
     "peano-netcdf-sampler-file-extent",
     {100.0, 105.0, 110.0},
@@ -278,7 +285,8 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testSamplingWithFileExtent() 
   std::filesystem::remove(path);
 }
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::testBilinearSampling() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testBilinearSampling() {
   const std::string path =
     writeTempNetCDFFile("peano-netcdf-sampler-bilinear", {0.0, 10.0}, {0.0, 10.0}, {0.0, 10.0, 20.0, 30.0});
 
@@ -297,7 +305,8 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testBilinearSampling() {
   std::filesystem::remove(path);
 }
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalSampling() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalSampling() {
   // value(z, y, x) over a 2x2x2 grid, so the first coordinate varies fastest.
   const std::string path = writeTempNetCDF3DFile(
     "peano-netcdf-sampler-3d",
@@ -324,7 +333,8 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalSampling(
   std::filesystem::remove(path);
 }
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalBilinearSampling() {
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalBilinearSampling() {
   const std::string path = writeTempNetCDF3DFile(
     "peano-netcdf-sampler-3d-bilinear",
     {0.0, 10.0},
@@ -356,6 +366,7 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalBilinearS
 tarch::reader::tests::NetCDFFieldSamplerTest::NetCDFFieldSamplerTest() :
   tarch::tests::TestCase("tarch::reader::tests::NetCDFFieldSamplerTest") {}
 
-void tarch::reader::tests::NetCDFFieldSamplerTest::run() {}
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::run() {}
 
 #endif

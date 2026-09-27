@@ -11,13 +11,18 @@ namespace tarch::accelerator::tests {
 class tarch::accelerator::tests::MemoryAllocationTest final : public tarch::tests::TestCase {
 public:
   MemoryAllocationTest();
+  MemoryAllocationTest(const MemoryAllocationTest& other)            = delete;
+  MemoryAllocationTest(MemoryAllocationTest&& other)                 = delete;
+  MemoryAllocationTest& operator=(const MemoryAllocationTest& other) = delete;
+  MemoryAllocationTest& operator=(MemoryAllocationTest&& other)      = delete;
+  ~MemoryAllocationTest() override                                   = default;
 
   void run() override;
 
 private:
   void testAllocateRawData();
   void testAllocateMemory();
-  void testZeroedHeapMemory();
   void testLocationSpecificAllocators();
   void testLocationSpecificCopyFunctions();
+  void testTheCurrentDeviceHoldsForEveryHostThread();
 };

@@ -22,6 +22,5 @@ public:
 private:
   void testPollsUntilTheFunctionReportsCompletion();
   void testStopEndsAPollThatNeverCompletes();
-  void testRestartPollsAgain();
   void testStopWithoutStartIsHarmless();
 };

@@ -65,7 +65,7 @@ private:
    */
   bool _deleteTestCases{true};
 
-  static bool        isNameWithoutHierarchy(const std::string& testCaseName);
+  static bool isNameWithoutHierarchy(const std::string& testCaseName);
   static std::string getFirstIdentifierInHierarchy(const std::string& testCaseName);
   static std::string getRemainingPathWithoutIdentifier(const std::string& testCaseName);
 };

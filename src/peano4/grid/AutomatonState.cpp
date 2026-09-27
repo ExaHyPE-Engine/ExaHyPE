@@ -7,18 +7,20 @@
 static_assert(std::is_standard_layout_v<peano4::grid::AutomatonState>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::AutomatonState>);
 
-std::ostream& operator<<(std::ostream& out, const peano4::grid::AutomatonState& state) {
+std::ostream&
+operator<<(std::ostream& out, const peano4::grid::AutomatonState& state) {
   return (out << state.toString());
 }
 
-std::string peano4::grid::AutomatonState::toString() const {
+std::string
+peano4::grid::AutomatonState::toString() const {
   std::ostringstream out;
   out << "AutomatonState{";
 
   out << "Level=" << level;
 
   out << ", x=[";
-  for (auto i = 0; i < x.size(); i++) {
+  for (auto i = 0; i < x.getSize(); i++) {
     if (i > 0) {
       out << ",";
     }
@@ -27,7 +29,7 @@ std::string peano4::grid::AutomatonState::toString() const {
   out << "]";
 
   out << ", h=[";
-  for (auto i = 0; i < h.size(); i++) {
+  for (auto i = 0; i < h.getSize(); i++) {
     if (i > 0) {
       out << ",";
     }
@@ -48,13 +50,14 @@ std::string peano4::grid::AutomatonState::toString() const {
  * running fastest. The active curve supplies every child's position and curve
  * state.
  */
-void peano4::grid::AutomatonState::refineState(
+void
+peano4::grid::AutomatonState::refineState(
   const peano4::grid::AutomatonState& coarseGrid,
   peano4::grid::AutomatonState        fineGridStates[peano4::sfc::ActiveCurve::ChildrenPerCell]
 ) {
   assertion(coarseGrid.level >= 0, coarseGrid.toString());
   constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
-  for (const auto& child : peano4::sfc::ActiveCurve::children(coarseGrid.curveState)) {
+  for (const auto& child : peano4::sfc::ActiveCurve::getChildren(coarseGrid.curveState)) {
     assertion(
       child.linearisedPosition < peano4::sfc::ActiveCurve::ChildrenPerCell,
       static_cast<int>(child.linearisedPosition),

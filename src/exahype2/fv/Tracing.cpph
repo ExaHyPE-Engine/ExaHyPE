@@ -1,0 +1,253 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/particles/Integration.h"
+#include "peano4/Loop.h"
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/la/ScalarOperations.h"
+
+TARGET_DECLARE
+/** Returns the value of unknown in the volume of the patch that holds position. */
+template <int PatchSize, int NumberOfData, typename Storage>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::interpolatePiecewiseConstant(
+  const tarch::la::Vector<DIMENSIONS, double>& centre,
+  const tarch::la::Vector<DIMENSIONS, double>& width,
+  const Storage* NOALIAS const                 Q,
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const int                                    unknown
+) {
+  static_assert(PatchSize > 0);
+  assertion(unknown >= 0 and unknown < NumberOfData, unknown);
+  tarch::la::Vector<DIMENSIONS, int> volume;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(std::isfinite(width(axis)) and width(axis) > 0.0, axis, width);
+    const double volumeWidth         = width(axis) / PatchSize;
+    const double positionWithinPatch = position(axis) - (centre(axis) - 0.5 * width(axis));
+    volume(axis)                     = static_cast<int>(std::floor(positionWithinPatch / volumeWidth));
+    volume(axis)                     = std::max(0, std::min(volume(axis), PatchSize - 1));
+  }
+  return static_cast<double>(Q[peano4::dLinearised(volume, PatchSize) * NumberOfData + unknown]);
+}
+
+/**
+ * Returns the value of unknown at position from the multilinear interpolation between the
+ * centres of the volumes around it. The weight of a corner volume is the product of the axis
+ * weights 1 - |d|/h. Along an axis on which position lies beyond the first or the last volume
+ * centre, the boundary volume keeps its weight, so the interpolant extends the boundary value.
+ */
+template <int PatchSize, int NumberOfData, typename Storage>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::interpolatePiecewiseLinear(
+  const tarch::la::Vector<DIMENSIONS, double>& centre,
+  const tarch::la::Vector<DIMENSIONS, double>& width,
+  const Storage* NOALIAS const                 Q,
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const int                                    unknown
+) {
+  static_assert(PatchSize >= 2);
+  assertion(unknown >= 0 and unknown < NumberOfData, unknown);
+  tarch::la::Vector<DIMENSIONS, double> offset;
+  tarch::la::Vector<DIMENSIONS, double> volumeSize;
+  tarch::la::Vector<DIMENSIONS, int>    lowerVolume;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(std::isfinite(width(axis)) and width(axis) > 0.0, axis, width);
+    offset(axis)                       = centre(axis) - 0.5 * width(axis);
+    volumeSize(axis)                   = width(axis) / PatchSize;
+    const double biasedPositionInPatch = position(axis) - offset(axis) - volumeSize(axis) / 2.0;
+    lowerVolume(axis)                  = static_cast<int>(std::floor(biasedPositionInPatch / volumeSize(axis)));
+    lowerVolume(axis)                  = std::max(0, std::min(lowerVolume(axis), PatchSize - 2));
+  }
+
+  double result = 0.0;
+  peano4::dForEachCorner(
+    [&](const tarch::la::Vector<DIMENSIONS, int>& corner, [[maybe_unused]] const int linearisedCorner) {
+      const tarch::la::Vector<DIMENSIONS, int> currentVolume = lowerVolume + corner;
+      double                                   weight        = 1.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        const double volumeCentre =
+          centre(axis) - 0.5 * width(axis) + 0.5 * volumeSize(axis) + currentVolume(axis) * volumeSize(axis);
+        const double relativeDistance     = std::abs(volumeCentre - position(axis)) / volumeSize(axis);
+        const bool   extendsBoundaryValue = (position(axis) < volumeCentre and currentVolume(axis) == 0)
+          or (position(axis) > volumeCentre and currentVolume(axis) == PatchSize - 1);
+        if (extendsBoundaryValue) {
+          continue;
+        }
+        if (relativeDistance < 1.0) {
+          weight *= (1.0 - relativeDistance);
+        } else {
+          weight = 0.0;
+        }
+        assertion(tarch::la::smallerEquals(weight, 1.0), weight, corner, relativeDistance);
+      }
+      if (weight > 0.0) {
+        result +=
+          weight * static_cast<double>(Q[peano4::dLinearised(currentVolume, PatchSize) * NumberOfData + unknown]);
+      }
+    }
+  );
+  return result;
+}
+
+/**
+ * Writes the first unknowns of the patch at position into the particle: The k-th index of
+ * FieldIndices names the data entry that receives unknown k. The scheme None writes nothing.
+ */
+template <int PatchSize, int NumberOfData, typename Storage, int... FieldIndices>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::interpolateFields(
+  const exahype2::particles::InterpolationScheme scheme,
+  const tarch::la::Vector<DIMENSIONS, double>&   centre,
+  const tarch::la::Vector<DIMENSIONS, double>&   width,
+  const Storage* NOALIAS const                   Q,
+  const tarch::la::Vector<DIMENSIONS, double>&   position,
+  exahype2::particles::Particle&                 particle
+) {
+  static_assert(sizeof...(FieldIndices) <= NumberOfData, "Every interpolated field reads one unknown.");
+  if (scheme == exahype2::particles::InterpolationScheme::None) {
+    return;
+  }
+  [[maybe_unused]] const auto interpolateUnknown = [&](const int unknown) {
+    return scheme == exahype2::particles::InterpolationScheme::PiecewiseLinear
+      ? exahype2::fv::interpolatePiecewiseLinear<PatchSize, NumberOfData>(centre, width, Q, position, unknown)
+      : exahype2::fv::interpolatePiecewiseConstant<PatchSize, NumberOfData>(centre, width, Q, position, unknown);
+  };
+  [[maybe_unused]] int unknown = 0;
+  (particle.setData(FieldIndices, interpolateUnknown(unknown++)), ...);
+}
+
+/**
+ * Returns position, or its projection onto the box spanned by the first and the last volume
+ * centre of the patch when position lies outside the patch.
+ */
+template <int PatchSize>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::fv::clampIntoPatch(
+  const tarch::la::Vector<DIMENSIONS, double>& centre,
+  const tarch::la::Vector<DIMENSIONS, double>& width,
+  const tarch::la::Vector<DIMENSIONS, double>& position
+) {
+  bool inside = true;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    inside = inside and position(axis) >= centre(axis) - 0.5 * width(axis)
+      and position(axis) <= centre(axis) + 0.5 * width(axis);
+  }
+  if (inside) {
+    return position;
+  }
+  tarch::la::Vector<DIMENSIONS, double> clamped;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double volumeWidth       = width(axis) / PatchSize;
+    const double firstVolumeCentre = centre(axis) - 0.5 * width(axis) + 0.5 * volumeWidth;
+    const double lastVolumeCentre  = centre(axis) + 0.5 * width(axis) - 0.5 * volumeWidth;
+    clamped(axis)                  = std::max(firstVolumeCentre, std::min(position(axis), lastVolumeCentre));
+  }
+  return clamped;
+}
+
+/** Interpolates the fields the list names; the list carries the entries as a type. */
+template <int PatchSize, int NumberOfData, typename Storage, int... FieldIndices>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::interpolateFields(
+  [[maybe_unused]] const exahype2::particles::FieldList<FieldIndices...> fields,
+  const exahype2::particles::InterpolationScheme                         scheme,
+  const tarch::la::Vector<DIMENSIONS, double>&                           centre,
+  const tarch::la::Vector<DIMENSIONS, double>&                           width,
+  const Storage* NOALIAS const                                           Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                           position,
+  exahype2::particles::Particle&                                         particle
+) {
+  exahype2::fv::interpolateFields<PatchSize, NumberOfData, Storage, FieldIndices...>(
+    scheme,
+    centre,
+    width,
+    Q,
+    position,
+    particle
+  );
+}
+TARGET_DECLARE_END
+
+/**
+ * Moves every particle of the set through the patch of its cell and sends every particle that
+ * left its cell to the rank that holds it. A stage position of the integration outside the patch
+ * reads the patch at its clamped image. Only a set that moves copies its values back to the host,
+ * for the relocation.
+ */
+template <int PatchSize, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
+void
+exahype2::fv::traceParticles(
+  const peano4::Partition&                                partition,
+  const Pool&                                             solution,
+  const double                                            timeStepSize,
+  exahype2::particles::ParticleSet<NumberOfParticleData>& particles,
+  const exahype2::particles::Forces&                      forces,
+  const tarch::la::Vector<DIMENSIONS, double>&            domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>&            domainWidth,
+  const int                                               periodicAxes
+) {
+  assertion(timeStepSize >= 0.0, timeStepSize);
+  if (particles.getSize() == 0) {
+    particles.relocate(partition);
+    return;
+  }
+  particles.upload();
+  const auto set = particles.getView();
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(set.numberOfParticles),
+    exahype2::fv::TraceParticles<
+      PatchSize,
+      NumberOfData,
+      NumberOfParticleData,
+      exahype2::particles::FieldList<FieldIndices...>,
+      Pool
+    >{partition.onDevice(), solution.getView(), timeStepSize, set, forces, domainOffset, domainWidth, periodicAxes}
+  );
+  if (forces.integrationScheme != exahype2::particles::IntegrationScheme::Static) {
+    particles.download();
+  }
+  particles.relocate(partition);
+}
+
+template <int PatchSize, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::TraceParticles<PatchSize, NumberOfData, NumberOfParticleData, Fields, Pool>::operator()(
+  const int index
+) const {
+  constexpr double              WallDamping = 0.8;
+  exahype2::particles::Particle particle    = particles.getParticle(index);
+  const int                     slot        = particles.getSlot(index);
+  assertion(slot >= 0, slot, index);
+  tarch::la::Vector<DIMENSIONS, double> centre;
+  tarch::la::Vector<DIMENSIONS, double> width;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    centre(axis) = partition.getCellCentre(slot, axis);
+    width(axis)  = partition.getCellWidth(slot, axis);
+  }
+  const auto* const Q = solution.getChunk(slot);
+  const auto        interpolateAt =
+    [&](exahype2::particles::Particle& target, const tarch::la::Vector<DIMENSIONS, double>& position) {
+      exahype2::fv::interpolateFields<PatchSize, NumberOfData, std::remove_cv_t<std::remove_pointer_t<decltype(Q)>>>(
+        Fields{},
+        forces.interpolationScheme,
+        centre,
+        width,
+        Q,
+        exahype2::fv::clampIntoPatch<PatchSize>(centre, width, position),
+        target
+      );
+    };
+  interpolateAt(particle, particle.getX());
+  if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
+    return;
+  }
+  assertion(particle.numberOfData > exahype2::particles::ParticleRadiusAttribute, particle.numberOfData);
+  exahype2::particles::applyForces(particle, particle.getX(), forces, domainOffset, domainWidth);
+  auto newPosition =
+    exahype2::particles::advance(particle, forces, timeStepSize, interpolateAt, domainOffset, domainWidth);
+  exahype2::particles::reflectAtWalls(particle, newPosition, WallDamping, domainOffset, domainWidth, periodicAxes);
+  exahype2::particles::wrapIntoDomain(newPosition, domainOffset, domainWidth, periodicAxes);
+  particle.setX(newPosition);
+}

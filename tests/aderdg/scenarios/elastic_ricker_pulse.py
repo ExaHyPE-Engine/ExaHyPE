@@ -70,8 +70,8 @@ class ElasticRickerPulse(Scenario):
   constexpr auto cs   = 1;
 
   // Width of a cell on the finest level. The pulse starts centred in the leftmost cell.
-  const double h = ::runner::RuntimeParameters::divideBySubdivisionFactorPower(
-    DomainSize[0], ::runner::RuntimeParameters::getInstance().getMaxGridLevels()
+  const double h = ::exahype2::runner::RuntimeParameters::divideBySubdivisionFactorPower(
+    DomainSize[0], ::exahype2::runner::RuntimeParameters::getInstance().getMaxGridLevels()
   );
 
   auto distance = std::fmod( (x[0]-t-h/2), DomainSize[0]);

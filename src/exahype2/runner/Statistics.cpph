@@ -1,0 +1,53 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/TimeStepping.h"
+
+INLINE_METHOD exahype2::runner::SolverStatistic
+exahype2::runner::makeValueStatistic(const char* const label, const double value) {
+  return {label, SolverStatistic::Kind::Value, value, value, 0};
+}
+
+INLINE_METHOD exahype2::runner::SolverStatistic
+exahype2::runner::makeRangeStatistic(const char* const label, const double minimum, const double maximum) {
+  return {label, SolverStatistic::Kind::Value, minimum, maximum, 0};
+}
+
+INLINE_METHOD exahype2::runner::SolverStatistic
+exahype2::runner::makeCountStatistic(const char* const label, const long value) {
+  return {label, SolverStatistic::Kind::Count, 0.0, 0.0, value};
+}
+
+/**
+ * Returns the statistics of one solver a time step report shows. The largest eigenvalue appears
+ * under the adaptive time step rule, the troubled cell count, zero included, for a solver with a
+ * limiter.
+ */
+template <typename Solver, typename AppendAdditionalStatistics>
+INLINE_METHOD std::pair<std::string, std::vector<exahype2::runner::SolverStatistic>>
+exahype2::runner::makeSolverStatistics(
+  const char* const                 solverName,
+  const Solver&                     solver,
+  const AppendAdditionalStatistics& appendAdditionalStatistics
+) {
+  const exahype2::TimeStepping& timeStepping = solver.getTimeStepping();
+  std::vector<SolverStatistic>  statistics;
+  statistics.push_back(makeValueStatistic("dt", timeStepping.getTimeStepSizeOfLastStep()));
+  statistics.push_back(makeRangeStatistic("h", timeStepping.getMinMeshWidth(), timeStepping.getMaxMeshWidth()));
+  appendAdditionalStatistics(statistics);
+  if (timeStepping.getRule() == exahype2::TimeStepping::Rule::Adaptive) {
+    statistics.push_back(makeValueStatistic("λ_max", timeStepping.getMaxEigenvalue()));
+  }
+  if constexpr (requires {
+                  requires Solver::HasLimiter;
+                  solver.getNumberOfTroubledCells();
+                }) {
+    statistics.push_back(makeCountStatistic("Troubled", solver.getNumberOfTroubledCells()));
+  }
+  return {solverName, statistics};
+}
+
+INLINE_METHOD std::pair<std::string, std::vector<exahype2::runner::SolverStatistic>>
+exahype2::runner::makeParticleStatistics(const char* const particleName, const int numberOfParticles) {
+  return {particleName, {makeCountStatistic("Particles", numberOfParticles)}};
+}

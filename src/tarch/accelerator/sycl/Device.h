@@ -8,9 +8,9 @@
 
 namespace tarch::accelerator {
   /**
-   * Opaque team handle for a SYCL work item. The item stays valid for the enclosing kernel
-   * invocation, so a nested call may copy this handle by value. The scratch is work-group local
-   * memory for custom team reductions.
+   * Holds the SYCL work item of the running kernel. The item exists for the whole kernel, so a
+   * nested call may copy this handle by value. The scratch is work-group local memory for custom
+   * team reductions.
    */
   struct SyclTeam final {
     const ::sycl::nd_item<1>& item;
@@ -21,10 +21,6 @@ namespace tarch::accelerator {
   inline constexpr int SyclLocalSize        = 256;
   inline constexpr int SyclTeamScratchBytes = 16384;
 
-  /**
-   * Returns the queue of a logical device index. That index counts the accelerators only and does
-   * not match a physical device number.
-   */
   void* getSYCLQueue(int number);
 } // namespace tarch::accelerator
 

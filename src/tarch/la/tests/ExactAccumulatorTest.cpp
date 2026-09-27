@@ -2,21 +2,97 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ExactAccumulatorTest.h"
 
+#include "tarch/accelerator/Buffer.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/ExactAccumulator.h"
+
+namespace {
+  /** Returns a rounded quotient whose sum spans many limbs and whose top digit differs per entry. */
+  GPU_CALLABLE_METHOD double getRoundedQuotientOf(const int entry) {
+    tarch::la::ExactAccumulator accumulator;
+    accumulator.add(0.25 * (entry + 1));
+    accumulator.add(1.0e-3 * entry * entry);
+    tarch::la::ExactAccumulator negative;
+    negative.add(-3.0e10 * entry);
+    accumulator.merge(negative);
+    return accumulator.roundQuotient(entry + 1);
+  }
+
+  /** Raises the accumulator by one when the rounded quotient of the entry holds other bits than expected. */
+  struct CountMismatch final {
+    const std::uint64_t* expected{nullptr};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, int& accumulator) const {
+      if (std::bit_cast<std::uint64_t>(getRoundedQuotientOf(entry)) != expected[entry]) {
+        accumulator++;
+      }
+    }
+  };
+
+  /** Counts the entries whose quotient a dispatch rounds to other bits than expected holds. */
+  int getNumberOfDeviceMismatchesOf(const std::vector<std::uint64_t>& expectedOnHost) {
+    tarch::accelerator::Buffer<std::uint64_t> expectedBits(tarch::MemoryLocation::Device);
+    expectedBits.setValues(expectedOnHost);
+    int mismatches = 0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(static_cast<int>(expectedOnHost.size())),
+      CountMismatch{expectedBits.getData()},
+      tarch::accelerator::Sum<int>{mismatches}
+    );
+    return mismatches;
+  }
+} // namespace
 
 tarch::la::tests::ExactAccumulatorTest::ExactAccumulatorTest() :
   TestCase("tarch::la::tests::ExactAccumulatorTest") {}
 
-void tarch::la::tests::ExactAccumulatorTest::run() {
+void
+tarch::la::tests::ExactAccumulatorTest::run() {
   testMethod(testCorrectRounding);
+  testMethod(testCorrectlyRoundedQuotient);
   testMethod(testOrderInvariance);
+  testMethod(testMergingPreservesLowBitsAndCancellation);
   testMethod(testNegationSymmetry);
   testMethod(testSubnormalsAndZero);
   testMethod(testOverflow);
   testMethod(testClear);
+  testMethod(testDeviceRoundsLikeTheHost);
 }
 
-void tarch::la::tests::ExactAccumulatorTest::testCorrectRounding() {
+/** Checks exact merging across a rounding tie, signed cancellation and repeated doubling. */
+void
+tarch::la::tests::ExactAccumulatorTest::testMergingPreservesLowBitsAndCancellation() {
+  tarch::la::ExactAccumulator left;
+  tarch::la::ExactAccumulator right;
+  left.add(1.0);
+  left.add(0x1p-53);
+  right.add(0x1p-53);
+  left.merge(right);
+  validateEquals(left.round(), 1.0 + 0x1p-52);
+
+  left.clear();
+  right.clear();
+  left.add(1.0e300);
+  left.add(1.0);
+  right.add(-1.0e300);
+  right.add(-2.0);
+  left.merge(right);
+  validateEquals(left.round(), -1.0);
+  for (int doubling = 0; doubling < 40; doubling++) {
+    left.merge(left);
+  }
+  validateEquals(left.round(), -0x1p40);
+  right.clear();
+  right.add(0x1p40);
+  left.merge(right);
+  validateEquals(left.round(), 0.0);
+}
+
+void
+tarch::la::tests::ExactAccumulatorTest::testCorrectRounding() {
   tarch::la::ExactAccumulator accumulator;
 
   accumulator.add(1.0e16);
@@ -56,7 +132,59 @@ void tarch::la::tests::ExactAccumulatorTest::testCorrectRounding() {
   validateNumericalEquals(accumulator.round(), TwoPower53);
 }
 
-void tarch::la::tests::ExactAccumulatorTest::testOrderInvariance() {
+void
+tarch::la::tests::ExactAccumulatorTest::testCorrectlyRoundedQuotient() {
+  constexpr double Third      = 1.0 / 3.0;
+  constexpr double TwoPower53 = 9007199254740992.0;
+
+  // Nine copies of a value whose ninefold is not representable return the value bitwise.
+  tarch::la::ExactAccumulator accumulator;
+  for (int copy = 0; copy < 9; copy++) {
+    accumulator.add(Third);
+  }
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(9)), std::bit_cast<std::uint64_t>(Third));
+
+  // A sum that cancels down to seven divides like the exact rational.
+  accumulator.clear();
+  accumulator.add(1.0e16);
+  accumulator.add(-1.0e16);
+  for (int one = 0; one < 7; one++) {
+    accumulator.add(1.0);
+  }
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(9)), std::bit_cast<std::uint64_t>(7.0 / 9.0));
+
+  // A quotient on the tie between two doubles rounds to the even one, and a remainder of the
+  // division breaks the tie upwards.
+  accumulator.clear();
+  accumulator.add(3.0 * TwoPower53);
+  accumulator.add(3.0);
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(3)), std::bit_cast<std::uint64_t>(TwoPower53));
+  accumulator.add(1.0);
+  validateEquals(
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(3)),
+    std::bit_cast<std::uint64_t>(TwoPower53 + 2.0)
+  );
+
+  accumulator.clear();
+  accumulator.add(-7.0);
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)), std::bit_cast<std::uint64_t>(-3.5));
+
+  // A quotient below the smallest subnormal rounds to zero with the sign of the sum.
+  accumulator.clear();
+  accumulator.add(-std::numeric_limits<double>::denorm_min());
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(4)), std::bit_cast<std::uint64_t>(-0.0));
+
+  accumulator.clear();
+  accumulator.add(0.1);
+  accumulator.add(0.2);
+  validateEquals(
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(1)),
+    std::bit_cast<std::uint64_t>(accumulator.round())
+  );
+}
+
+void
+tarch::la::tests::ExactAccumulatorTest::testOrderInvariance() {
   const double  values[]       = {1.0e16, -3.75, 1.0, std::ldexp(1.0, -70), -1.0e16, 0.125, 2.0e8, -0.125};
   constexpr int NumberOfValues = 8;
   const int     permutations[3][NumberOfValues] = {
@@ -81,7 +209,8 @@ void tarch::la::tests::ExactAccumulatorTest::testOrderInvariance() {
   }
 }
 
-void tarch::la::tests::ExactAccumulatorTest::testNegationSymmetry() {
+void
+tarch::la::tests::ExactAccumulatorTest::testNegationSymmetry() {
   const double values[] = {0.1, -1.0e12, 3.3333333333333333e-5, 7.0, -0.7, 1.0e-200};
 
   tarch::la::ExactAccumulator positive;
@@ -93,7 +222,8 @@ void tarch::la::tests::ExactAccumulatorTest::testNegationSymmetry() {
   validateEquals(std::bit_cast<std::uint64_t>(negative.round()), std::bit_cast<std::uint64_t>(-positive.round()));
 }
 
-void tarch::la::tests::ExactAccumulatorTest::testSubnormalsAndZero() {
+void
+tarch::la::tests::ExactAccumulatorTest::testSubnormalsAndZero() {
   constexpr double MinimumSubnormal       = 4.9406564584124654e-324;
   constexpr double ThreeMinimumSubnormals = 3.0 * MinimumSubnormal;
   constexpr double LargestSubnormal       = 2.225073858507201e-308;
@@ -141,7 +271,8 @@ void tarch::la::tests::ExactAccumulatorTest::testSubnormalsAndZero() {
   validate(not std::signbit(accumulator.round()));
 }
 
-void tarch::la::tests::ExactAccumulatorTest::testOverflow() {
+void
+tarch::la::tests::ExactAccumulatorTest::testOverflow() {
   constexpr double MaximumFinite = std::numeric_limits<double>::max();
   constexpr double Infinity      = std::numeric_limits<double>::infinity();
 
@@ -173,10 +304,22 @@ void tarch::la::tests::ExactAccumulatorTest::testOverflow() {
   validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(-Infinity));
 }
 
-void tarch::la::tests::ExactAccumulatorTest::testClear() {
+void
+tarch::la::tests::ExactAccumulatorTest::testClear() {
   tarch::la::ExactAccumulator accumulator;
   accumulator.add(123.456);
   accumulator.clear();
   accumulator.add(-1.5);
   validateNumericalEquals(accumulator.round(), -1.5);
+}
+
+/** A dispatch rounds every sum to the bits the host rounds it to. */
+void
+tarch::la::tests::ExactAccumulatorTest::testDeviceRoundsLikeTheHost() {
+  constexpr int              NumberOfSums = 64;
+  std::vector<std::uint64_t> hostBits(NumberOfSums);
+  for (int entry = 0; entry < NumberOfSums; entry++) {
+    hostBits[static_cast<std::size_t>(entry)] = std::bit_cast<std::uint64_t>(getRoundedQuotientOf(entry));
+  }
+  validateEquals(getNumberOfDeviceMismatchesOf(hostBits), 0);
 }

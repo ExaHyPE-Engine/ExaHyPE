@@ -31,4 +31,5 @@ private:
   void testEraseReportsWhetherItRemoved();
   void testProbeChainsSurviveAnErase();
   void testErasedSlotsTakeEntriesAgain();
+  void testBytesCountTheKeyAndValueArrays();
 };

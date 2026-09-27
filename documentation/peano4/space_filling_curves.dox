@@ -4,14 +4,12 @@
 
 \tableofcontents
 
-Peano traverses its spacetree along a space-filling curve. The curve decides in
+Peano orders its spacetree along a space-filling curve. The curve decides in
 which order a refined cell's children are visited and which curve pattern each
 child continues with. Nothing else in the grid depends on it: the entity data
-live in slot-addressed pools, and a traversal detects the first and the last
-touch of a vertex or face by counting its touches against the number of
-adjacent cells. Any curve that is a depth-first visit of every child once
-therefore yields a correct traversal, and the curve is a compile-time choice
-of the library.
+live in slot-addressed pools, and the mesh assigns its slots in curve order.
+Any curve that is a depth-first visit of every child once therefore yields a
+correct mesh, and the curve is a compile-time choice of the library.
 
 # Turtle grammars
 
@@ -73,8 +71,8 @@ peano4::sfc::SpaceFillingCurve takes a grammar and derives the child-order
 table from it while the compiler instantiates the class. For every
 non-terminal, the turtle walk of its production yields the child positions and
 the production's right-hand side yields the child states. The derivation runs
-in constexpr functions, so the table is a constant of the program and a
-traversal reads it with one indexed load per refined cell.
+in constexpr functions, so the table is a constant of the program and the
+mesh build reads it with one indexed load per refined cell.
 
 Three static assertions reject a faulty grammar before any code runs:
 
@@ -94,9 +92,9 @@ build.
 peano4::grid::AutomatonState stores the curve state of a cell next to its
 level and geometry. peano4::grid::AutomatonState::refineState() reads the
 children of that state from the active curve and derives every child's
-geometry and curve state from its table entry. The traversals in
-peano4::topology::TreeTraversal and the rank partition in
-peano4::topology::Tree loop over the same child sequence. The active curve is
+geometry and curve state from its table entry. The partition build in
+peano4::Spacetree and the rank partition in peano4::topology::Tree loop over
+the same child sequence. The active curve is
 the alias peano4::sfc::ActiveCurve, which CMake configures from
 PEANO_WITH_SPACE_FILLING_CURVE:
 
@@ -109,7 +107,7 @@ read peano4::sfc::ActiveCurve::SubdivisionFactor and
 peano4::sfc::ActiveCurve::ChildrenPerCell, so a Hilbert build bisects every
 cell and a Peano build splits it in three. The Discontinuous Galerkin solvers
 derive their interpolation and restriction matrices between a cell and its
-children in C++ (exahype2/dg/AMRMatrices.h) from the quadrature nodes and the
+children in C++ (exahype2/dg/Basis.h) from the quadrature nodes and the
 subdivision factor, so the Python code generator holds no table that depends
 on the curve. The 3^d neighbourhood of a cell is a property of the lattice,
 not of the curve; peano4::CellsPerNeighbourhood names it.

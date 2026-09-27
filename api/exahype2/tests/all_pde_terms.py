@@ -70,8 +70,8 @@ project.add_solver(godunov_solver)
 tracer_particles = project.add_tracer(
     name="AllPDETermsTracer",
     particle_attributes={"unknowns": {"value": 1}},
-    solver=godunov_solver,
 )
+tracer_particles.insert_by_coordinates([[0.5, 0.5, 0.5]])
 godunov_solver.trace(tracer_particles)
 godunov_solver.measure_particle_error(tracer_particles)
 
@@ -91,7 +91,7 @@ nonlinear_solver.set_pde_terms(
     ncp=nothing,
     source=nothing,
     diffusive_source=nothing,
-    riemann_solver=nothing,
+    riemann_solver=zero,
     subcell_riemann_solver=zero,
     physical_admissibility="return true;",
     dmp_observables=nothing,
@@ -123,7 +123,7 @@ linear_solver.set_pde_terms(
     material_parameters=nothing,
     point_source=nothing,
     point_source_locations=nothing,
-    riemann_solver=nothing,
+    riemann_solver=zero,
 )
 project.add_solver(linear_solver)
 
@@ -143,7 +143,7 @@ rk_solver.set_pde_terms(
     flux=nothing,
     ncp=nothing,
     source=nothing,
-    riemann_solver=nothing,
+    riemann_solver=zero,
     analytical_solution=nothing,
 )
 rk_solver.measure_error()

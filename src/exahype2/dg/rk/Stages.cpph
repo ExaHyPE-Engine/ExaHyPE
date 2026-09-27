@@ -1,0 +1,467 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "peano4/Loop.h"
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/Scratch.h"
+
+TARGET_DECLARE
+/**
+ * Opens one stage of a cell: The stage state is the cell state plus the weighted estimates of
+ * the earlier stages, the estimate of the stage takes the volume terms of that state, and the
+ * face states and face fluxes of that state go onto the faces. weights is the row of the Butcher
+ * matrix of the stage. stageState is scratch memory of StateValuesPerCell values that no other
+ * call reads while this call runs.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::rk::Stage<Derived, ComputePrecision>::open(
+  const Weights&                               weights,
+  const StoragePrecision* NOALIAS const        cellState,
+  ComputePrecision* NOALIAS const              estimates,
+  ComputePrecision* NOALIAS const              stageState,
+  const int                                    stage,
+  ComputePrecision* const NOALIAS              faceStates[peano4::FacesPerCell],
+  ComputePrecision* const NOALIAS              faceFluxes[peano4::FacesPerCell],
+  const ComputePrecision* NOALIAS const        quadratureNodes,
+  const ComputePrecision* NOALIAS const        derivativeOperator,
+  const ComputePrecision* NOALIAS const        leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const        rightFaceCoefficients,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 stageTimeStamp,
+  const double                                 timeStepSize
+) {
+  assertion(stage >= 0 and stage < Tableau::Stages, stage);
+  assertion(cellState != nullptr);
+  assertion(estimates != nullptr);
+  assertion(stageState != nullptr);
+
+  combineEstimates(weights, cellState, estimates, stageState);
+  volumeIntegral(
+    stageState,
+    estimates + stage * UnknownsPerStage,
+    quadratureNodes,
+    derivativeOperator,
+    cellCentre,
+    cellSize,
+    stageTimeStamp,
+    timeStepSize
+  );
+  projectOntoFaces(
+    stageState,
+    faceStates,
+    faceFluxes,
+    leftFaceCoefficients,
+    rightFaceCoefficients,
+    quadratureNodes,
+    derivativeOperator,
+    cellCentre,
+    cellSize,
+    stageTimeStamp,
+    timeStepSize
+  );
+}
+
+/**
+ * Adds the face integrals of the numerical fluxes on the faces of one cell to the estimate of
+ * the stage. faceFluxes points at the half of every face the cell reads, which holds the
+ * difference between the numerical flux and the cell's own flux.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::rk::Stage<Derived, ComputePrecision>::addFaceIntegrals(
+  ComputePrecision* NOALIAS const              estimates,
+  const int                                    stage,
+  const ComputePrecision* const                faceFluxes[peano4::FacesPerCell],
+  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
+  const ComputePrecision* NOALIAS const        inverseCellQuadratureWeights,
+  const ComputePrecision* NOALIAS const        leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const        rightFaceCoefficients,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStepSize
+) {
+  assertion(stage >= 0 and stage < Tableau::Stages, stage);
+  assertion(estimates != nullptr);
+
+  exahype2::dg::addFaceIntegrals<Derived, CellLayout::NumberOfUnknowns>(
+    estimates + stage * UnknownsPerStage,
+    faceFluxes,
+    faceQuadratureWeights,
+    inverseCellQuadratureWeights,
+    leftFaceCoefficients,
+    rightFaceCoefficients,
+    cellSize,
+    timeStepSize
+  );
+}
+
+/**
+ * Writes the cell state plus the weighted estimates of every stage over the cell state, runs the
+ * postprocessing of Derived on it and returns the wave-speed maxima of that state at the updated
+ * time stamp; without ReportEigenvalues the maxima are zero. weights is the weight row of the
+ * Butcher tableau.
+ */
+template <typename Derived, typename ComputePrecision>
+template <bool ReportEigenvalues, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
+exahype2::dg::rk::Stage<Derived, ComputePrecision>::close(
+  const Weights&                               weights,
+  StoragePrecision* const                      cellState,
+  const ComputePrecision* NOALIAS const        estimates,
+  const StoragePrecision* NOALIAS const        stateQuadraturePoints,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  combineEstimates(weights, cellState, estimates, cellState);
+  return exahype2::dg::finishCell<Derived, ReportEigenvalues>(
+    cellState,
+    stateQuadraturePoints,
+    cellCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize
+  );
+}
+
+/**
+ * Writes the cell state plus the weighted estimates into target and copies the auxiliary
+ * variables. An estimate with a zero weight is not read, so the estimates of later stages may
+ * still be unwritten. target may alias cellState.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision, typename TargetPrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::rk::Stage<Derived, ComputePrecision>::combineEstimates(
+  const Weights&                        weights,
+  const StoragePrecision* const         cellState,
+  const ComputePrecision* NOALIAS const estimates,
+  TargetPrecision* const                target
+) {
+  constexpr int NumberOfUnknowns = CellLayout::NumberOfUnknowns;
+  constexpr int NumberOfData     = CellLayout::NumberOfData;
+  using AccumulatePrecision      = std::common_type_t<StoragePrecision, ComputePrecision, double>;
+
+  assertion(cellState != nullptr);
+  assertion(estimates != nullptr);
+  assertion(target != nullptr);
+
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    SIMD()
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const int stateEntry = cellNode * NumberOfData + unknown;
+      auto      value      = static_cast<AccumulatePrecision>(cellState[stateEntry]);
+      for (int stage = 0; stage < Tableau::Stages; stage++) {
+        if (weights[stage] != 0.0) {
+          value += static_cast<AccumulatePrecision>(weights[stage])
+            * static_cast<AccumulatePrecision>(
+                     estimates[stage * UnknownsPerStage + cellNode * NumberOfUnknowns + unknown]
+            );
+        }
+      }
+      target[stateEntry] = static_cast<TargetPrecision>(value);
+    }
+    for (int auxiliaryVariable = 0; auxiliaryVariable < Derived::NumberOfAuxiliaryVariables; auxiliaryVariable++) {
+      const int stateEntry = cellNode * NumberOfData + NumberOfUnknowns + auxiliaryVariable;
+      target[stateEntry]   = static_cast<TargetPrecision>(cellState[stateEntry]);
+    }
+  }
+}
+
+/**
+ * Writes the volume terms of one stage times the time step into estimate, which holds
+ * NumberOfUnknowns values per node: The strong-form divergence of the nodal flux along every
+ * axis, the source and the nonconservative product of the stage state. The divergence acts on
+ * the differences of every line of nodes from its smallest value, so a constant flux gives zeros
+ * bitwise. Every axis sums its terms into one line update before that update enters estimate, so
+ * two mirror-image cells receive bitwise mirrored estimates.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
+  const ComputePrecision* NOALIAS const        stageState,
+  ComputePrecision* NOALIAS const              estimate,
+  const ComputePrecision* NOALIAS const        quadratureNodes,
+  const ComputePrecision* NOALIAS const        derivativeOperator,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  constexpr int NodesPerAxis           = CellLayout::NodesPerAxis;
+  constexpr int NumberOfUnknowns       = CellLayout::NumberOfUnknowns;
+  constexpr int NumberOfData           = CellLayout::NumberOfData;
+  constexpr int GradientEntriesPerAxis = CellLayout::NodesPerCell * NumberOfData;
+
+  assertion(stageState != nullptr);
+  assertion(estimate != nullptr);
+  assertion(quadratureNodes != nullptr);
+  assertion(derivativeOperator != nullptr);
+  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, cellCentre);
+
+  for (int entry = 0; entry < UnknownsPerStage; entry++) {
+    estimate[entry] = static_cast<ComputePrecision>(0);
+  }
+
+  [[maybe_unused]] ComputePrecision nodalGradients[EvaluateDiffusiveFlux ? DIMENSIONS * GradientEntriesPerAxis : 1];
+  if constexpr (EvaluateDiffusiveFlux) {
+    exahype2::dg::computeNodalGradients<NodesPerAxis, NumberOfData, ComputePrecision, ComputePrecision>(
+      nodalGradients,
+      stageState,
+      derivativeOperator,
+      cellSize
+    );
+  }
+
+  if constexpr (EvaluateFlux or EvaluateNonconservativeProduct) {
+    for (int direction = 0; direction < DIMENSIONS; direction++) {
+      assertion(cellSize(direction) > 0.0, cellSize, direction);
+      int lowerAxesStride = 1;
+      for (int axis = 0; axis < direction; axis++) {
+        lowerAxesStride *= NodesPerAxis;
+      }
+
+      for (int line = 0; line < CellLayout::NodesPerFace; line++) {
+        const int lowerAxesIndex  = line % lowerAxesStride;
+        const int higherAxesIndex = line / lowerAxesStride;
+        const int firstCellNode   = higherAxesIndex * NodesPerAxis * lowerAxesStride + lowerAxesIndex;
+
+        ComputePrecision lineUpdate[NodesPerAxis * NumberOfUnknowns];
+
+        if constexpr (EvaluateFlux) {
+          ComputePrecision fluxValues[NodesPerAxis * NumberOfUnknowns];
+          for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
+            const int                             cellNode  = firstCellNode + normalIndex * lowerAxesStride;
+            const auto                            nodeIndex = peano4::dDelinearised(cellNode, NodesPerAxis);
+            const ComputePrecision* NOALIAS const nodeState = stageState + cellNode * NumberOfData;
+            if constexpr (EvaluateDiffusiveFlux) {
+              const ComputePrecision* NOALIAS nodeGradients[DIMENSIONS];
+              for (int axis = 0; axis < DIMENSIONS; axis++) {
+                nodeGradients[axis] = nodalGradients + axis * GradientEntriesPerAxis + cellNode * NumberOfData;
+              }
+              Derived::flux(
+                nodeState,
+                nodeGradients,
+                exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
+                cellSize,
+                timeStamp,
+                timeStepSize,
+                direction,
+                fluxValues + normalIndex * NumberOfUnknowns
+              );
+            } else {
+              Derived::flux(
+                nodeState,
+                exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
+                cellSize,
+                timeStamp,
+                timeStepSize,
+                direction,
+                fluxValues + normalIndex * NumberOfUnknowns
+              );
+            }
+          }
+          exahype2::dg::differentiateAlongAxis<
+            NumberOfUnknowns,
+            NodesPerAxis,
+            NumberOfUnknowns,
+            NodesPerAxis,
+            NumberOfUnknowns,
+            true,
+            ComputePrecision,
+            ComputePrecision
+          >(lineUpdate, fluxValues, derivativeOperator, -timeStepSize / cellSize(direction));
+        } else {
+          for (int entry = 0; entry < NodesPerAxis * NumberOfUnknowns; entry++) {
+            lineUpdate[entry] = static_cast<ComputePrecision>(0);
+          }
+        }
+
+        if constexpr (EvaluateNonconservativeProduct) {
+          ComputePrecision stateLine[NodesPerAxis * NumberOfData];
+          for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
+            const int cellNode = firstCellNode + normalIndex * lowerAxesStride;
+            for (int value = 0; value < NumberOfData; value++) {
+              stateLine[normalIndex * NumberOfData + value] = stageState[cellNode * NumberOfData + value];
+            }
+          }
+          ComputePrecision gradients[NodesPerAxis * NumberOfData];
+          exahype2::dg::differentiateAlongAxis<
+            NumberOfData,
+            NodesPerAxis,
+            NumberOfData,
+            NodesPerAxis,
+            NumberOfData,
+            true,
+            ComputePrecision,
+            ComputePrecision
+          >(gradients, stateLine, derivativeOperator, 1.0 / cellSize(direction));
+
+          for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
+            const int        cellNode  = firstCellNode + normalIndex * lowerAxesStride;
+            const auto       nodeIndex = peano4::dDelinearised(cellNode, NodesPerAxis);
+            ComputePrecision nonconservativeProduct[NumberOfUnknowns];
+            Derived::nonconservativeProduct(
+              stageState + cellNode * NumberOfData,
+              gradients + normalIndex * NumberOfData,
+              exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
+              cellSize,
+              timeStamp,
+              timeStepSize,
+              direction,
+              nonconservativeProduct
+            );
+            SIMD()
+            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+              lineUpdate[normalIndex * NumberOfUnknowns + unknown] -=
+                static_cast<ComputePrecision>(timeStepSize) * nonconservativeProduct[unknown];
+            }
+          }
+        }
+
+        for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
+          const int cellNode = firstCellNode + normalIndex * lowerAxesStride;
+          SIMD()
+          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+            estimate[cellNode * NumberOfUnknowns + unknown] += lineUpdate[normalIndex * NumberOfUnknowns + unknown];
+          }
+        }
+      }
+    }
+  }
+
+  if constexpr (EvaluateSource) {
+    peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
+      const int        cellNode = peano4::dLinearised(nodeIndex, NodesPerAxis);
+      ComputePrecision sourceValues[NumberOfUnknowns];
+      Derived::sourceTerm(
+        stageState + cellNode * NumberOfData,
+        exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
+        cellSize,
+        timeStamp,
+        timeStepSize,
+        sourceValues
+      );
+      SIMD()
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        estimate[cellNode * NumberOfUnknowns + unknown] +=
+          static_cast<ComputePrecision>(timeStepSize) * sourceValues[unknown];
+      }
+    });
+  }
+}
+
+/** Extrapolates the stage state and its nodal flux onto the faces of the cell. */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::rk::Stage<Derived, ComputePrecision>::projectOntoFaces(
+  const ComputePrecision* NOALIAS const        stageState,
+  ComputePrecision* const NOALIAS              faceStates[peano4::FacesPerCell],
+  ComputePrecision* const NOALIAS              faceFluxes[peano4::FacesPerCell],
+  const ComputePrecision* NOALIAS const        leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const        rightFaceCoefficients,
+  const ComputePrecision* NOALIAS const        quadratureNodes,
+  const ComputePrecision* NOALIAS const        derivativeOperator,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  assertion(stageState != nullptr);
+  exahype2::dg::extrapolateStateToFaces<Derived>(faceStates, stageState, leftFaceCoefficients, rightFaceCoefficients);
+  exahype2::dg::extrapolateFluxToFaces<Derived>(
+    faceFluxes,
+    stageState,
+    leftFaceCoefficients,
+    rightFaceCoefficients,
+    quadratureNodes,
+    derivativeOperator,
+    cellCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize
+  );
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::rk::OpenStage<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
+  constexpr int     StateValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
+  constexpr int     FluxValuesPerFace  = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
+  const int         slot               = cells[entry];
+  ComputePrecision* ownStateHalves[peano4::FacesPerCell];
+  ComputePrecision* ownFluxHalves[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    const int face             = partition.getCellFace(slot, faceNumber);
+    const int half             = exahype2::dg::getOwnHalf(faceNumber);
+    ownStateHalves[faceNumber] = faceStates.getChunk(face) + half * StateValuesPerFace;
+    ownFluxHalves[faceNumber]  = faceFluxes.getChunk(face) + half * FluxValuesPerFace;
+  }
+  Kernel::open(
+    weights,
+    solution.getChunk(slot),
+    estimates.getChunk(slot),
+    stageScratch + tarch::accelerator::getScratchChunk(entry) * Kernel::StateValuesPerCell,
+    stage,
+    ownStateHalves,
+    ownFluxHalves,
+    quadratureNodes,
+    derivativeOperator,
+    leftFaceCoefficients,
+    rightFaceCoefficients,
+    partition.getCellCentre(slot),
+    partition.getCellWidth(slot),
+    stageTimeStamp,
+    timeStepSize
+  );
+}
+
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::rk::AddStageFaceIntegrals<Derived, ComputePrecision>::operator()(const int entry) const {
+  constexpr int           FluxValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
+  const int               slot              = cells[entry];
+  const ComputePrecision* fluxes[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    const int face = partition.getCellFace(slot, faceNumber);
+    fluxes[faceNumber] =
+      faceFluxes.getChunk(face) + exahype2::dg::getCorrectionHalf(partition, face, faceNumber) * FluxValuesPerFace;
+  }
+  Kernel::addFaceIntegrals(
+    estimates.getChunk(slot),
+    stage,
+    fluxes,
+    faceQuadratureWeights,
+    inverseCellQuadratureWeights,
+    leftFaceCoefficients,
+    rightFaceCoefficients,
+    partition.getCellWidth(slot),
+    timeStepSize
+  );
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::rk::CombineStages<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int                              entry,
+  exahype2::dg::MaxEigenvalueStatistics& accumulator
+) const {
+  const int slot = cells[entry];
+  accumulator    = exahype2::dg::MaxEigenvalueStatistics::combine(
+    accumulator,
+    Kernel::template close<UsesAdaptiveTimeStepping>(
+      weights,
+      solution.getChunk(slot),
+      estimates.getChunk(slot),
+      stateQuadraturePoints,
+      partition.getCellCentre(slot),
+      partition.getCellWidth(slot),
+      timeStamp,
+      timeStepSize
+    )
+  );
+}
+TARGET_DECLARE_END

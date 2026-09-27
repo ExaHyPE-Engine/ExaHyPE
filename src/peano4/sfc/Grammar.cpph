@@ -1,9 +1,13 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-INLINE_METHOD constexpr int peano4::sfc::Grammar::axisOf(const Step step) { return static_cast<int>(step) / 2; }
+INLINE_METHOD constexpr int
+peano4::sfc::Grammar::getAxis(const Step step) {
+  return static_cast<int>(step) / 2;
+}
 
-INLINE_METHOD constexpr int peano4::sfc::Grammar::directionOf(const Step step) {
+INLINE_METHOD constexpr int
+peano4::sfc::Grammar::getDirection(const Step step) {
   return static_cast<int>(step) % 2 == 0 ? -1 : 1;
 }
 
@@ -14,10 +18,8 @@ INLINE_METHOD constexpr int peano4::sfc::Grammar::directionOf(const Step step) {
  * in a child slot or a child in a step slot does not compile.
  */
 template <class NonTerminal, class... Symbols>
-constexpr peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> peano4::sfc::Grammar::production(
-  const NonTerminal leftHandSide,
-  Symbols... symbols
-) {
+constexpr peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2>
+peano4::sfc::Grammar::production(const NonTerminal leftHandSide, Symbols... symbols) {
   static_assert(sizeof...(Symbols) % 2 == 1, "A right-hand side alternates children and steps and ends with a child.");
   peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> result{leftHandSide, {}, {}};
   peano4::sfc::Grammar::placeSymbols<0>(result, symbols...);
@@ -25,16 +27,16 @@ constexpr peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> pea
 }
 
 template <std::size_t Position, class NonTerminal, int NumberOfChildren>
-constexpr void peano4::sfc::Grammar::placeSymbols(
-  [[maybe_unused]] peano4::sfc::Production<NonTerminal, NumberOfChildren>& result
-) {}
+constexpr void
+peano4::sfc::Grammar::placeSymbols([[maybe_unused]] peano4::sfc::Production<NonTerminal, NumberOfChildren>& result) {}
 
 /**
  * Writes the symbol at Position into the child array or the step array of the
  * production and recurses over the remaining symbols.
  */
 template <std::size_t Position, class NonTerminal, int NumberOfChildren, class Symbol, class... Symbols>
-constexpr void peano4::sfc::Grammar::placeSymbols(
+constexpr void
+peano4::sfc::Grammar::placeSymbols(
   peano4::sfc::Production<NonTerminal, NumberOfChildren>& result,
   const Symbol                                            symbol,
   Symbols... symbols

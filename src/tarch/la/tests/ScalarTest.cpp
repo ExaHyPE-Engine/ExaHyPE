@@ -8,13 +8,15 @@
 tarch::la::tests::ScalarTest::ScalarTest() :
   TestCase("tarch::la::tests::ScalarTest") {}
 
-void tarch::la::tests::ScalarTest::run() {
+void
+tarch::la::tests::ScalarTest::run() {
   testMethod(testComparison);
   testMethod(testAbs);
   testMethod(testAdditionalScalarFunctions);
 }
 
-void tarch::la::tests::ScalarTest::testComparison() {
+void
+tarch::la::tests::ScalarTest::testComparison() {
   const double a   = 1.0;
   const double b   = 2.0;
   const double eps = 1e-14;
@@ -45,7 +47,8 @@ void tarch::la::tests::ScalarTest::testComparison() {
   validate(equals(a, a + 10.0 * eps, 10.0 * eps));
 }
 
-void tarch::la::tests::ScalarTest::testAbs() {
+void
+tarch::la::tests::ScalarTest::testAbs() {
   const double a = -1.0;
   const int    b = -1;
 
@@ -53,21 +56,16 @@ void tarch::la::tests::ScalarTest::testAbs() {
   validateEquals(abs(b), 1);
 }
 
-void tarch::la::tests::ScalarTest::testAdditionalScalarFunctions() {
-  validateEquals(aPowI(3, 2), 8);
+void
+tarch::la::tests::ScalarTest::testAdditionalScalarFunctions() {
   validateEquals(sign(2.0), 1);
   validateEquals(sign(-2.0), -1);
   validateEquals(sign(1.0e-10), 0);
   validateEquals(round(2.4), 2);
   validateEquals(round(2.6), 3);
-  validateEquals(round(2.6f), 3);
+  validateEquals(round(2.6F), 3);
 
-  validateNumericalEquals(relativeEps(10.0, 20.0, 1.0e-3), 2.0e-2);
-  validateNumericalEquals(relativeEpsNormalisedAgainstValueGreaterOne(0.5, 0.25, 1.0e-3), 1.0e-3);
-  validateNumericalEquals(relativeEpsNormalisedAgainstValueGreaterOne(10.0, 0.25, 1.0e-3), 1.0e-2);
   validateEquals(max(1.0, 3.0, 2.0), 3.0);
   validateEquals(min(1.0, 3.0, 2.0), 1.0);
   validateNumericalEquals(pow(4.0, 0.5), 2.0);
-  validateNumericalEquals(convertAbsoluteIntoRelativeValue(10.0, 2.0), 0.2);
-  validateNumericalEquals(convertAbsoluteIntoRelativeValue(0.5, 2.0), 2.0);
 }

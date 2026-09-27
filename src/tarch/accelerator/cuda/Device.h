@@ -10,13 +10,13 @@
 
 namespace tarch::accelerator {
   cudaStream_t deviceStreamCreate();
-  void         deviceStreamDestroy(cudaStream_t* stream);
-  void         deviceStreamSync(cudaStream_t stream);
+  void deviceStreamDestroy(cudaStream_t* stream);
+  void deviceStreamSync(cudaStream_t stream);
 
-  void         deviceStreamSet(cudaStream_t stream);
-  cudaStream_t deviceStreamGet();
+  void setDeviceStream(cudaStream_t stream);
+  cudaStream_t getDeviceStream();
 
-  // CudaTeam carries no state: The team overloads read threadIdx and blockDim directly.
+  // The team overloads read threadIdx and blockDim.
   struct CudaTeam final {};
   using TeamHandle = CudaTeam;
 

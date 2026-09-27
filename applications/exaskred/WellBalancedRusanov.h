@@ -14,8 +14,9 @@ namespace applications::exahype2::exaskred::riemann {
     int Order,
     typename T,
     typename MaxEigenvalue,
-    typename InterfaceGravity>
-  INLINE_METHOD GPU_CALLABLE_METHOD void wellBalancedRusanov(
+    typename InterfaceGravity
+  >
+  INLINE_METHOD GPU_CALLABLE_METHOD double wellBalancedRusanov(
     const T* const NOALIAS                       QL,
     const T* const NOALIAS                       QR,
     const tarch::la::Vector<DIMENSIONS, double>& x,

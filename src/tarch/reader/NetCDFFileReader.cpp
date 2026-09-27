@@ -7,7 +7,8 @@
 #include <netcdf.h>
 #include <sys/stat.h>
 
-int tarch::reader::NetCDFFileReader::open(const std::string& filename) {
+int
+tarch::reader::NetCDFFileReader::open(const std::string& filename) {
   // Check that file exists (nc_open does not do that apparently)
   struct stat buffer;
   if (stat(filename.c_str(), &buffer) != 0) {
@@ -22,14 +23,16 @@ int tarch::reader::NetCDFFileReader::open(const std::string& filename) {
   return ncid;
 }
 
-int tarch::reader::NetCDFFileReader::close(int ncid) {
+int
+tarch::reader::NetCDFFileReader::close(int ncid) {
   if (nc_close(ncid) != NC_NOERR) {
     return -1;
   }
   return 0;
 }
 
-std::size_t tarch::reader::NetCDFFileReader::getDimension(int ncid, const char* key) {
+std::size_t
+tarch::reader::NetCDFFileReader::getDimension(int ncid, const char* key) {
   int         dimidkey = -1;
   std::size_t dim      = 0;
 
@@ -43,9 +46,10 @@ std::size_t tarch::reader::NetCDFFileReader::getDimension(int ncid, const char* 
   return dim;
 }
 
-int* tarch::reader::NetCDFFileReader::getGlobalAttInt(int ncid, const char* name) {
+int*
+tarch::reader::NetCDFFileReader::getGlobalAttInt(int ncid, const char* name) {
   std::size_t len = 0;
-  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR || len == 0) {
+  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR or len == 0) {
     return nullptr;
   }
 
@@ -57,9 +61,10 @@ int* tarch::reader::NetCDFFileReader::getGlobalAttInt(int ncid, const char* name
   return tmp;
 }
 
-float* tarch::reader::NetCDFFileReader::getGlobalAttFloat(int ncid, const char* name) {
+float*
+tarch::reader::NetCDFFileReader::getGlobalAttFloat(int ncid, const char* name) {
   std::size_t len = 0;
-  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR || len == 0) {
+  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR or len == 0) {
     return nullptr;
   }
 
@@ -71,9 +76,10 @@ float* tarch::reader::NetCDFFileReader::getGlobalAttFloat(int ncid, const char* 
   return tmp;
 }
 
-double* tarch::reader::NetCDFFileReader::getGlobalAttDouble(int ncid, const char* name) {
+double*
+tarch::reader::NetCDFFileReader::getGlobalAttDouble(int ncid, const char* name) {
   std::size_t len = 0;
-  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR || len == 0) {
+  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR or len == 0) {
     return nullptr;
   }
 
@@ -85,9 +91,10 @@ double* tarch::reader::NetCDFFileReader::getGlobalAttDouble(int ncid, const char
   return tmp;
 }
 
-char* tarch::reader::NetCDFFileReader::getGlobalAttText(int ncid, const char* name) {
+char*
+tarch::reader::NetCDFFileReader::getGlobalAttText(int ncid, const char* name) {
   std::size_t len;
-  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR || len == 0) {
+  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR or len == 0) {
     return nullptr;
   }
 
@@ -99,7 +106,8 @@ char* tarch::reader::NetCDFFileReader::getGlobalAttText(int ncid, const char* na
   return tmp;
 }
 
-int tarch::reader::NetCDFFileReader::readVariable1D(int ncid, const char* key, double* variable) {
+int
+tarch::reader::NetCDFFileReader::readVariable1D(int ncid, const char* key, double* variable) {
   int varidkey = -1;
 
   if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
@@ -113,7 +121,8 @@ int tarch::reader::NetCDFFileReader::readVariable1D(int ncid, const char* key, d
   return 0;
 }
 
-int tarch::reader::NetCDFFileReader::readVariable2D(
+int
+tarch::reader::NetCDFFileReader::readVariable2D(
   int         ncid,
   const char* key,
   double**    variable,
@@ -133,7 +142,7 @@ int tarch::reader::NetCDFFileReader::readVariable2D(
 
   std::size_t j = 0;
   for (std::size_t i = 0; i < rows * cols; i++) {
-    if (i % rows == 0 && i > 0) {
+    if (i % rows == 0 and i > 0) {
       j++;
     }
     variable[i % rows][j] = tmp[i];
@@ -144,7 +153,8 @@ int tarch::reader::NetCDFFileReader::readVariable2D(
   return 0;
 }
 
-int tarch::reader::NetCDFFileReader::readVariable2D(int ncid, const char* key, double* variable) {
+int
+tarch::reader::NetCDFFileReader::readVariable2D(int ncid, const char* key, double* variable) {
   int varidkey = -1;
 
   if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
@@ -158,7 +168,8 @@ int tarch::reader::NetCDFFileReader::readVariable2D(int ncid, const char* key, d
   return 0;
 }
 
-int tarch::reader::NetCDFFileReader::readVariable2DHyperslab(
+int
+tarch::reader::NetCDFFileReader::readVariable2DHyperslab(
   int         ncid,
   const char* key,
   double**    variable,
@@ -182,7 +193,7 @@ int tarch::reader::NetCDFFileReader::readVariable2DHyperslab(
 
   std::size_t j = 0;
   for (std::size_t i = 0; i < rows * cols; i++) {
-    if (i % rows == 0 && i > 0) {
+    if (i % rows == 0 and i > 0) {
       j++;
     }
     variable[i % rows][j] = tmp[i];
@@ -193,7 +204,8 @@ int tarch::reader::NetCDFFileReader::readVariable2DHyperslab(
   return 0;
 }
 
-int tarch::reader::NetCDFFileReader::readVariable3D(int ncid, const char* key, double* variable) {
+int
+tarch::reader::NetCDFFileReader::readVariable3D(int ncid, const char* key, double* variable) {
   int varidkey = -1;
 
   if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
@@ -207,7 +219,8 @@ int tarch::reader::NetCDFFileReader::readVariable3D(int ncid, const char* key, d
   return 0;
 }
 
-int tarch::reader::NetCDFFileReader::readVariable3DHyperslab(
+int
+tarch::reader::NetCDFFileReader::readVariable3DHyperslab(
   int         ncid,
   const char* key,
   double*     variable,

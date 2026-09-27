@@ -43,14 +43,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rtol", type=float, default=0.0, help="Relative tolerance (default: 0)"
     )
-    # Mirrored cells sum their kernel terms in a different node order, so one rounding
-    # error per evaluation is admissible; a few hundred time steps stay well below this
-    # multiple of the machine epsilon. Pass 0 to demand exact symmetry.
     parser.add_argument(
         "--atol",
         type=float,
-        default=100.0 * sys.float_info.epsilon,
-        help="Absolute tolerance (default: one hundred machine epsilons)",
+        default=0.0,
+        help="Absolute tolerance (default: 0, which demands bitwise symmetry)",
     )
     parser.add_argument(
         "--frame", type=int, help="Check only this snapshot index (default: all)"
@@ -58,9 +55,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--skip-fields",
         nargs="+",
-        default=["Subdomain", "Subtree", "CurvePosition"],
-        help="Fields to ignore (default: Subdomain, Subtree and CurvePosition, which depend on "
-        "the domain decomposition and on the curve order)",
+        default=["Subdomain"],
+        help="Fields to ignore (default: Subdomain, which depends on the domain decomposition)",
     )
     parser.add_argument(
         "--vector-fields",

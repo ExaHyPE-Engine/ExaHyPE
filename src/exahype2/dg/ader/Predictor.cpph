@@ -1,0 +1,197 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/dg/Kernels.h"
+#include "exahype2/dg/limiting/LimiterStatus.h"
+#include "peano4/Constants.h"
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/Scratch.h"
+
+TARGET_DECLARE
+/**
+ * Runs the space-time predictor of one cell of Derived and subtracts the volume integral of its
+ * time averages from the cell state; a linear Derived runs LinearPredictor::predict() with the
+ * point sources inside the cell, every other Derived runs NonlinearPredictor::predict().
+ * faceStates and faceFluxes point at the halves of the faces the cell writes. scratch holds
+ * ScratchSize values and picardScratch PicardScratchSize values; no other call reads the two
+ * blocks while this call runs. pointSourceLocations holds DIMENSIONS coordinates per point source
+ * of Derived. Returns the number of Picard sweeps of a nonlinear Derived, which is negative when
+ * the iteration diverged, and zero for a linear one.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  ComputePrecision* const* const               faceStates,
+  ComputePrecision* const* const               faceFluxes,
+  StoragePrecision* NOALIAS const              cellState,
+  const double* NOALIAS const                  pointSourceLocations,
+  ComputePrecision* NOALIAS const              scratch,
+  ComputePrecision* NOALIAS const              picardScratch,
+  const Tables&                                tables,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  assertion(faceStates != nullptr);
+  assertion(faceFluxes != nullptr);
+  assertion(cellState != nullptr);
+  assertion(scratch != nullptr);
+  assertion(Derived::IsLinear or picardScratch != nullptr);
+  assertion(timeStamp >= 0.0, timeStamp, cellCentre);
+  assertion(timeStepSize >= 0.0, timeStepSize, cellCentre);
+
+  if constexpr (Derived::IsLinear) {
+    using Scratch = typename Linear::Scratch;
+
+    if constexpr (Linear::EvaluatePointSources) {
+      static_assert(Derived::NumberOfPointSources > 0, "A solver that evaluates point sources declares at least one.");
+      assertion(pointSourceLocations != nullptr);
+      int       pointSourceIndices[Derived::NumberOfPointSources];
+      const int numberOfPointSources =
+        Linear::selectPointSources(pointSourceIndices, pointSourceLocations, cellCentre, cellSize);
+      Linear::predict(
+        faceStates,
+        faceFluxes,
+        cellState,
+        scratch,
+        pointSourceIndices,
+        numberOfPointSources,
+        pointSourceLocations,
+        tables,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize
+      );
+    } else {
+      const int* const pointSourceIndices = nullptr;
+      Linear::predict(
+        faceStates,
+        faceFluxes,
+        cellState,
+        scratch,
+        pointSourceIndices,
+        0,
+        pointSourceLocations,
+        tables,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize
+      );
+    }
+    subtractTimeAveragedVolumeIntegral<Linear::AccumulatesFlux, Linear::AccumulatesSource>(
+      cellState,
+      scratch + Scratch::TimeAveragedFluxOffset,
+      scratch + Scratch::TimeAveragedSourceOffset,
+      timeStepSize
+    );
+    return 0;
+  } else {
+    using Scratch = typename Nonlinear::Scratch;
+
+    const int numberOfSweeps = Nonlinear::predict(
+      faceStates,
+      faceFluxes,
+      cellState,
+      scratch,
+      picardScratch,
+      tables,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      Derived::PicardResidualTolerance
+    );
+    subtractTimeAveragedVolumeIntegral<Nonlinear::AccumulatesFlux, Nonlinear::AccumulatesSource>(
+      cellState,
+      scratch + Scratch::TimeAveragedFluxOffset,
+      scratch + Scratch::TimeAveragedSourceOffset,
+      timeStepSize
+    );
+    return numberOfSweeps;
+  }
+}
+
+/**
+ * Adds the time-averaged source and subtracts the time-averaged flux divergence, both times the
+ * time step. timeAveragedFlux holds the derivative of the flux along its own axis, one block per
+ * axis in cell node order.
+ */
+template <typename Derived, typename ComputePrecision>
+template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::Predictor<Derived, ComputePrecision>::subtractTimeAveragedVolumeIntegral(
+  StoragePrecision* NOALIAS const                        cellState,
+  [[maybe_unused]] const ComputePrecision* NOALIAS const timeAveragedFlux,
+  [[maybe_unused]] const ComputePrecision* NOALIAS const timeAveragedSource,
+  const double                                           timeStepSize
+) {
+  constexpr int UnknownStride = CellLayout::PaddedNumberOfUnknowns;
+  constexpr int AxisStride    = UnknownStride * CellLayout::NodesPerCell;
+
+  using UpdatePrecision = std::common_type_t<ComputePrecision, double>;
+
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    SIMD()
+    for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
+      const int entry  = cellNode * UnknownStride + unknown;
+      auto      update = static_cast<ComputePrecision>(0);
+      if constexpr (AccumulatesFlux) {
+        update = timeAveragedFlux[entry] + timeAveragedFlux[entry + AxisStride];
+        if constexpr (DIMENSIONS == 3) {
+          update += timeAveragedFlux[entry + 2 * AxisStride];
+        }
+      }
+      if constexpr (AccumulatesSource) {
+        update -= timeAveragedSource[entry];
+      }
+      cellState[cellNode * CellLayout::NumberOfData + unknown] -= static_cast<StoragePrecision>(
+        static_cast<UpdatePrecision>(timeStepSize) * static_cast<UpdatePrecision>(update)
+      );
+    }
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename DivergenceMarks>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, DivergenceMarks>::operator()(
+  const int entry,
+  int&      accumulator
+) const {
+  constexpr int     StateValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
+  constexpr int     FluxValuesPerFace  = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
+  const int         slot               = cells[entry];
+  const int         chunk              = tarch::accelerator::getScratchChunk(entry);
+  ComputePrecision* ownStateHalves[peano4::FacesPerCell];
+  ComputePrecision* ownFluxHalves[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    const int face             = partition.getCellFace(slot, faceNumber);
+    const int half             = exahype2::dg::getOwnHalf(faceNumber);
+    ownStateHalves[faceNumber] = faceStates.getChunk(face) + half * StateValuesPerFace;
+    ownFluxHalves[faceNumber]  = faceFluxes.getChunk(face) + half * FluxValuesPerFace;
+  }
+  const int numberOfPicardIterations = exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
+    partition.getCellCentre(slot),
+    partition.getCellWidth(slot),
+    ownStateHalves,
+    ownFluxHalves,
+    solution.getChunk(slot),
+    pointSourceLocations,
+    predictorScratch + chunk * predictorScratchSize,
+    picardScratchSize > 0 ? picardScratch + chunk * picardScratchSize : nullptr,
+    tables,
+    timeStamp,
+    timeStepSize
+  );
+  if (numberOfPicardIterations < 0) {
+    if constexpr (HasLimiter) {
+      divergenceMarks.getChunk(slot)[static_cast<int>(exahype2::dg::limiting::StatusEntry::PredictorDiverged)] = 1;
+    } else {
+      accumulator++;
+    }
+  }
+}
+TARGET_DECLARE_END

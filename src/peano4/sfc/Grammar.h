@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 
 namespace peano4::sfc {
   struct Grammar;
@@ -19,11 +20,12 @@ namespace peano4::sfc {
  * non-terminal. The turtle steps are the terminals: Left and Right move along
  * axis 0, Down and Up along axis 1, Back and Front along axis 2.
  */
+TARGET_DECLARE
 struct peano4::sfc::Grammar {
   enum Step : std::uint8_t { Left, Right, Down, Up, Back, Front };
 
-  INLINE_METHOD static constexpr int axisOf(Step step);
-  INLINE_METHOD static constexpr int directionOf(Step step);
+  INLINE_METHOD static constexpr int getAxis(Step step);
+  INLINE_METHOD static constexpr int getDirection(Step step);
 
   template <class NonTerminal, class... Symbols>
   static constexpr peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> production(
@@ -53,5 +55,6 @@ struct peano4::sfc::Production {
   std::array<NonTerminal, NumberOfChildren>                    children{};
   std::array<peano4::sfc::Grammar::Step, NumberOfChildren - 1> steps{};
 };
+TARGET_DECLARE_END
 
 #include "peano4/sfc/Grammar.cpph"

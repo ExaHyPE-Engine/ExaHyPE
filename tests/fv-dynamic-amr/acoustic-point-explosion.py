@@ -78,16 +78,17 @@ flux = """
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
-    NumberOfFiniteVolumesPerAxisPerPatch,
+    ::exahype2::getVolumeCentresInUnitInterval<PatchSize>(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     5.0e-3,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    nullptr,
     [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
     [](const double* const values) {
       double velocitySquared = 0.0;
       for (int d = 0; d < DIMENSIONS; d++) {
-        velocitySquared += values[Shortcuts::u + d] * values[Shortcuts::u + d];
+        const double velocity = values[Shortcuts::u + d];
+        const double square   = velocity * velocity;
+        velocitySquared += square;
       }
       return 1.0 + RHO * WAVE_SPEED * std::sqrt(velocitySquared);
     }

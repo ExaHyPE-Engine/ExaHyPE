@@ -11,30 +11,6 @@ namespace tarch::plotter {
 
 class tarch::plotter::FileWriter {
 public:
-  explicit FileWriter(const std::string& outputDirectory);
-  FileWriter(const FileWriter&)            = delete;
-  FileWriter(FileWriter&&)                 = delete;
-  FileWriter& operator=(const FileWriter&) = delete;
-  FileWriter& operator=(FileWriter&&)      = delete;
-  virtual ~FileWriter()                    = default;
-
-  /**
-   * Claims one piece of the output file and returns its id for the create
-   * calls. Any number of concurrent plot writers can claim pieces; the file
-   * orders them by the caller's key, so the output is deterministic however
-   * the writers are scheduled.
-   */
-  int acquirePiece(int orderKey);
-
-  virtual bool isOpen() const;
-  virtual bool writeToFile(const std::string& filename, const double time) = 0;
-
-  virtual std::string getFileExtension() const = 0;
-
-  static void setDoublePrecisionOutput(const bool value);
-  static bool getDoublePrecisionOutput();
-
-protected:
   /** A plot point's coordinates quantised to the deduplication tolerance. */
   using VertexKey = std::tuple<std::int64_t, std::int64_t, std::int64_t>;
 
@@ -48,6 +24,10 @@ protected:
     std::size_t operator()(const VertexKey& key) const;
   };
 
+  /**
+   * The geometry and the fields of one piece: The points as x, y and z triples, the point
+   * indices of every cell, the end offset of every cell in that list and the cell types.
+   */
   struct SubdomainBuffers {
     std::vector<double>       pointsXYZ{};
     std::vector<std::int32_t> connectivity{};
@@ -104,7 +84,6 @@ protected:
     int                     _components{1};
   };
 
-public:
   enum class VertexMerging { Merged, Distinct };
 
   class VertexPlotter {
@@ -123,11 +102,6 @@ public:
     SubdomainBuffers&   _buffers;
     const VertexMerging _vertexMerging;
   };
-
-  std::unique_ptr<VertexPlotter> createVertexPlotter(
-    int           subdomainId,
-    VertexMerging vertexMerging = VertexMerging::Merged
-  );
 
   class VertexDataPlotter {
   public:
@@ -161,12 +135,6 @@ public:
     DataPlotter _impl;
   };
 
-  std::unique_ptr<VertexDataPlotter> createVertexDataPlotter(
-    const int          subdomainId,
-    const std::string& identifier,
-    const int          recordsPerVertex
-  );
-
   class CellPlotter {
   public:
     CellPlotter(FileWriter& plotter, const int subdomainId);
@@ -191,8 +159,6 @@ public:
     template <int N>
     int plotStandardCell(const int* const vertexIndices, const std::uint8_t vtkType);
   };
-
-  std::unique_ptr<CellPlotter> createCellPlotter(const int subdomainId);
 
   class CellDataPlotter {
   public:
@@ -226,15 +192,20 @@ public:
     DataPlotter _impl;
   };
 
-  std::unique_ptr<CellDataPlotter> createCellDataPlotter(
-    const int          subdomainId,
-    const std::string& identifier,
-    const int          recordsPerCell
-  );
+  explicit FileWriter(const std::string& outputDirectory);
+  FileWriter(const FileWriter&)            = delete;
+  FileWriter(FileWriter&&)                 = delete;
+  FileWriter& operator=(const FileWriter&) = delete;
+  FileWriter& operator=(FileWriter&&)      = delete;
+  virtual ~FileWriter()                    = default;
 
-protected:
-  static void validateIdentifier(const std::string& id);
-  void        createOutputDirectory() const;
+  /**
+   * Claims one piece of the output file and returns its id for the create
+   * calls. Any number of concurrent plot writers can claim pieces; the file
+   * orders them by the caller's key, so the output is deterministic however
+   * the writers are scheduled.
+   */
+  int acquirePiece(int orderKey);
 
   /**
    * Validates the piece id and returns its buffer set, under the acquisition
@@ -242,17 +213,48 @@ protected:
    * deque, and even a growing deque's size and element lookup must not be
    * read unguarded. The returned reference stays valid without the lock.
    */
-  SubdomainBuffers& pieceBuffers(int subdomainId);
+  SubdomainBuffers& getPieceBuffers(int subdomainId);
+
+  std::unique_ptr<VertexPlotter> createVertexPlotter(
+    int           subdomainId,
+    VertexMerging vertexMerging = VertexMerging::Merged
+  );
+
+  std::unique_ptr<VertexDataPlotter> createVertexDataPlotter(
+    const int          subdomainId,
+    const std::string& identifier,
+    const int          recordsPerVertex
+  );
+
+  std::unique_ptr<CellPlotter> createCellPlotter(const int subdomainId);
+
+  std::unique_ptr<CellDataPlotter> createCellDataPlotter(
+    const int          subdomainId,
+    const std::string& identifier,
+    const int          recordsPerCell
+  );
+
+  virtual bool isOpen() const;
+  virtual bool writeToFile(const std::string& filename, const double time) = 0;
+
+  virtual std::string getFileExtension() const = 0;
+
+  static void setDoublePrecisionOutput(const bool value);
+  static bool getDoublePrecisionOutput();
+
+protected:
+  static void validateIdentifier(const std::string& id);
+  void createOutputDirectory() const;
 
   // MPI-IO hints for the parallel writers (collective buffering for the large
   // collective writes).
-  static std::vector<std::pair<std::string, std::string>> mpiIoHints();
-  SubdomainBuffersSequence                                getSubdomainBuffersSequenceForWriting() const;
+  static std::vector<std::pair<std::string, std::string>> getMPIFileHints();
+  SubdomainBuffersSequence getSubdomainBuffersSequenceForWriting() const;
 
   // Field schema from the local reference, no MPI exchange. The parallel writers run
   // their collective I/O on a sub-communicator of the data-holding ranks, so every
   // participant has a non-null reference with the identical field list.
-  static FieldSchema fieldSchemaFromReference(const SubdomainBuffers* const localReference);
+  static FieldSchema getFieldSchema(const SubdomainBuffers* const localReference);
 
   // Classify a field by its source component count into the written width and
   // role every writer uses (see FieldLayout).
@@ -271,10 +273,10 @@ protected:
   // Narrow a double buffer to float for single-precision output.
   static std::vector<float> narrowToFloat(const std::vector<double>& values);
 
-  static bool             hasSchemaOrGeometry(const SubdomainBuffers& buffers);
-  static bool             hasPayload(const SubdomainBuffers& buffers);
+  static bool hasSchemaOrGeometry(const SubdomainBuffers& buffers);
+  static bool hasPayload(const SubdomainBuffers& buffers);
   const SubdomainBuffers* findReferenceSubdomain() const;
-  void                    validateSubdomainsForWriting(const SubdomainBuffers& reference) const;
+  void validateSubdomainsForWriting(const SubdomainBuffers& reference) const;
 
   std::string _outputDirectory;
   bool        _written = false;

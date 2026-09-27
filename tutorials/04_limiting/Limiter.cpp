@@ -25,7 +25,8 @@ namespace {
   }
 } // namespace
 
-bool tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
+bool
+tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                  Q,
   const int                                    numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
@@ -57,7 +58,8 @@ bool tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
   return true;
 }
 
-void tutorials::exahype2::limiting::ADERDGSolver::mapDmpObservables(
+void
+tutorials::exahype2::limiting::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
 ) {

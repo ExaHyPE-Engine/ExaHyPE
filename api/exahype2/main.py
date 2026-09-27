@@ -6,29 +6,14 @@ import exahype2.codegen
 
 
 class Main:
-    """Writes ``<project>-main.{h,cpp}``."""
+    """Writes ``<project>-main.{h,cpp}``: The main function, which hands the domain and the
+    repository callbacks to the runner."""
 
     def __init__(self, project):
         self.project = project
         self.template_dictionary = {}
 
-    def _step_dictionaries(self):
-        """Every step carries the C++ hooks the runner calls before and after its traversal."""
-        result = []
-        for step in self.project.solversteps._steps:
-            result.append(
-                {
-                    "name": step.name,
-                    "start_hooks": getattr(step, "runner_start_hook", "").splitlines(),
-                    "finish_hooks": getattr(
-                        step, "runner_finish_hook", ""
-                    ).splitlines(),
-                }
-            )
-        return result
-
     def _configure_template_dictionary(self):
-        self.template_dictionary["MAIN_STEPS"] = self._step_dictionaries()
         self.template_dictionary["DOMAIN_OFFSET"] = (
             self.project.domain_offset_initialiser
         )

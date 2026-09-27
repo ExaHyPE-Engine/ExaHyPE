@@ -6,7 +6,7 @@
 #include "tarch/mpi/Rank.h"
 
 namespace {
-  std::string testFileBaseName(const std::string& name) {
+  std::string getTestFileBaseName(const std::string& name) {
     return (tarch::tests::getWritableTestDirectory() / name).string();
   }
 
@@ -34,21 +34,26 @@ namespace {
 } // namespace
 
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::GlobalTimeSeriesDatabaseTest() :
-  TestCase("tarch::database::tests::GlobalTimeSeriesDatabaseTest") {}
+  tarch::tests::TestCase("tarch::database::tests::GlobalTimeSeriesDatabaseTest") {}
 
-void tarch::database::tests::GlobalTimeSeriesDatabaseTest::run() {
+void
+tarch::database::tests::GlobalTimeSeriesDatabaseTest::run() {
   // Only the global master writes the reduced global database, so a parallel run
-  // exercises it on that one rank and never has several ranks share a file.
+  // exercises it on that one rank and no two ranks write the same file.
   if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     return;
   }
   testMethod(testAppendsChronologicallyWithoutDuplication);
   testMethod(testClearRewritesFileFromScratch);
   testMethod(testTimeDeltaThrottlesSnapshots);
+  testMethod(testASnapshotIsDueForTheNewestTimeStampAndAfterTheTimeDelta);
+  testMethod(testADatabaseWithoutFileNameWritesNoFile);
 }
 
-void tarch::database::tests::GlobalTimeSeriesDatabaseTest::testAppendsChronologicallyWithoutDuplication() {
-  const std::string baseName = testFileBaseName("GlobalTimeSeriesDatabaseTest_append");
+/** Every added snapshot reaches the file once and in the order of its time stamps. */
+void
+tarch::database::tests::GlobalTimeSeriesDatabaseTest::testAppendsChronologicallyWithoutDuplication() {
+  const std::string baseName = getTestFileBaseName("GlobalTimeSeriesDatabaseTest_append");
   const std::string fileName = baseName + ".csv";
   std::filesystem::remove(fileName);
 
@@ -56,7 +61,7 @@ void tarch::database::tests::GlobalTimeSeriesDatabaseTest::testAppendsChronologi
     tarch::database::GlobalTimeSeriesDatabase database;
     database.setOutputFileName(baseName);
     for (int step = 1; step <= 4; step++) {
-      double data[2] = {10.0 * step, 20.0 * step};
+      const double data[2] = {10.0 * step, 20.0 * step};
       database.addGlobalSnapshot(static_cast<double>(step), 2, data);
     }
   }
@@ -75,8 +80,10 @@ void tarch::database::tests::GlobalTimeSeriesDatabaseTest::testAppendsChronologi
   std::filesystem::remove(fileName);
 }
 
-void tarch::database::tests::GlobalTimeSeriesDatabaseTest::testClearRewritesFileFromScratch() {
-  const std::string baseName = testFileBaseName("GlobalTimeSeriesDatabaseTest_clear");
+/** A cleared database rewrites its file with the snapshots added after the clear only. */
+void
+tarch::database::tests::GlobalTimeSeriesDatabaseTest::testClearRewritesFileFromScratch() {
+  const std::string baseName = getTestFileBaseName("GlobalTimeSeriesDatabaseTest_clear");
   const std::string fileName = baseName + ".csv";
   std::filesystem::remove(fileName);
 
@@ -84,14 +91,14 @@ void tarch::database::tests::GlobalTimeSeriesDatabaseTest::testClearRewritesFile
     tarch::database::GlobalTimeSeriesDatabase database;
     database.setOutputFileName(baseName);
 
-    double firstData[1] = {1.0};
+    const double firstData[1] = {1.0};
     database.addGlobalSnapshot(1.0, 1, firstData);
     database.addGlobalSnapshot(2.0, 1, firstData);
     validateEqualsWithParams1(static_cast<int>(readNonEmptyLines(fileName).size()), 3, fileName);
 
     database.clear();
 
-    double secondData[1] = {5.0};
+    const double secondData[1] = {5.0};
     database.addGlobalSnapshot(3.0, 1, secondData);
 
     const std::vector<std::string> lines = readNonEmptyLines(fileName);
@@ -106,8 +113,10 @@ void tarch::database::tests::GlobalTimeSeriesDatabaseTest::testClearRewritesFile
   std::filesystem::remove(fileName);
 }
 
-void tarch::database::tests::GlobalTimeSeriesDatabaseTest::testTimeDeltaThrottlesSnapshots() {
-  const std::string baseName = testFileBaseName("GlobalTimeSeriesDatabaseTest_throttle");
+/** A snapshot within the time delta of the newest one does not reach the file. */
+void
+tarch::database::tests::GlobalTimeSeriesDatabaseTest::testTimeDeltaThrottlesSnapshots() {
+  const std::string baseName = getTestFileBaseName("GlobalTimeSeriesDatabaseTest_throttle");
   const std::string fileName = baseName + ".csv";
   std::filesystem::remove(fileName);
 
@@ -116,7 +125,7 @@ void tarch::database::tests::GlobalTimeSeriesDatabaseTest::testTimeDeltaThrottle
     database.setOutputFileName(baseName);
     database.setTimeDeltaBetweenTwoSnapshots(1.0);
 
-    double data[1] = {0.0};
+    const double data[1] = {0.0};
     database.addGlobalSnapshot(0.5, 1, data);
     database.addGlobalSnapshot(0.9, 1, data);
     database.addGlobalSnapshot(1.6, 1, data);
@@ -129,4 +138,33 @@ void tarch::database::tests::GlobalTimeSeriesDatabaseTest::testTimeDeltaThrottle
     }
   }
   std::filesystem::remove(fileName);
+}
+
+/** A snapshot is due for an empty database, for the newest time stamp and one time delta after it. */
+void
+tarch::database::tests::GlobalTimeSeriesDatabaseTest::testASnapshotIsDueForTheNewestTimeStampAndAfterTheTimeDelta() {
+  tarch::database::GlobalTimeSeriesDatabase database;
+  database.setTimeDeltaBetweenTwoSnapshots(1.0);
+  validateEquals(database.isSnapshotDue(0.5), true);
+
+  const double data[1] = {0.0};
+  database.addGlobalSnapshot(0.5, 1, data);
+  validateEquals(database.isSnapshotDue(0.5), true);
+  validateEquals(database.isSnapshotDue(0.9), false);
+  validateEquals(database.isSnapshotDue(1.5), true);
+}
+
+/** A database without an output file name keeps its snapshots and creates no file. */
+void
+tarch::database::tests::GlobalTimeSeriesDatabaseTest::testADatabaseWithoutFileNameWritesNoFile() {
+  const std::string fileNameOfAnEmptyBaseName = ".csv";
+  std::filesystem::remove(fileNameOfAnEmptyBaseName);
+
+  tarch::database::GlobalTimeSeriesDatabase database;
+  database.setTimeDeltaBetweenTwoSnapshots(1.0);
+  const double data[1] = {2.0};
+  database.addGlobalSnapshot(0.5, 1, data);
+
+  validateEquals(std::filesystem::exists(fileNameOfAnEmptyBaseName), false);
+  validateEquals(database.isSnapshotDue(0.9), false);
 }

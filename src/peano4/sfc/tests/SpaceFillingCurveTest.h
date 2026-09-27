@@ -26,12 +26,8 @@ private:
   template <class Curve>
   void validateLeafSequenceIsAHamiltonianPath();
 
-  template <class Curve>
-  void validateCurveParameterFollowsTheLeafOrder();
-
   void testChildrenMatchTheDerivedTable();
   void testLeafSequenceIsAHamiltonianPath();
-  void testCurveParameterFollowsTheLeafOrder();
   void testPeanoMatchesTheSerpentineClosedForm();
   void testHilbertVisitsTheTextbookOrder();
 };

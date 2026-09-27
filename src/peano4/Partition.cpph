@@ -1,0 +1,262 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::Partition::getNumberOfSlots() const noexcept {
+  return _numberOfSlots;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::Partition::getNumberOfFaces() const noexcept {
+  return _numberOfFaces;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::Partition::getMinimumLevel() const noexcept {
+  return _minimumLevel;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::Partition::getMaximumLevel() const noexcept {
+  return _maximumLevel;
+}
+
+INLINE_METHOD int
+peano4::Partition::getRangeIndexOfLevel(const Dependence dependence, const int level) const noexcept {
+  assertion(level >= 0 and level <= _maximumLevel + 1, level, _maximumLevel);
+  return static_cast<int>(dependence) * (_maximumLevel + 2) + level;
+}
+
+INLINE_METHOD int
+peano4::Partition::getRangeIndexOfKind(const Dependence dependence, const FaceKind kind) const noexcept {
+  return static_cast<int>(dependence) * (peano4::NumberOfFaceKinds + 1) + static_cast<int>(kind);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::Span<const int>
+peano4::Partition::getCells() const noexcept {
+  return {_cells, _numberOfCells};
+}
+
+INLINE_METHOD tarch::Span<const int>
+peano4::Partition::getCells(const Dependence dependence) const noexcept {
+  if (_numberOfCells == 0) {
+    return {};
+  }
+  const int first = _cellRanges[getRangeIndexOfLevel(dependence, 0)];
+  const int end   = _cellRanges[getRangeIndexOfLevel(dependence, _maximumLevel + 1)];
+  return {_cells + first, end - first};
+}
+
+/** Returns the cells of the level with the dependence; a level the partition holds no cell of gives an empty span. */
+INLINE_METHOD tarch::Span<const int>
+peano4::Partition::getCells(const Dependence dependence, const int level) const noexcept {
+  assertion(level >= 0, level);
+  if (_numberOfCells == 0 or level > _maximumLevel) {
+    return {};
+  }
+  const int first = _cellRanges[getRangeIndexOfLevel(dependence, level)];
+  const int end   = _cellRanges[getRangeIndexOfLevel(dependence, level + 1)];
+  return {_cells + first, end - first};
+}
+
+INLINE_METHOD tarch::Span<const int>
+peano4::Partition::getFaces(const Dependence dependence, const FaceKind kind) const noexcept {
+  return getFaces(dependence, kind, kind);
+}
+
+/** Returns the faces with the dependence whose kind lies between firstKind and lastKind in the order of FaceKind. */
+INLINE_METHOD tarch::Span<const int>
+peano4::Partition::getFaces(
+  const Dependence dependence,
+  const FaceKind   firstKind,
+  const FaceKind   lastKind
+) const noexcept {
+  assertion(
+    static_cast<int>(firstKind) <= static_cast<int>(lastKind),
+    static_cast<int>(firstKind),
+    static_cast<int>(lastKind)
+  );
+  if (_numberOfFaces == 0) {
+    return {};
+  }
+  const int first = _faceRanges[getRangeIndexOfKind(dependence, firstKind)];
+  const int end   = _faceRanges[getRangeIndexOfKind(dependence, lastKind) + 1];
+  return {_faces + first, end - first};
+}
+
+INLINE_METHOD tarch::Span<const peano4::LevelJump>
+peano4::Partition::getLevelJumps(const Dependence dependence) const noexcept {
+  if (_numberOfLevelJumps == 0) {
+    return {};
+  }
+  const int first = _levelJumpRanges[getRangeIndexOfLevel(dependence, 0)];
+  const int end   = _levelJumpRanges[getRangeIndexOfLevel(dependence, _maximumLevel + 1)];
+  return {_levelJumps + first, end - first};
+}
+
+/** Returns the level jumps whose coarse face lies on the level; the fine faces lie one level below. */
+INLINE_METHOD tarch::Span<const peano4::LevelJump>
+peano4::Partition::getLevelJumps(const Dependence dependence, const int level) const noexcept {
+  assertion(level >= 0, level);
+  if (_numberOfLevelJumps == 0 or level > _maximumLevel) {
+    return {};
+  }
+  const int first = _levelJumpRanges[getRangeIndexOfLevel(dependence, level)];
+  const int end   = _levelJumpRanges[getRangeIndexOfLevel(dependence, level + 1)];
+  return {_levelJumps + first, end - first};
+}
+
+INLINE_METHOD tarch::Span<const peano4::Neighbour>
+peano4::Partition::getNeighbours() const noexcept {
+  return {_neighbours, _numberOfNeighbours};
+}
+
+INLINE_METHOD tarch::Span<const peano4::ExchangedFace>
+peano4::Partition::getExchangedFaces(const Neighbour& neighbour) const noexcept {
+  return {_exchangedFaces + neighbour.firstFace, neighbour.numberOfFaces};
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::Partition::getCellLevel(const int cell) const noexcept {
+  assertion(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  return _cellLevel[cell];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int>
+peano4::Partition::getCellLattice(const int cell) const noexcept {
+  assertion(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  tarch::la::Vector<DIMENSIONS, int> result(0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = _cellLattice[cell * DIMENSIONS + axis];
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::Partition::getCellCentre(const int cell, const int axis) const noexcept {
+  assertion(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  return _domainOffset[axis]
+    + (static_cast<double>(_cellLattice[cell * DIMENSIONS + axis]) + 0.5) * getCellWidth(cell, axis);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::Partition::getCellCentre(const int cell) const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = getCellCentre(cell, axis);
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::Partition::getCellWidth(const int cell, const int axis) const noexcept {
+  return getWidthOfLevel(getCellLevel(cell), axis);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::Partition::getCellWidth(const int cell) const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = getCellWidth(cell, axis);
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::Partition::getCellFace(const int cell, const int faceNumber) const noexcept {
+  assertion(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  assertion(faceNumber >= 0 and faceNumber < peano4::FacesPerCell, faceNumber);
+  return _facesOfCell[cell * peano4::FacesPerCell + faceNumber];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD peano4::FaceKind
+peano4::Partition::getFaceKind(const int face) const noexcept {
+  assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  return _faceKind[face];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::Partition::getFaceNormal(const int face) const noexcept {
+  assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  return _faceNormal[face];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::Partition::getFaceLevel(const int face) const noexcept {
+  assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  return _faceLevel[face];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int>
+peano4::Partition::getFaceLattice(const int face) const noexcept {
+  assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  tarch::la::Vector<DIMENSIONS, int> result(0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = _faceLattice[face * DIMENSIONS + axis];
+  }
+  return result;
+}
+
+/** A face sits at the lower border of its lattice cell along its normal and at the centre along every other axis. */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::Partition::getFaceCentre(const int face, const int axis) const noexcept {
+  assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  const double shift = axis == _faceNormal[face] ? 0.0 : 0.5;
+  return _domainOffset[axis]
+    + (static_cast<double>(_faceLattice[face * DIMENSIONS + axis]) + shift) * getFaceWidth(face, axis);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::Partition::getFaceCentre(const int face) const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = getFaceCentre(face, axis);
+  }
+  return result;
+}
+
+/** Returns the width of the cells of the face's level; the face spans one such cell along every axis but its normal. */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::Partition::getFaceWidth(const int face, const int axis) const noexcept {
+  return getWidthOfLevel(getFaceLevel(face), axis);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::Partition::getFaceWidth(const int face) const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = getFaceWidth(face, axis);
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::Partition::getFaceCell(const int face, const int side) const noexcept {
+  assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  assertion(side == 0 or side == 1, side);
+  return _cellsOfFace[face * 2 + side];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::Partition::getWidthOfLevel(const int level, const int axis) const noexcept {
+  assertion(level >= 0 and level <= _maximumLevel, level, _maximumLevel);
+  assertion(axis >= 0 and axis < DIMENSIONS, axis);
+  return _widthOfLevel[level * DIMENSIONS + axis];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::Partition::getDomainOffset() const noexcept {
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = _domainOffset[axis];
+  }
+  return result;
+}
+
+/** Returns the partition whose arrays a kernel reads; a build without a GPU backend returns this one. */
+INLINE_METHOD const peano4::Partition&
+peano4::Partition::onDevice() const noexcept {
+  return _deviceTwin == nullptr ? *this : *_deviceTwin;
+}

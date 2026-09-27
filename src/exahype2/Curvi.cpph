@@ -10,7 +10,8 @@ exahype2::Curvi::Curvi(const Point& domainOffset, const Point& domainSize, const
 /**
  * Pins the interface to the cell boundary closest to position.
  */
-INLINE_METHOD double exahype2::Curvi::split(int normal, double position, Perturbation perturbation) {
+INLINE_METHOD double
+exahype2::Curvi::split(int normal, double position, Perturbation perturbation) {
   const int splitIndex = static_cast<int>(std::round((position - _domainOffset[normal]) / _minCellSize[normal]));
   return split(normal, splitIndex, position, std::move(perturbation));
 }
@@ -18,11 +19,15 @@ INLINE_METHOD double exahype2::Curvi::split(int normal, double position, Perturb
 /**
  * @return The curvilinear position of the cartesian point x.
  */
-INLINE_METHOD exahype2::Curvi::Point exahype2::Curvi::operator()(const Point& x) const { return _positionFunction(x); }
+INLINE_METHOD exahype2::Curvi::Point
+exahype2::Curvi::operator()(const Point& x) const {
+  return _positionFunction(x);
+}
 
 /**
  * @return The cartesian point which operator() maps onto the curvilinear point x.
  */
-INLINE_METHOD exahype2::Curvi::Point exahype2::Curvi::invertProjection(const Point& x) const {
+INLINE_METHOD exahype2::Curvi::Point
+exahype2::Curvi::invertProjection(const Point& x) const {
   return _inversePositionFunction(x);
 }

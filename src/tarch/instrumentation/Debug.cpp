@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Debug.h"
 
-void tarch::instrumentation::Log::debugWithScopeName(
+void
+tarch::instrumentation::Log::debugWithScopeName(
   [[maybe_unused]] std::string_view scopeName,
   [[maybe_unused]] std::string_view message
 ) {

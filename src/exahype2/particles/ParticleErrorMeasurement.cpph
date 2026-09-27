@@ -1,0 +1,41 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+/**
+ * Records the norms of the position errors of the particles against the analytical solution of
+ * SolverType at timeStamp and returns them; every rank calls it once a snapshot of measurement is
+ * due. The analytical solution receives the host copy of the particle, the time stamp, the time
+ * step size and a buffer of DIMENSIONS plus NumberOfData entries whose first DIMENSIONS entries
+ * are the exact position.
+ */
+template <typename SolverType, int NumberOfData>
+INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
+exahype2::particles::measurePositionErrors(
+  ParticleSet<NumberOfData>& particles,
+  const double               timeStamp,
+  const double               timeStepSize,
+  ErrorMeasurement&          measurement
+) {
+  assertion(measurement.isSnapshotDue(timeStamp), timeStamp);
+  constexpr int  NumberOfNorms   = ErrorMeasurement::NumberOfNorms;
+  constexpr auto PositionEntries = []() {
+    std::array<int, DIMENSIONS> entries{};
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      entries[static_cast<std::size_t>(axis)] = axis;
+    }
+    return entries;
+  }();
+  particles.download();
+  ErrorSums sums;
+  for (int index = 0; index < particles.getSize(); index++) {
+    const Particle particle = particles.getParticle(index);
+    double         solution[DIMENSIONS + NumberOfData]{};
+    SolverType::analyticalSolution(&particle, timeStamp, timeStepSize, solution);
+    double errors[NumberOfNorms]{0.0, 0.0, 0.0};
+    accumulateError(PositionEntries, particle.values, solution, 1.0, errors);
+    sums.add(errors);
+  }
+  return measurement.record(sums, timeStamp);
+}

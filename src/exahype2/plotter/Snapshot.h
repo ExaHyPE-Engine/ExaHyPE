@@ -2,9 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/Assertions.h"
-#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/plotter/FileWriter.h"
+#include "tarch/plotter/Format.h"
 #include "tarch/plotter/TimeSeriesWriter.h"
 
 namespace exahype2::plotter {
@@ -12,7 +11,8 @@ namespace exahype2::plotter {
 } // namespace exahype2::plotter
 
 /**
- * Holds the writers of one plot series.
+ * Holds the writers of one plot series: One file writer per snapshot and one time series
+ * writer for the whole series.
  */
 class exahype2::plotter::Snapshot final {
 public:
@@ -23,8 +23,7 @@ public:
   Snapshot& operator=(Snapshot&&)      = delete;
   ~Snapshot()                          = default;
 
-  template <typename FileWriterType, typename TimeSeriesWriterType>
-  INLINE_METHOD void openFile(const std::string& outputDirectory, double timeStamp);
+  void openFile(tarch::plotter::Format format, const std::string& outputDirectory, double timeStamp);
 
   void writeFile(const std::string& outputDirectory, const std::string& filename);
 
@@ -35,5 +34,3 @@ private:
   std::unique_ptr<tarch::plotter::FileWriter>       _fileWriter{};
   std::unique_ptr<tarch::plotter::TimeSeriesWriter> _timeSeriesWriter{};
 };
-
-#include "exahype2/plotter/Snapshot.cpph"

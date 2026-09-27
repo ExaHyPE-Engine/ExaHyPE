@@ -19,7 +19,7 @@ def _positive_finite(value, name):
 class Fixed:
     """The time step size follows the smallest mesh width, scaled by the given factor."""
 
-    cpp = "::exahype2::FixedTimeStepping"
+    rule = "Fixed"
     adaptive = False
 
     def __init__(self, normalised_time_step_size):
@@ -34,7 +34,7 @@ class Fixed:
 class Adaptive:
     """The time step size follows the CFL condition, relaxed by the given factor."""
 
-    cpp = "::exahype2::AdaptiveTimeStepping"
+    rule = "Adaptive"
     adaptive = True
 
     def __init__(self, relaxation):

@@ -3,33 +3,33 @@
 
 /** The granular layer counts as submerged once a resolved water column covers it. */
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::coupled::isSlideSubmerged(
-  const T* const NOALIAS Q,
-  const double           minimumWaterHeight
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::coupled::isSlideSubmerged(const T* const NOALIAS Q, const double minimumWaterHeight) {
   return std::isfinite(static_cast<double>(Q[Shortcuts::h])) and Q[Shortcuts::h] > static_cast<T>(minimumWaterHeight);
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::coupled::slideGravity(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::coupled::getSlideGravity(
   const T* const NOALIAS                                      Q,
   const applications::exahype2::exaskred::landslide::Physics& physics,
   const double                                                minimumWaterHeight
 ) {
   return isSlideSubmerged<Shortcuts>(Q, minimumWaterHeight)
-    ? applications::exahype2::exaskred::landslide::submergedGravity(physics)
+    ? applications::exahype2::exaskred::landslide::getSubmergedGravity(physics)
     : physics.gravity;
 }
 
 /**
  * Copies a state and zeroes each layer that is dry or nonfinite.
  *
- * The layers dry independently: a slide running over dry land keeps its flow
+ * The layers dry independently: A slide running over dry land keeps its flow
  * while the water above it is zeroed, and a water column keeps flowing where
  * the granular layer has drained away.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled::sanitiseDryLayers(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::coupled::sanitiseDryLayers(
   const T* const NOALIAS                                      QIn,
   T* const NOALIAS                                            QOut,
   const applications::exahype2::exaskred::landslide::Physics& physics,
@@ -57,10 +57,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled::gatherWaterView(
-  const T* const NOALIAS Q,
-  T* const NOALIAS       view
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::coupled::gatherWaterView(const T* const NOALIAS Q, T* const NOALIAS view) {
   view[WaterView::h]  = Q[Shortcuts::h];
   view[WaterView::hu] = Q[Shortcuts::hu];
   view[WaterView::hv] = Q[Shortcuts::hu + 1];
@@ -68,15 +66,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled::gatherSlideView(
-  const T* const NOALIAS Q,
-  T* const NOALIAS       view
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::coupled::gatherSlideView(const T* const NOALIAS Q, T* const NOALIAS view) {
   view[SlideView::h]          = Q[Shortcuts::lsh];
   view[SlideView::hu]         = Q[Shortcuts::lshu];
   view[SlideView::hv]         = Q[Shortcuts::lshu + 1];
   view[SlideView::z]          = Q[Shortcuts::z];
-  view[SlideView::waterDepth] = Q[Shortcuts::h];
+  view[SlideView::WaterDepth] = Q[Shortcuts::h];
 }
 
 /**
@@ -87,7 +83,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
  * formulation its standalone scenarios validate.
  */
 template <class Shortcuts, int NumberOfUnknowns, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled::flux(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::coupled::flux(
   const T* const NOALIAS                                      Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
@@ -118,7 +115,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
     dt,
     normal,
     physics,
-    slideGravity<Shortcuts>(Q, physics, minimumWaterHeight),
+    getSlideGravity<Shortcuts>(Q, physics, minimumWaterHeight),
     slideFlux
   );
   F[Shortcuts::lsh]      = slideFlux[Shortcuts::lsh];
@@ -127,7 +124,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::coupled::maxEigenvalue(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::coupled::maxEigenvalue(
   const T* const NOALIAS                                      Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
@@ -139,20 +137,29 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::coupl
   const double                                                sourceEigenvalueScaling
 ) {
   const double waterSpeed =
-    static_cast<double>(applications::exahype2::exaskred::shallowwater::maxEigenvalue<
-                        Shortcuts>(Q, x, h, t, dt, normal, physics.gravity, minimumWaterHeight));
-  const double slideSpeed = applications::exahype2::exaskred::landslide::effectiveMaxEigenvalue<SlideLayer<Shortcuts>>(
-    Q,
-    x,
-    h,
-    t,
-    dt,
-    normal,
-    physics,
-    slideGravity<Shortcuts>(Q, physics, minimumWaterHeight),
-    isSlideSubmerged<Shortcuts>(Q, minimumWaterHeight),
-    sourceEigenvalueScaling
-  );
+    static_cast<double>(applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+      Q,
+      x,
+      h,
+      t,
+      dt,
+      normal,
+      physics.gravity,
+      minimumWaterHeight
+    ));
+  const double slideSpeed =
+    applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue<SlideLayer<Shortcuts>>(
+      Q,
+      x,
+      h,
+      t,
+      dt,
+      normal,
+      physics,
+      getSlideGravity<Shortcuts>(Q, physics, minimumWaterHeight),
+      isSlideSubmerged<Shortcuts>(Q, minimumWaterHeight),
+      sourceEigenvalueScaling
+    );
   return std::fmax(waterSpeed, slideSpeed);
 }
 
@@ -165,7 +172,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::coupl
  * granular layer feels the terrain slope under its buoyancy-reduced gravity.
  */
 template <class Shortcuts, int NumberOfUnknowns, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled::nonconservativeProduct(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::coupled::nonconservativeProduct(
   const T* const NOALIAS                                      Q,
   const T* const NOALIAS                                      deltaQ,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
@@ -201,14 +209,15 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
     dt,
     normal,
     physics,
-    slideGravity<Shortcuts>(Q, physics, minimumWaterHeight),
+    getSlideGravity<Shortcuts>(Q, physics, minimumWaterHeight),
     slideProduct
   );
   BTimesDeltaQ[Shortcuts::lshu + normal] = slideProduct[Shortcuts::lshu + normal];
 }
 
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled::diffusiveSourceTerm(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::coupled::diffusiveSourceTerm(
   const T* const NOALIAS                                      Q,
   const T* const NOALIAS                                      deltaQ,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
@@ -219,31 +228,34 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
   const double                                                minimumWaterHeight,
   T* const NOALIAS                                            S
 ) {
-  applications::exahype2::exaskred::landslide::
-    diffusiveSourceTerm<SlideLayer<Shortcuts>, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-      Q,
-      deltaQ,
-      x,
-      h,
-      t,
-      dt,
-      physics,
-      slideGravity<Shortcuts>(Q, physics, minimumWaterHeight),
-      isSlideSubmerged<Shortcuts>(Q, minimumWaterHeight),
-      S
-    );
+  applications::exahype2::exaskred::landslide::diffusiveSourceTerm<
+    SlideLayer<Shortcuts>,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(Q,
+    deltaQ,
+    x,
+    h,
+    t,
+    dt,
+    physics,
+    getSlideGravity<Shortcuts>(Q, physics, minimumWaterHeight),
+    isSlideSubmerged<Shortcuts>(Q, minimumWaterHeight),
+    S);
 }
 
 /**
  * Solves the nodal Riemann problems of one Galerkin face layer by layer.
  *
- * Each layer runs the well-balanced Rusanov solver on its own view: the water
+ * Each layer runs the well-balanced Rusanov solver on its own view: The water
  * over the effective bathymetry with constant gravity, the granular layer
  * over the terrain with buoyancy decided by the water column both sides
  * carry. Dry layers are sanitised first, and the terrain receives no flux.
+ * Returns the larger maximal wave speed of the two layers.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, int Order, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled::riemannSolver(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::coupled::solveRiemannProblem(
   const T* const NOALIAS                                      QL,
   const T* const NOALIAS                                      QR,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
@@ -307,27 +319,28 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
                                  const double                                 timeStepSize,
                                  const int                                    direction
                                ) {
-    return applications::exahype2::exaskred::shallowwater::maxEigenvalue<
-      WaterView>(Q, facePosition, faceSize, time, timeStepSize, direction, physics.gravity, minimumWaterHeight);
+    return applications::exahype2::exaskred::shallowwater::maxEigenvalue<WaterView>(
+      Q,
+      facePosition,
+      faceSize,
+      time,
+      timeStepSize,
+      direction,
+      physics.gravity,
+      minimumWaterHeight
+    );
   };
   const auto waterGravity =
     [&physics]([[maybe_unused]] const T* const NOALIAS QLeft, [[maybe_unused]] const T* const NOALIAS QRight) {
       return physics.gravity;
     };
-  applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<WaterView, WaterView::b, LayerUnknowns, WaterView::Size - LayerUnknowns, Order>(
-      waterViewL,
-      waterViewR,
-      x,
-      h,
-      t,
-      dt,
-      normal,
-      waterEigenvalue,
-      waterGravity,
-      waterFluxL,
-      waterFluxR
-    );
+  const double waterWaveSpeed = applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+    WaterView,
+    WaterView::b,
+    LayerUnknowns,
+    WaterView::Size - LayerUnknowns,
+    Order
+  >(waterViewL, waterViewR, x, h, t, dt, normal, waterEigenvalue, waterGravity, waterFluxL, waterFluxR);
 
   const auto slideEigenvalue = [minimumWaterHeight, &physics](
                                  const T* const NOALIAS                       Q,
@@ -337,32 +350,33 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
                                  const double                                 timeStepSize,
                                  const int                                    direction
                                ) {
-    const double gravity = Q[SlideView::waterDepth] > static_cast<T>(minimumWaterHeight)
-      ? applications::exahype2::exaskred::landslide::submergedGravity(physics)
+    const double gravity = Q[SlideView::WaterDepth] > static_cast<T>(minimumWaterHeight)
+      ? applications::exahype2::exaskred::landslide::getSubmergedGravity(physics)
       : physics.gravity;
-    return applications::exahype2::exaskred::landslide::fluxEigenvalue<
-      SlideView>(Q, facePosition, faceSize, time, timeStepSize, direction, physics, gravity);
+    return applications::exahype2::exaskred::landslide::getFluxEigenvalue<SlideView>(
+      Q,
+      facePosition,
+      faceSize,
+      time,
+      timeStepSize,
+      direction,
+      physics,
+      gravity
+    );
   };
   const auto slideGravityAtFace = [minimumWaterHeight,
                                    &physics](const T* const NOALIAS QLeft, const T* const NOALIAS QRight) {
-    const bool bothSubmerged = QLeft[SlideView::waterDepth] > static_cast<T>(minimumWaterHeight)
-      and QRight[SlideView::waterDepth] > static_cast<T>(minimumWaterHeight);
-    return bothSubmerged ? applications::exahype2::exaskred::landslide::submergedGravity(physics) : physics.gravity;
+    const bool bothSubmerged = QLeft[SlideView::WaterDepth] > static_cast<T>(minimumWaterHeight)
+      and QRight[SlideView::WaterDepth] > static_cast<T>(minimumWaterHeight);
+    return bothSubmerged ? applications::exahype2::exaskred::landslide::getSubmergedGravity(physics) : physics.gravity;
   };
-  applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<SlideView, SlideView::z, LayerUnknowns, SlideView::Size - LayerUnknowns, Order>(
-      slideViewL,
-      slideViewR,
-      x,
-      h,
-      t,
-      dt,
-      normal,
-      slideEigenvalue,
-      slideGravityAtFace,
-      slideFluxL,
-      slideFluxR
-    );
+  const double slideWaveSpeed = applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+    SlideView,
+    SlideView::z,
+    LayerUnknowns,
+    SlideView::Size - LayerUnknowns,
+    Order
+  >(slideViewL, slideViewR, x, h, t, dt, normal, slideEigenvalue, slideGravityAtFace, slideFluxL, slideFluxR);
 
   for (int node = 0; node < NumberOfFaceNodes; node++) {
     T* const nodeFL = FL + node * NumberOfUnknowns;
@@ -376,6 +390,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
     nodeFL[Shortcuts::z] = T{};
     nodeFR[Shortcuts::z] = T{};
   }
+  return std::fmax(waterWaveSpeed, slideWaveSpeed);
 }
 
 /**
@@ -383,7 +398,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
  * solver, mirroring the face treatment of the Galerkin scheme.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::coupled::solveRiemannProblem(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::coupled::solveSubcellRiemannProblem(
   const T* const NOALIAS                                      QL,
   const T* const NOALIAS                                      QR,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
@@ -442,10 +458,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::coupl
     waterFluxR
   );
 
-  const bool bothSubmerged = slideViewL[SlideView::waterDepth] > static_cast<T>(minimumWaterHeight)
-    and slideViewR[SlideView::waterDepth] > static_cast<T>(minimumWaterHeight);
+  const bool bothSubmerged = slideViewL[SlideView::WaterDepth] > static_cast<T>(minimumWaterHeight)
+    and slideViewR[SlideView::WaterDepth] > static_cast<T>(minimumWaterHeight);
   const double faceSlideGravity =
-    bothSubmerged ? applications::exahype2::exaskred::landslide::submergedGravity(physics) : physics.gravity;
+    bothSubmerged ? applications::exahype2::exaskred::landslide::getSubmergedGravity(physics) : physics.gravity;
   const auto slideWaveSpeed = applications::exahype2::exaskred::riemann::augmentedState<SlideView, SlideView::z, false>(
     slideViewL,
     slideViewR,

@@ -260,25 +260,25 @@ C++ core
 --------
 
 -   **Where is the information whether a point or face is at the
-    boundary or not?** Peano does not provide any such feature. Many codes for
-    example use the grid to represent complicated domains, and thus
-    would need such a feature anyway. So what you have to do is to add a
-    bool to each vertex/face and set this boolean yourself.
+    boundary or not?** `peano4::Partition::getFaceKind()` returns
+    `peano4::FaceKind::Boundary` for a face on a non-periodic domain
+    boundary. A solver supplies its own geometry predicate for an embedded
+    boundary inside the Cartesian domain.
 
 
 Parallelisation
 ---------------
 
--   **Why does adaptive refinement need several sweeps?** A refinement
+-   **Why does adaptive refinement need several regrids?** A refinement
     request names a cell that already exists and can expose one additional
     level. The next criterion evaluation can then request cells on that new
-    level. A regrid also uses a transition sweep to create and destroy entities
-    while it migrates persistent data into the target rank ownership.
+    level. Each regrid rebuilds the tree and the partition, then transfers
+    the solution through `peano4::Regrid` into the target rank ownership.
 
 -   **Why can the rank partition remain imbalanced?** Peano assigns complete
-    spawn-level blocks, or the children of a heavy block, using leaf-cell
+    spawn-level blocks, or the children of a heavy block, using cell
     weights. An indivisible heavy unit limits the attainable balance, and
-    equal leaf weights do not represent solver-specific work such as limiters
+    equal cell weights do not represent solver-specific work such as limiters
     or particle interactions.
 
 -   **Where is the load-balancer configuration?** Rank partitioning is part of

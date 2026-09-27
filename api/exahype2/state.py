@@ -8,7 +8,7 @@ import exahype2.codegen
 class State:
     """Counts the unknowns and auxiliary variables of a solver and names their positions.
 
-    Named variables reach the generated code as the constants of ``VariableShortcuts<Name>``,
+    Named variables reach the generated code as the constants of ``<Name>VariableShortcuts``,
     which the solver exposes as ``Shortcuts``.
     """
 
@@ -121,7 +121,7 @@ class State:
         return result
 
     def generate_shortcuts(self, dictionary, namespace, output):
-        """Writes ``VariableShortcuts<Name>.h`` when the variables carry names."""
+        """Writes ``<Name>VariableShortcuts.h`` when the variables carry names."""
         if not self.has_names:
             return
         dictionary["USE_VARIABLE_SHORTCUTS"] = True
@@ -134,13 +134,11 @@ class State:
                     "VariableShortcuts.h.jinja2",
                 ),
                 None,
-                "VariableShortcuts" + self._name,
+                self._name + "VariableShortcuts",
                 namespace,
-                ".",
+                "",
                 dictionary,
                 True,
             )
         )
-        output.makefile.add_h_file(
-            "VariableShortcuts" + self._name + ".h", generated=True
-        )
+        output.makefile.add_h_file(self._name + "VariableShortcuts.h", generated=True)

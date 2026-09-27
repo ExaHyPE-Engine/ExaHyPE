@@ -3,7 +3,8 @@
 
 TARGET_DECLARE
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Zero::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::Zero::limitedDifference(
   [[maybe_unused]] const ComputePrecision forwardDifference,
   [[maybe_unused]] const ComputePrecision backwardDifference
 ) {
@@ -11,7 +12,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Zero::
 }
 
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Average::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::Average::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {
@@ -19,7 +21,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Averag
 }
 
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Minmod::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::Minmod::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {
@@ -34,7 +37,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Minmod
 }
 
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::VanAlbada::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::VanAlbada::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {
@@ -47,7 +51,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::VanAlb
 }
 
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Superbee::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::Superbee::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {
@@ -64,7 +69,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Superb
 }
 
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::MinmodCentral::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::MinmodCentral::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {

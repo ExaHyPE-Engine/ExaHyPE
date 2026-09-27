@@ -53,7 +53,8 @@ namespace {
 tarch::plotter::tests::HDF5FileWriterTest::HDF5FileWriterTest() :
   tarch::tests::TestCase("tarch::plotter::tests::HDF5FileWriterTest") {}
 
-void tarch::plotter::tests::HDF5FileWriterTest::testHeterogeneousRanks() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::testHeterogeneousRanks() {
   // Only the global master contributes geometry and a "Marker" cell field, and every
   // other rank leaves the plotter empty. writeToFile() stays collective for all ranks.
   const std::string filename = "HDF5TestHeterogeneous";
@@ -90,7 +91,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testHeterogeneousRanks() {
   barrier();
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::testInvalidIdentifierThrows() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::testInvalidIdentifierThrows() {
   // A data identifier is written into the XML, an HDF5 path and a NetCDF name, so
   // a character that would corrupt those (here '/') must be rejected up front.
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -107,7 +109,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInvalidIdentifierThrows() {
   }
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::run() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::run() {
   // The read-back helpers report a malformed file by throwing, and the test framework
   // does not guard run(), so this catch records the failure and keeps the binary alive.
   try {
@@ -129,7 +132,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::run() {
   }
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::testUnevenSubdomainCounts() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::testUnevenSubdomainCounts() {
   const std::string filename = "HDF5TestUneven";
 
   // Master contributes 3 quads, every other rank 2 - non-zero but unequal counts.
@@ -165,7 +169,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testUnevenSubdomainCounts() {
   barrier();
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::testVectorAndTensorPadding() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::testVectorAndTensorPadding() {
   const std::string filename = "HDF5TestVectorTensor";
 
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -218,7 +223,7 @@ void tarch::plotter::tests::HDF5FileWriterTest::testVectorAndTensorPadding() {
     if (dimensions[1] != 3) {
       throw std::runtime_error("Expected the 2D vector field to be written with 3 components.");
     }
-    if (values[0] != 1.5f or values[1] != -1.5f or values[2] != 0.0f) {
+    if (values[0] != 1.5F or values[1] != -1.5F or values[2] != 0.0F) {
       throw std::runtime_error("Expected the 2D vector to be padded with a zero z component (1.5, -1.5, 0).");
     }
     cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string());
@@ -226,7 +231,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testVectorAndTensorPadding() {
   barrier();
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
   const std::string filename = "HDF5Test2DTriangle";
 
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -262,7 +268,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
   barrier();
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::test2DParticlesWithData() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::test2DParticlesWithData() {
   const std::string filename = "HDF5Test2DParticles";
 
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -290,7 +297,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DParticlesWithData() {
   barrier();
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::test3DCellData() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::test3DCellData() {
   const std::string filename = "HDF5Test3DCellData";
 
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -321,7 +329,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::test3DCellData() {
   barrier();
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::testAttributeTypes() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::testAttributeTypes() {
   const std::string filename = "HDF5TestTypes";
 
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -361,7 +370,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testAttributeTypes() {
   barrier();
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::testMultipleSubdomains() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::testMultipleSubdomains() {
   const std::string filename = "HDF5TestMultipleSubdomains";
 
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -421,7 +431,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testMultipleSubdomains() {
   barrier();
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::testEmptyPlotter() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::testEmptyPlotter() {
   const std::string filename = "HDF5TestEmpty";
   HDF5FileWriter    plotter(tarch::tests::getWritableTestDirectory().string());
   plotter.acquirePiece(0);
@@ -438,7 +449,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testEmptyPlotter() {
   barrier();
 }
 
-void tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows() {
+void
+tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows() {
   const std::string filename = "HDF5TestInconsistent";
 
   bool exceptionThrown = false;
@@ -479,6 +491,7 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows()
 tarch::plotter::tests::HDF5FileWriterTest::HDF5FileWriterTest() :
   tarch::tests::TestCase("tarch::plotter::tests::HDF5FileWriterTest") {}
 
-void tarch::plotter::tests::HDF5FileWriterTest::run() {}
+void
+tarch::plotter::tests::HDF5FileWriterTest::run() {}
 
 #endif

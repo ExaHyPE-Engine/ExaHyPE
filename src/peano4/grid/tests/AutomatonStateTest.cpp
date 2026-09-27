@@ -12,13 +12,15 @@
 peano4::grid::tests::AutomatonStateTest::AutomatonStateTest() :
   TestCase("peano4::grid::tests::AutomatonStateTest") {}
 
-void peano4::grid::tests::AutomatonStateTest::run() {
+void
+peano4::grid::tests::AutomatonStateTest::run() {
   testMethod(testCurveState);
   testMethod(testRefineState);
   testMethod(testSendAndReceiveInARing);
 }
 
-void peano4::grid::tests::AutomatonStateTest::testCurveState() {
+void
+peano4::grid::tests::AutomatonStateTest::testCurveState() {
   const peano4::grid::AutomatonState state;
   validateEquals(state.curveState, peano4::sfc::ActiveCurve::RootState);
 
@@ -27,7 +29,8 @@ void peano4::grid::tests::AutomatonStateTest::testCurveState() {
   validateTrue(description.find("CurveState") != std::string::npos);
 }
 
-void peano4::grid::tests::AutomatonStateTest::testRefineState() {
+void
+peano4::grid::tests::AutomatonStateTest::testRefineState() {
   peano4::grid::AutomatonState coarseState;
   coarseState.level = 3;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -60,12 +63,13 @@ void peano4::grid::tests::AutomatonStateTest::testRefineState() {
   }
 
   // Every child carries the curve state its parent's production assigns to its position.
-  for (const auto& child : peano4::sfc::ActiveCurve::children(coarseState.curveState)) {
+  for (const auto& child : peano4::sfc::ActiveCurve::getChildren(coarseState.curveState)) {
     validateEqualsWithParams1(fineStates[child.linearisedPosition].curveState, child.state, child.linearisedPosition);
   }
 }
 
-void peano4::grid::tests::AutomatonStateTest::testSendAndReceiveInARing() {
+void
+peano4::grid::tests::AutomatonStateTest::testSendAndReceiveInARing() {
   constexpr int Tag = 4321;
 
   const auto&    rank          = tarch::mpi::Rank::getInstance();

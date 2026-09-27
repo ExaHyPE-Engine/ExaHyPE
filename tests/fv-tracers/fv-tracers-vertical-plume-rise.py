@@ -177,21 +177,15 @@ tracer_attributes = {
 }
 
 tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
+    name="Tracers", particle_attributes=tracer_attributes
 )
 
 generate_particles_on_vertical_line(
     "InitTracers.dat", num_particles=1000, x_fixed=1.5, y_min=0.1, y_max=0.7
 )
-init_tracers = exahype2.particles.InsertParticlesFromFile(
-    particle_set=tracer_particles,
-    filename="InitTracers.dat",
-    scale_factor=1.0,
-    save_initialpos=True,
+tracer_particles.insert_from_file(
+    "InitTracers.dat", scale_factor=1.0, save_initial_position=True
 )
-
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
 
 fv_solver.trace(
     tracer_particles,
@@ -203,10 +197,6 @@ fv_solver.trace(
 )
 
 fv_solver.set_pde_terms(particle_analytical_solution=analytical_solution)
-fv_solver.measure_particle_error(
-    tracer_particles,
-    file="Error_" + Path(__file__).name,
-    descend_invocation_order=65536,  # After all other action sets
-)
+fv_solver.measure_particle_error(tracer_particles, file="Error_" + Path(__file__).name)
 
 project.generate_and_build()

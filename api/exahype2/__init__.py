@@ -3,13 +3,10 @@
 import importlib
 
 _LAZY_MODULES = {
-    "actionsets": "exahype2.actionsets",
     "codegen": "exahype2.codegen",
-    "datamodel": "exahype2.datamodel",
     "dg": "exahype2.dg",
     "fv": "exahype2.fv",
     "particles": "exahype2.particles",
-    "plotter": "exahype2.plotter",
 }
 
 _LAZY_ATTRIBUTES = {

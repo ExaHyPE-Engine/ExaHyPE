@@ -1,263 +1,256 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-/**
- * Creates a host-accessible pool and rejects device-only storage.
- */
-template <typename T, int N>
-tarch::accelerator::ChunkedMemoryPool<T, N>::ChunkedMemoryPool(MemoryLocation location, int device) noexcept :
-  _location(location),
-  _device(device) {
-  if (_location == MemoryLocation::Device) {
-    tarch::terminateWithError("The pool needs host-accessible storage because chunk resolution runs on the host.");
-  }
+#include "tarch/Assertions.h"
+#include "tarch/Termination.h"
+
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD T*
+tarch::accelerator::ChunkedMemoryPool<T>::View::getChunk(const int slot) const noexcept {
+  return segments[slot >> segmentSizeExponent]
+    + static_cast<std::size_t>(slot & slotMask) * static_cast<std::size_t>(paddedChunkSize);
 }
 
-template <typename T, int N>
-tarch::accelerator::ChunkedMemoryPool<T, N>::ChunkedMemoryPool(ChunkedMemoryPool&& other) noexcept :
-  _data(std::exchange(other._data, nullptr)),
-  _capacity(std::exchange(other._capacity, 0)),
-  _size(std::exchange(other._size, 0)),
-  _touchedChunks(std::exchange(other._touchedChunks, 0)),
-  _location(other._location),
-  _device(other._device) {}
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD const T*
+tarch::accelerator::ChunkedMemoryPool<T>::ConstView::getChunk(const int slot) const noexcept {
+  return segments[slot >> segmentSizeExponent]
+    + static_cast<std::size_t>(slot & slotMask) * static_cast<std::size_t>(paddedChunkSize);
+}
 
-template <typename T, int N>
-tarch::accelerator::ChunkedMemoryPool<T, N>& tarch::accelerator::ChunkedMemoryPool<T, N>::operator=(
-  ChunkedMemoryPool&& other
-) noexcept {
+/** Returns the smallest chunk stride at or above chunkSize at which every chunk starts aligned. */
+template <typename T>
+INLINE_METHOD int
+tarch::accelerator::ChunkedMemoryPool<T>::getPaddedChunkSizeOf(const int chunkSize) noexcept {
+  const auto alignment            = static_cast<std::size_t>(PEANO_WITH_ALIGNMENT);
+  const auto elementsPerAlignment = alignment / std::gcd(alignment, sizeof(T));
+  return static_cast<int>(
+    (static_cast<std::size_t>(chunkSize) + elementsPerAlignment - 1) / elementsPerAlignment * elementsPerAlignment
+  );
+}
+
+template <typename T>
+tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(
+  const int                   chunkSize,
+  const tarch::MemoryLocation location
+) noexcept :
+  _chunkSize(chunkSize),
+  _paddedChunkSize(getPaddedChunkSizeOf(chunkSize)),
+  _segmentTable(location),
+  _location(location) {
+  assertion(chunkSize > 0, chunkSize);
+}
+
+template <typename T>
+tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(tarch::accelerator::ChunkedMemoryPool<T>&& other) noexcept :
+  _chunkSize(other._chunkSize),
+  _paddedChunkSize(other._paddedChunkSize),
+  _segments(std::move(other._segments)),
+  _segmentBasesOnHost(std::move(other._segmentBasesOnHost)),
+  _segmentTable(std::move(other._segmentTable)),
+  _segmentSizeExponent(std::exchange(other._segmentSizeExponent, 0)),
+  _location(other._location) {
+  other._segments.clear();
+  other._segmentBasesOnHost.clear();
+}
+
+template <typename T>
+tarch::accelerator::ChunkedMemoryPool<T>&
+tarch::accelerator::ChunkedMemoryPool<T>::operator=(tarch::accelerator::ChunkedMemoryPool<T>&& other) noexcept {
   if (this != &other) {
-    clear();
-    _data          = std::exchange(other._data, nullptr);
-    _capacity      = std::exchange(other._capacity, 0);
-    _size          = std::exchange(other._size, 0);
-    _touchedChunks = std::exchange(other._touchedChunks, 0);
-    _location      = other._location;
-    _device        = other._device;
+    release();
+    _chunkSize           = other._chunkSize;
+    _paddedChunkSize     = other._paddedChunkSize;
+    _segments            = std::move(other._segments);
+    _segmentBasesOnHost  = std::move(other._segmentBasesOnHost);
+    _segmentTable        = std::move(other._segmentTable);
+    _segmentSizeExponent = std::exchange(other._segmentSizeExponent, 0);
+    _location            = other._location;
+    other._segments.clear();
+    other._segmentBasesOnHost.clear();
   }
   return *this;
 }
 
-template <typename T, int N>
-tarch::accelerator::ChunkedMemoryPool<T, N>::ChunkedMemoryPool::~ChunkedMemoryPool() noexcept {
-  clear();
+template <typename T>
+tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool::~ChunkedMemoryPool() noexcept {
+  release();
 }
 
 /**
- * Releases the backing buffer and resets the pool.
+ * Grows the capacity without moving existing chunks. The first reservation fixes the segment size.
  */
-template <typename T, int N>
-void tarch::accelerator::ChunkedMemoryPool<T, N>::clear() noexcept {
-  rawFree(_data, _capacity);
-  _data          = nullptr;
-  _capacity      = 0;
-  _size          = 0;
-  _touchedChunks = 0;
-}
-
-/**
- * Allocates zero-filled aligned backing storage. A heap buffer is a mapping
- * whose pages turn resident on their first write. A pinned buffer comes from
- * the backend allocator and gets cleared after the allocation.
- */
-template <typename T, int N>
-T* tarch::accelerator::ChunkedMemoryPool<T, N>::rawAllocate(const std::size_t chunks) const {
-  constexpr std::size_t BytesPerChunk = static_cast<std::size_t>(PaddedChunkSize) * sizeof(T);
-  if (chunks > std::numeric_limits<std::size_t>::max() / BytesPerChunk) {
-    tarch::terminateWithError(
-      "A pool buffer of " + std::to_string(chunks) + " chunks of " + std::to_string(BytesPerChunk)
-      + " bytes overflows std::size_t."
-    );
-  }
-  const std::size_t bytes  = chunks * BytesPerChunk;
-  T*                buffer = nullptr;
-  switch (_location) {
-  case MemoryLocation::Heap:
-    buffer = static_cast<T*>(allocateZeroedHeapMemory(bytes));
-    break;
-  case MemoryLocation::Pinned:
-    buffer = static_cast<T*>(allocatePinnedMemory(bytes, _device));
-    std::memset(buffer, 0, bytes);
-    break;
-  case MemoryLocation::Device:
-    assertion(false, "The constructor rejects device-resident pools.");
-    break;
-  }
-  // The padded stride keeps chunks aligned only relative to the buffer base;
-  // a backend whose pinned allocator returns a weaker-aligned base breaks the
-  // alignment guarantee for every chunk.
-  assertion(reinterpret_cast<std::uintptr_t>(buffer) % PEANO_WITH_ALIGNMENT == 0, bytes);
-  return buffer;
-}
-
-template <typename T, int N>
-void tarch::accelerator::ChunkedMemoryPool<T, N>::rawFree(T* const buffer, const std::size_t chunks) const noexcept {
-  if (buffer == nullptr) {
+template <typename T>
+void
+tarch::accelerator::ChunkedMemoryPool<T>::reserve(const int numberOfSlots) {
+  assertion(numberOfSlots >= 0, numberOfSlots);
+  if (numberOfSlots <= getCapacity()) {
     return;
   }
-  switch (_location) {
-  case MemoryLocation::Heap:
-    freeZeroedHeapMemory(buffer, chunks * static_cast<std::size_t>(PaddedChunkSize) * sizeof(T));
-    break;
-  case MemoryLocation::Pinned:
-    freePinnedMemory(buffer, _device);
-    break;
-  case MemoryLocation::Device:
-    assertion(false, "The constructor rejects device-resident pools.");
-    break;
+  if (_segments.empty()) {
+    const auto slotsPerSegment =
+      std::bit_ceil(static_cast<unsigned int>(std::max(1, numberOfSlots / SegmentsPerFirstReservation)));
+    _segmentSizeExponent = std::max(MinimumSegmentSizeExponent, std::countr_zero(slotsPerSegment));
+  }
+  while (numberOfSlots > getCapacity()) {
+    appendSegment();
+  }
+  uploadSegmentTable();
+}
+
+template <typename T>
+void
+tarch::accelerator::ChunkedMemoryPool<T>::appendSegment() {
+  constexpr auto MaximumNumberOfSlots = static_cast<std::size_t>(std::numeric_limits<int>::max());
+  if (static_cast<std::size_t>(getCapacity()) + static_cast<std::size_t>(getSegmentSize()) > MaximumNumberOfSlots) {
+    tarch::terminateWithError("A pool has more slots than the 32-bit parallel range supports.");
+  }
+  auto& segment = _segments.emplace_back(_location);
+  segment.allocate(static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize));
+  assertion(reinterpret_cast<std::uintptr_t>(segment.getData()) % PEANO_WITH_ALIGNMENT == 0, _segments.size());
+  _segmentBasesOnHost.push_back(segment.getData());
+}
+
+/**
+ * Copies the segment bases into the table that the views read. The table lies in the memory
+ * location of the pool, so a device view reads device memory only.
+ */
+template <typename T>
+void
+tarch::accelerator::ChunkedMemoryPool<T>::uploadSegmentTable() {
+  _segmentTable.allocate(_segmentBasesOnHost.size());
+  _segmentTable.copyFromHost(_segmentBasesOnHost.data(), _segmentBasesOnHost.size());
+}
+
+template <typename T>
+void
+tarch::accelerator::ChunkedMemoryPool<T>::release() noexcept {
+  _segments.clear();
+  _segmentBasesOnHost.clear();
+  _segmentTable.release();
+  _segmentSizeExponent = 0;
+}
+
+/** Resizes target to the padded chunks of every slot of the pool and copies them into it. */
+template <typename T>
+void
+tarch::accelerator::ChunkedMemoryPool<T>::copyToHost(std::vector<T>& target) const {
+  const auto valuesPerSegment = static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize);
+  target.resize(_segments.size() * valuesPerSegment);
+  for (std::size_t segment = 0; segment < _segments.size(); segment++) {
+    _segments[segment].copyToHost(target.data() + segment * valuesPerSegment, valuesPerSegment);
   }
 }
 
-/**
- * Returns a writable pointer to the chunk selected by @p slot.
- *
- * The size conversion prevents 32-bit offset overflow in large pools.
- */
-template <typename T, int N>
-INLINE_METHOD GPU_CALLABLE_METHOD T* tarch::accelerator::ChunkedMemoryPool<T, N>::chunk(SlotIndex slot) noexcept {
-  assertion(slot != InvalidSlot);
-  assertion(static_cast<std::size_t>(slot) < _size, slot, _size);
-  return _data + static_cast<std::size_t>(slot) * static_cast<std::size_t>(PaddedChunkSize);
+/** Overwrites the padded chunks of every slot of the pool from source, which holds what copyToHost() writes. */
+template <typename T>
+void
+tarch::accelerator::ChunkedMemoryPool<T>::copyFromHost(const std::vector<T>& source) {
+  const auto valuesPerSegment = static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize);
+  assertion(source.size() == _segments.size() * valuesPerSegment, source.size(), _segments.size(), valuesPerSegment);
+  for (std::size_t segment = 0; segment < _segments.size(); segment++) {
+    _segments[segment].copyFromHost(source.data() + segment * valuesPerSegment, valuesPerSegment);
+  }
+}
+
+template <typename T>
+INLINE_METHOD typename tarch::accelerator::ChunkedMemoryPool<T>::View
+tarch::accelerator::ChunkedMemoryPool<T>::getView() noexcept {
+  return typename tarch::accelerator::ChunkedMemoryPool<T>::View{
+    _segmentTable.getData(),
+    _segmentSizeExponent,
+    getSegmentSize() - 1,
+    _paddedChunkSize
+  };
+}
+
+template <typename T>
+INLINE_METHOD typename tarch::accelerator::ChunkedMemoryPool<T>::ConstView
+tarch::accelerator::ChunkedMemoryPool<T>::getView() const noexcept {
+  return typename tarch::accelerator::ChunkedMemoryPool<T>::ConstView{
+    _segmentTable.getData(),
+    _segmentSizeExponent,
+    getSegmentSize() - 1,
+    _paddedChunkSize
+  };
 }
 
 /**
- * Returns a read-only pointer to the chunk selected by @p slot.
+ * Returns the address of a chunk from the host copy of the segment table. Host code dereferences
+ * the address of a host-accessible pool only.
  */
-template <typename T, int N>
-INLINE_METHOD GPU_CALLABLE_METHOD const T* tarch::accelerator::ChunkedMemoryPool<T, N>::chunk(
-  SlotIndex slot
-) const noexcept {
-  assertion(slot != InvalidSlot);
-  assertion(static_cast<std::size_t>(slot) < _size, slot, _size);
-  return _data + static_cast<std::size_t>(slot) * static_cast<std::size_t>(PaddedChunkSize);
+template <typename T>
+INLINE_METHOD T*
+tarch::accelerator::ChunkedMemoryPool<T>::getChunk(const int slot) noexcept {
+  assertion(slot >= 0 and slot < getCapacity(), slot, getCapacity());
+  return _segmentBasesOnHost[static_cast<std::size_t>(slot >> _segmentSizeExponent)]
+    + static_cast<std::size_t>(slot & (getSegmentSize() - 1)) * static_cast<std::size_t>(_paddedChunkSize);
 }
 
-/**
- * Returns the writable strided backing buffer.
- */
-template <typename T, int N>
-INLINE_METHOD T* tarch::accelerator::ChunkedMemoryPool<T, N>::rawData() noexcept {
-  return _data;
+template <typename T>
+INLINE_METHOD const T*
+tarch::accelerator::ChunkedMemoryPool<T>::getChunk(const int slot) const noexcept {
+  assertion(slot >= 0 and slot < getCapacity(), slot, getCapacity());
+  return _segmentBasesOnHost[static_cast<std::size_t>(slot >> _segmentSizeExponent)]
+    + static_cast<std::size_t>(slot & (getSegmentSize() - 1)) * static_cast<std::size_t>(_paddedChunkSize);
 }
 
-/**
- * Returns the read-only strided backing buffer.
- */
-template <typename T, int N>
-INLINE_METHOD const T* tarch::accelerator::ChunkedMemoryPool<T, N>::rawData() const noexcept {
-  return _data;
+template <typename T>
+INLINE_METHOD tarch::accelerator::Buffer<T>&
+tarch::accelerator::ChunkedMemoryPool<T>::getSegment(const int segmentNumber) noexcept {
+  assertion(segmentNumber >= 0 and segmentNumber < getNumberOfSegments(), segmentNumber, getNumberOfSegments());
+  return _segments[static_cast<std::size_t>(segmentNumber)];
 }
 
-/**
- * Returns the number of live chunks.
- */
-template <typename T, int N>
-INLINE_METHOD std::size_t tarch::accelerator::ChunkedMemoryPool<T, N>::size() const noexcept {
-  return _size;
+template <typename T>
+INLINE_METHOD const tarch::accelerator::Buffer<T>&
+tarch::accelerator::ChunkedMemoryPool<T>::getSegment(const int segmentNumber) const noexcept {
+  assertion(segmentNumber >= 0 and segmentNumber < getNumberOfSegments(), segmentNumber, getNumberOfSegments());
+  return _segments[static_cast<std::size_t>(segmentNumber)];
 }
 
-/**
- * Returns the number of chunks the buffer can hold.
- */
-template <typename T, int N>
-INLINE_METHOD std::size_t tarch::accelerator::ChunkedMemoryPool<T, N>::capacity() const noexcept {
-  return _capacity;
+template <typename T>
+INLINE_METHOD int
+tarch::accelerator::ChunkedMemoryPool<T>::getChunkSize() const noexcept {
+  return _chunkSize;
 }
 
-/**
- * Returns whether the pool has no live chunks.
- */
-template <typename T, int N>
-INLINE_METHOD bool tarch::accelerator::ChunkedMemoryPool<T, N>::empty() const noexcept {
-  return _size == 0;
+template <typename T>
+INLINE_METHOD int
+tarch::accelerator::ChunkedMemoryPool<T>::getPaddedChunkSize() const noexcept {
+  return _paddedChunkSize;
 }
 
-/**
- * Returns the live element count including padding.
- */
-template <typename T, int N>
-INLINE_METHOD std::size_t tarch::accelerator::ChunkedMemoryPool<T, N>::rawSize() const noexcept {
-  return _size * static_cast<std::size_t>(PaddedChunkSize);
+template <typename T>
+INLINE_METHOD int
+tarch::accelerator::ChunkedMemoryPool<T>::getCapacity() const noexcept {
+  return getNumberOfSegments() * getSegmentSize();
 }
 
-/**
- * Returns the live byte count including padding.
- */
-template <typename T, int N>
-INLINE_METHOD std::size_t tarch::accelerator::ChunkedMemoryPool<T, N>::rawSizeInBytes() const noexcept {
-  return rawSize() * sizeof(T);
+/** Returns the slots per segment, which is zero before the first reservation. */
+template <typename T>
+INLINE_METHOD int
+tarch::accelerator::ChunkedMemoryPool<T>::getSegmentSize() const noexcept {
+  return _segments.empty() ? 0 : 1 << _segmentSizeExponent;
 }
 
-/**
- * Returns the backing-buffer size in bytes.
- */
-template <typename T, int N>
-INLINE_METHOD std::size_t tarch::accelerator::ChunkedMemoryPool<T, N>::allocatedBytes() const noexcept {
-  return _capacity * static_cast<std::size_t>(PaddedChunkSize) * sizeof(T);
+template <typename T>
+INLINE_METHOD int
+tarch::accelerator::ChunkedMemoryPool<T>::getNumberOfSegments() const noexcept {
+  return static_cast<int>(_segments.size());
 }
 
-/**
- * Clears the chunks in [firstChunk, endChunk) through tarch::accelerator::parallelFor.
- */
-template <typename T, int N>
-void tarch::accelerator::ChunkedMemoryPool<T, N>::clearChunks(
-  const std::size_t firstChunk,
-  const std::size_t endChunk
-) noexcept {
-  assertion(firstChunk <= endChunk, firstChunk, endChunk);
-  assertion(endChunk <= _capacity, endChunk, _capacity);
-  constexpr auto        ElementsPerChunk = static_cast<std::size_t>(PaddedChunkSize);
-  constexpr std::size_t BytesPerChunk    = ElementsPerChunk * sizeof(T);
-  T* const              buffer           = _data;
-  tarch::accelerator::parallelForOnHost(
-    tarch::accelerator::Range(static_cast<int>(endChunk - firstChunk)),
-    [buffer, firstChunk](const int chunk) {
-      std::memset(buffer + (firstChunk + static_cast<std::size_t>(chunk)) * ElementsPerChunk, 0, BytesPerChunk);
-    }
+template <typename T>
+INLINE_METHOD tarch::AllocatedBytes
+tarch::accelerator::ChunkedMemoryPool<T>::getAllocatedBytes() const noexcept {
+  return tarch::AllocatedBytes::in(
+    _location,
+    static_cast<std::size_t>(getCapacity()) * static_cast<std::size_t>(_paddedChunkSize) * sizeof(T)
   );
 }
 
-/**
- * Resizes the live chunk range and preserves retained data.
- *
- * Resizing within capacity keeps chunk pointers valid and clears the chunks
- * that re-enter the live range. Reallocation invalidates the pointers and
- * grows the capacity geometrically. The retained chunks move through
- * tarch::accelerator::parallelFor.
- */
-template <typename T, int N>
-void tarch::accelerator::ChunkedMemoryPool<T, N>::resize(const std::size_t numberOfChunks) {
-  constexpr auto MaximumNumberOfChunks = static_cast<std::size_t>(std::numeric_limits<int>::max());
-  if (numberOfChunks > MaximumNumberOfChunks) {
-    tarch::terminateWithError("A pool has more chunks than the 32-bit parallel range supports.");
-  }
-  if (numberOfChunks <= _capacity) {
-    if (numberOfChunks > _size and _touchedChunks > _size) {
-      clearChunks(_size, std::min(numberOfChunks, _touchedChunks));
-    }
-    _size          = numberOfChunks;
-    _touchedChunks = std::max(_touchedChunks, _size);
-    return;
-  }
-
-  const auto geometricCapacity = _capacity + std::min(_capacity / 2, MaximumNumberOfChunks - _capacity);
-  const auto newCapacity       = std::max(numberOfChunks, geometricCapacity);
-  T* const   newBuffer         = rawAllocate(newCapacity);
-  if (_size > 0) {
-    constexpr auto        ElementsPerChunk = static_cast<std::size_t>(PaddedChunkSize);
-    constexpr std::size_t BytesPerChunk    = ElementsPerChunk * sizeof(T);
-    T* const              oldBuffer        = _data;
-    tarch::accelerator::parallelForOnHost(
-      tarch::accelerator::Range(static_cast<int>(_size)),
-      [newBuffer, oldBuffer](const int chunk) {
-        const auto offset = static_cast<std::size_t>(chunk) * ElementsPerChunk;
-        std::memcpy(newBuffer + offset, oldBuffer + offset, BytesPerChunk);
-      }
-    );
-  }
-  rawFree(_data, _capacity);
-  _data          = newBuffer;
-  _capacity      = newCapacity;
-  _size          = numberOfChunks;
-  _touchedChunks = numberOfChunks;
+template <typename T>
+INLINE_METHOD tarch::MemoryLocation
+tarch::accelerator::ChunkedMemoryPool<T>::getLocation() const noexcept {
+  return _location;
 }

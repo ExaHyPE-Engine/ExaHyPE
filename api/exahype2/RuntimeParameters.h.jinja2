@@ -2,12 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/CompileTarget.h"
+{%- if HAS_ARRAY_RUNTIME_PARAMETERS %}
 #include "tarch/la/Vector.h"
+{%- endif %}
 
-namespace runner {
+namespace exahype2::runner {
   class ParameterTable;
-} // namespace runner
+} // namespace exahype2::runner
 
 namespace tarch::reader {
   class JSONReader;
@@ -17,27 +20,40 @@ namespace {{NAMESPACE | join("::")}} {
   struct RuntimeParameters;
 } // namespace {{NAMESPACE | join("::")}}
 
+/**
+ * Holds the parameters that the configuration file and the command line set. Storage holds the
+ * parameters that a kernel reads, and HostStorage holds the strings.
+ */
 struct {{NAMESPACE | join("::")}}::RuntimeParameters final {
   struct Storage final {
-{%- for parameter in RUNTIME_PARAMETERS %}
-    {{ parameter.cpp_type }} {{ parameter.name }} = {{ parameter.default_value }};
+{%- for parameter in RUNTIME_PARAMETERS if not parameter.is_string %}
+    {{ parameter.cpp_type }} {{ parameter.name }}{ {{- parameter.default_value -}} };
+{%- endfor %}
+  };
+
+  struct HostStorage final {
+{%- for parameter in RUNTIME_PARAMETERS if parameter.is_string %}
+    {{ parameter.cpp_type }} {{ parameter.name }}{ {{- parameter.default_value -}} };
 {%- endfor %}
   };
 
   static void load(tarch::reader::JSONReader* reader);
   static void load(tarch::reader::JSONReader* reader, int& argc, char** argv);
   static void printUsage();
+  static INLINE_METHOD const Storage& getStorage();
 {%- for parameter in RUNTIME_PARAMETERS %}
-
-  static INLINE_METHOD GPU_CALLABLE_METHOD {{ parameter.return_type }} {{ parameter.accessor_name }}() {
-    return _storage.{{ parameter.name }};
-  }
+{%- if parameter.is_string %}
+  static INLINE_METHOD const {{ parameter.return_type }}& {{ parameter.name }}();
+{%- else %}
+  static INLINE_METHOD GPU_CALLABLE_METHOD {{ parameter.return_type }} {{ parameter.name }}();
+{%- endif %}
 {%- endfor %}
 
 private:
-  static ::runner::ParameterTable parameterTable(Storage& storage);
+  static ::exahype2::runner::ParameterTable getParameterTable(Storage& storage, HostStorage& hostStorage);
 
-  TARGET_DECLARE
-  static Storage _storage;
-  TARGET_DECLARE_END
+  static Storage     _storage;
+  static HostStorage _hostStorage;
 };
+
+#include "RuntimeParameters.cpph"

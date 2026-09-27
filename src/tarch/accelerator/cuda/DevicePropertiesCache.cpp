@@ -7,7 +7,8 @@
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/cuda/ErrorCheck.h"
 
-cudaDeviceProp& tarch::accelerator::cuda::DevicePropertiesCache::get() {
+cudaDeviceProp&
+tarch::accelerator::cuda::DevicePropertiesCache::getProperties() {
   static DevicePropertiesCache instance;
 
   int deviceId = -1;

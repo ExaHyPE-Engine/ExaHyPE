@@ -14,15 +14,20 @@
 tarch::plotter::HDF5FileWriter::HDF5FileWriter(const std::string& outputDirectory) :
   tarch::plotter::FileWriter(outputDirectory) {}
 
-int tarch::plotter::HDF5FileWriter::toXdmfType(const int vtkType) {
+int
+tarch::plotter::HDF5FileWriter::toXdmfType(const int vtkType) {
   // Mapping based on XDMF Model and VTK File Formats; see CellTypes.h for the table.
   const CellTypeInfo* const info = lookupCellType(vtkType);
   return info != nullptr ? info->xdmf : 0; // 0 == unknown/unstructured
 }
 
-std::string tarch::plotter::HDF5FileWriter::getFileExtension() const { return ".xmf"; }
+std::string
+tarch::plotter::HDF5FileWriter::getFileExtension() const {
+  return ".xmf";
+}
 
-bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe_unused]] const double time) {
+bool
+tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe_unused]] const double time) {
   if (_written) {
     throw std::runtime_error("Cannot write a plotter file more than once.");
   }
@@ -111,8 +116,8 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
 
   if (useParallelIO) {
     const unsigned long long local[3]  = {localNumberOfPoints, localNumberOfCells, localTopologySize};
-    unsigned long long       prefix[3] = {0ull, 0ull, 0ull};
-    unsigned long long       totals[3] = {0ull, 0ull, 0ull};
+    unsigned long long       prefix[3] = {0ULL, 0ULL, 0ULL};
+    unsigned long long       totals[3] = {0ULL, 0ULL, 0ULL};
 
     // Inclusive prefix sums over the three size fields; subtract local to get exclusive offsets.
     tarch::mpi::scan(local, prefix, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
@@ -135,7 +140,7 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
     fileAccessProperties = H5Pcreate(H5P_FILE_ACCESS);
 
     MPI_Info   info  = MPI_INFO_NULL;
-    const auto hints = mpiIoHints();
+    const auto hints = getMPIFileHints();
     if (not hints.empty()) {
       MPI_Info_create(&info);
       for (const auto& hint : hints) {
@@ -217,7 +222,7 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
     // filtered dataset collectively.
     const hid_t datasetCreationProperties = H5Pcreate(H5P_DATASET_CREATE);
 
-    constexpr hsize_t ChunkByteTarget    = 1u << 20;
+    constexpr hsize_t ChunkByteTarget    = 1U << 20;
     const hsize_t     columns            = (numberOfDimensions > 1) ? globalDimensions[1] : 1;
     const hsize_t     bytesPerRow        = std::max<hsize_t>(1, columns * static_cast<hsize_t>(H5Tget_size(type)));
     const hsize_t     targetRows         = std::max<hsize_t>(1, ChunkByteTarget / bytesPerRow);
@@ -385,7 +390,7 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
 
   // Every rank of the writing communicator holds data, so the schema comes from the
   // local reference.
-  const FieldSchema             schema      = fieldSchemaFromReference(localData.reference);
+  const FieldSchema             schema      = getFieldSchema(localData.reference);
   const std::vector<DataField>& pointFields = schema.pointFields;
   const std::vector<DataField>& cellFields  = schema.cellFields;
 

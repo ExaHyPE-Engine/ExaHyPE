@@ -1,6 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/Assertions.h"
+
 /**
  * Returns the slot a key probes first.
  *
@@ -9,10 +11,11 @@
  * multiply-shift finaliser spreads those bits over the whole word before the
  * mask cuts it down to a slot.
  */
-INLINE_METHOD std::size_t peano4::grid::LatticeIndexMap::firstSlotOf(const std::int64_t key) const {
+INLINE_METHOD std::size_t
+peano4::grid::LatticeIndexMap::getFirstSlot(const std::int64_t key) const {
   constexpr int           MixShift     = 33;
-  constexpr std::uint64_t FirstFactor  = 0xff51afd7ed558ccdULL;
-  constexpr std::uint64_t SecondFactor = 0xc4ceb9fe1a85ec53ULL;
+  constexpr std::uint64_t FirstFactor  = 0xFF51AFD7ED558CCDULL;
+  constexpr std::uint64_t SecondFactor = 0xC4CEB9FE1A85EC53ULL;
 
   auto mixed = static_cast<std::uint64_t>(key);
   mixed ^= mixed >> MixShift;
@@ -28,12 +31,13 @@ INLINE_METHOD std::size_t peano4::grid::LatticeIndexMap::firstSlotOf(const std::
  *
  * Probing stops at the first free slot, since an insert would have taken it.
  */
-INLINE_METHOD int peano4::grid::LatticeIndexMap::find(const std::int64_t key) const {
+INLINE_METHOD int
+peano4::grid::LatticeIndexMap::find(const std::int64_t key) const {
   assertion(key >= 0, key);
   if (_keys.empty()) {
     return NoEntry;
   }
-  auto slot = firstSlotOf(key);
+  auto slot = getFirstSlot(key);
   while (true) {
     const auto occupant = _keys[slot];
     if (occupant == key) {
@@ -55,13 +59,14 @@ INLINE_METHOD int peano4::grid::LatticeIndexMap::find(const std::int64_t key) co
  * A new entry reuses the first tombstone of its probe chain, so erased slots
  * recycle before the table grows.
  */
-INLINE_METHOD std::pair<int, bool> peano4::grid::LatticeIndexMap::insert(const std::int64_t key, const int value) {
+INLINE_METHOD std::pair<int, bool>
+peano4::grid::LatticeIndexMap::insert(const std::int64_t key, const int value) {
   assertion(key >= 0, key);
   // Half the slots stay free, so a probe run stays short.
   if (2 * (_size + _numberOfTombstones + 1) > _keys.size()) {
     grow();
   }
-  auto        slot          = firstSlotOf(key);
+  auto        slot          = getFirstSlot(key);
   std::size_t insertionSlot = _keys.size();
   while (true) {
     const auto occupant = _keys[slot];
@@ -90,12 +95,13 @@ INLINE_METHOD std::pair<int, bool> peano4::grid::LatticeIndexMap::insert(const s
  * Removes a key and returns whether it was held. The slot stays a tombstone
  * so probe chains across it keep working; the next growth drops it.
  */
-INLINE_METHOD bool peano4::grid::LatticeIndexMap::erase(const std::int64_t key) {
+INLINE_METHOD bool
+peano4::grid::LatticeIndexMap::erase(const std::int64_t key) {
   assertion(key >= 0, key);
   if (_keys.empty()) {
     return false;
   }
-  auto slot = firstSlotOf(key);
+  auto slot = getFirstSlot(key);
   while (true) {
     const auto occupant = _keys[slot];
     if (occupant == key) {
@@ -112,7 +118,16 @@ INLINE_METHOD bool peano4::grid::LatticeIndexMap::erase(const std::int64_t key) 
   }
 }
 
-INLINE_METHOD std::size_t peano4::grid::LatticeIndexMap::size() const { return _size; }
+INLINE_METHOD std::size_t
+peano4::grid::LatticeIndexMap::getSize() const {
+  return _size;
+}
+
+/** Returns the bytes the key and value arrays hold. */
+INLINE_METHOD std::size_t
+peano4::grid::LatticeIndexMap::getAllocatedBytes() const {
+  return _keys.capacity() * sizeof(std::int64_t) + _values.capacity() * sizeof(int);
+}
 
 /**
  * Hands every held key and its value to the callback.
@@ -121,7 +136,8 @@ INLINE_METHOD std::size_t peano4::grid::LatticeIndexMap::size() const { return _
  * into: It follows from the hash and from the sequence the entries arrived in.
  */
 template <typename Callback>
-INLINE_METHOD void peano4::grid::LatticeIndexMap::forEachEntry(const Callback& callback) const {
+INLINE_METHOD void
+peano4::grid::LatticeIndexMap::forEachEntry(const Callback& callback) const {
   for (std::size_t slot = 0; slot < _keys.size(); slot++) {
     if (_keys[slot] != EmptyKey and _keys[slot] != TombstoneKey) {
       callback(_keys[slot], _values[slot]);

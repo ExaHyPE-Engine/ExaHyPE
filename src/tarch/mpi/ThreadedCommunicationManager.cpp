@@ -2,29 +2,29 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ThreadedCommunicationManager.h"
 
-void tarch::mpi::ThreadedCommunicationManager::start() {
+void
+tarch::mpi::ThreadedCommunicationManager::start() {
   _pollingThread.start();
   _threadIsRunning = true;
 }
 
-void tarch::mpi::ThreadedCommunicationManager::stop() {
+void
+tarch::mpi::ThreadedCommunicationManager::stop() {
   _pollingThread.stop();
   _threadIsRunning = false;
 }
 
-/** The polling thread owns all progress, so there is nothing to do inline. */
-void tarch::mpi::ThreadedCommunicationManager::progress() {}
+/** The polling thread runs every poller, so this function does nothing. */
+void
+tarch::mpi::ThreadedCommunicationManager::progress() {}
 
 /**
- * Waits until every registered concern is idle. The caller guarantees that
- * nothing re-arms a poller during the call.
- *
- * A pass that began before the call may report a state older than the
- * caller's arming, so the wait only trusts a pass that started after entry:
- * The second pass completed from here on is such a pass. After stop() the
- * pollers run inline, as no thread polls them then.
+ * Waits until every poller is idle, and a caller re-arms no poller during the call. A pass that
+ * began before the call may report a state older than the arming of the caller, so the wait trusts
+ * the second pass that completes after entry. After stop(), the pollers run on the calling thread.
  */
-void tarch::mpi::ThreadedCommunicationManager::finishPendingWork() {
+void
+tarch::mpi::ThreadedCommunicationManager::finishPendingWork() {
   if (not _threadIsRunning) {
     while (not runPollersOnce()) {
     }

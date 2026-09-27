@@ -1,11 +1,23 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-/**
- * Returns the CFL factor of the ADER-DG scheme of the given order. Up to order 4 the factors
- * come from the von Neumann analysis of Dumbser, Balsara, Toro and Munz (2008).
- */
-constexpr double exahype2::dg::ader::cflFactor(const int order) {
+#include "exahype2/LevelJumps.h"
+#include "exahype2/dg/ader/Corrector.h"
+#include "exahype2/dg/limiting/LimiterStatus.h"
+#include "exahype2/terms/CellPredicate.h"
+#include "exahype2/terms/PointSourceLocations.h"
+#include "tarch/Assertions.h"
+#include "tarch/Termination.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/Scratch.h"
+#include "tarch/la/Vector.h"
+
+/** Returns the CFL factor of the ADER-DG scheme of the given polynomial order. */
+constexpr double
+exahype2::dg::ader::getCFLFactor(const int order) {
   constexpr double Factors[] = {
     1.0,
     0.33,
@@ -27,848 +39,636 @@ constexpr double exahype2::dg::ader::cflFactor(const int order) {
   return Factors[order];
 }
 
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-thread_local exahype2::Solver::LocalUpdates exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::_localUpdates;
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-double
-  exahype2::dg::ader::Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    pointSourceLocation[PointSources == 0 ? 1 : PointSources][DIMENSIONS]{};
-
-/**
- * The factor timeStepFactor is the CFL safety factor of an adaptive solver or the normalised time
- * step size of a fixed one.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-exahype2::dg::ader::Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-  Solver(const double timeStepFactor) :
-  Solver(timeStepFactor, std::bool_constant<UsesAdaptiveTimeStepping>{}) {}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-exahype2::dg::ader::Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-  Solver(const double timeStepFactor, [[maybe_unused]] const std::true_type adaptive) :
-  TimeStepping(exahype2::AdaptiveTimeStepping::Stability::ScaledEigenvalue),
-  _timeStepFactor{timeStepFactor} {}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-exahype2::dg::ader::Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-  Solver(const double timeStepFactor, [[maybe_unused]] const std::false_type fixed) :
-  _timeStepFactor{timeStepFactor} {}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-std::string exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::toString(
-    const SolverState state
-  ) {
-  switch (state) {
-  case SolverState::GridConstruction:
-    return "GridConstruction";
-  case SolverState::GridInitialisation:
-    return "GridInitialisation";
-  case SolverState::Plotting:
-    return "Plotting";
-  case SolverState::InitialPrediction:
-    return "InitialPrediction";
-  case SolverState::PredictionOnHangingCells:
-    return "PredictionOnHangingCells";
-  case SolverState::TimeStep:
-    return "TimeStep";
-  case SolverState::Suspended:
-    return "Suspended";
-  }
-  return "<undef>";
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::Solver(
+  const double                                     timeStepFactor,
+  const std::string&                               name,
+  const std::vector<exahype2::plotter::DataField>& plottedFields
+) :
+  Base(timeStepFactor, name, plottedFields) {
+  static_assert(not HasLimiter, "A solver with a limiter takes the relaxation parameters of the limiter.");
+  static_assert(
+    Derived::DGOrder >= 0 and Derived::DGOrder < 16,
+    "The CFL factors of the ADER-DG scheme cover the orders 0 to 15."
+  );
 }
 
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-exahype2::dg::LimitingBranchDecision exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    branchDecision() const {
-  return exahype2::dg::LimitingBranchDecision{
-    .hasHangingFaces  = this->_hasHangingFacesThisTimeStep,
-    .hasTroubledCells = _numberOfTroubledCellsThisTimeStep.load(std::memory_order_relaxed) != 0
+/**
+ * relaxationParameter and differencesScaling widen the range of the discrete maximum
+ * principle of the limiter.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::Solver(
+  const double                                     timeStepFactor,
+  const std::string&                               name,
+  const std::vector<exahype2::plotter::DataField>& plottedFields,
+  const double                                     relaxationParameter,
+  const double                                     differencesScaling
+) :
+  Base(timeStepFactor, name, plottedFields),
+  _limiter(std::in_place, relaxationParameter, differencesScaling) {
+  static_assert(HasLimiter, "A solver without a limiter takes no relaxation parameters.");
+  static_assert(
+    Derived::DGOrder >= 0 and Derived::DGOrder < 16,
+    "The CFL factors of the ADER-DG scheme cover the orders 0 to 15."
+  );
+}
+
+/** Reserves the pools of the solver and of its limiter and lists the coupling faces. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::allocate(
+  const peano4::Partition& partition
+) {
+  Base::allocate(partition);
+  if constexpr (HasLimiter) {
+    _limiter->allocate(partition);
+  }
+  rebuildCouplingFaces(partition);
+  reservePredictorScratch(partition);
+}
+
+/** Sizes the predictor scratch to the chunks the dispatch over the advanced cells needs. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::reservePredictorScratch(
+  const peano4::Partition& partition
+) {
+  const auto chunks =
+    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(this->getNumberOfCells(partition)));
+  if (_predictorScratch.getSize() < chunks * Predictor::ScratchSize) {
+    _predictorScratch.allocate(chunks * Predictor::ScratchSize);
+  }
+  if constexpr (not Derived::IsLinear) {
+    if (_picardScratch.getSize() < chunks * Predictor::PicardScratchSize) {
+      _picardScratch.allocate(chunks * Predictor::PicardScratchSize);
+    }
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::release() {
+  Base::release();
+  _pointSourceLocations.release();
+  _predictorScratch.release();
+  _picardScratch.release();
+  _couplingFaces.release();
+  _couplingMatrix.release();
+  _numberOfCouplingFaces = 0;
+  if constexpr (HasLimiter) {
+    _limiter->release();
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+tarch::AllocatedBytes
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getAllocatedBytes() const {
+  auto result = Base::getAllocatedBytes() + _pointSourceLocations.getAllocatedBytes()
+    + _couplingFaces.getAllocatedBytes() + _couplingMatrix.getAllocatedBytes() + _predictorScratch.getAllocatedBytes()
+    + _picardScratch.getAllocatedBytes();
+  if constexpr (HasLimiter) {
+    result += _limiter->getAllocatedBytes();
+  }
+  return result;
+}
+
+/**
+ * Writes the initial condition into every cell and, with a limiter, onto every subgrid, and
+ * reads the point source locations after the grid initialisation hook of Derived ran.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::initialise(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
+) {
+  Base::initialise(partition, requests);
+  if constexpr (Derived::NumberOfPointSources > 0) {
+    static_assert(
+      exahype2::terms::HasPointSourceLocations<Derived, Derived::NumberOfPointSources>,
+      "A solver with point sources declares initPointSourceLocations()."
+    );
+    double locations[Derived::NumberOfPointSources][DIMENSIONS];
+    Derived::initPointSourceLocations(locations);
+    _pointSourceLocations.setValues(
+      std::vector<double>(
+        &locations[0][0],
+        &locations[0][0] + static_cast<std::size_t>(Derived::NumberOfPointSources) * DIMENSIONS
+      )
+    );
+  }
+  if constexpr (HasLimiter) {
+    _limiter->initialise(partition, this->_solution);
+  }
+}
+
+/**
+ * Advances every cell by the time step size the previous time step proposed: The predictor of
+ * every cell writes its face states and face fluxes onto its own halves of its faces, the faces
+ * solve their Riemann problems, the corrector adds the face integrals, and the limiter judges the
+ * candidates and recomputes the rejected cells. Between threads the cells meet only in the face
+ * pools, where every cell writes its own halves and the Riemann problems read both halves;
+ * between ranks the own halves of the exchanged faces travel in the state and flux exchanges
+ * while the local faces solve their Riemann problems, and the fluxes restricted onto coarse faces
+ * travel in the flux exchange while the local cells correct. A solver with a coupling partner
+ * runs the time step of both solvers, and a solver that follows its partner runs nothing here.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::performTimeStep(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
+) {
+  if (_drivenByPartner) {
+    return;
+  }
+  if (_coupledTimeStep) {
+    _coupledTimeStep(partition, requests);
+    return;
+  }
+  constexpr auto Local        = peano4::Dependence::Local;
+  constexpr auto Remote       = peano4::Dependence::Remote;
+  const double   timeStepSize = this->_timeStepping.startTimeStep();
+  const double   timeStamp    = this->_timeStepping.getTimeStamp();
+
+  if constexpr (HasLimiter) {
+    _limiter->openTimeStep(partition, this->_solution);
+  }
+  predict(partition, timeStepSize);
+
+  const typename Base::InterpolateHalves interpolateHalves{
+    this->_faceStates.getView(),
+    this->_faceFluxes.getView(),
+    DGMatrices<double>::ProlongationMatrix1D
+  };
+  const typename Base::RestrictFluxes restrictFluxes{
+    partition.onDevice(),
+    this->_faceFluxes.getView(),
+    DGMatrices<double>::WeightedRestrictionMatrix1D
+  };
+  this->_stateExchange.post();
+  this->_fluxExchange.post();
+  exahype2::interpolateCoarseFaces(partition, Local, interpolateHalves);
+  this->solveRiemannProblems(partition, Local, timeStamp, timeStepSize);
+  this->_stateExchange.wait();
+  this->_fluxExchange.wait();
+  exahype2::interpolateCoarseFaces(partition, Remote, interpolateHalves);
+  this->solveRiemannProblems(partition, Remote, timeStamp, timeStepSize);
+
+  exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
+  this->_fluxExchange.post();
+  exahype2::restrictFineFaces(partition, Local, restrictFluxes);
+  auto statistics = correct(partition, Local, timeStepSize);
+  this->_fluxExchange.wait();
+  statistics = exahype2::dg::MaxEigenvalueStatistics::combine(statistics, correct(partition, Remote, timeStepSize));
+  if constexpr (HasLimiter) {
+    statistics = _limiter->closeTimeStep(partition, this->_solution, timeStamp, timeStepSize);
+  }
+  this->closeTimeStep(partition, timeStepSize, statistics);
+  this->measureError(partition);
+  this->voteOnRefinement(partition, requests);
+}
+
+/**
+ * Returns the number of cells of all ranks the limiter marked as troubled in the last time step;
+ * zero without a limiter.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+int
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getNumberOfTroubledCells() const {
+  if constexpr (HasLimiter) {
+    return _limiter->getGlobalNumberOfTroubledCells();
+  } else {
+    return 0;
+  }
+}
+
+/**
+ * Couples this solver with partner across the faces between the cells the two solvers own:
+ * Every time step of this solver runs both solvers with the smaller of their time step sizes,
+ * copies the halves of every coupling face from the partner's face pools into this solver's pools
+ * and back, and partner's own performTimeStep() runs nothing. fromPartnerMatrix maps the face
+ * nodes of partner onto the face nodes of this solver and toPartnerMatrix the other way round,
+ * both flattened with the input node as the major index.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename Partner>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::coupleWith(
+  Partner&                   partner,
+  const std::vector<double>& fromPartnerMatrix,
+  const std::vector<double>& toPartnerMatrix
+) {
+  static_assert(
+    exahype2::terms::HasCellPredicate<Derived> and exahype2::terms::HasCellPredicate<typename Partner::DerivedType>,
+    "Both coupled solvers restrict themselves to cells through ownsCell()."
+  );
+  static_assert(Partner::NumberOfData == NumberOfData, "Coupled solvers carry the same values per node.");
+  assertion(not _drivenByPartner and not _coupledTimeStep);
+  setCouplingMatrix(fromPartnerMatrix);
+  partner.setCouplingMatrix(toPartnerMatrix);
+  partner.leaveTimeStepsToPartner();
+  _coupledTimeStep = [this, &partner](const peano4::Partition& partition, exahype2::RefinementRequests& requests) {
+    constexpr auto Local        = peano4::Dependence::Local;
+    constexpr auto Remote       = peano4::Dependence::Remote;
+    const double   timeStepSize = std::min(this->_timeStepping.startTimeStep(), partner._timeStepping.startTimeStep());
+    const double   timeStamp    = this->_timeStepping.getTimeStamp();
+
+    if constexpr (HasLimiter) {
+      _limiter->openTimeStep(partition, this->_solution);
+    }
+    if constexpr (Partner::HasLimiter) {
+      partner._limiter->openTimeStep(partition, partner._solution);
+    }
+    predict(partition, timeStepSize);
+    partner.predict(partition, timeStepSize);
+
+    const typename Base::InterpolateHalves interpolateHalves{
+      this->_faceStates.getView(),
+      this->_faceFluxes.getView(),
+      DGMatrices<double>::ProlongationMatrix1D
+    };
+    const typename Partner::InterpolateHalves interpolatePartnerHalves{
+      partner._faceStates.getView(),
+      partner._faceFluxes.getView(),
+      Partner::template DGMatrices<double>::ProlongationMatrix1D
+    };
+    const typename Base::RestrictFluxes restrictFluxes{
+      partition.onDevice(),
+      this->_faceFluxes.getView(),
+      DGMatrices<double>::WeightedRestrictionMatrix1D
+    };
+    const typename Partner::RestrictFluxes restrictPartnerFluxes{
+      partition.onDevice(),
+      partner._faceFluxes.getView(),
+      Partner::template DGMatrices<double>::WeightedRestrictionMatrix1D
+    };
+    const double partnerTimeStamp = partner.getTimeStepping().getTimeStamp();
+
+    this->_stateExchange.post();
+    this->_fluxExchange.post();
+    partner._stateExchange.post();
+    partner._fluxExchange.post();
+    exahype2::interpolateCoarseFaces(partition, Local, interpolateHalves);
+    exahype2::interpolateCoarseFaces(partition, Local, interpolatePartnerHalves);
+    copyFaceHalvesFromPartner(partition, partner, Local);
+    partner.copyFaceHalvesFromPartner(partition, *this, Local);
+    this->solveRiemannProblems(partition, Local, timeStamp, timeStepSize);
+    partner.solveRiemannProblems(partition, Local, partnerTimeStamp, timeStepSize);
+    this->_stateExchange.wait();
+    this->_fluxExchange.wait();
+    partner._stateExchange.wait();
+    partner._fluxExchange.wait();
+    exahype2::interpolateCoarseFaces(partition, Remote, interpolateHalves);
+    exahype2::interpolateCoarseFaces(partition, Remote, interpolatePartnerHalves);
+    copyFaceHalvesFromPartner(partition, partner, Remote);
+    partner.copyFaceHalvesFromPartner(partition, *this, Remote);
+    this->solveRiemannProblems(partition, Remote, timeStamp, timeStepSize);
+    partner.solveRiemannProblems(partition, Remote, partnerTimeStamp, timeStepSize);
+
+    exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
+    exahype2::restrictFineFaces(partition, Remote, restrictPartnerFluxes);
+    this->_fluxExchange.post();
+    partner._fluxExchange.post();
+    exahype2::restrictFineFaces(partition, Local, restrictFluxes);
+    exahype2::restrictFineFaces(partition, Local, restrictPartnerFluxes);
+    auto statistics        = correct(partition, Local, timeStepSize);
+    auto partnerStatistics = partner.correct(partition, Local, timeStepSize);
+    this->_fluxExchange.wait();
+    partner._fluxExchange.wait();
+    statistics = exahype2::dg::MaxEigenvalueStatistics::combine(statistics, correct(partition, Remote, timeStepSize));
+    partnerStatistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+      partnerStatistics,
+      partner.correct(partition, Remote, timeStepSize)
+    );
+    if constexpr (HasLimiter) {
+      statistics = _limiter->closeTimeStep(partition, this->_solution, timeStamp, timeStepSize);
+    }
+    if constexpr (Partner::HasLimiter) {
+      partnerStatistics =
+        partner._limiter
+          ->closeTimeStep(partition, partner._solution, partner.getTimeStepping().getTimeStamp(), timeStepSize);
+    }
+    this->closeTimeStep(partition, timeStepSize, statistics);
+    partner.closeTimeStep(partition, timeStepSize, partnerStatistics);
+    this->measureError(partition);
+    partner.measureError(partition);
+    this->voteOnRefinement(partition, requests);
+    partner.voteOnRefinement(partition, requests);
+  };
+}
+
+/** Stores the matrix that maps the partner's face nodes onto this solver's face nodes. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::setCouplingMatrix(
+  const std::vector<double>& fromPartnerMatrix
+) {
+  assertion(fromPartnerMatrix.size() % static_cast<std::size_t>(NodesPerAxis) == 0, fromPartnerMatrix.size());
+  std::vector<ComputePrecision> matrix(fromPartnerMatrix.size());
+  for (std::size_t entry = 0; entry < matrix.size(); entry++) {
+    matrix[entry] = static_cast<ComputePrecision>(fromPartnerMatrix[entry]);
+  }
+  _couplingMatrix.setValues(matrix);
+}
+
+/** Leaves every time step of this solver to the coupling partner that drives it. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::leaveTimeStepsToPartner() {
+  assertion(not _coupledTimeStep);
+  _drivenByPartner = true;
+}
+
+/**
+ * Overwrites the partner's half of every coupling face with the dependence in this solver's face
+ * pools with the face states and the face fluxes the partner wrote, mapped onto this solver's
+ * face nodes and compute precision.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename Partner>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::copyFaceHalvesFromPartner(
+  [[maybe_unused]] const peano4::Partition& partition,
+  const Partner&                            partner,
+  const peano4::Dependence                  dependence
+) {
+  assertion(
+    _couplingMatrix.getSize() == static_cast<std::size_t>(Partner::NodesPerAxis * NodesPerAxis),
+    _couplingMatrix.getSize()
+  );
+  assertion(partition.getNumberOfFaces() <= partner.getFaceStates().getCapacity(), partition.getNumberOfFaces());
+  using PartnerPrecision   = typename Partner::StatePool::ValueType;
+  const bool local         = dependence == peano4::Dependence::Local;
+  const int  firstFace     = local ? 0 : _numberOfLocalCouplingFaces;
+  const int  numberOfFaces = local ? _numberOfLocalCouplingFaces : _numberOfCouplingFaces - _numberOfLocalCouplingFaces;
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(numberOfFaces),
+    exahype2::dg::CopyPartnerFaceHalves<Derived, typename Partner::DerivedType, PartnerPrecision, ComputePrecision>{
+      _couplingFaces.getData() + 2 * static_cast<std::ptrdiff_t>(firstFace),
+      partner.getFaceStates().getView(),
+      partner.getFaceFluxes().getView(),
+      this->_faceStates.getView(),
+      this->_faceFluxes.getView(),
+      _couplingMatrix.getData()
+    }
+  );
+}
+
+/**
+ * Lists every interior face with exactly one owned cell on this rank whose far cell this solver
+ * does not own, the local faces first; the far cell of an exchanged face is the owned cell
+ * mirrored across the face. A level jump never separates two coupled solvers.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::rebuildCouplingFaces(
+  [[maybe_unused]] const peano4::Partition& partition
+) {
+  if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+    std::vector<int> couplingFaces;
+    for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
+      for (const int face :
+           partition.getFaces(dependence, peano4::FaceKind::Interior, peano4::FaceKind::Intermediate)) {
+        const auto kind = partition.getFaceKind(face);
+        if (kind == peano4::FaceKind::Boundary) {
+          continue;
+        }
+        int ownedSide = -1;
+        int farSide   = -1;
+        for (int side = 0; side < 2; side++) {
+          const int slot = partition.getFaceCell(face, side);
+          if (slot < 0) {
+            continue;
+          }
+          if (Derived::ownsCell(partition.getCellCentre(slot), partition.getCellWidth(slot))) {
+            ownedSide = side;
+          } else {
+            farSide = side;
+          }
+        }
+        if (ownedSide < 0 or (farSide < 0 and partition.getFaceCell(face, 1 - ownedSide) >= 0)) {
+          continue;
+        }
+        if (farSide < 0) {
+          const int                             owned  = partition.getFaceCell(face, ownedSide);
+          const int                             normal = partition.getFaceNormal(face);
+          tarch::la::Vector<DIMENSIONS, double> centre = partition.getCellCentre(owned);
+          centre(normal) += (ownedSide == 0 ? 1.0 : -1.0) * partition.getCellWidth(owned)(normal);
+          if (Derived::ownsCell(centre, partition.getCellWidth(owned))) {
+            continue;
+          }
+        }
+        if (kind != peano4::FaceKind::Interior) {
+          tarch::terminateWithError(
+            "The coupling face " + toString(partition.getFaceLattice(face)) + " on level "
+            + std::to_string(partition.getFaceLevel(face)) + " lies on a level jump."
+          );
+        }
+        couplingFaces.push_back(face);
+        couplingFaces.push_back(ownedSide);
+      }
+      if (dependence == peano4::Dependence::Local) {
+        _numberOfLocalCouplingFaces = static_cast<int>(couplingFaces.size() / 2);
+      }
+    }
+    _numberOfCouplingFaces = static_cast<int>(couplingFaces.size() / 2);
+    _couplingFaces.setValues(couplingFaces);
+  }
+}
+
+/** Moves the solution and, with a limiter, the statuses and the subgrids through the regrid. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::regrid(
+  const peano4::Partition&      partition,
+  const peano4::Regrid&         regrid,
+  exahype2::RefinementRequests& requests
+) {
+  if constexpr (HasLimiter) {
+    _limiter->regrid(partition, regrid, this->_solution);
+  }
+  Base::regrid(partition, regrid, requests);
+  rebuildCouplingFaces(partition);
+  reservePredictorScratch(partition);
+}
+
+/**
+ * Writes one snapshot; with a limiter every plot cell carries its status, and a cell on the
+ * subcell scheme plots at every node the subcell that contains the node.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::plot(
+  const peano4::Partition&     partition,
+  const tarch::plotter::Format format,
+  const std::string&           outputDirectory
+) {
+  if constexpr (HasLimiter) {
+    this->_plotter.template plotNodes<NodesPerAxis, NumberOfData, Limiter::SubcellScheme::SubcellsPerAxis>(
+      partition,
+      this->getCellsOnHost(partition),
+      this->downloadSolution(),
+      this->_solution.getPaddedChunkSize(),
+      this->_nodePositionsOnHost.data(),
+      _limiter->downloadSubcells(),
+      Limiter::CellPool::getPaddedChunkSizeOf(Limiter::SubcellScheme::SubcellValuesPerCell),
+      _limiter->downloadStatuses(),
+      Limiter::StatusPool::getPaddedChunkSizeOf(exahype2::dg::limiting::NumberOfStatusEntries),
+      static_cast<int>(exahype2::dg::limiting::LimiterStatus::Limited),
+      this->_timeStepping.getTimeStamp(),
+      format,
+      outputDirectory
+    );
+    this->plotFaces(partition, format, outputDirectory);
+  } else {
+    Base::plot(partition, format, outputDirectory);
+  }
+}
+
+/** Returns the time step size of the CFL condition of the ADER-DG scheme on the scaled wave speed. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+double
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getTimeStepSizeFromCFL() const {
+  if constexpr (UsesAdaptiveTimeStepping) {
+    return this->_timeStepping.getFactor() * PNPM / this->_timeStepping.getMaxScaledEigenvalueOfThisStep();
+  } else {
+    return 0.0;
+  }
+}
+
+/** Returns the normalised fraction of the admissible mesh width a fixed rule advances by. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+double
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getFixedTimeStepSize() const {
+  const double maxAdmissibleMeshWidth = this->_timeStepping.getLimits().maxAdmissibleMeshWidth;
+  assertion(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
+  return this->_timeStepping.getFactor() * this->_timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth;
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+const typename exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::LimiterType&
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getLimiter() const {
+  if constexpr (HasLimiter) {
+    return *_limiter;
+  } else {
+    return _limiter;
+  }
+}
+
+/** Returns the operator tables of the compute precision the predictor and corrector read. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+exahype2::dg::BasisTables<ComputePrecision>
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getBasisTables() {
+  return exahype2::dg::BasisTables<ComputePrecision>{
+    Quadrature<ComputePrecision>::QuadraturePoints1D,
+    Quadrature<ComputePrecision>::QuadratureWeights1D,
+    Quadrature<ComputePrecision>::InverseQuadratureWeights1D,
+    Quadrature<ComputePrecision>::QuadratureWeightsInCell,
+    Quadrature<ComputePrecision>::InverseQuadratureWeightsInCell,
+    DGMatrices<ComputePrecision>::StiffnessOperator1D,
+    DGMatrices<ComputePrecision>::StiffnessOperatorTransposed1D,
+    DGMatrices<ComputePrecision>::DerivativeOperator1D,
+    DGMatrices<ComputePrecision>::InversePicardOperator1D,
+    DGMatrices<ComputePrecision>::BasisFunctionValuesLeft1D,
+    DGMatrices<ComputePrecision>::BasisFunctionValuesRight1D
   };
 }
 
 /**
- * Returns the sweep a plotted or suspended solver resumes with. At time zero this is the initial
- * prediction, else the sweep that follows a time-step sweep.
+ * Runs the space-time predictor of every cell: The solution takes its volume integral, and the
+ * cell's own half of every face of the cell takes the time-averaged face states and face
+ * fluxes. A diverged Picard iteration ends the run without a limiter and marks the cell's
+ * status with one.
  */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-typename exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::SolverState
-  exahype2::dg::ader::Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    successorAfterInterruption() const {
-  if (this->_minTimeStamp == 0) {
-    return SolverState::InitialPrediction;
-  }
-  return successorOfTimeStep();
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-typename exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::SolverState
-  exahype2::dg::ader::Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    successorOfTimeStep() const {
-  return (this->_hasHangingFacesThisTimeStep or this->_meshRefinementRanSinceLastTimeStep)
-    ? SolverState::PredictionOnHangingCells
-    : SolverState::TimeStep;
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    startGridConstructionStep() {
-  if constexpr (UsesSubcellLimiter) {
-    assertion(_limitingSweep.state == exahype2::dg::LimitingSolverState::GridConstruction);
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::predict(
+  const peano4::Partition& partition,
+  const double             timeStepSize
+) {
+  assertion(
+    _predictorScratch.getSize()
+    >= static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(this->getNumberOfCells(partition)))
+      * Predictor::ScratchSize
+  );
+  if constexpr (HasLimiter) {
+    static_cast<void>(predictCells(partition, timeStepSize, _limiter->getStatuses()));
   } else {
-    assertion(_solverState == SolverState::GridConstruction);
-  }
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    finishGridConstructionStep() {}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    startGridInitialisationStep() {
-  if constexpr (UsesSubcellLimiter) {
-    _limitingSweep.state = exahype2::dg::LimitingSolverState::GridInitialisation;
-  } else {
-    _solverState = SolverState::GridInitialisation;
-  }
-}
-
-/**
- * From here on every completed sweep has sent a face-data batch, which the following sweep's
- * boundary exchange consumes.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    finishGridInitialisationStep() {
-  this->_hasStoredFaceData = true;
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    suspendSolversForOneGridSweep() {
-  if constexpr (UsesSubcellLimiter) {
-    _limitingSweep.state = exahype2::dg::LimitingSolverState::Suspended;
-  } else {
-    _solverState = SolverState::Suspended;
-  }
-}
-
-/**
- * A new step opens at the predictor, so the troubled count of the previous step clears there,
- * also when this sweep resumes from a suspended one.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    advanceLimitingState(bool& resumesFromSuspension) {
-  resumesFromSuspension = _limitingSweep.state == exahype2::dg::LimitingSolverState::Suspended;
-  _limitingSweep =
-    exahype2::dg::advanceLimitingSweep(_limitingSweep, branchDecision(), exahype2::dg::NumberOfSpreadRings);
-  if (exahype2::dg::isFirstSweepOfTimeStep(_limitingSweep)) {
-    _numberOfTroubledCellsThisTimeStep.store(0, std::memory_order_relaxed);
-  }
-}
-
-/**
- * A suspended solver returns before the start-of-step statistics reset, so its eigenvalues
- * survive the sweep it sits out. The corrector rewrites every cell's stamp, so the stamps a
- * separate predictor sweep reported restart with the corrector's sweep.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::startTimeStep() {
-  if constexpr (UsesSubcellLimiter) {
-    bool resumesFromSuspension = false;
-    advanceLimitingState(resumesFromSuspension);
-    if (resumesFromSuspension) {
-      return;
-    }
-  } else {
-    switch (_solverState) {
-    case SolverState::GridConstruction:
-      _solverState = SolverState::GridInitialisation;
-      break;
-    case SolverState::GridInitialisation:
-      _solverState = SolverState::InitialPrediction;
-      break;
-    case SolverState::Suspended:
-      _solverState = successorAfterInterruption();
-      return;
-    case SolverState::Plotting:
-      _solverState = successorAfterInterruption();
-      break;
-    case SolverState::InitialPrediction:
-      _solverState = successorOfTimeStep();
-      break;
-    case SolverState::PredictionOnHangingCells:
-      _solverState = SolverState::TimeStep;
-      break;
-    case SolverState::TimeStep:
-      _solverState = successorOfTimeStep();
-      break;
-    }
-  }
-
-  this->_meshRefinementRanSinceLastTimeStep = false;
-
-  if (isFirstGridSweepOfTimeStep()) {
-    if constexpr (UsesAdaptiveTimeStepping) {
-      this->startAdaptiveTimeStep();
-    }
-    this->resetTimeStepStatistics();
-  }
-  if (isCorrectorSweep() and not isFirstGridSweepOfTimeStep()) {
-    this->_minTimeStampThisTimeStep = std::numeric_limits<double>::infinity();
-    this->_maxTimeStampThisTimeStep = 0.0;
-  }
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    isCorrectorSweep() const {
-  if constexpr (UsesSubcellLimiter) {
-    return _limitingSweep.state == exahype2::dg::LimitingSolverState::CorrectAndFlag;
-  } else {
-    return _solverState == SolverState::TimeStep;
-  }
-}
-
-/**
- * Returns whether finishTimeStep() reduces the statistics of the sweep that ends now across the
- * ranks.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    reducesStatisticsThisSweep() const {
-  if constexpr (UsesSubcellLimiter) {
-    return isLastGridSweepOfTimeStep() or _limitingSweep.state == exahype2::dg::LimitingSolverState::Predict;
-  } else {
-    return isLastGridSweepOfTimeStep() or _solverState == SolverState::InitialPrediction;
-  }
-}
-
-/**
- * The troubled counts of every rank are summed before the last-sweep test, so all ranks grow
- * the subcell domain or close the step together.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::finishTimeStep() {
-  if constexpr (UsesSubcellLimiter) {
-    if (_limitingSweep.state == exahype2::dg::LimitingSolverState::CorrectAndFlag) {
-      const long localTroubledCells  = _numberOfTroubledCellsThisTimeStep.load(std::memory_order_relaxed);
-      long       globalTroubledCells = 0;
-      tarch::mpi::allreduce(
-        &localTroubledCells,
-        &globalTroubledCells,
-        1,
-        MPI_LONG,
-        MPI_SUM,
-        tarch::mpi::Rank::getInstance().getCommunicator()
-      );
-      _numberOfTroubledCellsThisTimeStep.store(globalTroubledCells, std::memory_order_relaxed);
-    }
-  }
-  if (reducesStatisticsThisSweep()) {
-    this->reduceTimeStepStatisticsAcrossRanks();
-    if (isLastGridSweepOfTimeStep()) {
-      closeTimeStep();
-      this->commitTimeStepStatistics();
+    const int diverged = predictCells(partition, timeStepSize, exahype2::dg::ader::NoLimiter{});
+    if (diverged > 0) {
+      tarch::terminateWithError("The space-time predictor diverged in " + std::to_string(diverged) + " cells.");
     }
   }
 }
 
 /**
- * Derives the time step size of the next time step from the reduced statistics: The CFL
- * condition of the ADER-DG scheme for an adaptive solver, the normalised fraction of the
- * admissible patch width for a fixed one.
+ * Runs the predictor kernel with the given divergence marks and returns the diverged cells the
+ * marks do not record.
  */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::closeTimeStep() {
-  if constexpr (UsesAdaptiveTimeStepping) {
-    this->reduceMaxEigenvaluesAcrossRanks();
-    const auto terminalTime = this->minTerminalTime();
-    if (this->hasPositiveStabilityEigenvalue() and this->_minTimeStampThisTimeStep < terminalTime) {
-      const auto timeStepSizeFromCFL = _timeStepFactor * PNPM / this->_maxScaledEigenvalueThisTimeStep;
-      this->proposeAdmissibleTimeStepSize(timeStepSizeFromCFL, terminalTime);
-    }
-  } else {
-    const auto maxAdmissiblePatchSize = maxAdmissibleMeshWidth();
-    assertion(std::isfinite(maxAdmissiblePatchSize) and maxAdmissiblePatchSize > 0.0, maxAdmissiblePatchSize);
-    this->setFixedTimeStepSize(_timeStepFactor * this->_minMeshWidthThisTimeStep / maxAdmissiblePatchSize);
-  }
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    startPlottingStep() {
-  assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());
-  if constexpr (UsesSubcellLimiter) {
-    _limitingSweep.state = exahype2::dg::LimitingSolverState::Plotting;
-  } else {
-    _solverState = SolverState::Plotting;
-  }
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    finishPlottingStep() {}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-double exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    getMaxPatchSize() const {
-  return this->getMaxCellSize();
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-double exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    getMinPatchSize() const {
-  return this->getMinCellSize();
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-int exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    getNumberOfDoFs() const {
-  return peano4::power(DGOrder + 1, DIMENSIONS) * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::mayPlot() const {
-  if constexpr (UsesSubcellLimiter) {
-    return _limitingSweep.state == exahype2::dg::LimitingSolverState::Suspended
-      or _limitingSweep.state == exahype2::dg::LimitingSolverState::GridInitialisation or isLastGridSweepOfTimeStep();
-  } else {
-    return _solverState == SolverState::Suspended or _solverState == SolverState::GridInitialisation
-      or isLastGridSweepOfTimeStep();
-  }
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename DivergenceMarks>
+int
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::predictCells(
+  const peano4::Partition& partition,
+  const double             timeStepSize,
+  const DivergenceMarks&   divergenceMarks
+) {
+  const auto cells    = this->getCells(partition);
+  int        diverged = 0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(cells.size),
+    exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, DivergenceMarks>{
+      partition.onDevice(),
+      cells,
+      this->_solution.getView(),
+      this->_faceStates.getView(),
+      this->_faceFluxes.getView(),
+      getBasisTables(),
+      _pointSourceLocations.getData(),
+      _predictorScratch.getData(),
+      Predictor::ScratchSize,
+      _picardScratch.getData(),
+      Predictor::PicardScratchSize,
+      divergenceMarks,
+      this->_timeStepping.getTimeStamp(),
+      timeStepSize
+    },
+    tarch::accelerator::Sum<int>{diverged}
+  );
+  return diverged;
 }
 
 /**
- * Adds one cell to the extrema of the current traversal.
+ * Adds the face integrals of every cell with the dependence to its solution and returns the
+ * wave-speed maxima of the updated solution; with a limiter the maxima come from the limiter.
  */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-INLINE_METHOD void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::update(
-    const double timeStepSize,
-    const double timeStamp,
-    const double minCellSize,
-    const double maxCellSize,
-    const bool   hasHangingFaces
-  ) {
-  _localUpdates.addTimeStep(timeStepSize);
-  _localUpdates.addTimeStamp(timeStamp);
-  _localUpdates.addMeshWidths(minCellSize, maxCellSize);
-  _localUpdates.hasHangingFaces = _localUpdates.hasHangingFaces or hasHangingFaces;
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-INLINE_METHOD void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    reduceLocalUpdates() {
-  this->mergeLocalUpdates(_localUpdates);
-}
-
-/**
- * With the limiter the limiting sweep holds the state, and the Galerkin solver state follows
- * from it.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-typename exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::SolverState
-  exahype2::dg::ader::Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    getSolverState() const {
-  if constexpr (UsesSubcellLimiter) {
-    switch (_limitingSweep.state) {
-    case exahype2::dg::LimitingSolverState::GridConstruction:
-      return SolverState::GridConstruction;
-    case exahype2::dg::LimitingSolverState::GridInitialisation:
-      return SolverState::GridInitialisation;
-    case exahype2::dg::LimitingSolverState::Predict:
-      return SolverState::InitialPrediction;
-    case exahype2::dg::LimitingSolverState::PredictOnHangingCells:
-      return SolverState::PredictionOnHangingCells;
-    case exahype2::dg::LimitingSolverState::CorrectAndFlag:
-    case exahype2::dg::LimitingSolverState::SpreadDomain:
-    case exahype2::dg::LimitingSolverState::RecomputeSubcells:
-      return SolverState::TimeStep;
-    case exahype2::dg::LimitingSolverState::Plotting:
-      return SolverState::Plotting;
-    case exahype2::dg::LimitingSolverState::Suspended:
-      return SolverState::Suspended;
-    }
-    return SolverState::TimeStep;
-  } else {
-    return _solverState;
-  }
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-exahype2::dg::LimitingSolverState exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    getLimitingSolverState() const {
-  return _limitingSweep.state;
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-void exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    markCellAsTroubled() {
-  _numberOfTroubledCellsThisTimeStep.fetch_add(1, std::memory_order_relaxed);
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-long exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    getNumberOfTroubledCells() const {
-  return _numberOfTroubledCellsThisTimeStep.load(std::memory_order_relaxed);
-}
-
-/**
- * Identifies the spreading sweep that completes the halo before recomputation.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    isFinalSubcellSpreadSweep() const {
-  return _limitingSweep.state == exahype2::dg::LimitingSolverState::SpreadDomain
-    and _limitingSweep.spreadRing + 1 == exahype2::dg::NumberOfSpreadRings;
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    isFirstGridSweepOfTimeStep() const {
-  if constexpr (UsesSubcellLimiter) {
-    return exahype2::dg::isFirstSweepOfTimeStep(_limitingSweep);
-  } else {
-    return _solverState == SolverState::TimeStep or _solverState == SolverState::InitialPrediction;
-  }
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    isLastGridSweepOfTimeStep() const {
-  if constexpr (UsesSubcellLimiter) {
-    return exahype2::dg::isLastSweepOfTimeStep(_limitingSweep, branchDecision());
-  } else {
-    return _solverState == SolverState::TimeStep;
-  }
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    isGridInitialisationSweep() const {
-  return getSolverState() == SolverState::GridInitialisation;
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    isPlottingSweep() const {
-  return getSolverState() == SolverState::Plotting;
-}
-
-/**
- * The sweep that runs the predictor on the cells behind a hanging face, so that the face holds
- * a trace on both sides.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    isPredictionOnHangingCellsSweep() const {
-  return getSolverState() == SolverState::PredictionOnHangingCells;
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::isLimitingSweep(
-    const exahype2::dg::LimitingSolverState state
-  ) const {
-  return _limitingSweep.state == state;
-}
-
-/**
- * A cell that will be refined passes its nodes on to its children, and the grid construction
- * sweeps carry no nodes at all.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::storesCellData(
-    const peano4::dataview::CellMarker& marker
-  ) const {
-  return not marker.willBeRefined() and getSolverState() != SolverState::GridConstruction;
-}
-
-/**
- * The initial condition writes the first nodes, so the sweeps up to and including the grid
- * initialisation read none.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::loadsCellData(
-    const peano4::dataview::CellMarker& marker
-  ) const {
-  return not marker.hasBeenRefined() and getSolverState() != SolverState::GridConstruction
-    and getSolverState() != SolverState::GridInitialisation;
-}
-
-/**
- * The faces of a cell that will be refined hand their traces to the faces of the children.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::storesFaceData(
-    const peano4::dataview::FaceMarker& marker
-  ) const {
-  return not marker.willBeRefined() and getSolverState() != SolverState::GridConstruction;
-}
-
-/**
- * A face reads its trace once a preceding sweep has written one, which hasStoredFaceData()
- * reports.
- */
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::loadsFaceData(
-    const peano4::dataview::FaceMarker& marker
-  ) const {
-  return not marker.hasBeenRefined() and getSolverState() != SolverState::GridConstruction
-    and this->hasStoredFaceData();
-}
-
-template <
-  typename Derived,
-  int Order,
-  int Unknowns,
-  int AuxiliaryVariables,
-  typename TimeStepping,
-  bool SubcellLimiter,
-  int  PointSources>
-bool exahype2::dg::ader::
-  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
-    providesCellDataToKernels(const peano4::dataview::CellMarker& marker) const {
-  return storesCellData(marker);
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+exahype2::dg::MaxEigenvalueStatistics
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::correct(
+  const peano4::Partition& partition,
+  const peano4::Dependence dependence,
+  const double             timeStepSize
+) {
+  const auto                            cells = this->getCells(partition, dependence);
+  exahype2::dg::MaxEigenvalueStatistics statistics;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(cells.size),
+    exahype2::dg::ader::CorrectCells<Derived, UsesAdaptiveTimeStepping and not HasLimiter, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      cells,
+      this->_solution.getView(),
+      std::as_const(this->_faceFluxes).getView(),
+      Quadrature<ComputePrecision>::QuadratureWeightsOnFace,
+      Quadrature<ComputePrecision>::InverseQuadratureWeightsInCell,
+      DGMatrices<ComputePrecision>::BasisFunctionValuesLeft1D,
+      DGMatrices<ComputePrecision>::BasisFunctionValuesRight1D,
+      Quadrature<StoragePrecision>::QuadraturePoints1D,
+      this->_timeStepping.getTimeStamp(),
+      timeStepSize
+    },
+    tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{statistics}
+  );
+  return statistics;
 }

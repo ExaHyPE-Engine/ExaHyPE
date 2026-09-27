@@ -3,12 +3,13 @@
 #include "tarch/Termination.h"
 #include "tarch/plotter/FileWriter.h"
 
-std::size_t tarch::plotter::FileWriter::VertexHash::operator()(const VertexKey& key) const {
+std::size_t
+tarch::plotter::FileWriter::VertexHash::operator()(const VertexKey& key) const {
   // Mix the three coordinates with the constants of boost hash_combine, which
   // spreads the structured integer coordinates over the buckets.
   std::size_t seed = 0;
   auto        mix  = [&seed](const std::int64_t value) {
-    seed ^= std::hash<std::int64_t>()(value) + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
+    seed ^= std::hash<std::int64_t>()(value) + 0x9E3779B97F4A7C15ULL + (seed << 6) + (seed >> 2);
   };
   mix(std::get<0>(key));
   mix(std::get<1>(key));
@@ -21,10 +22,11 @@ tarch::plotter::FileWriter::VertexPlotter::VertexPlotter(
   const int           subdomainId,
   const VertexMerging vertexMerging
 ) :
-  _buffers(plotter.pieceBuffers(subdomainId)),
+  _buffers(plotter.getPieceBuffers(subdomainId)),
   _vertexMerging(vertexMerging) {}
 
-int tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vector<2, double>& position) {
+int
+tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vector<2, double>& position) {
   tarch::la::Vector<3, double> position3D;
   position3D(0) = position(0);
   position3D(1) = position(1);
@@ -32,7 +34,8 @@ int tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vecto
   return plotVertex(position3D);
 }
 
-int tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vector<3, double>& position) {
+int
+tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vector<3, double>& position) {
   const auto appendVertex = [&]() {
     const auto numberOfVertices = _buffers.pointsXYZ.size() / 3;
     if (numberOfVertices >= static_cast<std::size_t>(std::numeric_limits<int>::max())) {

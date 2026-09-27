@@ -101,7 +101,7 @@ namespace GRMHD {
       double V[19];
       if (r < 0.8) {
         // To avoid division by zero, never used for evolution or BC
-        using Shortcuts         = tests::exahype2::aderdg::VariableShortcutsADERDGSolver;
+        using Shortcuts         = tests::exahype2::aderdg::ADERDGSolverVariableShortcuts;
         V[Shortcuts::rho]       = 1;
         V[Shortcuts::vel + 0]   = 0.;
         V[Shortcuts::vel + 1]   = 0.;
@@ -200,7 +200,7 @@ namespace GRMHD {
       double BV[3];
       PDE::matrixVectMult(g_cov, BV_contr, BV);
 
-      using Shortcuts         = tests::exahype2::aderdg::VariableShortcutsADERDGSolver;
+      using Shortcuts         = tests::exahype2::aderdg::ADERDGSolverVariableShortcuts;
       V[Shortcuts::rho]       = rho;
       V[Shortcuts::vel + 0]   = VV_cov[0];
       V[Shortcuts::vel + 1]   = VV_cov[1];
@@ -241,7 +241,7 @@ namespace GRMHD {
       double va2 = B0 * B0 / (tempaa * tempac);
       double vax = sqrt(va2);
 
-      using Shortcuts = tests::exahype2::aderdg::VariableShortcutsADERDGSolver;
+      using Shortcuts = tests::exahype2::aderdg::ADERDGSolverVariableShortcuts;
       double V[19];
 
       V[Shortcuts::rho] = rho0;

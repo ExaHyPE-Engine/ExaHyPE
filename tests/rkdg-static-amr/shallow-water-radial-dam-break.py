@@ -63,14 +63,18 @@ solver = exahype2.dg.rk.Solver(
 
 solver.set_pde_terms(
     initial_condition="""
-  const double r = std::sqrt((x[0] - 0.5) * (x[0] - 0.5) + (x[1] - 0.5) * (x[1] - 0.5));
+  const double firstSquare  = (x[0] - 0.5) * (x[0] - 0.5);
+  const double secondSquare = (x[1] - 0.5) * (x[1] - 0.5);
+  const double r            = std::sqrt(firstSquare + secondSquare);
   Q[0] = 1.;
   Q[1] = 0.;
   Q[2] = 0.;
   Q[3] = r < 0.1 ? 0.0 : 0.05;
 """,
     boundary_conditions="""
-  const double r = std::sqrt((x[0] - 0.5) * (x[0] - 0.5) + (x[1] - 0.5) * (x[1] - 0.5));
+  const double firstSquare  = (x[0] - 0.5) * (x[0] - 0.5);
+  const double secondSquare = (x[1] - 0.5) * (x[1] - 0.5);
+  const double r            = std::sqrt(firstSquare + secondSquare);
   Qoutside[0] = 1.;
   Qoutside[1] = 0.;
   Qoutside[2] = 0.;
@@ -78,7 +82,9 @@ solver.set_pde_terms(
 """,
     refinement_criterion="""
   auto result = ::exahype2::RefinementCommand::Keep;
-  const double r = std::sqrt((x[0] - 0.5) * (x[0] - 0.5) + (x[1] - 0.5) * (x[1] - 0.5));
+  const double firstSquare  = (x[0] - 0.5) * (x[0] - 0.5);
+  const double secondSquare = (x[1] - 0.5) * (x[1] - 0.5);
+  const double r            = std::sqrt(firstSquare + secondSquare);
   if (r < 0.2) {
     result = ::exahype2::RefinementCommand::Refine;
   }

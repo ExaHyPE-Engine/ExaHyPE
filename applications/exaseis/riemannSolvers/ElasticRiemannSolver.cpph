@@ -1,0 +1,349 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+TARGET_DECLARE
+/**
+ * Returns the material, the velocity and the traction of the node whose data Q holds, with the
+ * velocity and the traction rotated into the local basis of the face along normal.
+ */
+template <typename Shortcuts, typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaseis::FaceNodeSide<Value>
+applications::exahype2::exaseis::getFaceNodeSide(const Value* const Q, const int normal) {
+  static_assert(DIMENSIONS == 3, "The elastic Riemann solvers are three-dimensional");
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+
+  FaceNodeSide<Value> side;
+  side.density            = Q[Shortcuts::rho];
+  side.pressureWaveSpeed  = Q[Shortcuts::cp];
+  side.shearWaveSpeed     = Q[Shortcuts::cs];
+  side.shearModulus       = side.shearWaveSpeed * side.shearWaveSpeed * side.density;
+  side.firstLameParameter = side.density * side.pressureWaveSpeed * side.pressureWaveSpeed - 2 * side.shearModulus;
+  side.pressureImpedance  = side.density * side.pressureWaveSpeed;
+  side.shearImpedance     = side.density * side.shearWaveSpeed;
+
+  if constexpr (HasMetricDerivatives<Shortcuts>) {
+    const Value metricX = Q[Shortcuts::metricDerivative + 0 + normal * 3];
+    const Value metricY = Q[Shortcuts::metricDerivative + 1 + normal * 3];
+    const Value metricZ = Q[Shortcuts::metricDerivative + 2 + normal * 3];
+    side.metricNorm     = std::sqrt(metricX * metricX + metricY * metricY + metricZ * metricZ);
+    side.normal[0]      = metricX / side.metricNorm;
+    side.normal[1]      = metricY / side.metricNorm;
+    side.normal[2]      = metricZ / side.metricNorm;
+  } else {
+    side.metricNorm     = 1;
+    side.normal[normal] = 1;
+  }
+  assertion(side.metricNorm > 0, side.metricNorm);
+
+  const Value* const stress = Q + Shortcuts::sigma;
+  const Value        traction[3]{
+    side.normal[0] * stress[0] + side.normal[1] * stress[3] + side.normal[2] * stress[4],
+    side.normal[0] * stress[3] + side.normal[1] * stress[1] + side.normal[2] * stress[5],
+    side.normal[0] * stress[4] + side.normal[1] * stress[5] + side.normal[2] * stress[2]
+  };
+
+  // Gram-Schmidt against the normal turns the y axis, or the z axis where the normal is parallel to
+  // the y axis, into the first tangent.
+  constexpr Value Tolerance   = 1e-12;
+  side.firstTangent[1]        = 1;
+  const Value distanceToYAxis = std::sqrt(
+    std::pow(static_cast<double>(side.normal[0]), 2) + std::pow(static_cast<double>(side.normal[1] - 1), 2)
+    + std::pow(static_cast<double>(side.normal[2]), 2)
+  );
+  const Value distanceToNegativeYAxis = std::sqrt(
+    std::pow(static_cast<double>(side.normal[0]), 2) + std::pow(static_cast<double>(side.normal[1] + 1), 2)
+    + std::pow(static_cast<double>(side.normal[2]), 2)
+  );
+  if (distanceToYAxis < Tolerance or distanceToNegativeYAxis < Tolerance) {
+    side.firstTangent[1] = 0;
+    side.firstTangent[2] = 1;
+  }
+  const Value projection = side.normal[0] * side.firstTangent[0] + side.normal[1] * side.firstTangent[1]
+    + side.normal[2] * side.firstTangent[2];
+  for (int axis = 0; axis < 3; axis++) {
+    side.firstTangent[axis] = side.firstTangent[axis] - projection * side.normal[axis];
+  }
+  const Value firstTangentNorm = std::sqrt(
+    side.firstTangent[0] * side.firstTangent[0] + side.firstTangent[1] * side.firstTangent[1]
+    + side.firstTangent[2] * side.firstTangent[2]
+  );
+  for (int axis = 0; axis < 3; axis++) {
+    side.firstTangent[axis] = side.firstTangent[axis] / firstTangentNorm;
+  }
+  side.secondTangent[0] = side.normal[1] * side.firstTangent[2] - side.normal[2] * side.firstTangent[1];
+  side.secondTangent[1] = -(side.normal[0] * side.firstTangent[2] - side.normal[2] * side.firstTangent[0]);
+  side.secondTangent[2] = side.normal[0] * side.firstTangent[1] - side.normal[1] * side.firstTangent[0];
+
+  rotateIntoLocalBasis(side, traction, side.traction);
+  rotateIntoLocalBasis(side, Q + Shortcuts::v, side.velocity);
+  if constexpr (HasPerfectlyMatchedLayer<Shortcuts>) {
+    for (int axis = 0; axis < 3; axis++) {
+      side.pmlDamping[axis] = Q[Shortcuts::pmlDamping + axis];
+    }
+  }
+  return side;
+}
+
+/** Writes the components of physicalVector along the local basis of side into localVector. */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaseis::rotateIntoLocalBasis(
+  const FaceNodeSide<Value>& side,
+  const Value* const         physicalVector,
+  Value* const               localVector
+) {
+  localVector[0] =
+    physicalVector[0] * side.normal[0] + physicalVector[1] * side.normal[1] + physicalVector[2] * side.normal[2];
+  localVector[1] = physicalVector[0] * side.firstTangent[0] + physicalVector[1] * side.firstTangent[1]
+    + physicalVector[2] * side.firstTangent[2];
+  localVector[2] = physicalVector[0] * side.secondTangent[0] + physicalVector[1] * side.secondTangent[1]
+    + physicalVector[2] * side.secondTangent[2];
+}
+
+/**
+ * Writes the velocity and the traction of a welded interface between left and right, which keep the
+ * outgoing characteristics of both sides. Along a direction in which a side has no impedance, both
+ * sides keep their velocities, and a side with impedance gets zero traction.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaseis::solveInteriorInterface(
+  const FaceNodeSide<Value>& left,
+  const FaceNodeSide<Value>& right,
+  InterfaceValues<Value>&    leftInterface,
+  InterfaceValues<Value>&    rightInterface
+) {
+  for (int direction = 0; direction < 3; direction++) {
+    const Value leftImpedance       = direction == 0 ? left.pressureImpedance : left.shearImpedance;
+    const Value rightImpedance      = direction == 0 ? right.pressureImpedance : right.shearImpedance;
+    const Value rightCharacteristic = rightImpedance * right.velocity[direction] + right.traction[direction];
+    const Value leftCharacteristic  = leftImpedance * left.velocity[direction] - left.traction[direction];
+    if (rightImpedance > 0 and leftImpedance > 0) {
+      const Value harmonicMean = (rightImpedance * leftImpedance) / (rightImpedance + leftImpedance);
+      const Value traction = harmonicMean * (rightCharacteristic / rightImpedance - leftCharacteristic / leftImpedance);
+      rightInterface.traction[direction] = traction;
+      leftInterface.traction[direction]  = traction;
+      rightInterface.velocity[direction] = (leftCharacteristic + traction) / leftImpedance;
+      leftInterface.velocity[direction]  = (rightCharacteristic - traction) / rightImpedance;
+    } else {
+      rightInterface.traction[direction] = rightImpedance > 0 ? 0 : right.traction[direction];
+      leftInterface.traction[direction]  = leftImpedance > 0 ? 0 : left.traction[direction];
+      rightInterface.velocity[direction] = right.velocity[direction];
+      leftInterface.velocity[direction]  = left.velocity[direction];
+    }
+  }
+}
+
+/**
+ * Returns the velocity and the traction that the domain boundary imposes on side. A reflection of
+ * one makes the boundary a free surface, a reflection of zero an absorbing boundary.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaseis::InterfaceValues<Value>
+applications::exahype2::exaseis::getBoundaryInterface(
+  const FaceNodeSide<Value>& side,
+  const bool                 isLowerFace,
+  const Value                reflection
+) {
+  InterfaceValues<Value> interface;
+  for (int direction = 0; direction < 3; direction++) {
+    const Value impedance = direction == 0 ? side.pressureImpedance : side.shearImpedance;
+    if (impedance > 0) {
+      const Value characteristic = isLowerFace ? (impedance * side.velocity[direction] + side.traction[direction]) / 2
+                                               : (impedance * side.velocity[direction] - side.traction[direction]) / 2;
+      interface.velocity[direction] = (1 + reflection) / impedance * characteristic;
+      interface.traction[direction] =
+        isLowerFace ? (1 - reflection) * characteristic : -(1 - reflection) * characteristic;
+    } else {
+      interface.velocity[direction] = side.velocity[direction];
+      interface.traction[direction] = side.traction[direction];
+    }
+  }
+  return interface;
+}
+
+/**
+ * Writes the flux fluctuation of one side of a face node into flux. isLeftSide selects the sign of
+ * the traction difference and of the stress entries.
+ */
+template <typename Shortcuts, typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaseis::writeFluxFluctuation(
+  const FaceNodeSide<Value>&    side,
+  const InterfaceValues<Value>& interface,
+  const bool                    isLeftSide,
+  Value* const                  flux
+) {
+  Value fluctuation[3];
+  Value scaledFluctuation[3];
+  for (int direction = 0; direction < 3; direction++) {
+    const Value impedance        = direction == 0 ? side.pressureImpedance : side.shearImpedance;
+    const Value velocityJump     = side.velocity[direction] - interface.velocity[direction];
+    const Value tractionJump     = side.traction[direction] - interface.traction[direction];
+    fluctuation[direction]       = (impedance * velocityJump + (isLeftSide ? tractionJump : -tractionJump)) / 2;
+    scaledFluctuation[direction] = impedance > 0 or direction == 0 ? fluctuation[direction] / impedance : 0;
+  }
+
+  Value physical[3];
+  Value scaledPhysical[3];
+  for (int axis = 0; axis < 3; axis++) {
+    physical[axis] = side.normal[axis] * fluctuation[0] + side.firstTangent[axis] * fluctuation[1]
+      + side.secondTangent[axis] * fluctuation[2];
+    scaledPhysical[axis] = side.normal[axis] * scaledFluctuation[0] + side.firstTangent[axis] * scaledFluctuation[1]
+      + side.secondTangent[axis] * scaledFluctuation[2];
+  }
+
+  const Value* const normal       = side.normal;
+  const Value        signedNorm   = isLeftSide ? side.metricNorm : -side.metricNorm;
+  const Value        longitudinal = 2 * side.shearModulus + side.firstLameParameter;
+  const Value        lame         = side.firstLameParameter;
+  const Value        shear        = side.shearModulus;
+  for (int axis = 0; axis < 3; axis++) {
+    flux[Shortcuts::v + axis] = side.metricNorm / side.density * physical[axis];
+  }
+  flux[Shortcuts::sigma + 0] = signedNorm
+    * (longitudinal * normal[0] * scaledPhysical[0] + lame * normal[1] * scaledPhysical[1]
+       + lame * normal[2] * scaledPhysical[2]);
+  flux[Shortcuts::sigma + 1] = signedNorm
+    * (longitudinal * normal[1] * scaledPhysical[1] + lame * normal[0] * scaledPhysical[0]
+       + lame * normal[2] * scaledPhysical[2]);
+  flux[Shortcuts::sigma + 2] = signedNorm
+    * (longitudinal * normal[2] * scaledPhysical[2] + lame * normal[0] * scaledPhysical[0]
+       + lame * normal[1] * scaledPhysical[1]);
+  flux[Shortcuts::sigma + 3] = signedNorm * shear * (normal[1] * scaledPhysical[0] + normal[0] * scaledPhysical[1]);
+  flux[Shortcuts::sigma + 4] = signedNorm * shear * (normal[2] * scaledPhysical[0] + normal[0] * scaledPhysical[2]);
+  flux[Shortcuts::sigma + 5] = signedNorm * shear * (normal[2] * scaledPhysical[1] + normal[1] * scaledPhysical[2]);
+
+  if constexpr (HasPerfectlyMatchedLayer<Shortcuts>) {
+    // The auxiliary variables of the layer hold nine entries per axis, the velocity entries first.
+    for (int axis = 0; axis < 3; axis++) {
+      Value* const layerFlux    = flux + Shortcuts::pml + 9 * axis;
+      const Value  damping      = side.pmlDamping[axis];
+      const Value  signedNormal = isLeftSide ? normal[axis] : -normal[axis];
+      layerFlux[0]              = normal[axis] * damping * side.metricNorm * physical[0];
+      layerFlux[1]              = normal[axis] * damping * side.metricNorm * physical[1];
+      layerFlux[2]              = normal[axis] * damping * side.metricNorm * physical[2];
+      layerFlux[3]              = signedNormal * damping * side.metricNorm * normal[0] * scaledPhysical[0];
+      layerFlux[4]              = signedNormal * damping * side.metricNorm * normal[1] * scaledPhysical[1];
+      layerFlux[5]              = signedNormal * damping * side.metricNorm * normal[2] * scaledPhysical[2];
+      layerFlux[6] =
+        signedNormal * damping * side.metricNorm * (normal[1] * scaledPhysical[0] + normal[0] * scaledPhysical[1]);
+      layerFlux[7] =
+        signedNormal * damping * side.metricNorm * (normal[2] * scaledPhysical[0] + normal[0] * scaledPhysical[2]);
+      layerFlux[8] =
+        signedNormal * damping * side.metricNorm * (normal[2] * scaledPhysical[1] + normal[1] * scaledPhysical[2]);
+    }
+  }
+  if constexpr (HasDisplacement<Shortcuts>) {
+    for (int axis = 0; axis < 3; axis++) {
+      flux[Shortcuts::u + axis] = 0;
+    }
+  }
+}
+
+/**
+ * Adds the flux fluctuation of every node of a face to the flux trace in FL, subtracts it from the
+ * flux trace in FR, so both hold the numerical flux of their side, and returns the largest wave
+ * speed on the face. solveInterface receives the node data of both sides, both sides of the node
+ * and the interface values it writes.
+ */
+template <
+  typename Shortcuts,
+  typename Value,
+  int NodesPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfData,
+  typename SolveInterface
+>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaseis::solveRiemannProblemOnFaceNodes(
+  const Value* const    QL,
+  const Value* const    QR,
+  const int             normal,
+  const SolveInterface& solveInterface,
+  Value* const          FL,
+  Value* const          FR
+) {
+  double maxWaveSpeed = 0.0;
+  for (int node = 0; node < NodesPerAxis * NodesPerAxis; node++) {
+    const Value* const leftData  = QL + node * NumberOfData;
+    const Value* const rightData = QR + node * NumberOfData;
+    const auto         left      = getFaceNodeSide<Shortcuts>(leftData, normal);
+    const auto         right     = getFaceNodeSide<Shortcuts>(rightData, normal);
+    assertion(
+      left.pressureImpedance > 0 and right.pressureImpedance > 0,
+      left.pressureImpedance,
+      right.pressureImpedance
+    );
+
+    InterfaceValues<Value> leftInterface;
+    InterfaceValues<Value> rightInterface;
+    solveInterface(leftData, rightData, left, right, leftInterface, rightInterface);
+    Value leftFluctuation[NumberOfUnknowns]{};
+    Value rightFluctuation[NumberOfUnknowns]{};
+    writeFluxFluctuation<Shortcuts>(left, leftInterface, true, leftFluctuation);
+    writeFluxFluctuation<Shortcuts>(right, rightInterface, false, rightFluctuation);
+    Value* const leftFlux  = FL + node * NumberOfUnknowns;
+    Value* const rightFlux = FR + node * NumberOfUnknowns;
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      leftFlux[unknown]  = leftFlux[unknown] + leftFluctuation[unknown];
+      rightFlux[unknown] = rightFlux[unknown] - rightFluctuation[unknown];
+    }
+
+    const Value leftWaveSpeed  = left.metricNorm * std::fmax(left.pressureWaveSpeed, left.shearWaveSpeed);
+    const Value rightWaveSpeed = right.metricNorm * std::fmax(right.pressureWaveSpeed, right.shearWaveSpeed);
+    maxWaveSpeed               = std::fmax(maxWaveSpeed, static_cast<double>(std::fmax(leftWaveSpeed, rightWaveSpeed)));
+  }
+  return maxWaveSpeed;
+}
+
+/**
+ * Solves the Riemann problems of a face between two elastic media or on the domain boundary and
+ * returns the largest wave speed on it. The boundary face FreeSurfaceFace is a free surface, every
+ * other boundary face absorbs.
+ */
+template <
+  typename Shortcuts,
+  typename Value,
+  int NodesPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfData,
+  int FreeSurfaceFace
+>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaseis::solveElasticRiemannProblem(
+  const Value* const QL,
+  const Value* const QR,
+  const int          normal,
+  const bool         isBoundaryFace,
+  const int          faceIndex,
+  Value* const       FL,
+  Value* const       FR
+) {
+  const Value reflection = faceIndex == FreeSurfaceFace ? 1 : 0;
+  return solveRiemannProblemOnFaceNodes<Shortcuts, Value, NodesPerAxis, NumberOfUnknowns, NumberOfData>(
+    QL,
+    QR,
+    normal,
+    [isBoundaryFace, faceIndex, reflection](
+      [[maybe_unused]] const Value* const leftData,
+      [[maybe_unused]] const Value* const rightData,
+      const FaceNodeSide<Value>&          left,
+      const FaceNodeSide<Value>&          right,
+      InterfaceValues<Value>&             leftInterface,
+      InterfaceValues<Value>&             rightInterface
+    ) {
+      if (isBoundaryFace) {
+        leftInterface  = getBoundaryInterface(left, faceIndex < DIMENSIONS, reflection);
+        rightInterface = getBoundaryInterface(right, faceIndex < DIMENSIONS, reflection);
+      } else {
+        solveInteriorInterface(left, right, leftInterface, rightInterface);
+      }
+    },
+    FL,
+    FR
+  );
+}
+TARGET_DECLARE_END

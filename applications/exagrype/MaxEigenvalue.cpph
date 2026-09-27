@@ -6,10 +6,8 @@
  * The conformal metric must be positive definite.
  */
 template <class Shortcuts>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exagrype::maxEigenvalue(
-  const double* const NOALIAS Q,
-  const int                   normal
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exagrype::maxEigenvalue(const double* const NOALIAS Q, const int normal) {
   assertion(Q != nullptr);
   assertion(normal >= 0 and normal < 3, normal);
   const auto* const metric       = Q + Shortcuts::gamma_tilde;

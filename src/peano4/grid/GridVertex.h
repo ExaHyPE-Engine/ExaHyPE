@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Constants.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
 
 namespace peano4::grid {
@@ -29,20 +29,16 @@ struct peano4::grid::GridVertex {
   GridVertex() noexcept = default;
 
   [[nodiscard]] INLINE_METHOD State getState() const noexcept;
-  INLINE_METHOD void                setState(State value) noexcept;
+  INLINE_METHOD void setState(State value) noexcept;
 
 #if PEANO_DEBUG
   [[nodiscard]] INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const noexcept;
-  INLINE_METHOD void                 setX(const tarch::la::Vector<DIMENSIONS, double>& value) noexcept;
+  INLINE_METHOD void setX(const tarch::la::Vector<DIMENSIONS, double>& value) noexcept;
   [[nodiscard]] INLINE_METHOD double getX(int axis) const noexcept;
-  INLINE_METHOD void                 setX(int axis, double value) noexcept;
+  INLINE_METHOD void setX(int axis, double value) noexcept;
 #endif
 
   [[nodiscard]] std::string toString() const;
-
-  static bool areAllVerticesRefined(const GridVertex vertices[peano4::VerticesPerCell]);
-
-  static std::bitset<peano4::VerticesPerCell> getRefinedVertices(const GridVertex vertices[peano4::VerticesPerCell]);
 };
 
 std::ostream& operator<<(std::ostream& out, const peano4::grid::GridVertex& vertex);

@@ -1,47 +1,37 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "{{ TABLE_CLASS }}.h"
-{% if TABLES | selectattr("expression", "defined") | list %}
-#include "exahype2/dg/AMRMatrices.h"
-#include "peano4/sfc/ActiveCurve.h"
-{%- endif %}
+#include "{{ CLASSNAME }}.h"
+
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/accelerator.h"
 
 namespace {
-{%- if TABLES | selectattr("expression", "defined") | list %}
-  constexpr int NodesPerAxis               = {{ DG_ORDER }} + 1;
-  constexpr int EntriesPerTransferOperator = peano4::sfc::ActiveCurve::SubdivisionFactor * NodesPerAxis * NodesPerAxis;
-
-  constexpr double QuadratureNodes1D[NodesPerAxis]   = {{ QUADRATURE_NODES_1D }};
-  constexpr double QuadratureWeights1D[NodesPerAxis] = {{ QUADRATURE_WEIGHTS_1D }};
-{%- endif %}
-{%- for table in TABLES %}
-{%- if table.expression is defined %}
-  constexpr auto {{ table.name }}Values = {{ table.expression }};
-{%- else %}
-  constexpr double {{ table.name }}Values[{{ table.length }}] = {{ table.rendered }};
-{%- endif %}
-{%- endfor %}
+  /** Returns a copy of values in device memory. */
+  template <typename Precision, std::size_t Length>
+  Precision* copyToDevice(const std::array<Precision, Length>& values) {
+    static_assert(Length > 0);
+    auto* const result = tarch::allocateMemory<Precision>(Length, tarch::MemoryLocation::Device);
+    tarch::copyTo(result, values.data(), Length, tarch::MemoryLocation::Device);
+    return result;
+  }
 } // namespace
 
 template <typename Precision>
-void {{ FULL_QUALIFIED_NAMESPACE }}::{{ TABLE_CLASS }}<Precision>::initialise() {
+void {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }}<Precision>::initialise() {
 {%- for table in TABLES %}
-{%- set length = "EntriesPerTransferOperator" if table.expression is defined else table.length %}
-  {{ table.name }} = tarch::allocateMemory<Precision>({{ length }}, tarch::MemoryLocation::Heap);
-  for (int entry = 0; entry < {{ length }}; entry++) {
-    {{ table.name }}[entry] = static_cast<Precision>({{ table.name }}Values[entry]);
-  }
+  assertion({{ table.name }} == nullptr);
+  {{ table.name }} = copyToDevice(get{{ table.name }}());
 {%- endfor %}
 }
 
 template <typename Precision>
-void {{ FULL_QUALIFIED_NAMESPACE }}::{{ TABLE_CLASS }}<Precision>::deallocate() {
+void {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }}<Precision>::deallocate() {
 {%- for table in TABLES %}
-  tarch::freeMemory({{ table.name }}, tarch::MemoryLocation::Heap);
+  tarch::freeMemory({{ table.name }}, tarch::MemoryLocation::Device);
   {{ table.name }} = nullptr;
 {%- endfor %}
 }
 {% for precision in TABLE_PRECISIONS %}
-template class {{ FULL_QUALIFIED_NAMESPACE }}::{{ TABLE_CLASS }}<{{ precision }}>;
+template class {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }}<{{ precision }}>;
 {%- endfor %}

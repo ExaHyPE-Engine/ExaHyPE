@@ -12,7 +12,7 @@ namespace tarch::accelerator::cuda {
 
 class tarch::accelerator::cuda::DevicePropertiesCache {
 public:
-  static cudaDeviceProp& get();
+  static cudaDeviceProp& getProperties();
 
 private:
   std::mutex                    _mtx;

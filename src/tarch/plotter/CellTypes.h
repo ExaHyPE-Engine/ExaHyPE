@@ -52,8 +52,8 @@ namespace tarch::plotter {
 
   INLINE_METHOD constexpr const tarch::plotter::CellTypeInfo* lookupCellType(const int vtkCode);
   INLINE_METHOD constexpr const tarch::plotter::CellTypeInfo* lookupCellType(const tarch::plotter::CellType type);
-  INLINE_METHOD constexpr int                                 nodesOf(const tarch::plotter::CellType type);
-  INLINE_METHOD constexpr bool                                xdmfTypeNeedsNodeCount(const int xdmfType);
+  INLINE_METHOD constexpr int getNumberOfNodesOf(const tarch::plotter::CellType type);
+  INLINE_METHOD constexpr bool xdmfTypeNeedsNodeCount(const int xdmfType);
 } // namespace tarch::plotter
 
-#include "CellTypes.cpph"
+#include "tarch/plotter/CellTypes.cpph"

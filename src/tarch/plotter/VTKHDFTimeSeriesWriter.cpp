@@ -2,12 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "VTKHDFTimeSeriesWriter.h"
 
-void tarch::plotter::VTKHDFTimeSeriesWriter::writeTimeSeriesMetaFile(
+void
+tarch::plotter::VTKHDFTimeSeriesWriter::writeTimeSeriesMetaFile(
   [[maybe_unused]] const std::string& outputDirectory,
   [[maybe_unused]] const std::string& filename
 ) const {}
 
-std::string tarch::plotter::VTKHDFTimeSeriesWriter::snapshotName(
+std::string
+tarch::plotter::VTKHDFTimeSeriesWriter::getSnapshotName(
   const std::string&            filename,
   [[maybe_unused]] const double time
 ) const {

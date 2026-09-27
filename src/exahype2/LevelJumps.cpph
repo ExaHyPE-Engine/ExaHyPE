@@ -1,0 +1,74 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+
+/**
+ * Runs operation on the level jumps with the dependence, one level after the other from the
+ * coarsest level down, so an interpolation reads a coarse face the level above has written.
+ */
+template <typename Operation>
+void
+exahype2::interpolateCoarseFaces(
+  const peano4::Partition& partition,
+  const peano4::Dependence dependence,
+  const Operation&         operation
+) {
+  for (int level = 0; level <= partition.getMaximumLevel(); level++) {
+    const auto levelJumps = partition.onDevice().getLevelJumps(dependence, level);
+    if (not levelJumps.isEmpty()) {
+      tarch::accelerator::parallelFor(
+        tarch::accelerator::Range(levelJumps.size),
+        exahype2::ForEachLevelJump<Operation>{levelJumps, operation}
+      );
+    }
+  }
+}
+
+/**
+ * Runs operation on the level jumps with the dependence, one level after the other from the
+ * finest level up, so a restriction reads fine faces the level below has written.
+ */
+template <typename Operation>
+void
+exahype2::restrictFineFaces(
+  const peano4::Partition& partition,
+  const peano4::Dependence dependence,
+  const Operation&         operation
+) {
+  for (int level = partition.getMaximumLevel(); level >= 0; level--) {
+    const auto levelJumps = partition.onDevice().getLevelJumps(dependence, level);
+    if (not levelJumps.isEmpty()) {
+      tarch::accelerator::parallelFor(
+        tarch::accelerator::Range(levelJumps.size),
+        exahype2::ForEachLevelJump<Operation>{levelJumps, operation}
+      );
+    }
+  }
+}
+
+/** Runs operation on every level jump of the partition, one level after the other from the finest level up. */
+template <typename Operation>
+void
+exahype2::restrictFineFaces(const peano4::Partition& partition, const Operation& operation) {
+  for (int level = partition.getMaximumLevel(); level >= 0; level--) {
+    for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
+      const auto levelJumps = partition.onDevice().getLevelJumps(dependence, level);
+      if (not levelJumps.isEmpty()) {
+        tarch::accelerator::parallelFor(
+          tarch::accelerator::Range(levelJumps.size),
+          exahype2::ForEachLevelJump<Operation>{levelJumps, operation}
+        );
+      }
+    }
+  }
+}
+
+TARGET_DECLARE
+template <typename Operation>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::ForEachLevelJump<Operation>::operator()(const int entry) const {
+  operation(levelJumps[entry]);
+}
+TARGET_DECLARE_END

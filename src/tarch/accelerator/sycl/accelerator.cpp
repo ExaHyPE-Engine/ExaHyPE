@@ -9,7 +9,8 @@
 
 #include <sycl/sycl.hpp>
 
-void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {
+void*
+tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {
   assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   void*        data  = sycl::malloc_device(sizeInBytes, queue);
@@ -17,7 +18,8 @@ void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int devi
   return data;
 }
 
-void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int device) {
+void*
+tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int device) {
   assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   void*        data  = sycl::malloc_host(sizeInBytes, queue);
@@ -25,21 +27,27 @@ void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int devi
   return data;
 }
 
-void tarch::accelerator::freeDeviceMemory(void* data, int device) {
+void
+tarch::accelerator::freeDeviceMemory(void* data, int device) {
   assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   sycl::free(data, queue);
 }
 
-void tarch::accelerator::freePinnedMemory(void* data, int device) { freeDeviceMemory(data, device); }
+void
+tarch::accelerator::freePinnedMemory(void* data, int device) {
+  freeDeviceMemory(data, device);
+}
 
-void tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, int device) {
+void
+tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, int device) {
   assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   queue.memcpy(target, source, sizeInBytes).wait();
 }
 
-void tarch::accelerator::copyToPinnedMemory(
+void
+tarch::accelerator::copyToPinnedMemory(
   void*                target,
   const void*          source,
   std::size_t          sizeInBytes,
@@ -48,13 +56,15 @@ void tarch::accelerator::copyToPinnedMemory(
   std::memcpy(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device) {
+void
+tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device) {
   assertion(device >= 0, device);
   sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(device));
   queue.memcpy(target, source, sizeInBytes).wait();
 }
 
-void tarch::accelerator::copyFromPinnedMemory(
+void
+tarch::accelerator::copyFromPinnedMemory(
   const void*          source,
   void*                target,
   std::size_t          sizeInBytes,

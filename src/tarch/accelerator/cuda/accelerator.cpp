@@ -17,7 +17,8 @@ namespace {
   }
 } // namespace
 
-void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {
+void*
+tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {
   void* data = nullptr;
   assertion(device >= 0, device);
   activateDevice(device);
@@ -26,7 +27,8 @@ void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int devi
   return data;
 }
 
-void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int device) {
+void*
+tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int device) {
   void* data = nullptr;
   assertion(device >= 0, device);
   CHECK_CUDA_ERROR(cudaMallocHost(&data, sizeInBytes));
@@ -34,24 +36,28 @@ void* tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, int devi
   return data;
 }
 
-void tarch::accelerator::freeDeviceMemory(void* data, int device) {
+void
+tarch::accelerator::freeDeviceMemory(void* data, int device) {
   assertion(device >= 0, device);
   activateDevice(device);
   CHECK_CUDA_ERROR(cudaFree(data));
 }
 
-void tarch::accelerator::freePinnedMemory(void* data, int device) {
+void
+tarch::accelerator::freePinnedMemory(void* data, int device) {
   assertion(device >= 0, device);
   CHECK_CUDA_ERROR(cudaFreeHost(data));
 }
 
-void tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, int device) {
+void
+tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, int device) {
   assertion(device >= 0, device);
   activateDevice(device);
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToDevice, deviceStreamGet()));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToDevice, getDeviceStream()));
 }
 
-void tarch::accelerator::copyToPinnedMemory(
+void
+tarch::accelerator::copyToPinnedMemory(
   void*                target,
   const void*          source,
   std::size_t          sizeInBytes,
@@ -60,13 +66,15 @@ void tarch::accelerator::copyToPinnedMemory(
   std::memcpy(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device) {
+void
+tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device) {
   assertion(device >= 0, device);
   activateDevice(device);
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyDeviceToHost, deviceStreamGet()));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyDeviceToHost, getDeviceStream()));
 }
 
-void tarch::accelerator::copyFromPinnedMemory(
+void
+tarch::accelerator::copyFromPinnedMemory(
   const void*          source,
   void*                target,
   std::size_t          sizeInBytes,

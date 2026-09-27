@@ -26,7 +26,8 @@ namespace {
  * @return The conventional coordinate variable names for this number of field dimensions.
  */
 template <int FieldDimensions>
-std::array<std::string, FieldDimensions> tarch::reader::NetCDFFieldSampler<FieldDimensions>::defaultCoordinateKeys() {
+std::array<std::string, FieldDimensions>
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::getDefaultCoordinateKeys() {
   if constexpr (FieldDimensions == 3) {
     return {"x", "y", "z"};
   } else {
@@ -75,7 +76,8 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::NetCDFFieldSampler(
 }
 
 template <int FieldDimensions>
-void tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDescription& fieldDescription) {
+void
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDescription& fieldDescription) {
   logDebug(
     "Parse field " << fieldDescription.name << " from " << fieldDescription.filePath << " with keys ("
                    << fieldDescription.valueKey << ", " << coordinateKeysToString(fieldDescription) << ")"
@@ -162,7 +164,8 @@ void tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const Fi
  * @return The field's value at position, or 0 if position falls outside the field's extent.
  */
 template <int FieldDimensions>
-double tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConstant(
+double
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConstant(
   const std::string&                         fieldName,
   tarch::la::Vector<FieldDimensions, double> position
 ) const {
@@ -192,7 +195,8 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConsta
 }
 
 template <int FieldDimensions>
-double tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
+double
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
   const std::string&                         fieldName,
   tarch::la::Vector<FieldDimensions, double> position
 ) const {
@@ -205,7 +209,7 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
 
   tarch::la::Vector<FieldDimensions, std::size_t> lowerIndex(std::size_t(0));
   tarch::la::Vector<FieldDimensions, std::size_t> upperIndex(std::size_t(0));
-  tarch::la::Vector<FieldDimensions, double>      fraction(0.0);
+  tarch::la::Vector<FieldDimensions, double> fraction(0.0);
 
   for (int i = 0; i < FieldDimensions; i++) {
     const double coordinate = transformSimulationCoordinateToCDFRange(
@@ -256,7 +260,8 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
  * @return Index in netCDF space, in [minIndexOfCDFspaceInZDirection, maxIndexOfCDFspaceInZDirection].
  */
 template <int FieldDimensions>
-double tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCoordinateToCDFRange(
+double
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCoordinateToCDFRange(
   double coordinateOfDimensionZInSimulationSpace,
   double sizeOfSimulationSpaceInZDirection,
   double minIndexOfCDFspaceInZDirection,
@@ -280,7 +285,8 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCo
  * @return Index in [0, product of lengthOfDimensionsInCDFMesh).
  */
 template <int FieldDimensions>
-std::size_t tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCDFRangeToArray(
+std::size_t
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCDFRangeToArray(
   tarch::la::Vector<FieldDimensions, double>      coordinatesInCDFMesh,
   tarch::la::Vector<FieldDimensions, double>      firstCoordinatesInCDFMesh,
   tarch::la::Vector<FieldDimensions, double>      lastCoordinatesInCDFMesh,
@@ -316,7 +322,8 @@ std::size_t tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCD
 }
 
 template <int FieldDimensions>
-bool tarch::reader::NetCDFFieldSampler<FieldDimensions>::isCoordinateInRange(
+bool
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::isCoordinateInRange(
   double coordinate,
   double firstCoordinate,
   double lastCoordinate

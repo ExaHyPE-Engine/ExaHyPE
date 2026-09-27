@@ -13,15 +13,12 @@ int tarch::mpi::Rank::_nextFreeTag     = 0;
 tarch::mpi::Rank tarch::mpi::Rank::_singleton;
 
 /**
- * Reserves a contiguous range of message tags. The function and the counter it
- * increments are static, and a caller reserves tags before the static log devices
- * exist, so the reservation writes no log line.
- *
- * @param fullQualifiedMessageName Identifies the owner in assertions.
- * @param numberOfTags Number of consecutive tags to reserve.
- * @return First tag in the reserved range.
+ * Reserves numberOfTags consecutive message tags and returns the first one. A caller reserves tags
+ * during static initialisation, so a reservation writes a log line only after init() has read the
+ * upper tag bound.
  */
-int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName, const int numberOfTags) {
+int
+tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName, const int numberOfTags) {
   assertion(numberOfTags >= 1, fullQualifiedMessageName, numberOfTags);
   const int firstReservedTag = _nextFreeTag;
   _nextFreeTag += numberOfTags;
@@ -31,7 +28,10 @@ int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName
   return firstReservedTag;
 }
 
-bool tarch::mpi::Rank::isInitialised() const { return _initIsCalled; }
+bool
+tarch::mpi::Rank::isInitialised() const {
+  return _initIsCalled;
+}
 
 /**
  * Shuts the MPI environment down and runs before the final return statement of
@@ -39,7 +39,8 @@ bool tarch::mpi::Rank::isInitialised() const { return _initIsCalled; }
  * a destructor can run after main returns, where Scalasca's instrumentation
  * reports an error.
  */
-void tarch::mpi::Rank::shutdown() {
+void
+tarch::mpi::Rank::shutdown() {
   assertion(_rank != -1);
 
   const int errorCode = MPI_Finalize();
@@ -51,10 +52,13 @@ void tarch::mpi::Rank::shutdown() {
   _initIsCalled = false;
 }
 
-/** @return The root of the logical rank tree, which is rank 0. */
-int tarch::mpi::Rank::getGlobalMasterRank() { return 0; }
+int
+tarch::mpi::Rank::getGlobalMasterRank() {
+  return 0;
+}
 
-bool tarch::mpi::Rank::isGlobalMaster() const {
+bool
+tarch::mpi::Rank::isGlobalMaster() const {
   assertion(_initIsCalled);
   return getRank() == getGlobalMasterRank();
 }
@@ -64,7 +68,8 @@ bool tarch::mpi::Rank::isGlobalMaster() const {
  * writes a warning when it does not. init() reads that bound, so the check passes
  * before init() runs.
  */
-bool tarch::mpi::Rank::validateReservedTagsAreSupported() {
+bool
+tarch::mpi::Rank::validateReservedTagsAreSupported() {
   const int highestReservedTag = _nextFreeTag - 1;
   if (_maximumTagValue < 0 or highestReservedTag <= _maximumTagValue) {
     return true;
@@ -77,11 +82,6 @@ bool tarch::mpi::Rank::validateReservedTagsAreSupported() {
 }
 
 /**
- * Returns the thread-support level provided during MPI initialisation.
- */
-int tarch::mpi::Rank::getProvidedThreadLevelSupport() const { return _providedThreadLevelSupport; }
-
-/**
  * Initialises the MPI environment and the program instance. argc and argv are in
  * and out parameters, because an MPI implementation removes its own arguments
  * before it returns.
@@ -90,7 +90,8 @@ int tarch::mpi::Rank::getProvidedThreadLevelSupport() const { return _providedTh
  *
  * @see shutdown
  */
-bool tarch::mpi::Rank::init(int* const argc, char*** const argv) {
+bool
+tarch::mpi::Rank::init(int* const argc, char*** const argv) {
   int mpiResult = MPI_Init_thread(argc, argv, MPI_THREAD_MULTIPLE, &_providedThreadLevelSupport);
   if (mpiResult == MPI_SUCCESS and _providedThreadLevelSupport != MPI_THREAD_MULTIPLE) {
     std::cerr << "Error: MPI implementation does not support MPI_THREAD_MULTIPLE. The supported multithreading level "
@@ -144,7 +145,9 @@ bool tarch::mpi::Rank::init(int* const argc, char*** const argv) {
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, _rank, MPI_INFO_NULL, &nodeCommunicator);
   int nodeRank{0};
   MPI_Comm_rank(nodeCommunicator, &nodeRank);
+  MPI_Comm_size(nodeCommunicator, &_numberOfRanksOnNode);
   MPI_Comm_free(&nodeCommunicator);
+  _rankOnNode              = nodeRank;
   _isNodeMaster            = (nodeRank == 0);
   const int nodeMasterFlag = _isNodeMaster ? 1 : 0;
   MPI_Allreduce(&nodeMasterFlag, &_numberOfNodes, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -156,17 +159,43 @@ bool tarch::mpi::Rank::init(int* const argc, char*** const argv) {
 /**
  * @return Number of distinct compute nodes the ranks run on.
  */
-int tarch::mpi::Rank::getNumberOfNodes() const { return _numberOfNodes; }
+int
+tarch::mpi::Rank::getNumberOfNodes() const {
+  return _numberOfNodes;
+}
+
+/**
+ * @return Number of ranks on the node of this rank, this rank included.
+ */
+int
+tarch::mpi::Rank::getNumberOfRanksOnNode() const {
+  return _numberOfRanksOnNode;
+}
+
+/**
+ * @return Rank of this process among the ranks of its node, counted from zero.
+ */
+int
+tarch::mpi::Rank::getRankOnNode() const {
+  return _rankOnNode;
+}
 
 /**
  * @return Whether this rank is the lowest-ranked process on its node, which
  *   lets a caller count per-node data exactly once.
  */
-bool tarch::mpi::Rank::isNodeMaster() const { return _isNodeMaster; }
+bool
+tarch::mpi::Rank::isNodeMaster() const {
+  return _isNodeMaster;
+}
 
-int tarch::mpi::Rank::getRank() const { return _rank; }
+int
+tarch::mpi::Rank::getRank() const {
+  return _rank;
+}
 
-int tarch::mpi::Rank::getNumberOfRanks() const {
+int
+tarch::mpi::Rank::getNumberOfRanks() const {
   assertion(_initIsCalled);
   return _numberOfRanks;
 }
@@ -174,9 +203,13 @@ int tarch::mpi::Rank::getNumberOfRanks() const {
 /**
  * Returns the singleton instance. init() establishes its MPI state.
  */
-tarch::mpi::Rank& tarch::mpi::Rank::getInstance() { return _singleton; }
+tarch::mpi::Rank&
+tarch::mpi::Rank::getInstance() {
+  return _singleton;
+}
 
-MPI_Comm tarch::mpi::Rank::getCommunicator() const {
+MPI_Comm
+tarch::mpi::Rank::getCommunicator() const {
   assertion(_initIsCalled);
   return _communicator;
 }
@@ -185,7 +218,8 @@ MPI_Comm tarch::mpi::Rank::getCommunicator() const {
  * Stops every rank of the job from any rank. MPI_Abort reaches every rank, and
  * std::_Exit() stops this rank while MPI is not initialised.
  */
-void tarch::mpi::abort(const int errorCode) {
+void
+tarch::mpi::abort(const int errorCode) {
   std::cout.flush();
   std::cerr.flush();
   int mpiInitialised{0};

@@ -23,20 +23,23 @@ tarch::instrumentation::CommandLineSink::CommandLineSink() :
 
 tarch::instrumentation::CommandLineSink::~CommandLineSink() { close(); }
 
-tarch::instrumentation::CommandLineSink& tarch::instrumentation::CommandLineSink::getInstance() {
+tarch::instrumentation::CommandLineSink&
+tarch::instrumentation::CommandLineSink::getInstance() {
   // Process-lifetime storage keeps logging available during static destruction.
   static CommandLineSink& singleton = *new CommandLineSink();
   return singleton;
 }
 
-void tarch::instrumentation::CommandLineSink::configureOutputStreams() {
+void
+tarch::instrumentation::CommandLineSink::configureOutputStreams() {
   std::cout.setf(std::ios_base::scientific, std::ios_base::floatfield);
   std::cout.precision(20);
   std::cerr.setf(std::ios_base::scientific, std::ios_base::floatfield);
   std::cerr.precision(20);
 }
 
-bool tarch::instrumentation::CommandLineSink::streamSupportsAnsi(const int fileDescriptor) {
+bool
+tarch::instrumentation::CommandLineSink::streamSupportsAnsi(const int fileDescriptor) {
 #if defined(_WIN32)
   if (_isatty(fileDescriptor) == 0) {
     return false;
@@ -67,7 +70,8 @@ bool tarch::instrumentation::CommandLineSink::streamSupportsAnsi(const int fileD
 #endif
 }
 
-const char* tarch::instrumentation::CommandLineSink::getAnsiPrefix(const TerminalStyle terminalStyle) {
+const char*
+tarch::instrumentation::CommandLineSink::getANSIPrefix(const TerminalStyle terminalStyle) {
   switch (terminalStyle) {
   case TerminalStyle::Warning:
     return "\033[33m";
@@ -80,7 +84,8 @@ const char* tarch::instrumentation::CommandLineSink::getAnsiPrefix(const Termina
   return "";
 }
 
-void tarch::instrumentation::CommandLineSink::writeToStdOut(
+void
+tarch::instrumentation::CommandLineSink::writeToStdOut(
   const std::string_view message,
   const bool             flush,
   const TerminalStyle    terminalStyle
@@ -89,7 +94,7 @@ void tarch::instrumentation::CommandLineSink::writeToStdOut(
 
   const bool useAnsi = _stdoutSupportsAnsi and terminalStyle != TerminalStyle::Plain;
   if (useAnsi) {
-    std::cout << getAnsiPrefix(terminalStyle);
+    std::cout << getANSIPrefix(terminalStyle);
   }
   std::cout << message;
   if (useAnsi) {
@@ -100,7 +105,8 @@ void tarch::instrumentation::CommandLineSink::writeToStdOut(
   }
 }
 
-void tarch::instrumentation::CommandLineSink::writeToStdErr(
+void
+tarch::instrumentation::CommandLineSink::writeToStdErr(
   const std::string_view message,
   const bool             flush,
   const TerminalStyle    terminalStyle
@@ -109,7 +115,7 @@ void tarch::instrumentation::CommandLineSink::writeToStdErr(
 
   const bool useAnsi = _stderrSupportsAnsi and terminalStyle != TerminalStyle::Plain;
   if (useAnsi) {
-    std::cerr << getAnsiPrefix(terminalStyle);
+    std::cerr << getANSIPrefix(terminalStyle);
   }
   std::cerr << message;
   if (useAnsi) {
@@ -120,7 +126,8 @@ void tarch::instrumentation::CommandLineSink::writeToStdErr(
   }
 }
 
-void tarch::instrumentation::CommandLineSink::close() {
+void
+tarch::instrumentation::CommandLineSink::close() {
   const std::scoped_lock lock(_mutex);
 
   std::cout.flush();

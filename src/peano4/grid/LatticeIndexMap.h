@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 namespace peano4::grid {
   class LatticeIndexMap;
@@ -44,7 +44,8 @@ public:
 
   INLINE_METHOD bool erase(std::int64_t key);
 
-  [[nodiscard]] INLINE_METHOD std::size_t size() const;
+  [[nodiscard]] INLINE_METHOD std::size_t getSize() const;
+  [[nodiscard]] INLINE_METHOD std::size_t getAllocatedBytes() const;
 
   template <typename Callback>
   INLINE_METHOD void forEachEntry(const Callback& callback) const;
@@ -64,7 +65,7 @@ private:
   /** Tracks erased probe slots until growth clears them. */
   std::size_t _numberOfTombstones{0};
 
-  [[nodiscard]] INLINE_METHOD std::size_t firstSlotOf(std::int64_t key) const;
+  [[nodiscard]] INLINE_METHOD std::size_t getFirstSlot(std::int64_t key) const;
 
   void grow();
 };

@@ -7,7 +7,8 @@
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/hip/ErrorCheck.h"
 
-hipDeviceProp_t& tarch::accelerator::hip::DevicePropertiesCache::get() {
+hipDeviceProp_t&
+tarch::accelerator::hip::DevicePropertiesCache::getProperties() {
   static DevicePropertiesCache instance;
 
   int deviceId = -1;

@@ -12,9 +12,13 @@
 tarch::plotter::VTUFileWriter::VTUFileWriter(const std::string& outputDirectory) :
   tarch::plotter::FileWriter(outputDirectory) {}
 
-std::string tarch::plotter::VTUFileWriter::getFileExtension() const { return ".pvtu"; }
+std::string
+tarch::plotter::VTUFileWriter::getFileExtension() const {
+  return ".pvtu";
+}
 
-bool tarch::plotter::VTUFileWriter::writeToFile(const std::string& filename, [[maybe_unused]] const double time) {
+bool
+tarch::plotter::VTUFileWriter::writeToFile(const std::string& filename, [[maybe_unused]] const double time) {
   if (_written) {
     throw std::runtime_error("Cannot write a plotter file more than once.");
   }
@@ -31,7 +35,8 @@ bool tarch::plotter::VTUFileWriter::writeToFile(const std::string& filename, [[m
   return true;
 }
 
-void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) const {
+void
+tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) const {
   const auto            rank    = tarch::mpi::Rank::getInstance().getRank();
   const std::string     vtuFile = filename + "-rank-" + std::to_string(rank) + ".vtu";
   std::filesystem::path filePath(_outputDirectory);
@@ -238,7 +243,8 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) const 
   }
 }
 
-void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) const {
+void
+tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) const {
   const std::string     pvtuFile = filename + ".pvtu";
   std::filesystem::path filePath(_outputDirectory);
   filePath /= pvtuFile;

@@ -1,0 +1,44 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "peano4/Regrid.h"
+
+TARGET_DECLARE
+template <typename T, typename Transfer>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::ProlongChunks<T, Transfer>::operator()(const int entry) const {
+  const peano4::Prolongation& prolongation = prolongations[entry];
+  transfer
+    .interpolateFromParent(prolongation.parentSlot, pool.getChunk(prolongation.childSlot), prolongation.childPosition);
+}
+
+template <typename T, typename Transfer>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::RestrictChunks<T, Transfer>::operator()(const int entry) const {
+  const peano4::Restriction& restriction = restrictions[entry];
+  transfer.restrictFromChildren(restriction.childSlots, pool.getChunk(restriction.parentSlot));
+}
+
+/** A sent cell takes its chunk from its own old slot, from its parent or from its children. */
+template <typename T, typename Transfer>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::GatherChunks<T, Transfer>::operator()(const int entry) const {
+  const peano4::TransferredCell& cell   = cells[entry];
+  T* const                       target = send + entry * chunkSize;
+  if (cell.keptSlot >= 0) {
+    transfer.copy(cell.keptSlot, target);
+  } else if (cell.parentSlot >= 0) {
+    transfer.interpolateFromParent(cell.parentSlot, target, cell.childPosition);
+  } else {
+    transfer.restrictFromChildren(cell.childSlots, target);
+  }
+}
+
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::ScatterChunks<T>::operator()(const int index) const {
+  const int entry                      = index / chunkSize;
+  const int element                    = index - entry * chunkSize;
+  pool.getChunk(slots[entry])[element] = received[index];
+}
+TARGET_DECLARE_END

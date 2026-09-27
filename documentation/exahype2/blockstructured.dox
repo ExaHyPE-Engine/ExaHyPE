@@ -12,16 +12,16 @@ Runge-Kutta DG and the ADER-DG solvers all assemble their kernels from them.
 
 ## Functionality
 
-\li `exahype2/Enumeration.h` Lexicographic serialisation of the voxel indices
-  within a patch overlap (halo layer). This defines the canonical ordering of
-  halo data.
-\li `exahype2/amr/AMRRoutines.h` Interpolation of coarse patch data onto
-  embedded fine patches at resolution transitions, together with the matching
-  restriction of fine data back onto the coarse patch. These are the
-  inter-resolution transfer operators for adaptive mesh refinement.
-\li `exahype2/amr/ChildDataStage.h` Collects the data of the children of one
-  coarse cell or face until the sweep restricts it.
-\li `exahype2/amr/MultiresolutionDetail.h` Relative representation error of an
+\li `exahype2/fv/FiniteVolume.h` The finite-volume scheme on one patch:
+  exahype2::fv::FiniteVolume writes the initial condition, fills the outer
+  half of a boundary face, copies the boundary layers of a patch onto its
+  faces, interpolates and restricts the halo halves across a level jump,
+  interpolates and restricts a patch across a regrid and advances a patch by
+  one time step. The free functions exahype2::fv::getFaceVolumeIndex() name the
+  volumes of a face, and exahype2::fv::getVolumeCentre() the centre of a
+  volume; `exahype2/dg/Basis.h` derives the operators of the DG solver
+  families from the quadrature nodes.
+\li `exahype2/MultiresolutionDetail.h` Relative representation error of an
   affine fit over one patch. exahype2::refineOnDetail() maps it onto a
   refinement command.
 \li `exahype2/Curvi.h` Transformation between a Cartesian domain and a

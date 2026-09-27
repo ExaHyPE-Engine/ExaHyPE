@@ -2,43 +2,36 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace tarch::accelerator {
-  /**
-   * Flat 1-dimensional range [0, n).
-   * Maps to OMP `for (int i=0; i<n; ++i)`, Kokkos::RangePolicy(0,n),
-   * CUDA/HIP grid stride, sycl::range<1>(n).
-   */
+  /** Covers the work items 0 to n - 1 of a one-dimensional dispatch. */
   struct Range {
     int n;
     GPU_CALLABLE_METHOD constexpr explicit Range(int n_) :
       n(n_) {}
   };
 
-  /**
-   * Multi-dimensional range, D in {2, 3}.
-   * Lambda receives D ints (e.g. `[=](int x, int y, int z){...}` for D=3).
-   */
+  /** Covers a D-dimensional index space, and the kernel receives D indices. */
   template <int D>
   struct RangeMD {
-    static_assert(D == 2 or D == 3, "RangeMD only supports D=2 or D=3");
+    static_assert(D == 2 or D == 3, "A RangeMD has two or three dimensions.");
     int n[D];
 
     GPU_CALLABLE_METHOD constexpr RangeMD(int nx, int ny) :
       n{nx, ny} {
-      static_assert(D == 2, "2-arg RangeMD ctor requires D==2");
+      static_assert(D == 2, "The constructor with two extents requires D == 2.");
     }
     GPU_CALLABLE_METHOD constexpr RangeMD(int nx, int ny, int nz) :
       n{nx, ny, nz} {
-      static_assert(D == 3, "3-arg RangeMD ctor requires D==3");
+      static_assert(D == 3, "The constructor with three extents requires D == 3.");
     }
   };
 
   /**
-   * Outer hierarchical range: `n` independent teams (Kokkos teams / CUDA blocks /
-   * SYCL groups). Inside the lambda you call `tarch::accelerator::parallelFor(team, ...)` or
-   * `tarch::accelerator::parallelReduce(team, ...)` with an inner Range/RangeMD.
+   * Covers n independent teams, which a GPU backend maps onto thread blocks or work groups. The
+   * kernel of one team calls parallelFor() or parallelReduce() with the team and an inner Range or
+   * RangeMD.
    */
   struct TeamRange {
     int n;

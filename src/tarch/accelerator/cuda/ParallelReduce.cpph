@@ -32,6 +32,23 @@ namespace tarch::accelerator {
     return blockResult;
   }
 
+  /**
+   * Combines the partial value of every thread of the team into the target of the reducer. One
+   * host thread runs a whole team, so its partial value is already the team's result.
+   */
+  template <typename Reducer, typename T>
+  GPU_CALLABLE_METHOD inline void reduceOverTeam(
+    [[maybe_unused]] const CudaTeam& team,
+    const T                          threadValue,
+    const Reducer                    reducer
+  ) {
+    COMPILE_IF_ON_DEVICE(
+      const T blockResult = tarch::accelerator::blockReduce<Reducer>(threadValue);
+      if (threadIdx.x == 0) { reducer.target = Reducer::combine(reducer.target, blockResult); }
+    )
+    COMPILE_IF_ON_HOST(reducer.target = Reducer::combine(reducer.target, threadValue);)
+  }
+
   // The reducer parameter deduces Reducer, as the type of blockResults is a non-deduced context;
   // the reducer's target is a host reference that no device thread dereferences.
   template <typename Reducer, typename Functor>
@@ -171,57 +188,51 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  __device__ inline void parallelReduce(
-    [[maybe_unused]] const CudaTeam& team,
-    const Range&                     range,
-    const Functor                    functor,
-    const Reducer                    reducer
+  GPU_CALLABLE_METHOD inline void parallelReduce(
+    const CudaTeam& team,
+    const Range&    range,
+    const Functor   functor,
+    const Reducer   reducer
   ) {
     typename Reducer::ValueType threadAccumulator = Reducer::identity();
-    for (int i = threadIdx.x; i < range.n; i += blockDim.x) {
+    for (int i = tarch::accelerator::getThreadOfTeam(team); i < range.n;
+         i += tarch::accelerator::getNumberOfThreadsPerTeam(team)) {
       functor(i, threadAccumulator);
     }
-    const typename Reducer::ValueType blockResult = tarch::accelerator::blockReduce<Reducer>(threadAccumulator);
-    if (threadIdx.x == 0) {
-      reducer.target = Reducer::combine(reducer.target, blockResult);
-    }
+    tarch::accelerator::reduceOverTeam<Reducer>(team, threadAccumulator, reducer);
   }
   template <typename Reducer, typename Functor>
-  __device__ inline void parallelReduce(
-    [[maybe_unused]] const CudaTeam& team,
-    const RangeMD<2>&                range,
-    const Functor                    functor,
-    const Reducer                    reducer
+  GPU_CALLABLE_METHOD inline void parallelReduce(
+    const CudaTeam&   team,
+    const RangeMD<2>& range,
+    const Functor     functor,
+    const Reducer     reducer
   ) {
     typename Reducer::ValueType threadAccumulator = Reducer::identity();
     const int                   numberOfItems     = range.n[0] * range.n[1];
     const int                   extentY           = range.n[1];
-    for (int index = threadIdx.x; index < numberOfItems; index += blockDim.x) {
+    for (int index = tarch::accelerator::getThreadOfTeam(team); index < numberOfItems;
+         index += tarch::accelerator::getNumberOfThreadsPerTeam(team)) {
       functor(index / extentY, index % extentY, threadAccumulator);
     }
-    const typename Reducer::ValueType blockResult = tarch::accelerator::blockReduce<Reducer>(threadAccumulator);
-    if (threadIdx.x == 0) {
-      reducer.target = Reducer::combine(reducer.target, blockResult);
-    }
+    tarch::accelerator::reduceOverTeam<Reducer>(team, threadAccumulator, reducer);
   }
   template <typename Reducer, typename Functor>
-  __device__ inline void parallelReduce(
-    [[maybe_unused]] const CudaTeam& team,
-    const RangeMD<3>&                range,
-    const Functor                    functor,
-    const Reducer                    reducer
+  GPU_CALLABLE_METHOD inline void parallelReduce(
+    const CudaTeam&   team,
+    const RangeMD<3>& range,
+    const Functor     functor,
+    const Reducer     reducer
   ) {
     typename Reducer::ValueType threadAccumulator = Reducer::identity();
     const int                   numberOfItems     = range.n[0] * range.n[1] * range.n[2];
     const int                   extentY           = range.n[1];
     const int                   extentZ           = range.n[2];
-    for (int index = threadIdx.x; index < numberOfItems; index += blockDim.x) {
+    for (int index = tarch::accelerator::getThreadOfTeam(team); index < numberOfItems;
+         index += tarch::accelerator::getNumberOfThreadsPerTeam(team)) {
       functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ, threadAccumulator);
     }
-    const typename Reducer::ValueType blockResult = tarch::accelerator::blockReduce<Reducer>(threadAccumulator);
-    if (threadIdx.x == 0) {
-      reducer.target = Reducer::combine(reducer.target, blockResult);
-    }
+    tarch::accelerator::reduceOverTeam<Reducer>(team, threadAccumulator, reducer);
   }
 
   template <typename Reducer, typename Functor>
@@ -246,15 +257,17 @@ namespace tarch::accelerator {
       numberOfBlocks,
       tarch::accelerator::CudaBlockSize,
       0,
-      tarch::accelerator::deviceStreamGet()>>>(functor, reducer, range.n, blockResults);
+      tarch::accelerator::getDeviceStream()
+    >>>(functor, reducer, range.n, blockResults);
+    CHECK_CUDA_ERROR(cudaGetLastError());
     tarch::accelerator::cubReduce(
       reducer,
       blockResults,
       deviceResult,
       numberOfBlocks,
-      tarch::accelerator::deviceStreamGet()
+      tarch::accelerator::getDeviceStream()
     );
-    tarch::accelerator::finaliseReduction(reducer, deviceResult, tarch::accelerator::deviceStreamGet());
+    tarch::accelerator::finaliseReduction(reducer, deviceResult, tarch::accelerator::getDeviceStream());
 
     // finaliseReduction synchronises the stream before the scratch buffers are freed.
     tarch::freeMemory(blockResults, tarch::MemoryLocation::Device, device);
@@ -275,13 +288,14 @@ namespace tarch::accelerator {
     ValueType* const deviceResult = tarch::allocateMemory<ValueType>(1, tarch::MemoryLocation::Device, device);
 
     tarch::accelerator::
-      teamReduceKernel<<<range.n, tarch::accelerator::CudaBlockSize, 0, tarch::accelerator::deviceStreamGet()>>>(
+      teamReduceKernel<<<range.n, tarch::accelerator::CudaBlockSize, 0, tarch::accelerator::getDeviceStream()>>>(
         functor,
         reducer,
         blockResults
       );
-    tarch::accelerator::cubReduce(reducer, blockResults, deviceResult, range.n, tarch::accelerator::deviceStreamGet());
-    tarch::accelerator::finaliseReduction(reducer, deviceResult, tarch::accelerator::deviceStreamGet());
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    tarch::accelerator::cubReduce(reducer, blockResults, deviceResult, range.n, tarch::accelerator::getDeviceStream());
+    tarch::accelerator::finaliseReduction(reducer, deviceResult, tarch::accelerator::getDeviceStream());
 
     tarch::freeMemory(blockResults, tarch::MemoryLocation::Device, device);
     tarch::freeMemory(deviceResult, tarch::MemoryLocation::Device, device);

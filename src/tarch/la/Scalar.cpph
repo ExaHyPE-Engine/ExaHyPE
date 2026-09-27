@@ -1,0 +1,21 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+static_assert(tarch::la::NUMERICAL_ZERO_DIFFERENCE > 0.0, "Scalar tolerances should be positive");
+
+TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::max(const double a, const double b, const double c) {
+  return std::max(a, std::max(b, c));
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::min(const double a, const double b, const double c) {
+  return std::min(a, std::min(b, c));
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::pow(const double base, const double exponent) {
+  return std::pow(base, exponent);
+}
+TARGET_DECLARE_END

@@ -83,7 +83,7 @@ function(_kokkos_build_parallel_args out_var)
   endif()
 endfunction()
 
-# Application side: honour the settings exported by the core build.
+# Application side: Honour the settings exported by the core build.
 if(DEFINED PEANO_KOKKOS_DIR AND NOT PEANO_KOKKOS_DIR STREQUAL "")
   set(Kokkos_DIR "${PEANO_KOKKOS_DIR}" CACHE PATH "Kokkos package config dir (from Peano core build)" FORCE)
 endif()
@@ -149,4 +149,11 @@ message(STATUS "Found Kokkos: ${Kokkos_DIR}")
 if(TARGET PeanoOptions)
   target_link_libraries(PeanoOptions INTERFACE Kokkos::kokkos)
   target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_KOKKOS PEANO_WITH_GPU_BACKEND)
+  # nvcc_wrapper passes -Werror to the host compiler only.
+  if(Kokkos_CXX_COMPILER_ID STREQUAL "NVIDIA")
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANGUAGE:CXX>:--expt-relaxed-constexpr>
+      $<$<COMPILE_LANGUAGE:CXX>:-Werror=all-warnings>
+    )
+  endif()
 endif()

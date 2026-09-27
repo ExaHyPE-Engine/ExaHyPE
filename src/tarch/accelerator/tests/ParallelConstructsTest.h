@@ -19,8 +19,7 @@ public:
 
   void run() override;
 
-  // The test bodies launch extended __device__ lambdas, which nvcc forbids
-  // inside private or protected member functions.
+private:
   void testParallelForOnHost();
   void testParallelFor();
   void testParallelForRangeMD2();

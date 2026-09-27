@@ -5,33 +5,30 @@
 #include "tarch/plotter/FileWriter.h"
 
 namespace {
-  // The public plotXXX(int[N]) signatures promise a fixed corner count; lock
-  // those promises to the CellTypes table so the two cannot drift.
-  static_assert(tarch::plotter::nodesOf(tarch::plotter::CellType::Vertex) == 1);
-  static_assert(tarch::plotter::nodesOf(tarch::plotter::CellType::Line) == 2);
-  static_assert(tarch::plotter::nodesOf(tarch::plotter::CellType::Triangle) == 3);
-  static_assert(tarch::plotter::nodesOf(tarch::plotter::CellType::Quadrangle) == 4);
-  static_assert(tarch::plotter::nodesOf(tarch::plotter::CellType::Hexahedron) == 8);
+  static_assert(tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Vertex) == 1);
+  static_assert(tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Line) == 2);
+  static_assert(tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Triangle) == 3);
+  static_assert(tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Quadrangle) == 4);
+  static_assert(tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Hexahedron) == 8);
 } // namespace
 
 tarch::plotter::FileWriter::CellPlotter::CellPlotter(FileWriter& plotter, const int subdomainId) :
-  _buffers(plotter.pieceBuffers(subdomainId)),
+  _buffers(plotter.getPieceBuffers(subdomainId)),
   // _buffers is declared first, so it is already bound here. A piece that
   // already holds cells continues its connectivity where they left off.
   _currentOffset(_buffers.offsets.empty() ? 0 : _buffers.offsets.back()) {}
 
 template <int N>
-int tarch::plotter::FileWriter::CellPlotter::plotStandardCell(
-  const int* const   vertexIndices,
-  const std::uint8_t vtkType
-) {
+int
+tarch::plotter::FileWriter::CellPlotter::plotStandardCell(const int* const vertexIndices, const std::uint8_t vtkType) {
   assertion(vertexIndices != nullptr);
   std::int32_t buffer[N];
   std::copy_n(vertexIndices, N, buffer);
   return pushCell(buffer, N, vtkType);
 }
 
-int tarch::plotter::FileWriter::CellPlotter::pushCell(
+int
+tarch::plotter::FileWriter::CellPlotter::pushCell(
   const std::int32_t* const vertexIndices,
   const int                 numberOfVertices,
   const std::uint8_t        vtkType
@@ -66,27 +63,38 @@ int tarch::plotter::FileWriter::CellPlotter::pushCell(
   return cellId;
 }
 
-int tarch::plotter::FileWriter::CellPlotter::plotPoint(const int vertexIndex) {
-  return plotStandardCell<nodesOf(CellType::Vertex)>(&vertexIndex, static_cast<std::uint8_t>(CellType::Vertex));
+int
+tarch::plotter::FileWriter::CellPlotter::plotPoint(const int vertexIndex) {
+  return plotStandardCell<getNumberOfNodesOf(CellType::Vertex)>(
+    &vertexIndex,
+    static_cast<std::uint8_t>(CellType::Vertex)
+  );
 }
 
-int tarch::plotter::FileWriter::CellPlotter::plotLine(const int* const vertexIndices) {
-  return plotStandardCell<nodesOf(CellType::Line)>(vertexIndices, static_cast<std::uint8_t>(CellType::Line));
+int
+tarch::plotter::FileWriter::CellPlotter::plotLine(const int* const vertexIndices) {
+  return plotStandardCell<getNumberOfNodesOf(CellType::Line)>(vertexIndices, static_cast<std::uint8_t>(CellType::Line));
 }
 
-int tarch::plotter::FileWriter::CellPlotter::plotTriangle(const int* const vertexIndices) {
-  return plotStandardCell<nodesOf(CellType::Triangle)>(vertexIndices, static_cast<std::uint8_t>(CellType::Triangle));
+int
+tarch::plotter::FileWriter::CellPlotter::plotTriangle(const int* const vertexIndices) {
+  return plotStandardCell<getNumberOfNodesOf(CellType::Triangle)>(
+    vertexIndices,
+    static_cast<std::uint8_t>(CellType::Triangle)
+  );
 }
 
-int tarch::plotter::FileWriter::CellPlotter::plotQuadrangle(const int* const vertexIndices) {
-  return plotStandardCell<nodesOf(CellType::Quadrangle)>(
+int
+tarch::plotter::FileWriter::CellPlotter::plotQuadrangle(const int* const vertexIndices) {
+  return plotStandardCell<getNumberOfNodesOf(CellType::Quadrangle)>(
     vertexIndices,
     static_cast<std::uint8_t>(CellType::Quadrangle)
   );
 }
 
-int tarch::plotter::FileWriter::CellPlotter::plotHexahedron(const int* const vertexIndices) {
-  return plotStandardCell<nodesOf(CellType::Hexahedron)>(
+int
+tarch::plotter::FileWriter::CellPlotter::plotHexahedron(const int* const vertexIndices) {
+  return plotStandardCell<getNumberOfNodesOf(CellType::Hexahedron)>(
     vertexIndices,
     static_cast<std::uint8_t>(CellType::Hexahedron)
   );

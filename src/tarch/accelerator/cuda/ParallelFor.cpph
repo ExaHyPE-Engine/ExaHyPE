@@ -16,39 +16,46 @@ namespace tarch::accelerator {
     functor(static_cast<int>(blockIdx.x), CudaTeam{});
   }
 
+  /** Returns the index of the running thread within its team. */
+  GPU_CALLABLE_METHOD inline int getThreadOfTeam([[maybe_unused]] const CudaTeam& team) {
+    COMPILE_IF_ON_DEVICE(return static_cast<int>(threadIdx.x);)
+    COMPILE_IF_ON_HOST(return 0;)
+  }
+
+  /** Returns the number of threads of a team. */
+  GPU_CALLABLE_METHOD inline int getNumberOfThreadsPerTeam([[maybe_unused]] const CudaTeam& team) {
+    COMPILE_IF_ON_DEVICE(return static_cast<int>(blockDim.x);)
+    COMPILE_IF_ON_HOST(return 1;)
+  }
+
   template <typename Functor>
-  __device__ inline void parallelFor([[maybe_unused]] const CudaTeam& team, const Range& range, const Functor functor) {
-    for (int i = threadIdx.x; i < range.n; i += blockDim.x) {
+  GPU_CALLABLE_METHOD inline void parallelFor(const CudaTeam& team, const Range& range, const Functor functor) {
+    for (int i = getThreadOfTeam(team); i < range.n; i += getNumberOfThreadsPerTeam(team)) {
       functor(i);
     }
   }
   template <typename Functor>
-  __device__ inline void parallelFor(
-    [[maybe_unused]] const CudaTeam& team,
-    const RangeMD<2>&                range,
-    const Functor                    functor
-  ) {
+  GPU_CALLABLE_METHOD inline void parallelFor(const CudaTeam& team, const RangeMD<2>& range, const Functor functor) {
     const int numberOfItems = range.n[0] * range.n[1];
     const int extentY       = range.n[1];
-    for (int index = threadIdx.x; index < numberOfItems; index += blockDim.x) {
+    for (int index = getThreadOfTeam(team); index < numberOfItems; index += getNumberOfThreadsPerTeam(team)) {
       functor(index / extentY, index % extentY);
     }
   }
   template <typename Functor>
-  __device__ inline void parallelFor(
-    [[maybe_unused]] const CudaTeam& team,
-    const RangeMD<3>&                range,
-    const Functor                    functor
-  ) {
+  GPU_CALLABLE_METHOD inline void parallelFor(const CudaTeam& team, const RangeMD<3>& range, const Functor functor) {
     const int numberOfItems = range.n[0] * range.n[1] * range.n[2];
     const int extentY       = range.n[1];
     const int extentZ       = range.n[2];
-    for (int index = threadIdx.x; index < numberOfItems; index += blockDim.x) {
+    for (int index = getThreadOfTeam(team); index < numberOfItems; index += getNumberOfThreadsPerTeam(team)) {
       functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ);
     }
   }
 
-  __device__ inline void teamBarrier([[maybe_unused]] const CudaTeam& team) { __syncthreads(); }
+  /** One host thread runs a whole team, so the host pass has nothing to wait for. */
+  GPU_CALLABLE_METHOD inline void teamBarrier([[maybe_unused]] const CudaTeam& team) {
+    COMPILE_IF_ON_DEVICE(__syncthreads();)
+  }
 
   template <typename Functor>
   inline void parallelFor(const Range& range, const Functor functor) {
@@ -62,11 +69,12 @@ namespace tarch::accelerator {
       tarch::accelerator::CudaMaxNumberOfBlocks
     );
     tarch::accelerator::
-      flatKernel1D<<<numberOfBlocks, tarch::accelerator::CudaBlockSize, 0, tarch::accelerator::deviceStreamGet()>>>(
+      flatKernel1D<<<numberOfBlocks, tarch::accelerator::CudaBlockSize, 0, tarch::accelerator::getDeviceStream()>>>(
         functor,
         range.n
       );
-    CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::getDeviceStream()));
   }
 
   template <typename Functor>
@@ -99,7 +107,8 @@ namespace tarch::accelerator {
     }
     CHECK_CUDA_ERROR(cudaSetDevice(tarch::accelerator::getCurrentDevice()));
     tarch::accelerator::
-      teamKernel<<<range.n, tarch::accelerator::CudaBlockSize, 0, tarch::accelerator::deviceStreamGet()>>>(functor);
-    CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
+      teamKernel<<<range.n, tarch::accelerator::CudaBlockSize, 0, tarch::accelerator::getDeviceStream()>>>(functor);
+    CHECK_CUDA_ERROR(cudaGetLastError());
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::getDeviceStream()));
   }
 } // namespace tarch::accelerator

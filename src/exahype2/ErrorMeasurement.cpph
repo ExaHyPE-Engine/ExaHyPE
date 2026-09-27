@@ -1,17 +1,60 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+
 TARGET_DECLARE
+/** Adds the L1 error, the squared L2 error and the largest error of one cell. */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::ErrorSums::add(const double* const errors) {
+  assertion(errors != nullptr);
+  assertion(std::isfinite(errors[0]) and errors[0] >= 0.0, errors[0]);
+  assertion(std::isfinite(errors[1]) and errors[1] >= 0.0, errors[1]);
+  assertion(std::isfinite(errors[2]) and errors[2] >= 0.0, errors[2]);
+  summedError.add(errors[0]);
+  summedSquaredError.add(errors[1]);
+  maxError = maxError < errors[2] ? errors[2] : maxError;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::ErrorSums::merge(const ErrorSums& other) {
+  summedError.merge(other.summedError);
+  summedSquaredError.merge(other.summedSquaredError);
+  maxError = maxError < other.maxError ? other.maxError : maxError;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::SumErrorsOfCells::operator()(const int partialSum) const {
+  assertion(partialSum >= 0 and partialSum < numberOfPartialSums, partialSum, numberOfPartialSums);
+  constexpr int NumberOfNorms = ErrorSums::NumberOfNorms;
+  ErrorSums     sums;
+  for (int cell = partialSum; cell < numberOfCells; cell += numberOfPartialSums) {
+    sums.add(errorsPerCell + static_cast<std::ptrdiff_t>(cell) * NumberOfNorms);
+  }
+  partialSums[partialSum] = sums;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::MergeErrorSums::operator()(const int partialSum) const {
+  assertion(stride > 0, stride);
+  if (partialSum % (2 * stride) == 0 and partialSum + stride < numberOfPartialSums) {
+    partialSums[partialSum].merge(partialSums[partialSum + stride]);
+  }
+}
+
 /**
  * Adds the weighted absolute error of every measured unknown to the L1 slot, its weighted
  * square to the L2 slot and takes the maximum into the Linf slot of errors.
  */
-template <int NumberOfMeasuredUnknowns, typename Precision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::accumulateError(
-  const int (&measuredUnknowns)[NumberOfMeasuredUnknowns],
-  const Precision* const value,
-  const double* const    exactSolution,
-  const double           weight,
+template <std::size_t NumberOfMeasuredUnknowns, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::accumulateError(
+  const std::array<int, NumberOfMeasuredUnknowns>& measuredUnknowns,
+  const Precision* const                           value,
+  const double* const                              exactSolution,
+  const double                                     weight,
   double (&errors)[ErrorMeasurement::NumberOfNorms]
 ) {
   assertion(value != nullptr);
@@ -33,17 +76,19 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::accumulateError(
  */
 template <
   typename SolverType,
-  int NumberOfUnknowns,
-  int NumberOfAuxiliaryVariables,
-  int NumberOfMeasuredUnknowns,
-  typename Precision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::accumulateSolutionError(
-  const int (&measuredUnknowns)[NumberOfMeasuredUnknowns],
-  const Precision* const                       value,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  const double                                 weight,
+  int         NumberOfUnknowns,
+  int         NumberOfAuxiliaryVariables,
+  std::size_t NumberOfMeasuredUnknowns,
+  typename Precision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::accumulateSolutionError(
+  const std::array<int, NumberOfMeasuredUnknowns>& measuredUnknowns,
+  const Precision* const                           value,
+  const tarch::la::Vector<DIMENSIONS, double>&     x,
+  const double                                     timeStamp,
+  const double                                     timeStepSize,
+  const double                                     weight,
   double (&errors)[ErrorMeasurement::NumberOfNorms]
 ) {
   static_assert(NumberOfUnknowns > 0);
@@ -65,33 +110,50 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::accumulateSolutionError(
 TARGET_DECLARE_END
 
 /**
- * Adds the error of one degree of freedom to the measurement on its own, so a cell reports every
- * degree of freedom separately.
+ * Returns the error sums of the numberOfCells cells whose L1, squared L2 and largest errors
+ * errorsPerCell holds in the memory the kernels read. The cells add into partial sums, which
+ * merge pairwise, and only the merged sums travel to the host. The exact sums make the result
+ * independent of the number of partial sums.
  */
-template <
-  typename SolverType,
-  int NumberOfUnknowns,
-  int NumberOfAuxiliaryVariables,
-  int NumberOfMeasuredUnknowns,
-  typename Precision>
-INLINE_METHOD void exahype2::accumulateAndRecordSolutionError(
-  const int (&measuredUnknowns)[NumberOfMeasuredUnknowns],
-  const Precision* const                       value,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  const double                                 weight,
-  ErrorMeasurement&                            measurement
+INLINE_METHOD exahype2::ErrorSums
+exahype2::ErrorMeasurement::sumErrorsOfCells(
+  const double* const                    errorsPerCell,
+  const int                              numberOfCells,
+  tarch::accelerator::Buffer<ErrorSums>& partialSums
 ) {
-  double errors[ErrorMeasurement::NumberOfNorms]{};
-  accumulateSolutionError<SolverType, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
-    measuredUnknowns,
-    value,
-    x,
-    timeStamp,
-    timeStepSize,
-    weight,
-    errors
+  assertion(numberOfCells >= 0, numberOfCells);
+  assertion(errorsPerCell != nullptr or numberOfCells == 0);
+  constexpr int MaximumNumberOfPartialSums = 1024;
+  const int     numberOfPartialSums        = std::clamp(numberOfCells, 1, MaximumNumberOfPartialSums);
+  if (partialSums.getSize() < static_cast<std::size_t>(numberOfPartialSums)) {
+    partialSums.allocate(static_cast<std::size_t>(numberOfPartialSums));
+  }
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(numberOfPartialSums),
+    SumErrorsOfCells{errorsPerCell, numberOfCells, numberOfPartialSums, partialSums.getData()}
   );
-  measurement.add(errors);
+  for (int stride = 1; stride < numberOfPartialSums; stride *= 2) {
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(numberOfPartialSums),
+      MergeErrorSums{partialSums.getData(), stride, numberOfPartialSums}
+    );
+  }
+  ErrorSums result;
+  partialSums.copyToHost(&result, 1);
+  return result;
+}
+
+/**
+ * Sums the errors of the cells in the buffer of getErrorsPerCell() and records the norms. The
+ * translation unit of the caller launches the device loops, so a generated solver compiled for
+ * the device runs them there.
+ */
+INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
+exahype2::ErrorMeasurement::record(const int numberOfCells, const double timeStamp) {
+  assertion(
+    _errorsPerCell.getSize() >= static_cast<std::size_t>(numberOfCells) * NumberOfNorms,
+    _errorsPerCell.getSize(),
+    numberOfCells
+  );
+  return record(sumErrorsOfCells(_errorsPerCell.getData(), numberOfCells, _partialSums), timeStamp);
 }

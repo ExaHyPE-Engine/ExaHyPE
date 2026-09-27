@@ -20,6 +20,5 @@ public:
   void run() override;
 
 private:
-  void testPlotsTheTwoTracesOfOneFace();
-  void testSpansTheAxesOtherThanTheNormalAxis();
+  void testEverySelectedFaceBecomesItsNodesAndBothTraces();
 };

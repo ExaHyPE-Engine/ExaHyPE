@@ -1,0 +1,144 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::projection::AlbersEqualArea::getParallelRadius(
+  const double latitude,
+  const double eccentricitySquared
+) {
+  const double sinLatitude = std::sin(latitude);
+  return std::cos(latitude) / std::sqrt(1.0 - eccentricitySquared * sinLatitude * sinLatitude);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::projection::AlbersEqualArea::getAuthalicMeasure(
+  const double latitude,
+  const double eccentricity
+) {
+  const double eccentricitySquared = eccentricity * eccentricity;
+  const double sinLatitude         = std::sin(latitude);
+  const double sinLatitudeSquared  = sinLatitude * sinLatitude;
+  return (1.0 - eccentricitySquared)
+    * (sinLatitude / (1.0 - eccentricitySquared * sinLatitudeSquared)
+       - std::log((1.0 - eccentricity * sinLatitude) / (1.0 + eccentricity * sinLatitude)) / (2.0 * eccentricity));
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::projection::AlbersEqualArea::getAuthalicMeasureDerivative(
+  const double latitude,
+  const double eccentricity
+) {
+  const double eccentricitySquared = eccentricity * eccentricity;
+  const double sinLatitude         = std::sin(latitude);
+  const double denominator         = 1.0 - eccentricitySquared * sinLatitude * sinLatitude;
+  return 2.0 * (1.0 - eccentricitySquared) * std::cos(latitude) / (denominator * denominator);
+}
+
+/** Returns the metric coordinates of the geographic point at longitudeInDegrees and latitudeInDegrees. */
+INLINE_METHOD GPU_CALLABLE_METHOD std::pair<double, double>
+applications::exahype2::exaskred::projection::AlbersEqualArea::forward(
+  const double longitudeInDegrees,
+  const double latitudeInDegrees
+) const {
+  assertion(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);
+  const double eccentricitySquared = eccentricity * eccentricity;
+  const double firstParallel       = firstStandardParallel * DegreesToRadians;
+  const double secondParallel      = secondStandardParallel * DegreesToRadians;
+
+  const double firstRadius   = getParallelRadius(firstParallel, eccentricitySquared);
+  const double secondRadius  = getParallelRadius(secondParallel, eccentricitySquared);
+  const double firstMeasure  = getAuthalicMeasure(firstParallel, eccentricity);
+  const double secondMeasure = getAuthalicMeasure(secondParallel, eccentricity);
+  const double originMeasure = getAuthalicMeasure(referenceLatitude * DegreesToRadians, eccentricity);
+  const double pointMeasure  = getAuthalicMeasure(latitudeInDegrees * DegreesToRadians, eccentricity);
+
+  const double cone     = (firstRadius * firstRadius - secondRadius * secondRadius) / (secondMeasure - firstMeasure);
+  const double constant = firstRadius * firstRadius + cone * firstMeasure;
+  const double originDistance = semiMajorAxis * std::sqrt(constant - cone * originMeasure) / cone;
+  const double pointDistance  = semiMajorAxis * std::sqrt(constant - cone * pointMeasure) / cone;
+  const double coneAngle      = cone * (longitudeInDegrees * DegreesToRadians - referenceLongitude * DegreesToRadians);
+
+  return {pointDistance * std::sin(coneAngle), originDistance - pointDistance * std::cos(coneAngle)};
+}
+
+/** Returns the longitude and the latitude in degrees of the metric point (x, y). */
+INLINE_METHOD GPU_CALLABLE_METHOD std::pair<double, double>
+applications::exahype2::exaskred::projection::AlbersEqualArea::inverse(const double x, const double y) const {
+  assertion(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);
+  const double eccentricitySquared         = eccentricity * eccentricity;
+  const double oneMinusEccentricitySquared = 1.0 - eccentricitySquared;
+  const double firstParallel               = firstStandardParallel * DegreesToRadians;
+  const double secondParallel              = secondStandardParallel * DegreesToRadians;
+
+  const double firstRadius   = getParallelRadius(firstParallel, eccentricitySquared);
+  const double secondRadius  = getParallelRadius(secondParallel, eccentricitySquared);
+  const double firstMeasure  = getAuthalicMeasure(firstParallel, eccentricity);
+  const double secondMeasure = getAuthalicMeasure(secondParallel, eccentricity);
+  const double originMeasure = getAuthalicMeasure(referenceLatitude * DegreesToRadians, eccentricity);
+
+  const double cone     = (firstRadius * firstRadius - secondRadius * secondRadius) / (secondMeasure - firstMeasure);
+  const double constant = firstRadius * firstRadius + cone * firstMeasure;
+  const double originDistance = semiMajorAxis * std::sqrt(constant - cone * originMeasure) / cone;
+  const double pointDistance  = std::hypot(x, originDistance - y);
+  const double pointMeasure =
+    (constant - pointDistance * pointDistance * cone * cone / (semiMajorAxis * semiMajorAxis)) / cone;
+
+  // Newton's method on the authalic measure starts from the latitude of the sphere.
+  double latitude = std::asin(pointMeasure / 2.0);
+  for (int iteration = 0; iteration < LatitudeIterations; iteration++) {
+    const double sinLatitude        = std::sin(latitude);
+    const double sinLatitudeSquared = sinLatitude * sinLatitude;
+    const double denominator        = 1.0 - eccentricitySquared * sinLatitudeSquared;
+    const double increment          = denominator * denominator
+      * (pointMeasure / oneMinusEccentricitySquared - sinLatitude / denominator
+         + std::log((1.0 - eccentricity * sinLatitude) / (1.0 + eccentricity * sinLatitude)) / (2.0 * eccentricity))
+      / (2.0 * std::cos(latitude));
+    latitude += increment;
+    if (std::abs(increment) < LatitudeTolerance) {
+      break;
+    }
+  }
+
+  const double coneAngle = std::atan2(x, originDistance - y);
+  return {(referenceLongitude * DegreesToRadians + coneAngle / cone) * RadiansToDegrees, latitude * RadiansToDegrees};
+}
+
+/**
+ * Returns the derivatives of longitude and latitude with respect to the metric coordinates in
+ * degrees per metre, the longitude derivatives in row zero. The matrix is the inverse of the
+ * Jacobian of forward().
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, double>
+applications::exahype2::exaskred::projection::AlbersEqualArea::inverseJacobian(const double x, const double y) const {
+  assertion(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);
+  const double eccentricitySquared = eccentricity * eccentricity;
+  const double firstParallel       = firstStandardParallel * DegreesToRadians;
+  const double secondParallel      = secondStandardParallel * DegreesToRadians;
+
+  const double firstRadius   = getParallelRadius(firstParallel, eccentricitySquared);
+  const double secondRadius  = getParallelRadius(secondParallel, eccentricitySquared);
+  const double firstMeasure  = getAuthalicMeasure(firstParallel, eccentricity);
+  const double secondMeasure = getAuthalicMeasure(secondParallel, eccentricity);
+  const double originMeasure = getAuthalicMeasure(referenceLatitude * DegreesToRadians, eccentricity);
+
+  const double cone     = (firstRadius * firstRadius - secondRadius * secondRadius) / (secondMeasure - firstMeasure);
+  const double constant = firstRadius * firstRadius + cone * firstMeasure;
+  const double originDistance = semiMajorAxis * std::sqrt(constant - cone * originMeasure) / cone;
+
+  const double pointDistance      = std::hypot(x, originDistance - y);
+  const double coneAngle          = std::atan2(x, originDistance - y);
+  const double latitude           = inverse(x, y).second * DegreesToRadians;
+  const double distanceDerivative = -semiMajorAxis * semiMajorAxis
+    * getAuthalicMeasureDerivative(latitude, eccentricity) / (2.0 * pointDistance * cone);
+
+  tarch::la::Matrix<2, 2, double> jacobian;
+  jacobian(0, 0) = RadiansToDegrees * std::cos(coneAngle) / (pointDistance * cone);
+  jacobian(0, 1) = RadiansToDegrees * std::sin(coneAngle) / (pointDistance * cone);
+  jacobian(1, 0) = RadiansToDegrees * std::sin(coneAngle) / distanceDerivative;
+  jacobian(1, 1) = -RadiansToDegrees * std::cos(coneAngle) / distanceDerivative;
+  return jacobian;
+}
+TARGET_DECLARE_END

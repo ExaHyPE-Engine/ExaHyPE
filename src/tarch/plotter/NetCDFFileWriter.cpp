@@ -4,8 +4,6 @@
 
 #ifdef PEANO_WITH_NETCDF
 
-#include "CellTypes.h"
-
 #include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
@@ -16,8 +14,8 @@
 
 namespace {
   // Corner counts the fixed-width connectivity pads to, taken from the CellTypes table.
-  constexpr int          MaxFaceNodes       = tarch::plotter::nodesOf(tarch::plotter::CellType::Quadrangle);
-  constexpr int          MaxVolumeNodes     = tarch::plotter::nodesOf(tarch::plotter::CellType::Hexahedron);
+  constexpr int          MaxFaceNodes       = tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Quadrangle);
+  constexpr int          MaxVolumeNodes     = tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Hexahedron);
   constexpr std::int32_t FillValue          = -1; // Marks an unused node of a padded connectivity
   constexpr int          UgridHexahedronTag = 2;  // UGRID flag value; 0 is a tetrahedron, 1 a wedge
 
@@ -47,15 +45,20 @@ namespace {
 tarch::plotter::NetCDFFileWriter::NetCDFFileWriter(const std::string& outputDirectory) :
   tarch::plotter::FileWriter(outputDirectory) {}
 
-void tarch::plotter::NetCDFFileWriter::check(const int status, const std::string& operation) {
+void
+tarch::plotter::NetCDFFileWriter::check(const int status, const std::string& operation) {
   if (status != NC_NOERR) {
     tarch::terminateWithError("NetCDF operation '" + operation + "' failed: " + std::string(nc_strerror(status)) + ".");
   }
 }
 
-std::string tarch::plotter::NetCDFFileWriter::getFileExtension() const { return ".nc"; }
+std::string
+tarch::plotter::NetCDFFileWriter::getFileExtension() const {
+  return ".nc";
+}
 
-bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const double time) {
+bool
+tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const double time) {
   if (_written) {
     throw std::runtime_error("Cannot write a plotter file more than once.");
   }
@@ -231,7 +234,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
   if (useParallelIO) {
     MPI_Info   info  = MPI_INFO_NULL;
-    const auto hints = mpiIoHints();
+    const auto hints = getMPIFileHints();
     if (not hints.empty()) {
       MPI_Info_create(&info);
       for (const auto& hint : hints) {
@@ -290,7 +293,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   const char* const elementDimensionAtt = is3DTopology ? "volume_dimension" : "face_dimension";
   const char* const elementLocation     = is3DTopology ? "volume" : "face";
 
-  constexpr std::size_t ChunkByteTarget    = 1u << 20;
+  constexpr std::size_t ChunkByteTarget    = 1U << 20;
   const std::size_t     bytesPerBulkScalar = getDoublePrecisionOutput() ? sizeof(double) : sizeof(float);
 
   const auto configure1DVariable =
@@ -311,7 +314,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
         variableId,
         std::max<std::size_t>(chunkLength * bytesPerBulkScalar, ChunkByteTarget),
         1009,
-        0.75f
+        0.75F
       );
     };
 
@@ -333,7 +336,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
         variableId,
         std::max<std::size_t>(chunkRows * bytesPerRow, ChunkByteTarget),
         1009,
-        0.75f
+        0.75F
       );
     };
 
@@ -524,7 +527,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
   // Empty ranks were dropped from the writing communicator, so the schema comes from the
   // local reference without any exchange.
-  const FieldSchema             schema      = fieldSchemaFromReference(localData.reference);
+  const FieldSchema             schema      = getFieldSchema(localData.reference);
   const std::vector<DataField>& pointFields = schema.pointFields;
   const std::vector<DataField>& cellFields  = schema.cellFields;
 
@@ -633,7 +636,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
       check(nc_put_vara_double(ncid, varId, start, writtenCount, count > 0 ? data.data() : &placeholder), where);
     } else {
       const std::vector<float> narrowed    = narrowToFloat(data);
-      const float              placeholder = 0.0f;
+      const float              placeholder = 0.0F;
       check(nc_put_vara_float(ncid, varId, start, writtenCount, count > 0 ? narrowed.data() : &placeholder), where);
     }
   };

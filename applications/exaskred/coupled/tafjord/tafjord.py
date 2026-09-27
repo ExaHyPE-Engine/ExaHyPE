@@ -91,6 +91,7 @@ aderdg_solver.add_subcell_limiter(
     dmp_relaxation_parameter=0.0,
     dmp_differences_scaling=1.0e-3,
 )
+aderdg_solver.initialise_on_host()
 
 project.add_solver(aderdg_solver)
 
@@ -128,5 +129,5 @@ project.add_constant("maxHeightCurvatureRatio", 0.3)
 project.add_constant("mu", math.tan(math.pi / 180.0 * 25.0))
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
+project.output.makefile.add_h_file("ADERDGSolver.cpph")
 project.generate_and_build()

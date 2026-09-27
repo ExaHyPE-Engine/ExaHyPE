@@ -40,7 +40,7 @@ periodic = args.periodic_bc == "on"
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
-    project_name=".",
+    project_name="EulerCircularDisc",
     dimensions=2,
     size=[1.0, 1.0, 1.0],
     offset=[0.0, 0.0, 0.0],
@@ -101,10 +101,15 @@ compute_primitive_variables = r"""
 #endif
 
 #if DIMENSIONS == 3
-  const auto uSq = u0 * u0 + u1 * u1 + u2 * u2;
+  const auto squareOfU0 = u0 * u0;
+  const auto squareOfU1 = u1 * u1;
+  const auto squareOfU2 = u2 * u2;
+  const auto uSq        = squareOfU0 + squareOfU1 + squareOfU2;
   const auto u_n = (normal == 0) ? u0 : (normal == 1) ? u1 : u2;
 #else
-  const auto uSq = u0 * u0 + u1 * u1;
+  const auto squareOfU0 = u0 * u0;
+  const auto squareOfU1 = u1 * u1;
+  const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 #endif
 

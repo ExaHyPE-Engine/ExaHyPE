@@ -76,11 +76,10 @@ flux = """
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
-    DGOrder + 1,
+    Quadrature<double>::getQuadraturePoints1D(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    kernels::RKDGSolver::Quadrature<double>::QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::rho]; }
   );
 """

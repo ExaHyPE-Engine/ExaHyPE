@@ -4,7 +4,7 @@
 
 tarch::reader::CSVReader::CSVReader(const std::string& filepath, const int skipFirstNLines) {
   std::ifstream csvFile(filepath.c_str());
-  if (!csvFile.is_open()) {
+  if (not csvFile.is_open()) {
     std::stringstream ss;
     ss << "Could not open CSV file at \"" << filepath << "\".";
     throw std::runtime_error(ss.str());
@@ -14,8 +14,9 @@ tarch::reader::CSVReader::CSVReader(const std::string& filepath, const int skipF
     int         lineNumber = 0;
     while (getline(csvFile, line)) {
       ++lineNumber;
-      if (lineNumber > skipFirstNLines)
+      if (lineNumber > skipFirstNLines) {
         csvLines.push_back(line);
+      }
     }
   }
   numberOfRows = csvLines.size();
@@ -27,7 +28,8 @@ tarch::reader::CSVReader::~CSVReader() {
   csvLines.shrink_to_fit();
 }
 
-std::string tarch::reader::CSVReader::getRow(const int rowIndex) const {
+std::string
+tarch::reader::CSVReader::getRow(const int rowIndex) const {
   if (rowIndex >= numberOfRows) {
     std::stringstream ss;
     ss << "Illegal row index " << rowIndex << " for maximum number of rows " << numberOfRows << ".";
@@ -37,4 +39,7 @@ std::string tarch::reader::CSVReader::getRow(const int rowIndex) const {
   return csvLines.at(rowIndex);
 }
 
-int tarch::reader::CSVReader::getNumberOfRows() const { return numberOfRows; }
+int
+tarch::reader::CSVReader::getNumberOfRows() const {
+  return numberOfRows;
+}

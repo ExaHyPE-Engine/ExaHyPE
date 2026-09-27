@@ -16,7 +16,8 @@ namespace {
   std::map<int, sycl::queue> syclQueues;
 } // namespace
 
-bool tarch::accelerator::Device::init() {
+bool
+tarch::accelerator::Device::init() {
   auto         platforms           = sycl::platform::get_platforms();
   unsigned int physicalDeviceIndex = 0;
   unsigned int logicalDeviceIndex  = 0;
@@ -54,18 +55,30 @@ bool tarch::accelerator::Device::init() {
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() {
+void
+tarch::accelerator::Device::shutdown() {
   for (auto& queue : syclQueues) {
     queue.second.wait();
   }
   syclQueues.clear();
 }
 
-bool tarch::accelerator::Device::isInitialised() const { return not syclQueues.empty(); }
+bool
+tarch::accelerator::Device::isInitialised() const {
+  return not syclQueues.empty();
+}
 
-int tarch::accelerator::Device::getNumberOfDevices() const { return static_cast<int>(syclQueues.size()); }
+int
+tarch::accelerator::Device::getNumberOfDevices() const {
+  return static_cast<int>(syclQueues.size());
+}
 
-void* tarch::accelerator::getSYCLQueue(int number) {
+/**
+ * Returns the queue of a logical device number. The logical number counts the GPUs only and
+ * differs from the physical device number.
+ */
+void*
+tarch::accelerator::getSYCLQueue(int number) {
   assertion(syclQueues.count(number) == 1, number);
   return &syclQueues[number];
 }

@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FVSolver.h"
 
-double tests::exahype2::fortran::FVSolver::maxEigenvalue(
+double
+tests::exahype2::fortran::FVSolver::maxEigenvalue(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -26,7 +27,8 @@ double rpn2_augmented_wrapper(
 );
 }
 
-double tests::exahype2::fortran::FVSolver::solveRiemannProblem(
+double
+tests::exahype2::fortran::FVSolver::solveRiemannProblem(
   const double* const NOALIAS                  QL,
   const double* const NOALIAS                  QR,
   const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -34,6 +36,8 @@ double tests::exahype2::fortran::FVSolver::solveRiemannProblem(
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
+  [[maybe_unused]] const bool                  isBoundaryFace,
+  [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {

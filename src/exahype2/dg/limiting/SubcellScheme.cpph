@@ -1,0 +1,472 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/dg/limiting/LimiterStatus.h"
+#include "exahype2/fv/Kernels.h"
+#include "exahype2/terms/PhysicalAdmissibility.h"
+#include "peano4/Loop.h"
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/Scratch.h"
+
+TARGET_DECLARE
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::sampleInitialCondition(
+  StoragePrecision* NOALIAS const              subcells,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+) {
+  forEachSubcell(
+    cellCentre,
+    cellSize,
+    subcells,
+    [](
+      StoragePrecision* const                      values,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h
+    ) { Derived::initialCondition(values, x, h); }
+  );
+}
+
+/** Averages the nodal polynomial of a cell onto its subcells, every axis through the same matrix. */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectNodesOntoSubcells(
+  const StoragePrecision* NOALIAS const nodes,
+  StoragePrecision* NOALIAS const       subcells,
+  const StoragePrecision* NOALIAS const nodesToSubcells
+) {
+  assertion(nodes != nullptr);
+  assertion(subcells != nullptr);
+  assertion(nodesToSubcells != nullptr);
+  exahype2::dg::projectTensorProduct<DIMENSIONS, NodesPerAxis, SubcellsPerAxis, NumberOfData>(
+    nodes,
+    subcells,
+    nodesToSubcells
+  );
+}
+
+/**
+ * A cell that ran the Galerkin scheme in the previous step holds no subgrid, so it takes the
+ * projection of its previous solution first; in the first step every subgrid holds the sampled
+ * initial condition.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubgridOntoFaces(
+  const int* NOALIAS const              status,
+  StoragePrecision* NOALIAS const       subcells,
+  const StoragePrecision* NOALIAS const previousSolution,
+  StoragePrecision* const               haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* NOALIAS const nodesToSubcells,
+  const bool                            holdsInitialSubcells
+) {
+  const auto previousStatus = static_cast<exahype2::dg::limiting::LimiterStatus>(
+    status[static_cast<int>(exahype2::dg::limiting::StatusEntry::PreviousStatus)]
+  );
+  if (not exahype2::dg::limiting::runsSubcellScheme(previousStatus) and not holdsInitialSubcells) {
+    projectNodesOntoSubcells(previousSolution, subcells, nodesToSubcells);
+  }
+  Subgrid::projectOntoFaces(subcells, haloHalves);
+}
+
+/**
+ * The evolved subgrid is written into evolvedSubcells first: A solver with a fallback
+ * reconstruction repeats the step with it when a subcell of the evolved subgrid fails the
+ * physical admissibility term. Bit f of boundaryFaces is set when face f lies on the domain
+ * boundary. A solver with a fixed time step rule returns empty wave speeds.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
+  StoragePrecision* NOALIAS const              nodes,
+  StoragePrecision* NOALIAS const              subcells,
+  StoragePrecision* NOALIAS const              evolvedSubcells,
+  const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* NOALIAS const        subcellsToNodes,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const int                                    boundaryFaces,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  using FallbackReconstruction = typename Derived::FallbackReconstruction;
+  advanceSubcells<typename Derived::Reconstruction>(
+    subcells,
+    evolvedSubcells,
+    haloHalves,
+    cellCentre,
+    cellSize,
+    boundaryFaces,
+    timeStamp,
+    timeStepSize
+  );
+  if constexpr (
+    exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision> and not std::is_void_v<FallbackReconstruction>
+  ) {
+    bool needsFallback = false;
+    for (int subcell = 0; subcell < SubcellsPerCell and not needsFallback; subcell++) {
+      needsFallback = not Derived::isPhysicallyAdmissible(
+        evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData,
+        1,
+        cellCentre,
+        cellSize
+      );
+    }
+    if (needsFallback) {
+      advanceSubcells<FallbackReconstruction>(
+        subcells,
+        evolvedSubcells,
+        haloHalves,
+        cellCentre,
+        cellSize,
+        boundaryFaces,
+        timeStamp,
+        timeStepSize
+      );
+    }
+  }
+  for (int value = 0; value < SubcellValuesPerCell; value++) {
+    subcells[value] = evolvedSubcells[value];
+  }
+  projectSubcellsOntoNodes(subcells, nodes, subcellsToNodes);
+  if constexpr (ReportEigenvalues) {
+    return reduceMaxEigenvalues(subcells, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize);
+  } else {
+    return exahype2::dg::MaxEigenvalueStatistics{};
+  }
+}
+
+/**
+ * Returns the physical and scaled wave-speed maxima over the subcells of a cell. The scaled wave
+ * speeds divide by the cell extents, so they bound the same time step as the nodal maxima.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::reduceMaxEigenvalues(
+  const StoragePrecision* NOALIAS const        subcells,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  assertion(subcells != nullptr);
+  exahype2::dg::MaxEigenvalueStatistics result;
+  forEachSubcell(
+    cellCentre,
+    cellSize,
+    subcells,
+    [&](
+      const StoragePrecision* const                values,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h
+    ) {
+      result.template accumulate<DIMENSIONS>(cellSize, [&](const int normal) {
+        return Derived::maxEigenvalue(values, x, h, timeStamp, timeStepSize, normal);
+      });
+    }
+  );
+  return result;
+}
+
+/**
+ * Calls functor(values, x, h) for every subcell of a subgrid in linearised order, where x is the
+ * centre exahype2::fv::getVolumeCentre() returns for the volume of the same index and h the
+ * subcell size. A constexpr function takes the execution space of its caller.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename Value, typename Functor>
+INLINE_METHOD constexpr void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::forEachSubcell(
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  Value* const                                 values,
+  Functor&&                                    functor
+) {
+  assertion(values != nullptr);
+  const auto subcellSize = exahype2::fv::getVolumeSize(cellSize, SubcellsPerAxis);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(subcellSize(axis) > 0.0, subcellSize, axis);
+  }
+  peano4::dForEach(SubcellsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& subcell) {
+    const int  index         = peano4::dLinearised(subcell, SubcellsPerAxis);
+    const auto subcellCentre = exahype2::fv::getVolumeCentre(cellCentre, cellSize, SubcellsPerAxis, subcell);
+    functor(values + static_cast<std::ptrdiff_t>(index) * NumberOfData, subcellCentre, subcellSize);
+  });
+}
+
+/** Runs the finite-volume scheme of the given reconstruction on one subgrid. */
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::advanceSubcells(
+  const StoragePrecision* NOALIAS const        subcells,
+  StoragePrecision* NOALIAS const              evolvedSubcells,
+  const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const int                                    boundaryFaces,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  static_assert(Reconstruct::HaloSize == HaloSize, "The halo holds the layers of the primary reconstruction.");
+  static_cast<void>(exahype2::fv::FiniteVolume<SubgridSolver<Reconstruct>, ComputePrecision>::update(
+    subcells,
+    evolvedSubcells,
+    haloHalves,
+    cellCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize,
+    boundaryFaces
+  ));
+}
+
+/** Projects the subcell averages of a cell back onto its nodes, every axis through the same matrix. */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubcellsOntoNodes(
+  const StoragePrecision* NOALIAS const subcells,
+  StoragePrecision* NOALIAS const       nodes,
+  const StoragePrecision* NOALIAS const subcellsToNodes
+) {
+  assertion(subcells != nullptr);
+  assertion(nodes != nullptr);
+  assertion(subcellsToNodes != nullptr);
+  exahype2::dg::projectTensorProduct<DIMENSIONS, SubcellsPerAxis, NodesPerAxis, NumberOfData>(
+    subcells,
+    nodes,
+    subcellsToNodes
+  );
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::flux(
+  const Precision* const                       Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  Precision* const                             F
+)
+  requires exahype2::terms::HasFlux<Derived, Precision>
+{
+  Derived::flux(Q, x, h, t, dt, normal, F);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::nonconservativeProduct(
+  const Precision* const                       Q,
+  const Precision* const                       deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  Precision* const                             BTimesDeltaQ
+)
+  requires exahype2::terms::HasNonconservativeProduct<Derived, Precision>
+{
+  Derived::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::sourceTerm(
+  const Precision* const                       Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  Precision* const                             S
+)
+  requires exahype2::terms::HasSourceTerm<Derived, Precision>
+{
+  Derived::sourceTerm(Q, x, h, t, dt, S);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::diffusiveSourceTerm(
+  const Precision* const                       Q,
+  const Precision* const                       deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  Precision* const                             S
+)
+  requires exahype2::terms::HasDiffusiveSourceTerm<Derived, Precision>
+{
+  Derived::diffusiveSourceTerm(Q, deltaQ, x, h, t, dt, S);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::maxEigenvalue(
+  const Precision* const                       Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal
+)
+  requires exahype2::terms::HasMaxEigenvalue<Derived, Precision>
+{
+  return Derived::maxEigenvalue(Q, x, h, t, dt, normal);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::solveRiemannProblem(
+  const Precision* const                       QL,
+  const Precision* const                       QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  const bool                                   isBoundaryFace,
+  const int                                    faceIndex,
+  Precision* const                             FL,
+  Precision* const                             FR
+)
+  requires exahype2::terms::HasSubcellRiemannSolver<Derived, Precision>
+{
+  return Derived::solveSubcellRiemannProblem(QL, QR, x, h, t, dt, normal, isBoundaryFace, faceIndex, FL, FR);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SampleSubcells<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
+  const int slot = partition.getCells()[entry];
+  Kernel::sampleInitialCondition(subcells.getChunk(slot), partition.getCellCentre(slot), partition.getCellWidth(slot));
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::ProjectSubgridsOntoFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int entry
+) const {
+  const int         slot = cells[entry];
+  StoragePrecision* haloHalves[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    haloHalves[faceNumber] = halo.getChunk(partition.getCellFace(slot, faceNumber));
+  }
+  Kernel::projectSubgridOntoFaces(
+    statuses.getChunk(slot),
+    subcells.getChunk(slot),
+    previousSolution.getChunk(slot),
+    haloHalves,
+    nodesToSubcells,
+    holdsInitialSubcells
+  );
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int                              entry,
+  exahype2::dg::MaxEigenvalueStatistics& accumulator
+) const {
+  const int               slot = cells[entry];
+  const StoragePrecision* haloHalves[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    haloHalves[faceNumber] = halo.getChunk(partition.getCellFace(slot, faceNumber));
+  }
+  StoragePrecision* const evolvedSubcells =
+    scratch + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::SubcellValuesPerCell;
+  accumulator = exahype2::dg::MaxEigenvalueStatistics::combine(
+    accumulator,
+    Kernel::recompute(
+      nodes.getChunk(slot),
+      subcells.getChunk(slot),
+      evolvedSubcells,
+      haloHalves,
+      subcellsToNodes,
+      partition.getCellCentre(slot),
+      partition.getCellWidth(slot),
+      exahype2::fv::getBoundaryFaceMask(partition, slot),
+      timeStamp,
+      timeStepSize
+    )
+  );
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>::copy(
+  const int               slot,
+  StoragePrecision* const target
+) const {
+  const StoragePrecision* const subgrid = getSubgrid(slot, target);
+  if (subgrid != target) {
+    for (int value = 0; value < Kernel::SubcellValuesPerCell; value++) {
+      target[value] = subgrid[value];
+    }
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>::interpolateFromParent(
+  const int               parentSlot,
+  StoragePrecision* const target,
+  const int               childPosition
+) const {
+  StoragePrecision projection[Kernel::SubcellValuesPerCell];
+  Kernel::Subgrid::interpolatePatch(getSubgrid(parentSlot, projection), target, childPosition);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>::restrictFromChildren(
+  const int* const        childSlots,
+  StoragePrecision* const target
+) const {
+  StoragePrecision        projections[peano4::ChildrenPerCell][Kernel::SubcellValuesPerCell];
+  const StoragePrecision* children[peano4::ChildrenPerCell];
+  for (int child = 0; child < peano4::ChildrenPerCell; child++) {
+    children[child] = getSubgrid(childSlots[child], projections[child]);
+  }
+  Kernel::Subgrid::restrictPatch(children, target);
+}
+
+/** Returns the subgrid a cell on the subcell scheme holds, or writes the projection of its nodes into projection. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*
+exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>::getSubgrid(
+  const int               slot,
+  StoragePrecision* const projection
+) const {
+  const auto status = static_cast<exahype2::dg::limiting::LimiterStatus>(
+    statuses.getChunk(slot)[static_cast<int>(exahype2::dg::limiting::StatusEntry::Status)]
+  );
+  if (exahype2::dg::limiting::runsSubcellScheme(status)) {
+    return subcells.getChunk(slot);
+  }
+  Kernel::projectNodesOntoSubcells(nodes.getChunk(slot), projection, nodesToSubcells);
+  return projection;
+}
+TARGET_DECLARE_END

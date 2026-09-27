@@ -167,13 +167,11 @@ tracer_attributes = {
 }
 
 tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
+    name="Tracers", particle_attributes=tracer_attributes
 )
 
-init_tracers = exahype2.particles.InsertParticlesByCoordinatesAndData(
-    particle_set=tracer_particles,
-    unknowns_per_particle=len(tracer_attributes["unknowns"]),
-    initial_data="""
+tracer_particles.insert_with_data(
+    """
   {
     2.0, 2.5, 0.0, 0.0, 0.0, 0, 0, 0, 0.0, 0.01, 0.1,
     1.5, 2.5, 0.0, 0.0, 0.0, 0, 0, 0, 0.0, 0.1,  0.1,
@@ -181,10 +179,8 @@ init_tracers = exahype2.particles.InsertParticlesByCoordinatesAndData(
     0.5, 2.5, 0.0, 0.0, 0.0, 0, 0, 0, 0.0, 1.0,  0.1
   }
 """,
+    unknowns_per_particle=len(tracer_attributes["unknowns"]),
 )
-
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
 
 fv_solver.trace(
     tracer_particles,
@@ -200,10 +196,6 @@ fv_solver.trace(
 )
 
 fv_solver.set_pde_terms(particle_analytical_solution=analytical_solution)
-fv_solver.measure_particle_error(
-    tracer_particles,
-    file="Error_" + Path(__file__).name,
-    descend_invocation_order=65536,  # After all other action sets
-)
+fv_solver.measure_particle_error(tracer_particles, file="Error_" + Path(__file__).name)
 
 project.generate_and_build()

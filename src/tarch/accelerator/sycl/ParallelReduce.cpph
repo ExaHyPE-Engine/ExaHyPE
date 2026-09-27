@@ -3,15 +3,15 @@
 
 namespace tarch::accelerator {
   template <typename T>
-  inline auto syclOp([[maybe_unused]] const Max<T> reducer) {
+  inline auto getSYCLOperator([[maybe_unused]] const Max<T> reducer) {
     return ::sycl::maximum<T>{};
   }
   template <typename T>
-  inline auto syclOp([[maybe_unused]] const Min<T> reducer) {
+  inline auto getSYCLOperator([[maybe_unused]] const Min<T> reducer) {
     return ::sycl::minimum<T>{};
   }
   template <typename T>
-  inline auto syclOp([[maybe_unused]] const Sum<T> reducer) {
+  inline auto getSYCLOperator([[maybe_unused]] const Sum<T> reducer) {
     return ::sycl::plus<T>{};
   }
 
@@ -26,7 +26,7 @@ namespace tarch::accelerator {
   };
 
   template <typename Op>
-  inline auto syclOp([[maybe_unused]] const Custom<Op> reducer) {
+  inline auto getSYCLOperator([[maybe_unused]] const Custom<Op> reducer) {
     return SyclCombine<Op>{};
   }
 
@@ -101,7 +101,7 @@ namespace tarch::accelerator {
     *deviceTarget                 = reducer.target;
     queue
       .submit([&](::sycl::handler& handler) {
-        auto reduction = ::sycl::reduction(deviceTarget, tarch::accelerator::syclOp(reducer));
+        auto reduction = ::sycl::reduction(deviceTarget, tarch::accelerator::getSYCLOperator(reducer));
         handler.parallel_for(::sycl::range<1>(range.n), reduction, [=](const ::sycl::id<1> itemId, auto& accumulator) {
           ValueType threadAccumulator = Reducer::identity();
           functor(static_cast<int>(itemId[0]), threadAccumulator);
@@ -159,7 +159,7 @@ namespace tarch::accelerator {
     );
     queue
       .submit([&](::sycl::handler& handler) {
-        auto reduction = ::sycl::reduction(deviceTarget, tarch::accelerator::syclOp(reducer));
+        auto reduction = ::sycl::reduction(deviceTarget, tarch::accelerator::getSYCLOperator(reducer));
         const ::sycl::local_accessor<std::uint64_t, 1> scratch(
           ::sycl::range<1>(tarch::accelerator::SyclTeamScratchBytes / sizeof(std::uint64_t)),
           handler
@@ -181,12 +181,13 @@ namespace tarch::accelerator {
 } // namespace tarch::accelerator
 
 template <typename Reducer>
-INLINE_METHOD GPU_CALLABLE_METHOD typename Reducer::ValueType tarch::accelerator::reduceTeamValue(
+INLINE_METHOD GPU_CALLABLE_METHOD typename Reducer::ValueType
+tarch::accelerator::reduceTeamValue(
   const tarch::accelerator::SyclTeam& team,
   const typename Reducer::ValueType   value,
   const Reducer                       reducer
 ) {
-  return ::sycl::reduce_over_group(team.item.get_group(), value, tarch::accelerator::syclOp(reducer));
+  return ::sycl::reduce_over_group(team.item.get_group(), value, tarch::accelerator::getSYCLOperator(reducer));
 }
 
 /**
@@ -194,7 +195,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD typename Reducer::ValueType tarch::accelerator
  * take arithmetic types only.
  */
 template <typename Op>
-INLINE_METHOD GPU_CALLABLE_METHOD typename Op::ValueType tarch::accelerator::reduceTeamValue(
+INLINE_METHOD GPU_CALLABLE_METHOD typename Op::ValueType
+tarch::accelerator::reduceTeamValue(
   const tarch::accelerator::SyclTeam&                   team,
   const typename Op::ValueType                          value,
   [[maybe_unused]] const tarch::accelerator::Custom<Op> reducer

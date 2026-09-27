@@ -13,11 +13,11 @@
 namespace {
   // Paths of the .vtkhdf files this process has created. The first write to a path
   // truncates the file and lays out its groups; every later write reopens and appends.
-  std::set<std::string>& createdPaths() {
+  std::set<std::string>& getCreatedPaths() {
     static std::set<std::string> paths;
     return paths;
   }
-  std::mutex& createdPathsMutex() {
+  std::mutex& getCreatedPathsMutex() {
     static std::mutex mutex;
     return mutex;
   }
@@ -26,23 +26,30 @@ namespace {
 tarch::plotter::VTKHDFFileWriter::VTKHDFFileWriter(const std::string& outputDirectory) :
   tarch::plotter::FileWriter(outputDirectory) {}
 
-bool        tarch::plotter::VTKHDFFileWriter::isOpen() const { return true; }
-std::string tarch::plotter::VTKHDFFileWriter::getFileExtension() const { return ".vtkhdf"; }
+bool
+tarch::plotter::VTKHDFFileWriter::isOpen() const {
+  return true;
+}
+std::string
+tarch::plotter::VTKHDFFileWriter::getFileExtension() const {
+  return ".vtkhdf";
+}
 
-bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const double time) {
+bool
+tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const double time) {
   createOutputDirectory();
   const std::string filePath = (std::filesystem::path(_outputDirectory) / (filename + ".vtkhdf")).string();
 
   bool firstWrite;
   {
-    const std::lock_guard<std::mutex> lock(createdPathsMutex());
-    firstWrite = createdPaths().insert(filePath).second;
+    const std::lock_guard<std::mutex> lock(getCreatedPathsMutex());
+    firstWrite = getCreatedPaths().insert(filePath).second;
   }
 
   const auto localData = getSubdomainBuffersSequenceForWriting();
   // Every rank of the writing communicator holds data, so the schema comes from the
   // local reference.
-  const FieldSchema schema = fieldSchemaFromReference(localData.reference);
+  const FieldSchema schema = getFieldSchema(localData.reference);
 
   // Each rank merges its subdomains into one contiguous grid, and the grids of all
   // ranks form one VTKHDF part per step. Each dataset takes one collective write.
@@ -108,7 +115,7 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
   if (useParallelIO) {
     fileAccessProperties = H5Pcreate(H5P_FILE_ACCESS);
     MPI_Info   info      = MPI_INFO_NULL;
-    const auto hints     = mpiIoHints();
+    const auto hints     = getMPIFileHints();
     if (not hints.empty()) {
       MPI_Info_create(&info);
       for (const auto& hint : hints) {

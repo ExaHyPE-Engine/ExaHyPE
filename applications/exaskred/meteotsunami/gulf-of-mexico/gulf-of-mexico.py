@@ -76,6 +76,7 @@ aderdg_solver.add_subcell_limiter(
     dmp_relaxation_parameter=1.0e-2,
     dmp_differences_scaling=1.0e-3,
 )
+aderdg_solver.initialise_on_host()
 project.add_solver(aderdg_solver)
 
 for name, kind, value in (
@@ -111,7 +112,5 @@ for name, kind, value in (
 project.add_constant("g", 9.81)
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("../../AlbersEqualArea.cpp")
-project.output.makefile.add_cpp_file("../../Forcing.cpp")
-project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
+project.output.makefile.add_h_file("ADERDGSolver.cpph")
 project.generate_and_build()

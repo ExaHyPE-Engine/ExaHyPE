@@ -2,9 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Matrix.h"
 #include "tarch/la/Vector.h"
 
+TARGET_DECLARE
 namespace tarch::la {
   /**
    * Returns the product of the matrix and the vector.
@@ -85,12 +88,7 @@ namespace tarch::la {
     const Matrix<4, 4, Scalar>& matrix,
     const Vector<4, Scalar>&    vector
   );
-
-  template <int Size, typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Matrix<Size, Size, Scalar> outerDot(
-    const Vector<Size, Scalar>& lhs,
-    const Vector<Size, Scalar>& rhs
-  );
 } // namespace tarch::la
+TARGET_DECLARE_END
 
 #include "tarch/la/MatrixVectorOperations.cpph"

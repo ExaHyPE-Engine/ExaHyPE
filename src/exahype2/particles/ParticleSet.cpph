@@ -1,0 +1,459 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "peano4/Constants.h"
+#include "peano4/Spacetree.h"
+#include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
+#include "tarch/Termination.h"
+#include "tarch/la/Scalar.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+
+#include <mpi.h>
+
+TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::particles::Particle::getX(const int axis) const {
+  assertion(axis >= 0 and axis < DIMENSIONS, axis);
+  return values[axis];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::particles::Particle::getX() const {
+  return tarch::la::Vector<DIMENSIONS, double>(values);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::Particle::setX(const int axis, const double value) {
+  assertion(axis >= 0 and axis < DIMENSIONS, axis);
+  values[axis] = value;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::Particle::setX(const tarch::la::Vector<DIMENSIONS, double>& position) {
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    values[axis] = position(axis);
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::particles::Particle::getData(const int index) const {
+  assertion(index >= 0 and index < numberOfData, index, numberOfData);
+  return values[DIMENSIONS + index];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::Particle::setData(const int index, const double value) {
+  assertion(index >= 0 and index < numberOfData, index, numberOfData);
+  values[DIMENSIONS + index] = value;
+}
+
+template <int NumberOfData>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::Particle
+exahype2::particles::ParticleSetView<NumberOfData>::getParticle(const int index) const {
+  assertion(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  return Particle{values + static_cast<std::ptrdiff_t>(index) * ValuesPerParticle, NumberOfData};
+}
+
+template <int NumberOfData>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::particles::ParticleSetView<NumberOfData>::getSlot(const int index) const {
+  assertion(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  return slots[index];
+}
+TARGET_DECLARE_END
+
+template <int NumberOfData>
+INLINE_METHOD int
+exahype2::particles::ParticleSet<NumberOfData>::getSize() const noexcept {
+  return static_cast<int>(_slots.size());
+}
+
+/** Returns the number of particles of all ranks after the last relocate(). */
+template <int NumberOfData>
+INLINE_METHOD int
+exahype2::particles::ParticleSet<NumberOfData>::getGlobalNumberOfParticles() const noexcept {
+  return _globalNumberOfParticles;
+}
+
+template <int NumberOfData>
+INLINE_METHOD tarch::AllocatedBytes
+exahype2::particles::ParticleSet<NumberOfData>::getAllocatedBytes() const noexcept {
+  return tarch::AllocatedBytes::onHost(
+           tarch::getAllocatedBytesOf(_values) + tarch::getAllocatedBytesOf(_numbers)
+           + tarch::getAllocatedBytesOf(_slots)
+         )
+    + _valuesOnDevice.getAllocatedBytes() + _slotsOnDevice.getAllocatedBytes();
+}
+
+/**
+ * Returns the position of the particle index on the host. A caller calls download() after every
+ * kernel that moves particles, so the host positions are current while other host data is stale.
+ */
+template <int NumberOfData>
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::particles::ParticleSet<NumberOfData>::getPosition(const int index) const {
+  assertion(index >= 0 and index < getSize(), index, getSize());
+  return tarch::la::Vector<DIMENSIONS, double>(_values.data() + static_cast<std::size_t>(index) * ValuesPerParticle);
+}
+
+/** Returns the data of the particle index on the host; download() precedes it after a kernel. */
+template <int NumberOfData>
+INLINE_METHOD const double*
+exahype2::particles::ParticleSet<NumberOfData>::getData(const int index) const {
+  assertion(index >= 0 and index < getSize(), index, getSize());
+  assertion(_hostValuesAreCurrent);
+  return _values.data() + static_cast<std::size_t>(index) * ValuesPerParticle + DIMENSIONS;
+}
+
+/** Returns the particle index on the host; download() precedes it after a kernel. */
+template <int NumberOfData>
+INLINE_METHOD exahype2::particles::Particle
+exahype2::particles::ParticleSet<NumberOfData>::getParticle(const int index) {
+  assertion(index >= 0 and index < getSize(), index, getSize());
+  assertion(_hostValuesAreCurrent);
+  return Particle{_values.data() + static_cast<std::size_t>(index) * ValuesPerParticle, NumberOfData};
+}
+
+template <int NumberOfData>
+INLINE_METHOD std::pair<int, int>
+exahype2::particles::ParticleSet<NumberOfData>::getNumber(const int index) const {
+  assertion(index >= 0 and index < getSize(), index, getSize());
+  return {_numbers[static_cast<std::size_t>(index) * 2], _numbers[static_cast<std::size_t>(index) * 2 + 1]};
+}
+
+template <int NumberOfData>
+INLINE_METHOD int
+exahype2::particles::ParticleSet<NumberOfData>::getSlot(const int index) const {
+  assertion(index >= 0 and index < getSize(), index, getSize());
+  return _slots[static_cast<std::size_t>(index)];
+}
+
+/**
+ * Returns the slot of the cell of the rank that holds position, or a negative value when no
+ * cell of the rank holds it. A position on the face between two cells belongs to the lower cell
+ * along the face normal, a position on the lower domain wall to the cell at the wall.
+ */
+template <int NumberOfData>
+int
+exahype2::particles::ParticleSet<NumberOfData>::getSlotAt(
+  const peano4::Partition&                     partition,
+  const tarch::la::Vector<DIMENSIONS, double>& position
+) {
+  if (partition.getCells().isEmpty()) {
+    return -1;
+  }
+  const auto domainOffset = partition.getDomainOffset();
+  for (int level = partition.getMaximumLevel(); level >= partition.getMinimumLevel(); level--) {
+    const int                          cellsPerAxis = peano4::power(peano4::SubdivisionFactor, level);
+    tarch::la::Vector<DIMENSIONS, int> lattice;
+    bool                               insideDomain = true;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const double width     = partition.getWidthOfLevel(level, axis);
+      const double relative  = (position(axis) - domainOffset(axis)) / width;
+      int          index     = static_cast<int>(std::floor(relative));
+      const double lowerFace = domainOffset(axis) + index * width;
+      if (index >= 1 and position(axis) - lowerFace <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
+        index--;
+      }
+      if (index == cellsPerAxis and position(axis) - lowerFace <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
+        index--;
+      }
+      insideDomain  = insideDomain and index >= 0 and index < cellsPerAxis;
+      lattice(axis) = index;
+    }
+    if (not insideDomain) {
+      return -1;
+    }
+    const int slot = peano4::Spacetree::getInstance().getCellAt(level, lattice);
+    if (slot >= 0) {
+      return slot;
+    }
+  }
+  return -1;
+}
+
+template <int NumberOfData>
+void
+exahype2::particles::ParticleSet<NumberOfData>::append(
+  const double* const values,
+  const int           number0,
+  const int           number1,
+  const int           slot
+) {
+  assertion(_hostValuesAreCurrent);
+  _values.insert(_values.end(), values, values + ValuesPerParticle);
+  _numbers.push_back(number0);
+  _numbers.push_back(number1);
+  _slots.push_back(slot);
+  _deviceValuesAreCurrent = false;
+  _deviceSlotsAreCurrent  = false;
+}
+
+/**
+ * Takes over every candidate whose position a cell of the rank holds. candidates holds
+ * ValuesPerParticle values per particle, the coordinates first. A new particle carries the rank
+ * and a running number the rank counts. Every rank calls it, and the sum over the ranks yields the
+ * particle count of all ranks.
+ */
+template <int NumberOfData>
+void
+exahype2::particles::ParticleSet<NumberOfData>::insert(
+  const peano4::Partition&   partition,
+  const std::vector<double>& candidates
+) {
+  assertion(candidates.size() % ValuesPerParticle == 0, candidates.size(), ValuesPerParticle);
+  const auto& rank = tarch::mpi::Rank::getInstance();
+  for (std::size_t offset = 0; offset < candidates.size(); offset += ValuesPerParticle) {
+    const double* const values = candidates.data() + offset;
+    const int           slot   = getSlotAt(partition, tarch::la::Vector<DIMENSIONS, double>(values));
+    if (slot >= 0) {
+      append(values, rank.getRank(), _nextNumber, slot);
+      _nextNumber++;
+    }
+  }
+  const int localNumberOfParticles = getSize();
+  _globalNumberOfParticles         = localNumberOfParticles;
+  if (rank.getNumberOfRanks() > 1) {
+    tarch::mpi::allreduce(
+      &localNumberOfParticles,
+      &_globalNumberOfParticles,
+      1,
+      MPI_INT,
+      MPI_SUM,
+      rank.getCommunicator()
+    );
+  }
+  assertion(_globalNumberOfParticles >= localNumberOfParticles, _globalNumberOfParticles, localNumberOfParticles);
+}
+
+template <int NumberOfData>
+void
+exahype2::particles::ParticleSet<NumberOfData>::locate(const peano4::Partition& partition) {
+  for (int index = 0; index < getSize(); index++) {
+    const int slot = getSlotAt(partition, getPosition(index));
+    if (slot != _slots[static_cast<std::size_t>(index)]) {
+      _slots[static_cast<std::size_t>(index)] = slot;
+      _deviceSlotsAreCurrent                  = false;
+    }
+  }
+}
+
+/**
+ * Sends every particle without a cell on this rank to the rank that holds its position and stops
+ * the run for a particle that no rank holds. Every rank calls it, and the gathered counts yield the
+ * particle count of all ranks. Only a call in which some particle leaves its rank downloads the
+ * host values.
+ */
+template <int NumberOfData>
+void
+exahype2::particles::ParticleSet<NumberOfData>::exchange(const peano4::Partition& partition) {
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const int      numberOfRanks = rank.getNumberOfRanks();
+  const MPI_Comm communicator  = rank.getCommunicator();
+  const int      localLeaving =
+    static_cast<int>(std::count_if(_slots.begin(), _slots.end(), [](const int slot) { return slot < 0; }));
+  const int kept = getSize() - localLeaving;
+
+  const int        localCounts[2]{kept, localLeaving};
+  std::vector<int> countsPerRank(localCounts, localCounts + 2);
+  if (numberOfRanks > 1) {
+    countsPerRank.resize(2 * static_cast<std::size_t>(numberOfRanks));
+    tarch::mpi::allgather(localCounts, 2, MPI_INT, countsPerRank.data(), 2, MPI_INT, communicator);
+  }
+  std::vector<int> leavingPerRank(static_cast<std::size_t>(numberOfRanks));
+  int              totalKept    = 0;
+  int              totalLeaving = 0;
+  for (int other = 0; other < numberOfRanks; other++) {
+    const auto entry      = static_cast<std::size_t>(other);
+    leavingPerRank[entry] = countsPerRank[2 * entry + 1];
+    totalKept += countsPerRank[2 * entry];
+    totalLeaving += leavingPerRank[entry];
+  }
+  _globalNumberOfParticles = totalKept + totalLeaving;
+  if (totalLeaving == 0) {
+    return;
+  }
+
+  // The leaving particles carry their data to the other ranks, and every rank appends the ones it
+  // receives, so every rank brings its host values up to date first.
+  download();
+  std::vector<double> leavingValues;
+  std::vector<int>    leavingNumbers;
+  int                 keptParticles = 0;
+  for (int index = 0; index < getSize(); index++) {
+    const auto offset = static_cast<std::size_t>(index) * ValuesPerParticle;
+    if (_slots[static_cast<std::size_t>(index)] >= 0) {
+      if (keptParticles != index) {
+        const auto target = static_cast<std::size_t>(keptParticles) * ValuesPerParticle;
+        std::copy_n(
+          _values.begin() + static_cast<std::ptrdiff_t>(offset),
+          ValuesPerParticle,
+          _values.begin() + static_cast<std::ptrdiff_t>(target)
+        );
+        _numbers[static_cast<std::size_t>(keptParticles) * 2]     = _numbers[static_cast<std::size_t>(index) * 2];
+        _numbers[static_cast<std::size_t>(keptParticles) * 2 + 1] = _numbers[static_cast<std::size_t>(index) * 2 + 1];
+        _slots[static_cast<std::size_t>(keptParticles)]           = _slots[static_cast<std::size_t>(index)];
+      }
+      keptParticles++;
+    } else {
+      leavingValues.insert(
+        leavingValues.end(),
+        _values.begin() + static_cast<std::ptrdiff_t>(offset),
+        _values.begin() + static_cast<std::ptrdiff_t>(offset + ValuesPerParticle)
+      );
+      leavingNumbers.push_back(_numbers[static_cast<std::size_t>(index) * 2]);
+      leavingNumbers.push_back(_numbers[static_cast<std::size_t>(index) * 2 + 1]);
+    }
+  }
+  assertion(keptParticles == kept, keptParticles, kept);
+  _values.resize(static_cast<std::size_t>(kept) * ValuesPerParticle);
+  _numbers.resize(static_cast<std::size_t>(kept) * 2);
+  _slots.resize(static_cast<std::size_t>(kept));
+  _deviceValuesAreCurrent = false;
+  _deviceSlotsAreCurrent  = false;
+
+  std::vector<double> allValues(static_cast<std::size_t>(totalLeaving) * ValuesPerParticle);
+  std::vector<int>    allNumbers(static_cast<std::size_t>(totalLeaving) * 2);
+  if (numberOfRanks > 1) {
+    std::vector<int> valueCounts(static_cast<std::size_t>(numberOfRanks));
+    std::vector<int> valueDisplacements(static_cast<std::size_t>(numberOfRanks));
+    std::vector<int> numberCounts(static_cast<std::size_t>(numberOfRanks));
+    std::vector<int> numberDisplacements(static_cast<std::size_t>(numberOfRanks));
+    int              valueDisplacement  = 0;
+    int              numberDisplacement = 0;
+    for (int other = 0; other < numberOfRanks; other++) {
+      const auto entry           = static_cast<std::size_t>(other);
+      valueCounts[entry]         = leavingPerRank[entry] * ValuesPerParticle;
+      valueDisplacements[entry]  = valueDisplacement;
+      numberCounts[entry]        = leavingPerRank[entry] * 2;
+      numberDisplacements[entry] = numberDisplacement;
+      valueDisplacement += valueCounts[entry];
+      numberDisplacement += numberCounts[entry];
+    }
+    tarch::mpi::allgatherv(
+      leavingValues.data(),
+      localLeaving * ValuesPerParticle,
+      MPI_DOUBLE,
+      allValues.data(),
+      valueCounts.data(),
+      valueDisplacements.data(),
+      MPI_DOUBLE,
+      communicator
+    );
+    tarch::mpi::allgatherv(
+      leavingNumbers.data(),
+      localLeaving * 2,
+      MPI_INT,
+      allNumbers.data(),
+      numberCounts.data(),
+      numberDisplacements.data(),
+      MPI_INT,
+      communicator
+    );
+  } else {
+    allValues  = leavingValues;
+    allNumbers = leavingNumbers;
+  }
+
+  int placed = 0;
+  for (int candidate = 0; candidate < totalLeaving; candidate++) {
+    const double* const values = allValues.data() + static_cast<std::size_t>(candidate) * ValuesPerParticle;
+    const int           slot   = getSlotAt(partition, tarch::la::Vector<DIMENSIONS, double>(values));
+    if (slot >= 0) {
+      append(
+        values,
+        allNumbers[static_cast<std::size_t>(candidate) * 2],
+        allNumbers[static_cast<std::size_t>(candidate) * 2 + 1],
+        slot
+      );
+      placed++;
+    }
+  }
+  int globalPlaced = placed;
+  if (numberOfRanks > 1) {
+    tarch::mpi::allreduce(&placed, &globalPlaced, 1, MPI_INT, MPI_SUM, communicator);
+  }
+  if (globalPlaced != totalLeaving) {
+    tarch::terminateWithError(
+      "No rank holds the position of " + std::to_string(totalLeaving - globalPlaced) + " of "
+      + std::to_string(totalLeaving) + " particles that left their cells."
+    );
+  }
+}
+
+/** Finds the cell of every particle again and moves the particles that left the rank. */
+template <int NumberOfData>
+void
+exahype2::particles::ParticleSet<NumberOfData>::relocate(const peano4::Partition& partition) {
+  locate(partition);
+  exchange(partition);
+}
+
+/**
+ * Copies the values and the slots that changed on the host since the last upload to the device
+ * copy. A device copy that grows starts empty, so it takes every value and slot.
+ */
+template <int NumberOfData>
+void
+exahype2::particles::ParticleSet<NumberOfData>::upload() {
+  if (_valuesOnDevice.getSize() < _values.size() or _slotsOnDevice.getSize() < _slots.size()) {
+    _valuesOnDevice.allocate(_values.size());
+    _slotsOnDevice.allocate(_slots.size());
+    _deviceValuesAreCurrent = false;
+    _deviceSlotsAreCurrent  = false;
+  }
+  if (not _deviceValuesAreCurrent) {
+    assertion(_hostValuesAreCurrent);
+    _valuesOnDevice.copyFromHost(_values.data(), _values.size());
+    _deviceValuesAreCurrent = true;
+  }
+  if (not _deviceSlotsAreCurrent) {
+    _slotsOnDevice.copyFromHost(_slots.data(), _slots.size());
+    _deviceSlotsAreCurrent = true;
+  }
+}
+
+/** Copies the values a kernel wrote since the last download back to the host array. */
+template <int NumberOfData>
+void
+exahype2::particles::ParticleSet<NumberOfData>::download() {
+  if (_hostValuesAreCurrent) {
+    return;
+  }
+  assertion(_valuesOnDevice.getSize() >= _values.size(), _valuesOnDevice.getSize(), _values.size());
+  _valuesOnDevice.copyToHost(_values.data(), _values.size());
+  _hostValuesAreCurrent = true;
+}
+
+template <int NumberOfData>
+void
+exahype2::particles::ParticleSet<NumberOfData>::release() {
+  _values.clear();
+  _values.shrink_to_fit();
+  _numbers.clear();
+  _numbers.shrink_to_fit();
+  _slots.clear();
+  _slots.shrink_to_fit();
+  _globalNumberOfParticles = 0;
+  _valuesOnDevice.release();
+  _slotsOnDevice.release();
+  _hostValuesAreCurrent   = true;
+  _deviceValuesAreCurrent = false;
+  _deviceSlotsAreCurrent  = false;
+}
+
+/**
+ * Returns the device copy for a kernel that writes it; upload() precedes it, and the host values
+ * are stale until the next download().
+ */
+template <int NumberOfData>
+exahype2::particles::ParticleSetView<NumberOfData>
+exahype2::particles::ParticleSet<NumberOfData>::getView() {
+  assertion(_deviceValuesAreCurrent and _deviceSlotsAreCurrent);
+  assertion(_valuesOnDevice.getSize() >= _values.size(), _valuesOnDevice.getSize(), _values.size());
+  assertion(_slotsOnDevice.getSize() >= _slots.size(), _slotsOnDevice.getSize(), _slots.size());
+  _hostValuesAreCurrent = false;
+  return ParticleSetView<NumberOfData>{getSize(), _valuesOnDevice.getData(), _slotsOnDevice.getData()};
+}

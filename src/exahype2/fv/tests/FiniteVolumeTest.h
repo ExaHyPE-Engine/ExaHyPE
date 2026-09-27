@@ -11,17 +11,37 @@ namespace exahype2::fv::tests {
 class exahype2::fv::tests::FiniteVolumeTest final : public tarch::tests::TestCase {
 public:
   FiniteVolumeTest();
-  FiniteVolumeTest(const FiniteVolumeTest&)            = delete;
-  FiniteVolumeTest(FiniteVolumeTest&&)                 = delete;
-  FiniteVolumeTest& operator=(const FiniteVolumeTest&) = delete;
-  FiniteVolumeTest& operator=(FiniteVolumeTest&&)      = delete;
-  ~FiniteVolumeTest() override                         = default;
+  FiniteVolumeTest(const FiniteVolumeTest& other)            = delete;
+  FiniteVolumeTest(FiniteVolumeTest&& other)                 = delete;
+  FiniteVolumeTest& operator=(const FiniteVolumeTest& other) = delete;
+  FiniteVolumeTest& operator=(FiniteVolumeTest&& other)      = delete;
+  ~FiniteVolumeTest() override                               = default;
 
   void run() override;
 
 private:
+  void testTheFaceVolumeIndexRunsLayerSlowest();
+  void testBothFaceVolumeIndexFormsAgreeAndVisitEveryVolumeOnce();
+  void testForEachVolumeVisitsEveryVolumeInLinearisedOrder();
+  void testAccumulateMaxEigenvalueKeepsTheLargestAndAFault();
+  void testInitialiseWritesTheInitialConditionAtEveryVolumeCentre();
+  void testBoundaryConditionsCopyAUniformStateOntoTheOuterHalf();
+  void testEachOuterLayerReadsTheMatchingInnerLayer();
+  void testEachOuterVolumeIsWrittenOnce();
+  void testProjectionFillsTheOwnHalfOfEveryFace();
+  void testHaloInterpolationReproducesALinearProfile();
+  void testAConstantFaceInterpolatesBitwise();
+  void testHaloRestrictionAveragesTheCoveringVolumes();
+  void testConstantFineFacesRestrictBitwise();
+  void testPatchInterpolationCopiesTheCoveringVolume();
+  void testPatchRestrictionInvertsTheInterpolation();
+  void testPatchRestrictionAveragesExactly();
+  void testAVolumeFaceOnTheDomainBoundaryReachesTheRiemannSolver();
   void testZeroTimeStepPreservesState();
   void testUniformStateIsPreserved();
+  void testAFixedRuleReportsNoWaveSpeed();
+  void testASourceTermGrowsAUniformStateByItsRate();
+  void testADiffusiveSourceTermReadsTheForwardDifference();
   void testLimitedLinearPreservesUniformState();
   void testLimitedLinearIntegratesTimeDependentAdvection();
   void testLimitedLinearAverageConvergesAtSecondOrder();
@@ -32,8 +52,11 @@ private:
   void testLimitedLinearCustomRiemannIncludesVolumeNonconservativeProduct();
   void testPeriodicAdvectionConservesMass();
   void testSodShockTubeReachesStarStates();
+  void testMirroredVolumesReceiveMirroredStates();
   void testReconstructionHookReproducingDefaultChangesNothing();
   void testLimiterHookReproducingMinmodChangesNothing();
-  void testParticleUpdateAdvancesWithExplicitEuler();
-  void testParticleAccessorsMatchAttributeOffsets();
+  void testThePostprocessingRunsBeforeTheWaveSpeedsOfTheUpdatedPatch();
+  void testReduceMaxEigenvalueTakesTheLargestWaveSpeedOverTheVolumes();
+  void testMeasureErrorsSumsTheWeightedNorms();
+  void testEveryCellOfADeviceRangeUpdatesLikeTheHost();
 };

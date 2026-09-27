@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2 {
@@ -57,13 +57,9 @@ namespace exahype2 {
  * Each coordinate direction may carry at most one transformation, i.e. applyPerturbation() and
  * split() together have to be called at most once per axis. The class asserts this.
  *
- * The restriction is what makes the composition exact. Because every earlier transformation leaves
- * the current axis untouched, the domain bounds along that axis are still the cartesian ones, and
- * both split() and applyPerturbation() measure against them directly, in the forward as well as in
- * the inverse direction. Lifting the restriction means measuring bounds that have themselves
- * moved, and doing so consistently in both directions, which the linear ansatz used here cannot
- * express. A second split along an axis that has already been stretched would in particular no
- * longer land on a cell boundary, which is the entire purpose of split().
+ * Every earlier transformation leaves the current axis untouched, so the domain bounds along that
+ * axis stay the cartesian ones that split() and applyPerturbation() measure against in both
+ * directions. A second split along a stretched axis misses the cell boundary that split() lands on.
  *
  * A perturbation is always evaluated on the surface it moves, with the coordinate along the
  * transformed axis pinned to the face for applyPerturbation() and to the interface's cell boundary

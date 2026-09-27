@@ -8,7 +8,7 @@
 
 // clang-format off
 // --- C++ language level ------------------------------------------------------
-// _MSVC_LANG mirrors __cplusplus for MSVC, whose __cplusplus stays at 199711L
+// _MSVC_LANG mirrors __cplusplus for the Microsoft compiler, whose __cplusplus stays at 199711L
 // unless /Zc:__cplusplus is passed; everywhere else __cplusplus is authoritative.
 #if defined(_MSVC_LANG)
 #define PEANO_CPLUSPLUS _MSVC_LANG
@@ -21,25 +21,25 @@
 #undef PEANO_CPLUSPLUS
 
 // --- Required C++20 standard-library features --------------------------------
-#if !defined(__cpp_lib_filesystem) || __cpp_lib_filesystem < 201703L
+#if not defined(__cpp_lib_filesystem) or __cpp_lib_filesystem < 201703L
 #error "Peano needs a standard library providing <filesystem> (__cpp_lib_filesystem >= 201703L): libstdc++ >= 9 (we require >= 12), libc++ >= 9, or MSVC STL."
 #endif
-#if !defined(__cpp_lib_source_location) || __cpp_lib_source_location < 201907L
+#if not defined(__cpp_lib_source_location) or __cpp_lib_source_location < 201907L
 #error "Peano needs std::source_location (__cpp_lib_source_location >= 201907L): libstdc++ >= 11 or a recent libc++ (LLVM >= 16)."
 #endif
-#if !defined(__cpp_lib_ranges) || __cpp_lib_ranges < 201911L
+#if not defined(__cpp_lib_ranges) or __cpp_lib_ranges < 201911L
 #error "Peano needs the C++20 ranges library (__cpp_lib_ranges >= 201911L)."
 #endif
 
 // --- Known-bad standard-library versions -------------------------------------
-#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 12
+#if defined(_GLIBCXX_RELEASE) and _GLIBCXX_RELEASE < 12
 #error "Peano requires libstdc++ >= 12 (as shipped with GCC >= 12). When building with Clang or Intel, load a GCC >= 12 toolchain so a recent libstdc++ is used."
 #endif
 
 // --- Apple platform availability ---------------------------------------------
 // On Apple the <filesystem> headers exist but their symbols are unavailable
 // below a macOS 10.15 deployment target.
-#if defined(__APPLE__) && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500
+#if defined(__APPLE__) and defined(__MAC_OS_X_VERSION_MIN_REQUIRED) and __MAC_OS_X_VERSION_MIN_REQUIRED < 101500
 #error "Peano needs a macOS 10.15+ deployment target for std::filesystem (set CMAKE_OSX_DEPLOYMENT_TARGET)."
 #endif
 // clang-format on

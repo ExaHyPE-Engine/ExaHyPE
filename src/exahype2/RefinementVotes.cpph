@@ -1,0 +1,219 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/Limits.h"
+#include "exahype2/RefinementRequests.h"
+#include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/la/ScalarOperations.h"
+#include "tarch/la/VectorOperations.h"
+
+/** Votes on every cell of the partition from the admissible sizes alone and merges the votes. */
+template <typename Derived, typename StoragePrecision>
+INLINE_METHOD void
+exahype2::RefinementVotes::voteOnGridConstruction(
+  const peano4::Partition&      partition,
+  const exahype2::Limits&       limits,
+  exahype2::RefinementRequests& requests
+) {
+  reserve(partition.getNumberOfSlots());
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(partition.getCells().size),
+    exahype2::VoteOnGridConstruction<Derived, StoragePrecision>{
+      partition.onDevice(),
+      _commands.getData(),
+      limits.maxAdmissiblePatchSize,
+      limits.minAdmissiblePatchSize
+    }
+  );
+  merge(partition, partition.onDevice().getCells(), partition.getCells(), requests);
+}
+
+/** Votes on every cell of the partition from its patch in solution and merges the votes. */
+template <typename Derived, typename SolutionView>
+INLINE_METHOD void
+exahype2::RefinementVotes::voteOnEveryCell(
+  const peano4::Partition&      partition,
+  const SolutionView&           solution,
+  const exahype2::Limits&       limits,
+  const double                  timeStamp,
+  exahype2::RefinementRequests& requests
+) {
+  reserve(partition.getNumberOfSlots());
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(partition.getCells().size),
+    exahype2::VoteOnRefinement<Derived, SolutionView>{
+      partition.onDevice(),
+      partition.onDevice().getCells(),
+      solution,
+      _commands.getData(),
+      limits.maxAdmissiblePatchSize,
+      limits.minAdmissiblePatchSize,
+      timeStamp
+    }
+  );
+  merge(partition, partition.onDevice().getCells(), partition.getCells(), requests);
+}
+
+/** Votes on the listed cells from their patches in solution and merges those votes. */
+template <typename Derived, typename SolutionView>
+INLINE_METHOD void
+exahype2::RefinementVotes::voteOnCells(
+  const peano4::Partition&      partition,
+  const std::vector<int>&       cells,
+  const SolutionView&           solution,
+  const exahype2::Limits&       limits,
+  const double                  timeStamp,
+  exahype2::RefinementRequests& requests
+) {
+  reserve(partition.getNumberOfSlots());
+  _listedCells.setValues(cells);
+  const tarch::Span<const int> cellsOnDevice{_listedCells.getData(), static_cast<int>(cells.size())};
+  const tarch::Span<const int> cellsOnHost{cells.data(), static_cast<int>(cells.size())};
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(cellsOnDevice.size),
+    exahype2::VoteOnRefinement<Derived, SolutionView>{
+      partition.onDevice(),
+      cellsOnDevice,
+      solution,
+      _commands.getData(),
+      limits.maxAdmissiblePatchSize,
+      limits.minAdmissiblePatchSize,
+      timeStamp
+    }
+  );
+  merge(partition, cellsOnDevice, cellsOnHost, requests);
+}
+
+INLINE_METHOD void
+exahype2::RefinementVotes::release() {
+  _commands.release();
+  _listedCells.release();
+  _commandsOnHost = std::vector<exahype2::RefinementCommand>{};
+}
+
+INLINE_METHOD tarch::AllocatedBytes
+exahype2::RefinementVotes::getAllocatedBytes() const {
+  return _commands.getAllocatedBytes() + _listedCells.getAllocatedBytes()
+    + tarch::AllocatedBytes::onHost(tarch::getAllocatedBytesOf(_commandsOnHost));
+}
+
+INLINE_METHOD void
+exahype2::RefinementVotes::reserve(const int numberOfSlots) {
+  assertion(numberOfSlots >= 0, numberOfSlots);
+  if (_commands.getSize() < static_cast<std::size_t>(numberOfSlots)) {
+    _commands.allocate(static_cast<std::size_t>(numberOfSlots));
+  }
+}
+
+/**
+ * Merges the commands of the cells, listed on the device and on the host, into the requests; a
+ * vote of keep on every listed cell merges without the copy to the host.
+ */
+INLINE_METHOD void
+exahype2::RefinementVotes::merge(
+  const peano4::Partition&      partition,
+  const tarch::Span<const int>  cellsOnDevice,
+  const tarch::Span<const int>  cellsOnHost,
+  exahype2::RefinementRequests& requests
+) {
+  assertion(
+    _commands.getSize() >= static_cast<std::size_t>(partition.getNumberOfSlots()),
+    _commands.getSize(),
+    partition.getNumberOfSlots()
+  );
+  assertion(cellsOnDevice.size == cellsOnHost.size, cellsOnDevice.size, cellsOnHost.size);
+  int votes = 0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(cellsOnDevice.size),
+    exahype2::CountRefinementVotes{cellsOnDevice, _commands.getData()},
+    tarch::accelerator::Sum<int>{votes}
+  );
+  if (votes == 0) {
+    requests.merge(exahype2::RefinementCommand::Keep, cellsOnHost);
+    return;
+  }
+  const auto numberOfSlots = static_cast<std::size_t>(partition.getNumberOfSlots());
+  _commandsOnHost.resize(numberOfSlots);
+  _commands.copyToHost(_commandsOnHost.data(), numberOfSlots);
+  requests.merge(_commandsOnHost, cellsOnHost);
+}
+
+TARGET_DECLARE
+template <typename Derived, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::VoteOnGridConstruction<Derived, StoragePrecision>::operator()(const int entry) const {
+  const int                                   slot         = partition.getCells()[entry];
+  const tarch::la::Vector<DIMENSIONS, double> width        = partition.getCellWidth(slot);
+  const double                                largestWidth = tarch::la::max(width);
+  exahype2::RefinementCommand                 command      = exahype2::RefinementCommand::Keep;
+  if (tarch::la::greater(largestWidth, maxAdmissibleSize)) {
+    command = exahype2::RefinementCommand::Refine;
+  } else if (tarch::la::greaterEquals(largestWidth, minAdmissibleSize)) {
+    command = Derived::refinementCriterion(
+      static_cast<const StoragePrecision*>(nullptr),
+      partition.getCellCentre(slot),
+      width,
+      0.0
+    );
+  }
+  commands[slot] = command;
+}
+
+/**
+ * Returns the vote of Derived on one cell: A cell above the largest admissible size refines, a
+ * cell that can refine or erase within the admissible sizes asks the refinement criterion, and a
+ * vote that would leave the admissible sizes turns into a keep.
+ */
+template <typename Derived, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand
+exahype2::voteWithinAdmissibleSizes(
+  const StoragePrecision* const                Q,
+  const tarch::la::Vector<DIMENSIONS, double>& centre,
+  const tarch::la::Vector<DIMENSIONS, double>& width,
+  const double                                 maxAdmissibleSize,
+  const double                                 minAdmissibleSize,
+  const double                                 timeStamp
+) {
+  const double                largestWidth = tarch::la::max(width);
+  exahype2::RefinementCommand command      = exahype2::RefinementCommand::Keep;
+  if (tarch::la::greater(largestWidth, maxAdmissibleSize)) {
+    command = exahype2::RefinementCommand::Refine;
+  } else if (
+    tarch::la::greater(largestWidth, minAdmissibleSize) or peano4::SubdivisionFactor * largestWidth <= maxAdmissibleSize
+  ) {
+    command = Derived::refinementCriterion(Q, centre, width, timeStamp);
+    if (command == exahype2::RefinementCommand::Refine and tarch::la::smallerEquals(largestWidth, minAdmissibleSize)) {
+      command = exahype2::RefinementCommand::Keep;
+    } else if (
+      command == exahype2::RefinementCommand::Erase and peano4::SubdivisionFactor * largestWidth > maxAdmissibleSize
+    ) {
+      command = exahype2::RefinementCommand::Keep;
+    }
+  }
+  return command;
+}
+
+template <typename Derived, typename SolutionView>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::VoteOnRefinement<Derived, SolutionView>::operator()(const int entry) const {
+  const int slot = cells[entry];
+  commands[slot] = exahype2::voteWithinAdmissibleSizes<Derived>(
+    solution.getChunk(slot),
+    partition.getCellCentre(slot),
+    partition.getCellWidth(slot),
+    maxAdmissibleSize,
+    minAdmissibleSize,
+    timeStamp
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::CountRefinementVotes::operator()(const int entry, int& accumulator) const {
+  accumulator += commands[cells[entry]] == exahype2::RefinementCommand::Keep ? 0 : 1;
+}
+TARGET_DECLARE_END

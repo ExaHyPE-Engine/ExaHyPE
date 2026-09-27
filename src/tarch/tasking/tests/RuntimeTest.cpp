@@ -8,20 +8,28 @@
 tarch::tasking::tests::RuntimeTest::RuntimeTest() :
   tarch::tests::TestCase("tarch::tasking::tests::RuntimeTest") {}
 
-void tarch::tasking::tests::RuntimeTest::run() {
+void
+tarch::tasking::tests::RuntimeTest::run() {
   testMethod(testRuntimeProperties);
-  testMethod(testWaitPolicyOfRanksOnOneNode);
+  testMethod(testWaitPolicyOfOversubscribedNode);
 }
 
-void tarch::tasking::tests::RuntimeTest::testWaitPolicyOfRanksOnOneNode() {
+/**
+ * An oversubscribed node runs its teams with a set wait policy, and a rank counts itself among the ranks of
+ * its node.
+ */
+void
+tarch::tasking::tests::RuntimeTest::testWaitPolicyOfOversubscribedNode() {
   const auto& rank = tarch::mpi::Rank::getInstance();
-  if (rank.getNumberOfRanks() > rank.getNumberOfNodes()) {
-    const char* const waitPolicy = std::getenv("OMP_WAIT_POLICY");
-    validate(waitPolicy != nullptr);
+  validate(rank.getNumberOfRanksOnNode() >= 1);
+  validate(rank.getNumberOfRanksOnNode() <= rank.getNumberOfRanks());
+  if (tarch::tasking::oversubscribesNode()) {
+    validate(std::getenv("OMP_WAIT_POLICY") != nullptr);
   }
 }
 
-void tarch::tasking::tests::RuntimeTest::testRuntimeProperties() {
+void
+tarch::tasking::tests::RuntimeTest::testRuntimeProperties() {
   validate(tarch::tasking::Runtime::getInstance().isInitialised());
   validate(tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 0);
   validate(tarch::tasking::Runtime::getInstance().getCoreNumber() >= 0);

@@ -11,7 +11,8 @@ bool tarch::plotter::FileWriter::_doublePrecisionOutput = false;
 tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory) :
   _outputDirectory(outputDirectory) {}
 
-int tarch::plotter::FileWriter::acquirePiece(int orderKey) {
+int
+tarch::plotter::FileWriter::acquirePiece(int orderKey) {
   const std::lock_guard<std::mutex> acquisitionGuard(_pieceAcquisitionMutex);
   if (_written) {
     tarch::terminateWithError("Cannot acquire a plot piece, as the file has already been written.");
@@ -28,7 +29,10 @@ int tarch::plotter::FileWriter::acquirePiece(int orderKey) {
   return static_cast<int>(_subdomains.size()) - 1;
 }
 
-bool tarch::plotter::FileWriter::isOpen() const { return not _written; }
+bool
+tarch::plotter::FileWriter::isOpen() const {
+  return not _written;
+}
 
 /**
  * Selects the width the writers store their fields in.
@@ -37,11 +41,18 @@ bool tarch::plotter::FileWriter::isOpen() const { return not _written; }
  * DataField, whose values are double, and narrows them as it writes, so single precision
  * halves the file and leaves the memory a plot holds unchanged.
  */
-void tarch::plotter::FileWriter::setDoublePrecisionOutput(const bool value) { _doublePrecisionOutput = value; }
+void
+tarch::plotter::FileWriter::setDoublePrecisionOutput(const bool value) {
+  _doublePrecisionOutput = value;
+}
 
-bool tarch::plotter::FileWriter::getDoublePrecisionOutput() { return _doublePrecisionOutput; }
+bool
+tarch::plotter::FileWriter::getDoublePrecisionOutput() {
+  return _doublePrecisionOutput;
+}
 
-std::vector<std::pair<std::string, std::string>> tarch::plotter::FileWriter::mpiIoHints() {
+std::vector<std::pair<std::string, std::string>>
+tarch::plotter::FileWriter::getMPIFileHints() {
   // Collective buffering for these large collective writes. The keys belong to ROMIO;
   // other MPI-IO stacks ignore unknown keys.
   return {
@@ -50,7 +61,8 @@ std::vector<std::pair<std::string, std::string>> tarch::plotter::FileWriter::mpi
   };
 }
 
-void tarch::plotter::FileWriter::createOutputDirectory() const {
+void
+tarch::plotter::FileWriter::createOutputDirectory() const {
   int         success = 1;
   std::string failureReason;
 
@@ -107,7 +119,8 @@ void tarch::plotter::FileWriter::createOutputDirectory() const {
   }
 }
 
-void tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
+void
+tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
   if (id.empty()) {
     throw std::runtime_error("Plotter data identifier is empty.");
   }
@@ -126,7 +139,8 @@ void tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
   }
 }
 
-tarch::plotter::FileWriter::SubdomainBuffers& tarch::plotter::FileWriter::pieceBuffers(int subdomainId) {
+tarch::plotter::FileWriter::SubdomainBuffers&
+tarch::plotter::FileWriter::getPieceBuffers(int subdomainId) {
   const std::lock_guard<std::mutex> acquisitionGuard(_pieceAcquisitionMutex);
   if (_written) {
     throw std::runtime_error("Cannot create a data plotter after the file has been written.");
@@ -148,20 +162,18 @@ tarch::plotter::FileWriter::SubdomainBuffers& tarch::plotter::FileWriter::pieceB
  * fields. A distinct vertex per cell keeps separate point-data values at the same
  * position, which a discontinuous field needs.
  */
-std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> tarch::plotter::FileWriter::createVertexPlotter(
-  const int           subdomainId,
-  const VertexMerging vertexMerging
-) {
+std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter>
+tarch::plotter::FileWriter::createVertexPlotter(const int subdomainId, const VertexMerging vertexMerging) {
   return std::make_unique<VertexPlotter>(*this, subdomainId, vertexMerging);
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> tarch::plotter::FileWriter::createCellPlotter(
-  const int subdomainId
-) {
+std::unique_ptr<tarch::plotter::FileWriter::CellPlotter>
+tarch::plotter::FileWriter::createCellPlotter(const int subdomainId) {
   return std::make_unique<CellPlotter>(*this, subdomainId);
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> tarch::plotter::FileWriter::createVertexDataPlotter(
+std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter>
+tarch::plotter::FileWriter::createVertexDataPlotter(
   const int          subdomainId,
   const std::string& identifier,
   const int          recordsPerVertex
@@ -170,7 +182,8 @@ std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> tarch::plotter::F
   return std::make_unique<VertexDataPlotter>(*this, subdomainId, identifier, recordsPerVertex);
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> tarch::plotter::FileWriter::createCellDataPlotter(
+std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter>
+tarch::plotter::FileWriter::createCellDataPlotter(
   const int          subdomainId,
   const std::string& identifier,
   const int          recordsPerCell
@@ -207,12 +220,14 @@ tarch::plotter::FileWriter::DataPlotter::DataPlotter(
   }
 }
 
-bool tarch::plotter::FileWriter::hasSchemaOrGeometry(const SubdomainBuffers& buffers) {
+bool
+tarch::plotter::FileWriter::hasSchemaOrGeometry(const SubdomainBuffers& buffers) {
   return not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty()
     or not buffers.types.empty() or not buffers.pointFields.empty() or not buffers.cellFields.empty();
 }
 
-bool tarch::plotter::FileWriter::hasPayload(const SubdomainBuffers& buffers) {
+bool
+tarch::plotter::FileWriter::hasPayload(const SubdomainBuffers& buffers) {
   if (
     not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty()
     or not buffers.types.empty()
@@ -233,7 +248,8 @@ bool tarch::plotter::FileWriter::hasPayload(const SubdomainBuffers& buffers) {
   return false;
 }
 
-const tarch::plotter::FileWriter::SubdomainBuffers* tarch::plotter::FileWriter::findReferenceSubdomain() const {
+const tarch::plotter::FileWriter::SubdomainBuffers*
+tarch::plotter::FileWriter::findReferenceSubdomain() const {
   for (const auto& subdomain : _subdomains) {
     if (hasSchemaOrGeometry(subdomain)) {
       return &subdomain;
@@ -242,7 +258,8 @@ const tarch::plotter::FileWriter::SubdomainBuffers* tarch::plotter::FileWriter::
   return nullptr;
 }
 
-void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuffers& reference) const {
+void
+tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuffers& reference) const {
   for (const auto& subdomain : _subdomains) {
     if (not hasSchemaOrGeometry(subdomain)) {
       continue;
@@ -323,8 +340,8 @@ void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuf
   }
 }
 
-tarch::plotter::FileWriter::SubdomainBuffersSequence tarch::plotter::FileWriter::
-  getSubdomainBuffersSequenceForWriting() const {
+tarch::plotter::FileWriter::SubdomainBuffersSequence
+tarch::plotter::FileWriter::getSubdomainBuffersSequenceForWriting() const {
   SubdomainBuffersSequence result;
 
   result.reference = findReferenceSubdomain();
@@ -352,7 +369,8 @@ tarch::plotter::FileWriter::SubdomainBuffersSequence tarch::plotter::FileWriter:
   return result;
 }
 
-tarch::plotter::FileWriter::FieldLayout tarch::plotter::FileWriter::classifyField(const int sourceComponents) {
+tarch::plotter::FileWriter::FieldLayout
+tarch::plotter::FileWriter::classifyField(const int sourceComponents) {
   if (sourceComponents == 1) {
     return {FieldKind::Scalar, 1};
   }
@@ -365,7 +383,8 @@ tarch::plotter::FileWriter::FieldLayout tarch::plotter::FileWriter::classifyFiel
   return {FieldKind::Generic, sourceComponents};
 }
 
-std::vector<double> tarch::plotter::FileWriter::expandFieldComponents(
+std::vector<double>
+tarch::plotter::FileWriter::expandFieldComponents(
   const std::vector<double>& values,
   const int                  sourceComponents,
   const int                  writtenComponents
@@ -383,7 +402,8 @@ std::vector<double> tarch::plotter::FileWriter::expandFieldComponents(
   return result;
 }
 
-std::vector<float> tarch::plotter::FileWriter::narrowToFloat(const std::vector<double>& values) {
+std::vector<float>
+tarch::plotter::FileWriter::narrowToFloat(const std::vector<double>& values) {
   std::vector<float> result(values.size());
   std::transform(values.begin(), values.end(), result.begin(), [](const double value) {
     // The narrowing must not trap when floating-point exceptions are enabled:
@@ -391,7 +411,7 @@ std::vector<float> tarch::plotter::FileWriter::narrowToFloat(const std::vector<d
     // beyond its finite range saturates, so every solution state remains
     // plottable.
     if (std::abs(value) < static_cast<double>(std::numeric_limits<float>::min())) {
-      return std::signbit(value) ? -0.0f : 0.0f;
+      return std::signbit(value) ? -0.0F : 0.0F;
     }
     if (std::abs(value) > static_cast<double>(std::numeric_limits<float>::max())) {
       return std::signbit(value) ? -std::numeric_limits<float>::max() : std::numeric_limits<float>::max();
@@ -401,9 +421,8 @@ std::vector<float> tarch::plotter::FileWriter::narrowToFloat(const std::vector<d
   return result;
 }
 
-tarch::plotter::FileWriter::FieldSchema tarch::plotter::FileWriter::fieldSchemaFromReference(
-  const SubdomainBuffers* const localReference
-) {
+tarch::plotter::FileWriter::FieldSchema
+tarch::plotter::FileWriter::getFieldSchema(const SubdomainBuffers* const localReference) {
   // Names and component counts only; the field values are streamed from the
   // subdomain buffers at write time.
   FieldSchema schema;

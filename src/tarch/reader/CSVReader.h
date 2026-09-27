@@ -55,11 +55,9 @@ public:
     // Length of string till last found match
     size_t lastMatch = 0;
     // Length of string till next found match
-    size_t nextMatch = 0;
-    // Count posts of the fence
-    int numberOfMatches = 0;
+    size_t nextMatch       = 0;
+    int    numberOfMatches = 0;
 
-    // Loop over separator occurrences in row and get substring of value, if possible
     while ((nextMatch = row.find(separator, lastMatch)) != std::string::npos) {
       ++numberOfMatches;
       if (numberOfMatches > valueIndex) {

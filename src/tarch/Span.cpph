@@ -1,0 +1,29 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+template <typename Element>
+INLINE_METHOD GPU_CALLABLE_METHOD Element&
+tarch::Span<Element>::operator[](const int index) const noexcept {
+  assertion(index >= 0 and index < size, index, size);
+  return data[index];
+}
+
+template <typename Element>
+INLINE_METHOD GPU_CALLABLE_METHOD Element*
+tarch::Span<Element>::begin() const noexcept {
+  return data;
+}
+
+template <typename Element>
+INLINE_METHOD GPU_CALLABLE_METHOD Element*
+tarch::Span<Element>::end() const noexcept {
+  return data + size;
+}
+
+template <typename Element>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::Span<Element>::isEmpty() const noexcept {
+  return size == 0;
+}

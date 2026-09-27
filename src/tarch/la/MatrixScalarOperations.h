@@ -2,8 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Matrix.h"
 
+TARGET_DECLARE
 namespace tarch::la {
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix<Rows, Cols, Scalar>& operator*=(
@@ -59,5 +62,6 @@ namespace tarch::la {
     const Matrix<Rows, Cols, Scalar>& matrix
   );
 } // namespace tarch::la
+TARGET_DECLARE_END
 
 #include "tarch/la/MatrixScalarOperations.cpph"

@@ -1,0 +1,317 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "applications/exaskred/Coupled.h"
+#include "applications/exaskred/LandslideLimiting.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
+
+TARGET_DECLARE
+namespace applications::exahype2::exaskred {
+  INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getSlidePhysics();
+  INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getWaterAdmissibilityPhysics();
+} // namespace applications::exahype2::exaskred
+
+/** Returns the physical parameters of the granular layer. */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
+applications::exahype2::exaskred::getSlidePhysics() {
+  return {
+    g,
+    hThresholdSlide,
+    mu,
+    invXi,
+    rhoSlide,
+    rhoWater,
+    0.0,
+    waterFrictionDragCoefficient,
+    waterPressureDragCoefficient
+  };
+}
+
+/**
+ * Returns the physical parameters under which the admissibility check of the granular layer tests
+ * the water layer: The dry threshold of the water and no friction.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
+applications::exahype2::exaskred::getWaterAdmissibilityPhysics() {
+  return {g, hThresholdWater, 0.0, 0.0, rhoWater, rhoWater, 0.0, 0.0, 0.0};
+}
+
+INLINE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::initialCondition(
+  double* const NOALIAS                                         Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+) {
+  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+
+  const auto bathymetrySize   = applications::exahype2::exaskred::RuntimeParameters::bathymetrySize();
+  const auto bathymetryOffset = applications::exahype2::exaskred::RuntimeParameters::bathymetryOffset();
+  static tarch::reader::NetCDFFieldSampler<2> bathymetrySampler(
+    {{"bathymetry", applications::exahype2::exaskred::RuntimeParameters::bathymetryFile(), "Band1", {"x", "y"}}},
+    {bathymetrySize(0), bathymetrySize(1)},
+    {bathymetryOffset(0), bathymetryOffset(1)}
+  );
+
+  const auto displacementSize     = applications::exahype2::exaskred::RuntimeParameters::displacementSize();
+  const auto displacementOffset   = applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
+  const auto displacementPosition = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
+  static tarch::reader::NetCDFFieldSampler<2> displacementSampler(
+    {{"displacement", applications::exahype2::exaskred::RuntimeParameters::displacementFile(), "Band1", {"x", "y"}}},
+    {displacementSize(0), displacementSize(1)},
+    {displacementOffset(0), displacementOffset(1)}
+  );
+
+  const double displacement = displacementSampler.sampleBilinear(
+    "displacement",
+    {x(0) - displacementPosition(0), x(1) - displacementPosition(1)}
+  );
+
+  Q[Shortcuts::z]   = bathymetrySampler.sampleBilinear("bathymetry", {x(0), x(1)});
+  Q[Shortcuts::lsh] = displacement > 0.0 ? displacement : 0.0;
+  Q[Shortcuts::h]   = std::max(-Q[Shortcuts::z] - Q[Shortcuts::lsh], 0.0);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
+  const double* const NOALIAS                                   Qinside,
+  double* const NOALIAS                                         Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const int                                    normal
+) {
+  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
+    Qoutside[i] = Qinside[i];
+  }
+}
+
+/** Refines a cell that carries slide material or a disturbed water surface and erases every other cell. */
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
+  const double* const NOALIAS                                   Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t
+) {
+  if (Q == nullptr) {
+    return ::exahype2::RefinementCommand::Keep;
+  }
+
+  constexpr int NumberOfNodes =
+    DIMENSIONS == 2 ? (DGOrder + 1) * (DGOrder + 1) : (DGOrder + 1) * (DGOrder + 1) * (DGOrder + 1);
+  constexpr int    DataPerNode                 = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr double SurfaceDisturbanceTolerance = 0.5;
+  for (int node = 0; node < NumberOfNodes; node++) {
+    const double* const nodeState = Q + node * DataPerNode;
+    if (nodeState[Shortcuts::lsh] > hThresholdSlide) {
+      return ::exahype2::RefinementCommand::Refine;
+    }
+    const double waterDepth = nodeState[Shortcuts::h];
+    if (waterDepth > hThresholdWater) {
+      const double surface = waterDepth + nodeState[Shortcuts::z] + nodeState[Shortcuts::lsh];
+      if (std::abs(surface) > SurfaceDisturbanceTolerance) {
+        return ::exahype2::RefinementCommand::Refine;
+      }
+    }
+  }
+  return ::exahype2::RefinementCommand::Erase;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::flux(
+  const double* const NOALIAS                  Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const NOALIAS                        F
+) {
+  ::applications::exahype2::exaskred::coupled::flux<Shortcuts, NumberOfUnknowns>(
+    Q,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    getSlidePhysics(),
+    hThresholdWater,
+    F
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
+  const double* const NOALIAS                  Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal
+) {
+  return ::applications::exahype2::exaskred::coupled::maxEigenvalue<Shortcuts>(
+    Q,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    getSlidePhysics(),
+    hThresholdWater,
+    PNPM / static_cast<double>(DIMENSIONS)
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
+  const double* const NOALIAS                  Q,
+  const double* const NOALIAS                  deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const NOALIAS                        BTimesDeltaQ
+) {
+  ::applications::exahype2::exaskred::coupled::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+    Q,
+    deltaQ,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    getSlidePhysics(),
+    hThresholdWater,
+    BTimesDeltaQ
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::diffusiveSourceTerm(
+  const double* const NOALIAS                  Q,
+  const double* const NOALIAS                  deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  double* const NOALIAS                        S
+) {
+  ::applications::exahype2::exaskred::coupled::diffusiveSourceTerm<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(Q, deltaQ, x, h, t, dt, getSlidePhysics(), hThresholdWater, S);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
+  const double* const NOALIAS                  QL,
+  const double* const NOALIAS                  QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  [[maybe_unused]] const bool                  isBoundaryFace,
+  [[maybe_unused]] const int                   faceIndex,
+  double* const NOALIAS                        FL,
+  double* const NOALIAS                        FR
+) {
+  return ::applications::exahype2::exaskred::coupled::solveRiemannProblem<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    DGOrder
+  >(QL, QR, x, h, t, dt, normal, getSlidePhysics(), hThresholdWater, FL, FR);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
+  const double* const NOALIAS                  QL,
+  const double* const NOALIAS                  QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  [[maybe_unused]] const bool                  isBoundaryFace,
+  [[maybe_unused]] const int                   faceIndex,
+  double* const NOALIAS                        FL,
+  double* const NOALIAS                        FR
+) {
+  return ::applications::exahype2::exaskred::coupled::solveSubcellRiemannProblem<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(QL, QR, x, h, t, dt, normal, getSlidePhysics(), hThresholdWater, FL, FR);
+}
+
+/**
+ * Returns whether both layers are finite, non-negative and at rest where dry, and whether the
+ * granular layer keeps its friction stiffness integrable and its nodal height surface below the
+ * curvature bound.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
+  const double* const NOALIAS                                   Q,
+  const int                                                     numberOfStates,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>&                  h
+) {
+  using SlideLayer = ::applications::exahype2::exaskred::coupled::SlideLayer<Shortcuts>;
+  if (not ::applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
+        Shortcuts,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables
+      >(Q, numberOfStates, h, getWaterAdmissibilityPhysics(), 0.0)) {
+    return false;
+  }
+  if (not ::applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
+        SlideLayer,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables
+      >(Q, numberOfStates, h, getSlidePhysics(), maxFrictionStiffnessRatio)) {
+    return false;
+  }
+  const int nodesPerAxis = static_cast<int>(std::lround(std::sqrt(static_cast<double>(numberOfStates))));
+  if (numberOfStates > 1 and nodesPerAxis * nodesPerAxis == numberOfStates) {
+    return ::applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<
+      SlideLayer,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables
+    >(Q, nodesPerAxis, getSlidePhysics(), maxHeightCurvatureRatio);
+  }
+  return true;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
+  double* const NOALIAS       observables,
+  const double* const NOALIAS Q
+) {
+  for (int observable = 0; observable < NumberOfDMPObservables; observable++) {
+    observables[observable] = Q[observable];
+  }
+}
+
+/**
+ * Returns at least a decimetre floor for the water observables, since fjord waves reach metres and
+ * the millimetre-scale admissibility threshold would flag every wave cell.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
+  const int    observable,
+  const double specifiedRelaxationParameter
+) {
+  if (observable < 3) {
+    return std::max(specifiedRelaxationParameter, waterDmpRelaxation);
+  }
+  return ::applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(
+    observable - 3,
+    specifiedRelaxationParameter,
+    getSlidePhysics()
+  );
+}
+TARGET_DECLARE_END

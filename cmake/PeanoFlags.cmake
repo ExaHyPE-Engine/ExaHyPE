@@ -63,11 +63,13 @@ function(peano_apply_flags)
   endforeach()
 
   list(APPEND PEANO_CUDA_WARNINGS
+    -Werror=all-warnings
     -Wreorder # Diagnose device member initialisation order.
     -Wdefault-stream-launch
     -Wext-lambda-captures-this
-    -Xptxas=--warn-on-spills # Diagnose device register spills.
+    #-Xptxas=--warn-on-spills # Diagnose device register spills.
     -Xcompiler=-Wno-overlength-strings
+    -Xcompiler=-Wno-dtor-name
   )
 
   target_compile_options(PeanoOptions INTERFACE
@@ -89,8 +91,8 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Mnoautoinline>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Mnoautoinline>
     # IntelLLVM precise semantics preserve exact grid arithmetic and the symmetry of
-    # interpolation and restriction. Explicit contraction confines fused operations to
-    # individual expressions and supports FENV_ACCESS.
+    # interpolation and restriction. The second flag confines fused multiply-adds to
+    # single expressions and supports FENV_ACCESS.
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>

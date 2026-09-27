@@ -43,9 +43,6 @@ initial_conditions = """
   Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5  * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]);
 """
 
-boundary_conditions = """
-"""
-
 analytical_solution = """
   constexpr double Viscosity = 1.0;
   const double C = 100.0 / GAMMA;
@@ -92,7 +89,6 @@ fv_solver = exahype2.fv.Solver(
 
 fv_solver.set_pde_terms(
     initial_condition=initial_conditions,
-    boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
     analytical_solution=analytical_solution,

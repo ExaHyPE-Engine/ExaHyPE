@@ -1,39 +1,45 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::abs(int value) { return value < 0 ? -value : value; }
-
-INLINE_METHOD GPU_CALLABLE_METHOD double tarch::la::abs(double value) { return std::abs(value); }
-
-INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::aPowI(int i, int a) {
-  int result = 1;
-  for (int d = 0; d < i; d++) {
-    result *= a;
-  }
-  return result;
+TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::abs(int value) {
+  return value < 0 ? -value : value;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::greater(double lhs, double rhs, double tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::abs(double value) {
+  return std::abs(value);
+}
+
+/** Returns whether lhs exceeds rhs by more than the absolute tolerance. */
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::greater(double lhs, double rhs, double tolerance) {
   return lhs - rhs > tolerance;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::greaterEquals(double lhs, double rhs, double tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::greaterEquals(double lhs, double rhs, double tolerance) {
   return lhs - rhs >= -tolerance;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::smaller(double lhs, double rhs, double tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::smaller(double lhs, double rhs, double tolerance) {
   return lhs - rhs < -tolerance;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::smallerEquals(double lhs, double rhs, double tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::smallerEquals(double lhs, double rhs, double tolerance) {
   return lhs - rhs <= tolerance;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(double lhs, double rhs, double tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::equals(double lhs, double rhs, double tolerance) {
   return std::abs(rhs - lhs) <= tolerance;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::sign(double number, double tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::sign(double number, double tolerance) {
   if (greater(number, tolerance)) {
     return 1;
   } else if (greater(tolerance, number)) {
@@ -42,12 +48,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::sign(double number, double tole
   return 0;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::round(double value) {
-  // return static_cast<int>(std::round(value));
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::round(double value) {
   return static_cast<int>(std::floor(value + 0.5));
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::round(float value) {
-  // return static_cast<int>(std::round(value));
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::round(float value) {
   return static_cast<int>(std::floor(value + static_cast<float>(0.5)));
 }
+TARGET_DECLARE_END

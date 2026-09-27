@@ -67,12 +67,14 @@ namespace {
 tarch::reader::tests::NetCDFFileReaderTest::NetCDFFileReaderTest() :
   tarch::tests::TestCase("tarch::reader::tests::NetCDFFileReaderTest") {}
 
-void tarch::reader::tests::NetCDFFileReaderTest::run() {
+void
+tarch::reader::tests::NetCDFFileReaderTest::run() {
   testMethod(testOpenReadAndClose);
   testMethod(testMissingFileFails);
 }
 
-void tarch::reader::tests::NetCDFFileReaderTest::testOpenReadAndClose() {
+void
+tarch::reader::tests::NetCDFFileReaderTest::testOpenReadAndClose() {
   const std::string path =
     writeTempNetCDFFile("peano-netcdf-reader", {1.0, 3.0, 5.0}, {-2.0, 4.0}, {10.0, 11.0, 12.0, 20.0, 21.0, 22.0});
 
@@ -110,7 +112,8 @@ void tarch::reader::tests::NetCDFFileReaderTest::testOpenReadAndClose() {
   std::filesystem::remove(path);
 }
 
-void tarch::reader::tests::NetCDFFileReaderTest::testMissingFileFails() {
+void
+tarch::reader::tests::NetCDFFileReaderTest::testMissingFileFails() {
   tarch::reader::NetCDFFileReader reader;
   validateEquals(reader.open("/tmp/this-netcdf-fixture-should-not-exist.nc"), -1);
 }
@@ -120,6 +123,7 @@ void tarch::reader::tests::NetCDFFileReaderTest::testMissingFileFails() {
 tarch::reader::tests::NetCDFFileReaderTest::NetCDFFileReaderTest() :
   tarch::tests::TestCase("tarch::reader::tests::NetCDFFileReaderTest") {}
 
-void tarch::reader::tests::NetCDFFileReaderTest::run() {}
+void
+tarch::reader::tests::NetCDFFileReaderTest::run() {}
 
 #endif

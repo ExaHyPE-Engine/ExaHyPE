@@ -39,7 +39,7 @@ initial_conditions = """
   const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.18, 0.3, 0.6};
 #endif
 
-  const double peakDeviation = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  const double peakDeviation = ::exahype2::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
   const double distance = tarch::la::norm2(x - circleCentre);
   const double exponent = -(distance * distance) / 2.0 / peakDeviation / peakDeviation;
 

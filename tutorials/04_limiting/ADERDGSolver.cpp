@@ -29,7 +29,8 @@ namespace {
   }
 } // namespace
 
-void tutorials::exahype2::limiting::ADERDGSolver::initialCondition(
+void
+tutorials::exahype2::limiting::ADERDGSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize
@@ -45,7 +46,8 @@ void tutorials::exahype2::limiting::ADERDGSolver::initialCondition(
   Q[Shortcuts::E]     = pressure / (Gamma - 1.0);
 }
 
-void tutorials::exahype2::limiting::ADERDGSolver::boundaryConditions(
+void
+tutorials::exahype2::limiting::ADERDGSolver::boundaryConditions(
   const double* const NOALIAS                  Qinside,
   double* const NOALIAS                        Qoutside,
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
@@ -63,7 +65,8 @@ void tutorials::exahype2::limiting::ADERDGSolver::boundaryConditions(
   Qoutside[Shortcuts::E]     = pressure / (Gamma - 1.0);
 }
 
-void tutorials::exahype2::limiting::ADERDGSolver::flux(
+void
+tutorials::exahype2::limiting::ADERDGSolver::flux(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -84,7 +87,8 @@ void tutorials::exahype2::limiting::ADERDGSolver::flux(
   F[Shortcuts::j + normal] += pressure;
 }
 
-double tutorials::exahype2::limiting::ADERDGSolver::maxEigenvalue(
+double
+tutorials::exahype2::limiting::ADERDGSolver::maxEigenvalue(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,

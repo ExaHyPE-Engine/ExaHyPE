@@ -1,17 +1,15 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+TARGET_DECLARE
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>::Vector() :
-  _values{} {}
-
-template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>::Vector(const Scalar* values) :
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>::Vector(const Scalar* const values) :
   _values{values[0], values[1]} {}
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>::Vector(std::initializer_list<Scalar> values) :
-  _values{} {
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr tarch::la::Vector<2, Scalar>::Vector(
+  const std::initializer_list<Scalar> values
+) {
   auto p = values.begin();
   if (p != values.end()) {
     _values[0] = *p;
@@ -31,40 +29,48 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>::Vector(const Sca
   _values{initialValue, initialValue} {}
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Vector<2, Scalar>::size() const {
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::Vector<2, Scalar>::getSize() const {
   return 2;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Vector<2, Scalar>::operator[](int index) const {
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar&
+tarch::la::Vector<2, Scalar>::operator[](const int index) const {
   assertion(index >= 0, index, 2, ::toString(*this));
   assertion(index < 2, index, 2, ::toString(*this));
   return _values[index];
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Vector<2, Scalar>::operator[](int index) {
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar&
+tarch::la::Vector<2, Scalar>::operator[](const int index) {
   assertion(index >= 0, index, 2, ::toString(*this));
   assertion(index < 2, index, 2, ::toString(*this));
   return _values[index];
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Vector<2, Scalar>::operator()(int index) const {
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar&
+tarch::la::Vector<2, Scalar>::operator()(const int index) const {
   return (*this)[index];
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Vector<2, Scalar>::operator()(int index) {
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar&
+tarch::la::Vector<2, Scalar>::operator()(const int index) {
   return (*this)[index];
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar* tarch::la::Vector<2, Scalar>::data() {
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar*
+tarch::la::Vector<2, Scalar>::getData() {
   return _values;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* tarch::la::Vector<2, Scalar>::data() const {
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar*
+tarch::la::Vector<2, Scalar>::getData() const {
   return _values;
 }
+TARGET_DECLARE_END

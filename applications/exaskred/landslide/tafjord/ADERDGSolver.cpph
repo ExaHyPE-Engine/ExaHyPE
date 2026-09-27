@@ -1,0 +1,338 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "applications/exaskred/AugmentedState.h"
+#include "applications/exaskred/Landslide.h"
+#include "applications/exaskred/LandslideLimiting.h"
+#include "applications/exaskred/WellBalancedRusanov.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
+
+TARGET_DECLARE
+namespace applications::exahype2::exaskred {
+  INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getLandslidePhysics();
+} // namespace applications::exahype2::exaskred
+
+/** Returns the physical parameters of the granular layer. */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
+applications::exahype2::exaskred::getLandslidePhysics() {
+  return {
+    g,
+    hThreshold,
+    mu,
+    invXi,
+    rhoSlide,
+    rhoWater,
+    waterLevel,
+    waterFrictionDragCoefficient,
+    waterPressureDragCoefficient
+  };
+}
+
+INLINE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::initialCondition(
+  double* const NOALIAS                                         Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+) {
+  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+
+  const auto bathymetrySize   = applications::exahype2::exaskred::RuntimeParameters::bathymetrySize();
+  const auto bathymetryOffset = applications::exahype2::exaskred::RuntimeParameters::bathymetryOffset();
+  static tarch::reader::NetCDFFieldSampler<2> bathymetrySampler(
+    {{"bathymetry", applications::exahype2::exaskred::RuntimeParameters::bathymetryFile(), "Band1", {"x", "y"}}},
+    {bathymetrySize(0), bathymetrySize(1)},
+    {bathymetryOffset(0), bathymetryOffset(1)}
+  );
+
+  const auto displacementSize     = applications::exahype2::exaskred::RuntimeParameters::displacementSize();
+  const auto displacementOffset   = applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
+  const auto displacementPosition = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
+  static tarch::reader::NetCDFFieldSampler<2> displacementSampler(
+    {{"displacement", applications::exahype2::exaskred::RuntimeParameters::displacementFile(), "Band1", {"x", "y"}}},
+    {displacementSize(0), displacementSize(1)},
+    {displacementOffset(0), displacementOffset(1)}
+  );
+
+  const double displacement = displacementSampler.sampleBilinear(
+    "displacement",
+    {x(0) - displacementPosition(0), x(1) - displacementPosition(1)}
+  );
+
+  Q[Shortcuts::h] = displacement > 0.0 ? displacement : 0.0;
+  Q[Shortcuts::z] = bathymetrySampler.sampleBilinear("bathymetry", {x(0), x(1)});
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
+  const double* const NOALIAS                                   Qinside,
+  double* const NOALIAS                                         Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const int                                    normal
+) {
+  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
+    Qoutside[i] = Qinside[i];
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
+  [[maybe_unused]] const double* const NOALIAS                  Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t
+) {
+  return ::exahype2::RefinementCommand::Keep;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::flux(
+  const double* const NOALIAS                  Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const NOALIAS                        F
+) {
+  ::applications::exahype2::exaskred::landslide::flux<Shortcuts, NumberOfUnknowns>(
+    Q,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    getLandslidePhysics(),
+    F
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
+  const double* const NOALIAS                  Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal
+) {
+  return ::applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue<Shortcuts>(
+    Q,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    getLandslidePhysics(),
+    PNPM / static_cast<double>(DIMENSIONS)
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
+  const double* const NOALIAS                  Q,
+  const double* const NOALIAS                  deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const NOALIAS                        BTimesDeltaQ
+) {
+  ::applications::exahype2::exaskred::landslide::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+    Q,
+    deltaQ,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    getLandslidePhysics(),
+    BTimesDeltaQ
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::diffusiveSourceTerm(
+  const double* const NOALIAS                  Q,
+  const double* const NOALIAS                  deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  double* const NOALIAS                        S
+) {
+  ::applications::exahype2::exaskred::landslide::diffusiveSourceTerm<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(Q, deltaQ, x, h, t, dt, getLandslidePhysics(), S);
+}
+
+/**
+ * Returns the wave speed of the well-balanced Rusanov flux between the sanitised face states, so a
+ * wet-dry front feeds no stale momenta of formally dry nodes into the dissipation or the jump terms.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
+  const double* const NOALIAS                  QL,
+  const double* const NOALIAS                  QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  [[maybe_unused]] const bool                  isBoundaryFace,
+  [[maybe_unused]] const int                   faceIndex,
+  double* const NOALIAS                        FL,
+  double* const NOALIAS                        FR
+) {
+  constexpr int NumberOfFaceNodes = DGOrder + 1;
+  constexpr int NumberOfData      = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  double        sanitisedQL[NumberOfFaceNodes * NumberOfData];
+  double        sanitisedQR[NumberOfFaceNodes * NumberOfData];
+  for (int node = 0; node < NumberOfFaceNodes; node++) {
+    ::applications::exahype2::exaskred::landslide::sanitiseDryState<
+      Shortcuts,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables
+    >(QL + node * NumberOfData, sanitisedQL + node * NumberOfData, getLandslidePhysics());
+    ::applications::exahype2::exaskred::landslide::sanitiseDryState<
+      Shortcuts,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables
+    >(QR + node * NumberOfData, sanitisedQR + node * NumberOfData, getLandslidePhysics());
+  }
+  const auto maxEigenvalue = [](
+                               const double* const NOALIAS                  Q,
+                               const tarch::la::Vector<DIMENSIONS, double>& facePosition,
+                               const tarch::la::Vector<DIMENSIONS, double>& faceSize,
+                               const double                                 time,
+                               const double                                 timeStepSize,
+                               const int                                    normal
+                             ) {
+    return ::applications::exahype2::exaskred::landslide::getFluxEigenvalue<Shortcuts>(
+      Q,
+      facePosition,
+      faceSize,
+      time,
+      timeStepSize,
+      normal,
+      getLandslidePhysics()
+    );
+  };
+  const auto interfaceGravity = [](const double* const NOALIAS QLeft, const double* const NOALIAS QRight) {
+    return ::applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity<Shortcuts>(
+      QLeft,
+      QRight,
+      getLandslidePhysics()
+    );
+  };
+  return ::applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+    Shortcuts,
+    Shortcuts::z,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    DGOrder
+  >(sanitisedQL, sanitisedQR, x, h, t, dt, normal, maxEigenvalue, interfaceGravity, FL, FR);
+}
+
+/** Returns the wave speed of the augmented Riemann solver between the sanitised subcell states. */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
+  const double* const NOALIAS                  QL,
+  const double* const NOALIAS                  QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  [[maybe_unused]] const bool                  isBoundaryFace,
+  [[maybe_unused]] const int                   faceIndex,
+  double* const NOALIAS                        FL,
+  double* const NOALIAS                        FR
+) {
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  double        sanitisedQL[NumberOfData];
+  double        sanitisedQR[NumberOfData];
+  ::applications::exahype2::exaskred::landslide::sanitiseDryState<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(QL, sanitisedQL, getLandslidePhysics());
+  ::applications::exahype2::exaskred::landslide::sanitiseDryState<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(QR, sanitisedQR, getLandslidePhysics());
+  return ::applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::z, true>(
+    sanitisedQL,
+    sanitisedQR,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    ::applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity<Shortcuts>(
+      sanitisedQL,
+      sanitisedQR,
+      getLandslidePhysics()
+    ),
+    getLandslidePhysics().dryHeightThreshold,
+    FL,
+    FR
+  );
+}
+
+/**
+ * Returns whether every state of the granular layer is finite, non-negative, at rest on dry ground
+ * and of integrable friction stiffness, and whether the height surface of a nodal candidate stays
+ * below the curvature bound.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
+  const double* const NOALIAS                                   Q,
+  const int                                                     numberOfStates,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>&                  h
+) {
+  if (not ::applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
+        Shortcuts,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables
+      >(Q, numberOfStates, h, getLandslidePhysics(), maxFrictionStiffnessRatio)) {
+    return false;
+  }
+  const int nodesPerAxis = static_cast<int>(std::lround(std::sqrt(static_cast<double>(numberOfStates))));
+  if (numberOfStates > 1 and nodesPerAxis * nodesPerAxis == numberOfStates) {
+    return ::applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<
+      Shortcuts,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables
+    >(Q, nodesPerAxis, getLandslidePhysics(), maxHeightCurvatureRatio);
+  }
+  return true;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
+  double* const NOALIAS       observables,
+  const double* const NOALIAS Q
+) {
+  ::applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables<Shortcuts>(observables, Q);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
+  const int    observable,
+  const double specifiedRelaxationParameter
+) {
+  return ::applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(
+    observable,
+    specifiedRelaxationParameter,
+    getLandslidePhysics()
+  );
+}
+TARGET_DECLARE_END

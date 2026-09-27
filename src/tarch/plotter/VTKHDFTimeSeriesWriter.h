@@ -25,5 +25,5 @@ public:
   void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const override;
 
 protected:
-  std::string snapshotName(const std::string& filename, const double time) const override;
+  std::string getSnapshotName(const std::string& filename, const double time) const override;
 };

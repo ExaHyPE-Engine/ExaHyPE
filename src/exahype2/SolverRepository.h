@@ -2,9 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/NonNegativeReduction.h"
-#include "tarch/Assertions.h"
+#include "exahype2/RefinementRequests.h"
+#include "peano4/RefinementRequest.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/plotter/Format.h"
+
+namespace peano4 {
+  class Partition;
+  struct Regrid;
+} // namespace peano4
 
 namespace exahype2 {
   template <typename... Solvers>
@@ -12,8 +19,9 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * Calls one method on every solver of a project and reduces the answers. The repository holds
- * references, so every solver outlives it.
+ * Runs every phase on every solver of a project and reduces their answers. The repository
+ * holds references, so every solver outlives it. The refinement votes of the solvers merge
+ * into one request list, which every phase that votes commits collectively at its end.
  */
 template <typename... Solvers>
 class exahype2::SolverRepository final {
@@ -30,25 +38,23 @@ public:
   [[nodiscard]] INLINE_METHOD double getMaxTimeStamp() const;
   [[nodiscard]] INLINE_METHOD double getMinTimeStepSize() const;
   [[nodiscard]] INLINE_METHOD double getMaxTimeStepSize() const;
-  [[nodiscard]] INLINE_METHOD int    getNumberOfDoFs() const;
+  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfCellDoFs(const peano4::Partition& partition) const;
 
-  [[nodiscard]] INLINE_METHOD bool mayPlot() const;
-  [[nodiscard]] INLINE_METHOD bool isFirstGridSweepOfTimeStep() const;
-  [[nodiscard]] INLINE_METHOD bool isLastGridSweepOfTimeStep() const;
-
-  INLINE_METHOD void startGridConstructionStep();
-  INLINE_METHOD void finishGridConstructionStep();
-  INLINE_METHOD void startGridInitialisationStep();
-  INLINE_METHOD void finishGridInitialisationStep();
-  INLINE_METHOD void startDynamicMeshRefinementStep();
-  INLINE_METHOD void finishDynamicMeshRefinementStep();
-  INLINE_METHOD void startTimeStep();
-  INLINE_METHOD void finishTimeStep();
-  INLINE_METHOD void startPlottingStep();
-  INLINE_METHOD void finishPlottingStep();
-  INLINE_METHOD void suspendSolversForOneGridSweep();
   INLINE_METHOD void startSimulation();
   INLINE_METHOD void finishSimulation();
+  INLINE_METHOD void allocate(const peano4::Partition& partition);
+  [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
+  INLINE_METHOD void requestRefinementForGridConstruction(const peano4::Partition& partition);
+  INLINE_METHOD void initialise(const peano4::Partition& partition);
+  INLINE_METHOD void performTimeStep(const peano4::Partition& partition);
+  INLINE_METHOD void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid);
+  INLINE_METHOD void plot(
+    const peano4::Partition& partition,
+    tarch::plotter::Format   format,
+    const std::string&       outputDirectory
+  );
+
+  [[nodiscard]] INLINE_METHOD const std::vector<peano4::RefinementRequest>& getRefinementRequests() const;
 
 private:
   template <typename Operation>
@@ -57,7 +63,13 @@ private:
   template <typename Operation>
   INLINE_METHOD void forEachSolver(const Operation& operation) const;
 
+  INLINE_METHOD void commitRefinementRequests(const peano4::Partition& partition);
+
   std::tuple<Solvers&...> _solvers;
+
+  RefinementRequests _refinementRequests{};
+
+  std::vector<peano4::RefinementRequest> _requestsOfTheRun{};
 };
 
 #include "exahype2/SolverRepository.cpph"

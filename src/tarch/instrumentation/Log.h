@@ -62,7 +62,6 @@ public:
   static void warningWithScopeName(std::string_view scopeName, std::string_view message);
   static void errorWithScopeName(std::string_view scopeName, std::string_view message);
 
-  static void setLogColumnSeparator(const std::string& separator = " ");
   static void setLogTimeStamp(bool value = true);
   static void setLogTimeStampHumanReadable(bool value = true);
   static void setLogMachineName(bool value = true);
@@ -72,24 +71,7 @@ public:
   static void setInfoOutputEnabled(bool value = true);
   static void setWarningOutputEnabled(bool value = true);
 
-  static void setLogFormat(
-    const std::string& columnSeparator,
-    bool               logTimeStamp,
-    bool               logTimeStampHumanReadable,
-    bool               logMachineName,
-    bool               logThreadName,
-    bool               logMessageType,
-    bool               logScopeName,
-    const std::string& outputLogFileName
-  );
-
   static void setOutputFile(const std::string& outputLogFileName);
-
-  static void setDebug(bool enabled);
-  static void enableDebugScopePrefix(const std::string& scopePrefix);
-  static void clearDebugFilter();
-
-  static std::string getScopeName(std::string_view className, std::string_view methodName);
 
   static void close();
 

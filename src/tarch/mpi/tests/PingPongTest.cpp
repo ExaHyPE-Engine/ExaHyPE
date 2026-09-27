@@ -14,7 +14,8 @@
 tarch::mpi::tests::PingPongTest::PingPongTest() :
   tarch::tests::TestCase("tarch::mpi::tests::PingPongTest") {}
 
-void tarch::mpi::tests::PingPongTest::testBuiltInType() {
+void
+tarch::mpi::tests::PingPongTest::testBuiltInType() {
   const int tag           = tarch::mpi::Rank::reserveFreeTag("tarch::mpi::tests::PingPongTest::testBuiltInType");
   const int outgoingValue = 23;
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
@@ -117,7 +118,8 @@ namespace {
   }
 } // namespace
 
-void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingReceives() {
+void
+tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingReceives() {
   std::atomic<int> errorCount{0};
   const int        numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   const int        baseTag         = tarch::mpi::Rank::reserveFreeTag(
@@ -139,7 +141,8 @@ void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingRecei
   validate(errorCount.load(std::memory_order_relaxed) == 0);
 }
 
-void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingReceives() {
+void
+tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingReceives() {
   std::atomic<int> errorCount{0};
   const int        numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   const int        baseTag         = tarch::mpi::Rank::reserveFreeTag(
@@ -161,7 +164,8 @@ void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingRe
   validate(errorCount.load(std::memory_order_relaxed) == 0);
 }
 
-void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends() {
+void
+tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends() {
   const int numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   const int baseTag         = tarch::mpi::Rank::reserveFreeTag(
     "tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends",
@@ -182,7 +186,8 @@ void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends
   tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
-void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSends() {
+void
+tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSends() {
   const int numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   const int baseTag         = tarch::mpi::Rank::reserveFreeTag(
     "tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSends",
@@ -203,7 +208,8 @@ void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSe
   tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
-void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingSendsAndReceives() {
+void
+tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingSendsAndReceives() {
   std::atomic<int> errorCount{0};
   const int        numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   const int        baseTag         = tarch::mpi::Rank::reserveFreeTag(
@@ -225,7 +231,8 @@ void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends
   validate(errorCount.load(std::memory_order_relaxed) == 0);
 }
 
-void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSendsAndReceives() {
+void
+tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSendsAndReceives() {
   std::atomic<int> errorCount{0};
   const int        numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   const int        baseTag         = tarch::mpi::Rank::reserveFreeTag(
@@ -247,7 +254,8 @@ void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSe
   validate(errorCount.load(std::memory_order_relaxed) == 0);
 }
 
-void tarch::mpi::tests::PingPongTest::run() {
+void
+tarch::mpi::tests::PingPongTest::run() {
   testMethod(testBuiltInType);
   testMethod(testMultithreadedPingPongWithBlockingReceives);
   testMethod(testMultithreadedPingPongWithBlockingSends);

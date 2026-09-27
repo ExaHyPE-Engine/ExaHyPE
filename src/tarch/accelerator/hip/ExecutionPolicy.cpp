@@ -42,19 +42,38 @@ tarch::accelerator::hip::ExecutionPolicy::ExecutionPolicy(
   setStream(stream);
 }
 
-int tarch::accelerator::hip::ExecutionPolicy::getConfigState() const { return _state; }
+int
+tarch::accelerator::hip::ExecutionPolicy::getConfigState() const {
+  return _state;
+}
 
-int tarch::accelerator::hip::ExecutionPolicy::getGridSize() const { return _gridSize; }
+int
+tarch::accelerator::hip::ExecutionPolicy::getGridSize() const {
+  return _gridSize;
+}
 
-int tarch::accelerator::hip::ExecutionPolicy::getBlockSize() const { return _blockSize; }
+int
+tarch::accelerator::hip::ExecutionPolicy::getBlockSize() const {
+  return _blockSize;
+}
 
-int tarch::accelerator::hip::ExecutionPolicy::getMaxBlockSize() const { return _maxBlockSize; }
+int
+tarch::accelerator::hip::ExecutionPolicy::getMaxBlockSize() const {
+  return _maxBlockSize;
+}
 
-std::size_t tarch::accelerator::hip::ExecutionPolicy::getSharedMemBytes() const { return _sharedMemBytes; }
+std::size_t
+tarch::accelerator::hip::ExecutionPolicy::getSharedMemBytes() const {
+  return _sharedMemBytes;
+}
 
-hipStream_t tarch::accelerator::hip::ExecutionPolicy::getStream() const { return _stream; }
+hipStream_t
+tarch::accelerator::hip::ExecutionPolicy::getStream() const {
+  return _stream;
+}
 
-void tarch::accelerator::hip::ExecutionPolicy::setGridSize(int size) {
+void
+tarch::accelerator::hip::ExecutionPolicy::setGridSize(int size) {
   _gridSize = size;
   if (_gridSize > 0) {
     _state |= GridSize;
@@ -63,7 +82,8 @@ void tarch::accelerator::hip::ExecutionPolicy::setGridSize(int size) {
   }
 }
 
-void tarch::accelerator::hip::ExecutionPolicy::setBlockSize(int size) {
+void
+tarch::accelerator::hip::ExecutionPolicy::setBlockSize(int size) {
   _blockSize = size;
   if (_blockSize > 0) {
     _state |= BlockSize;
@@ -72,13 +92,20 @@ void tarch::accelerator::hip::ExecutionPolicy::setBlockSize(int size) {
   }
 }
 
-void tarch::accelerator::hip::ExecutionPolicy::setMaxBlockSize(int size) { _maxBlockSize = size; }
+void
+tarch::accelerator::hip::ExecutionPolicy::setMaxBlockSize(int size) {
+  _maxBlockSize = size;
+}
 
-void tarch::accelerator::hip::ExecutionPolicy::setSharedMemBytes(std::size_t bytes) {
+void
+tarch::accelerator::hip::ExecutionPolicy::setSharedMemBytes(std::size_t bytes) {
   _sharedMemBytes = bytes;
   _state |= SharedMemory;
 }
 
-void tarch::accelerator::hip::ExecutionPolicy::setStream(hipStream_t stream) { _stream = stream; }
+void
+tarch::accelerator::hip::ExecutionPolicy::setStream(hipStream_t stream) {
+  _stream = stream;
+}
 
 #endif

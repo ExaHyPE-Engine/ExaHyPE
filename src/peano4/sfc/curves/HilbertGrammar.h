@@ -3,6 +3,7 @@
 #pragma once
 
 #include "peano4/sfc/Grammar.h"
+#include "tarch/accelerator/accelerator.h"
 
 namespace peano4::sfc {
   struct HilbertGrammar;
@@ -24,6 +25,7 @@ namespace peano4::sfc {
  * the book, a negated axis. The pattern xyz enters the cell at its origin
  * corner and leaves it at the corner on the far side of axis 2.
  */
+TARGET_DECLARE
 struct peano4::sfc::HilbertGrammar final : peano4::sfc::Grammar {
   static constexpr std::string_view Name{"Hilbert"};
 
@@ -75,3 +77,4 @@ struct peano4::sfc::HilbertGrammar final : peano4::sfc::Grammar {
   };
 #endif
 };
+TARGET_DECLARE_END

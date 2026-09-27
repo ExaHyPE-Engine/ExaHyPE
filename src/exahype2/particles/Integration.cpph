@@ -1,0 +1,220 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+TARGET_DECLARE
+/** Returns the state with v + f dt a as velocity and x + f dt v as position, f the step fraction. */
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::State
+exahype2::particles::advancePartialStep(
+  const exahype2::particles::State& current,
+  const double                      timeStepSize,
+  const double                      stepFraction
+) {
+  exahype2::particles::State state;
+  const double               factorDt = stepFraction * timeStepSize;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    state.velocity(axis) = current.velocity(axis) + factorDt * current.acceleration(axis);
+    state.position(axis) = current.position(axis) + factorDt * current.velocity(axis);
+  }
+  return state;
+}
+
+/**
+ * Returns the state with the velocity of base plus f dt times the acceleration of update, the
+ * position of base plus f dt times the velocity of update, and the acceleration of update.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::State
+exahype2::particles::advancePartialStepWithBase(
+  const exahype2::particles::State& base,
+  const exahype2::particles::State& update,
+  const double                      timeStepSize,
+  const double                      factor
+) {
+  exahype2::particles::State result;
+  const double               factorDt = factor * timeStepSize;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result.velocity(axis)     = base.velocity(axis) + factorDt * update.acceleration(axis);
+    result.position(axis)     = base.position(axis) + factorDt * update.velocity(axis);
+    result.acceleration(axis) = update.acceleration(axis);
+  }
+  return result;
+}
+
+/** Returns the state with v + f dt a as velocity and x + f dt times that new velocity as position. */
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::State
+exahype2::particles::advanceMidpointStep(
+  const exahype2::particles::State& current,
+  const double                      timeStepSize,
+  const double                      stepFraction
+) {
+  exahype2::particles::State state;
+  const double               factorDt = stepFraction * timeStepSize;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    state.velocity(axis) = current.velocity(axis) + factorDt * current.acceleration(axis);
+    state.position(axis) = current.position(axis) + factorDt * state.velocity(axis);
+  }
+  state.acceleration = current.acceleration;
+  return state;
+}
+
+/**
+ * Advances the velocity and the acceleration of the particle by one time step with the
+ * integration scheme of forces and returns the new position. A scheme with intermediate stages
+ * calls interpolateAt(particle, position) and applyForces() at every stage position.
+ */
+template <typename Interpolation>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+exahype2::particles::advance(
+  exahype2::particles::Particle&               particle,
+  const exahype2::particles::Forces&           forces,
+  const double                                 timeStepSize,
+  const Interpolation&                         interpolateAt,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainWidth
+) {
+  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
+  if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
+    return particle.getX();
+  }
+  const auto currentState = exahype2::particles::getState(particle);
+
+  const auto stageAcceleration = [&](exahype2::particles::State& stage) {
+    exahype2::particles::setVelocity(particle, stage.velocity);
+    interpolateAt(particle, stage.position);
+    stage.velocity = exahype2::particles::getVelocity(particle);
+    exahype2::particles::applyForces(particle, stage.position, forces, domainOffset, domainWidth);
+    stage.acceleration = exahype2::particles::getAcceleration(particle);
+  };
+
+  auto finalState = currentState;
+  switch (forces.integrationScheme) {
+  case exahype2::particles::IntegrationScheme::Static:
+    return currentState.position;
+  case exahype2::particles::IntegrationScheme::SemiImplicitEuler:
+    finalState = exahype2::particles::advanceMidpointStep(currentState, timeStepSize, 1.0);
+    break;
+  case exahype2::particles::IntegrationScheme::VelocityVerlet: {
+    exahype2::particles::State midpointState;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      midpointState.velocity(axis) = currentState.velocity(axis) + 0.5 * timeStepSize * currentState.acceleration(axis);
+      midpointState.position(axis) = currentState.position(axis) + timeStepSize * midpointState.velocity(axis);
+    }
+    stageAcceleration(midpointState);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      finalState.acceleration(axis) = midpointState.acceleration(axis);
+      finalState.velocity(axis)     = midpointState.velocity(axis) + 0.5 * timeStepSize * finalState.acceleration(axis);
+      finalState.position(axis)     = midpointState.position(axis);
+    }
+    break;
+  }
+  case exahype2::particles::IntegrationScheme::Midpoint: {
+    auto midpointState = exahype2::particles::advancePartialStep(currentState, timeStepSize, 0.5);
+    stageAcceleration(midpointState);
+    finalState = exahype2::particles::advancePartialStepWithBase(currentState, midpointState, timeStepSize, 1.0);
+    break;
+  }
+  case exahype2::particles::IntegrationScheme::RungeKutta3: {
+    const auto& stage1 = currentState;
+    auto        stage2 = exahype2::particles::advancePartialStep(stage1, timeStepSize, 0.5);
+    stageAcceleration(stage2);
+    auto stage3 = exahype2::particles::advancePartialStepWithBase(currentState, stage1, timeStepSize, -1.0);
+    stage3      = exahype2::particles::advancePartialStepWithBase(stage3, stage2, timeStepSize, 2.0);
+    stageAcceleration(stage3);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      finalState.position(axis) = currentState.position(axis)
+        + (timeStepSize / 6.0) * (stage1.velocity(axis) + 4.0 * stage2.velocity(axis) + stage3.velocity(axis));
+      finalState.velocity(axis) = currentState.velocity(axis)
+        + (timeStepSize / 6.0)
+          * (stage1.acceleration(axis) + 4.0 * stage2.acceleration(axis) + stage3.acceleration(axis));
+      finalState.acceleration(axis) = stage3.acceleration(axis);
+    }
+    break;
+  }
+  case exahype2::particles::IntegrationScheme::RungeKutta4: {
+    const auto& stage1 = currentState;
+    auto        stage2 = exahype2::particles::advancePartialStep(stage1, timeStepSize, 0.5);
+    stageAcceleration(stage2);
+    auto stage3 = exahype2::particles::advancePartialStepWithBase(currentState, stage2, timeStepSize, 0.5);
+    stageAcceleration(stage3);
+    auto stage4 = exahype2::particles::advancePartialStepWithBase(currentState, stage3, timeStepSize, 1.0);
+    stageAcceleration(stage4);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      finalState.position(axis) = currentState.position(axis)
+        + (timeStepSize / 6.0)
+          * (stage1.velocity(axis) + 2.0 * stage2.velocity(axis) + 2.0 * stage3.velocity(axis) + stage4.velocity(axis));
+      finalState.velocity(axis) = currentState.velocity(axis)
+        + (timeStepSize / 6.0)
+          * (stage1.acceleration(axis) + 2.0 * stage2.acceleration(axis) + 2.0 * stage3.acceleration(axis) + stage4.acceleration(axis));
+      finalState.acceleration(axis) = stage4.acceleration(axis);
+    }
+    break;
+  }
+  case exahype2::particles::IntegrationScheme::ExplicitEuler:
+    finalState = exahype2::particles::advancePartialStep(currentState, timeStepSize, 1.0);
+    break;
+  }
+
+  exahype2::particles::setState(particle, finalState);
+  return finalState.position;
+}
+
+/** Returns whether bit axis of periodicAxes is set. */
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::particles::isPeriodic(const int periodicAxes, const int axis) {
+  assertion(axis >= 0 and axis < DIMENSIONS, axis);
+  return ((periodicAxes >> axis) & 1) == 1;
+}
+
+/**
+ * Mirrors position back into the domain along every axis that is not periodic and multiplies
+ * the velocity of the particle along that axis by -dampingFactor. periodicAxes carries one bit
+ * per periodic axis.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::reflectAtWalls(
+  exahype2::particles::Particle&               particle,
+  tarch::la::Vector<DIMENSIONS, double>&       position,
+  const double                                 dampingFactor,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
+  const int                                    periodicAxes
+) {
+  auto velocity = exahype2::particles::getVelocity(particle);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    if (exahype2::particles::isPeriodic(periodicAxes, axis)) {
+      continue;
+    }
+    const double lowerBound = domainOffset(axis);
+    const double upperBound = domainOffset(axis) + domainWidth(axis);
+    if (position(axis) < lowerBound) {
+      position(axis) = lowerBound + (lowerBound - position(axis));
+      velocity(axis) = -velocity(axis) * dampingFactor;
+    } else if (position(axis) > upperBound) {
+      position(axis) = upperBound - (position(axis) - upperBound);
+      velocity(axis) = -velocity(axis) * dampingFactor;
+    }
+  }
+  exahype2::particles::setVelocity(particle, velocity);
+}
+
+/** Shifts position by one domain width along every periodic axis on which it left the domain. */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::particles::wrapIntoDomain(
+  tarch::la::Vector<DIMENSIONS, double>&       position,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
+  const int                                    periodicAxes
+) {
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    if (not exahype2::particles::isPeriodic(periodicAxes, axis)) {
+      continue;
+    }
+    if (position(axis) < domainOffset(axis)) {
+      position(axis) += domainWidth(axis);
+    } else if (position(axis) >= domainOffset(axis) + domainWidth(axis)) {
+      position(axis) -= domainWidth(axis);
+    }
+  }
+}
+TARGET_DECLARE_END

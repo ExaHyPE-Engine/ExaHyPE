@@ -2,9 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Matrix.h"
 #include "tarch/la/Vector.h"
 
+TARGET_DECLARE
 namespace tarch::la {
   /**
    * Computes the sum of all entries of the matrix.
@@ -31,31 +34,34 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD static Matrix<Rows, Rows, Scalar> identity();
 
   template <int Rows, typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> diag(const Matrix<Rows, Rows, Scalar>& matrix);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> getDiagonal(const Matrix<Rows, Rows, Scalar>& matrix);
   template <typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> diag(const Matrix<2, 2, Scalar>& matrix);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> getDiagonal(const Matrix<2, 2, Scalar>& matrix);
   template <typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> diag(const Matrix<3, 3, Scalar>& matrix);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> getDiagonal(const Matrix<3, 3, Scalar>& matrix);
   template <typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> diag(const Matrix<4, 4, Scalar>& matrix);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> getDiagonal(const Matrix<4, 4, Scalar>& matrix);
 
   template <int Rows, int Cols, typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Cols, Scalar> row(const Matrix<Rows, Cols, Scalar>& matrix, int whichRow);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Cols, Scalar> getRow(const Matrix<Rows, Cols, Scalar>& matrix, int whichRow);
   template <typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> row(const Matrix<2, 2, Scalar>& matrix, int whichRow);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> getRow(const Matrix<2, 2, Scalar>& matrix, int whichRow);
   template <typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> row(const Matrix<3, 3, Scalar>& matrix, int whichRow);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> getRow(const Matrix<3, 3, Scalar>& matrix, int whichRow);
   template <typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> row(const Matrix<4, 4, Scalar>& matrix, int whichRow);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> getRow(const Matrix<4, 4, Scalar>& matrix, int whichRow);
 
   template <int Rows, int Cols, typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> col(const Matrix<Rows, Cols, Scalar>& matrix, int whichColumn);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> getColumn(
+    const Matrix<Rows, Cols, Scalar>& matrix,
+    int                               whichColumn
+  );
   template <typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> col(const Matrix<2, 2, Scalar>& matrix, int whichColumn);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> getColumn(const Matrix<2, 2, Scalar>& matrix, int whichColumn);
   template <typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> col(const Matrix<3, 3, Scalar>& matrix, int whichColumn);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> getColumn(const Matrix<3, 3, Scalar>& matrix, int whichColumn);
   template <typename Scalar>
-  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> col(const Matrix<4, 4, Scalar>& matrix, int whichColumn);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> getColumn(const Matrix<4, 4, Scalar>& matrix, int whichColumn);
 
   /**
    * Returns a matrix that holds the reciprocal of every entry.
@@ -95,5 +101,6 @@ namespace tarch::la {
 
 template <int Rows, int Cols, typename Scalar>
 INLINE_METHOD std::ostream& operator<<(std::ostream& os, const tarch::la::Matrix<Rows, Cols, Scalar>& matrix);
+TARGET_DECLARE_END
 
 #include "tarch/la/MatrixOperations.cpph"

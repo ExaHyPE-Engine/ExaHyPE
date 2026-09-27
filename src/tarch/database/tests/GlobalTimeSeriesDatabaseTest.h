@@ -9,14 +9,20 @@ namespace tarch::database::tests {
 } // namespace tarch::database::tests
 
 class tarch::database::tests::GlobalTimeSeriesDatabaseTest final : public tarch::tests::TestCase {
+public:
+  GlobalTimeSeriesDatabaseTest();
+  GlobalTimeSeriesDatabaseTest(const GlobalTimeSeriesDatabaseTest& other)            = delete;
+  GlobalTimeSeriesDatabaseTest(GlobalTimeSeriesDatabaseTest&& other)                 = delete;
+  GlobalTimeSeriesDatabaseTest& operator=(const GlobalTimeSeriesDatabaseTest& other) = delete;
+  GlobalTimeSeriesDatabaseTest& operator=(GlobalTimeSeriesDatabaseTest&& other)      = delete;
+  ~GlobalTimeSeriesDatabaseTest() override                                           = default;
+
+  void run() override;
+
 private:
   void testAppendsChronologicallyWithoutDuplication();
   void testClearRewritesFileFromScratch();
   void testTimeDeltaThrottlesSnapshots();
-
-public:
-  GlobalTimeSeriesDatabaseTest();
-  ~GlobalTimeSeriesDatabaseTest() override = default;
-
-  void run() override;
+  void testASnapshotIsDueForTheNewestTimeStampAndAfterTheTimeDelta();
+  void testADatabaseWithoutFileNameWritesNoFile();
 };

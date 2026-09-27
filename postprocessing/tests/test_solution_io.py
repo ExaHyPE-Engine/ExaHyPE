@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from pathlib import Path
+import json
 import tempfile
 import unittest
 
@@ -20,6 +21,7 @@ from postprocessing.solution_io import (
     _drop_trivial_z,
     _index_in_directory,
     _local_tag,
+    _load_vtu_meshio,
     _ordered_field_names,
     _pack_cells,
     _scan_path,
@@ -278,6 +280,143 @@ class BareHdf5Test(unittest.TestCase):
         self.assertEqual(snapshot.points.shape, (6, 2))
         np.testing.assert_array_equal(snapshot.cells, [[0, 1, 4, 3], [1, 2, 5, 4]])
         self.assertEqual(snapshot.node_data["pressure"].shape, (6,))
+
+
+class WriterFormatsTest(unittest.TestCase):
+    def setUp(self):
+        self._directory = tempfile.TemporaryDirectory()
+        self.directory = Path(self._directory.name)
+
+    def tearDown(self):
+        self._directory.cleanup()
+
+    def test_vtu_rank_pieces_keep_their_fields_and_skip_empty_ranks(self):
+        import meshio
+
+        empty = self.directory / "Solver-rank-0.vtu"
+        empty.write_text(
+            '<VTKFile type="UnstructuredGrid" version="1.0" '
+            'byte_order="LittleEndian" header_type="UInt64">'
+            '<UnstructuredGrid><Piece NumberOfPoints="0" NumberOfCells="0">'
+            "<Points></Points><Cells></Cells></Piece></UnstructuredGrid></VTKFile>"
+        )
+        meshio.write(
+            self.directory / "Solver-rank-1.vtu",
+            meshio.Mesh(
+                points=np.asarray(QUAD_POINTS),
+                cells=[("quad", np.asarray(QUAD_CONNECTIVITY).reshape(2, 4))],
+                point_data={"pressure": np.arange(6, dtype=float)},
+                cell_data={
+                    "Subdomain": [np.ones(2)],
+                    "RefinementLevel": [np.full(2, 3)],
+                },
+            ),
+        )
+        path = self.directory / "Solver.pvtu"
+        path.write_text(
+            '<VTKFile type="PUnstructuredGrid"><PUnstructuredGrid>'
+            '<Piece Source="Solver-rank-0.vtu"/>'
+            '<Piece Source="Solver-rank-1.vtu"/>'
+            "</PUnstructuredGrid></VTKFile>"
+        )
+        snapshot = _load_vtu_meshio(SnapshotRef("vtu", str(path), 0.5, "Solver"), path)
+        np.testing.assert_array_equal(
+            snapshot.cells, np.asarray(QUAD_CONNECTIVITY).reshape(2, 4)
+        )
+        np.testing.assert_array_equal(snapshot.points, np.asarray(QUAD_POINTS)[:, :2])
+        np.testing.assert_array_equal(snapshot.node_data["pressure"], np.arange(6))
+        np.testing.assert_array_equal(snapshot.cell_data["Subdomain"], [1, 1])
+        self.assertEqual(
+            set(snapshot.variables), {"pressure", "Subdomain", "RefinementLevel"}
+        )
+
+    def test_xdmf_index_reads_named_node_and_cell_fields(self):
+        data = write_bare_hdf5(self.directory / "Solver-0_500000.h5")
+        with h5py.File(data, "a") as handle:
+            handle.create_group("cell_data").create_dataset("Subdomain", data=[0, 1])
+        path = self.directory / "Solver.xmf"
+        path.write_text(
+            '<Xdmf><Domain><Grid CollectionType="Temporal">'
+            '<Grid><Time Value="0.5"/><Topology TopologyType="Mixed">'
+            f"<DataItem>{data.name}:/topology</DataItem></Topology>"
+            '<Geometry GeometryType="X_Y_Z">'
+            + "".join(
+                f"<DataItem>{data.name}:/geometry/{axis}</DataItem>" for axis in "xyz"
+            )
+            + '</Geometry><Attribute Name="pressure" Center="Node">'
+            f"<DataItem>{data.name}:/data/pressure</DataItem></Attribute>"
+            '<Attribute Name="Subdomain" Center="Cell">'
+            f"<DataItem>{data.name}:/cell_data/Subdomain</DataItem></Attribute>"
+            "</Grid></Grid></Domain></Xdmf>"
+        )
+        source = SolutionSource.open(path)
+        snapshot = source.load(0)
+        self.assertEqual(source.times, [0.5])
+        np.testing.assert_array_equal(
+            snapshot.cells, np.asarray(QUAD_CONNECTIVITY).reshape(2, 4)
+        )
+        np.testing.assert_array_equal(snapshot.node_data["pressure"], np.arange(6))
+        np.testing.assert_array_equal(snapshot.cell_data["Subdomain"], [0, 1])
+
+    def test_netcdf_series_reads_components_and_ignores_dimension_scales(self):
+        from netCDF4 import Dataset
+
+        data = self.directory / "Solver-0_500000.nc"
+        with Dataset(data, "w") as dataset:
+            dataset.createDimension("nMesh2d_node", 6)
+            dataset.createDimension("nMesh2d_face", 2)
+            dataset.createDimension("nMax_face_nodes", 4)
+            for dimension in ("nMesh2d_node", "nMesh2d_face"):
+                dataset.createVariable(dimension, "i4", (dimension,))
+            mesh = dataset.createVariable("mesh2d", "i4")
+            mesh.cf_role = "mesh_topology"
+            mesh.topology_dimension = 2
+            mesh.node_coordinates = "x y"
+            mesh.face_node_connectivity = "face_nodes"
+            for axis, name in enumerate("xy"):
+                dataset.createVariable(name, "f8", ("nMesh2d_node",))[:] = np.asarray(
+                    QUAD_POINTS
+                )[:, axis]
+            cells = dataset.createVariable(
+                "face_nodes", "i4", ("nMesh2d_face", "nMax_face_nodes"), fill_value=-1
+            )
+            cells.start_index = 0
+            cells[:] = np.asarray(QUAD_CONNECTIVITY).reshape(2, 4)
+            rank = dataset.createVariable("Subdomain", "f8", ("nMesh2d_face",))
+            rank.long_name = "Subdomain"
+            rank[:] = [0, 1]
+            scalar = dataset.createVariable("species_0", "f8", ("nMesh2d_face",))
+            scalar.long_name = "species_0"
+            scalar[:] = [3, 4]
+            for component in range(3):
+                velocity = dataset.createVariable(
+                    f"velocity_{component}", "f8", ("nMesh2d_node",)
+                )
+                velocity.long_name = f"velocity (component {component})"
+                velocity[:] = np.arange(6) + component
+            dataset.createVariable("time", "f8")[...] = 0.5
+        path = self.directory / "Solver.nc.series"
+        path.write_text(
+            json.dumps(
+                {
+                    "file-series-version": "1.0",
+                    "files": [{"name": data.name, "time": 0.5}],
+                }
+            )
+        )
+        source = SolutionSource.open(path)
+        snapshot = source.load(0)
+        self.assertEqual(source.times, [0.5])
+        self.assertEqual(
+            set(snapshot.variables), {"velocity", "species_0", "Subdomain"}
+        )
+        np.testing.assert_array_equal(snapshot.cell_data["species_0"], [3, 4])
+        np.testing.assert_array_equal(
+            snapshot.node_data["velocity"], np.arange(6)[:, None] + np.arange(3)
+        )
+        np.testing.assert_array_equal(
+            snapshot.cells, np.asarray(QUAD_CONNECTIVITY).reshape(2, 4)
+        )
 
 
 class SolutionSourceTest(unittest.TestCase):

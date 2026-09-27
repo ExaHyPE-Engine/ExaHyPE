@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "CPUFeatureDetection.h"
 
-// x86 detection headers
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+// The x86 detection headers.
+#if defined(__x86_64__) or defined(_M_X64) or defined(__i386) or defined(_M_IX86)
 #define CPUFEAT_X86 1
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -17,12 +17,13 @@
 #include <asm/hwcap.h>
 #include <sys/auxv.h>
 #ifndef HWCAP_SVE
-#define HWCAP_SVE (1 << 22) // Ensure definition if older headers are used
+#define HWCAP_SVE (1 << 22) // The value of the header of an older kernel.
 #endif
 #endif
 
 #ifdef CPUFEAT_X86
-static void run_cpuid(int regs[4], int leaf, int subleaf = 0) {
+static void
+run_cpuid(int regs[4], int leaf, int subleaf = 0) {
 #if defined(_MSC_VER)
   __cpuidex(regs, leaf, subleaf);
 #else
@@ -30,7 +31,8 @@ static void run_cpuid(int regs[4], int leaf, int subleaf = 0) {
 #endif
 }
 
-static bool check_xgetbv_avx_support() {
+static bool
+check_xgetbv_avx_support() {
 #if defined(_MSC_VER)
   unsigned long long mask = _xgetbv(0);
   return (mask & 0x6) == 0x6;
@@ -43,7 +45,8 @@ static bool check_xgetbv_avx_support() {
 }
 #endif
 
-tarch::CPUFeatures tarch::CPUFeatures::detect() {
+tarch::CPUFeatures
+tarch::CPUFeatures::detect() {
   CPUFeatures f{};
 
 #ifdef CPUFEAT_X86
@@ -51,7 +54,8 @@ tarch::CPUFeatures tarch::CPUFeatures::detect() {
 
   run_cpuid(regs, 1);
 
-  // Check XSAVE support (OSXSAVE) and AVX hardware support
+  // Bit 27 of the second register carries the register save of the operating system, bit 28 the
+  // AVX hardware.
   bool osXSAVE = regs[2] & (1 << 27);
   bool avxHW   = regs[2] & (1 << 28);
 
@@ -59,11 +63,11 @@ tarch::CPUFeatures tarch::CPUFeatures::detect() {
 
   // Check OS support for AVX (saving YMM registers)
   bool avxOS = false;
-  if (osXSAVE && avxHW) {
+  if (osXSAVE and avxHW) {
     avxOS = check_xgetbv_avx_support();
   }
 
-  f.avx = avxHW && osXSAVE && avxOS;
+  f.avx = avxHW and osXSAVE and avxOS;
 
   // Extended features (leaf 7)
   if (f.avx) {
@@ -98,27 +102,35 @@ tarch::CPUFeatures tarch::CPUFeatures::detect() {
   return f;
 }
 
-static const tarch::CPUFeatures& get_cached_features() {
+static const tarch::CPUFeatures&
+getCachedCPUFeatures() {
   static tarch::CPUFeatures f = tarch::CPUFeatures::detect();
   return f;
 }
 
-std::string tarch::detectCPUFeatures() {
-  const auto&              f = get_cached_features();
+std::string
+tarch::detectCPUFeatures() {
+  const auto&              f = getCachedCPUFeatures();
   std::vector<std::string> features;
 
-  if (f.sse2)
+  if (f.sse2) {
     features.push_back("SSE2");
-  if (f.avx)
+  }
+  if (f.avx) {
     features.push_back("AVX");
-  if (f.avx2)
+  }
+  if (f.avx2) {
     features.push_back("AVX2");
-  if (f.avx512)
+  }
+  if (f.avx512) {
     features.push_back("AVX512");
-  if (f.neon)
+  }
+  if (f.neon) {
     features.push_back("NEON");
-  if (f.sve)
+  }
+  if (f.sve) {
     features.push_back("SVE");
+  }
 
   if (features.empty()) {
     return "None";

@@ -2,33 +2,35 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RuntimeParameters.h"
 
-#include "runner/ParameterTable.h"
+#include "exahype2/runner/RuntimeParameters.h"
 
-TARGET_DECLARE
-{{NAMESPACE | join("::")}}::RuntimeParameters::Storage {{NAMESPACE | join("::")}}::RuntimeParameters::_storage;
-TARGET_DECLARE_END
+{{NAMESPACE | join("::")}}::RuntimeParameters::Storage     {{NAMESPACE | join("::")}}::RuntimeParameters::_storage;
+{{NAMESPACE | join("::")}}::RuntimeParameters::HostStorage {{NAMESPACE | join("::")}}::RuntimeParameters::_hostStorage;
 
-::runner::ParameterTable {{NAMESPACE | join("::")}}::RuntimeParameters::parameterTable(
-  [[maybe_unused]] Storage& storage
+::exahype2::runner::ParameterTable {{NAMESPACE | join("::")}}::RuntimeParameters::getParameterTable(
+  [[maybe_unused]] Storage&     storage,
+  [[maybe_unused]] HostStorage& hostStorage
 ) {
-  ::runner::ParameterTable result;
+  ::exahype2::runner::ParameterTable result;
 {%- for parameter in RUNTIME_PARAMETERS %}
+{%- set owner = "hostStorage" if parameter.is_string else "storage" %}
 {%- if parameter.is_array %}
-  result.addArray("{{ parameter.name }}", storage.{{ parameter.name }}.data(), {{ parameter.array_size }});
+  result.addArray("{{ parameter.name }}", {{ owner }}.{{ parameter.name }}.getData(), {{ parameter.array_size }});
 {%- else %}
-  result.add("{{ parameter.name }}", &storage.{{ parameter.name }});
+  result.add("{{ parameter.name }}", &{{ owner }}.{{ parameter.name }});
 {%- endif %}
 {%- endfor %}
   return result;
 }
 
 void {{NAMESPACE | join("::")}}::RuntimeParameters::printUsage() {
-  Storage defaults{};
-  parameterTable(defaults).printUsage();
+  Storage     defaults{};
+  HostStorage hostDefaults{};
+  getParameterTable(defaults, hostDefaults).printUsage();
 }
 
 void {{NAMESPACE | join("::")}}::RuntimeParameters::load(tarch::reader::JSONReader* const reader) {
-  parameterTable(_storage).load(reader);
+  getParameterTable(_storage, _hostStorage).load(reader);
 }
 
 void {{NAMESPACE | join("::")}}::RuntimeParameters::load(
@@ -36,5 +38,5 @@ void {{NAMESPACE | join("::")}}::RuntimeParameters::load(
   int&                             argc,
   char** const                     argv
 ) {
-  parameterTable(_storage).load(reader, argc, argv);
+  getParameterTable(_storage, _hostStorage).load(reader, argc, argv);
 }

@@ -116,7 +116,9 @@ compute_primitive_variables = r"""
   const auto u0 = Q[Shortcuts::rhoU] * irho;
   const auto u1 = Q[Shortcuts::rhoV] * irho;
 
-  const auto uSq = u0 * u0 + u1 * u1;
+  const auto squareOfU0 = u0 * u0;
+  const auto squareOfU1 = u1 * u1;
+  const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 
   const auto internalE = Q[Shortcuts::rhoE] - 0.5 * Q[Shortcuts::rho] * uSq;
@@ -176,20 +178,13 @@ tracer_attributes = {
 }
 
 tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
+    name="Tracers", particle_attributes=tracer_attributes
 )
 
 generate_random_particles(
     "InitTracers.dat", num_particles=100, domain_min=0.1, domain_max=0.9
 )
-init_tracers = exahype2.particles.InsertParticlesFromFile(
-    particle_set=tracer_particles,
-    filename="InitTracers.dat",
-    scale_factor=1.0,
-)
-
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
+tracer_particles.insert_from_file("InitTracers.dat", scale_factor=1.0)
 
 fv_solver.trace(
     tracer_particles,

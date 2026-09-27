@@ -1,7 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-INLINE_METHOD bool tarch::mpi::PollPacing::reportProgressNow() {
+INLINE_METHOD bool
+tarch::mpi::PollPacing::reportProgressNow() {
   if (_iterationsUntilNextTurn > 0) {
     --_iterationsUntilNextTurn;
     return false;

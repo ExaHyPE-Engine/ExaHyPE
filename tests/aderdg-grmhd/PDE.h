@@ -4,7 +4,7 @@
 
 namespace GRMHD {
   namespace PDE {
-    using Shortcuts = tests::exahype2::aderdg::VariableShortcutsADERDGSolver;
+    using Shortcuts = tests::exahype2::aderdg::ADERDGSolverVariableShortcuts;
 
     // Computes the vector resulting from the multiplication of a 3x3 matrix with a
     //  vector of size 3
@@ -249,7 +249,6 @@ namespace GRMHD {
       double w      = rho + gamma1 * p;
       double ww     = w * lf * lf;
 
-      // using Shortcuts = tests::exahype2::aderdg::VariableShortcutsADERDGSolver;
       Q[Shortcuts::rho]     = gp * rho * lf;
       Q[Shortcuts::vel + 0] = gp * ww * v_cov[0] + b2 * v_cov[0] - vb * B_cov[0];
       Q[Shortcuts::vel + 1] = gp * ww * v_cov[1] + b2 * v_cov[1] - vb * B_cov[1];
@@ -288,7 +287,6 @@ namespace GRMHD {
 
       // constexpr double tol = 1.0e-12;
 
-      // using Shortcuts = tests::exahype2::aderdg::VariableShortcutsADERDGSolver;
       double psi        = Q[Shortcuts::psi];
       double lapse      = Q[Shortcuts::lapse];
       double shift[3]   = {Q[Shortcuts::shift + 0], Q[Shortcuts::shift + 1], Q[Shortcuts::shift + 2]};

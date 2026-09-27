@@ -17,7 +17,9 @@
     } \
   };
 
-#define testNumericalEquals(lhs, rhs) (std::abs((rhs) - (lhs)) <= 1.0e-10)
+/** Is true when lhs and rhs differ by at most eps, so a NaN on either side compares unequal. */
+#define testNumericalEqualsWithEps(lhs, rhs, eps) (std::abs((rhs) - (lhs)) <= (eps))
+#define testNumericalEquals(lhs, rhs) testNumericalEqualsWithEps(lhs, rhs, 1.0e-10)
 
 #define validate(booleanExpr) \
   if (not static_cast<bool>(booleanExpr)) { \
@@ -30,11 +32,9 @@
   }
 
 #define validateTrue(booleanExpr) validate(booleanExpr)
-#define validateFalse(booleanExpr) validate(not booleanExpr)
+#define validateFalse(booleanExpr) validate(not(booleanExpr))
 
-/**
- * The message parameter has to be a std::string or char*.
- */
+/** Streams message into the failure report, so message is any value that operator<< accepts. */
 #define validateWithMessage(booleanExpr, message) \
   if (not static_cast<bool>(booleanExpr)) { \
     _errors++; \
@@ -42,7 +42,7 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Message: " << message << std::endl; \
+              << "  Message: " << (message) << std::endl; \
     return; \
   }
 
@@ -53,7 +53,7 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl; \
     return; \
   }
 
@@ -64,8 +64,8 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl; \
     return; \
   }
 
@@ -76,9 +76,9 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl; \
     return; \
   }
 
@@ -89,10 +89,10 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl; \
     return; \
   }
 
@@ -103,11 +103,11 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl; \
     return; \
   }
 
@@ -118,12 +118,12 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl \
-              << "  Parameter " << #param5 << "=" << param5 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl \
+              << "  Parameter " << #param5 << "=" << (param5) << std::endl; \
     return; \
   }
 
@@ -134,13 +134,13 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl \
-              << "  Parameter " << #param5 << "=" << param5 << std::endl \
-              << "  Parameter " << #param6 << "=" << param6 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl \
+              << "  Parameter " << #param5 << "=" << (param5) << std::endl \
+              << "  Parameter " << #param6 << "=" << (param6) << std::endl; \
     return; \
   }
 
@@ -151,14 +151,14 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl \
-              << "  Parameter " << #param5 << "=" << param5 << std::endl \
-              << "  Parameter " << #param6 << "=" << param6 << std::endl \
-              << "  Parameter " << #param7 << "=" << param7 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl \
+              << "  Parameter " << #param5 << "=" << (param5) << std::endl \
+              << "  Parameter " << #param6 << "=" << (param6) << std::endl \
+              << "  Parameter " << #param7 << "=" << (param7) << std::endl; \
     return; \
   }
 
@@ -169,15 +169,15 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl \
-              << "  Parameter " << #param5 << "=" << param5 << std::endl \
-              << "  Parameter " << #param6 << "=" << param6 << std::endl \
-              << "  Parameter " << #param7 << "=" << param7 << std::endl \
-              << "  Parameter " << #param8 << "=" << param8 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl \
+              << "  Parameter " << #param5 << "=" << (param5) << std::endl \
+              << "  Parameter " << #param6 << "=" << (param6) << std::endl \
+              << "  Parameter " << #param7 << "=" << (param7) << std::endl \
+              << "  Parameter " << #param8 << "=" << (param8) << std::endl; \
     return; \
   }
 
@@ -200,16 +200,16 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl \
-              << "  Parameter " << #param5 << "=" << param5 << std::endl \
-              << "  Parameter " << #param6 << "=" << param6 << std::endl \
-              << "  Parameter " << #param7 << "=" << param7 << std::endl \
-              << "  Parameter " << #param8 << "=" << param8 << std::endl \
-              << "  Parameter " << #param9 << "=" << param9 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl \
+              << "  Parameter " << #param5 << "=" << (param5) << std::endl \
+              << "  Parameter " << #param6 << "=" << (param6) << std::endl \
+              << "  Parameter " << #param7 << "=" << (param7) << std::endl \
+              << "  Parameter " << #param8 << "=" << (param8) << std::endl \
+              << "  Parameter " << #param9 << "=" << (param9) << std::endl; \
     return; \
   }
 
@@ -233,17 +233,17 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl \
-              << "  Parameter " << #param5 << "=" << param5 << std::endl \
-              << "  Parameter " << #param6 << "=" << param6 << std::endl \
-              << "  Parameter " << #param7 << "=" << param7 << std::endl \
-              << "  Parameter " << #param8 << "=" << param8 << std::endl \
-              << "  Parameter " << #param9 << "=" << param9 << std::endl \
-              << "  Parameter " << #param10 << "=" << param10 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl \
+              << "  Parameter " << #param5 << "=" << (param5) << std::endl \
+              << "  Parameter " << #param6 << "=" << (param6) << std::endl \
+              << "  Parameter " << #param7 << "=" << (param7) << std::endl \
+              << "  Parameter " << #param8 << "=" << (param8) << std::endl \
+              << "  Parameter " << #param9 << "=" << (param9) << std::endl \
+              << "  Parameter " << #param10 << "=" << (param10) << std::endl; \
     return; \
   }
 
@@ -268,18 +268,18 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl \
-              << "  Parameter " << #param5 << "=" << param5 << std::endl \
-              << "  Parameter " << #param6 << "=" << param6 << std::endl \
-              << "  Parameter " << #param7 << "=" << param7 << std::endl \
-              << "  Parameter " << #param8 << "=" << param8 << std::endl \
-              << "  Parameter " << #param9 << "=" << param9 << std::endl \
-              << "  Parameter " << #param10 << "=" << param10 << std::endl \
-              << "  Parameter " << #param11 << "=" << param11 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl \
+              << "  Parameter " << #param5 << "=" << (param5) << std::endl \
+              << "  Parameter " << #param6 << "=" << (param6) << std::endl \
+              << "  Parameter " << #param7 << "=" << (param7) << std::endl \
+              << "  Parameter " << #param8 << "=" << (param8) << std::endl \
+              << "  Parameter " << #param9 << "=" << (param9) << std::endl \
+              << "  Parameter " << #param10 << "=" << (param10) << std::endl \
+              << "  Parameter " << #param11 << "=" << (param11) << std::endl; \
     return; \
   }
 
@@ -305,19 +305,19 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl \
-              << "  Parameter " << #param5 << "=" << param5 << std::endl \
-              << "  Parameter " << #param6 << "=" << param6 << std::endl \
-              << "  Parameter " << #param7 << "=" << param7 << std::endl \
-              << "  Parameter " << #param8 << "=" << param8 << std::endl \
-              << "  Parameter " << #param9 << "=" << param9 << std::endl \
-              << "  Parameter " << #param10 << "=" << param10 << std::endl \
-              << "  Parameter " << #param11 << "=" << param11 << std::endl \
-              << "  Parameter " << #param12 << "=" << param12 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl \
+              << "  Parameter " << #param5 << "=" << (param5) << std::endl \
+              << "  Parameter " << #param6 << "=" << (param6) << std::endl \
+              << "  Parameter " << #param7 << "=" << (param7) << std::endl \
+              << "  Parameter " << #param8 << "=" << (param8) << std::endl \
+              << "  Parameter " << #param9 << "=" << (param9) << std::endl \
+              << "  Parameter " << #param10 << "=" << (param10) << std::endl \
+              << "  Parameter " << #param11 << "=" << (param11) << std::endl \
+              << "  Parameter " << #param12 << "=" << (param12) << std::endl; \
     return; \
   }
 
@@ -344,20 +344,20 @@
     std::cerr << "  Boolean test failed " << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #booleanExpr << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
-              << "  Parameter " << #param1 << "=" << param1 << std::endl \
-              << "  Parameter " << #param2 << "=" << param2 << std::endl \
-              << "  Parameter " << #param3 << "=" << param3 << std::endl \
-              << "  Parameter " << #param4 << "=" << param4 << std::endl \
-              << "  Parameter " << #param5 << "=" << param5 << std::endl \
-              << "  Parameter " << #param6 << "=" << param6 << std::endl \
-              << "  Parameter " << #param7 << "=" << param7 << std::endl \
-              << "  Parameter " << #param8 << "=" << param8 << std::endl \
-              << "  Parameter " << #param9 << "=" << param9 << std::endl \
-              << "  Parameter " << #param10 << "=" << param10 << std::endl \
-              << "  Parameter " << #param11 << "=" << param11 << std::endl \
-              << "  Parameter " << #param12 << "=" << param12 << std::endl \
-              << "  Parameter " << #param13 << "=" << param13 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
+              << "  Parameter " << #param1 << "=" << (param1) << std::endl \
+              << "  Parameter " << #param2 << "=" << (param2) << std::endl \
+              << "  Parameter " << #param3 << "=" << (param3) << std::endl \
+              << "  Parameter " << #param4 << "=" << (param4) << std::endl \
+              << "  Parameter " << #param5 << "=" << (param5) << std::endl \
+              << "  Parameter " << #param6 << "=" << (param6) << std::endl \
+              << "  Parameter " << #param7 << "=" << (param7) << std::endl \
+              << "  Parameter " << #param8 << "=" << (param8) << std::endl \
+              << "  Parameter " << #param9 << "=" << (param9) << std::endl \
+              << "  Parameter " << #param10 << "=" << (param10) << std::endl \
+              << "  Parameter " << #param11 << "=" << (param11) << std::endl \
+              << "  Parameter " << #param12 << "=" << (param12) << std::endl \
+              << "  Parameter " << #param13 << "=" << (param13) << std::endl; \
     return; \
   }
 
@@ -365,7 +365,7 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl; \
     return; \
@@ -375,10 +375,10 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Message " << message << std::endl; \
+              << "  Message " << (message) << std::endl; \
     return; \
   }
 
@@ -386,10 +386,10 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl; \
     return; \
   }
 
@@ -397,10 +397,10 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
               << std::endl; \
     return; \
   }
@@ -409,11 +409,11 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << std::endl; \
     return; \
   }
 
@@ -421,11 +421,11 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << ", parameter " << #param3 << "=" << (param3) \
               << std::endl; \
     return; \
   }
@@ -434,12 +434,12 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 \
-              << ", parameter " << #param4 << "=" << param4 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << ", parameter " << #param3 << "=" << (param3) \
+              << ", parameter " << #param4 << "=" << (param4) << std::endl; \
     return; \
   }
 
@@ -447,12 +447,12 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 \
-              << ", parameter " << #param4 << "=" << param4 << ", parameter " << #param5 << "=" << param5 \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << ", parameter " << #param3 << "=" << (param3) \
+              << ", parameter " << #param4 << "=" << (param4) << ", parameter " << #param5 << "=" << (param5) \
               << std::endl; \
     return; \
   }
@@ -461,13 +461,13 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 \
-              << ", parameter " << #param4 << "=" << param4 << ", parameter " << #param5 << "=" << param5 \
-              << ", parameter " << #param6 << "=" << param6 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << ", parameter " << #param3 << "=" << (param3) \
+              << ", parameter " << #param4 << "=" << (param4) << ", parameter " << #param5 << "=" << (param5) \
+              << ", parameter " << #param6 << "=" << (param6) << std::endl; \
     return; \
   }
 
@@ -486,13 +486,13 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 \
-              << ", parameter " << #param4 << "=" << param4 << ", parameter " << #param5 << "=" << param5 \
-              << ", parameter " << #param6 << "=" << param6 << ", parameter " << #param7 << "=" << param7 \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << ", parameter " << #param3 << "=" << (param3) \
+              << ", parameter " << #param4 << "=" << (param4) << ", parameter " << #param5 << "=" << (param5) \
+              << ", parameter " << #param6 << "=" << (param6) << ", parameter " << #param7 << "=" << (param7) \
               << std::endl; \
     return; \
   }
@@ -513,22 +513,22 @@
   if (not((actualValue) == (validValue))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 \
-              << ", parameter " << #param4 << "=" << param4 << ", parameter " << #param5 << "=" << param5 \
-              << ", parameter " << #param6 << "=" << param6 << ", parameter " << #param7 << "=" << param7 \
-              << ", parameter " << #param8 << "=" << param8 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << ", parameter " << #param3 << "=" << (param3) \
+              << ", parameter " << #param4 << "=" << (param4) << ", parameter " << #param5 << "=" << (param5) \
+              << ", parameter " << #param6 << "=" << (param6) << ", parameter " << #param7 << "=" << (param7) \
+              << ", parameter " << #param8 << "=" << (param8) << std::endl; \
     return; \
   }
 
 #define validateNotEqual(actualValue, validValue) \
-  if ((actualValue == validValue)) { \
+  if ((actualValue) == (validValue)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Inequality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Inequality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "!=" << #validValue << std::endl; \
     return; \
@@ -538,18 +538,38 @@
   if (not testNumericalEquals(actualValue, validValue)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
 
+/**
+ * Compares two buffers of doubles entry by entry and fails the test when an entry of actual differs
+ * from its entry of valid by more than tarch::tests::MaxUnitsInTheLastPlace units in the last place
+ * of the largest magnitude of valid. Two compilers that fuse different multiply-adds, such as a host
+ * and a device compiler, round one computation within this bound.
+ */
+#define validateNumericalBuffersEquals(actual, valid) \
+  { \
+    validateEquals((actual).size(), (valid).size()); \
+    const double bufferTolerance = tarch::tests::getToleranceInUnitsInTheLastPlace(valid); \
+    for (std::size_t bufferEntry = 0; bufferEntry < (actual).size(); bufferEntry++) { \
+      validateNumericalEqualsWithEpsWithParams1( \
+        (actual)[bufferEntry], \
+        (valid)[bufferEntry], \
+        bufferTolerance, \
+        bufferEntry \
+      ); \
+    } \
+  }
+
 #define validateNumericalEqualsWithEps(actualValue, validValue, eps) \
-  if ((fabs((actualValue) - (validValue)) > eps)) { \
+  if (not testNumericalEqualsWithEps(actualValue, validValue, eps)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
@@ -557,38 +577,39 @@
   }
 
 #define validateNumericalEqualsWithEpsWithParams1(actualValue, validValue, eps, param0) \
-  if ((fabs((actualValue) - (validValue)) > eps)) { \
+  if (not testNumericalEqualsWithEps(actualValue, validValue, eps)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
 
 #define validateNumericalEqualsWithEpsWithParams2(actualValue, validValue, eps, param0, param1) \
-  if ((fabs((actualValue) - (validValue)) > eps)) { \
+  if (not testNumericalEqualsWithEps(actualValue, validValue, eps)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 << std::endl \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
 
 #define validateNumericalEqualsWithEpsWithParams3(actualValue, validValue, eps, param0, param1, param2) \
-  if ((fabs((actualValue) - (validValue)) > eps)) { \
+  if (not testNumericalEqualsWithEps(actualValue, validValue, eps)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << std::endl \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
@@ -597,10 +618,10 @@
   if (not testNumericalEquals(actualValue, validValue)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
@@ -609,10 +630,11 @@
   if (not testNumericalEquals(actualValue, validValue)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 << std::endl \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
@@ -621,11 +643,11 @@
   if (not testNumericalEquals(actualValue, validValue)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << std::endl \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
@@ -634,11 +656,12 @@
   if (not testNumericalEquals(actualValue, validValue)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 << std::endl \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << ", parameter " << #param3 << "=" << (param3) \
+              << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
@@ -647,12 +670,12 @@
   if (not testNumericalEquals(actualValue, validValue)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 \
-              << ", parameter " << #param4 << "=" << param4 << std::endl \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << ", parameter " << #param3 << "=" << (param3) \
+              << ", parameter " << #param4 << "=" << (param4) << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
@@ -661,63 +684,62 @@
   if (not testNumericalEquals(actualValue, validValue)) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical equality test failed: " << actualValue << ", expected " << validValue << std::endl \
+    std::cerr << "  Numerical equality test failed: " << (actualValue) << ", expected " << (validValue) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actualValue << "==" << #validValue << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 \
-              << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 \
-              << ", parameter " << #param4 << "=" << param4 << ", parameter " << #param5 << "=" << param5 << std::endl \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << ", parameter " << #param3 << "=" << (param3) \
+              << ", parameter " << #param4 << "=" << (param4) << ", parameter " << #param5 << "=" << (param5) \
+              << std::endl \
               << "  Difference: " << fabs((actualValue) - (validValue)) << std::endl; \
     return; \
   }
 
 /**
- * Compares two vectors and fails the test when the Euclidean norm of their
- * difference exceeds the tolerance.
- *
- * @param actual             Vector under test.
- * @param valid              Valid reference vector.
+ * Compares two vectors entry by entry and fails the test when an entry differs by more than
+ * tarch::la::NUMERICAL_ZERO_DIFFERENCE.
  */
 #define validateNumericalVectorEquals(actual, valid) \
-  if (not tarch::la::equals(actual, valid)) { \
+  if (not tarch::la::equals((actual), (valid))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical vector equality test failed: " << actual << ", expected " << valid << std::endl \
+    std::cerr << "  Numerical vector equality test failed: " << (actual) << ", expected " << (valid) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actual << "==" << #valid << std::endl; \
     return; \
   }
 
 #define validateNumericalVectorEqualsWithParams1(actual, valid, param0) \
-  if (not tarch::la::equals(actual, valid)) { \
+  if (not tarch::la::equals((actual), (valid))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical vector equality test failed: " << actual << ", expected " << valid << std::endl \
+    std::cerr << "  Numerical vector equality test failed: " << (actual) << ", expected " << (valid) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actual << "==" << #valid << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << std::endl; \
     return; \
   }
 
 #define validateNumericalVectorEqualsWithParams2(actual, valid, param0, param1) \
-  if (not tarch::la::equals(actual, valid)) { \
+  if (not tarch::la::equals((actual), (valid))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical vector equality test failed: " << actual << ", expected " << valid << std::endl \
+    std::cerr << "  Numerical vector equality test failed: " << (actual) << ", expected " << (valid) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actual << "==" << #valid << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << #param1 << "=" << param1 << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << std::endl; \
     return; \
   }
 
 #define validateNumericalVectorEqualsWithParams3(actual, valid, param0, param1, param2) \
-  if (not tarch::la::equals(actual, valid)) { \
+  if (not tarch::la::equals((actual), (valid))) { \
     _errors++; \
     _error = true; \
-    std::cerr << "  Numerical vector equality test failed: " << actual << ", expected " << valid << std::endl \
+    std::cerr << "  Numerical vector equality test failed: " << (actual) << ", expected " << (valid) << std::endl \
               << "  File: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
               << "  Statement: " << #actual << "==" << #valid << std::endl \
-              << "  Parameter " << #param0 << "=" << param0 << #param1 << "=" << param1 << #param2 << "=" << param2 \
-              << std::endl; \
+              << "  Parameter " << #param0 << "=" << (param0) << ", parameter " << #param1 << "=" << (param1) \
+              << ", parameter " << #param2 << "=" << (param2) << std::endl; \
     return; \
   }

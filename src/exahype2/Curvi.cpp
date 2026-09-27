@@ -2,13 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Curvi.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/la/ScalarOperations.h"
 
 /**
  * Asserts that normal is a valid direction which does not carry a transformation yet, and records
  * that it does from now on.
  */
-void exahype2::Curvi::reserveAxis(int normal) {
+void
+exahype2::Curvi::reserveAxis(int normal) {
   assertion(normal >= 0 and normal < DIMENSIONS, "Coordinate direction out of range", normal, DIMENSIONS);
   assertion(
     not _axisIsTransformed[normal],
@@ -28,7 +30,8 @@ void exahype2::Curvi::reserveAxis(int normal) {
  * @param perturbation Offset of the face, as a function of the coordinates transverse to the face
  *                     normal.
  */
-void exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
+void
+exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
   assertion(faceIndex >= 0 and faceIndex < 2 * DIMENSIONS, "Face index out of range", faceIndex, DIMENSIONS);
 
   const int  normal      = faceIndex % DIMENSIONS;
@@ -110,7 +113,8 @@ void exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation
  *                     normal.
  * @return The cartesian position of the cell boundary the interface was pinned to.
  */
-double exahype2::Curvi::split(int normal, int index, double position, Perturbation perturbation) {
+double
+exahype2::Curvi::split(int normal, int index, double position, Perturbation perturbation) {
   reserveAxis(normal);
 
   // The axis carries no earlier transformation, so both bounds are still the cartesian ones.

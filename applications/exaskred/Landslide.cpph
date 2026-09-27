@@ -8,7 +8,8 @@
  * so it survives the sanitisation while depth and momenta reset to zero.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landslide::sanitiseDryState(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::landslide::sanitiseDryState(
   const T* const NOALIAS                                      QIn,
   T* const NOALIAS                                            QOut,
   const applications::exahype2::exaskred::landslide::Physics& physics
@@ -28,7 +29,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
 }
 
 /** Returns the buoyancy-reduced gravity a fully submerged slide feels. */
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::submergedGravity(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getSubmergedGravity(
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
   const double densityRatio   = physics.waterDensity / physics.slideDensity;
@@ -37,7 +39,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::landslide::isSubmergedByBathymetry(
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::landslide::isSubmergedByBathymetry(
   const T* const NOALIAS                                      Q,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
@@ -45,22 +48,24 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::landsli
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::effectiveGravity(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getEffectiveGravity(
   const T* const NOALIAS                                      Q,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  return isSubmergedByBathymetry<Shortcuts>(Q, physics) ? submergedGravity(physics) : physics.gravity;
+  return isSubmergedByBathymetry<Shortcuts>(Q, physics) ? getSubmergedGravity(physics) : physics.gravity;
 }
 
 /** A face uses the reduced gravity only when both adjacent states are submerged. */
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::interfaceEffectiveGravity(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity(
   const T* const NOALIAS                                      QL,
   const T* const NOALIAS                                      QR,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
   return isSubmergedByBathymetry<Shortcuts>(QL, physics) and isSubmergedByBathymetry<Shortcuts>(QR, physics)
-    ? submergedGravity(physics)
+    ? getSubmergedGravity(physics)
     : physics.gravity;
 }
 
@@ -69,7 +74,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
  * (2019), which bounds the admissible time step of a submerged, moving state.
  */
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::waterFrictionDragSourceSpeed(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getWaterFrictionDragSourceSpeed(
   const T* const NOALIAS                                      Q,
   const applications::exahype2::exaskred::landslide::Physics& physics,
   const bool                                                  submerged
@@ -91,11 +97,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::waterFrictionDragSourceSpeed(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getWaterFrictionDragSourceSpeed(
   const T* const NOALIAS                                      Q,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  return waterFrictionDragSourceSpeed<Shortcuts>(Q, physics, isSubmergedByBathymetry<Shortcuts>(Q, physics));
+  return getWaterFrictionDragSourceSpeed<Shortcuts>(Q, physics, isSubmergedByBathymetry<Shortcuts>(Q, physics));
 }
 
 /**
@@ -106,7 +113,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
  * flux.
  */
 template <class Shortcuts, int NumberOfUnknowns, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landslide::flux(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::landslide::flux(
   const T* const NOALIAS                                        Q,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -139,7 +147,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
 }
 
 template <class Shortcuts, int NumberOfUnknowns, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landslide::flux(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::landslide::flux(
   const T* const NOALIAS                                      Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
@@ -149,11 +158,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
   const applications::exahype2::exaskred::landslide::Physics& physics,
   T* const NOALIAS                                            F
 ) {
-  flux<Shortcuts, NumberOfUnknowns>(Q, x, h, t, dt, normal, physics, effectiveGravity<Shortcuts>(Q, physics), F);
+  flux<Shortcuts, NumberOfUnknowns>(Q, x, h, t, dt, normal, physics, getEffectiveGravity<Shortcuts>(Q, physics), F);
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::fluxEigenvalue(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getFluxEigenvalue(
   const T* const NOALIAS                                        Q,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -177,7 +187,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::fluxEigenvalue(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getFluxEigenvalue(
   const T* const NOALIAS                                      Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
@@ -186,7 +197,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
   const int                                                   normal,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  return fluxEigenvalue<Shortcuts>(Q, x, h, t, dt, normal, physics, effectiveGravity<Shortcuts>(Q, physics));
+  return getFluxEigenvalue<Shortcuts>(Q, x, h, t, dt, normal, physics, getEffectiveGravity<Shortcuts>(Q, physics));
 }
 
 /**
@@ -198,7 +209,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
  * time-step formula the flux eigenvalue feeds.
  */
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::effectiveMaxEigenvalue(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue(
   const T* const NOALIAS                                      Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
@@ -210,7 +222,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
   const bool                                                  submerged,
   const double                                                sourceEigenvalueScaling
 ) {
-  const double fluxSpeed = fluxEigenvalue<Shortcuts>(Q, x, h, t, dt, normal, physics, gravity);
+  const double fluxSpeed = getFluxEigenvalue<Shortcuts>(Q, x, h, t, dt, normal, physics, gravity);
 
   if (
     not std::isfinite(static_cast<double>(Q[Shortcuts::h])) or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
@@ -224,13 +236,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
     std::sqrt(static_cast<double>(Q[Shortcuts::hu] * Q[Shortcuts::hu] + Q[Shortcuts::hu + 1] * Q[Shortcuts::hu + 1]));
   const double sourceSpeed = 2.0 * gravity * momentum * physics.inverseTurbulentFrictionLength
       / static_cast<double>(Q[Shortcuts::h] * Q[Shortcuts::h])
-    + waterFrictionDragSourceSpeed<Shortcuts>(Q, physics, submerged);
+    + getWaterFrictionDragSourceSpeed<Shortcuts>(Q, physics, submerged);
 
   return std::fmax(fluxSpeed, h[normal] * sourceEigenvalueScaling * sourceSpeed);
 }
 
 template <class Shortcuts, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::effectiveMaxEigenvalue(
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue(
   const T* const NOALIAS                                      Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
@@ -240,7 +253,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
   const applications::exahype2::exaskred::landslide::Physics& physics,
   const double                                                sourceEigenvalueScaling
 ) {
-  return effectiveMaxEigenvalue<Shortcuts>(
+  return getEffectiveMaxEigenvalue<Shortcuts>(
     Q,
     x,
     h,
@@ -248,7 +261,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
     dt,
     normal,
     physics,
-    effectiveGravity<Shortcuts>(Q, physics),
+    getEffectiveGravity<Shortcuts>(Q, physics),
     isSubmergedByBathymetry<Shortcuts>(Q, physics),
     sourceEigenvalueScaling
   );
@@ -262,7 +275,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
  * contributes nothing.
  */
 template <class Shortcuts, int NumberOfUnknowns, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landslide::nonconservativeProduct(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::landslide::nonconservativeProduct(
   const T* const NOALIAS                                        Q,
   const T* const NOALIAS                                        deltaQ,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -290,7 +304,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
 }
 
 template <class Shortcuts, int NumberOfUnknowns, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landslide::nonconservativeProduct(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::landslide::nonconservativeProduct(
   const T* const NOALIAS                                      Q,
   const T* const NOALIAS                                      deltaQ,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
@@ -310,7 +325,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
     dt,
     normal,
     physics,
-    effectiveGravity<Shortcuts>(Q, physics),
+    getEffectiveGravity<Shortcuts>(Q, physics),
     BTimesDeltaQ
   );
 }
@@ -325,7 +340,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
  * reverses the momentum, which keeps the layer from oscillating around rest.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landslide::diffusiveSourceTerm(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::landslide::diffusiveSourceTerm(
   const T* const NOALIAS                                        Q,
   const T* const NOALIAS                                        deltaQ,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -395,7 +411,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
 }
 
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landslide::diffusiveSourceTerm(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::landslide::diffusiveSourceTerm(
   const T* const NOALIAS                                      Q,
   const T* const NOALIAS                                      deltaQ,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
@@ -413,7 +430,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
     t,
     dt,
     physics,
-    effectiveGravity<Shortcuts>(Q, physics),
+    getEffectiveGravity<Shortcuts>(Q, physics),
     isSubmergedByBathymetry<Shortcuts>(Q, physics),
     S
   );

@@ -1,0 +1,42 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+/**
+ * Sorts the first size entries of values in ascending order with a heap sort, which needs neither
+ * recursion nor extra memory, so a device thread may call it.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::sortAscending(Value* const values, const int size) {
+  assertion(size >= 0, size);
+  assertion(size == 0 or values != nullptr, size);
+
+  // Moves the entry at root down the heap of the first end entries until no child is larger.
+  const auto siftDown = [values](int root, const int end) {
+    while (2 * root + 1 < end) {
+      int child = 2 * root + 1;
+      if (child + 1 < end and values[child] < values[child + 1]) {
+        child++;
+      }
+      if (not(values[root] < values[child])) {
+        return;
+      }
+      const Value rootValue = values[root];
+      values[root]          = values[child];
+      values[child]         = rootValue;
+      root                  = child;
+    }
+  };
+
+  for (int root = size / 2 - 1; root >= 0; root--) {
+    siftDown(root, size);
+  }
+  for (int end = size - 1; end > 0; end--) {
+    const Value largestValue = values[0];
+    values[0]                = values[end];
+    values[end]              = largestValue;
+    siftDown(0, end);
+  }
+}

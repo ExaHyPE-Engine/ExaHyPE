@@ -49,7 +49,9 @@ primitives = """
   const double normalVelocity = Q[Shortcuts::rhoU + normal] * inverseDensity;
   double momentumSquared = 0.0;
   for (int d = 0; d < DIMENSIONS; d++) {
-    momentumSquared += Q[Shortcuts::rhoU + d] * Q[Shortcuts::rhoU + d];
+    const double momentum = Q[Shortcuts::rhoU + d];
+    const double square   = momentum * momentum;
+    momentumSquared += square;
   }
   const double pressure =
     std::max((GAMMA - 1.0) * (Q[Shortcuts::rhoE] - 0.5 * momentumSquared * inverseDensity), 1.0e-12);
@@ -95,16 +97,17 @@ max_eigenvalue = """
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
-    NumberOfFiniteVolumesPerAxisPerPatch,
+    ::exahype2::getVolumeCentresInUnitInterval<PatchSize>(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     2.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    nullptr,
     [](const double* const values) { return values[Shortcuts::rho]; },
     [](const double* const values) {
       double momentumSquared = 0.0;
       for (int d = 0; d < DIMENSIONS; d++) {
-        momentumSquared += values[Shortcuts::rhoU + d] * values[Shortcuts::rhoU + d];
+        const double momentum = values[Shortcuts::rhoU + d];
+        const double square   = momentum * momentum;
+        momentumSquared += square;
       }
       const double density = std::max(values[Shortcuts::rho], 1.0e-12);
       return std::max(

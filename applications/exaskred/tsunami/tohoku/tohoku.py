@@ -80,6 +80,7 @@ aderdg_solver.add_subcell_limiter(
     dmp_relaxation_parameter=10000.0,
     dmp_differences_scaling=10000.0,
 )
+aderdg_solver.initialise_on_host()
 
 project.add_solver(aderdg_solver)
 
@@ -96,31 +97,24 @@ for name, kind, value in (
 
 if args.use_probes:
     probe_particles = project.add_tracer(name="Probe", particle_attributes=4)
-
-    project.add_action_set_to_initialisation(
-        exahype2.particles.InsertTracersByCoordinates(
-            particle_set=probe_particles,
-            coordinates=[
-                [545735.266126, 62716.4740303],
-                [1050678.21, 798352.124],
-            ],
-        )
+    probe_particles.insert_by_coordinates(
+        [
+            [545735.266126, 62716.4740303],
+            [1050678.21, 798352.124],
+        ]
     )
-
+    probe_particles.dump_into_database(
+        filename="Probes", time_delta_between_two_snapshots=10.0, output_precision=17
+    )
     aderdg_solver.trace(
         probe_particles,
-        kernel="::exahype2::dg::projectAllValuesOntoParticle",
+        exahype2.particles.Forces(
+            interpolation_scheme=2,
+            integration_scheme=0,
+            force_method=0,
+            fields_to_interpolate="0,1,2,3",
+        ),
         initialisation=False,
-    )
-
-    project.add_action_set_to_timestepping(
-        exahype2.particles.DumpTracerIntoDatabase(
-            particle_set=probe_particles,
-            solver=aderdg_solver,
-            filename="Probes",
-            time_delta_between_two_snapshots=10.0,
-            output_precision=17,
-        )
     )
 
 project.add_constant("g", 9.81)
@@ -135,5 +129,5 @@ project.add_constant(
 )
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
+project.output.makefile.add_h_file("ADERDGSolver.cpph")
 project.generate_and_build()

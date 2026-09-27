@@ -66,11 +66,10 @@ flux = """
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
-    NumberOfFiniteVolumesPerAxisPerPatch,
+    ::exahype2::getVolumeCentresInUnitInterval<PatchSize>(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    nullptr,
     [](const double* const values) { return 1.0 + values[Shortcuts::rho]; }
   );
 """

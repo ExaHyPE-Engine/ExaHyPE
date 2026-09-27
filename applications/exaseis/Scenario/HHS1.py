@@ -61,7 +61,7 @@ class HHS1(Scenario):
         return """
   tarch::la::Vector<DIMENSIONS, double> ps = _curvi->invertProjection({0., 2., 0.});
 
-  pointSourceLocation[0][0] = ps[0];
-  pointSourceLocation[0][1] = ps[1];
-  pointSourceLocation[0][2] = ps[2];
+  location[0][0] = ps[0];
+  location[0][1] = ps[1];
+  location[0][2] = ps[2];
 """

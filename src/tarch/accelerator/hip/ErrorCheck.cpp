@@ -4,7 +4,8 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
-void tarch::accelerator::hip::checkError(hipError_t code, const char* expr, const char* file, int line) {
+void
+tarch::accelerator::hip::checkError(hipError_t code, const char* expr, const char* file, int line) {
   if (code != hipSuccess) {
     (void)hipDeviceSynchronize();
     (void)hipDeviceReset();
@@ -14,7 +15,8 @@ void tarch::accelerator::hip::checkError(hipError_t code, const char* expr, cons
   }
 }
 
-void tarch::accelerator::hip::checkLastError(const char* file, int line) {
+void
+tarch::accelerator::hip::checkLastError(const char* file, int line) {
   hipError_t code = hipGetLastError();
   if (code != hipSuccess) {
     (void)hipDeviceSynchronize();

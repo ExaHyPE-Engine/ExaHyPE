@@ -16,7 +16,12 @@ set(SOURCES
   UnitTests.cpp
   tests/TestCase.cpp
   tests/TreeTestCaseCollection.cpp
+  tests/AssertionsTest.cpp
+  tests/MemoryUsageTest.cpp
   tests/NonCriticalAssertionsTest.cpp
+  tests/SortTest.cpp
+  tests/SpanTest.cpp
+  tests/TestCaseTest.cpp
 
   database/SnapshotDatabase.cpp
   database/GlobalTimeSeriesDatabase.cpp
@@ -24,12 +29,16 @@ set(SOURCES
 
   accelerator/accelerator.cpp
   accelerator/Device.cpp
+  accelerator/DeviceCopies.cpp
   accelerator/MemoryBlocks.cpp
   accelerator/MemoryLocation.cpp
-  accelerator/tests/AtomicTest.cpp
+  accelerator/Scratch.cpp
+  accelerator/tests/BufferTest.cpp
   accelerator/tests/ChunkedMemoryPoolTest.cpp
+  accelerator/tests/DeviceCopiesTest.cpp
   accelerator/tests/MemoryAllocationTest.cpp
   accelerator/tests/ParallelConstructsTest.cpp
+  accelerator/tests/ScratchTest.cpp
   accelerator/cuda/accelerator.cpp
   accelerator/cuda/Device.cpp
   accelerator/cuda/DevicePropertiesCache.cpp
@@ -47,8 +56,6 @@ set(SOURCES
   accelerator/sycl/accelerator.cpp
   accelerator/sycl/Device.cpp
 
-  la/ExactAccumulator.cpp
-  la/Scalar.cpp
   la/tests/ExactAccumulatorTest.cpp
   la/tests/MatrixTest.cpp
   la/tests/MatrixVectorTest.cpp
@@ -67,19 +74,16 @@ set(SOURCES
   mpi/Collectives.cpp
   mpi/Diagnostics.cpp
   mpi/HelperThread.cpp
-  mpi/PersistentChannel.cpp
   mpi/Rank.cpp
   mpi/Request.cpp
-  mpi/RequestGroup.cpp
   mpi/SerialCommunicationManager.cpp
   mpi/ThreadedCommunicationManager.cpp
   mpi/tests/CommunicationManagerTest.cpp
   mpi/tests/DiagnosticsTest.cpp
   mpi/tests/HelperThreadTest.cpp
-  mpi/tests/PersistentChannelTest.cpp
   mpi/tests/PingPongTest.cpp
   mpi/tests/PollPacingTest.cpp
-  mpi/tests/RequestGroupTest.cpp
+  mpi/tests/RankTest.cpp
 
   tasking/Runtime.cpp
   tasking/FunctorTask.cpp
@@ -90,6 +94,7 @@ set(SOURCES
   plotter/CellDataPlotter.cpp
   plotter/CellPlotter.cpp
   plotter/FileWriter.cpp
+  plotter/Format.cpp
   plotter/HDF5FileWriter.cpp
   plotter/JSONTimeSeriesWriter.cpp
   plotter/NetCDFFileWriter.cpp
@@ -101,6 +106,7 @@ set(SOURCES
   plotter/VTKHDFTimeSeriesWriter.cpp
   plotter/VTUFileWriter.cpp
   plotter/XDMFTimeSeriesWriter.cpp
+  plotter/tests/FormatTest.cpp
   plotter/tests/HDF5FileWriterTest.cpp
   plotter/tests/NetCDFFileWriterTest.cpp
   plotter/tests/VTKHDFFileWriterTest.cpp
@@ -118,16 +124,20 @@ set(SOURCES
   instrumentation/Watch.cpp
 )
 
+set(GPU_SOURCES
+  accelerator/tests/BufferTest.cpp
+  accelerator/tests/ChunkedMemoryPoolTest.cpp
+  accelerator/tests/DeviceCopiesTest.cpp
+  accelerator/tests/ParallelConstructsTest.cpp
+  accelerator/tests/ScratchTest.cpp
+  la/tests/ExactAccumulatorTest.cpp
+)
 if(_peano_gpu_backend STREQUAL "cuda")
   list(APPEND SOURCES accelerator/cuda/tests/ReductionTest.cpp)
-  set_source_files_properties(accelerator/cuda/tests/ReductionTest.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(accelerator/tests/AtomicTest.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(accelerator/cuda/tests/ReductionTest.cpp ${GPU_SOURCES} PROPERTIES LANGUAGE CUDA)
 elseif(_peano_gpu_backend STREQUAL "hip")
   list(APPEND SOURCES accelerator/hip/tests/ReductionTest.cpp)
-  set_source_files_properties(accelerator/hip/tests/ReductionTest.cpp PROPERTIES LANGUAGE HIP)
-  set_source_files_properties(accelerator/tests/AtomicTest.cpp PROPERTIES LANGUAGE HIP)
-  set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE HIP)
+  set_source_files_properties(accelerator/hip/tests/ReductionTest.cpp ${GPU_SOURCES} PROPERTIES LANGUAGE HIP)
 elseif(_peano_gpu_backend STREQUAL "sycl")
   list(APPEND SOURCES accelerator/sycl/tests/ReductionTest.cpp)
 elseif(_peano_gpu_backend STREQUAL "kokkos")

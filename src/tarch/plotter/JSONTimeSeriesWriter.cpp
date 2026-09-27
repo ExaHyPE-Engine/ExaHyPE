@@ -5,7 +5,8 @@
 #include "tarch/Termination.h"
 #include "tarch/mpi/Rank.h"
 
-void tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(
+void
+tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(
   const std::string& outputDirectory,
   const std::string& filename
 ) const {

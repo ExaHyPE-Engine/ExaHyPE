@@ -9,8 +9,8 @@
 
 namespace tarch::accelerator {
   /**
-   * Opaque team handle that binds the team member of the enclosing Kokkos lambda. That member
-   * lives for the whole body of the lambda, so a nested call may copy this handle by value.
+   * Holds the Kokkos team member of the running kernel. The member exists for the whole kernel, so
+   * a nested call may copy this handle by value.
    */
   struct KokkosTeam final {
     using MemberType = Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>::member_type;

@@ -8,7 +8,8 @@ namespace {
   constexpr double K0  = Rho * C * C; // bulk modulus
 } // namespace
 
-void tutorials::exahype2::acoustic::ADERDGSolver::initialCondition(
+void
+tutorials::exahype2::acoustic::ADERDGSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize
@@ -18,7 +19,8 @@ void tutorials::exahype2::acoustic::ADERDGSolver::initialCondition(
   Q[Shortcuts::v + 1] = 0.0;
 }
 
-void tutorials::exahype2::acoustic::ADERDGSolver::boundaryConditions(
+void
+tutorials::exahype2::acoustic::ADERDGSolver::boundaryConditions(
   const double* const NOALIAS                  Qinside,
   double* const NOALIAS                        Qoutside,
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
@@ -31,7 +33,8 @@ void tutorials::exahype2::acoustic::ADERDGSolver::boundaryConditions(
   Qoutside[Shortcuts::v + 1] = 0.0;
 }
 
-double tutorials::exahype2::acoustic::ADERDGSolver::maxEigenvalue(
+double
+tutorials::exahype2::acoustic::ADERDGSolver::maxEigenvalue(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -42,7 +45,8 @@ double tutorials::exahype2::acoustic::ADERDGSolver::maxEigenvalue(
   return C;
 }
 
-void tutorials::exahype2::acoustic::ADERDGSolver::flux(
+void
+tutorials::exahype2::acoustic::ADERDGSolver::flux(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -57,7 +61,8 @@ void tutorials::exahype2::acoustic::ADERDGSolver::flux(
   F[Shortcuts::v + normal] = Q[Shortcuts::p] / Rho;
 }
 
-void tutorials::exahype2::acoustic::ADERDGSolver::pointSource(
+void
+tutorials::exahype2::acoustic::ADERDGSolver::pointSource(
   const double* const NOALIAS Q,
   const double* const         x,
   const double                t,
@@ -76,7 +81,8 @@ void tutorials::exahype2::acoustic::ADERDGSolver::pointSource(
     PulseAmplitude * std::exp(-(t - PulsePeakTime) * (t - PulsePeakTime) / (2.0 * PulseWidth * PulseWidth));
 }
 
-void tutorials::exahype2::acoustic::ADERDGSolver::initPointSourceLocations(
+void
+tutorials::exahype2::acoustic::ADERDGSolver::initPointSourceLocations(
   double location[NumberOfPointSources][DIMENSIONS]
 ) {
   location[0][0] = -0.7;

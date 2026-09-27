@@ -40,14 +40,18 @@ class IncludeConventionTest(unittest.TestCase):
             [(1, 'includes "../riemannSolvers/Routines.h" through a parent directory')],
         )
 
-    def test_an_inline_definition_file_includes_nothing_and_holds_no_pragma_once(self):
+    def test_an_inline_definition_file_includes_headers_by_their_full_path(self):
+        text = '#include "tarch/A.h"\n#include "A.h"\n'
+        self.assertEqual(
+            messages("/repo/src/tarch/Foo.cpph", text),
+            [(2, 'spells "A.h" without its path from src')],
+        )
+
+    def test_an_inline_definition_file_holds_no_pragma_once(self):
         text = '#pragma once\n#include "tarch/A.h"\n'
         self.assertEqual(
             messages("/repo/src/tarch/Foo.cpph", text),
-            [
-                (2, "an inline definition file includes a header"),
-                (0, "an inline definition file holds a #pragma once"),
-            ],
+            [(0, "an inline definition file holds a #pragma once")],
         )
 
     def test_a_header_without_pragma_once_is_reported(self):

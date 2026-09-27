@@ -11,10 +11,11 @@ namespace {
 } // namespace
 
 /**
- * Records that this rank winds the run down. The first violation wins the exchange and writes the
- * error, every later one writes a debug message.
+ * Records the rank of the first violated non-critical assertion. The first violation writes the
+ * error, and every later one writes a debug message.
  */
-void tarch::triggerNonCriticalAssertion(
+void
+tarch::triggerNonCriticalAssertion(
   const std::string& file,
   const int          line,
   const std::string& expression,
@@ -30,21 +31,28 @@ void tarch::triggerNonCriticalAssertion(
 
   logError("A non-critical assertion failed in (" << file << ":" << line << "): " << expression);
   logError(parameterValuePairs);
-  logError("The application will dump the solution and shut down.");
+  logError("The application will write its output and shut down.");
 }
 
-bool tarch::hasNonCriticalAssertionBeenViolated() { return rankWhichHasSetNonCriticalAssertion.load() >= 0; }
+bool
+tarch::hasNonCriticalAssertionBeenViolated() {
+  return rankWhichHasSetNonCriticalAssertion.load() >= 0;
+}
 
 /**
  * Returns the rank that raised a non-critical assertion, or -1 if no rank raised one.
  */
-int tarch::getNonCriticalAssertionRank() { return rankWhichHasSetNonCriticalAssertion.load(); }
+int
+tarch::getNonCriticalAssertionRank() {
+  return rankWhichHasSetNonCriticalAssertion.load();
+}
 
 /**
  * Adopts a non-critical assertion that another rank raised. A rank that has raised one of its own
  * keeps its own value, and passing -1 leaves the value untouched.
  */
-void tarch::adoptNonCriticalAssertionRank(const int rank) {
+void
+tarch::adoptNonCriticalAssertionRank(const int rank) {
   int expected = -1;
   rankWhichHasSetNonCriticalAssertion.compare_exchange_strong(expected, rank);
 }

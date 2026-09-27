@@ -172,7 +172,7 @@ class NavierStokes(Equation):
         return self.eigenvalue_functions() + """
     // The ADER-DG solver takes the order factor from PNPM, the RKDG solver
     // from the Cockburn-Shu bound of the Runge-Kutta order.
-    {% if FAMILY == "ader" %}
+    {% if SOLVER_FAMILY == "ader" %}
     constexpr double orderFactor = PNPM;
     {% else %}
     constexpr double orderFactor = 1.0 / (2.0 * RKOrder - 1.0);
@@ -409,7 +409,7 @@ class NavierStokes(Equation):
       constexpr int faceSize = (DGOrder+1);
 #endif
 
-  const auto* const faceWeights = kernels::{{SOLVER_NAME}}::Quadrature<FaceValue>::QuadratureWeightsOnFace;
+  const auto faceWeights = Quadrature<FaceValue>::getQuadratureWeightsOnFace();
   for (int xy = 0; xy < faceSize; xy++) {
     for (int n = 0; n < strideQ; n++) {
       QavL[n] += faceWeights[xy] * QL[xy * strideQ + n];
@@ -422,13 +422,13 @@ class NavierStokes(Equation):
             + """
 
   auto smax = std::fmax(
-    maxEval(&QavL[0], direction),
-    maxEval(&QavR[0], direction)
+    maxEval(&QavL[0], normal),
+    maxEval(&QavR[0], normal)
   );
 
-  const auto factor = 2 * (2 * DGOrder + 1) / (h[direction] * std::sqrt(0.5 * std::numbers::pi));
+  const auto factor = 2 * (2 * DGOrder + 1) / (h[normal] * std::sqrt(0.5 * std::numbers::pi));
   smax += factor*std::fmax(
-    diffusiveEval(&QavL[0], direction), diffusiveEval(&QavR[0], direction)
+    diffusiveEval(&QavL[0], normal), diffusiveEval(&QavR[0], normal)
   );
 
   for (int xy = 0; xy < faceSize; xy++) {
@@ -438,5 +438,6 @@ class NavierStokes(Equation):
     }
   }
   std::copy_n(FL, faceSize*NumberOfUnknowns, FR);
+  return smax;
 """
         )

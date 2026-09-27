@@ -8,7 +8,11 @@
 namespace tarch::tests {
   class TestCase;
 
+  /** Units in the last place by which two compilers may round one computation apart. */
+  constexpr int MaxUnitsInTheLastPlace = 16;
+
   std::filesystem::path getWritableTestDirectory();
+  double getToleranceInUnitsInTheLastPlace(const std::vector<double>& reference);
 } // namespace tarch::tests
 
 /**

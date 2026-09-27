@@ -2,13 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/Enumeration.h"
-#include "exahype2/fv/EigenvalueStatistics.h"
-#include "exahype2/fv/PatchUtils.h"
 #include "peano4/Constants.h"
-#include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::fv::reconstruction {
@@ -36,7 +32,8 @@ struct exahype2::fv::reconstruction::Constant final {
     bool EvaluateCustomRiemann,
     bool EvaluateMaxEigenvalue,
     typename StoragePrecision,
-    typename ComputePrecision>
+    typename ComputePrecision
+  >
   INLINE_METHOD GPU_CALLABLE_METHOD static void accumulateFluxDivergence(
     const StoragePrecision* NOALIAS              inputPatch,
     const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
@@ -49,6 +46,7 @@ struct exahype2::fv::reconstruction::Constant final {
     const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
     double                                       timeStamp,
     double                                       timeStepSize,
+    int                                          boundaryFaces,
     StoragePrecision* NOALIAS                    outputState,
     double&                                      maxEigenvalueAfterTimeStep
   );

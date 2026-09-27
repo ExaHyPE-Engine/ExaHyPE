@@ -72,6 +72,7 @@ aderdg_solver.set_pde_terms(
     physical_admissibility=True,
 )
 aderdg_solver.add_subcell_limiter(exahype2.fv.Godunov())
+aderdg_solver.initialise_on_host()
 
 project.add_solver(aderdg_solver)
 
@@ -90,5 +91,5 @@ project.add_constant("g", 9.81)
 project.add_constant("hThreshold", 1e-5)
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
+project.output.makefile.add_h_file("ADERDGSolver.cpph")
 project.generate_and_build()

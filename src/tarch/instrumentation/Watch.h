@@ -21,7 +21,7 @@ namespace tarch::instrumentation {
  * also stop the watch explicitly and retrieve the elapsed CPU and wall clock
  * time through the getters.
  *
- * @author  Tobias Weinzierl, Tobias Neckel
+ * @author Tobias Weinzierl, Tobias Neckel
  */
 class tarch::instrumentation::Watch {
 private:
@@ -56,7 +56,7 @@ private:
   std::chrono::steady_clock::duration _elapsedTime;
 
   /**
-   * Is the watch currently running?
+   * Is the watch running?
    */
   bool _isRunning;
 
@@ -102,18 +102,7 @@ public:
   double getCPUTime() const;
 
   /**
-   * Equals getCPUTime() but returns the clock ticks instead of the time in
-   * seconds.
-   */
-  std::clock_t getCPUTicks() const;
-
-  /**
    * @return Elapsed calendar time in seconds
    */
   double getCalendarTime() const;
-
-  /**
-   * @return Whether the watch is currently running
-   */
-  bool isOn() const;
 };

@@ -94,15 +94,9 @@ tracers = project.add_tracer(
             "d": 1,
         }
     },
-    solver=fv_solver,
 )
 
-init_tracers = exahype2.particles.InsertTracersByCoordinates(
-    particle_set=tracers,
-    coordinates=[[0.9, 0.5, 0.0], [0.5, 0.9, 0.0], [0.7, 0.8, 0.0]],
-)
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
+tracers.insert_by_coordinates([[0.9, 0.5, 0.0], [0.5, 0.9, 0.0], [0.7, 0.8, 0.0]])
 
 # The fluid velocity becomes the tracer velocity and an explicit Euler step
 # moves the tracer with it; no force acts on the tracer.

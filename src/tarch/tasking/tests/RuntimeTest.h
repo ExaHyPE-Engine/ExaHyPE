@@ -21,5 +21,5 @@ public:
 
 private:
   void testRuntimeProperties();
-  void testWaitPolicyOfRanksOnOneNode();
+  void testWaitPolicyOfOversubscribedNode();
 };

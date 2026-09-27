@@ -92,7 +92,6 @@ fv_solver = exahype2.fv.Solver(
 
 fv_solver.set_pde_terms(
     initial_condition=initial_conditions,
-    boundary_conditions=True,
     flux=flux,
     max_eigenvalue=max_eigenvalue,
     analytical_solution=analytical_solution,

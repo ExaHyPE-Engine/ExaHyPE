@@ -35,8 +35,8 @@ private:
   bool       _stdoutSupportsAnsi{false};
   bool       _stderrSupportsAnsi{false};
 
-  static bool        streamSupportsAnsi(const int fileDescriptor);
-  static const char* getAnsiPrefix(const TerminalStyle terminalStyle);
+  static bool streamSupportsAnsi(const int fileDescriptor);
+  static const char* getANSIPrefix(const TerminalStyle terminalStyle);
 
   void configureOutputStreams();
 

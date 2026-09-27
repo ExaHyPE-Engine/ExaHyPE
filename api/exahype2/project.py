@@ -10,11 +10,8 @@ import re
 import subprocess
 import sys
 
-import exahype2.actionsets
 import exahype2.codegen
-import exahype2.datamodel
 import exahype2.particles
-import exahype2.plotter
 
 from .log import log
 from .log import setup_logging
@@ -56,7 +53,6 @@ class Project:
             )
 
         self.namespace = list(namespace)
-        self.namespaces = [self.namespace]
         self.project_name = project_name
         self.directory = directory
         self._dimensions = dimensions
@@ -74,31 +70,14 @@ class Project:
         )
 
         self.output = exahype2.codegen.Output()
-        self.datamodel = exahype2.datamodel.Model(self.namespace)
-        self.solversteps = exahype2.actionsets.Steps(self)
-        self.create_grid = exahype2.actionsets.Step("CreateGrid", False)
-        self.init_grid = exahype2.actionsets.Step("InitGrid", False)
-        self.plot_solution = exahype2.actionsets.Step("PlotSolution", False)
-        self.perform_time_step = exahype2.actionsets.Step("TimeStep", False)
-        self.dynamic_amr = exahype2.actionsets.Step("DynamicAMR", False)
-        for step in (
-            self.create_grid,
-            self.init_grid,
-            self.plot_solution,
-            self.perform_time_step,
-            self.dynamic_amr,
-        ):
-            self.solversteps.add_step(step)
         self.main = Main(self)
         self.output.makefile.set_executable_name(executable)
 
         self._solvers = []
+        self._couplings = []
         self._solver_set_generated = False
         self._runtime_parameters = []
         self._constants = {}
-        self._tracer_particles = []
-        self._tracer_particle_sets = []
-        self._solver_tracers = []
         self._makefile_configured = False
         self.is_built = False
         self.build_was_successful = False
@@ -154,18 +133,12 @@ class Project:
                 default=False,
                 help="Enable verbose (debug) logging during code generation.",
             )
-            parser.add_argument(
-                "--plot-format",
-                choices=exahype2.plotter.SUPPORTED_FORMATS,
-                default=None,
-                help="Output file format for all solver plotters; defaults to vtkhdf unless the application selects another.",
-            )
             Project._arguments, _ = parser.parse_known_args()
         return Project._arguments
 
     def __str__(self):
-        return (
-            "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
+        return "Project(name={}, solvers={})".format(
+            self.project_name, [solver.name for solver in self._solvers]
         )
 
     @property
@@ -216,6 +189,44 @@ class Project:
         self._solvers.append(solver)
         return solver
 
+    def add_tracer(self, name, particle_attributes):
+        """Returns a tracer set; a solver moves it through ``Solver.trace``."""
+        return exahype2.particles.Tracers(name, particle_attributes)
+
+    def couple(self, first, second):
+        """Couples two ADER-DG solvers of this project across the faces between the cells
+        their ``restrict_to_cells`` predicates own; ``first`` drives the time steps of both.
+        """
+        for solver in (first, second):
+            if solver not in self._solvers:
+                raise ValueError(
+                    "[{}] belongs to the project before it is coupled.".format(
+                        solver.name
+                    )
+                )
+            if not hasattr(solver, "coupling_matrix_from"):
+                raise ValueError(
+                    "[{}] is not an ADER-DG solver and cannot be coupled.".format(
+                        solver.name
+                    )
+                )
+            if not solver.owns_cells:
+                raise ValueError(
+                    "[{}] restricts itself to cells before it is coupled.".format(
+                        solver.name
+                    )
+                )
+        if first is second:
+            raise ValueError("[{}] cannot couple with itself.".format(first.name))
+        if first.state.number_of_values != second.state.number_of_values:
+            raise ValueError(
+                "[{}] and [{}] carry different numbers of values per node.".format(
+                    first.name, second.name
+                )
+            )
+        self._couplings.append((first, second))
+        return self
+
     def add_constant(self, name, value, cpp_type="double"):
         """Inserts ``value`` as a C++ expression into ``Constants.h``.
 
@@ -223,27 +234,9 @@ class Project:
         """
         self._constants[name] = {"name": name, "value": str(value), "type": cpp_type}
 
-    def add_action_set_to_timestepping(self, action_set):
-        self.perform_time_step.add_action_set(action_set)
-
-    def add_action_set_to_plot_solution(self, action_set):
-        self.plot_solution.add_action_set(action_set)
-
-    def add_action_set_to_initialisation(self, action_set):
-        self.init_grid.add_action_set(action_set)
-
-    def add_action_set_to_create_grid(self, action_set):
-        self.create_grid.add_action_set(action_set)
-
-    def use_data_in_step(self, step):
-        """Adds the data of every solver and tracer to a step the script registers afterwards."""
-        for solver in self._solvers:
-            solver.use_data_in_step(step)
-        for tracer_set in self._tracer_particle_sets:
-            step.use_vertex(tracer_set)
-
     def add_runtime_parameter(self, name, parameter_type, default_value):
-        """Registers a parameter the executable reads from config.json and the command line."""
+        """Registers a parameter the executable reads from config.json and the command line. The
+        generated RuntimeParameters::<name>() returns it."""
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
             raise ValueError(
                 f"Invalid runtime parameter name '{name}'. Use a valid C++ identifier."
@@ -302,7 +295,6 @@ class Project:
                     f"Runtime parameter '{name}' expects finite default values."
                 )
 
-        accessor_name = "get" + name[0].upper() + name[1:]
         scalar_cpp_type = {
             "double": "double",
             "int": "int",
@@ -311,42 +303,29 @@ class Project:
         }[base_type]
         if is_array:
             cpp_type = f"tarch::la::Vector<{array_size}, {scalar_cpp_type}>"
-            literal = (
-                "{"
-                + ", ".join(
-                    (
-                        repr(float(value))
-                        if base_type == "double"
-                        else (
-                            str(value)
-                            if base_type == "int"
-                            else "true" if value else "false"
-                        )
+            literal = ", ".join(
+                (
+                    repr(float(value))
+                    if base_type == "double"
+                    else (
+                        str(value)
+                        if base_type == "int"
+                        else "true" if value else "false"
                     )
-                    for value in default_value
                 )
-                + "}"
+                for value in default_value
             )
-            getter = {
-                "double": "getDoubleArray",
-                "int": "getIntegerArray",
-                "bool": "getBooleanArray",
-            }[base_type]
             return_type = cpp_type
         else:
             cpp_type = scalar_cpp_type
             if base_type == "double":
                 literal = repr(float(default_value))
-                getter = "getDouble"
             elif base_type == "int":
                 literal = str(default_value)
-                getter = "getInteger"
             elif base_type == "bool":
                 literal = "true" if default_value else "false"
-                getter = "getBoolean"
             else:
                 literal = json.dumps(default_value)
-                getter = "getString"
             return_type = cpp_type
 
         self._runtime_parameters = [
@@ -357,162 +336,13 @@ class Project:
         self._runtime_parameters.append(
             {
                 "name": name,
-                "accessor_name": accessor_name,
                 "cpp_type": cpp_type,
                 "return_type": return_type,
                 "is_array": is_array,
+                "is_string": base_type == "string",
                 "array_size": array_size,
-                "base_type": base_type,
-                "scalar_cpp_type": scalar_cpp_type,
                 "default_value": literal,
-                "getter": getter,
             }
-        )
-
-    def add_tracer(
-        self,
-        name,
-        particle_attributes,
-        sort_descend_invocation_order_within_action_sets=-1,
-        plot_descend_invocation_order_within_action_sets=65536,
-        solver=None,
-    ):
-        """Returns a particle set owned by ``solver`` or the project.
-
-        A solver sorts its particles after its own action sets.
-        The project sorts unassigned particles during initialisation and time stepping.
-        """
-        particle = exahype2.particles.Particle(name)
-        if isinstance(particle_attributes, dict):
-            particle_unknowns = sum(particle_attributes["unknowns"].values())
-            self._generate_particle_shortcuts(name, particle_attributes["unknowns"])
-        elif isinstance(particle_attributes, int):
-            particle_unknowns = particle_attributes
-        else:
-            raise TypeError("particle_attributes is an integer or a dictionary.")
-
-        particle.add_attribute(
-            exahype2.datamodel.DoubleArray("data", str(particle_unknowns))
-        )
-        particle.add_attribute(
-            exahype2.datamodel.Enumeration("moveState", ["NotMovedYet", "Moved"])
-        )
-        particle.add_attribute(exahype2.datamodel.IntegerArray("number", "2"))
-
-        particle.configure(self.namespace, exahype2.datamodel.DoFAssociation.Global)
-        particle_set = exahype2.particles.ParticleSet(particle)
-        association = exahype2.particles.UpdateParticleGridAssociationLiftDrop(
-            particle_set
-        )
-        association.descend_invocation_order = (
-            sort_descend_invocation_order_within_action_sets
-        )
-        parallel_state = exahype2.particles.UpdateParallelState(particle_set)
-        parallel_state.descend_invocation_order = (
-            sort_descend_invocation_order_within_action_sets
-        )
-
-        if solver is None:
-            self.datamodel.add_global_object(particle)
-            self.datamodel.add_vertex(particle_set)
-            for step in self._steps_with_particles():
-                step.use_vertex(particle_set)
-            self.init_grid.add_action_set(
-                exahype2.particles.UpdateParticleGridAssociationLiftDrop(particle_set)
-            )
-            self.perform_time_step.add_action_set(association)
-            self.perform_time_step.add_action_set(parallel_state)
-        else:
-            self._solver_tracers.append(
-                {
-                    "solver": solver,
-                    "particle": particle,
-                    "particle_set": particle_set,
-                    "unknowns": particle_unknowns,
-                    "association": association,
-                    "parallel_state": parallel_state,
-                    "plot_order": plot_descend_invocation_order_within_action_sets,
-                }
-            )
-
-        self._tracer_particles.append(particle)
-        self._tracer_particle_sets.append(particle_set)
-        return particle_set
-
-    def _tracers_of(self, solver):
-        return [tracer for tracer in self._solver_tracers if tracer["solver"] is solver]
-
-    def _steps_with_particles(self):
-        """Returns the steps that store particle sets.
-
-        The dynamic mesh refinement step runs no particle action set. The particle assignment
-        checks do not record the vertex copies that the regrid of this step makes between
-        subtree tasks.
-        """
-        return (
-            self.plot_solution,
-            self.init_grid,
-            self.perform_time_step,
-            self.create_grid,
-        )
-
-    def _add_solver_tracer_actions(self, tracer):
-        """Sorts the particles of a solver's tracer into the grid after the solver's action sets
-        and plots them with the solution."""
-        # NetCDF has no point-cloud representation, so the particle plotter writes HDF5 whenever
-        # NetCDF is the solver's output format. The number identifies a particle across layouts.
-        particle_file_format = exahype2.plotter.get_default_format()
-        if particle_file_format == "netcdf":
-            particle_file_format = "hdf5"
-        unknowns = tracer["unknowns"]
-        particle_plotter = exahype2.plotter.ParticlePlotter(
-            filename=tracer["particle"].name,
-            particle_set=tracer["particle_set"],
-            description="description",
-            time_stamp_evaluation="0.5 * (repositories::getMinTimeStamp() + repositories::getMaxTimeStamp())",
-            file_format=particle_file_format,
-            attributes=[
-                ("Number", 2, "p->getNumber()"),
-                ("Data", unknowns, "p->getData().data(), " + str(unknowns)),
-            ],
-        )
-        particle_plotter.descend_invocation_order = tracer["plot_order"]
-        for step in (self.init_grid, self.perform_time_step):
-            step.add_action_set(tracer["association"])
-            step.add_action_set(tracer["parallel_state"])
-        self.plot_solution.add_action_set(particle_plotter)
-        self.plot_solution.add_action_set(tracer["association"])
-        self.plot_solution.add_action_set(tracer["parallel_state"])
-
-    def _add_action_sets(self, action_sets_per_step):
-        for step_name, action_sets in action_sets_per_step.items():
-            for action_set in action_sets:
-                getattr(self, step_name).add_action_set(action_set)
-
-    def _generate_particle_shortcuts(self, name, unknowns):
-        positions = [0]
-        for count in unknowns.values():
-            positions.append(positions[-1] + count)
-        self.output.add(
-            exahype2.codegen.TemplatedFile(
-                os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)),
-                    "VariableShortcuts.h.jinja2",
-                ),
-                None,
-                "VariableShortcuts" + name,
-                self.namespace,
-                ".",
-                {
-                    "VARIABLE_NAMES": list(unknowns.keys()),
-                    "VARIABLE_POSITIONS": positions,
-                    "SOLVER_NAME": name,
-                },
-                True,
-            )
-        )
-        self.output.makefile.add_h_file(
-            "VariableShortcuts" + name + ".h", generated=True
         )
 
     def _generate_constants(self):
@@ -524,7 +354,7 @@ class Project:
                 None,
                 "Constants",
                 self.namespace,
-                ".",
+                "",
                 {
                     "CONSTANTS": list(self._constants.values()),
                     "DOMAIN_OFFSET": self.domain_offset_initialiser,
@@ -540,21 +370,10 @@ class Project:
         template_directory = os.path.dirname(os.path.realpath(__file__))
         dictionary = {
             "RUNTIME_PARAMETERS": self._runtime_parameters,
-            "HAS_RUNTIME_PARAMETERS": len(self._runtime_parameters) > 0,
             "HAS_ARRAY_RUNTIME_PARAMETERS": any(
                 parameter["is_array"] for parameter in self._runtime_parameters
             ),
         }
-        for base_type, key in (
-            ("double", "HAS_DOUBLE_RUNTIME_PARAMETERS"),
-            ("int", "HAS_INTEGER_RUNTIME_PARAMETERS"),
-            ("bool", "HAS_BOOLEAN_RUNTIME_PARAMETERS"),
-            ("string", "HAS_STRING_RUNTIME_PARAMETERS"),
-        ):
-            dictionary[key] = any(
-                parameter["base_type"] == base_type
-                for parameter in self._runtime_parameters
-            )
         self.output.add(
             exahype2.codegen.TemplatedFile(
                 os.path.join(template_directory, "RuntimeParameters.h.jinja2"),
@@ -565,49 +384,49 @@ class Project:
                 dictionary,
             )
         )
+        self.output.add(
+            exahype2.codegen.TemplatedFile(
+                os.path.join(template_directory, "RuntimeParameters.cpph.jinja2"),
+                None,
+                "RuntimeParameters",
+                self.namespace,
+                "",
+                dictionary,
+            )
+        )
         self.output.makefile.add_h_file("RuntimeParameters.h", generated=True)
+        self.output.makefile.add_h_file("RuntimeParameters.cpph", generated=True)
         self.output.makefile.add_cpp_file("RuntimeParameters.cpp", generated=True)
 
     def _solver_repository_dictionary(self):
-        """A solver without a refinement criterion never submits an erase request, so only a
-        solver with one counts towards the coarsening consensus."""
-        tracers = []
-        for particle in self._tracer_particles:
-            if particle.name not in tracers:
-                tracers.append(particle.name)
-        project_tracers = list(tracers)
-        solvers = []
-        for solver in self._solvers:
-            solver_tracers = []
-            for tracer in self._tracers_of(solver):
-                particle_name = tracer["particle"].name
-                if particle_name not in solver_tracers:
-                    solver_tracers.append(particle_name)
-                if particle_name in project_tracers:
-                    project_tracers.remove(particle_name)
-            solvers.append(
+        return {
+            "SOLVERS": [
                 (
                     solver.name,
                     solver.instance_name,
-                    solver_tracers,
                     [
                         (str(label), str(value))
                         for label, value in solver.statistics_metadata()
                     ],
+                    bool(solver.dictionary["TRACERS"]),
                 )
-            )
-        amr_participants = sum(
-            1
-            for solver in self._solvers
-            if solver.pde_terms.is_set("refinement_criterion")
-        )
-        return {
-            "SOLVERS": solvers,
-            "TRACERS": tracers,
-            "PROJECT_TRACERS": project_tracers,
-            "NUMBER_OF_AMR_PARTICIPANTS": max(amr_participants, 1),
-            "DOMAIN_OFFSET": self.domain_offset_initialiser,
-            "DOMAIN_SIZE": self.domain_size_initialiser,
+                for solver in self._solvers
+            ],
+            "COUPLINGS": [
+                {
+                    "FIRST": first.instance_name,
+                    "SECOND": second.instance_name,
+                    "FROM_SECOND": first.coupling_matrix_from(second),
+                    "FROM_FIRST": second.coupling_matrix_from(first),
+                }
+                for first, second in self._couplings
+                if first in self._solvers and second in self._solvers
+            ],
+            "SOLVER_HEADERS": sorted(
+                header
+                for solver in self._solvers
+                for header in (solver.name + ".h", solver.name + "PDETerms.h")
+            ),
         }
 
     def _generate_solver_repository(self):
@@ -617,13 +436,14 @@ class Project:
                 os.path.join(template_directory, "SolverRepository.h.jinja2"),
                 os.path.join(template_directory, "SolverRepository.cpp.jinja2"),
                 "SolverRepository",
-                self.namespace + ["repositories"],
-                "repositories",
+                self.namespace,
+                "",
                 self._solver_repository_dictionary(),
             )
         )
+        self.output.makefile.add_h_file("SolverRepository.h", generated=True)
         self.output.makefile.add_cpp_file(
-            "repositories/SolverRepository.cpp", generated=True
+            "SolverRepository.cpp", generated=True, is_gpu_kernel=True
         )
 
     @staticmethod
@@ -631,17 +451,6 @@ class Project:
         return fallback if value is None else str(value)
 
     def _configure_main(self):
-        repository = "::" + "::".join(self.namespace) + "::repositories"
-        for step, phase in (
-            (self.create_grid, "GridConstructionStep"),
-            (self.init_grid, "GridInitialisationStep"),
-            (self.plot_solution, "PlottingStep"),
-            (self.perform_time_step, "TimeStep"),
-            (self.dynamic_amr, "DynamicMeshRefinementStep"),
-        ):
-            step.runner_start_hook = repository + "::start" + phase + "();"
-            step.runner_finish_hook = repository + "::finish" + phase + "();"
-
         # A non-increasing interval uses the minimum stamp as its sole completion criterion.
         max_terminal_time = self._max_terminal_time
         if (
@@ -670,6 +479,8 @@ class Project:
     def _generate(self):
         """Writes every generated file; the project state is put back afterwards, so a second
         call generates the same files again."""
+        if not self._solvers:
+            raise ValueError("The project has no solver.")
         self._solver_set_generated = True
         self.output.makefile.parse_configuration_outcome()
         self._makefile_configured = True
@@ -683,71 +494,15 @@ class Project:
             list(self.output.makefile.generated_fortranfiles),
             list(self.output.makefile.generated_gpu_cppfiles),
         )
-        pre_generation_datamodel = (
-            list(self.datamodel.cell_data),
-            list(self.datamodel.face_data),
-            list(self.datamodel.vertex_data),
-            list(self.datamodel.global_data),
-        )
-        pre_generation_steps = {
-            step: (
-                list(step.cell_data),
-                list(step.face_data),
-                list(step.vertex_data),
-                list(step.action_sets),
-            )
-            for step in self.solversteps._steps
-        }
 
         try:
-            steps = (
-                self.create_grid,
-                self.plot_solution,
-                self.perform_time_step,
-                self.init_grid,
-                self.dynamic_amr,
-            )
-            for tracer in self._solver_tracers:
-                if not any(tracer["solver"] is solver for solver in self._solvers):
-                    raise ValueError(
-                        "The solver of the tracer {} is not part of the project.".format(
-                            tracer["particle"].name
-                        )
-                    )
             for solver in self._solvers:
                 log.debug("Prepare solver %s.", solver.name)
                 solver.build(self)
-                solver.register_data(self.datamodel)
-                for tracer in self._tracers_of(solver):
-                    self.datamodel.add_global_object(tracer["particle"])
-                    self.datamodel.add_vertex(tracer["particle_set"])
-                for step in steps:
-                    solver.use_data_in_step(step)
-                for step in self._steps_with_particles():
-                    for tracer in self._tracers_of(solver):
-                        step.use_vertex(tracer["particle_set"])
-            # The insertion order decides the order of action sets of equal descend order, so
-            # the tracings enter every sweep before the solvers' action sets.
-            for solver in self._solvers:
-                self._add_action_sets(solver.tracing_action_sets_per_step())
-            for solver in self._solvers:
-                self._add_action_sets(solver.action_sets_per_step())
-                for tracer in self._tracers_of(solver):
-                    self._add_solver_tracer_actions(tracer)
 
             self._generate_constants()
             self._generate_solver_repository()
             self._configure_main()
-
-            for step in self.solversteps._steps:
-                for action_set in step.action_sets:
-                    if isinstance(action_set, exahype2.plotter.BasePlotter):
-                        action_set.set_available_formats(
-                            self.output.makefile.available_plot_formats
-                        )
-
-            self.datamodel.construct_output(self.output)
-            self.solversteps.construct_output(self.output)
             self._generate_runtime_parameters()
             self.main.construct_output(self.output, self.project_name + "-main")
 
@@ -763,22 +518,6 @@ class Project:
                 self.output.makefile.generated_fortranfiles,
                 self.output.makefile.generated_gpu_cppfiles,
             ) = pre_generation_generated_files
-            (
-                self.datamodel.cell_data,
-                self.datamodel.face_data,
-                self.datamodel.vertex_data,
-                self.datamodel.global_data,
-            ) = pre_generation_datamodel
-            for step, (
-                cell_data,
-                face_data,
-                vertex_data,
-                action_sets,
-            ) in pre_generation_steps.items():
-                step.cell_data = cell_data
-                step.face_data = face_data
-                step.vertex_data = vertex_data
-                step.action_sets = action_sets
 
     def _run_cmake(self, command, environment, action):
         process = subprocess.Popen(
@@ -881,8 +620,6 @@ class Project:
         )
         self.is_built = False
         arguments = Project._parse_arguments()
-        if arguments.plot_format is not None:
-            exahype2.plotter.set_default_format(arguments.plot_format)
         self._generate()
         if not arguments.generate_only:
             self._build()

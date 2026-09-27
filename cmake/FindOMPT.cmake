@@ -6,6 +6,7 @@ set(OMPT_FOUND "${OpenMP_FOUND}")
 
 if(TARGET PeanoOptions)
   set(OFFLOADING_FLAGS "")
+  set(OFFLOADING_COMPILE_FLAGS "")
   if(NOT DEFINED PEANO_WITH_GPU_ARCH OR "${PEANO_WITH_GPU_ARCH}" STREQUAL "none")
     message(FATAL_ERROR "PEANO_WITH_GPU_ARCH must be set to one of: sm_<cc>, gfx<arch>, spir64")
   endif()
@@ -18,6 +19,13 @@ if(TARGET PeanoOptions)
     elseif(PEANO_WITH_GPU_VENDOR STREQUAL "intel")
       set(OFFLOADING_FLAGS -fopenmp-targets=spir64)
     endif()
+    # A local of a device function stays private to its thread, so a team kernel keeps the data its
+    # threads exchange in omp_pteam_mem_alloc memory.
+    list(APPEND OFFLOADING_COMPILE_FLAGS -fopenmp-cuda-mode)
+    # The OpenMP optimiser needs more iterations than its default for the ADER-DG predictor kernel.
+    list(APPEND OFFLOADING_COMPILE_FLAGS -mllvm=-openmp-opt-max-iterations=1024)
+    # A remark names a variable the OpenMP optimiser leaves in team memory or a kernel it cannot optimise.
+    list(APPEND OFFLOADING_COMPILE_FLAGS -Rpass-missed=openmp-opt -Rpass-analysis=openmp-opt)
 
   elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
     message(FATAL_ERROR
@@ -45,8 +53,11 @@ if(TARGET PeanoOptions)
   endif()
 
   target_link_libraries(PeanoOptions INTERFACE OpenMP::OpenMP_CXX)
-  target_compile_options(PeanoOptions INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_FLAGS}>)
+  target_compile_options(PeanoOptions INTERFACE
+    $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_FLAGS}>
+    $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_COMPILE_FLAGS}>
+  )
   target_link_options(PeanoOptions INTERFACE ${OFFLOADING_FLAGS} ${OpenMP_CXX_FLAGS})
-  message(STATUS "Using OMPT offloading flags: ${OFFLOADING_FLAGS}")
+  message(STATUS "Using OMPT offloading flags: ${OFFLOADING_FLAGS} ${OFFLOADING_COMPILE_FLAGS}")
   target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_OMPT PEANO_WITH_GPU_BACKEND)
 endif()

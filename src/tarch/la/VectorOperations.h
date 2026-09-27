@@ -2,9 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/la/ScalarOperations.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
+TARGET_DECLARE
 template <int Size, typename Scalar>
 std::string toString(const tarch::la::Vector<Size, Scalar>& vector);
 
@@ -21,6 +23,10 @@ namespace tarch::la {
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm2(const Vector<Size, Scalar>& vector);
 
+  /**
+   * Every square is rounded on its own before it enters the sum, so a vector and the vector with
+   * its first two components swapped return the same value bitwise.
+   */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar norm2Squared(const Vector<Size, Scalar>& vector);
   template <typename Scalar>
@@ -176,9 +182,6 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD int isEntryFinite(const Vector<3, Scalar>& vector);
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD int isEntryFinite(const Vector<4, Scalar>& vector);
-
-  template <int Size, typename Scalar>
-  INLINE_METHOD std::vector<Scalar> toSTLVector(const Vector<Size, Scalar>& vector);
 } // namespace tarch::la
 
 /**
@@ -186,5 +189,6 @@ namespace tarch::la {
  */
 template <int Size, typename Scalar>
 INLINE_METHOD std::ostream& operator<<(std::ostream& os, const tarch::la::Vector<Size, Scalar>& vector);
+TARGET_DECLARE_END
 
 #include "tarch/la/VectorOperations.cpph"

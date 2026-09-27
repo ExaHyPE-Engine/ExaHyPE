@@ -4,13 +4,8 @@
 
 #if defined(PEANO_WITH_FPE)
 
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/mpi/Rank.h"
-
-#if defined(__linux__) and not defined(_MSC_VER)
-#include <fenv.h>
-#elif defined(_MSC_VER)
-#include <float.h>
-#endif
 
 #if defined(__linux__) and not defined(_MSC_VER) and (defined(__x86_64__) or defined(__i386__))
 #include <sys/ucontext.h>
@@ -33,7 +28,7 @@ namespace {
     const tarch::FloatingPointExceptions::ExceptionMask candidate,
     const tarch::FloatingPointExceptions::Exception     exception
   ) noexcept {
-    return (candidate & static_cast<tarch::FloatingPointExceptions::ExceptionMask>(exception)) != 0u;
+    return (candidate & static_cast<tarch::FloatingPointExceptions::ExceptionMask>(exception)) != 0U;
   }
 #endif
 
@@ -67,7 +62,7 @@ namespace {
   }
 #elif defined(_MSC_VER)
   unsigned int toNativeExceptionMask(const tarch::FloatingPointExceptions::ExceptionMask exceptions) noexcept {
-    unsigned int result = 0u;
+    unsigned int result = 0U;
 
     if (hasException(exceptions, tarch::FloatingPointExceptions::DivisionByZero)) {
       result |= _EM_ZERODIVIDE;
@@ -542,8 +537,8 @@ namespace {
       return false;
     }
 
-    constexpr unsigned int SseExceptionStatusBits = 0x3fu;
-    constexpr unsigned int SseExceptionMaskShift  = 7u;
+    constexpr unsigned int SseExceptionStatusBits = 0x3FU;
+    constexpr unsigned int SseExceptionMaskShift  = 7U;
 
     const auto nativeExceptions = toNativeExceptionMask(tarch::FloatingPointExceptions::AllExceptions);
     floatingPointContext->cwd |= static_cast<decltype(floatingPointContext->cwd)>(nativeExceptions);
@@ -645,8 +640,8 @@ namespace {
     }
     armedExceptions = tarch::FloatingPointExceptions::None;
 
-    // Signal-context work remains async-signal-safe; reporting starts after execution resumes
-    // in the reporting function.
+    // The handler does async-signal-safe work only, so execution resumes in
+    // terminateAfterFloatingPointSignal(), which writes the report.
     auto* const machineContext = static_cast<ucontext_t*>(signalContext);
 #if defined(__x86_64__)
     machineContext->uc_mcontext.gregs[REG_RIP] =
@@ -672,15 +667,8 @@ namespace {
 #endif
 } // namespace
 
-bool tarch::FloatingPointExceptions::areExceptionTrapsSupported() noexcept {
-#if (defined(__linux__) and (defined(__x86_64__) or defined(__i386__))) or defined(_MSC_VER)
-  return true;
-#else
-  return false;
-#endif
-}
-
-bool tarch::FloatingPointExceptions::enableExceptionTraps(const ExceptionMask exceptions) noexcept {
+bool
+tarch::FloatingPointExceptions::enableExceptionTraps(const ExceptionMask exceptions) noexcept {
 #if defined(__linux__) and not defined(_MSC_VER) and (defined(__x86_64__) or defined(__i386__))
   std::call_once(floatingPointSignalHandlerInstallation, installFloatingPointSignalHandler);
   if (not floatingPointSignalHandlerInstalled) {
@@ -704,14 +692,14 @@ bool tarch::FloatingPointExceptions::enableExceptionTraps(const ExceptionMask ex
 #elif defined(_MSC_VER)
   const auto supportedExceptions = exceptions & AllExceptions;
   const auto nativeExceptions    = toNativeExceptionMask(supportedExceptions);
-  if (nativeExceptions == 0u) {
+  if (nativeExceptions == 0U) {
     disableExceptionTraps();
     return true;
   }
 
   static_cast<void>(_clearfp());
-  unsigned int currentControlWord = 0u;
-  if (_controlfp_s(&currentControlWord, 0u, 0u) != 0) {
+  unsigned int currentControlWord = 0U;
+  if (_controlfp_s(&currentControlWord, 0U, 0U) != 0) {
     return false;
   }
 
@@ -727,12 +715,13 @@ bool tarch::FloatingPointExceptions::enableExceptionTraps(const ExceptionMask ex
 #endif
 }
 
-void tarch::FloatingPointExceptions::disableExceptionTraps() noexcept {
+void
+tarch::FloatingPointExceptions::disableExceptionTraps() noexcept {
 #if defined(__linux__) and not defined(_MSC_VER) and (defined(__x86_64__) or defined(__i386__))
   fedisableexcept(FE_ALL_EXCEPT);
   armedExceptions = None;
 #elif defined(_MSC_VER)
-  unsigned int currentControlWord = 0u;
+  unsigned int currentControlWord = 0U;
   static_cast<void>(_controlfp_s(&currentControlWord, _MCW_EM, _MCW_EM));
   armedExceptions = None;
 #endif
@@ -761,14 +750,14 @@ tarch::FloatingPointExceptions::ScopedTrap::~ScopedTrap() {
 
 #else
 
-bool tarch::FloatingPointExceptions::areExceptionTrapsSupported() noexcept { return false; }
-
-bool tarch::FloatingPointExceptions::enableExceptionTraps(const ExceptionMask exceptions) noexcept {
+bool
+tarch::FloatingPointExceptions::enableExceptionTraps(const ExceptionMask exceptions) noexcept {
   static_cast<void>(exceptions);
   return false;
 }
 
-void tarch::FloatingPointExceptions::disableExceptionTraps() noexcept {}
+void
+tarch::FloatingPointExceptions::disableExceptionTraps() noexcept {}
 
 tarch::FloatingPointExceptions::ScopedTrap::ScopedTrap(
   const char* const   file,

@@ -35,7 +35,8 @@ namespace {
   }
 } // namespace
 
-void tarch::plotter::XDMFTimeSeriesWriter::writeTimeSeriesMetaFile(
+void
+tarch::plotter::XDMFTimeSeriesWriter::writeTimeSeriesMetaFile(
   const std::string& outputDirectory,
   const std::string& filename
 ) const {

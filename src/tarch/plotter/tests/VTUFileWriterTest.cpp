@@ -32,7 +32,8 @@ namespace {
 tarch::plotter::tests::VTUFileWriterTest::VTUFileWriterTest() :
   tarch::tests::TestCase("tarch::plotter::tests::VTUFileWriterTest") {}
 
-void tarch::plotter::tests::VTUFileWriterTest::run() {
+void
+tarch::plotter::tests::VTUFileWriterTest::run() {
   // The read-back helpers report a malformed file by throwing. An exception that leaves run()
   // takes the whole unit test binary down, so this catch counts the failure and the cases
   // behind it stay unrun.
@@ -57,17 +58,19 @@ void tarch::plotter::tests::VTUFileWriterTest::run() {
   }
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::testCellTypeMetadata() {
+void
+tarch::plotter::tests::VTUFileWriterTest::testCellTypeMetadata() {
   const auto* const triangle = tarch::plotter::lookupCellType(tarch::plotter::CellType::Triangle);
   validate(triangle == tarch::plotter::lookupCellType(static_cast<int>(tarch::plotter::CellType::Triangle)));
   validate(tarch::plotter::lookupCellType(-1) == nullptr);
   validate(triangle->type == tarch::plotter::CellType::Triangle);
-  validateEquals(tarch::plotter::nodesOf(tarch::plotter::CellType::Triangle), 3);
+  validateEquals(tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Triangle), 3);
   validate(tarch::plotter::xdmfTypeNeedsNodeCount(2));
   validate(not tarch::plotter::xdmfTypeNeedsNodeCount(triangle->xdmf));
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
+void
+tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
   const std::string filename = "VTUTest2DTriangle";
 
   tarch::plotter::VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -104,7 +107,8 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
   std::filesystem::remove(vtuPath);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
+void
+tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
   const std::string filename = "VTUTest3DHex";
 
   tarch::plotter::VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -143,7 +147,8 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
   std::filesystem::remove(vtuPath);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
+void
+tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
   const std::string filename = "VTUTest2DParticles";
 
   tarch::plotter::VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -184,7 +189,8 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
   std::filesystem::remove(vtuPath);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
+void
+tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
   const std::string filename = "VTUTest3DCellData";
 
   tarch::plotter::VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -228,7 +234,8 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
   std::filesystem::remove(vtuPath);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::testEmptyPlotter() {
+void
+tarch::plotter::tests::VTUFileWriterTest::testEmptyPlotter() {
   const std::string filename = "VTUTestEmpty";
 
   {
@@ -253,7 +260,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testEmptyPlotter() {
   std::filesystem::remove(vtuPath);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::testMixedEmptySubdomains() {
+void
+tarch::plotter::tests::VTUFileWriterTest::testMixedEmptySubdomains() {
   const std::string filename = "VTUTestMixedEmpty";
 
   tarch::plotter::VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -287,7 +295,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testMixedEmptySubdomains() {
   std::filesystem::remove(vtuPath);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::testMultipleNonEmptySubdomains() {
+void
+tarch::plotter::tests::VTUFileWriterTest::testMultipleNonEmptySubdomains() {
   const std::string filename = "VTUTestMultipleSubdomains";
 
   tarch::plotter::VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -335,7 +344,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testMultipleNonEmptySubdomains() 
   std::filesystem::remove(vtuPath);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
+void
+tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
   const std::string filename = "VTUTestOversized";
 
   bool exceptionThrown = false;
@@ -367,7 +377,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
   validate(exceptionThrown);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::testInconsistentSchemaThrows() {
+void
+tarch::plotter::tests::VTUFileWriterTest::testInconsistentSchemaThrows() {
   const std::string filename = "VTUTestSchemaMismatch";
 
   bool exceptionThrown = false;
@@ -403,7 +414,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testInconsistentSchemaThrows() {
   validate(exceptionThrown);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::testUnevenSubdomainCounts() {
+void
+tarch::plotter::tests::VTUFileWriterTest::testUnevenSubdomainCounts() {
   const std::string filename = "VTUTestUneven";
 
   // The global master holds three subdomains and every other rank holds two. The writer puts
@@ -455,7 +467,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testUnevenSubdomainCounts() {
   std::filesystem::remove(vtuPath);
 }
 
-void tarch::plotter::tests::VTUFileWriterTest::testInvalidIdentifierThrows() {
+void
+tarch::plotter::tests::VTUFileWriterTest::testInvalidIdentifierThrows() {
   tarch::plotter::VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
   plotter.acquirePiece(0);
   bool exceptionThrown = false;

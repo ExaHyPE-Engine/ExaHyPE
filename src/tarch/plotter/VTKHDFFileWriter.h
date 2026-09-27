@@ -25,7 +25,7 @@ public:
   VTKHDFFileWriter& operator=(VTKHDFFileWriter&&)      = delete;
   ~VTKHDFFileWriter() override                         = default;
 
-  bool        isOpen() const override;
-  bool        writeToFile(const std::string& filename, const double time) override;
+  bool isOpen() const override;
+  bool writeToFile(const std::string& filename, const double time) override;
   std::string getFileExtension() const override;
 };

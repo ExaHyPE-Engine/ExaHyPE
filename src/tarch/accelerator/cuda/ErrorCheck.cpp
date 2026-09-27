@@ -4,7 +4,8 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
-void tarch::accelerator::cuda::checkError(cudaError_t code, const char* expr, const char* file, int line) {
+void
+tarch::accelerator::cuda::checkError(cudaError_t code, const char* expr, const char* file, int line) {
   if (code != cudaSuccess) {
     cudaDeviceSynchronize();
     cudaDeviceReset();
@@ -14,7 +15,8 @@ void tarch::accelerator::cuda::checkError(cudaError_t code, const char* expr, co
   }
 }
 
-void tarch::accelerator::cuda::checkLastError(const char* file, int line) {
+void
+tarch::accelerator::cuda::checkLastError(const char* file, int line) {
   cudaError_t code = cudaGetLastError();
   if (code != cudaSuccess) {
     cudaDeviceSynchronize();

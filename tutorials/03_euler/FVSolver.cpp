@@ -16,7 +16,8 @@ namespace {
   }
 } // namespace
 
-void tutorials::exahype2::euler::FVSolver::initialCondition(
+void
+tutorials::exahype2::euler::FVSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize
@@ -30,7 +31,8 @@ void tutorials::exahype2::euler::FVSolver::initialCondition(
   Q[Shortcuts::E]     = 2.5;
 }
 
-::exahype2::RefinementCommand tutorials::exahype2::euler::FVSolver::refinementCriterion(
+::exahype2::RefinementCommand
+tutorials::exahype2::euler::FVSolver::refinementCriterion(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -52,7 +54,8 @@ void tutorials::exahype2::euler::FVSolver::initialCondition(
   return ::exahype2::RefinementCommand::Keep;
 }
 
-void tutorials::exahype2::euler::FVSolver::boundaryConditions(
+void
+tutorials::exahype2::euler::FVSolver::boundaryConditions(
   const double* const NOALIAS                  Qinside,
   double* const NOALIAS                        Qoutside,
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
@@ -73,7 +76,8 @@ void tutorials::exahype2::euler::FVSolver::boundaryConditions(
   }
 }
 
-double tutorials::exahype2::euler::FVSolver::maxEigenvalue(
+double
+tutorials::exahype2::euler::FVSolver::maxEigenvalue(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -93,7 +97,8 @@ double tutorials::exahype2::euler::FVSolver::maxEigenvalue(
   return std::max(std::abs(u - c), std::abs(u + c));
 }
 
-void tutorials::exahype2::euler::FVSolver::flux(
+void
+tutorials::exahype2::euler::FVSolver::flux(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,

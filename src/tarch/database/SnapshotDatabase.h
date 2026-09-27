@@ -47,7 +47,7 @@ protected:
 
   SnapshotDatabase(double timeDelta, bool deltasAreRelative);
 
-  virtual std::string outputFileName() const;
+  virtual std::string getOutputFileName() const;
 
   virtual void prepareOutputStream(std::ostream& file) const = 0;
   virtual void writeHeader(std::ostream& file) const         = 0;

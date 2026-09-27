@@ -31,25 +31,32 @@ tarch::tests::TreeTestCaseCollection::~TreeTestCaseCollection() {
   }
 }
 
-bool tarch::tests::TreeTestCaseCollection::isNameWithoutHierarchy(const std::string& testCaseName) {
+bool
+tarch::tests::TreeTestCaseCollection::isNameWithoutHierarchy(const std::string& testCaseName) {
   return testCaseName.rfind("::") == std::string::npos;
 }
 
-std::string tarch::tests::TreeTestCaseCollection::getFirstIdentifierInHierarchy(const std::string& testCaseName) {
+std::string
+tarch::tests::TreeTestCaseCollection::getFirstIdentifierInHierarchy(const std::string& testCaseName) {
   std::string result = testCaseName.substr(0, testCaseName.find("::"));
   assertion(isNameWithoutHierarchy(result), result, testCaseName);
   return result;
 }
 
-std::string tarch::tests::TreeTestCaseCollection::getRemainingPathWithoutIdentifier(const std::string& testCaseName) {
+std::string
+tarch::tests::TreeTestCaseCollection::getRemainingPathWithoutIdentifier(const std::string& testCaseName) {
   assertion(not isNameWithoutHierarchy(testCaseName));
   std::string result = testCaseName.substr(testCaseName.find("::") + 2);
   return result;
 }
 
-void tarch::tests::TreeTestCaseCollection::run() { run(""); }
+void
+tarch::tests::TreeTestCaseCollection::run() {
+  run("");
+}
 
-void tarch::tests::TreeTestCaseCollection::run(const std::string& prefix) {
+void
+tarch::tests::TreeTestCaseCollection::run(const std::string& prefix) {
   std::string progressMessage;
   if ((prefix + _testCaseName).length() > 0) {
     progressMessage = "Running test case collection \"" + prefix + _testCaseName + "\" ...";
@@ -85,11 +92,13 @@ void tarch::tests::TreeTestCaseCollection::run(const std::string& prefix) {
   }
 }
 
-void tarch::tests::TreeTestCaseCollection::addTestCase(TestCase* testCase) {
+void
+tarch::tests::TreeTestCaseCollection::addTestCase(TestCase* testCase) {
   addTestCase(testCase->getTestCaseName(), testCase);
 }
 
-void tarch::tests::TreeTestCaseCollection::addTestCase(const std::string& fullQualifiedPath, TestCase* testCase) {
+void
+tarch::tests::TreeTestCaseCollection::addTestCase(const std::string& fullQualifiedPath, TestCase* testCase) {
   if (isNameWithoutHierarchy(fullQualifiedPath)) {
     _testCases.push_back(testCase);
   } else {

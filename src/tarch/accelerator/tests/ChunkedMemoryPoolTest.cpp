@@ -4,24 +4,29 @@
 
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/tests/TestMacros.h"
 
 namespace {
+  TARGET_DECLARE
   //! A cardinality that is not a multiple of the alignment block exercises the padding.
   constexpr int ChunkSize = 5;
+  TARGET_DECLARE_END
 
-  using Pool = tarch::accelerator::ChunkedMemoryPool<double, ChunkSize>;
+  using Pool = tarch::accelerator::ChunkedMemoryPool<double>;
+
+  constexpr int MinimumSegmentSize = 1 << Pool::MinimumSegmentSizeExponent;
 
   /** Writes a value that identifies the chunk into every element of it. */
-  void fillChunk(Pool& pool, const Pool::SlotIndex slot, const double seed) {
-    double* const chunk = pool.chunk(slot);
+  void fillChunk(Pool& pool, const int slot, const double seed) {
+    double* const chunk = pool.getChunk(slot);
     for (int element = 0; element < ChunkSize; element++) {
       chunk[element] = seed + element;
     }
   }
 
-  bool chunkHolds(const Pool& pool, const Pool::SlotIndex slot, const double seed) {
-    const double* const chunk = pool.chunk(slot);
+  bool chunkHolds(const Pool& pool, const int slot, const double seed) {
+    const double* const chunk = pool.getChunk(slot);
     for (int element = 0; element < ChunkSize; element++) {
       if (chunk[element] != seed + element) {
         return false;
@@ -30,239 +35,298 @@ namespace {
     return true;
   }
 
-  /** Returns whether the whole padded chunk reads as zero. */
-  bool chunkIsZero(const Pool& pool, const Pool::SlotIndex slot) {
-    const double* const chunk = pool.chunk(slot);
-    return std::all_of(chunk, chunk + Pool::PaddedChunkSize, [](const double element) { return element == 0.0; });
+  TARGET_DECLARE
+  /** Writes the slot number into every element of the chunk of that slot. */
+  struct WriteSlotIntoEveryElement final {
+    Pool::View chunks{};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int slot) const {
+      double* const chunk = chunks.getChunk(slot);
+      for (int element = 0; element < ChunkSize; element++) {
+        chunk[element] = static_cast<double>(slot);
+      }
+    }
+  };
+
+  /** Adds every element of the chunk of one slot to the accumulator. */
+  struct AddElementsOfChunk final {
+    Pool::ConstView chunks{};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int slot, double& accumulator) const {
+      const double* const chunk = chunks.getChunk(slot);
+      for (int element = 0; element < ChunkSize; element++) {
+        accumulator += chunk[element];
+      }
+    }
+  };
+  TARGET_DECLARE_END
+
+  void writeSlotIntoEveryElement(Pool& pool, const int numberOfSlots) {
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(numberOfSlots),
+      WriteSlotIntoEveryElement{pool.getView()}
+    );
+  }
+
+  double getSumOfElements(const Pool& pool, const int numberOfSlots) {
+    double sum = 0.0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(numberOfSlots),
+      AddElementsOfChunk{pool.getView()},
+      tarch::accelerator::Sum<double>{sum}
+    );
+    return sum;
   }
 } // namespace
 
 tarch::accelerator::tests::ChunkedMemoryPoolTest::ChunkedMemoryPoolTest() :
   TestCase("tarch::accelerator::tests::ChunkedMemoryPoolTest") {}
 
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::run() {
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::run() {
   testMethod(testEmptyPool);
-  testMethod(testResizeAndIndexedFill);
-  testMethod(testResizeKeepsContent);
-  testMethod(testFreshChunksReadAsZero);
-  testMethod(testCapacityGrowsGeometrically);
-  testMethod(testShrinkKeepsCapacity);
+  testMethod(testReserveAllocatesWholeSegments);
+  testMethod(testSegmentSizeFollowsTheFirstReservation);
+  testMethod(testGrowthKeepsChunksInPlace);
   testMethod(testChunkAlignment);
   testMethod(testScalarTypes);
-  testMethod(testRawDataIsStrided);
-  testMethod(testPinnedPlacement);
+  testMethod(testViewAddressesEveryChunk);
+  testMethod(testDeviceFillThroughView);
   testMethod(testAllocatedBytes);
-  testMethod(testMoveTransfersBuffer);
-  testMethod(testParallelDisjointFill);
+  testMethod(testMoveTransfersSegments);
+  testMethod(testRelease);
+  testMethod(testHostCopiesRoundTrip);
 }
 
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testEmptyPool() {
-  const Pool pool;
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testEmptyPool() {
+  const Pool pool(ChunkSize, tarch::MemoryLocation::Heap);
 
-  validate(pool.empty());
-  validateEquals(pool.capacity(), 0);
-  validateEquals(pool.rawSize(), 0);
-  validateEquals(pool.allocatedBytes(), 0);
+  validateEquals(pool.getCapacity(), 0);
+  validateEquals(pool.getSegmentSize(), 0);
+  validateEquals(pool.getNumberOfSegments(), 0);
+  validateEquals(pool.getAllocatedBytes().getTotal(), 0);
+  validate(pool.getLocation() == tarch::MemoryLocation::Heap);
 }
 
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testResizeAndIndexedFill() {
-  Pool pool;
-  pool.resize(4);
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testReserveAllocatesWholeSegments() {
+  Pool pool(ChunkSize, tarch::MemoryLocation::Heap);
 
-  validateEquals(pool.size(), 4);
-  validate(not pool.empty());
+  pool.reserve(4);
+  validateEquals(pool.getSegmentSize(), MinimumSegmentSize);
+  validateEquals(pool.getNumberOfSegments(), 1);
+  validateEquals(pool.getCapacity(), MinimumSegmentSize);
 
-  for (Pool::SlotIndex slot = 0; slot < 4; slot++) {
-    fillChunk(pool, slot, 100.0 * slot);
+  pool.reserve(MinimumSegmentSize);
+  validateEquals(pool.getNumberOfSegments(), 1);
+
+  pool.reserve(MinimumSegmentSize + 1);
+  validateEquals(pool.getNumberOfSegments(), 2);
+  validateEquals(pool.getCapacity(), 2 * MinimumSegmentSize);
+
+  pool.reserve(5 * MinimumSegmentSize);
+  validateEquals(pool.getNumberOfSegments(), 5);
+
+  pool.reserve(3);
+  validateEquals(pool.getNumberOfSegments(), 5);
+
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    fillChunk(pool, slot, 3.0 * slot);
   }
-  for (Pool::SlotIndex slot = 0; slot < 4; slot++) {
-    validate(chunkHolds(pool, slot, 100.0 * slot));
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    validateWithParams1(chunkHolds(pool, slot, 3.0 * slot), slot);
   }
 }
 
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testResizeKeepsContent() {
-  Pool pool;
-  pool.resize(3);
-  for (Pool::SlotIndex slot = 0; slot < 3; slot++) {
+/**
+ * The first reservation sizes a segment to a sixteenth of the reserved slots, rounded up to a
+ * power of two and never below the minimum.
+ */
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testSegmentSizeFollowsTheFirstReservation() {
+  Pool large(ChunkSize, tarch::MemoryLocation::Heap);
+  large.reserve(16 * 256);
+  validateEquals(large.getSegmentSize(), 256);
+  validateEquals(large.getNumberOfSegments(), 16);
+
+  Pool odd(ChunkSize, tarch::MemoryLocation::Heap);
+  odd.reserve(16 * 200 + 1);
+  validateEquals(odd.getSegmentSize(), 256);
+  validateEquals(odd.getNumberOfSegments(), 13);
+  validate(odd.getCapacity() >= 16 * 200 + 1);
+
+  Pool small(ChunkSize, tarch::MemoryLocation::Heap);
+  small.reserve(1);
+  validateEquals(small.getSegmentSize(), MinimumSegmentSize);
+}
+
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testGrowthKeepsChunksInPlace() {
+  Pool pool(ChunkSize, tarch::MemoryLocation::Heap);
+  pool.reserve(3);
+  for (int slot = 0; slot < 3; slot++) {
     fillChunk(pool, slot, 10.0 * slot);
   }
+  const double* const firstChunk = pool.getChunk(0);
 
-  // A growth beyond the capacity moves the buffer, so this is the case in
-  // which the content has to be carried across.
-  pool.resize(64);
+  pool.reserve(10 * MinimumSegmentSize);
 
-  validateEquals(pool.size(), 64);
-  for (Pool::SlotIndex slot = 0; slot < 3; slot++) {
-    validate(chunkHolds(pool, slot, 10.0 * slot));
+  validate(pool.getChunk(0) == firstChunk);
+  for (int slot = 0; slot < 3; slot++) {
+    validateWithParams1(chunkHolds(pool, slot, 10.0 * slot), slot);
+  }
+  validateEquals(pool.getNumberOfSegments(), 10);
+}
+
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testChunkAlignment() {
+  Pool pool(ChunkSize, tarch::MemoryLocation::Heap);
+  pool.reserve(3 * MinimumSegmentSize);
+
+  std::set<const double*> addresses;
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    validateEqualsWithParams1(reinterpret_cast<std::uintptr_t>(pool.getChunk(slot)) % PEANO_WITH_ALIGNMENT, 0, slot);
+    addresses.insert(pool.getChunk(slot));
+  }
+  validateEquals(static_cast<int>(addresses.size()), pool.getCapacity());
+  validate(pool.getChunk(1) - pool.getChunk(0) == pool.getPaddedChunkSize());
+}
+
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testScalarTypes() {
+  tarch::accelerator::ChunkedMemoryPool<float> floatPool(3, tarch::MemoryLocation::Heap);
+  floatPool.reserve(2);
+  floatPool.getChunk(1)[2] = 2.5F;
+  validateEquals(floatPool.getChunk(1)[2], 2.5F);
+
+  tarch::accelerator::ChunkedMemoryPool<int> integerPool(7, tarch::MemoryLocation::Heap);
+  integerPool.reserve(2);
+  integerPool.getChunk(0)[6] = 42;
+  validateEquals(integerPool.getChunk(0)[6], 42);
+  validateEquals(reinterpret_cast<std::uintptr_t>(integerPool.getChunk(1)) % PEANO_WITH_ALIGNMENT, 0);
+}
+
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testViewAddressesEveryChunk() {
+  Pool pool(ChunkSize, tarch::MemoryLocation::Heap);
+  pool.reserve(3 * MinimumSegmentSize);
+
+  const auto  view      = pool.getView();
+  const auto& constPool = pool;
+  const auto  constView = constPool.getView();
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    validateWithParams1(view.getChunk(slot) == pool.getChunk(slot), slot);
+    validateWithParams1(constView.getChunk(slot) == constPool.getChunk(slot), slot);
   }
 }
 
 /**
- * Every chunk that enters the live range reads as zero, a chunk that re-enters
- * it after a shrink included.
+ * A device pool is written by a kernel through its view and read back by a reduction, so the
+ * check never dereferences device memory on the host.
  */
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testFreshChunksReadAsZero() {
-  Pool pool;
-  pool.resize(3);
-  for (Pool::SlotIndex slot = 0; slot < 3; slot++) {
-    validate(chunkIsZero(pool, slot));
-  }
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testDeviceFillThroughView() {
+  constexpr int NumberOfSlots = 3 * MinimumSegmentSize;
+  Pool          pool(ChunkSize, tarch::MemoryLocation::Device);
+  pool.reserve(NumberOfSlots);
+  validate(pool.getLocation() == tarch::MemoryLocation::Device);
 
-  fillChunk(pool, 2, 5.0);
-  pool.resize(64);
-  validate(chunkHolds(pool, 2, 5.0));
-  validate(chunkIsZero(pool, 3));
-  validate(chunkIsZero(pool, 63));
-
-  fillChunk(pool, 63, 9.0);
-  pool.resize(1);
-  pool.resize(64);
-  validate(chunkIsZero(pool, 2));
-  validate(chunkIsZero(pool, 63));
-
-  Pool pinned(tarch::MemoryLocation::Pinned);
-  pinned.resize(2);
-  validate(chunkIsZero(pinned, 0));
-  validate(chunkIsZero(pinned, 1));
-}
-
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testCapacityGrowsGeometrically() {
-  Pool pool;
-  pool.resize(100);
-  const std::size_t capacityAfterFirstGrowth = pool.capacity();
-  validate(capacityAfterFirstGrowth >= 100);
-
-  // One chunk more than the capacity must not allocate one chunk more, or a
-  // sequence of regrids would relocate the buffer every time.
-  pool.resize(capacityAfterFirstGrowth + 1);
-  validate(pool.capacity() > capacityAfterFirstGrowth + 1);
-}
-
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testShrinkKeepsCapacity() {
-  Pool pool;
-  pool.resize(32);
-  const std::size_t grownCapacity = pool.capacity();
-  fillChunk(pool, 0, 7.0);
-
-  pool.resize(2);
-
-  validateEquals(pool.size(), 2);
-  validateEquals(pool.capacity(), grownCapacity);
-  validate(chunkHolds(pool, 0, 7.0));
-}
-
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testChunkAlignment() {
-  Pool pool;
-  pool.resize(8);
-
-  for (Pool::SlotIndex slot = 0; slot < 8; slot++) {
-    const auto address = reinterpret_cast<std::uintptr_t>(pool.chunk(slot));
-    validateEquals(address % PEANO_WITH_ALIGNMENT, 0);
-  }
-
-  tarch::accelerator::ChunkedMemoryPool<double, 64> alignedPool;
-  alignedPool.resize(2);
-  for (decltype(alignedPool)::SlotIndex slot = 0; slot < 2; slot++) {
-    const auto address = reinterpret_cast<std::uintptr_t>(alignedPool.chunk(slot));
-    validateEquals(address % PEANO_WITH_ALIGNMENT, 0);
-  }
-}
-
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testScalarTypes() {
-  tarch::accelerator::ChunkedMemoryPool<float, ChunkSize> floatPool;
-  floatPool.resize(1);
-  floatPool.chunk(0)[0] = 1.5F;
-  validateEquals(floatPool.chunk(0)[0], 1.5F);
-
-  tarch::accelerator::ChunkedMemoryPool<char, ChunkSize> charPool;
-  charPool.resize(1);
-  charPool.chunk(0)[0] = 'a';
-  validateEquals(charPool.chunk(0)[0], 'a');
-
-  tarch::accelerator::ChunkedMemoryPool<int, ChunkSize> intPool;
-  intPool.resize(1);
-  intPool.chunk(0)[0] = 42;
-  validateEquals(intPool.chunk(0)[0], 42);
-}
-
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testRawDataIsStrided() {
-  Pool pool;
-  pool.resize(3);
-  for (Pool::SlotIndex slot = 0; slot < 3; slot++) {
-    fillChunk(pool, slot, 1000.0 * slot);
-  }
-
-  validateEquals(pool.rawSize(), 3 * static_cast<std::size_t>(Pool::PaddedChunkSize));
-
-  const double* const buffer = pool.rawData();
-  for (Pool::SlotIndex slot = 0; slot < 3; slot++) {
-    validateEquals(
-      buffer[static_cast<std::size_t>(slot) * static_cast<std::size_t>(Pool::PaddedChunkSize)],
-      1000.0 * slot
-    );
-  }
-}
-
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testPinnedPlacement() {
-  Pool pool(tarch::MemoryLocation::Pinned);
-  pool.resize(2);
-  fillChunk(pool, 0, 3.0);
-
-  validate(chunkHolds(pool, 0, 3.0));
-  validateEquals(reinterpret_cast<std::uintptr_t>(pool.chunk(1)) % PEANO_WITH_ALIGNMENT, 0);
-}
-
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testAllocatedBytes() {
-  Pool pool;
-  validateEquals(pool.allocatedBytes(), 0);
-
-  pool.resize(4);
+  writeSlotIntoEveryElement(pool, NumberOfSlots);
   validateEquals(
-    pool.allocatedBytes(),
-    pool.capacity() * static_cast<std::size_t>(Pool::PaddedChunkSize) * sizeof(double)
+    getSumOfElements(pool, NumberOfSlots),
+    ChunkSize * static_cast<double>(NumberOfSlots) * (NumberOfSlots - 1) / 2.0
   );
-  validateEquals(pool.rawSizeInBytes(), 4 * static_cast<std::size_t>(Pool::PaddedChunkSize) * sizeof(double));
 }
 
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testMoveTransfersBuffer() {
-  Pool source;
-  source.resize(2);
-  fillChunk(source, 1, 11.0);
+/** A pool on the heap counts its segments as host bytes, and a device pool of a GPU build as device bytes. */
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testAllocatedBytes() {
+  Pool pool(ChunkSize, tarch::MemoryLocation::Heap);
+  validateEquals(pool.getAllocatedBytes().getTotal(), 0);
 
-  const double* const buffer = source.rawData();
+  pool.reserve(4);
+  const auto expectedBytes =
+    static_cast<std::size_t>(pool.getCapacity()) * static_cast<std::size_t>(pool.getPaddedChunkSize()) * sizeof(double);
+  validateEquals(pool.getAllocatedBytes().host, expectedBytes);
+  validateEquals(pool.getAllocatedBytes().device, 0);
+  validateEquals(pool.getSegment(0).getSizeInBytes(), pool.getAllocatedBytes().getTotal());
+
+  Pool devicePool(ChunkSize, tarch::MemoryLocation::Device);
+  devicePool.reserve(4);
+#if defined(PEANO_WITH_GPU_BACKEND)
+  validateEquals(devicePool.getAllocatedBytes().device, expectedBytes);
+  validateEquals(devicePool.getAllocatedBytes().host, 0);
+#else
+  validateEquals(devicePool.getAllocatedBytes().host, expectedBytes);
+  validateEquals(devicePool.getAllocatedBytes().device, 0);
+#endif
+}
+
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testMoveTransfersSegments() {
+  Pool source(ChunkSize, tarch::MemoryLocation::Heap);
+  source.reserve(2);
+  fillChunk(source, 1, 11.0);
+  const double* const chunk = source.getChunk(1);
 
   Pool moved(std::move(source));
-
-  validateEquals(moved.size(), 2);
-  validate(moved.rawData() == buffer);
+  validateEquals(moved.getNumberOfSegments(), 1);
+  validate(moved.getChunk(1) == chunk);
   validate(chunkHolds(moved, 1, 11.0));
+  validate(moved.getView().getChunk(1) == chunk);
 
-  Pool target;
-  target.resize(1);
+  Pool target(ChunkSize, tarch::MemoryLocation::Heap);
+  target.reserve(1);
   target = std::move(moved);
-
-  validateEquals(target.size(), 2);
-  validate(target.rawData() == buffer);
+  validateEquals(target.getNumberOfSegments(), 1);
+  validate(target.getChunk(1) == chunk);
   validate(chunkHolds(target, 1, 11.0));
-
-  target.clear();
-  validate(target.empty());
-  validateEquals(target.capacity(), 0);
 }
 
-/**
- * Concurrent iterations write disjoint chunks without a lock.
- */
-void tarch::accelerator::tests::ChunkedMemoryPoolTest::testParallelDisjointFill() {
-  constexpr int NumberOfChunks = 256;
-  Pool          pool;
-  pool.resize(NumberOfChunks);
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testRelease() {
+  Pool pool(ChunkSize, tarch::MemoryLocation::Heap);
+  pool.reserve(2 * MinimumSegmentSize);
+  pool.release();
 
-  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(NumberOfChunks), [&pool](const int slot) {
-    fillChunk(pool, static_cast<Pool::SlotIndex>(slot), 2.0 * slot);
-  });
+  validateEquals(pool.getCapacity(), 0);
+  validateEquals(pool.getNumberOfSegments(), 0);
+  validateEquals(pool.getSegmentSize(), 0);
 
-  for (int slot = 0; slot < NumberOfChunks; slot++) {
-    validate(chunkHolds(pool, static_cast<Pool::SlotIndex>(slot), 2.0 * slot));
+  pool.reserve(1);
+  validateEquals(pool.getNumberOfSegments(), 1);
+  fillChunk(pool, 0, 1.0);
+  validate(chunkHolds(pool, 0, 1.0));
+}
+
+/** copyToHost() writes the padded chunks of every slot into one vector and copyFromHost() reads them back. */
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testHostCopiesRoundTrip() {
+  Pool pool(ChunkSize, tarch::MemoryLocation::Heap);
+  pool.reserve(2 * MinimumSegmentSize + 1);
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    fillChunk(pool, slot, slot);
+  }
+
+  std::vector<double> host;
+  pool.copyToHost(host);
+  const auto valuesPerSlot = static_cast<std::size_t>(pool.getPaddedChunkSize());
+  validateEquals(host.size(), static_cast<std::size_t>(pool.getCapacity()) * valuesPerSlot);
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    for (int element = 0; element < ChunkSize; element++) {
+      validateEqualsWithParams2(
+        host[static_cast<std::size_t>(slot) * valuesPerSlot + element],
+        slot + element,
+        slot,
+        element
+      );
+      host[static_cast<std::size_t>(slot) * valuesPerSlot + element] += 1.0;
+    }
+  }
+
+  pool.copyFromHost(host);
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    validateWithParams1(chunkHolds(pool, slot, slot + 1.0), slot);
   }
 }

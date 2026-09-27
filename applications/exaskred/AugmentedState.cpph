@@ -963,5 +963,4 @@ namespace applications::exahype2::exaskred::riemann {
 
     return std::max(std::abs(waveSpeeds[0]), std::max(std::abs(waveSpeeds[1]), std::abs(waveSpeeds[2])));
   }
-
 } // namespace applications::exahype2::exaskred::riemann

@@ -4,46 +4,40 @@
 
 \tableofcontents
 
-Peano applications report global grid, memory, rank-partition, and subtree-task
-statistics after program steps. The Grid Snapshot presents the latest
-synchronised view across all ranks.
+Peano applications report global grid, memory and rank-partition statistics
+after every phase. The Grid Snapshot presents the latest synchronised view
+across all ranks.
 
 # Grid
 
-The grid section reports leaf and refined cells, persistent and hanging
-vertices, and the minimum and maximum grid levels. These counts describe the
-global logical grid. The replicated structural cells that reach the local
-subtrees are reported separately as decomposition overhead.
+The row `Cells` of the grid section reports the number of unrefined cells
+with the refined cells above them in brackets, the row `Faces` the number of
+faces with the hanging faces among them, and the row `Levels` the minimum and
+maximum grid levels. These counts describe the global logical grid.
 
-# Inter-rank decomposition
+# MPI decomposition
 
-`MPI Load Balance` compares the average owned leaf count with the most loaded
-rank and prints the minimum and maximum leaves per rank. `Spine Replication`
-reports replicated structural cells relative to owned cells and gives the
-minimum and maximum replicated counts per rank.
+The section appears with more than one rank; the configuration summary names
+the number of ranks. `Load Balance` divides the average cell count of a rank
+by the cell count of the most loaded rank and prints the minimum and maximum
+cells per rank. `Rank Boundary Faces` gives the percentage of the faces two
+ranks hold and their minimum and maximum per rank.
 
-A low balance value identifies unequal geometric ownership. High spine
-replication identifies a small local workload relative to the replicated
-coarse structure and rank interfaces.
+A low balance value identifies unequal ownership. Many rank-boundary faces
+identify a small local workload relative to the halo traffic.
 
-# Intra-rank decomposition
+# Memory
 
-`Subtree Tasks` gives the global task count and its range per rank. `Cells per
-Task` gives the smallest, largest, and mean number of cells. `Thread Ceiling`
-estimates the best utilisation permitted by the largest task, while the phase
-report line `Utilisation` measures the task time accumulated during the latest
-sweep against its wall-clock task window.
-
-A high ceiling with low measured utilisation points to scheduling,
-dependencies, communication waits, memory bandwidth, or serial work outside
-the subtree tasks. A low ceiling identifies insufficient or uneven task
-decomposition.
+`CPU Grid` and `GPU Grid` report the bytes of the partition and the tree in
+host and device memory, `CPU Solver Data` and `GPU Solver Data` the bytes of
+the application data, and `Used` the resident set of the process with the free
+and the total memory of the node.
 
 # Regridding
 
-The dynamic-AMR report records the leaf count, level range, MPI load balance,
-subtree tasks, and thread ceiling before and after a drain. It also reports
-the number and duration of the sweeps needed to settle the topology.
+The dynamic-AMR report records the number of regrids and sweeps with their
+wall clock, and the grid, MPI decomposition and memory rows before the first
+and after the last regrid.
 
 @ref page_peano_performance_optimisation provides tuning guidance.
 

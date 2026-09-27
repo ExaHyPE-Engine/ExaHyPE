@@ -6,7 +6,6 @@
   "numberOfSnapshots": 10,
   "outputPath": "solutions",
   "timeStepLogInterval": 10.0,
-  "targetDevice": 0,
   "bathymetryFile": "bathymetry/TafjordBathymetry.nc",
   "displacementFile": "bathymetry/TafjordDisplacement.nc"
 }

@@ -58,9 +58,7 @@ class Zugspitze(Scenario):
         Q[Shortcuts::cs ] = 3.464;
 """
 
-    # TODO: is this point source correct?
-    # it is in the scenario of ExaHyPE1 but also does not use certain parameters
-    # and is a 1-to-1 copy of LOH1
+    # The point source is a copy of the LOH1 point source, as in the ExaHyPE1 scenario.
     def point_source(self):
         return """
   std::fill_n(forceVector, 9, 0.);
@@ -89,13 +87,13 @@ class Zugspitze(Scenario):
     2675.783
   });
 
-  pointSourceLocation[0][0] = ps[0];
-  pointSourceLocation[0][1] = ps[1];
-  pointSourceLocation[0][2] = ps[2];
+  location[0][0] = ps[0];
+  location[0][1] = ps[1];
+  location[0][2] = ps[2];
 """
 
     def generate_required_files(self):
-        # using a symlink instead of a copy as the file is quite large
+        # A symbolic link points to the large data file.
         source = (
             os.path.dirname(os.path.realpath(__file__))
             + "/specs/Zugspitze/zugspitze_25m_4345_100_2650_100.nc"

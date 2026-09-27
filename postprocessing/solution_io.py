@@ -557,9 +557,7 @@ def _scan_vtu(path: Path) -> tuple[str, list[SnapshotRef]]:
 
 
 def _load_vtu(ref: SnapshotRef) -> MeshSnapshot:
-    # Prefer VTK: ExaHyPE writes one <Piece> per subdomain inside each per-rank
-    # .vtu and stores the data zlib-appended, both of which meshio mishandles (it keeps all points
-    # but only one piece's cells). Use VTK when available, falling back to meshio otherwise.
+    # VTK reads appended data and multi-piece grids; meshio supplies the fallback.
     path = Path(ref.path)
     try:
         return _load_vtu_vtk(ref, path)
@@ -580,7 +578,9 @@ def _load_vtu_vtk(ref: SnapshotRef, path: Path) -> MeshSnapshot:
     grid = reader.GetOutput()
 
     points = _drop_trivial_z(
-        np.asarray(vtk_to_numpy(grid.GetPoints().GetData()), dtype=float)
+        np.empty((0, 3))
+        if grid.GetNumberOfPoints() == 0
+        else np.asarray(vtk_to_numpy(grid.GetPoints().GetData()), dtype=float)
     )
     cell_array = grid.GetCells()
     connectivity = np.asarray(
@@ -621,7 +621,24 @@ def _load_vtu_meshio(ref: SnapshotRef, path: Path) -> MeshSnapshot:
     cell_acc: dict[str, list[np.ndarray]] = {}
     point_offset = 0
     for piece in piece_files:
-        if piece.read_bytes()[:65536].count(b"<Piece") > 1:
+        with piece.open("rb") as source:
+            header = source.read(65536)
+        piece_tags = re.findall(rb"<Piece\b[^>]*>", header)
+        if (
+            b"</VTKFile>" in header
+            and piece_tags
+            and all(
+                dict(
+                    re.findall(
+                        rb"\b(NumberOfPoints|NumberOfCells)\s*=\s*[\"'](\d+)[\"']", tag
+                    )
+                )
+                == {b"NumberOfPoints": b"0", b"NumberOfCells": b"0"}
+                for tag in piece_tags
+            )
+        ):
+            continue
+        if len(piece_tags) > 1:
             import warnings
 
             warnings.warn(

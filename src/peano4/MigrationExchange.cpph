@@ -1,0 +1,180 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "peano4/communication/CommunicationManager.h"
+#include "peano4/communication/MigrationExchangeKernels.h"
+#include "tarch/Assertions.h"
+#include "tarch/Termination.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/mpi/Request.h"
+
+template <typename T>
+peano4::MigrationExchange<T>::MigrationExchange(const tarch::MemoryLocation location) :
+  _prolongations(location),
+  _restrictions(location),
+  _sentCells(location),
+  _receivedSlots(location),
+  _sendBuffer(location),
+  _receiveBuffer(location) {}
+
+/**
+ * Fills the slots of the cells the regrid creates through the three device functions of the
+ * transfer, copy(slot, target), interpolateFromParent(parentSlot, target, childPosition) and
+ * restrictFromChildren(childSlots, target), which read old slots of the pool and write one chunk.
+ * The prolongations and restrictions on this rank run while the messages of the other ranks
+ * travel; no new slot reuses an old slot, so they write no chunk a message reads. Every rank calls
+ * this at the same time, and the first call reserves the tag of the exchange.
+ */
+template <typename T>
+template <typename Transfer>
+void
+peano4::MigrationExchange<T>::migrate(Pool& pool, const peano4::Regrid& regrid, const Transfer& transfer) {
+  assertion(pool.getLocation() == _sendBuffer.getLocation());
+  assertion(pool.getCapacity() >= regrid.newNumberOfSlots, pool.getCapacity(), regrid.newNumberOfSlots);
+  if (_tag == NoTag) {
+    _tag = peano4::communication::CommunicationManager::getInstance().reserveTag();
+  }
+  postTransfers(pool, regrid.rankTransfers, transfer);
+  if (not regrid.prolongations.empty()) {
+    _prolongations.setValues(regrid.prolongations);
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(static_cast<int>(regrid.prolongations.size())),
+      peano4::communication::ProlongChunks<T, Transfer>{_prolongations.getData(), pool.getView(), transfer}
+    );
+  }
+  if (not regrid.restrictions.empty()) {
+    _restrictions.setValues(regrid.restrictions);
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(static_cast<int>(regrid.restrictions.size())),
+      peano4::communication::RestrictChunks<T, Transfer>{_restrictions.getData(), pool.getView(), transfer}
+    );
+  }
+  receiveTransfers(pool);
+}
+
+/** Gathers the chunks of the sent cells into one send buffer and posts one message per rank of the transfers. */
+template <typename T>
+template <typename Transfer>
+void
+peano4::MigrationExchange<T>::postTransfers(
+  const Pool&                              pool,
+  const std::vector<peano4::RankTransfer>& transfers,
+  const Transfer&                          transfer
+) {
+  assertion(_requests.empty(), _requests.size());
+  _numberOfReceivedChunks = 0;
+  std::vector<peano4::TransferredCell> sentCells;
+  std::vector<int>                     receivedSlots;
+  for (const auto& rankTransfer : transfers) {
+    assertion(rankTransfer.rank >= 0, rankTransfer.rank);
+    sentCells.insert(sentCells.end(), rankTransfer.sentCells.begin(), rankTransfer.sentCells.end());
+    receivedSlots.insert(receivedSlots.end(), rankTransfer.receivedSlots.begin(), rankTransfer.receivedSlots.end());
+  }
+  if (sentCells.empty() and receivedSlots.empty()) {
+    return;
+  }
+  const int  chunkSize      = pool.getChunkSize();
+  const auto valuesPerChunk = static_cast<std::size_t>(chunkSize);
+  _sentCells.setValues(sentCells);
+  _receivedSlots.setValues(receivedSlots);
+  _sendBuffer.allocate(sentCells.size() * valuesPerChunk);
+  _receiveBuffer.allocate(receivedSlots.size() * valuesPerChunk);
+
+  if (not sentCells.empty()) {
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(static_cast<int>(sentCells.size())),
+      peano4::communication::GatherChunks<T, Transfer>{_sentCells.getData(), _sendBuffer.getData(), transfer, chunkSize}
+    );
+  }
+
+  MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
+  _requests.reserve(2 * transfers.size());
+  _numberOfReceivedChunks   = static_cast<int>(receivedSlots.size());
+  std::size_t sendOffset    = 0;
+  std::size_t receiveOffset = 0;
+  for (const auto& rankTransfer : transfers) {
+    const std::size_t sentValues     = rankTransfer.sentCells.size() * valuesPerChunk;
+    const std::size_t receivedValues = rankTransfer.receivedSlots.size() * valuesPerChunk;
+    constexpr auto    LargestMessage = static_cast<std::size_t>(std::numeric_limits<int>::max());
+    if (sentValues * sizeof(T) > LargestMessage or receivedValues * sizeof(T) > LargestMessage) {
+      tarch::terminateWithError(
+        "The migration message to rank " + std::to_string(rankTransfer.rank) + " exceeds one message."
+      );
+    }
+    if (receivedValues > 0) {
+      _requests.emplace_back();
+      tarch::mpi::irecv(
+        _receiveBuffer.getData() + receiveOffset,
+        static_cast<int>(receivedValues * sizeof(T)),
+        MPI_BYTE,
+        rankTransfer.rank,
+        _tag,
+        communicator,
+        &_requests.back()
+      );
+    }
+    if (sentValues > 0) {
+      _requests.emplace_back();
+      tarch::mpi::isend(
+        _sendBuffer.getData() + sendOffset,
+        static_cast<int>(sentValues * sizeof(T)),
+        MPI_BYTE,
+        rankTransfer.rank,
+        _tag,
+        communicator,
+        &_requests.back()
+      );
+    }
+    sendOffset += sentValues;
+    receiveOffset += receivedValues;
+  }
+}
+
+/** Waits for every message postTransfers() posted and copies every received chunk into its slot. */
+template <typename T>
+void
+peano4::MigrationExchange<T>::receiveTransfers(Pool& pool) {
+  for (auto& request : _requests) {
+    tarch::mpi::wait(&request);
+  }
+  _requests.clear();
+  if (_numberOfReceivedChunks > 0) {
+    const int chunkSize = pool.getChunkSize();
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(_numberOfReceivedChunks * chunkSize),
+      peano4::communication::ScatterChunks<T>{
+        _receivedSlots.getData(),
+        _receiveBuffer.getData(),
+        pool.getView(),
+        chunkSize
+      }
+    );
+  }
+}
+
+/** Frees every buffer; the tag stays reserved for the next migrate. */
+template <typename T>
+void
+peano4::MigrationExchange<T>::release() {
+  _prolongations.release();
+  _restrictions.release();
+  _sentCells.release();
+  _receivedSlots.release();
+  _sendBuffer.release();
+  _receiveBuffer.release();
+}
+
+template <typename T>
+INLINE_METHOD int
+peano4::MigrationExchange<T>::getTag() const noexcept {
+  return _tag;
+}
+
+/** Returns the bytes of the slot lists and both transfer buffers. */
+template <typename T>
+INLINE_METHOD tarch::AllocatedBytes
+peano4::MigrationExchange<T>::getAllocatedBytes() const noexcept {
+  return _prolongations.getAllocatedBytes() + _restrictions.getAllocatedBytes() + _sentCells.getAllocatedBytes()
+    + _receivedSlots.getAllocatedBytes() + _sendBuffer.getAllocatedBytes() + _receiveBuffer.getAllocatedBytes();
+}

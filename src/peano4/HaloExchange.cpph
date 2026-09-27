@@ -1,0 +1,216 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "peano4/communication/CommunicationManager.h"
+#include "peano4/communication/HaloExchangeKernels.h"
+#include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
+#include "tarch/Termination.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/mpi/AbstractCommunicationManager.h"
+#include "tarch/mpi/Request.h"
+
+template <typename T>
+peano4::HaloExchange<T>::HaloExchange(Pool& pool) :
+  _pool(pool),
+  _halfSize(pool.getChunkSize() / 2),
+  _entries(pool.getLocation()),
+  _sendBuffer(pool.getLocation()),
+  _receiveBuffer(pool.getLocation()) {
+  assertion(pool.getChunkSize() % 2 == 0, "A face chunk holds one half per side.", pool.getChunkSize());
+}
+
+template <typename T>
+peano4::HaloExchange<T>::HaloExchange::~HaloExchange() noexcept {
+  assertion(not _inFlight, "An exchange is destroyed only after wait() has completed its last post().");
+}
+
+/**
+ * Copies the exchanged faces of the partition into one entry table and sizes the buffers for
+ * them. Runs after every build of the partition, while no post is in flight. The first call
+ * reserves the tag of the exchange, so every rank reserves the tags of its exchanges in the order
+ * of their first rebuild.
+ */
+template <typename T>
+void
+peano4::HaloExchange<T>::rebuild(const peano4::Partition& partition) {
+  assertion(not _inFlight);
+  if (_tag == NoTag) {
+    _tag = peano4::communication::CommunicationManager::getInstance().reserveTag();
+  }
+
+  std::vector<peano4::ExchangedFace> entries;
+  _messages.clear();
+  for (const auto& neighbour : partition.getNeighbours()) {
+    const auto faces = partition.getExchangedFaces(neighbour);
+    assertion(neighbour.rank >= 0 and not faces.isEmpty(), neighbour.rank);
+#if PEANO_ASSERTIONS
+    for (const auto& entry : faces) {
+      assertion(
+        entry.face >= 0 and entry.face < partition.getNumberOfFaces(),
+        entry.face,
+        partition.getNumberOfFaces()
+      );
+      assertion(entry.side == 0 or entry.side == 1, entry.side);
+    }
+#endif
+    const std::size_t bytes = static_cast<std::size_t>(faces.size) * static_cast<std::size_t>(_halfSize) * sizeof(T);
+    if (bytes > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+      tarch::terminateWithError(
+        "The halo message to rank " + std::to_string(neighbour.rank) + " holds " + std::to_string(bytes)
+        + " bytes, but a message holds at most " + std::to_string(std::numeric_limits<int>::max()) + " bytes."
+      );
+    }
+    _messages.push_back({neighbour.rank, static_cast<int>(entries.size()), faces.size});
+    entries.insert(entries.end(), faces.begin(), faces.end());
+  }
+
+  _numberOfEntries = static_cast<int>(entries.size());
+  _entries.setValues(entries);
+  _sendBuffer.allocate(entries.size() * static_cast<std::size_t>(_halfSize));
+  _receiveBuffer.allocate(entries.size() * static_cast<std::size_t>(_halfSize));
+  _requests.assign(2 * _messages.size(), MPI_REQUEST_NULL);
+}
+
+/** Frees the entry table and the buffers; the tag stays reserved for the next rebuild. */
+template <typename T>
+void
+peano4::HaloExchange<T>::release() {
+  assertion(not _inFlight);
+  _messages        = std::vector<Message>{};
+  _requests        = std::vector<MPI_Request>{};
+  _numberOfEntries = 0;
+  _entries.release();
+  _sendBuffer.release();
+  _receiveBuffer.release();
+}
+
+/**
+ * Gathers the local halves into the send buffer and posts the receives and sends of every
+ * neighbour rank. A caller leaves the exchanged faces of the pool unchanged until wait() returns.
+ */
+template <typename T>
+void
+peano4::HaloExchange<T>::post() {
+  assertion(not _inFlight);
+  assertion(_tag != NoTag, "rebuild() precedes post().");
+  assertion(_messagesCompleted.load(std::memory_order_acquire));
+  assertion(_requests.size() == 2 * _messages.size(), _requests.size(), _messages.size());
+  assertion(
+    _sendBuffer.getSize() == static_cast<std::size_t>(_numberOfEntries) * static_cast<std::size_t>(_halfSize),
+    _sendBuffer.getSize()
+  );
+
+  if (_numberOfEntries > 0) {
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(_numberOfEntries * _halfSize),
+      peano4::communication::GatherHaloHalves<T>{
+        std::as_const(_pool).getView(),
+        _entries.getData(),
+        _sendBuffer.getData(),
+        _halfSize
+      }
+    );
+  }
+
+  auto&    manager      = peano4::communication::CommunicationManager::getInstance();
+  MPI_Comm communicator = manager.getCommunicator();
+  for (std::size_t messageNumber = 0; messageNumber < _messages.size(); messageNumber++) {
+    const Message& message   = _messages[messageNumber];
+    const int      byteCount = message.numberOfEntries * _halfSize * static_cast<int>(sizeof(T));
+    const auto     offset    = static_cast<std::size_t>(message.firstEntry) * static_cast<std::size_t>(_halfSize);
+    tarch::mpi::irecv(
+      _receiveBuffer.getData() + offset,
+      byteCount,
+      MPI_BYTE,
+      message.rank,
+      _tag,
+      communicator,
+      &_requests[2 * messageNumber]
+    );
+    tarch::mpi::isend(
+      _sendBuffer.getData() + offset,
+      byteCount,
+      MPI_BYTE,
+      message.rank,
+      _tag,
+      communicator,
+      &_requests[2 * messageNumber + 1]
+    );
+  }
+
+  _inFlight = true;
+  if (not _messages.empty()) {
+    _messagesCompleted.store(false, std::memory_order_release);
+    manager.registerInFlightTransfer([this]() { return pollMessages(); });
+  }
+}
+
+/**
+ * Blocks until every message of the post has completed, then scatters the received halves
+ * into the side of their faces the neighbour owns.
+ */
+template <typename T>
+void
+peano4::HaloExchange<T>::wait() {
+  assertion(_inFlight);
+
+  auto& progressManager = tarch::mpi::AbstractCommunicationManager::getInstance();
+  while (not _messagesCompleted.load(std::memory_order_acquire)) {
+    progressManager.progress();
+  }
+
+  if (_numberOfEntries > 0) {
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(_numberOfEntries * _halfSize),
+      peano4::communication::ScatterHaloHalves<T>{
+        _entries.getData(),
+        _receiveBuffer.getData(),
+        _pool.getView(),
+        _halfSize
+      }
+    );
+  }
+
+  _inFlight = false;
+}
+
+/**
+ * Tests every request of the post once. Only the poller calls this, so no other thread touches
+ * the requests while a post is in flight.
+ */
+template <typename T>
+bool
+peano4::HaloExchange<T>::pollMessages() {
+  bool allCompleted = true;
+  for (auto& request : _requests) {
+    int flag = 0;
+    tarch::mpi::test(&request, &flag);
+    allCompleted = allCompleted and flag != 0;
+  }
+  if (allCompleted) {
+    _messagesCompleted.store(true, std::memory_order_release);
+  }
+  return allCompleted;
+}
+
+template <typename T>
+INLINE_METHOD int
+peano4::HaloExchange<T>::getNumberOfEntries() const noexcept {
+  return _numberOfEntries;
+}
+
+template <typename T>
+INLINE_METHOD int
+peano4::HaloExchange<T>::getTag() const noexcept {
+  return _tag;
+}
+
+/** Returns the bytes of the entry table, the message runs, the requests and both transfer buffers. */
+template <typename T>
+INLINE_METHOD tarch::AllocatedBytes
+peano4::HaloExchange<T>::getAllocatedBytes() const noexcept {
+  return _entries.getAllocatedBytes() + _sendBuffer.getAllocatedBytes() + _receiveBuffer.getAllocatedBytes()
+    + tarch::AllocatedBytes::onHost(tarch::getAllocatedBytesOf(_messages) + tarch::getAllocatedBytesOf(_requests));
+}

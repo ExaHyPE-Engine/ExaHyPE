@@ -3,7 +3,6 @@
 #include "exahype2/UnitTests.h"
 #include "peano4/Init.h"
 #include "peano4/UnitTests.h"
-#include "runner/UnitTests.h"
 #include "tarch/FloatingPointExceptions.h"
 #include "tarch/Init.h"
 #include "tarch/NonCriticalAssertions.h"
@@ -13,6 +12,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/tasking/Runtime.h"
+#include "tarch/tests/TestCase.h"
 
 namespace {
   int runTests() {
@@ -27,7 +27,6 @@ namespace {
     runTestCollection(tarch::getUnitTests());
     runTestCollection(peano4::getUnitTests());
     runTestCollection(exahype2::getUnitTests());
-    runTestCollection(runner::getUnitTests());
 
     if (numberOfErrors != 0) {
       logError("Unit tests failed: " << numberOfErrors << ".");
@@ -38,7 +37,8 @@ namespace {
   }
 } // namespace
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
 #if DIMENSIONS == 2
   const tarch::la::Vector<DIMENSIONS, double> domainOffset = {0.0, 0.0};
   const tarch::la::Vector<DIMENSIONS, double> domainSize   = {1.0, 1.0};

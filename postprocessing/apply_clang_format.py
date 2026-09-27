@@ -18,7 +18,7 @@ from postprocessing.source_tree import resolve_root
 from postprocessing.source_tree import run_commands
 from postprocessing.source_tree import source_files
 
-MINIMUM_MAJOR_VERSION = 20
+MINIMUM_MAJOR_VERSION = 22
 FORMAT_VIOLATION = "[-Wclang-format-violations]"
 
 

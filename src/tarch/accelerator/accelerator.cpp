@@ -3,14 +3,9 @@
 #include "accelerator.h"
 
 #include "tarch/Assertions.h"
-#include "tarch/Termination.h"
 #include "tarch/accelerator/MemoryBlocks.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Warning.h"
-
-#if not defined(_WIN32)
-#include <sys/mman.h>
-#endif
 
 namespace {
   std::atomic<bool> loggedMissingTaskloopSupport{false};
@@ -20,71 +15,43 @@ namespace {
  * Writes one warning per run that this toolchain offers no OpenMP taskloop. parallelFor() is a
  * template, so its fallback branch reaches this function from every translation unit that uses it.
  */
-void tarch::accelerator::reportMissingTaskloopSupportOnce() {
+void
+tarch::accelerator::reportMissingTaskloopSupportOnce() {
   if (not loggedMissingTaskloopSupport.exchange(true, std::memory_order_relaxed)) {
     logWarning(
-      "OpenMP taskloop is unavailable on this toolchain. A parallel range is split into tasks by hand, which costs one spawn per chunk. Expect degraded performance."
+      "OpenMP taskloop is unavailable on this toolchain, so a parallel range spawns one task per chunk. Expect "
+      "degraded performance."
     );
   }
 }
 
-void* tarch::accelerator::allocateHeapMemory(const std::size_t sizeInBytes) {
+void*
+tarch::accelerator::allocateHeapMemory(const std::size_t sizeInBytes) {
   return ::operator new(sizeInBytes, std::align_val_t(PEANO_WITH_ALIGNMENT));
 }
 
-void tarch::accelerator::freeHeapMemory(void* const data) {
+void
+tarch::accelerator::freeHeapMemory(void* const data) {
   ::operator delete(data, std::align_val_t(PEANO_WITH_ALIGNMENT));
 }
 
-/**
- * Maps @p sizeInBytes of zero-filled, page-aligned memory. A page of the
- * mapping turns resident on its first write. The writing thread's NUMA node
- * holds the page.
- */
-void* tarch::accelerator::allocateZeroedHeapMemory(const std::size_t sizeInBytes) {
-#if defined(_WIN32)
-  void* const data = allocateHeapMemory(sizeInBytes);
-  std::memset(data, 0, sizeInBytes);
-  return data;
-#else
-  void* const data = ::mmap(nullptr, sizeInBytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (data == MAP_FAILED) {
-    tarch::terminateWithError("Mapping " + std::to_string(sizeInBytes) + " bytes of zeroed memory failed.");
-  }
-  return data;
-#endif
-}
-
-void tarch::accelerator::freeZeroedHeapMemory(void* const data, [[maybe_unused]] const std::size_t sizeInBytes) {
-#if defined(_WIN32)
-  freeHeapMemory(data);
-#else
-  [[maybe_unused]] const int result = ::munmap(data, sizeInBytes);
-  assertion(result == 0, sizeInBytes);
-#endif
-}
-
-void tarch::accelerator::copyToHeapMemory(void* const target, const void* const source, const std::size_t sizeInBytes) {
+void
+tarch::accelerator::copyToHeapMemory(void* const target, const void* const source, const std::size_t sizeInBytes) {
   std::memcpy(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::copyFromHeapMemory(
-  const void* const source,
-  void* const       target,
-  const std::size_t sizeInBytes
-) {
+void
+tarch::accelerator::copyFromHeapMemory(const void* const source, void* const target, const std::size_t sizeInBytes) {
   std::memcpy(target, source, sizeInBytes);
 }
 
-void tarch::freeMemory(void* const memoryPtr, const MemoryLocation location, const int device) {
+void
+tarch::freeMemory(void* const memoryPtr, const MemoryLocation location, const int device) {
   accelerator::freeRawData(memoryPtr, location, device);
 }
 
-void* tarch::accelerator::allocateRawData(
-  const std::size_t    sizeInBytes,
-  const MemoryLocation location,
-  const int            device
-) {
+void*
+tarch::accelerator::allocateRawData(const std::size_t sizeInBytes, const MemoryLocation location, const int device) {
   assertion(sizeInBytes > 0, sizeInBytes, toString(location));
 
   void* data = nullptr;
@@ -105,7 +72,8 @@ void* tarch::accelerator::allocateRawData(
   return data;
 }
 
-void tarch::accelerator::freeRawData(void* const data, const MemoryLocation location, const int device) {
+void
+tarch::accelerator::freeRawData(void* const data, const MemoryLocation location, const int device) {
   if (data == nullptr) {
     return;
   }
@@ -125,7 +93,8 @@ void tarch::accelerator::freeRawData(void* const data, const MemoryLocation loca
   }
 }
 
-void tarch::accelerator::copyTo(
+void
+tarch::accelerator::copyTo(
   void* const          target,
   const void* const    source,
   const std::size_t    sizeInBytes,
@@ -152,7 +121,8 @@ void tarch::accelerator::copyTo(
   }
 }
 
-void tarch::accelerator::copyFrom(
+void
+tarch::accelerator::copyFrom(
   const void* const    source,
   void* const          target,
   const std::size_t    sizeInBytes,
@@ -180,31 +150,47 @@ void tarch::accelerator::copyFrom(
 }
 
 namespace {
-  thread_local int currentDevice = tarch::accelerator::Device::DefaultDevice;
+  int currentDevice = tarch::accelerator::Device::DefaultDevice;
 } // namespace
 
 /**
- * Selects the device that tarch::accelerator::parallelFor and tarch::accelerator::parallelReduce
- * target. Every host thread holds its own selection, which starts at Device::DefaultDevice.
+ * Selects the device of every kernel launch and of every allocation that names no device, for
+ * every host thread. tarch::init() selects the device of the rank before the first allocation.
  */
-void tarch::accelerator::setCurrentDevice(const int device) { currentDevice = device; }
+void
+tarch::accelerator::setCurrentDevice(const int device) {
+  assertion(device >= 0, device);
+  currentDevice = device;
+}
 
-int tarch::accelerator::getCurrentDevice() { return currentDevice; }
+int
+tarch::accelerator::getCurrentDevice() {
+  return currentDevice;
+}
 
 #if not defined(PEANO_WITH_GPU_BACKEND)
-void* tarch::accelerator::allocateDeviceMemory(const std::size_t sizeInBytes, [[maybe_unused]] const int device) {
+void*
+tarch::accelerator::allocateDeviceMemory(const std::size_t sizeInBytes, [[maybe_unused]] const int device) {
   return allocateHeapMemory(sizeInBytes);
 }
 
-void* tarch::accelerator::allocatePinnedMemory(const std::size_t sizeInBytes, [[maybe_unused]] const int device) {
+void*
+tarch::accelerator::allocatePinnedMemory(const std::size_t sizeInBytes, [[maybe_unused]] const int device) {
   return allocateHeapMemory(sizeInBytes);
 }
 
-void tarch::accelerator::freeDeviceMemory(void* const data, [[maybe_unused]] const int device) { freeHeapMemory(data); }
+void
+tarch::accelerator::freeDeviceMemory(void* const data, [[maybe_unused]] const int device) {
+  freeHeapMemory(data);
+}
 
-void tarch::accelerator::freePinnedMemory(void* const data, [[maybe_unused]] const int device) { freeHeapMemory(data); }
+void
+tarch::accelerator::freePinnedMemory(void* const data, [[maybe_unused]] const int device) {
+  freeHeapMemory(data);
+}
 
-void tarch::accelerator::copyToDeviceMemory(
+void
+tarch::accelerator::copyToDeviceMemory(
   void* const                target,
   const void* const          source,
   const std::size_t          sizeInBytes,
@@ -213,7 +199,8 @@ void tarch::accelerator::copyToDeviceMemory(
   copyToHeapMemory(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::copyToPinnedMemory(
+void
+tarch::accelerator::copyToPinnedMemory(
   void* const                target,
   const void* const          source,
   const std::size_t          sizeInBytes,
@@ -222,7 +209,8 @@ void tarch::accelerator::copyToPinnedMemory(
   copyToHeapMemory(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::copyFromDeviceMemory(
+void
+tarch::accelerator::copyFromDeviceMemory(
   const void* const          source,
   void* const                target,
   const std::size_t          sizeInBytes,
@@ -231,7 +219,8 @@ void tarch::accelerator::copyFromDeviceMemory(
   copyFromHeapMemory(source, target, sizeInBytes);
 }
 
-void tarch::accelerator::copyFromPinnedMemory(
+void
+tarch::accelerator::copyFromPinnedMemory(
   const void* const          source,
   void* const                target,
   const std::size_t          sizeInBytes,

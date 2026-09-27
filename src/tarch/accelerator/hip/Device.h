@@ -10,13 +10,13 @@
 
 namespace tarch::accelerator {
   hipStream_t deviceStreamCreate();
-  void        deviceStreamDestroy(hipStream_t* stream);
-  void        deviceStreamSync(hipStream_t stream);
+  void deviceStreamDestroy(hipStream_t* stream);
+  void deviceStreamSync(hipStream_t stream);
 
-  void        deviceStreamSet(hipStream_t stream);
-  hipStream_t deviceStreamGet();
+  void setDeviceStream(hipStream_t stream);
+  hipStream_t getDeviceStream();
 
-  // HipTeam carries no state: The team overloads read threadIdx and blockDim directly.
+  // The team overloads read threadIdx and blockDim.
   struct HipTeam final {};
   using TeamHandle = HipTeam;
 

@@ -13,18 +13,11 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 /**
- * Supervises the message exchange of one rank.
- *
- * A wait that exceeds the warning threshold reports itself, and one that
- * exceeds the deadlock threshold terminates the program. The pending-request
- * table records the origin, the partner and the tag of every non-blocking
- * request, so a timeout names the request it waits on, and the warnings and
- * the abort also work while the table is switched off.
- *
- * The table is a fixed array of seqlock-guarded slots: A writer claims a slot
- * by a compare-and-swap on the slot's sequence word and releases it with a
- * second increment, and a reader accepts a slot only when the sequence is even
- * and unchanged across its read.
+ * Warns about a wait on a request that exceeds the warning threshold and terminates the program
+ * when a wait exceeds the deadlock threshold. A table records the origin, the partner and the tag
+ * of every tracked non-blocking request, so a timeout report names the request. Every access
+ * claims a table slot with a compare-and-swap on its sequence word and releases it with a second
+ * increment.
  */
 class tarch::mpi::Diagnostics final {
 public:
@@ -50,27 +43,6 @@ public:
   [[nodiscard]] bool isRequestTrackingEnabled() const;
 
   [[nodiscard]] bool useTimeoutChecks() const;
-
-  void setDeadlockWarningTimeStamp();
-
-  void setDeadlockTimeoutTimeStamp();
-
-  void writeTimeoutWarning(
-    const std::string& className,
-    const std::string& methodName,
-    int                communicationPartnerRank,
-    int                tag,
-    int                numberOfExpectedMessages = 1
-  );
-
-  void triggerDeadlockTimeout(
-    const std::string& className,
-    const std::string& methodName,
-    int                communicationPartnerRank,
-    int                tag,
-    int                numberOfExpectedMessages = 1,
-    const std::string& comment                  = ""
-  );
 
   void plotMessageQueues();
 
@@ -114,17 +86,10 @@ private:
   Diagnostics()  = default;
   ~Diagnostics() = default;
 
-  static std::size_t slotIndex(const MPI_Request* request, std::size_t displacement);
-
-  [[nodiscard]] bool exceededTimeoutWarningThreshold() const;
-
-  [[nodiscard]] bool exceededDeadlockThreshold() const;
+  static std::size_t getSlotIndex(const MPI_Request* request, std::size_t displacement);
 
   std::chrono::duration<double> _timeoutWarning{0};
   std::chrono::duration<double> _deadlockTimeout{0};
-
-  std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double>> _globalTimeoutWarning{};
-  std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double>> _globalTimeoutDeadlock{};
 
   bool _requestTrackingEnabled{false};
 

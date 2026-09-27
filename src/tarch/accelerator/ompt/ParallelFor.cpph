@@ -54,9 +54,10 @@ namespace tarch::accelerator {
     if (range.n <= 0) {
       return;
     }
-    const int device = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for device(device)
-    for (int i = 0; i < range.n; ++i) {
+    const int device        = tarch::accelerator::getCurrentDevice();
+    const int numberOfItems = range.n;
+#pragma omp target teams distribute parallel for firstprivate(functor) device(device)
+    for (int i = 0; i < numberOfItems; ++i) {
       functor(i);
     }
   }
@@ -68,10 +69,12 @@ namespace tarch::accelerator {
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
-    const int device = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(2) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
+    const int device  = tarch::accelerator::getCurrentDevice();
+    const int extentX = range.n[0];
+    const int extentY = range.n[1];
+#pragma omp target teams distribute parallel for collapse(2) firstprivate(functor) device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
         functor(x, y);
       }
     }
@@ -85,11 +88,14 @@ namespace tarch::accelerator {
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
-    const int device = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(3) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
-        for (int z = 0; z < range.n[2]; ++z) {
+    const int device  = tarch::accelerator::getCurrentDevice();
+    const int extentX = range.n[0];
+    const int extentY = range.n[1];
+    const int extentZ = range.n[2];
+#pragma omp target teams distribute parallel for collapse(3) firstprivate(functor) device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
+        for (int z = 0; z < extentZ; ++z) {
           functor(x, y, z);
         }
       }
@@ -102,13 +108,16 @@ namespace tarch::accelerator {
     if (range.n <= 0) {
       return;
     }
-    const int device = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute device(device)
-    for (int i = 0; i < range.n; ++i) {
-      alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp                         parallel default(none) shared(functor, i, teamScratch)
-      {
-        functor(i, tarch::accelerator::OmptTeam{teamScratch});
+    const int device        = tarch::accelerator::getCurrentDevice();
+    const int numberOfTeams = range.n;
+#pragma omp target teams num_teams(numberOfTeams) firstprivate(functor) device(device)
+#pragma omp parallel
+    {
+      alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
+#pragma omp allocate(teamScratch) allocator(omp_pteam_mem_alloc)
+      for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
+        functor(team, tarch::accelerator::OmptTeam{teamScratch});
+#pragma omp barrier
       }
     }
   }

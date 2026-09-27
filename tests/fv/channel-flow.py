@@ -43,7 +43,7 @@ boundary_conditions = """
   }
 
   // Inlet boundary condition (x[0] = 0.0)
-  const double maxAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  const double maxAdmissiblePatchSize = ::exahype2::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
   if (tarch::la::smallerEquals(x[0], maxAdmissiblePatchSize)) {
     Qoutside[Shortcuts::rhoU + 0] = 1.0;
   }

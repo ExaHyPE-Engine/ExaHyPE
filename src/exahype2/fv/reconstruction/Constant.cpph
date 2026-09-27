@@ -1,6 +1,9 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "exahype2/fv/FiniteVolume.h"
+#include "tarch/Assertions.h"
+
 TARGET_DECLARE
 /**
  * Adds one volume's flux divergence to @p outputState with a Rusanov flux or the
@@ -20,8 +23,10 @@ template <
   bool EvaluateCustomRiemann,
   bool EvaluateMaxEigenvalue,
   typename StoragePrecision,
-  typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
+  typename ComputePrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
   const StoragePrecision* NOALIAS const        inputPatch,
   const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
@@ -33,6 +38,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
   const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
+  [[maybe_unused]] const int                   boundaryFaces,
   StoragePrecision* NOALIAS const              outputState,
   double&                                      maxEigenvalueAfterTimeStep
 ) {
@@ -71,7 +77,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
         tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
         overlapCell(normal)                            = volumeIndex(normal) + 2 * HaloSize - NumberOfVolumesPerAxis;
         const int overlapIndex =
-          exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+          exahype2::fv::getFaceVolumeIndex(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
         rightStateInStorage =
           &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
       }
@@ -106,20 +112,24 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
     }
   }
 
+  // Every axis adds its flux difference to one update, and that update enters outputState once,
+  // so two volumes that a mirror of the axes maps onto each other receive mirrored states.
+  StateUpdatePrecision axisUpdates[NumberOfUnknowns];
+  SIMD()
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    axisUpdates[unknown] = static_cast<StateUpdatePrecision>(0);
+  }
+
   for (int normal = 0; normal < DIMENSIONS; normal++) {
     auto leftVolumeIndex  = volumeIndex;
     auto rightVolumeIndex = volumeIndex;
     leftVolumeIndex(normal) -= HaloSize;
     rightVolumeIndex(normal) += HaloSize;
 
-    [[maybe_unused]] const auto [leftVolumeSize, leftVolumeCentre] =
-      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(patchCentre, patchSize, leftVolumeIndex);
-    [[maybe_unused]] const auto [rightVolumeSize, rightVolumeCentre] =
-      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
-        patchCentre,
-        patchSize,
-        rightVolumeIndex
-      );
+    [[maybe_unused]] const auto leftVolumeCentre =
+      exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, leftVolumeIndex);
+    [[maybe_unused]] const auto rightVolumeCentre =
+      exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, rightVolumeIndex);
 
     int strideAlongNormal = NumberOfData;
     for (int dimension = 0; dimension < normal; dimension++) {
@@ -134,9 +144,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
     } else {
       tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
       overlapCell(normal)                            = volumeIndex(normal);
-      const int overlapIndex =
-        exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-      leftStateInStorage = &faceInputPatches[normal][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
+      const int overlapIndex = exahype2::fv::getFaceVolumeIndex(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+      leftStateInStorage     = &faceInputPatches[normal][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
     }
 
     // Right neighbour: An interior volume if it exists, otherwise the halo
@@ -147,8 +156,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
     } else {
       tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
       overlapCell(normal)                            = volumeIndex(normal) + 2 * HaloSize - NumberOfVolumesPerAxis;
-      const int overlapIndex =
-        exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+      const int overlapIndex = exahype2::fv::getFaceVolumeIndex(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
       rightStateInStorage =
         &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
     }
@@ -197,28 +205,36 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       ComputePrecision leftGoingFluxRightFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       ComputePrecision rightGoingFluxRightFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-      const ComputePrecision maxWaveSpeedLeft = SolverType::solveRiemannProblem(
-        leftState,
-        centreStateForCompute,
-        leftFaceCentre,
-        volumeSize,
-        timeStamp,
-        timeStepSize,
-        normal,
-        leftGoingFluxLeftFace,
-        rightGoingFluxLeftFace
-      );
-      const ComputePrecision maxWaveSpeedRight = SolverType::solveRiemannProblem(
-        centreStateForCompute,
-        rightState,
-        rightFaceCentre,
-        volumeSize,
-        timeStamp,
-        timeStepSize,
-        normal,
-        leftGoingFluxRightFace,
-        rightGoingFluxRightFace
-      );
+      const auto maxWaveSpeedLeft =
+        static_cast<ComputePrecision>(exahype2::fv::solveRiemannProblemOnVolumeFace<SolverType, NumberOfVolumesPerAxis>(
+          leftState,
+          centreStateForCompute,
+          leftFaceCentre,
+          volumeSize,
+          timeStamp,
+          timeStepSize,
+          normal,
+          volumeIndex,
+          0,
+          boundaryFaces,
+          leftGoingFluxLeftFace,
+          rightGoingFluxLeftFace
+        ));
+      const auto maxWaveSpeedRight =
+        static_cast<ComputePrecision>(exahype2::fv::solveRiemannProblemOnVolumeFace<SolverType, NumberOfVolumesPerAxis>(
+          centreStateForCompute,
+          rightState,
+          rightFaceCentre,
+          volumeSize,
+          timeStamp,
+          timeStepSize,
+          normal,
+          volumeIndex,
+          1,
+          boundaryFaces,
+          leftGoingFluxRightFace,
+          rightGoingFluxRightFace
+        ));
       // A solver that defines solveRiemannProblem need not define maxEigenvalue, so the wave
       // speed the Riemann solver returns is the only eigenvalue this branch reads.
       if constexpr (EvaluateMaxEigenvalue) {
@@ -232,18 +248,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       );
       SIMD(aligned(rightGoingFluxLeftFace, leftGoingFluxRightFace : PEANO_WITH_ALIGNMENT))
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        const ComputePrecision fluxFromLeftInterface = rightGoingFluxLeftFace[unknown];
-        const ComputePrecision fluxToRightInterface  = leftGoingFluxRightFace[unknown];
-        outputState[unknown]                         = static_cast<StoragePrecision>(
-          static_cast<StateUpdatePrecision>(outputState[unknown])
-          + static_cast<StateUpdatePrecision>(scale * (fluxFromLeftInterface - fluxToRightInterface))
-        );
-      }
-      // The finiteness check stays out of the vectorised loop, whose body must
-      // be free of the diagnostics an assertion emits.
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        [[maybe_unused]] const bool outputStateIsFinite = std::isfinite(outputState[unknown]);
-        assertion(outputStateIsFinite, unknown, outputState[unknown]);
+        const ComputePrecision     fluxFromLeftInterface = rightGoingFluxLeftFace[unknown];
+        const ComputePrecision     fluxToRightInterface  = leftGoingFluxRightFace[unknown];
+        const StateUpdatePrecision contribution          = scale * (fluxFromLeftInterface - fluxToRightInterface);
+        axisUpdates[unknown] += contribution;
       }
     } else {
       ComputePrecision leftFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -322,18 +330,22 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
           fluxLeftFace -= leftNonconservativeProduct[unknown];
           fluxRightFace += centreNonconservativeProduct[unknown];
         }
-        outputState[unknown] = static_cast<StoragePrecision>(
-          static_cast<StateUpdatePrecision>(outputState[unknown])
-          + static_cast<StateUpdatePrecision>(scale * (fluxLeftFace - fluxRightFace))
-        );
-      }
-      // The finiteness check stays out of the vectorised loop, whose body must
-      // be free of the diagnostics an assertion emits.
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        [[maybe_unused]] const bool outputStateIsFinite = std::isfinite(outputState[unknown]);
-        assertion(outputStateIsFinite, unknown, outputState[unknown]);
+        const StateUpdatePrecision contribution = scale * (fluxLeftFace - fluxRightFace);
+        axisUpdates[unknown] += contribution;
       }
     }
+  }
+
+  SIMD()
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    outputState[unknown] =
+      static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + axisUpdates[unknown]);
+  }
+  // The finiteness check stays out of the vectorised loop, whose body must be free of the
+  // diagnostics an assertion emits.
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    [[maybe_unused]] const bool outputStateIsFinite = std::isfinite(outputState[unknown]);
+    assertion(outputStateIsFinite, unknown, outputState[unknown]);
   }
 }
 TARGET_DECLARE_END

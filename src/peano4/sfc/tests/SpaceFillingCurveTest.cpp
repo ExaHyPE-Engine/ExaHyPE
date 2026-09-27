@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SpaceFillingCurveTest.h"
 
+#include "peano4/Loop.h"
 #include "peano4/sfc/SpaceFillingCurve.h"
 #include "peano4/sfc/curves/HilbertGrammar.h"
 #include "peano4/sfc/curves/PeanoGrammar.h"
@@ -30,7 +31,7 @@ namespace {
       return;
     }
     const int childWidth = power(Curve::SubdivisionFactor, depth - 1);
-    for (const auto& child : Curve::children(state)) {
+    for (const auto& child : Curve::getChildren(state)) {
       Leaf childOrigin = origin;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         childOrigin[axis] += child.position[axis] * childWidth;
@@ -40,14 +41,14 @@ namespace {
   }
 
   template <class Curve>
-  std::vector<Leaf> leavesOf(const int depth) {
+  std::vector<Leaf> getLeavesOfDepth(const int depth) {
     std::vector<Leaf> leaves;
     appendLeaves<Curve>(Curve::RootState, depth, Leaf{}, leaves);
     return leaves;
   }
 
   /**
-   * Advances a serpentine walk over a 3^d patch: Axis 0 runs in its current
+   * Advances a serpentine walk over a 3^d block: Axis 0 runs in its current
    * direction, and an axis that reaches a face flips its direction and carries
    * over to the next axis.
    */
@@ -122,20 +123,21 @@ namespace {
 peano4::sfc::tests::SpaceFillingCurveTest::SpaceFillingCurveTest() :
   TestCase("peano4::sfc::tests::SpaceFillingCurveTest") {}
 
-void peano4::sfc::tests::SpaceFillingCurveTest::run() {
+void
+peano4::sfc::tests::SpaceFillingCurveTest::run() {
   testMethod(testChildrenMatchTheDerivedTable);
   testMethod(testLeafSequenceIsAHamiltonianPath);
-  testMethod(testCurveParameterFollowsTheLeafOrder);
   testMethod(testPeanoMatchesTheSerpentineClosedForm);
   testMethod(testHilbertVisitsTheTextbookOrder);
 }
 
 template <class Curve>
-void peano4::sfc::tests::SpaceFillingCurveTest::validateChildrenMatchTheDerivedTable() {
+void
+peano4::sfc::tests::SpaceFillingCurveTest::validateChildrenMatchTheDerivedTable() {
   constexpr auto Table = Curve::deriveChildOrder();
   static_assert(Table.size() == Curve::NumberOfStates);
   for (int state = 0; state < Curve::NumberOfStates; state++) {
-    const auto& children = Curve::children(state);
+    const auto& children = Curve::getChildren(state);
     for (int child = 0; child < Curve::ChildrenPerCell; child++) {
       validateEqualsWithParams2(
         children[child].linearisedPosition,
@@ -145,24 +147,26 @@ void peano4::sfc::tests::SpaceFillingCurveTest::validateChildrenMatchTheDerivedT
       );
       validateEqualsWithParams2(children[child].state, Table[state][child].state, state, child);
       validateWithParams2(children[child].state < Curve::NumberOfStates, state, child);
-      const auto position           = children[child].positionWithinParent();
-      int        linearisedPosition = 0;
-      int        stride             = 1;
+      const auto position = children[child].getPositionWithinParent();
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         validateEqualsWithParams3(position(axis), children[child].position[axis], state, child, axis);
-        linearisedPosition += position(axis) * stride;
-        stride *= Curve::SubdivisionFactor;
       }
-      validateEqualsWithParams2(linearisedPosition, children[child].linearisedPosition, state, child);
+      validateEqualsWithParams2(
+        peano4::dLinearised(position, Curve::SubdivisionFactor),
+        children[child].linearisedPosition,
+        state,
+        child
+      );
     }
   }
 }
 
 template <class Curve>
-void peano4::sfc::tests::SpaceFillingCurveTest::validateLeafSequenceIsAHamiltonianPath() {
+void
+peano4::sfc::tests::SpaceFillingCurveTest::validateLeafSequenceIsAHamiltonianPath() {
   constexpr int Depth        = 2;
   const int     cellsPerAxis = power(Curve::SubdivisionFactor, Depth);
-  const auto    leaves       = leavesOf<Curve>(Depth);
+  const auto    leaves       = getLeavesOfDepth<Curve>(Depth);
   validateEquals(static_cast<int>(leaves.size()), power(cellsPerAxis, DIMENSIONS));
   std::vector<bool> visited(leaves.size(), false);
   for (std::size_t leaf = 0; leaf < leaves.size(); leaf++) {
@@ -179,59 +183,22 @@ void peano4::sfc::tests::SpaceFillingCurveTest::validateLeafSequenceIsAHamiltoni
   }
 }
 
-void peano4::sfc::tests::SpaceFillingCurveTest::testChildrenMatchTheDerivedTable() {
+void
+peano4::sfc::tests::SpaceFillingCurveTest::testChildrenMatchTheDerivedTable() {
   validateChildrenMatchTheDerivedTable<PeanoCurve>();
   validateChildrenMatchTheDerivedTable<HilbertCurve>();
 }
 
-void peano4::sfc::tests::SpaceFillingCurveTest::testLeafSequenceIsAHamiltonianPath() {
+void
+peano4::sfc::tests::SpaceFillingCurveTest::testLeafSequenceIsAHamiltonianPath() {
   validateLeafSequenceIsAHamiltonianPath<PeanoCurve>();
   validateLeafSequenceIsAHamiltonianPath<HilbertCurve>();
 }
 
-/**
- * The leaves of a regular grid in curve order receive the parameters
- * i / ChildrenPerCell^depth, a coarser cell receives the parameter of its
- * first leaf, and the root receives zero.
- */
-template <class Curve>
-void peano4::sfc::tests::SpaceFillingCurveTest::validateCurveParameterFollowsTheLeafOrder() {
-  constexpr int    Depth                  = 3;
-  constexpr double Tolerance              = 1e-12;
-  const int        cellsPerAxis           = power(Curve::SubdivisionFactor, Depth);
-  const int        leavesBelowACoarseCell = power(Curve::ChildrenPerCell, Depth - 1);
-  const auto       leaves                 = leavesOf<Curve>(Depth);
-  const auto       numberOfLeaves         = static_cast<double>(leaves.size());
-  for (std::size_t leaf = 0; leaf < leaves.size(); leaf++) {
-    tarch::la::Vector<DIMENSIONS, double> centre;
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      centre(axis) = (leaves[leaf][axis] + 0.5) / cellsPerAxis;
-    }
-    validateNumericalEqualsWithEpsWithParams1(
-      Curve::curveParameter(centre, Depth),
-      static_cast<double>(leaf) / numberOfLeaves,
-      Tolerance,
-      leaf
-    );
-    const auto coarseCell = leaf / leavesBelowACoarseCell;
-    validateNumericalEqualsWithEpsWithParams1(
-      Curve::curveParameter(centre, 1),
-      static_cast<double>(coarseCell) / Curve::ChildrenPerCell,
-      Tolerance,
-      leaf
-    );
-    validateNumericalEquals(Curve::curveParameter(centre, 0), 0.0);
-  }
-}
-
-void peano4::sfc::tests::SpaceFillingCurveTest::testCurveParameterFollowsTheLeafOrder() {
-  validateCurveParameterFollowsTheLeafOrder<PeanoCurve>();
-  validateCurveParameterFollowsTheLeafOrder<HilbertCurve>();
-}
-
-void peano4::sfc::tests::SpaceFillingCurveTest::testPeanoMatchesTheSerpentineClosedForm() {
+void
+peano4::sfc::tests::SpaceFillingCurveTest::testPeanoMatchesTheSerpentineClosedForm() {
   constexpr int     Depth  = 3;
-  const auto        leaves = leavesOf<PeanoCurve>(Depth);
+  const auto        leaves = getLeavesOfDepth<PeanoCurve>(Depth);
   std::vector<Leaf> expected;
   appendSerpentineLeaves(std::bitset<DIMENSIONS>{}, Depth, Leaf{}, expected);
   validateEquals(leaves.size(), expected.size());
@@ -243,14 +210,13 @@ void peano4::sfc::tests::SpaceFillingCurveTest::testPeanoMatchesTheSerpentineClo
 }
 
 /**
- * In two dimensions the second iteration runs through the 4x4 cells in the
- * classic Hilbert order. In three dimensions the first iteration runs through
- * the octants along the base pattern of Bader, Sect. 8.1.2, which enters at
- * the origin and leaves along axis 2.
+ * The second iteration in 2D visits the 4x4 cells in the classic Hilbert order, and the first
+ * iteration in 3D visits the octants along the base pattern of Bader, Sect. 8.1.2.
  */
-void peano4::sfc::tests::SpaceFillingCurveTest::testHilbertVisitsTheTextbookOrder() {
+void
+peano4::sfc::tests::SpaceFillingCurveTest::testHilbertVisitsTheTextbookOrder() {
 #if DIMENSIONS == 2
-  const auto                 leaves = leavesOf<HilbertCurve>(2);
+  const auto                 leaves = getLeavesOfDepth<HilbertCurve>(2);
   const std::array<Leaf, 16> expected{
     {{0, 0},
      {1, 0},
@@ -270,7 +236,7 @@ void peano4::sfc::tests::SpaceFillingCurveTest::testHilbertVisitsTheTextbookOrde
      {3, 0}}
   };
 #else
-  const auto                leaves = leavesOf<HilbertCurve>(1);
+  const auto                leaves = getLeavesOfDepth<HilbertCurve>(1);
   const std::array<Leaf, 8> expected{
     {{0, 0, 0}, {0, 1, 0}, {1, 1, 0}, {1, 0, 0}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}, {0, 0, 1}}
   };

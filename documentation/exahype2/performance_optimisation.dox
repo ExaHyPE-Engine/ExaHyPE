@@ -6,58 +6,39 @@
 
 ExaHyPE performance analysis combines the runner's decomposition statistics
 with a profile of the numerical kernels. @ref page_peano_performance_optimisation
-describes the grid and traversal metrics.
+describes the grid metrics.
 
 # Data access
 
-Generated patch data resides in rank-local flat pools. A traversal event names
-the pool slots for its cell, faces, vertices, and coarse-grid context, and the
-observer passes references to the action sets. Fusing consecutive numerical
-operations can still improve cache reuse and reduce repeated traversal and
-temporary-data traffic.
+Solver data resides in rank-local pools indexed by the cell and face slots of
+the partition, and every dispatch reads the pools directly. A time step is a fixed
+sequence of dispatches, so the traffic per step is the pools it reads and
+writes plus the halo buffers.
 
 # Kernel cost
 
-Fluxes, eigenvalues, non-conservative products, sources, and Riemann solves
+Fluxes, eigenvalues, non-conservative products, sources and Riemann solves
 should account for a substantial fraction of a compute-bound run. If they do,
-apply the vectorisation and accelerator guidance on
-@ref page_exahype_gpu. The CPU and the GPU evaluate the same kernel.
+apply the vectorisation and accelerator guidance on @ref page_exahype_gpu.
+The CPU and the GPU evaluate the same kernel.
 
-If memory movement or observer glue dominates, inspect patch size, temporary
-arrays, callback fusion, and the number of traversals per time step before
-tuning the kernel itself.
+If memory movement dominates, inspect the patch size or the polynomial order,
+the number of pools a family holds and the plot frequency before tuning the
+kernel itself.
 
-# Traversal task balance
+# Rank balance
 
-`MPI Load Balance` describes the distribution of leaf cells. `Cells per Task`
-and `Thread Ceiling` describe the subtree decomposition on each rank. The
-phase report line `Utilisation` measures the realised use of those tasks.
-
-A geometrically balanced mesh can remain computationally imbalanced when only
-a few patches enter a limiter, carry many particles, or execute an expensive
-material model. A solver-specific profile or work counter identifies this
-case. Solver-created tasks and parallel kernels can distribute the expensive
-callback work beyond its traversal task.
-
-# Solver tasks
-
-Few large solver tasks create a long tail after most traversal work has
-finished. Increase their priority when they lie on the next time-step critical
-path, or divide their numerical work when the kernel supports independent
-subranges. Dividing work does not remove an algorithmic dependency that makes
-the expensive task unavailable until late in the sweep.
-
-Many small tasks create scheduling overhead. Increase task granularity or fuse
-compatible patch work while preserving incoming and outgoing dependencies.
-OpenMP profiles and targeted tarch instrumentation show whether ready work is
-available when threads idle.
+`Load Balance` describes the distribution of the cells. A geometrically
+balanced mesh can remain computationally imbalanced when only a few cells
+enter the limiter, carry many particles or execute an expensive material
+model. A solver-specific profile or work counter identifies this case.
 
 # Hybrid runs
 
-MPI ranks exchange face and vertex state while interior subtree and solver
-tasks execute. A rank with little interior work cannot hide this exchange.
-Compare rank balance, spine replication, boundary waits, and solver-task load
-before changing the MPI and thread layout.
+MPI ranks exchange their face halves while the local cells compute. A rank
+with little local work cannot hide this exchange. Compare the rank
+balance, the rank-boundary faces and the halo waits before changing the MPI
+and thread layout.
 
 Processor affinity can reduce the thread count visible to a rank. Confirm the
 runtime thread report and avoid oversubscription when comparing layouts.
@@ -65,8 +46,8 @@ runtime thread report and avoid oversubscription when comparing layouts.
 # Adaptive runs
 
 Dynamic AMR can change both the solver workload and the rank ownership. The
-runner reports balance and task metrics before and after each drain. Profile
-the AMR phase separately from time stepping when structure construction,
-migration, or repeated refinement levels dominate.
+runner reports the balance before and after each regrid. Profile the AMR
+phase separately from the time stepping when the mesh rebuild, the migration
+or repeated refinement levels dominate.
 
 */

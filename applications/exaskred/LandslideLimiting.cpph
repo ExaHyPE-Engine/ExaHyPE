@@ -9,7 +9,8 @@
  * node never flags a cell while genuine flow on dry ground does.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerState(
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerState(
   const T* const NOALIAS                                      Q,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
@@ -51,7 +52,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::landsli
  * step by more than that factor.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell(
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell(
   const T* const NOALIAS                                      Q,
   const int                                                   numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>&                cellSize,
@@ -113,13 +115,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::landsli
  * curvature.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::landslide::
-  hasAdmissibleGranularLayerHeightCurvature2D(
-    const T* const NOALIAS                                      Q,
-    const int                                                   nodesPerAxis,
-    const applications::exahype2::exaskred::landslide::Physics& physics,
-    const double                                                maxCurvatureRatio
-  ) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D(
+  const T* const NOALIAS                                      Q,
+  const int                                                   nodesPerAxis,
+  const applications::exahype2::exaskred::landslide::Physics& physics,
+  const double                                                maxCurvatureRatio
+) {
   if (maxCurvatureRatio <= 0.0 or nodesPerAxis < 3) {
     return true;
   }
@@ -170,7 +172,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool applications::exahype2::exaskred::landsli
 
 /** Maps one state to the height and momentum observables the DMP tracks. */
 template <class Shortcuts, typename ObservableT, typename T>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables(
   ObservableT* const NOALIAS observables,
   const T* const NOALIAS     Q
 ) {
@@ -186,12 +189,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
  * momentum observables within the momentum a dry layer may carry, so rounding
  * noise around the wet-dry front never triggers the maximum principle.
  */
-INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::landslide::
-  granularLayerDmpRelaxationParameter(
-    const int                                                   observable,
-    const double                                                specifiedRelaxationParameter,
-    const applications::exahype2::exaskred::landslide::Physics& physics
-  ) {
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(
+  const int                                                   observable,
+  const double                                                specifiedRelaxationParameter,
+  const applications::exahype2::exaskred::landslide::Physics& physics
+) {
   const double dryHeight = std::max(physics.dryHeightThreshold, 0.0);
   if (observable == 0) {
     return std::max(specifiedRelaxationParameter, dryHeight);

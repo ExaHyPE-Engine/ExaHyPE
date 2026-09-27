@@ -5,7 +5,8 @@
 #include "tarch/Termination.h"
 #include "tarch/mpi/Rank.h"
 
-void tarch::plotter::PVDTimeSeriesWriter::writeTimeSeriesMetaFile(
+void
+tarch::plotter::PVDTimeSeriesWriter::writeTimeSeriesMetaFile(
   const std::string& outputDirectory,
   const std::string& filename
 ) const {
@@ -24,7 +25,7 @@ void tarch::plotter::PVDTimeSeriesWriter::writeTimeSeriesMetaFile(
       << "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n"
       << "  <Collection>\n";
 
-  out << std::setprecision(15); // Ensure time is accurate
+  out << std::setprecision(15); // The time stamp of a snapshot keeps every digit of a double.
 
   for (const auto& s : _snapshots) {
     out << "    <DataSet timestep=\"" << s.time << "\" group=\"\" part=\"0\" file=\"" << s.filename << "\"/>\n";

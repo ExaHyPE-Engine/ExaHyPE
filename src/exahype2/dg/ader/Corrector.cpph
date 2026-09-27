@@ -1,0 +1,105 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/terms/PostprocessUpdatedPatch.h"
+#include "tarch/Assertions.h"
+
+TARGET_DECLARE
+/**
+ * Adds the face integrals of one cell to its state, runs postprocessCell on the result and
+ * returns the wave-speed maxima of that state at the updated time stamp; without
+ * ReportEigenvalues the maxima are zero. faceFluxes points at the half of every face the cell
+ * reads, which holds the difference between the numerical flux and the cell's own flux.
+ */
+template <typename Derived, typename ComputePrecision>
+template <bool ReportEigenvalues, typename StoragePrecision, typename Postprocessing>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
+exahype2::dg::ader::Corrector<Derived, ComputePrecision>::correct(
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const ComputePrecision* const                faceFluxes[peano4::FacesPerCell],
+  StoragePrecision* NOALIAS const              cellState,
+  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
+  const ComputePrecision* NOALIAS const        inverseCellQuadratureWeights,
+  const ComputePrecision* NOALIAS const        leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const        rightFaceCoefficients,
+  const StoragePrecision* NOALIAS const        stateQuadraturePoints,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  Postprocessing&&                             postprocessCell
+) {
+  assertion(cellState != nullptr);
+  assertion(stateQuadraturePoints != nullptr);
+  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp, cellCentre);
+  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, cellCentre);
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    assertion(faceFluxes[faceNumber] != nullptr, faceNumber);
+  }
+
+  exahype2::dg::addFaceIntegrals<Derived, CellLayout::NumberOfData>(
+    cellState,
+    faceFluxes,
+    faceQuadratureWeights,
+    inverseCellQuadratureWeights,
+    leftFaceCoefficients,
+    rightFaceCoefficients,
+    cellSize,
+    timeStepSize
+  );
+
+  postprocessCell();
+
+  exahype2::dg::MaxEigenvalueStatistics statistics;
+  if constexpr (ReportEigenvalues) {
+    statistics = exahype2::dg::reduceMaxEigenvalues<Derived>(
+      cellState,
+      stateQuadraturePoints,
+      cellCentre,
+      cellSize,
+      timeStamp + timeStepSize,
+      timeStepSize
+    );
+  }
+  return statistics;
+}
+
+template <typename Derived, bool ReportEigenvalues, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, ComputePrecision>::operator()(
+  const int                              entry,
+  exahype2::dg::MaxEigenvalueStatistics& accumulator
+) const {
+  constexpr int FluxValuesPerFace                    = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
+  const int     slot                                 = cells[entry];
+  const tarch::la::Vector<DIMENSIONS, double> centre = partition.getCellCentre(slot);
+  const tarch::la::Vector<DIMENSIONS, double> width  = partition.getCellWidth(slot);
+  const ComputePrecision*                     fluxes[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    const int face = partition.getCellFace(slot, faceNumber);
+    fluxes[faceNumber] =
+      faceFluxes.getChunk(face) + exahype2::dg::getCorrectionHalf(partition, face, faceNumber) * FluxValuesPerFace;
+  }
+  StoragePrecision* const updated = solution.getChunk(slot);
+  accumulator                     = exahype2::dg::MaxEigenvalueStatistics::combine(
+    accumulator,
+    exahype2::dg::ader::Corrector<Derived, ComputePrecision>::template correct<ReportEigenvalues>(
+      centre,
+      width,
+      fluxes,
+      updated,
+      faceQuadratureWeights,
+      inverseCellQuadratureWeights,
+      leftFaceCoefficients,
+      rightFaceCoefficients,
+      stateQuadraturePoints,
+      timeStamp,
+      timeStepSize,
+      [&]() {
+        if constexpr (exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>) {
+          Derived::postprocessUpdatedPatch(updated, centre, width, timeStamp, timeStepSize);
+        }
+      }
+    )
+  );
+}
+TARGET_DECLARE_END

@@ -14,7 +14,8 @@
 //   Shortcuts::b        bathymetry            (1 component)
 #include "ADERDGSolver.h"
 
-void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
+void
+tutorials::exahype2::swe::ADERDGSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize
@@ -27,7 +28,8 @@ void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
   Q[Shortcuts::b]      = 0.0;
 }
 
-void tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
+void
+tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
   const double* const NOALIAS                  Qinside,
   double* const NOALIAS                        Qoutside,
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
@@ -43,7 +45,8 @@ void tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
   Qoutside[Shortcuts::b]      = Qinside[Shortcuts::b];
 }
 
-::exahype2::RefinementCommand tutorials::exahype2::swe::ADERDGSolver::refinementCriterion(
+::exahype2::RefinementCommand
+tutorials::exahype2::swe::ADERDGSolver::refinementCriterion(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -53,7 +56,8 @@ void tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
   return ::exahype2::RefinementCommand::Keep;
 }
 
-double tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
+double
+tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -67,7 +71,8 @@ double tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
   return 1.0;
 }
 
-void tutorials::exahype2::swe::ADERDGSolver::flux(
+void
+tutorials::exahype2::swe::ADERDGSolver::flux(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -83,7 +88,8 @@ void tutorials::exahype2::swe::ADERDGSolver::flux(
   F[Shortcuts::b]      = 0.0;
 }
 
-void tutorials::exahype2::swe::ADERDGSolver::nonconservativeProduct(
+void
+tutorials::exahype2::swe::ADERDGSolver::nonconservativeProduct(
   const double* const NOALIAS                  Q,
   const double* const NOALIAS                  deltaQ,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,

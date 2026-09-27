@@ -28,7 +28,7 @@ module load openmpi/4.1.6--gcc--12.2.0
 module load netcdf-c/4.9.2--openmpi--4.1.6--gcc--12.2.0
 module load git-lfs/3.1.2
 
-srun --cpu-bind=verbose,cores bash -c 'env CUDA_VISIBLE_DEVICES=$SLURM_PROCID ./Executable'
+srun --cpu-bind=verbose,cores ./Executable
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 */

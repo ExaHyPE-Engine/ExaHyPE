@@ -8,17 +8,20 @@
 #include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Rank.h"
 
-tarch::accelerator::MemoryBlocks& tarch::accelerator::MemoryBlocks::getInstance() {
+tarch::accelerator::MemoryBlocks&
+tarch::accelerator::MemoryBlocks::getInstance() {
   static MemoryBlocks instance;
   return instance;
 }
 
-void tarch::accelerator::MemoryBlocks::clear() {
+void
+tarch::accelerator::MemoryBlocks::clear() {
   const std::scoped_lock lock(_memoryBlockMutex);
   _memoryBlockTable.clear();
 }
 
-void tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
+void
+tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
 #if PEANO_DEBUG
   const std::scoped_lock lock(_memoryBlockMutex);
 
@@ -37,7 +40,8 @@ void tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
 #endif
 }
 
-void tarch::accelerator::MemoryBlocks::bookmarkMemoryBlock(void* memoryBlock, std::size_t size) {
+void
+tarch::accelerator::MemoryBlocks::bookmarkMemoryBlock(void* memoryBlock, std::size_t size) {
 #if PEANO_DEBUG
   logDebug("Bookmarked memory block at " << memoryBlock << " with " << size << " bytes.");
   const std::scoped_lock lock(_memoryBlockMutex);
@@ -45,7 +49,8 @@ void tarch::accelerator::MemoryBlocks::bookmarkMemoryBlock(void* memoryBlock, st
 #endif
 }
 
-void tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
+void
+tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
 #if PEANO_DEBUG
   const std::scoped_lock lock(_memoryBlockMutex);
   const auto             memoryBlockEntry = _memoryBlockTable.find(memoryBlock);
@@ -61,7 +66,8 @@ void tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
  * Returns the tracked allocation size while holding the registry lock.
  * An unknown block terminates in debug builds.
  */
-std::size_t tarch::accelerator::MemoryBlocks::getSizeOfMemoryBlock(void* memoryBlock) const {
+std::size_t
+tarch::accelerator::MemoryBlocks::getSizeOfMemoryBlock(void* memoryBlock) const {
 #if PEANO_DEBUG
   const std::scoped_lock lock(_memoryBlockMutex);
   const auto             memoryBlockEntry = _memoryBlockTable.find(memoryBlock);

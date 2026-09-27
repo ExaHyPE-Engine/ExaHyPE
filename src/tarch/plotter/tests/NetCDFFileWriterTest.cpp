@@ -79,7 +79,7 @@ namespace {
     const int   zVar            = readVarId("z");
     std::size_t zStart[1]       = {0};
     std::size_t zCount[1]       = {8};
-    float       zCoordinates[8] = {0.0f};
+    float       zCoordinates[8] = {0.0F};
     checkNc(nc_get_vara_float(ncid, zVar, zStart, zCount, zCoordinates), "read z");
 
     const int   densityVar = readVarId("Density");
@@ -89,7 +89,7 @@ namespace {
     checkNc(nc_get_att_text(ncid, densityVar, "location", location.data()), "Density location");
     std::size_t densityStart[1] = {0};
     std::size_t densityCount[1] = {1};
-    float       density         = 0.0f;
+    float       density         = 0.0F;
     checkNc(nc_get_vara_float(ncid, densityVar, densityStart, densityCount, &density), "read Density");
 
     checkNc(nc_close(ncid), "nc_close(" + filepath + ")");
@@ -114,7 +114,7 @@ namespace {
     if (shapeTag != 2) {
       throw std::runtime_error("Expected UGRID hexahedron shape tag 2.");
     }
-    const float expectedZ[8] = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+    const float expectedZ[8] = {0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F};
     for (int i = 0; i < 8; ++i) {
       if (zCoordinates[i] != expectedZ[i]) {
         throw std::runtime_error("Unexpected 3D hexahedron z coordinates.");
@@ -123,7 +123,7 @@ namespace {
     if (location != "volume") {
       throw std::runtime_error("Expected 3D cell data location 'volume'.");
     }
-    if (density != 2.5f) {
+    if (density != 2.5F) {
       throw std::runtime_error("Expected 3D cell field Density value 2.5.");
     }
   }
@@ -167,9 +167,9 @@ namespace {
     checkNc(nc_inq_varid(ncid, "Material", &materialVar), "inq Material");
     std::size_t fieldStart[1] = {0};
     std::size_t fieldCount[1] = {2};
-    float       material[2]   = {0.0f, 0.0f};
+    float       material[2]   = {0.0F, 0.0F};
     checkNc(nc_get_vara_float(ncid, materialVar, fieldStart, fieldCount, material), "read Material");
-    if (material[0] != 3.0f or material[1] != 7.0f) {
+    if (material[0] != 3.0F or material[1] != 7.0F) {
       nc_close(ncid);
       throw std::runtime_error("Unexpected multi-subdomain NetCDF cell field values.");
     }
@@ -188,7 +188,8 @@ namespace {
 tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest() :
   tarch::tests::TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
 
-void tarch::plotter::tests::NetCDFFileWriterTest::testHeterogeneousRanks() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::testHeterogeneousRanks() {
   // Only the global master contributes geometry and a "Material" cell field, and every
   // other rank leaves the plotter empty. writeToFile() stays collective for all ranks.
   const std::string filename = "NetCDFTestHeterogeneous";
@@ -222,7 +223,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testHeterogeneousRanks() {
   barrier();
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::run() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::run() {
   // The read-back helpers report a malformed file by throwing, and the test framework
   // does not guard run(), so this catch records the failure and keeps the binary alive.
   try {
@@ -243,7 +245,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::run() {
   }
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::testInvalidIdentifierThrows() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::testInvalidIdentifierThrows() {
   NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
   plotter.acquirePiece(0);
   bool thrown = false;
@@ -257,7 +260,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testInvalidIdentifierThrows() 
   }
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::test2DSimpleTriangle() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::test2DSimpleTriangle() {
   const std::string filename = "NetCDFTestTriangle";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
@@ -285,7 +289,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test2DSimpleTriangle() {
   barrier();
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::test2DQuadWithData() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::test2DQuadWithData() {
   const std::string filename = "NetCDFTestQuad";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
@@ -323,7 +328,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test2DQuadWithData() {
   barrier();
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::test3DHexahedronWithData() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::test3DHexahedronWithData() {
   const std::string filename = "NetCDFTestHex";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
@@ -358,7 +364,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test3DHexahedronWithData() {
   barrier();
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::testMultipleSubdomains2DWithData() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::testMultipleSubdomains2DWithData() {
   const std::string filename = "NetCDFTestMultipleSubdomains";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
@@ -416,7 +423,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testMultipleSubdomains2DWithDa
   barrier();
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::testUnevenSubdomainCounts() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::testUnevenSubdomainCounts() {
   const std::string filename = "NetCDFTestUneven";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
@@ -467,7 +475,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnevenSubdomainCounts() {
   barrier();
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::testEmptyPlotter() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::testEmptyPlotter() {
   const std::string filename = "NetCDFTestEmpty";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
@@ -486,7 +495,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testEmptyPlotter() {
   barrier();
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows() {
   const std::string filename = "NetCDFTestInconsistent";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
@@ -524,7 +534,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows
   barrier();
 }
 
-void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
+void
+tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
   const std::string filename = "NetCDFTestUnsupported";
 
   bool exceptionThrown = false;
@@ -561,6 +572,7 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
 tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest() :
   tarch::tests::TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
 
-void tarch::plotter::tests::NetCDFFileWriterTest::run() {}
+void
+tarch::plotter::tests::NetCDFFileWriterTest::run() {}
 
 #endif

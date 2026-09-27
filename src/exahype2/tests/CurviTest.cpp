@@ -3,17 +3,20 @@
 #include "CurviTest.h"
 
 #include "exahype2/Curvi.h"
+#include "tarch/la/Vector.h"
 
 exahype2::tests::CurviTest::CurviTest() :
   tarch::tests::TestCase("exahype2::tests::CurviTest") {}
 
-void exahype2::tests::CurviTest::run() {
+void
+exahype2::tests::CurviTest::run() {
   testMethod(testCreateBlock);
   testMethod(testTransverselyVaryingPerturbation);
   testMethod(testLowerFacePerturbation);
 }
 
-void exahype2::tests::CurviTest::testCreateBlock() {
+void
+exahype2::tests::CurviTest::testCreateBlock() {
   const tarch::la::Vector<DIMENSIONS, double> domainOffset = {-1., 0., 1.};
   const tarch::la::Vector<DIMENSIONS, double> domainSize   = {1., 10., 100.};
   const tarch::la::Vector<DIMENSIONS, int>    numElements  = {5, 7, 9};
@@ -104,11 +107,11 @@ void exahype2::tests::CurviTest::testCreateBlock() {
 }
 
 /**
- * A face perturbation varying along a direction that an earlier transformation has already
- * stretched, so the round trip reproduces the point it started from only when the forward and the
- * inverse map sample the perturbation in the same space.
+ * The round trip returns every point for a face perturbation that varies along an axis an earlier
+ * transformation stretched.
  */
-void exahype2::tests::CurviTest::testTransverselyVaryingPerturbation() {
+void
+exahype2::tests::CurviTest::testTransverselyVaryingPerturbation() {
   const tarch::la::Vector<DIMENSIONS, double> domainOffset = {0., 0., 0.};
   const tarch::la::Vector<DIMENSIONS, double> domainSize   = {10., 10., 10.};
   const int                                   numElements  = 5;
@@ -153,10 +156,11 @@ void exahype2::tests::CurviTest::testTransverselyVaryingPerturbation() {
 }
 
 /**
- * A perturbation of a lower face, which moves the domain's own origin along the face normal. The
- * face has to land where the perturbation puts it, and the round trip has to come back.
+ * A perturbation of a lower face moves the face where the perturbation puts it, and the round trip
+ * returns every point.
  */
-void exahype2::tests::CurviTest::testLowerFacePerturbation() {
+void
+exahype2::tests::CurviTest::testLowerFacePerturbation() {
   const tarch::la::Vector<DIMENSIONS, double> domainOffset = {0., 0., 0.};
   const tarch::la::Vector<DIMENSIONS, double> domainSize   = {10., 10., 10.};
   const int                                   numElements  = 5;

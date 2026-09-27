@@ -1,0 +1,47 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+{%- set runtime_parameters = NAMESPACE | join("::") ~ "::RuntimeParameters" %}
+{%- set kernel_parameters = RUNTIME_PARAMETERS | rejectattr("is_string") | list %}
+{%- if kernel_parameters %}
+
+#include "tarch/accelerator/DeviceCopies.h"
+
+namespace {
+  TARGET_DECLARE
+  [[maybe_unused]] DEVICE_VARIABLE {{ runtime_parameters }}::Storage runtimeParametersOnDevice;
+
+  /** Writes storage into the device copy of the runtime parameters of this translation unit. */
+  struct WriteRuntimeParametersOnDevice final {
+    {{ runtime_parameters }}::Storage storage{};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()([[maybe_unused]] const int workItem) const {
+      COMPILE_IF_ON_DEVICE(runtimeParametersOnDevice = storage;)
+    }
+  };
+  TARGET_DECLARE_END
+
+  [[maybe_unused]] const bool runtimeParametersOnDeviceAreAdded = tarch::accelerator::addDeviceCopy<
+    WriteRuntimeParametersOnDevice>({{ runtime_parameters }}::getStorage());
+} // namespace
+{%- endif %}
+
+INLINE_METHOD const {{ runtime_parameters }}::Storage& {{ runtime_parameters }}::getStorage() { return _storage; }
+{%- for parameter in RUNTIME_PARAMETERS if parameter.is_string %}
+
+INLINE_METHOD const {{ parameter.return_type }}& {{ runtime_parameters }}::{{ parameter.name }}() {
+  return _hostStorage.{{ parameter.name }};
+}
+{%- endfor %}
+{%- if kernel_parameters %}
+
+TARGET_DECLARE
+{%- for parameter in kernel_parameters %}
+{%- if not loop.first %}
+{% endif %}
+INLINE_METHOD GPU_CALLABLE_METHOD {{ parameter.return_type }} {{ runtime_parameters }}::{{ parameter.name }}() {
+  COMPILE_IF_ON_DEVICE(return runtimeParametersOnDevice.{{ parameter.name }};)
+  COMPILE_IF_ON_HOST(return _storage.{{ parameter.name }};)
+}
+{%- endfor %}
+TARGET_DECLARE_END
+{%- endif %}

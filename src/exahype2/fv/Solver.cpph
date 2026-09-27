@@ -1,291 +1,445 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-thread_local exahype2::Solver::LocalUpdates
-  exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::_localUpdates;
+#include "exahype2/LevelJumps.h"
+#include "exahype2/fv/Kernels.h"
+#include "exahype2/terms/InitialisesOnHost.h"
+#include "exahype2/terms/MaxEigenvalue.h"
+#include "exahype2/terms/MeasuredUnknowns.h"
+#include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
 
 /**
- * timeStepFactor is the CFL relaxation of an adaptive solver or the normalised time step size
- * of a fixed one.
+ * timeStepFactor is the CFL relaxation of an adaptive rule or the normalised time step size of
+ * a fixed one; name and plottedFields describe the plot files.
  */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::Solver(
-  const double timeStepFactor
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::Solver(
+  const double                              timeStepFactor,
+  std::string                               name,
+  std::vector<exahype2::plotter::DataField> plottedFields
 ) :
-  Solver(timeStepFactor, std::bool_constant<UsesAdaptiveTimeStepping>{}) {}
+  _timeStepping{Derived::TimeSteppingRule, timeStepFactor, exahype2::TimeStepping::Stability::PhysicalEigenvalue},
+  _plotter(std::move(name), std::move(plottedFields)) {
+  static_assert(exahype2::fv::ReconstructionScheme<typename Derived::Reconstruction>);
+  static_assert(exahype2::fv::TimeSteppingScheme<typename Derived::TimeIntegration>);
+}
 
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::Solver(
-  const double                          timeStepFactor,
-  [[maybe_unused]] const std::true_type adaptive
-) :
-  TimeStepping(exahype2::AdaptiveTimeStepping::Stability::PhysicalEigenvalue),
-  _timeStepFactor{timeStepFactor} {}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::Solver(
-  const double                           timeStepFactor,
-  [[maybe_unused]] const std::false_type fixed
-) :
-  _timeStepFactor{timeStepFactor} {}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-std::string exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::toString(
-  const SolverState state
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::requestRefinementForGridConstruction(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
 ) {
-  switch (state) {
-  case SolverState::GridConstruction:
-    return "GridConstruction";
-  case SolverState::GridInitialisation:
-    return "GridInitialisation";
-  case SolverState::TimeStep:
-    return "TimeStep";
-  case SolverState::Plotting:
-    return "Plotting";
-  case SolverState::Suspended:
-    return "Suspended";
-  }
-  return "<undef>";
-}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::startGridConstructionStep() {
-  assertion(_solverState == SolverState::GridConstruction);
-}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  finishGridConstructionStep() {}
-
-/**
- * Initialisation re-enters after every completed mesh update of its initialise-drain loop, so
- * the state may already sit at GridInitialisation.
- */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  startGridInitialisationStep() {
-  assertion(_solverState == SolverState::GridConstruction or _solverState == SolverState::GridInitialisation);
-  _solverState = SolverState::GridInitialisation;
+  _votes.voteOnGridConstruction<Derived, StoragePrecision>(partition, _timeStepping.getLimits(), requests);
 }
 
 /**
- * From here on every completed sweep has sent a face-data batch, which the following sweep's
- * boundary exchange consumes.
+ * Reserves the pools for the slots and faces of the partition and builds the halo exchange.
+ * Every rank calls this at the same time, so the exchanges of every solver take the same tags.
  */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  finishGridInitialisationStep() {
-  this->_hasStoredFaceData = true;
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(const peano4::Partition& partition) {
+  _solution.reserve(partition.getNumberOfSlots());
+  _previousSolution.reserve(partition.getNumberOfSlots());
+  _halo.reserve(partition.getNumberOfFaces());
+  _haloExchange.rebuild(partition);
+  reduceMeshWidths(partition);
 }
 
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  suspendSolversForOneGridSweep() {
-  _solverState = SolverState::Suspended;
-}
-
-/**
- * A suspended solver resumes without resetting the per-time-step accumulators, so it keeps
- * its eigenvalue and time step sizes.
- */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::startTimeStep() {
-  if (_solverState == SolverState::Suspended) {
-    _solverState = SolverState::TimeStep;
-    return;
-  }
-  _solverState                              = SolverState::TimeStep;
-  this->_meshRefinementRanSinceLastTimeStep = false;
-  if constexpr (UsesAdaptiveTimeStepping) {
-    this->startAdaptiveTimeStep();
-  }
-  this->resetTimeStepStatistics();
-}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::finishTimeStep() {
-  if (isLastGridSweepOfTimeStep()) {
-    this->reduceTimeStepStatisticsAcrossRanks();
-    closeTimeStep();
-    this->commitTimeStepStatistics();
-  }
-}
-
-/**
- * Derives the time step size of the next time step from the reduced statistics: The CFL
- * condition of an adaptive solver, the normalised fraction of the admissible mesh width of a
- * fixed one.
- */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::closeTimeStep() {
-  if constexpr (UsesAdaptiveTimeStepping) {
-    this->reduceMaxEigenvaluesAcrossRanks();
-    const auto terminalTime = this->minTerminalTime();
-    if (this->hasPositiveStabilityEigenvalue() and this->_minTimeStampThisTimeStep < terminalTime) {
-      const auto timeStepSizeFromCFL =
-        _timeStepFactor * this->_minMeshWidthThisTimeStep / (DIMENSIONS * this->_maxEigenvalueThisTimeStep);
-      this->proposeAdmissibleTimeStepSize(timeStepSizeFromCFL, terminalTime);
-    }
+/** Writes the initial condition into every patch, fills the faces and votes on the refinement. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
+) {
+  if constexpr (exahype2::terms::InitialisesOnHost<Derived>) {
+    // The initial condition reads host objects, so the patches fill a host copy of the pool and travel once.
+    _solution.copyToHost(_solutionOnHost);
+    const auto valuesPerSlot = static_cast<std::size_t>(_solution.getPaddedChunkSize());
+    const auto cells         = partition.getCells();
+    tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int entry) {
+      const int slot = cells[entry];
+      FiniteVolume::initialise(
+        _solutionOnHost.data() + static_cast<std::size_t>(slot) * valuesPerSlot,
+        partition.getCellCentre(slot),
+        partition.getCellWidth(slot)
+      );
+    });
+    _solution.copyFromHost(_solutionOnHost);
   } else {
-    const auto maxAdmissibleCellSize = maxAdmissibleMeshWidth();
-    assertion(std::isfinite(maxAdmissibleCellSize) and maxAdmissibleCellSize > 0.0, maxAdmissibleCellSize);
-    assertion(
-      std::isfinite(this->_minMeshWidthThisTimeStep) and this->_minMeshWidthThisTimeStep > 0.0,
-      this->_minMeshWidthThisTimeStep
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(partition.getCells().size),
+      exahype2::fv::InitialisePatches<Derived, StoragePrecision, ComputePrecision>{
+        partition.onDevice(),
+        _solution.getView()
+      }
     );
-    this->setFixedTimeStepSize(_timeStepFactor * this->_minMeshWidthThisTimeStep / maxAdmissibleCellSize);
   }
-}
 
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::startPlottingStep() {
-  assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());
-  _solverState = SolverState::Plotting;
-}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::finishPlottingStep() {}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-double exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::getMaxPatchSize() const {
-  return this->getMaxCellSize() * NumberOfFiniteVolumesPerAxisPerPatch;
-}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-double exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::getMinPatchSize() const {
-  return this->getMinCellSize() * NumberOfFiniteVolumesPerAxisPerPatch;
-}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-int exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::getNumberOfDoFs() const {
-  return peano4::power(NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
-    * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
-}
-
-/**
- * The solver remains in TimeStep between time steps, so plotting is valid there.
- */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::mayPlot() const {
-  return _solverState == SolverState::GridInitialisation or isLastGridSweepOfTimeStep();
-}
-
-/**
- * Adds one patch's time step size, time stamp and patch size to the extrema of the current
- * traversal.
- */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::update(
-  const double timeStepSize,
-  const double timeStamp,
-  const double minPatchSize,
-  const double maxPatchSize
-) {
-  _localUpdates.addTimeStep(timeStepSize);
-  updateTimeStampAndPatchSize(timeStamp, minPatchSize, maxPatchSize);
-}
-
-/**
- * A cell that skips its update this sweep still names its stamp and extent, so the global
- * statistics cover every cell of the mesh.
- */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  updateTimeStampAndPatchSize(const double timeStamp, const double minPatchSize, const double maxPatchSize) {
-  _localUpdates.addTimeStamp(timeStamp);
-  _localUpdates.addMeshWidths(
-    minPatchSize / NumberOfFiniteVolumesPerAxisPerPatch,
-    maxPatchSize / NumberOfFiniteVolumesPerAxisPerPatch
+  projectOntoFaces(partition);
+  exahype2::restrictFineFaces(
+    partition,
+    exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>{partition.onDevice(), _halo.getView()}
+  );
+  reduceMeshWidths(partition);
+  measureError(partition);
+  _votes.voteOnEveryCell<Derived>(
+    partition,
+    std::as_const(_solution).getView(),
+    _timeStepping.getLimits(),
+    _timeStepping.getTimeStamp(),
+    requests
   );
 }
 
 /**
- * One call per tree at the end of a traversal keeps the per-patch update free of atomic
- * operations.
+ * Advances every patch by the time step size the previous step admitted. The local patches
+ * update while the own halves of the exchanged faces travel; the patches beside a rank boundary
+ * update once the halves have arrived. The updated patches then fill their own halves of every
+ * face, and the fine faces of every level jump restrict onto their coarse face.
  */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  reduceLocalUpdates() {
-  this->mergeLocalUpdates(_localUpdates);
-}
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeStep(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
+) {
+  const double timeStepSize = _timeStepping.startTimeStep();
+  const exahype2::fv::InterpolateHaloHalves<Derived, StoragePrecision, ComputePrecision> interpolateHalo{
+    partition.onDevice(),
+    _halo.getView()
+  };
 
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD typename exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::SolverState
-exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::getSolverState() const {
-  return _solverState;
-}
+  _haloExchange.post();
+  applyBoundaryConditions(partition);
+  exahype2::interpolateCoarseFaces(partition, peano4::Dependence::Local, interpolateHalo);
+  double maxEigenvalue = updatePatches(partition, peano4::Dependence::Local, timeStepSize);
+  _haloExchange.wait();
+  exahype2::interpolateCoarseFaces(partition, peano4::Dependence::Remote, interpolateHalo);
+  maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+    maxEigenvalue,
+    updatePatches(partition, peano4::Dependence::Remote, timeStepSize)
+  );
+  std::swap(_solution, _previousSolution);
 
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  isFirstGridSweepOfTimeStep() const {
-  return _solverState == SolverState::TimeStep;
-}
+  projectOntoFaces(partition);
+  exahype2::restrictFineFaces(
+    partition,
+    exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>{partition.onDevice(), _halo.getView()}
+  );
 
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  isLastGridSweepOfTimeStep() const {
-  return _solverState == SolverState::TimeStep;
-}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  isGridInitialisationSweep() const {
-  return _solverState == SolverState::GridInitialisation;
-}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  isTimeStepSweep() const {
-  return _solverState == SolverState::TimeStep;
+  _timeStepping.advanceTimeStamp(timeStepSize);
+  reduceMeshWidths(partition);
+  proposeTimeStepSize(maxEigenvalue);
+  measureError(partition);
+  if (_meshChangedSinceLastTimeStep) {
+    _meshChangedSinceLastTimeStep = false;
+  } else {
+    _votes.voteOnEveryCell<Derived>(
+      partition,
+      std::as_const(_solution).getView(),
+      _timeStepping.getLimits(),
+      _timeStepping.getTimeStamp(),
+      requests
+    );
+  }
 }
 
 /**
- * A cell that will be refined passes its patch on to its children, and the grid construction
- * sweeps carry no patch at all.
+ * Realises the slot moves of a regrid on the solution: Every new child takes its patch from its
+ * parent, every new parent from its children, and the patches that changed rank travel in
+ * _migration. The faces are numbered afresh, so every patch fills its own halves again, and
+ * the time step size follows the new smallest volume. Only the patches the regrid created vote
+ * on the refinement.
  */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::storesCellData(
-  const peano4::dataview::CellMarker& marker
-) const {
-  return not marker.willBeRefined() and _solverState != SolverState::GridConstruction;
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
+  const peano4::Partition&      partition,
+  const peano4::Regrid&         regrid,
+  exahype2::RefinementRequests& requests
+) {
+  assertion(regrid.newNumberOfSlots >= regrid.oldNumberOfSlots, regrid.newNumberOfSlots, regrid.oldNumberOfSlots);
+  _solution.reserve(regrid.newNumberOfSlots);
+  _previousSolution.reserve(regrid.newNumberOfSlots);
+  _migration.migrate(
+    _solution,
+    regrid,
+    exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>{std::as_const(_solution).getView()}
+  );
+
+  _halo.reserve(partition.getNumberOfFaces());
+  _haloExchange.rebuild(partition);
+  projectOntoFaces(partition);
+  exahype2::restrictFineFaces(
+    partition,
+    exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>{partition.onDevice(), _halo.getView()}
+  );
+
+  reduceMeshWidths(partition);
+  if (_timeStepping.getTimeStepSizeOfNextStep() > 0.0) {
+    proposeTimeStepSize(measureMaxEigenvalue(partition));
+  }
+  _meshChangedSinceLastTimeStep = true;
+  _votes.voteOnCells<Derived>(
+    partition,
+    regrid.createdSlots,
+    std::as_const(_solution).getView(),
+    _timeStepping.getLimits(),
+    _timeStepping.getTimeStamp(),
+    requests
+  );
+}
+
+/** Copies the solution to the host and writes one snapshot; every rank calls this at the same time. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
+  const peano4::Partition&     partition,
+  const tarch::plotter::Format format,
+  const std::string&           outputDirectory
+) {
+  _solution.copyToHost(_solutionOnHost);
+  _plotter.template plotVolumes<Derived::PatchSize, Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables>(
+    partition,
+    partition.getCells(),
+    _solutionOnHost.data(),
+    _solution.getPaddedChunkSize(),
+    _timeStepping.getTimeStamp(),
+    format,
+    outputDirectory
+  );
+}
+
+/** Frees the pools, the exchanges and every device buffer, so nothing outlives the runtime. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
+  _solution.release();
+  _previousSolution.release();
+  _halo.release();
+  _haloExchange.release();
+  _migration.release();
+  _votes.release();
+  _errorMeasurement.release();
+  _solutionOnHost = std::vector<StoragePrecision>{};
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::setLimits(const exahype2::Limits& limits) {
+  _timeStepping.setLimits(limits);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::openErrorMeasurement(
+  const std::string& fileName,
+  const double       timeDeltaBetweenSnapshots
+) {
+  static_assert(exahype2::terms::HasMeasuredUnknowns<Derived>, "An error measurement needs the measured unknowns.");
+  _errorMeasurement.open(fileName, timeDeltaBetweenSnapshots);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+const exahype2::TimeStepping&
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getTimeStepping() const {
+  return _timeStepping;
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+const typename exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::Patches&
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getSolution() const {
+  return _solution;
+}
+
+/** Returns the solution the last time step read, which holds until the next time step swaps the pools. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+const typename exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::Patches&
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getPreviousSolution() const {
+  return _previousSolution;
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+tarch::AllocatedBytes
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
+  return _solution.getAllocatedBytes() + _previousSolution.getAllocatedBytes() + _halo.getAllocatedBytes()
+    + _haloExchange.getAllocatedBytes() + _migration.getAllocatedBytes() + _votes.getAllocatedBytes()
+    + _errorMeasurement.getAllocatedBytes()
+    + tarch::AllocatedBytes::onHost(tarch::getAllocatedBytesOf(_solutionOnHost));
+}
+
+/** Returns the values of one patch. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+int
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getNumberOfDoFs() const {
+  return _solution.getChunkSize();
+}
+
+/** Fills the outer half of every boundary face from the inner half through the boundary conditions. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::applyBoundaryConditions(
+  const peano4::Partition& partition
+) {
+  const auto boundaryFaces = partition.onDevice().getFaces(peano4::Dependence::Local, peano4::FaceKind::Boundary);
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(boundaryFaces.size),
+    exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      boundaryFaces,
+      _halo.getView(),
+      _timeStepping.getTimeStamp()
+    }
+  );
+}
+
+/** Copies the boundary layers of every patch into its own half of every face of the cell. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::projectOntoFaces(
+  const peano4::Partition& partition
+) {
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(partition.getCells().size),
+    exahype2::fv::ProjectPatchesOntoFaces<Derived, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      std::as_const(_solution).getView(),
+      _halo.getView()
+    }
+  );
 }
 
 /**
- * The initial condition writes the first patch, so the sweeps up to and including the grid
- * initialisation read none.
+ * Advances the cells with the dependence from the solution into the previous solution and
+ * returns the maximum eigenvalue over them.
  */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::loadsCellData(
-  const peano4::dataview::CellMarker& marker
-) const {
-  return not marker.hasBeenRefined() and _solverState != SolverState::GridConstruction
-    and _solverState != SolverState::GridInitialisation;
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+double
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::updatePatches(
+  const peano4::Partition& partition,
+  const peano4::Dependence dependence,
+  const double             timeStepSize
+) {
+  const auto cells         = partition.onDevice().getCells(dependence);
+  double     maxEigenvalue = 0.0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(cells.size),
+    exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      cells,
+      std::as_const(_solution).getView(),
+      _previousSolution.getView(),
+      std::as_const(_halo).getView(),
+      _timeStepping.getTimeStamp(),
+      timeStepSize
+    },
+    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+  );
+  return maxEigenvalue;
 }
 
 /**
- * The faces of a cell that will be refined hand their halo to the faces of the children.
+ * Returns the largest wave speed over the volumes of the solution; zero when no wave speed feeds the time step size.
  */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::storesFaceData(
-  const peano4::dataview::FaceMarker& marker
-) const {
-  return not marker.willBeRefined() and _solverState != SolverState::GridConstruction;
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+double
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureMaxEigenvalue(
+  const peano4::Partition& partition
+) {
+  if constexpr (
+    Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive
+    and exahype2::terms::HasMaxEigenvalue<Derived, ComputePrecision>
+  ) {
+    double maxEigenvalue = 0.0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(partition.getCells().size),
+      exahype2::fv::MeasurePatchEigenvalues<Derived, StoragePrecision, ComputePrecision>{
+        partition.onDevice(),
+        std::as_const(_solution).getView(),
+        _timeStepping.getTimeStamp()
+      },
+      tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+    );
+    return maxEigenvalue;
+  } else {
+    return 0.0;
+  }
+}
+
+/** Records the error norms of the solution when a snapshot is due at the time stamp. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureError(const peano4::Partition& partition) {
+  if constexpr (exahype2::terms::HasMeasuredUnknowns<Derived>) {
+    const double timeStamp = _timeStepping.getTimeStamp();
+    if (not _errorMeasurement.isSnapshotDue(timeStamp)) {
+      return;
+    }
+    const int numberOfCells = partition.getCells().size;
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(numberOfCells),
+      exahype2::fv::MeasurePatchErrors<Derived, StoragePrecision, ComputePrecision>{
+        partition.onDevice(),
+        std::as_const(_solution).getView(),
+        _errorMeasurement.getErrorsPerCell(numberOfCells),
+        timeStamp,
+        _timeStepping.getTimeStepSizeOfLastStep()
+      }
+    );
+    _errorMeasurement.record(numberOfCells, timeStamp);
+  }
+}
+
+/** Reduces the finite-volume widths of the cells over all ranks. */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::reduceMeshWidths(
+  const peano4::Partition& partition
+) {
+  double minimum = std::numeric_limits<double>::infinity();
+  double maximum = 0.0;
+  if (not partition.getCells().isEmpty()) {
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      minimum = std::min(minimum, partition.getWidthOfLevel(partition.getMaximumLevel(), axis) / Derived::PatchSize);
+      maximum = std::max(maximum, partition.getWidthOfLevel(partition.getMinimumLevel(), axis) / Derived::PatchSize);
+    }
+  }
+  _timeStepping.reduceMeshWidthsAcrossRanks(minimum, maximum);
 }
 
 /**
- * A face reads its halo once a preceding sweep has written one, which hasStoredFaceData()
- * reports.
+ * Derives the size of the next time step: An adaptive rule reduces maxEigenvalue over all ranks
+ * and takes the CFL condition on the smallest volume, a fixed rule the normalised fraction of
+ * the largest admissible mesh width.
  */
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::loadsFaceData(
-  const peano4::dataview::FaceMarker& marker
-) const {
-  return not marker.hasBeenRefined() and _solverState != SolverState::GridConstruction and this->hasStoredFaceData();
-}
-
-template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
-INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
-  providesCellDataToKernels(const peano4::dataview::CellMarker& marker) const {
-  return storesCellData(marker);
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::proposeTimeStepSize(const double maxEigenvalue) {
+  if constexpr (Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive) {
+    _timeStepping.raiseMaxEigenvalue(maxEigenvalue);
+    _timeStepping.reduceMaxEigenvaluesAcrossRanks();
+    if (
+      _timeStepping.hasPositiveStabilityEigenvalue()
+      and _timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime
+    ) {
+      _timeStepping.setAdmissibleTimeStepSize(
+        _timeStepping.getFactor() * _timeStepping.getMinMeshWidth()
+        / (DIMENSIONS * _timeStepping.getMaxEigenvalueOfThisStep())
+      );
+    }
+  } else {
+    const double maxAdmissibleMeshWidth = _timeStepping.getLimits().maxAdmissibleMeshWidth;
+    assertion(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
+    _timeStepping.setFixedTimeStepSize(
+      _timeStepping.getFactor() * _timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth
+    );
+  }
 }

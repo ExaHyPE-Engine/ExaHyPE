@@ -2,70 +2,39 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/accelerator/CompileTarget.h"
+
 namespace applications::exahype2::exaseis {
-  template<typename T>
-  static inline
-  void initialStressTensor(
-    const double* const x,
-    T& sxx,
-    T& syy,
-    T& szz,
-    T& sxy,
-    T& sxz,
-    T& syz
-  ){
-    // The initialStresses entry assigns all six stresses.
-    {{initialStresses}}
-  }
+  template <typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeInitialStress(
+    const double* x,
+    Value&        sxx,
+    Value&        syy,
+    Value&        szz,
+    Value&        sxy,
+    Value&        sxz,
+    Value&        syz
+  );
 
-  // Additional stress on the fault in yz direction normal to the fault
-  template<typename T>
-  static inline
-  T n_yz(
-    const double* const x
-  ){
-    {{n_yz}}
-  }
+  template <typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value getAdditionalShearStress(const double* x);
 
-  template<typename T>
-  static inline
-  T fault_cohesion(
-    const double* const x
-  ){
-    {{cohesion}}
-  }
+  template <typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value getCohesion(const double* x);
 
-  template<typename T>
-  static inline
-  T forced_rupture_time(
-    const double* const x
-  ){
-    {{forced_rupture_time}}
-  }
+  template <typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value getForcedRuptureTime(const double* x);
 
-  template<typename T>
-  static inline
-  T slipWeakeningCriticalDistance(
-    const double* const x
-  ){
-    {{d_c}}
-  }
+  template <typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value getCriticalSlipDistance(const double* x);
 
-  // Dynamic coefficient of friction (dimensionless)
-  constexpr double mu_d = {{mu_d}};
-  // Static coefficient of friction (dimensionless)
-  constexpr double mu_s = {{mu_s}};
-
-  // Duration of the forced rupture in seconds.
-  // The forces holding the fault together decrease linearly over this duration from the forced rupture time.
-  constexpr double t0_rupture = {{t0_rupture}};
-
-  /**
-   * tauStrength() adds 1e10 cohesion outside the rectangle -f_wy < y - f_cy < f_wy,
-   * -f_wz < z - f_cz < f_wz, which locks the fault there.
-   */
-  constexpr double f_cy = {{f_cy}};
-  constexpr double f_wy = {{f_wy}};
-  constexpr double f_cz = {{f_cz}};
-  constexpr double f_wz = {{f_wz}};
+  constexpr double DynamicFrictionCoefficient = {{mu_d}};
+  constexpr double StaticFrictionCoefficient  = {{mu_s}};
+  constexpr double ForcedRuptureDuration      = {{t0_rupture}};
+  constexpr double CohesionBoxCentreY         = {{f_cy}};
+  constexpr double CohesionBoxHalfWidthY      = {{f_wy}};
+  constexpr double CohesionBoxCentreZ         = {{f_cz}};
+  constexpr double CohesionBoxHalfWidthZ      = {{f_wz}};
 } // namespace applications::exahype2::exaseis
+
+#include "DynamicRuptureParameters.cpph"

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace exahype2::fv::limiter {
   /**
@@ -28,8 +28,8 @@ TARGET_DECLARE
 struct exahype2::fv::limiter::Zero final {
   template <typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision limitedDifference(
-    const ComputePrecision forwardDifference,
-    const ComputePrecision backwardDifference
+    ComputePrecision forwardDifference,
+    ComputePrecision backwardDifference
   );
 };
 
@@ -40,8 +40,8 @@ struct exahype2::fv::limiter::Zero final {
 struct exahype2::fv::limiter::Average final {
   template <typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision limitedDifference(
-    const ComputePrecision forwardDifference,
-    const ComputePrecision backwardDifference
+    ComputePrecision forwardDifference,
+    ComputePrecision backwardDifference
   );
 };
 
@@ -52,8 +52,8 @@ struct exahype2::fv::limiter::Average final {
 struct exahype2::fv::limiter::Minmod final {
   template <typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision limitedDifference(
-    const ComputePrecision forwardDifference,
-    const ComputePrecision backwardDifference
+    ComputePrecision forwardDifference,
+    ComputePrecision backwardDifference
   );
 };
 
@@ -64,8 +64,8 @@ struct exahype2::fv::limiter::Minmod final {
 struct exahype2::fv::limiter::VanAlbada final {
   template <typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision limitedDifference(
-    const ComputePrecision forwardDifference,
-    const ComputePrecision backwardDifference
+    ComputePrecision forwardDifference,
+    ComputePrecision backwardDifference
   );
 };
 
@@ -76,8 +76,8 @@ struct exahype2::fv::limiter::VanAlbada final {
 struct exahype2::fv::limiter::Superbee final {
   template <typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision limitedDifference(
-    const ComputePrecision forwardDifference,
-    const ComputePrecision backwardDifference
+    ComputePrecision forwardDifference,
+    ComputePrecision backwardDifference
   );
 };
 
@@ -88,8 +88,8 @@ struct exahype2::fv::limiter::Superbee final {
 struct exahype2::fv::limiter::MinmodCentral final {
   template <typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision limitedDifference(
-    const ComputePrecision forwardDifference,
-    const ComputePrecision backwardDifference
+    ComputePrecision forwardDifference,
+    ComputePrecision backwardDifference
   );
 };
 TARGET_DECLARE_END

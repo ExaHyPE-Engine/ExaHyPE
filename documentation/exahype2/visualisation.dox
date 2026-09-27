@@ -5,56 +5,41 @@
 \tableofcontents
 
 
-ExaHyPE 2  relies on Peano's standard output routines to write file dumps,
-and it employs Peano's standard terminal routines to dump runtime information.
-Further to that, you can enable @ref tarch_logging "Peano's statistics" if you require more in-depth
-(profile) information.
-
-
-# Visualise the patch files
-
-Consult @ref documentation_tarch_visualisation "Peano's generic discussion" of various
-visualisation pathways as well as the patch file format.
+ExaHyPE writes solution snapshots through `exahype2::plotter::PatchPlotter`
+and the file writers described in @ref tarch_plotting. The runtime option
+`--plotFormat` selects `vtu`, `vtkhdf`, `hdf5` or `netcdf`; the default is
+VTKHDF when the build includes HDF5 and VTU otherwise.
 
 
 # Solution output
 
-As the files can be rather large, the simulation configuration allows you to
-specify exactly how often you want to see file dumps, and you can also add
-spatial filters.
-The latter help you to visualise only subdomains.
-As we rely on Peano's infrastructure, you can use the scripts from
-@ref documentation_tarch_visualisation to convert the output files into vtu files.
+Each snapshot contains the patches of the cells the solver owns and the named
+unknowns and auxiliary variables in its project description. The cell fields
+`RefinementLevel` and `Subdomain` record the level and the MPI rank of the
+patch; limiting solvers also write `LimiterStatus`.
 
-
-By default, ExaHyPE dumps all data as one large vector Q per Finite
-Volume/integration point, i.e. you get a set of scalars.
-It also dumps all the resolution levels of the grid simultaneously.
-Therefore, one of the first postprocessing steps usually is to remove all data
-from the output data set besides the fine grid level.
+The plotter assigns each patch a fixed range of plot cells and points before
+parallel filling. `postprocessing/render_curve.py` draws the cell centres
+in snapshot order and colours them by `Subdomain`.
 
 
 # Solver-specific rendering recommendations
 
 ## Finite Volumes
 
-If you dump Finite Volume data, it becomes difficult to spot how the resulting
-Finite Volumes are organised in patches:
-The organisation in patches is not visible unless you study AMR resolution
-boundaries.
+Each finite volume becomes one plot cell with cell-associated fields.
+Patch boundaries appear where the refinement level or cell spacing changes.
 Cell outlines are drawn by default; pass `--no-edges` to
 `postprocessing/render_solution.py` to turn them off when you only want the field.
 
 
 ## Discontinuous Galerkin
 
-If you use ExaHyPE's Discontinuous Galerkin solvers with non-Lobatto nodes,
-the file dumps will look pretty ragged.
-This is due to the fact that the DG quadrature points are not placed on the cell
-faces.
-This might be unsatisfying and make some postprocessing (isolines, e.g.)
-difficult, but we found it important to display the actual spatial arrangement
-of the unknowns.
+Each DG node becomes one plot point at its quadrature position, and plot
+cells connect neighbouring nodes within the patch. Gauss-Legendre nodes lie
+inside a cell, so adjacent patches show visible gaps. A cell whose limiter
+status selects the subcell solution plots the value of the containing subcell
+at each DG node.
 
 
 As with the Finite Volume output, cell outlines are drawn by default; pass
@@ -64,16 +49,16 @@ including the field to plot (`--field`), the component of a vector field
 (`--component`) and the colour map (`--colormap`).
 
 
-# Logging
+# Comparing outputs
 
-Often, users are only interested in a particular phase of the simulation or want
-to specify different log entries per program phase. The program phases offered
-by default are
+`postprocessing/compare_solution.py` and `postprocessing/check_symmetry.py`
+ignore `Subdomain` by default because rank ownership changes with the
+decomposition. `compare_solution.py --unordered` matches cells by geometry
+when point numbering or boundary-point duplication differs between outputs.
 
-- CreateGrid
-- InitGrid
-- PlotSolution
-- TimeStep
+`postprocessing/plot_error_norms.py` plots the error database, and
+`postprocessing/plot_probe_data.py` plots tracer CSV records. See
+@ref tarch_logging for terminal logging and profiling.
 
 
 
