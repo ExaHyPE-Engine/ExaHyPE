@@ -163,6 +163,10 @@ namespace {
     static constexpr double PicardResidualTolerance = 1.0e-10;
     static constexpr double FluxScaling             = 1.0e30;
 
+    static inline int unconvergedPredictions{0};
+
+    static void markPredictionAsUnconverged() { unconvergedPredictions++; }
+
     static void flux(
       const double* NOALIAS const                                   state,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
@@ -174,6 +178,32 @@ namespace {
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] = FluxScaling * state[unknown];
+      }
+    }
+  };
+
+  /**
+   * Writes a source whose rate stops the Picard iteration at its sweep limit.
+   */
+  struct StiffSourceSolver final : SolverReport {
+    static constexpr bool   UsesSubcellLimiter      = false;
+    static constexpr double PicardResidualTolerance = 1.0e-10;
+    static constexpr double SourceRate              = 100.0;
+
+    static inline int unconvergedPredictions{0};
+
+    static void markPredictionAsUnconverged() { unconvergedPredictions++; }
+
+    static void sourceTerm(
+      const double* NOALIAS const                                   state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      double* NOALIAS const                                         values
+    ) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        values[unknown] += SourceRate * state[unknown];
       }
     }
   };
@@ -267,7 +297,6 @@ namespace {
       cell.cellState,
       cell.previousCellState,
       collect(tables),
-      collect(tables),
       TimeStepSize
     );
   }
@@ -298,7 +327,6 @@ namespace {
       cell.cellState,
       cell.previousCellState,
       collect(tables),
-      collect(tables),
       TimeStepSize
     );
   }
@@ -326,6 +354,7 @@ void exahype2::dg::ader::tests::PredictTest::run() {
   testMethod(testThePredictionStampsTheCellsOwnFaceHalves);
   testMethod(testTheCellReportsItselfToTheSolver);
   testMethod(testADivergedPredictorFlagsTheCell);
+  testMethod(testAnUnconvergedPredictionReportsItselfToTheSolver);
   testMethod(testThePredictorEvaluatesOnlyThePointSourcesInsideTheCell);
 }
 
@@ -505,11 +534,50 @@ void exahype2::dg::ader::tests::PredictTest::testADivergedPredictorFlagsTheCell(
     cell.cellState,
     cell.previousCellState,
     collect(tables),
-    collect(tables),
     TimeStepSize
   );
 
   validateEquals(cell.cellLabel.predictorDiverged, true);
+  validateEquals(DivergingLimitedSolver::unconvergedPredictions, 0);
+  validateEquals(solver.numberOfUpdates, 1);
+}
+
+/**
+ * An unconverged prediction reports itself to the solver type and leaves the cell unflagged.
+ */
+void exahype2::dg::ader::tests::PredictTest::testAnUnconvergedPredictionReportsItselfToTheSolver() {
+  const Tables      tables = makeTables();
+  Cell              cell;
+  StiffSourceSolver solver;
+  fill(cell);
+
+  exahype2::dg::ader::predict<
+    StiffSourceSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false>(
+    makeCellMarker(),
+    solver,
+    cell.cellLabel,
+    cell.faceLabelEnumerator,
+    cell.faceStateEnumerator,
+    cell.faceFluxEnumerator,
+    cell.cellState,
+    cell.previousCellState,
+    collect(tables),
+    TimeStepSize
+  );
+
+  validateEquals(StiffSourceSolver::unconvergedPredictions, 1);
+  validateEquals(cell.cellLabel.predictorDiverged, false);
   validateEquals(solver.numberOfUpdates, 1);
 }
 

@@ -44,9 +44,4 @@ private:
    * padding lanes.
    */
   void testTheMaterialParameterMatrixActsOnEveryAxis();
-
-  /**
-   * The source of every node reaches the source buffer.
-   */
-  void testTheSourceFillsEveryNode();
 };

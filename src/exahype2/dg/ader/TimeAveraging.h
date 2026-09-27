@@ -8,21 +8,9 @@
 
 TARGET_DECLARE
 namespace exahype2::dg::ader {
-  template <
-    int  NumberOfDofsPerAxis,
-    int  NumberOfUnknowns,
-    int  NumberOfAuxiliaryVariables,
-    bool EvaluateFlux,
-    bool AccumulatesSource,
-    typename ComputePrecision,
-    typename PicardPrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void averagePredictorOverTime(
-    ComputePrecision* NOALIAS       timeAveragedState,
-    ComputePrecision* NOALIAS       timeAveragedFlux,
-    ComputePrecision* NOALIAS       timeAveragedSource,
-    const PicardPrecision* NOALIAS  spaceTimeState,
-    const PicardPrecision* NOALIAS  spaceTimeFlux,
-    const PicardPrecision* NOALIAS  spaceTimeSource,
+  template <int NumberOfDofsPerAxis, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void averageStateOverTime(
+    ComputePrecision* NOALIAS       spaceTimeState,
     const ComputePrecision* NOALIAS quadratureWeights
   );
 } // namespace exahype2::dg::ader

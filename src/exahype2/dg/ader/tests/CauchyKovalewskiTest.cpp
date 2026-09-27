@@ -5,9 +5,11 @@
 #include "exahype2/dg/ader/CauchyKovalewski.h"
 
 namespace {
-  constexpr int NumberOfDofsPerAxis        = 3;
-  constexpr int NumberOfUnknowns           = 2;
-  constexpr int NumberOfAuxiliaryVariables = 1;
+  constexpr int    NumberOfDofsPerAxis        = 3;
+  constexpr int    NumberOfUnknowns           = 2;
+  constexpr int    NumberOfAuxiliaryVariables = 1;
+  constexpr double TimeStamp                  = 0.5;
+  constexpr double TimeStepSize               = 0.25;
 
   using CellLayout = exahype2::dg::ader::Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
 
@@ -71,6 +73,21 @@ namespace {
   }
 
   double slopeOfAxis(const int axis) { return 2.0 + axis; }
+
+  struct MarkerSolver final {
+    static void sourceTerm(
+      const double* NOALIAS const                                   state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      double* NOALIAS const                                         sourceValues
+    ) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        sourceValues[unknown] = 4.0;
+      }
+    }
+  };
 } // namespace
 
 exahype2::dg::ader::tests::CauchyKovalewskiTest::CauchyKovalewskiTest() :
@@ -79,10 +96,9 @@ exahype2::dg::ader::tests::CauchyKovalewskiTest::CauchyKovalewskiTest() :
 void exahype2::dg::ader::tests::CauchyKovalewskiTest::run() {
   testMethod(testTheSeedCopiesTheCellStateAndClearsThePadding);
   testMethod(testTheTimeAverageStartsFromTheState);
-  testMethod(testTheTermsAreClearedBeforeATaylorStep);
+  testMethod(testTheFluxesAreClearedBeforeATaylorStep);
   testMethod(testALinearFluxDifferentiatesToItsPhysicalSlope);
   testMethod(testTheUnitOperatorScalesEachAxisByItsCellExtent);
-  testMethod(testTheTimeAveragedTermsGrowByTheGivenFactor);
   testMethod(testTheTimeAveragedStateGrowsByTheGivenFactor);
   testMethod(testTheNextDerivativeIsTheSourceMinusTheFluxDivergence);
 }
@@ -145,43 +161,16 @@ void exahype2::dg::ader::tests::CauchyKovalewskiTest::testTheTimeAverageStartsFr
   }
 }
 
-void exahype2::dg::ader::tests::CauchyKovalewskiTest::testTheTermsAreClearedBeforeATaylorStep() {
+void exahype2::dg::ader::tests::CauchyKovalewskiTest::testTheFluxesAreClearedBeforeATaylorStep() {
   double flux[DIMENSIONS * AxisStride];
-  double source[AxisStride];
   for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
     flux[entry] = MarkerValue;
   }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    source[entry] = MarkerValue;
-  }
 
-  exahype2::dg::ader::clearTaylorTerms<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, double>(
-    flux,
-    source
-  );
+  exahype2::dg::ader::clearFluxes<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, double>(flux);
 
   for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
     validateNumericalEqualsWithParams1(flux[entry], 0.0, entry);
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(source[entry], 0.0, entry);
-  }
-
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    flux[entry] = MarkerValue;
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    source[entry] = MarkerValue;
-  }
-
-  exahype2::dg::ader::
-    clearTaylorTerms<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, false, double>(flux, source);
-
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(flux[entry], 0.0, entry);
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(source[entry], MarkerValue, entry);
   }
 }
 
@@ -265,62 +254,6 @@ void exahype2::dg::ader::tests::CauchyKovalewskiTest::testTheUnitOperatorScalesE
   }
 }
 
-void exahype2::dg::ader::tests::CauchyKovalewskiTest::testTheTimeAveragedTermsGrowByTheGivenFactor() {
-  double flux[DIMENSIONS * AxisStride];
-  double source[AxisStride];
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    flux[entry] = 1.0 + 0.25 * entry;
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    source[entry] = 2.0 - 0.125 * entry;
-  }
-
-  double timeAveragedFlux[DIMENSIONS * AxisStride] = {};
-  double timeAveragedSource[AxisStride]            = {};
-
-  exahype2::dg::ader::
-    accumulateTimeAveragedTerms<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, double>(
-      timeAveragedFlux,
-      timeAveragedSource,
-      flux,
-      source,
-      0.5
-    );
-  exahype2::dg::ader::
-    accumulateTimeAveragedTerms<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, double>(
-      timeAveragedFlux,
-      timeAveragedSource,
-      flux,
-      source,
-      0.25
-    );
-
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(timeAveragedFlux[entry], 0.75 * flux[entry], entry);
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(timeAveragedSource[entry], 0.75 * source[entry], entry);
-  }
-
-  for (int entry = 0; entry < AxisStride; entry++) {
-    timeAveragedSource[entry] = MarkerValue;
-  }
-  exahype2::dg::ader::
-    accumulateTimeAveragedTerms<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, false, double>(
-      timeAveragedFlux,
-      timeAveragedSource,
-      flux,
-      source,
-      0.25
-    );
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(timeAveragedFlux[entry], flux[entry], entry);
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(timeAveragedSource[entry], MarkerValue, entry);
-  }
-}
-
 void exahype2::dg::ader::tests::CauchyKovalewskiTest::testTheTimeAveragedStateGrowsByTheGivenFactor() {
   double state[StateSize];
   for (int entry = 0; entry < StateSize; entry++) {
@@ -353,17 +286,11 @@ void exahype2::dg::ader::tests::CauchyKovalewskiTest::testTheTimeAveragedStateGr
 
 void exahype2::dg::ader::tests::CauchyKovalewskiTest::testTheNextDerivativeIsTheSourceMinusTheFluxDivergence() {
   double flux[DIMENSIONS * AxisStride] = {};
-  double source[AxisStride]            = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         flux[axis * AxisStride + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown] = 1.0 + axis;
       }
-    }
-  }
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      source[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown] = 4.0;
     }
   }
 
@@ -379,17 +306,25 @@ void exahype2::dg::ader::tests::CauchyKovalewskiTest::testTheNextDerivativeIsThe
     withoutSource[entry] = MarkerValue;
   }
 
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(0.5);
+
+  exahype2::dg::ader::overwriteStateWithLinearSource<
+    MarkerSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    double>(withSource, cellCentre, cellSize, TimeStamp, TimeStepSize);
   exahype2::dg::ader::
-    advanceTimeDerivative<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, double>(
+    addFluxesToTimeDerivative<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, double>(
       withSource,
-      flux,
-      source
+      flux
     );
+
   exahype2::dg::ader::
-    advanceTimeDerivative<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, false, double>(
+    addFluxesToTimeDerivative<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, false, double>(
       withoutSource,
-      flux,
-      source
+      flux
     );
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {

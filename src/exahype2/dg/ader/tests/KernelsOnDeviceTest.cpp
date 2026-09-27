@@ -20,13 +20,8 @@ namespace {
     true,
     true,
     true>;
-  using LinearScratch = exahype2::dg::ader::LinearPredictorScratch<
-    Setup::DofsPerAxis,
-    Setup::NumberOfUnknowns,
-    Setup::NumberOfAuxiliaryVariables,
-    true,
-    true,
-    true>;
+  using LinearScratch = exahype2::dg::ader::
+    LinearPredictorScratch<Setup::DofsPerAxis, Setup::NumberOfUnknowns, Setup::NumberOfAuxiliaryVariables, true, true>;
 
   TARGET_DECLARE
   /**
@@ -165,34 +160,25 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testNonlinearSpaceTimePredi
   const std::vector<double> cellStates = exahype2::dg::tests::makeRamp(Setup::AllCellStatesCardinality, 1.0, 0.003);
   const std::vector<double> faceStates(Setup::AllFaceStatesCardinality, 0.0);
   const std::vector<double> faceFluxes(Setup::AllFaceFluxesCardinality, 0.0);
-  const std::vector<double> timeAveragedScratch(
-    static_cast<std::size_t>(Setup::NumberOfCells) * NonlinearScratch::TimeAveragedSize,
-    0.0
-  );
-  const std::vector<double> picardScratch(
-    static_cast<std::size_t>(Setup::NumberOfCells) * NonlinearScratch::PicardSize,
-    0.0
-  );
-  const std::vector<int> sweeps(Setup::NumberOfCells, 0);
+  const std::vector<double> scratch(static_cast<std::size_t>(Setup::NumberOfCells) * NonlinearScratch::Size, 0.0);
+  const std::vector<int>    sweeps(Setup::NumberOfCells, 0);
 
   const exahype2::dg::tests::DeviceBuffer<double> deviceCellStates(cellStates);
   const exahype2::dg::tests::DeviceBuffer<double> deviceFaceStates(faceStates);
   const exahype2::dg::tests::DeviceBuffer<double> deviceFaceFluxes(faceFluxes);
-  const exahype2::dg::tests::DeviceBuffer<double> deviceTimeAveragedScratch(timeAveragedScratch);
-  const exahype2::dg::tests::DeviceBuffer<double> devicePicardScratch(picardScratch);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceScratch(scratch);
   const exahype2::dg::tests::DeviceBuffer<int>    deviceSweeps(sweeps);
   const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
   const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
 
-  const exahype2::dg::ader::BasisTables<double> onDeviceTables              = deviceTables.view();
-  double* const                                 onDeviceCellStates          = deviceCellStates.data();
-  double* const                                 onDeviceFaceStates          = deviceFaceStates.data();
-  double* const                                 onDeviceFaceFluxes          = deviceFaceFluxes.data();
-  double* const                                 onDeviceTimeAveragedScratch = deviceTimeAveragedScratch.data();
-  double* const                                 onDevicePicardScratch       = devicePicardScratch.data();
-  int* const                                    onDeviceSweeps              = deviceSweeps.data();
-  const double* const                           onDeviceCellCentres         = deviceCellCentres.data();
-  const double* const                           onDeviceCellSizes           = deviceCellSizes.data();
+  const exahype2::dg::ader::BasisTables<double> onDeviceTables      = deviceTables.view();
+  double* const                                 onDeviceCellStates  = deviceCellStates.data();
+  double* const                                 onDeviceFaceStates  = deviceFaceStates.data();
+  double* const                                 onDeviceFaceFluxes  = deviceFaceFluxes.data();
+  double* const                                 onDeviceScratch     = deviceScratch.data();
+  int* const                                    onDeviceSweeps      = deviceSweeps.data();
+  const double* const                           onDeviceCellCentres = deviceCellCentres.data();
+  const double* const                           onDeviceCellSizes   = deviceCellSizes.data();
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(Setup::NumberOfCells),
     [=] GPU_CALLABLE_LAMBDA(const int cell) {
@@ -202,10 +188,9 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testNonlinearSpaceTimePredi
       const int                                   coordinateOffset = cell * DIMENSIONS;
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(onDeviceCellCentres + coordinateOffset);
       const tarch::la::Vector<DIMENSIONS, double> cellSize(onDeviceCellSizes + coordinateOffset);
-      const int                                   stateOffset        = cell * Setup::CellStateCardinality;
-      const int                                   timeAveragedOffset = cell * NonlinearScratch::TimeAveragedSize;
-      const int                                   picardOffset       = cell * NonlinearScratch::PicardSize;
-      onDeviceSweeps[cell]                                           = exahype2::dg::ader::spaceTimePredictor<
+      const int                                   stateOffset   = cell * Setup::CellStateCardinality;
+      const int                                   scratchOffset = cell * NonlinearScratch::Size;
+      onDeviceSweeps[cell]                                      = exahype2::dg::ader::spaceTimePredictor<
         exahype2::dg::ader::tests::StubSolver,
         Setup::DofsPerAxis,
         Setup::NumberOfUnknowns,
@@ -217,14 +202,11 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testNonlinearSpaceTimePredi
         true,
         double,
         double,
-        double,
         double>(
         faceState,
         faceFlux,
         onDeviceCellStates + stateOffset,
-        onDeviceTimeAveragedScratch + timeAveragedOffset,
-        onDevicePicardScratch + picardOffset,
-        onDeviceTables,
+        onDeviceScratch + scratchOffset,
         onDeviceTables,
         cellCentre,
         cellSize,
@@ -244,12 +226,11 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testNonlinearSpaceTimePredi
   std::vector<int> deviceSweepResult(sweeps.size());
   deviceSweeps.copyBack(deviceSweepResult);
 
-  std::vector<double>                           hostCellStates          = cellStates;
-  std::vector<double>                           hostFaceStates          = faceStates;
-  std::vector<double>                           hostFaceFluxes          = faceFluxes;
-  std::vector<double>                           hostTimeAveragedScratch = timeAveragedScratch;
-  std::vector<double>                           hostPicardScratch       = picardScratch;
-  const exahype2::dg::ader::BasisTables<double> hostTables              = tables.view();
+  std::vector<double>                           hostCellStates = cellStates;
+  std::vector<double>                           hostFaceStates = faceStates;
+  std::vector<double>                           hostFaceFluxes = faceFluxes;
+  std::vector<double>                           hostScratch    = scratch;
+  const exahype2::dg::ader::BasisTables<double> hostTables     = tables.view();
   for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
     double* faceState[peano4::FacesPerCell];
     double* faceFlux[peano4::FacesPerCell];
@@ -257,10 +238,9 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testNonlinearSpaceTimePredi
     const int                                   coordinateOffset = cell * DIMENSIONS;
     const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
     const tarch::la::Vector<DIMENSIONS, double> cellSize(geometry.cellSizes.data() + coordinateOffset);
-    const int                                   stateOffset        = cell * Setup::CellStateCardinality;
-    const int                                   timeAveragedOffset = cell * NonlinearScratch::TimeAveragedSize;
-    const int                                   picardOffset       = cell * NonlinearScratch::PicardSize;
-    const int                                   hostSweeps         = exahype2::dg::ader::spaceTimePredictor<
+    const int                                   stateOffset   = cell * Setup::CellStateCardinality;
+    const int                                   scratchOffset = cell * NonlinearScratch::Size;
+    const int                                   hostSweeps    = exahype2::dg::ader::spaceTimePredictor<
       exahype2::dg::ader::tests::StubSolver,
       Setup::DofsPerAxis,
       Setup::NumberOfUnknowns,
@@ -272,14 +252,11 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testNonlinearSpaceTimePredi
       true,
       double,
       double,
-      double,
       double>(
       faceState,
       faceFlux,
       hostCellStates.data() + stateOffset,
-      hostTimeAveragedScratch.data() + timeAveragedOffset,
-      hostPicardScratch.data() + picardOffset,
-      hostTables,
+      hostScratch.data() + scratchOffset,
       hostTables,
       cellCentre,
       cellSize,

@@ -14,7 +14,7 @@ namespace {
 
   constexpr int StateStride        = CellLayout::PaddedNumberOfData;
   constexpr int UnknownStride      = CellLayout::PaddedNumberOfUnknowns;
-  constexpr int FluxAxisStride     = CellLayout::SpaceTimeNodes * UnknownStride;
+  constexpr int FluxAxisStride     = CellLayout::NodesPerCell * UnknownStride;
   constexpr int GradientAxisStride = CellLayout::NodesPerCell * UnknownStride;
 
   constexpr int    MarkedTimeNode = 1;
@@ -131,13 +131,17 @@ namespace {
     }
   }
 
+  constexpr double InitialTimeAverage = 0.75;
+
   void resetSourceBuffers(
-    double (&spaceTimeSource)[CellLayout::SpaceTimeNodes * UnknownStride],
+    double (&timeAveragedSource)[CellLayout::NodesPerCell * UnknownStride],
     double (&rightHandSide)[CellLayout::SpaceTimeNodes * UnknownStride]
   ) {
+    for (int entry = 0; entry < CellLayout::NodesPerCell * UnknownStride; entry++) {
+      timeAveragedSource[entry] = InitialTimeAverage;
+    }
     for (int entry = 0; entry < CellLayout::SpaceTimeNodes * UnknownStride; entry++) {
-      spaceTimeSource[entry] = 9.0;
-      rightHandSide[entry]   = 0.5;
+      rightHandSide[entry] = 0.5;
     }
   }
 
@@ -231,6 +235,7 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::run() {
   testMethod(testTheFluxIsAskedForOncePerNodeAndAxis);
   testMethod(testTheDiffusiveFluxSeesTheNodalGradients);
   testMethod(testEveryTermCombinationAccumulatesIntoOneBuffer);
+  testMethod(testTheFirstTimeNodeRestartsTheTimeAverages);
 }
 
 void exahype2::dg::ader::tests::SpaceTimeTermsTest::testTheNodeIndexSplitsTheFlattenedIndex() {
@@ -356,9 +361,11 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testTheFluxIsAskedForOncePer
   double stateGradient[DIMENSIONS * GradientAxisStride];
   fillStateGradient(stateGradient);
 
-  double spaceTimeFlux[DIMENSIONS * FluxAxisStride];
+  double flux[DIMENSIONS * FluxAxisStride];
+  double timeAveragedFlux[DIMENSIONS * FluxAxisStride];
   for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
-    spaceTimeFlux[entry] = 9.0;
+    flux[entry]             = 9.0;
+    timeAveragedFlux[entry] = InitialTimeAverage;
   }
 
   exahype2::dg::ader::evaluateSpaceTimeFlux<
@@ -368,10 +375,12 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testTheFluxIsAskedForOncePer
     NumberOfAuxiliaryVariables,
     false,
     double>(
-    spaceTimeFlux,
+    flux,
+    timeAveragedFlux,
     spaceTimeState,
     stateGradient,
     QuadratureNodes,
+    QuadratureWeights,
     cellCentre,
     cellSize,
     TimeStamp,
@@ -383,34 +392,23 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testTheFluxIsAskedForOncePer
 
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-      const int    spaceTimeNode = MarkedTimeNode * CellLayout::NodesPerCell + cellNode;
-      const double position      = nodePositionAt(cellNode)(axis);
+      const double position = nodePositionAt(cellNode)(axis);
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        const int    entry    = axis * FluxAxisStride + cellNode * UnknownStride + unknown;
         const double expected = (1.0 + axis) * stateValueAt(cellNode, unknown) + position + timePosition;
+        validateNumericalEqualsWithParams3(flux[entry], expected, axis, cellNode, unknown);
         validateNumericalEqualsWithParams3(
-          spaceTimeFlux[axis * FluxAxisStride + spaceTimeNode * UnknownStride + unknown],
-          expected,
+          timeAveragedFlux[entry],
+          InitialTimeAverage + QuadratureWeights[MarkedTimeNode] * expected,
           axis,
           cellNode,
           unknown
         );
       }
       for (int unknown = NumberOfUnknowns; unknown < UnknownStride; unknown++) {
-        validateNumericalEqualsWithParams3(
-          spaceTimeFlux[axis * FluxAxisStride + spaceTimeNode * UnknownStride + unknown],
-          0.0,
-          axis,
-          cellNode,
-          unknown
-        );
-      }
-    }
-    for (int timeNode = 0; timeNode < NumberOfDofsPerAxis; timeNode++) {
-      if (timeNode != MarkedTimeNode) {
-        const int firstEntry = axis * FluxAxisStride + timeNode * CellLayout::NodesPerCell * UnknownStride;
-        for (int entry = 0; entry < CellLayout::NodesPerCell * UnknownStride; entry++) {
-          validateNumericalEqualsWithParams3(spaceTimeFlux[firstEntry + entry], 9.0, axis, timeNode, entry);
-        }
+        const int entry = axis * FluxAxisStride + cellNode * UnknownStride + unknown;
+        validateNumericalEqualsWithParams3(flux[entry], 0.0, axis, cellNode, unknown);
+        validateNumericalEqualsWithParams3(timeAveragedFlux[entry], InitialTimeAverage, axis, cellNode, unknown);
       }
     }
   }
@@ -426,17 +424,21 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testTheDiffusiveFluxSeesTheN
   double stateGradient[DIMENSIONS * GradientAxisStride];
   fillStateGradient(stateGradient);
 
-  double spaceTimeFlux[DIMENSIONS * FluxAxisStride];
+  double flux[DIMENSIONS * FluxAxisStride];
+  double timeAveragedFlux[DIMENSIONS * FluxAxisStride];
   for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
-    spaceTimeFlux[entry] = 9.0;
+    flux[entry]             = 9.0;
+    timeAveragedFlux[entry] = InitialTimeAverage;
   }
 
   exahype2::dg::ader::
     evaluateSpaceTimeFlux<MarkerSolver, NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, double>(
-      spaceTimeFlux,
+      flux,
+      timeAveragedFlux,
       spaceTimeState,
       stateGradient,
       QuadratureNodes,
+      QuadratureWeights,
       cellCentre,
       cellSize,
       TimeStamp,
@@ -446,14 +448,13 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testTheDiffusiveFluxSeesTheN
 
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-      const int spaceTimeNode = MarkedTimeNode * CellLayout::NodesPerCell + cellNode;
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         double expected = (1.0 + axis) * stateValueAt(cellNode, unknown);
         for (int gradientAxis = 0; gradientAxis < DIMENSIONS; gradientAxis++) {
           expected += (0.5 + gradientAxis) * gradientValueAt(gradientAxis, cellNode, unknown);
         }
         validateNumericalEqualsWithParams3(
-          spaceTimeFlux[axis * FluxAxisStride + spaceTimeNode * UnknownStride + unknown],
+          flux[axis * FluxAxisStride + cellNode * UnknownStride + unknown],
           expected,
           axis,
           cellNode,
@@ -479,10 +480,10 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     cellQuadratureWeights[cellNode] = cellQuadratureWeightAt(cellNode);
   }
 
-  double spaceTimeSource[CellLayout::SpaceTimeNodes * UnknownStride];
+  double timeAveragedSource[CellLayout::NodesPerCell * UnknownStride];
   double rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride];
 
-  resetSourceBuffers(spaceTimeSource, rightHandSide);
+  resetSourceBuffers(timeAveragedSource, rightHandSide);
   exahype2::dg::ader::evaluateSpaceTimeSource<
     MarkerSolver,
     NumberOfDofsPerAxis,
@@ -492,8 +493,8 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     true,
     false,
     double>(
-    spaceTimeSource,
     rightHandSide,
+    timeAveragedSource,
     spaceTimeState,
     stateGradient,
     QuadratureNodes,
@@ -505,9 +506,9 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     TimeStepSize,
     MarkedTimeNode
   );
-  validateSourceCombination(spaceTimeSource, rightHandSide, false, true, false);
+  validateSourceCombination(rightHandSide, timeAveragedSource, false, true, false);
 
-  resetSourceBuffers(spaceTimeSource, rightHandSide);
+  resetSourceBuffers(timeAveragedSource, rightHandSide);
   exahype2::dg::ader::evaluateSpaceTimeSource<
     MarkerSolver,
     NumberOfDofsPerAxis,
@@ -517,8 +518,8 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     false,
     false,
     double>(
-    spaceTimeSource,
     rightHandSide,
+    timeAveragedSource,
     spaceTimeState,
     stateGradient,
     QuadratureNodes,
@@ -530,9 +531,9 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     TimeStepSize,
     MarkedTimeNode
   );
-  validateSourceCombination(spaceTimeSource, rightHandSide, true, false, false);
+  validateSourceCombination(rightHandSide, timeAveragedSource, true, false, false);
 
-  resetSourceBuffers(spaceTimeSource, rightHandSide);
+  resetSourceBuffers(timeAveragedSource, rightHandSide);
   exahype2::dg::ader::evaluateSpaceTimeSource<
     MarkerSolver,
     NumberOfDofsPerAxis,
@@ -542,8 +543,8 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     false,
     true,
     double>(
-    spaceTimeSource,
     rightHandSide,
+    timeAveragedSource,
     spaceTimeState,
     stateGradient,
     QuadratureNodes,
@@ -555,9 +556,9 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     TimeStepSize,
     MarkedTimeNode
   );
-  validateSourceCombination(spaceTimeSource, rightHandSide, false, false, true);
+  validateSourceCombination(rightHandSide, timeAveragedSource, false, false, true);
 
-  resetSourceBuffers(spaceTimeSource, rightHandSide);
+  resetSourceBuffers(timeAveragedSource, rightHandSide);
   exahype2::dg::ader::evaluateSpaceTimeSource<
     MarkerSolver,
     NumberOfDofsPerAxis,
@@ -567,8 +568,8 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     true,
     false,
     double>(
-    spaceTimeSource,
     rightHandSide,
+    timeAveragedSource,
     spaceTimeState,
     stateGradient,
     QuadratureNodes,
@@ -580,9 +581,9 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     TimeStepSize,
     MarkedTimeNode
   );
-  validateSourceCombination(spaceTimeSource, rightHandSide, true, true, false);
+  validateSourceCombination(rightHandSide, timeAveragedSource, true, true, false);
 
-  resetSourceBuffers(spaceTimeSource, rightHandSide);
+  resetSourceBuffers(timeAveragedSource, rightHandSide);
   exahype2::dg::ader::evaluateSpaceTimeSource<
     MarkerSolver,
     NumberOfDofsPerAxis,
@@ -592,8 +593,8 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     false,
     true,
     double>(
-    spaceTimeSource,
     rightHandSide,
+    timeAveragedSource,
     spaceTimeState,
     stateGradient,
     QuadratureNodes,
@@ -605,9 +606,9 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     TimeStepSize,
     MarkedTimeNode
   );
-  validateSourceCombination(spaceTimeSource, rightHandSide, true, false, true);
+  validateSourceCombination(rightHandSide, timeAveragedSource, true, false, true);
 
-  resetSourceBuffers(spaceTimeSource, rightHandSide);
+  resetSourceBuffers(timeAveragedSource, rightHandSide);
   exahype2::dg::ader::evaluateSpaceTimeSource<
     MarkerSolver,
     NumberOfDofsPerAxis,
@@ -617,8 +618,8 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     true,
     true,
     double>(
-    spaceTimeSource,
     rightHandSide,
+    timeAveragedSource,
     spaceTimeState,
     stateGradient,
     QuadratureNodes,
@@ -630,9 +631,9 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     TimeStepSize,
     MarkedTimeNode
   );
-  validateSourceCombination(spaceTimeSource, rightHandSide, false, true, true);
+  validateSourceCombination(rightHandSide, timeAveragedSource, false, true, true);
 
-  resetSourceBuffers(spaceTimeSource, rightHandSide);
+  resetSourceBuffers(timeAveragedSource, rightHandSide);
   exahype2::dg::ader::evaluateSpaceTimeSource<
     MarkerSolver,
     NumberOfDofsPerAxis,
@@ -642,8 +643,8 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     true,
     true,
     double>(
-    spaceTimeSource,
     rightHandSide,
+    timeAveragedSource,
     spaceTimeState,
     stateGradient,
     QuadratureNodes,
@@ -655,12 +656,103 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::testEveryTermCombinationAccu
     TimeStepSize,
     MarkedTimeNode
   );
-  validateSourceCombination(spaceTimeSource, rightHandSide, true, true, true);
+  validateSourceCombination(rightHandSide, timeAveragedSource, true, true, true);
+}
+
+void exahype2::dg::ader::tests::SpaceTimeTermsTest::testTheFirstTimeNodeRestartsTheTimeAverages() {
+  const auto cellCentre = makeCellCentre();
+  const auto cellSize   = makeCellSize();
+
+  // The first time slice holds zeros, so the callbacks depend on the node position and time only.
+  double spaceTimeState[CellLayout::SpaceTimeNodes * StateStride];
+  fillSpaceTimeState(spaceTimeState);
+
+  double stateGradient[DIMENSIONS * GradientAxisStride];
+  fillStateGradient(stateGradient);
+
+  double cellQuadratureWeights[CellLayout::NodesPerCell];
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    cellQuadratureWeights[cellNode] = cellQuadratureWeightAt(cellNode);
+  }
+
+  double flux[DIMENSIONS * FluxAxisStride];
+  double timeAveragedFlux[DIMENSIONS * FluxAxisStride];
+  for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
+    timeAveragedFlux[entry] = 9.0;
+  }
+  double timeAveragedSource[CellLayout::NodesPerCell * UnknownStride];
+  double rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride];
+  resetSourceBuffers(timeAveragedSource, rightHandSide);
+
+  exahype2::dg::ader::evaluateSpaceTimeFlux<
+    MarkerSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    false,
+    double>(
+    flux,
+    timeAveragedFlux,
+    spaceTimeState,
+    stateGradient,
+    QuadratureNodes,
+    QuadratureWeights,
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize,
+    0
+  );
+  exahype2::dg::ader::evaluateSpaceTimeSource<
+    MarkerSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    false,
+    true,
+    false,
+    double>(
+    rightHandSide,
+    timeAveragedSource,
+    spaceTimeState,
+    stateGradient,
+    QuadratureNodes,
+    QuadratureWeights,
+    cellQuadratureWeights,
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize,
+    0
+  );
+
+  const double timePosition = TimeStamp + QuadratureNodes[0] * TimeStepSize;
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int unknown = 0; unknown < UnknownStride; unknown++) {
+      const double source = (unknown < NumberOfUnknowns) ? timePosition : 0.0;
+      validateNumericalEqualsWithParams2(
+        timeAveragedSource[cellNode * UnknownStride + unknown],
+        QuadratureWeights[0] * source,
+        cellNode,
+        unknown
+      );
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        const double nodeFlux = (unknown < NumberOfUnknowns) ? nodePositionAt(cellNode)(axis) + timePosition : 0.0;
+        validateNumericalEqualsWithParams3(
+          timeAveragedFlux[axis * FluxAxisStride + cellNode * UnknownStride + unknown],
+          QuadratureWeights[0] * nodeFlux,
+          axis,
+          cellNode,
+          unknown
+        );
+      }
+    }
+  }
 }
 
 void exahype2::dg::ader::tests::SpaceTimeTermsTest::validateSourceCombination(
-  const double* const spaceTimeSource,
   const double* const rightHandSide,
+  const double* const timeAveragedSource,
   const bool          evaluateNonconservativeProduct,
   const bool          evaluateSource,
   const bool          evaluateDiffusiveSource
@@ -686,28 +778,28 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::validateSourceCombination(
         }
       }
       validateNumericalEqualsWithParams2(
-        spaceTimeSource[spaceTimeNode * UnknownStride + unknown],
-        expected,
+        rightHandSide[spaceTimeNode * UnknownStride + unknown],
+        0.5 + updateSize * expected,
         cellNode,
         unknown
       );
       validateNumericalEqualsWithParams2(
-        rightHandSide[spaceTimeNode * UnknownStride + unknown],
-        0.5 + updateSize * expected,
+        timeAveragedSource[cellNode * UnknownStride + unknown],
+        InitialTimeAverage + QuadratureWeights[MarkedTimeNode] * expected,
         cellNode,
         unknown
       );
     }
     for (int unknown = NumberOfUnknowns; unknown < UnknownStride; unknown++) {
       validateNumericalEqualsWithParams2(
-        spaceTimeSource[spaceTimeNode * UnknownStride + unknown],
-        0.0,
+        rightHandSide[spaceTimeNode * UnknownStride + unknown],
+        0.5,
         cellNode,
         unknown
       );
       validateNumericalEqualsWithParams2(
-        rightHandSide[spaceTimeNode * UnknownStride + unknown],
-        0.5,
+        timeAveragedSource[cellNode * UnknownStride + unknown],
+        InitialTimeAverage,
         cellNode,
         unknown
       );
@@ -718,7 +810,6 @@ void exahype2::dg::ader::tests::SpaceTimeTermsTest::validateSourceCombination(
     if (timeNode != MarkedTimeNode) {
       const int firstEntry = timeNode * CellLayout::NodesPerCell * UnknownStride;
       for (int entry = 0; entry < CellLayout::NodesPerCell * UnknownStride; entry++) {
-        validateNumericalEqualsWithParams2(spaceTimeSource[firstEntry + entry], 9.0, timeNode, entry);
         validateNumericalEqualsWithParams2(rightHandSide[firstEntry + entry], 0.5, timeNode, entry);
       }
     }

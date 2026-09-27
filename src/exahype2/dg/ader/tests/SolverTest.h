@@ -33,4 +33,5 @@ private:
   void testALimitedSolverWalksThroughATroubledTimeStep();
   void testSolversOfEqualParametersKeepSeparateStatistics();
   void testSweepPredicatesFollowTheMarkerAndTheSweep();
+  void testUnconvergedPredictionsAreReportedWhenTheTimeStepCloses();
 };

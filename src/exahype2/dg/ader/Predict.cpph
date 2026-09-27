@@ -21,7 +21,6 @@ template <
   bool EvaluateMaterialParameters,
   bool EvaluatePointSources,
   typename ComputePrecision,
-  typename PicardPrecision,
   typename StoragePrecision,
   typename CellLabel,
   typename FaceLabelEnumerator,
@@ -37,7 +36,6 @@ INLINE_METHOD void exahype2::dg::ader::predict(
   StoragePrecision* NOALIAS            cellState,
   StoragePrecision* NOALIAS            previousCellState,
   const BasisTables<ComputePrecision>& tables,
-  const BasisTables<PicardPrecision>&  picardTables,
   const double                         timeStepSize
 ) {
   using CellLayout    = exahype2::dg::ader::Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
@@ -85,26 +83,20 @@ INLINE_METHOD void exahype2::dg::ader::predict(
     EvaluateDiffusiveFlux,
     EvaluateDiffusiveSource,
     EvaluateMaterialParameters,
-    EvaluatePointSources>(
-    marker,
-    stateEstimates,
-    fluxEstimates,
-    cellState,
-    tables,
-    picardTables,
-    timeStamp,
-    timeStepSize
-  );
+    EvaluatePointSources>(marker, stateEstimates, fluxEstimates, cellState, tables, timeStamp, timeStepSize);
 
   if constexpr (not IsLinear) {
     if constexpr (SolverType::UsesSubcellLimiter) {
       // A diverged predictor holds no candidate, so the limiter recomputes the cell.
-      cellLabel.setPredictorDiverged(numberOfPicardIterations < 0);
-    } else if (numberOfPicardIterations < 0) {
+      cellLabel.setPredictorDiverged(numberOfPicardIterations == DivergedPicardIteration);
+    } else if (numberOfPicardIterations == DivergedPicardIteration) {
       tarch::terminateWithError(
         "The space-time predictor diverged in " + marker.toString()
         + ". Configure a subcell limiter so failing cells are recomputed."
       );
+    }
+    if (numberOfPicardIterations == UnconvergedPicardIteration) {
+      SolverType::markPredictionAsUnconverged();
     }
   }
 

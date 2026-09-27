@@ -75,14 +75,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::initialisePicardRight
 }
 
 /**
- * Subtracts the flux divergence of one time node from the right-hand side of the Picard system. The
- * stiffness operator carries the quadrature weight of its own axis, so the scaling supplies the
- * weights of time and of the other axes.
+ * Subtracts the flux divergence of one time node, whose time slice the flux holds, from the
+ * right-hand side of the Picard system. The stiffness operator carries the quadrature weight of its
+ * own axis, so the scaling supplies the weights of time and of the other axes.
  */
 template <int NumberOfDofsPerAxis, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractFluxDivergence(
   ComputePrecision* NOALIAS const                        rightHandSide,
-  const ComputePrecision* NOALIAS const                  spaceTimeFlux,
+  const ComputePrecision* NOALIAS const                  flux,
   const ComputePrecision* NOALIAS const                  stiffnessOperatorTransposed,
   const ComputePrecision* NOALIAS const                  cellQuadratureWeights,
   const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
@@ -91,7 +91,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractFluxDivergenc
 ) {
   using CellLayout             = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
   constexpr int NodeStride     = CellLayout::PaddedNumberOfUnknowns;
-  constexpr int FluxAxisStride = CellLayout::SpaceTimeNodes * NodeStride;
+  constexpr int FluxAxisStride = CellLayout::NodesPerCell * NodeStride;
 
   assertion(timeNode >= 0 and timeNode < NumberOfDofsPerAxis, timeNode);
 
@@ -106,6 +106,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractFluxDivergenc
     for (int y = 0; y < NumberOfDofsPerAxis; y++) {
       const int lineNode   = (timeNode * CellLayout::NodesPerAxisIn3D + z) * NumberOfDofsPerAxis + y;
       const int lineOffset = lineNode * NumberOfDofsPerAxis * NodeStride;
+      const int fluxOffset = (z * NumberOfDofsPerAxis + y) * NumberOfDofsPerAxis * NodeStride;
       exahype2::dg::applyOperatorAlongAxis<
         NodeStride,
         NumberOfDofsPerAxis,
@@ -117,7 +118,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractFluxDivergenc
         ComputePrecision,
         ComputePrecision>(
         rightHandSide + lineOffset,
-        spaceTimeFlux + lineOffset,
+        flux + fluxOffset,
         stiffnessOperatorTransposed,
         -cellQuadratureWeights[lineNode],
         timeStepByCellSize[0]
@@ -130,6 +131,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractFluxDivergenc
       const int lineNode = (timeNode * CellLayout::NodesPerAxisIn3D + z) * NumberOfDofsPerAxis + x;
       const int lineOffset =
         ((timeNode * CellLayout::NodesPerAxisIn3D + z) * NumberOfDofsPerAxis * NumberOfDofsPerAxis + x) * NodeStride;
+      const int fluxOffset = (z * NumberOfDofsPerAxis * NumberOfDofsPerAxis + x) * NodeStride;
       exahype2::dg::applyOperatorAlongAxis<
         NodeStride,
         NumberOfDofsPerAxis,
@@ -141,7 +143,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractFluxDivergenc
         ComputePrecision,
         ComputePrecision>(
         rightHandSide + lineOffset,
-        spaceTimeFlux + lineOffset + FluxAxisStride,
+        flux + fluxOffset + FluxAxisStride,
         stiffnessOperatorTransposed,
         -cellQuadratureWeights[lineNode],
         timeStepByCellSize[1]
@@ -155,6 +157,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractFluxDivergenc
         const int lineNode = (timeNode * CellLayout::NodesPerAxisIn3D + y) * NumberOfDofsPerAxis + x;
         const int lineOffset =
           ((timeNode * NumberOfDofsPerAxis * NumberOfDofsPerAxis + y) * NumberOfDofsPerAxis + x) * NodeStride;
+        const int fluxOffset = (y * NumberOfDofsPerAxis + x) * NodeStride;
         exahype2::dg::applyOperatorAlongAxis<
           NodeStride,
           NumberOfDofsPerAxis,
@@ -166,7 +169,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractFluxDivergenc
           ComputePrecision,
           ComputePrecision>(
           rightHandSide + lineOffset,
-          spaceTimeFlux + lineOffset + 2 * FluxAxisStride,
+          flux + fluxOffset + 2 * FluxAxisStride,
           stiffnessOperatorTransposed,
           -cellQuadratureWeights[lineNode],
           timeStepByCellSize[DIMENSIONS - 1]

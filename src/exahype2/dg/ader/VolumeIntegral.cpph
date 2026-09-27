@@ -145,10 +145,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::addSourceVolumeIntegr
 }
 
 /**
- * Adds the time-averaged source and subtracts the time-averaged flux divergence, both times the
- * time step.
+ * Adds the source of the time-averaged state and subtracts the time-averaged flux divergence, both
+ * times the time step. For a linear source this source equals the time-averaged source.
  */
 template <
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -157,10 +158,13 @@ template <
   typename StoragePrecision,
   typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractTimeAveragedVolumeIntegral(
-  StoragePrecision* NOALIAS const                        cellState,
-  [[maybe_unused]] const ComputePrecision* NOALIAS const timeAveragedFlux,
-  [[maybe_unused]] const ComputePrecision* NOALIAS const timeAveragedSource,
-  const double                                           timeStepSize
+  StoragePrecision* NOALIAS const                               cellState,
+  [[maybe_unused]] const ComputePrecision* NOALIAS const        timeAveragedFlux,
+  [[maybe_unused]] const ComputePrecision* NOALIAS const        timeAveragedState,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  const double                                                  timeStepSize
 ) {
   using CellLayout            = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
   constexpr int UnknownStride = CellLayout::PaddedNumberOfUnknowns;
@@ -168,7 +172,23 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractTimeAveragedV
 
   using UpdatePrecision = std::common_type_t<ComputePrecision, double>;
 
+  [[maybe_unused]] ComputePrecision sourceValues[UnknownStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    if constexpr (EvaluateSource) {
+      for (int unknown = 0; unknown < UnknownStride; unknown++) {
+        sourceValues[unknown] = static_cast<ComputePrecision>(0);
+      }
+      SolverType::sourceTerm(
+        timeAveragedState + cellNode * CellLayout::PaddedNumberOfData,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize,
+        sourceValues
+      );
+    }
+
     SIMD()
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       const int entry  = cellNode * UnknownStride + unknown;
@@ -180,7 +200,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractTimeAveragedV
         }
       }
       if constexpr (EvaluateSource) {
-        update -= timeAveragedSource[entry];
+        update -= sourceValues[unknown];
       }
       cellState[cellNode * CellLayout::NumberOfData + unknown] -= static_cast<StoragePrecision>(
         static_cast<UpdatePrecision>(timeStepSize) * static_cast<UpdatePrecision>(update)

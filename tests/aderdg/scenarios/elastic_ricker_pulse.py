@@ -34,12 +34,12 @@ class ElasticRickerPulse(Scenario):
     def initial_conditions(self):
         return """
   // Lamé parameters
-  constexpr auto mu     =  1;
-  constexpr auto lambda = -1;
+  constexpr auto mu     = 1;
+  constexpr auto lambda = 2;
 
   // Constant auxiliary parameters
   constexpr auto rho  = 1;
-  constexpr auto cp   = 1;
+  constexpr auto cp   = 2;
   constexpr auto cs   = 1;
 
   // The pulse is centred in the leftmost cell. It reaches the left edge of the
@@ -51,11 +51,11 @@ class ElasticRickerPulse(Scenario):
   // Stresses
   Q[Shortcuts::sigma+0] = -amplitudeX*(lambda+2*mu)  + amplitudeY*lambda;         //xx
   Q[Shortcuts::sigma+1] = -amplitudeX*lambda         + amplitudeY*(lambda+2*mu);  //yy
-  Q[Shortcuts::sigma+2] = -amplitudeX*mu + amplitudeY*mu;                         //xy
+  Q[Shortcuts::sigma+2] = 0;                         //xy
 
   // Velocities
-  Q[Shortcuts::v+0] = amplitudeX*cp + amplitudeY*cs; //vx
-  Q[Shortcuts::v+1] = amplitudeY*cp + amplitudeX*cs; //vy
+  Q[Shortcuts::v+0] = amplitudeX*cp; //vx
+  Q[Shortcuts::v+1] = amplitudeY*cp; //vy
 
   // Auxiliary variables
   Q[Shortcuts::rho] = rho;  //rho
@@ -66,18 +66,18 @@ class ElasticRickerPulse(Scenario):
     def analytical_solution(self):
         return """
   // Constant auxiliary parameters
-  constexpr auto cp   = 1;
-  constexpr auto cs   = 1;
+  constexpr auto cp   = 2;
 
   // Width of a cell on the finest level. The pulse starts centred in the leftmost cell.
   const double h = ::runner::RuntimeParameters::divideBySubdivisionFactorPower(
     DomainSize[0], ::runner::RuntimeParameters::getInstance().getMaxGridLevels()
   );
 
-  auto distance = std::fmod( (x[0]-t-h/2), DomainSize[0]);
+  // The P-wave moves with speed cp, and the periodic image closest to x carries the pulse.
+  auto distance = x[0] - cp*t - h/2;
+  distance -= DomainSize[0] * std::round(distance / DomainSize[0]);
   const auto tau  = 1.25*std::numbers::pi*(distance);
   const auto amplitudeX = (1-2*tau*tau)*std::exp(-tau*tau);
-  constexpr auto amplitudeY = 0.;
 
   // Stresses
   solution[Shortcuts::sigma+0] = Q[Shortcuts::sigma+0];
@@ -85,6 +85,6 @@ class ElasticRickerPulse(Scenario):
   solution[Shortcuts::sigma+2] = Q[Shortcuts::sigma+2];
 
   // Velocities
-  solution[Shortcuts::v+0] = amplitudeX*cp + amplitudeY*cs; //vx
+  solution[Shortcuts::v+0] = amplitudeX*cp; //vx
   solution[Shortcuts::v+1] = Q[Shortcuts::v+1];
 """

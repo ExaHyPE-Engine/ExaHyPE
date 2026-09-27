@@ -13,6 +13,7 @@
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/NonCriticalAssertions.h"
+#include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 
@@ -128,12 +129,16 @@ public:
 
   void markCellAsTroubled();
 
+  static void               markPredictionAsUnconverged();
+  [[nodiscard]] static long getNumberOfUnconvergedPredictions();
+
   [[nodiscard]] bool reducesStatisticsThisSweep() const;
 
 protected:
   [[nodiscard]] virtual double maxAdmissibleMeshWidth() const = 0;
 
   static thread_local exahype2::Solver::LocalUpdates _localUpdates;
+  static inline std::atomic<long>                    _numberOfUnconvergedPredictions{0};
 
   SolverState                 _solverState{SolverState::GridConstruction};
   exahype2::dg::LimitingSweep _limitingSweep{};
@@ -150,6 +155,7 @@ private:
   [[nodiscard]] bool                                 isCorrectorSweep() const;
   void                                               advanceLimitingState(bool& resumesFromSuspension);
   void                                               closeTimeStep();
+  void                                               reportUnconvergedPredictions();
 };
 
 #include "exahype2/dg/ader/Solver.cpph"

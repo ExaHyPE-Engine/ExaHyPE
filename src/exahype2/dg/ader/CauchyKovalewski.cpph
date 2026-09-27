@@ -44,28 +44,15 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::seedTimeAveragedState
 }
 
 /**
- * Zeroes the flux and the source of one Taylor step, so the solver callbacks accumulate into them.
+ * Zeroes the flux of one Taylor step, so the solver callbacks accumulate into it.
  */
-template <
-  int  NumberOfDofsPerAxis,
-  int  NumberOfUnknowns,
-  int  NumberOfAuxiliaryVariables,
-  bool EvaluateSource,
-  typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::clearTaylorTerms(
-  ComputePrecision* NOALIAS const                  flux,
-  [[maybe_unused]] ComputePrecision* NOALIAS const source
-) {
+template <int NumberOfDofsPerAxis, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::clearFluxes(ComputePrecision* NOALIAS const flux) {
   using CellLayout         = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
   constexpr int AxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
 
   for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
     flux[entry] = static_cast<ComputePrecision>(0);
-  }
-  if constexpr (EvaluateSource) {
-    for (int entry = 0; entry < AxisStride; entry++) {
-      source[entry] = static_cast<ComputePrecision>(0);
-    }
   }
 }
 
@@ -155,8 +142,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::differentiateFluxInPl
 }
 
 /**
- * Adds the current Taylor coefficient of the flux and the source, scaled by the time average
- * factor, to their time averages.
+ * Adds the negated flux divergence to the source the state holds, which gives the next Taylor
+ * coefficient.
  */
 template <
   int  NumberOfDofsPerAxis,
@@ -164,46 +151,9 @@ template <
   int  NumberOfAuxiliaryVariables,
   bool EvaluateSource,
   typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::accumulateTimeAveragedTerms(
-  ComputePrecision* NOALIAS const                        timeAveragedFlux,
-  [[maybe_unused]] ComputePrecision* NOALIAS const       timeAveragedSource,
-  const ComputePrecision* NOALIAS const                  flux,
-  [[maybe_unused]] const ComputePrecision* NOALIAS const source,
-  const ComputePrecision                                 timeAverageFactor
-) {
-  using CellLayout         = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
-  constexpr int FluxStride = CellLayout::PaddedNumberOfUnknowns;
-  constexpr int AxisStride = CellLayout::NodesPerCell * FluxStride;
-
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    SIMD()
-    for (int unknown = 0; unknown < FluxStride; unknown++) {
-      const int entry = cellNode * FluxStride + unknown;
-      timeAveragedFlux[entry] += timeAverageFactor * flux[entry];
-      timeAveragedFlux[entry + AxisStride] += timeAverageFactor * flux[entry + AxisStride];
-      if constexpr (DIMENSIONS == 3) {
-        timeAveragedFlux[entry + 2 * AxisStride] += timeAverageFactor * flux[entry + 2 * AxisStride];
-      }
-      if constexpr (EvaluateSource) {
-        timeAveragedSource[entry] += timeAverageFactor * source[entry];
-      }
-    }
-  }
-}
-
-/**
- * Writes the next Taylor coefficient, the source minus the flux divergence, into the state.
- */
-template <
-  int  NumberOfDofsPerAxis,
-  int  NumberOfUnknowns,
-  int  NumberOfAuxiliaryVariables,
-  bool EvaluateSource,
-  typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::advanceTimeDerivative(
-  ComputePrecision* NOALIAS const                        state,
-  const ComputePrecision* NOALIAS const                  flux,
-  [[maybe_unused]] const ComputePrecision* NOALIAS const source
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::addFluxesToTimeDerivative(
+  ComputePrecision* NOALIAS const       state,
+  const ComputePrecision* NOALIAS const flux
 ) {
   using CellLayout         = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
   constexpr int FluxStride = CellLayout::PaddedNumberOfUnknowns;
@@ -217,10 +167,52 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::advanceTimeDerivative
       if constexpr (DIMENSIONS == 3) {
         derivative -= flux[entry + 2 * AxisStride];
       }
+
       if constexpr (EvaluateSource) {
-        derivative += source[entry];
+        state[cellNode * CellLayout::PaddedNumberOfData + unknown] += derivative;
+      } else {
+        state[cellNode * CellLayout::PaddedNumberOfData + unknown] = derivative;
       }
-      state[cellNode * CellLayout::PaddedNumberOfData + unknown] = derivative;
+    }
+  }
+}
+
+/**
+ * Overwrites the unknowns of every node with the linear source, the first part of the next Taylor
+ * coefficient.
+ */
+template <
+  typename SolverType,
+  int NumberOfDofsPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::overwriteStateWithLinearSource(
+  ComputePrecision* NOALIAS const              state,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  using CellLayout            = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+  constexpr int UnknownStride = CellLayout::PaddedNumberOfUnknowns;
+
+  ComputePrecision sourceValues[UnknownStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int unknown = 0; unknown < UnknownStride; unknown++) {
+      sourceValues[unknown] = static_cast<ComputePrecision>(0);
+    }
+    SolverType::sourceTerm(
+      state + cellNode * CellLayout::PaddedNumberOfData,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      sourceValues
+    );
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      state[cellNode * CellLayout::PaddedNumberOfData + unknown] = sourceValues[unknown];
     }
   }
 }

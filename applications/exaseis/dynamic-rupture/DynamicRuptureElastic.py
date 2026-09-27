@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 def algebraic_source():
     return """
-  std::fill_n(S, NumberOfAuxiliaryVariables, 0);
+  std::fill_n(S, NumberOfUnknowns, 0);
 
   S[Shortcuts::u+0] = Q[Shortcuts::v+0];
   S[Shortcuts::u+1] = Q[Shortcuts::v+1];
