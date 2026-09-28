@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/Assertions.h"
 #include "tarch/accelerator/CompileTarget.h"
 
 TARGET_DECLARE
@@ -267,10 +268,15 @@ namespace GRMHD {
         Q[Shortcuts::gij + 4],
         Q[Shortcuts::gij + 5]
       };
-      double g_cov[3][3] = {{Q[13], Q[14], Q[15]}, {Q[14], Q[16], Q[17]}, {Q[15], Q[17], Q[18]}};
+      double g_cov[3][3] = {
+        {gammaij[0], gammaij[1], gammaij[2]},
+        {gammaij[1], gammaij[3], gammaij[4]},
+        {gammaij[2], gammaij[4], gammaij[5]}
+      };
 
       double g_contr[3][3];
       double gp = matrixInverse3x3(g_cov, g_contr);
+      assertion(gp > 0.0, gp);
 
       gp        = std::sqrt(gp);
       double gm = 1. / gp;
@@ -305,9 +311,10 @@ namespace GRMHD {
 
       double e = Qloc[4] + dd;
 
-      double x1  = 0.;
-      double x2  = 1.0 - 1e-10;
-      double tol = 1.0e-18;
+      double x1 = 0.;
+      double x2 = 1.0 - 1e-10;
+      // The tolerance lies above the spacing of doubles near v2, so the root finder stops before MaxIt.
+      double tol = 1.0e-15;
       double w   = 0;
       double v2;
       RTSAFE_C2P_RMHD1(&v2, &x1, &x2, &tol, &w, gam, dd, e, s2, b2, sb2, &failed);

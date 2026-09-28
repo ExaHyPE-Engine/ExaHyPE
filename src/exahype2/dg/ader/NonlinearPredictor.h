@@ -3,6 +3,7 @@
 #pragma once
 
 #include "exahype2/dg/Basis.h"
+#include "exahype2/dg/ader/PicardOutcome.h"
 #include "exahype2/terms/DiffusiveFlux.h"
 #include "exahype2/terms/DiffusiveSourceTerm.h"
 #include "exahype2/terms/Flux.h"
@@ -50,39 +51,36 @@ public:
     EvaluateNonconservativeProduct or EvaluateDiffusiveFlux or EvaluateDiffusiveSource;
 
   /**
-   * Extents and offsets of the two scratch blocks of predict(). The Picard block holds every
-   * space-time quantity, the time-averaged block holds the time integrals. A term Derived does not
-   * declare has extent zero.
+   * Extents and offsets of the one scratch block of predict(). The first time slice of the
+   * space-time state takes the time-averaged state, the flux holds one time slice, and the flux and
+   * the source of the first time node stay beside their running time averages. A term Derived does
+   * not declare has extent zero.
    */
   struct Scratch final {
     static constexpr int SpaceTimeStateSize = CellLayout::PaddedNumberOfData * CellLayout::SpaceTimeNodes;
     static constexpr int RightHandSideSize  = CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes;
-    static constexpr int SpaceTimeFluxSize =
-      EvaluateFlux ? CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes * DIMENSIONS : 0;
-    static constexpr int SpaceTimeSourceSize =
-      AccumulatesSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes : 0;
+    static constexpr int FluxSize =
+      EvaluateFlux ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
+    static constexpr int FirstFluxSize        = FluxSize;
+    static constexpr int TimeAveragedFluxSize = FluxSize;
+    static constexpr int FirstSourceSize =
+      AccumulatesSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell : 0;
+    static constexpr int TimeAveragedSourceSize = FirstSourceSize;
     static constexpr int StateGradientSize =
       NeedsStateGradient ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
     static constexpr int UpdatedTimeSliceSize = CellLayout::NodesPerAxis * CellLayout::PaddedNumberOfUnknowns;
 
-    static constexpr int SpaceTimeStateOffset   = 0;
-    static constexpr int RightHandSideOffset    = SpaceTimeStateOffset + SpaceTimeStateSize;
-    static constexpr int SpaceTimeFluxOffset    = RightHandSideOffset + RightHandSideSize;
-    static constexpr int SpaceTimeSourceOffset  = SpaceTimeFluxOffset + SpaceTimeFluxSize;
-    static constexpr int StateGradientOffset    = SpaceTimeSourceOffset + SpaceTimeSourceSize;
-    static constexpr int UpdatedTimeSliceOffset = StateGradientOffset + StateGradientSize;
-    static constexpr int PicardSize             = UpdatedTimeSliceOffset + UpdatedTimeSliceSize;
-
-    static constexpr int TimeAveragedStateSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
-    static constexpr int TimeAveragedFluxSize =
-      EvaluateFlux ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
-    static constexpr int TimeAveragedSourceSize =
-      AccumulatesSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell : 0;
-
-    static constexpr int TimeAveragedStateOffset  = 0;
-    static constexpr int TimeAveragedFluxOffset   = TimeAveragedStateOffset + TimeAveragedStateSize;
-    static constexpr int TimeAveragedSourceOffset = TimeAveragedFluxOffset + TimeAveragedFluxSize;
-    static constexpr int TimeAveragedSize         = TimeAveragedSourceOffset + TimeAveragedSourceSize;
+    static constexpr int SpaceTimeStateOffset     = 0;
+    static constexpr int TimeAveragedStateOffset  = SpaceTimeStateOffset;
+    static constexpr int RightHandSideOffset      = SpaceTimeStateOffset + SpaceTimeStateSize;
+    static constexpr int FluxOffset               = RightHandSideOffset + RightHandSideSize;
+    static constexpr int FirstFluxOffset          = FluxOffset + FluxSize;
+    static constexpr int TimeAveragedFluxOffset   = FirstFluxOffset + FirstFluxSize;
+    static constexpr int FirstSourceOffset        = TimeAveragedFluxOffset + TimeAveragedFluxSize;
+    static constexpr int TimeAveragedSourceOffset = FirstSourceOffset + FirstSourceSize;
+    static constexpr int StateGradientOffset      = TimeAveragedSourceOffset + TimeAveragedSourceSize;
+    static constexpr int UpdatedTimeSliceOffset   = StateGradientOffset + StateGradientSize;
+    static constexpr int Size                     = UpdatedTimeSliceOffset + UpdatedTimeSliceSize;
   };
 
   template <typename StoragePrecision>
@@ -90,8 +88,7 @@ public:
     ComputePrecision* const NOALIAS              faceStates[peano4::FacesPerCell],
     ComputePrecision* const NOALIAS              faceFluxes[peano4::FacesPerCell],
     const StoragePrecision* NOALIAS              cellState,
-    ComputePrecision* NOALIAS                    timeAveragedScratch,
-    ComputePrecision* NOALIAS                    picardScratch,
+    ComputePrecision* NOALIAS                    scratch,
     const Tables&                                tables,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -118,7 +115,7 @@ private:
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeFlux(
-    ComputePrecision* NOALIAS                    spaceTimeFlux,
+    ComputePrecision* NOALIAS                    flux,
     const ComputePrecision* NOALIAS              spaceTimeState,
     const ComputePrecision* NOALIAS              stateGradient,
     const ComputePrecision* NOALIAS              quadraturePoints,
@@ -129,6 +126,14 @@ private:
     int                                          timeNode
   );
 
+  static INLINE_METHOD GPU_CALLABLE_METHOD void averageFluxOverTime(
+    ComputePrecision* NOALIAS timeAveragedFlux,
+    const ComputePrecision*   flux,
+    const ComputePrecision*   firstFlux,
+    ComputePrecision          weight,
+    int                       timeNode
+  );
+
   static INLINE_METHOD GPU_CALLABLE_METHOD void clearRightHandSide(
     ComputePrecision* NOALIAS rightHandSide,
     int                       timeNode
@@ -136,7 +141,7 @@ private:
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void subtractFluxDivergence(
     ComputePrecision* NOALIAS                              rightHandSide,
-    const ComputePrecision* NOALIAS                        spaceTimeFlux,
+    const ComputePrecision* NOALIAS                        flux,
     const ComputePrecision* NOALIAS                        stiffnessOperatorTransposed,
     const ComputePrecision* NOALIAS                        cellQuadratureWeights,
     const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
@@ -145,8 +150,9 @@ private:
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeSource(
-    ComputePrecision* NOALIAS                    spaceTimeSource,
     ComputePrecision* NOALIAS                    rightHandSide,
+    ComputePrecision* NOALIAS                    firstSource,
+    ComputePrecision* NOALIAS                    timeAveragedSource,
     const ComputePrecision* NOALIAS              spaceTimeState,
     const ComputePrecision* NOALIAS              stateGradient,
     const ComputePrecision* NOALIAS              quadraturePoints,
@@ -169,13 +175,8 @@ private:
     const ComputePrecision* NOALIAS inverseCellQuadratureWeights
   );
 
-  static INLINE_METHOD GPU_CALLABLE_METHOD void averageOverTime(
-    ComputePrecision* NOALIAS       timeAveragedState,
-    ComputePrecision* NOALIAS       timeAveragedFlux,
-    ComputePrecision* NOALIAS       timeAveragedSource,
-    const ComputePrecision* NOALIAS spaceTimeState,
-    const ComputePrecision* NOALIAS spaceTimeFlux,
-    const ComputePrecision* NOALIAS spaceTimeSource,
+  static INLINE_METHOD GPU_CALLABLE_METHOD void averageStateOverTime(
+    ComputePrecision* NOALIAS       spaceTimeState,
     const ComputePrecision* NOALIAS quadratureWeights
   );
 };

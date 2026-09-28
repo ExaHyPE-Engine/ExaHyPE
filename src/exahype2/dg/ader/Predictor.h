@@ -16,6 +16,8 @@ namespace exahype2::dg::ader {
   template <typename Derived, typename ComputePrecision>
   class Predictor;
 
+  struct PredictionCounts;
+
   template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename DivergenceMarks>
   struct PredictCells;
 } // namespace exahype2::dg::ader
@@ -41,15 +43,9 @@ public:
   using Nonlinear  = exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>;
 
   /**
-   * Values of the scratch block of one cell: The block of the linear predictor, or the
-   * time-averaged block of the nonlinear one.
+   * Values of the scratch block of one cell.
    */
-  static constexpr int ScratchSize = Derived::IsLinear ? Linear::Scratch::Size : Nonlinear::Scratch::TimeAveragedSize;
-
-  /**
-   * Values of the Picard block of one cell; zero for a linear Derived.
-   */
-  static constexpr int PicardScratchSize = Derived::IsLinear ? 0 : Nonlinear::Scratch::PicardSize;
+  static constexpr int ScratchSize = Derived::IsLinear ? Linear::Scratch::Size : Nonlinear::Scratch::Size;
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD int predict(
@@ -60,7 +56,6 @@ public:
     StoragePrecision* NOALIAS                    cellState,
     const double* NOALIAS                        pointSourceLocations,
     ComputePrecision* NOALIAS                    scratch,
-    ComputePrecision* NOALIAS                    picardScratch,
     const Tables&                                tables,
     double                                       timeStamp,
     double                                       timeStepSize
@@ -69,20 +64,35 @@ public:
 private:
   friend class exahype2::dg::ader::tests::PredictorTest;
 
-  template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision>
+  template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
   static INLINE_METHOD GPU_CALLABLE_METHOD void subtractTimeAveragedVolumeIntegral(
     StoragePrecision* NOALIAS       cellState,
     const ComputePrecision* NOALIAS timeAveragedFlux,
-    const ComputePrecision* NOALIAS timeAveragedSource,
+    const SourceOfNode&             sourceOfNode,
     double                          timeStepSize
   );
+};
+
+/**
+ * The cells of one predictor sweep whose Picard iteration diverged and those whose iteration
+ * stopped at its sweep limit. identity() and combine() reduce the counts of many cells.
+ */
+struct exahype2::dg::ader::PredictionCounts final {
+  using ValueType = exahype2::dg::ader::PredictionCounts;
+
+  int divergedCells{0};
+  int unconvergedCells{0};
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType identity();
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType combine(ValueType left, ValueType right);
 };
 
 /**
  * Runs the predictor of every listed cell: The solution takes its volume integral, and the cell's
  * own half of every face takes the time-averaged face states and face fluxes. DivergenceMarks is
  * the status view of a limiter, in which a cell with a diverged Picard iteration marks itself, or
- * an empty type, and then the reduction counts those cells.
+ * an empty type, and then the reduction counts those cells. The reduction counts the cells whose
+ * Picard iteration stopped at its sweep limit in both cases.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename DivergenceMarks>
 struct exahype2::dg::ader::PredictCells final {
@@ -103,13 +113,11 @@ struct exahype2::dg::ader::PredictCells final {
   const double*                               pointSourceLocations{nullptr};
   ComputePrecision*                           predictorScratch{nullptr};
   int                                         predictorScratchSize{0};
-  ComputePrecision*                           picardScratch{nullptr};
-  int                                         picardScratchSize{0};
   DivergenceMarks                             divergenceMarks{};
   double                                      timeStamp{0.0};
   double                                      timeStepSize{0.0};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, int& accumulator) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, PredictionCounts& accumulator) const;
 };
 TARGET_DECLARE_END
 

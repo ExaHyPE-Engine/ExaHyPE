@@ -26,7 +26,8 @@ public:
 private:
   void testAnInertNonlinearSystemLeavesTheCellAtRest();
   void testTheNonlinearPredictorMovesALinearProfileByTheExactAmount();
-  void testADivergingNonlinearPredictorReportsMinusOne();
+  void testADivergingNonlinearPredictorReportsDivergence();
+  void testThePredictionCountsAddUpOverCells();
   void testAnInertLinearSystemLeavesTheCellAtRest();
   void testTheLinearPredictorTranslatesALinearProfileByTheExactAmount();
   void testTheLinearPredictorFollowsTheTaylorSeriesOfTheSystem();

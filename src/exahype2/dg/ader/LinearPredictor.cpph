@@ -40,9 +40,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::selectPointSourc
  * Runs the space-time predictor of a linear system on one cell: The Cauchy-Kovalewski recursion
  * builds the Taylor coefficients of the state one at a time and integrates them over the time
  * step, and the time averages of the state and of the flux derivative along every axis go onto
- * the faces of the cell. The scratch block has the extent of Scratch and keeps the time averages
- * for the volume integral of the caller. pointSourceIndices lists the numberOfPointSources point
- * sources inside the cell.
+ * the faces of the cell. The scratch block has the extent of Scratch and keeps the time-averaged
+ * state and the flux of the time-averaged state for the volume integral of the caller.
+ * pointSourceIndices lists the numberOfPointSources point sources inside the cell.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -67,25 +67,15 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
   assertion(timeStepSize >= 0.0, timeStepSize);
   assertion(numberOfPointSources >= 0, numberOfPointSources);
 
-  ComputePrecision* NOALIAS const state              = scratch + Scratch::StateOffset;
-  ComputePrecision* NOALIAS const timeAveragedState  = scratch + Scratch::TimeAveragedStateOffset;
-  ComputePrecision* NOALIAS const flux               = scratch + Scratch::FluxOffset;
-  ComputePrecision* NOALIAS const timeAveragedFlux   = scratch + Scratch::TimeAveragedFluxOffset;
-  ComputePrecision* NOALIAS const source             = scratch + Scratch::SourceOffset;
-  ComputePrecision* NOALIAS const timeAveragedSource = scratch + Scratch::TimeAveragedSourceOffset;
-  ComputePrecision* NOALIAS const stateGradient      = scratch + Scratch::StateGradientOffset;
-  ComputePrecision* NOALIAS const pointSourceValues  = scratch + Scratch::PointSourceOffset;
+  ComputePrecision* NOALIAS const state             = scratch + Scratch::StateOffset;
+  ComputePrecision* NOALIAS const timeAveragedState = scratch + Scratch::TimeAveragedStateOffset;
+  ComputePrecision* NOALIAS const flux              = scratch + Scratch::FluxOffset;
+  ComputePrecision* NOALIAS const stateGradient     = scratch + Scratch::StateGradientOffset;
+  ComputePrecision* NOALIAS const pointSourceValues = scratch + Scratch::PointSourceOffset;
 
   const auto inverseCellSize = tarch::la::convertScalar<ComputePrecision>(tarch::la::invertEntries(cellSize));
 
   initialiseState(state, cellState);
-
-  for (int entry = 0; entry < Scratch::TimeAveragedFluxSize; entry++) {
-    timeAveragedFlux[entry] = static_cast<ComputePrecision>(0);
-  }
-  for (int entry = 0; entry < Scratch::TimeAveragedSourceSize; entry++) {
-    timeAveragedSource[entry] = static_cast<ComputePrecision>(0);
-  }
 
   if constexpr (EvaluatePointSources) {
     if (numberOfPointSources > 0) {
@@ -112,11 +102,16 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
   // The coefficient of the ith Taylor term enters the time average with dt^i / (i + 1)!.
   auto timeAverageFactor = static_cast<ComputePrecision>(1.0);
 
+  // The terms of Derived are linear in the state, so the last pass evaluates the time-averaged
+  // flux from the time-averaged state.
   for (int derivative = 0; derivative < NodesPerAxis; derivative++) {
-    clearTaylorTerms(flux, source);
+    const bool                    isLastPass = derivative == NodesPerAxis - 1;
+    const ComputePrecision* const values     = isLastPass ? timeAveragedState : state;
+
+    clearFluxes(flux);
 
     if constexpr (EvaluateFlux) {
-      evaluateFlux(flux, state, cellCentre, cellSize, timeStamp, timeStepSize);
+      evaluateFlux(flux, values, cellCentre, cellSize, timeStamp, timeStepSize);
       exahype2::dg::differentiateFluxInPlace<Derived>(flux, tables.derivativeOperator, inverseCellSize);
     }
 
@@ -124,7 +119,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
       addNonconservativeProduct(
         flux,
         stateGradient,
-        state,
+        values,
         tables.derivativeOperator,
         inverseCellSize,
         cellCentre,
@@ -135,20 +130,17 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
     }
 
     if constexpr (EvaluateMaterialParameters) {
-      applyMaterialParameterMatrix(flux, state, cellCentre, cellSize, timeStamp, timeStepSize);
+      applyMaterialParameterMatrix(flux, values, cellCentre, cellSize, timeStamp, timeStepSize);
     }
 
-    if constexpr (EvaluateSource) {
-      evaluateSource(source, state, cellCentre, cellSize, timeStamp, timeStepSize);
-    }
-
-    accumulateTimeAveragedTerms(timeAveragedFlux, timeAveragedSource, flux, source, timeAverageFactor);
-
-    if (derivative == NodesPerAxis - 1) {
+    if (isLastPass) {
       break;
     }
 
-    advanceTimeDerivative(state, flux, source);
+    if constexpr (EvaluateSource) {
+      overwriteStateWithLinearSource(state, cellCentre, cellSize, timeStamp, timeStepSize);
+    }
+    addFluxesToTimeDerivative(state, flux);
 
     if constexpr (EvaluatePointSources) {
       if (numberOfPointSources > 0) {
@@ -163,7 +155,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
 
   if constexpr (EvaluatePointSources) {
     if (numberOfPointSources > 0) {
-      addPointSourcesToTimeAveragedFlux(timeAveragedFlux, pointSourceValues, tables.quadratureWeights);
+      addPointSourcesToTimeAveragedFlux(flux, pointSourceValues, tables.quadratureWeights);
     }
   }
 
@@ -191,7 +183,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
       ComputePrecision
     >(faceFluxes[direction],
       faceFluxes[direction + DIMENSIONS],
-      timeAveragedFlux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
+      flux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
       tables.leftFaceCoefficients,
       tables.rightFaceCoefficients,
       direction);
@@ -388,24 +380,15 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::seedTimeAveraged
 }
 
 /**
- * Zeroes the flux and, when Derived declares a source term, the source of one Taylor step, so
- * the terms of Derived accumulate into them.
+ * Zeroes the flux of one Taylor step, so the terms of Derived accumulate into it.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::clearTaylorTerms(
-  ComputePrecision* NOALIAS const                  flux,
-  [[maybe_unused]] ComputePrecision* NOALIAS const source
-) {
+exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::clearFluxes(ComputePrecision* NOALIAS const flux) {
   constexpr int AxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
 
   for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
     flux[entry] = static_cast<ComputePrecision>(0);
-  }
-  if constexpr (EvaluateSource) {
-    for (int entry = 0; entry < AxisStride; entry++) {
-      source[entry] = static_cast<ComputePrecision>(0);
-    }
   }
 }
 
@@ -574,71 +557,47 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::applyMaterialPar
 }
 
 /**
- * Adds the source of Derived at every node into the zeroed source buffer.
+ * Overwrites the unknowns of every node with the source of Derived at the node, the first part of
+ * the next Taylor coefficient.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateSource(
-  ComputePrecision* NOALIAS const              source,
-  const ComputePrecision* NOALIAS const        state,
+exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::overwriteStateWithLinearSource(
+  ComputePrecision* NOALIAS const              state,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize
 ) {
+  ComputePrecision sourceValues[CellLayout::PaddedNumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int unknown = 0; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
+      sourceValues[unknown] = static_cast<ComputePrecision>(0);
+    }
     Derived::sourceTerm(
       state + cellNode * CellLayout::PaddedNumberOfData,
       cellCentre,
       cellSize,
       timeStamp,
       timeStepSize,
-      source + cellNode * CellLayout::PaddedNumberOfUnknowns
+      sourceValues
     );
-  }
-}
-
-/**
- * Adds the current Taylor coefficient of the flux and, when Derived declares a source term, of
- * the source, scaled by the time average factor, to their time averages.
- */
-template <typename Derived, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::accumulateTimeAveragedTerms(
-  ComputePrecision* NOALIAS const                        timeAveragedFlux,
-  [[maybe_unused]] ComputePrecision* NOALIAS const       timeAveragedSource,
-  const ComputePrecision* NOALIAS const                  flux,
-  [[maybe_unused]] const ComputePrecision* NOALIAS const source,
-  const ComputePrecision                                 timeAverageFactor
-) {
-  constexpr int FluxStride = CellLayout::PaddedNumberOfUnknowns;
-  constexpr int AxisStride = CellLayout::NodesPerCell * FluxStride;
-
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    SIMD()
-    for (int unknown = 0; unknown < FluxStride; unknown++) {
-      const int entry = cellNode * FluxStride + unknown;
-      timeAveragedFlux[entry] += timeAverageFactor * flux[entry];
-      timeAveragedFlux[entry + AxisStride] += timeAverageFactor * flux[entry + AxisStride];
-      if constexpr (DIMENSIONS == 3) {
-        timeAveragedFlux[entry + 2 * AxisStride] += timeAverageFactor * flux[entry + 2 * AxisStride];
-      }
-      if constexpr (EvaluateSource) {
-        timeAveragedSource[entry] += timeAverageFactor * source[entry];
-      }
+    for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
+      state[cellNode * CellLayout::PaddedNumberOfData + unknown] = sourceValues[unknown];
     }
   }
 }
 
 /**
- * Writes the next Taylor coefficient, the source minus the flux divergence, into the state.
+ * Adds the negated flux divergence to the source the state holds, or overwrites the state with it
+ * when Derived declares no source term, which gives the next Taylor coefficient.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::advanceTimeDerivative(
-  ComputePrecision* NOALIAS const                        state,
-  const ComputePrecision* NOALIAS const                  flux,
-  [[maybe_unused]] const ComputePrecision* NOALIAS const source
+exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addFluxesToTimeDerivative(
+  ComputePrecision* NOALIAS const       state,
+  const ComputePrecision* NOALIAS const flux
 ) {
   constexpr int FluxStride = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride = CellLayout::NodesPerCell * FluxStride;
@@ -652,9 +611,10 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::advanceTimeDeriv
         derivative -= flux[entry + 2 * AxisStride];
       }
       if constexpr (EvaluateSource) {
-        derivative += source[entry];
+        state[cellNode * CellLayout::PaddedNumberOfData + unknown] += derivative;
+      } else {
+        state[cellNode * CellLayout::PaddedNumberOfData + unknown] = derivative;
       }
-      state[cellNode * CellLayout::PaddedNumberOfData + unknown] = derivative;
     }
   }
 }

@@ -13,7 +13,12 @@
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/accelerator/Scratch.h"
+#include "tarch/instrumentation/Warning.h"
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+
+#include <mpi.h>
 
 /**
  * Returns the CFL factor of the ADER-DG scheme of the given polynomial order.
@@ -105,11 +110,6 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   if (_predictorScratch.getSize() < chunks * Predictor::ScratchSize) {
     _predictorScratch.allocate(chunks * Predictor::ScratchSize);
   }
-  if constexpr (not Derived::IsLinear) {
-    if (_picardScratch.getSize() < chunks * Predictor::PicardScratchSize) {
-      _picardScratch.allocate(chunks * Predictor::PicardScratchSize);
-    }
-  }
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
@@ -118,7 +118,6 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   Base::release();
   _pointSourceLocations.release();
   _predictorScratch.release();
-  _picardScratch.release();
   _couplingFaces.release();
   _couplingMatrix.release();
   _numberOfCouplingFaces = 0;
@@ -131,8 +130,7 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 tarch::AllocatedBytes
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getAllocatedBytes() const {
   auto result = Base::getAllocatedBytes() + _pointSourceLocations.getAllocatedBytes()
-    + _couplingFaces.getAllocatedBytes() + _couplingMatrix.getAllocatedBytes() + _predictorScratch.getAllocatedBytes()
-    + _picardScratch.getAllocatedBytes();
+    + _couplingFaces.getAllocatedBytes() + _couplingMatrix.getAllocatedBytes() + _predictorScratch.getAllocatedBytes();
   if constexpr (HasLimiter) {
     result += _limiter->getAllocatedBytes();
   }
@@ -232,6 +230,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     statistics = _limiter->closeTimeStep(partition, this->_solution, timeStamp, timeStepSize);
   }
   this->closeTimeStep(partition, timeStepSize, statistics);
+  reportUnconvergedPredictions();
   this->measureError(partition);
   this->voteOnRefinement(partition, requests);
 }
@@ -358,6 +357,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     }
     this->closeTimeStep(partition, timeStepSize, statistics);
     partner.closeTimeStep(partition, timeStepSize, partnerStatistics);
+    reportUnconvergedPredictions();
+    partner.reportUnconvergedPredictions();
     this->measureError(partition);
     partner.measureError(partition);
     this->voteOnRefinement(partition, requests);
@@ -598,7 +599,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * Runs the space-time predictor of every cell: The solution takes its volume integral, and the
  * cell's own half of every face of the cell takes the time-averaged face states and face
  * fluxes. A diverged Picard iteration ends the run without a limiter and marks the cell's
- * status with one.
+ * status with one. A cell whose Picard iteration stops at its sweep limit continues with the last
+ * iterate and adds to the count of the time step.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 void
@@ -611,30 +613,64 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     >= static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(this->getNumberOfCells(partition)))
       * Predictor::ScratchSize
   );
+  exahype2::dg::ader::PredictionCounts counts;
   if constexpr (HasLimiter) {
-    static_cast<void>(predictCells(partition, timeStepSize, _limiter->getStatuses()));
+    counts = predictCells(partition, timeStepSize, _limiter->getStatuses());
   } else {
-    const int diverged = predictCells(partition, timeStepSize, exahype2::dg::ader::NoLimiter{});
-    if (diverged > 0) {
-      tarch::terminateWithError("The space-time predictor diverged in " + std::to_string(diverged) + " cells.");
+    counts = predictCells(partition, timeStepSize, exahype2::dg::ader::NoLimiter{});
+    if (counts.divergedCells > 0) {
+      tarch::terminateWithError(
+        "The space-time predictor diverged in " + std::to_string(counts.divergedCells) + " cells."
+      );
+    }
+  }
+  assertion(counts.unconvergedCells >= 0, counts.unconvergedCells);
+  _unconvergedPredictions += counts.unconvergedCells;
+}
+
+/**
+ * Sums the cells of all ranks whose Picard iteration stopped at its sweep limit in this time step,
+ * warns once on the global master when the sum is positive and restarts the count. Every rank
+ * calls this at the end of every time step.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+void
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::reportUnconvergedPredictions() {
+  if constexpr (not Derived::IsLinear) {
+    int globalPredictions = 0;
+    tarch::mpi::allreduce(
+      &_unconvergedPredictions,
+      &globalPredictions,
+      1,
+      MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getInstance().getCommunicator()
+    );
+    _unconvergedPredictions = 0;
+    if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      logWarning(
+        "The Picard iteration of " << globalPredictions << " cells stopped at its sweep limit with a residual above "
+                                   << Derived::PicardResidualTolerance << " at t = "
+                                   << this->_timeStepping.getTimeStamp() << "; the cells continue with the last iterate."
+      );
     }
   }
 }
 
 /**
- * Runs the predictor kernel with the given divergence marks and returns the diverged cells the
- * marks do not record.
+ * Runs the predictor kernel with the given divergence marks and returns the counts of the cells
+ * whose Picard iteration diverged without a mark or stopped at its sweep limit.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 template <typename DivergenceMarks>
-int
+exahype2::dg::ader::PredictionCounts
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::predictCells(
   const peano4::Partition& partition,
   const double             timeStepSize,
   const DivergenceMarks&   divergenceMarks
 ) {
-  const auto cells    = this->getCells(partition);
-  int        diverged = 0;
+  const auto                           cells = this->getCells(partition);
+  exahype2::dg::ader::PredictionCounts counts;
   tarch::accelerator::parallelReduce(
     tarch::accelerator::Range(cells.size),
     exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, DivergenceMarks>{
@@ -647,15 +683,13 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
       _pointSourceLocations.getData(),
       _predictorScratch.getData(),
       Predictor::ScratchSize,
-      _picardScratch.getData(),
-      Predictor::PicardScratchSize,
       divergenceMarks,
       this->_timeStepping.getTimeStamp(),
       timeStepSize
     },
-    tarch::accelerator::Sum<int>{diverged}
+    tarch::accelerator::Custom<exahype2::dg::ader::PredictionCounts>{counts}
   );
-  return diverged;
+  return counts;
 }
 
 /**

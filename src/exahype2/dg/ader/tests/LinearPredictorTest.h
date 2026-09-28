@@ -25,15 +25,15 @@ public:
 private:
   void testTheSeedCopiesTheCellStateAndClearsThePadding();
   void testTheTimeAverageStartsFromTheState();
-  void testTheTermsAreClearedBeforeATaylorStep();
-  void testTheTimeAveragedTermsGrowByTheGivenFactor();
+  void testTheFluxIsClearedBeforeATaylorStep();
+  void testTheLastPassEvaluatesTheTermsOfTheTimeAveragedState();
   void testTheTimeAveragedStateGrowsByTheGivenFactor();
   void testTheNextDerivativeIsTheSourceMinusTheFluxDivergence();
   void testTheFluxFillsEveryNodeAndAxis();
   void testAConstantStateLeavesTheNonconservativeProductAtZero();
   void testALinearStateGivesTheExactNonconservativeProduct();
   void testTheMaterialParameterMatrixActsOnEveryAxis();
-  void testTheSourceFillsEveryNode();
+  void testTheSourceOverwritesTheUnknownsOfEveryNode();
   void testASourceInsideIsSelected();
   void testASourceOutsideIsRejected();
   void testASourceOnAFaceBelongsToBothCells();

@@ -170,7 +170,7 @@ namespace GRMHD {
       PDE::matrixVectMult(g_cov, VV, VV_cov);
 
       double rho = rhoc * std::pow(tt / tc, ng);
-      double p   = std::pow(rho, tt);
+      double p   = rho * tt;
 
       double gammaij[6] = {g_cov[0][0], g_cov[0][1], g_cov[0][2], g_cov[1][1], g_cov[1][2], g_cov[2][2]};
 

@@ -4,6 +4,7 @@
 
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/NonlinearPredictor.h"
+#include "exahype2/dg/ader/PicardOutcome.h"
 #include "exahype2/dg/ader/tests/KernelTestData.h"
 #include "exahype2/dg/tests/KernelTestData.h"
 #include "peano4/Constants.h"
@@ -30,9 +31,9 @@ namespace {
   constexpr int OperatorEntries    = NodesPerAxis * NodesPerAxis;
   constexpr int StateStride        = CellLayout::PaddedNumberOfData;
   constexpr int UnknownStride      = CellLayout::PaddedNumberOfUnknowns;
-  constexpr int FluxAxisStride     = CellLayout::SpaceTimeNodes * UnknownStride;
+  constexpr int FluxAxisStride     = CellLayout::NodesPerCell * UnknownStride;
   constexpr int GradientAxisStride = CellLayout::NodesPerCell * UnknownStride;
-  constexpr int AveragedAxisStride = CellLayout::NodesPerCell * UnknownStride;
+  constexpr int SourceSize         = CellLayout::NodesPerCell * UnknownStride;
   constexpr int CellStateSize      = CellLayout::NodesPerCell * NumberOfData;
 
   constexpr int    MarkedTimeNode  = 1;
@@ -150,7 +151,6 @@ namespace {
   struct ProductDiffusiveSourceSolver final : StubLayout, ProductTerm, DiffusiveSourceTerm {};
   struct SourceDiffusiveSourceSolver final : StubLayout, SourceTerm, DiffusiveSourceTerm {};
   struct AllSourcesSolver final : StubLayout, ProductTerm, SourceTerm, DiffusiveSourceTerm {};
-  struct FluxSourceSolver final : StubLayout, PlainFluxTerm, SourceTerm {};
   struct FullSolver final : StubLayout, DiffusiveFluxTerm, ProductTerm, SourceTerm, DiffusiveSourceTerm {};
 
   /**
@@ -307,53 +307,22 @@ namespace {
 
   double getAveragedStateValueAt(const int cellNode, const int value) { return 1.0 + 0.25 * cellNode + 0.5 * value; }
 
-  double getAveragedFluxValueAt(const int axis, const int cellNode, const int unknown) {
+  double getSpaceTimeStateValueAt(const int timeNode, const int cellNode, const int value) {
+    return getAveragedStateValueAt(cellNode, value) + 0.5 * timeNode;
+  }
+
+  double getFluxValueAt(const int axis, const int cellNode, const int unknown) {
     return 2.0 + 0.25 * cellNode + axis + 0.5 * unknown;
   }
 
-  double getAveragedSourceValueAt(const int cellNode, const int unknown) {
-    return 3.0 - 0.25 * cellNode + 0.5 * unknown;
-  }
-
-  struct SpaceTimeBuffers final {
-    double state[CellLayout::SpaceTimeNodes * StateStride]{};
-    double flux[DIMENSIONS * FluxAxisStride]{};
-    double source[CellLayout::SpaceTimeNodes * UnknownStride]{};
-  };
-
-  struct AveragedBuffers final {
-    double state[CellLayout::NodesPerCell * StateStride]{};
-    double flux[DIMENSIONS * AveragedAxisStride]{};
-    double source[AveragedAxisStride]{};
-  };
-
-  void fillConstantInTime(SpaceTimeBuffers& buffers) {
-    for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
+  void fillFlux(double (&flux)[DIMENSIONS * FluxAxisStride], const double factor) {
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
       for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-        const int spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
-        for (int value = 0; value < StateStride; value++) {
-          buffers.state[spaceTimeNode * StateStride + value] = getAveragedStateValueAt(cellNode, value);
-        }
         for (int unknown = 0; unknown < UnknownStride; unknown++) {
-          buffers.source[spaceTimeNode * UnknownStride + unknown] = getAveragedSourceValueAt(cellNode, unknown);
-          for (int axis = 0; axis < DIMENSIONS; axis++) {
-            buffers.flux[axis * FluxAxisStride + spaceTimeNode * UnknownStride + unknown] =
-              getAveragedFluxValueAt(axis, cellNode, unknown);
-          }
+          flux[axis * FluxAxisStride + cellNode * UnknownStride + unknown] =
+            factor * getFluxValueAt(axis, cellNode, unknown);
         }
       }
-    }
-  }
-
-  void fillTargets(AveragedBuffers& buffers, const double value) {
-    for (int entry = 0; entry < CellLayout::NodesPerCell * StateStride; entry++) {
-      buffers.state[entry] = value;
-    }
-    for (int entry = 0; entry < DIMENSIONS * AveragedAxisStride; entry++) {
-      buffers.flux[entry] = value;
-    }
-    for (int entry = 0; entry < AveragedAxisStride; entry++) {
-      buffers.source[entry] = value;
     }
   }
 
@@ -388,6 +357,14 @@ namespace {
       + Slope * cellExtent * tables.quadraturePoints[peano4::dDelinearised(cellNode, NodesPerAxis)(0)];
   }
 
+  void fillLinearCellState(const Tables& tables, double (&cellState)[CellStateSize], const double cellExtent) {
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      for (int value = 0; value < NumberOfData; value++) {
+        cellState[cellNode * NumberOfData + value] = getLinearCellStateEntry(tables, cellNode, value, cellExtent);
+      }
+    }
+  }
+
   TARGET_DECLARE
   /**
    * Points the face arrays of one cell into the flat buffers, one block per cell and face.
@@ -416,8 +393,7 @@ namespace {
     double*                           cellStates{nullptr};
     double*                           faceStates{nullptr};
     double*                           faceFluxes{nullptr};
-    double*                           timeAveragedScratch{nullptr};
-    double*                           picardScratch{nullptr};
+    double*                           scratch{nullptr};
     int*                              sweeps{nullptr};
     const double*                     cellCentres{nullptr};
     const double*                     cellSizes{nullptr};
@@ -429,15 +405,13 @@ namespace {
       const int                                   coordinateOffset = cell * DIMENSIONS;
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
       const tarch::la::Vector<DIMENSIONS, double> cellSize(cellSizes + coordinateOffset);
-      const int                                   stateOffset        = cell * Setup::CellStateCardinality;
-      const int                                   timeAveragedOffset = cell * StubScratch::TimeAveragedSize;
-      const int                                   picardOffset       = cell * StubScratch::PicardSize;
+      const int                                   stateOffset   = cell * Setup::CellStateCardinality;
+      const int                                   scratchOffset = cell * StubScratch::Size;
       sweeps[cell] = Predictor<exahype2::dg::ader::tests::StubSolver>::predict(
         faceState,
         faceFlux,
         cellStates + stateOffset,
-        timeAveragedScratch + timeAveragedOffset,
-        picardScratch + picardOffset,
+        scratch + scratchOffset,
         tables,
         cellCentre,
         cellSize,
@@ -460,21 +434,13 @@ namespace {
     std::vector<double>&                  faceFluxes
   ) {
     const exahype2::dg::tests::DeviceBasisTables deviceTables(tables);
-    const std::vector<double>                    timeAveragedScratch(
-      static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::TimeAveragedSize,
-      0.0
-    );
-    const std::vector<double> picardScratch(
-      static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::PicardSize,
-      0.0
-    );
-    std::vector<int> sweeps(Setup::NumberOfCells, 0);
+    const std::vector<double> scratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::Size, 0.0);
+    std::vector<int>          sweeps(Setup::NumberOfCells, 0);
 
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellStates(cellStates);
     const exahype2::dg::tests::DeviceBuffer<double> deviceFaceStates(faceStates);
     const exahype2::dg::tests::DeviceBuffer<double> deviceFaceFluxes(faceFluxes);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceTimeAveragedScratch(timeAveragedScratch);
-    const exahype2::dg::tests::DeviceBuffer<double> devicePicardScratch(picardScratch);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceScratch(scratch);
     const exahype2::dg::tests::DeviceBuffer<int>    deviceSweeps(sweeps);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
@@ -486,8 +452,7 @@ namespace {
         deviceCellStates.getData(),
         deviceFaceStates.getData(),
         deviceFaceFluxes.getData(),
-        deviceTimeAveragedScratch.getData(),
-        devicePicardScratch.getData(),
+        deviceScratch.getData(),
         deviceSweeps.getData(),
         deviceCellCentres.getData(),
         deviceCellSizes.getData()
@@ -520,12 +485,13 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::run() {
   testMethod(testTheDiffusiveFluxSeesTheNodalGradients);
   testMethod(testEveryTermCombinationAccumulatesIntoOneBuffer);
   testMethod(testTheAverageOfAConstantIsThatConstant);
-  testMethod(testTheTargetIsOverwrittenNotAccumulated);
+  testMethod(testTheFirstTimeNodeRestartsTheRunningAverages);
   testMethod(testEveryAxisBlockKeepsCellNodeOrder);
-  testMethod(testTermsTheSolverLacksAreLeftAlone);
+  testMethod(testTheStateAverageLeavesTheLaterTimeSlicesAlone);
   testMethod(testTheScratchBlocksFollowEachOtherWithoutOverlap);
   testMethod(testATermTheSolverLacksHasZeroExtent);
   testMethod(testThePredictorWritesTheTimeAveragesAndTheFacesAndLeavesTheCellState);
+  testMethod(testAnUnreachableToleranceReportsUnconvergedPicardIteration);
   testMethod(testEveryCellOfADeviceRangeMatchesTheHostPredictor);
 }
 
@@ -605,9 +571,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAConstantFluxHasNoDiverge
   const auto   inverseCellSize = getInverseCellSize();
 
   // A constant without an exact binary representation, so a plain product leaves rounding behind.
-  double spaceTimeFlux[DIMENSIONS * FluxAxisStride];
+  double flux[DIMENSIONS * FluxAxisStride];
   for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
-    spaceTimeFlux[entry] = 5.0 / 3.0;
+    flux[entry] = 5.0 / 3.0;
   }
 
   double rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride];
@@ -618,7 +584,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAConstantFluxHasNoDiverge
   for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
     Predictor<StubLayout>::subtractFluxDivergence(
       rightHandSide,
-      spaceTimeFlux,
+      flux,
       tables.stiffnessOperatorTransposed.data(),
       tables.cellQuadratureWeights.data(),
       inverseCellSize,
@@ -644,16 +610,13 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testALinearFluxSubtractsItsEx
 
   // The flux block of an axis grows linearly along that axis alone, so the nodal derivative of the
   // interpolant is the slope itself.
-  double spaceTimeFlux[DIMENSIONS * FluxAxisStride] = {};
+  double flux[DIMENSIONS * FluxAxisStride] = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-      for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-        const int    spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
-        const double reference     = tables.quadraturePoints[peano4::dDelinearised(cellNode, NodesPerAxis)(axis)];
-        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-          spaceTimeFlux[axis * FluxAxisStride + spaceTimeNode * UnknownStride + unknown] =
-            (1.0 + unknown) * (2.0 + FluxSlope * (1.0 + axis) * reference);
-        }
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      const double reference = tables.quadraturePoints[peano4::dDelinearised(cellNode, NodesPerAxis)(axis)];
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        flux[axis * FluxAxisStride + cellNode * UnknownStride + unknown] =
+          (1.0 + unknown) * (2.0 + FluxSlope * (1.0 + axis) * reference);
       }
     }
   }
@@ -662,7 +625,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testALinearFluxSubtractsItsEx
 
   Predictor<StubLayout>::subtractFluxDivergence(
     rightHandSide,
-    spaceTimeFlux,
+    flux,
     tables.stiffnessOperatorTransposed.data(),
     tables.cellQuadratureWeights.data(),
     inverseCellSize,
@@ -979,13 +942,13 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheFluxIsAskedForOncePerN
   double stateGradient[DIMENSIONS * GradientAxisStride];
   fillStateGradient(stateGradient);
 
-  double spaceTimeFlux[DIMENSIONS * FluxAxisStride];
+  double flux[DIMENSIONS * FluxAxisStride];
   for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
-    spaceTimeFlux[entry] = 9.0;
+    flux[entry] = 9.0;
   }
 
   Predictor<PlainFluxSolver>::evaluateSpaceTimeFlux(
-    spaceTimeFlux,
+    flux,
     spaceTimeState,
     stateGradient,
     tables.quadraturePoints.data(),
@@ -1000,12 +963,11 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheFluxIsAskedForOncePerN
 
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-      const int    spaceTimeNode = MarkedTimeNode * CellLayout::NodesPerCell + cellNode;
-      const double position      = getNodePositionAt(tables, cellNode)(axis);
+      const double position = getNodePositionAt(tables, cellNode)(axis);
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         const double expected = (1.0 + axis) * getStateValueAt(cellNode, unknown) + position + timePosition;
         validateNumericalEqualsWithParams3(
-          spaceTimeFlux[axis * FluxAxisStride + spaceTimeNode * UnknownStride + unknown],
+          flux[axis * FluxAxisStride + cellNode * UnknownStride + unknown],
           expected,
           axis,
           cellNode,
@@ -1014,20 +976,12 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheFluxIsAskedForOncePerN
       }
       for (int unknown = NumberOfUnknowns; unknown < UnknownStride; unknown++) {
         validateNumericalEqualsWithParams3(
-          spaceTimeFlux[axis * FluxAxisStride + spaceTimeNode * UnknownStride + unknown],
+          flux[axis * FluxAxisStride + cellNode * UnknownStride + unknown],
           0.0,
           axis,
           cellNode,
           unknown
         );
-      }
-    }
-    for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-      if (timeNode != MarkedTimeNode) {
-        const int firstEntry = axis * FluxAxisStride + timeNode * CellLayout::NodesPerCell * UnknownStride;
-        for (int entry = 0; entry < CellLayout::NodesPerCell * UnknownStride; entry++) {
-          validateNumericalEqualsWithParams3(spaceTimeFlux[firstEntry + entry], 9.0, axis, timeNode, entry);
-        }
       }
     }
   }
@@ -1046,13 +1000,13 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheDiffusiveFluxSeesTheNo
   double stateGradient[DIMENSIONS * GradientAxisStride];
   fillStateGradient(stateGradient);
 
-  double spaceTimeFlux[DIMENSIONS * FluxAxisStride];
+  double flux[DIMENSIONS * FluxAxisStride];
   for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
-    spaceTimeFlux[entry] = 9.0;
+    flux[entry] = 9.0;
   }
 
   Predictor<DiffusiveFluxSolver>::evaluateSpaceTimeFlux(
-    spaceTimeFlux,
+    flux,
     spaceTimeState,
     stateGradient,
     tables.quadraturePoints.data(),
@@ -1065,14 +1019,13 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheDiffusiveFluxSeesTheNo
 
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-      const int spaceTimeNode = MarkedTimeNode * CellLayout::NodesPerCell + cellNode;
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         double expected = (1.0 + axis) * getStateValueAt(cellNode, unknown);
         for (int gradientAxis = 0; gradientAxis < DIMENSIONS; gradientAxis++) {
           expected += (0.5 + gradientAxis) * getGradientValueAt(gradientAxis, cellNode, unknown);
         }
         validateNumericalEqualsWithParams3(
-          spaceTimeFlux[axis * FluxAxisStride + spaceTimeNode * UnknownStride + unknown],
+          flux[axis * FluxAxisStride + cellNode * UnknownStride + unknown],
           expected,
           axis,
           cellNode,
@@ -1084,8 +1037,8 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheDiffusiveFluxSeesTheNo
 }
 
 /**
- * Runs the source evaluation of Derived on one time slice and compares the source buffer and the
- * right-hand side against the terms the flags name.
+ * Runs the source evaluation of Derived on a later time slice and compares the right-hand side and
+ * the running source average against the terms the flags name.
  */
 template <typename Derived>
 void
@@ -1094,6 +1047,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::validateSourceOf(
   const bool evaluateSource,
   const bool evaluateDiffusiveSource
 ) {
+  constexpr double FirstSourceValue    = 0.25;
+  constexpr double AveragedSourceValue = 0.75;
+
   const Tables tables;
 
   double spaceTimeState[CellLayout::SpaceTimeNodes * StateStride];
@@ -1102,16 +1058,22 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::validateSourceOf(
   double stateGradient[DIMENSIONS * GradientAxisStride];
   fillStateGradient(stateGradient);
 
-  double spaceTimeSource[CellLayout::SpaceTimeNodes * UnknownStride];
   double rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride];
   for (int entry = 0; entry < CellLayout::SpaceTimeNodes * UnknownStride; entry++) {
-    spaceTimeSource[entry] = 9.0;
-    rightHandSide[entry]   = 0.5;
+    rightHandSide[entry] = 0.5;
+  }
+
+  double firstSource[SourceSize];
+  double timeAveragedSource[SourceSize];
+  for (int entry = 0; entry < SourceSize; entry++) {
+    firstSource[entry]        = FirstSourceValue;
+    timeAveragedSource[entry] = AveragedSourceValue;
   }
 
   Predictor<Derived>::evaluateSpaceTimeSource(
-    spaceTimeSource,
     rightHandSide,
+    firstSource,
+    timeAveragedSource,
     spaceTimeState,
     stateGradient,
     tables.quadraturePoints.data(),
@@ -1125,11 +1087,11 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::validateSourceOf(
   );
 
   const double timePosition = getTimePositionOfMarkedNode(tables);
+  const double weight       = tables.quadratureWeights[MarkedTimeNode];
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     const int    spaceTimeNode = MarkedTimeNode * CellLayout::NodesPerCell + cellNode;
-    const double updateSize =
-      tables.quadratureWeights[MarkedTimeNode] * tables.cellQuadratureWeights[cellNode] * TimeStepSize;
+    const double updateSize    = weight * tables.cellQuadratureWeights[cellNode] * TimeStepSize;
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       double expected = 0.0;
       if (evaluateSource) {
@@ -1146,31 +1108,34 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::validateSourceOf(
         }
       }
       validateNumericalEqualsWithParams2(
-        spaceTimeSource[spaceTimeNode * UnknownStride + unknown],
-        expected,
+        rightHandSide[spaceTimeNode * UnknownStride + unknown],
+        0.5 + updateSize * expected,
         cellNode,
         unknown
       );
       validateNumericalEqualsWithParams2(
-        rightHandSide[spaceTimeNode * UnknownStride + unknown],
-        0.5 + updateSize * expected,
+        timeAveragedSource[cellNode * UnknownStride + unknown],
+        AveragedSourceValue + weight * (expected - FirstSourceValue),
         cellNode,
         unknown
       );
     }
     for (int unknown = NumberOfUnknowns; unknown < UnknownStride; unknown++) {
       validateNumericalEqualsWithParams2(
-        spaceTimeSource[spaceTimeNode * UnknownStride + unknown],
-        0.0,
-        cellNode,
-        unknown
-      );
-      validateNumericalEqualsWithParams2(
         rightHandSide[spaceTimeNode * UnknownStride + unknown],
         0.5,
         cellNode,
         unknown
       );
+      validateNumericalEqualsWithParams2(
+        timeAveragedSource[cellNode * UnknownStride + unknown],
+        AveragedSourceValue - weight * FirstSourceValue,
+        cellNode,
+        unknown
+      );
+    }
+    for (int unknown = 0; unknown < UnknownStride; unknown++) {
+      validateEqualsWithParams2(firstSource[cellNode * UnknownStride + unknown], FirstSourceValue, cellNode, unknown);
     }
   }
 
@@ -1178,7 +1143,6 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::validateSourceOf(
     if (timeNode != MarkedTimeNode) {
       const int firstEntry = timeNode * CellLayout::NodesPerCell * UnknownStride;
       for (int entry = 0; entry < CellLayout::NodesPerCell * UnknownStride; entry++) {
-        validateNumericalEqualsWithParams2(spaceTimeSource[firstEntry + entry], 9.0, timeNode, entry);
         validateNumericalEqualsWithParams2(rightHandSide[firstEntry + entry], 0.5, timeNode, entry);
       }
     }
@@ -1200,124 +1164,179 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryTermCombinationAccum
 }
 
 /**
- * A predictor that holds the same value at every time node averages to that value.
+ * A state, a flux and a source that hold the same value at every time node average to that value bitwise.
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheAverageOfAConstantIsThatConstant() {
   const Tables tables;
 
-  SpaceTimeBuffers spaceTime;
-  fillConstantInTime(spaceTime);
+  double spaceTimeState[CellLayout::SpaceTimeNodes * StateStride];
+  for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      const int spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
+      for (int value = 0; value < StateStride; value++) {
+        spaceTimeState[spaceTimeNode * StateStride + value] = getAveragedStateValueAt(cellNode, value);
+      }
+    }
+  }
 
-  AveragedBuffers averaged;
-  fillTargets(averaged, 9.0);
+  double stateGradient[DIMENSIONS * GradientAxisStride];
+  fillStateGradient(stateGradient);
 
-  Predictor<FluxSourceSolver>::averageOverTime(
-    averaged.state,
-    averaged.flux,
-    averaged.source,
-    spaceTime.state,
-    spaceTime.flux,
-    spaceTime.source,
-    tables.quadratureWeights.data()
-  );
+  double firstFlux[DIMENSIONS * FluxAxisStride];
+  double flux[DIMENSIONS * FluxAxisStride];
+  fillFlux(firstFlux, 1.0);
+  fillFlux(flux, 1.0);
+
+  double timeAveragedFlux[DIMENSIONS * FluxAxisStride]             = {};
+  double rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride] = {};
+  double firstSource[SourceSize]                                   = {};
+  double timeAveragedSource[SourceSize];
+  for (int entry = 0; entry < SourceSize; entry++) {
+    timeAveragedSource[entry] = 9.0;
+  }
+
+  for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
+    const double* const fluxOfTimeNode = timeNode == 0 ? firstFlux : flux;
+    Predictor<PlainFluxSolver>::averageFluxOverTime(
+      timeAveragedFlux,
+      fluxOfTimeNode,
+      firstFlux,
+      tables.quadratureWeights[timeNode],
+      timeNode
+    );
+    Predictor<ProductSolver>::evaluateSpaceTimeSource(
+      rightHandSide,
+      firstSource,
+      timeAveragedSource,
+      spaceTimeState,
+      stateGradient,
+      tables.quadraturePoints.data(),
+      tables.quadratureWeights.data(),
+      tables.cellQuadratureWeights.data(),
+      getCellCentre(),
+      getCellSize(),
+      TimeStamp,
+      TimeStepSize,
+      timeNode
+    );
+  }
+
+  Predictor<StubLayout>::averageStateOverTime(spaceTimeState, tables.quadratureWeights.data());
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int value = 0; value < StateStride; value++) {
       validateEqualsWithParams2(
-        averaged.state[cellNode * StateStride + value],
+        spaceTimeState[cellNode * StateStride + value],
         getAveragedStateValueAt(cellNode, value),
         cellNode,
         value
       );
     }
+  }
+  for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
+    validateEqualsWithParams1(timeAveragedFlux[entry], firstFlux[entry], entry);
+  }
+  for (int entry = 0; entry < SourceSize; entry++) {
+    validateEqualsWithParams1(timeAveragedSource[entry], firstSource[entry], entry);
+  }
+}
+
+/**
+ * The first time node overwrites the running flux and source averages with its own flux and source.
+ */
+void
+exahype2::dg::ader::tests::NonlinearPredictorTest::testTheFirstTimeNodeRestartsTheRunningAverages() {
+  const Tables tables;
+
+  double firstFlux[DIMENSIONS * FluxAxisStride];
+  fillFlux(firstFlux, 1.0);
+
+  double timeAveragedFlux[DIMENSIONS * FluxAxisStride];
+  for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
+    timeAveragedFlux[entry] = 9.0;
+  }
+
+  Predictor<PlainFluxSolver>::averageFluxOverTime(
+    timeAveragedFlux,
+    firstFlux,
+    firstFlux,
+    tables.quadratureWeights[0],
+    0
+  );
+
+  for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
+    validateEqualsWithParams1(timeAveragedFlux[entry], firstFlux[entry], entry);
+  }
+
+  double spaceTimeState[CellLayout::SpaceTimeNodes * StateStride];
+  fillSpaceTimeState(spaceTimeState);
+
+  double stateGradient[DIMENSIONS * GradientAxisStride];
+  fillStateGradient(stateGradient);
+
+  double rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride] = {};
+  double firstSource[SourceSize];
+  double timeAveragedSource[SourceSize];
+  for (int entry = 0; entry < SourceSize; entry++) {
+    firstSource[entry]        = 9.0;
+    timeAveragedSource[entry] = 9.0;
+  }
+
+  Predictor<SourceSolver>::evaluateSpaceTimeSource(
+    rightHandSide,
+    firstSource,
+    timeAveragedSource,
+    spaceTimeState,
+    stateGradient,
+    tables.quadraturePoints.data(),
+    tables.quadratureWeights.data(),
+    tables.cellQuadratureWeights.data(),
+    getCellCentre(),
+    getCellSize(),
+    TimeStamp,
+    TimeStepSize,
+    0
+  );
+
+  // The first time slice of the state holds zeros, so the source of SourceSolver is the time of that slice.
+  const double sourceOfFirstTimeNode = TimeStamp + tables.quadraturePoints[0] * TimeStepSize;
+
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int unknown = 0; unknown < UnknownStride; unknown++) {
-      validateEqualsWithParams2(
-        averaged.source[cellNode * UnknownStride + unknown],
-        getAveragedSourceValueAt(cellNode, unknown),
-        cellNode,
-        unknown
-      );
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        validateEqualsWithParams3(
-          averaged.flux[axis * AveragedAxisStride + cellNode * UnknownStride + unknown],
-          getAveragedFluxValueAt(axis, cellNode, unknown),
-          axis,
-          cellNode,
-          unknown
-        );
-      }
+      const int    entry    = cellNode * UnknownStride + unknown;
+      const double expected = unknown < NumberOfUnknowns ? sourceOfFirstTimeNode : 0.0;
+      validateNumericalEqualsWithParams2(firstSource[entry], expected, cellNode, unknown);
+      validateEqualsWithParams2(timeAveragedSource[entry], firstSource[entry], cellNode, unknown);
     }
   }
 }
 
 /**
- * The average overwrites the state, the flux and the source of the target and adds nothing to them.
- */
-void
-exahype2::dg::ader::tests::NonlinearPredictorTest::testTheTargetIsOverwrittenNotAccumulated() {
-  const Tables           tables;
-  const SpaceTimeBuffers spaceTime;
-
-  AveragedBuffers averaged;
-  fillTargets(averaged, 9.0);
-
-  Predictor<FluxSourceSolver>::averageOverTime(
-    averaged.state,
-    averaged.flux,
-    averaged.source,
-    spaceTime.state,
-    spaceTime.flux,
-    spaceTime.source,
-    tables.quadratureWeights.data()
-  );
-
-  for (int entry = 0; entry < CellLayout::NodesPerCell * StateStride; entry++) {
-    validateNumericalEqualsWithParams1(averaged.state[entry], 0.0, entry);
-  }
-  for (int entry = 0; entry < DIMENSIONS * AveragedAxisStride; entry++) {
-    validateNumericalEqualsWithParams1(averaged.flux[entry], 0.0, entry);
-  }
-  for (int entry = 0; entry < AveragedAxisStride; entry++) {
-    validateNumericalEqualsWithParams1(averaged.source[entry], 0.0, entry);
-  }
-}
-
-/**
- * The averaged flux holds one block per axis, and every block runs in cell node order.
+ * The flux average holds one block per axis, and every block runs in cell node order.
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryAxisBlockKeepsCellNodeOrder() {
-  double weightOfFirstNodeOnly[NodesPerAxis] = {};
-  weightOfFirstNodeOnly[0]                   = 1.0;
+  constexpr double Weight      = 0.25;
+  constexpr double FirstFactor = 1.0;
+  constexpr double LaterFactor = 3.0;
 
-  SpaceTimeBuffers spaceTime;
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        spaceTime.flux[axis * FluxAxisStride + cellNode * UnknownStride + unknown] =
-          getAveragedFluxValueAt(axis, cellNode, unknown);
-      }
-    }
-  }
+  double firstFlux[DIMENSIONS * FluxAxisStride];
+  double flux[DIMENSIONS * FluxAxisStride];
+  fillFlux(firstFlux, FirstFactor);
+  fillFlux(flux, LaterFactor);
 
-  AveragedBuffers averaged;
-  Predictor<PlainFluxSolver>::averageOverTime(
-    averaged.state,
-    averaged.flux,
-    averaged.source,
-    spaceTime.state,
-    spaceTime.flux,
-    spaceTime.source,
-    weightOfFirstNodeOnly
-  );
+  double timeAveragedFlux[DIMENSIONS * FluxAxisStride] = {};
+  Predictor<PlainFluxSolver>::averageFluxOverTime(timeAveragedFlux, firstFlux, firstFlux, Weight, 0);
+  Predictor<PlainFluxSolver>::averageFluxOverTime(timeAveragedFlux, flux, firstFlux, Weight, MarkedTimeNode);
 
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      for (int unknown = 0; unknown < UnknownStride; unknown++) {
+        const double value = getFluxValueAt(axis, cellNode, unknown);
         validateNumericalEqualsWithParams3(
-          averaged.flux[axis * AveragedAxisStride + cellNode * UnknownStride + unknown],
-          getAveragedFluxValueAt(axis, cellNode, unknown),
+          timeAveragedFlux[axis * FluxAxisStride + cellNode * UnknownStride + unknown],
+          FirstFactor * value + Weight * (LaterFactor - FirstFactor) * value,
           axis,
           cellNode,
           unknown
@@ -1328,48 +1347,54 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryAxisBlockKeepsCellNo
 }
 
 /**
- * A solver without flux and without source leaves the target buffers of both untouched.
+ * The state average overwrites the first time slice with the temporal quadrature and leaves later slices bitwise.
  */
 void
-exahype2::dg::ader::tests::NonlinearPredictorTest::testTermsTheSolverLacksAreLeftAlone() {
+exahype2::dg::ader::tests::NonlinearPredictorTest::testTheStateAverageLeavesTheLaterTimeSlicesAlone() {
   const Tables tables;
 
-  SpaceTimeBuffers spaceTime;
-  fillConstantInTime(spaceTime);
-
-  AveragedBuffers averaged;
-  fillTargets(averaged, 5.0);
-
-  Predictor<InertSolver>::averageOverTime(
-    averaged.state,
-    averaged.flux,
-    averaged.source,
-    spaceTime.state,
-    spaceTime.flux,
-    spaceTime.source,
-    tables.quadratureWeights.data()
-  );
-
-  for (int entry = 0; entry < DIMENSIONS * AveragedAxisStride; entry++) {
-    validateNumericalEqualsWithParams1(averaged.flux[entry], 5.0, entry);
+  double spaceTimeState[CellLayout::SpaceTimeNodes * StateStride];
+  for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      const int spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
+      for (int value = 0; value < StateStride; value++) {
+        spaceTimeState[spaceTimeNode * StateStride + value] = getSpaceTimeStateValueAt(timeNode, cellNode, value);
+      }
+    }
   }
-  for (int entry = 0; entry < AveragedAxisStride; entry++) {
-    validateNumericalEqualsWithParams1(averaged.source[entry], 5.0, entry);
-  }
+
+  Predictor<StubLayout>::averageStateOverTime(spaceTimeState, tables.quadratureWeights.data());
+
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int value = 0; value < StateStride; value++) {
-      validateNumericalEqualsWithParams2(
-        averaged.state[cellNode * StateStride + value],
-        getAveragedStateValueAt(cellNode, value),
-        cellNode,
-        value
-      );
+      const double firstValue = getSpaceTimeStateValueAt(0, cellNode, value);
+      double       expected   = firstValue;
+      for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
+        const double difference = getSpaceTimeStateValueAt(timeNode, cellNode, value) - firstValue;
+        expected += tables.quadratureWeights[timeNode] * difference;
+      }
+      validateNumericalEqualsWithParams2(spaceTimeState[cellNode * StateStride + value], expected, cellNode, value);
+    }
+  }
+
+  for (int timeNode = 1; timeNode < NodesPerAxis; timeNode++) {
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      const int spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
+      for (int value = 0; value < StateStride; value++) {
+        validateEqualsWithParams3(
+          spaceTimeState[spaceTimeNode * StateStride + value],
+          getSpaceTimeStateValueAt(timeNode, cellNode, value),
+          timeNode,
+          cellNode,
+          value
+        );
+      }
     }
   }
 }
 
 /**
- * The two blocks of the scratch place every buffer behind its predecessor without a gap.
+ * The block of the scratch places every buffer behind its predecessor without a gap.
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheScratchBlocksFollowEachOtherWithoutOverlap() {
@@ -1377,31 +1402,29 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheScratchBlocksFollowEac
 
   validateEquals(Scratch::SpaceTimeStateSize, StateStride * CellLayout::SpaceTimeNodes);
   validateEquals(Scratch::RightHandSideSize, UnknownStride * CellLayout::SpaceTimeNodes);
-  validateEquals(Scratch::SpaceTimeFluxSize, DIMENSIONS * UnknownStride * CellLayout::SpaceTimeNodes);
-  validateEquals(Scratch::SpaceTimeSourceSize, UnknownStride * CellLayout::SpaceTimeNodes);
+  validateEquals(Scratch::FluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
+  validateEquals(Scratch::FirstFluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
+  validateEquals(Scratch::TimeAveragedFluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
+  validateEquals(Scratch::FirstSourceSize, UnknownStride * CellLayout::NodesPerCell);
+  validateEquals(Scratch::TimeAveragedSourceSize, UnknownStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::StateGradientSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::UpdatedTimeSliceSize, NodesPerAxis * UnknownStride);
 
   validateEquals(Scratch::SpaceTimeStateOffset, 0);
+  validateEquals(Scratch::TimeAveragedStateOffset, Scratch::SpaceTimeStateOffset);
   validateEquals(Scratch::RightHandSideOffset, Scratch::SpaceTimeStateOffset + Scratch::SpaceTimeStateSize);
-  validateEquals(Scratch::SpaceTimeFluxOffset, Scratch::RightHandSideOffset + Scratch::RightHandSideSize);
-  validateEquals(Scratch::SpaceTimeSourceOffset, Scratch::SpaceTimeFluxOffset + Scratch::SpaceTimeFluxSize);
-  validateEquals(Scratch::StateGradientOffset, Scratch::SpaceTimeSourceOffset + Scratch::SpaceTimeSourceSize);
+  validateEquals(Scratch::FluxOffset, Scratch::RightHandSideOffset + Scratch::RightHandSideSize);
+  validateEquals(Scratch::FirstFluxOffset, Scratch::FluxOffset + Scratch::FluxSize);
+  validateEquals(Scratch::TimeAveragedFluxOffset, Scratch::FirstFluxOffset + Scratch::FirstFluxSize);
+  validateEquals(Scratch::FirstSourceOffset, Scratch::TimeAveragedFluxOffset + Scratch::TimeAveragedFluxSize);
+  validateEquals(Scratch::TimeAveragedSourceOffset, Scratch::FirstSourceOffset + Scratch::FirstSourceSize);
+  validateEquals(Scratch::StateGradientOffset, Scratch::TimeAveragedSourceOffset + Scratch::TimeAveragedSourceSize);
   validateEquals(Scratch::UpdatedTimeSliceOffset, Scratch::StateGradientOffset + Scratch::StateGradientSize);
-  validateEquals(Scratch::PicardSize, Scratch::UpdatedTimeSliceOffset + Scratch::UpdatedTimeSliceSize);
-
-  validateEquals(Scratch::TimeAveragedStateSize, StateStride * CellLayout::NodesPerCell);
-  validateEquals(Scratch::TimeAveragedFluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-  validateEquals(Scratch::TimeAveragedSourceSize, UnknownStride * CellLayout::NodesPerCell);
-
-  validateEquals(Scratch::TimeAveragedStateOffset, 0);
-  validateEquals(Scratch::TimeAveragedFluxOffset, Scratch::TimeAveragedStateOffset + Scratch::TimeAveragedStateSize);
-  validateEquals(Scratch::TimeAveragedSourceOffset, Scratch::TimeAveragedFluxOffset + Scratch::TimeAveragedFluxSize);
-  validateEquals(Scratch::TimeAveragedSize, Scratch::TimeAveragedSourceOffset + Scratch::TimeAveragedSourceSize);
+  validateEquals(Scratch::Size, Scratch::UpdatedTimeSliceOffset + Scratch::UpdatedTimeSliceSize);
 }
 
 /**
- * A term the solver lacks occupies no entry and shortens the block it belongs to.
+ * A term the solver lacks occupies no entry and shortens the block.
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testATermTheSolverLacksHasZeroExtent() {
@@ -1411,29 +1434,30 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testATermTheSolverLacksHasZer
   using DiffusiveFlux = Predictor<DiffusiveFluxSolver>;
 
   validate(not Bare::EvaluateFlux);
-  validateEquals(Bare::Scratch::SpaceTimeFluxSize, 0);
-  validateEquals(Bare::Scratch::SpaceTimeSourceSize, 0);
-  validateEquals(Bare::Scratch::StateGradientSize, 0);
+  validateEquals(Bare::Scratch::FluxSize, 0);
+  validateEquals(Bare::Scratch::FirstFluxSize, 0);
   validateEquals(Bare::Scratch::TimeAveragedFluxSize, 0);
+  validateEquals(Bare::Scratch::FirstSourceSize, 0);
   validateEquals(Bare::Scratch::TimeAveragedSourceSize, 0);
+  validateEquals(Bare::Scratch::StateGradientSize, 0);
   validate(not Bare::AccumulatesSource);
   validate(not Bare::NeedsStateGradient);
-  validate(Bare::Scratch::PicardSize < Full::Scratch::PicardSize);
-  validate(Bare::Scratch::TimeAveragedSize < Full::Scratch::TimeAveragedSize);
+  validate(Bare::Scratch::Size < Full::Scratch::Size);
 
-  // A nonconservative product enters the source buffer, so it claims that buffer without a source term.
+  // A nonconservative product enters the source, so it claims the source buffers without a source term.
   validate(Product::AccumulatesSource);
   validate(Product::NeedsStateGradient);
-  validate(Product::Scratch::SpaceTimeSourceSize > 0);
+  validate(Product::Scratch::FirstSourceSize > 0);
+  validate(Product::Scratch::TimeAveragedSourceSize > 0);
   validate(Product::Scratch::StateGradientSize > 0);
-  validateEquals(Product::Scratch::SpaceTimeFluxSize, 0);
+  validateEquals(Product::Scratch::FluxSize, 0);
 
   validate(DiffusiveFlux::EvaluateFlux);
   validate(DiffusiveFlux::NeedsStateGradient);
   validate(not DiffusiveFlux::AccumulatesSource);
   validate(DiffusiveFlux::Scratch::StateGradientSize > 0);
-  validateEquals(DiffusiveFlux::Scratch::SpaceTimeSourceSize, 0);
-  validate(DiffusiveFlux::Scratch::SpaceTimeFluxSize > 0);
+  validateEquals(DiffusiveFlux::Scratch::TimeAveragedSourceSize, 0);
+  validate(DiffusiveFlux::Scratch::FluxSize > 0);
 }
 
 /**
@@ -1448,22 +1472,16 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
 
   double cellState[CellStateSize];
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    for (int value = 0; value < NumberOfData; value++) {
-      cellState[cellNode * NumberOfData + value] = getLinearCellStateEntry(tables, cellNode, value, cellSize(0));
-    }
-  }
+  fillLinearCellState(tables, cellState, cellSize(0));
 
   FaceBuffers faces;
-  double      timeAveragedScratch[ProfileScratch::TimeAveragedSize] = {};
-  double      picardScratch[ProfileScratch::PicardSize]             = {};
+  double      scratch[ProfileScratch::Size] = {};
 
   const int numberOfSweeps = Predictor<ProfileSolver>::predict(
     faces.statePointers,
     faces.fluxPointers,
     cellState,
-    timeAveragedScratch,
-    picardScratch,
+    scratch,
     tables.getView(),
     cellCentre,
     cellSize,
@@ -1501,7 +1519,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int value = 0; value < NumberOfData; value++) {
       validateNumericalEqualsWithParams2(
-        timeAveragedScratch[ProfileScratch::TimeAveragedStateOffset + cellNode * StateStride + value],
+        scratch[ProfileScratch::TimeAveragedStateOffset + cellNode * StateStride + value],
         averagedState[cellNode * NumberOfData + value],
         cellNode,
         value
@@ -1509,7 +1527,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
     }
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       validateNumericalEqualsWithParams2(
-        timeAveragedScratch[ProfileScratch::TimeAveragedSourceOffset + cellNode * UnknownStride + unknown],
+        scratch[ProfileScratch::TimeAveragedSourceOffset + cellNode * UnknownStride + unknown],
         sourceAverage,
         cellNode,
         unknown
@@ -1518,8 +1536,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         const double fluxDerivative = axis == 0 ? FluxSpeed * Slope : 0.0;
         validateNumericalEqualsWithParams3(
-          timeAveragedScratch
-            [ProfileScratch::TimeAveragedFluxOffset + axis * AveragedAxisStride + cellNode * UnknownStride + unknown],
+          scratch[ProfileScratch::TimeAveragedFluxOffset + axis * FluxAxisStride + cellNode * UnknownStride + unknown],
           fluxDerivative,
           axis,
           cellNode,
@@ -1576,6 +1593,81 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
 }
 
 /**
+ * A tolerance the sweeps cannot reach returns UnconvergedPicardIteration with the time averages of the last sweep.
+ */
+void
+exahype2::dg::ader::tests::NonlinearPredictorTest::testAnUnreachableToleranceReportsUnconvergedPicardIteration() {
+  // The square of the tolerance rounds to zero, so no squared residual falls below it.
+  constexpr double UnreachableTolerance = 1.0e-200;
+
+  const Tables                                tables;
+  const auto                                  cellSize = getCellSize();
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
+
+  double cellState[CellStateSize];
+  fillLinearCellState(tables, cellState, cellSize(0));
+
+  FaceBuffers convergedFaces;
+  FaceBuffers unconvergedFaces;
+  double      convergedScratch[ProfileScratch::Size]   = {};
+  double      unconvergedScratch[ProfileScratch::Size] = {};
+
+  const int convergedOutcome = Predictor<ProfileSolver>::predict(
+    convergedFaces.statePointers,
+    convergedFaces.fluxPointers,
+    cellState,
+    convergedScratch,
+    tables.getView(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize,
+    PicardTolerance
+  );
+  const int unconvergedOutcome = Predictor<ProfileSolver>::predict(
+    unconvergedFaces.statePointers,
+    unconvergedFaces.fluxPointers,
+    cellState,
+    unconvergedScratch,
+    tables.getView(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize,
+    UnreachableTolerance
+  );
+
+  validateWithParams1(convergedOutcome > 0, convergedOutcome);
+  validateEquals(unconvergedOutcome, exahype2::dg::ader::UnconvergedPicardIteration);
+
+  for (int entry = 0; entry < CellLayout::NodesPerCell * StateStride; entry++) {
+    validateNumericalEqualsWithParams1(
+      unconvergedScratch[ProfileScratch::TimeAveragedStateOffset + entry],
+      convergedScratch[ProfileScratch::TimeAveragedStateOffset + entry],
+      entry
+    );
+  }
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfData; entry++) {
+      validateNumericalEqualsWithParams2(
+        unconvergedFaces.state[face][entry],
+        convergedFaces.state[face][entry],
+        face,
+        entry
+      );
+    }
+    for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
+      validateNumericalEqualsWithParams2(
+        unconvergedFaces.flux[face][entry],
+        convergedFaces.flux[face][entry],
+        face,
+        entry
+      );
+    }
+  }
+}
+
+/**
  * The predictor of every cell of a device range reproduces the serial host loop.
  */
 void
@@ -1595,11 +1687,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryCellOfADeviceRangeMa
   std::vector<double> hostCellStates = cellStates;
   std::vector<double> hostFaceStates = faceStates;
   std::vector<double> hostFaceFluxes = faceFluxes;
-  std::vector<double> hostTimeAveragedScratch(
-    static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::TimeAveragedSize,
-    0.0
-  );
-  std::vector<double> hostPicardScratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::PicardSize, 0.0);
+  std::vector<double> hostScratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::Size, 0.0);
   const exahype2::dg::BasisTables<double> hostTables = tables.getView();
   for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
     double* faceState[peano4::FacesPerCell];
@@ -1608,15 +1696,13 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryCellOfADeviceRangeMa
     const int                                   coordinateOffset = cell * DIMENSIONS;
     const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
     const tarch::la::Vector<DIMENSIONS, double> cellSize(geometry.cellSizes.data() + coordinateOffset);
-    const int                                   stateOffset        = cell * Setup::CellStateCardinality;
-    const int                                   timeAveragedOffset = cell * StubScratch::TimeAveragedSize;
-    const int                                   picardOffset       = cell * StubScratch::PicardSize;
+    const int                                   stateOffset   = cell * Setup::CellStateCardinality;
+    const int                                   scratchOffset = cell * StubScratch::Size;
     const int                                   hostSweeps = Predictor<exahype2::dg::ader::tests::StubSolver>::predict(
       faceState,
       faceFlux,
       hostCellStates.data() + stateOffset,
-      hostTimeAveragedScratch.data() + timeAveragedOffset,
-      hostPicardScratch.data() + picardOffset,
+      hostScratch.data() + scratchOffset,
       hostTables,
       cellCentre,
       cellSize,

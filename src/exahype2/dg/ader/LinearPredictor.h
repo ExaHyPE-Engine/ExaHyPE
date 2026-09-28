@@ -49,35 +49,26 @@ public:
 
   /**
    * Extents and offsets of the one scratch block of predict(). The block holds the current Taylor
-   * coefficient of the state, its flux and its source, the time averages of the three, one
-   * differentiated line of nodes and the point source samples. A term Derived does not declare
-   * has extent zero.
+   * coefficient of the state, the time-averaged state, the flux, one differentiated line of nodes
+   * and the point source samples. After predict() the flux holds the flux of the time-averaged
+   * state. A term Derived does not declare has extent zero.
    */
   struct Scratch final {
     static constexpr int StateSize             = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
     static constexpr int TimeAveragedStateSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
     static constexpr int FluxSize = DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
-    static constexpr int TimeAveragedFluxSize =
-      DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
-    static constexpr int SourceSize =
-      EvaluateSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell : 0;
-    static constexpr int TimeAveragedSourceSize =
-      EvaluateSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell : 0;
     static constexpr int StateGradientSize =
       EvaluateNonconservativeProduct ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerAxis : 0;
     static constexpr int PointSourceSize = EvaluatePointSources
       ? (CellLayout::NodesPerAxis + 1) * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns
       : 0;
 
-    static constexpr int StateOffset              = 0;
-    static constexpr int TimeAveragedStateOffset  = StateOffset + StateSize;
-    static constexpr int FluxOffset               = TimeAveragedStateOffset + TimeAveragedStateSize;
-    static constexpr int TimeAveragedFluxOffset   = FluxOffset + FluxSize;
-    static constexpr int SourceOffset             = TimeAveragedFluxOffset + TimeAveragedFluxSize;
-    static constexpr int TimeAveragedSourceOffset = SourceOffset + SourceSize;
-    static constexpr int StateGradientOffset      = TimeAveragedSourceOffset + TimeAveragedSourceSize;
-    static constexpr int PointSourceOffset        = StateGradientOffset + StateGradientSize;
-    static constexpr int Size                     = PointSourceOffset + PointSourceSize;
+    static constexpr int StateOffset             = 0;
+    static constexpr int TimeAveragedStateOffset = StateOffset + StateSize;
+    static constexpr int FluxOffset              = TimeAveragedStateOffset + TimeAveragedStateSize;
+    static constexpr int StateGradientOffset     = FluxOffset + FluxSize;
+    static constexpr int PointSourceOffset       = StateGradientOffset + StateGradientSize;
+    static constexpr int Size                    = PointSourceOffset + PointSourceSize;
   };
 
   template <int NumberOfPointSources>
@@ -147,10 +138,7 @@ private:
     const ComputePrecision* NOALIAS state
   );
 
-  static INLINE_METHOD GPU_CALLABLE_METHOD void clearTaylorTerms(
-    ComputePrecision* NOALIAS flux,
-    ComputePrecision* NOALIAS source
-  );
+  static INLINE_METHOD GPU_CALLABLE_METHOD void clearFluxes(ComputePrecision* NOALIAS flux);
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateFlux(
     ComputePrecision* NOALIAS                    flux,
@@ -182,27 +170,17 @@ private:
     double                                       timeStepSize
   );
 
-  static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSource(
-    ComputePrecision* NOALIAS                    source,
-    const ComputePrecision* NOALIAS              state,
+  static INLINE_METHOD GPU_CALLABLE_METHOD void overwriteStateWithLinearSource(
+    ComputePrecision* NOALIAS                    state,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize
   );
 
-  static INLINE_METHOD GPU_CALLABLE_METHOD void accumulateTimeAveragedTerms(
-    ComputePrecision* NOALIAS       timeAveragedFlux,
-    ComputePrecision* NOALIAS       timeAveragedSource,
-    const ComputePrecision* NOALIAS flux,
-    const ComputePrecision* NOALIAS source,
-    ComputePrecision                timeAverageFactor
-  );
-
-  static INLINE_METHOD GPU_CALLABLE_METHOD void advanceTimeDerivative(
+  static INLINE_METHOD GPU_CALLABLE_METHOD void addFluxesToTimeDerivative(
     ComputePrecision* NOALIAS       state,
-    const ComputePrecision* NOALIAS flux,
-    const ComputePrecision* NOALIAS source
+    const ComputePrecision* NOALIAS flux
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void addPointSourceDerivativeToState(

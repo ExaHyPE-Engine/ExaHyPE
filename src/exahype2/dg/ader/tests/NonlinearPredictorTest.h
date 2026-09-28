@@ -36,12 +36,13 @@ private:
   void testTheDiffusiveFluxSeesTheNodalGradients();
   void testEveryTermCombinationAccumulatesIntoOneBuffer();
   void testTheAverageOfAConstantIsThatConstant();
-  void testTheTargetIsOverwrittenNotAccumulated();
+  void testTheFirstTimeNodeRestartsTheRunningAverages();
   void testEveryAxisBlockKeepsCellNodeOrder();
-  void testTermsTheSolverLacksAreLeftAlone();
+  void testTheStateAverageLeavesTheLaterTimeSlicesAlone();
   void testTheScratchBlocksFollowEachOtherWithoutOverlap();
   void testATermTheSolverLacksHasZeroExtent();
   void testThePredictorWritesTheTimeAveragesAndTheFacesAndLeavesTheCellState();
+  void testAnUnreachableToleranceReportsUnconvergedPicardIteration();
   void testEveryCellOfADeviceRangeMatchesTheHostPredictor();
 
   template <typename Derived>

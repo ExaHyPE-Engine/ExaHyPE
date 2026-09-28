@@ -137,11 +137,12 @@ private:
 
   void predict(const peano4::Partition& partition, double timeStepSize);
   template <typename DivergenceMarks>
-  [[nodiscard]] int predictCells(
+  [[nodiscard]] exahype2::dg::ader::PredictionCounts predictCells(
     const peano4::Partition& partition,
     double                   timeStepSize,
     const DivergenceMarks&   divergenceMarks
   );
+  void reportUnconvergedPredictions();
   [[nodiscard]] exahype2::dg::MaxEigenvalueStatistics correct(
     const peano4::Partition& partition,
     peano4::Dependence       dependence,
@@ -165,10 +166,14 @@ private:
   tarch::accelerator::Buffer<double> _pointSourceLocations{tarch::MemoryLocation::Device};
 
   /**
-   * One predictor scratch block and one Picard block per scratch chunk of the predictor dispatch.
+   * One predictor scratch block per scratch chunk of the predictor dispatch.
    */
   tarch::accelerator::Buffer<ComputePrecision> _predictorScratch{tarch::MemoryLocation::Device};
-  tarch::accelerator::Buffer<ComputePrecision> _picardScratch{tarch::MemoryLocation::Device};
+
+  /**
+   * Cells of this rank whose Picard iteration stopped at its sweep limit in the current time step.
+   */
+  int _unconvergedPredictions{0};
 
   LimiterSlot _limiter{};
 

@@ -201,6 +201,7 @@ namespace {
   };
   TARGET_DECLARE_END
 
+  using MarkerScratch  = Predictor<MarkerSolver>::Scratch;
   using ProfileScratch = Predictor<ProfileSolver>::Scratch;
   using StubScratch    = Predictor<exahype2::dg::ader::tests::StubSolver>::Scratch;
 
@@ -549,15 +550,15 @@ void
 exahype2::dg::ader::tests::LinearPredictorTest::run() {
   testMethod(testTheSeedCopiesTheCellStateAndClearsThePadding);
   testMethod(testTheTimeAverageStartsFromTheState);
-  testMethod(testTheTermsAreClearedBeforeATaylorStep);
-  testMethod(testTheTimeAveragedTermsGrowByTheGivenFactor);
+  testMethod(testTheFluxIsClearedBeforeATaylorStep);
+  testMethod(testTheLastPassEvaluatesTheTermsOfTheTimeAveragedState);
   testMethod(testTheTimeAveragedStateGrowsByTheGivenFactor);
   testMethod(testTheNextDerivativeIsTheSourceMinusTheFluxDivergence);
   testMethod(testTheFluxFillsEveryNodeAndAxis);
   testMethod(testAConstantStateLeavesTheNonconservativeProductAtZero);
   testMethod(testALinearStateGivesTheExactNonconservativeProduct);
   testMethod(testTheMaterialParameterMatrixActsOnEveryAxis);
-  testMethod(testTheSourceFillsEveryNode);
+  testMethod(testTheSourceOverwritesTheUnknownsOfEveryNode);
   testMethod(testASourceInsideIsSelected);
   testMethod(testASourceOutsideIsRejected);
   testMethod(testASourceOnAFaceBelongsToBothCells);
@@ -631,82 +632,83 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAverageStartsFromTheS
 }
 
 /**
- * A Taylor step starts from a zeroed flux, and a solver without a source keeps that buffer.
+ * A Taylor step starts from a zeroed flux.
  */
 void
-exahype2::dg::ader::tests::LinearPredictorTest::testTheTermsAreClearedBeforeATaylorStep() {
+exahype2::dg::ader::tests::LinearPredictorTest::testTheFluxIsClearedBeforeATaylorStep() {
   double flux[DIMENSIONS * AxisStride];
-  double source[AxisStride];
   for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
     flux[entry] = MarkerValue;
   }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    source[entry] = MarkerValue;
-  }
 
-  Predictor<SourceSolver>::clearTaylorTerms(flux, source);
+  Predictor<StubLayout>::clearFluxes(flux);
 
   for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
     validateNumericalEqualsWithParams1(flux[entry], 0.0, entry);
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(source[entry], 0.0, entry);
-  }
-
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    flux[entry] = MarkerValue;
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    source[entry] = MarkerValue;
-  }
-
-  Predictor<InertSolver>::clearTaylorTerms(flux, source);
-
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(flux[entry], 0.0, entry);
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(source[entry], MarkerValue, entry);
   }
 }
 
 /**
- * Every Taylor term enters the time average scaled by its factor, and a solver without a source leaves that buffer
- * alone.
+ * After predict the flux block holds the terms of the time-averaged state.
  */
 void
-exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAveragedTermsGrowByTheGivenFactor() {
-  double flux[DIMENSIONS * AxisStride];
-  double source[AxisStride];
+exahype2::dg::ader::tests::LinearPredictorTest::testTheLastPassEvaluatesTheTermsOfTheTimeAveragedState() {
+  const Tables                                tables;
+  const auto                                  cellSize        = getCellSize();
+  const auto                                  inverseCellSize = getInverseCellSize();
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
+
+  double cellState[CellStateSize];
+  for (int entry = 0; entry < CellStateSize; entry++) {
+    cellState[entry] = 1.0 + 0.125 * entry;
+  }
+
+  FaceBuffers faces;
+  double      scratch[MarkerScratch::Size] = {};
+
+  Predictor<MarkerSolver>::predict(
+    faces.statePointers,
+    faces.fluxPointers,
+    cellState,
+    scratch,
+    nullptr,
+    0,
+    nullptr,
+    tables.getView(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
+
+  const double* const timeAveragedState = scratch + MarkerScratch::TimeAveragedStateOffset;
+
+  double stateGradient[GradientSize]   = {};
+  double flux[DIMENSIONS * AxisStride] = {};
+  Predictor<MarkerSolver>::evaluateFlux(flux, timeAveragedState, cellCentre, cellSize, TimeStamp, TimeStepSize);
+  exahype2::dg::differentiateFluxInPlace<MarkerSolver>(flux, tables.derivativeOperator.data(), inverseCellSize);
+  Predictor<MarkerSolver>::addNonconservativeProduct(
+    flux,
+    stateGradient,
+    timeAveragedState,
+    tables.derivativeOperator.data(),
+    inverseCellSize,
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
+  Predictor<MarkerSolver>::applyMaterialParameterMatrix(
+    flux,
+    timeAveragedState,
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
+
   for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    flux[entry] = 1.0 + 0.25 * entry;
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    source[entry] = 2.0 - 0.125 * entry;
-  }
-
-  double timeAveragedFlux[DIMENSIONS * AxisStride] = {};
-  double timeAveragedSource[AxisStride]            = {};
-
-  Predictor<SourceSolver>::accumulateTimeAveragedTerms(timeAveragedFlux, timeAveragedSource, flux, source, 0.5);
-  Predictor<SourceSolver>::accumulateTimeAveragedTerms(timeAveragedFlux, timeAveragedSource, flux, source, 0.25);
-
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(timeAveragedFlux[entry], 0.75 * flux[entry], entry);
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(timeAveragedSource[entry], 0.75 * source[entry], entry);
-  }
-
-  for (int entry = 0; entry < AxisStride; entry++) {
-    timeAveragedSource[entry] = MarkerValue;
-  }
-  Predictor<InertSolver>::accumulateTimeAveragedTerms(timeAveragedFlux, timeAveragedSource, flux, source, 0.25);
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(timeAveragedFlux[entry], flux[entry], entry);
-  }
-  for (int entry = 0; entry < AxisStride; entry++) {
-    validateNumericalEqualsWithParams1(timeAveragedSource[entry], MarkerValue, entry);
+    validateNumericalEqualsWithParams1(scratch[MarkerScratch::FluxOffset + entry], flux[entry], entry);
   }
 }
 
@@ -740,22 +742,20 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAveragedStateGrowsByT
 }
 
 /**
- * The next Taylor coefficient is the source minus the sum of the differentiated fluxes.
+ * The next Taylor coefficient is the source minus the sum of the differentiated fluxes, or that negated sum without a
+ * source.
  */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheNextDerivativeIsTheSourceMinusTheFluxDivergence() {
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(0.5);
+
   double flux[DIMENSIONS * AxisStride] = {};
-  double source[AxisStride]            = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         flux[axis * AxisStride + cellNode * UnknownStride + unknown] = 1.0 + axis;
       }
-    }
-  }
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      source[cellNode * UnknownStride + unknown] = 4.0;
     }
   }
 
@@ -764,25 +764,30 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheNextDerivativeIsTheSource
     sumOverAxes += 1.0 + axis;
   }
 
+  double initialState[StateSize];
+  fillVaryingState(initialState);
+
   double withSource[StateSize];
+  fillVaryingState(withSource);
   double withoutSource[StateSize];
   for (int entry = 0; entry < StateSize; entry++) {
-    withSource[entry]    = MarkerValue;
     withoutSource[entry] = MarkerValue;
   }
 
-  Predictor<SourceSolver>::advanceTimeDerivative(withSource, flux, source);
-  Predictor<InertSolver>::advanceTimeDerivative(withoutSource, flux, source);
+  Predictor<SourceSolver>::overwriteStateWithLinearSource(withSource, cellCentre, cellSize, TimeStamp, TimeStepSize);
+  Predictor<SourceSolver>::addFluxesToTimeDerivative(withSource, flux);
+  Predictor<InertSolver>::addFluxesToTimeDerivative(withoutSource, flux);
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       const int entry = cellNode * StateStride + unknown;
-      validateNumericalEqualsWithParams2(withSource[entry], 4.0 - sumOverAxes, cellNode, unknown);
+      validateNumericalEqualsWithParams2(withSource[entry], 3.0 * initialState[entry] - sumOverAxes, cellNode, unknown);
       validateNumericalEqualsWithParams2(withoutSource[entry], -sumOverAxes, cellNode, unknown);
     }
     for (int value = NumberOfUnknowns; value < StateStride; value++) {
       const int entry = cellNode * StateStride + value;
-      validateNumericalEqualsWithParams2(withSource[entry], MarkerValue, cellNode, value);
+      validateNumericalEqualsWithParams2(withSource[entry], initialState[entry], cellNode, value);
+      validateNumericalEqualsWithParams2(withoutSource[entry], MarkerValue, cellNode, value);
     }
   }
 }
@@ -947,32 +952,33 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheMaterialParameterMatrixAc
 }
 
 /**
- * The source of every node reaches the source buffer.
+ * The source of every node overwrites the unknowns of that node and leaves the auxiliary variables and the padding lanes.
  */
 void
-exahype2::dg::ader::tests::LinearPredictorTest::testTheSourceFillsEveryNode() {
+exahype2::dg::ader::tests::LinearPredictorTest::testTheSourceOverwritesTheUnknownsOfEveryNode() {
   double state[StateSize];
   fillVaryingState(state);
 
-  double source[AxisStride] = {};
+  double initialState[StateSize];
+  fillVaryingState(initialState);
 
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
   const tarch::la::Vector<DIMENSIONS, double> cellSize(0.5);
 
-  Predictor<MarkerSolver>::evaluateSource(source, state, cellCentre, cellSize, TimeStamp, TimeStepSize);
+  Predictor<MarkerSolver>::overwriteStateWithLinearSource(state, cellCentre, cellSize, TimeStamp, TimeStepSize);
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    const int base = cellNode * UnknownStride;
+    const int base = cellNode * StateStride;
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       validateNumericalEqualsWithParams2(
-        source[base + unknown],
+        state[base + unknown],
         3.0 * getVaryingStateEntry(cellNode, unknown),
         cellNode,
         unknown
       );
     }
-    for (int unknown = NumberOfUnknowns; unknown < UnknownStride; unknown++) {
-      validateNumericalEqualsWithParams2(source[base + unknown], 0.0, cellNode, unknown);
+    for (int value = NumberOfUnknowns; value < StateStride; value++) {
+      validateNumericalEqualsWithParams2(state[base + value], initialState[base + value], cellNode, value);
     }
   }
 }
@@ -1372,19 +1378,13 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheScratchBlocksFollowEachOt
   validateEquals(Scratch::StateSize, StateStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::TimeAveragedStateSize, StateStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::FluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-  validateEquals(Scratch::TimeAveragedFluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-  validateEquals(Scratch::SourceSize, UnknownStride * CellLayout::NodesPerCell);
-  validateEquals(Scratch::TimeAveragedSourceSize, UnknownStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::StateGradientSize, UnknownStride * NodesPerAxis);
   validateEquals(Scratch::PointSourceSize, (NodesPerAxis + 1) * CellLayout::NodesPerCell * UnknownStride);
 
   validateEquals(Scratch::StateOffset, 0);
   validateEquals(Scratch::TimeAveragedStateOffset, Scratch::StateOffset + Scratch::StateSize);
   validateEquals(Scratch::FluxOffset, Scratch::TimeAveragedStateOffset + Scratch::TimeAveragedStateSize);
-  validateEquals(Scratch::TimeAveragedFluxOffset, Scratch::FluxOffset + Scratch::FluxSize);
-  validateEquals(Scratch::SourceOffset, Scratch::TimeAveragedFluxOffset + Scratch::TimeAveragedFluxSize);
-  validateEquals(Scratch::TimeAveragedSourceOffset, Scratch::SourceOffset + Scratch::SourceSize);
-  validateEquals(Scratch::StateGradientOffset, Scratch::TimeAveragedSourceOffset + Scratch::TimeAveragedSourceSize);
+  validateEquals(Scratch::StateGradientOffset, Scratch::FluxOffset + Scratch::FluxSize);
   validateEquals(Scratch::PointSourceOffset, Scratch::StateGradientOffset + Scratch::StateGradientSize);
   validateEquals(Scratch::Size, Scratch::PointSourceOffset + Scratch::PointSourceSize);
 }
@@ -1408,8 +1408,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::testATermTheSolverLacksHasZeroEx
   validate(not Bare::EvaluateFlux);
   validate(not Bare::AccumulatesFlux);
   validate(not Bare::AccumulatesSource);
-  validateEquals(Bare::Scratch::SourceSize, 0);
-  validateEquals(Bare::Scratch::TimeAveragedSourceSize, 0);
   validateEquals(Bare::Scratch::StateGradientSize, 0);
   validateEquals(Bare::Scratch::PointSourceSize, 0);
   validate(Bare::Scratch::Size < Full::Scratch::Size);
@@ -1499,16 +1497,10 @@ exahype2::dg::ader::tests::LinearPredictorTest::
       );
     }
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      validateNumericalEqualsWithParams2(
-        scratch[ProfileScratch::TimeAveragedSourceOffset + cellNode * UnknownStride + unknown],
-        LinearSourceRate * averagedState[cellNode * NumberOfData + unknown],
-        cellNode,
-        unknown
-      );
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         const double expectedFlux = (axis == 0) ? averagedFlux[unknown] : 0.0;
         validateNumericalEqualsWithParams3(
-          scratch[ProfileScratch::TimeAveragedFluxOffset + axis * AxisStride + cellNode * UnknownStride + unknown],
+          scratch[ProfileScratch::FluxOffset + axis * AxisStride + cellNode * UnknownStride + unknown],
           expectedFlux,
           axis,
           cellNode,
