@@ -55,6 +55,8 @@ private:
   void testInvalidEigenvalueAccumulation();
   void testReduceMaxEigenvaluesOverTheCellNodes();
   void testTheReductionKeepsTheLargerAndAnInvalidObservation();
+  void testTheStateInterpolationFillsTheCoarseSideOfTheFineFaces();
+  void testTheStateRestrictionFillsTheFineSideOfTheCoarseFace();
   void testCopyKeepsEveryValue();
   void testInterpolationFromTheParentReproducesALinearState();
   void testRestrictionFromTheChildrenReproducesALinearState();

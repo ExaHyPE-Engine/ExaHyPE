@@ -54,7 +54,9 @@ namespace {
   void appendNothing([[maybe_unused]] const std::vector<exahype2::runner::SolverStatistic>& statistics) {}
 } // namespace
 
-/** A solver with a fixed rule, which reports no wave speed. */
+/**
+ * A solver with a fixed rule, which reports no wave speed.
+ */
 struct exahype2::runner::tests::StatisticsTest::PlainSolver final {
   PlainSolver() {
     timeStepping.advanceTimeStamp(0.25);
@@ -68,7 +70,9 @@ struct exahype2::runner::tests::StatisticsTest::PlainSolver final {
   };
 };
 
-/** A solver with an adaptive rule and a limiter. */
+/**
+ * A solver with an adaptive rule and a limiter.
+ */
 struct exahype2::runner::tests::StatisticsTest::LimitedSolver final {
   static constexpr bool HasLimiter = true;
   LimitedSolver() {
@@ -87,7 +91,9 @@ struct exahype2::runner::tests::StatisticsTest::LimitedSolver final {
   long troubledCells{0};
 };
 
-/** A solver with an adaptive rule and no limiter, which offers a troubled cell count all the same. */
+/**
+ * A solver with an adaptive rule and no limiter, which offers a troubled cell count all the same.
+ */
 struct exahype2::runner::tests::StatisticsTest::UnlimitedSolver final {
   static constexpr bool HasLimiter = false;
   UnlimitedSolver() {
@@ -120,7 +126,6 @@ exahype2::runner::tests::StatisticsTest::run() {
   testMethod(testASolverWithEigenvalueAndTroubledCellsAppendsBoth);
   testMethod(testASolverWithoutLimiterReportsNoTroubledCells);
   testMethod(testAdditionalStatisticsFollowTheMeshWidth);
-  testMethod(testParticleStatisticsCountTheParticles);
 }
 
 /**
@@ -133,7 +138,7 @@ exahype2::runner::tests::StatisticsTest::testTheGlobalViewSumsAndBoundsTheRankSt
   const auto& local      = peano4::Spacetree::getInstance().getStatistics();
   auto&       statistics = exahype2::runner::getGlobalStatistics();
   statistics.setLocalSolverBytes(100 + rank, 7 + rank);
-  statistics.setLocalCellDoFs(64 * (rank + 1));
+  statistics.setLocalCellUpdates(8 * (rank + 1), 64 * (rank + 1));
   statistics.synchronise(true);
 
   const auto cells             = static_cast<std::uint64_t>(local.numberOfCells);
@@ -154,6 +159,7 @@ exahype2::runner::tests::StatisticsTest::testTheGlobalViewSumsAndBoundsTheRankSt
   validateEquals(statistics.getGlobalTreeBytes(), getGlobalSumOf(local.treeBytes));
   validateEquals(statistics.getGlobalSolverHostBytes(), getGlobalSumOf(100 + rank));
   validateEquals(statistics.getGlobalSolverDeviceBytes(), getGlobalSumOf(7 + rank));
+  validateEquals(statistics.getGlobalNumberOfSolverCells(), getGlobalSumOf(8 * (rank + 1)));
   validateEquals(statistics.getGlobalNumberOfCellDoFs(), getGlobalSumOf(64 * (rank + 1)));
   validateEquals(
     static_cast<std::uint64_t>(statistics.getGlobalMinimumLevel()),
@@ -178,7 +184,9 @@ exahype2::runner::tests::StatisticsTest::testTheGlobalViewSumsAndBoundsTheRankSt
   validate(statistics.getGlobalProcessMemoryUsageInBytes() > 0);
 }
 
-/** A snapshot fills the CPU memory rows, and the GPU memory rows only in a build with a GPU backend. */
+/**
+ * A snapshot fills the CPU memory rows, and the GPU memory rows only in a build with a GPU backend.
+ */
 void
 exahype2::runner::tests::StatisticsTest::testSnapshotFillsTheMemoryRowsOfTheBuild() {
   using GridSnapshot = exahype2::runner::GridSnapshot;
@@ -206,7 +214,9 @@ exahype2::runner::tests::StatisticsTest::testSnapshotFillsTheMemoryRowsOfTheBuil
 #endif
 }
 
-/** A filled row renders as value, suffix and bracketed detail under its section; an empty row stays out. */
+/**
+ * A filled row renders as value, suffix and bracketed detail under its section; an empty row stays out.
+ */
 void
 exahype2::runner::tests::StatisticsTest::testDescribeGridSnapshotRendersFilledRows() {
   using GridSnapshot = exahype2::runner::GridSnapshot;
@@ -223,7 +233,9 @@ exahype2::runner::tests::StatisticsTest::testDescribeGridSnapshotRendersFilledRo
   validateEquals(lines[4], std::string("    Free    4.29 GiB of 15.56 GiB"));
 }
 
-/** describeGridTransition() writes an arrow for a changed value and the value alone for an unchanged one. */
+/**
+ * describeGridTransition() writes an arrow for a changed value and the value alone for an unchanged one.
+ */
 void
 exahype2::runner::tests::StatisticsTest::testDescribeGridTransitionMarksChangedValuesOnly() {
   using GridSnapshot = exahype2::runner::GridSnapshot;
@@ -245,7 +257,9 @@ exahype2::runner::tests::StatisticsTest::testDescribeGridTransitionMarksChangedV
   validateEquals(lines[5], std::string("    Free             4.29 GiB → 4.10 GiB of 15.56 GiB"));
 }
 
-/** The free memory continues the line of the used memory below the grid and the solver memory. */
+/**
+ * The free memory continues the line of the used memory below the grid and the solver memory.
+ */
 void
 exahype2::runner::tests::StatisticsTest::testUsedAndFreeMemoryFormOneLine() {
   using GridSnapshot = exahype2::runner::GridSnapshot;
@@ -319,7 +333,9 @@ exahype2::runner::tests::StatisticsTest::testASolverWithEigenvalueAndTroubledCel
   validateEquals(troubled.second[3].count, 5L);
 }
 
-/** A solver without a limiter reports no troubled cells, although it offers the count. */
+/**
+ * A solver without a limiter reports no troubled cells, although it offers the count.
+ */
 void
 exahype2::runner::tests::StatisticsTest::testASolverWithoutLimiterReportsNoTroubledCells() {
   const UnlimitedSolver solver;
@@ -341,13 +357,4 @@ exahype2::runner::tests::StatisticsTest::testAdditionalStatisticsFollowTheMeshWi
   validateEquals(statistics.second.size(), 3U);
   validateEquals(statistics.second[2].label, std::string("Tracers"));
   validateEquals(statistics.second[2].count, 3L);
-}
-
-void
-exahype2::runner::tests::StatisticsTest::testParticleStatisticsCountTheParticles() {
-  const auto statistics = exahype2::runner::makeParticleStatistics("Tracers", 42);
-  validateEquals(statistics.first, std::string("Tracers"));
-  validateEquals(statistics.second.size(), 1U);
-  validateEquals(statistics.second[0].label, std::string("Particles"));
-  validateEquals(statistics.second[0].count, 42L);
 }

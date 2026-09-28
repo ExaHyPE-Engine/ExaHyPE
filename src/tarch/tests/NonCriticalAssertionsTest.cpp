@@ -12,7 +12,9 @@ tarch::tests::NonCriticalAssertionsTest::run() {
   testMethod(testNoAssertionIsNotAdopted);
 }
 
-/** Adopting the rank -1 leaves the non-critical assertion rank at -1 and raises no violation. */
+/**
+ * Adopting the rank -1 leaves the non-critical assertion rank at -1 and raises no violation.
+ */
 void
 tarch::tests::NonCriticalAssertionsTest::testNoAssertionIsNotAdopted() {
   tarch::adoptNonCriticalAssertionRank(-1);

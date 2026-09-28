@@ -16,7 +16,9 @@ namespace exahype2::plotter {
   struct DataField;
   class PatchPlotter;
 
-  /** Corner positions of a plotted quadrangle and hexahedron in the order the plot file expects. */
+  /**
+   * Corner positions of a plotted quadrangle and hexahedron in the order the plot file expects.
+   */
   constexpr std::array<std::array<int, 3>, 8> CellCorners{
     {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}}
   };
@@ -91,7 +93,9 @@ public:
 private:
   static constexpr const char* OutputSubdirectory = "patch/";
 
-  /** A volume corner of a patch and its index among the corners on the patch faces or among the interior corners. */
+  /**
+   * A volume corner of a patch and its index among the corners on the patch faces or among the interior corners.
+   */
   struct PatchCorner final {
     bool onFace{false};
     int  index{0};

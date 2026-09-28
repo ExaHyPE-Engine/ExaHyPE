@@ -58,7 +58,7 @@ if project.dimensions != 3:
 # solver owns the slab of one finest cell below the upper domain boundary.
 solver_interface_plane = (
     "(DomainOffset(1) + DomainSize(1) - DomainSize(1)"
-    " / std::pow(peano4::sfc::ActiveCurve::SubdivisionFactor, ::exahype2::runner::RuntimeParameters::getInstance().getGridLevels()))"
+    " / std::pow(peano4::sfc::ActiveCurve::SubdivisionFactor, RuntimeParameters::getGridLevels()))"
 )
 
 hpSolver = exahype2.dg.ader.Solver(
@@ -99,7 +99,6 @@ for theSolver in [hpSolver, lpSolver]:
 
     theSolver.add_includes(
         "applications/exaseis/riemannSolvers/ElasticRiemannSolver.h",
-        "exahype2/runner/RuntimeParameters.h",
         "peano4/sfc/ActiveCurve.h",
     )
 

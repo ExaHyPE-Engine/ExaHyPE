@@ -17,7 +17,9 @@ namespace {
   constexpr double WaveSpeed      = 3.0;
   constexpr double UntouchedValue = -7.0;
 
-  /** Returns the wave speed at the time stamp after the step of the tests only. */
+  /**
+   * Returns the wave speed at the time stamp after the step of the tests only.
+   */
   struct WaveSpeedSolver final {
     static constexpr int DGOrder                    = 1;
     static constexpr int NumberOfUnknowns           = 1;
@@ -64,7 +66,9 @@ namespace {
     return tables;
   }
 
-  /** Returns the cell node that carries the given face node at the given position along the normal. */
+  /**
+   * Returns the cell node that carries the given face node at the given position along the normal.
+   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     int lowerAxesStride = 1;
     for (int axis = 0; axis < direction; axis++) {
@@ -75,7 +79,9 @@ namespace {
     return (higherAxesIndex * NodesPerAxis + normalIndex) * lowerAxesStride + lowerAxesIndex;
   }
 
-  /** Returns the index of the first value of a cell node in the cell state. */
+  /**
+   * Returns the index of the first value of a cell node in the cell state.
+   */
   int getStateIndexOf(const int cellNode) { return cellNode * CellLayout::NumberOfData; }
 
   double getCellStateEntry(const int cellNode) { return 1.0 + 0.25 * cellNode; }
@@ -90,7 +96,9 @@ namespace {
 
   tarch::la::Vector<DIMENSIONS, double> getCellSize() { return tarch::la::Vector<DIMENSIONS, double>(CellExtent); }
 
-  /** Holds the state of one cell and the flux differences its faces contribute. */
+  /**
+   * Holds the state of one cell and the flux differences its faces contribute.
+   */
   struct Cell final {
     double        faceFluxes[peano4::FacesPerCell][FluxElementsPerFace]{};
     double        cellState[CellStateSize]{};
@@ -135,7 +143,9 @@ namespace {
     }
   }
 
-  /** Runs the correction of one cell, counts the postprocessing calls and returns the wave-speed maxima. */
+  /**
+   * Runs the correction of one cell, counts the postprocessing calls and returns the wave-speed maxima.
+   */
   template <bool ReportEigenvalues>
   exahype2::dg::MaxEigenvalueStatistics correct(Cell& cell, const Tables& tables, int& postprocessingCalls) {
     return exahype2::dg::ader::Corrector<WaveSpeedSolver, double>::correct<ReportEigenvalues>(
@@ -165,7 +175,9 @@ exahype2::dg::ader::tests::CorrectorTest::run() {
   testMethod(testTheCorrectionReportsTheWaveSpeedsOfTheUpdatedState);
 }
 
-/** The face integrals of the two faces of every axis reach the nodes those faces carry. */
+/**
+ * The face integrals of the two faces of every axis reach the nodes those faces carry.
+ */
 void
 exahype2::dg::ader::tests::CorrectorTest::testTheFaceIntegralsReachTheCellState() {
   const Tables tables = getTables();
@@ -190,7 +202,9 @@ exahype2::dg::ader::tests::CorrectorTest::testTheFaceIntegralsReachTheCellState(
   }
 }
 
-/** Faces whose flux differences are zero leave every node of the cell untouched bitwise. */
+/**
+ * Faces whose flux differences are zero leave every node of the cell untouched bitwise.
+ */
 void
 exahype2::dg::ader::tests::CorrectorTest::testZeroFluxDifferencesLeaveTheCellStateBitwise() {
   const Tables tables = getTables();
@@ -213,7 +227,9 @@ exahype2::dg::ader::tests::CorrectorTest::testZeroFluxDifferencesLeaveTheCellSta
   }
 }
 
-/** The correction evaluates the wave speeds of the updated state at the updated time stamp. */
+/**
+ * The correction evaluates the wave speeds of the updated state at the updated time stamp.
+ */
 void
 exahype2::dg::ader::tests::CorrectorTest::testTheCorrectionReportsTheWaveSpeedsOfTheUpdatedState() {
   const Tables tables = getTables();

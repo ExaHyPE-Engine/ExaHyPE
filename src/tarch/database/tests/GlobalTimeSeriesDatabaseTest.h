@@ -22,6 +22,7 @@ public:
 private:
   void testAppendsChronologicallyWithoutDuplication();
   void testClearRewritesFileFromScratch();
+  void testARepeatedTimeStampOverwritesTheRowInTheFile();
   void testTimeDeltaThrottlesSnapshots();
   void testASnapshotIsDueForTheNewestTimeStampAndAfterTheTimeDelta();
   void testADatabaseWithoutFileNameWritesNoFile();

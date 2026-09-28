@@ -52,7 +52,9 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(cons
   reduceMeshWidths(partition);
 }
 
-/** Writes the initial condition into every patch, fills the faces and votes on the refinement. */
+/**
+ * Writes the initial condition into every patch, fills the faces and votes on the refinement.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
@@ -198,7 +200,9 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   );
 }
 
-/** Copies the solution to the host and writes one snapshot; every rank calls this at the same time. */
+/**
+ * Copies the solution to the host and writes one snapshot; every rank calls this at the same time.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
@@ -218,7 +222,9 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
   );
 }
 
-/** Frees the pools, the exchanges and every device buffer, so nothing outlives the runtime. */
+/**
+ * Frees the pools, the exchanges and every device buffer, so nothing outlives the runtime.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
@@ -260,7 +266,9 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getSolution()
   return _solution;
 }
 
-/** Returns the solution the last time step read, which holds until the next time step swaps the pools. */
+/**
+ * Returns the solution the last time step read, which holds until the next time step swaps the pools.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 const typename exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::Patches&
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getPreviousSolution() const {
@@ -276,14 +284,18 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedB
     + tarch::AllocatedBytes::onHost(tarch::getAllocatedBytesOf(_solutionOnHost));
 }
 
-/** Returns the values of one patch. */
+/**
+ * Returns the values of one patch.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 int
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getNumberOfDoFs() const {
   return _solution.getChunkSize();
 }
 
-/** Fills the outer half of every boundary face from the inner half through the boundary conditions. */
+/**
+ * Fills the outer half of every boundary face from the inner half through the boundary conditions.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::applyBoundaryConditions(
@@ -301,7 +313,9 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::applyBoundary
   );
 }
 
-/** Copies the boundary layers of every patch into its own half of every face of the cell. */
+/**
+ * Copies the boundary layers of every patch into its own half of every face of the cell.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::projectOntoFaces(
@@ -374,7 +388,9 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureMaxEig
   }
 }
 
-/** Records the error norms of the solution when a snapshot is due at the time stamp. */
+/**
+ * Records the error norms of the solution when a snapshot is due at the time stamp.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureError(const peano4::Partition& partition) {
@@ -398,7 +414,9 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureError(
   }
 }
 
-/** Reduces the finite-volume widths of the cells over all ranks. */
+/**
+ * Reduces the finite-volume widths of the cells over all ranks.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::reduceMeshWidths(

@@ -53,7 +53,9 @@ peano4::MigrationExchange<T>::migrate(Pool& pool, const peano4::Regrid& regrid, 
   receiveTransfers(pool);
 }
 
-/** Gathers the chunks of the sent cells into one send buffer and posts one message per rank of the transfers. */
+/**
+ * Gathers the chunks of the sent cells into one send buffer and posts one message per rank of the transfers.
+ */
 template <typename T>
 template <typename Transfer>
 void
@@ -131,7 +133,9 @@ peano4::MigrationExchange<T>::postTransfers(
   }
 }
 
-/** Waits for every message postTransfers() posted and copies every received chunk into its slot. */
+/**
+ * Waits for every message postTransfers() posted and copies every received chunk into its slot.
+ */
 template <typename T>
 void
 peano4::MigrationExchange<T>::receiveTransfers(Pool& pool) {
@@ -153,7 +157,9 @@ peano4::MigrationExchange<T>::receiveTransfers(Pool& pool) {
   }
 }
 
-/** Frees every buffer; the tag stays reserved for the next migrate. */
+/**
+ * Frees every buffer; the tag stays reserved for the next migrate.
+ */
 template <typename T>
 void
 peano4::MigrationExchange<T>::release() {
@@ -171,7 +177,9 @@ peano4::MigrationExchange<T>::getTag() const noexcept {
   return _tag;
 }
 
-/** Returns the bytes of the slot lists and both transfer buffers. */
+/**
+ * Returns the bytes of the slot lists and both transfer buffers.
+ */
 template <typename T>
 INLINE_METHOD tarch::AllocatedBytes
 peano4::MigrationExchange<T>::getAllocatedBytes() const noexcept {

@@ -41,7 +41,9 @@ namespace {
     return result;
   }
 
-  /** Slots of one reduction record, in the three contiguous segments the operation sums, minimises and maximises. */
+  /**
+   * Slots of one reduction record, in the three contiguous segments the operation sums, minimises and maximises.
+   */
   enum SumSlot {
     SumOfCells,
     SumOfRefinedCells,
@@ -53,6 +55,7 @@ namespace {
     SumOfTreeBytes,
     SumOfSolverHostBytes,
     SumOfSolverDeviceBytes,
+    SumOfSolverCells,
     SumOfCellDoFs,
     SumOfProcessMemory,
     SumOfTotalMemory,
@@ -224,10 +227,14 @@ exahype2::runner::GlobalStatistics::setLocalSolverBytes(const std::size_t hostBy
   _localSolverDeviceBytes = static_cast<std::uint64_t>(deviceBytes);
 }
 
-/** Records the degrees of freedom on the cells of this rank; synchronise() sums them over the ranks. */
+/**
+ * Records the cells of this rank that hold solver data and their degrees of freedom, both summed
+ * over the solvers; synchronise() sums them over the ranks.
+ */
 void
-exahype2::runner::GlobalStatistics::setLocalCellDoFs(const std::uint64_t cellDoFs) {
-  _localCellDoFs = cellDoFs;
+exahype2::runner::GlobalStatistics::setLocalCellUpdates(const std::uint64_t solverCells, const std::uint64_t cellDoFs) {
+  _localSolverCells = solverCells;
+  _localCellDoFs    = cellDoFs;
 }
 
 /**
@@ -282,6 +289,7 @@ exahype2::runner::GlobalStatistics::synchronise(const bool refreshMemory) {
   sums[SumOfTreeBytes]            = static_cast<std::uint64_t>(statistics.treeBytes);
   sums[SumOfSolverHostBytes]      = _localSolverHostBytes;
   sums[SumOfSolverDeviceBytes]    = _localSolverDeviceBytes;
+  sums[SumOfSolverCells]          = _localSolverCells;
   sums[SumOfCellDoFs]             = _localCellDoFs;
   sums[SumOfProcessMemory]        = _localProcessMemoryUsageInBytes;
   sums[SumOfTotalMemory]          = isNodeMaster ? _localTotalMemoryInBytes : 0;
@@ -323,6 +331,7 @@ exahype2::runner::GlobalStatistics::synchronise(const bool refreshMemory) {
   _globalTreeBytes                 = sums[SumOfTreeBytes];
   _globalSolverHostBytes           = sums[SumOfSolverHostBytes];
   _globalSolverDeviceBytes         = sums[SumOfSolverDeviceBytes];
+  _globalNumberOfSolverCells       = sums[SumOfSolverCells];
   _globalNumberOfCellDoFs          = sums[SumOfCellDoFs];
   _globalProcessMemoryUsageInBytes = sums[SumOfProcessMemory];
   _globalTotalMemoryInBytes        = sums[SumOfTotalMemory];
@@ -367,7 +376,9 @@ exahype2::runner::GlobalStatistics::getGlobalMaxRankBoundaryFaces() const {
   return _globalMaxRankBoundaryFaces;
 }
 
-/** Returns the percentage of the faces of the grid that lie on a rank boundary. */
+/**
+ * Returns the percentage of the faces of the grid that lie on a rank boundary.
+ */
 double
 exahype2::runner::GlobalStatistics::getGlobalRankBoundaryFacePercentage() const {
   return _globalNumberOfFaces > 0
@@ -408,6 +419,11 @@ exahype2::runner::GlobalStatistics::getGlobalSolverHostBytes() const {
 std::uint64_t
 exahype2::runner::GlobalStatistics::getGlobalSolverDeviceBytes() const {
   return _globalSolverDeviceBytes;
+}
+
+std::uint64_t
+exahype2::runner::GlobalStatistics::getGlobalNumberOfSolverCells() const {
+  return _globalNumberOfSolverCells;
 }
 
 std::uint64_t
@@ -540,7 +556,9 @@ exahype2::runner::collectGridSnapshot() {
   return snapshot;
 }
 
-/** Renders every row that carries a value under its section title. */
+/**
+ * Renders every row that carries a value under its section title.
+ */
 std::vector<std::string>
 exahype2::runner::describeGridSnapshot(const exahype2::runner::GridSnapshot& snapshot) {
   std::array<std::string, GridSnapshot::RowCount> texts{};

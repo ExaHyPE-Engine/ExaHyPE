@@ -266,7 +266,8 @@ struct exahype2::dg::limiting::OpenInitialStatuses final {
 
 /**
  * Writes the identity of every face reduction into both halves of every face, so the outer half
- * of a boundary face adds nothing to a cell: The status Regular and empty extrema.
+ * of a boundary face adds nothing to a cell: The status Regular and empty extrema. Every value of
+ * the subcell halo of the face becomes zero.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::ClearFaces final {
@@ -276,11 +277,14 @@ struct exahype2::dg::limiting::ClearFaces final {
 
   typename StatusPool::View faceStatuses{};
   typename CellPool::View   extremaFaces{};
+  typename CellPool::View   subcellHalo{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int face) const;
 };
 
-/** Copies the solution of every cell into its previous solution and opens its status for the step. */
+/**
+ * Copies the solution of every cell into its previous solution and opens its status for the step.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::OpenStep final {
   using Kernel     = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
@@ -295,7 +299,9 @@ struct exahype2::dg::limiting::OpenStep final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Writes the observable extrema of the previous solution of every cell into its reference extrema. */
+/**
+ * Writes the observable extrema of the previous solution of every cell into its reference extrema.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::ReduceReferenceExtrema final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
@@ -310,7 +316,9 @@ struct exahype2::dg::limiting::ReduceReferenceExtrema final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Copies the reference extrema of every cell into its own halves of its two faces along axis. */
+/**
+ * Copies the reference extrema of every cell into its own halves of its two faces along axis.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::WriteExtremaOntoFaces final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
@@ -324,7 +332,9 @@ struct exahype2::dg::limiting::WriteExtremaOntoFaces final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Widens the reference extrema of every listed cell by the extrema its two face neighbours along axis wrote. */
+/**
+ * Widens the reference extrema of every listed cell by the extrema its two face neighbours along axis wrote.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::MergeNeighbourExtrema final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
@@ -396,7 +406,9 @@ struct exahype2::dg::limiting::SubcellSchemeCounts final {
   int troubledCells{0};
 };
 
-/** Adds the cell counts of two work items. */
+/**
+ * Adds the cell counts of two work items.
+ */
 struct exahype2::dg::limiting::SubcellSchemeCountsReduction final {
   using ValueType = exahype2::dg::limiting::SubcellSchemeCounts;
 
@@ -444,7 +456,9 @@ struct exahype2::dg::limiting::ListCellsOnSubcellScheme final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int block) const;
 };
 
-/** Copies the coarse-side status half of the coarse face of a level jump onto its fine faces. */
+/**
+ * Copies the coarse-side status half of the coarse face of a level jump onto its fine faces.
+ */
 struct exahype2::dg::limiting::InterpolateStatusHalves final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
@@ -453,7 +467,9 @@ struct exahype2::dg::limiting::InterpolateStatusHalves final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
-/** Writes the most limited fine-side status of the fine faces of a level jump onto its coarse face. */
+/**
+ * Writes the most limited fine-side status of the fine faces of a level jump onto its coarse face.
+ */
 struct exahype2::dg::limiting::RestrictStatusHalves final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
@@ -462,7 +478,9 @@ struct exahype2::dg::limiting::RestrictStatusHalves final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
-/** Copies the coarse-side extrema half of the coarse face of a level jump onto its fine faces. */
+/**
+ * Copies the coarse-side extrema half of the coarse face of a level jump onto its fine faces.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::InterpolateExtremaHalves final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
@@ -473,7 +491,9 @@ struct exahype2::dg::limiting::InterpolateExtremaHalves final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
-/** Writes the union of the fine-side extrema of the fine faces of a level jump onto its coarse face. */
+/**
+ * Writes the union of the fine-side extrema of the fine faces of a level jump onto its coarse face.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::RestrictExtremaHalves final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;

@@ -62,10 +62,6 @@ class State:
         return self._names
 
     @property
-    def positions(self):
-        return self._positions
-
-    @property
     def plot_description(self):
         return self._plot_description
 

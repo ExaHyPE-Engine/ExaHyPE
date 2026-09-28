@@ -9,14 +9,16 @@ namespace peano4 {
   struct RefinementRequest;
 } // namespace peano4
 
-/** Asks the spacetree to refine or to erase the cell at a level and lattice position. */
+/**
+ * Asks the spacetree to refine or to erase the cell at a level and lattice position.
+ */
 struct peano4::RefinementRequest {
 public:
   enum class RefinementControl : std::uint8_t { Refine = 0, Erase = 1 };
 
-  std::uint8_t refinementControl = static_cast<std::uint8_t>(RefinementControl::Refine);
+  std::uint8_t refinementControl{static_cast<std::uint8_t>(RefinementControl::Refine)};
 
-  std::int32_t level = 0;
+  std::int32_t level{0};
 
   tarch::la::Vector<DIMENSIONS, int> latticeIndex{0};
 

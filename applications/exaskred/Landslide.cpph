@@ -28,7 +28,9 @@ applications::exahype2::exaskred::landslide::sanitiseDryState(
   }
 }
 
-/** Returns the buoyancy-reduced gravity a fully submerged slide feels. */
+/**
+ * Returns the buoyancy-reduced gravity a fully submerged slide feels.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getSubmergedGravity(
   const applications::exahype2::exaskred::landslide::Physics& physics
@@ -56,7 +58,9 @@ applications::exahype2::exaskred::landslide::getEffectiveGravity(
   return isSubmergedByBathymetry<Shortcuts>(Q, physics) ? getSubmergedGravity(physics) : physics.gravity;
 }
 
-/** A face uses the reduced gravity only when both adjacent states are submerged. */
+/**
+ * A face uses the reduced gravity only when both adjacent states are submerged.
+ */
 template <class Shortcuts, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity(
@@ -109,7 +113,7 @@ applications::exahype2::exaskred::landslide::getWaterFrictionDragSourceSpeed(
  * Adds the granular advective and pressure fluxes under the given gravity.
  *
  * The acting gravity is a parameter, so a caller with a static water level and
- * a caller that derives submergence from a resolved water column share one
+ * a caller that derives submergence from a resolved water column call the same
  * flux.
  */
 template <class Shortcuts, int NumberOfUnknowns, typename T>
@@ -205,7 +209,7 @@ applications::exahype2::exaskred::landslide::getFluxEigenvalue(
  *
  * The Voellmy-Salm drag stiffens as the layer thins, so a time step chosen
  * from the flux waves alone can leave the friction update unstable. Scaling
- * the stiffness rate with the cell size folds it into the same admissible
+ * the stiffness rate with the cell size enters it into the same admissible
  * time-step formula the flux eigenvalue feeds.
  */
 template <class Shortcuts, typename T>

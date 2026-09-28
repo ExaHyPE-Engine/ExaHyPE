@@ -354,7 +354,9 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
   }
 }
 
-/** Extrapolates the stage state and its nodal flux onto the faces of the cell. */
+/**
+ * Extrapolates the stage state and its nodal flux onto the faces of the cell.
+ */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::rk::Stage<Derived, ComputePrecision>::projectOntoFaces(

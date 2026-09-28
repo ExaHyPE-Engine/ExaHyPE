@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SpaceFillingCurveTest.h"
 
+#include "peano4/Constants.h"
 #include "peano4/Loop.h"
 #include "peano4/sfc/SpaceFillingCurve.h"
 #include "peano4/sfc/curves/HilbertGrammar.h"
@@ -11,14 +12,6 @@ namespace {
   using Leaf         = std::array<int, DIMENSIONS>;
   using PeanoCurve   = peano4::sfc::SpaceFillingCurve<peano4::sfc::PeanoGrammar>;
   using HilbertCurve = peano4::sfc::SpaceFillingCurve<peano4::sfc::HilbertGrammar>;
-
-  int power(const int base, const int exponent) {
-    int result = 1;
-    for (int i = 0; i < exponent; i++) {
-      result *= base;
-    }
-    return result;
-  }
 
   /**
    * Appends the leaves of a subtree in curve order, with leaf coordinates
@@ -30,7 +23,7 @@ namespace {
       leaves.push_back(origin);
       return;
     }
-    const int childWidth = power(Curve::SubdivisionFactor, depth - 1);
+    const int childWidth = peano4::power(Curve::SubdivisionFactor, depth - 1);
     for (const auto& child : Curve::getChildren(state)) {
       Leaf childOrigin = origin;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -91,7 +84,7 @@ namespace {
       }
       positive[axis] = flagsOfOtherAxes % 2 == 0;
     }
-    const int childWidth = power(3, depth - 1);
+    const int childWidth = peano4::power(3, depth - 1);
     Leaf      counter;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       counter[axis] = positive[axis] ? 0 : 2;
@@ -165,9 +158,9 @@ template <class Curve>
 void
 peano4::sfc::tests::SpaceFillingCurveTest::validateLeafSequenceIsAHamiltonianPath() {
   constexpr int Depth        = 2;
-  const int     cellsPerAxis = power(Curve::SubdivisionFactor, Depth);
+  const int     cellsPerAxis = peano4::power(Curve::SubdivisionFactor, Depth);
   const auto    leaves       = getLeavesOfDepth<Curve>(Depth);
-  validateEquals(static_cast<int>(leaves.size()), power(cellsPerAxis, DIMENSIONS));
+  validateEquals(static_cast<int>(leaves.size()), peano4::power(cellsPerAxis, DIMENSIONS));
   std::vector<bool> visited(leaves.size(), false);
   for (std::size_t leaf = 0; leaf < leaves.size(); leaf++) {
     const int index = linearise(leaves[leaf], cellsPerAxis);

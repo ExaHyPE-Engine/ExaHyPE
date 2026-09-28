@@ -9,10 +9,6 @@
 #include <hip/hip_runtime.h>
 
 namespace tarch::accelerator {
-  hipStream_t deviceStreamCreate();
-  void deviceStreamDestroy(hipStream_t* stream);
-  void deviceStreamSync(hipStream_t stream);
-
   void setDeviceStream(hipStream_t stream);
   hipStream_t getDeviceStream();
 

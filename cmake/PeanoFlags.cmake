@@ -97,10 +97,11 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-contract=on>
-    # GCC fuses operations across statements by default, so two code paths of one kernel
-    # round differently.
+    # GCC, and Clang in the CUDA mode AdaptiveCpp and Kokkos compile through, fuse operations
+    # across statements by default, so two code paths of one kernel round differently.
     $<$<COMPILE_LANG_AND_ID:C,GNU>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ffp-contract=on>
+    $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-ffp-contract=on>
   )
 
   target_compile_options(PeanoOptions INTERFACE

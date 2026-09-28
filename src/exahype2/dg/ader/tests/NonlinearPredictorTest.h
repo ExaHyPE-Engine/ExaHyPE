@@ -8,7 +8,9 @@ namespace exahype2::dg::ader::tests {
   class NonlinearPredictorTest;
 } // namespace exahype2::dg::ader::tests
 
-/** Checks the nonlinear space-time predictor of one cell on the host and on the device. */
+/**
+ * Checks the nonlinear space-time predictor of one cell on the host and on the device.
+ */
 class exahype2::dg::ader::tests::NonlinearPredictorTest final : public tarch::tests::TestCase {
 public:
   NonlinearPredictorTest();

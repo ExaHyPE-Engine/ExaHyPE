@@ -61,7 +61,9 @@ tarch::mpi::tests::DiagnosticsTest::run() {
   testMethod(testTableSurvivesConcurrentChurn);
 }
 
-/** A registered request is found and named, and a cleared one is gone. */
+/**
+ * A registered request is found and named, and a cleared one is gone.
+ */
 void
 tarch::mpi::tests::DiagnosticsTest::testRegisterReportClear() {
   const ScopedTracking tracking;
@@ -75,7 +77,9 @@ tarch::mpi::tests::DiagnosticsTest::testRegisterReportClear() {
   validate(not diagnostics.reportRequest(&registeredRequest, "MPI_Wait", std::source_location::current()));
 }
 
-/** The table loses, duplicates or keeps no entry while two threads register, report and clear disjoint requests. */
+/**
+ * The table loses, duplicates or keeps no entry while two threads register, report and clear disjoint requests.
+ */
 void
 tarch::mpi::tests::DiagnosticsTest::testTableSurvivesConcurrentChurn() {
   const ScopedTracking tracking;

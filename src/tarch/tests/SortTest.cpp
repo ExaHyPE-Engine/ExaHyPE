@@ -13,7 +13,9 @@ tarch::tests::SortTest::run() {
   testMethod(testSortAscendingKeepsEmptyAndSingleEntries);
 }
 
-/** Every prefix of a sequence with repeated, negative and signed-zero entries sorts like std::sort. */
+/**
+ * Every prefix of a sequence with repeated, negative and signed-zero entries sorts like std::sort.
+ */
 void
 tarch::tests::SortTest::testSortAscendingMatchesTheStandardSort() {
   const std::vector<double> sequence{3.5, -1.0, 0.0, 7.25, -1.0, 2.0, -0.0, 1.0e-300, -8.5, 3.5, 4.0, -2.0, 6.0};
@@ -34,7 +36,9 @@ tarch::tests::SortTest::testSortAscendingMatchesTheStandardSort() {
   }
 }
 
-/** An empty range and a range of one entry stay unchanged. */
+/**
+ * An empty range and a range of one entry stay unchanged.
+ */
 void
 tarch::tests::SortTest::testSortAscendingKeepsEmptyAndSingleEntries() {
   tarch::sortAscending(static_cast<double*>(nullptr), 0);

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "exahype2/dg/Basis.h"
-#include "peano4/Constants.h"
 #include "peano4/Partition.h"
 
 namespace exahype2::dg::tests {
@@ -21,7 +20,9 @@ namespace exahype2::dg::tests {
   void fillTransferConstant(double* values);
 } // namespace exahype2::dg::tests
 
-/** The basis of the transfer tests: Two Gauss-Legendre nodes per axis and two values per node. */
+/**
+ * The basis of the transfer tests: Two Gauss-Legendre nodes per axis and two values per node.
+ */
 struct exahype2::dg::tests::TransferSetup final {
   static constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
   static constexpr int ChildrenPerCell   = peano4::ChildrenPerCell;
@@ -34,7 +35,9 @@ struct exahype2::dg::tests::TransferSetup final {
   static const double QuadratureWeights[NodesPerAxis];
 };
 
-/** The transfer operators of the basis in the layout of the generated tables. */
+/**
+ * The transfer operators of the basis in the layout of the generated tables.
+ */
 struct exahype2::dg::tests::TransferOperators final {
   exahype2::dg::AMRMatrices1D<TransferSetup::NodesPerAxis> prolongation;
   exahype2::dg::AMRMatrices1D<TransferSetup::NodesPerAxis> restriction;
@@ -58,7 +61,9 @@ exahype2::dg::tests::fillLinearTransferProfile(double* const values, const int a
   }
 }
 
-/** Writes the constant of every value into every node. */
+/**
+ * Writes the constant of every value into every node.
+ */
 template <int Nodes>
 void
 exahype2::dg::tests::fillTransferConstant(double* const values) {

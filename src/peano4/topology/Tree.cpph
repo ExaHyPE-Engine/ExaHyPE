@@ -139,14 +139,18 @@ peano4::topology::Tree::usesBlockLayout(const int level) const {
   return not _materialisesWholeDomain and level > _spawnLevel and level <= _depth;
 }
 
-/** Returns the number of cells per axis of one spawn-level block on a block level. */
+/**
+ * Returns the number of cells per axis of one spawn-level block on a block level.
+ */
 INLINE_METHOD int
 peano4::topology::Tree::getCellsPerAxisOfBlock(const int level) const {
   assertion(usesBlockLayout(level), level);
   return getCellsPerAxisOfLevel(level) / getCellsPerAxisOfLevel(_spawnLevel);
 }
 
-/** Returns the slot of the materialised block at a spawn-level lattice position, or -1. */
+/**
+ * Returns the slot of the materialised block at a spawn-level lattice position, or -1.
+ */
 INLINE_METHOD int
 peano4::topology::Tree::getBlockSlotAt(const tarch::la::Vector<DIMENSIONS, int>& blockLattice) const {
   const auto spawnCellIndex = static_cast<std::size_t>(getInterleavedIndex(_spawnLevel, blockLattice));
@@ -448,7 +452,9 @@ peano4::topology::Tree::getAdjacentCellOwnerAt(
   return getOwnerOfCellAt(currentLevel, adjacentCellLattice);
 }
 
-/** Returns how many cells around the vertex the local rank owns. */
+/**
+ * Returns how many cells around the vertex the local rank owns.
+ */
 INLINE_METHOD int
 peano4::topology::Tree::getNumberOfLocalAdjacentCellsOfVertexAt(
   const int                                 level,
@@ -502,7 +508,9 @@ peano4::topology::Tree::getTopologyNodeAt(
   return topologyNode;
 }
 
-/** Returns the first rank whose curve interval intersects the cell. */
+/**
+ * Returns the first rank whose curve interval intersects the cell.
+ */
 INLINE_METHOD int
 peano4::topology::Tree::getOwnerOfCellAt(
   const int                                 level,
@@ -555,7 +563,9 @@ peano4::topology::Tree::subtreeTouchesRankAt(
   return rank >= _topologyNodes[topologyNode].firstOwner and rank <= _topologyNodes[topologyNode].lastOwner;
 }
 
-/** Returns whether several ranks own leaves below the spawn-level block. */
+/**
+ * Returns whether several ranks own leaves below the spawn-level block.
+ */
 INLINE_METHOD bool
 peano4::topology::Tree::isSplitBlockAt(const tarch::la::Vector<DIMENSIONS, int>& blockLattice) const {
   if (_topologyNodes.empty()) {

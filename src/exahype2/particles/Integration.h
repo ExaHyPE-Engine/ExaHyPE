@@ -5,7 +5,7 @@
 #include "exahype2/particles/Forces.h"
 #include "exahype2/particles/ParticleSet.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
 TARGET_DECLARE

@@ -29,7 +29,9 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::sampleInitialC
   );
 }
 
-/** Averages the nodal polynomial of a cell onto its subcells, every axis through the same matrix. */
+/**
+ * Averages the nodal polynomial of a cell onto its subcells, every axis through the same matrix.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -200,7 +202,9 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::forEachSubcell
   });
 }
 
-/** Runs the finite-volume scheme of the given reconstruction on one subgrid. */
+/**
+ * Runs the finite-volume scheme of the given reconstruction on one subgrid.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename Reconstruct, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -227,7 +231,9 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::advanceSubcell
   ));
 }
 
-/** Projects the subcell averages of a cell back onto its nodes, every axis through the same matrix. */
+/**
+ * Projects the subcell averages of a cell back onto its nodes, every axis through the same matrix.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -386,6 +392,22 @@ exahype2::dg::limiting::ProjectSubgridsOntoFaces<Derived, StoragePrecision, Comp
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int entry
+) const {
+  const int  face      = boundaryConditions.boundaryFaces[entry];
+  const int  lowerCell = boundaryConditions.partition.getFaceCell(face, 0);
+  const int  slot      = lowerCell >= 0 ? lowerCell : boundaryConditions.partition.getFaceCell(face, 1);
+  const auto status    = static_cast<exahype2::dg::limiting::LimiterStatus>(
+    statuses.getChunk(slot)[static_cast<int>(exahype2::dg::limiting::StatusEntry::Status)]
+  );
+  if (status != exahype2::dg::limiting::LimiterStatus::Regular) {
+    boundaryConditions(entry);
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int                              entry,
   exahype2::dg::MaxEigenvalueStatistics& accumulator
@@ -453,7 +475,9 @@ exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecis
   Kernel::Subgrid::restrictPatch(children, target);
 }
 
-/** Returns the subgrid a cell on the subcell scheme holds, or writes the projection of its nodes into projection. */
+/**
+ * Returns the subgrid a cell on the subcell scheme holds, or writes the projection of its nodes into projection.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*
 exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>::getSubgrid(

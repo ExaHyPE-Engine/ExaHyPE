@@ -51,7 +51,9 @@ tarch::plotter::tests::FormatTest::testTheDefaultFormatIsAvailable() {
   validateEquals(defaultIsVtkhdf, hdf5Available);
 }
 
-/** Every available format hands out a file writer and a time series writer. */
+/**
+ * Every available format hands out a file writer and a time series writer.
+ */
 void
 tarch::plotter::tests::FormatTest::testTheWritersOfAnAvailableFormatExist() {
   const std::string directory = (tarch::tests::getWritableTestDirectory() / "FormatTest").string() + "/";

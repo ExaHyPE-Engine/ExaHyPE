@@ -4,7 +4,9 @@
 #include "tarch/Assertions.h"
 
 TARGET_DECLARE
-/** Adds a finite double exactly. */
+/**
+ * Adds a finite double exactly.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tarch::la::ExactAccumulator::add(const double value) {
   assertion(std::isfinite(value));
@@ -31,7 +33,9 @@ tarch::la::ExactAccumulator::add(const double value) {
   _limbs[limb + 2] += sign * high;
 }
 
-/** Adds the exact sum of other and propagates carries through both accumulators. */
+/**
+ * Adds the exact sum of other and propagates carries through both accumulators.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tarch::la::ExactAccumulator::merge(const tarch::la::ExactAccumulator& other) {
   std::int64_t leftCarry  = 0;
@@ -66,7 +70,7 @@ tarch::la::ExactAccumulator::round() const {
  * Returns the running sum divided by the positive divisor, rounded to the
  * nearest double with ties to even. The magnitude of the exact sum is divided
  * limb by limb from the top and the remainder of that division feeds the
- * sticky bit, so the result is the correctly rounded quotient and a sum of
+ * guard and sticky bits, so the result is the correctly rounded quotient and a sum of
  * divisor copies of one value returns that value bitwise.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -109,14 +113,20 @@ tarch::la::ExactAccumulator::roundQuotient(const int divisor) const {
     return std::bit_cast<double>(signField | magnitudeBits);
   }
 
+  // A quotient below 2^64 units takes its guard bit from the first digit below the unit.
+  const auto fractionDigit     = static_cast<std::uint64_t>((remainder << BitsPerLimb) / divisor);
+  const auto fractionRemainder = (remainder << BitsPerLimb) % divisor;
+
   const auto topDigit      = static_cast<std::uint64_t>(digits[topLimb]);
-  const auto digitBelow    = topLimb >= 1 ? static_cast<std::uint64_t>(digits[topLimb - 1]) : 0;
-  const auto digitFurther  = topLimb >= 2 ? static_cast<std::uint64_t>(digits[topLimb - 2]) : 0;
+  const auto digitBelow    = topLimb >= 1 ? static_cast<std::uint64_t>(digits[topLimb - 1]) : fractionDigit;
+  const auto digitFurther  = topLimb >= 2 ? static_cast<std::uint64_t>(digits[topLimb - 2])
+    : topLimb == 1                        ? fractionDigit
+                                          : 0;
   const auto leadingZeros  = leadingZerosOfDigit(topDigit);
   const auto exponentOfMsb = topLimb * BitsPerLimb + (BitsPerLimb - 1 - leadingZeros) - 1074;
   const auto mantissaBits  = exponentOfMsb + 1075 < 53 ? exponentOfMsb + 1075 : 53;
 
-  auto remainderIsNonZero = remainder != 0;
+  auto remainderIsNonZero = topLimb >= 2 ? remainder != 0 : fractionRemainder != 0;
   for (int limb = 0; limb < topLimb - 2; limb++) {
     remainderIsNonZero = remainderIsNonZero or digits[limb] != 0;
   }

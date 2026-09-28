@@ -54,7 +54,9 @@ exahype2::TimeStepping::getTimeStepSizeOfLastStep() const {
   return _timeStepSizeOfLastStep;
 }
 
-/** Returns the size the next step takes: The admitted size of an adaptive rule, the fixed size otherwise. */
+/**
+ * Returns the size the next step takes: The admitted size of an adaptive rule, the fixed size otherwise.
+ */
 INLINE_METHOD double
 exahype2::TimeStepping::getTimeStepSizeOfNextStep() const {
   return _rule == Rule::Adaptive ? _admissibleTimeStepSizeOfNextStep : _timeStepSize;

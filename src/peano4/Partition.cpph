@@ -49,7 +49,9 @@ peano4::Partition::getCells(const Dependence dependence) const noexcept {
   return {_cells + first, end - first};
 }
 
-/** Returns the cells of the level with the dependence; a level the partition holds no cell of gives an empty span. */
+/**
+ * Returns the cells of the level with the dependence; a level the partition holds no cell of gives an empty span.
+ */
 INLINE_METHOD tarch::Span<const int>
 peano4::Partition::getCells(const Dependence dependence, const int level) const noexcept {
   assertion(level >= 0, level);
@@ -66,7 +68,9 @@ peano4::Partition::getFaces(const Dependence dependence, const FaceKind kind) co
   return getFaces(dependence, kind, kind);
 }
 
-/** Returns the faces with the dependence whose kind lies between firstKind and lastKind in the order of FaceKind. */
+/**
+ * Returns the faces with the dependence whose kind lies between firstKind and lastKind in the order of FaceKind.
+ */
 INLINE_METHOD tarch::Span<const int>
 peano4::Partition::getFaces(
   const Dependence dependence,
@@ -96,7 +100,9 @@ peano4::Partition::getLevelJumps(const Dependence dependence) const noexcept {
   return {_levelJumps + first, end - first};
 }
 
-/** Returns the level jumps whose coarse face lies on the level; the fine faces lie one level below. */
+/**
+ * Returns the level jumps whose coarse face lies on the level; the fine faces lie one level below.
+ */
 INLINE_METHOD tarch::Span<const peano4::LevelJump>
 peano4::Partition::getLevelJumps(const Dependence dependence, const int level) const noexcept {
   assertion(level >= 0, level);
@@ -199,7 +205,9 @@ peano4::Partition::getFaceLattice(const int face) const noexcept {
   return result;
 }
 
-/** A face sits at the lower border of its lattice cell along its normal and at the centre along every other axis. */
+/**
+ * A face sits at the lower border of its lattice cell along its normal and at the centre along every other axis.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 peano4::Partition::getFaceCentre(const int face, const int axis) const noexcept {
   assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
@@ -217,7 +225,9 @@ peano4::Partition::getFaceCentre(const int face) const noexcept {
   return result;
 }
 
-/** Returns the width of the cells of the face's level; the face spans one such cell along every axis but its normal. */
+/**
+ * Returns the width of the cells of the face's level; the face spans one such cell along every axis but its normal.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 peano4::Partition::getFaceWidth(const int face, const int axis) const noexcept {
   return getWidthOfLevel(getFaceLevel(face), axis);
@@ -255,7 +265,9 @@ peano4::Partition::getDomainOffset() const noexcept {
   return result;
 }
 
-/** Returns the partition whose arrays a kernel reads; a build without a GPU backend returns this one. */
+/**
+ * Returns the partition whose arrays a kernel reads; a build without a GPU backend returns this one.
+ */
 INLINE_METHOD const peano4::Partition&
 peano4::Partition::onDevice() const noexcept {
   return _deviceTwin == nullptr ? *this : *_deviceTwin;

@@ -31,7 +31,9 @@ public:
   static constexpr int MinimumSegmentSizeExponent  = 6;
   static constexpr int SegmentsPerFirstReservation = 16;
 
-  /** Addresses the chunks from a kernel; a copy of it stays valid until the next reserve(). */
+  /**
+   * Addresses the chunks from a kernel; a copy of it stays valid until the next reserve().
+   */
   struct View final {
     T* const* segments{nullptr};
     int       segmentSizeExponent{0};

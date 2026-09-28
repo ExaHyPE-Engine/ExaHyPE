@@ -10,7 +10,9 @@
 namespace {
   constexpr int ElementCount = 1024;
 
-  /** Adds the entry of values at index to the partial sum of the calling thread. */
+  /**
+   * Adds the entry of values at index to the partial sum of the calling thread.
+   */
   struct AddEntry final {
     const int* values{nullptr};
 

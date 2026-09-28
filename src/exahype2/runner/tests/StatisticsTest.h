@@ -34,5 +34,4 @@ private:
   void testASolverWithEigenvalueAndTroubledCellsAppendsBoth();
   void testASolverWithoutLimiterReportsNoTroubledCells();
   void testAdditionalStatisticsFollowTheMeshWidth();
-  void testParticleStatisticsCountTheParticles();
 };

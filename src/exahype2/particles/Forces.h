@@ -4,7 +4,7 @@
 
 #include "exahype2/particles/ParticleSet.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::particles {
@@ -15,10 +15,14 @@ namespace exahype2::particles {
   struct State;
 } // namespace exahype2::particles
 
-/** How a particle reads the fluid state at its position. */
+/**
+ * How a particle reads the fluid state at its position.
+ */
 enum class exahype2::particles::InterpolationScheme : int { None = 0, PiecewiseConstant = 1, PiecewiseLinear = 2 };
 
-/** How a particle advances over one time step. */
+/**
+ * How a particle advances over one time step.
+ */
 enum class exahype2::particles::IntegrationScheme : int {
   Static            = 0,
   ExplicitEuler     = 1,
@@ -29,7 +33,9 @@ enum class exahype2::particles::IntegrationScheme : int {
   RungeKutta4       = 6
 };
 
-/** One bit per force, so a set of forces is the sum of its members. */
+/**
+ * One bit per force, so a set of forces is the sum of its members.
+ */
 enum class exahype2::particles::ForceType : int {
   None            = 0,
   CentralGravity  = 1,
@@ -54,7 +60,9 @@ struct exahype2::particles::Forces final {
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool enables(ForceType force) const;
 };
 
-/** The position, the velocity and the acceleration of one particle. */
+/**
+ * The position, the velocity and the acceleration of one particle.
+ */
 struct exahype2::particles::State final {
   tarch::la::Vector<DIMENSIONS, double> position{};
   tarch::la::Vector<DIMENSIONS, double> velocity{};

@@ -8,7 +8,9 @@ namespace exahype2::fv::tests {
   class KernelsTest;
 } // namespace exahype2::fv::tests
 
-/** Checks the regrid transfer of the finite-volume loops. */
+/**
+ * Checks the regrid transfer of the finite-volume loops.
+ */
 class exahype2::fv::tests::KernelsTest final : public tarch::tests::TestCase {
 public:
   KernelsTest();

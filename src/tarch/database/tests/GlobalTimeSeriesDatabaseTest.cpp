@@ -45,12 +45,15 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::run() {
   }
   testMethod(testAppendsChronologicallyWithoutDuplication);
   testMethod(testClearRewritesFileFromScratch);
+  testMethod(testARepeatedTimeStampOverwritesTheRowInTheFile);
   testMethod(testTimeDeltaThrottlesSnapshots);
   testMethod(testASnapshotIsDueForTheNewestTimeStampAndAfterTheTimeDelta);
   testMethod(testADatabaseWithoutFileNameWritesNoFile);
 }
 
-/** Every added snapshot reaches the file once and in the order of its time stamps. */
+/**
+ * Every added snapshot reaches the file once and in the order of its time stamps.
+ */
 void
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::testAppendsChronologicallyWithoutDuplication() {
   const std::string baseName = getTestFileBaseName("GlobalTimeSeriesDatabaseTest_append");
@@ -80,7 +83,9 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::testAppendsChronologically
   std::filesystem::remove(fileName);
 }
 
-/** A cleared database rewrites its file with the snapshots added after the clear only. */
+/**
+ * A cleared database rewrites its file with the snapshots added after the clear only.
+ */
 void
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::testClearRewritesFileFromScratch() {
   const std::string baseName = getTestFileBaseName("GlobalTimeSeriesDatabaseTest_clear");
@@ -113,7 +118,41 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::testClearRewritesFileFromS
   std::filesystem::remove(fileName);
 }
 
-/** A snapshot within the time delta of the newest one does not reach the file. */
+/**
+ * A repeated time stamp overwrites the newest row in the file.
+ */
+void
+tarch::database::tests::GlobalTimeSeriesDatabaseTest::testARepeatedTimeStampOverwritesTheRowInTheFile() {
+  const std::string baseName = getTestFileBaseName("GlobalTimeSeriesDatabaseTest_replace");
+  const std::string fileName = baseName + ".csv";
+  std::filesystem::remove(fileName);
+
+  {
+    tarch::database::GlobalTimeSeriesDatabase database;
+    database.setOutputFileName(baseName);
+
+    const double firstData[1]       = {1.0};
+    const double secondData[1]      = {2.0};
+    const double replacementData[1] = {3.0};
+    database.addGlobalSnapshot(1.0, 1, firstData);
+    database.addGlobalSnapshot(2.0, 1, secondData);
+    database.addGlobalSnapshot(2.0, 1, replacementData);
+
+    const std::vector<std::string> lines = readNonEmptyLines(fileName);
+    validateEqualsWithParams1(static_cast<int>(lines.size()), 3, fileName);
+    if (lines.size() == 3) {
+      validateNumericalEquals(parseRow(lines[1])[0], 1.0);
+      validateNumericalEquals(parseRow(lines[1])[1], 1.0);
+      validateNumericalEquals(parseRow(lines[2])[0], 2.0);
+      validateNumericalEquals(parseRow(lines[2])[1], 3.0);
+    }
+  }
+  std::filesystem::remove(fileName);
+}
+
+/**
+ * A snapshot within the time delta of the newest one does not reach the file.
+ */
 void
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::testTimeDeltaThrottlesSnapshots() {
   const std::string baseName = getTestFileBaseName("GlobalTimeSeriesDatabaseTest_throttle");
@@ -140,7 +179,9 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::testTimeDeltaThrottlesSnap
   std::filesystem::remove(fileName);
 }
 
-/** A snapshot is due for an empty database, for the newest time stamp and one time delta after it. */
+/**
+ * A snapshot is due for an empty database, for the newest time stamp and one time delta after it.
+ */
 void
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::testASnapshotIsDueForTheNewestTimeStampAndAfterTheTimeDelta() {
   tarch::database::GlobalTimeSeriesDatabase database;
@@ -154,7 +195,9 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::testASnapshotIsDueForTheNe
   validateEquals(database.isSnapshotDue(1.5), true);
 }
 
-/** A database without an output file name keeps its snapshots and creates no file. */
+/**
+ * A database without an output file name keeps its snapshots and creates no file.
+ */
 void
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::testADatabaseWithoutFileNameWritesNoFile() {
   const std::string fileNameOfAnEmptyBaseName = ".csv";

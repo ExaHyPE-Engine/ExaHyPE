@@ -71,7 +71,7 @@ refinement_criterion = """
   constexpr double MaxRadius = 5.0;
 #endif
 
-  const double     startRadius = ::exahype2::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  const double     startRadius = RuntimeParameters::getMaxAdmissiblePatchSize();
   constexpr double GrowthRate  = 1.5;
   constexpr double BandWidth   = 0.05;
 

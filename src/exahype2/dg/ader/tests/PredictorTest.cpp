@@ -35,20 +35,26 @@ namespace {
   constexpr double LinearProductSpeed      = 0.25;
   constexpr double LinearSourceRate        = 0.75;
 
-  /** The scheme constants of a nonlinear generated solver. */
+  /**
+   * The scheme constants of a nonlinear generated solver.
+   */
   struct NonlinearStub : exahype2::dg::ader::tests::StubLayout {
     static constexpr bool   IsLinear                = false;
     static constexpr double PicardResidualTolerance = 1.0e-8;
   };
 
-  /** The scheme constants of a linear generated solver without point sources. */
+  /**
+   * The scheme constants of a linear generated solver without point sources.
+   */
   struct LinearStub : exahype2::dg::ader::tests::StubLayout {
     static constexpr bool IsLinear = true;
   };
 
   struct InertNonlinearSolver final : NonlinearStub {};
 
-  /** Every term moves a profile that is linear along the first axis at a constant rate. */
+  /**
+   * Every term moves a profile that is linear along the first axis at a constant rate.
+   */
   struct TermSolver final : NonlinearStub {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
@@ -131,7 +137,9 @@ namespace {
 
   struct InertLinearSolver final : LinearStub {};
 
-  /** A flux and a product that transport every unknown along its axis. */
+  /**
+   * A flux and a product that transport every unknown along its axis.
+   */
   struct LinearTransportTerms {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
@@ -187,7 +195,9 @@ namespace {
   using TransportScratch       = exahype2::dg::ader::Predictor<TransportSolver, double>::Linear::Scratch;
   using SourceTransportScratch = exahype2::dg::ader::Predictor<SourceTransportSolver, double>::Linear::Scratch;
 
-  /** The face states and face fluxes of one cell, with one pointer per face for the kernels. */
+  /**
+   * The face states and face fluxes of one cell, with one pointer per face for the kernels.
+   */
   struct FaceBuffers final {
     double  state[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfData]{};
     double  flux[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfUnknowns]{};
@@ -202,7 +212,9 @@ namespace {
     }
   };
 
-  /** Returns the cell node that carries the face node of the face along direction in layer normalIndex. */
+  /**
+   * Returns the cell node that carries the face node of the face along direction in layer normalIndex.
+   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     auto nodeIndex       = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
     nodeIndex(direction) = normalIndex;
@@ -242,7 +254,9 @@ namespace {
     }
   }
 
-  /** Returns the rate at which the terms of TermSolver move a profile of the test's slope. */
+  /**
+   * Returns the rate at which the terms of TermSolver move a profile of the test's slope.
+   */
   double getNonlinearStateRate() {
     return -FluxSpeed * Slope + SourceStrength + (DiffusiveSourceStrength - ProductSpeed) * Slope;
   }
@@ -279,7 +293,9 @@ namespace {
     return coefficients;
   }
 
-  /** Runs the prediction of one cell of Derived on a cell at the unit position. */
+  /**
+   * Runs the prediction of one cell of Derived on a cell at the unit position.
+   */
   template <typename Derived>
   int predict(
     const Tables& tables,
@@ -319,7 +335,9 @@ exahype2::dg::ader::tests::PredictorTest::run() {
   testMethod(testTheVolumeIntegralSubtractsTheDivergenceAndAddsTheSource);
 }
 
-/** Compares both faces of every axis against the extrapolation of the expected nodal state. */
+/**
+ * Compares both faces of every axis against the extrapolation of the expected nodal state.
+ */
 void
 exahype2::dg::ader::tests::PredictorTest::validateFaceStates(
   const double* const* const faceStates,
@@ -351,7 +369,9 @@ exahype2::dg::ader::tests::PredictorTest::validateFaceStates(
   }
 }
 
-/** Compares both faces of every axis against the extrapolation of the expected nodal flux of that axis. */
+/**
+ * Compares both faces of every axis against the extrapolation of the expected nodal flux of that axis.
+ */
 void
 exahype2::dg::ader::tests::PredictorTest::validateFaceFluxes(
   const double* const* const faceFluxes,
@@ -384,7 +404,9 @@ exahype2::dg::ader::tests::PredictorTest::validateFaceFluxes(
   }
 }
 
-/** A nonlinear system without terms keeps the cell state, writes it onto every face and converges in one sweep. */
+/**
+ * A nonlinear system without terms keeps the cell state, writes it onto every face and converges in one sweep.
+ */
 void
 exahype2::dg::ader::tests::PredictorTest::testAnInertNonlinearSystemLeavesTheCellAtRest() {
   const Tables tables;
@@ -504,7 +526,9 @@ exahype2::dg::ader::tests::PredictorTest::testTheNonlinearPredictorMovesALinearP
   }
 }
 
-/** A flux that drives the iterate past the bound of the solve reports a diverged cell. */
+/**
+ * A flux that drives the iterate past the bound of the solve reports a diverged cell.
+ */
 void
 exahype2::dg::ader::tests::PredictorTest::testADivergingNonlinearPredictorReportsMinusOne() {
   const Tables tables;
@@ -522,7 +546,9 @@ exahype2::dg::ader::tests::PredictorTest::testADivergingNonlinearPredictorReport
   validateEquals(numberOfSweeps, -1);
 }
 
-/** A linear system without terms keeps the cell state, writes it onto every face and leaves every face flux at zero. */
+/**
+ * A linear system without terms keeps the cell state, writes it onto every face and leaves every face flux at zero.
+ */
 void
 exahype2::dg::ader::tests::PredictorTest::testAnInertLinearSystemLeavesTheCellAtRest() {
   const Tables tables;

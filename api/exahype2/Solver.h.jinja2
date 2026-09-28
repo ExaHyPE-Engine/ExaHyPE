@@ -3,6 +3,12 @@
 #pragma once
 
 #include "{{CLASSNAME}}Base.h"
+{%- if HOST_DEFINED_DEVICE_TERMS %}
+
+#if defined(PEANO_WITH_GPU_BACKEND)
+#error "The kernels of a GPU build call {{HOST_DEFINED_DEVICE_TERMS | join(', ')}} on the device, which requires their definition in {{CLASSNAME}}.cpph; {{CLASSNAME}}.cpp defines them on the host only."
+#endif
+{%- endif %}
 
 namespace {{NAMESPACE | join("::")}} {
   class {{CLASSNAME}};

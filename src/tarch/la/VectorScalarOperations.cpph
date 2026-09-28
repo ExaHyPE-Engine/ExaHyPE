@@ -41,7 +41,9 @@ tarch::la::operator*=(tarch::la::Vector<4, Scalar>& vector, const Scalar& scalar
   return vector;
 }
 
-/** Returns every component of vector minus the largest multiple of h that does not exceed it. */
+/**
+ * Returns every component of vector minus the largest multiple of h that does not exceed it.
+ */
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>
 tarch::la::remainder(const tarch::la::Vector<Size, Scalar>& vector, const double h) {
@@ -333,7 +335,9 @@ tarch::la::operator-(const tarch::la::Vector<4, Scalar>& vector, const Scalar& s
   );
 }
 
-/** Returns whether every component of lhs lies within tolerance of cmp. A NaN component never does. */
+/**
+ * Returns whether every component of lhs lies within tolerance of cmp. A NaN component never does.
+ */
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 tarch::la::equals(const tarch::la::Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {

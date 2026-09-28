@@ -160,7 +160,9 @@ tarch::la::operator*(const tarch::la::Matrix<4, 4, Scalar>& lhs, const tarch::la
   return tarch::la::multiply(lhs, rhs);
 }
 
-/** Compares the entries exactly. A floating-point matrix compares within a tolerance through equals(). */
+/**
+ * Compares the entries exactly. A floating-point matrix compares within a tolerance through equals().
+ */
 template <int Rows, int Cols, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 tarch::la::operator==(
@@ -212,7 +214,9 @@ tarch::la::operator==(const tarch::la::Matrix<4, 4, Scalar>& lhs, const tarch::l
   return true;
 }
 
-/** Returns whether every entry of lhs lies within tolerance of its entry of rhs. A NaN entry never does. */
+/**
+ * Returns whether every entry of lhs lies within tolerance of its entry of rhs. A NaN entry never does.
+ */
 template <int Rows, int Cols, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 tarch::la::equals(

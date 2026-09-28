@@ -86,7 +86,9 @@ applications::exahype2::exaseis::getFaceNodeSide(const Value* const Q, const int
   return side;
 }
 
-/** Writes the components of physicalVector along the local basis of side into localVector. */
+/**
+ * Writes the components of physicalVector along the local basis of side into localVector.
+ */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaseis::rotateIntoLocalBasis(

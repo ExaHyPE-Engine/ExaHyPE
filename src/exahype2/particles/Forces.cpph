@@ -76,7 +76,9 @@ exahype2::particles::getState(const Particle& particle) {
   return state;
 }
 
-/** Writes the velocity and the acceleration of state; the position stays with the caller. */
+/**
+ * Writes the velocity and the acceleration of state; the position stays with the caller.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::particles::setState(Particle& particle, const State& state) {
   setVelocity(particle, state.velocity);

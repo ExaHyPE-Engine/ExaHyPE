@@ -9,7 +9,9 @@ namespace applications::exahype2::exaskred {
   INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getWaterAdmissibilityPhysics();
 } // namespace applications::exahype2::exaskred
 
-/** Returns the physical parameters of the granular layer. */
+/**
+ * Returns the physical parameters of the granular layer.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
 applications::exahype2::exaskred::getSlidePhysics() {
   return {

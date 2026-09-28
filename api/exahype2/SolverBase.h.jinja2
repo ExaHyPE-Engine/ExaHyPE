@@ -37,11 +37,15 @@ public:
   static constexpr std::bitset<DIMENSIONS> PeriodicBoundaries{ {{PERIODIC_BOUNDARIES}}ULL };
 {%- if INITIALISE_PATCHES is defined %}
 
-  /** The initial condition fills every node of a cell in one call. */
+  /**
+   * The initial condition fills every node of a cell in one call.
+   */
   static constexpr bool InitialisesPatches = {{ "true" if INITIALISE_PATCHES else "false" }};
 {%- endif %}
 
-  /** The initial condition runs on the host and the cells are uploaded afterwards. */
+  /**
+   * The initial condition runs on the host and the cells are uploaded afterwards.
+   */
   static constexpr bool InitialisesOnHost = {{ "true" if INITIALISE_ON_HOST else "false" }};
 {%- if NUMBER_OF_DMP_OBSERVABLES is defined and NUMBER_OF_DMP_OBSERVABLES > 0 %}
 
@@ -73,6 +77,7 @@ public:
     const peano4::Regrid&           regrid,
     ::exahype2::RefinementRequests& requests
   );
+  void plot(const peano4::Partition& partition, ::tarch::plotter::Format format, const std::string& outputDirectory);
   void                                  release();
   [[nodiscard]] ::tarch::AllocatedBytes getAllocatedBytes() const;
   void                                  appendTracerStatistics(
@@ -97,6 +102,7 @@ private:
     {{tracer.FORCES.DYNAMIC_VISCOSITY}}
   };
   bool _{{tracer.NAME}}Inserted{false};
+  ::exahype2::plotter::ParticlePlotter _{{tracer.NAME}}Plotter{"{{tracer.NAME}}"};
 {%- if tracer.DATABASE %}
   ::exahype2::particles::TrajectoryDatabase _{{tracer.NAME}}Database{
     {{tracer.DATABASE.POSITION_DELTA}},

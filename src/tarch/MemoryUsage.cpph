@@ -1,7 +1,9 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-/** Returns the heap bytes a vector holds, its unused capacity included. */
+/**
+ * Returns the heap bytes a vector holds, its unused capacity included.
+ */
 template <typename Element>
 INLINE_METHOD std::size_t
 tarch::getAllocatedBytesOf(const std::vector<Element>& elements) {

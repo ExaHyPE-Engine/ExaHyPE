@@ -32,7 +32,9 @@ namespace exahype2::fv {
     { ReconstructionPolicy::HaloSize } -> std::convertible_to<int>;
   };
 
-  /** A time-stepping scheme advances a patch by one time step in NumberOfStages evaluations. */
+  /**
+   * A time-stepping scheme advances a patch by one time step in NumberOfStages evaluations.
+   */
   template <typename TimeSteppingPolicy>
   concept TimeSteppingScheme = std::is_empty_v<TimeSteppingPolicy> and requires {
     { TimeSteppingPolicy::NumberOfStages } -> std::convertible_to<int>;
@@ -137,6 +139,15 @@ public:
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void interpolateHalo(
+    const StoragePrecision* NOALIAS coarseFace,
+    StoragePrecision* NOALIAS       fineFace,
+    int                             side,
+    int                             normal,
+    int                             subface
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void injectHalo(
     const StoragePrecision* NOALIAS coarseFace,
     StoragePrecision* NOALIAS       fineFace,
     int                             side,

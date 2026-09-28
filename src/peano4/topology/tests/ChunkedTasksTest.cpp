@@ -76,7 +76,9 @@ peano4::topology::tests::ChunkedTasksTest::testNumberOfChunksFollowsTheMinimum()
   validateWithParams1(chunksOfLongRange < peano4::topology::getMaximumNumberOfChunks(), chunksOfLongRange);
 }
 
-/** A range below two chunk minimums runs as one chunk in the calling thread. */
+/**
+ * A range below two chunk minimums runs as one chunk in the calling thread.
+ */
 void
 peano4::topology::tests::ChunkedTasksTest::testASmallRangeRunsInOneChunk() {
   constexpr int NumberOfItems = 100;
@@ -99,7 +101,9 @@ peano4::topology::tests::ChunkedTasksTest::testASmallRangeRunsInOneChunk() {
   validateEquals(chunkThread, callingThread);
 }
 
-/** An empty range calls the chunk body once with an empty range. */
+/**
+ * An empty range calls the chunk body once with an empty range.
+ */
 void
 peano4::topology::tests::ChunkedTasksTest::testAnEmptyRangeRunsOnce() {
   int numberOfChunks = 0;

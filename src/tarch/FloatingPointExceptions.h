@@ -27,15 +27,17 @@ struct tarch::FloatingPointExceptions final {
 
   static constexpr ExceptionMask AllExceptions = DivisionByZero | Invalid | Overflow | Underflow | Inexact;
 
-  /** Leaves underflow out, because a subnormal result is representable. */
+  /**
+   * Leaves underflow out, because a subnormal result is representable.
+   */
   static constexpr ExceptionMask DefaultExceptions = DivisionByZero | Invalid | Overflow;
 
-  static bool enableExceptionTraps(const ExceptionMask exceptions = DefaultExceptions) noexcept;
+  static bool enableExceptionTraps(ExceptionMask exceptions = DefaultExceptions) noexcept;
   static void disableExceptionTraps() noexcept;
 
   class ScopedTrap final {
   public:
-    ScopedTrap(const char* const file, const int line, const ExceptionMask exceptions = DefaultExceptions);
+    ScopedTrap(const char* file, int line, ExceptionMask exceptions = DefaultExceptions);
     ~ScopedTrap();
 
     ScopedTrap(const ScopedTrap& other)            = delete;

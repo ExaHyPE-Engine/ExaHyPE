@@ -14,7 +14,9 @@ tarch::mpi::ThreadedCommunicationManager::stop() {
   _threadIsRunning = false;
 }
 
-/** The polling thread runs every poller, so this function does nothing. */
+/**
+ * The polling thread runs every poller, so this function does nothing.
+ */
 void
 tarch::mpi::ThreadedCommunicationManager::progress() {}
 

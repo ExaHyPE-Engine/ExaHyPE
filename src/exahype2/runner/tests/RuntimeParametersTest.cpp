@@ -150,7 +150,9 @@ exahype2::runner::tests::RuntimeParametersTest::testBothSpellingsOfTheLoadBalanc
   validateEquals(numberOfShortFormArguments, 1);
 }
 
-/** A maximum terminal time from the command line or the environment lowers a larger minimum one. */
+/**
+ * A maximum terminal time from the command line or the environment lowers a larger minimum one.
+ */
 void
 exahype2::runner::tests::RuntimeParametersTest::testTheMaximumTerminalTimeBoundsTheMinimumOne() {
   exahype2::runner::RuntimeParameters commandLineParameters;
@@ -180,7 +182,9 @@ exahype2::runner::tests::RuntimeParametersTest::testTheMaximumTerminalTimeBounds
   validateNumericalEquals(shorterRunParameters.getMaxTerminalTime(), 0.1);
 }
 
-/** Without the option the plot format is the default of the build, and both spellings select one. */
+/**
+ * Without the option the plot format is the default of the build, and both spellings select one.
+ */
 void
 exahype2::runner::tests::RuntimeParametersTest::testThePlotFormatComesFromTheCommandLine() {
   const exahype2::runner::RuntimeParameters defaultParameters;
@@ -275,7 +279,9 @@ exahype2::runner::tests::RuntimeParametersTest::testTheTableUsageNamesEveryEntry
   validateTrue(exahype2::runner::ParameterTable{}.getUsage().find("<none>") != std::string::npos);
 }
 
-/** A configuration file sets the engine parameters it names, and an MPI timeout switches the request tracking on. */
+/**
+ * A configuration file sets the engine parameters it names, and an MPI timeout switches the request tracking on.
+ */
 void
 exahype2::runner::tests::RuntimeParametersTest::testTheConfigurationFileSetsTheEngineParameters() {
   exahype2::runner::RuntimeParameters parameters;

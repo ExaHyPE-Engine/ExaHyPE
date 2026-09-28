@@ -181,7 +181,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   return std::min(numberOfSweeps + 1, MaximumNumberOfSweeps);
 }
 
-/** Copies the cell state into every time slice of the space-time state and zeroes the padding lanes. */
+/**
+ * Copies the cell state into every time slice of the space-time state and zeroes the padding lanes.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void

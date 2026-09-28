@@ -46,7 +46,9 @@ public:
    */
   static constexpr int ScratchSize = Derived::IsLinear ? Linear::Scratch::Size : Nonlinear::Scratch::TimeAveragedSize;
 
-  /** Values of the Picard block of one cell; zero for a linear Derived. */
+  /**
+   * Values of the Picard block of one cell; zero for a linear Derived.
+   */
   static constexpr int PicardScratchSize = Derived::IsLinear ? 0 : Nonlinear::Scratch::PicardSize;
 
   template <typename StoragePrecision>

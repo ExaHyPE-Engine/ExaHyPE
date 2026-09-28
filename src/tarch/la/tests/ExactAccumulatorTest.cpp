@@ -10,7 +10,9 @@
 #include "tarch/la/ExactAccumulator.h"
 
 namespace {
-  /** Returns a rounded quotient whose sum spans many limbs and whose top digit differs per entry. */
+  /**
+   * Returns a rounded quotient whose sum spans many limbs and whose top digit differs per entry.
+   */
   GPU_CALLABLE_METHOD double getRoundedQuotientOf(const int entry) {
     tarch::la::ExactAccumulator accumulator;
     accumulator.add(0.25 * (entry + 1));
@@ -21,7 +23,9 @@ namespace {
     return accumulator.roundQuotient(entry + 1);
   }
 
-  /** Raises the accumulator by one when the rounded quotient of the entry holds other bits than expected. */
+  /**
+   * Raises the accumulator by one when the rounded quotient of the entry holds other bits than expected.
+   */
   struct CountMismatch final {
     const std::uint64_t* expected{nullptr};
 
@@ -32,7 +36,9 @@ namespace {
     }
   };
 
-  /** Counts the entries whose quotient a dispatch rounds to other bits than expected holds. */
+  /**
+   * Counts the entries whose quotient a dispatch rounds to other bits than expected holds.
+   */
   int getNumberOfDeviceMismatchesOf(const std::vector<std::uint64_t>& expectedOnHost) {
     tarch::accelerator::Buffer<std::uint64_t> expectedBits(tarch::MemoryLocation::Device);
     expectedBits.setValues(expectedOnHost);
@@ -62,7 +68,9 @@ tarch::la::tests::ExactAccumulatorTest::run() {
   testMethod(testDeviceRoundsLikeTheHost);
 }
 
-/** Checks exact merging across a rounding tie, signed cancellation and repeated doubling. */
+/**
+ * Checks exact merging across a rounding tie, signed cancellation and repeated doubling.
+ */
 void
 tarch::la::tests::ExactAccumulatorTest::testMergingPreservesLowBitsAndCancellation() {
   tarch::la::ExactAccumulator left;
@@ -168,6 +176,41 @@ tarch::la::tests::ExactAccumulatorTest::testCorrectlyRoundedQuotient() {
   accumulator.clear();
   accumulator.add(-7.0);
   validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)), std::bit_cast<std::uint64_t>(-3.5));
+
+  // A quotient of subnormals rounds to the nearest subnormal with ties to even, and so does a
+  // quotient whose integer digits end at the smallest subnormal.
+  constexpr double MinimumSubnormal = std::numeric_limits<double>::denorm_min();
+  accumulator.clear();
+  accumulator.add(3.0 * MinimumSubnormal);
+  validateEquals(
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)),
+    std::bit_cast<std::uint64_t>(2.0 * MinimumSubnormal)
+  );
+  accumulator.clear();
+  accumulator.add(5.0 * MinimumSubnormal);
+  validateEquals(
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)),
+    std::bit_cast<std::uint64_t>(2.0 * MinimumSubnormal)
+  );
+  accumulator.clear();
+  accumulator.add(-7.0 * MinimumSubnormal);
+  validateEquals(
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)),
+    std::bit_cast<std::uint64_t>(-4.0 * MinimumSubnormal)
+  );
+  accumulator.clear();
+  accumulator.add(7.0 * MinimumSubnormal);
+  validateEquals(
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(3)),
+    std::bit_cast<std::uint64_t>(2.0 * MinimumSubnormal)
+  );
+  accumulator.clear();
+  accumulator.add(std::ldexp(1.0, -1021));
+  accumulator.add(3.0 * MinimumSubnormal);
+  validateEquals(
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)),
+    std::bit_cast<std::uint64_t>(std::ldexp(1.0, -1022) + 2.0 * MinimumSubnormal)
+  );
 
   // A quotient below the smallest subnormal rounds to zero with the sign of the sum.
   accumulator.clear();
@@ -313,7 +356,9 @@ tarch::la::tests::ExactAccumulatorTest::testClear() {
   validateNumericalEquals(accumulator.round(), -1.5);
 }
 
-/** A dispatch rounds every sum to the bits the host rounds it to. */
+/**
+ * A dispatch rounds every sum to the bits the host rounds it to.
+ */
 void
 tarch::la::tests::ExactAccumulatorTest::testDeviceRoundsLikeTheHost() {
   constexpr int              NumberOfSums = 64;

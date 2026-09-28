@@ -30,6 +30,7 @@ private:
   void testTheSpawnLevelGrowsWithTheRankCount();
   void testDeepGridsKeepTheirSpawnLevelInRange();
   void testNoStatisticsStandBeforeTheFirstRegrid();
+  void testARankWithoutCellsReportsNoLevel();
   void testRejectedRequestsChangeNoPlan();
   void testARegridWithLiveDataReturnsTheSlotMoves();
   void testTheCellLookupFindsEveryCellAndNothingElse();

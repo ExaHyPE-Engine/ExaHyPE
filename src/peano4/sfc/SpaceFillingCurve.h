@@ -5,7 +5,7 @@
 #include "peano4/Constants.h"
 #include "peano4/sfc/Grammar.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
 namespace peano4::sfc {

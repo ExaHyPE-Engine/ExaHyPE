@@ -61,6 +61,12 @@ tarch::la::tests::ScalarTest::testAdditionalScalarFunctions() {
   validateEquals(sign(2.0), 1);
   validateEquals(sign(-2.0), -1);
   validateEquals(sign(1.0e-10), 0);
+  validateEquals(sign(-1.0e-10), 0);
+  validateEquals(sign(0.0), 0);
+  validateEquals(sign(0.5, 1.0), 0);
+  validateEquals(sign(-0.5, 1.0), 0);
+  validateEquals(sign(1.5, 1.0), 1);
+  validateEquals(sign(-1.5, 1.0), -1);
   validateEquals(round(2.4), 2);
   validateEquals(round(2.6), 3);
   validateEquals(round(2.6F), 3);

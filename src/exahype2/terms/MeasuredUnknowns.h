@@ -5,7 +5,9 @@
 #include "exahype2/terms/AnalyticalSolution.h"
 
 namespace exahype2::terms {
-  /** A solver that names the unknowns of its error measurement carries an analytical solution. */
+  /**
+   * A solver that names the unknowns of its error measurement carries an analytical solution.
+   */
   template <typename SolverType>
   concept HasMeasuredUnknowns = exahype2::terms::HasAnalyticalSolution<SolverType> and requires {
     { SolverType::MeasuredUnknowns.size() } -> std::convertible_to<std::size_t>;

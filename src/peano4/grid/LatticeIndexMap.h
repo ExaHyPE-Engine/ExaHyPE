@@ -18,13 +18,19 @@ namespace peano4::grid {
  */
 class peano4::grid::LatticeIndexMap final {
 public:
-  /** Marks a free slot. Lattice keys are non-negative, so no key collides with it. */
+  /**
+   * Marks a free slot. Lattice keys are non-negative, so no key collides with it.
+   */
   static constexpr std::int64_t EmptyKey{-1};
 
-  /** Marks an erased slot, which a probe passes and an insert may reuse. */
+  /**
+   * Marks an erased slot, which a probe passes and an insert may reuse.
+   */
   static constexpr std::int64_t TombstoneKey{-2};
 
-  /** Reported for a key the map does not hold. */
+  /**
+   * Reported for a key the map does not hold.
+   */
   static constexpr int NoEntry{-1};
 
   LatticeIndexMap()                                  = default;
@@ -51,18 +57,24 @@ public:
   INLINE_METHOD void forEachEntry(const Callback& callback) const;
 
 private:
-  /** Keeps the slot mask valid before the first growth. */
+  /**
+   * Keeps the slot mask valid before the first growth.
+   */
   static constexpr std::size_t SmallestCapacity{8};
 
   std::vector<std::int64_t> _keys{};
   std::vector<int>          _values{};
 
-  /** Keeps the key-array length minus one, allowing bitwise probe wrapping. */
+  /**
+   * Keeps the key-array length minus one, allowing bitwise probe wrapping.
+   */
   std::size_t _slotMask{0};
 
   std::size_t _size{0};
 
-  /** Tracks erased probe slots until growth clears them. */
+  /**
+   * Tracks erased probe slots until growth clears them.
+   */
   std::size_t _numberOfTombstones{0};
 
   [[nodiscard]] INLINE_METHOD std::size_t getFirstSlot(std::int64_t key) const;

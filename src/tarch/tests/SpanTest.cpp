@@ -13,7 +13,9 @@ tarch::tests::SpanTest::run() {
   testMethod(testTheEmptySpanHasNoElements);
 }
 
-/** The index operator and the range loop visit the size elements behind data and no other. */
+/**
+ * The index operator and the range loop visit the size elements behind data and no other.
+ */
 void
 tarch::tests::SpanTest::testTheSpanReadsTheElementsBehindItsData() {
   const std::vector<int>       values{7, 3, 5, 11, 2};

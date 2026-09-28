@@ -5,11 +5,8 @@
 #include "tarch/Assertions.h"
 #include "tarch/la/ScalarOperations.h"
 
-tarch::database::GlobalTimeSeriesDatabase::GlobalTimeSeriesDatabase(
-  const double timeDelta,
-  const bool   deltasAreRelative
-) :
-  SnapshotDatabase(timeDelta, deltasAreRelative) {}
+tarch::database::GlobalTimeSeriesDatabase::GlobalTimeSeriesDatabase(const double timeDelta) :
+  SnapshotDatabase(timeDelta) {}
 
 tarch::database::GlobalTimeSeriesDatabase::~GlobalTimeSeriesDatabase() { clear(); }
 
@@ -92,7 +89,9 @@ tarch::database::GlobalTimeSeriesDatabase::getAction(const double timestamp) con
   }
 }
 
-/** Returns whether addGlobalSnapshot() appends or replaces a snapshot at timestamp. */
+/**
+ * Returns whether addGlobalSnapshot() appends or replaces a snapshot at timestamp.
+ */
 bool
 tarch::database::GlobalTimeSeriesDatabase::isSnapshotDue(const double timestamp) {
   const std::scoped_lock lock(_mutex);
@@ -101,8 +100,9 @@ tarch::database::GlobalTimeSeriesDatabase::isSnapshotDue(const double timestamp)
 
 /**
  * Adds one measurement while holding the database lock across the decision and mutation: A
- * repeated time stamp replaces the newest row and a later accepted time stamp is prepended. A
- * database without an output file name keeps its rows in memory only.
+ * repeated time stamp replaces the newest row, and the next flush rewrites the file when that row
+ * is on disk. A later accepted time stamp is prepended. A database without an output file name
+ * keeps its rows in memory only.
  */
 void
 tarch::database::GlobalTimeSeriesDatabase::addGlobalSnapshot(
@@ -125,6 +125,10 @@ tarch::database::GlobalTimeSeriesDatabase::addGlobalSnapshot(
       break;
     case AddSnapshotAction::Replace:
       std::copy_n(data, _numberOfGlobalDataPoints, _data.front().data.begin());
+      if (not hasUnwrittenSnapshots()) {
+        resetWriteTracking();
+        _csvHeaderWritten = false;
+      }
       break;
     }
   }

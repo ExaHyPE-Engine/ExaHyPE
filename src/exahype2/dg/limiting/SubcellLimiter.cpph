@@ -277,7 +277,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   return _statuses.getView();
 }
 
-/** Copies the status pool to the host and returns it, the chunk of every slot at slot times the padded chunk size. */
+/**
+ * Copies the status pool to the host and returns it, the chunk of every slot at slot times the padded chunk size.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 const int*
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::downloadStatuses() {
@@ -285,7 +287,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   return _statusesOnHost.data();
 }
 
-/** Copies the subgrid pool to the host and returns it, the chunk of every slot at slot times the padded chunk size. */
+/**
+ * Copies the subgrid pool to the host and returns it, the chunk of every slot at slot times the padded chunk size.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 const StoragePrecision*
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::downloadSubcells() {
@@ -303,7 +307,9 @@ exahype2::dg::limiting::SubcellLimiter<
   return _cellCounts.recomputedCells;
 }
 
-/** Returns the number of cells whose status is not Regular at the end of the last time step. */
+/**
+ * Returns the number of cells whose status is not Regular at the end of the last time step.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 int
 exahype2::dg::limiting::SubcellLimiter<
@@ -320,7 +326,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   return _cellCounts.troubledCells;
 }
 
-/** Returns the troubled cells of all ranks at the end of the last closeTimeStep(). */
+/**
+ * Returns the troubled cells of all ranks at the end of the last closeTimeStep().
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 int
 exahype2::dg::limiting::SubcellLimiter<
@@ -331,7 +339,9 @@ exahype2::dg::limiting::SubcellLimiter<
   return _globalTroubledCells;
 }
 
-/** Sizes the face pools and the cell lists to the partition, rebuilds the exchanges and clears the faces. */
+/**
+ * Sizes the face pools and the cell lists to the partition, rebuilds the exchanges and clears the faces.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::rebuild(
@@ -355,7 +365,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 
 /**
  * Writes the identity of every face reduction into both halves of every face, so the outer
- * half of a boundary face adds nothing to a cell: The status Regular and empty extrema.
+ * half of a boundary face adds nothing to a cell: The status Regular and empty extrema. The
+ * subcell halo takes zeros, so the level jumps and the rank boundaries move finite values in the
+ * halves no cell writes.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
@@ -366,12 +378,15 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
     tarch::accelerator::Range(partition.getNumberOfFaces()),
     exahype2::dg::limiting::ClearFaces<Derived, StoragePrecision, ComputePrecision>{
       _faceStatuses.getView(),
-      _extremaFaces.getView()
+      _extremaFaces.getView(),
+      _subcellHalo.getView()
     }
   );
 }
 
-/** The solution of every cell becomes its previous solution, and a troubled cell opens on the subcell scheme. */
+/**
+ * The solution of every cell becomes its previous solution, and a troubled cell opens on the subcell scheme.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::openStep(
@@ -576,7 +591,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 /**
  * Writes the subgrid of every cell on the subcell scheme onto its faces at the time stamp of
  * the previous solution (a cell that enters the scheme after the first step takes the
- * projection of its previous solution, a boundary face takes the boundary state), passes the
+ * projection of its previous solution, a boundary face beside such a cell takes the boundary
+ * state), passes the
  * halves across the level jumps and the rank boundaries, and advances every cell that recomputes
  * by one finite-volume step on its subgrid, the local cells while the halves travel. The step
  * projects its result onto the nodes over the candidate and returns the wave speeds of the
@@ -606,11 +622,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   const auto boundaryFaces = partition.onDevice().getFaces(peano4::Dependence::Local, peano4::FaceKind::Boundary);
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(boundaryFaces.size),
-    exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
-      boundaryFaces,
-      _subcellHalo.getView(),
-      timeStamp
+    exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision, ComputePrecision>{
+      {partition.onDevice(), boundaryFaces, _subcellHalo.getView(), timeStamp},
+      std::as_const(_statuses).getView()
     }
   );
 
@@ -621,9 +635,11 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
     _recomputeScratch.allocate(scratchValues);
   }
   exahype2::dg::MaxEigenvalueStatistics statistics;
+  // A level jump copies coarse subcells into the fine halo, so every halo value is a value of the
+  // coarse subgrid; a linear interpolation overshoots at a shock.
   exchangeFaces(
     partition,
-    exahype2::fv::InterpolateHaloHalves<Derived, StoragePrecision, ComputePrecision>{
+    exahype2::fv::InjectHaloHalves<Derived, StoragePrecision, ComputePrecision>{
       partition.onDevice(),
       _subcellHalo.getView()
     },

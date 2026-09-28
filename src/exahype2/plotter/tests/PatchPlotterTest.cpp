@@ -25,7 +25,9 @@ namespace {
     return buffer.str();
   }
 
-  /** Deletes the output directory on the global master once every rank has read its piece back. */
+  /**
+   * Deletes the output directory on the global master once every rank has read its piece back.
+   */
   void deleteOutputDirectory(const std::string& outputDirectory) {
     tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -44,7 +46,9 @@ exahype2::plotter::tests::PatchPlotterTest::run() {
   testMethod(testEveryNodeReadsTheSubcellThatContainsIt);
 }
 
-/** Every node maps to the subcell that contains it, a node on a subcell boundary to the upper subcell. */
+/**
+ * Every node maps to the subcell that contains it, a node on a subcell boundary to the upper subcell.
+ */
 void
 exahype2::plotter::tests::PatchPlotterTest::testEveryNodeReadsTheSubcellThatContainsIt() {
   constexpr int                   NodesPerAxis    = 3;

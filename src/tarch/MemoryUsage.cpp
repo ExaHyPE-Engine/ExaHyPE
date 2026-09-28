@@ -51,7 +51,9 @@ tarch::getTotalMemoryInBytes() {
 }
 
 namespace {
-  /** Returns one field of /proc/meminfo in KiB, or nothing when the kernel does not report it. */
+  /**
+   * Returns one field of /proc/meminfo in KiB, or nothing when the kernel does not report it.
+   */
   std::optional<std::uint64_t> readMemoryInformationInKiB(const std::string_view field) {
     std::ifstream memoryInformation("/proc/meminfo");
     std::string   line;
@@ -97,7 +99,9 @@ tarch::getTotalMemoryInBytes() {
   return static_cast<std::uint64_t>(physicalMemory);
 }
 
-/** Returns the bytes of the free and the inactive pages, which a new allocation obtains without swapping. */
+/**
+ * Returns the bytes of the free and the inactive pages, which a new allocation obtains without swapping.
+ */
 std::uint64_t
 tarch::getAvailableMemoryInBytes() {
   const mach_port_t      host     = mach_host_self();

@@ -27,6 +27,7 @@
 #include "exahype2/particles/tests/TrajectoryDatabaseTest.h"
 #include "exahype2/particles/tests/TrajectoryRecordingTest.h"
 #include "exahype2/plotter/tests/FacePlotterTest.h"
+#include "exahype2/plotter/tests/ParticlePlotterTest.h"
 #include "exahype2/plotter/tests/PatchPlotterTest.h"
 #include "exahype2/runner/tests/ConsoleTest.h"
 #include "exahype2/runner/tests/RunnerTest.h"
@@ -87,6 +88,7 @@ exahype2::getUnitTests() {
   result->addTestCase(new exahype2::particles::tests::TrajectoryRecordingTest());
 
   result->addTestCase(new exahype2::plotter::tests::FacePlotterTest());
+  result->addTestCase(new exahype2::plotter::tests::ParticlePlotterTest());
   result->addTestCase(new exahype2::plotter::tests::PatchPlotterTest());
 
   result->addTestCase(new exahype2::runner::tests::ConsoleTest());

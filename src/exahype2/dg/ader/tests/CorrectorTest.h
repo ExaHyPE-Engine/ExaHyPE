@@ -8,7 +8,9 @@ namespace exahype2::dg::ader::tests {
   class CorrectorTest;
 } // namespace exahype2::dg::ader::tests
 
-/** Checks the corrector phase of one ADER-DG cell. */
+/**
+ * Checks the corrector phase of one ADER-DG cell.
+ */
 class exahype2::dg::ader::tests::CorrectorTest final : public tarch::tests::TestCase {
 public:
   CorrectorTest();

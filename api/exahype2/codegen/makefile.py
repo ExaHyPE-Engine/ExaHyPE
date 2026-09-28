@@ -49,7 +49,6 @@ class Makefile(object):
         self.d["LINK_OPTIONS"] = []
         self.d["DIMENSIONS"] = "2"
         self.d["EXECUTABLENAME"] = ""
-        self.d["SIMDLEN"] = "1"
         self.d["GPU"] = "no"
         self.d["CMAKE_BUILD_DIR"] = ""
         self.d["CMAKE_GENERATOR"] = ""
@@ -192,9 +191,7 @@ class Makefile(object):
                             if match.group(2) is not None
                             else match.group(3)
                         )
-                        if key == "PEANO_WITH_SIMDLEN":
-                            self.d["SIMDLEN"] = value
-                        elif key == "PEANO_WITH_GPU_BACKEND":
+                        if key == "PEANO_WITH_GPU_BACKEND":
                             self.d["GPU"] = value
                         elif key == "PEANO_CMAKE_GENERATOR":
                             self.d["CMAKE_GENERATOR"] = value

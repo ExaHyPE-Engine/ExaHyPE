@@ -24,5 +24,6 @@ private:
   void testTheTerminationStepReachesEveryRank();
   void testDescribeMeshUpdatesReportsTheSweepCountAndWallClock();
   void testDescribeRepetitionsCountsEveryPhaseInItsUnit();
-  void testFinishStepSumsTheSolverBytesAndCellDoFs();
+  void testFinishStepSumsTheSolverBytesAndCellUpdates();
+  void testTheGridInitialisationRealisesOnlyTheVotesOfTheInitialCondition();
 };

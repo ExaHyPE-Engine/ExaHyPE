@@ -37,7 +37,9 @@
 #endif
 
 namespace {
-  /** The names of the program steps and the time loop in the reports and the Score-P regions. */
+  /**
+   * The names of the program steps and the time loop in the reports and the Score-P regions.
+   */
   struct PhaseName {
     static constexpr const char* GridConstruction   = "Grid Construction";
     static constexpr const char* AllocateMemory     = "Allocate Memory";
@@ -90,7 +92,9 @@ namespace {
       + exahype2::runner::Format::getMemory(space.available) + " Free";
   }
 
-  /** Names the GPU backend the build selected and, when there is one, the devices it found. */
+  /**
+   * Names the GPU backend the build selected and, when there is one, the devices it found.
+   */
   std::string getGPUBackendLabel() {
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
     const std::string backend = "SYCL";
@@ -114,7 +118,9 @@ namespace {
 #endif
   }
 
-  /** Names whether the MPI library accepts pointers into CUDA device memory. */
+  /**
+   * Names whether the MPI library accepts pointers into CUDA device memory.
+   */
   std::string getGPUAwareMPILabel() {
 #if defined(OPEN_MPI) and defined(MPIX_CUDA_AWARE_SUPPORT)
     return MPIX_Query_cuda_support() == 1 ? "CUDA-Aware" : "Not CUDA-Aware";
@@ -154,7 +160,9 @@ namespace {
     return result.str();
   }
 
-  /** Renders the rate of the cell updates, and of the degree-of-freedom updates when the solvers count any. */
+  /**
+   * Renders the rate of the cell updates, and of the degree-of-freedom updates when the solvers count any.
+   */
   std::string getPerformanceOf(const double cellUpdates, const double dofUpdates, const double seconds) {
     assertion(seconds > 0.0 and cellUpdates >= 0.0 and dofUpdates >= 0.0, seconds, cellUpdates, dofUpdates);
     std::ostringstream performance;
@@ -381,7 +389,9 @@ exahype2::runner::Runner::regrid(const bool dataLive) {
   }
 }
 
-/** Runs the body of one step on this rank. */
+/**
+ * Runs the body of one step on this rank.
+ */
 void
 exahype2::runner::Runner::executeStep(const Step step) {
   const tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
@@ -417,7 +427,10 @@ exahype2::runner::Runner::finishStep(const Step step) {
   auto&      statistics = exahype2::runner::getGlobalStatistics();
   const auto bytes      = _callbacks.getAllocatedBytes ? _callbacks.getAllocatedBytes() : tarch::AllocatedBytes{};
   statistics.setLocalSolverBytes(bytes.host, bytes.device);
-  statistics.setLocalCellDoFs(_callbacks.getNumberOfCellDoFs ? _callbacks.getNumberOfCellDoFs() : 0);
+  statistics.setLocalCellUpdates(
+    _callbacks.getNumberOfSolverCells ? _callbacks.getNumberOfSolverCells() : 0,
+    _callbacks.getNumberOfCellDoFs ? _callbacks.getNumberOfCellDoFs() : 0
+  );
   statistics.synchronise(step != Step::TimeStep);
 }
 
@@ -456,7 +469,9 @@ exahype2::runner::Runner::runWorker() {
   }
 }
 
-/** Returns the exit code of the run: A run that ended on a non-critical assertion fails. */
+/**
+ * Returns the exit code of the run: A run that ended on a non-critical assertion fails.
+ */
 int
 exahype2::runner::Runner::run() {
   if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -486,7 +501,9 @@ exahype2::runner::Runner::run() {
   return _stoppedAfterNonCriticalAssertion ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
-/** Writes the banners and the build, domain, time stepping, MPI and solver configuration. */
+/**
+ * Writes the banners and the build, domain, time stepping, MPI and solver configuration.
+ */
 void
 exahype2::runner::Runner::reportConfiguration() {
   const auto& parameters = exahype2::runner::RuntimeParameters::getInstance();
@@ -599,7 +616,8 @@ exahype2::runner::Runner::reportConfiguration() {
 
 /**
  * The first step builds the complete base grid; further steps run while the refinement
- * criterion asks for adaptive levels beyond it.
+ * criterion asks for adaptive levels beyond it. A construction that has not settled after
+ * MaximumMeshUpdateSweeps sweeps stops the run with an error.
  */
 void
 exahype2::runner::Runner::constructGrid() {
@@ -612,8 +630,9 @@ exahype2::runner::Runner::constructGrid() {
   const auto coarsestAdmissiblePatchSize = parameters.getMaxAdmissiblePatchSize(_domainSize);
   auto       currentMinimumPatchSize     = std::numeric_limits<double>::max();
   bool       finishConditionSeenLastStep = false;
+  bool       settled                     = false;
   int        sweeps                      = 0;
-  while (true) {
+  while (not settled and sweeps < MaximumMeshUpdateSweeps) {
     {
       SCOREP_USER_REGION(PhaseName::GridConstruction, SCOREP_USER_REGION_TYPE_COMMON)
       static_cast<void>(runStep(Step::CreateGrid));
@@ -628,10 +647,14 @@ exahype2::runner::Runner::constructGrid() {
     // for nothing further. The predicate has to hold on two consecutive steps.
     const bool converged = tarch::la::smallerEquals(currentMinimumPatchSize, coarsestAdmissiblePatchSize)
       and statistics.getGlobalNumberOfStationaryRegrids() >= 1;
-    if (converged and finishConditionSeenLastStep) {
-      break;
-    }
+    settled                     = converged and finishConditionSeenLastStep;
     finishConditionSeenLastStep = converged;
+  }
+  if (not settled) {
+    tarch::terminateWithError(
+      "The grid construction did not settle within " + std::to_string(MaximumMeshUpdateSweeps)
+      + " sweeps: The refinement criterion still changes the grid."
+    );
   }
   constructionWatch.stop();
   _report.line(
@@ -641,9 +664,10 @@ exahype2::runner::Runner::constructGrid() {
 }
 
 /**
- * Initialises the solution and adapts the mesh before time stepping. The initial condition runs
- * again after every regrid, so every cell a regrid creates holds the analytic initial condition. A
- * run whose refinement requests still change the grid after the last round stops with an error.
+ * Initialises the solution and adapts the mesh before time stepping. Every round realises the
+ * votes of the initial condition in one regrid sweep, and the initial condition runs again on the
+ * new grid, so every cell holds the analytic initial condition when it votes. A run whose
+ * refinement requests still change the grid after the last round stops with an error.
  */
 void
 exahype2::runner::Runner::initialiseGrid() {
@@ -653,7 +677,10 @@ exahype2::runner::Runner::initialiseGrid() {
   peano4::Spacetree::getInstance().markPersistentDataLive();
   int rounds = 1;
   while (hasPendingMeshUpdates() and rounds < MaximumInitialisationRounds) {
-    applyMeshUpdates(false);
+    if (not _meshUpdatesStarted or _meshUpdates.sweeps == 0) {
+      startMeshUpdates();
+    }
+    runMeshUpdateSweep(true);
     elapsedSeconds += runStep(Step::InitGrid);
     rounds++;
   }
@@ -687,7 +714,9 @@ exahype2::runner::Runner::hasPendingMeshUpdates() const {
   return peano4::Spacetree::getInstance().requestsChangePlan(_callbacks.getRefinementRequests());
 }
 
-/** Renders the wall clock, the regrids and their sweeps since the previous report. */
+/**
+ * Renders the wall clock, the regrids and their sweeps since the previous report.
+ */
 std::string
 exahype2::runner::Runner::describeMeshUpdates(const MeshUpdates& updates) {
   assertion(updates.regrids >= 0 and updates.sweeps >= updates.regrids, updates.regrids, updates.sweeps);
@@ -717,7 +746,9 @@ exahype2::runner::Runner::describeRepetitions(const std::string& phaseName, cons
   return getCountOf(count, "Sweep");
 }
 
-/** Deletes the collected regrids and records the grid that the next report starts from. */
+/**
+ * Deletes the collected regrids and records the grid that the next report starts from.
+ */
 void
 exahype2::runner::Runner::startMeshUpdates() {
   _meshUpdates        = MeshUpdates{};
@@ -746,11 +777,11 @@ exahype2::runner::Runner::reportMeshUpdates() {
 /**
  * Realises the refine and erase requests of the solvers in one regrid: Its sweeps run until the
  * requests change the refinement plan no further, so the caller resumes on a settled topology.
- * The regrids are collected across the calls. With report set, a regrid reports them every
+ * The regrids are collected across the calls, and a regrid reports them every
  * SecondsBetweenMeshUpdateReports and before it stops the run.
  */
 void
-exahype2::runner::Runner::applyMeshUpdates(const bool report) {
+exahype2::runner::Runner::applyMeshUpdates() {
   SCOREP_USER_REGION(PhaseName::DynamicAMR, SCOREP_USER_REGION_TYPE_PHASE)
   if (not _meshUpdatesStarted or _meshUpdates.sweeps == 0) {
     startMeshUpdates();
@@ -759,30 +790,38 @@ exahype2::runner::Runner::applyMeshUpdates(const bool report) {
   double secondsSinceLastReport{0.0};
   while (hasPendingMeshUpdates() and sweepsOfThisRegrid < MaximumMeshUpdateSweeps) {
     // A report inside the regrid resets the collection, so the regrid counts itself on its first sweep.
-    if (sweepsOfThisRegrid == 0) {
-      _meshUpdates.regrids++;
-      _numberOfRegrids++;
-    }
-    const auto elapsedSeconds = runStep(Step::DynamicAMR);
-    _meshUpdates.wallClock += elapsedSeconds;
-    secondsSinceLastReport += elapsedSeconds;
-    _meshUpdateMeasurement.setValue(elapsedSeconds);
-    _meshUpdates.sweeps++;
+    secondsSinceLastReport += runMeshUpdateSweep(sweepsOfThisRegrid == 0);
     sweepsOfThisRegrid++;
-    if (report and secondsSinceLastReport >= SecondsBetweenMeshUpdateReports) {
+    if (secondsSinceLastReport >= SecondsBetweenMeshUpdateReports) {
       reportMeshUpdates();
       secondsSinceLastReport = 0.0;
     }
   }
   if (hasPendingMeshUpdates()) {
-    if (report) {
-      reportMeshUpdates();
-    }
+    reportMeshUpdates();
     std::ostringstream message;
     message << "The dynamic AMR phase did not settle within " << MaximumMeshUpdateSweeps
             << " sweeps: The solvers still request mesh updates.";
     tarch::terminateWithError(message.str());
   }
+}
+
+/**
+ * Runs one regrid sweep and adds it to the collected mesh updates; startsRegrid also counts a
+ * regrid. Returns the wall clock seconds of the sweep.
+ */
+double
+exahype2::runner::Runner::runMeshUpdateSweep(const bool startsRegrid) {
+  if (startsRegrid) {
+    _meshUpdates.regrids++;
+    _numberOfRegrids++;
+  }
+  const double elapsedSeconds = runStep(Step::DynamicAMR);
+  assertion(elapsedSeconds >= 0.0, elapsedSeconds);
+  _meshUpdates.wallClock += elapsedSeconds;
+  _meshUpdateMeasurement.setValue(elapsedSeconds);
+  _meshUpdates.sweeps++;
+  return elapsedSeconds;
 }
 
 std::string
@@ -799,13 +838,17 @@ exahype2::runner::Runner::formatETA(const double fraction) const {
   return Format::getDuration(remainingSeconds);
 }
 
-/** Moves the value column right of the label, so no label of the time loop reaches its values. */
+/**
+ * Moves the value column right of the label, so no label of the time loop reaches its values.
+ */
 void
 exahype2::runner::Runner::widenValueColumn(const std::size_t indentation, const std::string& label) {
   _valueColumn = std::max(_valueColumn, indentation + getDisplayWidth(label) + 2);
 }
 
-/** Writes the label at the indentation and the value at the value column, where a broken value continues. */
+/**
+ * Writes the label at the indentation and the value at the value column, where a broken value continues.
+ */
 void
 exahype2::runner::Runner::writeLabelled(
   const std::size_t  indentation,
@@ -895,7 +938,9 @@ exahype2::runner::Runner::logTimeStep(
   _measuredSecondsSinceReport = 0.0;
 }
 
-/** Opens a section of the report behind a rule; a plot after a plot continues the open section. */
+/**
+ * Opens a section of the report behind a rule; a plot after a plot continues the open section.
+ */
 void
 exahype2::runner::Runner::openSection(const Section section) {
   if (section != Section::Plot or _openSection != Section::Plot) {
@@ -904,7 +949,9 @@ exahype2::runner::Runner::openSection(const Section section) {
   _openSection = section;
 }
 
-/** Writes the report line of one plot; the plot of the initial condition carries no snapshot number. */
+/**
+ * Writes the report line of one plot; the plot of the initial condition carries no snapshot number.
+ */
 void
 exahype2::runner::Runner::logPlot(
   const int    snapshot,
@@ -976,7 +1023,7 @@ exahype2::runner::Runner::runTimeLoop() {
   enum class Action { TimeStep, Plot, Stop };
   while (true) {
     if (hasPendingMeshUpdates() and not tarch::hasNonCriticalAssertionBeenViolated()) {
-      applyMeshUpdates(true);
+      applyMeshUpdates();
     }
     const double minTerminal      = parameters.getMinTerminalTime();
     const double maxTerminal      = parameters.getMaxTerminalTime();
@@ -1093,7 +1140,7 @@ exahype2::runner::Runner::runTimeLoop() {
     // The first step warms the caches and the runtime, so the throughput excludes it.
     if (completedTimeSteps > 0) {
       const auto& statistics = exahype2::runner::getGlobalStatistics();
-      const auto  cells      = static_cast<double>(statistics.getGlobalNumberOfInnerUnrefinedCells());
+      const auto  cells      = static_cast<double>(statistics.getGlobalNumberOfSolverCells());
       const auto  cellDoFs   = static_cast<double>(statistics.getGlobalNumberOfCellDoFs());
       _timeStepMeasurement.setValue(elapsedSeconds);
       _cellUpdates += cells;

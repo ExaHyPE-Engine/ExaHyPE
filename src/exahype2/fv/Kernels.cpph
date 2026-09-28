@@ -5,7 +5,9 @@
 #include "peano4/Constants.h"
 
 TARGET_DECLARE
-/** Returns the mask whose bit f is set when face f of the cell lies on the domain boundary. */
+/**
+ * Returns the mask whose bit f is set when face f of the cell lies on the domain boundary.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::fv::getBoundaryFaceMask(const peano4::Partition& partition, const int cell) {
   int mask = 0;
@@ -51,6 +53,18 @@ exahype2::fv::InterpolateHaloHalves<Derived, StoragePrecision, ComputePrecision>
   const StoragePrecision* const coarse = halo.getChunk(levelJump.coarseFace);
   for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
     Kernel::interpolateHalo(coarse, halo.getChunk(levelJump.fineFaces[subface]), levelJump.coarseSide, normal, subface);
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::InjectHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const peano4::LevelJump& levelJump
+) const {
+  const int                     normal = partition.getFaceNormal(levelJump.coarseFace);
+  const StoragePrecision* const coarse = halo.getChunk(levelJump.coarseFace);
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    Kernel::injectHalo(coarse, halo.getChunk(levelJump.fineFaces[subface]), levelJump.coarseSide, normal, subface);
   }
 }
 

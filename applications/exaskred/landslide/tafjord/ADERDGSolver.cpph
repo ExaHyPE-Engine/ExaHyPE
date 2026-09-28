@@ -11,7 +11,9 @@ namespace applications::exahype2::exaskred {
   INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getLandslidePhysics();
 } // namespace applications::exahype2::exaskred
 
-/** Returns the physical parameters of the granular layer. */
+/**
+ * Returns the physical parameters of the granular layer.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
 applications::exahype2::exaskred::getLandslidePhysics() {
   return {
@@ -239,7 +241,9 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
   >(sanitisedQL, sanitisedQR, x, h, t, dt, normal, maxEigenvalue, interfaceGravity, FL, FR);
 }
 
-/** Returns the wave speed of the augmented Riemann solver between the sanitised subcell states. */
+/**
+ * Returns the wave speed of the augmented Riemann solver between the sanitised subcell states.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   const double* const NOALIAS                  QL,

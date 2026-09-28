@@ -8,7 +8,9 @@ tarch::mpi::SerialCommunicationManager::start() {}
 void
 tarch::mpi::SerialCommunicationManager::stop() {}
 
-/** Runs one pass over the registered pollers on the calling thread. */
+/**
+ * Runs one pass over the registered pollers on the calling thread.
+ */
 void
 tarch::mpi::SerialCommunicationManager::progress() {
   runPollersOnce();

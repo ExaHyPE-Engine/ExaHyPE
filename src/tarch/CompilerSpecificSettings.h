@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#define COMPILER_HAS_UTS_NAME
-#define COMPILER_HAS_TIMESPEC
-
 #if not defined(__APPLE__)
 #define COMPILER_HAS_SYSINFO
 #define COMPILER_HAS_PROC_STAT

@@ -14,7 +14,9 @@
 #include "tarch/Assertions.h"
 
 TARGET_DECLARE
-/** Returns the half of a face that the cell which holds the face as faceNumber writes. */
+/**
+ * Returns the half of a face that the cell which holds the face as faceNumber writes.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::dg::getOwnHalf(const int faceNumber) {
   return faceNumber < DIMENSIONS ? 1 : 0;
@@ -270,21 +272,31 @@ exahype2::dg::ProjectSolutionOntoPlane<Derived, StoragePrecision, ComputePrecisi
 
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::InterpolateFaceHalves<Derived, ComputePrecision>::operator()(const peano4::LevelJump& levelJump) const {
+exahype2::dg::InterpolateFaceStateHalves<Derived, ComputePrecision>::operator()(
+  const peano4::LevelJump& levelJump
+) const {
   constexpr int                 StateElementsPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis) * NumberOfData;
-  constexpr int                 FluxElementsPerFace  = exahype2::dg::getNodesPerFace(NodesPerAxis) * NumberOfUnknowns;
   const ComputePrecision* const coarseState =
     faceStates.getChunk(levelJump.coarseFace) + levelJump.coarseSide * StateElementsPerFace;
-  const ComputePrecision* const coarseFlux =
-    faceFluxes.getChunk(levelJump.coarseFace) + levelJump.coarseSide * FluxElementsPerFace;
   for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
-    const int fineFace = levelJump.fineFaces[subface];
     exahype2::dg::interpolateFace<NodesPerAxis, NumberOfData>(
       coarseState,
-      faceStates.getChunk(fineFace) + levelJump.coarseSide * StateElementsPerFace,
+      faceStates.getChunk(levelJump.fineFaces[subface]) + levelJump.coarseSide * StateElementsPerFace,
       prolongationMatrix,
       subface
     );
+  }
+}
+
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::InterpolateFaceHalves<Derived, ComputePrecision>::operator()(const peano4::LevelJump& levelJump) const {
+  constexpr int                 FluxElementsPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis) * NumberOfUnknowns;
+  const ComputePrecision* const coarseFlux =
+    faceFluxes.getChunk(levelJump.coarseFace) + levelJump.coarseSide * FluxElementsPerFace;
+  InterpolateFaceStateHalves<Derived, ComputePrecision>{faceStates, prolongationMatrix}(levelJump);
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    const int fineFace = levelJump.fineFaces[subface];
     exahype2::dg::interpolateFace<NodesPerAxis, NumberOfUnknowns>(
       coarseFlux,
       faceFluxes.getChunk(fineFace) + levelJump.coarseSide * FluxElementsPerFace,
@@ -884,6 +896,39 @@ exahype2::dg::RestrictFluxHalves<Derived, ComputePrecision>::operator()(const pe
   );
 }
 
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::RestrictStateHalves<Derived, ComputePrecision>::operator()(const peano4::LevelJump& levelJump) const {
+  constexpr int StateElementsPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis) * NumberOfData;
+  assertion(levelJump.coarseSide == 0 or levelJump.coarseSide == 1, levelJump.coarseSide);
+  assertion(restrictionMatrix != nullptr);
+  const int               fineSide = 1 - levelJump.coarseSide;
+  const ComputePrecision* fine[peano4::SubfacesPerFace];
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    fine[subface] = faceStates.getChunk(levelJump.fineFaces[subface]) + fineSide * StateElementsPerFace;
+  }
+  exahype2::dg::restrictFace<NodesPerAxis, NumberOfData>(
+    fine,
+    faceStates.getChunk(levelJump.coarseFace) + fineSide * StateElementsPerFace,
+    restrictionMatrix
+  );
+}
+
+template <typename Operation>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ForLevelJumpOnPlane<Operation>::operator()(const peano4::LevelJump& levelJump) const {
+  constexpr double PlaneTolerance = 1.0e-8;
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  const int face = levelJump.coarseFace;
+  if (
+    partition.getFaceNormal(face) == normal
+    and std::abs(partition.getFaceCentre(face, normal) - position)
+      <= PlaneTolerance * partition.getFaceWidth(face, normal)
+  ) {
+    operation(levelJump);
+  }
+}
+
 /**
  * Subtracts the integral of one face from the NumberOfUnknowns updates of cellNode in nodeUpdate.
  * faceFlux holds, per face node, the difference between the numerical flux and the cell's own
@@ -1053,7 +1098,9 @@ exahype2::dg::MaxEigenvalueStatistics::accumulate(
   maxScaledEigenvalue = exahype2::MaxEigenvalueReduction::combine(maxScaledEigenvalue, scaledEigenvalue);
 }
 
-/** Returns the physical and the scaled wave-speed maxima of Derived over the quadrature nodes of one cell. */
+/**
+ * Returns the physical and the scaled wave-speed maxima of Derived over the quadrature nodes of one cell.
+ */
 template <typename Derived, typename Precision>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::reduceMaxEigenvalues(

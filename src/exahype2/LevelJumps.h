@@ -5,7 +5,7 @@
 #include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace exahype2 {
   template <typename Operation>
@@ -26,7 +26,9 @@ namespace exahype2 {
 } // namespace exahype2
 
 TARGET_DECLARE
-/** Runs operation on one level jump of the span. */
+/**
+ * Runs operation on one level jump of the span.
+ */
 template <typename Operation>
 struct exahype2::ForEachLevelJump final {
   tarch::Span<const peano4::LevelJump> levelJumps{};

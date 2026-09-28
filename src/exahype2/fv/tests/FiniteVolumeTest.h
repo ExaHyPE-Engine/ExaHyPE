@@ -31,6 +31,7 @@ private:
   void testProjectionFillsTheOwnHalfOfEveryFace();
   void testHaloInterpolationReproducesALinearProfile();
   void testAConstantFaceInterpolatesBitwise();
+  void testHaloInjectionCopiesTheCoveringVolume();
   void testHaloRestrictionAveragesTheCoveringVolumes();
   void testConstantFineFacesRestrictBitwise();
   void testPatchInterpolationCopiesTheCoveringVolume();

@@ -26,7 +26,7 @@ namespace {
   constexpr int NumberOfData         = DIMENSIONS;
   constexpr int NodesPerCell         = exahype2::dg::getNodesPerCell(NodesPerAxis);
   constexpr int ValuesPerCell        = NodesPerCell * NumberOfData;
-  constexpr int NumberOfParticleData = exahype2::particles::ParticleRadiusAttribute + 1;
+  constexpr int NumberOfParticleData = exahype2::particles::ParticleMassAttribute + 1;
   TARGET_DECLARE_END
 
   constexpr double QuadratureNodes1D[NodesPerAxis] = {0.21132486540518713, 0.7886751345948129};
@@ -37,7 +37,9 @@ namespace {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<double>;
   using Set      = exahype2::particles::ParticleSet<NumberOfParticleData>;
 
-  /** Returns the linear field of unknown k at x, which is k + 1 plus the sum over the axes of (axis + 2) x(axis). */
+  /**
+   * Returns the linear field of unknown k at x, which is k + 1 plus the sum over the axes of (axis + 2) x(axis).
+   */
   GPU_CALLABLE_METHOD double getLinearField(const int unknown, const tarch::la::Vector<DIMENSIONS, double>& x) {
     double value = unknown + 1.0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -46,7 +48,9 @@ namespace {
     return value;
   }
 
-  /** Returns the values of the linear field at the nodes of a cell. */
+  /**
+   * Returns the values of the linear field at the nodes of a cell.
+   */
   std::vector<double> getLinearCell(
     const tarch::la::Vector<DIMENSIONS, double>& centre,
     const tarch::la::Vector<DIMENSIONS, double>& width
@@ -63,7 +67,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Writes velocity into the first unknown of every node of a cell and zero into its other unknowns. */
+  /**
+   * Writes velocity into the first unknown of every node of a cell and zero into its other unknowns.
+   */
   struct FillNodeVelocity final {
     peano4::Partition partition{};
     CellPool::View    solution{};
@@ -80,7 +86,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank. */
+  /**
+   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
+   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -158,7 +166,9 @@ namespace {
     );
   }
 
-  /** The forces of a tracer that copies the fluid velocity into its own velocity and moves with it. */
+  /**
+   * The forces of a tracer that copies the fluid velocity into its own velocity and moves with it.
+   */
   exahype2::particles::Forces getFluidTracer() {
     exahype2::particles::Forces forces;
     forces.interpolationScheme = exahype2::particles::InterpolationScheme::PiecewiseLinear;
@@ -188,7 +198,9 @@ exahype2::dg::tests::TracingTest::run() {
   testMethod(testFaceTracingWritesTheMeanAndTheJumpOfTheTraces);
 }
 
-/** Static sampling writes only its named attributes, also into a set without motion attributes. */
+/**
+ * Static sampling writes only its named attributes, also into a set without motion attributes.
+ */
 void
 exahype2::dg::tests::TracingTest::testStaticSamplingPreservesParticleData() {
   const Grid grid(2.0);
@@ -278,7 +290,9 @@ exahype2::dg::tests::TracingTest::testFaceTracingWritesTheMeanAndTheJumpOfTheTra
   faceStates.release();
 }
 
-/** The interpolation writes unknown k into the k-th named entry and leaves the other entries alone. */
+/**
+ * The interpolation writes unknown k into the k-th named entry and leaves the other entries alone.
+ */
 void
 exahype2::dg::tests::TracingTest::testInterpolateFieldsWritesThePolynomialIntoTheNamedEntries() {
   const tarch::la::Vector<DIMENSIONS, double> centre(0.5);

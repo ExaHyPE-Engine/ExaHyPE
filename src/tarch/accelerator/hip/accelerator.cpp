@@ -54,6 +54,8 @@ tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::si
   assertion(device >= 0, device);
   activateDevice(device);
   CHECK_HIP_ERROR(hipMemcpyAsync(target, source, sizeInBytes, hipMemcpyHostToDevice, getDeviceStream()));
+  // A copy from pinned host memory returns before the transfer ends, so the caller could overwrite its source.
+  CHECK_HIP_ERROR(hipStreamSynchronize(getDeviceStream()));
 }
 
 void
@@ -71,6 +73,8 @@ tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::
   assertion(device >= 0, device);
   activateDevice(device);
   CHECK_HIP_ERROR(hipMemcpyAsync(target, source, sizeInBytes, hipMemcpyDeviceToHost, getDeviceStream()));
+  // A copy into pinned host memory returns before the transfer ends, so the caller could read stale values.
+  CHECK_HIP_ERROR(hipStreamSynchronize(getDeviceStream()));
 }
 
 void

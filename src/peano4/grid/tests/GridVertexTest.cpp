@@ -41,7 +41,9 @@ peano4::grid::tests::GridVertexTest::testState() {
   validateEquals(stream.str(), description);
 }
 
-/** A byte copy of a vertex reproduces every declared field. */
+/**
+ * A byte copy of a vertex reproduces every declared field.
+ */
 void
 peano4::grid::tests::GridVertexTest::testTheByteRepresentationCarriesEveryField() {
   static_assert(std::is_trivially_copyable_v<peano4::grid::GridVertex>);

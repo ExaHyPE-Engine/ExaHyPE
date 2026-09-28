@@ -6,7 +6,9 @@
 #include "applications/exaskred/WellBalancedRusanov.h"
 
 TARGET_DECLARE
-/** Fills the dam left of x = 5 over three conical mounds on a flat channel floor. */
+/**
+ * Fills the dam left of x = 5 over three conical mounds on a flat channel floor.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   double* const NOALIAS                                         Q,

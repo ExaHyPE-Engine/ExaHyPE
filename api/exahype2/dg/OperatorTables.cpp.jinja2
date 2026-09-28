@@ -7,7 +7,9 @@
 #include "tarch/accelerator/accelerator.h"
 
 namespace {
-  /** Returns a copy of values in device memory. */
+  /**
+   * Returns a copy of values in device memory.
+   */
   template <typename Precision, std::size_t Length>
   Precision* copyToDevice(const std::array<Precision, Length>& values) {
     static_assert(Length > 0);

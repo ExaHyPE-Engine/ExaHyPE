@@ -23,6 +23,7 @@ namespace {
   template <typename Solver>
   using Predictor = exahype2::dg::ader::NonlinearPredictor<Solver, double>;
 
+  TARGET_DECLARE
   constexpr int NodesPerAxis       = CellLayout::NodesPerAxis;
   constexpr int NumberOfUnknowns   = CellLayout::NumberOfUnknowns;
   constexpr int NumberOfData       = CellLayout::NumberOfData;
@@ -46,8 +47,9 @@ namespace {
   constexpr double SourceStrength          = 1.5;
   constexpr double DiffusiveSourceStrength = 0.5;
 
-  TARGET_DECLARE
-  /** A flux that depends on the state, on the position along its axis and on the time. */
+  /**
+   * A flux that depends on the state, on the position along its axis and on the time.
+   */
   struct PlainFluxTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
@@ -64,7 +66,9 @@ namespace {
     }
   };
 
-  /** A diffusive flux that reads the gradient of every axis at the node. */
+  /**
+   * A diffusive flux that reads the gradient of every axis at the node.
+   */
   struct DiffusiveFluxTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
@@ -149,7 +153,9 @@ namespace {
   struct FluxSourceSolver final : StubLayout, PlainFluxTerm, SourceTerm {};
   struct FullSolver final : StubLayout, DiffusiveFluxTerm, ProductTerm, SourceTerm, DiffusiveSourceTerm {};
 
-  /** Every term moves a profile that is linear along the first axis at a constant rate. */
+  /**
+   * Every term moves a profile that is linear along the first axis at a constant rate.
+   */
   struct ProfileSolver final : StubLayout {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
@@ -351,7 +357,9 @@ namespace {
     }
   }
 
-  /** The face states and face fluxes of one cell, with one pointer per face for the kernels. */
+  /**
+   * The face states and face fluxes of one cell, with one pointer per face for the kernels.
+   */
   struct FaceBuffers final {
     double  state[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfData]{};
     double  flux[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfUnknowns]{};
@@ -366,7 +374,9 @@ namespace {
     }
   };
 
-  /** Returns the cell node that carries the face node of the face along direction in layer normalIndex. */
+  /**
+   * Returns the cell node that carries the face node of the face along direction in layer normalIndex.
+   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     auto nodeIndex       = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
     nodeIndex(direction) = normalIndex;
@@ -379,7 +389,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Points the face arrays of one cell into the flat buffers, one block per cell and face. */
+  /**
+   * Points the face arrays of one cell into the flat buffers, one block per cell and face.
+   */
   INLINE_METHOD GPU_CALLABLE_METHOD void collectFacePointers(
     const int     cell,
     double* const faceStates,
@@ -396,7 +408,9 @@ namespace {
     }
   }
 
-  /** Writes the predictor of one cell into its faces and the number of its Picard sweeps into sweeps. */
+  /**
+   * Writes the predictor of one cell into its faces and the number of its Picard sweeps into sweeps.
+   */
   struct PredictorOfCell final {
     exahype2::dg::BasisTables<double> tables{};
     double*                           cellStates{nullptr};
@@ -435,7 +449,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Runs the predictor of every cell on the device and returns the number of Picard sweeps of every cell. */
+  /**
+   * Runs the predictor of every cell on the device and returns the number of Picard sweeps of every cell.
+   */
   std::vector<int> predictOnDevice(
     const Tables&                         tables,
     const exahype2::dg::tests::CellChain& geometry,
@@ -513,7 +529,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::run() {
   testMethod(testEveryCellOfADeviceRangeMatchesTheHostPredictor);
 }
 
-/** Every time slice of the space-time state holds the cell state and every padding lane holds zero. */
+/**
+ * Every time slice of the space-time state holds the cell state and every padding lane holds zero.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheGuessRepeatsTheCellStateOverTime() {
   float cellState[CellStateSize];
@@ -547,7 +565,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheGuessRepeatsTheCellSta
   }
 }
 
-/** The right-hand side of the cleared time node holds zeros, the other time nodes keep their values. */
+/**
+ * The right-hand side of the cleared time node holds zeros, the other time nodes keep their values.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheRightHandSideOfATimeNodeStartsFromZero() {
   constexpr int ClearedTimeNode = 1;
@@ -576,7 +596,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheRightHandSideOfATimeNo
   }
 }
 
-/** A flux that is constant along every axis leaves the right-hand side where it is. */
+/**
+ * A flux that is constant along every axis leaves the right-hand side where it is.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testAConstantFluxHasNoDivergence() {
   const Tables tables;
@@ -610,7 +632,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAConstantFluxHasNoDiverge
   }
 }
 
-/** A flux that grows linearly along its own axis subtracts its exact derivative from one time slice. */
+/**
+ * A flux that grows linearly along its own axis subtracts its exact derivative from one time slice.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testALinearFluxSubtractsItsExactDivergence() {
   constexpr double FluxSlope = 3.0;
@@ -685,7 +709,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testALinearFluxSubtractsItsEx
   }
 }
 
-/** A cell without flux and without source solves to the initial state at every time node. */
+/**
+ * A cell without flux and without source solves to the initial state at every time node.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testAPicardSystemWithoutTermsReproducesTheInitialState() {
   const Tables tables;
@@ -735,7 +761,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAPicardSystemWithoutTerms
   }
 }
 
-/** The solve returns the squared distance between the new and the previous iterate and stores the new one. */
+/**
+ * The solve returns the squared distance between the new and the previous iterate and stores the new one.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheResidualIsTheSquaredDistanceOfTheIterates() {
   double inversePicardOperator[OperatorEntries];
@@ -800,7 +828,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheResidualIsTheSquaredDi
   validateNumericalEquals(secondResidual, 0.0);
 }
 
-/** An iterate above the divergence bound and an iterate that is not a number both return an infinite distance. */
+/**
+ * An iterate above the divergence bound and an iterate that is not a number both return an infinite distance.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testAnUnboundedIterateReportsDivergence() {
   double inversePicardOperator[OperatorEntries];
@@ -839,7 +869,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAnUnboundedIterateReports
   validate(not std::isfinite(notANumberResidual));
 }
 
-/** A state that holds one value at every node has a zero gradient along every axis. */
+/**
+ * A state that holds one value at every node has a zero gradient along every axis.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheGradientOfAConstantVanishes() {
   const Tables tables;
@@ -872,7 +904,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheGradientOfAConstantVan
   }
 }
 
-/** A state that grows linearly along every axis has the exact physical derivative along every axis. */
+/**
+ * A state that grows linearly along every axis has the exact physical derivative along every axis.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testALinearStateHasTheExactGradient() {
   constexpr double StateSlope = 3.0;
@@ -932,7 +966,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testALinearStateHasTheExactGr
   }
 }
 
-/** The flux fills one block per axis of one time slice, and the solver sees the node position and the node time. */
+/**
+ * The flux fills one block per axis of one time slice, and the solver sees the node position and the node time.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheFluxIsAskedForOncePerNodeAndAxis() {
   const Tables tables;
@@ -997,7 +1033,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheFluxIsAskedForOncePerN
   }
 }
 
-/** The diffusive flux of a node reads the gradient of every axis at that node. */
+/**
+ * The diffusive flux of a node reads the gradient of every axis at that node.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheDiffusiveFluxSeesTheNodalGradients() {
   const Tables tables;
@@ -1147,7 +1185,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::validateSourceOf(
   }
 }
 
-/** The source, the diffusive source and the negated nonconservative product enter one buffer in every combination. */
+/**
+ * The source, the diffusive source and the negated nonconservative product enter one buffer in every combination.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryTermCombinationAccumulatesIntoOneBuffer() {
   validateSourceOf<SourceSolver>(false, true, false);
@@ -1159,7 +1199,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryTermCombinationAccum
   validateSourceOf<AllSourcesSolver>(true, true, true);
 }
 
-/** A predictor that holds the same value at every time node averages to that value. */
+/**
+ * A predictor that holds the same value at every time node averages to that value.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheAverageOfAConstantIsThatConstant() {
   const Tables tables;
@@ -1209,7 +1251,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheAverageOfAConstantIsTh
   }
 }
 
-/** The average overwrites the state, the flux and the source of the target and adds nothing to them. */
+/**
+ * The average overwrites the state, the flux and the source of the target and adds nothing to them.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheTargetIsOverwrittenNotAccumulated() {
   const Tables           tables;
@@ -1239,7 +1283,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheTargetIsOverwrittenNot
   }
 }
 
-/** The averaged flux holds one block per axis, and every block runs in cell node order. */
+/**
+ * The averaged flux holds one block per axis, and every block runs in cell node order.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryAxisBlockKeepsCellNodeOrder() {
   double weightOfFirstNodeOnly[NodesPerAxis] = {};
@@ -1281,7 +1327,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryAxisBlockKeepsCellNo
   }
 }
 
-/** A solver without flux and without source leaves the target buffers of both untouched. */
+/**
+ * A solver without flux and without source leaves the target buffers of both untouched.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTermsTheSolverLacksAreLeftAlone() {
   const Tables tables;
@@ -1320,7 +1368,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTermsTheSolverLacksAreLef
   }
 }
 
-/** The two blocks of the scratch place every buffer behind its predecessor without a gap. */
+/**
+ * The two blocks of the scratch place every buffer behind its predecessor without a gap.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheScratchBlocksFollowEachOtherWithoutOverlap() {
   using Scratch = Predictor<FullSolver>::Scratch;
@@ -1350,7 +1400,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheScratchBlocksFollowEac
   validateEquals(Scratch::TimeAveragedSize, Scratch::TimeAveragedSourceOffset + Scratch::TimeAveragedSourceSize);
 }
 
-/** A term the solver lacks occupies no entry and shortens the block it belongs to. */
+/**
+ * A term the solver lacks occupies no entry and shortens the block it belongs to.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testATermTheSolverLacksHasZeroExtent() {
   using Full          = Predictor<FullSolver>;
@@ -1523,7 +1575,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
   }
 }
 
-/** The predictor of every cell of a device range reproduces the serial host loop. */
+/**
+ * The predictor of every cell of a device range reproduces the serial host loop.
+ */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryCellOfADeviceRangeMatchesTheHostPredictor() {
   const Tables                         tables;

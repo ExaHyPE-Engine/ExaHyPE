@@ -1,6 +1,9 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/accelerator/accelerator.h"
+
 TARGET_DECLARE
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::tests::StubSolver::boundaryConditions(

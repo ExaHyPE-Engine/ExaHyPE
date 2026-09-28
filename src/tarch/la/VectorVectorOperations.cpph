@@ -252,7 +252,9 @@ tarch::la::min(const tarch::la::Vector<Size, Scalar>& lhs, const tarch::la::Vect
   return result;
 }
 
-/** Returns the inner product of lhs and rhs. */
+/**
+ * Returns the inner product of lhs and rhs.
+ */
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar
 tarch::la::operator*(const tarch::la::Vector<Size, Scalar>& lhs, const tarch::la::Vector<Size, Scalar>& rhs) {
@@ -363,7 +365,9 @@ tarch::la::equals(
   return true;
 }
 
-/** Returns whether lhs is greater than rhs in the first component pair that differs by more than tolerance. */
+/**
+ * Returns whether lhs is greater than rhs in the first component pair that differs by more than tolerance.
+ */
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 tarch::la::firstGreater(
@@ -497,7 +501,9 @@ tarch::la::oneSmallerEquals(
   return false;
 }
 
-/** Compares the components exactly. A floating-point vector compares within a tolerance through equals(). */
+/**
+ * Compares the components exactly. A floating-point vector compares within a tolerance through equals().
+ */
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 tarch::la::operator==(const tarch::la::Vector<Size, Scalar>& lhs, const tarch::la::Vector<Size, Scalar>& rhs) {

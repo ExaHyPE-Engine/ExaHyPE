@@ -35,7 +35,9 @@ peano4::tests::buildRegularGrid(const int depth, const std::bitset<DIMENSIONS>& 
   }
 }
 
-/** Applies the requests to the standing grid without live data, so the partition is numbered afresh. */
+/**
+ * Applies the requests to the standing grid without live data, so the partition is numbered afresh.
+ */
 void
 peano4::tests::refineGrid(const std::vector<peano4::RefinementRequest>& requests) {
   peano4::Regrid regrid;
@@ -58,7 +60,9 @@ peano4::tests::getRefinementOfCentreCell(const int depth) {
   return request;
 }
 
-/** Returns one erase request per cell of the base grid of the depth, so every refined block coarsens. */
+/**
+ * Returns one erase request per cell of the base grid of the depth, so every refined block coarsens.
+ */
 std::vector<peano4::RefinementRequest>
 peano4::tests::getErasureOfEveryCell(const int depth) {
   const int                              cellsPerAxis = peano4::topology::getCellsPerAxis(depth);

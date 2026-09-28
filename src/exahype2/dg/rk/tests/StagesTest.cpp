@@ -18,6 +18,7 @@ namespace {
   using Setup  = exahype2::dg::tests::KernelTestSetup;
   using Tables = exahype2::dg::tests::BasisTableSet;
 
+  TARGET_DECLARE
   /**
    * The layout constants of a generated solver of order two with three Runge-Kutta stages, two
    * unknowns and one auxiliary variable; the stub solvers derive from it.
@@ -52,8 +53,9 @@ namespace {
   constexpr double WaveSpeed             = 3.0;
   constexpr double UniformCellExtent     = 0.5;
 
-  TARGET_DECLARE
-  /** A flux that scales the state by one plus the axis number. */
+  /**
+   * A flux that scales the state by one plus the axis number.
+   */
   struct FluxTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
@@ -70,7 +72,9 @@ namespace {
     }
   };
 
-  /** A diffusive flux that sums one plus the axis number times the gradient over the axes. */
+  /**
+   * A diffusive flux that sums one plus the axis number times the gradient over the axes.
+   */
   struct DiffusiveFluxTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       [[maybe_unused]] const double* NOALIAS const                  state,
@@ -91,7 +95,9 @@ namespace {
     }
   };
 
-  /** A source that scales the state by one plus the unknown number. */
+  /**
+   * A source that scales the state by one plus the unknown number.
+   */
   struct SourceTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void sourceTerm(
       const double* NOALIAS const                                   state,
@@ -107,7 +113,9 @@ namespace {
     }
   };
 
-  /** A product that returns the gradient. */
+  /**
+   * A product that returns the gradient.
+   */
   struct ProductTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
       [[maybe_unused]] const double* NOALIAS const                  state,
@@ -125,7 +133,9 @@ namespace {
     }
   };
 
-  /** A wave speed that is WaveSpeed at the end of the time step of the tests. */
+  /**
+   * A wave speed that is WaveSpeed at the end of the time step of the tests.
+   */
   struct WaveSpeedTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
       [[maybe_unused]] const double* NOALIAS const                  state,
@@ -179,7 +189,9 @@ namespace {
 
   constexpr int AcousticUnknowns = AcousticSolver::NumberOfUnknowns;
 
-  /** Returns the node that holds the values of the given node once the first two axes swap. */
+  /**
+   * Returns the node that holds the values of the given node once the first two axes swap.
+   */
   int getMirroredNode(const int node) {
     const auto                         index = peano4::dDelinearised(node, NodesPerAxis);
     tarch::la::Vector<DIMENSIONS, int> mirrored(index);
@@ -188,7 +200,9 @@ namespace {
     return peano4::dLinearised(mirrored, NodesPerAxis);
   }
 
-  /** Returns the unknown that holds the value of the given unknown once the first two axes swap. */
+  /**
+   * Returns the unknown that holds the value of the given unknown once the first two axes swap.
+   */
   int getMirroredUnknown(const int unknown) {
     if (unknown == 1) {
       return 2;
@@ -207,7 +221,9 @@ namespace {
     return cellSize;
   }
 
-  /** Fills the state with a profile that is linear along one axis and constant along the others. */
+  /**
+   * Fills the state with a profile that is linear along one axis and constant along the others.
+   */
   void fillLinearState(const Tables& tables, double* const cellState, const int axis, const double slope) {
     for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
       const double reference = tables.quadraturePoints[peano4::dDelinearised(cellNode, NodesPerAxis)(axis)];
@@ -217,7 +233,9 @@ namespace {
     }
   }
 
-  /** Returns the quadrature weight of every face node as the product of the weights of its face axes. */
+  /**
+   * Returns the quadrature weight of every face node as the product of the weights of its face axes.
+   */
   std::array<double, NodesPerFace> getFaceQuadratureWeights(const Tables& tables) {
     std::array<double, NodesPerFace> weights{};
     for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
@@ -232,7 +250,9 @@ namespace {
     return weights;
   }
 
-  /** Holds the face states and face fluxes of every face of one cell and the pointers the kernels take. */
+  /**
+   * Holds the face states and face fluxes of every face of one cell and the pointers the kernels take.
+   */
   struct FaceHalves final {
     double  states[peano4::FacesPerCell][StateValuesPerFace]{};
     double  fluxes[peano4::FacesPerCell][FluxValuesPerFace]{};
@@ -248,7 +268,9 @@ namespace {
   };
 
   TARGET_DECLARE
-  /** Points the face arrays of one cell into the flat buffers, one block per cell and face. */
+  /**
+   * Points the face arrays of one cell into the flat buffers, one block per cell and face.
+   */
   INLINE_METHOD GPU_CALLABLE_METHOD void collectFacePointers(
     const int     cell,
     double* const faceStates,
@@ -263,7 +285,9 @@ namespace {
     }
   }
 
-  /** Opens the stage of one cell into its estimates and its faces. */
+  /**
+   * Opens the stage of one cell into its estimates and its faces.
+   */
   template <typename Solver>
   struct OpenStageOfCell final {
     typename StageOf<Solver>::Weights weights{};
@@ -302,7 +326,9 @@ namespace {
     }
   };
 
-  /** Closes the step of one cell over its cell state. */
+  /**
+   * Closes the step of one cell over its cell state.
+   */
   struct CloseStepOfCell final {
     StageOf<FullSolver>::Weights weights{};
     double*                      cellStates{nullptr};
@@ -327,7 +353,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Opens the stage of every cell on the device and copies the estimates and the faces back. */
+  /**
+   * Opens the stage of every cell on the device and copies the estimates and the faces back.
+   */
   template <typename Solver>
   void openOnDevice(
     const Tables&                            tables,
@@ -369,7 +397,9 @@ namespace {
     deviceFaceFluxes.copyBack(faceFluxes);
   }
 
-  /** Closes the step of every cell on the device and copies the cell states back. */
+  /**
+   * Closes the step of every cell on the device and copies the cell states back.
+   */
   void closeOnDevice(
     const exahype2::dg::tests::CellChain& geometry,
     const StageOf<FullSolver>::Weights&   weights,
@@ -420,7 +450,9 @@ exahype2::dg::rk::tests::StagesTest::run() {
   testMethod(testEveryCellOfADeviceRangeClosesTheStepLikeTheHost);
 }
 
-/** The combination adds every weighted estimate to the unknowns and copies the auxiliary variables. */
+/**
+ * The combination adds every weighted estimate to the unknowns and copies the auxiliary variables.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testTheCombinationWeighsTheEstimatesAndCopiesTheAuxiliaryVariables() {
   double cellState[StateValuesPerCell];
@@ -453,7 +485,9 @@ exahype2::dg::rk::tests::StagesTest::testTheCombinationWeighsTheEstimatesAndCopi
   }
 }
 
-/** A stage with zero weights reproduces the cell state bitwise and reads no estimate. */
+/**
+ * A stage with zero weights reproduces the cell state bitwise and reads no estimate.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testAZeroWeightSkipsAnUnwrittenEstimate() {
   double cellState[StateValuesPerCell];
@@ -474,7 +508,9 @@ exahype2::dg::rk::tests::StagesTest::testAZeroWeightSkipsAnUnwrittenEstimate() {
   }
 }
 
-/** The combination into the cell state itself equals the combination into another target. */
+/**
+ * The combination into the cell state itself equals the combination into another target.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testTheCombinationWritesInPlace() {
   double cellState[StateValuesPerCell];
@@ -498,7 +534,9 @@ exahype2::dg::rk::tests::StagesTest::testTheCombinationWritesInPlace() {
   }
 }
 
-/** A state that is constant over the cell has a flux whose divergence is zero bitwise. */
+/**
+ * A state that is constant over the cell has a flux whose divergence is zero bitwise.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testAConstantFluxGivesZerosBitwise() {
   const Tables                                tables;
@@ -532,7 +570,9 @@ exahype2::dg::rk::tests::StagesTest::testAConstantFluxGivesZerosBitwise() {
   }
 }
 
-/** A flux that is linear along the first axis subtracts its physical slope times the time step at every node. */
+/**
+ * A flux that is linear along the first axis subtracts its physical slope times the time step at every node.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testTheDivergenceOfALinearFluxIsItsSlope() {
   const Tables                                tables;
@@ -562,7 +602,9 @@ exahype2::dg::rk::tests::StagesTest::testTheDivergenceOfALinearFluxIsItsSlope() 
   }
 }
 
-/** The source of every node enters the estimate times the time step. */
+/**
+ * The source of every node enters the estimate times the time step.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testTheSourceTermIsScaledByTheTimeStep() {
   const Tables                                tables;
@@ -597,7 +639,9 @@ exahype2::dg::rk::tests::StagesTest::testTheSourceTermIsScaledByTheTimeStep() {
   }
 }
 
-/** The product of a state that is linear along the last axis reads the exact physical gradient of that axis. */
+/**
+ * The product of a state that is linear along the last axis reads the exact physical gradient of that axis.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testTheNonconservativeProductSeesTheNodalGradient() {
   const Tables                                tables;
@@ -627,7 +671,9 @@ exahype2::dg::rk::tests::StagesTest::testTheNonconservativeProductSeesTheNodalGr
   }
 }
 
-/** A diffusive flux reads the gradient of every axis at the node. */
+/**
+ * A diffusive flux reads the gradient of every axis at the node.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testTheDiffusiveFluxSeesTheNodalGradients() {
   const Tables                                tables;
@@ -656,7 +702,9 @@ exahype2::dg::rk::tests::StagesTest::testTheDiffusiveFluxSeesTheNodalGradients()
   }
 }
 
-/** Two cells whose states mirror each other across the first diagonal receive mirrored estimates bitwise. */
+/**
+ * Two cells whose states mirror each other across the first diagonal receive mirrored estimates bitwise.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testMirroredCellsReceiveMirroredEstimates() {
   const Tables                                tables;
@@ -708,7 +756,9 @@ exahype2::dg::rk::tests::StagesTest::testMirroredCellsReceiveMirroredEstimates()
   }
 }
 
-/** A state that is linear along the first axis extrapolates to its values at the two faces of that axis. */
+/**
+ * A state that is linear along the first axis extrapolates to its values at the two faces of that axis.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testTheFaceStatesOfALinearStateAreItsValuesAtTheFaces() {
   const Tables                                tables;
@@ -765,7 +815,9 @@ exahype2::dg::rk::tests::StagesTest::testTheFaceStatesOfALinearStateAreItsValues
   }
 }
 
-/** A constant state opens a stage with a zero estimate and writes itself and its flux onto every face. */
+/**
+ * A constant state opens a stage with a zero estimate and writes itself and its flux onto every face.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testAConstantStateOpensAStageWithAZeroEstimateAndConstantFaceStates() {
   const Tables                                tables;
@@ -882,7 +934,9 @@ exahype2::dg::rk::tests::StagesTest::testTheFaceIntegralsReachTheEstimateOfTheSt
   validate(stageChanged);
 }
 
-/** The close writes the weighted sum of the estimates over the cell state and reports the wave speeds of that state. */
+/**
+ * The close writes the weighted sum of the estimates over the cell state and reports the wave speeds of that state.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testTheCloseWritesTheWeightedSumInPlaceAndReportsTheWaveSpeeds() {
   const Tables                                tables;
@@ -934,7 +988,9 @@ exahype2::dg::rk::tests::StagesTest::testTheCloseWritesTheWeightedSumInPlaceAndR
   validateNumericalEquals(silentStatistics.maxScaledEigenvalue, 0.0);
 }
 
-/** Every tableau is explicit, its nodes are the row sums of its matrix and its weights sum to one. */
+/**
+ * Every tableau is explicit, its nodes are the row sums of its matrix and its weights sum to one.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testTheButcherTableausAreConsistent() {
   const auto check = [this](const auto& tableau) {
@@ -960,13 +1016,17 @@ exahype2::dg::rk::tests::StagesTest::testTheButcherTableausAreConsistent() {
   check(exahype2::dg::rk::ButcherTableau<4>{});
 }
 
-/** The opened stage of every cell of a device range reproduces the serial host loop. */
+/**
+ * The opened stage of every cell of a device range reproduces the serial host loop.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeOpensAStageLikeTheHost() {
   validateEveryCellOpensLikeTheHost<FullSolver>();
 }
 
-/** The opened stage of a diffusive system of every cell of a device range reproduces the serial host loop. */
+/**
+ * The opened stage of a diffusive system of every cell of a device range reproduces the serial host loop.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeOpensADiffusiveStageLikeTheHost() {
   validateEveryCellOpensLikeTheHost<DiffusiveFullSolver>();
@@ -1033,7 +1093,9 @@ exahype2::dg::rk::tests::StagesTest::validateEveryCellOpensLikeTheHost() {
   validateNumericalBuffersEquals(deviceFaceFluxes, hostFaceFluxes);
 }
 
-/** The closed step of every cell of a device range reproduces the serial host loop. */
+/**
+ * The closed step of every cell of a device range reproduces the serial host loop.
+ */
 void
 exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeClosesTheStepLikeTheHost() {
   const exahype2::dg::tests::CellChain geometry;

@@ -23,7 +23,9 @@ exahype2::dg::tests::TransferOperators::TransferOperators() :
     )
   ) {}
 
-/** Returns a profile that is linear in every coordinate with a slope that depends on the axis and the value. */
+/**
+ * Returns a profile that is linear in every coordinate with a slope that depends on the axis and the value.
+ */
 double
 exahype2::dg::tests::getLinearTransferProfile(const double* const coordinates, const int axes, const int value) {
   double result = 1.0 + value;
@@ -33,7 +35,9 @@ exahype2::dg::tests::getLinearTransferProfile(const double* const coordinates, c
   return result;
 }
 
-/** Returns the constant of one value without an exact binary representation. */
+/**
+ * Returns the constant of one value without an exact binary representation.
+ */
 double
 exahype2::dg::tests::getTransferConstantOf(const int value) {
   return 1.0 / 3.0 + 0.1 * value;

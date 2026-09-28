@@ -31,10 +31,14 @@ namespace {
   };
 
   TARGET_DECLARE
-  /** Returns the L1 error of one cell; the L2 error is its square and the Linf error the same value. */
+  /**
+   * Returns the L1 error of one cell; the L2 error is its square and the Linf error the same value.
+   */
   GPU_CALLABLE_METHOD double getErrorOfCell(const int cell) { return 0.5 * (cell + 1); }
 
-  /** Writes the three errors of every cell into the buffer of the measurement. */
+  /**
+   * Writes the three errors of every cell into the buffer of the measurement.
+   */
   struct WriteErrorsOfCell final {
     double* errors{nullptr};
 
@@ -48,7 +52,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Deletes the time series file of the measurement on the global master, the one rank that writes it. */
+  /**
+   * Deletes the time series file of the measurement on the global master, the one rank that writes it.
+   */
   void deleteTimeSeriesFile(const std::string& fileName) {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       std::filesystem::remove(fileName + ".csv");
@@ -90,7 +96,9 @@ exahype2::tests::ErrorMeasurementTest::testEveryRankFindsASnapshotDueForTheNewes
   deleteTimeSeriesFile(fileName);
 }
 
-/** Redistributing contributions smaller than one rounding unit over the ranks preserves the norms bitwise. */
+/**
+ * Redistributing contributions smaller than one rounding unit over the ranks preserves the norms bitwise.
+ */
 void
 exahype2::tests::ErrorMeasurementTest::testRecordIsExactAcrossRankPartitions() {
   const int                  rank          = tarch::mpi::Rank::getInstance().getRank();
@@ -146,7 +154,9 @@ exahype2::tests::ErrorMeasurementTest::testSolutionErrorComparesAgainstTheAnalyt
   validateNumericalEquals(errors[2], 2.0);
 }
 
-/** The accumulation weights the listed unknowns and skips every other one. */
+/**
+ * The accumulation weights the listed unknowns and skips every other one.
+ */
 void
 exahype2::tests::ErrorMeasurementTest::testAccumulationWeightsTheMeasuredUnknownsOnly() {
   constexpr std::array<int, 2> MeasuredUnknowns{0, 2};
@@ -190,7 +200,9 @@ exahype2::tests::ErrorMeasurementTest::testRecordSumsTheIntegralNormsAndTakesThe
   deleteTimeSeriesFile(fileName);
 }
 
-/** The device sums of the cell errors in either order give bitwise the norms of the host sums. */
+/**
+ * The device sums of the cell errors in either order give bitwise the norms of the host sums.
+ */
 void
 exahype2::tests::ErrorMeasurementTest::testDeviceSumsMatchTheHostSumsWhateverTheCellOrder() {
   constexpr int       NumberOfCells = 3000;

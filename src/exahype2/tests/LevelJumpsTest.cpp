@@ -19,7 +19,9 @@
 #include "tarch/mpi/Rank.h"
 
 namespace {
-  /** The smallest depth whose first cell of level one holds at least three cells per axis. */
+  /**
+   * The smallest depth whose first cell of level one holds at least three cells per axis.
+   */
   constexpr int Depth = peano4::SubdivisionFactor >= 3 ? 2 : 3;
 
   /**
@@ -46,7 +48,9 @@ namespace {
     return peano4::Spacetree::getInstance().getPartition();
   }
 
-  /** Returns the level jumps of this rank whose coarse face lies on a level coarser than every cell of the rank. */
+  /**
+   * Returns the level jumps of this rank whose coarse face lies on a level coarser than every cell of the rank.
+   */
   int getNumberOfLevelJumpsCoarserThanEveryCell(const peano4::Partition& partition) {
     int result = 0;
     for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
@@ -57,7 +61,9 @@ namespace {
     return result;
   }
 
-  /** Returns the level jumps of both dependences in the order of the partition's list. */
+  /**
+   * Returns the level jumps of both dependences in the order of the partition's list.
+   */
   tarch::Span<const peano4::LevelJump> getEveryLevelJump(const peano4::Partition& partition) {
     const auto local  = partition.getLevelJumps(peano4::Dependence::Local);
     const auto remote = partition.getLevelJumps(peano4::Dependence::Remote);
@@ -91,7 +97,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Returns 1 for every level jump of the remote span, 0 for every level jump of the local span. */
+  /**
+   * Returns 1 for every level jump of the remote span, 0 for every level jump of the local span.
+   */
   std::vector<int> getRemoteMarks(const peano4::Partition& partition) {
     const auto       local  = partition.getLevelJumps(peano4::Dependence::Local);
     const auto       remote = partition.getLevelJumps(peano4::Dependence::Remote);

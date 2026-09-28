@@ -13,7 +13,9 @@
 #include <mpi.h>
 
 namespace {
-  /** Holds the erase vote of one child cell with the level and lattice position of its parent cell. */
+  /**
+   * Holds the erase vote of one child cell with the level and lattice position of its parent cell.
+   */
   struct EraseVote final {
     int                                level{0};
     tarch::la::Vector<DIMENSIONS, int> lattice{0};
@@ -118,7 +120,9 @@ exahype2::RefinementRequests::clear(const int numberOfSlots) {
   _votes.assign(static_cast<std::size_t>(numberOfSlots), NoVote);
 }
 
-/** Adds the commands indexed by slot for the cells on which the solver votes. */
+/**
+ * Adds the commands indexed by slot for the cells on which the solver votes.
+ */
 void
 exahype2::RefinementRequests::merge(
   const std::vector<exahype2::RefinementCommand>& commands,
@@ -153,7 +157,7 @@ exahype2::RefinementRequests::getRefinementRequests(const peano4::Partition& par
   std::vector<peano4::RefinementRequest> requests;
   for (const int slot : partition.getCells()) {
     if (_votes[static_cast<std::size_t>(slot)] == static_cast<std::uint8_t>(RefinementCommand::Refine)) {
-      peano4::RefinementRequest request;
+      peano4::RefinementRequest request{};
       request.setRefinementControl(Control::Refine);
       request.level        = partition.getCellLevel(slot);
       request.latticeIndex = partition.getCellLattice(slot);
@@ -163,7 +167,7 @@ exahype2::RefinementRequests::getRefinementRequests(const peano4::Partition& par
 
   const auto eraseVotes = getSortedEraseVotes(_votes, partition);
   forEachCompleteSiblingSet(eraseVotes, [&requests, &eraseVotes](const std::size_t firstVote) {
-    peano4::RefinementRequest request;
+    peano4::RefinementRequest request{};
     request.setRefinementControl(Control::Erase);
     request.level        = eraseVotes[firstVote].level;
     request.latticeIndex = eraseVotes[firstVote].lattice;

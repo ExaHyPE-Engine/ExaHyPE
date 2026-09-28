@@ -31,7 +31,9 @@ exahype2::ErrorMeasurement::isSnapshotDue(const double timeStamp) {
   return _open and _database.isSnapshotDue(timeStamp);
 }
 
-/** Returns the buffer that holds NumberOfNorms errors for each of the numberOfCells cells. */
+/**
+ * Returns the buffer that holds NumberOfNorms errors for each of the numberOfCells cells.
+ */
 double*
 exahype2::ErrorMeasurement::getErrorsPerCell(const int numberOfCells) {
   assertion(numberOfCells >= 0, numberOfCells);

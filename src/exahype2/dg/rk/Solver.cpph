@@ -17,7 +17,9 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::Solver(
 ) :
   Base(timeStepFactor, name, plottedFields) {}
 
-/** Reserves the pools of the base and one estimate chunk per slot. */
+/**
+ * Reserves the pools of the base and one estimate chunk per slot.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(const peano4::Partition& partition) {
@@ -26,7 +28,9 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(
   reserveStageScratch(partition);
 }
 
-/** Sizes the stage scratch to the chunks the dispatch over the advanced cells needs. */
+/**
+ * Sizes the stage scratch to the chunks the dispatch over the advanced cells needs.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::reserveStageScratch(
@@ -110,7 +114,9 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTi
   this->voteOnRefinement(partition, requests);
 }
 
-/** Moves the solution through the regrid and grows the estimate pool with the slot range. */
+/**
+ * Moves the solution through the regrid and grows the estimate pool with the slot range.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
@@ -199,7 +205,9 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage
   );
 }
 
-/** Adds the face integrals of every cell with the dependence to the estimate of the stage. */
+/**
+ * Adds the face integrals of every cell with the dependence to the estimate of the stage.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::addFaceIntegrals(

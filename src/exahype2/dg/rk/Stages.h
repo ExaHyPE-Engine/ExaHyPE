@@ -38,6 +38,7 @@ namespace exahype2::dg::rk::tests {
   class StagesTest;
 } // namespace exahype2::dg::rk::tests
 
+TARGET_DECLARE
 /**
  * The explicit Runge-Kutta scheme of one order as a Butcher tableau: Nodes holds the fraction
  * of the time step every stage advances to, Matrix the weight of every earlier stage in a
@@ -81,7 +82,6 @@ struct exahype2::dg::rk::ButcherTableau<4> final {
   };
 };
 
-TARGET_DECLARE
 /**
  * One Runge-Kutta stage of one cell of Derived, the generated solver class, whose RungeKuttaOrder
  * picks the Butcher tableau. The estimates of a cell hold NumberOfUnknowns values per node, one
@@ -218,7 +218,9 @@ struct exahype2::dg::rk::OpenStage final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Adds the face integrals of every listed cell to the estimate of the stage. */
+/**
+ * Adds the face integrals of every listed cell to the estimate of the stage.
+ */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::rk::AddStageFaceIntegrals final {
   using Kernel     = exahype2::dg::rk::Stage<Derived, ComputePrecision>;

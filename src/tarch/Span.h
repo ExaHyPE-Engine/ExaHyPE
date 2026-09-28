@@ -10,7 +10,9 @@ namespace tarch {
   struct Span;
 } // namespace tarch
 
-/** Addresses the size consecutive elements that start at data. */
+/**
+ * Addresses the size consecutive elements that start at data.
+ */
 template <typename Element>
 struct tarch::Span final {
   Element* data{nullptr};

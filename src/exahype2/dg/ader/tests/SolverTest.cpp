@@ -48,7 +48,9 @@ namespace {
   const double QuadratureNodes[NodesPerAxis]   = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
   const double QuadratureWeights[NodesPerAxis] = {0.5, 0.5};
 
-  /** Returns the Lagrange basis function of node at x. */
+  /**
+   * Returns the Lagrange basis function of node at x.
+   */
   double getBasisValue(const double x, const int node) {
     double result = 1.0;
     for (int other = 0; other < NodesPerAxis; other++) {
@@ -59,7 +61,9 @@ namespace {
     return result;
   }
 
-  /** Returns the derivative of the Lagrange basis function of node at x. */
+  /**
+   * Returns the derivative of the Lagrange basis function of node at x.
+   */
   double getBasisDerivative(const double x, const int node) {
     double result = 0.0;
     for (int omitted = 0; omitted < NodesPerAxis; omitted++) {
@@ -76,7 +80,9 @@ namespace {
     return result;
   }
 
-  /** Returns a new table in device memory, the memory the kernels read, with the values converted to Precision. */
+  /**
+   * Returns a new table in device memory, the memory the kernels read, with the values converted to Precision.
+   */
   template <typename Precision>
   Precision* getTableOf(const std::vector<double>& values) {
     std::vector<Precision> converted(values.size());
@@ -236,7 +242,9 @@ namespace {
   template <int Side>
   struct HalfSolver;
 
-  /** The PDE terms of a linear initial condition without flux and wave speed, so a step changes nothing. */
+  /**
+   * The PDE terms of a linear initial condition without flux and wave speed, so a step changes nothing.
+   */
   struct LinearTerms {
     static INLINE_METHOD GPU_CALLABLE_METHOD double getProfile(const tarch::la::Vector<DIMENSIONS, double>& x) {
       double value = 1.0;
@@ -298,7 +306,9 @@ namespace {
     }
   };
 
-  /** A solver with one unknown and no point source, which reads the tables of side 0. */
+  /**
+   * A solver with one unknown and no point source, which reads the tables of side 0.
+   */
   struct LinearADERDGSolver final : exahype2::dg::ader::Solver<LinearADERDGSolver, double, double, void>, LinearTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -322,7 +332,9 @@ namespace {
       Solver(TimeStepFactor, "LinearADERDGSolver", {{"q", 1}}) {}
   };
 
-  /** The linear solver with an adaptive rule and a unit wave speed. */
+  /**
+   * The linear solver with an adaptive rule and a unit wave speed.
+   */
   struct AdaptiveADERDGSolver final : exahype2::dg::ader::Solver<AdaptiveADERDGSolver, double, double, void>,
                                       LinearTerms {
     static constexpr int  DGOrder                    = ::Order;
@@ -353,10 +365,14 @@ namespace {
     }
   };
 
-  /** The plane between the cells the two coupled solvers own. */
+  /**
+   * The plane between the cells the two coupled solvers own.
+   */
   constexpr double Interface = CoarseWidth;
 
-  /** Owns the cells left of the interface for Side 0 and the cells right of it for Side 1. */
+  /**
+   * Owns the cells left of the interface for Side 0 and the cells right of it for Side 1.
+   */
   template <int Side>
   struct HalfSolver final : exahype2::dg::ader::Solver<HalfSolver<Side>, double, double, void>, LinearTerms {
     static constexpr int  DGOrder                    = ::Order;
@@ -383,7 +399,9 @@ namespace {
     }
   };
 
-  /** Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank. */
+  /**
+   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
+   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -416,7 +434,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Copies one entry of a list in the memory of the kernels into a buffer the test reads back. */
+  /**
+   * Copies one entry of a list in the memory of the kernels into a buffer the test reads back.
+   */
   struct CopyListEntries final {
     tarch::Span<const int> source{};
     int*                   target{nullptr};
@@ -425,7 +445,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Returns the entries of a list in the memory of the kernels. */
+  /**
+   * Returns the entries of a list in the memory of the kernels.
+   */
   std::vector<int> readList(const tarch::Span<const int> list) {
     if (list.isEmpty()) {
       return {};
@@ -435,7 +457,9 @@ namespace {
     return target.getValues();
   }
 
-  /** Returns for every face whether it lies in a group that depends on the data of another rank. */
+  /**
+   * Returns for every face whether it lies in a group that depends on the data of another rank.
+   */
   std::vector<bool> getRemoteFaceMarks(const peano4::Partition& partition) {
     std::vector<bool> remote(static_cast<std::size_t>(partition.getNumberOfFaces()), false);
     for (int kind = 0; kind < peano4::NumberOfFaceKinds; kind++) {
@@ -454,7 +478,9 @@ namespace {
     return depends;
   }
 
-  /** Returns the number of interior, boundary and hanging faces of the partition. */
+  /**
+   * Returns the number of interior, boundary and hanging faces of the partition.
+   */
   int getNumberOfRiemannFacesOf(const peano4::Partition& partition) {
     int riemannFaces = 0;
     for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
@@ -475,7 +501,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Increments the accumulator for every node of one cell whose value differs from the profile there. */
+  /**
+   * Increments the accumulator for every node of one cell whose value differs from the profile there.
+   */
   template <typename Pool>
   struct CountMismatchesAgainstTheProfile final {
     peano4::Partition        partition{};
@@ -501,7 +529,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Counts the nodes of every cell whose value differs from the profile at the node. */
+  /**
+   * Counts the nodes of every cell whose value differs from the profile at the node.
+   */
   template <typename Solver>
   int getNumberOfMismatchesAgainstTheProfile(const Solver& solver, const peano4::Partition& partition) {
     int mismatches = 0;
@@ -517,14 +547,18 @@ namespace {
     return mismatches;
   }
 
-  /** Returns whether the face is an interior face with normal 0 on the interface plane. */
+  /**
+   * Returns whether the face is an interior face with normal 0 on the interface plane.
+   */
   GPU_CALLABLE_METHOD bool isInterfaceFace(const peano4::Partition& partition, const int face) {
     return partition.getFaceNormal(face) == 0 and std::abs(partition.getFaceCentre(face, 0) - Interface) < Tolerance
       and partition.getFaceKind(face) == peano4::FaceKind::Interior;
   }
 
   TARGET_DECLARE
-  /** Increments the accumulator when the face is an interface face that holds a cell on its lower side. */
+  /**
+   * Increments the accumulator when the face is an interface face that holds a cell on its lower side.
+   */
   struct CountCouplingFace final {
     peano4::Partition partition{};
 
@@ -577,12 +611,55 @@ namespace {
   };
 
   /**
+   * Returns the number of nodes of both halves of the face whose face state differs from the profile.
+   */
+  GPU_CALLABLE_METHOD int getProfileMismatchesOfFace(
+    const peano4::Partition& partition,
+    const double* const      halves,
+    const double* const      quadraturePoints,
+    const int                face
+  ) {
+    constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
+    assertion(halves != nullptr);
+    assertion(quadraturePoints != nullptr);
+    assertion(face >= 0 and face < partition.getNumberOfFaces(), face, partition.getNumberOfFaces());
+    const int normal     = partition.getFaceNormal(face);
+    int       mismatches = 0;
+    for (int node = 0; node < NodesPerFace; node++) {
+      const auto                            nodeIndex = peano4::dDelinearisedExclusive(node, NodesPerAxis, normal);
+      tarch::la::Vector<DIMENSIONS, double> position;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        position(axis) = partition.getFaceCentre(face, axis);
+        if (axis != normal) {
+          position(axis) += (quadraturePoints[nodeIndex(axis)] - 0.5) * partition.getFaceWidth(face, axis);
+        }
+      }
+      for (int half = 0; half < 2; half++) {
+        if (std::abs(halves[half * NodesPerFace + node] - LinearTerms::getProfile(position)) > Tolerance) {
+          mismatches++;
+        }
+      }
+    }
+    return mismatches;
+  }
+
+  /**
+   * Returns whether the face is a coarse face of a level jump with normal 0 on the plane at position.
+   */
+  GPU_CALLABLE_METHOD bool isCoarseFaceOnPlane(
+    const peano4::Partition& partition,
+    const int                face,
+    const double             position
+  ) {
+    return partition.getFaceKind(face) == peano4::FaceKind::Coarse and partition.getFaceNormal(face) == 0
+      and std::abs(partition.getFaceCentre(face, 0) - position) < Tolerance;
+  }
+
+  /**
    * Increments the accumulator for every node of both halves of an interior face, of an interface
    * face only with interfaceOnly, whose face state differs from the profile.
    */
   struct CountTraceMismatchesAgainstTheProfile final {
-    static constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
-
     peano4::Partition                        partition{};
     LinearADERDGSolver::StatePool::ConstView faceStates{};
     const double*                            quadraturePoints{nullptr};
@@ -590,32 +667,48 @@ namespace {
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
       if (
-        partition.getFaceKind(face) != peano4::FaceKind::Interior
-        or (interfaceOnly and not isInterfaceFace(partition, face))
+        partition.getFaceKind(face) == peano4::FaceKind::Interior
+        and (not interfaceOnly or isInterfaceFace(partition, face))
       ) {
-        return;
-      }
-      const int           normal = partition.getFaceNormal(face);
-      const double* const halves = faceStates.getChunk(face);
-      for (int node = 0; node < NodesPerFace; node++) {
-        const auto                            nodeIndex = peano4::dDelinearisedExclusive(node, NodesPerAxis, normal);
-        tarch::la::Vector<DIMENSIONS, double> position;
-        for (int axis = 0; axis < DIMENSIONS; axis++) {
-          position(axis) = partition.getFaceCentre(face, axis);
-          if (axis != normal) {
-            position(axis) += (quadraturePoints[nodeIndex(axis)] - 0.5) * partition.getFaceWidth(face, axis);
-          }
-        }
-        for (int half = 0; half < 2; half++) {
-          if (std::abs(halves[half * NodesPerFace + node] - LinearTerms::getProfile(position)) > Tolerance) {
-            accumulator++;
-          }
-        }
+        accumulator += getProfileMismatchesOfFace(partition, faceStates.getChunk(face), quadraturePoints, face);
       }
     }
   };
 
-  /** Increments the accumulator for every interior face, for every interface face only with interfaceOnly. */
+  /**
+   * Increments the accumulator for every node of both halves of a coarse face with normal 0 on the
+   * plane at position whose face state differs from the profile.
+   */
+  struct CountCoarseFaceMismatchesOnPlane final {
+    peano4::Partition                        partition{};
+    LinearADERDGSolver::StatePool::ConstView faceStates{};
+    const double*                            quadraturePoints{nullptr};
+    double                                   position{0.0};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
+      if (isCoarseFaceOnPlane(partition, face, position)) {
+        accumulator += getProfileMismatchesOfFace(partition, faceStates.getChunk(face), quadraturePoints, face);
+      }
+    }
+  };
+
+  /**
+   * Increments the accumulator for every coarse face with normal 0 on the plane at position.
+   */
+  struct CountCoarseFacesOnPlane final {
+    peano4::Partition partition{};
+    double            position{0.0};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
+      if (isCoarseFaceOnPlane(partition, face, position)) {
+        accumulator++;
+      }
+    }
+  };
+
+  /**
+   * Increments the accumulator for every interior face, for every interface face only with interfaceOnly.
+   */
   struct CountInteriorFace final {
     peano4::Partition partition{};
     bool              interfaceOnly{false};
@@ -683,6 +776,35 @@ namespace {
     );
     return {faces, mismatches};
   }
+
+  /**
+   * Counts the coarse faces with normal 0 on the plane at position and the nodes of their halves
+   * whose face state differs from the profile.
+   */
+  std::pair<int, int> getCoarseFaceMismatchesOnPlane(
+    const LinearADERDGSolver& solver,
+    const peano4::Partition&  partition,
+    const double              position
+  ) {
+    int faces      = 0;
+    int mismatches = 0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(partition.getNumberOfFaces()),
+      CountCoarseFacesOnPlane{partition.onDevice(), position},
+      tarch::accelerator::Sum<int>{faces}
+    );
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(partition.getNumberOfFaces()),
+      CountCoarseFaceMismatchesOnPlane{
+        partition.onDevice(),
+        solver.getFaceStates().getView(),
+        Quadrature<double>::QuadraturePoints1D,
+        position
+      },
+      tarch::accelerator::Sum<int>{mismatches}
+    );
+    return {faces, mismatches};
+  }
 } // namespace
 
 exahype2::dg::ader::tests::SolverTest::SolverTest() :
@@ -698,6 +820,7 @@ exahype2::dg::ader::tests::SolverTest::run() {
   testMethod(testTheCellAndFaceGroupsSplitAtTheRankBoundary);
   testMethod(testTheProjectionWritesTheTracesOfTheSolutionIntoBothHalvesOfEveryInteriorFace);
   testMethod(testTheProjectionOntoAPlaneWritesTheTracesOfTheSolutionIntoItsFaces);
+  testMethod(testTheProjectionOntoAPlaneWritesBothHalvesOfTheCoarseFacesOfTheLevelJumps);
   testMethod(testReleaseFreesEveryPool);
 }
 
@@ -764,7 +887,9 @@ exahype2::dg::ader::tests::SolverTest::testTheCellAndFaceGroupsSplitAtTheRankBou
   solver.release();
 }
 
-/** Both halves of every face on the plane hold the values of the solution after the projection onto that plane. */
+/**
+ * Both halves of every face on the plane hold the values of the solution after the projection onto that plane.
+ */
 void
 exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesTheTracesOfTheSolutionIntoItsFaces() {
   const auto& partition = buildGrid();
@@ -783,7 +908,36 @@ exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesTheTrace
   solver.release();
 }
 
-/** The first time step after a refinement uses the stability bound of the finer grid. */
+/**
+ * Both halves of every coarse face on the plane beside a refined block hold the values of the
+ * solution after the projection onto that plane.
+ */
+void
+exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesBothHalvesOfTheCoarseFacesOfTheLevelJumps() {
+  const auto& partition = buildGrid();
+
+  LinearADERDGSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(partition);
+  exahype2::RefinementRequests requests;
+  requests.clear(partition.getNumberOfSlots());
+  solver.initialise(partition, requests);
+  peano4::Spacetree::getInstance().markPersistentDataLive();
+  regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
+
+  const int    firstRefinedCell = CellsPerAxis / 2 - peano4::tests::getNumberOfCellsPerAxisRefinedAroundTheCentre() / 2;
+  const double blockBoundary    = firstRefinedCell * CoarseWidth;
+  solver.projectSolutionOntoPlane(partition, 0, blockBoundary);
+
+  const auto [coarseFaces, mismatches] = getCoarseFaceMismatchesOnPlane(solver, partition, blockBoundary);
+  validateEquals(peano4::tests::getGlobalSumOf(mismatches), 0);
+  validate(peano4::tests::getGlobalSumOf(coarseFaces) > 0);
+  solver.release();
+}
+
+/**
+ * The first time step after a refinement uses the stability bound of the finer grid.
+ */
 void
 exahype2::dg::ader::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
   const auto&          partition = buildGrid();

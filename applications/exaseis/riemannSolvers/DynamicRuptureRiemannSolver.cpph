@@ -10,7 +10,9 @@ namespace {
   TARGET_DECLARE
   [[maybe_unused]] DEVICE_VARIABLE applications::exahype2::exaseis::FaultPlane faultPlaneOnDevice;
 
-  /** Writes faultPlane into the device copy of the fault plane of this translation unit. */
+  /**
+   * Writes faultPlane into the device copy of the fault plane of this translation unit.
+   */
   struct WriteFaultPlaneOnDevice final {
     applications::exahype2::exaseis::FaultPlane faultPlane{};
 
@@ -25,7 +27,9 @@ namespace {
   );
 } // namespace
 
-/** Stores the fault plane on the host and copies it to every device copy. */
+/**
+ * Stores the fault plane on the host and copies it to every device copy.
+ */
 INLINE_METHOD void
 applications::exahype2::exaseis::FaultPlane::set(const int normal, const double position) {
   assertion(normal >= 0 and normal < DIMENSIONS, normal);
@@ -33,7 +37,9 @@ applications::exahype2::exaseis::FaultPlane::set(const int normal, const double 
   tarch::accelerator::uploadDeviceCopies();
 }
 
-/** Returns the fault plane that set() stored last. */
+/**
+ * Returns the fault plane that set() stored last.
+ */
 INLINE_METHOD const applications::exahype2::exaseis::FaultPlane&
 applications::exahype2::exaseis::FaultPlane::getHostCopy() {
   return getStoredHostCopy();
@@ -46,14 +52,18 @@ applications::exahype2::exaseis::FaultPlane::getStoredHostCopy() {
 }
 
 TARGET_DECLARE
-/** Returns the device copy on the device and the host copy on the host. */
+/**
+ * Returns the device copy on the device and the host copy on the host.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaseis::FaultPlane
 applications::exahype2::exaseis::FaultPlane::get() {
   COMPILE_IF_ON_DEVICE(return faultPlaneOnDevice;)
   COMPILE_IF_ON_HOST(return getHostCopy();)
 }
 
-/** Returns whether the face with faceCentre and faceNormal of a cell of cellSize lies on the plane. */
+/**
+ * Returns whether the face with faceCentre and faceNormal of a cell of cellSize lies on the plane.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaseis::FaultPlane::containsFace(
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,

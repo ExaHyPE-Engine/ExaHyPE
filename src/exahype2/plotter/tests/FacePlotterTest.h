@@ -21,4 +21,5 @@ public:
 
 private:
   void testEverySelectedFaceBecomesItsNodesAndBothTraces();
+  void testEveryFaceOfAnAdaptiveGridIsWrittenByOneRank();
 };

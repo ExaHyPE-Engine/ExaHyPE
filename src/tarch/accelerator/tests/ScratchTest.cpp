@@ -10,6 +10,8 @@
 #include "tarch/accelerator/Scratch.h"
 #include "tarch/accelerator/accelerator.h"
 
+#include <omp.h>
+
 namespace {
   TARGET_DECLARE
   constexpr int ChunkSize = 4;
@@ -41,7 +43,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Returns the number of work items of a dispatch over workItems that violate their scratch chunk. */
+  /**
+   * Returns the number of work items of a dispatch over workItems that violate their scratch chunk.
+   */
   int getNumberOfScratchViolations(const int workItems, const int chunks, int* const memory) {
     int violations = 0;
     tarch::accelerator::parallelReduce(
@@ -59,6 +63,7 @@ tarch::accelerator::tests::ScratchTest::ScratchTest() :
 void
 tarch::accelerator::tests::ScratchTest::run() {
   testMethod(testEveryWorkItemNamesAChunkOfTheDispatch);
+  testMethod(testTheChunksCoverTheTeamOfTheEnclosingRegion);
 }
 
 /**
@@ -77,4 +82,20 @@ tarch::accelerator::tests::ScratchTest::testEveryWorkItemNamesAChunkOfTheDispatc
   scratch.allocate(static_cast<std::size_t>(chunks) * ChunkSize);
   validateEquals(getNumberOfScratchViolations(WorkItems, chunks, scratch.getData()), 0);
   scratch.release();
+}
+
+/**
+ * The chunks cover the team of the enclosing parallel region when a nested region would hold one thread.
+ */
+void
+tarch::accelerator::tests::ScratchTest::testTheChunksCoverTheTeamOfTheEnclosingRegion() {
+  constexpr int WorkItems      = 1000;
+  const int     maximumThreads = omp_get_max_threads();
+  omp_set_num_threads(1);
+  const int chunks = tarch::accelerator::getNumberOfScratchChunks(WorkItems);
+  omp_set_num_threads(maximumThreads);
+
+  tarch::accelerator::Buffer<int> scratch{tarch::MemoryLocation::Device};
+  scratch.allocate(static_cast<std::size_t>(chunks) * ChunkSize);
+  validateEquals(getNumberOfScratchViolations(WorkItems, chunks, scratch.getData()), 0);
 }

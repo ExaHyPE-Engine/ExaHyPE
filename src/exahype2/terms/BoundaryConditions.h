@@ -17,12 +17,16 @@ namespace exahype2::terms {
     { SolverType::boundaryConditions(inside, outside, x, h, t, normal) } -> std::same_as<void>;
   };
 
-  /** A solver whose domain is periodic along every axis has no face on the domain boundary. */
+  /**
+   * A solver whose domain is periodic along every axis has no face on the domain boundary.
+   */
   template <typename SolverType>
   concept IsPeriodicAlongEveryAxis = SolverType::PeriodicBoundaries[0] and SolverType::PeriodicBoundaries[1]
     and SolverType::PeriodicBoundaries[DIMENSIONS - 1];
 
-  /** A solver needs boundary conditions unless its domain is periodic along every axis. */
+  /**
+   * A solver needs boundary conditions unless its domain is periodic along every axis.
+   */
   template <typename SolverType, typename Precision>
   concept HasBoundaryConditionsWhereNeeded =
     HasBoundaryConditions<SolverType, Precision> or IsPeriodicAlongEveryAxis<SolverType>;

@@ -42,7 +42,9 @@ tarch::mpi::HelperThread::stop() {
   _thread = std::thread();
 }
 
-/** Returns whether the polling function has returned true. */
+/**
+ * Returns whether the polling function has returned true.
+ */
 bool
 tarch::mpi::HelperThread::hasFinished() const {
   return _hasFinished.load(std::memory_order_acquire);

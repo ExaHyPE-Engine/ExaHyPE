@@ -7,7 +7,7 @@
 #include "exahype2/fv/timestepping/SingleStep.h"
 #include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::limiting::tests {
@@ -23,7 +23,9 @@ namespace exahype2::dg::limiting::tests {
 } // namespace exahype2::dg::limiting::tests
 
 TARGET_DECLARE
-/** Sizes of the cells the limiter tests run with: Two nodes and three subcells per axis. */
+/**
+ * Sizes of the cells the limiter tests run with: Two nodes and three subcells per axis.
+ */
 struct exahype2::dg::limiting::tests::StubLayout final {
   static constexpr int    NodesPerAxis         = 2;
   static constexpr int    SubcellsPerAxis      = 3;
@@ -94,7 +96,9 @@ struct exahype2::dg::limiting::tests::StubSolverOf {
   );
 };
 
-/** The stub solver with a relaxation term that doubles the specified parameter. */
+/**
+ * The stub solver with a relaxation term that doubles the specified parameter.
+ */
 struct exahype2::dg::limiting::tests::RelaxedStubSolver final : exahype2::dg::limiting::tests::StubSolver {
   static INLINE_METHOD GPU_CALLABLE_METHOD double dmpRelaxationParameter(
     int    observable,
@@ -102,7 +106,9 @@ struct exahype2::dg::limiting::tests::RelaxedStubSolver final : exahype2::dg::li
   );
 };
 
-/** The stub solver with a subcell Riemann solver whose wave speed is two. */
+/**
+ * The stub solver with a subcell Riemann solver whose wave speed is two.
+ */
 struct exahype2::dg::limiting::tests::RiemannStubSolver final : exahype2::dg::limiting::tests::StubSolver {
   static constexpr double SubcellWaveSpeed = 2.0;
 

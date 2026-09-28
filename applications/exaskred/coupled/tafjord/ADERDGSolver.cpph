@@ -10,7 +10,9 @@ namespace applications::exahype2::exaskred {
   INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getWaterAdmissibilityPhysics();
 } // namespace applications::exahype2::exaskred
 
-/** Returns the physical parameters of the granular layer. */
+/**
+ * Returns the physical parameters of the granular layer.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
 applications::exahype2::exaskred::getSlidePhysics() {
   return {
@@ -86,7 +88,9 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   }
 }
 
-/** Refines a cell that carries slide material or a disturbed water surface and erases every other cell. */
+/**
+ * Refines a cell that carries slide material or a disturbed water surface and erases every other cell.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   const double* const NOALIAS                                   Q,

@@ -21,7 +21,9 @@ namespace exahype2 {
   } // namespace tests
 } // namespace exahype2
 
-/** Holds the exact sums of the L1 and the squared L2 errors and the largest error of a set of cells. */
+/**
+ * Holds the exact sums of the L1 and the squared L2 errors and the largest error of a set of cells.
+ */
 struct exahype2::ErrorSums final {
   TARGET_DECLARE
   static constexpr int NumberOfNorms = 3;
@@ -82,7 +84,9 @@ private:
 };
 
 TARGET_DECLARE
-/** Adds the errors of every numberOfPartialSums-th cell, starting at the cell of its index, into that partial sum. */
+/**
+ * Adds the errors of every numberOfPartialSums-th cell, starting at the cell of its index, into that partial sum.
+ */
 struct exahype2::SumErrorsOfCells final {
   const double* errorsPerCell{nullptr};
   int           numberOfCells{0};
@@ -92,7 +96,9 @@ struct exahype2::SumErrorsOfCells final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int partialSum) const;
 };
 
-/** Merges the partial sum stride entries further into the partial sum of an index divisible by twice stride. */
+/**
+ * Merges the partial sum stride entries further into the partial sum of an index divisible by twice stride.
+ */
 struct exahype2::MergeErrorSums final {
   ErrorSums* partialSums{nullptr};
   int        stride{0};

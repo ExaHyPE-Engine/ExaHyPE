@@ -8,7 +8,9 @@ namespace tarch::mpi::tests {
   class RankTest;
 } // namespace tarch::mpi::tests
 
-/** Checks the node layout the rank derives, which decides the device a rank takes. */
+/**
+ * Checks the node layout the rank derives, which decides the device a rank takes.
+ */
 class tarch::mpi::tests::RankTest final : public tarch::tests::TestCase {
 public:
   RankTest();

@@ -4,7 +4,7 @@
 
 #include "exahype2/Limits.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 TARGET_DECLARE
 namespace exahype2 {
@@ -42,7 +42,9 @@ class exahype2::TimeStepping final {
 public:
   enum class Rule { Adaptive, Fixed };
 
-  /** Names the eigenvalue maximum the CFL condition of the solver family divides by. */
+  /**
+   * Names the eigenvalue maximum the CFL condition of the solver family divides by.
+   */
   enum class Stability { PhysicalEigenvalue, ScaledEigenvalue };
 
   TimeStepping()                               = delete;

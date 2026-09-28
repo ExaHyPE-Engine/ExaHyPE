@@ -3,7 +3,9 @@
 #pragma once
 
 namespace exahype2::terms {
-  /** A solver whose initial condition fills every node of a cell in one call sets this constant. */
+  /**
+   * A solver whose initial condition fills every node of a cell in one call sets this constant.
+   */
   template <typename SolverType>
   concept InitialisesPatches = requires {
     { SolverType::InitialisesPatches } -> std::convertible_to<bool>;

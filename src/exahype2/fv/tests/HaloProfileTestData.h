@@ -4,6 +4,7 @@
 
 #include "peano4/Constants.h"
 #include "peano4/Partition.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace exahype2::fv::tests {
   struct HaloProfileSetup;
@@ -13,7 +14,10 @@ namespace exahype2::fv::tests {
   std::vector<double> getFineFaceWithProfile(int normal, int firstSubface, int secondSubface);
 } // namespace exahype2::fv::tests
 
-/** The patch and halo extents of the transfer tests. */
+TARGET_DECLARE
+/**
+ * The patch and halo extents of the transfer tests.
+ */
 struct exahype2::fv::tests::HaloProfileSetup final {
   static constexpr int DofsPerAxis       = 3;
   static constexpr int HaloSize          = 2;
@@ -27,3 +31,4 @@ struct exahype2::fv::tests::HaloProfileSetup final {
   static constexpr int ValuesPerFace     = VolumesPerFace * NumberOfData;
   static constexpr int SecondExtent      = DIMENSIONS == 3 ? DofsPerAxis : 1;
 };
+TARGET_DECLARE_END

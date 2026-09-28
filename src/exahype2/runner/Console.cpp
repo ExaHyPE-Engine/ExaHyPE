@@ -7,10 +7,14 @@
 #include "tarch/instrumentation/Info.h"
 
 namespace {
-  /** Columns of the text inside the frame; the frame adds two columns on either side. */
+  /**
+   * Columns of the text inside the frame; the frame adds two columns on either side.
+   */
   constexpr std::size_t ReportWidth = 93;
 
-  /** Durations of more than this many days render as a bounded text, so the field width stays fixed. */
+  /**
+   * Durations of more than this many days render as a bounded text, so the field width stays fixed.
+   */
   constexpr int MaxDurationDays = 999;
 
   constexpr std::string_view Separator = " · ";
@@ -94,7 +98,9 @@ exahype2::runner::Format::getGroupedNumber(const unsigned long value) {
   return result;
 }
 
-/** Renders the two most significant units of a duration and clamps long ones, so the width stays bounded. */
+/**
+ * Renders the two most significant units of a duration and clamps long ones, so the width stays bounded.
+ */
 std::string
 exahype2::runner::Format::getDuration(const double seconds) {
   // The clamp precedes the integer cast, so a huge or infinite duration neither overflows nor widens the field.
@@ -245,7 +251,9 @@ exahype2::runner::Report::Report(const Writer& writer) :
   assertion(_writer != nullptr);
 }
 
-/** Writes a thin rule across the frame; a closed frame opens with its top border. */
+/**
+ * Writes a thin rule across the frame; a closed frame opens with its top border.
+ */
 void
 exahype2::runner::Report::rule() {
   if (_lastWasRule) {
@@ -256,7 +264,9 @@ exahype2::runner::Report::rule() {
   _lastWasRule = true;
 }
 
-/** Continues a broken line at its own indentation. */
+/**
+ * Continues a broken line at its own indentation.
+ */
 void
 exahype2::runner::Report::line(const std::string& text) {
   const auto firstNonSpace = text.find_first_not_of(' ');
@@ -278,7 +288,9 @@ exahype2::runner::Report::line(const std::string& text, const std::size_t contin
   _lastWasRule = false;
 }
 
-/** Writes the bottom border of an open frame, so the next line or rule opens a new frame. */
+/**
+ * Writes the bottom border of an open frame, so the next line or rule opens a new frame.
+ */
 void
 exahype2::runner::Report::close() {
   if (_open) {

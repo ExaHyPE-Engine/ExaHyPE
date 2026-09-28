@@ -21,7 +21,9 @@ namespace {
 
   using Control = peano4::RefinementRequest::RefinementControl;
 
-  /** Builds a regular grid of Depth levels partitioned over the ranks and returns the partition of this rank. */
+  /**
+   * Builds a regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
+   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -31,7 +33,9 @@ namespace {
     return peano4::Spacetree::getInstance().getCellAt(Depth, lattice);
   }
 
-  /** Returns whether the rank holds every child cell of the parent cell at the given lattice position. */
+  /**
+   * Returns whether the rank holds every child cell of the parent cell at the given lattice position.
+   */
   bool holdsEveryChildOf(const tarch::la::Vector<DIMENSIONS, int>& parentLattice) {
     for (int child = 0; child < peano4::ChildrenPerCell; child++) {
       const auto                         childPosition = peano4::dDelinearised(child, peano4::SubdivisionFactor);
@@ -60,10 +64,14 @@ namespace {
     return peano4::tests::getGlobalSumOf(wholeParents);
   }
 
-  /** Returns whether the rank that owns the origin cell holds every sibling of it. */
+  /**
+   * Returns whether the rank that owns the origin cell holds every sibling of it.
+   */
   bool originParentIsHeldWhole() { return peano4::tests::getGlobalSumOf(holdsEveryChildOf(Origin) ? 1 : 0) == 1; }
 
-  /** Holds the votes of one solver, one per slot of the partition. */
+  /**
+   * Holds the votes of one solver, one per slot of the partition.
+   */
   struct Votes final {
     std::vector<exahype2::RefinementCommand> commands;
 
@@ -76,7 +84,9 @@ namespace {
       }
     }
 
-    /** Casts the vote on the cell at the lattice origin, which one rank owns. */
+    /**
+     * Casts the vote on the cell at the lattice origin, which one rank owns.
+     */
     void voteOnTheOriginCell(const exahype2::RefinementCommand command) {
       const int cell = getCellAt(Origin);
       if (cell >= 0) {
@@ -146,7 +156,9 @@ exahype2::tests::RefinementRequestsTest::testARefineVoteNamesTheCellOnEveryRank(
   validateEquals(refinementRequests[0].latticeIndex, Origin);
 }
 
-/** Every parent whose children all vote on one rank erases; the parent of one child that keeps stays. */
+/**
+ * Every parent whose children all vote on one rank erases; the parent of one child that keeps stays.
+ */
 void
 exahype2::tests::RefinementRequestsTest::testAnEraseStandsOnceEveryChildVotes() {
   const auto& partition         = buildGrid();

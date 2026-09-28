@@ -1,7 +1,9 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-/** The granular layer counts as submerged once a resolved water column covers it. */
+/**
+ * The granular layer counts as submerged once a resolved water column covers it.
+ */
 template <class Shortcuts, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::coupled::isSlideSubmerged(const T* const NOALIAS Q, const double minimumWaterHeight) {

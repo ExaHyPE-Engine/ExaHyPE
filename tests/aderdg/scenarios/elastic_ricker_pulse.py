@@ -70,9 +70,10 @@ class ElasticRickerPulse(Scenario):
   constexpr auto cs   = 1;
 
   // Width of a cell on the finest level. The pulse starts centred in the leftmost cell.
-  const double h = ::exahype2::runner::RuntimeParameters::divideBySubdivisionFactorPower(
-    DomainSize[0], ::exahype2::runner::RuntimeParameters::getInstance().getMaxGridLevels()
-  );
+  double h = DomainSize[0];
+  for (int level = 0; level < RuntimeParameters::getMaxGridLevels(); level++) {
+    h /= peano4::SubdivisionFactor;
+  }
 
   auto distance = std::fmod( (x[0]-t-h/2), DomainSize[0]);
   const auto tau  = 1.25*std::numbers::pi*(distance);

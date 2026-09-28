@@ -3,6 +3,8 @@
 #include "KernelTestData.h"
 
 #include "peano4/Loop.h"
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/accelerator/accelerator.h"
 
 namespace {
   constexpr int DofsPerAxis = exahype2::dg::tests::KernelTestSetup::DofsPerAxis;

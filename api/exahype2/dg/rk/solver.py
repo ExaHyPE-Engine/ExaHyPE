@@ -80,20 +80,8 @@ class Solver(exahype2.solver.Solver):
         self._is_linear = linear
 
     @property
-    def rk_order(self):
-        return self._rk_order
-
-    @property
-    def dg_order(self):
-        return self._dg_order
-
-    @property
     def basis(self):
         return self._basis
-
-    @property
-    def number_of_stages(self):
-        return self._rk_order
 
     def statistics_metadata(self):
         return super().statistics_metadata() + [
@@ -185,8 +173,6 @@ class Solver(exahype2.solver.Solver):
 
     def _add_solver_family_entries(self, d):
         d["DG_ORDER"] = self._dg_order
-        d["RK_ORDER"] = self._rk_order
-        d["IS_LINEAR"] = self._is_linear
         d["TABLE_PRECISIONS"] = self._table_precisions()
         d["MAX_ADMISSIBLE_MESH_WIDTH"] = (
             "parameters.getMaxAdmissiblePatchSize(DomainSize)"

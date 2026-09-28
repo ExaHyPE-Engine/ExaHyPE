@@ -8,7 +8,9 @@ namespace exahype2::dg::ader::tests {
   class LinearPredictorTest;
 } // namespace exahype2::dg::ader::tests
 
-/** Checks the linear space-time predictor of one cell on the host and on the device. */
+/**
+ * Checks the linear space-time predictor of one cell on the host and on the device.
+ */
 class exahype2::dg::ader::tests::LinearPredictorTest final : public tarch::tests::TestCase {
 public:
   LinearPredictorTest();

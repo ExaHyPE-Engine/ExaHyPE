@@ -22,10 +22,14 @@ namespace exahype2::dg {
   template <typename Precision>
   struct BasisTables;
 
-  /** Returns the number of nodes one face of a cell carries. */
+  /**
+   * Returns the number of nodes one face of a cell carries.
+   */
   constexpr int getNodesPerFace(const int nodesPerAxis) { return peano4::power(nodesPerAxis, DIMENSIONS - 1); }
 
-  /** Returns the number of nodes one cell carries. */
+  /**
+   * Returns the number of nodes one cell carries.
+   */
   constexpr int getNodesPerCell(const int nodesPerAxis) { return peano4::power(nodesPerAxis, DIMENSIONS); }
 
   template <typename QuadraturePrecision>
@@ -176,12 +180,18 @@ struct exahype2::dg::BasisTables final {
   const Precision* inverseQuadratureWeights{nullptr};
   const Precision* cellQuadratureWeights{nullptr};
   const Precision* inverseCellQuadratureWeights{nullptr};
-  /** Entry [i][j] holds the weight of node j times the derivative of basis function i at node j. */
+  /**
+   * Entry [i][j] holds the weight of node j times the derivative of basis function i at node j.
+   */
   const Precision* stiffnessOperator{nullptr};
   const Precision* stiffnessOperatorTransposed{nullptr};
-  /** Entry [i][j] holds the derivative of basis function j at node i. */
+  /**
+   * Entry [i][j] holds the derivative of basis function j at node i.
+   */
   const Precision* derivativeOperator{nullptr};
-  /** The inverse of the temporal operator a Picard iteration solves. */
+  /**
+   * The inverse of the temporal operator a Picard iteration solves.
+   */
   const Precision* inversePicardOperator{nullptr};
   const Precision* leftFaceCoefficients{nullptr};
   const Precision* rightFaceCoefficients{nullptr};

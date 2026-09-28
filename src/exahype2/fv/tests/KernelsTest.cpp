@@ -45,7 +45,9 @@ exahype2::fv::tests::KernelsTest::run() {
   testMethod(testRestrictionFromTheChildrenAveragesTheCoveredVolumes);
 }
 
-/** A cell that survives the regrid keeps every value of its old slot. */
+/**
+ * A cell that survives the regrid keeps every value of its old slot.
+ */
 void
 exahype2::fv::tests::KernelsTest::testCopyKeepsEveryValue() {
   CellPool pool(Setup::ValuesPerCell, tarch::MemoryLocation::Heap);
@@ -60,7 +62,9 @@ exahype2::fv::tests::KernelsTest::testCopyKeepsEveryValue() {
   }
 }
 
-/** Every volume of a new child takes the value of the parent volume that covers it. */
+/**
+ * Every volume of a new child takes the value of the parent volume that covers it.
+ */
 void
 exahype2::fv::tests::KernelsTest::testInterpolationFromTheParentCopiesTheCoveringVolume() {
   CellPool pool(Setup::ValuesPerCell, tarch::MemoryLocation::Heap);
@@ -86,7 +90,9 @@ exahype2::fv::tests::KernelsTest::testInterpolationFromTheParentCopiesTheCoverin
   }
 }
 
-/** Every volume of a coarsened parent takes the mean of the child volumes it covers. */
+/**
+ * Every volume of a coarsened parent takes the mean of the child volumes it covers.
+ */
 void
 exahype2::fv::tests::KernelsTest::testRestrictionFromTheChildrenAveragesTheCoveredVolumes() {
   CellPool pool(Setup::ValuesPerCell, tarch::MemoryLocation::Heap);

@@ -65,6 +65,8 @@ double {{ NAMESPACE | join("::") }}::getMinTimeStamp() { return solverRepository
 
 double {{ NAMESPACE | join("::") }}::getMaxTimeStamp() { return solverRepository.getMaxTimeStamp(); }
 
+std::uint64_t {{ NAMESPACE | join("::") }}::getNumberOfSolverCells() { return solverRepository.getNumberOfSolverCells(getPartition()); }
+
 std::uint64_t {{ NAMESPACE | join("::") }}::getNumberOfCellDoFs() { return solverRepository.getNumberOfCellDoFs(getPartition()); }
 
 ::exahype2::runner::SolverStatistics {{ NAMESPACE | join("::") }}::getSolverStatistics() {

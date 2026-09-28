@@ -18,10 +18,14 @@ namespace {
 
   using Pool = tarch::accelerator::ChunkedMemoryPool<double>;
 
-  /** Returns the value the test writes into element of the face. */
+  /**
+   * Returns the value the test writes into element of the face.
+   */
   double getValueOf(const int face, const int element) { return 10.0 * face + element; }
 
-  /** Fills every face chunk of a device pool with getValueOf() and returns the pool. */
+  /**
+   * Fills every face chunk of a device pool with getValueOf() and returns the pool.
+   */
   Pool getFilledPool() {
     Pool pool(ChunkSize, tarch::MemoryLocation::Device);
     pool.reserve(NumberOfFaces);

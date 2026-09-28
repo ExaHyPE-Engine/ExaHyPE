@@ -314,7 +314,9 @@ tarch::la::tests::MatrixTest::testAdditionalMatrixOperations() {
   validateEquals(rectangularTranspose(3, 0), 4);
 }
 
-/** A NaN entry makes every tolerance comparison of matrices report a difference, whatever the tolerance. */
+/**
+ * A NaN entry makes every tolerance comparison of matrices report a difference, whatever the tolerance.
+ */
 void
 tarch::la::tests::MatrixTest::testNaNComparesUnequal() {
 #if not defined(PEANO_WITH_FPE)
@@ -337,7 +339,9 @@ tarch::la::tests::MatrixTest::testNaNComparesUnequal() {
 #endif
 }
 
-/** The component product of two matrices of the same shape multiplies the entries at equal positions. */
+/**
+ * The component product of two matrices of the same shape multiplies the entries at equal positions.
+ */
 void
 tarch::la::tests::MatrixTest::testComponentProductOfRectangularMatrices() {
   const tarch::la::Matrix<2, 3, int> lhs     = {1, 2, 3, 4, 5, 6};

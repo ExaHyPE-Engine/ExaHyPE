@@ -15,7 +15,9 @@ namespace {
   constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
   constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
 
-  /** Returns the containing coarse-lattice position by rounding towards minus infinity. */
+  /**
+   * Returns the containing coarse-lattice position by rounding towards minus infinity.
+   */
   int floorDivide(const int value, const int divisor) noexcept {
     return value >= 0 ? value / divisor : -((-value + divisor - 1) / divisor);
   }
@@ -1049,7 +1051,9 @@ peano4::topology::Tree::derivePlanRefinedCellKeys(const RefinementPlan& refineme
   _planRefinedCellKeys = deriveRefinedCellKeyTables(_depth, _periodicBoundaries, refinementPlan);
 }
 
-/** Fills the flag tables from the plan, one table per plan level. */
+/**
+ * Fills the flag tables from the plan, one table per plan level.
+ */
 void
 peano4::topology::Tree::assignBuildFlagKeys(const RefinementPlan& refinementPlan) {
   _buildFlagKeys.assign(refinementPlan.size(), {});
@@ -1717,7 +1721,9 @@ peano4::topology::Tree::derivePlanLeafWeights(const int depth, const RefinementP
   return weights;
 }
 
-/** Returns the number of leaves below the cell at the given level and lattice position. */
+/**
+ * Returns the number of leaves below the cell at the given level and lattice position.
+ */
 std::int64_t
 peano4::topology::Tree::PlanLeafWeights::getLeafWeight(
   const int                                 level,

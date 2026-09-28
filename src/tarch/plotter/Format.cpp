@@ -37,7 +37,9 @@ namespace {
   }
 } // namespace
 
-/** Returns the format the name selects and stops the run on a name that names none. */
+/**
+ * Returns the format the name selects and stops the run on a name that names none.
+ */
 tarch::plotter::Format
 tarch::plotter::parseFormat(const std::string& name) {
   for (const auto& [format, formatName] : FormatNames) {
@@ -60,7 +62,9 @@ tarch::plotter::toString(const Format format) {
   tarch::terminateWithError("The plot format has no name.");
 }
 
-/** Returns whether the build links the library the format writes with. */
+/**
+ * Returns whether the build links the library the format writes with.
+ */
 bool
 tarch::plotter::isAvailable(const Format format) {
   switch (format) {
@@ -83,7 +87,9 @@ tarch::plotter::isAvailable(const Format format) {
   tarch::terminateWithError("The plot format is unknown.");
 }
 
-/** Returns VTKHDF where the build links HDF5 and VTU otherwise. */
+/**
+ * Returns VTKHDF where the build links HDF5 and VTU otherwise.
+ */
 tarch::plotter::Format
 tarch::plotter::getDefaultFormat() {
   return isAvailable(Format::VTKHDF) ? Format::VTKHDF : Format::VTU;

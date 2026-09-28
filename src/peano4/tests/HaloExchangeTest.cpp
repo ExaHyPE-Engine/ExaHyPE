@@ -50,7 +50,9 @@ namespace {
     return static_cast<double>((key * 2 + side) * ElementsPerFace + element + round);
   }
 
-  /** Returns the side this rank owns of every face, and -1 for a face no neighbour rank holds. */
+  /**
+   * Returns the side this rank owns of every face, and -1 for a face no neighbour rank holds.
+   */
   std::vector<int> getLocalSidesOfFaces(const peano4::Partition& partition) {
     std::vector<int> sides(static_cast<std::size_t>(partition.getNumberOfFaces()), -1);
     for (const auto& neighbour : partition.getNeighbours()) {
@@ -70,7 +72,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Writes the marker into one face and the expected value into the half this rank owns of it. */
+  /**
+   * Writes the marker into one face and the expected value into the half this rank owns of it.
+   */
   struct WriteLocalHalf final {
     peano4::Partition partition{};
     Pool::View        faces{};
@@ -121,7 +125,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Writes the marker into every face and the expected value into the half this rank owns of an exchanged face. */
+  /**
+   * Writes the marker into every face and the expected value into the half this rank owns of an exchanged face.
+   */
   void writeLocalHalves(
     Pool&                                  pool,
     const peano4::Partition&               partition,
@@ -247,7 +253,9 @@ peano4::tests::HaloExchangeTest::testExchangesHoldDistinctTags() {
   validateEquals(minimumTags[1], maximumTags[1]);
 }
 
-/** release() frees the entry table and the buffers and keeps the tag, so a rebuild serves the next partition. */
+/**
+ * release() frees the entry table and the buffers and keeps the tag, so a rebuild serves the next partition.
+ */
 void
 peano4::tests::HaloExchangeTest::testReleaseFreesTheBuffersAndKeepsTheTag() {
   peano4::tests::buildRegularGrid(Depth);

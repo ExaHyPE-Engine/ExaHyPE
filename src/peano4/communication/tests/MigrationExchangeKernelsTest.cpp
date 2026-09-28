@@ -22,7 +22,9 @@ namespace {
 
   using Pool = tarch::accelerator::ChunkedMemoryPool<double>;
 
-  /** Returns the value the test writes into element of the slot. */
+  /**
+   * Returns the value the test writes into element of the slot.
+   */
   GPU_CALLABLE_METHOD double getValueOf(const int slot, const int element) { return 10.0 * slot + element; }
 
   TARGET_DECLARE
@@ -63,7 +65,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Fills every chunk of a device pool with getValueOf() and returns the pool. */
+  /**
+   * Fills every chunk of a device pool with getValueOf() and returns the pool.
+   */
   Pool getFilledPool() {
     Pool pool(ChunkSize, tarch::MemoryLocation::Device);
     pool.reserve(NumberOfSlots);
@@ -88,7 +92,9 @@ namespace {
        + static_cast<std::size_t>(element)];
   }
 
-  /** Returns the sum of getValueOf() over the first ChildrenPerCell slots. */
+  /**
+   * Returns the sum of getValueOf() over the first ChildrenPerCell slots.
+   */
   double getSumOfFirstChildren(const int element) {
     double sum = 0.0;
     for (int child = 0; child < peano4::ChildrenPerCell; child++) {
@@ -166,7 +172,9 @@ peano4::communication::tests::MigrationExchangeKernelsTest::testRestrictFillsThe
   }
 }
 
-/** The send buffer holds the kept cell, the interpolated child and the restricted parent in the order of the cells. */
+/**
+ * The send buffer holds the kept cell, the interpolated child and the restricted parent in the order of the cells.
+ */
 void
 peano4::communication::tests::MigrationExchangeKernelsTest::testGatherTakesEveryKindOfSentCell() {
   const Pool              pool = getFilledPool();

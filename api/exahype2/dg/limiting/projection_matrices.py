@@ -4,17 +4,6 @@ from exahype2.dg.basis import GaussLobattoBasis
 from exahype2.dg.matrices import dg_to_fv as average_onto_subcells
 from exahype2.dg.matrices import fv_to_dg as project_from_subcells
 from exahype2.dg.matrices import quadrature_conversion
-from exahype2.dg.matrices import render_vector
-
-
-def render_matrix_table(name, matrix, precision):
-    """Returns the definition of one constant projection table of the given ``precision``.
-
-    The table is flattened row by input degree of freedom, the layout
-    ``exahype2::dg::projectTensorProduct`` reads.
-    """
-    values = [value for row in matrix for value in row]
-    return "  constexpr {} {}[] = {};\n".format(precision, name, render_vector(values))
 
 
 def create_subcell_projection_matrices(basis):

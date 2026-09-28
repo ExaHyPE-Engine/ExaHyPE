@@ -9,7 +9,9 @@
 #include "tarch/la/ScalarOperations.h"
 
 TARGET_DECLARE
-/** Returns the value of unknown in the volume of the patch that holds position. */
+/**
+ * Returns the value of unknown in the volume of the patch that holds position.
+ */
 template <int PatchSize, int NumberOfData, typename Storage>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::fv::interpolatePiecewiseConstant(
@@ -147,7 +149,9 @@ exahype2::fv::clampIntoPatch(
   return clamped;
 }
 
-/** Interpolates the fields the list names; the list carries the entries as a type. */
+/**
+ * Interpolates the fields the list names; the list carries the entries as a type.
+ */
 template <int PatchSize, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::interpolateFields(
@@ -243,7 +247,6 @@ exahype2::fv::TraceParticles<PatchSize, NumberOfData, NumberOfParticleData, Fiel
   if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
     return;
   }
-  assertion(particle.numberOfData > exahype2::particles::ParticleRadiusAttribute, particle.numberOfData);
   exahype2::particles::applyForces(particle, particle.getX(), forces, domainOffset, domainWidth);
   auto newPosition =
     exahype2::particles::advance(particle, forces, timeStepSize, interpolateAt, domainOffset, domainWidth);

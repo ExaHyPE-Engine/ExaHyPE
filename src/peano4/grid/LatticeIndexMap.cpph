@@ -123,7 +123,9 @@ peano4::grid::LatticeIndexMap::getSize() const {
   return _size;
 }
 
-/** Returns the bytes the key and value arrays hold. */
+/**
+ * Returns the bytes the key and value arrays hold.
+ */
 INLINE_METHOD std::size_t
 peano4::grid::LatticeIndexMap::getAllocatedBytes() const {
   return _keys.capacity() * sizeof(std::int64_t) + _values.capacity() * sizeof(int);

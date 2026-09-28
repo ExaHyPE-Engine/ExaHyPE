@@ -8,12 +8,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/tasking/Runtime.h"
 
-std::ostream&
-tarch::align(std::ostream& out) {
-  out.put('\x1f');
-  return out;
-}
-
 std::chrono::steady_clock::time_point tarch::instrumentation::Log::_startupTime{std::chrono::steady_clock::now()};
 
 // The default configuration and the snapshot store are heap objects that are
@@ -33,8 +27,6 @@ std::atomic<const tarch::instrumentation::Log::Configuration*> tarch::instrument
 };
 
 std::once_flag tarch::instrumentation::Log::_debugFilterEnvironmentOnce;
-
-std::atomic<std::string::size_type> tarch::instrumentation::Log::_alignedMessagePrefixColumn{0};
 
 namespace {
   bool isGlobalMasterRankOrMpiUninitialised() {
@@ -289,35 +281,6 @@ tarch::instrumentation::Log::getTimeStampHumanReadable(long int timestampNanosec
 }
 
 std::string
-tarch::instrumentation::Log::alignMessage(std::string_view message, std::string::size_type messageStartColumn) {
-  const std::size_t marker = message.find(AlignmentMarker);
-  if (marker == std::string_view::npos) {
-    return std::string(message);
-  }
-
-  const std::string_view prefix    = message.substr(0, marker);
-  const std::string_view suffix    = message.substr(marker + 1);
-  const auto requestedPrefixColumn = messageStartColumn + std::max(MinimumAlignedMessagePrefixWidth, prefix.size());
-
-  auto prefixColumn = _alignedMessagePrefixColumn.load(std::memory_order_relaxed);
-  while (prefixColumn < requestedPrefixColumn
-         and not _alignedMessagePrefixColumn
-                   .compare_exchange_weak(prefixColumn, requestedPrefixColumn, std::memory_order_relaxed)) {
-  }
-  prefixColumn = std::max(prefixColumn, requestedPrefixColumn);
-
-  const auto prefixEndColumn = messageStartColumn + prefix.size();
-  const auto separatorSpaces = prefixColumn - prefixEndColumn + 1;
-
-  std::string result;
-  result.reserve(prefix.size() + separatorSpaces + suffix.size());
-  result.append(prefix.data(), prefix.size());
-  result.append(separatorSpaces, ' ');
-  result.append(suffix.data(), suffix.size());
-  return result;
-}
-
-std::string
 tarch::instrumentation::Log::constructMessageString(
   std::string_view     messageType,
   long int             timestampNanoseconds,
@@ -329,8 +292,8 @@ tarch::instrumentation::Log::constructMessageString(
 ) {
   std::string result;
   result.reserve(
-    message.size() + MinimumAlignedMessagePrefixWidth + scopeName.size() + messageType.size()
-    + configuration.logColumnSeparator.size() * 7 + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
+    message.size() + scopeName.size() + messageType.size() + configuration.logColumnSeparator.size() * 7
+    + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
   );
 
   if (configuration.logTimeStamp) {
@@ -361,12 +324,7 @@ tarch::instrumentation::Log::constructMessageString(
     appendColumn(result, configuration.logColumnSeparator, NumberOfScopeColumnSpaces, scopeName);
   }
 
-  if (message.find(AlignmentMarker) == std::string_view::npos) {
-    appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimRightView(message));
-  } else {
-    const std::string alignedMessage = alignMessage(message, result.size() + configuration.logColumnSeparator.size());
-    appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimRightView(alignedMessage));
-  }
+  appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimRightView(message));
   result += '\n';
 
   return result;

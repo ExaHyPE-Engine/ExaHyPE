@@ -5,14 +5,18 @@
 #include "tarch/accelerator/CompileTarget.h"
 
 namespace tarch::accelerator {
-  /** Covers the work items 0 to n - 1 of a one-dimensional dispatch. */
+  /**
+   * Covers the work items 0 to n - 1 of a one-dimensional dispatch.
+   */
   struct Range {
     int n;
-    GPU_CALLABLE_METHOD constexpr explicit Range(int n_) :
-      n(n_) {}
+    GPU_CALLABLE_METHOD constexpr explicit Range(int size) :
+      n(size) {}
   };
 
-  /** Covers a D-dimensional index space, and the kernel receives D indices. */
+  /**
+   * Covers a D-dimensional index space, and the kernel receives D indices.
+   */
   template <int D>
   struct RangeMD {
     static_assert(D == 2 or D == 3, "A RangeMD has two or three dimensions.");
@@ -35,7 +39,7 @@ namespace tarch::accelerator {
    */
   struct TeamRange {
     int n;
-    GPU_CALLABLE_METHOD constexpr explicit TeamRange(int n_) :
-      n(n_) {}
+    GPU_CALLABLE_METHOD constexpr explicit TeamRange(int size) :
+      n(size) {}
   };
 } // namespace tarch::accelerator

@@ -5,9 +5,8 @@
 #include "tarch/Assertions.h"
 #include "tarch/instrumentation/Error.h"
 
-tarch::database::SnapshotDatabase::SnapshotDatabase(double timeDelta, bool deltasAreRelative) :
-  _timeDelta(timeDelta),
-  _deltasAreRelative(deltasAreRelative) {}
+tarch::database::SnapshotDatabase::SnapshotDatabase(const double timeDelta) :
+  _timeDelta(timeDelta) {}
 
 tarch::database::SnapshotDatabase::Snapshot::Snapshot(double timestamp, int numberOfDataEntries) :
   timestamp(timestamp),

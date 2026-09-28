@@ -18,7 +18,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Doubles the entry of values at the index of the calling thread. */
+  /**
+   * Doubles the entry of values at the index of the calling thread.
+   */
   struct DoubleEntry final {
     double* values{nullptr};
 
@@ -45,6 +47,7 @@ tarch::accelerator::tests::BufferTest::run() {
   testMethod(testAllocateReplacesTheArray);
   testMethod(testMoveTransfersTheArray);
   testMethod(testPinnedBuffer);
+  testMethod(testPinnedCopiesEndBeforeTheyReturn);
   testMethod(testAllocatedBytesFollowTheLocation);
 }
 
@@ -142,6 +145,31 @@ tarch::accelerator::tests::BufferTest::testPinnedBuffer() {
   validate(buffer.getLocation() == tarch::MemoryLocation::Pinned);
   validateEquals(buffer.getSize(), 3);
   validateEquals(buffer.getValues()[2], 3.0F);
+}
+
+/**
+ * A copy between a device buffer and pinned host memory has ended when it returns.
+ */
+void
+tarch::accelerator::tests::BufferTest::testPinnedCopiesEndBeforeTheyReturn() {
+  constexpr std::size_t              LargeNumberOfEntries = std::size_t{1} << 22;
+  tarch::accelerator::Buffer<double> pinned(LargeNumberOfEntries, tarch::MemoryLocation::Pinned);
+  tarch::accelerator::Buffer<double> device(LargeNumberOfEntries, tarch::MemoryLocation::Device);
+  double* const                      values = pinned.getData();
+  for (std::size_t entry = 0; entry < LargeNumberOfEntries; entry++) {
+    values[entry] = static_cast<double>(entry);
+  }
+  device.copyFromHost(values, LargeNumberOfEntries);
+  std::fill_n(values, LargeNumberOfEntries, -1.0);
+  doubleEveryEntry(device);
+  device.copyToHost(values, LargeNumberOfEntries);
+  int mismatches = 0;
+  for (std::size_t entry = 0; entry < LargeNumberOfEntries; entry++) {
+    if (values[entry] != 2.0 * static_cast<double>(entry)) {
+      mismatches++;
+    }
+  }
+  validateEquals(mismatches, 0);
 }
 
 /**

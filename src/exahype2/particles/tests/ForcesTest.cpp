@@ -14,7 +14,9 @@ namespace {
   const tarch::la::Vector<DIMENSIONS, double> DomainOffset(0.0);
   const tarch::la::Vector<DIMENSIONS, double> DomainWidth(1.0);
 
-  /** Holds the values of one particle at the domain centre with unit mass and radius one half. */
+  /**
+   * Holds the values of one particle at the domain centre with unit mass and radius one half.
+   */
   struct Values final {
     std::array<double, DIMENSIONS + NumberOfData> values{};
 
@@ -49,7 +51,9 @@ exahype2::particles::tests::ForcesTest::run() {
   testMethod(testReflectionAndWrapAtTheWalls);
 }
 
-/** Checks the convergence order of the particle velocity against exponential drag decay. */
+/**
+ * Checks the convergence order of the particle velocity against exponential drag decay.
+ */
 void
 exahype2::particles::tests::ForcesTest::testHigherOrderSchemesConvergeForDrag() {
   exahype2::particles::Forces forces;
@@ -83,7 +87,9 @@ exahype2::particles::tests::ForcesTest::testHigherOrderSchemesConvergeForDrag() 
   }
 }
 
-/** Checks that static integration preserves a position without reading particle data. */
+/**
+ * Checks that static integration preserves a position without reading particle data.
+ */
 void
 exahype2::particles::tests::ForcesTest::testStaticIntegrationNeedsNoDataAttributes() {
   std::array<double, DIMENSIONS> values{};
@@ -158,7 +164,9 @@ exahype2::particles::tests::ForcesTest::testEveryForceWritesItsAcceleration() {
   validate(not forces.enables(exahype2::particles::ForceType::Buoyancy));
 }
 
-/** Explicit Euler moves with the old velocity, semi-implicit Euler with the new one. */
+/**
+ * Explicit Euler moves with the old velocity, semi-implicit Euler with the new one.
+ */
 void
 exahype2::particles::tests::ForcesTest::testTheEulerSchemesAdvanceOneStep() {
   exahype2::particles::Forces forces;

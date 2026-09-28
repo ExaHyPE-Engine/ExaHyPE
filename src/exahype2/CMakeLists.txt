@@ -63,6 +63,7 @@ set(SOURCES
   runner/tests/RuntimeParametersTest.cpp
   runner/tests/StatisticsTest.cpp
   plotter/tests/FacePlotterTest.cpp
+  plotter/tests/ParticlePlotterTest.cpp
   plotter/tests/PatchPlotterTest.cpp
 
   terms/tests/TermsTest.cpp
@@ -85,6 +86,7 @@ set(GPU_SOURCES
   particles/tests/ParticleErrorMeasurementTest.cpp
   particles/tests/ParticleSetTest.cpp
   particles/tests/TrajectoryRecordingTest.cpp
+  plotter/tests/ParticlePlotterTest.cpp
   tests/ErrorMeasurementTest.cpp
   tests/LevelJumpsTest.cpp
   tests/MultiresolutionDetailTest.cpp

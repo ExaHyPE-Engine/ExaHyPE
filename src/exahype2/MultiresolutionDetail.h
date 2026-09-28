@@ -6,7 +6,7 @@
 #include "peano4/Constants.h"
 #include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 TARGET_DECLARE
 namespace exahype2 {

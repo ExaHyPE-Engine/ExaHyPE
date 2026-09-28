@@ -537,6 +537,19 @@ class PDETerms:
         """Returns whether the generated solver declares the term: Set by the script or defaulted."""
         return name in self._values or self._table[name].default is not None
 
+    def get_host_defined_device_terms(self, user_terms_inline):
+        """Returns the C++ names of the user-defined terms that the kernels call on the device and
+        that ``<Name>.cpp`` defines on the host, because ``user_terms_inline`` is false.
+        """
+        return [
+            term.cpp
+            for name, term in self._table.items()
+            if term.gpu
+            and name not in self._host_only
+            and self.is_user_defined(name)
+            and not user_terms_inline
+        ]
+
     def flags(self):
         """Returns the kernel flags of the table, true for every set term."""
         result = {}

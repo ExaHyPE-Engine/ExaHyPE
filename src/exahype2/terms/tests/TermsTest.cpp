@@ -364,7 +364,9 @@ exahype2::terms::tests::TermsTest::testASolverWithoutTheConstantsOfItsSolverFami
   validateEquals((exahype2::dg::ader::SolverConcept<ADERDGSolver, double, float>), false);
 }
 
-/** A solver without boundary conditions satisfies its family concept only on a domain periodic along every axis. */
+/**
+ * A solver without boundary conditions satisfies its family concept only on a domain periodic along every axis.
+ */
 void
 exahype2::terms::tests::TermsTest::testOnlyADomainPeriodicAlongEveryAxisOmitsTheBoundaryConditions() {
   constexpr unsigned long long EveryAxis = (1ULL << DIMENSIONS) - 1;

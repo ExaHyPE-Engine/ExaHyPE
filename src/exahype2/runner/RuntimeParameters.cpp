@@ -140,7 +140,9 @@ namespace {
   }
 } // namespace
 
-/** The value the storage holds at registration is the default the usage text reports. */
+/**
+ * The value the storage holds at registration is the default the usage text reports.
+ */
 void
 exahype2::runner::ParameterTable::add(const std::string& name, const Values values) {
   assertion(not name.empty());
@@ -173,7 +175,9 @@ exahype2::runner::ParameterTable::load(const tarch::reader::JSONReader* const re
   }
 }
 
-/** The arguments that name no entry keep their order, so the caller's own parser reads them afterwards. */
+/**
+ * The arguments that name no entry keep their order, so the caller's own parser reads them afterwards.
+ */
 void
 exahype2::runner::ParameterTable::load(
   const tarch::reader::JSONReader* const reader,
@@ -649,7 +653,9 @@ exahype2::runner::RuntimeParameters::configure(int& argc, char** argv) {
   validateParameterRanges();
 }
 
-/** Returns the reader of the JSON configuration file, or nullptr when no configuration file is read. */
+/**
+ * Returns the reader of the JSON configuration file, or nullptr when no configuration file is read.
+ */
 tarch::reader::JSONReader*
 exahype2::runner::RuntimeParameters::getConfigReader() const {
   return _configReader.get();

@@ -15,7 +15,9 @@
 #include "tarch/accelerator/Scratch.h"
 #include "tarch/la/Vector.h"
 
-/** Returns the CFL factor of the ADER-DG scheme of the given polynomial order. */
+/**
+ * Returns the CFL factor of the ADER-DG scheme of the given polynomial order.
+ */
 constexpr double
 exahype2::dg::ader::getCFLFactor(const int order) {
   constexpr double Factors[] = {
@@ -74,7 +76,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   );
 }
 
-/** Reserves the pools of the solver and of its limiter and lists the coupling faces. */
+/**
+ * Reserves the pools of the solver and of its limiter and lists the coupling faces.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::allocate(
@@ -88,7 +92,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   reservePredictorScratch(partition);
 }
 
-/** Sizes the predictor scratch to the chunks the dispatch over the advanced cells needs. */
+/**
+ * Sizes the predictor scratch to the chunks the dispatch over the advanced cells needs.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::reservePredictorScratch(
@@ -359,7 +365,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   };
 }
 
-/** Stores the matrix that maps the partner's face nodes onto this solver's face nodes. */
+/**
+ * Stores the matrix that maps the partner's face nodes onto this solver's face nodes.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::setCouplingMatrix(
@@ -373,7 +381,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   _couplingMatrix.setValues(matrix);
 }
 
-/** Leaves every time step of this solver to the coupling partner that drives it. */
+/**
+ * Leaves every time step of this solver to the coupling partner that drives it.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::leaveTimeStepsToPartner() {
@@ -478,7 +488,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   }
 }
 
-/** Moves the solution and, with a limiter, the statuses and the subgrids through the regrid. */
+/**
+ * Moves the solution and, with a limiter, the statuses and the subgrids through the regrid.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::regrid(
@@ -527,7 +539,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   }
 }
 
-/** Returns the time step size of the CFL condition of the ADER-DG scheme on the scaled wave speed. */
+/**
+ * Returns the time step size of the CFL condition of the ADER-DG scheme on the scaled wave speed.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 double
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getTimeStepSizeFromCFL() const {
@@ -538,7 +552,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   }
 }
 
-/** Returns the normalised fraction of the admissible mesh width a fixed rule advances by. */
+/**
+ * Returns the normalised fraction of the admissible mesh width a fixed rule advances by.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 double
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getFixedTimeStepSize() const {
@@ -557,7 +573,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   }
 }
 
-/** Returns the operator tables of the compute precision the predictor and corrector read. */
+/**
+ * Returns the operator tables of the compute precision the predictor and corrector read.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 exahype2::dg::BasisTables<ComputePrecision>
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getBasisTables() {

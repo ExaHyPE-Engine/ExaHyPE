@@ -122,17 +122,23 @@ private:
   std::vector<int>              _statusesOnHost{};
   std::vector<StoragePrecision> _subcellsOnHost{};
 
-  /** The slots of the cells whose status is not Regular and of the cells that recompute, one entry per cell. */
+  /**
+   * The slots of the cells whose status is not Regular and of the cells that recompute, one entry per cell.
+   */
   tarch::accelerator::Buffer<int> _cellsOnSubcellScheme{tarch::MemoryLocation::Device};
   tarch::accelerator::Buffer<int> _recomputedCells{tarch::MemoryLocation::Device};
   tarch::accelerator::Buffer<exahype2::dg::limiting::SubcellSchemeCounts> _cellCountsOfBlocks{
     tarch::MemoryLocation::Device
   };
   exahype2::dg::limiting::SubcellSchemeCounts _cellCounts{};
-  /** Troubled cells of all ranks at the end of the last closeTimeStep(). */
+  /**
+   * Troubled cells of all ranks at the end of the last closeTimeStep().
+   */
   int _globalTroubledCells{0};
 
-  /** One evolved subgrid per scratch chunk of the recompute dispatch. */
+  /**
+   * One evolved subgrid per scratch chunk of the recompute dispatch.
+   */
   tarch::accelerator::Buffer<StoragePrecision> _recomputeScratch{tarch::MemoryLocation::Device};
 };
 

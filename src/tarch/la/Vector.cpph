@@ -4,6 +4,7 @@
 TARGET_DECLARE
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const Scalar* values) {
+  assertion(values != nullptr);
   for (int i = 0; i < Size; i++) {
     _values[i] = *(values + i);
   }
@@ -13,6 +14,7 @@ template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr tarch::la::Vector<Size, Scalar>::Vector(
   const std::initializer_list<Scalar> values
 ) {
+  assertion(static_cast<int>(values.size()) >= Size, values.size(), Size);
   int index = 0;
   for (const auto* p = values.begin(); p != values.end(); p++) {
     if (index < Size) {
@@ -23,9 +25,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD constexpr tarch::la::Vector<Size, Scalar>::Vec
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const std::bitset<Size>& value) {
+INLINE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const std::bitset<Size>& values) {
   for (int i = 0; i < Size; i++) {
-    _values[i] = value[i] ? Scalar(1) : Scalar(0);
+    _values[i] = values[i] ? Scalar(1) : Scalar(0);
   }
 }
 

@@ -37,7 +37,9 @@ applications::exahype2::exaskred::projection::AlbersEqualArea::getAuthalicMeasur
   return 2.0 * (1.0 - eccentricitySquared) * std::cos(latitude) / (denominator * denominator);
 }
 
-/** Returns the metric coordinates of the geographic point at longitudeInDegrees and latitudeInDegrees. */
+/**
+ * Returns the metric coordinates of the geographic point at longitudeInDegrees and latitudeInDegrees.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD std::pair<double, double>
 applications::exahype2::exaskred::projection::AlbersEqualArea::forward(
   const double longitudeInDegrees,
@@ -64,7 +66,9 @@ applications::exahype2::exaskred::projection::AlbersEqualArea::forward(
   return {pointDistance * std::sin(coneAngle), originDistance - pointDistance * std::cos(coneAngle)};
 }
 
-/** Returns the longitude and the latitude in degrees of the metric point (x, y). */
+/**
+ * Returns the longitude and the latitude in degrees of the metric point (x, y).
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD std::pair<double, double>
 applications::exahype2::exaskred::projection::AlbersEqualArea::inverse(const double x, const double y) const {
   assertion(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);

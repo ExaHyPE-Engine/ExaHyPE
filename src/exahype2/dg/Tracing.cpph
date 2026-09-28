@@ -46,7 +46,9 @@ exahype2::dg::interpolateFields(
   (particle.setData(FieldIndices, interpolateUnknown(unknown++)), ...);
 }
 
-/** Interpolates the fields the list names; the list carries the entries as a type. */
+/**
+ * Interpolates the fields the list names; the list carries the entries as a type.
+ */
 template <int NodesPerAxis, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::interpolateFields(
@@ -70,7 +72,9 @@ exahype2::dg::interpolateFields(
   );
 }
 
-/** Returns whether value is one of the entries of the list. */
+/**
+ * Returns whether value is one of the entries of the list.
+ */
 template <int... Fields>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::dg::listsValue([[maybe_unused]] const exahype2::particles::FieldList<Fields...> fields, const int value) {
@@ -294,7 +298,6 @@ exahype2::dg::TraceParticles<NodesPerAxis, NumberOfData, NumberOfParticleData, F
   if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
     return;
   }
-  assertion(particle.numberOfData > exahype2::particles::ParticleRadiusAttribute, particle.numberOfData);
   exahype2::particles::applyForces(particle, particle.getX(), forces, domainOffset, domainWidth);
   auto newPosition =
     exahype2::particles::advance(particle, forces, timeStepSize, interpolateAt, domainOffset, domainWidth);

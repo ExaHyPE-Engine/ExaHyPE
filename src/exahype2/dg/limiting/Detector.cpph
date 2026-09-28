@@ -29,7 +29,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::openInitialStatus(
     : 0;
 }
 
-/** The status of the closed step becomes the previous status, and a troubled cell opens on the subcell scheme. */
+/**
+ * The status of the closed step becomes the previous status, and a troubled cell opens on the subcell scheme.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -74,7 +76,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceExtrema(
   reduceProjectedObservableExtrema<Scheme::SubcellsPerAxis>(extrema, nodes, nodesToSubcells);
 }
 
-/** Writes the identity of the extrema reduction: Every minimum is plus infinity, every maximum minus infinity. */
+/**
+ * Writes the identity of the extrema reduction: Every minimum is plus infinity, every maximum minus infinity.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -85,7 +89,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::clearExtrema(Storag
   }
 }
 
-/** Lowers every minimum of extrema to the minimum of other and raises every maximum to the maximum of other. */
+/**
+ * Lowers every minimum of extrema to the minimum of other and raises every maximum to the maximum of other.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -357,7 +363,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceProjectedObse
   }
 }
 
-/** Returns a commutative minimum with one quiet NaN representation and deterministic signed zero. */
+/**
+ * Returns a commutative minimum with one quiet NaN representation and deterministic signed zero.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision
@@ -376,7 +384,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::mergeMinimum(
   return std::min(left, right);
 }
 
-/** Returns a commutative maximum with one quiet NaN representation and deterministic signed zero. */
+/**
+ * Returns a commutative maximum with one quiet NaN representation and deterministic signed zero.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision
@@ -395,7 +405,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::mergeMaximum(
   return std::max(left, right);
 }
 
-/** Returns whether the nodes and the subcells of a cell pass the physical admissibility term of Derived. */
+/**
+ * Returns whether the nodes and the subcells of a cell pass the physical admissibility term of Derived.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -440,7 +452,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesMaximumPri
   }
 }
 
-/** Returns whether every observable of the candidate extrema stays inside the relaxed reference extrema. */
+/**
+ * Returns whether every observable of the candidate extrema stays inside the relaxed reference extrema.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -618,6 +632,10 @@ exahype2::dg::limiting::ClearFaces<Derived, StoragePrecision, ComputePrecision>:
     Kernel::clearExtrema(extrema);
     Kernel::clearExtrema(extrema + Kernel::ExtremaPerCell);
   }
+  StoragePrecision* const halo = subcellHalo.getChunk(face);
+  for (int value = 0; value < subcellHalo.paddedChunkSize; value++) {
+    halo[value] = static_cast<StoragePrecision>(0.0);
+  }
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -737,7 +755,9 @@ exahype2::dg::limiting::SubcellSchemeCountsReduction::combine(const ValueType le
   };
 }
 
-/** Returns the first of the cells of block when numberOfBlocks blocks split numberOfCells cells evenly. */
+/**
+ * Returns the first of the cells of block when numberOfBlocks blocks split numberOfCells cells evenly.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::dg::limiting::getFirstCellOfBlock(const int block, const int numberOfBlocks, const int numberOfCells) {
   assertion(numberOfBlocks > 0 and block >= 0 and block <= numberOfBlocks, block, numberOfBlocks);

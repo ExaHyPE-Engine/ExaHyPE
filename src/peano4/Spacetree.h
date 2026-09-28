@@ -24,7 +24,9 @@ namespace peano4 {
  */
 class peano4::Spacetree final {
 public:
-  /** Counts of the rank's part of the grid after the last regrid. */
+  /**
+   * Counts of the rank's part of the grid after the last regrid.
+   */
   struct Statistics final {
     int minimumLevel{std::numeric_limits<int>::max()};
     int maximumLevel{0};
@@ -76,19 +78,25 @@ public:
   static constexpr int RepartitionTolerancePercent = 2;
 
 private:
-  /** Holds one local cell the curve walk finds: Its index in the tree and its slot in the partition. */
+  /**
+   * Holds one local cell the curve walk finds: Its index in the tree and its slot in the partition.
+   */
   struct CellRecord final {
     int treeCell{-1};
     int slot{-1};
   };
 
-  /** The faces one neighbour rank and this rank hold, as the walk over the cells finds them. */
+  /**
+   * The faces one neighbour rank and this rank hold, as the walk over the cells finds them.
+   */
   struct NeighbourFaces final {
     int                        rank{-1};
     std::vector<ExchangedFace> faces{};
   };
 
-  /** The arrays of the partition and the tables that build them, in host memory. */
+  /**
+   * The arrays of the partition and the tables that build them, in host memory.
+   */
   struct PartitionArrays final {
     int numberOfSlots{0};
     int numberOfFaces{0};
@@ -119,18 +127,26 @@ private:
     std::vector<ExchangedFace>  exchangedFaces{};
     std::vector<NeighbourFaces> neighbourFaces{};
 
-    /** Maps every tree face index that entered the partition onto its face during a build. */
+    /**
+     * Maps every tree face index that entered the partition onto its face during a build.
+     */
     std::vector<int> faceOfTreeFace{};
-    /** Maps a coarse face onto its level jump during a build. */
+    /**
+     * Maps a coarse face onto its level jump during a build.
+     */
     std::vector<int> levelJumpOfCoarseFace{};
-    /** Maps a lattice key onto the cell slot, one map per level. */
+    /**
+     * Maps a lattice key onto the cell slot, one map per level.
+     */
     std::vector<peano4::grid::LatticeIndexMap> cellSlotOfLattice{};
 
     std::vector<int> freeSlots{};
     std::vector<int> slotsFreedByRegrid{};
   };
 
-  /** The arrays a kernel reads, in device memory; a build without a GPU backend leaves them empty. */
+  /**
+   * The arrays a kernel reads, in device memory; a build without a GPU backend leaves them empty.
+   */
   struct DeviceArrays final {
     tarch::accelerator::Buffer<int>       cells{tarch::MemoryLocation::Device};
     tarch::accelerator::Buffer<int>       cellLevel{tarch::MemoryLocation::Device};

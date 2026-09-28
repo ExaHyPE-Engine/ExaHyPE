@@ -23,7 +23,9 @@ namespace {
   constexpr double MinAdmissibleSize = 0.1;
   constexpr double TimeStamp         = 0.5;
 
-  /** A solver whose refinement criterion returns the command the first value of the state names. */
+  /**
+   * A solver whose refinement criterion returns the command the first value of the state names.
+   */
   struct StubSolver final {
     static GPU_CALLABLE_METHOD exahype2::RefinementCommand refinementCriterion(
       const double* const                                           Q,
@@ -42,14 +44,18 @@ namespace {
 
   using Pool = tarch::accelerator::ChunkedMemoryPool<double>;
 
-  /** Builds a regular grid of Depth levels partitioned over the ranks and returns the partition of this rank. */
+  /**
+   * Builds a regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
+   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
   }
 
   TARGET_DECLARE
-  /** Writes the code of one command into the state of every cell, so the criterion of StubSolver returns it. */
+  /**
+   * Writes the code of one command into the state of every cell, so the criterion of StubSolver returns it.
+   */
   struct WriteCommandIntoEveryCell final {
     peano4::Partition partition{};
     Pool::View        solution{};
@@ -76,7 +82,9 @@ namespace {
     );
   }
 
-  /** Returns the limits that leave every vote on a regular grid of the depth to the criterion. */
+  /**
+   * Returns the limits that leave every vote on a regular grid of the depth to the criterion.
+   */
   exahype2::Limits getLimitsAroundTheGrid() {
     exahype2::Limits limits;
     limits.minAdmissiblePatchSize = 0.0;
@@ -112,7 +120,9 @@ exahype2::tests::RefinementVotesTest::run() {
   testMethod(testOnlyTheListedCellsVote);
 }
 
-/** A cell wider than the largest admissible size refines whatever the criterion says. */
+/**
+ * A cell wider than the largest admissible size refines whatever the criterion says.
+ */
 void
 exahype2::tests::RefinementVotesTest::testACellAboveTheLargestSizeRefines() {
   const double width = 2.0 * MaxAdmissibleSize;
@@ -126,7 +136,9 @@ exahype2::tests::RefinementVotesTest::testACellAboveTheLargestSizeRefines() {
   );
 }
 
-/** A cell between the two admissible sizes takes the command of the criterion. */
+/**
+ * A cell between the two admissible sizes takes the command of the criterion.
+ */
 void
 exahype2::tests::RefinementVotesTest::testTheCriterionDecidesWithinTheAdmissibleSizes() {
   const double width = MaxAdmissibleSize / peano4::SubdivisionFactor;
@@ -144,7 +156,9 @@ exahype2::tests::RefinementVotesTest::testTheCriterionDecidesWithinTheAdmissible
   );
 }
 
-/** A cell at the smallest admissible size keeps its size, as its children would fall below it. */
+/**
+ * A cell at the smallest admissible size keeps its size, as its children would fall below it.
+ */
 void
 exahype2::tests::RefinementVotesTest::testARefineVoteAtTheSmallestSizeTurnsIntoKeep() {
   validateEquals(
@@ -153,7 +167,9 @@ exahype2::tests::RefinementVotesTest::testARefineVoteAtTheSmallestSizeTurnsIntoK
   );
 }
 
-/** A cell whose parent would pass the largest admissible size keeps its size. */
+/**
+ * A cell whose parent would pass the largest admissible size keeps its size.
+ */
 void
 exahype2::tests::RefinementVotesTest::testAnEraseVoteThatWouldPassTheLargestSizeTurnsIntoKeep() {
   const double width = MaxAdmissibleSize;
@@ -163,7 +179,9 @@ exahype2::tests::RefinementVotesTest::testAnEraseVoteThatWouldPassTheLargestSize
   );
 }
 
-/** The count rises for every listed cell whose vote refines or erases. */
+/**
+ * The count rises for every listed cell whose vote refines or erases.
+ */
 void
 exahype2::tests::RefinementVotesTest::testTheCountNamesTheVotesThatChangeTheGrid() {
   const int                         cells[]    = {0, 1, 2};
@@ -182,7 +200,9 @@ exahype2::tests::RefinementVotesTest::testTheCountNamesTheVotesThatChangeTheGrid
   validateEquals(votes, 2);
 }
 
-/** A refine vote on every cell reaches the requests, a keep vote yields none, and release() frees the commands. */
+/**
+ * A refine vote on every cell reaches the requests, a keep vote yields none, and release() frees the commands.
+ */
 void
 exahype2::tests::RefinementVotesTest::testTheVotesOnEveryCellReachTheRequests() {
   const auto& partition     = buildGrid();
@@ -219,7 +239,9 @@ exahype2::tests::RefinementVotesTest::testTheVotesOnEveryCellReachTheRequests() 
   validateEquals(votes.getAllocatedBytes().getTotal(), std::size_t{0});
 }
 
-/** Without patches every cell above the largest admissible size refines and every other cell keeps its size. */
+/**
+ * Without patches every cell above the largest admissible size refines and every other cell keeps its size.
+ */
 void
 exahype2::tests::RefinementVotesTest::testGridConstructionRefinesEveryCellAboveTheLargestSize() {
   const auto&                  partition = buildGrid();
@@ -238,7 +260,9 @@ exahype2::tests::RefinementVotesTest::testGridConstructionRefinesEveryCellAboveT
   validate(requests.getRefinementRequests(partition).empty());
 }
 
-/** Only the listed cells vote; every other cell casts no vote whatever its patch says. */
+/**
+ * Only the listed cells vote; every other cell casts no vote whatever its patch says.
+ */
 void
 exahype2::tests::RefinementVotesTest::testOnlyTheListedCellsVote() {
   const auto& partition     = buildGrid();

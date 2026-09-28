@@ -96,7 +96,9 @@ namespace exahype2 {
   );
 } // namespace exahype2
 
-/** Votes on every cell of the grid under construction, whose patches hold no data yet. */
+/**
+ * Votes on every cell of the grid under construction, whose patches hold no data yet.
+ */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::VoteOnGridConstruction final {
   peano4::Partition            partition{};
@@ -107,7 +109,9 @@ struct exahype2::VoteOnGridConstruction final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Votes on every listed cell from the patch of the cell. */
+/**
+ * Votes on every listed cell from the patch of the cell.
+ */
 template <typename Derived, typename SolutionView>
 struct exahype2::VoteOnRefinement final {
   peano4::Partition            partition{};

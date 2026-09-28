@@ -23,6 +23,7 @@ namespace {
   template <typename Solver>
   using Predictor = exahype2::dg::ader::LinearPredictor<Solver, double>;
 
+  TARGET_DECLARE
   constexpr int NodesPerAxis              = CellLayout::NodesPerAxis;
   constexpr int NumberOfUnknowns          = CellLayout::NumberOfUnknowns;
   constexpr int NumberOfData              = CellLayout::NumberOfData;
@@ -46,8 +47,9 @@ namespace {
   constexpr double LinearProductSpeed = 0.25;
   constexpr double LinearSourceRate   = 0.75;
 
-  TARGET_DECLARE
-  /** A flux that scales the state by one plus the axis number. */
+  /**
+   * A flux that scales the state by one plus the axis number.
+   */
   struct FluxTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
@@ -64,7 +66,9 @@ namespace {
     }
   };
 
-  /** A product that scales the gradient by one plus the axis number. */
+  /**
+   * A product that scales the gradient by one plus the axis number.
+   */
   struct ProductTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
       [[maybe_unused]] const double* NOALIAS const                  state,
@@ -82,7 +86,9 @@ namespace {
     }
   };
 
-  /** A material parameter matrix that scales the flux by two plus the axis number. */
+  /**
+   * A material parameter matrix that scales the flux by two plus the axis number.
+   */
   struct MaterialTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void multiplyMaterialParameterMatrix(
       [[maybe_unused]] const double* NOALIAS const                  state,
@@ -99,7 +105,9 @@ namespace {
     }
   };
 
-  /** A source that triples the state. */
+  /**
+   * A source that triples the state.
+   */
   struct SourceTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void sourceTerm(
       const double* NOALIAS const                                   state,
@@ -145,7 +153,9 @@ namespace {
   struct PointSourceSolver final : StubLayout, PointSourceTerm {};
   struct FullSolver final : StubLayout, FluxTerm, ProductTerm, MaterialTerm, SourceTerm, PointSourceTerm {};
 
-  /** A flux, a product and a source that move a profile along the first axis and let it grow. */
+  /**
+   * A flux, a product and a source that move a profile along the first axis and let it grow.
+   */
   struct ProfileSolver final : StubLayout {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
@@ -239,7 +249,9 @@ namespace {
     return (pointSource == 0) ? 0.2 + 0.1 * axis : 0.7 - 0.15 * axis;
   }
 
-  /** Sample zero sits at the start of the step, the following samples on the quadrature points of the step. */
+  /**
+   * Sample zero sits at the start of the step, the following samples on the quadrature points of the step.
+   */
   double getTimePositionOf(const Tables& tables, const int timeSample) {
     return (timeSample == 0) ? TimeStamp : TimeStamp + TimeStepSize * tables.quadraturePoints[timeSample - 1];
   }
@@ -284,7 +296,9 @@ namespace {
 
   double getSeedOfState(const int entry) { return 0.25 + 0.125 * entry; }
 
-  /** The face states and face fluxes of one cell, with one pointer per face for the kernels. */
+  /**
+   * The face states and face fluxes of one cell, with one pointer per face for the kernels.
+   */
   struct FaceBuffers final {
     double  state[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfData]{};
     double  flux[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfUnknowns]{};
@@ -299,7 +313,9 @@ namespace {
     }
   };
 
-  /** Returns the cell node that carries the face node of the face along direction in layer normalIndex. */
+  /**
+   * Returns the cell node that carries the face node of the face along direction in layer normalIndex.
+   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     auto nodeIndex       = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
     nodeIndex(direction) = normalIndex;
@@ -343,7 +359,9 @@ namespace {
     return coefficients;
   }
 
-  /** Puts source zero at the centre of cell one and source one on the right face of cell four. */
+  /**
+   * Puts source zero at the centre of cell one and source one on the right face of cell four.
+   */
   std::vector<double> getPointSourceLocations(const exahype2::dg::tests::CellChain& geometry) {
     constexpr int SourceZeroCell = 1;
     constexpr int SourceOneCell  = 4;
@@ -360,7 +378,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Points the face arrays of one cell into the flat buffers, one block per cell and face. */
+  /**
+   * Points the face arrays of one cell into the flat buffers, one block per cell and face.
+   */
   INLINE_METHOD GPU_CALLABLE_METHOD void collectFacePointers(
     const int     cell,
     double* const faceStates,
@@ -377,7 +397,9 @@ namespace {
     }
   }
 
-  /** Writes the point sources of one cell and their number into indices and counts. */
+  /**
+   * Writes the point sources of one cell and their number into indices and counts.
+   */
   struct SelectPointSourcesOfCell final {
     const double* locations{nullptr};
     const double* cellCentres{nullptr};
@@ -404,7 +426,9 @@ namespace {
     }
   };
 
-  /** Writes the predictor of one cell and the point sources it carries into its faces. */
+  /**
+   * Writes the predictor of one cell and the point sources it carries into its faces.
+   */
   struct PredictorOfCell final {
     exahype2::dg::BasisTables<double> tables{};
     const double*                     locations{nullptr};
@@ -476,7 +500,9 @@ namespace {
     deviceCounts.copyBack(counts);
   }
 
-  /** Runs the predictor of every cell with the point sources it carries on the device and copies the results back. */
+  /**
+   * Runs the predictor of every cell with the point sources it carries on the device and copies the results back.
+   */
   void predictOnDevice(
     const Tables&                         tables,
     const exahype2::dg::tests::CellChain& geometry,
@@ -550,7 +576,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::run() {
   testMethod(testEveryCellOfADeviceRangeMatchesTheHostPredictor);
 }
 
-/** The zeroth Taylor coefficient holds the cell state and a zero in every padding lane. */
+/**
+ * The zeroth Taylor coefficient holds the cell state and a zero in every padding lane.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheSeedCopiesTheCellStateAndClearsThePadding() {
   double cellState[CellStateSize];
@@ -580,7 +608,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheSeedCopiesTheCellStateAnd
   }
 }
 
-/** The time average starts at the zeroth Taylor coefficient. */
+/**
+ * The time average starts at the zeroth Taylor coefficient.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAverageStartsFromTheState() {
   double state[StateSize];
@@ -600,7 +630,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAverageStartsFromTheS
   }
 }
 
-/** A Taylor step starts from a zeroed flux, and a solver without a source keeps that buffer. */
+/**
+ * A Taylor step starts from a zeroed flux, and a solver without a source keeps that buffer.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheTermsAreClearedBeforeATaylorStep() {
   double flux[DIMENSIONS * AxisStride];
@@ -678,7 +710,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAveragedTermsGrowByTh
   }
 }
 
-/** The unknowns of a Taylor coefficient enter the time-averaged state and its auxiliary variables stay. */
+/**
+ * The unknowns of a Taylor coefficient enter the time-averaged state and its auxiliary variables stay.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAveragedStateGrowsByTheGivenFactor() {
   double state[StateSize];
@@ -705,7 +739,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAveragedStateGrowsByT
   }
 }
 
-/** The next Taylor coefficient is the source minus the sum of the differentiated fluxes. */
+/**
+ * The next Taylor coefficient is the source minus the sum of the differentiated fluxes.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheNextDerivativeIsTheSourceMinusTheFluxDivergence() {
   double flux[DIMENSIONS * AxisStride] = {};
@@ -751,7 +787,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheNextDerivativeIsTheSource
   }
 }
 
-/** The flux of every node and axis reaches the block of that axis. */
+/**
+ * The flux of every node and axis reaches the block of that axis.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheFluxFillsEveryNodeAndAxis() {
   double state[StateSize];
@@ -783,7 +821,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheFluxFillsEveryNodeAndAxis
   }
 }
 
-/** A state that is constant over the cell has a zero gradient, so the product adds nothing. */
+/**
+ * A state that is constant over the cell has a zero gradient, so the product adds nothing.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testAConstantStateLeavesTheNonconservativeProductAtZero() {
   const Tables tables;
@@ -818,7 +858,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testAConstantStateLeavesTheNonco
   }
 }
 
-/** A state that is linear along one axis adds the product of its exact slope to the flux of that axis alone. */
+/**
+ * A state that is linear along one axis adds the product of its exact slope to the flux of that axis alone.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testALinearStateGivesTheExactNonconservativeProduct() {
   const Tables tables;
@@ -861,7 +903,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testALinearStateGivesTheExactNon
   }
 }
 
-/** The material parameter matrix multiplies the unknowns of every node and axis and leaves the padding lanes. */
+/**
+ * The material parameter matrix multiplies the unknowns of every node and axis and leaves the padding lanes.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheMaterialParameterMatrixActsOnEveryAxis() {
   double state[StateSize];
@@ -902,7 +946,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheMaterialParameterMatrixAc
   }
 }
 
-/** The source of every node reaches the source buffer. */
+/**
+ * The source of every node reaches the source buffer.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheSourceFillsEveryNode() {
   double state[StateSize];
@@ -931,7 +977,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheSourceFillsEveryNode() {
   }
 }
 
-/** A point source inside the cell raises the count by one and writes its table index. */
+/**
+ * A point source inside the cell raises the count by one and writes its table index.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testASourceInsideIsSelected() {
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(0.5);
@@ -949,7 +997,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceInsideIsSelected() {
   validateEquals(pointSourceIndices[2], -1);
 }
 
-/** A point source that leaves the cell along one axis raises neither the count nor an index. */
+/**
+ * A point source that leaves the cell along one axis raises neither the count nor an index.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testASourceOutsideIsRejected() {
   tarch::la::Vector<DIMENSIONS, double> beyondTheLastAxis(0.5);
@@ -968,7 +1018,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceOutsideIsRejected() {
   }
 }
 
-/** A point source on a face of two cells appears in the list of both cells. */
+/**
+ * A point source on a face of two cells appears in the list of both cells.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testASourceOnAFaceBelongsToBothCells() {
   PointSourceTable table;
@@ -988,7 +1040,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceOnAFaceBelongsToBothC
   validateEquals(upperIndices[0], 1);
 }
 
-/** The indices follow the order of the point source table of the solver. */
+/**
+ * The indices follow the order of the point source table of the solver.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testSelectionKeepsTheTableOrder() {
   PointSourceTable table;
@@ -1005,7 +1059,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testSelectionKeepsTheTableOrder(
   validateEquals(pointSourceIndices[2], -1);
 }
 
-/** The basis function of a node returns one at that node and zero at every other node. */
+/**
+ * The basis function of a node returns one at that node and zero at every other node.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheBasisFunctionIsOneAtItsOwnNodeAndZeroAtTheOthers() {
   const Tables tables;
@@ -1022,7 +1078,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheBasisFunctionIsOneAtItsOw
   }
 }
 
-/** The basis functions weighted with the node coordinates return the position they are evaluated at. */
+/**
+ * The basis functions weighted with the node coordinates return the position they are evaluated at.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheBasisFunctionsReproduceALinearFunction() {
   const Tables tables;
@@ -1041,7 +1099,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheBasisFunctionsReproduceAL
   }
 }
 
-/** An empty list of point sources leaves every sample at zero. */
+/**
+ * An empty list of point sources leaves every sample at zero.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testNoPointSourceLeavesTheSamplesEmpty() {
   const Tables                                tables;
@@ -1249,7 +1309,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheDerivativeCoefficientsWei
   }
 }
 
-/** Every axis of the time-averaged flux receives the same time integral divided by the number of axes. */
+/**
+ * Every axis of the time-averaged flux receives the same time integral divided by the number of axes.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testEveryAxisReceivesTheSameTimeAverage() {
   const Tables tables;
@@ -1300,7 +1362,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testEveryAxisReceivesTheSameTime
   }
 }
 
-/** The block of the scratch places every buffer behind its predecessor without a gap. */
+/**
+ * The block of the scratch places every buffer behind its predecessor without a gap.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheScratchBlocksFollowEachOtherWithoutOverlap() {
   using Scratch = Predictor<FullSolver>::Scratch;
@@ -1325,7 +1389,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheScratchBlocksFollowEachOt
   validateEquals(Scratch::Size, Scratch::PointSourceOffset + Scratch::PointSourceSize);
 }
 
-/** A term the solver lacks occupies no entry and shortens the block. */
+/**
+ * A term the solver lacks occupies no entry and shortens the block.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testATermTheSolverLacksHasZeroExtent() {
   using Full = Predictor<FullSolver>;
@@ -1489,7 +1555,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::
   }
 }
 
-/** The point source selection of every cell of a device range reproduces the serial host loop. */
+/**
+ * The point source selection of every cell of a device range reproduces the serial host loop.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testEveryCellOfADeviceRangeSelectsItsPointSources() {
   const exahype2::dg::tests::CellChain geometry;
@@ -1523,7 +1591,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testEveryCellOfADeviceRangeSelec
   validateEquals(selectedSources, Setup::NumberOfPointSources);
 }
 
-/** The predictor of every cell of a device range reproduces the serial host loop. */
+/**
+ * The predictor of every cell of a device range reproduces the serial host loop.
+ */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testEveryCellOfADeviceRangeMatchesTheHostPredictor() {
   const Tables                         tables;

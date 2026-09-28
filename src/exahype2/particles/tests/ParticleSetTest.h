@@ -30,6 +30,7 @@ private:
   void testRelocateMovesAParticleToTheCellThatHoldsIt();
   void testInsertAndRelocateCountTheParticlesOfAllRanks();
   void testUploadAndDownloadCarryTheValues();
+  void testAHostWriteReachesTheDeviceCopy();
   void testRelocateKeepsTheDeviceValuesWhileNoParticleLeaves();
   void testReleaseFreesEveryArray();
 };

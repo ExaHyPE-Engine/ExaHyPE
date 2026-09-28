@@ -36,8 +36,7 @@ public:
 
   [[nodiscard]] INLINE_METHOD double getMinTimeStamp() const;
   [[nodiscard]] INLINE_METHOD double getMaxTimeStamp() const;
-  [[nodiscard]] INLINE_METHOD double getMinTimeStepSize() const;
-  [[nodiscard]] INLINE_METHOD double getMaxTimeStepSize() const;
+  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfSolverCells(const peano4::Partition& partition) const;
   [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfCellDoFs(const peano4::Partition& partition) const;
 
   INLINE_METHOD void startSimulation();
@@ -64,6 +63,9 @@ private:
   INLINE_METHOD void forEachSolver(const Operation& operation) const;
 
   INLINE_METHOD void commitRefinementRequests(const peano4::Partition& partition);
+
+  template <typename Solver>
+  [[nodiscard]] static INLINE_METHOD int getNumberOfCellsOf(const Solver& solver, const peano4::Partition& partition);
 
   std::tuple<Solvers&...> _solvers;
 

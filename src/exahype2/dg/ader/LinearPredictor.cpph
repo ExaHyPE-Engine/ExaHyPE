@@ -198,7 +198,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
   }
 }
 
-/** Copies the cell state into the zeroth Taylor coefficient and zeroes the padding lanes. */
+/**
+ * Copies the cell state into the zeroth Taylor coefficient and zeroes the padding lanes.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -217,7 +219,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::initialiseState(
   }
 }
 
-/** Returns the Lagrange basis function of one node evaluated at a position of the reference interval. */
+/**
+ * Returns the Lagrange basis function of one node evaluated at a position of the reference interval.
+ */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateLagrangeBasis(
@@ -369,7 +373,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addPointSourcesT
   }
 }
 
-/** Copies the zeroth Taylor coefficient into the time average, which enters with a factor of one. */
+/**
+ * Copies the zeroth Taylor coefficient into the time average, which enters with a factor of one.
+ */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::seedTimeAveragedState(
@@ -536,7 +542,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
   }
 }
 
-/** Multiplies the flux of every node and axis by the material parameter matrix of Derived. */
+/**
+ * Multiplies the flux of every node and axis by the material parameter matrix of Derived.
+ */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::applyMaterialParameterMatrix(
@@ -565,7 +573,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::applyMaterialPar
   }
 }
 
-/** Adds the source of Derived at every node into the zeroed source buffer. */
+/**
+ * Adds the source of Derived at every node into the zeroed source buffer.
+ */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateSource(
@@ -620,7 +630,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::accumulateTimeAv
   }
 }
 
-/** Writes the next Taylor coefficient, the source minus the flux divergence, into the state. */
+/**
+ * Writes the next Taylor coefficient, the source minus the flux divergence, into the state.
+ */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::advanceTimeDerivative(

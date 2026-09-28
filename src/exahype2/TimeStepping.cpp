@@ -13,7 +13,9 @@
 namespace {
   constexpr double NumericalZero{1e-10};
 
-  /** A rank without a fault contributes this value to the minimum reduction of the fault bits. */
+  /**
+   * A rank without a fault contributes this value to the minimum reduction of the fault bits.
+   */
   constexpr std::uint64_t NoFaultBits = std::numeric_limits<std::uint64_t>::max();
 
   [[nodiscard]] bool isPositiveEigenvalue(const double eigenvalue) {
@@ -187,9 +189,7 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
   assertion(_rule == Rule::Adaptive);
   const double timeStepSizeToTerminalTime = _limits.terminalTime - _timeStamp;
   assertion(std::isfinite(timeStepSizeToTerminalTime), timeStepSizeToTerminalTime, _timeStamp);
-  if (exahype2::MaxEigenvalueReduction::isPhysicalValue(timeStepSizeFromCFL)) {
-    _admissibleTimeStepSizeOfNextStep = std::min(timeStepSizeFromCFL, timeStepSizeToTerminalTime);
-  } else {
+  if (not exahype2::MaxEigenvalueReduction::isPhysicalValue(timeStepSizeFromCFL)) {
     tarch::triggerNonCriticalAssertion(
       __FILE__,
       __LINE__,
@@ -197,7 +197,9 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
       "Time step size bits=" + std::to_string(std::bit_cast<std::uint64_t>(timeStepSizeFromCFL))
     );
     _admissibleTimeStepSizeOfNextStep = timeStepSizeFromCFL;
+    return;
   }
+  _admissibleTimeStepSizeOfNextStep = std::min(timeStepSizeFromCFL, timeStepSizeToTerminalTime);
   // A step that leaves less than the rounding of the terminal time behind stretches onto it, so
   // the run does not close with a step of a few times the machine epsilon.
   const double terminalTimeTolerance = NumericalZero * std::max(1.0, std::abs(_limits.terminalTime));
@@ -214,7 +216,9 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
   }
 }
 
-/** Stores the size every following step of a fixed rule takes. */
+/**
+ * Stores the size every following step of a fixed rule takes.
+ */
 void
 exahype2::TimeStepping::setFixedTimeStepSize(const double timeStepSize) {
   assertion(_rule == Rule::Fixed);

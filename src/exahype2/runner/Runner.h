@@ -55,6 +55,7 @@ struct exahype2::runner::SolverRepositoryCallbacks {
 
   std::function<double()>           getMinTimeStamp{};
   std::function<double()>           getMaxTimeStamp{};
+  std::function<std::uint64_t()>    getNumberOfSolverCells{};
   std::function<std::uint64_t()>    getNumberOfCellDoFs{};
   std::function<SolverStatistics()> getSolverStatistics{};
 
@@ -72,12 +73,18 @@ struct exahype2::runner::SolverRepositoryCallbacks {
  */
 class exahype2::runner::Runner final {
 public:
-  /** The program steps the global master broadcasts; every rank runs the body of the step. */
+  /**
+   * The program steps the global master broadcasts; every rank runs the body of the step.
+   */
   enum class Step : int { CreateGrid = 0, AllocateMemory, InitGrid, PlotSolution, TimeStep, DynamicAMR };
 
-  /** Step that ends the run on every rank. */
+  /**
+   * Step that ends the run on every rank.
+   */
   static constexpr int TerminationStep = -2;
-  /** Step of a rank that leaves the choice to the global master. */
+  /**
+   * Step of a rank that leaves the choice to the global master.
+   */
   static constexpr int NoStep = -1;
 
   static int launch(
@@ -107,9 +114,14 @@ public:
 private:
   friend class exahype2::runner::tests::RunnerTest;
 
-  /** Wall-clock seconds between two progress reports of one regrid. */
+  /**
+   * Wall-clock seconds between two progress reports of one regrid.
+   */
   static constexpr double SecondsBetweenMeshUpdateReports = 5.0;
-  /** Bounds the sweeps of one regrid; a regrid that reaches this cap stops the run with an error. */
+  /**
+   * Bounds the sweeps of the grid construction and of one regrid; a phase that reaches this cap
+   * without settling stops the run with an error.
+   */
   static constexpr int MaximumMeshUpdateSweeps = 1024;
   /**
    * Bounds the initialisation rounds; a run whose refinement requests still change the grid after
@@ -117,7 +129,9 @@ private:
    */
   static constexpr int MaximumInitialisationRounds = 16;
 
-  /** Records the regrids a report covers, their sweeps and the grid snapshots around them. */
+  /**
+   * Records the regrids a report covers, their sweeps and the grid snapshots around them.
+   */
   struct MeshUpdates {
     int          regrids{0};
     int          sweeps{0};
@@ -131,7 +145,9 @@ private:
     tarch::instrumentation::Measurement measurement{};
   };
 
-  /** The sections of the time loop's report; a plot after a plot continues the open section. */
+  /**
+   * The sections of the time loop's report; a plot after a plot continues the open section.
+   */
   enum class Section { None, TimeStep, MeshUpdates, Plot, Summary };
 
   static const char* getStepName(Step step);
@@ -144,7 +160,9 @@ private:
   SolverRepositoryCallbacks             _callbacks;
   Report                                _report{};
   Section                               _openSection{Section::None};
-  /** Column of the values behind the labels of the time loop; it only grows, so values stay aligned. */
+  /**
+   * Column of the values behind the labels of the time loop; it only grows, so values stay aligned.
+   */
   std::size_t _valueColumn{0};
 
   tarch::instrumentation::Measurement _timeStepMeasurement{};
@@ -154,19 +172,30 @@ private:
 
   MeshUpdates _meshUpdates{};
   bool        _meshUpdatesStarted{false};
-  /** Regrids of the whole run, the ones of the grid initialisation included. */
+  /**
+   * Regrids of the whole run, the ones of the grid initialisation included.
+   */
   int _numberOfRegrids{0};
 
-  /** Wall clock in seconds of every completed time step, the first one included. */
+  /**
+   * Wall clock in seconds of every completed time step, the first one included.
+   */
   double _timeSteppingSeconds{0.0};
-  /** Cells and degrees of freedom updated by the time steps the throughput measures, summed over those steps. */
+  /**
+   * Cells and degrees of freedom updated by the time steps the throughput measures, summed over
+   * those steps and over the solvers.
+   */
   double _cellUpdates{0.0};
   double _dofUpdates{0.0};
-  /** Wall clock in seconds the mesh updates of the grid initialisation took; the time loop's estimate excludes them. */
+  /**
+   * Wall clock in seconds the mesh updates of the grid initialisation took; the time loop's estimate excludes them.
+   */
   double _meshUpdateSecondsBeforeTimeLoop{0.0};
   bool   _stoppedAfterNonCriticalAssertion{false};
 
-  /** Time steps and their wall clock in seconds since the previous time step report. */
+  /**
+   * Time steps and their wall clock in seconds since the previous time step report.
+   */
   unsigned long _stepsSinceReport{0};
   double        _stepSecondsSinceReport{0.0};
   /**
@@ -187,7 +216,8 @@ private:
   void constructGrid();
   void initialiseGrid();
   [[nodiscard]] bool hasPendingMeshUpdates() const;
-  void applyMeshUpdates(bool report);
+  void applyMeshUpdates();
+  double runMeshUpdateSweep(bool startsRegrid);
   void reportMeshUpdates();
   void startMeshUpdates();
   void runTimeLoop();

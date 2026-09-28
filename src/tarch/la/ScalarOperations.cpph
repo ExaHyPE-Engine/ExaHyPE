@@ -3,58 +3,63 @@
 
 TARGET_DECLARE
 INLINE_METHOD GPU_CALLABLE_METHOD int
-tarch::la::abs(int value) {
+tarch::la::abs(const int value) {
   return value < 0 ? -value : value;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
-tarch::la::abs(double value) {
+tarch::la::abs(const double value) {
   return std::abs(value);
 }
 
-/** Returns whether lhs exceeds rhs by more than the absolute tolerance. */
+/**
+ * Returns whether lhs exceeds rhs by more than the absolute tolerance.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
-tarch::la::greater(double lhs, double rhs, double tolerance) {
+tarch::la::greater(const double lhs, const double rhs, const double tolerance) {
   return lhs - rhs > tolerance;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD bool
-tarch::la::greaterEquals(double lhs, double rhs, double tolerance) {
+tarch::la::greaterEquals(const double lhs, const double rhs, const double tolerance) {
   return lhs - rhs >= -tolerance;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD bool
-tarch::la::smaller(double lhs, double rhs, double tolerance) {
+tarch::la::smaller(const double lhs, const double rhs, const double tolerance) {
   return lhs - rhs < -tolerance;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD bool
-tarch::la::smallerEquals(double lhs, double rhs, double tolerance) {
+tarch::la::smallerEquals(const double lhs, const double rhs, const double tolerance) {
   return lhs - rhs <= tolerance;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD bool
-tarch::la::equals(double lhs, double rhs, double tolerance) {
+tarch::la::equals(const double lhs, const double rhs, const double tolerance) {
   return std::abs(rhs - lhs) <= tolerance;
 }
 
+/**
+ * Returns zero for a value within the tolerance of zero and the sign of the value otherwise.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD int
-tarch::la::sign(double number, double tolerance) {
-  if (greater(number, tolerance)) {
+tarch::la::sign(const double value, const double tolerance) {
+  if (greater(value, 0.0, tolerance)) {
     return 1;
-  } else if (greater(tolerance, number)) {
+  } else if (smaller(value, 0.0, tolerance)) {
     return -1;
   }
   return 0;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD int
-tarch::la::round(double value) {
+tarch::la::round(const double value) {
   return static_cast<int>(std::floor(value + 0.5));
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD int
-tarch::la::round(float value) {
+tarch::la::round(const float value) {
   return static_cast<int>(std::floor(value + static_cast<float>(0.5)));
 }
 TARGET_DECLARE_END

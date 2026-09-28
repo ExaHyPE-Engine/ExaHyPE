@@ -33,7 +33,9 @@ tarch::mpi::AbstractCommunicationManager::configure(const bool communicationThre
   _dedicatedThreadIsUsed = communicationThreadEnabled and tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1;
 }
 
-/** Returns whether the process drives its communication on a thread of its own. */
+/**
+ * Returns whether the process drives its communication on a thread of its own.
+ */
 bool
 tarch::mpi::AbstractCommunicationManager::usesDedicatedThread() {
   return _dedicatedThreadIsUsed;

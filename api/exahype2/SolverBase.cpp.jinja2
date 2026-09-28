@@ -79,7 +79,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialise(
 {%- endif %}
 {%- if TRACERS %}
 
-/** Moves the solver data through the regrid, then finds the cell of every tracer again. */
+/**
+ * Moves the solver data through the regrid, then finds the cell of every tracer again.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::regrid(
   const peano4::Partition&        partition,
   const peano4::Regrid&           regrid,
@@ -91,6 +93,21 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::regrid(
 {%- endfor %}
 }
 
+/**
+ * Writes the snapshot of the solver data and one snapshot of every tracer set; every rank calls
+ * this at the same time.
+ */
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::plot(
+  const peano4::Partition&       partition,
+  const ::tarch::plotter::Format format,
+  const std::string&             outputDirectory
+) {
+  SolverFamily::plot(partition, format, outputDirectory);
+{%- for tracer in TRACERS %}
+  _{{tracer.NAME}}Plotter.plot(_{{tracer.NAME}}, getTimeStepping().getTimeStamp(), format, outputDirectory);
+{%- endfor %}
+}
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::release() {
   SolverFamily::release();
 {%- for tracer in TRACERS %}
@@ -98,7 +115,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::release() {
 {%- endfor %}
 }
 
-/** Returns the bytes of the solver data and of every tracer set. */
+/**
+ * Returns the bytes of the solver data and of every tracer set.
+ */
 ::tarch::AllocatedBytes {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getAllocatedBytes() const {
   return SolverFamily::getAllocatedBytes()
 {%- for tracer in TRACERS %}
@@ -106,7 +125,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::release() {
 {%- endfor %};
 }
 
-/** Appends the particle count of all ranks of every tracer set. */
+/**
+ * Appends the particle count of all ranks of every tracer set.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::appendTracerStatistics(
   std::vector<::exahype2::runner::SolverStatistic>& statistics
 ) const {
@@ -117,7 +138,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::appendTracerStatistics(
 {%- endfor %}
 }
 
-/** Inserts the particles of every tracer set once; a rank keeps the particles its partition holds. */
+/**
+ * Inserts the particles of every tracer set once; a rank keeps the particles its partition holds.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::insertTracers(const peano4::Partition& partition) {
 {%- for tracer in TRACERS %}
   if (not _{{tracer.NAME}}Inserted) {
@@ -172,7 +195,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::insertTracers(const peano4::Part
 
 /**
  * Moves every tracer set the phase selects through the solution, then records the snapshots
- * and the position errors of every set at the time stamp of the solver.
+ * and the position errors of every set at the time stamp of the solver. A set that only the time
+ * steps move records its first snapshot after the first time step.
  */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
   const peano4::Partition& partition,
@@ -191,7 +215,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
     {{tracer.UPDATE_CALL | indent(4)}}
   }
 {%- endif %}
-{%- if tracer.DATABASE %}
+{%- if tracer.DATABASE and tracer.INITIALISATION %}
   ::exahype2::particles::recordSnapshots(
     _{{tracer.NAME}},
     getTimeStepping().getTimeStamp(),
@@ -199,6 +223,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
     {{tracer.DATABASE.LAST_RECORD_TIME}},
     _{{tracer.NAME}}Database
   );
+{%- elif tracer.DATABASE %}
+  // Only the time steps write the data of this set, so it holds no values after the initialisation.
+  if (not initialisation) {
+    ::exahype2::particles::recordSnapshots(
+      _{{tracer.NAME}},
+      getTimeStepping().getTimeStamp(),
+      {{tracer.DATABASE.INITIAL_RECORD_TIME}},
+      {{tracer.DATABASE.LAST_RECORD_TIME}},
+      _{{tracer.NAME}}Database
+    );
+  }
 {%- endif %}
 {%- if tracer.ERROR %}
   if (_{{tracer.NAME}}ErrorMeasurement.isSnapshotDue(getTimeStepping().getTimeStamp())) {

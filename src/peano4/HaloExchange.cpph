@@ -73,7 +73,9 @@ peano4::HaloExchange<T>::rebuild(const peano4::Partition& partition) {
   _requests.assign(2 * _messages.size(), MPI_REQUEST_NULL);
 }
 
-/** Frees the entry table and the buffers; the tag stays reserved for the next rebuild. */
+/**
+ * Frees the entry table and the buffers; the tag stays reserved for the next rebuild.
+ */
 template <typename T>
 void
 peano4::HaloExchange<T>::release() {
@@ -207,7 +209,9 @@ peano4::HaloExchange<T>::getTag() const noexcept {
   return _tag;
 }
 
-/** Returns the bytes of the entry table, the message runs, the requests and both transfer buffers. */
+/**
+ * Returns the bytes of the entry table, the message runs, the requests and both transfer buffers.
+ */
 template <typename T>
 INLINE_METHOD tarch::AllocatedBytes
 peano4::HaloExchange<T>::getAllocatedBytes() const noexcept {

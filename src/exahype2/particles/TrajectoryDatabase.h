@@ -18,6 +18,10 @@ namespace exahype2::particles {
 class exahype2::particles::TrajectoryDatabase final : public tarch::database::SnapshotDatabase {
 public:
   TrajectoryDatabase(double positionDelta = 1e-8, double timeDelta = 0.0, bool deltasAreRelative = false);
+  TrajectoryDatabase(const TrajectoryDatabase& other)            = delete;
+  TrajectoryDatabase(TrajectoryDatabase&& other)                 = delete;
+  TrajectoryDatabase& operator=(const TrajectoryDatabase& other) = delete;
+  TrajectoryDatabase& operator=(TrajectoryDatabase&& other)      = delete;
   ~TrajectoryDatabase() override;
 
   void addParticleSnapshot(
@@ -57,11 +61,15 @@ protected:
   void resetWriteTracking() override;
 
 private:
+  static constexpr double DeltaCutoffThreshold = 1e-6;
+
   double _positionDelta;
   double _maxPositionDelta{0.0};
+  bool   _deltasAreRelative;
+  int    _rank{-1};
   int    _numberOfDataPointsPerParticle{0};
 
-  std::map<std::pair<int, int>, int> _writtenSnapshotsPerParticle;
+  std::map<std::pair<int, int>, int> _writtenSnapshotsPerParticle{};
 
   struct Entry : Snapshot {
     tarch::la::Vector<DIMENSIONS, double> x;
@@ -69,7 +77,7 @@ private:
     Entry(const tarch::la::Vector<DIMENSIONS, double>& position, double timestamp, int numberOfDataEntries);
   };
 
-  std::map<std::pair<int, int>, std::list<Entry>> _data;
+  std::map<std::pair<int, int>, std::list<Entry>> _data{};
 
   void writeRow(std::ostream& file, const std::pair<int, int>& number, const Entry& snapshot) const;
 

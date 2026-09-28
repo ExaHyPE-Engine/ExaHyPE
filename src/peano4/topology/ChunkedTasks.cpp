@@ -7,7 +7,9 @@
 #include "tarch/tasking/Runtime.h"
 #include "tarch/tasking/TaskGraph.h"
 
-/** Returns the upper bound on the chunk count runChunkedTasks() uses. */
+/**
+ * Returns the upper bound on the chunk count runChunkedTasks() uses.
+ */
 int
 peano4::topology::getMaximumNumberOfChunks() {
   return 2 * std::max(tarch::tasking::Runtime::getInstance().getNumberOfThreads(), 1) + 1;

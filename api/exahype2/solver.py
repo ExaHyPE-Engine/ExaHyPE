@@ -41,7 +41,6 @@ class Solver:
         precision="double",
     ):
         self._name = name
-        self._solver_number = 0
         self._namespace = []
         self._dimensions = None
         self._project = None
@@ -90,10 +89,6 @@ class Solver:
     @property
     def name(self):
         return self._name
-
-    @property
-    def solver_number(self):
-        return self._solver_number
 
     @property
     def unknowns(self):
@@ -230,6 +225,7 @@ class Solver:
             headers.append("exahype2/particles/ParticleSet.h")
         if self._tracers:
             headers.append("exahype2/particles/Forces.h")
+            headers.append("exahype2/plotter/ParticlePlotter.h")
             headers.append("exahype2/runner/Statistics.h")
             headers.append("tarch/accelerator/MemoryLocation.h")
         if any(tracers.records_a_database for tracers in self._tracers):
@@ -328,7 +324,6 @@ class Solver:
         d["FULL_QUALIFIED_NAMESPACE"] = "::".join(self._namespace)
         d["SOLVER_NAME"] = self._name
         d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(self._namespace + [self._name])
-        d["SOLVER_INSTANCE"] = self.instance_name
         d["NUMBER_OF_UNKNOWNS"] = self.state.unknowns
         d["NUMBER_OF_AUXILIARY_VARIABLES"] = self.state.auxiliary_variables
         d["NUMBER_OF_DATA"] = self.state.number_of_values
@@ -341,7 +336,6 @@ class Solver:
         d["SOLVER_FAMILY_CLASS"] = self._solver_family_class()
         d["SOLVER_FAMILY_CONSTANTS"] = self._solver_family_constants()
         d["TIME_STEPPING_FACTOR"] = repr(float(self.time_stepping.factor))
-        d["ADAPTIVE_TIME_STEPPING"] = self.time_stepping.adaptive
         d["PLOTTED_FIELDS"] = ", ".join(
             '{"' + name + '", ' + str(count) + "}"
             for name, count in self.plotted_fields()
@@ -351,6 +345,9 @@ class Solver:
         d["USER_TERMS_INLINE"] = self._user_terms_inline()
         d["SOLVER_PDE_TERM_DECLARATIONS"] = self.pde_terms.render_declarations(
             d, d["USER_TERMS_INLINE"]
+        )
+        d["HOST_DEFINED_DEVICE_TERMS"] = self.pde_terms.get_host_defined_device_terms(
+            d["USER_TERMS_INLINE"]
         )
         d["SOLVER_PDE_TERM_ASSERTIONS"] = self.pde_terms.render_assertions(d)
         d["SOLVER_CONCEPT_ASSERTION"] = self._render_solver_concept_assertion(d)

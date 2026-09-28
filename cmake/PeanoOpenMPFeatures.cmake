@@ -70,21 +70,22 @@ function(peano_check_openmp_features)
   endif()
 
   _peano_check_openmp_construct(
-    "taskwait depend"
+    "taskwait depend(iterator)"
     "taskwait"
     "
     #include <omp.h>
 
     int main() {
-      char token{};
-      char* const tokenPointer = &token;
+      char tokenStorage[2]{};
+      char* tokens[2] = {&tokenStorage[0], &tokenStorage[1]};
+      const int numberOfTokens = 2;
 
       #pragma omp parallel
       #pragma omp single
       {
-        #pragma omp task depend(out: tokenPointer[0])
+        #pragma omp task depend(out: tokens[0][0])
         {}
-        #pragma omp taskwait depend(in: tokenPointer[0])
+        #pragma omp taskwait depend(iterator(i = 0 : numberOfTokens), in: tokens[i][0])
       }
 
       return 0;

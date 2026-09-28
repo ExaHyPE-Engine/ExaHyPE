@@ -254,10 +254,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         generate_kernels(solver=self, dictionary=dictionary, output=output)
 
     def _add_solver_family_entries(self, d):
-        d["ORDER"] = self._order
         d["DG_ORDER"] = self._order
-        d["IS_LINEAR"] = self._is_linear
-        d["NUMBER_OF_POINT_SOURCES"] = self._number_of_point_sources
         d["INITIALISE_PATCHES"] = self._initialise_patches
         d["TABLE_PRECISIONS"] = self._table_precisions()
         d["LIMITER_ARGUMENTS"] = self._subcell_limiter_arguments()

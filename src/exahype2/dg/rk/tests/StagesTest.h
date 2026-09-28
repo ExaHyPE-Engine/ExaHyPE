@@ -8,7 +8,9 @@ namespace exahype2::dg::rk::tests {
   class StagesTest;
 } // namespace exahype2::dg::rk::tests
 
-/** Checks one Runge-Kutta stage of one cell on the host and on the device. */
+/**
+ * Checks one Runge-Kutta stage of one cell on the host and on the device.
+ */
 class exahype2::dg::rk::tests::StagesTest final : public tarch::tests::TestCase {
 public:
   StagesTest();

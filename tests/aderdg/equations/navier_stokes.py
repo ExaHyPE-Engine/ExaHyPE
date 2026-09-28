@@ -175,7 +175,7 @@ class NavierStokes(Equation):
     {% if SOLVER_FAMILY == "ader" %}
     constexpr double orderFactor = PNPM;
     {% else %}
-    constexpr double orderFactor = 1.0 / (2.0 * RKOrder - 1.0);
+    constexpr double orderFactor = 1.0 / (2.0 * RungeKuttaOrder - 1.0);
     {% endif %}
     return maxEval(Q, normal)
       + diffusiveEval(Q, normal)*2/(h[normal]*orderFactor);
@@ -435,9 +435,9 @@ class NavierStokes(Equation):
     for (int n = 0; n < NumberOfUnknowns; n++) {
       FL[xy*NumberOfUnknowns+n] = 0.5 * (FL[xy * NumberOfUnknowns + n] + FR[xy * NumberOfUnknowns + n]
         + smax * (QL[xy * strideQ + n] - QR[xy * strideQ + n]) );
+      FR[xy * NumberOfUnknowns + n] = FL[xy * NumberOfUnknowns + n];
     }
   }
-  std::copy_n(FL, faceSize*NumberOfUnknowns, FR);
   return smax;
 """
         )

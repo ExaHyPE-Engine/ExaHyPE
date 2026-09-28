@@ -3,7 +3,9 @@
 #pragma once
 
 namespace exahype2::terms {
-  /** The analytical solution of a tracer writes the exact position and data of a particle into solution. */
+  /**
+   * The analytical solution of a tracer writes the exact position and data of a particle into solution.
+   */
   template <typename SolverType, typename Particle>
   concept HasParticleAnalyticalSolution =
     requires(Particle* const particle, const double t, const double dt, double* const solution) {

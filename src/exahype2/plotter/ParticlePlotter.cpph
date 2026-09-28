@@ -1,0 +1,73 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/plotter/CellTypes.h"
+#include "tarch/plotter/FileWriter.h"
+
+INLINE_METHOD
+exahype2::plotter::ParticlePlotter::ParticlePlotter(std::string filename) :
+  _filename(std::move(filename)) {
+  assertion(not _filename.empty());
+}
+
+/**
+ * Writes one snapshot of the particles of every rank; every rank calls this at the same time.
+ * Particles provides download(), getSize(), getPosition(), getNumber(), getData() and
+ * ValuesPerParticle, the DIMENSIONS coordinates and the data entries of one particle.
+ */
+template <typename Particles>
+void
+exahype2::plotter::ParticlePlotter::plot(
+  Particles&                   particles,
+  const double                 timeStamp,
+  const tarch::plotter::Format format,
+  const std::string&           outputDirectory
+) {
+  constexpr int NumberOfData = Particles::ValuesPerParticle - DIMENSIONS;
+  static_assert(NumberOfData >= 0);
+  particles.download();
+  const auto        numberOfParticles = static_cast<std::size_t>(particles.getSize());
+  const std::string directory         = outputDirectory + OutputSubdirectory;
+  const int         rank              = tarch::mpi::Rank::getInstance().getRank();
+
+  _snapshot.openFile(format, directory, timeStamp);
+  auto& writer = _snapshot.getFileWriter();
+  auto& piece  = writer.getPieceBuffers(writer.acquirePiece(rank));
+
+  piece.pointsXYZ.assign(numberOfParticles * 3, 0.0);
+  piece.connectivity.resize(numberOfParticles);
+  piece.offsets.resize(numberOfParticles);
+  piece.types.assign(numberOfParticles, static_cast<std::uint8_t>(tarch::plotter::CellType::Vertex));
+  piece.pointFields.clear();
+  piece.cellFields.clear();
+  piece.cellFields.push_back({"Number", 2, std::vector<double>(numberOfParticles * 2)});
+  if constexpr (NumberOfData > 0) {
+    piece.cellFields.push_back({"Data", NumberOfData, std::vector<double>(numberOfParticles * NumberOfData)});
+  }
+  piece.cellFields.push_back({"RefinementLevel", 1, std::vector<double>(numberOfParticles, 1.0)});
+  piece.cellFields.push_back({"Subdomain", 1, std::vector<double>(numberOfParticles, static_cast<double>(rank))});
+
+  for (std::size_t particle = 0; particle < numberOfParticles; particle++) {
+    const int  index    = static_cast<int>(particle);
+    const auto position = particles.getPosition(index);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      piece.pointsXYZ[particle * 3 + static_cast<std::size_t>(axis)] = position(axis);
+    }
+    piece.connectivity[particle] = static_cast<std::int32_t>(particle);
+    piece.offsets[particle]      = static_cast<std::int32_t>(particle + 1);
+
+    const auto number                            = particles.getNumber(index);
+    piece.cellFields[0].values[particle * 2]     = static_cast<double>(number.first);
+    piece.cellFields[0].values[particle * 2 + 1] = static_cast<double>(number.second);
+    if constexpr (NumberOfData > 0) {
+      const double* const data = particles.getData(index);
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        piece.cellFields[1].values[particle * NumberOfData + static_cast<std::size_t>(entry)] = data[entry];
+      }
+    }
+  }
+
+  _snapshot.writeFile(directory, _filename);
+}

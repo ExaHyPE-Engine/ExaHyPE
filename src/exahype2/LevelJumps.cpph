@@ -48,7 +48,9 @@ exahype2::restrictFineFaces(
   }
 }
 
-/** Runs operation on every level jump of the partition, one level after the other from the finest level up. */
+/**
+ * Runs operation on every level jump of the partition, one level after the other from the finest level up.
+ */
 template <typename Operation>
 void
 exahype2::restrictFineFaces(const peano4::Partition& partition, const Operation& operation) {

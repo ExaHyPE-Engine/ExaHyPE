@@ -64,7 +64,9 @@ exahype2::fv::getFaceVolumeIndex(
   return layer * VolumesPerLayer + tangential;
 }
 
-/** Returns the index of a volume in a face, where volume(normal) is the layer along the normal. */
+/**
+ * Returns the index of a volume in a face, where volume(normal) is the layer along the normal.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::fv::getFaceVolumeIndex(
   const tarch::la::Vector<DIMENSIONS, int>& volume,
@@ -344,6 +346,46 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::interpolateHalo(
 }
 
 /**
+ * Fills one half of a fine face from the same half of the coarse face above it. Every fine
+ * volume copies the coarse volume that covers it, so every fine value is a coarse value. Every
+ * layer of the half maps onto the same layer.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolume<Derived, ComputePrecision>::injectHalo(
+  const StoragePrecision* NOALIAS const coarseFace,
+  StoragePrecision* NOALIAS const       fineFace,
+  const int                             side,
+  const int                             normal,
+  const int                             subface
+) {
+  assertion(side == 0 or side == 1, side);
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  assertion(subface >= 0 and subface < peano4::SubfacesPerFace, subface);
+
+  constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
+  constexpr int SecondExtent      = DIMENSIONS == 3 ? PatchSize : 1;
+
+  const int firstSubface  = subface % SubdivisionFactor;
+  const int secondSubface = subface / SubdivisionFactor;
+  for (int layerInHalf = 0; layerInHalf < HaloSize; layerInHalf++) {
+    const int layer = side * HaloSize + layerInHalf;
+    for (int j = 0; j < SecondExtent; j++) {
+      const int jCell = DIMENSIONS == 3 ? (j + PatchSize * secondSubface) / SubdivisionFactor : 0;
+      for (int i = 0; i < PatchSize; i++) {
+        const int iCell       = (i + PatchSize * firstSubface) / SubdivisionFactor;
+        const int fineIndex   = getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, i, j) * NumberOfData;
+        const int coarseIndex = getFaceVolumeIndex<PatchSize, HaloSize>(normal, layer, iCell, jCell) * NumberOfData;
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          fineFace[fineIndex + unknown] = coarseFace[coarseIndex + unknown];
+        }
+      }
+    }
+  }
+}
+
+/**
  * Fills one half of a coarse face from the same half of the fine faces below it. Every coarse
  * volume takes the mean of the fine volumes that cover it as the correctly rounded quotient of
  * their exact sum, so the result is the same for every order of the fine faces and constant fine
@@ -527,7 +569,9 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::reduceMaxEigenvalue(
   return maximum;
 }
 
-/** Writes the error norms of Derived over the volumes of patch into the NumberOfNorms entries of errors. */
+/**
+ * Writes the error norms of Derived over the volumes of patch into the NumberOfNorms entries of errors.
+ */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void

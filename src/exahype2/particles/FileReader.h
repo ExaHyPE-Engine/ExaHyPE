@@ -8,7 +8,9 @@ namespace exahype2::particles {
   class FileReader;
 } // namespace exahype2::particles
 
-/** Stores particle coordinates read from a whitespace-separated text file. */
+/**
+ * Stores particle coordinates read from a whitespace-separated text file.
+ */
 class exahype2::particles::FileReader final {
 public:
   void readDatFile(const std::string& filename, double scale);

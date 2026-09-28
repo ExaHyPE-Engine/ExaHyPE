@@ -17,9 +17,6 @@
 #include <mpi.h>
 
 namespace {
-  /** Sizes one axis field so three coordinates fit into one 64-bit key. */
-  constexpr int LatticeKeyBitsPerAxis = 21;
-
   /**
    * Compares two refinement plans flag by flag. Every plan is canonical, its flags sorted by
    * lattice key on each level, so equal levels compare equal element by element. A plan may carry
@@ -72,7 +69,9 @@ namespace {
     return peano4::dLinearised(position, peano4::SubdivisionFactor);
   }
 
-  /** Returns the index of a child face among the subfaces of its parent face, ordered along the tangential axes. */
+  /**
+   * Returns the index of a child face among the subfaces of its parent face, ordered along the tangential axes.
+   */
   int getSubfaceIndexOf(const tarch::la::Vector<DIMENSIONS, int>& childPosition, const int normal) {
     return peano4::dLinearisedExclusive(childPosition, peano4::SubdivisionFactor, normal);
   }
@@ -112,7 +111,9 @@ namespace {
     }
   };
 
-  /** Turns the counts per key into the offsets of the ranges, with one end entry after the last key. */
+  /**
+   * Turns the counts per key into the offsets of the ranges, with one end entry after the last key.
+   */
   void turnCountsIntoOffsets(std::vector<int>& ranges) {
     int offset = 0;
     for (int& entry : ranges) {
@@ -145,7 +146,9 @@ peano4::Spacetree::init(
   _periodicBoundaries = periodicBoundaries;
 }
 
-/** Releases the tree and the partition and forgets the plan, so the next init() starts a new grid. */
+/**
+ * Releases the tree and the partition and forgets the plan, so the next init() starts a new grid.
+ */
 void
 peano4::Spacetree::shutdown() {
   _targetLevel = -1;
@@ -194,7 +197,9 @@ peano4::Spacetree::enableDynamicLoadBalancing(const bool enable) {
   _dynamicLoadBalancing = enable;
 }
 
-/** Returns the coarsest level whose blocks give every rank at least one block. */
+/**
+ * Returns the coarsest level whose blocks give every rank at least one block.
+ */
 int
 peano4::Spacetree::deriveSpawnLevel(const int targetLevel, const int numberOfRanks) {
   return peano4::topology::Tree::deriveSpawnLevel(targetLevel, numberOfRanks);
@@ -205,7 +210,9 @@ peano4::Spacetree::deriveSpawnLevel() const {
   return deriveSpawnLevel(_targetLevel, tarch::mpi::Rank::getInstance().getNumberOfRanks());
 }
 
-/** Returns a spare tree to rebuild into, or a new one when no spare is left. */
+/**
+ * Returns a spare tree to rebuild into, or a new one when no spare is left.
+ */
 std::unique_ptr<peano4::topology::Tree>
 peano4::Spacetree::acquireTree() {
   if (not _spareTrees.empty()) {
@@ -430,7 +437,9 @@ peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid
   return true;
 }
 
-/** Closes a regrid once the caller has moved its data: The freed slots join the free list. */
+/**
+ * Closes a regrid once the caller has moved its data: The freed slots join the free list.
+ */
 void
 peano4::Spacetree::finishRegrid() {
   assertion(_regridPending);
@@ -442,13 +451,14 @@ peano4::Spacetree::finishRegrid() {
 
 /**
  * Derives the rank's statistics from the partition and the tree. A refined cell counts for the
- * rank that owns it, so the ranks together count it once.
+ * rank that owns it, so the ranks together count it once. A rank without cells reports the
+ * identities of the reductions over the ranks as its minimum level and minimum cell width.
  */
 void
 peano4::Spacetree::deriveStatistics() {
   const auto rank                  = tarch::mpi::Rank::getInstance().getRank();
   _statistics.maximumLevel         = _arrays.maximumLevel;
-  _statistics.minimumLevel         = _arrays.minimumLevel;
+  _statistics.minimumLevel         = _arrays.cells.empty() ? std::numeric_limits<int>::max() : _arrays.minimumLevel;
   _statistics.numberOfCells        = static_cast<int>(_arrays.cells.size());
   _statistics.numberOfRefinedCells = 0;
   for (std::size_t cellIndex = 0; cellIndex < _tree->getNumberOfCells(); cellIndex++) {
@@ -474,15 +484,13 @@ peano4::Spacetree::getLatticeKey(
   [[maybe_unused]] const int                level,
   const tarch::la::Vector<DIMENSIONS, int>& lattice
 ) const {
-  std::int64_t key = 0;
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(lattice(axis) >= 0 and lattice(axis) < (1 << LatticeKeyBitsPerAxis), level, axis, lattice(axis));
-    key |= static_cast<std::int64_t>(lattice(axis)) << (LatticeKeyBitsPerAxis * axis);
-  }
-  return key;
+  assertion(level >= 0, level, lattice);
+  return peano4::topology::Tree::serialiseLatticeKey(lattice);
 }
 
-/** Returns the slot of the cell at the level and lattice position, or -1 when this rank owns no such cell. */
+/**
+ * Returns the slot of the cell at the level and lattice position, or -1 when this rank owns no such cell.
+ */
 int
 peano4::Spacetree::getCellAt(const int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const {
   if (level < 0 or level >= static_cast<int>(_arrays.cellSlotOfLattice.size())) {
@@ -492,7 +500,9 @@ peano4::Spacetree::getCellAt(const int level, const tarch::la::Vector<DIMENSIONS
   return slot == peano4::grid::LatticeIndexMap::NoEntry ? -1 : slot;
 }
 
-/** Numbers the partition of the tree afresh; the slots of an earlier partition are forgotten. */
+/**
+ * Numbers the partition of the tree afresh; the slots of an earlier partition are forgotten.
+ */
 void
 peano4::Spacetree::buildPartition() {
   assertion(_arrays.slotsFreedByRegrid.empty());
@@ -632,7 +642,13 @@ peano4::Spacetree::rebuildPartition(const peano4::topology::Tree& previousTree, 
           beyondOneLevel();
         }
         regrid.createdSlots.push_back(slot);
+        // The ownership plans never split a cell with a leaf child, so every child has the owner of the first one.
         const int owner = previousTree.getOwnerOfCellAt(level + 1, firstChild);
+        for (int child = 1; child < peano4::ChildrenPerCell; child++) {
+          [[maybe_unused]] const auto childLattice =
+            getChildLatticeOf(lattice, peano4::dDelinearised(child, peano4::SubdivisionFactor));
+          assertion(previousTree.getOwnerOfCellAt(level + 1, childLattice) == owner, level, lattice, child, owner);
+        }
         if (owner == rank) {
           Restriction restriction;
           restriction.parentSlot = slot;

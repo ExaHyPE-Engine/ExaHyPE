@@ -3,7 +3,7 @@
 #pragma once
 
 #include "peano4/sfc/Grammar.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace peano4::sfc {
   struct HilbertGrammar;

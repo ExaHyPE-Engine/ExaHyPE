@@ -18,21 +18,27 @@ namespace {
   constexpr int EntriesPerAxis             = CellNodes * NumberOfData;
   constexpr int PaddedNodeStride           = NumberOfData + 2;
 
-  /** Stands in for a generated solver of order two with two unknowns and one auxiliary variable. */
+  /**
+   * Stands in for a generated solver of order two with two unknowns and one auxiliary variable.
+   */
   struct Order2Layout {
     static constexpr int DGOrder                    = NodesPerAxis - 1;
     static constexpr int NumberOfUnknowns           = ::NumberOfUnknowns;
     static constexpr int NumberOfAuxiliaryVariables = ::NumberOfAuxiliaryVariables;
   };
 
-  /** Stands in for a generated solver whose unknowns fill the vector width exactly. */
+  /**
+   * Stands in for a generated solver whose unknowns fill the vector width exactly.
+   */
   struct ExactWidthLayout {
     static constexpr int DGOrder                    = NodesPerAxis - 1;
     static constexpr int NumberOfUnknowns           = PEANO_WITH_SIMDLEN;
     static constexpr int NumberOfAuxiliaryVariables = 0;
   };
 
-  /** Stands in for a generated solver whose unknowns exceed the vector width by one. */
+  /**
+   * Stands in for a generated solver whose unknowns exceed the vector width by one.
+   */
   struct OneAboveWidthLayout {
     static constexpr int DGOrder                    = NodesPerAxis - 1;
     static constexpr int NumberOfUnknowns           = PEANO_WITH_SIMDLEN + 1;
@@ -49,7 +55,9 @@ namespace {
   constexpr double QuadratureNodes1DP1[] = {0.21132486540518713, 0.7886751345948129};
   constexpr double QuadratureNodes1DP2[] = {0.1127016653792583, 0.5, 0.8872983346207417};
 
-  /** Returns the value of the Lagrange basis function of node at x. */
+  /**
+   * Returns the value of the Lagrange basis function of node at x.
+   */
   double getBasisValue(const double x, const int node) {
     double result = 1.0;
     for (int other = 0; other < NodesPerAxis; other++) {
@@ -60,7 +68,9 @@ namespace {
     return result;
   }
 
-  /** Returns the derivative of the Lagrange basis function of node at x. */
+  /**
+   * Returns the derivative of the Lagrange basis function of node at x.
+   */
   double getBasisDerivative(const double x, const int node) {
     double result = 0.0;
     for (int omitted = 0; omitted < NodesPerAxis; omitted++) {
@@ -77,7 +87,9 @@ namespace {
     return result;
   }
 
-  /** The entry (i, j) is the derivative of basis function j at node i. */
+  /**
+   * The entry (i, j) is the derivative of basis function j at node i.
+   */
   struct DerivativeOperator final {
     double entries[NodesPerAxis * NodesPerAxis]{};
 
@@ -90,7 +102,9 @@ namespace {
     }
   };
 
-  /** The values of the basis functions at the two ends of the unit interval. */
+  /**
+   * The values of the basis functions at the two ends of the unit interval.
+   */
   struct EndCoefficients final {
     double left[NodesPerAxis]{};
     double right[NodesPerAxis]{};
@@ -103,7 +117,9 @@ namespace {
     }
   };
 
-  /** Returns the cell node that carries the face node of the face along direction in layer normalIndex. */
+  /**
+   * Returns the cell node that carries the face node of the face along direction in layer normalIndex.
+   */
   int getCellNodeInAxisOrder(const int direction, const int faceNode, const int normalIndex) {
     auto nodeIndex       = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
     nodeIndex(direction) = normalIndex;
@@ -134,7 +150,9 @@ namespace {
     return result;
   }
 
-  /** An affine field lies in the nodal basis of order one and higher, so its interpolant returns it everywhere. */
+  /**
+   * An affine field lies in the nodal basis of order one and higher, so its interpolant returns it everywhere.
+   */
   void fillAffineNodalValues(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -214,7 +232,9 @@ namespace {
   using Setup = exahype2::dg::tests::TransferSetup;
 } // namespace
 
-/** Checks the interpolant of the affine field at its first node and at the cell centre. */
+/**
+ * Checks the interpolant of the affine field at its first node and at the cell centre.
+ */
 template <int Order>
 void
 exahype2::dg::tests::BasisTest::validateAffineInterpolant(const double* const nodes) {
@@ -291,7 +311,9 @@ exahype2::dg::tests::BasisTest::run() {
   testMethod(testConstantFacesAndCellsRestrictBitwise);
 }
 
-/** A cell holds one node per combination of the nodes along the axes, and a face one per tangential combination. */
+/**
+ * A cell holds one node per combination of the nodes along the axes, and a face one per tangential combination.
+ */
 void
 exahype2::dg::tests::BasisTest::testNodeCountsFollowTheNumberOfNodesPerAxis() {
   int nodesInCell = 0;
@@ -303,7 +325,9 @@ exahype2::dg::tests::BasisTest::testNodeCountsFollowTheNumberOfNodesPerAxis() {
   validateEquals(exahype2::dg::getNodesPerFace(NodesPerAxis), nodesInCell / NodesPerAxis);
 }
 
-/** A node of the state and a node of an unknown field grow to the next multiple of the vector width. */
+/**
+ * A node of the state and a node of an unknown field grow to the next multiple of the vector width.
+ */
 void
 exahype2::dg::tests::BasisTest::testEveryNodeIsPaddedToTheVectorWidth() {
   validateEquals(PaddedCell::NodesPerAxis, NodesPerAxis);
@@ -329,7 +353,9 @@ exahype2::dg::tests::BasisTest::testEveryNodeIsPaddedToTheVectorWidth() {
   validateEquals(OneAboveWidth::PaddedNumberOfData, 2 * PEANO_WITH_SIMDLEN);
 }
 
-/** A cell holds one node per axis combination and a space-time block holds one cell per time node. */
+/**
+ * A cell holds one node per axis combination and a space-time block holds one cell per time node.
+ */
 void
 exahype2::dg::tests::BasisTest::testTheNodeCountsFollowTheDimensionCount() {
   constexpr int ExpectedNodesPerAxisIn3D = (DIMENSIONS > 2) ? NodesPerAxis : 1;
@@ -340,7 +366,9 @@ exahype2::dg::tests::BasisTest::testTheNodeCountsFollowTheDimensionCount() {
   validateEquals(PaddedCell::NodesPerCell, PaddedCell::NodesPerFace * NodesPerAxis);
 }
 
-/** A default-constructed table bundle points nowhere, and every field keeps the table it is given. */
+/**
+ * A default-constructed table bundle points nowhere, and every field keeps the table it is given.
+ */
 void
 exahype2::dg::tests::BasisTest::testTheBasisTablesPointNowhereUntilTheyAreSet() {
   constexpr int NumberOfTables             = 11;
@@ -388,7 +416,9 @@ exahype2::dg::tests::BasisTest::testTheBasisTablesPointNowhereUntilTheyAreSet() 
   validateEquals(narrowTables.quadraturePoints, static_cast<const float*>(nullptr));
 }
 
-/** A reference node maps onto the cell offset plus the node's fraction of the cell size. */
+/**
+ * A reference node maps onto the cell offset plus the node's fraction of the cell size.
+ */
 void
 exahype2::dg::tests::BasisTest::testGetQuadraturePointMapsTheReferenceNode() {
   const auto                         cellCentre = getRampOverAxes(0.4, 0.2);
@@ -413,7 +443,9 @@ exahype2::dg::tests::BasisTest::testGetQuadraturePointMapsTheReferenceNode() {
   }
 }
 
-/** Every node carries the weight of the cell volume divided by the node count. */
+/**
+ * Every node carries the weight of the cell volume divided by the node count.
+ */
 void
 exahype2::dg::tests::BasisTest::testVisitsEveryNodeWithItsQuadratureWeight() {
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
@@ -444,7 +476,9 @@ exahype2::dg::tests::BasisTest::testVisitsEveryNodeWithItsQuadratureWeight() {
   validateEquals(visits, WalkNodes);
 }
 
-/** A single-precision buffer reaches the functor as a pointer into that buffer. */
+/**
+ * A single-precision buffer reaches the functor as a pointer into that buffer.
+ */
 void
 exahype2::dg::tests::BasisTest::testReadsFloatValuesInPlace() {
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
@@ -480,19 +514,25 @@ exahype2::dg::tests::BasisTest::testReadsFloatValuesInPlace() {
   validateNumericalEquals(sum, expected);
 }
 
-/** A polynomial of order one returns the affine field it interpolates at every point of the cell. */
+/**
+ * A polynomial of order one returns the affine field it interpolates at every point of the cell.
+ */
 void
 exahype2::dg::tests::BasisTest::testEvaluatePolynomialOrder1() {
   validateAffineInterpolant<1>(QuadratureNodes1DP1);
 }
 
-/** A polynomial of order two returns the affine field it interpolates at every point of the cell. */
+/**
+ * A polynomial of order two returns the affine field it interpolates at every point of the cell.
+ */
 void
 exahype2::dg::tests::BasisTest::testEvaluatePolynomialOrder2() {
   validateAffineInterpolant<2>(QuadratureNodes1DP2);
 }
 
-/** Every permutation of three factors returns the same bits. */
+/**
+ * Every permutation of three factors returns the same bits.
+ */
 void
 exahype2::dg::tests::BasisTest::testTheOrderInvariantProductIgnoresTheFactorOrder() {
   constexpr double First   = 0.1;
@@ -505,7 +545,9 @@ exahype2::dg::tests::BasisTest::testTheOrderInvariantProductIgnoresTheFactorOrde
   validateNumericalEquals(product, First * Second * Third);
 }
 
-/** Every entry of the reference drops to the smallest value of that entry over the nodes. */
+/**
+ * Every entry of the reference drops to the smallest value of that entry over the nodes.
+ */
 void
 exahype2::dg::tests::BasisTest::testTheSmallestValuesAreTakenPerEntry() {
   constexpr int Values                = 2;
@@ -939,7 +981,9 @@ exahype2::dg::tests::BasisTest::testTheGradientOfAConstantStateIsExactlyZero() {
   }
 }
 
-/** A flux that is linear along its own axis differentiates to its constant physical slope. */
+/**
+ * A flux that is linear along its own axis differentiates to its constant physical slope.
+ */
 void
 exahype2::dg::tests::BasisTest::testALinearFluxDifferentiatesToItsPhysicalSlope() {
   const DerivativeOperator derivativeOperator;
@@ -982,7 +1026,9 @@ exahype2::dg::tests::BasisTest::testALinearFluxDifferentiatesToItsPhysicalSlope(
   }
 }
 
-/** A flux that is constant along every axis differentiates to zeros bitwise. */
+/**
+ * A flux that is constant along every axis differentiates to zeros bitwise.
+ */
 void
 exahype2::dg::tests::BasisTest::testAConstantFluxDifferentiatesToExactZeros() {
   const DerivativeOperator derivativeOperator;
@@ -1334,7 +1380,9 @@ exahype2::dg::tests::BasisTest::testRestrictionIsTheInterpolationTransposedOverT
   }
 }
 
-/** The weighted restriction of children that all hold the constant one yields one at every coarse node. */
+/**
+ * The weighted restriction of children that all hold the constant one yields one at every coarse node.
+ */
 void
 exahype2::dg::tests::BasisTest::testWeightedRestrictionPreservesConstants() {
   for (int coarse = 0; coarse < MatrixNodesPerAxis; coarse++) {
@@ -1420,7 +1468,9 @@ exahype2::dg::tests::BasisTest::testOrderZeroMatrices() {
   }
 }
 
-/** Every subface takes the coarse face values at its own node positions. */
+/**
+ * Every subface takes the coarse face values at its own node positions.
+ */
 void
 exahype2::dg::tests::BasisTest::testFaceInterpolationReproducesALinearProfile() {
   const TransferOperators operators;
@@ -1451,7 +1501,9 @@ exahype2::dg::tests::BasisTest::testFaceInterpolationReproducesALinearProfile() 
   }
 }
 
-/** Every child takes the coarse state at its own node positions. */
+/**
+ * Every child takes the coarse state at its own node positions.
+ */
 void
 exahype2::dg::tests::BasisTest::testCellInterpolationReproducesALinearState() {
   const TransferOperators operators;
@@ -1482,7 +1534,9 @@ exahype2::dg::tests::BasisTest::testCellInterpolationReproducesALinearState() {
   }
 }
 
-/** A constant face and a constant cell return their bits on every subface and child. */
+/**
+ * A constant face and a constant cell return their bits on every subface and child.
+ */
 void
 exahype2::dg::tests::BasisTest::testAConstantFaceAndCellInterpolateBitwise() {
   const TransferOperators operators;
@@ -1533,7 +1587,9 @@ exahype2::dg::tests::BasisTest::testAConstantFaceAndCellInterpolateBitwise() {
   }
 }
 
-/** The coarse face takes the values the subfaces represent at its own node positions. */
+/**
+ * The coarse face takes the values the subfaces represent at its own node positions.
+ */
 void
 exahype2::dg::tests::BasisTest::testFaceRestrictionProjectsALinearProfile() {
   const TransferOperators operators;
@@ -1565,7 +1621,9 @@ exahype2::dg::tests::BasisTest::testFaceRestrictionProjectsALinearProfile() {
   }
 }
 
-/** The coarse cell takes the state the children represent at its own node positions. */
+/**
+ * The coarse cell takes the state the children represent at its own node positions.
+ */
 void
 exahype2::dg::tests::BasisTest::testCellRestrictionProjectsALinearState() {
   const TransferOperators operators;
@@ -1597,7 +1655,9 @@ exahype2::dg::tests::BasisTest::testCellRestrictionProjectsALinearState() {
   }
 }
 
-/** Constant fine faces and constant children return their bits on the coarse face and cell. */
+/**
+ * Constant fine faces and constant children return their bits on the coarse face and cell.
+ */
 void
 exahype2::dg::tests::BasisTest::testConstantFacesAndCellsRestrictBitwise() {
   const TransferOperators operators;

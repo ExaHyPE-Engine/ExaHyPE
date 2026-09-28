@@ -38,7 +38,9 @@ public:
 private:
   CommunicationManager() = default;
 
-  /** Holds the poll of one posted transfer until the poll reports completion. */
+  /**
+   * Holds the poll of one posted transfer until the poll reports completion.
+   */
   struct InFlightTransfer final {
     std::function<bool()> poll{};
     InFlightTransfer*     next{nullptr};
@@ -46,10 +48,14 @@ private:
 
   static peano4::communication::CommunicationManager _singleton;
 
-  /** Carries every message of the exchanges. */
+  /**
+   * Carries every message of the exchanges.
+   */
   MPI_Comm _exchangeCommunicator{MPI_COMM_NULL};
 
-  /** Largest tag every rank accepts on the exchange communicator. */
+  /**
+   * Largest tag every rank accepts on the exchange communicator.
+   */
   int _tagUpperBound{0};
 
   int _nextTag{0};
@@ -61,6 +67,8 @@ private:
    */
   std::atomic<InFlightTransfer*> _newInFlightTransfers{nullptr};
 
-  /** Belongs exclusively to the polling thread, so its accesses need no synchronisation. */
+  /**
+   * Belongs exclusively to the polling thread, so its accesses need no synchronisation.
+   */
   std::vector<std::unique_ptr<InFlightTransfer>> _transfersBeingPolled{};
 };

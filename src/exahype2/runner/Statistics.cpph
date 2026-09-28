@@ -46,8 +46,3 @@ exahype2::runner::makeSolverStatistics(
   }
   return {solverName, statistics};
 }
-
-INLINE_METHOD std::pair<std::string, std::vector<exahype2::runner::SolverStatistic>>
-exahype2::runner::makeParticleStatistics(const char* const particleName, const int numberOfParticles) {
-  return {particleName, {makeCountStatistic("Particles", numberOfParticles)}};
-}

@@ -31,7 +31,9 @@ exahype2::particles::isSnapshotDue(
   return someSnapshotIsDue;
 }
 
-/** Returns on every rank whether isSnapshotDue() holds on some rank. Every rank calls it at the same time. */
+/**
+ * Returns on every rank whether isSnapshotDue() holds on some rank. Every rank calls it at the same time.
+ */
 template <int NumberOfData>
 INLINE_METHOD bool
 exahype2::particles::isSnapshotDueOnSomeRank(

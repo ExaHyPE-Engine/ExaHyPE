@@ -17,7 +17,9 @@ namespace {
 
   constexpr int MinimumSegmentSize = 1 << Pool::MinimumSegmentSizeExponent;
 
-  /** Writes a value that identifies the chunk into every element of it. */
+  /**
+   * Writes a value that identifies the chunk into every element of it.
+   */
   void fillChunk(Pool& pool, const int slot, const double seed) {
     double* const chunk = pool.getChunk(slot);
     for (int element = 0; element < ChunkSize; element++) {
@@ -36,7 +38,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Writes the slot number into every element of the chunk of that slot. */
+  /**
+   * Writes the slot number into every element of the chunk of that slot.
+   */
   struct WriteSlotIntoEveryElement final {
     Pool::View chunks{};
 
@@ -48,7 +52,9 @@ namespace {
     }
   };
 
-  /** Adds every element of the chunk of one slot to the accumulator. */
+  /**
+   * Adds every element of the chunk of one slot to the accumulator.
+   */
   struct AddElementsOfChunk final {
     Pool::ConstView chunks{};
 
@@ -239,7 +245,9 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testDeviceFillThroughView() {
   );
 }
 
-/** A pool on the heap counts its segments as host bytes, and a device pool of a GPU build as device bytes. */
+/**
+ * A pool on the heap counts its segments as host bytes, and a device pool of a GPU build as device bytes.
+ */
 void
 tarch::accelerator::tests::ChunkedMemoryPoolTest::testAllocatedBytes() {
   Pool pool(ChunkSize, tarch::MemoryLocation::Heap);
@@ -300,7 +308,9 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testRelease() {
   validate(chunkHolds(pool, 0, 1.0));
 }
 
-/** copyToHost() writes the padded chunks of every slot into one vector and copyFromHost() reads them back. */
+/**
+ * copyToHost() writes the padded chunks of every slot into one vector and copyFromHost() reads them back.
+ */
 void
 tarch::accelerator::tests::ChunkedMemoryPoolTest::testHostCopiesRoundTrip() {
   Pool pool(ChunkSize, tarch::MemoryLocation::Heap);

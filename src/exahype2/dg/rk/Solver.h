@@ -104,7 +104,9 @@ private:
 
   EstimatePool _estimates{Stage::EstimateValuesPerCell};
 
-  /** One stage state per scratch chunk of the stage dispatch. */
+  /**
+   * One stage state per scratch chunk of the stage dispatch.
+   */
   tarch::accelerator::Buffer<ComputePrecision> _stageScratch{tarch::MemoryLocation::Device};
 };
 

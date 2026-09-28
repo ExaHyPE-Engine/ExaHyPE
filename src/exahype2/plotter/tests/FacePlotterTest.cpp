@@ -29,7 +29,9 @@ namespace {
     return buffer.str();
   }
 
-  /** Deletes the output directory on the global master once every rank has read its piece back. */
+  /**
+   * Deletes the output directory on the global master once every rank has read its piece back.
+   */
   void deleteOutputDirectory(const std::string& outputDirectory) {
     tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -44,6 +46,7 @@ exahype2::plotter::tests::FacePlotterTest::FacePlotterTest() :
 void
 exahype2::plotter::tests::FacePlotterTest::run() {
   testMethod(testEverySelectedFaceBecomesItsNodesAndBothTraces);
+  testMethod(testEveryFaceOfAnAdaptiveGridIsWrittenByOneRank);
 }
 
 /**
@@ -112,4 +115,58 @@ exahype2::plotter::tests::FacePlotterTest::testEverySelectedFaceBecomesItsNodesA
   validate(content.find("Name=\"RefinementLevel\"") != std::string::npos);
   validate(content.find("Name=\"Subdomain\"") != std::string::npos);
   deleteOutputDirectory(outputDirectory);
+}
+
+/**
+ * Every interior, boundary and hanging face of a grid with level jumps next to the rank boundaries
+ * is written by exactly one rank.
+ */
+void
+exahype2::plotter::tests::FacePlotterTest::testEveryFaceOfAnAdaptiveGridIsWrittenByOneRank() {
+  constexpr int AdaptiveDepth = peano4::tests::DepthWithCoarseCellsBesideTheCentreBlock;
+  peano4::tests::buildRegularGrid(AdaptiveDepth);
+  peano4::tests::refineGrid({peano4::tests::getRefinementOfCentreCell(AdaptiveDepth)});
+  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+
+  int heldFaces = 0;
+  for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
+    for (const auto kind : {peano4::FaceKind::Interior, peano4::FaceKind::Boundary, peano4::FaceKind::Hanging}) {
+      heldFaces += partition.getFaces(dependence, kind).size;
+    }
+  }
+  const int exchangedFaces = partition.getFaces(peano4::Dependence::Remote, peano4::FaceKind::Interior).size;
+
+  const int                 valuesPerFace = 2 * NodesPerFace * ValuesPerNode;
+  const std::vector<double> values(static_cast<std::size_t>(partition.getNumberOfFaces()) * valuesPerFace, 0.0);
+  int                       plottedFaces = 0;
+  const auto                countFace    = [&plottedFaces](
+                                             [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+                                             [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellWidth,
+                                             [[maybe_unused]] const int                                    normal
+                                           ) {
+    plottedFaces++;
+    return true;
+  };
+
+  const std::string outputDirectory =
+    (tarch::tests::getWritableTestDirectory() / "FacePlotterTestAdaptive").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "face/");
+  exahype2::plotter::FacePlotter plotter("FacePlotterTestAdaptive", {{"q", 1}, {"r", 1}});
+  plotter.plot<NodesPerAxis, ValuesPerNode, double>(
+    partition,
+    values.data(),
+    valuesPerFace,
+    QuadratureNodes,
+    0.5,
+    tarch::plotter::Format::VTU,
+    outputDirectory,
+    countFace
+  );
+
+  const int globalExchangedFaces = peano4::tests::getGlobalSumOf(exchangedFaces);
+  const int globalHeldFaces      = peano4::tests::getGlobalSumOf(heldFaces);
+  const int globalPlottedFaces   = peano4::tests::getGlobalSumOf(plottedFaces);
+  deleteOutputDirectory(outputDirectory);
+  validateEquals(globalExchangedFaces % 2, 0);
+  validateEquals(globalPlottedFaces, globalHeldFaces - globalExchangedFaces / 2);
 }

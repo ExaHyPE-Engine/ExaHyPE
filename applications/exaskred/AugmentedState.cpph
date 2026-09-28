@@ -9,18 +9,22 @@ namespace applications::exahype2::exaskred::riemann {
     constexpr double ZeroTolerance        = 1e-5;
 
     enum class WetDryState {
-      DryDry,           // Both cells are dry.
-      WetWet,           // Both cells are wet.
-      WetDryInundation, // 1st cell: wet, 2nd cell: dry. 1st cell lies higher than the 2nd one.
-      WetDryWall, // 1st cell: wet, 2nd cell: dry. 1st cell lies lower than the 2nd one. Momentum is not large enough to
-                  // overcome the difference.
-      WetDryWallInundation, // 1st cell: wet, 2nd cell: dry. 1st cell lies lower than the 2nd one. Momentum is large
-                            // enough to overcome the difference.
-      DryWetInundation,     // 1st cell: dry, 2nd cell: wet. 1st cell lies lower than the 2nd one.
-      DryWetWall, // 1st cell: dry, 2nd cell: wet. 1st cell lies higher than the 2nd one. Momentum is not large enough
-                  // to overcome the difference.
-      DryWetWallInundation // 1st cell: dry, 2nd cell: wet. 1st cell lies higher than the 2nd one. Momentum is large
-                           // enough to overcome the difference.
+      // Both cells are dry.
+      DryDry,
+      // Both cells are wet.
+      WetWet,
+      // The wet first cell lies higher than the dry second cell.
+      WetDryInundation,
+      // The wet first cell lies lower than the dry second cell, and its momentum cannot overcome the difference.
+      WetDryWall,
+      // The wet first cell lies lower than the dry second cell, and its momentum overcomes the difference.
+      WetDryWallInundation,
+      // The dry first cell lies lower than the wet second cell.
+      DryWetInundation,
+      // The dry first cell lies higher than the wet second cell, whose momentum cannot overcome the difference.
+      DryWetWall,
+      // The dry first cell lies higher than the wet second cell, whose momentum overcomes the difference.
+      DryWetWallInundation
     };
 
     /// The wave structure of the homogeneous Riemann problem.
@@ -33,7 +37,9 @@ namespace applications::exahype2::exaskred::riemann {
       RarefactionRarefaction // 1st wave family: rarefaction; 2nd wave family: rarefaction.
     };
 
-    /** Returns the wave structure the two states span. */
+    /**
+     * Returns the wave structure the two states span.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD RiemannStructure determineRiemannStructure(
       const T& hLeft,
@@ -73,7 +79,9 @@ namespace applications::exahype2::exaskred::riemann {
       }
     }
 
-    /** Solves the three-by-three linear system with Cramer's rule, following the Clawpack implementation. */
+    /**
+     * Solves the three-by-three linear system with Cramer's rule, following the Clawpack implementation.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD void solveLinearEquation(
       const T matrix[3][3],
@@ -104,7 +112,9 @@ namespace applications::exahype2::exaskred::riemann {
       }
     }
 
-    /** Returns the middle-state height estimate of the homogeneous Riemann problem and fills the middle wave speeds. */
+    /**
+     * Returns the middle-state height estimate of the homogeneous Riemann problem and fills the middle wave speeds.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD T computeMiddleState(
       const T&          hLeft,
@@ -157,16 +167,16 @@ namespace applications::exahype2::exaskred::riemann {
          * Compute middle state h_m
          * => Solve non-linear scalar equation by Newton's method
          *    u_l - (h_m - h_l) \sqrt{\frac{g}{2} \left( \frac{1}{h_m} + \frac{1}{h_l} \right) }
-         * =  u_r + (h_m - h_r) \sqrt{\frac{g}{2} \left( \frac{1}{h_m} + \frac{1}{h_r} \right) }
+         * = u_r + (h_m - h_r) \sqrt{\frac{g}{2} \left( \frac{1}{h_m} + \frac{1}{h_r} \right) }
          *
          * Therefore determine the root of phi_{ss}:
          *\begin{equation}
          *  \begin{matrix}
-         *    \phi_{ss}(h) =&&  u_r - u_l +
+         *    \phi_{ss}(h) =&& u_r - u_l +
          *                  (h-h_l) \sqrt{
          *                            \frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_l} \right)
          *                          } \\
-         *             &&  +(h-h_r) \sqrt{
+         *             && +(h-h_r) \sqrt{
          *                            \frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_r} \right)
          *                          }
          *  \end{matrix}
@@ -233,11 +243,11 @@ namespace applications::exahype2::exaskred::riemann {
          *  \end{matrix}
          *\end{equation}
          *\begin{equation}
-         *    \phi'_{sr}(h) = \phi'_{rs}(h) = \sqrt{\frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_{min}} \right)  }
+         *    \phi'_{sr}(h) = \phi'_{rs}(h) = \sqrt{\frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_{min}} \right) }
          *                     -\frac{g}{4} \frac{h-h_{min}}
          *                        { h^2
          *                          \sqrt{
-         *                            \frac{g}{2}  \left(\frac{1}{h} + \frac{1}{h_{min}} \right)
+         *                            \frac{g}{2} \left(\frac{1}{h} + \frac{1}{h_{min}} \right)
          *                          }
          *                        }
          *                     + \sqrt{\frac{g}{h}}
@@ -269,7 +279,9 @@ namespace applications::exahype2::exaskred::riemann {
       return hMiddle;
     }
 
-    /** Classifies the wet-dry configuration of the interface and prepares wall-boundary states where needed. */
+    /**
+     * Classifies the wet-dry configuration of the interface and prepares wall-boundary states where needed.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD WetDryState determineWetDryState(
       T&                hLeft,
@@ -347,7 +359,9 @@ namespace applications::exahype2::exaskred::riemann {
       return wetDryState;
     }
 
-    /** Decomposes the interface jump into the three f-waves of the augmented method and fills their speeds. */
+    /**
+     * Decomposes the interface jump into the three f-waves of the augmented method and fills their speeds.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD void computeWaveDecomposition(
       T&                hLeft,
@@ -528,9 +542,7 @@ namespace applications::exahype2::exaskred::riemann {
       steadyStateWave[0] = -(bRight - bLeft);
       steadyStateWave[1] = -g * static_cast<T>(0.5) * (hRight + hLeft) * (bRight - bLeft);
 
-      // The steady-state wave follows the iterated Clawpack formulation rather
-      // than the closed form of the paper: one iteration is more stable than
-      // either the closed form or several iterations.
+      // One iteration of the Clawpack formulation keeps the steady-state wave stable.
       T hLeftIter   = hLeft;
       T hRightIter  = hRight;
       T uLeftIter   = uLeft;
@@ -801,7 +813,7 @@ namespace applications::exahype2::exaskred::riemann {
       FR[BathymetryIndex] = T{};
     }
 
-    // A dry side folds its residual depth into the bed and rests; a wet side derives its velocities.
+    // A dry side adds its residual depth to the bed and rests; a wet side derives its velocities.
     if (hLeft > hThreshold) {
       uLeft = huLeft / hLeft;
       vLeft = hvLeft / hLeft;
@@ -905,10 +917,10 @@ namespace applications::exahype2::exaskred::riemann {
 
     const auto cfl = dt > 0.0 and h(normal) > 0.0 ? static_cast<T>(dt / h(normal)) : T{};
     if (std::isfinite(cfl) and cfl > T{}) {
-      constexpr auto PerFaceShare = static_cast<T>(1.0 / (2.0 * DIMENSIONS));
+      constexpr auto PerFaceFraction = static_cast<T>(1.0 / (2.0 * DIMENSIONS));
 
       const auto leftDrain  = std::fmax(FL[Shortcuts::h], T{});
-      const auto leftBudget = PerFaceShare * std::fmax(hLeft, T{});
+      const auto leftBudget = PerFaceFraction * std::fmax(hLeft, T{});
       if (leftDrain > T{} and cfl * leftDrain > leftBudget) {
         const auto factor = leftBudget / (cfl * leftDrain);
         FL[Shortcuts::h] *= factor;
@@ -917,7 +929,7 @@ namespace applications::exahype2::exaskred::riemann {
       }
 
       const auto rightDrain  = std::fmax(-FR[Shortcuts::h], T{});
-      const auto rightBudget = PerFaceShare * std::fmax(hRight, T{});
+      const auto rightBudget = PerFaceFraction * std::fmax(hRight, T{});
       if (rightDrain > T{} and cfl * rightDrain > rightBudget) {
         const auto factor = rightBudget / (cfl * rightDrain);
         FR[Shortcuts::h] *= factor;

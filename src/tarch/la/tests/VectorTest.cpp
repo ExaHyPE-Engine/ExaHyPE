@@ -84,7 +84,9 @@ tarch::la::tests::VectorTest::testConstruction() {
   validateEquals(vector6[2], 3);
 }
 
-/** A vector of every size built from a brace list is a constant expression that holds the list. */
+/**
+ * A vector of every size built from a brace list is a constant expression that holds the list.
+ */
 void
 tarch::la::tests::VectorTest::testListConstructionIsAConstantExpression() {
   constexpr tarch::la::Vector<1, double> Vector1{1.5};
@@ -108,7 +110,9 @@ tarch::la::tests::VectorTest::testListConstructionIsAConstantExpression() {
   }
 }
 
-/** A default-constructed vector of every size is a constant expression that holds zeros. */
+/**
+ * A default-constructed vector of every size is a constant expression that holds zeros.
+ */
 void
 tarch::la::tests::VectorTest::testDefaultConstructionZeroesEveryEntry() {
   constexpr tarch::la::Vector<1, int>    Vector1{};
@@ -659,7 +663,9 @@ tarch::la::tests::VectorTest::testVectorCompare() {
   validate(not compare(right, left));
 }
 
-/** A NaN component makes every tolerance comparison of vectors report a difference, whatever the tolerance. */
+/**
+ * A NaN component makes every tolerance comparison of vectors report a difference, whatever the tolerance.
+ */
 void
 tarch::la::tests::VectorTest::testNaNComparesUnequal() {
 #if not defined(PEANO_WITH_FPE)

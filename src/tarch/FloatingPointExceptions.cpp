@@ -23,7 +23,7 @@ namespace {
     tarch::mpi::abort(EXIT_FAILURE);
   }
 
-#if (defined(__linux__) and not defined(_MSC_VER)) or defined(_MSC_VER)
+#if (defined(__linux__) and not defined(_MSC_VER) and (defined(__x86_64__) or defined(__i386__))) or defined(_MSC_VER)
   bool hasException(
     const tarch::FloatingPointExceptions::ExceptionMask candidate,
     const tarch::FloatingPointExceptions::Exception     exception
@@ -38,7 +38,7 @@ namespace {
   thread_local tarch::FloatingPointExceptions::ExceptionMask armedExceptions = tarch::FloatingPointExceptions::None;
 #endif
 
-#if defined(__linux__) and not defined(_MSC_VER)
+#if defined(__linux__) and not defined(_MSC_VER) and (defined(__x86_64__) or defined(__i386__))
   int toNativeExceptionMask(const tarch::FloatingPointExceptions::ExceptionMask exceptions) noexcept {
     int result = 0;
 

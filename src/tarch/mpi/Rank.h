@@ -5,7 +5,7 @@
 #include <mpi.h>
 
 namespace tarch::mpi {
-  void abort(const int errorCode);
+  void abort(int errorCode);
   class Rank;
 } // namespace tarch::mpi
 

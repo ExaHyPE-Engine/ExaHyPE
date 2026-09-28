@@ -35,8 +35,6 @@ public:
 
 private:
   Scalar _values[4];
-
-  friend Matrix<2, 2, Scalar> buildMatrix<2, 2, Scalar>(const Scalar* values);
 };
 TARGET_DECLARE_END
 

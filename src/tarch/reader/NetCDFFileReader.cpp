@@ -46,66 +46,6 @@ tarch::reader::NetCDFFileReader::getDimension(int ncid, const char* key) {
   return dim;
 }
 
-int*
-tarch::reader::NetCDFFileReader::getGlobalAttInt(int ncid, const char* name) {
-  std::size_t len = 0;
-  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR or len == 0) {
-    return nullptr;
-  }
-
-  int* tmp = new int[len]{};
-  if (nc_get_att_int(ncid, NC_GLOBAL, name, tmp) != NC_NOERR) {
-    return nullptr;
-  }
-
-  return tmp;
-}
-
-float*
-tarch::reader::NetCDFFileReader::getGlobalAttFloat(int ncid, const char* name) {
-  std::size_t len = 0;
-  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR or len == 0) {
-    return nullptr;
-  }
-
-  float* tmp = new float[len]{};
-  if (nc_get_att_float(ncid, NC_GLOBAL, name, tmp) != NC_NOERR) {
-    return nullptr;
-  }
-
-  return tmp;
-}
-
-double*
-tarch::reader::NetCDFFileReader::getGlobalAttDouble(int ncid, const char* name) {
-  std::size_t len = 0;
-  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR or len == 0) {
-    return nullptr;
-  }
-
-  double* tmp = new double[len]{};
-  if (nc_get_att_double(ncid, NC_GLOBAL, name, tmp) != NC_NOERR) {
-    return nullptr;
-  }
-
-  return tmp;
-}
-
-char*
-tarch::reader::NetCDFFileReader::getGlobalAttText(int ncid, const char* name) {
-  std::size_t len;
-  if (nc_inq_attlen(ncid, NC_GLOBAL, name, &len) != NC_NOERR or len == 0) {
-    return nullptr;
-  }
-
-  char* tmp = new char[len]{};
-  if (nc_get_att_text(ncid, NC_GLOBAL, name, tmp) != NC_NOERR) {
-    return nullptr;
-  }
-
-  return tmp;
-}
-
 int
 tarch::reader::NetCDFFileReader::readVariable1D(int ncid, const char* key, double* variable) {
   int varidkey = -1;
@@ -117,38 +57,6 @@ tarch::reader::NetCDFFileReader::readVariable1D(int ncid, const char* key, doubl
   if (nc_get_var_double(ncid, varidkey, variable) != NC_NOERR) {
     return -1;
   }
-
-  return 0;
-}
-
-int
-tarch::reader::NetCDFFileReader::readVariable2D(
-  int         ncid,
-  const char* key,
-  double**    variable,
-  std::size_t rows,
-  std::size_t cols
-) {
-  int varidkey = -1;
-
-  if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
-    return -1;
-  }
-
-  double* tmp = new double[rows * cols]{};
-  if (nc_get_var_double(ncid, varidkey, tmp) != NC_NOERR) {
-    return -1;
-  }
-
-  std::size_t j = 0;
-  for (std::size_t i = 0; i < rows * cols; i++) {
-    if (i % rows == 0 and i > 0) {
-      j++;
-    }
-    variable[i % rows][j] = tmp[i];
-  }
-
-  delete[] tmp;
 
   return 0;
 }
@@ -169,42 +77,6 @@ tarch::reader::NetCDFFileReader::readVariable2D(int ncid, const char* key, doubl
 }
 
 int
-tarch::reader::NetCDFFileReader::readVariable2DHyperslab(
-  int         ncid,
-  const char* key,
-  double**    variable,
-  std::size_t rows,
-  std::size_t cols,
-  std::size_t start
-) {
-  int varidkey = -1;
-
-  if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
-    return -1;
-  }
-
-  std::size_t startp[]{start, 0, 0};
-  std::size_t countp[]{1, cols, rows};
-  double*     tmp = new double[cols * rows];
-
-  if (nc_get_vara_double(ncid, varidkey, startp, countp, tmp) != NC_NOERR) {
-    return -1;
-  }
-
-  std::size_t j = 0;
-  for (std::size_t i = 0; i < rows * cols; i++) {
-    if (i % rows == 0 and i > 0) {
-      j++;
-    }
-    variable[i % rows][j] = tmp[i];
-  }
-
-  delete[] tmp;
-
-  return 0;
-}
-
-int
 tarch::reader::NetCDFFileReader::readVariable3D(int ncid, const char* key, double* variable) {
   int varidkey = -1;
 
@@ -213,31 +85,6 @@ tarch::reader::NetCDFFileReader::readVariable3D(int ncid, const char* key, doubl
   }
 
   if (nc_get_var_double(ncid, varidkey, variable) != NC_NOERR) {
-    return -1;
-  }
-
-  return 0;
-}
-
-int
-tarch::reader::NetCDFFileReader::readVariable3DHyperslab(
-  int         ncid,
-  const char* key,
-  double*     variable,
-  std::size_t rows,
-  std::size_t cols,
-  std::size_t start,
-  std::size_t end
-) {
-  int varidkey = -1;
-  if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
-    return -1;
-  }
-
-  std::size_t startp[]{start, 0, 0};
-  std::size_t countp[]{end, cols, rows};
-
-  if (nc_get_vara_double(ncid, varidkey, startp, countp, variable) != NC_NOERR) {
     return -1;
   }
 

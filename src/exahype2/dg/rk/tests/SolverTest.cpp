@@ -43,7 +43,9 @@ namespace {
   const double QuadratureNodes[NodesPerAxis]   = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
   const double QuadratureWeights[NodesPerAxis] = {0.5, 0.5};
 
-  /** Returns the Lagrange basis function of node at x. */
+  /**
+   * Returns the Lagrange basis function of node at x.
+   */
   double getBasisValue(const double x, const int node) {
     double result = 1.0;
     for (int other = 0; other < NodesPerAxis; other++) {
@@ -54,13 +56,17 @@ namespace {
     return result;
   }
 
-  /** Returns the derivative of the Lagrange basis function of node. */
+  /**
+   * Returns the derivative of the Lagrange basis function of node.
+   */
   double getBasisDerivative(const int node) {
     const int other = 1 - node;
     return 1.0 / (QuadratureNodes[node] - QuadratureNodes[other]);
   }
 
-  /** Returns a new table in device memory, the memory the kernels read, with the values converted to Precision. */
+  /**
+   * Returns a new table in device memory, the memory the kernels read, with the values converted to Precision.
+   */
   template <typename Precision>
   Precision* getTableOf(const std::vector<double>& values) {
     std::vector<Precision> converted(values.size());
@@ -92,7 +98,9 @@ namespace {
     return result;
   }
 
-  /** The quadrature tables of the Gauss-Legendre basis of order one, in the layout of the generated tables. */
+  /**
+   * The quadrature tables of the Gauss-Legendre basis of order one, in the layout of the generated tables.
+   */
   template <typename Precision>
   class Quadrature final {
   public:
@@ -132,7 +140,9 @@ namespace {
     inline static Precision* InverseQuadratureWeightsInCell = nullptr;
   };
 
-  /** The reference operators of the Gauss-Legendre basis of order one, in the layout of the generated tables. */
+  /**
+   * The reference operators of the Gauss-Legendre basis of order one, in the layout of the generated tables.
+   */
   template <typename Precision>
   class DGMatrices final {
   public:
@@ -175,7 +185,9 @@ namespace {
     inline static Precision* WeightedRestrictionMatrix1D = nullptr;
   };
 
-  /** The PDE terms of every test solver: A copying boundary, no refinement, no wave speed, no flux. */
+  /**
+   * The PDE terms of every test solver: A copying boundary, no refinement, no wave speed, no flux.
+   */
   template <typename Solver>
   struct CommonTerms {
     static INLINE_METHOD GPU_CALLABLE_METHOD void boundaryConditions(
@@ -222,7 +234,9 @@ namespace {
     }
   };
 
-  /** A solver with a linear initial condition, no flux and no wave speed, so a step changes nothing. */
+  /**
+   * A solver with a linear initial condition, no flux and no wave speed, so a step changes nothing.
+   */
   struct LinearSolver final : exahype2::dg::rk::Solver<LinearSolver, double, double>, CommonTerms<LinearSolver> {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
@@ -257,7 +271,9 @@ namespace {
     }
   };
 
-  /** A solver with a constant state, an adaptive rule and a unit wave speed. */
+  /**
+   * A solver with a constant state, an adaptive rule and a unit wave speed.
+   */
   struct AdaptiveSolver final : exahype2::dg::rk::Solver<AdaptiveSolver, double, double>, CommonTerms<AdaptiveSolver> {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
@@ -295,7 +311,9 @@ namespace {
     }
   };
 
-  /** A solver with a constant initial condition and a unit source, so a step adds the time step size. */
+  /**
+   * A solver with a constant initial condition and a unit source, so a step adds the time step size.
+   */
   struct SourceSolver final : exahype2::dg::rk::Solver<SourceSolver, double, double>, CommonTerms<SourceSolver> {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
@@ -335,7 +353,9 @@ namespace {
     }
   };
 
-  /** Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank. */
+  /**
+   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
+   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -377,7 +397,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Raises the accumulator for every node of one cell whose value differs from the expected value there. */
+  /**
+   * Raises the accumulator for every node of one cell whose value differs from the expected value there.
+   */
   template <typename Pool, typename Expected>
   struct CountMismatchesAgainstExpected final {
     peano4::Partition        partition{};
@@ -404,7 +426,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Counts the nodes of every cell whose value differs from the expected value at the node. */
+  /**
+   * Counts the nodes of every cell whose value differs from the expected value at the node.
+   */
   template <typename Solver, typename Expected>
   int getNumberOfMismatches(const Solver& solver, const peano4::Partition& partition, Expected expected) {
     int result = 0;
@@ -421,14 +445,18 @@ namespace {
     return result;
   }
 
-  /** Returns the profile of the linear solver at a position. */
+  /**
+   * Returns the profile of the linear solver at a position.
+   */
   struct LinearProfile final {
     GPU_CALLABLE_METHOD double operator()(const tarch::la::Vector<DIMENSIONS, double>& x) const {
       return LinearSolver::getProfile(x);
     }
   };
 
-  /** Returns one value at every position. */
+  /**
+   * Returns one value at every position.
+   */
   struct ConstantProfile final {
     double value{0.0};
 
@@ -455,7 +483,9 @@ exahype2::dg::rk::tests::SolverTest::run() {
   testMethod(testReleaseFreesEveryPool);
 }
 
-/** Checks that the first time step after refinement uses the finer grid's stability bound. */
+/**
+ * Checks that the first time step after refinement uses the finer grid's stability bound.
+ */
 void
 exahype2::dg::rk::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
   const auto&    partition = buildGrid();
@@ -535,7 +565,9 @@ exahype2::dg::rk::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAnd
   solver.release();
 }
 
-/** Every stage of the unit source contributes the time step, so the weighted sum adds one time step. */
+/**
+ * Every stage of the unit source contributes the time step, so the weighted sum adds one time step.
+ */
 void
 exahype2::dg::rk::tests::SolverTest::testASourceTermAdvancesEveryNodeByTheTimeStep() {
   const auto& partition = buildGrid();

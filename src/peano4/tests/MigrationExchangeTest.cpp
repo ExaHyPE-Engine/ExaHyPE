@@ -29,7 +29,9 @@ namespace {
   constexpr int ChunkSize   = DIMENSIONS + 2;
   constexpr int MarkerEntry = DIMENSIONS + 1;
 
-  /** The marker names the origin of a chunk: Filled, copied, prolonged or restricted. */
+  /**
+   * The marker names the origin of a chunk: Filled, copied, prolonged or restricted.
+   */
   constexpr double FilledMarker     = 1.0;
   constexpr double CopiedMarker     = 2.0;
   constexpr double ProlongedMarker  = 3.0;
@@ -40,7 +42,9 @@ namespace {
   using Exchange = peano4::MigrationExchange<double>;
 
   TARGET_DECLARE
-  /** Writes the level and the lattice position of one cell into its chunk. */
+  /**
+   * Writes the level and the lattice position of one cell into its chunk.
+   */
   struct FillChunkWithCellIdentity final {
     peano4::Partition partition{};
     const int*        cells{nullptr};
@@ -57,7 +61,9 @@ namespace {
     }
   };
 
-  /** Writes the number of entries of one chunk that name another cell than the partition does. */
+  /**
+   * Writes the number of entries of one chunk that name another cell than the partition does.
+   */
   struct CountMismatchesInSlot final {
     peano4::Partition partition{};
     Pool::ConstView   chunks{};
@@ -86,7 +92,9 @@ namespace {
     }
   };
 
-  /** Derives the chunk of a new cell from the chunks of its old slots and marks how it arrived. */
+  /**
+   * Derives the chunk of a new cell from the chunks of its old slots and marks how it arrived.
+   */
   struct IdentityTransfer final {
     Pool::ConstView source{};
 
@@ -128,7 +136,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Writes the level and the lattice position of every cell into its chunk. */
+  /**
+   * Writes the level and the lattice position of every cell into its chunk.
+   */
   void fillChunksWithCellIdentity(Pool& pool, const peano4::Partition& partition) {
     tarch::accelerator::parallelFor(
       tarch::accelerator::Range(partition.getCells().size),
@@ -136,7 +146,9 @@ namespace {
     );
   }
 
-  /** Counts the given slots whose chunk names another cell than the partition does or no migration wrote. */
+  /**
+   * Counts the given slots whose chunk names another cell than the partition does or no migration wrote.
+   */
   int getNumberOfMismatchesInFilledSlots(
     const Pool&              pool,
     const peano4::Partition& partition,
@@ -164,7 +176,9 @@ namespace {
     int mismatches{0};
   };
 
-  /** Runs one regrid with the requests over the pool and counts the filled slots that hold a wrong chunk. */
+  /**
+   * Runs one regrid with the requests over the pool and counts the filled slots that hold a wrong chunk.
+   */
   Outcome migrateAndCount(Exchange& exchange, Pool& pool, const std::vector<peano4::RefinementRequest>& requests) {
     auto&          spacetree = peano4::Spacetree::getInstance();
     const auto&    partition = spacetree.getPartition();
@@ -200,7 +214,9 @@ namespace {
     return outcome;
   }
 
-  /** Builds the regular grid with live data and one chunk per cell that names the cell. */
+  /**
+   * Builds the regular grid with live data and one chunk per cell that names the cell.
+   */
   void buildGridWithLiveChunks(Pool& pool) {
     peano4::tests::buildRegularGrid(Depth);
     auto& spacetree = peano4::Spacetree::getInstance();
@@ -241,7 +257,9 @@ peano4::tests::MigrationExchangeTest::testEveryFilledSlotHoldsTheChunkOfItsCell(
   validateEquals(erase.mismatches, 0);
 }
 
-/** Two exchanges post on distinct tags, which their first migrate reserves, and every rank reserves the same tags. */
+/**
+ * Two exchanges post on distinct tags, which their first migrate reserves, and every rank reserves the same tags.
+ */
 void
 peano4::tests::MigrationExchangeTest::testExchangesHoldDistinctTags() {
   Pool                 pool(ChunkSize, tarch::MemoryLocation::Device);
@@ -263,7 +281,9 @@ peano4::tests::MigrationExchangeTest::testExchangesHoldDistinctTags() {
   validateEquals(minimumTags[1], maximumTags[1]);
 }
 
-/** release() frees every buffer and keeps the tag, so the next migrate moves the chunks of a later regrid. */
+/**
+ * release() frees every buffer and keeps the tag, so the next migrate moves the chunks of a later regrid.
+ */
 void
 peano4::tests::MigrationExchangeTest::testReleaseFreesTheBuffersAndKeepsTheTag() {
   Pool pool(ChunkSize, tarch::MemoryLocation::Device);

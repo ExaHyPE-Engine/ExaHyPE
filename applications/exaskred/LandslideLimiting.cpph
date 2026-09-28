@@ -170,7 +170,9 @@ applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCur
   return maxCurvature <= maxCurvatureRatio * localHeightScale;
 }
 
-/** Maps one state to the height and momentum observables the DMP tracks. */
+/**
+ * Maps one state to the height and momentum observables the DMP tracks.
+ */
 template <class Shortcuts, typename ObservableT, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables(

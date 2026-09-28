@@ -28,13 +28,15 @@ namespace applications::exahype2::exaseis {
   template <typename Value>
   INLINE_METHOD GPU_CALLABLE_METHOD Value getCriticalSlipDistance(const double* x);
 
-  constexpr double DynamicFrictionCoefficient = {{mu_d}};
-  constexpr double StaticFrictionCoefficient  = {{mu_s}};
-  constexpr double ForcedRuptureDuration      = {{t0_rupture}};
-  constexpr double CohesionBoxCentreY         = {{f_cy}};
-  constexpr double CohesionBoxHalfWidthY      = {{f_wy}};
-  constexpr double CohesionBoxCentreZ         = {{f_cz}};
-  constexpr double CohesionBoxHalfWidthZ      = {{f_wz}};
+  TARGET_DECLARE
+  DEVICE_VARIABLE constexpr double DynamicFrictionCoefficient = {{mu_d}};
+  DEVICE_VARIABLE constexpr double StaticFrictionCoefficient  = {{mu_s}};
+  DEVICE_VARIABLE constexpr double ForcedRuptureDuration      = {{t0_rupture}};
+  DEVICE_VARIABLE constexpr double CohesionBoxCentreY         = {{f_cy}};
+  DEVICE_VARIABLE constexpr double CohesionBoxHalfWidthY      = {{f_wy}};
+  DEVICE_VARIABLE constexpr double CohesionBoxCentreZ         = {{f_cz}};
+  DEVICE_VARIABLE constexpr double CohesionBoxHalfWidthZ      = {{f_wz}};
+  TARGET_DECLARE_END
 } // namespace applications::exahype2::exaseis
 
 #include "DynamicRuptureParameters.cpph"

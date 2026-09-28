@@ -40,6 +40,7 @@ private:
   void testJudgeCandidateFailsADivergedPredictor();
   void testJudgeCandidateRejectsACandidateOutsideTheReferenceExtrema();
   void testSpreadStatusLiftsByTheNeighbours();
+  void testClearFacesWritesRegularAndZerosTheSubcellHalo();
   void testAFixedRuleReportsNoWaveSpeeds();
   void testEveryCellOfADeviceRangeJudgesLikeTheHost();
   void testTheCellListsHoldTheLocalCellsFirst();

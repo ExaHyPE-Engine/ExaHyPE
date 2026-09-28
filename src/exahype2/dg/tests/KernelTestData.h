@@ -5,7 +5,7 @@
 #include "exahype2/dg/Basis.h"
 #include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::tests {

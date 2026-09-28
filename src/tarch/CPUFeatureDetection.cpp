@@ -13,7 +13,7 @@
 #endif
 
 // ARM detection headers (Linux specific for runtime SVE detection)
-#if defined(__linux__) && (defined(__aarch64__) || defined(_M_ARM64))
+#if defined(__linux__) and (defined(__aarch64__) or defined(_M_ARM64))
 #include <asm/hwcap.h>
 #include <sys/auxv.h>
 #ifndef HWCAP_SVE
@@ -76,7 +76,7 @@ tarch::CPUFeatures::detect() {
     f.avx512 = regs[1] & (1 << 16);
   }
 
-#elif defined(__aarch64__) || defined(_M_ARM64)
+#elif defined(__aarch64__) or defined(_M_ARM64)
   // --- ARM AArch64 ---
   f.neon = true;
   f.sse2 = true; // Conceptually similar
@@ -93,7 +93,7 @@ tarch::CPUFeatures::detect() {
 #endif
 #endif
 
-#elif defined(__ARM_NEON) || defined(__ARM_NEON__)
+#elif defined(__ARM_NEON) or defined(__ARM_NEON__)
   // --- 32-bit ARM or other fallback ---
   f.neon = true;
   f.sse2 = true;

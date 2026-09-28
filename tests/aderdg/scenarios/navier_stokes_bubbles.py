@@ -93,7 +93,7 @@ class NavierStokesBubbles(Scenario):
   const auto temperature = potentialT *
     std::pow((pressure / referencePressure), gasConstant / cp
   );
-  
+
   auto rho = pressure / (gasConstant * temperature);
   auto height = x[DIMENSIONS-1];
   Q[Shortcuts::rho] = rho;
@@ -131,8 +131,10 @@ class NavierStokesBubbles(Scenario):
             + """;
   constexpr auto gravity = 9.81;
   constexpr auto q0 = 0;
-  
-  std::copy_n(Qinside, NumberOfUnknowns+NumberOfAuxiliaryVariables, Qoutside);
+
+  for (int value = 0; value < NumberOfUnknowns + NumberOfAuxiliaryVariables; value++) {
+    Qoutside[value] = Qinside[value];
+  }
 
   // Normal velocity zero after Riemann.
   Qoutside[Shortcuts::j+normal] = -Qinside[Shortcuts::j+normal];
@@ -140,7 +142,7 @@ class NavierStokesBubbles(Scenario):
   // First compute overall state """
             + (self.evaluate_hydrostatic_pressure())
             + """
-  const auto T = backgroundPotentialTemperature * 
+  const auto T = backgroundPotentialTemperature *
     std::pow((pressure / referencePressure), gasConstant / cp);
 
   auto rho = pressure / (gasConstant * T);
@@ -159,11 +161,9 @@ class NavierStokesBubbles(Scenario):
 """
         )
 
-    # Currently unused, but serves as a mapping for visualization of the output quantities.
-    # Because of the high reference pressure and background potential temperature the
-    # the variation in the conservative variables (in particular the momenta and energy) is
-    # hard to see, but it is easier to see in the primitive form (velocities, but most of all
-    # in the perturbation of the background temperature)
+    # Returns the C++ code of a mapping from the conserved variables to the density, the velocities,
+    # the pressure and the potential temperature. The potential temperature shows the bubbles, whose
+    # variation in the conserved variables is small against the reference pressure.
     def mapQuantities(self):
         return (
             """
@@ -230,7 +230,7 @@ class NavierStokesCosineBubble(NavierStokesBubbles):
   constexpr auto tempDifference = 0.5;
 
   const auto dist = tarch::la::norm2(x-bubbleCenter);
-  auto perturbation = dist <= size ? 
+  auto perturbation = dist <= size ?
     tempDifference / 2 * (1 + std::cos((std::numbers::pi * dist) / size))
     : 0;
 """
@@ -260,11 +260,11 @@ class NavierStokesTwoBubbles(NavierStokesBubbles):
     ,640
 #endif
   };
-  
+
   constexpr double decay = 50.;
   constexpr double tempDifferenceHot  = 0.5;
   constexpr double tempDifferenceCold = -0.15;
- 
+
   const auto d1 = tarch::la::norm2(x-hotBubbleCenter) - 150; // Hot bubble has a radius of 150
   auto perturbation = d1 <= 0 ? tempDifferenceHot
     : tempDifferenceHot * std::exp(-(d1 * d1) / (decay * decay));

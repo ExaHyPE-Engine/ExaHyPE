@@ -25,21 +25,6 @@ TARGET_DECLARE
 namespace exahype2::dg {
   struct MaxEigenvalueStatistics;
 
-  /** Returns the number of values the nodes of one cell carry. */
-  constexpr int getValuesPerCell(const int nodesPerAxis, const int numberOfData) {
-    return exahype2::dg::getNodesPerCell(nodesPerAxis) * numberOfData;
-  }
-
-  /** Returns the number of values the face states of both halves of one face carry. */
-  constexpr int getStateValuesPerFace(const int nodesPerAxis, const int numberOfData) {
-    return 2 * exahype2::dg::getNodesPerFace(nodesPerAxis) * numberOfData;
-  }
-
-  /** Returns the number of values the face fluxes of both halves of one face carry. */
-  constexpr int getFluxValuesPerFace(const int nodesPerAxis, const int unknowns) {
-    return 2 * exahype2::dg::getNodesPerFace(nodesPerAxis) * unknowns;
-  }
-
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getOwnHalf(int faceNumber);
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getCorrectionHalf(
@@ -87,6 +72,9 @@ namespace exahype2::dg {
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct ProjectSolutionOntoPlane;
+
+  template <typename Derived, typename ComputePrecision>
+  struct InterpolateFaceStateHalves;
 
   template <typename Derived, typename ComputePrecision>
   struct InterpolateFaceHalves;
@@ -179,6 +167,12 @@ namespace exahype2::dg {
   template <typename Derived, typename ComputePrecision>
   struct RestrictFluxHalves;
 
+  template <typename Derived, typename ComputePrecision>
+  struct RestrictStateHalves;
+
+  template <typename Operation>
+  struct ForLevelJumpOnPlane;
+
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void addFaceIntegral(
     StoragePrecision* NOALIAS       nodeUpdate,
@@ -260,7 +254,9 @@ struct exahype2::dg::MaxEigenvalueStatistics final {
   );
 };
 
-/** Writes the initial condition of Derived into the nodes of every cell. */
+/**
+ * Writes the initial condition of Derived into the nodes of every cell.
+ */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::InitialiseCells final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
@@ -273,7 +269,9 @@ struct exahype2::dg::InitialiseCells final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Overwrites the halves of its faces that every listed cell owns with the face states of its solution. */
+/**
+ * Overwrites the halves of its faces that every listed cell owns with the face states of its solution.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::ProjectSolutionOntoFaces final {
   static constexpr int NodesPerAxis = Derived::DGOrder + 1;
@@ -315,6 +313,23 @@ struct exahype2::dg::ProjectSolutionOntoPlane final {
   double                       position{0.0};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+};
+
+/**
+ * Fills the coarse-side halves of the face states of the fine faces of a level jump from the same
+ * half of its coarse face.
+ */
+template <typename Derived, typename ComputePrecision>
+struct exahype2::dg::InterpolateFaceStateHalves final {
+  static constexpr int NodesPerAxis = Derived::DGOrder + 1;
+  static constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+
+  using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+
+  typename StatePool::View faceStates{};
+  const double*            prolongationMatrix{nullptr};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
 /**
@@ -377,7 +392,40 @@ struct exahype2::dg::RestrictFluxHalves final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
-/** Reduces the wave-speed maxima of Derived over the nodes of every listed cell. */
+/**
+ * Fills the fine-side half of the face states of the coarse face of a level jump with the
+ * restriction of the fine-side halves of its fine faces.
+ */
+template <typename Derived, typename ComputePrecision>
+struct exahype2::dg::RestrictStateHalves final {
+  static constexpr int NodesPerAxis = Derived::DGOrder + 1;
+  static constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+
+  using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+
+  typename StatePool::View faceStates{};
+  const double*            restrictionMatrix{nullptr};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
+/**
+ * Runs operation on a level jump whose coarse face lies on the plane at position along normal
+ * and skips every other level jump.
+ */
+template <typename Operation>
+struct exahype2::dg::ForLevelJumpOnPlane final {
+  peano4::Partition partition{};
+  int               normal{0};
+  double            position{0.0};
+  Operation         operation{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
+/**
+ * Reduces the wave-speed maxima of Derived over the nodes of every listed cell.
+ */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::MeasureNodeEigenvalues final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
@@ -394,7 +442,9 @@ struct exahype2::dg::MeasureNodeEigenvalues final {
   ) const;
 };
 
-/** Writes the error norms of the nodes of every listed cell into the NumberOfNorms entries of the cell. */
+/**
+ * Writes the error norms of the nodes of every listed cell into the NumberOfNorms entries of the cell.
+ */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::MeasureNodeErrors final {
   static constexpr int NodesPerAxis               = Derived::DGOrder + 1;

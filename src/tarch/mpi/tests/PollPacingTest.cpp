@@ -5,7 +5,9 @@
 #include "tarch/mpi/PollPacing.h"
 
 namespace {
-  /** Polls the pacing and collects the one-based indices at which it grants a turn. */
+  /**
+   * Polls the pacing and collects the one-based indices at which it grants a turn.
+   */
   std::vector<int> getTurns(const int numberOfPolls) {
     tarch::mpi::PollPacing pacing;
     std::vector<int>       turns;
@@ -29,14 +31,18 @@ tarch::mpi::tests::PollPacingTest::run() {
   testMethod(testEveryWaitStartsTight);
 }
 
-/** The first poll grants a turn. */
+/**
+ * The first poll grants a turn.
+ */
 void
 tarch::mpi::tests::PollPacingTest::testFirstPollReportsProgress() {
   tarch::mpi::PollPacing pacing;
   validate(pacing.reportProgressNow());
 }
 
-/** The gap between two turns doubles. */
+/**
+ * The gap between two turns doubles.
+ */
 void
 tarch::mpi::tests::PollPacingTest::testTurnsWidenWhileTheWaitLasts() {
   const auto             turns = getTurns(100);
@@ -47,7 +53,9 @@ tarch::mpi::tests::PollPacingTest::testTurnsWidenWhileTheWaitLasts() {
   }
 }
 
-/** The gap between two turns stops growing at one poll more than the largest stride. */
+/**
+ * The gap between two turns stops growing at one poll more than the largest stride.
+ */
 void
 tarch::mpi::tests::PollPacingTest::testStrideSaturatesSoReportingContinues() {
   constexpr int NumberOfPolls = 100000;
@@ -64,7 +72,9 @@ tarch::mpi::tests::PollPacingTest::testStrideSaturatesSoReportingContinues() {
   validateEqualsWithParams1(largestGap, 1025, largestGap);
 }
 
-/** Every new instance starts with the shortest gap. */
+/**
+ * Every new instance starts with the shortest gap.
+ */
 void
 tarch::mpi::tests::PollPacingTest::testEveryWaitStartsTight() {
   const auto firstWait  = getTurns(20);

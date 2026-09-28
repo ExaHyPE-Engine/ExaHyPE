@@ -3,7 +3,9 @@
 #include "TestCaseTest.h"
 
 namespace {
-  /** Returns the distance from magnitude to the next larger double. */
+  /**
+   * Returns the distance from magnitude to the next larger double.
+   */
   double getUnitInTheLastPlaceOf(const double magnitude) {
     return std::nextafter(magnitude, std::numeric_limits<double>::infinity()) - magnitude;
   }
@@ -20,7 +22,9 @@ tarch::tests::TestCaseTest::run() {
   testMethod(testANaNComparesUnequal);
 }
 
-/** The tolerance is MaxUnitsInTheLastPlace units in the last place of the largest magnitude, whatever its sign. */
+/**
+ * The tolerance is MaxUnitsInTheLastPlace units in the last place of the largest magnitude, whatever its sign.
+ */
 void
 tarch::tests::TestCaseTest::testToleranceScalesWithTheLargestMagnitude() {
   const std::vector<double> reference{1.0, -3.0e5, 2.0};
@@ -30,7 +34,9 @@ tarch::tests::TestCaseTest::testToleranceScalesWithTheLargestMagnitude() {
   );
 }
 
-/** A buffer of zeros admits MaxUnitsInTheLastPlace times the smallest normal double. */
+/**
+ * A buffer of zeros admits MaxUnitsInTheLastPlace times the smallest normal double.
+ */
 void
 tarch::tests::TestCaseTest::testAZeroBufferGetsTheSmallestTolerance() {
   const std::vector<double> reference(4, 0.0);
@@ -40,7 +46,9 @@ tarch::tests::TestCaseTest::testAZeroBufferGetsTheSmallestTolerance() {
   );
 }
 
-/** Entries one unit short of the tolerance compare equal, and one unit beyond it do not. */
+/**
+ * Entries one unit short of the tolerance compare equal, and one unit beyond it do not.
+ */
 void
 tarch::tests::TestCaseTest::testBuffersWithinTheToleranceAreEqual() {
   const std::vector<double> valid{1.68e5, -4.0, 0.0};
@@ -52,7 +60,9 @@ tarch::tests::TestCaseTest::testBuffersWithinTheToleranceAreEqual() {
   validateTrue(std::abs(actual[2] - valid[2]) > tarch::tests::getToleranceInUnitsInTheLastPlace(valid));
 }
 
-/** A NaN on either side of a numerical comparison compares unequal at every tolerance. */
+/**
+ * A NaN on either side of a numerical comparison compares unequal at every tolerance.
+ */
 void
 tarch::tests::TestCaseTest::testANaNComparesUnequal() {
 #if not defined(PEANO_WITH_FPE)

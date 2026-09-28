@@ -23,11 +23,6 @@ namespace exahype2::runner {
     const AppendAdditionalStatistics& appendAdditionalStatistics
   );
 
-  INLINE_METHOD std::pair<std::string, std::vector<SolverStatistic>> makeParticleStatistics(
-    const char* particleName,
-    int         numberOfParticles
-  );
-
   GlobalStatistics& getGlobalStatistics();
   void shutdownGlobalStatistics();
 
@@ -37,7 +32,9 @@ namespace exahype2::runner {
   void writeGridSnapshot(Report& report);
 } // namespace exahype2::runner
 
-/** One value, range or count a solver reports per time step. */
+/**
+ * One value, range or count a solver reports per time step.
+ */
 struct exahype2::runner::SolverStatistic {
   enum class Kind { Value, Count };
 
@@ -57,7 +54,7 @@ public:
   GlobalStatistics() = default;
 
   void setLocalSolverBytes(std::size_t hostBytes, std::size_t deviceBytes);
-  void setLocalCellDoFs(std::uint64_t cellDoFs);
+  void setLocalCellUpdates(std::uint64_t solverCells, std::uint64_t cellDoFs);
   void synchronise(bool refreshMemory);
 
   [[nodiscard]] std::uint64_t getGlobalNumberOfInnerUnrefinedCells() const;
@@ -74,6 +71,7 @@ public:
   [[nodiscard]] std::uint64_t getGlobalTreeBytes() const;
   [[nodiscard]] std::uint64_t getGlobalSolverHostBytes() const;
   [[nodiscard]] std::uint64_t getGlobalSolverDeviceBytes() const;
+  [[nodiscard]] std::uint64_t getGlobalNumberOfSolverCells() const;
   [[nodiscard]] std::uint64_t getGlobalNumberOfCellDoFs() const;
   [[nodiscard]] std::uint64_t getGlobalProcessMemoryUsageInBytes() const;
   [[nodiscard]] std::uint64_t getGlobalTotalMemoryInBytes() const;
@@ -97,6 +95,7 @@ private:
   std::uint64_t                         _localAvailableMemoryInBytes{0};
   std::uint64_t                         _localSolverHostBytes{0};
   std::uint64_t                         _localSolverDeviceBytes{0};
+  std::uint64_t                         _localSolverCells{0};
   std::uint64_t                         _localCellDoFs{0};
 
   std::uint64_t _globalNumberOfInnerUnrefinedCells{0};
@@ -113,6 +112,7 @@ private:
   std::uint64_t _globalTreeBytes{0};
   std::uint64_t _globalSolverHostBytes{0};
   std::uint64_t _globalSolverDeviceBytes{0};
+  std::uint64_t _globalNumberOfSolverCells{0};
   std::uint64_t _globalNumberOfCellDoFs{0};
   std::uint64_t _globalProcessMemoryUsageInBytes{0};
   std::uint64_t _globalTotalMemoryInBytes{0};

@@ -64,14 +64,6 @@ tarch::plotter::FileWriter::CellPlotter::pushCell(
 }
 
 int
-tarch::plotter::FileWriter::CellPlotter::plotPoint(const int vertexIndex) {
-  return plotStandardCell<getNumberOfNodesOf(CellType::Vertex)>(
-    &vertexIndex,
-    static_cast<std::uint8_t>(CellType::Vertex)
-  );
-}
-
-int
 tarch::plotter::FileWriter::CellPlotter::plotLine(const int* const vertexIndices) {
   return plotStandardCell<getNumberOfNodesOf(CellType::Line)>(vertexIndices, static_cast<std::uint8_t>(CellType::Line));
 }

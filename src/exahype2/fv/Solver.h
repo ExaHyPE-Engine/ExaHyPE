@@ -24,7 +24,9 @@ namespace exahype2::fv {
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   class Solver;
 
-  /** A generated finite-volume solver carries the PDE terms and the patch layout its solver family reads. */
+  /**
+   * A generated finite-volume solver carries the PDE terms and the patch layout its solver family reads.
+   */
   template <typename SolverType, typename Storage>
   concept SolverConcept = exahype2::terms::HasInitialCondition<SolverType, Storage>
     and exahype2::terms::HasBoundaryConditionsWhereNeeded<SolverType, Storage>

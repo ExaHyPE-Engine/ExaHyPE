@@ -35,7 +35,9 @@ peano4::grid::tests::LatticeIndexMapTest::run() {
   testMethod(testBytesCountTheKeyAndValueArrays);
 }
 
-/** An empty map holds no bytes, a reserved one the key and value arrays of its capacity, which a clear keeps. */
+/**
+ * An empty map holds no bytes, a reserved one the key and value arrays of its capacity, which a clear keeps.
+ */
 void
 peano4::grid::tests::LatticeIndexMapTest::testBytesCountTheKeyAndValueArrays() {
   peano4::grid::LatticeIndexMap map;

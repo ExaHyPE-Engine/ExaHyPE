@@ -48,7 +48,9 @@ namespace {
   constexpr double Tolerance        = 1.0e-12;
   constexpr double PositiveInfinity = std::numeric_limits<double>::infinity();
 
-  /** Returns the nodes of one cell, every node holding unknown and auxiliary. */
+  /**
+   * Returns the nodes of one cell, every node holding unknown and auxiliary.
+   */
   std::vector<double> getConstantNodes(const double unknown, const double auxiliary) {
     std::vector<double> nodes(Layout::ValuesPerCell);
     for (int node = 0; node < Layout::NodesPerCell; node++) {
@@ -58,7 +60,9 @@ namespace {
     return nodes;
   }
 
-  /** Returns a subgrid whose every subcell holds unknown and auxiliary. */
+  /**
+   * Returns a subgrid whose every subcell holds unknown and auxiliary.
+   */
   std::vector<double> getConstantSubgrid(const double unknown, const double auxiliary) {
     std::vector<double> subgrid(Layout::SubcellValuesPerCell);
     for (int subcell = 0; subcell < Layout::SubcellsPerCell; subcell++) {
@@ -100,7 +104,9 @@ namespace {
   };
 
   TARGET_DECLARE
-  /** Judges the candidate of one cell of a device range and adds its wave speeds to the accumulator. */
+  /**
+   * Judges the candidate of one cell of a device range and adds its wave speeds to the accumulator.
+   */
   struct JudgeCandidateOfCell final {
     int*          statuses{nullptr};
     int*          faceStatuses{nullptr};
@@ -216,6 +222,7 @@ exahype2::dg::limiting::tests::DetectorTest::run() {
   testMethod(testJudgeCandidateFailsADivergedPredictor);
   testMethod(testJudgeCandidateRejectsACandidateOutsideTheReferenceExtrema);
   testMethod(testSpreadStatusLiftsByTheNeighbours);
+  testMethod(testClearFacesWritesRegularAndZerosTheSubcellHalo);
   testMethod(testAFixedRuleReportsNoWaveSpeeds);
   testMethod(testEveryCellOfADeviceRangeJudgesLikeTheHost);
   testMethod(testTheCellListsHoldTheLocalCellsFirst);
@@ -341,7 +348,9 @@ exahype2::dg::limiting::tests::DetectorTest::testTheProjectedObservableExtremaCo
   validateNumericalEquals(extrema[1], Constant);
 }
 
-/** A profile linear along the first axis reaches its extrema at the Lobatto samples, outside the nodes. */
+/**
+ * A profile linear along the first axis reaches its extrema at the Lobatto samples, outside the nodes.
+ */
 void
 exahype2::dg::limiting::tests::DetectorTest::testTheCellExtremaCoverTheNodesAndTheSamples() {
   const exahype2::dg::limiting::tests::SubcellProjections tables;
@@ -372,7 +381,9 @@ exahype2::dg::limiting::tests::DetectorTest::testACandidateOutsideTheReferenceEx
   validateFalse(Judge::satisfiesRelaxedMaximumPrinciple(candidateExtrema, referenceExtrema, NoRelaxation, NoScaling));
 }
 
-/** The relaxation term accepts a candidate the specified parameter alone rejects. */
+/**
+ * The relaxation term accepts a candidate the specified parameter alone rejects.
+ */
 void
 exahype2::dg::limiting::tests::DetectorTest::testTheRelaxationWidensTheAcceptedRange() {
   const double     candidateExtrema[Layout::ExtremaPerCell]{-0.5, 9.0};
@@ -423,7 +434,9 @@ exahype2::dg::limiting::tests::DetectorTest::testWidenExtremaMergesTheMinimaAndT
   validateNumericalEquals(extrema[1], 6.0);
 }
 
-/** A steep interpolant over a constant subgrid leaves the sampled range, a constant interpolant stays inside. */
+/**
+ * A steep interpolant over a constant subgrid leaves the sampled range, a constant interpolant stays inside.
+ */
 void
 exahype2::dg::limiting::tests::DetectorTest::testOpenInitialStatusMarksAnOscillatingInterpolant() {
   const exahype2::dg::limiting::tests::SubcellProjections tables;
@@ -511,7 +524,9 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateMarksAnInadmissib
   validateNumericalEquals(statistics.maxScaledEigenvalue, 0.0);
 }
 
-/** A cell that was troubled in the previous step stays on the subcell scheme and reports no wave speeds. */
+/**
+ * A cell that was troubled in the previous step stays on the subcell scheme and reports no wave speeds.
+ */
 void
 exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateKeepsATroubledCellLimited() {
   const exahype2::dg::limiting::tests::SubcellProjections tables;
@@ -676,6 +691,46 @@ exahype2::dg::limiting::tests::DetectorTest::testSpreadStatusLiftsByTheNeighbour
   Judge::spreadStatus(troubledCell.status, troubledCell.neighbourStatusHalves, troubledCell.ownStatusHalves);
   validateEquals(troubledCell.status[StatusIndex], Troubled);
   validateEquals(troubledCell.faceHalves[0], Troubled);
+}
+
+/**
+ * Clearing the faces writes Regular into both status halves and zeros into every value of the
+ * subcell halo, whatever the halo held before.
+ */
+void
+exahype2::dg::limiting::tests::DetectorTest::testClearFacesWritesRegularAndZerosTheSubcellHalo() {
+  constexpr int NumberOfFaces     = 5;
+  constexpr int HaloValuesPerFace = 7;
+  using Clear = exahype2::dg::limiting::ClearFaces<exahype2::dg::limiting::tests::StubSolver, double, double>;
+
+  tarch::accelerator::ChunkedMemoryPool<int>    faceStatuses(Judge::StatusValuesPerFace);
+  tarch::accelerator::ChunkedMemoryPool<double> extremaFaces(Judge::ExtremaValuesPerFace);
+  tarch::accelerator::ChunkedMemoryPool<double> subcellHalo(HaloValuesPerFace);
+  faceStatuses.reserve(NumberOfFaces);
+  extremaFaces.reserve(NumberOfFaces);
+  subcellHalo.reserve(NumberOfFaces);
+  std::vector<double> haloOnHost;
+  subcellHalo.copyToHost(haloOnHost);
+  std::fill(haloOnHost.begin(), haloOnHost.end(), std::numeric_limits<double>::quiet_NaN());
+  subcellHalo.copyFromHost(haloOnHost);
+
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(NumberOfFaces),
+    Clear{faceStatuses.getView(), extremaFaces.getView(), subcellHalo.getView()}
+  );
+
+  std::vector<int> statusesOnHost;
+  faceStatuses.copyToHost(statusesOnHost);
+  subcellHalo.copyToHost(haloOnHost);
+  const auto paddedStatus = static_cast<std::size_t>(faceStatuses.getPaddedChunkSize());
+  const auto paddedHalo   = static_cast<std::size_t>(subcellHalo.getPaddedChunkSize());
+  for (int face = 0; face < NumberOfFaces; face++) {
+    validateEqualsWithParams1(statusesOnHost[static_cast<std::size_t>(face) * paddedStatus], Regular, face);
+    validateEqualsWithParams1(statusesOnHost[static_cast<std::size_t>(face) * paddedStatus + 1], Regular, face);
+    for (std::size_t value = 0; value < paddedHalo; value++) {
+      validateEqualsWithParams2(haloOnHost[static_cast<std::size_t>(face) * paddedHalo + value], 0.0, face, value);
+    }
+  }
 }
 
 void

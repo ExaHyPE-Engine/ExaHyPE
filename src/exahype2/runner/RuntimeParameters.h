@@ -55,7 +55,9 @@ private:
   std::vector<Entry> _entries{};
 };
 
-/** The runtime parameters of the engine, read from a JSON file and the command line. */
+/**
+ * The runtime parameters of the engine, read from a JSON file and the command line.
+ */
 class exahype2::runner::RuntimeParameters final {
 public:
   RuntimeParameters(const RuntimeParameters&)            = delete;

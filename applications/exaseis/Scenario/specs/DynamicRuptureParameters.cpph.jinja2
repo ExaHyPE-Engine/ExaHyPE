@@ -2,7 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 TARGET_DECLARE
-/** Writes the stress tensor that loads the fault at x before the rupture. */
+/**
+ * Writes the stress tensor that loads the fault at x before the rupture.
+ */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaseis::writeInitialStress(
   [[maybe_unused]] const double* const x,
@@ -16,7 +18,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaseis::writeIni
   {{initialStresses}}
 }
 
-/** Returns the shear stress that adds to the initial traction along the second tangent at x. */
+/**
+ * Returns the shear stress that adds to the initial traction along the second tangent at x.
+ */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getAdditionalShearStress(
   [[maybe_unused]] const double* const x
@@ -24,7 +28,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getAddi
   {{n_yz}}
 }
 
-/** Returns the cohesion of the fault at x. */
+/**
+ * Returns the cohesion of the fault at x.
+ */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getCohesion(
   [[maybe_unused]] const double* const x
@@ -32,7 +38,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getCohe
   {{cohesion}}
 }
 
-/** Returns the time at which the fault at x starts to rupture whatever its stress. */
+/**
+ * Returns the time at which the fault at x starts to rupture whatever its stress.
+ */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getForcedRuptureTime(
   [[maybe_unused]] const double* const x
@@ -40,7 +48,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getForc
   {{forced_rupture_time}}
 }
 
-/** Returns the slip at x over which the friction weakens from its static to its dynamic value. */
+/**
+ * Returns the slip at x over which the friction weakens from its static to its dynamic value.
+ */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getCriticalSlipDistance(
   [[maybe_unused]] const double* const x

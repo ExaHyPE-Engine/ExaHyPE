@@ -12,14 +12,18 @@ namespace peano4 {
   struct Regrid;
 } // namespace peano4
 
-/** Fills the new slot of one child from the old slot of its parent. */
+/**
+ * Fills the new slot of one child from the old slot of its parent.
+ */
 struct peano4::Prolongation final {
   int parentSlot{-1};
   int childSlot{-1};
   int childPosition{0};
 };
 
-/** Fills the new slot of one parent from the old slots of its children in linearised order. */
+/**
+ * Fills the new slot of one parent from the old slots of its children in linearised order.
+ */
 struct peano4::Restriction final {
   int parentSlot{-1};
   int childSlots[peano4::ChildrenPerCell]{};

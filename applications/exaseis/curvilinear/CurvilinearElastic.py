@@ -248,8 +248,7 @@ def init_grid_step_implementation(scenario_perturbations):
     return """
   // The finest cell width the grid construction can reach.
   tarch::la::Vector<DIMENSIONS, double> minCellSize = DomainSize;
-  const double minAdmissiblePatchSize =
-    ::exahype2::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
+  const double minAdmissiblePatchSize = RuntimeParameters::getMinAdmissiblePatchSize();
   while (min(minCellSize) > minAdmissiblePatchSize) {
     minCellSize /= static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor);
   }

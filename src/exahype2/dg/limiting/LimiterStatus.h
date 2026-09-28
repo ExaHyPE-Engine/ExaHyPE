@@ -14,16 +14,22 @@ namespace exahype2::dg::limiting {
   enum class LimiterStatus : int { Regular = 0, Halo = 1, Limited = 2, Troubled = 3 };
 
   /**
+   * The entries of the status chunk of one cell.
+   */
+  enum class StatusEntry : int { Status = 0, PreviousStatus = 1, WasTroubled = 2, PredictorDiverged = 3 };
+
+  TARGET_DECLARE
+  /**
    * Number of spreading rounds that grow the subcell domain from a troubled cell out to its halo
    * ring; every round lowers the status of a neighbour by one level.
    */
   constexpr int NumberOfSpreadRings = static_cast<int>(LimiterStatus::Troubled) - static_cast<int>(LimiterStatus::Halo);
 
-  /** The entries of the status chunk of one cell. */
-  enum class StatusEntry : int { Status = 0, PreviousStatus = 1, WasTroubled = 2, PredictorDiverged = 3 };
-
-  /** The size of the status chunk of one cell. */
+  /**
+   * The size of the status chunk of one cell.
+   */
   constexpr int NumberOfStatusEntries = 4;
+  TARGET_DECLARE_END
 } // namespace exahype2::dg::limiting
 
 TARGET_DECLARE

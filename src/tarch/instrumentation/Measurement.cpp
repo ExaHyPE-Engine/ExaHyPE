@@ -9,7 +9,9 @@ tarch::instrumentation::Measurement::getAccumulatedValue() const {
   return _accumulatedValue;
 }
 
-/** Returns the sum of the values divided by their count, and 0 before the first setValue() call. */
+/**
+ * Returns the sum of the values divided by their count, and 0 before the first setValue() call.
+ */
 double
 tarch::instrumentation::Measurement::getAverageValue() const {
   if (_numberOfMeasurements == 0) {

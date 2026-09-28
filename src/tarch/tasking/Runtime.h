@@ -12,7 +12,9 @@ namespace tarch::tasking {
   std::string printUnmaskedThreads();
 } // namespace tarch::tasking
 
-/** Holds the thread count of the process, which init() fixes for every caller. */
+/**
+ * Holds the thread count of the process, which init() fixes for every caller.
+ */
 class tarch::tasking::Runtime final {
 public:
   Runtime(const Runtime&)            = delete;

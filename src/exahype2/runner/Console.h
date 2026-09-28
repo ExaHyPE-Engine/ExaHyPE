@@ -22,7 +22,9 @@ namespace exahype2::runner {
   void writeToLog(const std::string& line);
 } // namespace exahype2::runner
 
-/** Renders numbers, sizes and durations for the reports. */
+/**
+ * Renders numbers, sizes and durations for the reports.
+ */
 struct exahype2::runner::Format {
   static std::string getScientific(double value);
   static std::string getMemory(unsigned long long bytes);
@@ -36,7 +38,9 @@ struct exahype2::runner::Format {
   static INLINE_METHOD std::string getNumber(const T& value);
 };
 
-/** Groups entries by section and aligns the labels of every section in one column. */
+/**
+ * Groups entries by section and aligns the labels of every section in one column.
+ */
 class exahype2::runner::Table final {
 public:
   void add(const std::string& section, const std::string& label, const std::string& value);

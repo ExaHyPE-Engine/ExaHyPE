@@ -6,7 +6,9 @@ namespace tarch::plotter {
   class FileWriter;
   class TimeSeriesWriter;
 
-  /** The file formats a run selects at start-up. */
+  /**
+   * The file formats a run selects at start-up.
+   */
   enum class Format { VTU, HDF5, NetCDF, VTKHDF };
 
   [[nodiscard]] Format parseFormat(const std::string& name);

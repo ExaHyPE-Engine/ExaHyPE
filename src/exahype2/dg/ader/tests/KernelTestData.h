@@ -5,7 +5,7 @@
 #include "exahype2/dg/Basis.h"
 #include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::ader::tests {
@@ -14,6 +14,7 @@ namespace exahype2::dg::ader::tests {
   struct StubSolver;
 } // namespace exahype2::dg::ader::tests
 
+TARGET_DECLARE
 /**
  * The layout constants of a generated solver of order two with two unknowns and one auxiliary
  * variable; the stub solvers of the ADER-DG tests derive from it.
@@ -23,6 +24,7 @@ struct exahype2::dg::ader::tests::StubLayout {
   static constexpr int NumberOfUnknowns           = 2;
   static constexpr int NumberOfAuxiliaryVariables = 1;
 };
+TARGET_DECLARE_END
 
 TARGET_DECLARE
 /**

@@ -28,5 +28,6 @@ private:
   void testTheCellAndFaceGroupsSplitAtTheRankBoundary();
   void testTheProjectionWritesTheTracesOfTheSolutionIntoBothHalvesOfEveryInteriorFace();
   void testTheProjectionOntoAPlaneWritesTheTracesOfTheSolutionIntoItsFaces();
+  void testTheProjectionOntoAPlaneWritesBothHalvesOfTheCoarseFacesOfTheLevelJumps();
   void testReleaseFreesEveryPool();
 };

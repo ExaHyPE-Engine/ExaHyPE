@@ -6,6 +6,7 @@
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/Kernels.h"
 #include "exahype2/fv/FiniteVolume.h"
+#include "exahype2/fv/Kernels.h"
 #include "exahype2/terms/DiffusiveSourceTerm.h"
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/MaxEigenvalue.h"
@@ -29,6 +30,9 @@ namespace exahype2::dg::limiting {
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct ProjectSubgridsOntoFaces;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct ApplySubgridBoundaryConditions;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct RecomputeSubcells;
@@ -243,7 +247,9 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     requires exahype2::terms::HasSubcellRiemannSolver<Derived, Precision>;
 };
 
-/** Writes the initial condition of Derived at the subcell centres of every cell. */
+/**
+ * Writes the initial condition of Derived at the subcell centres of every cell.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::SampleSubcells final {
   using Kernel   = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
@@ -273,6 +279,20 @@ struct exahype2::dg::limiting::ProjectSubgridsOntoFaces final {
   typename StatusPool::ConstView statuses{};
   const StoragePrecision*        nodesToSubcells{nullptr};
   bool                           holdsInitialSubcells{false};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+};
+
+/**
+ * Fills the outer half of every listed boundary face whose inner cell wrote its subgrid onto its
+ * faces in this step; the inner half of every other boundary face holds no state of this step.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::dg::limiting::ApplySubgridBoundaryConditions final {
+  using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
+
+  exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecision> boundaryConditions{};
+  typename StatusPool::ConstView                                                     statuses{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };

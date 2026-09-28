@@ -30,7 +30,6 @@ tarch::accelerator::tests::MemoryAllocationTest::run() {
 
 void
 tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
-  MemoryBlocks::getInstance().clear();
   const int device = tarch::accelerator::getCurrentDevice();
 
   for (const tarch::MemoryLocation location : MemoryLocations) {
@@ -57,14 +56,10 @@ tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
     validateWithParams2(trackedSize == ByteCount, toString(location), trackedSize);
 #endif
   }
-
-  MemoryBlocks::getInstance().clear();
 }
 
 void
 tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
-  MemoryBlocks::getInstance().clear();
-
   for (const tarch::MemoryLocation location : MemoryLocations) {
     std::array<int, ElementCount> source{11, 13, 17, 19};
     std::array<int, ElementCount> target{0, 0, 0, 0};
@@ -89,13 +84,10 @@ tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
     validateWithParams2(trackedSize == ByteCount, toString(location), trackedSize);
 #endif
   }
-
-  MemoryBlocks::getInstance().clear();
 }
 
 void
 tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificAllocators() {
-  MemoryBlocks::getInstance().clear();
   const int device = tarch::accelerator::getCurrentDevice();
 
   for (const tarch::MemoryLocation location : MemoryLocations) {
@@ -131,13 +123,10 @@ tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificAllocators(
 
     validateWithParams1(allocationWorked, toString(location));
   }
-
-  MemoryBlocks::getInstance().clear();
 }
 
 void
 tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFunctions() {
-  MemoryBlocks::getInstance().clear();
   const int device = tarch::accelerator::getCurrentDevice();
 
   for (const tarch::MemoryLocation location : MemoryLocations) {
@@ -183,11 +172,11 @@ tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFunctio
     validateWithParams1(allocationWorked, toString(location));
     validateWithParams1(copiedCorrectly, toString(location));
   }
-
-  MemoryBlocks::getInstance().clear();
 }
 
-/** A device one host thread selects is the current device of every other host thread. */
+/**
+ * A device one host thread selects is the current device of every other host thread.
+ */
 void
 tarch::accelerator::tests::MemoryAllocationTest::testTheCurrentDeviceHoldsForEveryHostThread() {
   const int deviceOfTheRank = tarch::accelerator::getCurrentDevice();

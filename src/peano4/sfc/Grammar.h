@@ -3,7 +3,7 @@
 #pragma once
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace peano4::sfc {
   struct Grammar;

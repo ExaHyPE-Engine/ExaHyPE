@@ -6,13 +6,19 @@
 
 namespace tarch {
   enum class MemoryLocation {
-    /** Places the data on the heap of the host. */
+    /**
+     * Places the data on the heap of the host.
+     */
     Heap,
 
-    /** Places the data on the device; a build without a GPU backend places it on the heap. */
+    /**
+     * Places the data on the device; a build without a GPU backend places it on the heap.
+     */
     Device,
 
-    /** Places the data in page-locked host memory. */
+    /**
+     * Places the data in page-locked host memory.
+     */
     Pinned
   };
 

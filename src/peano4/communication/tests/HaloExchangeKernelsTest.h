@@ -8,7 +8,9 @@ namespace peano4::communication::tests {
   class HaloExchangeKernelsTest;
 } // namespace peano4::communication::tests
 
-/** Checks that the gather copies the own half of every listed face and the scatter fills the other half. */
+/**
+ * Checks that the gather copies the own half of every listed face and the scatter fills the other half.
+ */
 class peano4::communication::tests::HaloExchangeKernelsTest final : public tarch::tests::TestCase {
 public:
   HaloExchangeKernelsTest();

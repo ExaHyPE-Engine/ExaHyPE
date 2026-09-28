@@ -12,7 +12,9 @@
 namespace exahype2::particles {
   struct Particle;
 
-  /** Names particle data entries as a type, so a dispatch over them needs no parameter pack. */
+  /**
+   * Names particle data entries as a type, so a dispatch over them needs no parameter pack.
+   */
   template <int... Fields>
   struct FieldList final {};
 

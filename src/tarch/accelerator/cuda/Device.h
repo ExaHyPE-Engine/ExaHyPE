@@ -9,10 +9,6 @@
 #include <cuda_runtime.h>
 
 namespace tarch::accelerator {
-  cudaStream_t deviceStreamCreate();
-  void deviceStreamDestroy(cudaStream_t* stream);
-  void deviceStreamSync(cudaStream_t stream);
-
   void setDeviceStream(cudaStream_t stream);
   cudaStream_t getDeviceStream();
 

@@ -6,7 +6,9 @@
 #include "tarch/accelerator/Range.h"
 
 TARGET_DECLARE
-/** Adds the L1 error, the squared L2 error and the largest error of one cell. */
+/**
+ * Adds the L1 error, the squared L2 error and the largest error of one cell.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::ErrorSums::add(const double* const errors) {
   assertion(errors != nullptr);

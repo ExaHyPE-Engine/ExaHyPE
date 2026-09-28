@@ -25,7 +25,7 @@ namespace {
   constexpr int NumberOfData         = DIMENSIONS;
   constexpr int VolumesPerPatch      = peano4::power(PatchSize, DIMENSIONS);
   constexpr int ValuesPerPatch       = VolumesPerPatch * NumberOfData;
-  constexpr int NumberOfParticleData = exahype2::particles::ParticleRadiusAttribute + 1;
+  constexpr int NumberOfParticleData = exahype2::particles::ParticleMassAttribute + 1;
   TARGET_DECLARE_END
 
   const tarch::la::Vector<DIMENSIONS, double> DomainOffset(0.0);
@@ -34,7 +34,9 @@ namespace {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<double>;
   using Set      = exahype2::particles::ParticleSet<NumberOfParticleData>;
 
-  /** A linear field per unknown: Unknown k at position x is k + 1 + sum over the axes of (axis + 2) x(axis). */
+  /**
+   * A linear field per unknown: Unknown k at position x is k + 1 + sum over the axes of (axis + 2) x(axis).
+   */
   double getLinearField(const int unknown, const tarch::la::Vector<DIMENSIONS, double>& x) {
     double value = unknown + 1.0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -43,7 +45,9 @@ namespace {
     return value;
   }
 
-  /** Fills a patch with the linear field at the volume centres. */
+  /**
+   * Fills a patch with the linear field at the volume centres.
+   */
   std::vector<double> getLinearPatch(
     const tarch::la::Vector<DIMENSIONS, double>& centre,
     const tarch::la::Vector<DIMENSIONS, double>& width
@@ -60,7 +64,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Writes velocity into the first unknown of every volume of a patch and zero into its other unknowns. */
+  /**
+   * Writes velocity into the first unknown of every volume of a patch and zero into its other unknowns.
+   */
   struct FillVelocity final {
     peano4::Partition partition{};
     CellPool::View    solution{};
@@ -77,7 +83,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank. */
+  /**
+   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
+   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -101,7 +109,9 @@ namespace {
     }
   };
 
-  /** The forces of a tracer that copies the fluid velocity into its own velocity and moves with it. */
+  /**
+   * The forces of a tracer that copies the fluid velocity into its own velocity and moves with it.
+   */
   exahype2::particles::Forces getFluidTracer() {
     exahype2::particles::Forces forces;
     forces.interpolationScheme = exahype2::particles::InterpolationScheme::PiecewiseLinear;
@@ -133,7 +143,9 @@ exahype2::fv::tests::TracingTest::run() {
   testMethod(testStaticSamplingPreservesParticleData);
 }
 
-/** Checks interpolation at one position using the spacing of each axis. */
+/**
+ * Checks interpolation at one position using the spacing of each axis.
+ */
 void
 exahype2::fv::tests::TracingTest::testInterpolationOnRectangularPatches() {
   const tarch::la::Vector<DIMENSIONS, double> centre(0.5);
@@ -170,7 +182,9 @@ exahype2::fv::tests::TracingTest::testInterpolationOnRectangularPatches() {
   }
 }
 
-/** Checks that static sampling writes only its named attributes, including sets without motion attributes. */
+/**
+ * Checks that static sampling writes only its named attributes, including sets without motion attributes.
+ */
 void
 exahype2::fv::tests::TracingTest::testStaticSamplingPreservesParticleData() {
   const Grid grid(2.0);
@@ -296,7 +310,9 @@ exahype2::fv::tests::TracingTest::testClampIntoPatchProjectsOntoTheVolumeCentres
   validateNumericalEquals(clamped(DIMENSIONS - 1), 0.5);
 }
 
-/** One explicit Euler step moves the tracer by the fluid velocity times the step size and keeps it in the domain. */
+/**
+ * One explicit Euler step moves the tracer by the fluid velocity times the step size and keeps it in the domain.
+ */
 void
 exahype2::fv::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
   constexpr double Velocity          = 1.0;

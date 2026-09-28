@@ -47,6 +47,7 @@ peano4::tests::SpacetreeTest::run() {
   testMethod(testTheSpawnLevelGrowsWithTheRankCount);
   testMethod(testDeepGridsKeepTheirSpawnLevelInRange);
   testMethod(testNoStatisticsStandBeforeTheFirstRegrid);
+  testMethod(testARankWithoutCellsReportsNoLevel);
   testMethod(testRejectedRequestsChangeNoPlan);
   testMethod(testARegridWithLiveDataReturnsTheSlotMoves);
   testMethod(testTheCellLookupFindsEveryCellAndNothingElse);
@@ -153,7 +154,9 @@ peano4::tests::SpacetreeTest::testARegridWithLiveDataReturnsTheSlotMoves() {
   spacetree.finishRegrid();
 }
 
-/** The spawn level deepens until its ownership units cover the ranks or the grid runs out of depth. */
+/**
+ * The spawn level deepens until its ownership units cover the ranks or the grid runs out of depth.
+ */
 void
 peano4::tests::SpacetreeTest::testTheSpawnLevelOffersEnoughOwnershipUnits() {
   const int unitsOnRootLevel  = static_cast<int>(getNumberOfOwnershipUnitsOnLevel(0));
@@ -180,7 +183,9 @@ peano4::tests::SpacetreeTest::testTheSpawnLevelOffersEnoughOwnershipUnits() {
   }
 }
 
-/** The spawn level stays strictly above the cells. */
+/**
+ * The spawn level stays strictly above the cells.
+ */
 void
 peano4::tests::SpacetreeTest::testTheSpawnLevelStaysAboveTheCells() {
   for (int targetLevel = 0; targetLevel <= 10; targetLevel++) {
@@ -192,7 +197,9 @@ peano4::tests::SpacetreeTest::testTheSpawnLevelStaysAboveTheCells() {
   }
 }
 
-/** A grid with no complete block level below the root has to use the root as its spawn level. */
+/**
+ * A grid with no complete block level below the root has to use the root as its spawn level.
+ */
 void
 peano4::tests::SpacetreeTest::testShallowGridsUseTheRootSpawnLevel() {
   for (const int numberOfRanks : {1, 2, 1000}) {
@@ -201,7 +208,9 @@ peano4::tests::SpacetreeTest::testShallowGridsUseTheRootSpawnLevel() {
   }
 }
 
-/** The spawn level increases monotonically with the number of ranks. */
+/**
+ * The spawn level increases monotonically with the number of ranks.
+ */
 void
 peano4::tests::SpacetreeTest::testTheSpawnLevelGrowsWithTheRankCount() {
   constexpr int DeepEnough = 9;
@@ -232,7 +241,9 @@ peano4::tests::SpacetreeTest::testTheSpawnLevelGrowsWithTheRankCount() {
   validate(beyondOneLevel > 2);
 }
 
-/** A grid deeper than the lattice key range still returns a spawn level below its target level. */
+/**
+ * A grid deeper than the lattice key range still returns a spawn level below its target level.
+ */
 void
 peano4::tests::SpacetreeTest::testDeepGridsKeepTheirSpawnLevelInRange() {
   for (const int targetLevel : {20, 30, 60}) {
@@ -244,7 +255,23 @@ peano4::tests::SpacetreeTest::testDeepGridsKeepTheirSpawnLevelInRange() {
   }
 }
 
-/** The statistics and the partition read as empty before the first regrid. */
+/**
+ * A rank without cells of the one-cell grid reports the identities of the level reductions over the ranks.
+ */
+void
+peano4::tests::SpacetreeTest::testARankWithoutCellsReportsNoLevel() {
+  peano4::tests::buildRegularGrid(0);
+  const auto& statistics = peano4::Spacetree::getInstance().getStatistics();
+  const bool  holdsCells = not peano4::Spacetree::getInstance().getPartition().getCells().isEmpty();
+
+  validateEquals(peano4::tests::getGlobalSumOf(statistics.numberOfCells), 1);
+  validateEquals(statistics.minimumLevel, holdsCells ? 0 : std::numeric_limits<int>::max());
+  validateEquals(statistics.maximumLevel, 0);
+}
+
+/**
+ * The statistics and the partition read as empty before the first regrid.
+ */
 void
 peano4::tests::SpacetreeTest::testNoStatisticsStandBeforeTheFirstRegrid() {
   auto& spacetree = peano4::Spacetree::getInstance();
@@ -264,7 +291,9 @@ peano4::tests::SpacetreeTest::testNoStatisticsStandBeforeTheFirstRegrid() {
   validateEquals(spacetree.getCellAt(0, tarch::la::Vector<DIMENSIONS, int>(0)), -1);
 }
 
-/** The lookup returns the slot of every cell of the partition and -1 for every other level and position. */
+/**
+ * The lookup returns the slot of every cell of the partition and -1 for every other level and position.
+ */
 void
 peano4::tests::SpacetreeTest::testTheCellLookupFindsEveryCellAndNothingElse() {
   constexpr int Depth = 2;
@@ -279,7 +308,9 @@ peano4::tests::SpacetreeTest::testTheCellLookupFindsEveryCellAndNothingElse() {
   validateEquals(spacetree.getCellAt(-1, tarch::la::Vector<DIMENSIONS, int>(0)), -1);
 }
 
-/** The spacetree returns the periodic boundaries of its init(). */
+/**
+ * The spacetree returns the periodic boundaries of its init().
+ */
 void
 peano4::tests::SpacetreeTest::testThePeriodicBoundariesReturnTheInitialisedValue() {
   std::bitset<DIMENSIONS> periodic;

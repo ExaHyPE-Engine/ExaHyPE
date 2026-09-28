@@ -30,5 +30,6 @@ private:
   void testAllocateReplacesTheArray();
   void testMoveTransfersTheArray();
   void testPinnedBuffer();
+  void testPinnedCopiesEndBeforeTheyReturn();
   void testAllocatedBytesFollowTheLocation();
 };

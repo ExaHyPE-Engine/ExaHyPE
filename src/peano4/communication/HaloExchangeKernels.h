@@ -19,7 +19,9 @@ namespace peano4::communication {
 } // namespace peano4::communication
 
 TARGET_DECLARE
-/** Copies the half this rank owns of every exchanged face into the send buffer. */
+/**
+ * Copies the half this rank owns of every exchanged face into the send buffer.
+ */
 template <typename T>
 struct peano4::communication::GatherHaloHalves final {
   typename tarch::accelerator::ChunkedMemoryPool<T>::ConstView pool{};
@@ -30,7 +32,9 @@ struct peano4::communication::GatherHaloHalves final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int index) const;
 };
 
-/** Copies the received half of every exchanged face into the side the neighbour owns. */
+/**
+ * Copies the received half of every exchanged face into the side the neighbour owns.
+ */
 template <typename T>
 struct peano4::communication::ScatterHaloHalves final {
   const peano4::ExchangedFace*                            entries{nullptr};

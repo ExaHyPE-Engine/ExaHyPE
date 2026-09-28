@@ -6,7 +6,7 @@
 #include "peano4/sfc/ActiveCurve.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
 namespace peano4 {
@@ -52,13 +52,17 @@ struct peano4::LevelJump final {
   int fineFaces[peano4::SubfacesPerFace]{};
 };
 
-/** One face this rank and a neighbour rank both hold; side is the side whose cell this rank owns. */
+/**
+ * One face this rank and a neighbour rank both hold; side is the side whose cell this rank owns.
+ */
 struct peano4::ExchangedFace final {
   int face{-1};
   int side{0};
 };
 
-/** One neighbour rank and its run of exchanged faces, in the canonical order both ranks derive. */
+/**
+ * One neighbour rank and its run of exchanged faces, in the canonical order both ranks derive.
+ */
 struct peano4::Neighbour final {
   int rank{-1};
   int firstFace{0};
@@ -157,7 +161,9 @@ private:
   const int* _cellLattice{nullptr};
   const int* _facesOfCell{nullptr};
 
-  /** The faces in the order of the list; the ranges hold one offset per dependence and kind and one end. */
+  /**
+   * The faces in the order of the list; the ranges hold one offset per dependence and kind and one end.
+   */
   const int*      _faces{nullptr};
   const int*      _faceRanges{nullptr};
   const int*      _faceLevel{nullptr};
@@ -175,7 +181,9 @@ private:
   const double* _widthOfLevel{nullptr};
   double        _domainOffset[DIMENSIONS]{};
 
-  /** The partition with the same arrays in device memory; null where this partition is that one. */
+  /**
+   * The partition with the same arrays in device memory; null where this partition is that one.
+   */
   const Partition* _deviceTwin{nullptr};
 };
 

@@ -22,7 +22,9 @@ namespace exahype2::dg::ader {
   template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
   class Solver;
 
-  /** The limiter slot of a solver without a limiter. */
+  /**
+   * The limiter slot of a solver without a limiter.
+   */
   struct NoLimiter final {};
 
   constexpr double getCFLFactor(int order);
@@ -119,7 +121,9 @@ public:
   );
 
 private:
-  /** The coupled time step drives the partner, a solver of another order or precision, through its private phases. */
+  /**
+   * The coupled time step drives the partner, a solver of another order or precision, through its private phases.
+   */
   template <typename PartnerDerived, typename PartnerStorage, typename PartnerCompute, typename PartnerLimiter>
   friend class exahype2::dg::ader::Solver;
 
@@ -155,16 +159,22 @@ private:
   void rebuildCouplingFaces(const peano4::Partition& partition);
   void reservePredictorScratch(const peano4::Partition& partition);
 
-  /** DIMENSIONS coordinates per point source, in the memory location of the kernels. */
+  /**
+   * DIMENSIONS coordinates per point source, in the memory location of the kernels.
+   */
   tarch::accelerator::Buffer<double> _pointSourceLocations{tarch::MemoryLocation::Device};
 
-  /** One predictor scratch block and one Picard block per scratch chunk of the predictor dispatch. */
+  /**
+   * One predictor scratch block and one Picard block per scratch chunk of the predictor dispatch.
+   */
   tarch::accelerator::Buffer<ComputePrecision> _predictorScratch{tarch::MemoryLocation::Device};
   tarch::accelerator::Buffer<ComputePrecision> _picardScratch{tarch::MemoryLocation::Device};
 
   LimiterSlot _limiter{};
 
-  /** Runs the time step of this solver and of its coupling partner; empty without a partner. */
+  /**
+   * Runs the time step of this solver and of its coupling partner; empty without a partner.
+   */
   std::function<void(const peano4::Partition&, exahype2::RefinementRequests&)> _coupledTimeStep{};
   bool                                                                         _drivenByPartner{false};
 
@@ -176,7 +186,9 @@ private:
   int                             _numberOfCouplingFaces{0};
   int                             _numberOfLocalCouplingFaces{0};
 
-  /** Maps the face nodes of the partner onto the face nodes of this solver, partner node major. */
+  /**
+   * Maps the face nodes of the partner onto the face nodes of this solver, partner node major.
+   */
   tarch::accelerator::Buffer<ComputePrecision> _couplingMatrix{tarch::MemoryLocation::Device};
 };
 TARGET_DECLARE_END

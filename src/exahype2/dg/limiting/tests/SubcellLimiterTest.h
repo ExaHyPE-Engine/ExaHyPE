@@ -23,5 +23,6 @@ private:
   void testAnAcceptedFreeStreamStaysOnTheGalerkinSchemeBitwise();
   void testARejectedFreeStreamRecomputesEveryCellAndKeepsTheConstant();
   void testOneTroubledCellSpreadsTwoRingsOfNeighbours();
+  void testTheSubgridBoundaryConditionsSkipTheCellsOffTheScheme();
   void testReleaseFreesEveryPool();
 };

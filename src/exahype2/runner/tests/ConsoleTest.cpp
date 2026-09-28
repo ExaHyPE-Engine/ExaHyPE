@@ -5,7 +5,9 @@
 #include "exahype2/runner/Console.h"
 
 namespace {
-  /** Columns of a framed report line: The text and two frame columns on either side. */
+  /**
+   * Columns of a framed report line: The text and two frame columns on either side.
+   */
   constexpr std::size_t FrameWidth = 97;
 } // namespace
 
@@ -30,7 +32,9 @@ exahype2::runner::tests::ConsoleTest::run() {
   testMethod(testReportWrapsAWideLineInsideTheFrame);
 }
 
-/** Only the two most significant non-zero units appear, the lower one zero-padded to two digits. */
+/**
+ * Only the two most significant non-zero units appear, the lower one zero-padded to two digits.
+ */
 void
 exahype2::runner::tests::ConsoleTest::testDurationPicksTwoMostSignificantUnits() {
   validateEquals(exahype2::runner::Format::getDuration(45.0), std::string("45s"));
@@ -40,7 +44,9 @@ exahype2::runner::tests::ConsoleTest::testDurationPicksTwoMostSignificantUnits()
   validateEquals(exahype2::runner::Format::getDuration(0.0), std::string("0s"));
 }
 
-/** A negative duration rounds to zero and a duration past the day cap collapses to the bounded text. */
+/**
+ * A negative duration rounds to zero and a duration past the day cap collapses to the bounded text.
+ */
 void
 exahype2::runner::tests::ConsoleTest::testDurationClampsAndStaysBounded() {
   validateEquals(exahype2::runner::Format::getDuration(-5.0), std::string("0s"));
@@ -76,7 +82,9 @@ exahype2::runner::tests::ConsoleTest::testWallClockAndMemory() {
   validateEquals(exahype2::runner::Format::getMemory(3ULL * 1024ULL * 1024ULL), std::string("3.00 MiB"));
 }
 
-/** A multi-byte glyph occupies one column. */
+/**
+ * A multi-byte glyph occupies one column.
+ */
 void
 exahype2::runner::tests::ConsoleTest::testDisplayWidthCountsCodePoints() {
   validateEquals(exahype2::runner::getDisplayWidth(""), std::size_t(0));
@@ -103,7 +111,9 @@ exahype2::runner::tests::ConsoleTest::testPadToWidthReachesTargetWidth() {
   validateEquals(exahype2::runner::padToWidth("abcde", 3), std::string("abcde"));
 }
 
-/** A broken line keeps its separator, and every continuation starts at the continuation column. */
+/**
+ * A broken line keeps its separator, and every continuation starts at the continuation column.
+ */
 void
 exahype2::runner::tests::ConsoleTest::testWrapBreaksAfterTheSeparator() {
   const auto lines = exahype2::runner::wrapToDisplayWidth("Label    alpha = 1 · beta = 2 · gamma = 3", 24, 9);
@@ -117,7 +127,9 @@ exahype2::runner::tests::ConsoleTest::testWrapBreaksAfterTheSeparator() {
   validateEquals(fitting[0], std::string("Label    alpha = 1"));
 }
 
-/** A line without a separator breaks at a space, and a line without a space breaks at the width. */
+/**
+ * A line without a separator breaks at a space, and a line without a space breaks at the width.
+ */
 void
 exahype2::runner::tests::ConsoleTest::testWrapFallsBackToSpacesAndTheWidth() {
   const auto words = exahype2::runner::wrapToDisplayWidth("aaaa bbbb cccc", 9, 2);
@@ -133,7 +145,9 @@ exahype2::runner::tests::ConsoleTest::testWrapFallsBackToSpacesAndTheWidth() {
   validateEquals(letters[2], std::string("ij"));
 }
 
-/** A section title sits at the block indent and its entries one level deeper, aligned across sections. */
+/**
+ * A section title sits at the block indent and its entries one level deeper, aligned across sections.
+ */
 void
 exahype2::runner::tests::ConsoleTest::testTableIndentsSectionsAndAlignsLabels() {
   exahype2::runner::Table table;
@@ -189,7 +203,9 @@ exahype2::runner::tests::ConsoleTest::testReportFramesLinesAndRules() {
   validateEquals(lines[6], "│ " + exahype2::runner::padToWidth("Goodbye", FrameWidth - 4) + " │");
 }
 
-/** A line wider than the frame continues on a framed line at the continuation column. */
+/**
+ * A line wider than the frame continues on a framed line at the continuation column.
+ */
 void
 exahype2::runner::tests::ConsoleTest::testReportWrapsAWideLineInsideTheFrame() {
   std::vector<std::string> lines;

@@ -23,19 +23,25 @@ namespace {
   constexpr double Eps                   = 1.0e-2;
   constexpr double CoarsenSafetyFactor   = 9.0;
 
-  /** Returns the density, the first unknown of a volume. */
+  /**
+   * Returns the density, the first unknown of a volume.
+   */
   template <typename Value>
   struct Density final {
     INLINE_METHOD GPU_CALLABLE_METHOD double operator()(const Value* const volume) const { return volume[0]; }
   };
 
-  /** Returns the pressure, the third unknown of a volume. */
+  /**
+   * Returns the pressure, the third unknown of a volume.
+   */
   template <typename Value>
   struct Pressure final {
     INLINE_METHOD GPU_CALLABLE_METHOD double operator()(const Value* const volume) const { return volume[2]; }
   };
 
-  /** Writes the refinement command of the density and the pressure of every patch. */
+  /**
+   * Writes the refinement command of the density and the pressure of every patch.
+   */
   struct RefineEveryPatchOnDetail final {
     const double*                patches{nullptr};
     exahype2::RefinementCommand* commands{nullptr};
@@ -57,20 +63,28 @@ namespace {
   constexpr auto VolumeCentres = exahype2::getVolumeCentresInUnitInterval<NumberOfDofsPerAxis>();
   constexpr std::array<double, NumberOfDofsPerAxis> LobattoNodes{0.0, 0.2763932, 0.7236068, 1.0};
 
-  /** Returns the value of a volume with one unknown. */
+  /**
+   * Returns the value of a volume with one unknown.
+   */
   double getValueOf(const double* const volume) { return volume[0]; }
 
-  /** Returns the detail of a patch with one unknown per volume at the volume centres. */
+  /**
+   * Returns the detail of a patch with one unknown per volume at the volume centres.
+   */
   double getDetailOf(const std::vector<double>& patch) {
     return exahype2::computeMultiresolutionDetail(patch.data(), VolumeCentres, 1, getValueOf);
   }
 
-  /** Returns the coordinate of a volume centre along one axis, relative to the patch centre. */
+  /**
+   * Returns the coordinate of a volume centre along one axis, relative to the patch centre.
+   */
   double getVolumeCoordinate(const int volume) {
     return (static_cast<double>(volume) + 0.5) / static_cast<double>(NumberOfDofsPerAxis) - 0.5;
   }
 
-  /** Returns a patch of three unknowns whose density is affine and whose other unknowns are constant. */
+  /**
+   * Returns a patch of three unknowns whose density is affine and whose other unknowns are constant.
+   */
   std::vector<double> getSmoothPatch() {
     std::vector<double> patch(static_cast<std::size_t>(NumberOfPatchValues), 0.0);
     peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
@@ -82,7 +96,9 @@ namespace {
     return patch;
   }
 
-  /** Returns the smooth patch with a pressure jump along the first axis. */
+  /**
+   * Returns the smooth patch with a pressure jump along the first axis.
+   */
   std::vector<double> getPatchWithAPressureJump() {
     std::vector<double> patch = getSmoothPatch();
     peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
@@ -112,7 +128,9 @@ exahype2::tests::MultiresolutionDetailTest::run() {
   testMethod(testRefineOnDetailRunsOnTheDevice);
 }
 
-/** The volume centres of the unit interval lie at odd multiples of half the volume width. */
+/**
+ * The volume centres of the unit interval lie at odd multiples of half the volume width.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testVolumeCentresAreEquidistant() {
   for (int volume = 0; volume < NumberOfDofsPerAxis; volume++) {
@@ -124,7 +142,9 @@ exahype2::tests::MultiresolutionDetailTest::testVolumeCentresAreEquidistant() {
   }
 }
 
-/** A constant field has zero detail in double and in single precision. */
+/**
+ * A constant field has zero detail in double and in single precision.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testConstantFieldHasZeroDetail() {
   const std::vector<double> patch(NumberOfVolumes, 1.0);
@@ -142,7 +162,9 @@ exahype2::tests::MultiresolutionDetailTest::testConstantFieldHasZeroDetail() {
   );
 }
 
-/** The affine fit reproduces an affine field, so its detail vanishes. */
+/**
+ * The affine fit reproduces an affine field, so its detail vanishes.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testAffineFieldHasZeroDetail() {
   std::vector<double> patch(NumberOfVolumes);
@@ -156,7 +178,9 @@ exahype2::tests::MultiresolutionDetailTest::testAffineFieldHasZeroDetail() {
   validateTrue(std::abs(getDetailOf(patch)) < 1.0e-12);
 }
 
-/** A jump between two halves of the patch has a detail far above the one of a ramp over the same values. */
+/**
+ * A jump between two halves of the patch has a detail far above the one of a ramp over the same values.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testStepFieldHasLargeDetail() {
   std::vector<double> step(NumberOfVolumes);
@@ -172,7 +196,9 @@ exahype2::tests::MultiresolutionDetailTest::testStepFieldHasLargeDetail() {
   validateTrue(stepDetail > 1.0e6 * (rampDetail + 1.0e-15));
 }
 
-/** Every reflection and axis swap of a patch yields the bitwise-identical detail for both node layouts. */
+/**
+ * Every reflection and axis swap of a patch yields the bitwise-identical detail for both node layouts.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testDetailIsBitwiseInvariantUnderReflectionsAndSwaps() {
   std::vector<double> patch(NumberOfVolumes);
@@ -215,7 +241,9 @@ exahype2::tests::MultiresolutionDetailTest::testDetailIsBitwiseInvariantUnderRef
   }
 }
 
-/** A NaN or an infinite value yields an infinite detail, so the patch refines. */
+/**
+ * A NaN or an infinite value yields an infinite detail, so the patch refines.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testNonFiniteValueRefines() {
   std::vector<double> patch(NumberOfVolumes, 1.0);
@@ -228,7 +256,9 @@ exahype2::tests::MultiresolutionDetailTest::testNonFiniteValueRefines() {
   validateTrue(std::isinf(getDetailOf(patch)));
 }
 
-/** A field affine in the Lobatto nodes fits exactly with these nodes and misfits with the volume centres. */
+/**
+ * A field affine in the Lobatto nodes fits exactly with these nodes and misfits with the volume centres.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testCustomNodesFitTheirOwnAffineField() {
   std::vector<double> patch(NumberOfVolumes, 0.0);
@@ -248,7 +278,9 @@ exahype2::tests::MultiresolutionDetailTest::testCustomNodesFitTheirOwnAffineFiel
   validate(getDetailOf(patch) > 1e-3);
 }
 
-/** The indicator reads one unknown of an AoS patch, and the other unknowns leave the detail unchanged. */
+/**
+ * The indicator reads one unknown of an AoS patch, and the other unknowns leave the detail unchanged.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testStridedPatchWithIndicator() {
   constexpr int       NumberOfUnknowns = 3;
@@ -277,7 +309,9 @@ exahype2::tests::MultiresolutionDetailTest::testStridedPatchWithIndicator() {
   validate(stepDetail > 1e-1);
 }
 
-/** A patch of one node has zero detail. */
+/**
+ * A patch of one node has zero detail.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testSingleNodePatchHasZeroDetail() {
   const double value = 42.0;
@@ -287,7 +321,9 @@ exahype2::tests::MultiresolutionDetailTest::testSingleNodePatchHasZeroDetail() {
   );
 }
 
-/** A detail above eps refines, one below eps divided by the safety factor erases, and the rest keeps. */
+/**
+ * A detail above eps refines, one below eps divided by the safety factor erases, and the rest keeps.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testRefinementCommandFromDetail() {
   validateTrue(
@@ -384,7 +420,9 @@ exahype2::tests::MultiresolutionDetailTest::testRefineOnDetail() {
   );
 }
 
-/** A device kernel derives the same refinement commands from patches in device memory as the host. */
+/**
+ * A device kernel derives the same refinement commands from patches in device memory as the host.
+ */
 void
 exahype2::tests::MultiresolutionDetailTest::testRefineOnDetailRunsOnTheDevice() {
   const std::vector<double> smoothPatch = getSmoothPatch();

@@ -6,7 +6,7 @@
 /**
  * Records the norms of the position errors of the particles against the analytical solution of
  * SolverType at timeStamp and returns them; every rank calls it once a snapshot of measurement is
- * due. The analytical solution receives the host copy of the particle, the time stamp, the time
+ * due. The analytical solution receives a copy of the particle, the time stamp, the time
  * step size and a buffer of DIMENSIONS plus NumberOfData entries whose first DIMENSIONS entries
  * are the exact position.
  */
@@ -30,11 +30,17 @@ exahype2::particles::measurePositionErrors(
   particles.download();
   ErrorSums sums;
   for (int index = 0; index < particles.getSize(); index++) {
-    const Particle particle = particles.getParticle(index);
+    const auto position = particles.getPosition(index);
+    double     values[DIMENSIONS + NumberOfData]{};
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      values[axis] = position(axis);
+    }
+    std::copy_n(particles.getData(index), NumberOfData, values + DIMENSIONS);
+    const Particle particle{values, NumberOfData};
     double         solution[DIMENSIONS + NumberOfData]{};
     SolverType::analyticalSolution(&particle, timeStamp, timeStepSize, solution);
     double errors[NumberOfNorms]{0.0, 0.0, 0.0};
-    accumulateError(PositionEntries, particle.values, solution, 1.0, errors);
+    accumulateError(PositionEntries, values, solution, 1.0, errors);
     sums.add(errors);
   }
   return measurement.record(sums, timeStamp);

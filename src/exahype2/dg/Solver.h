@@ -110,10 +110,22 @@ protected:
   static constexpr bool EvaluateDiffusiveSource    = exahype2::terms::HasDiffusiveSourceTerm<Derived, ComputePrecision>;
   static constexpr bool EvaluateMaterialParameters = exahype2::terms::HasMaterialParameters<Derived, ComputePrecision>;
 
-  /** Interpolates the face states and the face fluxes of a coarse face onto its fine faces. */
+  /**
+   * Interpolates the face states and the face fluxes of a coarse face onto its fine faces.
+   */
   using InterpolateHalves = exahype2::dg::InterpolateFaceHalves<Derived, ComputePrecision>;
-  /** Restricts the fluxes of the fine faces of a level jump onto their coarse face. */
+  /**
+   * Interpolates the face states of a coarse face onto its fine faces.
+   */
+  using InterpolateStateHalves = exahype2::dg::InterpolateFaceStateHalves<Derived, ComputePrecision>;
+  /**
+   * Restricts the fluxes of the fine faces of a level jump onto their coarse face.
+   */
   using RestrictFluxes = exahype2::dg::RestrictFluxHalves<Derived, ComputePrecision>;
+  /**
+   * Restricts the face states of the fine faces of a level jump onto their coarse face.
+   */
+  using RestrictStates = exahype2::dg::RestrictStateHalves<Derived, ComputePrecision>;
 
   [[nodiscard]] tarch::Span<const int> getCells(const peano4::Partition& partition) const;
   [[nodiscard]] tarch::Span<const int> getCells(
@@ -150,13 +162,17 @@ protected:
   StatePool _faceStates{StateValuesPerFace};
   FluxPool  _faceFluxes{FluxValuesPerFace};
 
-  /** The MPI exchanges of the own halves of every exchanged face with the neighbour ranks. */
+  /**
+   * The MPI exchanges of the own halves of every exchanged face with the neighbour ranks.
+   */
   peano4::HaloExchange<ComputePrecision> _stateExchange{_faceStates};
   peano4::HaloExchange<ComputePrecision> _fluxExchange{_faceFluxes};
 
   exahype2::plotter::PatchPlotter _plotter;
 
-  /** The 1D node positions and quadrature weights on the host, which the plots and a host initial condition read. */
+  /**
+   * The 1D node positions and quadrature weights on the host, which the plots and a host initial condition read.
+   */
   std::vector<double> _nodePositionsOnHost{};
   std::vector<double> _nodeWeightsOnHost{};
 
@@ -167,15 +183,21 @@ private:
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
 
   exahype2::RefinementVotes _votes{};
-  /** The regrid sets it and the next time step clears it, so that step casts no refinement vote. */
+  /**
+   * The regrid sets it and the next time step clears it, so that step casts no refinement vote.
+   */
   bool _meshChangedSinceLastTimeStep{false};
 
-  /** The cells the cell predicate of Derived owns, the local cells first; empty without a predicate. */
+  /**
+   * The cells the cell predicate of Derived owns, the local cells first; empty without a predicate.
+   */
   tarch::accelerator::Buffer<int> _ownedCells{tarch::MemoryLocation::Device};
   std::vector<int>                _ownedCellsOnHost{};
   int                             _numberOfLocalOwnedCells{0};
 
-  /** The interior, boundary and hanging faces with an owned cell, the local faces first; empty without a predicate. */
+  /**
+   * The interior, boundary and hanging faces with an owned cell, the local faces first; empty without a predicate.
+   */
   tarch::accelerator::Buffer<int> _ownedRiemannFaces{tarch::MemoryLocation::Device};
   int                             _numberOfLocalOwnedRiemannFaces{0};
 

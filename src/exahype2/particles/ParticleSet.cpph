@@ -70,7 +70,9 @@ exahype2::particles::ParticleSet<NumberOfData>::getSize() const noexcept {
   return static_cast<int>(_slots.size());
 }
 
-/** Returns the number of particles of all ranks after the last relocate(). */
+/**
+ * Returns the number of particles of all ranks after the last relocate().
+ */
 template <int NumberOfData>
 INLINE_METHOD int
 exahype2::particles::ParticleSet<NumberOfData>::getGlobalNumberOfParticles() const noexcept {
@@ -98,7 +100,9 @@ exahype2::particles::ParticleSet<NumberOfData>::getPosition(const int index) con
   return tarch::la::Vector<DIMENSIONS, double>(_values.data() + static_cast<std::size_t>(index) * ValuesPerParticle);
 }
 
-/** Returns the data of the particle index on the host; download() precedes it after a kernel. */
+/**
+ * Returns the data of the particle index on the host; download() precedes it after a kernel.
+ */
 template <int NumberOfData>
 INLINE_METHOD const double*
 exahype2::particles::ParticleSet<NumberOfData>::getData(const int index) const {
@@ -107,12 +111,16 @@ exahype2::particles::ParticleSet<NumberOfData>::getData(const int index) const {
   return _values.data() + static_cast<std::size_t>(index) * ValuesPerParticle + DIMENSIONS;
 }
 
-/** Returns the particle index on the host; download() precedes it after a kernel. */
+/**
+ * Returns the particle index on the host for writing; download() precedes it after a kernel, and
+ * the next upload() copies the host values to the device.
+ */
 template <int NumberOfData>
 INLINE_METHOD exahype2::particles::Particle
 exahype2::particles::ParticleSet<NumberOfData>::getParticle(const int index) {
   assertion(index >= 0 and index < getSize(), index, getSize());
   assertion(_hostValuesAreCurrent);
+  _deviceValuesAreCurrent = false;
   return Particle{_values.data() + static_cast<std::size_t>(index) * ValuesPerParticle, NumberOfData};
 }
 
@@ -155,9 +163,6 @@ exahype2::particles::ParticleSet<NumberOfData>::getSlotAt(
       int          index     = static_cast<int>(std::floor(relative));
       const double lowerFace = domainOffset(axis) + index * width;
       if (index >= 1 and position(axis) - lowerFace <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
-        index--;
-      }
-      if (index == cellsPerAxis and position(axis) - lowerFace <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
         index--;
       }
       insideDomain  = insideDomain and index >= 0 and index < cellsPerAxis;
@@ -383,7 +388,9 @@ exahype2::particles::ParticleSet<NumberOfData>::exchange(const peano4::Partition
   }
 }
 
-/** Finds the cell of every particle again and moves the particles that left the rank. */
+/**
+ * Finds the cell of every particle again and moves the particles that left the rank.
+ */
 template <int NumberOfData>
 void
 exahype2::particles::ParticleSet<NumberOfData>::relocate(const peano4::Partition& partition) {
@@ -415,7 +422,9 @@ exahype2::particles::ParticleSet<NumberOfData>::upload() {
   }
 }
 
-/** Copies the values a kernel wrote since the last download back to the host array. */
+/**
+ * Copies the values a kernel wrote since the last download back to the host array.
+ */
 template <int NumberOfData>
 void
 exahype2::particles::ParticleSet<NumberOfData>::download() {

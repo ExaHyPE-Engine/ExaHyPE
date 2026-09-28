@@ -4,6 +4,8 @@
 
 #include "tarch/MemoryUsage.h"
 
+#include <sys/mman.h>
+
 tarch::tests::MemoryUsageTest::MemoryUsageTest() :
   tarch::tests::TestCase("tarch::tests::MemoryUsageTest") {}
 
@@ -14,7 +16,9 @@ tarch::tests::MemoryUsageTest::run() {
   testMethod(testProcessAndNodeMemoryAreConsistent);
 }
 
-/** A vector holds the bytes of its capacity, its unused capacity included. */
+/**
+ * A vector holds the bytes of its capacity, its unused capacity included.
+ */
 void
 tarch::tests::MemoryUsageTest::testAllocatedBytesCountTheCapacity() {
   std::vector<double> values;
@@ -25,7 +29,9 @@ tarch::tests::MemoryUsageTest::testAllocatedBytesCountTheCapacity() {
   validate(tarch::getAllocatedBytesOf(values) >= 10 * sizeof(double));
 }
 
-/** Every size renders in the largest unit it reaches, and a size below one MiB renders in KiB. */
+/**
+ * Every size renders in the largest unit it reaches, and a size below one MiB renders in KiB.
+ */
 void
 tarch::tests::MemoryUsageTest::testFormatPicksTheLargestReachedUnit() {
   static_assert(tarch::chooseMemoryUsageFormat(0) == tarch::MemoryUsageFormat::KiB);
@@ -39,19 +45,23 @@ tarch::tests::MemoryUsageTest::testFormatPicksTheLargestReachedUnit() {
 }
 
 /**
- * The resident set of the process grows with memory it writes, and the available memory of the
- * node never exceeds its total memory.
+ * The resident set of the process grows with fresh pages it writes, and the available memory of
+ * the node never exceeds its total memory.
  */
 void
 tarch::tests::MemoryUsageTest::testProcessAndNodeMemoryAreConsistent() {
   const auto before = tarch::getMemoryUsageInBytes();
   validate(before > 0);
 
-  constexpr std::size_t   WrittenBytes = 64 * tarch::MiB;
-  const std::vector<char> written(WrittenBytes, 1);
-  const auto              after = tarch::getMemoryUsageInBytes();
+  // The heap may serve a vector from freed pages that stay resident, so the pages come from a
+  // mapping of their own.
+  constexpr std::size_t WrittenBytes = 64 * tarch::MiB;
+  void* const mapping = mmap(nullptr, WrittenBytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  validate(mapping != MAP_FAILED);
+  std::memset(mapping, 1, WrittenBytes);
+  const auto after = tarch::getMemoryUsageInBytes();
+  munmap(mapping, WrittenBytes);
   validateWithParams2(after >= before + WrittenBytes / 2, before, after);
-  validateEquals(written[WrittenBytes - 1], 1);
 
   const auto total     = tarch::getTotalMemoryInBytes();
   const auto available = tarch::getAvailableMemoryInBytes();

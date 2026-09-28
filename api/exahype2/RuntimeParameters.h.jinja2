@@ -22,10 +22,15 @@ namespace {{NAMESPACE | join("::")}} {
 
 /**
  * Holds the parameters that the configuration file and the command line set. Storage holds the
- * parameters that a kernel reads, and HostStorage holds the strings.
+ * parameters that a kernel reads, the admissible patch sizes and grid levels of the runtime
+ * included, and HostStorage holds the strings.
  */
 struct {{NAMESPACE | join("::")}}::RuntimeParameters final {
   struct Storage final {
+    double maxAdmissiblePatchSize{0.0};
+    double minAdmissiblePatchSize{0.0};
+    int    gridLevels{0};
+    int    maxGridLevels{0};
 {%- for parameter in RUNTIME_PARAMETERS if not parameter.is_string %}
     {{ parameter.cpp_type }} {{ parameter.name }}{ {{- parameter.default_value -}} };
 {%- endfor %}
@@ -41,6 +46,10 @@ struct {{NAMESPACE | join("::")}}::RuntimeParameters final {
   static void load(tarch::reader::JSONReader* reader, int& argc, char** argv);
   static void printUsage();
   static INLINE_METHOD const Storage& getStorage();
+  static INLINE_METHOD GPU_CALLABLE_METHOD double getMaxAdmissiblePatchSize();
+  static INLINE_METHOD GPU_CALLABLE_METHOD double getMinAdmissiblePatchSize();
+  static INLINE_METHOD GPU_CALLABLE_METHOD int getGridLevels();
+  static INLINE_METHOD GPU_CALLABLE_METHOD int getMaxGridLevels();
 {%- for parameter in RUNTIME_PARAMETERS %}
 {%- if parameter.is_string %}
   static INLINE_METHOD const {{ parameter.return_type }}& {{ parameter.name }}();
@@ -51,6 +60,7 @@ struct {{NAMESPACE | join("::")}}::RuntimeParameters final {
 
 private:
   static ::exahype2::runner::ParameterTable getParameterTable(Storage& storage, HostStorage& hostStorage);
+  static void readGridParameters();
 
   static Storage     _storage;
   static HostStorage _hostStorage;

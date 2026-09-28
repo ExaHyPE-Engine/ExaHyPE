@@ -154,6 +154,8 @@ public:
 
   INLINE_METHOD const std::bitset<DIMENSIONS>& getPeriodicBoundaries() const;
 
+  INLINE_METHOD static std::int64_t serialiseLatticeKey(const tarch::la::Vector<DIMENSIONS, int>& latticeIndex);
+
   INLINE_METHOD int getAdjacentCellOwnerAt(
     int                                       level,
     const tarch::la::Vector<DIMENSIONS, int>& vertexLattice,
@@ -194,7 +196,9 @@ private:
    */
   std::vector<int> _blockSlotOfSpawnCell{};
 
-  /** Stores the spawn-level lattice position of every materialised block in slot order. */
+  /**
+   * Stores the spawn-level lattice position of every materialised block in slot order.
+   */
   std::vector<tarch::la::Vector<DIMENSIONS, int>> _blockLatticeOfSlot{};
 
   /**
@@ -219,7 +223,9 @@ private:
   std::vector<peano4::topology::TreeCell> _cells{};
   std::vector<peano4::grid::GridVertex>   _vertices{};
 
-  /** Stores the first cell index of each level and the final total count. */
+  /**
+   * Stores the first cell index of each level and the final total count.
+   */
   std::vector<int> _cellLevelOffsets{};
 
   /**
@@ -230,27 +236,41 @@ private:
    */
   std::vector<std::vector<int>> _levelLocalIndexOfCoordinate{};
 
-  /** Stores the first vertex index of each level and the final total count. */
+  /**
+   * Stores the first vertex index of each level and the final total count.
+   */
   std::vector<int> _vertexLevelOffsets{};
 
-  /** Stores the first face index of each level created by the build. */
+  /**
+   * Stores the first face index of each level created by the build.
+   */
   std::vector<int> _faceLevelOffsets{};
 
   int _numberOfFaces{0};
 
-  /** Holds the number of cells per axis of every level. */
+  /**
+   * Holds the number of cells per axis of every level.
+   */
   std::vector<int> _cellsPerAxisOfLevel{};
 
-  /** Sizes one axis field so three coordinates fit into one 64-bit key. */
+  /**
+   * Sizes one axis field so three coordinates fit into one 64-bit key.
+   */
   static constexpr int LatticeKeyBitsPerAxis{21};
 
-  /** Maps cell lattice keys beyond the dense boundary, indexed by level - _denseBoundaryLevel - 1. */
+  /**
+   * Maps cell lattice keys beyond the dense boundary, indexed by level - _denseBoundaryLevel - 1.
+   */
   std::vector<peano4::grid::LatticeIndexMap> _sparseCellIndexOfLattice{};
 
-  /** Maps vertex lattice keys beyond the dense boundary, indexed like the cell maps. */
+  /**
+   * Maps vertex lattice keys beyond the dense boundary, indexed like the cell maps.
+   */
   std::vector<peano4::grid::LatticeIndexMap> _sparseVertexIndexOfLattice{};
 
-  /** Maps face lattice keys per normal on each sparse level. */
+  /**
+   * Maps face lattice keys per normal on each sparse level.
+   */
   std::vector<std::array<peano4::grid::LatticeIndexMap, DIMENSIONS>> _sparseFaceIndexOfLattice{};
 
   /**
@@ -261,7 +281,9 @@ private:
   mutable std::vector<std::vector<std::int64_t>> _surroundedVertices{};
   mutable bool                                   _surroundedVerticesDerived{false};
 
-  /** Stores flagged vertex lattice keys of one evaluation round, indexed by level - depth. */
+  /**
+   * Stores flagged vertex lattice keys of one evaluation round, indexed by level - depth.
+   */
   using FlaggedKeysPerLevel = std::vector<std::unordered_set<std::int64_t>>;
 
   /**
@@ -271,10 +293,11 @@ private:
    */
   std::vector<peano4::grid::LatticeIndexMap> _buildFlagKeys{};
 
-  /** Stores refined-cell lattice keys; element i holds level depth + i. */
+  /**
+   * Stores refined-cell lattice keys; element i holds level depth + i.
+   */
   std::vector<peano4::grid::LatticeIndexMap> _planRefinedCellKeys{};
 
-  INLINE_METHOD static std::int64_t serialiseLatticeKey(const tarch::la::Vector<DIMENSIONS, int>& latticeIndex);
   INLINE_METHOD static tarch::la::Vector<DIMENSIONS, int> deserialiseLatticeKey(std::int64_t latticeKey);
   INLINE_METHOD int getTopologyNodeAt(int level, const tarch::la::Vector<DIMENSIONS, int>& latticeIndex) const;
   INLINE_METHOD bool usesBlockLayout(int level) const;

@@ -30,6 +30,9 @@ namespace exahype2::fv {
   struct InterpolateHaloHalves;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct InjectHaloHalves;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct RestrictHaloHalves;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -48,7 +51,9 @@ namespace exahype2::fv {
   struct PatchTransfer;
 } // namespace exahype2::fv
 
-/** Writes the initial condition of Derived into the patch of every cell. */
+/**
+ * Writes the initial condition of Derived into the patch of every cell.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::InitialisePatches final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -60,7 +65,9 @@ struct exahype2::fv::InitialisePatches final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Fills the outer half of every boundary face from its inner half through the boundary conditions of Derived. */
+/**
+ * Fills the outer half of every boundary face from its inner half through the boundary conditions of Derived.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ApplyBoundaryConditions final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -74,7 +81,9 @@ struct exahype2::fv::ApplyBoundaryConditions final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Fills the coarse-side halves of the fine faces of a level jump from the same half of its coarse face. */
+/**
+ * Fills the coarse-side halves of the fine faces of a level jump from the same half of its coarse face.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::InterpolateHaloHalves final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -86,7 +95,24 @@ struct exahype2::fv::InterpolateHaloHalves final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
-/** Fills the fine-side half of the coarse face of a level jump from the same half of its fine faces. */
+/**
+ * Fills the coarse-side halves of the fine faces of a level jump with copies of the coarse volumes
+ * in the same half of its coarse face.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::fv::InjectHaloHalves final {
+  using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
+  using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+
+  peano4::Partition       partition{};
+  typename FacePool::View halo{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
+/**
+ * Fills the fine-side half of the coarse face of a level jump from the same half of its fine faces.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::RestrictHaloHalves final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -98,7 +124,9 @@ struct exahype2::fv::RestrictHaloHalves final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
-/** Copies the boundary layers of the patch of every cell into its own half of every face of the cell. */
+/**
+ * Copies the boundary layers of the patch of every cell into its own half of every face of the cell.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ProjectPatchesOntoFaces final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -112,7 +140,9 @@ struct exahype2::fv::ProjectPatchesOntoFaces final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Advances the patch of every listed cell from input into output and reduces the largest wave speed. */
+/**
+ * Advances the patch of every listed cell from input into output and reduces the largest wave speed.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::UpdatePatches final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -130,7 +160,9 @@ struct exahype2::fv::UpdatePatches final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, double& accumulator) const;
 };
 
-/** Reduces the largest wave speed of Derived over the volumes of the patch of every cell. */
+/**
+ * Reduces the largest wave speed of Derived over the volumes of the patch of every cell.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::MeasurePatchEigenvalues final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -143,7 +175,9 @@ struct exahype2::fv::MeasurePatchEigenvalues final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, double& accumulator) const;
 };
 
-/** Writes the error norms of the patch of every cell into the NumberOfNorms entries of the cell. */
+/**
+ * Writes the error norms of the patch of every cell into the NumberOfNorms entries of the cell.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::MeasurePatchErrors final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;

@@ -15,7 +15,9 @@
 namespace {
   constexpr int Depth = 2;
 
-  /** A solver with OwnsCells reports the cells it holds data on; the other one holds data on every cell. */
+  /**
+   * A solver with OwnsCells reports the cells it holds data on; the other one holds data on every cell.
+   */
   template <bool OwnsCells>
   struct RecordingSolver final {
     exahype2::TimeStepping timeStepping{
@@ -87,8 +89,8 @@ exahype2::tests::SolverRepositoryTest::run() {
 }
 
 /**
- * The time stamps, step sizes, degrees of freedom and bytes of the project come from every solver,
- * and a solver without own cells counts every cell of the partition.
+ * The time stamps, cells, degrees of freedom and bytes of the project come from every solver, and a
+ * solver without own cells counts every cell of the partition.
  */
 void
 exahype2::tests::SolverRepositoryTest::testTheRepositoryReducesTheValuesOfEverySolver() {
@@ -109,8 +111,10 @@ exahype2::tests::SolverRepositoryTest::testTheRepositoryReducesTheValuesOfEveryS
   const exahype2::SolverRepository repository{coarse, fine};
   validateNumericalEquals(repository.getMinTimeStamp(), 0.25);
   validateNumericalEquals(repository.getMaxTimeStamp(), 0.5);
-  validateNumericalEquals(repository.getMinTimeStepSize(), 0.125);
-  validateNumericalEquals(repository.getMaxTimeStepSize(), 0.5);
+  validateEquals(
+    repository.getNumberOfSolverCells(partition),
+    std::uint64_t{3} + static_cast<std::uint64_t>(partition.getCells().size)
+  );
   validateEquals(
     repository.getNumberOfCellDoFs(partition),
     std::uint64_t{3} * 64 + static_cast<std::uint64_t>(partition.getCells().size) * 128
@@ -119,7 +123,9 @@ exahype2::tests::SolverRepositoryTest::testTheRepositoryReducesTheValuesOfEveryS
   validateEquals(repository.getAllocatedBytes().device, std::size_t{256});
 }
 
-/** Every phase call reaches every solver once, and an empty partition yields no refinement request. */
+/**
+ * Every phase call reaches every solver once, and an empty partition yields no refinement request.
+ */
 void
 exahype2::tests::SolverRepositoryTest::testEveryPhaseCallReachesEverySolver() {
   RecordingSolver<false>     first;

@@ -26,7 +26,9 @@ namespace {
 
   using Set = exahype2::particles::ParticleSet<NumberOfData>;
 
-  /** Builds a regular grid of Depth levels partitioned over the ranks and returns the partition of this rank. */
+  /**
+   * Builds a regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
+   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -36,7 +38,9 @@ namespace {
     return peano4::Spacetree::getInstance().getCellAt(Depth, lattice);
   }
 
-  /** Returns one candidate particle: The position, then the data entries in ascending order. */
+  /**
+   * Returns one candidate particle: The position, then the data entries in ascending order.
+   */
   std::vector<double> getCandidateAt(const double first, const double second, const double firstData) {
     std::vector<double> values(ValuesPerParticle, 0.5);
     values[0] = first;
@@ -109,11 +113,14 @@ exahype2::particles::tests::ParticleSetTest::run() {
   testMethod(testRelocateMovesAParticleToTheCellThatHoldsIt);
   testMethod(testInsertAndRelocateCountTheParticlesOfAllRanks);
   testMethod(testUploadAndDownloadCarryTheValues);
+  testMethod(testAHostWriteReachesTheDeviceCopy);
   testMethod(testRelocateKeepsTheDeviceValuesWhileNoParticleLeaves);
   testMethod(testReleaseFreesEveryArray);
 }
 
-/** Three candidates lie in the domain and two outside it, so the ranks together keep three. */
+/**
+ * Three candidates lie in the domain and two outside it, so the ranks together keep three.
+ */
 void
 exahype2::particles::tests::ParticleSetTest::testInsertKeepsTheParticlesOfTheRank() {
   const auto&         partition = buildGrid();
@@ -170,7 +177,9 @@ exahype2::particles::tests::ParticleSetTest::testAPositionOnAFaceBelongsToTheLow
   validateEquals(Set::getSlotAt(partition, outside), -1);
 }
 
-/** A particle moved into another cell changes its slot or its rank, and the ranks together keep one particle. */
+/**
+ * A particle moved into another cell changes its slot or its rank, and the ranks together keep one particle.
+ */
 void
 exahype2::particles::tests::ParticleSetTest::testRelocateMovesAParticleToTheCellThatHoldsIt() {
   const auto& partition = buildGrid();
@@ -193,7 +202,9 @@ exahype2::particles::tests::ParticleSetTest::testRelocateMovesAParticleToTheCell
   }
 }
 
-/** Every rank holds the particle count of all ranks after insert() and relocate(), also after a particle moves. */
+/**
+ * Every rank holds the particle count of all ranks after insert() and relocate(), also after a particle moves.
+ */
 void
 exahype2::particles::tests::ParticleSetTest::testInsertAndRelocateCountTheParticlesOfAllRanks() {
   const auto&         partition = buildGrid();
@@ -234,6 +245,21 @@ exahype2::particles::tests::ParticleSetTest::testUploadAndDownloadCarryTheValues
     validateNumericalEquals(particles.getData(index)[1], 7.0);
     validateNumericalEquals(particles.getPosition(index)(0), 0.25);
   }
+}
+
+/**
+ * A value written through the host particle reaches the device copy with the next upload().
+ */
+void
+exahype2::particles::tests::ParticleSetTest::testAHostWriteReachesTheDeviceCopy() {
+  const auto& partition = buildGrid();
+  Set         particles;
+  particles.insert(partition, getCandidateAt(0.5, 0.5, 3.0));
+  particles.upload();
+  for (int index = 0; index < particles.getSize(); index++) {
+    particles.getParticle(index).setData(0, 5.0);
+  }
+  validateEquals(getNumberOfMismatchesOfTheDeviceCopy(particles, 5.0, 7.0, 0.5), 0);
 }
 
 /**

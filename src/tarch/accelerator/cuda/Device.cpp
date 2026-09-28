@@ -43,7 +43,9 @@ tarch::accelerator::Device::init() {
   return isInitialised();
 }
 
-/** Synchronises and resets the device of this rank, the only device the rank holds a context on. */
+/**
+ * Synchronises and resets the device of this rank, the only device the rank holds a context on.
+ */
 void
 tarch::accelerator::Device::shutdown() {
   assertion(
@@ -67,24 +69,6 @@ tarch::accelerator::Device::isInitialised() const {
 int
 tarch::accelerator::Device::getNumberOfDevices() const {
   return numberOfDevices;
-}
-
-cudaStream_t
-tarch::accelerator::deviceStreamCreate() {
-  cudaStream_t stream = nullptr;
-  CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
-  return stream;
-}
-
-void
-tarch::accelerator::deviceStreamDestroy(cudaStream_t* stream) {
-  CHECK_CUDA_ERROR(cudaStreamDestroy(*stream));
-  *stream = nullptr;
-}
-
-void
-tarch::accelerator::deviceStreamSync(cudaStream_t stream) {
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
 }
 
 void

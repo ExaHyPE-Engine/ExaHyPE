@@ -35,6 +35,7 @@ namespace {{ NAMESPACE | join("::") }} {
 
   double        getMinTimeStamp();
   double        getMaxTimeStamp();
+  std::uint64_t getNumberOfSolverCells();
   std::uint64_t getNumberOfCellDoFs();
 
   ::exahype2::runner::SolverStatistics     getSolverStatistics();

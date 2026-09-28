@@ -114,7 +114,9 @@ struct applications::exahype2::exaseis::FaceNodeSide final {
   Value pmlDamping[3]{};
 };
 
-/** Holds the velocity and the traction that the interface imposes on one side, in the local basis. */
+/**
+ * Holds the velocity and the traction that the interface imposes on one side, in the local basis.
+ */
 template <typename Value>
 struct applications::exahype2::exaseis::InterfaceValues final {
   Value velocity[3]{};

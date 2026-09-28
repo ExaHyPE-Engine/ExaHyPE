@@ -8,7 +8,9 @@ namespace {
     0.5 + 0.5 / std::sqrt(3.0)
   };
 
-  /** Returns the Lagrange basis function of node at x. */
+  /**
+   * Returns the Lagrange basis function of node at x.
+   */
   double getBasisValue(const double x, const int node) {
     const int other = 1 - node;
     return (x - QuadratureNodes[other]) / (QuadratureNodes[node] - QuadratureNodes[other]);

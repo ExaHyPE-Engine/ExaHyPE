@@ -49,7 +49,9 @@ namespace {
       + partition.getLevelJumps(peano4::Dependence::Remote).size;
   }
 
-  /** Marks every face of a remote span. */
+  /**
+   * Marks every face of a remote span.
+   */
   std::vector<char> getRemoteFaceMarks(const peano4::Partition& partition) {
     std::vector<char> remote(static_cast<std::size_t>(partition.getNumberOfFaces()), 0);
     for (const auto kind : FaceKinds) {
@@ -60,7 +62,9 @@ namespace {
     return remote;
   }
 
-  /** Counts how often a face appears among the faces of the cells. */
+  /**
+   * Counts how often a face appears among the faces of the cells.
+   */
   std::vector<int> getFaceReferenceCounts(const peano4::Partition& partition) {
     std::vector<int> counts(static_cast<std::size_t>(partition.getNumberOfFaces()), 0);
     for (const int cell : partition.getCells()) {
@@ -72,7 +76,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Writes the centre along the first axis, the width along the last axis and the first face of one cell. */
+  /**
+   * Writes the centre along the first axis, the width along the last axis and the first face of one cell.
+   */
   struct WriteCellGeometry final {
     peano4::Partition partition{};
     const int*        cells{nullptr};
@@ -549,7 +555,9 @@ peano4::tests::PartitionTest::testTheExchangedFacesMatchAcrossRanks() {
   }
 }
 
-/** A kernel reading the device twin derives the same geometry and faces as the host partition. */
+/**
+ * A kernel reading the device twin derives the same geometry and faces as the host partition.
+ */
 void
 peano4::tests::PartitionTest::testTheDeviceTwinReadsTheSameGeometry() {
   peano4::tests::buildRegularGrid(Depth);
@@ -593,7 +601,9 @@ peano4::tests::PartitionTest::testTheDeviceTwinReadsTheSameGeometry() {
   );
 }
 
-/** A built partition holds its cell and face arrays on the host and, with a GPU backend, once more on the device. */
+/**
+ * A built partition holds its cell and face arrays on the host and, with a GPU backend, once more on the device.
+ */
 void
 peano4::tests::PartitionTest::testTheBytesCountEveryArray() {
   peano4::tests::buildRegularGrid(1);

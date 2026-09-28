@@ -34,7 +34,9 @@ namespace {
 
   constexpr double Tolerance = 1.0e-12;
 
-  /** The arguments of every visit of the subcell loop in the order of the visits. */
+  /**
+   * The arguments of every visit of the subcell loop in the order of the visits.
+   */
   struct Visits final {
     int                                   numberOfVisits{0};
     const double*                         values[Layout::SubcellsPerCell]{};
@@ -42,7 +44,9 @@ namespace {
     tarch::la::Vector<DIMENSIONS, double> sizes[Layout::SubcellsPerCell]{};
   };
 
-  /** Returns a subgrid whose every subcell holds unknown and auxiliary. */
+  /**
+   * Returns a subgrid whose every subcell holds unknown and auxiliary.
+   */
   std::vector<double> getConstantSubgrid(const double unknown, const double auxiliary) {
     std::vector<double> subgrid(Layout::SubcellValuesPerCell);
     for (int subcell = 0; subcell < Layout::SubcellsPerCell; subcell++) {
@@ -52,7 +56,9 @@ namespace {
     return subgrid;
   }
 
-  /** Returns the nodes of one cell, every node holding unknown and auxiliary. */
+  /**
+   * Returns the nodes of one cell, every node holding unknown and auxiliary.
+   */
   std::vector<double> getConstantNodes(const double unknown, const double auxiliary) {
     std::vector<double> nodes(Layout::ValuesPerCell);
     for (int node = 0; node < Layout::NodesPerCell; node++) {
@@ -62,7 +68,9 @@ namespace {
     return nodes;
   }
 
-  /** Returns the halo halves of every face of one cell, every value holding unknown and auxiliary. */
+  /**
+   * Returns the halo halves of every face of one cell, every value holding unknown and auxiliary.
+   */
   std::vector<double> getConstantHalo(const double unknown, const double auxiliary) {
     std::vector<double> halo(HaloValuesPerCell);
     for (std::size_t entry = 0; entry < halo.size(); entry += Layout::NumberOfData) {
@@ -72,7 +80,9 @@ namespace {
     return halo;
   }
 
-  /** Returns the number of entries of values within the tolerance of value. */
+  /**
+   * Returns the number of entries of values within the tolerance of value.
+   */
   int countValues(const double* const values, const int count, const double value) {
     int result = 0;
     for (int entry = 0; entry < count; entry++) {
@@ -82,7 +92,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Recomputes the subgrid of one cell of a device range and adds its wave speeds to the accumulator. */
+  /**
+   * Recomputes the subgrid of one cell of a device range and adds its wave speeds to the accumulator.
+   */
   struct RecomputeSubgridOfCell final {
     double*       nodes{nullptr};
     double*       subcells{nullptr};
@@ -296,7 +308,9 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testTheSubcellWaveSpeedsScaleW
   validateNumericalEqualsWithEps(statistics.maxScaledEigenvalue, scaled, Tolerance);
 }
 
-/** The subgrid solver satisfies the concept of a term only where the solver offers the matching term. */
+/**
+ * The subgrid solver satisfies the concept of a term only where the solver offers the matching term.
+ */
 void
 exahype2::dg::limiting::tests::SubcellSchemeTest::testTheTermsForwardOnlyWhatTheSolverOffers() {
   using Reconstruction = exahype2::dg::limiting::tests::StubSolver::Reconstruction;

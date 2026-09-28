@@ -10,7 +10,9 @@
 namespace {
   using TimeoutPoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double>>;
 
-  /** Warns about and aborts a wait on a request that the pending-request table does not hold. */
+  /**
+   * Warns about and aborts a wait on a request that the pending-request table does not hold.
+   */
   void reportUntrackedWait(
     const char*                 operation,
     const std::source_location& location,

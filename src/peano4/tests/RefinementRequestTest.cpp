@@ -15,7 +15,7 @@ namespace {
     const int                                          level,
     const int                                          firstAxisPosition
   ) {
-    peano4::RefinementRequest request;
+    peano4::RefinementRequest request{};
     request.setRefinementControl(refinementControl);
     request.level = level;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -62,7 +62,9 @@ peano4::tests::RefinementRequestTest::testOperatorEquals() {
   }
 }
 
-/** A refine sorts before an erase, a coarser level before a finer one and the leading axis decides within a level. */
+/**
+ * A refine sorts before an erase, a coarser level before a finer one and the leading axis decides within a level.
+ */
 void
 peano4::tests::RefinementRequestTest::testOperatorLess() {
   const auto refineRequest = getRequest(peano4::RefinementRequest::RefinementControl::Refine, 9, 100);
@@ -146,7 +148,9 @@ peano4::tests::RefinementRequestTest::testToString() {
   validateTrue(eraseRequest.toString().find("Erase") != std::string::npos);
 }
 
-/** A request travels between the ranks as raw bytes and arrives unchanged. */
+/**
+ * A request travels between the ranks as raw bytes and arrives unchanged.
+ */
 void
 peano4::tests::RefinementRequestTest::testMPI() {
   constexpr int Tag = 4242;

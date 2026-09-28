@@ -18,10 +18,6 @@ namespace tarch::la {
 
 template <int Rows, int Cols, typename Scalar>
 class tarch::la::Matrix {
-private:
-  Scalar _values[Rows * Cols];
-  friend Matrix<Rows, Cols, Scalar> buildMatrix<Rows, Cols, Scalar>(const Scalar* values);
-
 public:
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix();
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix(const Scalar& value);
@@ -43,6 +39,9 @@ public:
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar* getData();
 
   INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* getData() const;
+
+private:
+  Scalar _values[Rows * Cols];
 };
 TARGET_DECLARE_END
 

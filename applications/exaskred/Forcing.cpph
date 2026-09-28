@@ -4,7 +4,9 @@
 #include "tarch/Assertions.h"
 
 TARGET_DECLARE
-/** Returns the Coriolis parameter of a sphere that rotates with angularVelocity at latitudeInDegrees. */
+/**
+ * Returns the Coriolis parameter of a sphere that rotates with angularVelocity at latitudeInDegrees.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::forcing::getCoriolisParameterOnSphere(
   const double latitudeInDegrees,

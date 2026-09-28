@@ -4,7 +4,9 @@
 #include "tarch/Assertions.h"
 
 TARGET_DECLARE
-/** Returns the state with v + f dt a as velocity and x + f dt v as position, f the step fraction. */
+/**
+ * Returns the state with v + f dt a as velocity and x + f dt v as position, f the step fraction.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::State
 exahype2::particles::advancePartialStep(
   const exahype2::particles::State& current,
@@ -41,7 +43,9 @@ exahype2::particles::advancePartialStepWithBase(
   return result;
 }
 
-/** Returns the state with v + f dt a as velocity and x + f dt times that new velocity as position. */
+/**
+ * Returns the state with v + f dt a as velocity and x + f dt times that new velocity as position.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::State
 exahype2::particles::advanceMidpointStep(
   const exahype2::particles::State& current,
@@ -159,7 +163,9 @@ exahype2::particles::advance(
   return finalState.position;
 }
 
-/** Returns whether bit axis of periodicAxes is set. */
+/**
+ * Returns whether bit axis of periodicAxes is set.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::particles::isPeriodic(const int periodicAxes, const int axis) {
   assertion(axis >= 0 and axis < DIMENSIONS, axis);
@@ -198,7 +204,9 @@ exahype2::particles::reflectAtWalls(
   exahype2::particles::setVelocity(particle, velocity);
 }
 
-/** Shifts position by one domain width along every periodic axis on which it left the domain. */
+/**
+ * Shifts position by one domain width along every periodic axis on which it left the domain.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::particles::wrapIntoDomain(
   tarch::la::Vector<DIMENSIONS, double>&       position,

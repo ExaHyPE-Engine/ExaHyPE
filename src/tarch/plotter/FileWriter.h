@@ -11,7 +11,9 @@ namespace tarch::plotter {
 
 class tarch::plotter::FileWriter {
 public:
-  /** A plot point's coordinates quantised to the deduplication tolerance. */
+  /**
+   * A plot point's coordinates quantised to the deduplication tolerance.
+   */
   using VertexKey = std::tuple<std::int64_t, std::int64_t, std::int64_t>;
 
   struct DataField {
@@ -147,7 +149,6 @@ public:
     int plotHexahedron(const int* const vertexIndices);
     int plotQuadrangle(const int* const vertexIndices);
     int plotLine(const int* const vertexIndices);
-    int plotPoint(const int vertexIndex);
     int plotTriangle(const int* const vertexIndices);
 
   private:
@@ -289,7 +290,9 @@ protected:
   std::deque<SubdomainBuffers> _subdomains{};
 
 private:
-  /** Order keys of the pieces, parallel to the buffer deque. */
+  /**
+   * Order keys of the pieces, parallel to the buffer deque.
+   */
   std::vector<int>        _pieceOrderKeys{};
   std::unordered_set<int> _claimedPieceOrderKeys{};
 

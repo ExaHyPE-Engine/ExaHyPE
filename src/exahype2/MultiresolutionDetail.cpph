@@ -6,7 +6,9 @@
 #include "tarch/Sort.h"
 #include "tarch/la/Vector.h"
 
-/** Returns the centres of the NumberOfVolumesPerAxis equidistant volumes of the unit interval. */
+/**
+ * Returns the centres of the NumberOfVolumesPerAxis equidistant volumes of the unit interval.
+ */
 template <std::size_t NumberOfVolumesPerAxis>
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr std::array<double, NumberOfVolumesPerAxis>
 exahype2::getVolumeCentresInUnitInterval() {
@@ -20,10 +22,10 @@ exahype2::getVolumeCentresInUnitInterval() {
 
 /**
  * Returns the largest relative residual max_v |s(v) - s_hat(v)| / (|s(v)| + floor) of the
- * least-squares affine fit s_hat of the indicator s over the AoS patch Q, or infinity if an
- * indicator value is not finite. nodesInUnitInterval holds the node positions in [0,1], symmetric
- * about one half. A reflected or axis-swapped patch yields the bitwise-identical detail if the
- * indicator is invariant under that transformation.
+ * least-squares affine fit s_hat of the indicator s over the AoS patch Q, infinity if an
+ * indicator value is not finite, and zero for one node per axis. nodesInUnitInterval holds the
+ * node positions in [0,1], symmetric about one half. A reflected or axis-swapped patch yields the
+ * bitwise-identical detail if the indicator is invariant under that transformation.
  */
 template <std::size_t NumberOfNodesPerAxis, typename Value, typename Indicator>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -38,6 +40,10 @@ exahype2::computeMultiresolutionDetail(
   assertion(Q != nullptr);
   assertion(numberOfUnknownsPlusAuxiliaryVariables > 0, numberOfUnknownsPlusAuxiliaryVariables);
   assertion(floor > 0.0, floor);
+
+  if constexpr (NumberOfNodesPerAxis < 2) {
+    return 0.0;
+  }
 
   constexpr int NumberOfNodes   = static_cast<int>(NumberOfNodesPerAxis);
   constexpr int NumberOfVolumes = peano4::power(NumberOfNodes, DIMENSIONS);

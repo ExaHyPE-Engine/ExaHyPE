@@ -12,7 +12,9 @@
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/la/VectorOperations.h"
 
-/** Votes on every cell of the partition from the admissible sizes alone and merges the votes. */
+/**
+ * Votes on every cell of the partition from the admissible sizes alone and merges the votes.
+ */
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD void
 exahype2::RefinementVotes::voteOnGridConstruction(
@@ -33,7 +35,9 @@ exahype2::RefinementVotes::voteOnGridConstruction(
   merge(partition, partition.onDevice().getCells(), partition.getCells(), requests);
 }
 
-/** Votes on every cell of the partition from its patch in solution and merges the votes. */
+/**
+ * Votes on every cell of the partition from its patch in solution and merges the votes.
+ */
 template <typename Derived, typename SolutionView>
 INLINE_METHOD void
 exahype2::RefinementVotes::voteOnEveryCell(
@@ -59,7 +63,9 @@ exahype2::RefinementVotes::voteOnEveryCell(
   merge(partition, partition.onDevice().getCells(), partition.getCells(), requests);
 }
 
-/** Votes on the listed cells from their patches in solution and merges those votes. */
+/**
+ * Votes on the listed cells from their patches in solution and merges those votes.
+ */
 template <typename Derived, typename SolutionView>
 INLINE_METHOD void
 exahype2::RefinementVotes::voteOnCells(

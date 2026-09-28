@@ -20,16 +20,11 @@ namespace tarch::accelerator {
  *
  * @author Tobias Weinzierl
  */
-class tarch::accelerator::Device {
-private:
-  Device() = default;
-
+class tarch::accelerator::Device final {
 public:
   TARGET_DECLARE
   static constexpr int DefaultDevice = 0;
   TARGET_DECLARE_END
-
-  ~Device() = default;
 
   static Device& getInstance();
 
@@ -40,4 +35,12 @@ public:
   bool isInitialised() const;
 
   int getNumberOfDevices() const;
+
+private:
+  Device()                               = default;
+  Device(const Device& other)            = delete;
+  Device(Device&& other)                 = delete;
+  Device& operator=(const Device& other) = delete;
+  Device& operator=(Device&& other)      = delete;
+  ~Device()                              = default;
 };

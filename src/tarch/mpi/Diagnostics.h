@@ -78,7 +78,9 @@ private:
     TimeoutPoint                    nextWarningAt{};
   };
 
-  /** Power of two, so the probe sequence wraps by masking. */
+  /**
+   * Power of two, so the probe sequence wraps by masking.
+   */
   static constexpr std::size_t TableSize = 1024;
 
   static Diagnostics _singleton;
@@ -95,7 +97,9 @@ private:
 
   std::array<Slot, TableSize> _slots{};
 
-  /** Lets a completion skip the table walk while nothing is tracked. */
+  /**
+   * Lets a completion skip the table walk while nothing is tracked.
+   */
   std::atomic<int> _pendingCount{0};
 
   /**

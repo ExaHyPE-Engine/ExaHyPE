@@ -27,7 +27,9 @@ namespace peano4::communication {
 } // namespace peano4::communication
 
 TARGET_DECLARE
-/** Fills the chunk of one child from the chunk of its parent. */
+/**
+ * Fills the chunk of one child from the chunk of its parent.
+ */
 template <typename T, typename Transfer>
 struct peano4::communication::ProlongChunks final {
   const peano4::Prolongation*                             prolongations{nullptr};
@@ -37,7 +39,9 @@ struct peano4::communication::ProlongChunks final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Fills the chunk of one parent from the chunks of its children. */
+/**
+ * Fills the chunk of one parent from the chunks of its children.
+ */
 template <typename T, typename Transfer>
 struct peano4::communication::RestrictChunks final {
   const peano4::Restriction*                              restrictions{nullptr};
@@ -47,7 +51,9 @@ struct peano4::communication::RestrictChunks final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Writes the chunk of one sent cell into the send buffer. */
+/**
+ * Writes the chunk of one sent cell into the send buffer.
+ */
 template <typename T, typename Transfer>
 struct peano4::communication::GatherChunks final {
   const peano4::TransferredCell* cells{nullptr};
@@ -58,7 +64,9 @@ struct peano4::communication::GatherChunks final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/** Copies one received element into the slot of its cell. */
+/**
+ * Copies one received element into the slot of its cell.
+ */
 template <typename T>
 struct peano4::communication::ScatterChunks final {
   const int*                                              slots{nullptr};

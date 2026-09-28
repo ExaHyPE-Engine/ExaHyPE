@@ -38,47 +38,48 @@ exahype2::SolverRepository<Solvers...>::getMaxTimeStamp() const {
   return result;
 }
 
+/**
+ * Returns the cells of this rank that hold data of the solver. A solver that reports its own
+ * cells holds data on those alone; every other solver holds data on every cell of the partition.
+ */
 template <typename... Solvers>
-INLINE_METHOD double
-exahype2::SolverRepository<Solvers...>::getMinTimeStepSize() const {
-  double result = std::numeric_limits<double>::max();
-  forEachSolver([&result](const auto& solver) {
-    result = std::min(result, solver.getTimeStepping().getTimeStepSizeOfLastStep());
-  });
-  return result;
+template <typename Solver>
+INLINE_METHOD int
+exahype2::SolverRepository<Solvers...>::getNumberOfCellsOf(const Solver& solver, const peano4::Partition& partition) {
+  int numberOfCells = partition.getCells().size;
+  if constexpr (requires { solver.getNumberOfCells(partition); }) {
+    numberOfCells = solver.getNumberOfCells(partition);
+  }
+  assertion(numberOfCells >= 0, numberOfCells);
+  return numberOfCells;
 }
 
+/**
+ * Returns the cells of this rank that hold data of a solver, summed over the solvers, so a time
+ * step updates this many cells.
+ */
 template <typename... Solvers>
-INLINE_METHOD double
-exahype2::SolverRepository<Solvers...>::getMaxTimeStepSize() const {
-  double result = 0.0;
-  forEachSolver([&result](const auto& solver) {
-    result = std::max(result, solver.getTimeStepping().getTimeStepSizeOfLastStep());
+INLINE_METHOD std::uint64_t
+exahype2::SolverRepository<Solvers...>::getNumberOfSolverCells(const peano4::Partition& partition) const {
+  std::uint64_t result = 0;
+  forEachSolver([&result, &partition](const auto& solver) {
+    result += static_cast<std::uint64_t>(getNumberOfCellsOf(solver, partition));
   });
   return result;
 }
 
 /**
- * Returns the degrees of freedom on the cells of this rank, summed over the solvers. A solver
- * that reports its own cells holds data on those alone; every other solver holds data on every
- * cell of the partition.
+ * Returns the degrees of freedom on the cells of this rank, summed over the solvers.
  */
 template <typename... Solvers>
 INLINE_METHOD std::uint64_t
 exahype2::SolverRepository<Solvers...>::getNumberOfCellDoFs(const peano4::Partition& partition) const {
   std::uint64_t result = 0;
   forEachSolver([&result, &partition](const auto& solver) {
-    const int numberOfDoFs  = solver.getNumberOfDoFs();
-    const int numberOfCells = [&] {
-      if constexpr (requires { solver.getNumberOfCells(partition); }) {
-        return solver.getNumberOfCells(partition);
-      } else {
-        return partition.getCells().size;
-      }
-    }();
+    const int numberOfDoFs = solver.getNumberOfDoFs();
     assertion(numberOfDoFs >= 0, numberOfDoFs);
-    assertion(numberOfCells >= 0, numberOfCells);
-    result += static_cast<std::uint64_t>(numberOfCells) * static_cast<std::uint64_t>(numberOfDoFs);
+    result +=
+      static_cast<std::uint64_t>(getNumberOfCellsOf(solver, partition)) * static_cast<std::uint64_t>(numberOfDoFs);
   });
   return result;
 }
@@ -89,7 +90,9 @@ exahype2::SolverRepository<Solvers...>::startSimulation() {
   forEachSolver([](auto& solver) { solver.startSimulation(); });
 }
 
-/** Runs the finish hook of every solver, then frees the memory its allocate() took. */
+/**
+ * Runs the finish hook of every solver, then frees the memory its allocate() took.
+ */
 template <typename... Solvers>
 INLINE_METHOD void
 exahype2::SolverRepository<Solvers...>::finishSimulation() {
@@ -165,7 +168,9 @@ exahype2::SolverRepository<Solvers...>::getRefinementRequests() const {
   return _requestsOfTheRun;
 }
 
-/** Derives the requests of the merged votes; collective over all ranks. */
+/**
+ * Derives the requests of the merged votes; collective over all ranks.
+ */
 template <typename... Solvers>
 INLINE_METHOD void
 exahype2::SolverRepository<Solvers...>::commitRefinementRequests(const peano4::Partition& partition) {

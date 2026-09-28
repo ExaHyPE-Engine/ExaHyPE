@@ -126,7 +126,9 @@ tarch::tasking::tests::TaskGraphTest::run() {
   testMethod([this]() { testTasksMaySpawnDependentTasks(); });
 }
 
-/** Producer and consumer keep their order in every sweep that reuses the same dependency addresses. */
+/**
+ * Producer and consumer keep their order in every sweep that reuses the same dependency addresses.
+ */
 void
 tarch::tasking::tests::TaskGraphTest::testRepeatedSweepsReuseTheSameTokens() {
   constexpr int NumberOfSweeps        = 400;
@@ -172,7 +174,9 @@ tarch::tasking::tests::TaskGraphTest::testRepeatedSweepsReuseTheSameTokens() {
   }
 }
 
-/** A task waits for the tasks it spawns before it returns. */
+/**
+ * A task waits for the tasks it spawns before it returns.
+ */
 void
 tarch::tasking::tests::TaskGraphTest::testTasksMaySpawnDependentTasks() {
   constexpr int NumberOfOuterTasks = 8;

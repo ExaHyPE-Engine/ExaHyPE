@@ -119,7 +119,9 @@ namespace {
 
   using LinearSolver = LinearSolverFor<exahype2::TimeStepping::Rule::Fixed>;
 
-  /** Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank. */
+  /**
+   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
+   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -206,7 +208,9 @@ namespace {
     }
   };
 
-  /** Raises the accumulator for every value of one cell that differs between the two solutions. */
+  /**
+   * Raises the accumulator for every value of one cell that differs between the two solutions.
+   */
   struct CountDifferencesBetweenSolutions final {
     peano4::Partition                partition{};
     LinearSolver::Patches::ConstView current{};
@@ -242,7 +246,9 @@ namespace {
     return mismatches;
   }
 
-  /** Counts the values of every cell that differ between the current and the previous solution. */
+  /**
+   * Counts the values of every cell that differ between the current and the previous solution.
+   */
   int getNumberOfDifferencesBetweenSolutions(const LinearSolver& solver, const peano4::Partition& partition) {
     int differences = 0;
     tarch::accelerator::parallelReduce(
@@ -270,7 +276,9 @@ exahype2::fv::tests::SolverTest::run() {
   testMethod(testReleaseFreesEveryPool);
 }
 
-/** Checks the first time step on a refined grid against its smaller finite volumes. */
+/**
+ * Checks the first time step on a refined grid against its smaller finite volumes.
+ */
 void
 exahype2::fv::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
   const auto&                                             partition = buildGrid();

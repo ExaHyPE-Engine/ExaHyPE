@@ -26,7 +26,9 @@
 namespace {
   TARGET_DECLARE
   constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
-  /** The smallest depth whose regular grid holds at least three cells per axis. */
+  /**
+   * The smallest depth whose regular grid holds at least three cells per axis.
+   */
   constexpr int    Depth                = SubdivisionFactor >= 3 ? 1 : 2;
   constexpr int    CellsPerAxis         = peano4::power(SubdivisionFactor, Depth);
   constexpr int    RegularCells         = peano4::power(CellsPerAxis, DIMENSIONS);
@@ -44,19 +46,25 @@ namespace {
   const double QuadratureNodes[NodesPerAxis]   = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
   const double QuadratureWeights[NodesPerAxis] = {0.5, 0.5};
 
-  /** Returns the Lagrange basis function of node at x. */
+  /**
+   * Returns the Lagrange basis function of node at x.
+   */
   double getBasisValue(const double x, const int node) {
     const int other = 1 - node;
     return (x - QuadratureNodes[other]) / (QuadratureNodes[node] - QuadratureNodes[other]);
   }
 
-  /** Returns the derivative of the Lagrange basis function of node. */
+  /**
+   * Returns the derivative of the Lagrange basis function of node.
+   */
   double getBasisDerivative(const int node) {
     const int other = 1 - node;
     return 1.0 / (QuadratureNodes[node] - QuadratureNodes[other]);
   }
 
-  /** Returns a new table in device memory, the memory the kernels read, with the values converted to Precision. */
+  /**
+   * Returns a new table in device memory, the memory the kernels read, with the values converted to Precision.
+   */
   template <typename Precision>
   Precision* getTableOf(const std::vector<double>& values) {
     std::vector<Precision> converted(values.size());
@@ -88,7 +96,9 @@ namespace {
     return result;
   }
 
-  /** The quadrature tables of the Gauss-Legendre basis of order one, in the layout of the generated tables. */
+  /**
+   * The quadrature tables of the Gauss-Legendre basis of order one, in the layout of the generated tables.
+   */
   template <typename Precision>
   class Quadrature final {
   public:
@@ -128,7 +138,9 @@ namespace {
     inline static Precision* InverseQuadratureWeightsInCell = nullptr;
   };
 
-  /** The reference operators of the Gauss-Legendre basis of order one, in the layout of the generated tables. */
+  /**
+   * The reference operators of the Gauss-Legendre basis of order one, in the layout of the generated tables.
+   */
   template <typename Precision>
   class DGMatrices final {
   public:
@@ -242,7 +254,9 @@ namespace {
   using SolverOf =
     exahype2::dg::ader::Solver<Solver, double, double, exahype2::dg::limiting::SubcellLimiter<Solver, double, double>>;
 
-  /** The PDE terms of every test solver: A constant state, no flux, no wave speed, a copying boundary. */
+  /**
+   * The PDE terms of every test solver: A constant state, no flux, no wave speed, a copying boundary.
+   */
   struct CommonTerms {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                                 Q,
@@ -296,7 +310,9 @@ namespace {
     }
   };
 
-  /** A solver that accepts every candidate. */
+  /**
+   * A solver that accepts every candidate.
+   */
   struct AcceptingSolver final : SolverOf<AcceptingSolver>, CommonTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -332,7 +348,9 @@ namespace {
     }
   };
 
-  /** A solver that rejects every candidate. */
+  /**
+   * A solver that rejects every candidate.
+   */
   struct RejectingSolver final : SolverOf<RejectingSolver>, CommonTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -368,7 +386,9 @@ namespace {
     }
   };
 
-  /** A solver that rejects the candidate of the cell at the origin corner of the domain. */
+  /**
+   * A solver that rejects the candidate of the cell at the origin corner of the domain.
+   */
   struct CornerSolver final : SolverOf<CornerSolver>, CommonTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -409,7 +429,9 @@ namespace {
     }
   };
 
-  /** Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank. */
+  /**
+   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
+   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -425,7 +447,9 @@ namespace {
   }
 
   TARGET_DECLARE
-  /** Raises the accumulator for every node of one cell that differs from the constant state. */
+  /**
+   * Raises the accumulator for every node of one cell that differs from the constant state.
+   */
   template <typename Pool>
   struct CountMismatchesAgainstTheConstantState final {
     static constexpr int NodesInCell = exahype2::dg::getNodesPerCell(NodesPerAxis);
@@ -445,7 +469,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /** Counts the nodes of every cell whose value differs from the constant by more than tolerance. */
+  /**
+   * Counts the nodes of every cell whose value differs from the constant by more than tolerance.
+   */
   template <typename Solver>
   int getNumberOfMismatches(const Solver& solver, const peano4::Partition& partition, const double tolerance) {
     int result = 0;
@@ -489,7 +515,71 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::run() {
   testMethod(testAnAcceptedFreeStreamStaysOnTheGalerkinSchemeBitwise);
   testMethod(testARejectedFreeStreamRecomputesEveryCellAndKeepsTheConstant);
   testMethod(testOneTroubledCellSpreadsTwoRingsOfNeighbours);
+  testMethod(testTheSubgridBoundaryConditionsSkipTheCellsOffTheScheme);
   testMethod(testReleaseFreesEveryPool);
+}
+
+/**
+ * The boundary conditions of the subgrids fill the outer half of a boundary face beside a cell on
+ * the subcell scheme and leave the face of a Regular cell as it was.
+ */
+void
+exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditionsSkipTheCellsOffTheScheme() {
+  using Scheme                      = exahype2::dg::limiting::SubcellScheme<CornerSolver, double>;
+  constexpr int    ValuesPerHalf    = Scheme::HaloValuesPerFace / 2;
+  constexpr double LowerHalfValue   = 1.0;
+  constexpr double UpperHalfValue   = 2.0;
+  constexpr int    StatusEntryIndex = static_cast<int>(exahype2::dg::limiting::StatusEntry::Status);
+  const auto&      partition        = buildGrid();
+
+  tarch::accelerator::ChunkedMemoryPool<double> halo(Scheme::HaloValuesPerFace, tarch::MemoryLocation::Device);
+  halo.reserve(partition.getNumberOfFaces());
+  std::vector<double> haloOnHost;
+  halo.copyToHost(haloOnHost);
+  const auto paddedFace = static_cast<std::size_t>(halo.getPaddedChunkSize());
+  for (int face = 0; face < partition.getNumberOfFaces(); face++) {
+    for (int value = 0; value < Scheme::HaloValuesPerFace; value++) {
+      haloOnHost[static_cast<std::size_t>(face) * paddedFace + static_cast<std::size_t>(value)] =
+        value < ValuesPerHalf ? LowerHalfValue : UpperHalfValue;
+    }
+  }
+  halo.copyFromHost(haloOnHost);
+
+  tarch::accelerator::ChunkedMemoryPool<int> statuses(exahype2::dg::limiting::NumberOfStatusEntries);
+  statuses.reserve(partition.getNumberOfSlots());
+  std::vector<int> statusesOnHost;
+  statuses.copyToHost(statusesOnHost);
+  const auto paddedStatus = static_cast<std::size_t>(statuses.getPaddedChunkSize());
+  const auto cells        = partition.getCells();
+  for (int entry = 0; entry < cells.size; entry++) {
+    statusesOnHost[static_cast<std::size_t>(cells[entry]) * paddedStatus + StatusEntryIndex] = static_cast<int>(
+      entry % 2 == 0 ? exahype2::dg::limiting::LimiterStatus::Limited : exahype2::dg::limiting::LimiterStatus::Regular
+    );
+  }
+  statuses.copyFromHost(statusesOnHost);
+
+  const auto boundaryFaces = partition.onDevice().getFaces(peano4::Dependence::Local, peano4::FaceKind::Boundary);
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(boundaryFaces.size),
+    exahype2::dg::limiting::ApplySubgridBoundaryConditions<CornerSolver, double, double>{
+      {partition.onDevice(), boundaryFaces, halo.getView(), 0.0},
+      std::as_const(statuses).getView()
+    }
+  );
+  halo.copyToHost(haloOnHost);
+
+  for (const int face : partition.getFaces(peano4::Dependence::Local, peano4::FaceKind::Boundary)) {
+    const int  lowerCell = partition.getFaceCell(face, 0);
+    const int  slot      = lowerCell >= 0 ? lowerCell : partition.getFaceCell(face, 1);
+    const bool onScheme  = statusesOnHost[static_cast<std::size_t>(slot) * paddedStatus + StatusEntryIndex]
+      != static_cast<int>(exahype2::dg::limiting::LimiterStatus::Regular);
+    const int  outerHalf = lowerCell >= 0 ? 1 : 0;
+    const auto firstOuter =
+      static_cast<std::size_t>(face) * paddedFace + static_cast<std::size_t>(outerHalf * ValuesPerHalf);
+    const double innerValue = lowerCell >= 0 ? LowerHalfValue : UpperHalfValue;
+    const double outerValue = lowerCell >= 0 ? UpperHalfValue : LowerHalfValue;
+    validateEqualsWithParams2(haloOnHost[firstOuter], onScheme ? innerValue : outerValue, face, onScheme);
+  }
 }
 
 void
@@ -506,7 +596,9 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testAnAcceptedFreeStreamStays
   solver.release();
 }
 
-/** The subgrid of a constant keeps the constant, and a rejected cell stays on the subcell scheme in the next step. */
+/**
+ * The subgrid of a constant keeps the constant, and a rejected cell stays on the subcell scheme in the next step.
+ */
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testARejectedFreeStreamRecomputesEveryCellAndKeepsTheConstant() {
   RejectingSolver solver;

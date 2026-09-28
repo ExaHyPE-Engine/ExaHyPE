@@ -8,20 +8,11 @@
 
 namespace tarch::accelerator::hip {
   void checkError(hipError_t code, const char* expr, const char* file, int line);
-  void checkLastError(const char* file, int line);
 } // namespace tarch::accelerator::hip
 
 #define CHECK_HIP_ERROR(ans) \
   do { \
     tarch::accelerator::hip::checkError((ans), #ans, __FILE__, __LINE__); \
   } while (0)
-#if PEANO_DEBUG
-#define CHECK_HIP_LAST_ERROR() \
-  { \
-    tarch::accelerator::hip::checkLastError(__FILE__, __LINE__); \
-  }
-#else
-#define CHECK_HIP_LAST_ERROR()
-#endif
 
 #endif // defined(PEANO_WITH_GPU_BACKEND_HIP)

@@ -15,10 +15,14 @@ namespace {
   constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
   constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
 
-  /** Cells per axis on the base depth. */
+  /**
+   * Cells per axis on the base depth.
+   */
   constexpr int CellsPerAxis = peano4::power(SubdivisionFactor, Depth);
 
-  /** Lattice position of the cell the refinement-plan tests request from, clear of the walls. */
+  /**
+   * Lattice position of the cell the refinement-plan tests request from, clear of the walls.
+   */
   constexpr int RequestedCell = CellsPerAxis / 2;
 } // namespace
 
@@ -48,7 +52,9 @@ peano4::topology::tests::TreeTest::run() {
   testMethod(testBytesGrowWithTheGrid);
 }
 
-/** A built table holds at least its cells and vertices, and a deeper grid holds more. */
+/**
+ * A built table holds at least its cells and vertices, and a deeper grid holds more.
+ */
 void
 peano4::topology::tests::TreeTest::testBytesGrowWithTheGrid() {
   const tarch::la::Vector<DIMENSIONS, double> offset(0.0);
@@ -396,7 +402,9 @@ namespace {
     }
   }
 
-  /** Returns a plan that refines one cell of every level below the base depth in full, three levels deep. */
+  /**
+   * Returns a plan that refines one cell of every level below the base depth in full, three levels deep.
+   */
   peano4::topology::Tree::RefinementPlan getThreeLevelPlan() {
     // Each level's flags cover the children of a cell the coarser level's
     // flags refine.

@@ -171,10 +171,6 @@ class Project:
             1 << axis for axis, periodic in enumerate(self._periodic_bc) if periodic
         )
 
-    @property
-    def solvers(self):
-        return list(self._solvers)
-
     def add_solver(self, solver):
         """Appends a solver; a repeated solver name and a project that has already generated
         its code both start a new solver set."""
@@ -185,7 +181,6 @@ class Project:
             self._solvers = []
             self.output.makefile.clear_user_files()
             self._solver_set_generated = False
-        solver._solver_number = len(self._solvers)
         self._solvers.append(solver)
         return solver
 

@@ -23,7 +23,9 @@ namespace {
     return exahype2::TimeStepping{Rule::Adaptive, 1.0, stability};
   }
 
-  /** Sets the terminal time and moves the solver to time stamp one. */
+  /**
+   * Sets the terminal time and moves the solver to time stamp one.
+   */
   void placeBeforeTheTerminalTime(exahype2::TimeStepping& timeStepping, const double terminalTime) {
     exahype2::Limits limits;
     limits.terminalTime = terminalTime;
@@ -51,7 +53,9 @@ exahype2::tests::TimeSteppingTest::run() {
   testMethod(testAFixedRuleKeepsItsSizeAcrossSteps);
 }
 
-/** The signed zeroes have to agree as well, so the comparison is bitwise. */
+/**
+ * The signed zeroes have to agree as well, so the comparison is bitwise.
+ */
 void
 exahype2::tests::TimeSteppingTest::testTheReductionTakesTheLargerPhysicalWaveSpeedBitwise() {
   validateEquals(getBitsOf(exahype2::MaxEigenvalueReduction::identity()), getBitsOf(0.0));
@@ -68,7 +72,9 @@ exahype2::tests::TimeSteppingTest::testTheReductionTakesTheLargerPhysicalWaveSpe
   }
 }
 
-/** A fault survives in either operand position and in every later reduction of the result. */
+/**
+ * A fault survives in either operand position and in every later reduction of the result.
+ */
 void
 exahype2::tests::TimeSteppingTest::testTheReductionKeepsAFaultyWaveSpeed() {
   for (const auto fault : {NegativeWaveSpeed, InfiniteWaveSpeed}) {
@@ -200,7 +206,9 @@ exahype2::tests::TimeSteppingTest::testStabilityEigenvalueIsThePhysicalOrTheScal
   validateEquals(scaled.hasPositiveStabilityEigenvalue(), true);
 }
 
-/** The proposal is the CFL time step size, or the distance to the terminal time when smaller. */
+/**
+ * The proposal is the CFL time step size, or the distance to the terminal time when smaller.
+ */
 void
 exahype2::tests::TimeSteppingTest::testProposalStopsAtTheTerminalTime() {
   exahype2::TimeStepping nearTheEnd = makeAdaptive(Stability::PhysicalEigenvalue);

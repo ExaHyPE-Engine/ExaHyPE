@@ -118,7 +118,9 @@ applications::exahype2::exagrype::CCZ4Solver::sourceTerm(
   applications::exahype2::exagrype::sourceTerm<Shortcuts>(Q, S);
 }
 
-/** Projects every point of the updated patch Q back onto the CCZ4 constraints. */
+/**
+ * Projects every point of the updated patch Q back onto the CCZ4 constraints.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exagrype::CCZ4Solver::postprocessUpdatedPatch(
   double* const NOALIAS                                         Q,

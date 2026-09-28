@@ -16,12 +16,13 @@ exahype2::particles::TrajectoryDatabase::Entry::Entry(
   x(position) {}
 
 exahype2::particles::TrajectoryDatabase::TrajectoryDatabase(
-  double positionDelta,
-  double timeDelta,
-  bool   deltasAreRelative
+  const double positionDelta,
+  const double timeDelta,
+  const bool   deltasAreRelative
 ) :
-  SnapshotDatabase(timeDelta, deltasAreRelative),
-  _positionDelta(positionDelta) {
+  SnapshotDatabase(timeDelta),
+  _positionDelta(positionDelta),
+  _deltasAreRelative(deltasAreRelative) {
   _precision = 8;
 }
 
@@ -182,7 +183,9 @@ exahype2::particles::TrajectoryDatabase::prepareSnapshot(
   return action;
 }
 
-/** Returns whether addParticleSnapshot() stores the snapshot of the particle number at position x and timestamp. */
+/**
+ * Returns whether addParticleSnapshot() stores the snapshot of the particle number at position x and timestamp.
+ */
 bool
 exahype2::particles::TrajectoryDatabase::isSnapshotDue(
   const std::pair<int, int>&                   number,

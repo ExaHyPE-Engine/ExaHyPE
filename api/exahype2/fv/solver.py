@@ -79,14 +79,6 @@ class Solver(exahype2.solver.Solver):
             raise ValueError("patch_size is a positive integer.")
         self._patch_size = patch_size
 
-    @property
-    def patch_size(self):
-        return self._patch_size
-
-    @property
-    def overlap(self):
-        return self.scheme.halo_width
-
     def statistics_metadata(self):
         return super().statistics_metadata() + [("Patch Size", self._patch_size)]
 
@@ -162,11 +154,6 @@ class Solver(exahype2.solver.Solver):
         ]
 
     def _add_solver_family_entries(self, d):
-        scheme = self.scheme.subcell_scheme()
-        d["RECONSTRUCTION"] = scheme.reconstruction
-        d["TIME_STEPPING"] = scheme.time_stepping
-        d["PATCH_SIZE"] = self._patch_size
-        d["HALO_SIZE"] = scheme.halo_width
         d["MAX_ADMISSIBLE_MESH_WIDTH"] = (
             "parameters.getMaxAdmissibleCellSize(DomainSize, PatchSize)"
         )
