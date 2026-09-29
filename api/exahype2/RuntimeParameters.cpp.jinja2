@@ -8,6 +8,10 @@ TARGET_DECLARE
 {{NAMESPACE | join("::")}}::RuntimeParameters::Storage {{NAMESPACE | join("::")}}::RuntimeParameters::_storage;
 TARGET_DECLARE_END
 
+{%- for parameter in RUNTIME_PARAMETERS %}
+{{ parameter.cpp_type }} {{NAMESPACE | join("::")}}::RuntimeParameters::Storage::{{ parameter.name }} = {{ parameter.default_value }};
+{%- endfor %}
+
 ::runner::ParameterTable {{NAMESPACE | join("::")}}::RuntimeParameters::parameterTable(
   [[maybe_unused]] Storage& storage
 ) {

@@ -20,7 +20,7 @@ namespace {{NAMESPACE | join("::")}} {
 struct {{NAMESPACE | join("::")}}::RuntimeParameters final {
   struct Storage final {
 {%- for parameter in RUNTIME_PARAMETERS %}
-    {{ parameter.cpp_type }} {{ parameter.name }} = {{ parameter.default_value }};
+    static {{ parameter.cpp_type }} {{ parameter.name }};
 {%- endfor %}
   };
 
