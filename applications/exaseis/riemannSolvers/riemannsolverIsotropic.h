@@ -25,7 +25,12 @@ namespace applications::exahype2::exaseis {
     T FL_n, FL_m, FL_l, FR_n, FR_m, FR_l;
     T FL_x, FL_y, FL_z, FR_x, FR_y, FR_z;
 
+#if DIMENSIONS==3
     for (int i = 0; i < basisSize; i++) {
+#else
+    {
+    constexpr int i = 0;
+#endif
       for (int j = 0; j < basisSize; j++) {
         const T* Q_p = QR + idx_QLR(i, j, 0);
         const T* Q_m = QL + idx_QLR(i, j, 0);
