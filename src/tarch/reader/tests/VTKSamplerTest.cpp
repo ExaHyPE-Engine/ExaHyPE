@@ -159,7 +159,7 @@ namespace {
    */
   void writeVTKHDF(const std::string& filename, int numberOfSteps) {
     for (int step = 0; step < numberOfSteps; step++) {
-      tarch::plotter::VTKHDFFileWriter plotter(".", 1);
+      tarch::plotter::VTKHDFFileWriter plotter(".");
 
       plotQuad(plotter, 0, 2.0 * thisRank(), 10.0 * thisRank() + step, 100.0 * thisRank() + step);
 

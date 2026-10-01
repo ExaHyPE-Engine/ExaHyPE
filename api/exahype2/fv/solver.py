@@ -13,6 +13,7 @@ from exahype2.layout import volume_loop
 from .patch_data import create_patch_and_halo
 from .scheme import Godunov
 from .scheme import MusclHancock
+from .scheme import WavePropagation
 
 
 def _pde_terms():
@@ -92,7 +93,7 @@ class Solver(exahype2.solver.Solver):
     ):
         super().__init__(name, unknowns, auxiliary_variables, time_stepping, precision)
         self.scheme = Godunov() if scheme is None else scheme
-        if not isinstance(self.scheme, (Godunov, MusclHancock)):
+        if not isinstance(self.scheme, (Godunov, MusclHancock, WavePropagation)):
             raise TypeError(
                 "scheme is exahype2.fv.Godunov() or exahype2.fv.MusclHancock(...)."
             )
