@@ -6,6 +6,7 @@
 
 #include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Handles.h"
 #include "tarch/mpi/Rank.h"
 
 #include <hdf5.h>
@@ -85,13 +86,13 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
       }
       useParallelIO = false;
     } else {
-      MPI_Comm_split(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
+      tarch::mpi::splitCommunicator(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
       if (not hasData) {
         return true; // The data-holding ranks write the file
       }
       comm       = ioComm;
       int ioRank = 0;
-      MPI_Comm_rank(ioComm, &ioRank);
+      tarch::mpi::getRank(ioComm, &ioRank);
       isMaster = (ioRank == 0);
     }
   }
@@ -117,14 +118,14 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
     MPI_Info   info      = MPI_INFO_NULL;
     const auto hints     = getMPIFileHints();
     if (not hints.empty()) {
-      MPI_Info_create(&info);
+      tarch::mpi::createInfo(&info);
       for (const auto& hint : hints) {
-        MPI_Info_set(info, hint.first.c_str(), hint.second.c_str());
+        tarch::mpi::setInfo(info, hint.first.c_str(), hint.second.c_str());
       }
     }
     H5Pset_fapl_mpio(fileAccessProperties, comm, info);
     if (info != MPI_INFO_NULL) {
-      MPI_Info_free(&info);
+      tarch::mpi::freeInfo(&info);
     }
 #if H5_VERSION_GE(1, 10, 0)
     H5Pset_all_coll_metadata_ops(fileAccessProperties, 1);
@@ -144,7 +145,7 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
   // H5Pset_fapl_mpio duplicated the communicator into the file, and the file keeps that
   // copy for the collective writes and the close.
   if (ioComm != MPI_COMM_NULL) {
-    MPI_Comm_free(&ioComm);
+    tarch::mpi::freeCommunicator(&ioComm);
   }
   if (fileId < 0) {
     if (dataTransferProperties != H5P_DEFAULT) {

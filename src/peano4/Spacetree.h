@@ -110,6 +110,10 @@ private:
     std::vector<int> cellLevel{};
     std::vector<int> cellLattice{};
     std::vector<int> facesOfCell{};
+    /**
+     * The index of every slot's cell along the space-filling curve over all ranks; -1 for a free slot.
+     */
+    std::vector<int> cellCurveIndex{};
 
     std::vector<int>      faces{};
     std::vector<int>      faceRanges{};
@@ -212,6 +216,7 @@ private:
   int registerLevelJump(int refinedTreeCell, int faceNumber, int coarseFace);
   void addExchangedFace(int rank, int face, int side);
   void orderLists(const std::vector<CellRecord>& records);
+  void numberCellsAlongCurve(const std::vector<CellRecord>& records);
   void assemblePartitions();
   [[nodiscard]] tarch::AllocatedBytes getPartitionBytes() const noexcept;
   [[nodiscard]] std::int64_t getLatticeKey(int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const;

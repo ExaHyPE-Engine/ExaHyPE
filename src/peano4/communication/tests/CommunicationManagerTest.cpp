@@ -5,6 +5,7 @@
 #include "peano4/communication/CommunicationManager.h"
 #include "tarch/mpi/AbstractCommunicationManager.h"
 #include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Handles.h"
 #include "tarch/mpi/Rank.h"
 
 #include <mpi.h>
@@ -75,8 +76,8 @@ peano4::communication::tests::CommunicationManagerTest::testTheExchangeCommunica
 
   int rank          = -1;
   int numberOfRanks = -1;
-  MPI_Comm_rank(communicator, &rank);
-  MPI_Comm_size(communicator, &numberOfRanks);
+  tarch::mpi::getRank(communicator, &rank);
+  tarch::mpi::getNumberOfRanks(communicator, &numberOfRanks);
   validateEquals(rank, tarch::mpi::Rank::getInstance().getRank());
   validateEquals(numberOfRanks, tarch::mpi::Rank::getInstance().getNumberOfRanks());
 }

@@ -8,7 +8,7 @@
 #include "tarch/MemoryUsage.h"
 #include "tarch/la/VectorOperations.h"
 #include "tarch/mpi/Collectives.h"
-#include "tarch/mpi/Diagnostics.h"
+#include "tarch/mpi/Handles.h"
 #include "tarch/mpi/Rank.h"
 
 #include <mpi.h>
@@ -84,7 +84,7 @@ namespace {
 
   /**
    * Applies sum, minimum and maximum to the fixed segments of each record. The parameter types
-   * follow MPI_User_function, which MPI_Op_create() takes.
+   * follow MPI_User_function, which tarch::mpi::createOperation() takes.
    */
   void reduceStatisticsRecords(
     void*                          incoming,
@@ -118,21 +118,9 @@ namespace {
    */
   MPI_Op getStatisticsReduction(MPI_Datatype& recordType) {
     if (StatisticsReductionOperation == MPI_OP_NULL) {
-      tarch::mpi::checkReturnValue(
-        MPI_Type_contiguous(NumberOfValues, MPI_UINT64_T, &StatisticsRecordType),
-        "MPI_Type_contiguous",
-        std::source_location::current()
-      );
-      tarch::mpi::checkReturnValue(
-        MPI_Type_commit(&StatisticsRecordType),
-        "MPI_Type_commit",
-        std::source_location::current()
-      );
-      tarch::mpi::checkReturnValue(
-        MPI_Op_create(reduceStatisticsRecords, 1, &StatisticsReductionOperation),
-        "MPI_Op_create",
-        std::source_location::current()
-      );
+      tarch::mpi::createContiguousType(NumberOfValues, MPI_UINT64_T, &StatisticsRecordType);
+      tarch::mpi::commitType(&StatisticsRecordType);
+      tarch::mpi::createOperation(reduceStatisticsRecords, true, &StatisticsReductionOperation);
     }
     recordType = StatisticsRecordType;
     return StatisticsReductionOperation;
@@ -202,18 +190,10 @@ exahype2::runner::getGlobalStatistics() {
 void
 exahype2::runner::shutdownGlobalStatistics() {
   if (StatisticsReductionOperation != MPI_OP_NULL) {
-    tarch::mpi::checkReturnValue(
-      MPI_Op_free(&StatisticsReductionOperation),
-      "MPI_Op_free",
-      std::source_location::current()
-    );
+    tarch::mpi::freeOperation(&StatisticsReductionOperation);
   }
   if (StatisticsRecordType != MPI_DATATYPE_NULL) {
-    tarch::mpi::checkReturnValue(
-      MPI_Type_free(&StatisticsRecordType),
-      "MPI_Type_free",
-      std::source_location::current()
-    );
+    tarch::mpi::freeType(&StatisticsRecordType);
   }
 }
 

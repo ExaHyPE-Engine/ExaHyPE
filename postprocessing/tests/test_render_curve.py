@@ -11,13 +11,20 @@ import numpy as np
 from postprocessing.render_curve import (
     cell_polygons,
     label_colours,
+    patch_centres_along_curve,
     render_curve,
 )
 from postprocessing.solution_io import MeshSnapshot
 
 
-def make_grid_snapshot(cells_per_axis: int, subdomains) -> MeshSnapshot:
-    """Builds a unit-square grid whose cells are written row by row along x."""
+def make_grid_snapshot(
+    cells_per_axis: int, subdomains, curve_indices=None
+) -> MeshSnapshot:
+    """Builds a unit-square grid whose cells are written row by row along x.
+
+    Every cell is its own patch with its position in the file as curve index unless
+    curve_indices names the curve index of every cell.
+    """
     axis = np.linspace(0.0, 1.0, cells_per_axis + 1)
     points = np.asarray([[x, y] for y in axis for x in axis])
     cells = []
@@ -33,14 +40,19 @@ def make_grid_snapshot(cells_per_axis: int, subdomains) -> MeshSnapshot:
                 ]
             )
     subdomains = np.asarray(subdomains, dtype=float)
+    if curve_indices is None:
+        curve_indices = np.arange(len(subdomains))
     return MeshSnapshot(
         name="test",
         time=0.25,
         points=points,
         cells=np.asarray(cells),
         node_data={},
-        cell_data={"Subdomain": subdomains},
-        field_order=[("Subdomain", "cell")],
+        cell_data={
+            "Subdomain": subdomains,
+            "CurveIndex": np.asarray(curve_indices, dtype=float),
+        },
+        field_order=[("Subdomain", "cell"), ("CurveIndex", "cell")],
     )
 
 
@@ -64,10 +76,24 @@ class RenderCurveTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             cell_polygons(snapshot)
 
-    def test_render_curve_follows_snapshot_order_for_different_rank_labels(self):
-        snapshot = make_grid_snapshot(2, [0, 0, 0, 0])
-        snapshot.cells = snapshot.cells[[3, 0, 2, 1]]
-        centres = cell_polygons(snapshot).mean(axis=1)
+    def test_the_patch_centres_follow_the_curve_index_not_the_snapshot_order(self):
+        # The file stores the cells as (0.75, 0.25), (0.25, 0.25), (0.75, 0.75), (0.25, 0.75).
+        snapshot = make_grid_snapshot(2, [0, 0, 0, 0], curve_indices=[1, 0, 2, 3])
+        snapshot.cells = snapshot.cells[[1, 0, 3, 2]]
+        centres = patch_centres_along_curve(snapshot, cell_polygons(snapshot))
+        np.testing.assert_allclose(
+            centres, [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]]
+        )
+
+    def test_the_cells_of_one_patch_join_into_one_centre(self):
+        # The left and the right column form one patch each; the right one comes first on the curve.
+        snapshot = make_grid_snapshot(2, [0, 0, 0, 0], curve_indices=[7, 3, 7, 3])
+        centres = patch_centres_along_curve(snapshot, cell_polygons(snapshot))
+        np.testing.assert_allclose(centres, [[0.75, 0.5], [0.25, 0.5]])
+
+    def test_render_curve_joins_the_patch_centres_for_different_rank_labels(self):
+        snapshot = make_grid_snapshot(2, [0, 0, 0, 0], curve_indices=[1, 0, 2, 3])
+        centres = patch_centres_along_curve(snapshot, cell_polygons(snapshot))
         with tempfile.TemporaryDirectory() as directory:
             for labels in ([0, 0, 0, 0], [1, 1, 0, 0]):
                 snapshot.cell_data["Subdomain"] = np.asarray(labels)
@@ -89,14 +115,17 @@ class RenderCurveTest(unittest.TestCase):
         np.testing.assert_allclose(colours[0], colours[2])
         self.assertFalse(np.allclose(colours[0], colours[1]))
 
-    def test_render_curve_writes_an_image_and_counts_ranks_and_cells(self):
-        snapshot = make_grid_snapshot(4, [0] * 8 + [1] * 8)
+    def test_render_curve_writes_an_image_and_counts_ranks_patches_and_cells(self):
+        snapshot = make_grid_snapshot(
+            4, [0] * 8 + [1] * 8, curve_indices=np.arange(16) // 2
+        )
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "curve.png"
             summary = render_curve(snapshot, "unit test", output)
             self.assertTrue(output.exists())
             self.assertGreater(output.stat().st_size, 0)
         self.assertEqual(summary["subdomains"], 2)
+        self.assertEqual(summary["patches"], 8)
         self.assertEqual(summary["cells"], 16)
 
     def test_render_curve_counts_labels_that_start_at_one_and_skip_values(self):

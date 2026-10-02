@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RankTest.h"
 
+#include "tarch/mpi/Handles.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/tests/TestMacros.h"
 
@@ -24,12 +25,18 @@ tarch::mpi::tests::RankTest::testRankOnNodeMatchesTheSharedMemorySplit() {
   const auto& rank = tarch::mpi::Rank::getInstance();
 
   MPI_Comm nodeCommunicator{MPI_COMM_NULL};
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, rank.getRank(), MPI_INFO_NULL, &nodeCommunicator);
+  tarch::mpi::splitCommunicatorByType(
+    MPI_COMM_WORLD,
+    MPI_COMM_TYPE_SHARED,
+    rank.getRank(),
+    MPI_INFO_NULL,
+    &nodeCommunicator
+  );
   int nodeRank{-1};
   int ranksOnNode{-1};
-  MPI_Comm_rank(nodeCommunicator, &nodeRank);
-  MPI_Comm_size(nodeCommunicator, &ranksOnNode);
-  MPI_Comm_free(&nodeCommunicator);
+  tarch::mpi::getRank(nodeCommunicator, &nodeRank);
+  tarch::mpi::getNumberOfRanks(nodeCommunicator, &ranksOnNode);
+  tarch::mpi::freeCommunicator(&nodeCommunicator);
 
   validateEquals(rank.getRankOnNode(), nodeRank);
   validateEquals(rank.getNumberOfRanksOnNode(), ranksOnNode);

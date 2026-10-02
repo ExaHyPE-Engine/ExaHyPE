@@ -16,11 +16,14 @@ VTKHDF when the build includes HDF5 and VTU otherwise.
 Each snapshot contains the patches of the cells the solver owns and the named
 unknowns and auxiliary variables in its project description. The cell fields
 `RefinementLevel` and `Subdomain` record the level and the MPI rank of the
-patch; limiting solvers also write `LimiterStatus`.
+patch, and `CurveIndex` numbers the patches along the space-filling curve over
+all ranks; limiting solvers also write `LimiterStatus`.
 
 The plotter assigns each patch a fixed range of plot cells and points before
-parallel filling. `postprocessing/render_curve.py` draws the cell centres
-in snapshot order and colours them by `Subdomain`.
+parallel filling. A snapshot stores the patches in the order the solver
+processes them, which is not the curve order. `postprocessing/render_curve.py`
+colours the cells by `Subdomain` and joins the patch centres in the order of
+`CurveIndex`.
 
 
 # Solver-specific rendering recommendations

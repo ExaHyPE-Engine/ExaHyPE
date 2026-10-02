@@ -15,7 +15,9 @@
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/Request.h"
 #include "tarch/tests/TestMacros.h"
 
 #include <mpi.h>
@@ -75,6 +77,33 @@ namespace {
     return counts;
   }
 
+  /**
+   * Returns whether two cells, possibly on different levels, share a part of a face: Their boxes
+   * touch along exactly one axis and overlap along every other axis.
+   */
+  bool shareAFace(const peano4::Partition& partition, const int first, const int second) {
+    const int  finerLevel = std::max(partition.getCellLevel(first), partition.getCellLevel(second));
+    const auto getExtent  = [&partition, finerLevel](const int cell, const int axis) {
+      int scale = 1;
+      for (int level = partition.getCellLevel(cell); level < finerLevel; level++) {
+        scale *= peano4::SubdivisionFactor;
+      }
+      const int lower = partition.getCellLattice(cell)(axis) * scale;
+      return std::pair{lower, lower + scale};
+    };
+    int touchingAxes = 0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const auto [firstLower, firstUpper]   = getExtent(first, axis);
+      const auto [secondLower, secondUpper] = getExtent(second, axis);
+      if (firstUpper == secondLower or secondUpper == firstLower) {
+        touchingAxes++;
+      } else if (std::min(firstUpper, secondUpper) <= std::max(firstLower, secondLower)) {
+        return false;
+      }
+    }
+    return touchingAxes == 1;
+  }
+
   TARGET_DECLARE
   /**
    * Writes the centre along the first axis, the width along the last axis and the first face of one cell.
@@ -107,6 +136,7 @@ peano4::tests::PartitionTest::run() {
   testMethod(testTheListsGroupByDependenceLevelAndKind);
   testMethod(testARegridKeepsTheSlotsOfSurvivingCellsAndReusesFreedOnes);
   testMethod(testTheExchangedFacesMatchAcrossRanks);
+  testMethod(testTheCurveIndicesNumberTheCellsAlongTheCurve);
   testMethod(testTheDeviceTwinReadsTheSameGeometry);
   testMethod(testTheBytesCountEveryArray);
 }
@@ -501,10 +531,9 @@ peano4::tests::PartitionTest::testTheExchangedFacesMatchAcrossRanks() {
         keys.push_back(lattice);
         keys.push_back(entry.side);
       }
-      int        numberOfKeys = static_cast<int>(keys.size());
-      int        partnerKeys  = 0;
-      MPI_Status status;
-      MPI_Sendrecv(
+      int numberOfKeys = static_cast<int>(keys.size());
+      int partnerKeys  = 0;
+      tarch::mpi::sendrecv(
         &numberOfKeys,
         1,
         MPI_INT,
@@ -515,12 +544,11 @@ peano4::tests::PartitionTest::testTheExchangedFacesMatchAcrossRanks() {
         MPI_INT,
         neighbour.rank,
         0,
-        communicator,
-        &status
+        communicator
       );
       validateEqualsWithParams3(partnerKeys, numberOfKeys, rank, neighbour.rank, refined);
       std::vector<std::int64_t> received(static_cast<std::size_t>(std::max(partnerKeys, 1)));
-      MPI_Sendrecv(
+      tarch::mpi::sendrecv(
         keys.data(),
         numberOfKeys,
         MPI_INT64_T,
@@ -531,8 +559,7 @@ peano4::tests::PartitionTest::testTheExchangedFacesMatchAcrossRanks() {
         MPI_INT64_T,
         neighbour.rank,
         1,
-        communicator,
-        &status
+        communicator
       );
       for (int entry = 0; entry + 3 < std::min(numberOfKeys, partnerKeys); entry += 4) {
         for (int component = 0; component < 3; component++) {
@@ -553,6 +580,61 @@ peano4::tests::PartitionTest::testTheExchangedFacesMatchAcrossRanks() {
       }
     }
   }
+}
+
+/**
+ * The curve indices number the cells of all ranks once each, those of a rank consecutively behind
+ * those of the lower ranks, and two cells with consecutive indices share a face. This holds on the
+ * regular grid, on the refined grid and after a regrid that keeps the slots of live data.
+ */
+void
+peano4::tests::PartitionTest::testTheCurveIndicesNumberTheCellsAlongTheCurve() {
+  const int   numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  MPI_Comm    communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
+  auto&       spacetree     = peano4::Spacetree::getInstance();
+  const auto& partition     = spacetree.getPartition();
+
+  const auto checkTheCurveIndices = [this, numberOfRanks, communicator, &partition](const int scenario) {
+    std::vector<std::pair<int, int>> cellsAlongCurve;
+    for (const int cell : partition.getCells()) {
+      cellsAlongCurve.emplace_back(partition.getCellCurveIndex(cell), cell);
+    }
+    std::sort(cellsAlongCurve.begin(), cellsAlongCurve.end());
+    for (std::size_t position = 1; position < cellsAlongCurve.size(); position++) {
+      const int previousIndex = cellsAlongCurve[position - 1].first;
+      const int previousCell  = cellsAlongCurve[position - 1].second;
+      const int index         = cellsAlongCurve[position].first;
+      const int cell          = cellsAlongCurve[position].second;
+      validateEqualsWithParams2(index, previousIndex + 1, scenario, cell);
+      validateWithParams3(shareAFace(partition, previousCell, cell), scenario, previousCell, cell);
+    }
+
+    const int        numberOfCells = static_cast<int>(cellsAlongCurve.size());
+    const int        firstIndex    = cellsAlongCurve.empty() ? 0 : cellsAlongCurve.front().first;
+    std::vector<int> cellsOfRank(static_cast<std::size_t>(numberOfRanks), 0);
+    std::vector<int> firstIndexOfRank(static_cast<std::size_t>(numberOfRanks), 0);
+    tarch::mpi::allgather(&numberOfCells, 1, MPI_INT, cellsOfRank.data(), 1, MPI_INT, communicator);
+    tarch::mpi::allgather(&firstIndex, 1, MPI_INT, firstIndexOfRank.data(), 1, MPI_INT, communicator);
+    int cellsOfLowerRanks = 0;
+    for (std::size_t otherRank = 0; otherRank < cellsOfRank.size(); otherRank++) {
+      if (cellsOfRank[otherRank] > 0) {
+        validateEqualsWithParams2(firstIndexOfRank[otherRank], cellsOfLowerRanks, scenario, otherRank);
+      }
+      cellsOfLowerRanks += cellsOfRank[otherRank];
+    }
+  };
+
+  peano4::tests::buildRegularGrid(Depth);
+  checkTheCurveIndices(0);
+  peano4::tests::refineGrid({peano4::tests::getRefinementOfCentreCell(Depth)});
+  checkTheCurveIndices(1);
+
+  peano4::tests::buildRegularGrid(Depth);
+  spacetree.markPersistentDataLive();
+  peano4::Regrid regrid;
+  validateTrue(spacetree.regrid({peano4::tests::getRefinementOfCentreCell(Depth)}, regrid));
+  checkTheCurveIndices(2);
+  spacetree.finishRegrid();
 }
 
 /**

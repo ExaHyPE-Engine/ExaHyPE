@@ -6,6 +6,7 @@
 
 #include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Handles.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/plotter/CellTypes.h"
 
@@ -122,14 +123,14 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
       }
       useParallelIO = false;
     } else {
-      MPI_Comm_split(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
+      tarch::mpi::splitCommunicator(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
       if (not hasData) {
         _written = true;
         return true; // The data-holding ranks write the file
       }
       comm       = ioComm;
       int ioRank = 0;
-      MPI_Comm_rank(ioComm, &ioRank);
+      tarch::mpi::getRank(ioComm, &ioRank);
       isMasterRank = (ioRank == 0);
     }
   }
@@ -236,14 +237,14 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
     MPI_Info   info  = MPI_INFO_NULL;
     const auto hints = getMPIFileHints();
     if (not hints.empty()) {
-      MPI_Info_create(&info);
+      tarch::mpi::createInfo(&info);
       for (const auto& hint : hints) {
-        MPI_Info_set(info, hint.first.c_str(), hint.second.c_str());
+        tarch::mpi::setInfo(info, hint.first.c_str(), hint.second.c_str());
       }
     }
     const int status = nc_create_par(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, comm, info, &ncid);
     if (info != MPI_INFO_NULL) {
-      MPI_Info_free(&info);
+      tarch::mpi::freeInfo(&info);
     }
     check(status, "nc_create_par(" + filePath.string() + ")");
   } else {
@@ -742,7 +743,7 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
   check(nc_close(ncid), "nc_close");
 
   if (ioComm != MPI_COMM_NULL) {
-    MPI_Comm_free(&ioComm);
+    tarch::mpi::freeCommunicator(&ioComm);
   }
 
   _written = true;

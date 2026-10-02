@@ -20,6 +20,8 @@ except ImportError:
     from solution_io import MeshSnapshot, SolutionSource
 
 LABEL_FIELD = "Subdomain"
+CURVE_INDEX_FIELD = "CurveIndex"
+REQUIRED_FIELDS = (LABEL_FIELD, CURVE_INDEX_FIELD)
 
 
 def cell_polygons(snapshot: MeshSnapshot) -> np.ndarray:
@@ -35,6 +37,30 @@ def cell_polygons(snapshot: MeshSnapshot) -> np.ndarray:
     return snapshot.points[cells[:, :4]]
 
 
+def patch_centres_along_curve(
+    snapshot: MeshSnapshot, polygons: np.ndarray
+) -> np.ndarray:
+    """Returns the centre of every patch in the order the curve visits the patches.
+
+    Every cell of one patch carries the curve index of its grid cell, so the distinct indices
+    enumerate the patches and sorting them follows the curve over all ranks, whatever order the
+    snapshot stores the cells in.
+    """
+    indices = np.asarray(snapshot.cell_data[CURVE_INDEX_FIELD]).reshape(
+        len(polygons), -1
+    )[:, 0]
+    _, membership = np.unique(indices, return_inverse=True)
+    membership = membership.reshape(-1)
+    cells_per_patch = np.bincount(membership)
+    centres = polygons.mean(axis=1)
+    return np.column_stack(
+        [
+            np.bincount(membership, weights=centres[:, axis]) / cells_per_patch
+            for axis in range(centres.shape[1])
+        ]
+    )
+
+
 def label_colours(labels: np.ndarray) -> np.ndarray:
     """Returns one colour per cell from a categorical colour map over the label values."""
     values = labels.astype(int)
@@ -46,11 +72,11 @@ def label_colours(labels: np.ndarray) -> np.ndarray:
 def render_curve(
     snapshot: MeshSnapshot, title: str, output: Path, dpi: int = 300
 ) -> dict:
-    """Draws cells coloured by rank and joins their centres in snapshot order."""
+    """Draws cells coloured by rank and joins the patch centres along the curve."""
     polygons = cell_polygons(snapshot)
     if len(polygons) == 0:
         raise ValueError("The decomposition renderer needs at least one cell")
-    centres = polygons.mean(axis=1)
+    centres = patch_centres_along_curve(snapshot, polygons)
     labels = np.asarray(snapshot.cell_data[LABEL_FIELD]).reshape(len(polygons), -1)[
         :, 0
     ]
@@ -69,12 +95,15 @@ def render_curve(
     axes.set_ylim(polygons[:, :, 1].min(), polygons[:, :, 1].max())
     axes.set_aspect("equal")
     time = "" if snapshot.time is None else f", t={snapshot.time:.3g}"
-    axes.set_title(f"{title}\n{subdomains} Subdomains, {len(polygons)} Cells{time}")
+    axes.set_title(
+        f"{title}\n{subdomains} Subdomains, {len(centres)} Patches, {len(polygons)} Cells{time}"
+    )
     figure.savefig(output, dpi=dpi, bbox_inches="tight")
     plt.close(figure)
     return {
         "output": Path(output),
         "subdomains": subdomains,
+        "patches": len(centres),
         "cells": len(polygons),
     }
 
@@ -101,9 +130,10 @@ def main(argv: list[str] | None = None) -> int:
     source = SolutionSource.locate(arguments.input)
     step = arguments.step if arguments.step >= 0 else source.count - 1
     snapshot = source.load(step)
-    if LABEL_FIELD not in snapshot.cell_data:
+    missing = [field for field in REQUIRED_FIELDS if field not in snapshot.cell_data]
+    if missing:
         raise SystemExit(
-            f"{LABEL_FIELD} missing from the cell fields of {source.describe()}; "
+            f"{', '.join(missing)} missing from the cell fields of {source.describe()}; "
             f"available: {', '.join(sorted(snapshot.cell_data))}"
         )
     output_dir = Path(arguments.output_dir)
@@ -111,7 +141,8 @@ def main(argv: list[str] | None = None) -> int:
     output = output_dir / f"{source.name}-{step:04d}-decomposition.png"
     summary = render_curve(snapshot, source.name, output, arguments.dpi)
     print(
-        f"{summary['output']}: {summary['subdomains']} subdomains, {summary['cells']} cells"
+        f"{summary['output']}: {summary['subdomains']} subdomains, "
+        f"{summary['patches']} patches, {summary['cells']} cells"
     )
     return 0
 

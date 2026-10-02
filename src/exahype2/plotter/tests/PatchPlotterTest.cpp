@@ -130,6 +130,7 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOneP
   );
   validate(content.find("<PointData") != std::string::npos);
   validate(content.find("Name=\"pair\"") != std::string::npos);
+  validate(content.find("Name=\"CurveIndex\"") != std::string::npos);
   validate(content.find("Name=\"LimiterStatus\"") != std::string::npos);
   deleteOutputDirectory(outputDirectory);
 }
@@ -192,6 +193,7 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryVolumeOfEveryPatchBecomesOn
   validate(content.find("Name=\"pair\"") != std::string::npos);
   validate(content.find("Name=\"RefinementLevel\"") != std::string::npos);
   validate(content.find("Name=\"Subdomain\"") != std::string::npos);
+  validate(content.find("Name=\"CurveIndex\"") != std::string::npos);
 
   // The global master writes the time series file, so only it reads the file back.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {

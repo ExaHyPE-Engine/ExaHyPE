@@ -94,6 +94,12 @@ private:
   static constexpr const char* OutputSubdirectory = "patch/";
 
   /**
+   * The positions of the grid cell fields among the cell fields behind the cell data fields.
+   */
+  static constexpr std::size_t RefinementLevelField = 0;
+  static constexpr std::size_t CurveIndexField      = 2;
+
+  /**
    * A volume corner of a patch and its index among the corners on the patch faces or among the interior corners.
    */
   struct PatchCorner final {

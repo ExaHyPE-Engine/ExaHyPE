@@ -21,7 +21,7 @@ ParaView reads the VTK and XDMF outputs. The scripts in `postprocessing/`
 read every supported writer format through `solution_io.py`.
 `render_solution.py` selects a field and renders its values;
 `render_curve.py` colours a 2D mesh by the `Subdomain` cell field and joins
-cell centres in snapshot order.
+the patch centres in the order of the `CurveIndex` cell field.
 
 # Adaptive meshes
 

@@ -69,9 +69,14 @@ exahype2::plotter::PatchPlotter::plotVolumes(
       piece
     );
     std::fill_n(
-      piece.cellFields[_fields.size()].values.begin() + firstCell,
+      piece.cellFields[_fields.size() + RefinementLevelField].values.begin() + firstCell,
       CellsPerPatch,
       static_cast<double>(partition.getCellLevel(cell))
+    );
+    std::fill_n(
+      piece.cellFields[_fields.size() + CurveIndexField].values.begin() + firstCell,
+      CellsPerPatch,
+      static_cast<double>(partition.getCellCurveIndex(cell))
     );
     const Precision* const volumes = values + static_cast<std::size_t>(cell) * valuesPerSlot;
     for (int volume = 0; volume < CellsPerPatch; volume++) {
@@ -185,9 +190,14 @@ exahype2::plotter::PatchPlotter::plotNodes(
       piece
     );
     std::fill_n(
-      piece.cellFields[0].values.begin() + firstCell,
+      piece.cellFields[RefinementLevelField].values.begin() + firstCell,
       CellsPerPatch,
       static_cast<double>(partition.getCellLevel(cell))
+    );
+    std::fill_n(
+      piece.cellFields[CurveIndexField].values.begin() + firstCell,
+      CellsPerPatch,
+      static_cast<double>(partition.getCellCurveIndex(cell))
     );
     if (hasStatus) {
       std::fill_n(piece.cellFields[statusField].values.begin() + firstCell, CellsPerPatch, static_cast<double>(status));

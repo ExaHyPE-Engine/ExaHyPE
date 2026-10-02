@@ -114,6 +114,7 @@ public:
   ) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getCellWidth(int cell, int axis) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getCellFace(int cell, int faceNumber) const noexcept;
+  [[nodiscard]] INLINE_METHOD int getCellCurveIndex(int cell) const noexcept;
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD FaceKind getFaceKind(int face) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getFaceNormal(int face) const noexcept;
@@ -160,6 +161,11 @@ private:
   const int* _cellLevel{nullptr};
   const int* _cellLattice{nullptr};
   const int* _facesOfCell{nullptr};
+  /**
+   * The index of every slot's cell along the space-filling curve over all ranks, in host memory in
+   * the device twin too.
+   */
+  const int* _cellCurveIndex{nullptr};
 
   /**
    * The faces in the order of the list; the ranges hold one offset per dependence and kind and one end.

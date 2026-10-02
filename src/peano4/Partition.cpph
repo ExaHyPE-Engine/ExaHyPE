@@ -177,6 +177,17 @@ peano4::Partition::getCellFace(const int cell, const int faceNumber) const noexc
   return _facesOfCell[cell * peano4::FacesPerCell + faceNumber];
 }
 
+/**
+ * Returns the index of the cell along the space-filling curve over all ranks: The cells of a rank
+ * carry consecutive indices in curve order, behind the cells of the lower ranks.
+ */
+INLINE_METHOD int
+peano4::Partition::getCellCurveIndex(const int cell) const noexcept {
+  assertion(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
+  assertion(_cellCurveIndex[cell] >= 0, cell);
+  return _cellCurveIndex[cell];
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD peano4::FaceKind
 peano4::Partition::getFaceKind(const int face) const noexcept {
   assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);

@@ -73,6 +73,7 @@ set(SOURCES
   mpi/AbstractCommunicationManager.cpp
   mpi/Collectives.cpp
   mpi/Diagnostics.cpp
+  mpi/Handles.cpp
   mpi/HelperThread.cpp
   mpi/Rank.cpp
   mpi/Request.cpp
@@ -80,6 +81,7 @@ set(SOURCES
   mpi/ThreadedCommunicationManager.cpp
   mpi/tests/CommunicationManagerTest.cpp
   mpi/tests/DiagnosticsTest.cpp
+  mpi/tests/HandlesTest.cpp
   mpi/tests/HelperThreadTest.cpp
   mpi/tests/PingPongTest.cpp
   mpi/tests/PollPacingTest.cpp

@@ -27,6 +27,7 @@
 #include "tarch/la/tests/VectorTest.h"
 #include "tarch/mpi/tests/CommunicationManagerTest.h"
 #include "tarch/mpi/tests/DiagnosticsTest.h"
+#include "tarch/mpi/tests/HandlesTest.h"
 #include "tarch/mpi/tests/HelperThreadTest.h"
 #include "tarch/mpi/tests/PingPongTest.h"
 #include "tarch/mpi/tests/PollPacingTest.h"
@@ -70,6 +71,7 @@ tarch::getUnitTests() {
 
   result->addTestCase(new tarch::mpi::tests::CommunicationManagerTest());
   result->addTestCase(new tarch::mpi::tests::DiagnosticsTest());
+  result->addTestCase(new tarch::mpi::tests::HandlesTest());
   result->addTestCase(new tarch::mpi::tests::HelperThreadTest());
   result->addTestCase(new tarch::mpi::tests::PingPongTest());
   result->addTestCase(new tarch::mpi::tests::PollPacingTest());

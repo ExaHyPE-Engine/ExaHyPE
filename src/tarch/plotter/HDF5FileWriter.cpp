@@ -6,6 +6,7 @@
 
 #include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Handles.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/plotter/CellTypes.h"
 
@@ -102,14 +103,14 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
       }
       useParallelIO = false;
     } else {
-      MPI_Comm_split(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
+      tarch::mpi::splitCommunicator(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
       if (not hasData) {
         _written = true;
         return true; // The data-holding ranks write the file
       }
       comm       = ioComm;
       int ioRank = 0;
-      MPI_Comm_rank(ioComm, &ioRank);
+      tarch::mpi::getRank(ioComm, &ioRank);
       writesMetadata = (ioRank == 0);
     }
   }
@@ -142,14 +143,14 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
     MPI_Info   info  = MPI_INFO_NULL;
     const auto hints = getMPIFileHints();
     if (not hints.empty()) {
-      MPI_Info_create(&info);
+      tarch::mpi::createInfo(&info);
       for (const auto& hint : hints) {
-        MPI_Info_set(info, hint.first.c_str(), hint.second.c_str());
+        tarch::mpi::setInfo(info, hint.first.c_str(), hint.second.c_str());
       }
     }
     H5Pset_fapl_mpio(fileAccessProperties, comm, info);
     if (info != MPI_INFO_NULL) {
-      MPI_Info_free(&info);
+      tarch::mpi::freeInfo(&info);
     }
 
 #if H5_VERSION_GE(1, 10, 0)
@@ -446,7 +447,7 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
   H5Fclose(fileId);
 
   if (ioComm != MPI_COMM_NULL) {
-    MPI_Comm_free(&ioComm);
+    tarch::mpi::freeCommunicator(&ioComm);
   }
 
   if (writesMetadata) {

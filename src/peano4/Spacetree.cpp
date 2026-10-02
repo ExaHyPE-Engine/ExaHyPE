@@ -515,6 +515,7 @@ peano4::Spacetree::buildPartition() {
   assignSlots(records, false);
   deriveFaces(records);
   orderLists(records);
+  numberCellsAlongCurve(records);
   assemblePartitions();
 }
 
@@ -583,6 +584,7 @@ peano4::Spacetree::rebuildPartition(const peano4::topology::Tree& previousTree, 
 
   deriveFaces(records);
   orderLists(records);
+  numberCellsAlongCurve(records);
   assemblePartitions();
 
   regrid                  = Regrid{};
@@ -762,15 +764,15 @@ peano4::Spacetree::getPartitionBytes() const noexcept {
   std::size_t hostBytes = tarch::getAllocatedBytesOf(_arrays.widthOfLevel) + tarch::getAllocatedBytesOf(_arrays.cells)
     + tarch::getAllocatedBytesOf(_arrays.cellRanges) + tarch::getAllocatedBytesOf(_arrays.cellLevel)
     + tarch::getAllocatedBytesOf(_arrays.cellLattice) + tarch::getAllocatedBytesOf(_arrays.facesOfCell)
-    + tarch::getAllocatedBytesOf(_arrays.faces) + tarch::getAllocatedBytesOf(_arrays.faceRanges)
-    + tarch::getAllocatedBytesOf(_arrays.faceLevel) + tarch::getAllocatedBytesOf(_arrays.faceNormal)
-    + tarch::getAllocatedBytesOf(_arrays.faceLattice) + tarch::getAllocatedBytesOf(_arrays.cellsOfFace)
-    + tarch::getAllocatedBytesOf(_arrays.faceKind) + tarch::getAllocatedBytesOf(_arrays.faceDependsOnRemoteData)
-    + tarch::getAllocatedBytesOf(_arrays.levelJumps) + tarch::getAllocatedBytesOf(_arrays.levelJumpRanges)
-    + tarch::getAllocatedBytesOf(_arrays.neighbours) + tarch::getAllocatedBytesOf(_arrays.exchangedFaces)
-    + tarch::getAllocatedBytesOf(_arrays.faceOfTreeFace) + tarch::getAllocatedBytesOf(_arrays.levelJumpOfCoarseFace)
-    + tarch::getAllocatedBytesOf(_arrays.cellSlotOfLattice) + tarch::getAllocatedBytesOf(_arrays.freeSlots)
-    + tarch::getAllocatedBytesOf(_arrays.slotsFreedByRegrid);
+    + tarch::getAllocatedBytesOf(_arrays.cellCurveIndex) + tarch::getAllocatedBytesOf(_arrays.faces)
+    + tarch::getAllocatedBytesOf(_arrays.faceRanges) + tarch::getAllocatedBytesOf(_arrays.faceLevel)
+    + tarch::getAllocatedBytesOf(_arrays.faceNormal) + tarch::getAllocatedBytesOf(_arrays.faceLattice)
+    + tarch::getAllocatedBytesOf(_arrays.cellsOfFace) + tarch::getAllocatedBytesOf(_arrays.faceKind)
+    + tarch::getAllocatedBytesOf(_arrays.faceDependsOnRemoteData) + tarch::getAllocatedBytesOf(_arrays.levelJumps)
+    + tarch::getAllocatedBytesOf(_arrays.levelJumpRanges) + tarch::getAllocatedBytesOf(_arrays.neighbours)
+    + tarch::getAllocatedBytesOf(_arrays.exchangedFaces) + tarch::getAllocatedBytesOf(_arrays.faceOfTreeFace)
+    + tarch::getAllocatedBytesOf(_arrays.levelJumpOfCoarseFace) + tarch::getAllocatedBytesOf(_arrays.cellSlotOfLattice)
+    + tarch::getAllocatedBytesOf(_arrays.freeSlots) + tarch::getAllocatedBytesOf(_arrays.slotsFreedByRegrid);
   for (const auto& cellSlotOfLattice : _arrays.cellSlotOfLattice) {
     hostBytes += cellSlotOfLattice.getAllocatedBytes();
   }
@@ -1259,9 +1261,35 @@ peano4::Spacetree::orderLists(const std::vector<CellRecord>& records) {
 }
 
 /**
+ * Numbers the cells along the space-filling curve over all ranks; every rank calls this. The walk
+ * records the cells of this rank in curve order, and the ranks own consecutive sections of the
+ * curve in rank order, so the cells of the lower ranks precede them.
+ */
+void
+peano4::Spacetree::numberCellsAlongCurve(const std::vector<CellRecord>& records) {
+  const int numberOfLocalCells        = static_cast<int>(records.size());
+  int       numberOfCellsUpToThisRank = numberOfLocalCells;
+  tarch::mpi::scan(
+    &numberOfLocalCells,
+    &numberOfCellsUpToThisRank,
+    1,
+    MPI_INT,
+    MPI_SUM,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  const int firstCurveIndex = numberOfCellsUpToThisRank - numberOfLocalCells;
+
+  _arrays.cellCurveIndex.assign(static_cast<std::size_t>(_arrays.numberOfSlots), -1);
+  for (std::size_t position = 0; position < records.size(); position++) {
+    _arrays.cellCurveIndex[static_cast<std::size_t>(records[position].slot)] =
+      firstCurveIndex + static_cast<int>(position);
+  }
+}
+
+/**
  * Points the partition at the host arrays and, with a GPU backend, uploads every array a kernel
- * reads and points the device twin at the copies. The range arrays and the neighbours stay in
- * host memory in both partitions, because the host derives every span.
+ * reads and points the device twin at the copies. The range arrays, the neighbours and the curve
+ * indices stay in host memory in both partitions, because only the host reads them.
  */
 void
 peano4::Spacetree::assemblePartitions() {
@@ -1278,6 +1306,7 @@ peano4::Spacetree::assemblePartitions() {
     partition._levelJumpRanges    = _arrays.levelJumpRanges.data();
     partition._neighbours         = _arrays.neighbours.data();
     partition._exchangedFaces     = _arrays.exchangedFaces.data();
+    partition._cellCurveIndex     = _arrays.cellCurveIndex.data();
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       partition._domainOffset[axis] = _domainOffset(axis);
     }

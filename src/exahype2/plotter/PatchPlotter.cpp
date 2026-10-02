@@ -47,7 +47,9 @@ exahype2::plotter::PatchPlotter::classifyCorners(const int cornersPerAxis) {
 /**
  * Opens the snapshot file, sizes the rank's piece for the patches and numberOfPoints points and
  * returns the id of the piece. The data fields become point fields or cell fields, followed by the
- * cell fields RefinementLevel, Subdomain and, with writesStatus, LimiterStatus.
+ * cell fields RefinementLevel, Subdomain, CurveIndex and, with writesStatus, LimiterStatus. All
+ * plot cells of one patch carry the curve index of its grid cell, which a single precision plot
+ * file holds exactly up to 2^24 grid cells.
  */
 int
 exahype2::plotter::PatchPlotter::openPiece(
@@ -84,6 +86,7 @@ exahype2::plotter::PatchPlotter::openPiece(
   }
   piece.cellFields.push_back({"RefinementLevel", 1, std::vector<double>(numberOfCells)});
   piece.cellFields.push_back({"Subdomain", 1, std::vector<double>(numberOfCells, static_cast<double>(rank))});
+  piece.cellFields.push_back({"CurveIndex", 1, std::vector<double>(numberOfCells)});
   if (writesStatus) {
     piece.cellFields.push_back({"LimiterStatus", 1, std::vector<double>(numberOfCells)});
   }

@@ -6,6 +6,7 @@
 #include "tarch/Termination.h"
 #include "tarch/mpi/AbstractCommunicationManager.h"
 #include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Handles.h"
 #include "tarch/mpi/Rank.h"
 
 peano4::communication::CommunicationManager peano4::communication::CommunicationManager::_singleton;
@@ -21,15 +22,15 @@ peano4::communication::CommunicationManager::getInstance() {
  */
 void
 peano4::communication::CommunicationManager::init() {
-  int*      tagUpperBound   = nullptr;
-  int       attributeFound  = 0;
-  const int attributeResult = MPI_Comm_get_attr(
+  int* tagUpperBound  = nullptr;
+  int  attributeFound = 0;
+  tarch::mpi::getAttribute(
     tarch::mpi::Rank::getInstance().getCommunicator(),
     MPI_TAG_UB,
     static_cast<void*>(&tagUpperBound),
     &attributeFound
   );
-  if (attributeResult != MPI_SUCCESS or attributeFound == 0 or tagUpperBound == nullptr) {
+  if (attributeFound == 0 or tagUpperBound == nullptr) {
     tarch::terminateWithError("Could not determine MPI_TAG_UB for the global communicator.");
   }
 
@@ -44,9 +45,7 @@ peano4::communication::CommunicationManager::init() {
   );
   _nextTag = 0;
 
-  if (MPI_Comm_dup(tarch::mpi::Rank::getInstance().getCommunicator(), &_exchangeCommunicator) != MPI_SUCCESS) {
-    tarch::terminateWithError("Could not create the exchange communicator.");
-  }
+  tarch::mpi::duplicateCommunicator(tarch::mpi::Rank::getInstance().getCommunicator(), &_exchangeCommunicator);
 
   auto& progressManager = tarch::mpi::AbstractCommunicationManager::getInstance();
   progressManager.registerPoller([]() { return getInstance().pollInFlightTransfers(); });
@@ -68,8 +67,7 @@ peano4::communication::CommunicationManager::shutdown() {
   tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
 
   if (_exchangeCommunicator != MPI_COMM_NULL) {
-    MPI_Comm_free(&_exchangeCommunicator);
-    _exchangeCommunicator = MPI_COMM_NULL;
+    tarch::mpi::freeCommunicator(&_exchangeCommunicator);
   }
 
   tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());

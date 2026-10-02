@@ -11,7 +11,8 @@ namespace peano4::tests {
 /**
  * Checks that the partition links every face to its cells, groups its lists by dependence, level
  * and kind, builds the level jumps of a refined block, keeps the slots of surviving cells across a
- * regrid, derives exchanged faces both ranks agree on and reads the same on the device.
+ * regrid, derives exchanged faces both ranks agree on, numbers the cells along the curve over all
+ * ranks and reads the same on the device.
  */
 class peano4::tests::PartitionTest final : public tarch::tests::TestCase {
 public:
@@ -31,6 +32,7 @@ private:
   void testTheListsGroupByDependenceLevelAndKind();
   void testARegridKeepsTheSlotsOfSurvivingCellsAndReusesFreedOnes();
   void testTheExchangedFacesMatchAcrossRanks();
+  void testTheCurveIndicesNumberTheCellsAlongTheCurve();
   void testTheDeviceTwinReadsTheSameGeometry();
   void testTheBytesCountEveryArray();
 };
