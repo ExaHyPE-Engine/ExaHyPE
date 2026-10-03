@@ -2,12 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 /**
- * Returns the heap bytes a vector holds, its unused capacity included.
+ * Returns the heap bytes a vector allocates, its unused capacity included.
  */
 template <typename Element>
 INLINE_METHOD std::size_t
 tarch::getAllocatedBytesOf(const std::vector<Element>& elements) {
-  // Open MPI defines an MPI handle as a pointer to a struct, so a vector of handles holds pointers.
+  // Open MPI defines an MPI handle as a pointer, so Element may be a pointer type.
   return elements.capacity() * sizeof(Element); // NOLINT(bugprone-sizeof-expression)
 }
 

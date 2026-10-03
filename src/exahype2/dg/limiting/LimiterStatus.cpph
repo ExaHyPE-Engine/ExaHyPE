@@ -20,9 +20,8 @@ exahype2::dg::limiting::mergeLimiterStatus(const LimiterStatus left, const Limit
 }
 
 /**
- * Returns the status a cell inherits from one neighbour in a spreading round: A troubled
- * neighbour lifts the cell to limited, a limited neighbour to halo, and a halo or regular
- * neighbour adds nothing.
+ * Returns the status a cell takes from a neighbour of status neighbourStatus in a spreading
+ * round. Troubled gives Limited, Limited gives Halo, and every other status gives Regular.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr exahype2::dg::limiting::LimiterStatus
 exahype2::dg::limiting::spreadLimiterStatus(const LimiterStatus neighbourStatus) {

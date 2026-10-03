@@ -7,9 +7,8 @@
 
 namespace applications::exahype2::exaskred::landslide {
   /**
-   * The landslide layer's material and coupling constants gathered into one
-   * aggregate, so every kernel receives the complete parameter set through a
-   * single argument built from a scenario's generated constants.
+   * Material and coupling constants of the landslide layer, built from the generated constants of a
+   * scenario.
    */
   struct Physics {
     double gravity;

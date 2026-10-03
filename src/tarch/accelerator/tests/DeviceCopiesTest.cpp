@@ -18,9 +18,6 @@ namespace {
   DEVICE_VARIABLE constexpr tarch::la::Vector<2, double> ConstantVector{1.5, -2.5};
   DEVICE_VARIABLE constexpr double                       ConstantScalar = 4.0;
 
-  /**
-   * Writes value into the device copy of this translation unit.
-   */
   struct WriteDeviceValue final {
     double value{0.0};
 
@@ -37,9 +34,6 @@ namespace {
     COMPILE_IF_ON_HOST(return hostValue;)
   }
 
-  /**
-   * Writes the value a kernel reads into target.
-   */
   struct ReadValue final {
     double* target{nullptr};
 
@@ -48,17 +42,11 @@ namespace {
     }
   };
 
-  /**
-   * Returns the entry of ConstantVector at index plus the larger of index and ConstantScalar.
-   */
   INLINE_METHOD GPU_CALLABLE_METHOD double getConstantValue(const int index) {
     assertion(index >= 0 and index < 2, index);
     return ConstantVector[index] + std::max(static_cast<double>(index), ConstantScalar);
   }
 
-  /**
-   * Writes the constant value of every work item into target.
-   */
   struct ReadConstants final {
     double* target{nullptr};
 
@@ -70,9 +58,6 @@ namespace {
 
   const bool deviceValueIsAdded = tarch::accelerator::addDeviceCopy<WriteDeviceValue>(hostValue);
 
-  /**
-   * Returns the value a kernel reads.
-   */
   double getValueOfAKernel() {
     tarch::accelerator::Buffer<double> target(1, tarch::MemoryLocation::Device);
     tarch::accelerator::parallelFor(tarch::accelerator::Range(1), ReadValue{target.getData()});
@@ -91,9 +76,6 @@ tarch::accelerator::tests::DeviceCopiesTest::run() {
   testMethod(testHostCodeAndAKernelReadTheSameConstants);
 }
 
-/**
- * A kernel reads the host value of the last upload from the device copy.
- */
 void
 tarch::accelerator::tests::DeviceCopiesTest::testAKernelReadsTheValueOfTheLastUpload() {
   validate(deviceValueIsAdded);
@@ -108,7 +90,7 @@ tarch::accelerator::tests::DeviceCopiesTest::testAKernelReadsTheValueOfTheLastUp
 }
 
 /**
- * Host code and a kernel read the same values from a constexpr variable that carries DEVICE_VARIABLE.
+ * Host code and a kernel read the same values from a constexpr DEVICE_VARIABLE.
  */
 void
 tarch::accelerator::tests::DeviceCopiesTest::testHostCodeAndAKernelReadTheSameConstants() {

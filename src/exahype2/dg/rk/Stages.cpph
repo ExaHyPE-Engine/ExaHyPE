@@ -7,11 +7,10 @@
 
 TARGET_DECLARE
 /**
- * Opens one stage of a cell: The stage state is the cell state plus the weighted estimates of
- * the earlier stages, the estimate of the stage takes the volume terms of that state, and the
- * face states and face fluxes of that state go onto the faces. weights is the row of the Butcher
- * matrix of the stage. stageState is scratch memory of StateValuesPerCell values that no other
- * call reads while this call runs.
+ * Writes the volume terms of the stage state into the estimate of the stage and extrapolates the
+ * stage state to the faces. The stage state is the cell state plus the earlier estimates weighted
+ * by weights, the row of the Butcher matrix. stageState is scratch memory of StateValuesPerCell
+ * values that no other call reads while this call runs.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -65,9 +64,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::open(
 }
 
 /**
- * Adds the face integrals of the numerical fluxes on the faces of one cell to the estimate of
- * the stage. faceFluxes points at the half of every face the cell reads, which holds the
- * difference between the numerical flux and the cell's own flux.
+ * Adds the face integrals of one cell to the estimate of the stage. faceFluxes points to the flux
+ * half of every face that the cell reads.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -98,10 +96,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::addFaceIntegrals(
 }
 
 /**
- * Writes the cell state plus the weighted estimates of every stage over the cell state, runs the
- * postprocessing of Derived on it and returns the wave-speed maxima of that state at the updated
- * time stamp; without ReportEigenvalues the maxima are zero. weights is the weight row of the
- * Butcher tableau.
+ * Adds the estimates weighted by weights to cellState, postprocesses it and returns its wave-speed
+ * maxima at the new time stamp. The maxima are zero without ReportEigenvalues.
  */
 template <typename Derived, typename ComputePrecision>
 template <bool ReportEigenvalues, typename StoragePrecision>
@@ -172,12 +168,10 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::combineEstimates(
 }
 
 /**
- * Writes the volume terms of one stage times the time step into estimate, which holds
- * NumberOfUnknowns values per node: The strong-form divergence of the nodal flux along every
- * axis, the source and the nonconservative product of the stage state. The divergence acts on
- * the differences of every line of nodes from its smallest value, so a constant flux gives zeros
- * bitwise. Every axis sums its terms into one line update before that update enters estimate, so
- * two mirror-image cells receive bitwise mirrored estimates.
+ * Overwrites estimate with the time step times the volume terms of the stage state: The
+ * strong-form flux divergence, the source and the nonconservative product. A constant flux gives
+ * zeros bitwise. Every axis completes a line update before the update enters estimate, so
+ * mirror-image cells receive bitwise mirrored estimates.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void

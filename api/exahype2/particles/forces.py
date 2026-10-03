@@ -5,13 +5,11 @@
 class Forces:
     """How a tracer reads the fluid state and moves through it.
 
-    Integration schemes: 0 static, 1 explicit Euler, 2 semi-implicit Euler, 3 velocity Verlet,
-    4 midpoint, 5 RK3, 6 RK4. Interpolation: 0 none, 1 piecewise constant, 2 piecewise linear.
     ``force_method`` is a bit mask: 1 central gravity, 2 buoyancy, 4 Stokes drag, 8 constant
     gravity. ``fields_to_interpolate`` lists the particle data entries that receive the first
-    unknowns of the solver in this order. ``mu`` is the gravitational parameter of the central
-    gravity, ``gravity_magnitude`` the acceleration of the constant gravity and the buoyancy
-    and ``dynamic_viscosity`` the viscosity of the Stokes drag, each a C++ expression.
+    unknowns of the solver, in this order. The C++ expressions ``mu``, ``gravity_magnitude``
+    and ``dynamic_viscosity`` are the gravitational parameter of the central gravity, the
+    acceleration of the constant gravity and the buoyancy, and the viscosity of the Stokes drag.
     """
 
     INTERPOLATION_SCHEMES = {0: "None", 1: "PiecewiseConstant", 2: "PiecewiseLinear"}
@@ -80,8 +78,7 @@ class Forces:
 
     @property
     def interpolated_fields(self):
-        """Returns the particle data entries the interpolation scheme writes; the scheme 0
-        writes none."""
+        """Returns the particle data entries the interpolation scheme writes."""
         if self.interpolation_scheme == 0:
             return []
         return list(self.fields_to_interpolate)

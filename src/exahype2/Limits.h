@@ -7,9 +7,8 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * The bounds a run sets on one solver: The time stamp at which the run ends, the patch sizes
- * between which the refinement votes keep the mesh, and the largest admissible mesh width,
- * which scales the time step size of a fixed rule.
+ * Time and mesh bounds of one solver. A fixed time step size scales with the smallest mesh width
+ * divided by maxAdmissibleMeshWidth.
  */
 struct exahype2::Limits final {
   double terminalTime{std::numeric_limits<double>::max()};

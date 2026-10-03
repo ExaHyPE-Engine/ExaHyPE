@@ -20,6 +20,8 @@
 #include "tarch/accelerator/tests/ParallelConstructsTest.h"
 #include "tarch/accelerator/tests/ScratchTest.h"
 #include "tarch/database/tests/GlobalTimeSeriesDatabaseTest.h"
+#include "tarch/instrumentation/tests/CommandLineSinkTest.h"
+#include "tarch/instrumentation/tests/WatchTest.h"
 #include "tarch/la/tests/ExactAccumulatorTest.h"
 #include "tarch/la/tests/MatrixTest.h"
 #include "tarch/la/tests/MatrixVectorTest.h"
@@ -35,14 +37,17 @@
 #include "tarch/plotter/tests/FormatTest.h"
 #include "tarch/plotter/tests/HDF5FileWriterTest.h"
 #include "tarch/plotter/tests/NetCDFFileWriterTest.h"
+#include "tarch/plotter/tests/TimeSeriesWriterTest.h"
 #include "tarch/plotter/tests/VTKHDFFileWriterTest.h"
 #include "tarch/plotter/tests/VTUFileWriterTest.h"
+#include "tarch/reader/tests/CSVReaderTest.h"
 #include "tarch/reader/tests/JSONReaderTest.h"
 #include "tarch/reader/tests/NetCDFFieldSamplerTest.h"
 #include "tarch/reader/tests/NetCDFFileReaderTest.h"
 #include "tarch/tasking/tests/RuntimeTest.h"
 #include "tarch/tasking/tests/TaskGraphTest.h"
 #include "tarch/tests/AssertionsTest.h"
+#include "tarch/tests/CPUFeatureDetectionTest.h"
 #include "tarch/tests/MemoryUsageTest.h"
 #include "tarch/tests/NonCriticalAssertionsTest.h"
 #include "tarch/tests/SortTest.h"
@@ -61,6 +66,7 @@ tarch::getUnitTests() {
   result->addTestCase(new tarch::la::tests::VectorTest());
 
   result->addTestCase(new tarch::tests::AssertionsTest());
+  result->addTestCase(new tarch::tests::CPUFeatureDetectionTest());
   result->addTestCase(new tarch::tests::MemoryUsageTest());
   result->addTestCase(new tarch::tests::NonCriticalAssertionsTest());
   result->addTestCase(new tarch::tests::SortTest());
@@ -68,6 +74,9 @@ tarch::getUnitTests() {
   result->addTestCase(new tarch::tests::TestCaseTest());
 
   result->addTestCase(new tarch::database::tests::GlobalTimeSeriesDatabaseTest());
+
+  result->addTestCase(new tarch::instrumentation::tests::CommandLineSinkTest());
+  result->addTestCase(new tarch::instrumentation::tests::WatchTest());
 
   result->addTestCase(new tarch::mpi::tests::CommunicationManagerTest());
   result->addTestCase(new tarch::mpi::tests::DiagnosticsTest());
@@ -102,9 +111,11 @@ tarch::getUnitTests() {
   result->addTestCase(new tarch::plotter::tests::FormatTest());
   result->addTestCase(new tarch::plotter::tests::HDF5FileWriterTest());
   result->addTestCase(new tarch::plotter::tests::NetCDFFileWriterTest());
+  result->addTestCase(new tarch::plotter::tests::TimeSeriesWriterTest());
   result->addTestCase(new tarch::plotter::tests::VTKHDFFileWriterTest());
   result->addTestCase(new tarch::plotter::tests::VTUFileWriterTest());
 
+  result->addTestCase(new tarch::reader::tests::CSVReaderTest());
   result->addTestCase(new tarch::reader::tests::JSONReaderTest());
   result->addTestCase(new tarch::reader::tests::NetCDFFileReaderTest());
   result->addTestCase(new tarch::reader::tests::NetCDFFieldSamplerTest());

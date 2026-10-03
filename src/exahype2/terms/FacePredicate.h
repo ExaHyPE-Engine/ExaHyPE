@@ -5,10 +5,6 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::terms {
-  /**
-   * A solver that plots face values names the faces by their centre, the width of their cells and their
-   * normal axis.
-   */
   template <typename SolverType>
   concept HasFacePredicate = requires(
     const tarch::la::Vector<DIMENSIONS, double>& x,

@@ -34,8 +34,8 @@ namespace {
   };
 
   int getNumberOfFacesOfKind(const peano4::Partition& partition, const peano4::FaceKind kind) {
-    return partition.getFaces(peano4::Dependence::Local, kind).size
-      + partition.getFaces(peano4::Dependence::Remote, kind).size;
+    return partition.getFaces(peano4::Adjacency::Local, kind).size
+      + partition.getFaces(peano4::Adjacency::Remote, kind).size;
   }
 
   int getNumberOfExchangedFaces(const peano4::Partition& partition) {
@@ -47,17 +47,17 @@ namespace {
   }
 
   int getNumberOfLevelJumps(const peano4::Partition& partition) {
-    return partition.getLevelJumps(peano4::Dependence::Local).size
-      + partition.getLevelJumps(peano4::Dependence::Remote).size;
+    return partition.getLevelJumps(peano4::Adjacency::Local).size
+      + partition.getLevelJumps(peano4::Adjacency::Remote).size;
   }
 
   /**
-   * Marks every face of a remote span.
+   * Returns 1 for every face in a remote span and 0 for every other face.
    */
   std::vector<char> getRemoteFaceMarks(const peano4::Partition& partition) {
     std::vector<char> remote(static_cast<std::size_t>(partition.getNumberOfFaces()), 0);
     for (const auto kind : FaceKinds) {
-      for (const int face : partition.getFaces(peano4::Dependence::Remote, kind)) {
+      for (const int face : partition.getFaces(peano4::Adjacency::Remote, kind)) {
         remote[static_cast<std::size_t>(face)] = 1;
       }
     }
@@ -65,7 +65,7 @@ namespace {
   }
 
   /**
-   * Counts how often a face appears among the faces of the cells.
+   * Returns for every face how often it appears among the faces of the cells.
    */
   std::vector<int> getFaceReferenceCounts(const peano4::Partition& partition) {
     std::vector<int> counts(static_cast<std::size_t>(partition.getNumberOfFaces()), 0);
@@ -133,7 +133,7 @@ peano4::tests::PartitionTest::run() {
   testMethod(testTheRegularGridLinksEveryFaceToItsCells);
   testMethod(testThePeriodicGridHasNoBoundaryFaces);
   testMethod(testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace);
-  testMethod(testTheListsGroupByDependenceLevelAndKind);
+  testMethod(testTheListsGroupByAdjacencyLevelAndKind);
   testMethod(testARegridKeepsTheSlotsOfSurvivingCellsAndReusesFreedOnes);
   testMethod(testTheExchangedFacesMatchAcrossRanks);
   testMethod(testTheCurveIndicesNumberTheCellsAlongTheCurve);
@@ -142,8 +142,8 @@ peano4::tests::PartitionTest::run() {
 }
 
 /**
- * The regular grid holds one cell per grid cell over all ranks, every cell links its faces, every
- * face links back to it, and the geometry follows from the level and the lattice position.
+ * On the regular grid, the ranks together own every cell once, every face points back to its cells,
+ * and the geometry follows from the level and the lattice position.
  */
 void
 peano4::tests::PartitionTest::testTheRegularGridLinksEveryFaceToItsCells() {
@@ -157,22 +157,22 @@ peano4::tests::PartitionTest::testTheRegularGridLinksEveryFaceToItsCells() {
   validateEquals(partition.getMinimumLevel(), Depth);
   validateEquals(partition.getMaximumLevel(), Depth);
   validateEquals(
-    partition.getCells(peano4::Dependence::Local).size + partition.getCells(peano4::Dependence::Remote).size,
+    partition.getCells(peano4::Adjacency::Local).size + partition.getCells(peano4::Adjacency::Remote).size,
     partition.getCells().size
   );
   validateEquals(
-    partition.getCells(peano4::Dependence::Local, Depth).size,
-    partition.getCells(peano4::Dependence::Local).size
+    partition.getCells(peano4::Adjacency::Local, Depth).size,
+    partition.getCells(peano4::Adjacency::Local).size
   );
-  validate(partition.getCells(peano4::Dependence::Local, Depth - 1).isEmpty());
-  validate(partition.getCells(peano4::Dependence::Remote, Depth + 1).isEmpty());
+  validate(partition.getCells(peano4::Adjacency::Local, Depth - 1).isEmpty());
+  validate(partition.getCells(peano4::Adjacency::Remote, Depth + 1).isEmpty());
   validateEquals(getNumberOfLevelJumps(partition), 0);
   const bool hasNoNeighbours = partition.getNeighbours().isEmpty();
   const bool runsAlone       = tarch::mpi::Rank::getInstance().getNumberOfRanks() == 1;
   validateEquals(hasNoNeighbours, runsAlone);
 
   const int facesPerNormal = peano4::power(cellsPerAxis, DIMENSIONS - 1);
-  validate(partition.getFaces(peano4::Dependence::Remote, peano4::FaceKind::Boundary).isEmpty());
+  validate(partition.getFaces(peano4::Adjacency::Remote, peano4::FaceKind::Boundary).isEmpty());
   validateEquals(
     peano4::tests::getGlobalSumOf(getNumberOfFacesOfKind(partition, peano4::FaceKind::Boundary)),
     2 * DIMENSIONS * facesPerNormal
@@ -256,8 +256,8 @@ peano4::tests::PartitionTest::testThePeriodicGridHasNoBoundaryFaces() {
 }
 
 /**
- * The refinement of the centre cell refines one block; every face between the block and a coarse
- * cell is one level jump, registered by the rank that owns the fine cells.
+ * Every face between the refined centre block and a coarse cell forms one level jump, which the rank
+ * of the fine cells registers.
  */
 void
 peano4::tests::PartitionTest::testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace() {
@@ -271,15 +271,15 @@ peano4::tests::PartitionTest::testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace
   const int   fineCells    = refinedCells * peano4::ChildrenPerCell;
   const int   levelJumps   = 2 * DIMENSIONS * peano4::power(blockPerAxis, DIMENSIONS - 1);
   const auto  cellsOfLevel = [&partition](const int level) {
-    return partition.getCells(peano4::Dependence::Local, level).size
-      + partition.getCells(peano4::Dependence::Remote, level).size;
+    return partition.getCells(peano4::Adjacency::Local, level).size
+      + partition.getCells(peano4::Adjacency::Remote, level).size;
   };
 
   // A failed check ends the test on its rank alone, so every global sum runs before the first check.
   const int globalCoarseCells = peano4::tests::getGlobalSumOf(cellsOfLevel(Depth));
   const int globalFineCells   = peano4::tests::getGlobalSumOf(cellsOfLevel(Depth + 1));
   const int globalLevelJumps  = peano4::tests::getGlobalSumOf(getNumberOfLevelJumps(partition));
-  // A rank may hold cells of one of the two levels only.
+  // A rank may own cells of one of the two levels only.
   const int minimumLevel = cellsOfLevel(Depth) > 0 ? Depth : Depth + 1;
   const int maximumLevel = cellsOfLevel(Depth + 1) > 0 ? Depth + 1 : Depth;
 
@@ -295,18 +295,18 @@ peano4::tests::PartitionTest::testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace
     getNumberOfLevelJumps(partition) * peano4::SubfacesPerFace
   );
   validate(getNumberOfFacesOfKind(partition, peano4::FaceKind::Coarse) >= getNumberOfLevelJumps(partition));
-  for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
-    validateEquals(partition.getLevelJumps(dependence, Depth).size, partition.getLevelJumps(dependence).size);
-    validate(partition.getLevelJumps(dependence, Depth + 1).isEmpty());
-    validate(partition.getLevelJumps(dependence, Depth - 1).isEmpty());
-    for (const auto& levelJump : partition.getLevelJumps(dependence)) {
+  for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+    validateEquals(partition.getLevelJumps(adjacency, Depth).size, partition.getLevelJumps(adjacency).size);
+    validate(partition.getLevelJumps(adjacency, Depth + 1).isEmpty());
+    validate(partition.getLevelJumps(adjacency, Depth - 1).isEmpty());
+    for (const auto& levelJump : partition.getLevelJumps(adjacency)) {
       validateEquals(levelJump.level, Depth);
       validate(partition.getFaceKind(levelJump.coarseFace) == peano4::FaceKind::Coarse);
       validateEquals(partition.getFaceLevel(levelJump.coarseFace), Depth);
       validateEquals(partition.getFaceCell(levelJump.coarseFace, 1 - levelJump.coarseSide), -1);
       const int  coarseCell      = partition.getFaceCell(levelJump.coarseFace, levelJump.coarseSide);
       const bool coarseCellLocal = coarseCell >= 0;
-      const bool jumpLocal       = dependence == peano4::Dependence::Local;
+      const bool jumpLocal       = adjacency == peano4::Adjacency::Local;
       validateEquals(coarseCellLocal, jumpLocal);
       if (coarseCell >= 0) {
         validateEquals(partition.getCellLevel(coarseCell), Depth);
@@ -332,51 +332,50 @@ peano4::tests::PartitionTest::testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace
 }
 
 /**
- * A local cell has no remote face and a remote cell has one; a remote level jump has a remote
- * coarse face and remote fine faces; every span of a level or a kind holds cells or faces of that
- * level or kind only, and the spans together cover the list.
+ * Every span contains only entries of its adjacency and its level or kind, and the spans together
+ * cover every list.
  */
 void
-peano4::tests::PartitionTest::testTheListsGroupByDependenceLevelAndKind() {
+peano4::tests::PartitionTest::testTheListsGroupByAdjacencyLevelAndKind() {
   peano4::tests::buildRegularGrid(Depth);
   peano4::tests::refineGrid({peano4::tests::getRefinementOfCentreCell(Depth)});
   const auto& partition = peano4::Spacetree::getInstance().getPartition();
   const auto  remote    = getRemoteFaceMarks(partition);
 
-  const auto cellDependsOnRemoteData = [&partition, &remote](const int cell) {
-    bool depends = false;
+  const auto cellHasRemoteFace = [&partition, &remote](const int cell) {
+    bool hasRemoteFace = false;
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-      depends = depends or remote[static_cast<std::size_t>(partition.getCellFace(cell, faceNumber))] != 0;
+      hasRemoteFace = hasRemoteFace or remote[static_cast<std::size_t>(partition.getCellFace(cell, faceNumber))] != 0;
     }
-    return depends;
+    return hasRemoteFace;
   };
   int cellsInLevelSpans = 0;
-  for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
-    const bool remoteSpan = dependence == peano4::Dependence::Remote;
-    for (const int cell : partition.getCells(dependence)) {
-      const bool dependsOnRemoteData = cellDependsOnRemoteData(cell);
-      validateEqualsWithParams1(dependsOnRemoteData, remoteSpan, cell);
+  for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+    const bool remoteSpan = adjacency == peano4::Adjacency::Remote;
+    for (const int cell : partition.getCells(adjacency)) {
+      const bool hasRemoteFace = cellHasRemoteFace(cell);
+      validateEqualsWithParams1(hasRemoteFace, remoteSpan, cell);
     }
     for (int level = 0; level <= partition.getMaximumLevel(); level++) {
-      for (const int cell : partition.getCells(dependence, level)) {
+      for (const int cell : partition.getCells(adjacency, level)) {
         validateEqualsWithParams2(partition.getCellLevel(cell), level, cell, level);
       }
-      cellsInLevelSpans += partition.getCells(dependence, level).size;
+      cellsInLevelSpans += partition.getCells(adjacency, level).size;
     }
     for (const auto kind : FaceKinds) {
-      for (const int face : partition.getFaces(dependence, kind)) {
+      for (const int face : partition.getFaces(adjacency, kind)) {
         validateWithParams1(partition.getFaceKind(face) == kind, face);
         const bool faceRemote = remote[static_cast<std::size_t>(face)] != 0;
         validateEqualsWithParams1(faceRemote, remoteSpan, face);
       }
     }
     validateEquals(
-      partition.getFaces(dependence, peano4::FaceKind::Interior, peano4::FaceKind::Hanging).size,
-      partition.getFaces(dependence, peano4::FaceKind::Interior).size
-        + partition.getFaces(dependence, peano4::FaceKind::Boundary).size
-        + partition.getFaces(dependence, peano4::FaceKind::Hanging).size
+      partition.getFaces(adjacency, peano4::FaceKind::Interior, peano4::FaceKind::Hanging).size,
+      partition.getFaces(adjacency, peano4::FaceKind::Interior).size
+        + partition.getFaces(adjacency, peano4::FaceKind::Boundary).size
+        + partition.getFaces(adjacency, peano4::FaceKind::Hanging).size
     );
-    for (const auto& levelJump : partition.getLevelJumps(dependence)) {
+    for (const auto& levelJump : partition.getLevelJumps(adjacency)) {
       const bool coarseFaceRemote = remote[static_cast<std::size_t>(levelJump.coarseFace)] != 0;
       validateEquals(coarseFaceRemote, remoteSpan);
       for (const int fineFace : levelJump.fineFaces) {
@@ -386,7 +385,7 @@ peano4::tests::PartitionTest::testTheListsGroupByDependenceLevelAndKind() {
     }
   }
   validateEquals(cellsInLevelSpans, partition.getCells().size);
-  // The own side of an exchanged coarse face holds no cell where the fine cells below it fill the half.
+  // The own side of an exchanged coarse face has no cell where the fine cells below it fill that half.
   for (const auto& neighbour : partition.getNeighbours()) {
     for (const auto& entry : partition.getExchangedFaces(neighbour)) {
       const bool ownSideFilled = partition.getFaceCell(entry.face, entry.side) >= 0
@@ -399,9 +398,8 @@ peano4::tests::PartitionTest::testTheListsGroupByDependenceLevelAndKind() {
 }
 
 /**
- * With live data a regrid keeps the slot of every surviving cell, lists one prolongation, one
- * restriction or one receive per new cell, frees the slots of the cells that go, and the next
- * regrid fills the freed slots before the slot range grows.
+ * With live data, a regrid keeps the slot of every surviving cell, fills every new cell once and
+ * reuses freed slots before the slot range grows.
  */
 void
 peano4::tests::PartitionTest::testARegridKeepsTheSlotsOfSurvivingCellsAndReusesFreedOnes() {
@@ -678,13 +676,14 @@ peano4::tests::PartitionTest::testTheDeviceTwinReadsTheSameGeometry() {
   validateEquals(partition.onDevice().getNumberOfFaces(), partition.getNumberOfFaces());
   validateEquals(partition.onDevice().getMaximumLevel(), partition.getMaximumLevel());
   validateEquals(
-    partition.onDevice().getCells(peano4::Dependence::Local).size,
-    partition.getCells(peano4::Dependence::Local).size
+    partition.onDevice().getCells(peano4::Adjacency::Local).size,
+    partition.getCells(peano4::Adjacency::Local).size
   );
 }
 
 /**
- * A built partition holds its cell and face arrays on the host and, with a GPU backend, once more on the device.
+ * The partition bytes cover the cell and face arrays on the host and, with a GPU backend, on the
+ * device.
  */
 void
 peano4::tests::PartitionTest::testTheBytesCountEveryArray() {

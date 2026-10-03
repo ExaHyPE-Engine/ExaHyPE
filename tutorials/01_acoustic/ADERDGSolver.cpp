@@ -3,9 +3,9 @@
 #include "ADERDGSolver.h"
 
 namespace {
-  constexpr double Rho = 1.0;         // density
-  constexpr double C   = 1.0;         // sound speed
-  constexpr double K0  = Rho * C * C; // bulk modulus
+  constexpr double Rho = 1.0;
+  constexpr double C   = 1.0;         // Sound speed
+  constexpr double K0  = Rho * C * C; // Bulk modulus
 } // namespace
 
 void

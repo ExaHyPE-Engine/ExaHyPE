@@ -4,10 +4,6 @@
 
 #include "tarch/Assertions.h"
 
-/**
- * Creates the time series writer of the series on the first snapshot and a file writer for
- * this snapshot.
- */
 void
 exahype2::plotter::Snapshot::openFile(
   const tarch::plotter::Format format,
@@ -22,9 +18,6 @@ exahype2::plotter::Snapshot::openFile(
   _time       = timeStamp;
 }
 
-/**
- * Writes the file of this snapshot and the meta file that lists every snapshot of the series.
- */
 void
 exahype2::plotter::Snapshot::writeFile(const std::string& outputDirectory, const std::string& filename) {
   assertion(_fileWriter);

@@ -14,12 +14,10 @@
 
 /**
  * @file
- * The kernels of the discontinuous Galerkin solver families. A cell of Derived, the generated
- * solver class, holds (DGOrder + 1)^DIMENSIONS nodes with one value per unknown and auxiliary
- * variable. A face holds two halves of face states and two halves of face fluxes, the half of
- * the lower side first, and the cell on a side writes its own half. The Riemann problem of a face
- * replaces both flux halves by the difference between the numerical flux and the half's own flux
- * with the sign of that side's outward normal.
+ * The kernels of the discontinuous Galerkin solver families, where Derived is the generated
+ * solver class. A face stores one state half and one flux half per side, the lower side first,
+ * and the cell on each side writes its own half. The Riemann solver overwrites both flux halves
+ * with the numerical flux minus the half's own flux, times the sign of the side's outward normal.
  */
 TARGET_DECLARE
 namespace exahype2::dg {
@@ -235,8 +233,7 @@ namespace exahype2::dg {
 
 /**
  * The largest wave speed and the largest sum over the axes of the wave speed divided by the cell
- * extent. identity() and combine() reduce the statistics of many cells through
- * exahype2::MaxEigenvalueReduction, so a wave speed that is negative or not finite survives.
+ * extent. combine() keeps a wave speed that is negative or not finite.
  */
 struct exahype2::dg::MaxEigenvalueStatistics final {
   using ValueType = exahype2::dg::MaxEigenvalueStatistics;
@@ -254,9 +251,6 @@ struct exahype2::dg::MaxEigenvalueStatistics final {
   );
 };
 
-/**
- * Writes the initial condition of Derived into the nodes of every cell.
- */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::InitialiseCells final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
@@ -270,7 +264,7 @@ struct exahype2::dg::InitialiseCells final {
 };
 
 /**
- * Overwrites the halves of its faces that every listed cell owns with the face states of its solution.
+ * Writes the solution of every listed cell into the own state half of each of its faces.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::ProjectSolutionOntoFaces final {
@@ -291,9 +285,8 @@ struct exahype2::dg::ProjectSolutionOntoFaces final {
 };
 
 /**
- * Overwrites the halves of its two faces along normal that a listed cell with a face on the
- * plane at position owns with the face states of its solution; a cell away from the plane writes
- * nothing.
+ * Writes the solution of every listed cell that touches the plane at position into the own state
+ * halves of its two faces along normal.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::ProjectSolutionOntoPlane final {
@@ -316,8 +309,8 @@ struct exahype2::dg::ProjectSolutionOntoPlane final {
 };
 
 /**
- * Fills the coarse-side halves of the face states of the fine faces of a level jump from the same
- * half of its coarse face.
+ * Interpolates the coarse-side state half of the coarse face into the same half of every fine
+ * face of a level jump.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::InterpolateFaceStateHalves final {
@@ -333,8 +326,8 @@ struct exahype2::dg::InterpolateFaceStateHalves final {
 };
 
 /**
- * Fills the coarse-side halves of the face states and the face fluxes of the fine faces of a
- * level jump from the same halves of its coarse face.
+ * Interpolates the coarse-side state and flux halves of the coarse face into the same halves of
+ * every fine face of a level jump.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::InterpolateFaceHalves final {
@@ -353,8 +346,8 @@ struct exahype2::dg::InterpolateFaceHalves final {
 };
 
 /**
- * Solves the Riemann problem of every listed face and writes the numerical flux into both flux
- * halves. A boundary face first takes the boundary state of its cell into its outer half.
+ * Solves the Riemann problem of every listed face. On a boundary face, the boundary conditions
+ * first overwrite the outer state half.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::SolveRiemannProblems final {
@@ -374,9 +367,9 @@ struct exahype2::dg::SolveRiemannProblems final {
 };
 
 /**
- * Fills the fine-side half of the coarse face of a level jump from the numerical fluxes of its
- * fine faces: A hanging face contributes the flux its coarse-side half holds, an intermediate
- * face the restricted flux its fine-side half holds.
+ * Restricts the fluxes of the fine faces of a level jump into the fine-side flux half of the
+ * coarse face. A hanging fine face contributes its coarse-side half, every other fine face the
+ * restricted flux in its fine-side half.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::RestrictFluxHalves final {
@@ -393,8 +386,8 @@ struct exahype2::dg::RestrictFluxHalves final {
 };
 
 /**
- * Fills the fine-side half of the face states of the coarse face of a level jump with the
- * restriction of the fine-side halves of its fine faces.
+ * Restricts the fine-side state halves of the fine faces of a level jump into the fine-side half
+ * of the coarse face.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::RestrictStateHalves final {
@@ -410,8 +403,7 @@ struct exahype2::dg::RestrictStateHalves final {
 };
 
 /**
- * Runs operation on a level jump whose coarse face lies on the plane at position along normal
- * and skips every other level jump.
+ * Calls operation for a level jump whose coarse face lies on the plane at position along normal.
  */
 template <typename Operation>
 struct exahype2::dg::ForLevelJumpOnPlane final {
@@ -423,9 +415,6 @@ struct exahype2::dg::ForLevelJumpOnPlane final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
-/**
- * Reduces the wave-speed maxima of Derived over the nodes of every listed cell.
- */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::MeasureNodeEigenvalues final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
@@ -443,7 +432,7 @@ struct exahype2::dg::MeasureNodeEigenvalues final {
 };
 
 /**
- * Writes the error norms of the nodes of every listed cell into the NumberOfNorms entries of the cell.
+ * Writes the error norms of every listed cell into errorsPerCell, indexed by its position in cells.
  */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::MeasureNodeErrors final {
@@ -468,11 +457,8 @@ struct exahype2::dg::MeasureNodeErrors final {
 };
 
 /**
- * Fills the nodes of a cell of the new partition in a regrid from the cells of the old
- * partition: copy() keeps a cell, interpolateFromParent() evaluates the polynomial of the parent
- * at the nodes of a new child with the prolongation matrix, and restrictFromChildren() projects
- * the nodes of the erased children onto their parent with the restriction matrix. Every function
- * reads the source pool and writes one cell into target.
+ * Fills one cell of the partition after a regrid from the cells in source. The slots of source
+ * belong to the partition before the regrid.
  */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::RegridCells final {
@@ -494,10 +480,9 @@ struct exahype2::dg::RegridCells final {
 };
 
 /**
- * Overwrites the partner's half of every coupling face with the face states and the face fluxes
- * the partner solver wrote, mapped from the face nodes of PartnerDerived onto the face nodes and
- * the compute precision of this solver. couplingFaces holds two entries per face: The face and
- * the side of the cell this solver owns.
+ * Copies the partner's state and flux halves of every coupling face into the same halves of this
+ * solver, projected onto its face nodes. couplingFaces stores two entries per face: The face and
+ * the side of this solver's cell.
  */
 template <typename Derived, typename PartnerDerived, typename PartnerPrecision, typename ComputePrecision>
 struct exahype2::dg::CopyPartnerFaceHalves final {

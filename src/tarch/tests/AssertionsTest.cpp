@@ -6,9 +6,6 @@
 #include "tarch/la/Vector.h"
 
 namespace {
-  /**
-   * Returns twice value; the assertion holds for every non-negative value.
-   */
   template <typename Value>
   constexpr Value getTwiceTheNonNegative(const Value value) {
     assertion(value >= Value{0}, value, tarch::la::Vector<2, int>(1));
@@ -25,7 +22,7 @@ tarch::tests::AssertionsTest::run() {
 }
 
 /**
- * A constexpr function with an assertion on a vector parameter evaluates at compile time and at run time.
+ * A constexpr function whose assertion prints a vector evaluates at compile time and at run time.
  */
 void
 tarch::tests::AssertionsTest::testAConstexprFunctionCarriesAnAssertion() {

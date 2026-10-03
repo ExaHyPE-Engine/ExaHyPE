@@ -38,9 +38,9 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
     return insideFile ? displacementSampler.sampleBilinear("displacement", {fileX, fileY}) : 0.0;
   };
 
-  // The displacement raster resolves scales far below the mesh, and sampling it pointwise aliases
-  // those scales into the polynomial basis, so a nine-point low-pass over the effective source
-  // radius, shrunk by the cell footprint, gives every resolution the same integrated source.
+  // Pointwise samples of the fine displacement raster alias into the polynomial basis. A nine-point
+  // low-pass over the source radius minus the cell footprint gives every resolution the same
+  // integrated source.
   const double filterCellH0               = std::max(h(0), sourceFilterMinimumCellH);
   const double filterCellH1               = std::max(h(1), sourceFilterMinimumCellH);
   const double cellFootprintRadiusSquared = filterCellH0 * filterCellH0 + filterCellH1 * filterCellH1;

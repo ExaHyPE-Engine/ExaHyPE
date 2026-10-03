@@ -24,12 +24,9 @@ exahype2::runner::tests::RunnerTest::run() {
   testMethod(testDescribeMeshUpdatesReportsTheSweepCountAndWallClock);
   testMethod(testDescribeRepetitionsCountsEveryPhaseInItsUnit);
   testMethod(testFinishStepSumsTheSolverBytesAndCellUpdates);
-  testMethod(testTheGridInitialisationRealisesOnlyTheVotesOfTheInitialCondition);
+  testMethod(testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition);
 }
 
-/**
- * Every rank continues with the step of the global master, whatever it passes itself.
- */
 void
 exahype2::runner::tests::RunnerTest::testTheMasterStepReachesEveryRank() {
   const bool master = tarch::mpi::Rank::getInstance().isGlobalMaster();
@@ -48,9 +45,6 @@ exahype2::runner::tests::RunnerTest::testTheTerminationStepReachesEveryRank() {
   );
 }
 
-/**
- * describeMeshUpdates() writes the wall clock and the regrid and sweep counts in singular and plural.
- */
 void
 exahype2::runner::tests::RunnerTest::testDescribeMeshUpdatesReportsTheSweepCountAndWallClock() {
   exahype2::runner::Runner::MeshUpdates singleSweep;
@@ -72,10 +66,6 @@ exahype2::runner::tests::RunnerTest::testDescribeMeshUpdatesReportsTheSweepCount
   );
 }
 
-/**
- * describeRepetitions() counts time steps as steps, plots as plots, dynamic AMR as regrids and sweeps and the grid
- * phases as sweeps.
- */
 void
 exahype2::runner::tests::RunnerTest::testDescribeRepetitionsCountsEveryPhaseInItsUnit() {
   validateEquals(exahype2::runner::Runner::describeRepetitions("Time Step", 1, 0), std::string("1 Step"));
@@ -89,10 +79,6 @@ exahype2::runner::tests::RunnerTest::testDescribeRepetitionsCountsEveryPhaseInIt
   validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Initialisation", 1, 0), std::string("1 Sweep"));
 }
 
-/**
- * finishStep() sums the host bytes, the device bytes, the cells and the cell degrees of freedom of
- * the solvers over the ranks.
- */
 void
 exahype2::runner::tests::RunnerTest::testFinishStepSumsTheSolverBytesAndCellUpdates() {
   static const std::vector<peano4::RefinementRequest> noRequests;
@@ -125,11 +111,10 @@ exahype2::runner::tests::RunnerTest::testFinishStepSumsTheSolverBytesAndCellUpda
 }
 
 /**
- * A grid initialisation round realises the votes of the initial condition in one regrid sweep, so
- * the votes the cells of a regrid cast on moved data change no cell.
+ * Votes cast during a regrid change no cell, since the next initialisation replaces them.
  */
 void
-exahype2::runner::tests::RunnerTest::testTheGridInitialisationRealisesOnlyTheVotesOfTheInitialCondition() {
+exahype2::runner::tests::RunnerTest::testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition() {
   constexpr int Depth = peano4::tests::DepthWithCoarseCellsBesideTheCentreBlock;
   peano4::tests::buildRegularGrid(Depth);
 

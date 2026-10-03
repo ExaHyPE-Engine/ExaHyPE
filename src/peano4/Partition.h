@@ -11,7 +11,7 @@
 
 namespace peano4 {
   enum class FaceKind : std::uint8_t;
-  enum class Dependence : std::uint8_t;
+  enum class Adjacency : std::uint8_t;
   struct LevelJump;
   struct ExchangedFace;
   struct Neighbour;
@@ -27,23 +27,20 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * Names what lies on the two sides of a face: A cell on both sides, a cell and the domain wall,
- * a cell and a coarser cell across the coarse face of its level jump, a cell and finer cells
- * across the fine faces of its level jump, or no cell at all inside a level jump of more than
- * one level.
+ * What lies on the two sides of a face: Cells on both sides, a cell and the domain boundary, a cell
+ * and a coarser cell, a cell and finer cells, or no cell inside a level jump of more than one level.
  */
 enum class peano4::FaceKind : std::uint8_t { Interior, Boundary, Hanging, Coarse, Intermediate };
 
 /**
- * Names whether a cell, a face or a level jump reads data a neighbour rank sends: A local one
+ * Whether a cell, a face or a level jump reads data a neighbour rank sends: A local one
  * reads local data only, a remote one waits for the halo exchange.
  */
-enum class peano4::Dependence : std::uint8_t { Local, Remote };
+enum class peano4::Adjacency : std::uint8_t { Local, Remote };
 
 /**
- * One level jump of the partition: A coarse face and the fine faces one level below it.
- * coarseSide names the side of the coarse face whose cell is coarse; the fine faces hold their
- * own cells on the other side.
+ * One level jump of the partition: A coarse face and the fine faces one level below it. The coarse
+ * cell lies on side coarseSide of the coarse face, the fine cells on the other side.
  */
 struct peano4::LevelJump final {
   int coarseFace{-1};
@@ -53,7 +50,8 @@ struct peano4::LevelJump final {
 };
 
 /**
- * One face this rank and a neighbour rank both hold; side is the side whose cell this rank owns.
+ * One face this rank and a neighbour rank both hold. The member side is the side of the cell this
+ * rank owns.
  */
 struct peano4::ExchangedFace final {
   int face{-1};
@@ -61,7 +59,7 @@ struct peano4::ExchangedFace final {
 };
 
 /**
- * One neighbour rank and its run of exchanged faces, in the canonical order both ranks derive.
+ * One neighbour rank and its range of exchanged faces. Both ranks sort these faces the same way.
  */
 struct peano4::Neighbour final {
   int rank{-1};
@@ -70,10 +68,10 @@ struct peano4::Neighbour final {
 };
 
 /**
- * The cells of the spacetree one rank owns, numbered by slots, with their faces, the level
- * jumps between them and the faces a neighbour rank holds too. A cell keeps its slot across
- * every regrid that keeps the cell; the faces are numbered afresh by every regrid. Every list is
- * ordered by dependence and then by level or kind, so every group a caller loops over is one span.
+ * The cells one rank owns, numbered by slots, with their faces, their level jumps and the faces the
+ * rank exchanges with neighbour ranks. A cell keeps its slot through every regrid that keeps the
+ * cell, and every regrid renumbers the faces. Every list is sorted by adjacency and then by level or
+ * kind, so every group a caller loops over is one span.
  */
 class peano4::Partition final {
 public:
@@ -83,19 +81,16 @@ public:
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getMaximumLevel() const noexcept;
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::Span<const int> getCells() const noexcept;
-  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(Dependence dependence) const noexcept;
-  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(Dependence dependence, int level) const noexcept;
-  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getFaces(Dependence dependence, FaceKind kind) const noexcept;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(Adjacency adjacency) const noexcept;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(Adjacency adjacency, int level) const noexcept;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getFaces(Adjacency adjacency, FaceKind kind) const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getFaces(
-    Dependence dependence,
-    FaceKind   firstKind,
-    FaceKind   lastKind
+    Adjacency adjacency,
+    FaceKind  firstKind,
+    FaceKind  lastKind
   ) const noexcept;
-  [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(Dependence dependence) const noexcept;
-  [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(
-    Dependence dependence,
-    int        level
-  ) const noexcept;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(Adjacency adjacency) const noexcept;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(Adjacency adjacency, int level) const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const Neighbour> getNeighbours() const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const ExchangedFace> getExchangedFaces(
     const Neighbour& neighbour
@@ -141,8 +136,8 @@ public:
 private:
   friend class peano4::Spacetree;
 
-  [[nodiscard]] INLINE_METHOD int getRangeIndexOfLevel(Dependence dependence, int level) const noexcept;
-  [[nodiscard]] INLINE_METHOD int getRangeIndexOfKind(Dependence dependence, FaceKind kind) const noexcept;
+  [[nodiscard]] INLINE_METHOD int getRangeIndexOfLevel(Adjacency adjacency, int level) const noexcept;
+  [[nodiscard]] INLINE_METHOD int getRangeIndexOfKind(Adjacency adjacency, FaceKind kind) const noexcept;
 
   int _numberOfSlots{0};
   int _numberOfFaces{0};
@@ -153,8 +148,8 @@ private:
   int _maximumLevel{0};
 
   /**
-   * The cells in the order of the list; the ranges hold one offset per dependence and level and
-   * one end. Every range array lies in host memory, in the device twin too.
+   * The range array stores one offset per adjacency and level plus the end offset. Every range array
+   * lies in host memory, also in the device twin.
    */
   const int* _cells{nullptr};
   const int* _cellRanges{nullptr};
@@ -168,7 +163,7 @@ private:
   const int* _cellCurveIndex{nullptr};
 
   /**
-   * The faces in the order of the list; the ranges hold one offset per dependence and kind and one end.
+   * The range array stores one offset per adjacency and kind plus the end offset.
    */
   const int*      _faces{nullptr};
   const int*      _faceRanges{nullptr};
@@ -188,7 +183,8 @@ private:
   double        _domainOffset[DIMENSIONS]{};
 
   /**
-   * The partition with the same arrays in device memory; null where this partition is that one.
+   * The partition with the same arrays in device memory, or null in that partition itself and in a
+   * build without a GPU backend.
    */
   const Partition* _deviceTwin{nullptr};
 };

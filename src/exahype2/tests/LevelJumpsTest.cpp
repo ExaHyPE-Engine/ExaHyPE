@@ -20,14 +20,14 @@
 
 namespace {
   /**
-   * The smallest depth whose first cell of level one holds at least three cells per axis.
+   * Smallest depth at which the first cell of level one covers at least three cells per axis.
    */
   constexpr int Depth = peano4::SubdivisionFactor >= 3 ? 2 : 3;
 
   /**
-   * Builds the regular grid with the first cell of level one refined, so level jumps surround
-   * it. The curve starts in that cell, so on more than one rank the first rank holds refined
-   * cells only, beside coarse cells of another rank.
+   * Returns the partition of a regular grid whose first cell of level one is refined, so level
+   * jumps surround it. The curve starts in that cell, so on more than one rank the first rank owns
+   * only refined cells beside coarse cells of another rank.
    */
   const peano4::Partition& buildPartitionWithLevelJumps() {
     peano4::tests::buildRegularGrid(Depth);
@@ -48,13 +48,10 @@ namespace {
     return peano4::Spacetree::getInstance().getPartition();
   }
 
-  /**
-   * Returns the level jumps of this rank whose coarse face lies on a level coarser than every cell of the rank.
-   */
   int getNumberOfLevelJumpsCoarserThanEveryCell(const peano4::Partition& partition) {
     int result = 0;
-    for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
-      for (const auto& levelJump : partition.getLevelJumps(dependence)) {
+    for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+      for (const auto& levelJump : partition.getLevelJumps(adjacency)) {
         result += levelJump.level < partition.getMinimumLevel() ? 1 : 0;
       }
     }
@@ -62,19 +59,19 @@ namespace {
   }
 
   /**
-   * Returns the level jumps of both dependences in the order of the partition's list.
+   * Returns every level jump of the partition, which stores the remote level jumps right after the
+   * local ones.
    */
   tarch::Span<const peano4::LevelJump> getEveryLevelJump(const peano4::Partition& partition) {
-    const auto local  = partition.getLevelJumps(peano4::Dependence::Local);
-    const auto remote = partition.getLevelJumps(peano4::Dependence::Remote);
+    const auto local  = partition.getLevelJumps(peano4::Adjacency::Local);
+    const auto remote = partition.getLevelJumps(peano4::Adjacency::Remote);
     return {local.data, local.size + remote.size};
   }
 
   TARGET_DECLARE
   /**
-   * Counts every visit of a level jump and, for the visited level jump, every level jump of the
-   * launched set that has to run before it and has no visit yet: A coarser level jump for an
-   * interpolation, a finer one for a restriction.
+   * Counts the visits of every level jump and, per visit, the launched level jumps that have to run
+   * earlier and have no visit yet.
    */
   struct RecordVisit final {
     tarch::Span<const peano4::LevelJump> levelJumps{};
@@ -97,12 +94,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Returns 1 for every level jump of the remote span, 0 for every level jump of the local span.
-   */
   std::vector<int> getRemoteMarks(const peano4::Partition& partition) {
-    const auto       local  = partition.getLevelJumps(peano4::Dependence::Local);
-    const auto       remote = partition.getLevelJumps(peano4::Dependence::Remote);
+    const auto       local  = partition.getLevelJumps(peano4::Adjacency::Local);
+    const auto       remote = partition.getLevelJumps(peano4::Adjacency::Remote);
     std::vector<int> marks(static_cast<std::size_t>(local.size), 0);
     marks.insert(marks.end(), static_cast<std::size_t>(remote.size), 1);
     return marks;
@@ -126,8 +120,8 @@ exahype2::tests::LevelJumpsTest::run() {
 }
 
 /**
- * The interpolation before the exchange visits the level jumps with local coarse data and the
- * one after it the others, on a rank whose level jumps lie coarser than all its cells as well.
+ * The interpolation before the exchange visits the local level jumps and the one after it the
+ * remote ones, also on a rank with level jumps coarser than all its cells.
  */
 void
 exahype2::tests::LevelJumpsTest::testTheInterpolationsVisitEveryLevelJumpOnceCoarsestLevelFirst() {
@@ -146,13 +140,13 @@ exahype2::tests::LevelJumpsTest::testTheInterpolationsVisitEveryLevelJumpOnceCoa
 
   exahype2::interpolateCoarseFaces(
     partition,
-    peano4::Dependence::Local,
+    peano4::Adjacency::Local,
     RecordVisit{levelJumps, localOnDevice.getData(), visits.getData(), missedVisits.getData(), true}
   );
   const std::vector<int> visitsBeforeExchange = visits.getValues();
   exahype2::interpolateCoarseFaces(
     partition,
-    peano4::Dependence::Remote,
+    peano4::Adjacency::Remote,
     RecordVisit{levelJumps, remoteOnDevice.getData(), visits.getData(), missedVisits.getData(), true}
   );
   const std::vector<int> visitsAfterExchange = visits.getValues();
@@ -192,10 +186,6 @@ exahype2::tests::LevelJumpsTest::testTheRestrictionVisitsEveryLevelJumpOnceFines
   }
 }
 
-/**
- * The restriction of the level jumps with a remote coarse face and the restriction of the other
- * level jumps together visit every level jump once, each group finest level first.
- */
 void
 exahype2::tests::LevelJumpsTest::testTheGroupedRestrictionsVisitEveryLevelJumpOnceFinestLevelFirst() {
   const auto& partition  = buildPartitionWithLevelJumps();
@@ -213,13 +203,13 @@ exahype2::tests::LevelJumpsTest::testTheGroupedRestrictionsVisitEveryLevelJumpOn
 
   exahype2::restrictFineFaces(
     partition,
-    peano4::Dependence::Remote,
+    peano4::Adjacency::Remote,
     RecordVisit{levelJumps, remoteOnDevice.getData(), visits.getData(), missedVisits.getData(), false}
   );
   const std::vector<int> visitsBeforeTheMessages = visits.getValues();
   exahype2::restrictFineFaces(
     partition,
-    peano4::Dependence::Local,
+    peano4::Adjacency::Local,
     RecordVisit{levelJumps, localOnDevice.getData(), visits.getData(), missedVisits.getData(), false}
   );
   const std::vector<int> visitsAfterTheMessages = visits.getValues();

@@ -129,8 +129,7 @@ exahype2::particles::tests::TrajectoryDatabaseTest::testClearRewritesFileFromScr
 }
 
 /**
- * isSnapshotDue() holds for a particle the database lacks, after the time delta, on a move and on a
- * second position at the same time stamp, and it agrees with the snapshots addParticleSnapshot() stores.
+ * isSnapshotDue() agrees with the snapshots that addParticleSnapshot() stores.
  */
 void
 exahype2::particles::tests::TrajectoryDatabaseTest::testASnapshotIsDueForANewParticleAfterTheDeltasAndOnAMove() {

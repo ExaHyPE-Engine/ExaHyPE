@@ -7,8 +7,7 @@
 
 namespace {
   std::string writeTempFile(const std::string& stem, const std::string& content) {
-    // The file name carries a per-run identifier, so two processes that write into the test
-    // directory at the same time do not overwrite each other's fixture.
+    // The file name contains a per-run identifier, so two processes never write the same fixture.
     static const std::string testRunIdentifier =
       std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
       + std::to_string(std::random_device{}());

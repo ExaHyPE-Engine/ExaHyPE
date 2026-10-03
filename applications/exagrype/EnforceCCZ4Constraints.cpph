@@ -3,8 +3,8 @@
 
 /**
  * Normalises each node's conformal metric and removes the traces of A_tilde and D_kij.
+ * Clamps the lapse and the conformal factor to positive values.
  * The conformal metric must be positive definite.
- * Clamps the lapse and conformal factor to positive values.
  */
 template <class Shortcuts>
 INLINE_METHOD GPU_CALLABLE_METHOD void

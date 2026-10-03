@@ -10,9 +10,7 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 /**
- * Singleton of one MPI rank. init() initialises MPI and reads the rank number, the rank count, the
- * node layout and the thread level, and shutdown() finalises MPI. reserveFreeTag() hands out the
- * message tags.
+ * Singleton of one MPI rank, which hands out the message tags through reserveFreeTag().
  *
  * @author Tobias Weinzierl
  */
@@ -62,7 +60,7 @@ private:
   int  _numberOfRanks{-1};
   int  _providedThreadLevelSupport{-1};
 
-  // Node layout, computed once in init() so later queries need no collective.
+  // The call init() computes the node layout, so a query needs no collective call.
   int  _numberOfNodes{1};
   int  _numberOfRanksOnNode{1};
   int  _rankOnNode{0};

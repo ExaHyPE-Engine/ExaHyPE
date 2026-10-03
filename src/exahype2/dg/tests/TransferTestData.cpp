@@ -44,9 +44,8 @@ exahype2::dg::tests::getTransferConstantOf(const int value) {
 }
 
 /**
- * Writes the coordinates of node in a block of axes axes whose extent is the unit interval on
- * every axis for a negative block, and the child interval of block on every axis otherwise. The
- * lowest axis of the node and of the block runs fastest.
+ * Writes the coordinates of node in block. A negative block spans the unit interval on every axis,
+ * any other block the child interval block. The lowest axis runs fastest in node and in block.
  */
 void
 exahype2::dg::tests::setTransferCoordinatesOf(

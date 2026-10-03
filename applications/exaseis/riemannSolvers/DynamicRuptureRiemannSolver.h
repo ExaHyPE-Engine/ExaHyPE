@@ -55,8 +55,7 @@ namespace applications::exahype2::exaseis {
 } // namespace applications::exahype2::exaseis
 
 /**
- * The plane of the fault: It is orthogonal to the axis normal and lies at position along that axis,
- * in the coordinates of the mesh.
+ * The fault plane orthogonal to the axis normal at position, in mesh coordinates.
  */
 struct applications::exahype2::exaseis::FaultPlane final {
   int    normal{0};

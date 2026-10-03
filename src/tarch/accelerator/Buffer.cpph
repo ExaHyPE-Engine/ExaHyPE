@@ -5,24 +5,24 @@
 #include "tarch/accelerator/accelerator.h"
 
 template <typename T>
-tarch::accelerator::Buffer<T>::Buffer(const tarch::MemoryLocation location) noexcept :
+INLINE_METHOD tarch::accelerator::Buffer<T>::Buffer(const tarch::MemoryLocation location) noexcept :
   _location(location) {}
 
 template <typename T>
-tarch::accelerator::Buffer<T>::Buffer(const std::size_t size, const tarch::MemoryLocation location) :
+INLINE_METHOD tarch::accelerator::Buffer<T>::Buffer(const std::size_t size, const tarch::MemoryLocation location) :
   _location(location) {
   allocate(size);
 }
 
 template <typename T>
-tarch::accelerator::Buffer<T>::Buffer(tarch::accelerator::Buffer<T>&& other) noexcept :
+INLINE_METHOD tarch::accelerator::Buffer<T>::Buffer(tarch::accelerator::Buffer<T>&& other) noexcept :
   _data(std::exchange(other._data, nullptr)),
   _size(std::exchange(other._size, 0)),
   _location(other._location),
   _device(other._device) {}
 
 template <typename T>
-tarch::accelerator::Buffer<T>&
+INLINE_METHOD tarch::accelerator::Buffer<T>&
 tarch::accelerator::Buffer<T>::operator=(tarch::accelerator::Buffer<T>&& other) noexcept {
   if (this != &other) {
     release();
@@ -35,16 +35,16 @@ tarch::accelerator::Buffer<T>::operator=(tarch::accelerator::Buffer<T>&& other) 
 }
 
 template <typename T>
-tarch::accelerator::Buffer<T>::Buffer::~Buffer() noexcept {
+INLINE_METHOD tarch::accelerator::Buffer<T>::Buffer::~Buffer() noexcept {
   release();
 }
 
 /**
- * Replaces the array by an uninitialised one of the given size; a size of zero leaves the
- * buffer empty.
+ * Replaces the array by an uninitialised one of the given size. A size of zero leaves the buffer
+ * empty.
  */
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::Buffer<T>::allocate(const std::size_t size) {
   release();
   if (size == 0) {
@@ -56,7 +56,7 @@ tarch::accelerator::Buffer<T>::allocate(const std::size_t size) {
 }
 
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::Buffer<T>::release() noexcept {
   if (_data != nullptr) {
     tarch::freeMemory(static_cast<void*>(_data), _location, _device);
@@ -66,7 +66,7 @@ tarch::accelerator::Buffer<T>::release() noexcept {
 }
 
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::Buffer<T>::copyFromHost(const T* const source, const std::size_t count) {
   assertion(count <= _size, count, _size);
   if (count == 0) {
@@ -76,7 +76,7 @@ tarch::accelerator::Buffer<T>::copyFromHost(const T* const source, const std::si
 }
 
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::Buffer<T>::copyToHost(T* const target, const std::size_t count) const {
   assertion(count <= _size, count, _size);
   if (count == 0) {
@@ -86,14 +86,14 @@ tarch::accelerator::Buffer<T>::copyToHost(T* const target, const std::size_t cou
 }
 
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::Buffer<T>::setValues(const std::vector<T>& values) {
   allocate(values.size());
   copyFromHost(values.data(), values.size());
 }
 
 template <typename T>
-std::vector<T>
+INLINE_METHOD std::vector<T>
 tarch::accelerator::Buffer<T>::getValues() const {
   std::vector<T> result(_size);
   copyToHost(result.data(), _size);

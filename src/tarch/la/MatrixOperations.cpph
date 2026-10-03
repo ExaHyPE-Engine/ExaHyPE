@@ -57,6 +57,9 @@ tarch::la::frobeniusNorm(const Matrix<4, 4, Scalar>& matrix) {
   return std::sqrt(result);
 }
 
+/**
+ * Returns the largest absolute entry of the matrix.
+ */
 template <int Rows, int Cols, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar
 tarch::la::elementMax(const Matrix<Rows, Cols, Scalar>& matrix) {
@@ -104,17 +107,7 @@ tarch::la::elementMax(const Matrix<4, 4, Scalar>& matrix) {
 }
 
 /**
- * Inverts each individual entry
- *
- * Works only when the matrix does not contain any zeroes, as this routine
- * yields
- *
- * @f$ A_{ij} \gets A_{ij}^{-1} @f$
- *
- * which is not @f$ A^{-1} @f$. Use tarch::la::invert() to obtain the matrix
- * inverse.
- *
- * @see tarch::la::invert()
+ * Returns the entry-wise reciprocals @f$ A_{ij}^{-1} @f$ of a matrix without zero entries.
  */
 template <int Rows, int Cols, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>

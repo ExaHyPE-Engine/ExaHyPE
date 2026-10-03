@@ -10,11 +10,7 @@ namespace tarch::plotter {
 } // namespace tarch::plotter
 
 /**
- * Cell types supported by the plotters.
- *
- * The numeric values are the standard VTK cell-type codes. All plotter
- * backends use CellTypes as the canonical mapping of codes, node counts,
- * dimensions, names, and XDMF topology codes.
+ * Cell types of the plotters, numbered by their VTK cell-type codes.
  */
 enum class tarch::plotter::CellType : std::uint8_t {
   Vertex      = 1,

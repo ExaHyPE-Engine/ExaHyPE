@@ -23,7 +23,7 @@
 /**
  * Returns the CFL factor of the ADER-DG scheme of the given polynomial order.
  */
-constexpr double
+INLINE_METHOD constexpr double
 exahype2::dg::ader::getCFLFactor(const int order) {
   constexpr double Factors[] = {
     1.0,
@@ -47,7 +47,7 @@ exahype2::dg::ader::getCFLFactor(const int order) {
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::Solver(
+INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::Solver(
   const double                                     timeStepFactor,
   const std::string&                               name,
   const std::vector<exahype2::plotter::DataField>& plottedFields
@@ -65,7 +65,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * principle of the limiter.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::Solver(
+INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::Solver(
   const double                                     timeStepFactor,
   const std::string&                               name,
   const std::vector<exahype2::plotter::DataField>& plottedFields,
@@ -81,11 +81,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   );
 }
 
-/**
- * Reserves the pools of the solver and of its limiter and lists the coupling faces.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::allocate(
   const peano4::Partition& partition
 ) {
@@ -97,11 +94,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   reservePredictorScratch(partition);
 }
 
-/**
- * Sizes the predictor scratch to the chunks the dispatch over the advanced cells needs.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::reservePredictorScratch(
   const peano4::Partition& partition
 ) {
@@ -113,7 +107,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::release() {
   Base::release();
   _pointSourceLocations.release();
@@ -127,7 +121,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-tarch::AllocatedBytes
+INLINE_METHOD tarch::AllocatedBytes
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getAllocatedBytes() const {
   auto result = Base::getAllocatedBytes() + _pointSourceLocations.getAllocatedBytes()
     + _couplingFaces.getAllocatedBytes() + _couplingMatrix.getAllocatedBytes() + _predictorScratch.getAllocatedBytes();
@@ -138,11 +132,11 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Writes the initial condition into every cell and, with a limiter, onto every subgrid, and
- * reads the point source locations after the grid initialisation hook of Derived ran.
+ * Writes the initial condition into every cell and, with a limiter, into every subgrid.
+ * initPointSourceLocations() runs after the initial condition.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::initialise(
   const peano4::Partition&      partition,
   exahype2::RefinementRequests& requests
@@ -168,18 +162,13 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Advances every cell by the time step size the previous time step proposed: The predictor of
- * every cell writes its face states and face fluxes onto its own halves of its faces, the faces
- * solve their Riemann problems, the corrector adds the face integrals, and the limiter judges the
- * candidates and recomputes the rejected cells. Between threads the cells meet only in the face
- * pools, where every cell writes its own halves and the Riemann problems read both halves;
- * between ranks the own halves of the exchanged faces travel in the state and flux exchanges
- * while the local faces solve their Riemann problems, and the fluxes restricted onto coarse faces
- * travel in the flux exchange while the local cells correct. A solver with a coupling partner
- * runs the time step of both solvers, and a solver that follows its partner runs nothing here.
+ * Advances every cell by the time step size that the previous time step proposed. The ranks
+ * exchange the face halves while the local faces solve their Riemann problems and the restricted
+ * fluxes while the local cells correct. A solver with a coupling partner runs the time steps of
+ * both solvers, and the partner returns at once.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::performTimeStep(
   const peano4::Partition&      partition,
   exahype2::RefinementRequests& requests
@@ -191,8 +180,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     _coupledTimeStep(partition, requests);
     return;
   }
-  constexpr auto Local        = peano4::Dependence::Local;
-  constexpr auto Remote       = peano4::Dependence::Remote;
+  constexpr auto Local        = peano4::Adjacency::Local;
+  constexpr auto Remote       = peano4::Adjacency::Remote;
   const double   timeStepSize = this->_timeStepping.startTimeStep();
   const double   timeStamp    = this->_timeStepping.getTimeStamp();
 
@@ -236,11 +225,11 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Returns the number of cells of all ranks the limiter marked as troubled in the last time step;
- * zero without a limiter.
+ * Returns the number of cells on all ranks that the limiter marked as troubled in the last time
+ * step, or zero without a limiter.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-int
+INLINE_METHOD int
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getNumberOfTroubledCells() const {
   if constexpr (HasLimiter) {
     return _limiter->getGlobalNumberOfTroubledCells();
@@ -250,16 +239,13 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Couples this solver with partner across the faces between the cells the two solvers own:
- * Every time step of this solver runs both solvers with the smaller of their time step sizes,
- * copies the halves of every coupling face from the partner's face pools into this solver's pools
- * and back, and partner's own performTimeStep() runs nothing. fromPartnerMatrix maps the face
- * nodes of partner onto the face nodes of this solver and toPartnerMatrix the other way round,
- * both flattened with the input node as the major index.
+ * Couples this solver with partner across the faces between their cells. Every time step of this
+ * solver then advances both solvers with the smaller time step size. fromPartnerMatrix and
+ * toPartnerMatrix store the input node as the major index.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 template <typename Partner>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::coupleWith(
   Partner&                   partner,
   const std::vector<double>& fromPartnerMatrix,
@@ -269,14 +255,14 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     exahype2::terms::HasCellPredicate<Derived> and exahype2::terms::HasCellPredicate<typename Partner::DerivedType>,
     "Both coupled solvers restrict themselves to cells through ownsCell()."
   );
-  static_assert(Partner::NumberOfData == NumberOfData, "Coupled solvers carry the same values per node.");
+  static_assert(Partner::NumberOfData == NumberOfData, "Coupled solvers store the same number of values per node.");
   assertion(not _drivenByPartner and not _coupledTimeStep);
   setCouplingMatrix(fromPartnerMatrix);
   partner.setCouplingMatrix(toPartnerMatrix);
   partner.leaveTimeStepsToPartner();
   _coupledTimeStep = [this, &partner](const peano4::Partition& partition, exahype2::RefinementRequests& requests) {
-    constexpr auto Local        = peano4::Dependence::Local;
-    constexpr auto Remote       = peano4::Dependence::Remote;
+    constexpr auto Local        = peano4::Adjacency::Local;
+    constexpr auto Remote       = peano4::Adjacency::Remote;
     const double   timeStepSize = std::min(this->_timeStepping.startTimeStep(), partner._timeStepping.startTimeStep());
     const double   timeStamp    = this->_timeStepping.getTimeStamp();
 
@@ -370,7 +356,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * Stores the matrix that maps the partner's face nodes onto this solver's face nodes.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::setCouplingMatrix(
   const std::vector<double>& fromPartnerMatrix
 ) {
@@ -382,28 +368,24 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   _couplingMatrix.setValues(matrix);
 }
 
-/**
- * Leaves every time step of this solver to the coupling partner that drives it.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::leaveTimeStepsToPartner() {
   assertion(not _coupledTimeStep);
   _drivenByPartner = true;
 }
 
 /**
- * Overwrites the partner's half of every coupling face with the dependence in this solver's face
- * pools with the face states and the face fluxes the partner wrote, mapped onto this solver's
- * face nodes and compute precision.
+ * Copies the partner's face states and fluxes on the local or the remote coupling faces into the
+ * partner's halves in this solver's pools.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 template <typename Partner>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::copyFaceHalvesFromPartner(
   [[maybe_unused]] const peano4::Partition& partition,
   const Partner&                            partner,
-  const peano4::Dependence                  dependence
+  const peano4::Adjacency                   adjacency
 ) {
   assertion(
     _couplingMatrix.getSize() == static_cast<std::size_t>(Partner::NodesPerAxis * NodesPerAxis),
@@ -411,7 +393,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   );
   assertion(partition.getNumberOfFaces() <= partner.getFaceStates().getCapacity(), partition.getNumberOfFaces());
   using PartnerPrecision   = typename Partner::StatePool::ValueType;
-  const bool local         = dependence == peano4::Dependence::Local;
+  const bool local         = adjacency == peano4::Adjacency::Local;
   const int  firstFace     = local ? 0 : _numberOfLocalCouplingFaces;
   const int  numberOfFaces = local ? _numberOfLocalCouplingFaces : _numberOfCouplingFaces - _numberOfLocalCouplingFaces;
   tarch::accelerator::parallelFor(
@@ -428,20 +410,19 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Lists every interior face with exactly one owned cell on this rank whose far cell this solver
- * does not own, the local faces first; the far cell of an exchanged face is the owned cell
- * mirrored across the face. A level jump never separates two coupled solvers.
+ * Lists every interior face between a cell this solver owns and a cell it does not own, the local
+ * faces first. The far cell of an exchanged face is the owned cell mirrored across the face. A
+ * coupling face on a level jump is a fatal error.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::rebuildCouplingFaces(
   [[maybe_unused]] const peano4::Partition& partition
 ) {
   if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
     std::vector<int> couplingFaces;
-    for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
-      for (const int face :
-           partition.getFaces(dependence, peano4::FaceKind::Interior, peano4::FaceKind::Intermediate)) {
+    for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+      for (const int face : partition.getFaces(adjacency, peano4::FaceKind::Interior, peano4::FaceKind::Intermediate)) {
         const auto kind = partition.getFaceKind(face);
         if (kind == peano4::FaceKind::Boundary) {
           continue;
@@ -480,7 +461,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
         couplingFaces.push_back(face);
         couplingFaces.push_back(ownedSide);
       }
-      if (dependence == peano4::Dependence::Local) {
+      if (adjacency == peano4::Adjacency::Local) {
         _numberOfLocalCouplingFaces = static_cast<int>(couplingFaces.size() / 2);
       }
     }
@@ -493,7 +474,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * Moves the solution and, with a limiter, the statuses and the subgrids through the regrid.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::regrid(
   const peano4::Partition&      partition,
   const peano4::Regrid&         regrid,
@@ -508,11 +489,11 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Writes one snapshot; with a limiter every plot cell carries its status, and a cell on the
- * subcell scheme plots at every node the subcell that contains the node.
+ * Writes one snapshot. With a limiter, every plot cell stores its status, and a limited cell plots
+ * at every node the subcell that contains the node.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::plot(
   const peano4::Partition&     partition,
   const tarch::plotter::Format format,
@@ -544,7 +525,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * Returns the time step size of the CFL condition of the ADER-DG scheme on the scaled wave speed.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-double
+INLINE_METHOD double
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getTimeStepSizeFromCFL() const {
   if constexpr (UsesAdaptiveTimeStepping) {
     return this->_timeStepping.getFactor() * PNPM / this->_timeStepping.getMaxScaledEigenvalueOfThisStep();
@@ -557,7 +538,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * Returns the normalised fraction of the admissible mesh width a fixed rule advances by.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-double
+INLINE_METHOD double
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getFixedTimeStepSize() const {
   const double maxAdmissibleMeshWidth = this->_timeStepping.getLimits().maxAdmissibleMeshWidth;
   assertion(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
@@ -565,7 +546,12 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-const typename exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::LimiterType&
+INLINE_METHOD const typename exahype2::dg::ader::Solver<
+  Derived,
+  StoragePrecision,
+  ComputePrecision,
+  Limiter
+>::LimiterType&
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getLimiter() const {
   if constexpr (HasLimiter) {
     return *_limiter;
@@ -574,11 +560,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   }
 }
 
-/**
- * Returns the operator tables of the compute precision the predictor and corrector read.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-exahype2::dg::BasisTables<ComputePrecision>
+INLINE_METHOD exahype2::dg::BasisTables<ComputePrecision>
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getBasisTables() {
   return exahype2::dg::BasisTables<ComputePrecision>{
     Quadrature<ComputePrecision>::QuadraturePoints1D,
@@ -596,14 +579,12 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Runs the space-time predictor of every cell: The solution takes its volume integral, and the
- * cell's own half of every face of the cell takes the time-averaged face states and face
- * fluxes. A diverged Picard iteration ends the run without a limiter and marks the cell's
- * status with one. A cell whose Picard iteration stops at its sweep limit continues with the last
- * iterate and adds to the count of the time step.
+ * Runs the space-time predictor of every cell. A diverged Picard iteration marks its cell for the
+ * limiter, or terminates the run without a limiter. A cell whose Picard iteration stops at its
+ * sweep limit continues with the last iterate.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::predict(
   const peano4::Partition& partition,
   const double             timeStepSize
@@ -629,12 +610,11 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Sums the cells of all ranks whose Picard iteration stopped at its sweep limit in this time step,
- * warns once on the global master when the sum is positive and restarts the count. Every rank
- * calls this at the end of every time step.
+ * Warns on the global master when the Picard iteration of any cell stopped at its sweep limit in
+ * this time step. Every rank calls this at the end of every time step.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-void
+INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::reportUnconvergedPredictions() {
   if constexpr (not Derived::IsLinear) {
     int globalPredictions = 0;
@@ -650,20 +630,21 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       logWarning(
         "The Picard iteration of " << globalPredictions << " cells stopped at its sweep limit with a residual above "
-                                   << Derived::PicardResidualTolerance << " at t = "
-                                   << this->_timeStepping.getTimeStamp() << "; the cells continue with the last iterate."
+                                   << Derived::PicardResidualTolerance
+                                   << " at t = " << this->_timeStepping.getTimeStamp()
+                                   << "; the cells continue with the last iterate."
       );
     }
   }
 }
 
 /**
- * Runs the predictor kernel with the given divergence marks and returns the counts of the cells
- * whose Picard iteration diverged without a mark or stopped at its sweep limit.
+ * Runs the predictor kernel and returns the numbers of cells whose Picard iteration diverged
+ * without a mark or stopped at its sweep limit.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 template <typename DivergenceMarks>
-exahype2::dg::ader::PredictionCounts
+INLINE_METHOD exahype2::dg::ader::PredictionCounts
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::predictCells(
   const peano4::Partition& partition,
   const double             timeStepSize,
@@ -693,17 +674,18 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Adds the face integrals of every cell with the dependence to its solution and returns the
- * wave-speed maxima of the updated solution; with a limiter the maxima come from the limiter.
+ * Adds the face integrals of the local or the remote cells to their solution and returns the
+ * wave-speed maxima of the updated solution. With a limiter, the maxima are zero and the limiter
+ * reports them.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-exahype2::dg::MaxEigenvalueStatistics
+INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::correct(
   const peano4::Partition& partition,
-  const peano4::Dependence dependence,
+  const peano4::Adjacency  adjacency,
   const double             timeStepSize
 ) {
-  const auto                            cells = this->getCells(partition, dependence);
+  const auto                            cells = this->getCells(partition, adjacency);
   exahype2::dg::MaxEigenvalueStatistics statistics;
   tarch::accelerator::parallelReduce(
     tarch::accelerator::Range(cells.size),

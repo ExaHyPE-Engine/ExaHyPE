@@ -28,16 +28,16 @@ struct peano4::sfc::Grammar {
   INLINE_METHOD static constexpr int getDirection(Step step);
 
   template <class NonTerminal, class... Symbols>
-  static constexpr peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> production(
+  INLINE_METHOD static constexpr peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> production(
     NonTerminal leftHandSide,
     Symbols... symbols
   );
 
   template <std::size_t Position, class NonTerminal, int NumberOfChildren>
-  static constexpr void placeSymbols(peano4::sfc::Production<NonTerminal, NumberOfChildren>& result);
+  INLINE_METHOD static constexpr void placeSymbols(peano4::sfc::Production<NonTerminal, NumberOfChildren>& result);
 
   template <std::size_t Position, class NonTerminal, int NumberOfChildren, class Symbol, class... Symbols>
-  static constexpr void placeSymbols(
+  INLINE_METHOD static constexpr void placeSymbols(
     peano4::sfc::Production<NonTerminal, NumberOfChildren>& result,
     Symbol                                                  symbol,
     Symbols... symbols

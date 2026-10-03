@@ -13,12 +13,11 @@ exahype2::plotter::ParticlePlotter::ParticlePlotter(std::string filename) :
 }
 
 /**
- * Writes one snapshot of the particles of every rank; every rank calls this at the same time.
- * Particles provides download(), getSize(), getPosition(), getNumber(), getData() and
- * ValuesPerParticle, the DIMENSIONS coordinates and the data entries of one particle.
+ * Writes one snapshot of the particles of every rank. Particles has the interface of
+ * exahype2::particles::ParticleSet. Every rank calls this function collectively.
  */
 template <typename Particles>
-void
+INLINE_METHOD void
 exahype2::plotter::ParticlePlotter::plot(
   Particles&                   particles,
   const double                 timeStamp,

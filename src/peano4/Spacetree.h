@@ -16,11 +16,10 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * The adaptive Cartesian grid of the whole domain and the partition of it this rank owns. Every
- * rank holds one spacetree: It builds the regular base grid, applies the refinement requests of
- * all ranks to the refinement plan, balances the ranks along the space-filling curve and rebuilds
- * the tree and the partition from the plan. A cell keeps its slot across a regrid with live data,
- * and that regrid returns the slot moves a caller realises on its pools before finishRegrid().
+ * The adaptive Cartesian grid of the whole domain and the partition this rank owns. Every rank
+ * applies the refinement requests of all ranks to one refinement plan, balances the ranks along the
+ * space-filling curve and rebuilds the tree and the partition from the plan. A regrid with live data
+ * returns the slot moves, which a caller applies to its pools before finishRegrid().
  */
 class peano4::Spacetree final {
 public:
@@ -79,7 +78,8 @@ public:
 
 private:
   /**
-   * Holds one local cell the curve walk finds: Its index in the tree and its slot in the partition.
+   * One local cell that the walk along the curve finds: Its index in the tree and its slot in the
+   * partition.
    */
   struct CellRecord final {
     int treeCell{-1};
@@ -115,14 +115,14 @@ private:
      */
     std::vector<int> cellCurveIndex{};
 
-    std::vector<int>      faces{};
-    std::vector<int>      faceRanges{};
-    std::vector<int>      faceLevel{};
-    std::vector<int>      faceNormal{};
-    std::vector<int>      faceLattice{};
-    std::vector<int>      cellsOfFace{};
-    std::vector<FaceKind> faceKind{};
-    std::vector<char>     faceDependsOnRemoteData{};
+    std::vector<int>       faces{};
+    std::vector<int>       faceRanges{};
+    std::vector<int>       faceLevel{};
+    std::vector<int>       faceNormal{};
+    std::vector<int>       faceLattice{};
+    std::vector<int>       cellsOfFace{};
+    std::vector<FaceKind>  faceKind{};
+    std::vector<Adjacency> faceAdjacency{};
 
     std::vector<LevelJump> levelJumps{};
     std::vector<int>       levelJumpRanges{};
@@ -132,15 +132,15 @@ private:
     std::vector<NeighbourFaces> neighbourFaces{};
 
     /**
-     * Maps every tree face index that entered the partition onto its face during a build.
+     * Maps the index of every tree face in the partition to its partition face during a build.
      */
     std::vector<int> faceOfTreeFace{};
     /**
-     * Maps a coarse face onto its level jump during a build.
+     * Maps a coarse face to its level jump during a build.
      */
     std::vector<int> levelJumpOfCoarseFace{};
     /**
-     * Maps a lattice key onto the cell slot, one map per level.
+     * Maps a lattice key to the slot of its cell, one map per level.
      */
     std::vector<peano4::grid::LatticeIndexMap> cellSlotOfLattice{};
 
@@ -149,7 +149,7 @@ private:
   };
 
   /**
-   * The arrays a kernel reads, in device memory; a build without a GPU backend leaves them empty.
+   * The arrays a kernel reads, in device memory. A build without a GPU backend leaves them empty.
    */
   struct DeviceArrays final {
     tarch::accelerator::Buffer<int>       cells{tarch::MemoryLocation::Device};

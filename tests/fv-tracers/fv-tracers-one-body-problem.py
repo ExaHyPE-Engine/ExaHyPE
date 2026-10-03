@@ -90,7 +90,7 @@ max_eigenvalue = """
 """
 
 analytical_solution = """
-  // Analytical solution for one-body problem with fixed central mass (circular orbit)
+  // A circular orbit around a fixed central mass.
   constexpr double GravitationalParameter = 10.0; // G*M
 
   constexpr double CentreX = 1.5;
@@ -106,23 +106,19 @@ analytical_solution = """
 
   const double angle = atan2(StartY - CentreY, StartX - CentreX) + omega * t;
 
-  // Position
   solution[0] = CentreX + r * cos(angle); // x
   solution[1] = CentreY + r * sin(angle); // y
 
-  // Velocity (perpendicular to radius)
   solution[5] = -r * omega * sin(angle); // vx
   solution[6] =  r * omega * cos(angle); // vy
 
-  // Acceleration (central)
   solution[7] = -GravitationalParameter / (r * r * r) * (solution[0] - CentreX); // ax
   solution[8] = -GravitationalParameter / (r * r * r) * (solution[1] - CentreY); // ay
 
-  // Other fields
-  solution[2] = 0.0;  // rho (density)
+  solution[2] = 0.0;  // rho
   solution[3] = 0.0;  // fluid_u
   solution[4] = 0.0;  // fluid_v
-  solution[9] = mass; // m (mass)
+  solution[9] = mass; // m
 """
 
 fv_solver = exahype2.fv.Solver(

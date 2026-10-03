@@ -44,9 +44,6 @@ namespace {
     tarch::la::Vector<DIMENSIONS, double> sizes[Layout::SubcellsPerCell]{};
   };
 
-  /**
-   * Returns a subgrid whose every subcell holds unknown and auxiliary.
-   */
   std::vector<double> getConstantSubgrid(const double unknown, const double auxiliary) {
     std::vector<double> subgrid(Layout::SubcellValuesPerCell);
     for (int subcell = 0; subcell < Layout::SubcellsPerCell; subcell++) {
@@ -56,9 +53,6 @@ namespace {
     return subgrid;
   }
 
-  /**
-   * Returns the nodes of one cell, every node holding unknown and auxiliary.
-   */
   std::vector<double> getConstantNodes(const double unknown, const double auxiliary) {
     std::vector<double> nodes(Layout::ValuesPerCell);
     for (int node = 0; node < Layout::NodesPerCell; node++) {
@@ -68,9 +62,6 @@ namespace {
     return nodes;
   }
 
-  /**
-   * Returns the halo halves of every face of one cell, every value holding unknown and auxiliary.
-   */
   std::vector<double> getConstantHalo(const double unknown, const double auxiliary) {
     std::vector<double> halo(HaloValuesPerCell);
     for (std::size_t entry = 0; entry < halo.size(); entry += Layout::NumberOfData) {
@@ -92,9 +83,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Recomputes the subgrid of one cell of a device range and adds its wave speeds to the accumulator.
-   */
   struct RecomputeSubgridOfCell final {
     double*       nodes{nullptr};
     double*       subcells{nullptr};
@@ -135,10 +123,6 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Recomputes the subgrid of every cell on the device, copies the subgrids and the nodes back and returns the wave
-   * speeds.
-   */
   exahype2::dg::MaxEigenvalueStatistics recomputeOnDevice(
     const exahype2::dg::limiting::tests::SubcellProjections& tables,
     const exahype2::dg::tests::CellChain&                    geometry,
@@ -245,8 +229,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testTheInitialConditionIsSampl
 }
 
 /**
- * The loop visits the subcells in linearised order at the centres of exahype2::fv::getVolumeCentre with the subcell
- * size.
+ * forEachSubcell() visits the subcells in linearised order at their centres and with their size.
  */
 void
 exahype2::dg::limiting::tests::SubcellSchemeTest::testEverySubcellIsVisitedAtItsCentre() {
@@ -309,7 +292,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testTheSubcellWaveSpeedsScaleW
 }
 
 /**
- * The subgrid solver satisfies the concept of a term only where the solver offers the matching term.
+ * SubgridSolver has a term only where the solver declares it.
  */
 void
 exahype2::dg::limiting::tests::SubcellSchemeTest::testTheTermsForwardOnlyWhatTheSolverOffers() {
@@ -330,8 +313,8 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testTheTermsForwardOnlyWhatThe
 }
 
 /**
- * The Riemann solver of the subgrid solver returns the wave speed of the subcell Riemann solver, and the flux
- * forwards.
+ * SubgridSolver::solveRiemannProblem() returns the wave speed of the subcell Riemann solver, and
+ * the other terms call the terms of the solver.
  */
 void
 exahype2::dg::limiting::tests::SubcellSchemeTest::testTheRiemannSolverCallsTheSubcellRiemannSolver() {
@@ -430,9 +413,8 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testAFixedRuleReportsNoWaveSpe
 }
 
 /**
- * A cell that ran the Galerkin scheme in the previous step takes the projection of its previous
- * solution, a cell that ran the subcell scheme keeps its subgrid, and in the first step every
- * cell keeps its sampled subgrid; the halo halves receive the boundary layer of the subgrid.
+ * A cell projects its previous solution onto its subgrid only after a Galerkin step, and never in
+ * the first step.
  */
 void
 exahype2::dg::limiting::tests::SubcellSchemeTest::

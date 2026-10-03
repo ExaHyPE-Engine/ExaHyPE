@@ -58,8 +58,7 @@ initial_conditions = """
   }
 """
 
-# The unit offset keeps the relative detail indicator well scaled where q
-# vanishes.
+# The unit offset bounds the relative detail where q is zero.
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,

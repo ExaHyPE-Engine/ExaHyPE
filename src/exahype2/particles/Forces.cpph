@@ -77,7 +77,7 @@ exahype2::particles::getState(const Particle& particle) {
 }
 
 /**
- * Writes the velocity and the acceleration of state; the position stays with the caller.
+ * Writes the velocity and the acceleration of state. The caller sets the position.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::particles::setState(Particle& particle, const State& state) {
@@ -86,10 +86,8 @@ exahype2::particles::setState(Particle& particle, const State& state) {
 }
 
 /**
- * Writes the acceleration the enabled forces exert at position into the particle. A particle
- * without mass is a tracer and carries no acceleration. The central gravity pulls towards the
- * domain centre, the buoyancy pushes and the constant gravity pulls along the last axis, and the
- * Stokes drag relaxes the particle velocity towards the interpolated fluid velocity.
+ * Writes the acceleration of the enabled forces at position into particle. A particle without mass
+ * is a tracer with zero acceleration.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::particles::applyForces(

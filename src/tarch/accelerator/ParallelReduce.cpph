@@ -3,7 +3,7 @@
 
 namespace tarch::accelerator {
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const CpuTeam& team,
     const Range&                    range,
     const Functor                   functor,
@@ -17,7 +17,7 @@ namespace tarch::accelerator {
     reducer.target = Reducer::combine(reducer.target, teamAccumulator);
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const CpuTeam& team,
     const RangeMD<2>&               range,
     const Functor                   functor,
@@ -34,7 +34,7 @@ namespace tarch::accelerator {
     reducer.target = Reducer::combine(reducer.target, teamAccumulator);
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const CpuTeam& team,
     const RangeMD<3>&               range,
     const Functor                   functor,
@@ -56,13 +56,11 @@ namespace tarch::accelerator {
 
   /**
    * Reduces over the range on the host threads. The partial values merge in thread order, so
-   * the result depends on the thread count alone. Inside an enclosing parallel region a
-   * worksharing loop would bind to an inactive nested region and run serially, so the range
-   * then splits into tasks of the enclosing team, one partial value per task, merged in task
-   * order.
+   * the result depends on the thread count alone. Inside a parallel region the range splits into
+   * tasks of the enclosing team, whose partial values merge in task order.
    */
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     using ValueType = typename Reducer::ValueType;
 #if defined(_OPENMP)
@@ -128,7 +126,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     using ValueType = typename Reducer::ValueType;
@@ -152,7 +150,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -179,7 +177,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     using ValueType = typename Reducer::ValueType;
     std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());

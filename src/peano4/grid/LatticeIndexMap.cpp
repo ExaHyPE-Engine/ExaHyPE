@@ -3,10 +3,7 @@
 #include "LatticeIndexMap.h"
 
 /**
- * Sizes the table for a number of entries and drops everything it held.
- *
- * The table takes twice the requested entries rounded up to a power of two, so
- * a caller that knows how many entries a level holds fills it without a rehash.
+ * Clears the map and sizes it for numberOfEntries entries, which then fit without a rehash.
  */
 void
 peano4::grid::LatticeIndexMap::reserve(const std::size_t numberOfEntries) {

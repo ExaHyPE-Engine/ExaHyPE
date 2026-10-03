@@ -9,10 +9,8 @@ namespace peano4::tests {
 } // namespace peano4::tests
 
 /**
- * Checks that the partition links every face to its cells, groups its lists by dependence, level
- * and kind, builds the level jumps of a refined block, keeps the slots of surviving cells across a
- * regrid, derives exchanged faces both ranks agree on, numbers the cells along the curve over all
- * ranks and reads the same on the device.
+ * Checks the lists of the partition on regular, refined and periodic grids, across a regrid and in
+ * the device twin, and the numbering of the cells along the curve over all ranks.
  */
 class peano4::tests::PartitionTest final : public tarch::tests::TestCase {
 public:
@@ -29,7 +27,7 @@ private:
   void testTheRegularGridLinksEveryFaceToItsCells();
   void testThePeriodicGridHasNoBoundaryFaces();
   void testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace();
-  void testTheListsGroupByDependenceLevelAndKind();
+  void testTheListsGroupByAdjacencyLevelAndKind();
   void testARegridKeepsTheSlotsOfSurvivingCellsAndReusesFreedOnes();
   void testTheExchangedFacesMatchAcrossRanks();
   void testTheCurveIndicesNumberTheCellsAlongTheCurve();

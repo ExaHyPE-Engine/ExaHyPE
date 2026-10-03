@@ -18,8 +18,8 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
     {{"bathymetry", RuntimeParameters::bathymetryFile()}}
   );
 
-  // The bathymetry raster covers the channel only, while the mesh spans the square that encloses
-  // it, so sampling the nearest raster coordinate continues the depth up to the mesh boundary.
+  // The raster covers the channel only and the mesh the enclosing square, so the clamped position
+  // continues the depth up to the mesh boundary.
   const auto                            offset = RuntimeParameters::bathymetryOffset();
   const auto                            size   = RuntimeParameters::bathymetrySize();
   tarch::la::Vector<DIMENSIONS, double> rasterPosition;
@@ -213,10 +213,9 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
 }
 
 /**
- * Returns false where the water is too shallow for the polynomial to describe a body of water.
- * A film thinner than the dry threshold in metres keeps a finite momentum whose velocity grows
- * until the admissible step underflows, and a cell over ground shallower than the coastal depth
- * goes on the subcell scheme before it dries.
+ * Returns false where the water is too shallow for the polynomial. A film below the dry threshold
+ * keeps a finite momentum whose velocity grows until the admissible time step underflows. A cell
+ * over ground shallower than the coastal depth switches to the subcell scheme before it dries.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(

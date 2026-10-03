@@ -10,7 +10,7 @@ namespace {
   [[maybe_unused]] DEVICE_VARIABLE {{ runtime_parameters }}::Storage runtimeParametersOnDevice;
 
   /**
-   * Writes storage into the device copy of the runtime parameters of this translation unit.
+   * Copies storage into the device variable of this translation unit.
    */
   struct WriteRuntimeParametersOnDevice final {
     {{ runtime_parameters }}::Storage storage{};

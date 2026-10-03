@@ -21,8 +21,7 @@ peano4::tests::LoopTest::run() {
 }
 
 /**
- * dForEach(max, body) visits every point of [0,max)^d exactly once in
- * dLinearised order, with the 0th component running fastest.
+ * dForEach(max, body) visits every point of [0,max)^d once in dLinearised() order.
  */
 void
 peano4::tests::LoopTest::testDForEachVisitsAllPointsInLinearOrder() {
@@ -43,8 +42,8 @@ peano4::tests::LoopTest::testDForEachVisitsAllPointsInLinearOrder() {
 }
 
 /**
- * dForEach(maxVector, body) with individual per-axis ranges, including a
- * degenerate axis of extent one, has to enumerate the full box exactly once.
+ * dForEach(maxVector, body) with a range per axis, one of them of extent one, visits every point of
+ * the box once.
  */
 void
 peano4::tests::LoopTest::testDForEachWithPerAxisRange() {

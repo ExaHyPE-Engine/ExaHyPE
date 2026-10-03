@@ -8,9 +8,6 @@ namespace exahype2::tests {
   class RefinementVotesTest;
 } // namespace exahype2::tests
 
-/**
- * Checks the vote one cell casts on the grid and the two kernels that keep and count votes.
- */
 class exahype2::tests::RefinementVotesTest final : public tarch::tests::TestCase {
 public:
   RefinementVotesTest();
@@ -27,7 +24,7 @@ private:
   void testTheCriterionDecidesWithinTheAdmissibleSizes();
   void testARefineVoteAtTheSmallestSizeTurnsIntoKeep();
   void testAnEraseVoteThatWouldPassTheLargestSizeTurnsIntoKeep();
-  void testTheCountNamesTheVotesThatChangeTheGrid();
+  void testTheCountSkipsKeepVotes();
   void testTheVotesOnEveryCellReachTheRequests();
   void testGridConstructionRefinesEveryCellAboveTheLargestSize();
   void testOnlyTheListedCellsVote();

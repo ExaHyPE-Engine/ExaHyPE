@@ -84,9 +84,6 @@ exahype2::dg::ader::tests::StubSolver::diffusiveSourceTerm(
   }
 }
 
-/**
- * Scales the flux in place.
- */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::tests::StubSolver::multiplyMaterialParameterMatrix(
   const double* NOALIAS const                                   state,

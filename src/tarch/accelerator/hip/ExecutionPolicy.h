@@ -42,8 +42,8 @@ public:
   void setStream(hipStream_t stream);
 
   /**
-   * Reads the grid size and the block size from the HIP occupancy interface and stores them, unless
-   * the caller has set every field by hand.
+   * Asks the HIP occupancy interface for the block size and the grid size that the caller has not
+   * set.
    */
   template <class KernelFunc>
   hipError_t configureGrid(KernelFunc kernel) {

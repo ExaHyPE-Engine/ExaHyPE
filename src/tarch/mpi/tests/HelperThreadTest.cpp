@@ -14,9 +14,6 @@ tarch::mpi::tests::HelperThreadTest::run() {
   testMethod(testStopWithoutStartIsHarmless);
 }
 
-/**
- * A polling function that returns true ends the loop of the thread.
- */
 void
 tarch::mpi::tests::HelperThreadTest::testPollsUntilTheFunctionReportsCompletion() {
   constexpr int    PollsUntilComplete = 5;
@@ -34,9 +31,6 @@ tarch::mpi::tests::HelperThreadTest::testPollsUntilTheFunctionReportsCompletion(
   validateEqualsWithParams1(numberOfPolls.load(), PollsUntilComplete, numberOfPolls.load());
 }
 
-/**
- * stop() ends the loop of a polling function that never returns true.
- */
 void
 tarch::mpi::tests::HelperThreadTest::testStopEndsAPollThatNeverCompletes() {
   std::atomic<int> numberOfPolls{0};
@@ -54,9 +48,6 @@ tarch::mpi::tests::HelperThreadTest::testStopEndsAPollThatNeverCompletes() {
   validateWithParams1(numberOfPolls.load() >= 1, numberOfPolls.load());
 }
 
-/**
- * stop() without start() has no effect.
- */
 void
 tarch::mpi::tests::HelperThreadTest::testStopWithoutStartIsHarmless() {
   tarch::mpi::HelperThread helperThread([]() -> bool { return true; });

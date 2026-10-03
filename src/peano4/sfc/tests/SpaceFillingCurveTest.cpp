@@ -61,10 +61,9 @@ namespace {
   }
 
   /**
-   * Appends the leaves of the Peano curve from its closed form: One even flag
-   * per axis, the walk along an axis is positive if an even number of the
-   * other axes' flags is set, and the middle child along an axis flips that
-   * axis' flag.
+   * Appends the leaves of the Peano curve from its closed form. The walk along an axis is positive if
+   * an even number of the flags of the other axes is set, and the middle child along an axis flips
+   * the flag of that axis.
    */
   void appendSerpentineLeaves(
     const std::bitset<DIMENSIONS>& evenFlags,

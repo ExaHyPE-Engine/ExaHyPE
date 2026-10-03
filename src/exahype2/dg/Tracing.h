@@ -62,7 +62,7 @@ namespace exahype2::dg {
   struct TraceParticles;
 
   template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, int... DifferenceFields, typename Pool>
-  void traceFaceValues(
+  INLINE_METHOD void traceFaceValues(
     const peano4::Partition&                                partition,
     const Pool&                                             faceStates,
     const double* NOALIAS                                   quadratureNodes,
@@ -72,7 +72,7 @@ namespace exahype2::dg {
   );
 
   template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
-  void traceParticles(
+  INLINE_METHOD void traceParticles(
     const peano4::Partition&                                partition,
     const Pool&                                             solution,
     const double* NOALIAS                                   quadratureNodes,
@@ -87,9 +87,8 @@ namespace exahype2::dg {
 
 TARGET_DECLARE
 /**
- * Writes the face values at the position of one particle into that particle: A field of Fields
- * gets the jump across the face, every other field the average of both sides. A particle that
- * does not lie on the plane at position keeps its values.
+ * Writes the face values at the position of one particle on the plane into the particle. A field
+ * of Fields receives the jump across the face, every other field the average of both sides.
  */
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
 struct exahype2::dg::TraceFaceValues final {
@@ -104,9 +103,7 @@ struct exahype2::dg::TraceFaceValues final {
 };
 
 /**
- * Moves one particle through its cell: Interpolates the fields of Fields at the particle
- * position, applies the forces, advances the particle by timeStepSize, reflects it at the walls
- * of the axes that are not periodic and wraps it through the periodic ones.
+ * Interpolates the fields of Fields to one particle and moves the particle by timeStepSize.
  */
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
 struct exahype2::dg::TraceParticles final {

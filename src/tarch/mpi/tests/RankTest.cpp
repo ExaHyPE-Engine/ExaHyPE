@@ -17,9 +17,6 @@ tarch::mpi::tests::RankTest::run() {
   testMethod(testNodeMasterHoldsNodeRankZero);
 }
 
-/**
- * The rank on the node and the number of ranks on it are those of a split over the shared memory.
- */
 void
 tarch::mpi::tests::RankTest::testRankOnNodeMatchesTheSharedMemorySplit() {
   const auto& rank = tarch::mpi::Rank::getInstance();
@@ -43,7 +40,7 @@ tarch::mpi::tests::RankTest::testRankOnNodeMatchesTheSharedMemorySplit() {
 }
 
 /**
- * The node master is the rank that carries node rank zero, and every node rank names one of its ranks.
+ * The node master has node rank zero, and every node rank lies below the number of ranks on the node.
  */
 void
 tarch::mpi::tests::RankTest::testNodeMasterHoldsNodeRankZero() {

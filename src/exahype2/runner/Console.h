@@ -59,8 +59,7 @@ private:
 
 /**
  * Writes the report lines inside a frame of thin lines. The first line or rule opens the frame
- * and close() closes it. A line wider than the frame breaks after a separator, an empty line
- * writes nothing, and a rule never follows a rule.
+ * and close() closes it.
  */
 class exahype2::runner::Report final {
 public:

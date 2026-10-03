@@ -65,8 +65,8 @@ TARGET_DECLARE_END
 
 TARGET_DECLARE
 /**
- * Every callback depends on its state and on the direction it is asked about,
- * so a cell or face read at the wrong offset produces a different number.
+ * A solver whose terms depend on the state and the direction, so a wrong offset changes the
+ * result.
  */
 struct exahype2::dg::tests::StubSolver final {
   static constexpr int DGOrder                    = KernelTestSetup::DofsPerAxis - 1;
@@ -145,16 +145,14 @@ struct exahype2::dg::tests::StubSolver final {
 TARGET_DECLARE_END
 
 /**
- * Frees device memory, so a unique pointer can own a device buffer.
+ * A deleter that frees device memory, so a unique pointer can own a device buffer.
  */
 struct exahype2::dg::tests::DeviceDeleter final {
   void operator()(void* data) const;
 };
 
 /**
- * Owns one buffer in device memory for the lifetime of a test. A build without
- * a GPU backend allocates and copies in plain host memory, so the tests run the
- * same code path everywhere.
+ * A device copy of a host vector. A build without a GPU backend allocates it in host memory.
  */
 template <typename T>
 class exahype2::dg::tests::DeviceBuffer final {
@@ -176,8 +174,7 @@ private:
 };
 
 /**
- * Operator tables with distinct, non-symmetric entries, so an index mix-up
- * cannot cancel out.
+ * Operator tables with distinct, non-symmetric entries, so an index mix-up cannot cancel out.
  */
 struct exahype2::dg::tests::KernelOperators final {
   std::vector<double> quadratureNodes              = std::vector<double>(KernelTestSetup::DofsPerAxis);
@@ -241,11 +238,9 @@ private:
 };
 
 /**
- * A chain of cells along the first axis, where two neighbours hold the same
- * face and a parallel dispatch could write it twice while the faces along the
- * other axes belong to one cell each, together with a work list that holds
- * every unique face once with one owning cell and the face number under which
- * that cell sees it.
+ * A chain of cells along the first axis, in which two neighbouring cells hold the face between
+ * them and every other face belongs to one cell. The work list stores every face once with one of
+ * its cells and the number of the face in that cell.
  */
 struct exahype2::dg::tests::CellChain final {
   std::vector<double>        cellCentres = std::vector<double>(KernelTestSetup::CoordinateCardinality);

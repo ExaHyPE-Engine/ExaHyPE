@@ -5,6 +5,8 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
 
+#include <omp.h>
+
 namespace tarch::accelerator {
   int getNumberOfScratchChunks(int workItems);
 

@@ -4,6 +4,10 @@
 
 #include "tarch/Assertions.h"
 
+/**
+ * The name has no ::, and an empty name makes a root collection that writes no progress line of its
+ * own.
+ */
 tarch::tests::TreeTestCaseCollection::TreeTestCaseCollection(
   const std::string& treeTestCaseCollectionName,
   bool               deleteTestCases,
@@ -55,6 +59,9 @@ tarch::tests::TreeTestCaseCollection::run() {
   run("");
 }
 
+/**
+ * Runs every test case of the collection with prefix in front of its name.
+ */
 void
 tarch::tests::TreeTestCaseCollection::run(const std::string& prefix) {
   std::string progressMessage;
@@ -97,6 +104,9 @@ tarch::tests::TreeTestCaseCollection::addTestCase(TestCase* testCase) {
   addTestCase(testCase->getTestCaseName(), testCase);
 }
 
+/**
+ * Adds testCase under fullQualifiedPath. The collection takes ownership if deleteTestCases is set.
+ */
 void
 tarch::tests::TreeTestCaseCollection::addTestCase(const std::string& fullQualifiedPath, TestCase* testCase) {
   if (isNameWithoutHierarchy(fullQualifiedPath)) {

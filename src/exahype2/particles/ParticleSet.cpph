@@ -71,7 +71,7 @@ exahype2::particles::ParticleSet<NumberOfData>::getSize() const noexcept {
 }
 
 /**
- * Returns the number of particles of all ranks after the last relocate().
+ * Returns the number of particles of all ranks after the last insert() or relocate().
  */
 template <int NumberOfData>
 INLINE_METHOD int
@@ -90,8 +90,8 @@ exahype2::particles::ParticleSet<NumberOfData>::getAllocatedBytes() const noexce
 }
 
 /**
- * Returns the position of the particle index on the host. A caller calls download() after every
- * kernel that moves particles, so the host positions are current while other host data is stale.
+ * Returns the position of particle index on the host. A caller calls download() after every kernel
+ * that moves particles, so the host positions stay current.
  */
 template <int NumberOfData>
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double>
@@ -101,7 +101,7 @@ exahype2::particles::ParticleSet<NumberOfData>::getPosition(const int index) con
 }
 
 /**
- * Returns the data of the particle index on the host; download() precedes it after a kernel.
+ * Returns the data of particle index on the host. After a kernel, a caller calls download() first.
  */
 template <int NumberOfData>
 INLINE_METHOD const double*
@@ -112,8 +112,8 @@ exahype2::particles::ParticleSet<NumberOfData>::getData(const int index) const {
 }
 
 /**
- * Returns the particle index on the host for writing; download() precedes it after a kernel, and
- * the next upload() copies the host values to the device.
+ * Returns particle index on the host for writing. After a kernel, a caller calls download() first,
+ * and the next upload() copies the changes to the device.
  */
 template <int NumberOfData>
 INLINE_METHOD exahype2::particles::Particle
@@ -139,12 +139,12 @@ exahype2::particles::ParticleSet<NumberOfData>::getSlot(const int index) const {
 }
 
 /**
- * Returns the slot of the cell of the rank that holds position, or a negative value when no
- * cell of the rank holds it. A position on the face between two cells belongs to the lower cell
- * along the face normal, a position on the lower domain wall to the cell at the wall.
+ * Returns the slot of the cell of this rank that contains position, or a negative value if no cell
+ * of this rank contains it. A position on a face belongs to the lower cell along the face normal,
+ * and a position on the lower domain wall to the cell at the wall.
  */
 template <int NumberOfData>
-int
+INLINE_METHOD int
 exahype2::particles::ParticleSet<NumberOfData>::getSlotAt(
   const peano4::Partition&                     partition,
   const tarch::la::Vector<DIMENSIONS, double>& position
@@ -180,7 +180,7 @@ exahype2::particles::ParticleSet<NumberOfData>::getSlotAt(
 }
 
 template <int NumberOfData>
-void
+INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::append(
   const double* const values,
   const int           number0,
@@ -197,13 +197,12 @@ exahype2::particles::ParticleSet<NumberOfData>::append(
 }
 
 /**
- * Takes over every candidate whose position a cell of the rank holds. candidates holds
- * ValuesPerParticle values per particle, the coordinates first. A new particle carries the rank
- * and a running number the rank counts. Every rank calls it, and the sum over the ranks yields the
- * particle count of all ranks.
+ * Appends every candidate whose position lies in a cell of this rank. candidates stores
+ * ValuesPerParticle values per particle, the coordinates first. Every rank calls this function
+ * collectively.
  */
 template <int NumberOfData>
-void
+INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::insert(
   const peano4::Partition&   partition,
   const std::vector<double>& candidates
@@ -234,7 +233,7 @@ exahype2::particles::ParticleSet<NumberOfData>::insert(
 }
 
 template <int NumberOfData>
-void
+INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::locate(const peano4::Partition& partition) {
   for (int index = 0; index < getSize(); index++) {
     const int slot = getSlotAt(partition, getPosition(index));
@@ -246,18 +245,16 @@ exahype2::particles::ParticleSet<NumberOfData>::locate(const peano4::Partition& 
 }
 
 /**
- * Sends every particle without a cell on this rank to the rank that holds its position and stops
- * the run for a particle that no rank holds. Every rank calls it, and the gathered counts yield the
- * particle count of all ranks. Only a call in which some particle leaves its rank downloads the
- * host values.
+ * Sends every particle without a cell on this rank to the rank whose cell contains its position
+ * and updates the global particle count. Every rank calls this function collectively.
  */
 template <int NumberOfData>
-void
+INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::exchange(const peano4::Partition& partition) {
-  const auto&    rank          = tarch::mpi::Rank::getInstance();
-  const int      numberOfRanks = rank.getNumberOfRanks();
-  const MPI_Comm communicator  = rank.getCommunicator();
-  const int      localLeaving =
+  const auto& rank          = tarch::mpi::Rank::getInstance();
+  const int   numberOfRanks = rank.getNumberOfRanks();
+  MPI_Comm    communicator  = rank.getCommunicator();
+  const int   localLeaving =
     static_cast<int>(std::count_if(_slots.begin(), _slots.end(), [](const int slot) { return slot < 0; }));
   const int kept = getSize() - localLeaving;
 
@@ -281,8 +278,7 @@ exahype2::particles::ParticleSet<NumberOfData>::exchange(const peano4::Partition
     return;
   }
 
-  // The leaving particles carry their data to the other ranks, and every rank appends the ones it
-  // receives, so every rank brings its host values up to date first.
+  // The exchange sends and appends host values, so every rank downloads them first.
   download();
   std::vector<double> leavingValues;
   std::vector<int>    leavingNumbers;
@@ -388,22 +384,18 @@ exahype2::particles::ParticleSet<NumberOfData>::exchange(const peano4::Partition
   }
 }
 
-/**
- * Finds the cell of every particle again and moves the particles that left the rank.
- */
 template <int NumberOfData>
-void
+INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::relocate(const peano4::Partition& partition) {
   locate(partition);
   exchange(partition);
 }
 
 /**
- * Copies the values and the slots that changed on the host since the last upload to the device
- * copy. A device copy that grows starts empty, so it takes every value and slot.
+ * Copies the values and the slots that changed on the host since the last upload to the device.
  */
 template <int NumberOfData>
-void
+INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::upload() {
   if (_valuesOnDevice.getSize() < _values.size() or _slotsOnDevice.getSize() < _slots.size()) {
     _valuesOnDevice.allocate(_values.size());
@@ -426,7 +418,7 @@ exahype2::particles::ParticleSet<NumberOfData>::upload() {
  * Copies the values a kernel wrote since the last download back to the host array.
  */
 template <int NumberOfData>
-void
+INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::download() {
   if (_hostValuesAreCurrent) {
     return;
@@ -437,7 +429,7 @@ exahype2::particles::ParticleSet<NumberOfData>::download() {
 }
 
 template <int NumberOfData>
-void
+INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::release() {
   _values.clear();
   _values.shrink_to_fit();
@@ -454,11 +446,11 @@ exahype2::particles::ParticleSet<NumberOfData>::release() {
 }
 
 /**
- * Returns the device copy for a kernel that writes it; upload() precedes it, and the host values
- * are stale until the next download().
+ * Returns the device copy for a kernel. A caller calls upload() first, and the host values are
+ * stale until the next download().
  */
 template <int NumberOfData>
-exahype2::particles::ParticleSetView<NumberOfData>
+INLINE_METHOD exahype2::particles::ParticleSetView<NumberOfData>
 exahype2::particles::ParticleSet<NumberOfData>::getView() {
   assertion(_deviceValuesAreCurrent and _deviceSlotsAreCurrent);
   assertion(_valuesOnDevice.getSize() >= _values.size(), _valuesOnDevice.getSize(), _values.size());

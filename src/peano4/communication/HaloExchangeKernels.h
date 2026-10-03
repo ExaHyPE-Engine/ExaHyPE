@@ -20,7 +20,7 @@ namespace peano4::communication {
 
 TARGET_DECLARE
 /**
- * Copies the half this rank owns of every exchanged face into the send buffer.
+ * Copies the half of every exchanged face that this rank owns into the send buffer.
  */
 template <typename T>
 struct peano4::communication::GatherHaloHalves final {

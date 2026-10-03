@@ -7,8 +7,8 @@
 #include "tarch/instrumentation/Info.h"
 
 /**
- * Appends the coordinates from @p filename and multiplies each value by @p scale.
- * Each non-empty line contains exactly DIMENSIONS numeric values.
+ * Appends the coordinates in filename, multiplied by scale. Every non-empty line contains exactly
+ * DIMENSIONS values.
  */
 void
 exahype2::particles::FileReader::readDatFile(const std::string& filename, const double scale) {
@@ -50,8 +50,8 @@ exahype2::particles::FileReader::empty() const {
 }
 
 /**
- * Returns coordinates inside the closed voxel centred at @p x with width @p h.
- * With @p remove, returned coordinates are erased from storage.
+ * Returns the coordinates inside the closed voxel of centre x and width h, and erases them from the
+ * reader if remove is set.
  */
 std::list<tarch::la::Vector<DIMENSIONS, double>>
 exahype2::particles::FileReader::getParticlesWithinVoxel(

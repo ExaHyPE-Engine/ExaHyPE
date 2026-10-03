@@ -46,8 +46,7 @@ struct exahype2::runner::SolverStatistic {
 };
 
 /**
- * Global view of the grid and the memory across all ranks. The runner synchronises the view
- * after every program step, so readers see the metrics of the latest completed step.
+ * Grid and memory statistics of all ranks, as of the last completed program step.
  */
 class exahype2::runner::GlobalStatistics final {
 public:
@@ -84,8 +83,7 @@ public:
 
 private:
   /**
-   * The process and node memory figures come from the kernel and cost a file read per call.
-   * Without a refresh request they refresh at most once per interval.
+   * Without a refresh request, the memory figures refresh at most once per interval.
    */
   static constexpr std::chrono::seconds MemorySamplingInterval{1};
 
@@ -124,8 +122,8 @@ private:
 };
 
 /**
- * Holds one entry per row of the grid summary. A row's suffix follows its value, its detail
- * follows in brackets, and a row with an empty value stays out of every report.
+ * One entry per row of the grid summary, rendered as value, suffix and detail in brackets. A row
+ * with an empty value stays out of every report.
  */
 struct exahype2::runner::GridSnapshot {
   enum Row {

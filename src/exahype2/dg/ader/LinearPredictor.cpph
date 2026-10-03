@@ -37,12 +37,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::selectPointSourc
 }
 
 /**
- * Runs the space-time predictor of a linear system on one cell: The Cauchy-Kovalewski recursion
- * builds the Taylor coefficients of the state one at a time and integrates them over the time
- * step, and the time averages of the state and of the flux derivative along every axis go onto
- * the faces of the cell. The scratch block has the extent of Scratch and keeps the time-averaged
- * state and the flux of the time-averaged state for the volume integral of the caller.
- * pointSourceIndices lists the numberOfPointSources point sources inside the cell.
+ * Extrapolates the time averages of the state and of the flux over the time step to the faces of
+ * the cell. scratch has the extent of Scratch and stores the time-averaged state and spatial terms
+ * for the volume integral. pointSourceIndices lists the point sources inside the cell.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -112,6 +109,24 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
 
     if constexpr (EvaluateFlux) {
       evaluateFlux(flux, values, cellCentre, cellSize, timeStamp, timeStepSize);
+      if (isLastPass) {
+        UNROLL(DIMENSIONS)
+        for (int direction = 0; direction < DIMENSIONS; direction++) {
+          exahype2::dg::extrapolateNodalFieldToFacePair<
+            NodesPerAxis,
+            NumberOfUnknowns,
+            CellLayout::PaddedNumberOfUnknowns,
+            ComputePrecision,
+            ComputePrecision,
+            ComputePrecision
+          >(faceFluxes[direction],
+            faceFluxes[direction + DIMENSIONS],
+            flux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
+            tables.leftFaceCoefficients,
+            tables.rightFaceCoefficients,
+            direction);
+        }
+      }
       exahype2::dg::differentiateFluxInPlace<Derived>(flux, tables.derivativeOperator, inverseCellSize);
     }
 
@@ -174,19 +189,12 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
       tables.leftFaceCoefficients,
       tables.rightFaceCoefficients,
       direction);
-    exahype2::dg::extrapolateNodalFieldToFacePair<
-      NodesPerAxis,
-      NumberOfUnknowns,
-      CellLayout::PaddedNumberOfUnknowns,
-      ComputePrecision,
-      ComputePrecision,
-      ComputePrecision
-    >(faceFluxes[direction],
-      faceFluxes[direction + DIMENSIONS],
-      flux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
-      tables.leftFaceCoefficients,
-      tables.rightFaceCoefficients,
-      direction);
+    if constexpr (not EvaluateFlux) {
+      for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
+        faceFluxes[direction][entry]              = static_cast<ComputePrecision>(0);
+        faceFluxes[direction + DIMENSIONS][entry] = static_cast<ComputePrecision>(0);
+      }
+    }
   }
 }
 
@@ -212,7 +220,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::initialiseState(
 }
 
 /**
- * Returns the Lagrange basis function of one node evaluated at a position of the reference interval.
+ * Returns the Lagrange basis function of node index at position on the reference interval.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -233,10 +241,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateLagrange
 }
 
 /**
- * Overwrites pointSourceValues with the force of every listed point source at every node, spread
- * over the cell by the basis functions at the source and divided by the node's quadrature weight
- * and the cell volume. Time sample zero sits at the start of the time step, the following samples
- * on the quadrature points of the step.
+ * Overwrites pointSourceValues with the forces of the listed point sources at every node,
+ * projected onto the basis and divided by the node's quadrature weight and the cell volume. Time
+ * sample zero lies at the start of the time step, the other samples at the quadrature points.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -379,9 +386,6 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::seedTimeAveraged
   }
 }
 
-/**
- * Zeroes the flux of one Taylor step, so the terms of Derived accumulate into it.
- */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::clearFluxes(ComputePrecision* NOALIAS const flux) {
@@ -393,9 +397,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::clearFluxes(Comp
 }
 
 /**
- * Adds the flux of Derived at every node into the zeroed flux buffer, one block per axis. The
- * coefficients are evaluated at the cell centre and the start of the time step and held fixed
- * throughout the Taylor expansion.
+ * Writes the flux of Derived at every node into flux, one block per axis. The coefficients stay at
+ * the cell centre and the start of the time step.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -426,8 +429,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateFlux(
 }
 
 /**
- * Adds the nonconservative product of Derived to the flux of every axis. The gradient along one
- * axis couples one line of nodes, so stateGradient holds one differentiated line.
+ * Adds the nonconservative product of Derived to the flux of every axis. stateGradient stores the
+ * gradient of one line of nodes.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -448,7 +451,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
   constexpr int AxisStride   = CellLayout::NodesPerCell * FluxStride;
 
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
+    assertion(cellSize(axis) > 0.0, cellSize, axis);
   }
 
   ComputePrecision productValues[FluxStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -557,8 +560,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::applyMaterialPar
 }
 
 /**
- * Overwrites the unknowns of every node with the source of Derived at the node, the first part of
- * the next Taylor coefficient.
+ * Overwrites the unknowns of every node with the source of Derived, the first part of the next
+ * Taylor coefficient.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -590,8 +593,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::overwriteStateWi
 }
 
 /**
- * Adds the negated flux divergence to the source the state holds, or overwrites the state with it
- * when Derived declares no source term, which gives the next Taylor coefficient.
+ * Adds the negative flux divergence to the source in state, or overwrites state with it without a
+ * source term. The result is the next Taylor coefficient.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -620,8 +623,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addFluxesToTimeD
 }
 
 /**
- * Adds the point source samples, weighted by the temporal derivative coefficients, to the
- * unknowns of the Taylor coefficient under construction.
+ * Adds the point source samples times derivativeCoefficients to the unknowns of the next Taylor
+ * coefficient.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -645,8 +648,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addPointSourceDe
 }
 
 /**
- * Adds the unknowns of the current Taylor coefficient, scaled by the time average factor, to the
- * time-averaged state. The auxiliary variables keep the value the seed left.
+ * Adds timeAverageFactor times the unknowns of the current Taylor coefficient to the time-averaged
+ * state. The auxiliary variables keep their seed values.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void

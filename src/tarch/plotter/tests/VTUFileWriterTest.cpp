@@ -34,9 +34,8 @@ tarch::plotter::tests::VTUFileWriterTest::VTUFileWriterTest() :
 
 void
 tarch::plotter::tests::VTUFileWriterTest::run() {
-  // The read-back helpers report a malformed file by throwing. An exception that leaves run()
-  // takes the whole unit test binary down, so this catch counts the failure and the cases
-  // behind it stay unrun.
+  // The read-back helpers report a malformed file by throwing, and the test framework does not
+  // guard run(), so this catch records the failure and keeps the binary alive.
   try {
     testMethod(test2DSimpleTriangle);
     testMethod(test3DSimpleHexahedron);
@@ -418,8 +417,8 @@ void
 tarch::plotter::tests::VTUFileWriterTest::testUnevenSubdomainCounts() {
   const std::string filename = "VTUTestUneven";
 
-  // The global master holds three subdomains and every other rank holds two. The writer puts
-  // one <Piece> per subdomain into this rank's own .vtu file.
+  // The master plots three subdomains and every other rank two, and the writer puts one piece per
+  // subdomain into the .vtu file of the rank.
   const int                     numberOfSubdomains = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
   tarch::plotter::VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
   for (int subdomainIndex = 0; subdomainIndex < numberOfSubdomains; ++subdomainIndex) {

@@ -27,11 +27,12 @@ class SubcellLimiting:
         dmp_relaxation_parameter=0.0,
         dmp_differences_scaling=0.0,
     ):
-        """Enables a-posteriori limiting on the finite-volume ``scheme``.
+        """Enables a-posteriori limiting with the finite-volume ``scheme``.
 
-        A discrete maximum principle merges the ranges of the previous step over every cell
-        and its neighbours and widens the result by the larger of the absolute relaxation and
-        the scaled range (Dumbser et al., arXiv:1406.7416, equation 23).
+        The discrete maximum principle widens the range of the previous step over a cell and
+        its neighbours by the larger of ``dmp_relaxation_parameter`` and
+        ``dmp_differences_scaling`` times that range (Dumbser et al., arXiv:1406.7416,
+        equation 23).
         """
         if self.subcell_limiter_is_enabled:
             raise RuntimeError("The subcell limiter is already configured.")
@@ -94,7 +95,7 @@ class SubcellLimiting:
             )
 
     def _subcell_limiter_includes(self):
-        """Returns the headers the limiter and its finite-volume scheme read."""
+        """Returns the headers of the limiter and its finite-volume scheme."""
         if not self.subcell_limiter_is_enabled:
             return []
         return [
@@ -111,8 +112,8 @@ class SubcellLimiting:
         )
 
     def _subcell_limiter_constants(self):
-        """Returns the C++ lines of the subcell layout and scheme the limiter and the finite-volume
-        kernels read from the generated class, empty without a limiter."""
+        """Returns the C++ constants and type aliases of the subcell layout and the scheme, or
+        an empty list without a limiter."""
         if not self.subcell_limiter_is_enabled:
             return []
         scheme = self._subcell_limiter_scheme.subcell_scheme()
@@ -161,21 +162,21 @@ class SubcellLimiting:
                     "NodesToSubcells1D",
                     flatten(nodes_to_subcells),
                     """
-  Averages the polynomial over the nodes onto the subcells.
+  Averaging operator from the nodal polynomial onto the subcells.
 """,
                 ),
                 table(
                     "SubcellsToNodes1D",
                     flatten(subcells_to_nodes),
                     """
-  Projects the subcell averages back onto the nodes and keeps the cell mean.
+  Projection operator from the subcell averages onto the nodes. It keeps the cell mean.
 """,
                 ),
                 table(
                     "NodesToLobatto1D",
                     flatten(nodes_to_lobatto),
                     """
-  Evaluates the polynomial over the nodes at the Gauss-Lobatto nodes of the same count.
+  Evaluation operator of the nodal polynomial at the same number of Gauss-Lobatto nodes.
 """,
                 ),
             ],

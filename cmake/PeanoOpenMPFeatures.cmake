@@ -3,11 +3,9 @@
 
 include_guard(GLOBAL)
 
-# Reports an OpenMP construct as supported only when the compiler accepts it in
-# silence. A compiler that accepts a construct and then names it in a warning
-# ignores the construct, so Peano takes the fallback. The probe runs on every
-# configuration and caches no verdict, so a change of compiler leaves no stale
-# answer behind.
+# Reports an OpenMP construct as supported only when no warning or remark mentions it, because a
+# compiler that warns about a construct ignores it. The probe runs at every configuration and
+# caches no result.
 function(_peano_check_openmp_construct construct_name construct_keyword probe_source out_var)
   string(MAKE_C_IDENTIFIER "${construct_name}" _peano_probe_identifier)
   set(_peano_probe_file "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/PeanoOpenMPProbe_${_peano_probe_identifier}.cpp")

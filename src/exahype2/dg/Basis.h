@@ -10,9 +10,9 @@
 
 /**
  * @file
- * The nodal Lagrange basis of a discontinuous Galerkin cell. A cell holds NodesPerAxis nodes
- * along every axis at the quadrature points of the unit interval, linearised with the first
- * axis fastest, and every node carries Values consecutive values.
+ * The nodal Lagrange basis of a discontinuous Galerkin cell. The nodes of a cell lie at the
+ * tensor-product quadrature points and are linearised with the first axis fastest. Every node
+ * stores Values consecutive values.
  */
 TARGET_DECLARE
 namespace exahype2::dg {
@@ -22,14 +22,8 @@ namespace exahype2::dg {
   template <typename Precision>
   struct BasisTables;
 
-  /**
-   * Returns the number of nodes one face of a cell carries.
-   */
   constexpr int getNodesPerFace(const int nodesPerAxis) { return peano4::power(nodesPerAxis, DIMENSIONS - 1); }
 
-  /**
-   * Returns the number of nodes one cell carries.
-   */
   constexpr int getNodesPerCell(const int nodesPerAxis) { return peano4::power(nodesPerAxis, DIMENSIONS); }
 
   template <typename QuadraturePrecision>
@@ -149,9 +143,8 @@ namespace exahype2::dg {
 } // namespace exahype2::dg
 
 /**
- * The node counts of a cell of Derived and the strides of one node padded to the vector width:
- * A padded stride rounds the value count of a node up to a multiple of the vector width, and
- * every padding lane holds zero.
+ * The node counts of a cell of Derived and its node strides padded to the SIMD width. Every
+ * padding lane is zero.
  */
 template <typename Derived>
 struct exahype2::dg::PaddedLayout final {
@@ -169,9 +162,8 @@ struct exahype2::dg::PaddedLayout final {
 };
 
 /**
- * The operator tables of one Lagrange basis, packed row major with NodesPerAxis columns. The
- * quadrature points of the reference interval double as the time nodes of a space-time
- * predictor.
+ * The operator tables of one Lagrange basis. Every matrix is stored row major with NodesPerAxis
+ * columns. The quadrature points are also the time nodes of the space-time predictor.
  */
 template <typename Precision>
 struct exahype2::dg::BasisTables final {
@@ -181,16 +173,16 @@ struct exahype2::dg::BasisTables final {
   const Precision* cellQuadratureWeights{nullptr};
   const Precision* inverseCellQuadratureWeights{nullptr};
   /**
-   * Entry [i][j] holds the weight of node j times the derivative of basis function i at node j.
+   * Entry [i][j] is the weight of node j times the derivative of basis function i at node j.
    */
   const Precision* stiffnessOperator{nullptr};
   const Precision* stiffnessOperatorTransposed{nullptr};
   /**
-   * Entry [i][j] holds the derivative of basis function j at node i.
+   * Entry [i][j] is the derivative of basis function j at node i.
    */
   const Precision* derivativeOperator{nullptr};
   /**
-   * The inverse of the temporal operator a Picard iteration solves.
+   * The inverse of the time operator of the Picard iteration.
    */
   const Precision* inversePicardOperator{nullptr};
   const Precision* leftFaceCoefficients{nullptr};
@@ -200,9 +192,8 @@ TARGET_DECLARE_END
 
 namespace exahype2::dg {
   /**
-   * The one-dimensional transfer matrices between a cell and its children hold one NodesPerAxis
-   * by NodesPerAxis matrix per child interval, stored flat as [child][row][column]; the operators
-   * of a cell are tensor products of them.
+   * The 1D transfer matrices of the child intervals, stored as [child][row][column]. The transfer
+   * operator between a cell and its children is a tensor product of them.
    */
   template <int NodesPerAxis>
   using AMRMatrices1D =

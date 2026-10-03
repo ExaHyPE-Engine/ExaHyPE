@@ -13,7 +13,7 @@
 #include "tarch/la/VectorOperations.h"
 
 /**
- * Votes on every cell of the partition from the admissible sizes alone and merges the votes.
+ * Votes on every cell of the partition with a null patch and merges the votes.
  */
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD void
@@ -35,9 +35,6 @@ exahype2::RefinementVotes::voteOnGridConstruction(
   merge(partition, partition.onDevice().getCells(), partition.getCells(), requests);
 }
 
-/**
- * Votes on every cell of the partition from its patch in solution and merges the votes.
- */
 template <typename Derived, typename SolutionView>
 INLINE_METHOD void
 exahype2::RefinementVotes::voteOnEveryCell(
@@ -63,9 +60,6 @@ exahype2::RefinementVotes::voteOnEveryCell(
   merge(partition, partition.onDevice().getCells(), partition.getCells(), requests);
 }
 
-/**
- * Votes on the listed cells from their patches in solution and merges those votes.
- */
 template <typename Derived, typename SolutionView>
 INLINE_METHOD void
 exahype2::RefinementVotes::voteOnCells(
@@ -117,8 +111,8 @@ exahype2::RefinementVotes::reserve(const int numberOfSlots) {
 }
 
 /**
- * Merges the commands of the cells, listed on the device and on the host, into the requests; a
- * vote of keep on every listed cell merges without the copy to the host.
+ * Merges the commands of the listed cells into requests. cellsOnDevice and cellsOnHost are the
+ * same list in device and in host memory.
  */
 INLINE_METHOD void
 exahype2::RefinementVotes::merge(
@@ -171,9 +165,8 @@ exahype2::VoteOnGridConstruction<Derived, StoragePrecision>::operator()(const in
 }
 
 /**
- * Returns the vote of Derived on one cell: A cell above the largest admissible size refines, a
- * cell that can refine or erase within the admissible sizes asks the refinement criterion, and a
- * vote that would leave the admissible sizes turns into a keep.
+ * Returns the vote of Derived on one cell. A cell wider than maxAdmissibleSize refines, and a vote
+ * of the refinement criterion that leaves the admissible sizes becomes Keep.
  */
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand

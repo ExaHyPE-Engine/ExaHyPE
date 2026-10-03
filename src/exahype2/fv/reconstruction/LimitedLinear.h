@@ -15,9 +15,8 @@ namespace exahype2::fv::reconstruction {
 
 TARGET_DECLARE
 /**
- * Evolves limited boundary states by half a time step before solving face Riemann problems.
- * Each predictor uses one coordinate direction because face exchange omits diagonal halo values.
- * The Limiter policy computes each unknown's limited difference from neighbouring volumes.
+ * MUSCL-Hancock reconstruction with the slope limiter Limiter. The half-step predictor reads
+ * neighbours along one axis only, since the faces store no diagonal halo volumes.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 struct exahype2::fv::reconstruction::LimitedLinear final {

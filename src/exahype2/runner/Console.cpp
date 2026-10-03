@@ -8,12 +8,12 @@
 
 namespace {
   /**
-   * Columns of the text inside the frame; the frame adds two columns on either side.
+   * Columns of the text inside the frame, which adds two columns on either side.
    */
   constexpr std::size_t ReportWidth = 93;
 
   /**
-   * Durations of more than this many days render as a bounded text, so the field width stays fixed.
+   * Durations beyond this many days render as a fixed-width text.
    */
   constexpr int MaxDurationDays = 999;
 
@@ -99,7 +99,7 @@ exahype2::runner::Format::getGroupedNumber(const unsigned long value) {
 }
 
 /**
- * Renders the two most significant units of a duration and clamps long ones, so the width stays bounded.
+ * Renders the two most significant units of a duration.
  */
 std::string
 exahype2::runner::Format::getDuration(const double seconds) {
@@ -130,9 +130,8 @@ exahype2::runner::Format::getDuration(const double seconds) {
 }
 
 /**
- * Counts UTF-8 code points as terminal columns. This is valid for the report's Latin letters, the
- * glyphs λ, · and → and the frame glyphs; combining and wide characters are outside the supported
- * input.
+ * Returns the number of UTF-8 code points, which equals the terminal columns for the glyphs of the
+ * reports. Combining and wide characters are not supported.
  */
 std::size_t
 exahype2::runner::getDisplayWidth(const std::string& text) {
@@ -252,7 +251,7 @@ exahype2::runner::Report::Report(const Writer& writer) :
 }
 
 /**
- * Writes a thin rule across the frame; a closed frame opens with its top border.
+ * Writes a thin rule across the frame, or the top border if the frame is closed.
  */
 void
 exahype2::runner::Report::rule() {

@@ -20,7 +20,7 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
 }
 
 /**
- * Writes the orbiting lake surface at t over the bathymetry that Q holds into solution.
+ * Writes the orbiting lake surface at time t over the bathymetry of Q into solution.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::analyticalSolution(

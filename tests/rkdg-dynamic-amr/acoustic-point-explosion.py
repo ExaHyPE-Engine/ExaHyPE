@@ -53,9 +53,9 @@ solver = exahype2.dg.rk.Solver(
     linear=True,
 )
 
-# Placing the source on the domain diagonal preserves axis-permutation symmetry
-# in the solution and refinement pattern. Unit offsets keep the detail
-# indicators well scaled at the ambient state.
+# The pulse lies on the diagonal and every wall reflects, so the solution and the refinement stay
+# symmetric under axis permutations. The unit offsets bound the relative detail near the zero
+# background.
 solver.set_pde_terms(
     initial_condition="""
   const tarch::la::Vector<DIMENSIONS, double> sourceCentre(-0.7);

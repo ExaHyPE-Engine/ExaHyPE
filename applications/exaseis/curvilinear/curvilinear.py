@@ -1,3 +1,5 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import argparse
 import os
 import sys
@@ -106,7 +108,7 @@ project.add_solver(theSolver)
 project.output.makefile.add_include_directory("../../..")
 
 if args.use_tracers:
-    # The tracers sit at the mesh positions of the physical coordinates and record every unknown.
+    # invertProjection maps the physical tracer coordinates to mesh positions.
     tracer_particles = project.add_tracer(
         name="Tracer", particle_attributes=theSolver.state.unknowns
     )

@@ -6,7 +6,7 @@
 
 namespace {
   /**
-   * Returns the uploads of every translation unit that holds a device copy.
+   * Returns the uploads of every translation unit that defines a device copy.
    */
   std::vector<std::function<void()>>& getUploads() {
     static std::vector<std::function<void()>> uploads;

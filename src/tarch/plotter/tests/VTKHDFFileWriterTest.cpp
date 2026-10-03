@@ -111,9 +111,8 @@ tarch::plotter::tests::VTKHDFFileWriterTest::VTKHDFFileWriterTest() :
 
 void
 tarch::plotter::tests::VTKHDFFileWriterTest::run() {
-  // check() and the read-back helpers report a malformed file by throwing. An exception that
-  // leaves run() takes the whole unit test binary down, so this catch counts the failure and
-  // the cases behind it stay unrun.
+  // The read-back helpers report a malformed file by throwing, and the test framework does not
+  // guard run(), so this catch records the failure and keeps the binary alive.
   try {
     testMethod(testSingleQuad2D);
     testMethod(testVertexMerging);
@@ -135,8 +134,7 @@ tarch::plotter::tests::VTKHDFFileWriterTest::run() {
 }
 
 /**
- * Checks the per-step NumberOf* totals, the Offsets, the vertex coordinates and the cell-data
- * value that one quad in one step writes.
+ * A single step of one quad per rank writes consistent sizes, offsets, coordinates and cell data.
  */
 void
 tarch::plotter::tests::VTKHDFFileWriterTest::testSingleQuad2D() {
@@ -169,8 +167,8 @@ tarch::plotter::tests::VTKHDFFileWriterTest::testSingleQuad2D() {
     const hid_t file          = openForRead(path);
 
     check(readNumberOfSteps(file) == 1, "NSteps should be 1");
-    // The declared specification version stays at the floor the file's features need; a
-    // higher number makes readers that could parse the file reject it.
+    // The writer declares the lowest specification version its features need, because a reader
+    // rejects a file with a newer version than it supports.
     const auto version = readVersion(file);
     check(version[0] == 2 and version[1] == 0, "VTKHDF version should be 2.0");
     const auto        numberOfPoints          = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
@@ -503,8 +501,7 @@ tarch::plotter::tests::VTKHDFFileWriterTest::testParticlePointCloud() {
 }
 
 /**
- * A hexahedron of VTK type 12 with cell data and non-zero z coordinates covers the 3D
- * geometry and connectivity path.
+ * A hexahedron with cell data and non-zero z coordinates writes its 3D geometry and connectivity.
  */
 void
 tarch::plotter::tests::VTKHDFFileWriterTest::test3DHexahedron() {
@@ -569,8 +566,7 @@ tarch::plotter::tests::VTKHDFFileWriterTest::test3DHexahedron() {
 }
 
 /**
- * Only the global master holds data and every other rank stays empty. The collective write
- * must not deadlock, and the merged grid carries only the master's cells.
+ * A write in which only the global master plots cells finishes and stores the master's cells.
  */
 void
 tarch::plotter::tests::VTKHDFFileWriterTest::testHeterogeneousRanks() {
@@ -612,8 +608,7 @@ tarch::plotter::tests::VTKHDFFileWriterTest::testHeterogeneousRanks() {
 }
 
 /**
- * The global master holds three subdomains and every other rank holds two, so a write loop
- * over the subdomains would make the ranks enter a different number of collective calls.
+ * Ranks with different subdomain counts enter the same collective calls.
  */
 void
 tarch::plotter::tests::VTKHDFFileWriterTest::testUnevenSubdomainCounts() {
@@ -701,7 +696,7 @@ tarch::plotter::tests::VTKHDFFileWriterTest::testInconsistentDataSizeThrows() {
     auto vertexDataPlotter = plotter.createVertexDataPlotter(0, "Broken", 1);
     vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
     vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-    // Only one of the two vertices carries data.
+    // The write validation rejects a field with a value for one of the two vertices only.
     vertexDataPlotter->plotVertexData(0, 5.0);
     plotter.writeToFile(filename, 0.0);
   } catch (const std::runtime_error&) {
@@ -727,13 +722,13 @@ tarch::plotter::tests::VTKHDFFileWriterTest::testInvalidIdentifierThrows() {
 }
 
 /**
- * Single-precision output stores 4-byte reals and double-precision output stores 8-byte reals
- * and returns a value below single-precision resolution unchanged.
+ * Single-precision output stores 4-byte reals, and double-precision output stores 8-byte reals
+ * without rounding.
  */
 void
 tarch::plotter::tests::VTKHDFFileWriterTest::testPrecisionSwitch() {
-  // The value differs from 1.0 by less than single precision resolves, so an exact round-trip
-  // proves the data travelled in double precision.
+  // The value differs from 1.0 by less than the single-precision resolution, so only
+  // double-precision output keeps it exactly.
   const double fineValue = 1.0 + 1.0e-12;
 
   auto writeQuadWithValue = [&](const std::string& filename) {

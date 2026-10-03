@@ -16,27 +16,27 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * Exchanges the halves of the faces this rank and a neighbour rank both hold. A face chunk of the
- * pool holds one half per side; post() sends the half this rank owns of every exchanged face and
- * wait() writes the half the neighbour owns. The buffers live where the pool lives, so with a GPU
- * backend MPI reads and writes device memory.
+ * Exchanges the faces this rank and a neighbour rank both hold. A face chunk of the pool stores one
+ * half per side: post() sends the half this rank owns, and wait() writes the half of the neighbour.
+ * The buffers use the memory location of the pool, so with a GPU backend MPI reads and writes device
+ * memory.
  */
 template <typename T>
 class peano4::HaloExchange final {
 public:
   using Pool = tarch::accelerator::ChunkedMemoryPool<T>;
 
-  explicit HaloExchange(Pool& pool);
+  INLINE_METHOD explicit HaloExchange(Pool& pool);
   HaloExchange(const HaloExchange& other)            = delete;
   HaloExchange(HaloExchange&& other)                 = delete;
   HaloExchange& operator=(const HaloExchange& other) = delete;
   HaloExchange& operator=(HaloExchange&& other)      = delete;
-  ~HaloExchange() noexcept;
+  INLINE_METHOD ~HaloExchange() noexcept;
 
-  void rebuild(const peano4::Partition& partition);
-  void release();
-  void post();
-  void wait();
+  INLINE_METHOD void rebuild(const peano4::Partition& partition);
+  INLINE_METHOD void release();
+  INLINE_METHOD void post();
+  INLINE_METHOD void wait();
 
   [[nodiscard]] INLINE_METHOD int getNumberOfEntries() const noexcept;
   [[nodiscard]] INLINE_METHOD int getTag() const noexcept;
@@ -49,7 +49,7 @@ private:
     int numberOfEntries{0};
   };
 
-  bool pollMessages();
+  INLINE_METHOD bool pollMessages();
 
   Pool& _pool;
 

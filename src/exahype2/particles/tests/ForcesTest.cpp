@@ -14,9 +14,6 @@ namespace {
   const tarch::la::Vector<DIMENSIONS, double> DomainOffset(0.0);
   const tarch::la::Vector<DIMENSIONS, double> DomainWidth(1.0);
 
-  /**
-   * Holds the values of one particle at the domain centre with unit mass and radius one half.
-   */
   struct Values final {
     std::array<double, DIMENSIONS + NumberOfData> values{};
 
@@ -51,9 +48,6 @@ exahype2::particles::tests::ForcesTest::run() {
   testMethod(testReflectionAndWrapAtTheWalls);
 }
 
-/**
- * Checks the convergence order of the particle velocity against exponential drag decay.
- */
 void
 exahype2::particles::tests::ForcesTest::testHigherOrderSchemesConvergeForDrag() {
   exahype2::particles::Forces forces;
@@ -87,9 +81,6 @@ exahype2::particles::tests::ForcesTest::testHigherOrderSchemesConvergeForDrag() 
   }
 }
 
-/**
- * Checks that static integration preserves a position without reading particle data.
- */
 void
 exahype2::particles::tests::ForcesTest::testStaticIntegrationNeedsNoDataAttributes() {
   std::array<double, DIMENSIONS> values{};
@@ -115,10 +106,6 @@ exahype2::particles::tests::ForcesTest::testAMasslessParticleCarriesNoAccelerati
   validateNumericalEquals(exahype2::particles::getAcceleration(particle)(DIMENSIONS - 1), 0.0);
 }
 
-/**
- * Constant gravity pulls, buoyancy pushes along the last axis, the drag follows the fluid and the central gravity
- * points at the centre.
- */
 void
 exahype2::particles::tests::ForcesTest::testEveryForceWritesItsAcceleration() {
   exahype2::particles::Forces forces;
@@ -202,10 +189,6 @@ exahype2::particles::tests::ForcesTest::testTheEulerSchemesAdvanceOneStep() {
   validateNumericalEquals(fixedPosition(0), 0.5);
 }
 
-/**
- * Under a constant acceleration the position after one step is x + v dt + a dt^2 / 2 for every scheme of second order
- * or higher.
- */
 void
 exahype2::particles::tests::ForcesTest::testTheHigherOrderSchemesAreExactForAConstantAcceleration() {
   exahype2::particles::Forces forces;

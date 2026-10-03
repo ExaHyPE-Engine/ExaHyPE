@@ -46,10 +46,6 @@ exahype2::MergeErrorSums::operator()(const int partialSum) const {
   }
 }
 
-/**
- * Adds the weighted absolute error of every measured unknown to the L1 slot, its weighted
- * square to the L2 slot and takes the maximum into the Linf slot of errors.
- */
 template <std::size_t NumberOfMeasuredUnknowns, typename Precision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::accumulateError(
@@ -71,11 +67,6 @@ exahype2::accumulateError(
   }
 }
 
-/**
- * Adds the weighted error of one degree of freedom against the analytical solution of SolverType
- * at x to errors. The analytical solution reads every value of the degree of freedom in double
- * precision.
- */
 template <
   typename SolverType,
   int         NumberOfUnknowns,
@@ -112,10 +103,8 @@ exahype2::accumulateSolutionError(
 TARGET_DECLARE_END
 
 /**
- * Returns the error sums of the numberOfCells cells whose L1, squared L2 and largest errors
- * errorsPerCell holds in the memory the kernels read. The cells add into partial sums, which
- * merge pairwise, and only the merged sums travel to the host. The exact sums make the result
- * independent of the number of partial sums.
+ * Returns the error sums of numberOfCells cells in errorsPerCell. The partial sums merge pairwise
+ * on the device, and only the total is copied to the host.
  */
 INLINE_METHOD exahype2::ErrorSums
 exahype2::ErrorMeasurement::sumErrorsOfCells(
@@ -146,9 +135,8 @@ exahype2::ErrorMeasurement::sumErrorsOfCells(
 }
 
 /**
- * Sums the errors of the cells in the buffer of getErrorsPerCell() and records the norms. The
- * translation unit of the caller launches the device loops, so a generated solver compiled for
- * the device runs them there.
+ * Records the norms of the first numberOfCells cells in getErrorsPerCell(). The caller's
+ * translation unit compiles the device loops, so a solver built for the device runs them there.
  */
 INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
 exahype2::ErrorMeasurement::record(const int numberOfCells, const double timeStamp) {

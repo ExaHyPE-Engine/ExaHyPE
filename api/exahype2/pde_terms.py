@@ -12,7 +12,7 @@ COORDINATES = "const tarch::la::Vector<DIMENSIONS, double>&"
 
 
 def _concept_header(concept):
-    """Returns the header of a concept: ``HasFlux`` lives in ``exahype2/terms/Flux.h``."""
+    """Returns the header of a concept, ``exahype2/terms/Flux.h`` for ``HasFlux``."""
     return "exahype2/terms/" + concept[len("Has") :] + ".h"
 
 
@@ -60,8 +60,8 @@ def get_inline_attributes(gpu):
 
 
 def render_declaration(term, precision, dictionary, attributes):
-    """Returns the declaration of a term in the solver class; ``attributes`` precede the return
-    type of a term that ``<Name>.cpph`` defines."""
+    """Returns the declaration of a term in the solver class, with ``attributes`` before the
+    return type."""
     return "static {}{} {}(\n{}\n);".format(
         attributes + " " if attributes else "",
         _substitute(term.returns, precision, dictionary),
@@ -71,8 +71,8 @@ def render_declaration(term, precision, dictionary, attributes):
 
 
 def render_definition(term, precision, dictionary, attributes, body):
-    """Returns the definition of a term with ``body``; ``attributes`` precede the return type of
-    a term that ``<Name>.cpph`` defines."""
+    """Returns the definition of a term with ``body`` and with ``attributes`` before the return
+    type."""
     return "{}{} {}::{}(\n{}\n) {{\n{}\n}}".format(
         attributes + " " if attributes else "",
         _substitute(term.returns, precision, dictionary),
@@ -101,8 +101,8 @@ def render_stub_definition(term, precision, dictionary):
 class PDETerm:
     """One row of a solver family's PDE term table.
 
-    ``parameters`` lists the C++ parameters with ``{P}`` for the term's precision and ``{N}``
-    and ``{A}`` for the unknown and auxiliary counts in the comments.
+    ``parameters`` lists the C++ parameters. ``{P}`` stands for the precision of the term,
+    ``{N}`` and ``{A}`` in the comments for the numbers of unknowns and auxiliary variables.
     """
 
     cpp: str
@@ -284,8 +284,8 @@ def _riemann_solver_parameters(points):
 
 
 def riemann_solver(points=""):
-    """The Riemann solver of every solver family; ``points`` names the number of face nodes a DG
-    solver passes at once."""
+    """Returns the Riemann solver term of every solver family. ``points`` is the number of face
+    nodes a DG solver passes in one call."""
     return PDETerm(
         cpp="solveRiemannProblem",
         concept="HasRiemannSolver",
@@ -428,8 +428,8 @@ def analytical_solution():
 
 
 def particle_analytical_solution():
-    """The solution buffer holds the exact position first, then the data entries of the tracer
-    the solver measures."""
+    """Returns the analytical solution term of a tracer set. The solution buffer stores the
+    exact position followed by the measured data entries."""
     return PDETerm(
         cpp="analyticalSolution",
         concept="HasParticleAnalyticalSolution",
@@ -492,7 +492,7 @@ class PDETerms:
         self._host_only = set()
 
     def set(self, **pde_terms):
-        """Stores every named PDE term; ``None`` and ``False`` remove a PDE term."""
+        """Stores every named PDE term. ``None`` and ``False`` remove a PDE term."""
         for name, value in pde_terms.items():
             if name not in self._table:
                 raise ValueError(
@@ -512,7 +512,8 @@ class PDETerms:
                 )
 
     def run_on_host(self, name):
-        """Renders the named PDE term without the device attribute, so it may read host objects."""
+        """Marks the named PDE term to render without the device attribute, so it may read host
+        objects."""
         if name not in self._table:
             raise ValueError("Unknown PDE term '{}'.".format(name))
         self._host_only.add(name)
@@ -534,13 +535,13 @@ class PDETerms:
         return self._table[name].default
 
     def is_declared(self, name):
-        """Returns whether the generated solver declares the term: Set by the script or defaulted."""
+        """Returns whether the generated solver declares the term, because the script set it or
+        the table has a default."""
         return name in self._values or self._table[name].default is not None
 
     def get_host_defined_device_terms(self, user_terms_inline):
-        """Returns the C++ names of the user-defined terms that the kernels call on the device and
-        that ``<Name>.cpp`` defines on the host, because ``user_terms_inline`` is false.
-        """
+        """Returns the C++ names of the user-defined device terms that ``<Name>.cpp`` defines on
+        the host. The list is empty when ``user_terms_inline`` is true."""
         return [
             term.cpp
             for name, term in self._table.items()
@@ -561,8 +562,8 @@ class PDETerms:
         return result
 
     def _rendered_body(self, name, precision, dictionary):
-        """Renders the inline body with the dictionary, so a body may name the precision it is
-        instantiated for through ``COMPUTE_PRECISION``."""
+        """Renders the inline body with the dictionary. A body reads the precision of its
+        instantiation as ``COMPUTE_PRECISION``."""
         context = dict(dictionary)
         context["COMPUTE_PRECISION"] = precision
         return render_jinja2_template(self.body(name), context, jinja2.DebugUndefined)
@@ -584,8 +585,9 @@ class PDETerms:
         ]
 
     def render_declarations(self, dictionary, user_terms_inline):
-        """Returns the declarations of every declared term in ``<Name>.h``; ``user_terms_inline``
-        declares the user-defined terms for the application's ``<Name>.cpph``."""
+        """Returns the declarations of every declared term for ``<Name>.h``. With
+        ``user_terms_inline``, the user-defined terms get the inline attributes, because the
+        application's ``<Name>.cpph`` defines them."""
         blocks = []
         for name, term in self._table.items():
             if not self.is_declared(name):
@@ -629,7 +631,7 @@ class PDETerms:
         ]
 
     def concept_headers(self):
-        """Returns the headers of the concepts of the declared terms, one per term."""
+        """Returns the sorted headers of the concepts of the declared terms."""
         return sorted(
             {
                 _concept_header(term.concept)

@@ -55,8 +55,7 @@ tarch::plotter::tests::HDF5FileWriterTest::HDF5FileWriterTest() :
 
 void
 tarch::plotter::tests::HDF5FileWriterTest::testHeterogeneousRanks() {
-  // Only the global master contributes geometry and a "Marker" cell field, and every
-  // other rank leaves the plotter empty. writeToFile() stays collective for all ranks.
+  // Only the global master plots data, and every rank calls writeToFile().
   const std::string filename = "HDF5TestHeterogeneous";
 
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -93,8 +92,7 @@ tarch::plotter::tests::HDF5FileWriterTest::testHeterogeneousRanks() {
 
 void
 tarch::plotter::tests::HDF5FileWriterTest::testInvalidIdentifierThrows() {
-  // A data identifier is written into the XML, an HDF5 path and a NetCDF name, so
-  // a character that would corrupt those (here '/') must be rejected up front.
+  // A slash would corrupt the HDF5 dataset path.
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
   plotter.acquirePiece(0);
 
@@ -136,7 +134,7 @@ void
 tarch::plotter::tests::HDF5FileWriterTest::testUnevenSubdomainCounts() {
   const std::string filename = "HDF5TestUneven";
 
-  // Master contributes 3 quads, every other rank 2 - non-zero but unequal counts.
+  // The master plots three quads and every other rank two.
   const int      numberOfSubdomains = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
   for (int subdomain = 0; subdomain < numberOfSubdomains; ++subdomain) {
@@ -159,7 +157,7 @@ tarch::plotter::tests::HDF5FileWriterTest::testUnevenSubdomainCounts() {
   barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     const int ranks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-    const int cells = 3 + 2 * (ranks - 1); // master 3, the other ranks 2 each
+    const int cells = 3 + 2 * (ranks - 1);
     validateXMFContent(
       (tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(),
       "NumberOfElements=\"" + std::to_string(cells) + "\""
@@ -463,7 +461,7 @@ tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows() {
     vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
     vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
 
-    // Data for only one of the two vertices, which the write validation rejects.
+    // The write validation rejects a field with a value for one of the two vertices only.
     vertexDataPlotter->plotVertexData(0, 5.0);
 
     plotter.writeToFile(filename, 0);
@@ -487,7 +485,7 @@ tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows() {
 
 #else // No HDF5
 
-// Dummy implementation to satisfy the linker when compiled without HDF5.
+// A build without HDF5 runs an empty test.
 tarch::plotter::tests::HDF5FileWriterTest::HDF5FileWriterTest() :
   tarch::tests::TestCase("tarch::plotter::tests::HDF5FileWriterTest") {}
 

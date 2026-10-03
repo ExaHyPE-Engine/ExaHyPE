@@ -49,8 +49,8 @@ peano4::topology::Tree::getChild(const int cellIndex, const int linearisedChildP
 }
 
 /**
- * Serialises a lattice position into one hash key. Every axis contributes
- * LatticeKeyBitsPerAxis bits, which covers every level the cell indices address.
+ * Packs a lattice position into one hash key with LatticeKeyBitsPerAxis bits per axis, enough for
+ * every level the cell indices address.
  */
 INLINE_METHOD std::int64_t
 peano4::topology::Tree::serialiseLatticeKey(const tarch::la::Vector<DIMENSIONS, int>& latticeIndex) {
@@ -76,8 +76,8 @@ peano4::topology::Tree::deserialiseLatticeKey(const std::int64_t latticeKey) {
 }
 
 /**
- * Orders two lattice positions by their serialised keys, which is the order
- * every canonical refinement plan level keeps.
+ * Returns whether left precedes right in the order of their serialised keys, which every level of a
+ * refinement plan keeps.
  */
 INLINE_METHOD bool
 peano4::topology::Tree::latticeKeyPrecedes(
@@ -88,10 +88,9 @@ peano4::topology::Tree::latticeKeyPrecedes(
 }
 
 /**
- * Returns the index of the cell at the given level and lattice position, or
- * -1 when no cell exists there. On the dense levels up to the dense boundary
- * level the index is closed-form; beyond it the level's lattice map decides
- * existence.
+ * Returns the index of the cell at the level and lattice position, or -1 when no cell exists there.
+ * The dense levels compute the index in closed form, and the finer levels look it up in their
+ * lattice map.
  */
 INLINE_METHOD int
 peano4::topology::Tree::getCellAt(const int level, const tarch::la::Vector<DIMENSIONS, int>& latticeIndex) const {
@@ -159,9 +158,8 @@ peano4::topology::Tree::getBlockSlotAt(const tarch::la::Vector<DIMENSIONS, int>&
 }
 
 /**
- * Returns the base-ChildrenPerCell digit interleave of a lattice position through the
- * level's table, one read per axis. On a whole level the position is the
- * level's lattice position, on a block level the position within the block.
+ * Returns the digit interleave of a lattice position with one table read per axis. On a block level,
+ * the position is relative to its block.
  */
 INLINE_METHOD int
 peano4::topology::Tree::getInterleavedIndex(const int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const {
@@ -201,8 +199,7 @@ peano4::topology::Tree::getVertexAt(const int level, const tarch::la::Vector<DIM
     return _sparseVertexIndexOfLattice[mapLevelIndex].find(serialiseLatticeKey(latticeIndex));
   }
   const int cellsPerAxisOnLevel = getCellsPerAxisOfLevel(level);
-  // The wrapped position and its canonical partner are one entity, so the
-  // build references the canonical one alone and a query has to wrap too.
+  // The build stores a periodic vertex at its canonical position only, so the query wraps too.
   tarch::la::Vector<DIMENSIONS, int> canonicalLattice(0);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     assertion(latticeIndex(axis) >= 0 and latticeIndex(axis) <= cellsPerAxisOnLevel, level, axis, latticeIndex(axis));
@@ -210,9 +207,8 @@ peano4::topology::Tree::getVertexAt(const int level, const tarch::la::Vector<DIM
       (_periodicBoundaries[axis] and latticeIndex(axis) == cellsPerAxisOnLevel) ? 0 : latticeIndex(axis);
   }
   if (usesBlockLayout(level)) {
-    // A vertex on a block boundary lies in two blocks per boundary axis; the
-    // lowest materialised one of the candidates owns it. The wrap of a
-    // periodic axis makes the last block the lower neighbour of the first one.
+    // A vertex on a block boundary lies in two blocks per boundary axis, and the lowest materialised
+    // candidate owns it. On a periodic axis, the last block is the lower neighbour of the first one.
     const int                          cellsPerAxisOfBlock = getCellsPerAxisOfBlock(level);
     const int                          blocksPerAxis       = getCellsPerAxisOfLevel(_spawnLevel);
     tarch::la::Vector<DIMENSIONS, int> upperBlock(0);
@@ -294,8 +290,7 @@ peano4::topology::Tree::getFaceAt(
     return _sparseFaceIndexOfLattice[mapLevelIndex][normal].find(serialiseLatticeKey(faceLattice));
   }
   const int cellsPerAxisOnLevel = getCellsPerAxisOfLevel(level);
-  // The two wrapped planes are one face, so a query wraps onto the canonical
-  // one exactly as the build does.
+  // The build stores a periodic face at its canonical position only, so the query wraps too.
   tarch::la::Vector<DIMENSIONS, int> canonicalLattice(0);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     assertion(
@@ -310,9 +305,8 @@ peano4::topology::Tree::getFaceAt(
       : faceLattice(axis);
   }
   if (usesBlockLayout(level)) {
-    // A face on a block boundary of the normal axis lies in two blocks; the
-    // lower materialised one owns it, and the wrap of a periodic axis makes
-    // the last block the lower neighbour of the first one.
+    // A face on a block boundary of the normal axis lies in two blocks, and the lower materialised
+    // one owns it. On a periodic axis, the last block is the lower neighbour of the first one.
     const int                          cellsPerAxisOfBlock = getCellsPerAxisOfBlock(level);
     const int                          blocksPerAxis       = getCellsPerAxisOfLevel(_spawnLevel);
     tarch::la::Vector<DIMENSIONS, int> block(0);
@@ -397,10 +391,9 @@ peano4::topology::Tree::getPeriodicBoundaries() const {
 }
 
 /**
- * Returns the rank owning the cell at the given adjacency position of a
- * vertex, or -1 where no cell exists there. A hanging vertex inherits every
- * entry from the nearest coarse vertex along the entry's direction, so the
- * walk descends until a persistent vertex answers from the partition.
+ * Returns the rank that owns the cell at an adjacency entry of a vertex, or -1 where no cell exists.
+ * A hanging vertex inherits every entry from the nearest coarser vertex, so the loop climbs the
+ * levels until it reaches a persistent vertex.
  */
 INLINE_METHOD int
 peano4::topology::Tree::getAdjacentCellOwnerAt(
@@ -420,8 +413,8 @@ peano4::topology::Tree::getAdjacentCellOwnerAt(
       const int  quotient         = currentLattice(axis) / SubdivisionFactor;
       const int  remainder        = currentLattice(axis) % SubdivisionFactor;
       const bool isOnCoarseVertex = remainder == 0;
-      // A vertex inside a coarse cell asks the coarse vertex nearest to it, and
-      // the entry points from that vertex back into the coarse cell.
+      // A vertex inside a coarse cell maps to the nearest coarse vertex, with the entry pointing back
+      // into the coarse cell.
       const bool nearestIsUpper = 2 * remainder > SubdivisionFactor;
       coarseLattice(axis)       = quotient + (nearestIsUpper ? 1 : 0);
       if (_periodicBoundaries[axis] and coarseLattice(axis) == coarseCellsPerAxis) {
@@ -462,7 +455,7 @@ peano4::topology::Tree::getNumberOfLocalAdjacentCellsOfVertexAt(
 ) const {
   int numberOfLocalAdjacentCells = 0;
   for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
-    if (getAdjacentCellOwnerAt(level, vertexLattice, adjacencyEntry) == _id) {
+    if (getAdjacentCellOwnerAt(level, vertexLattice, adjacencyEntry) == _rank) {
       numberOfLocalAdjacentCells++;
     }
   }
@@ -528,18 +521,17 @@ peano4::topology::Tree::getOwnerOfCellAt(
     }
   }
   const auto topologyNode = getTopologyNodeAt(level, latticeIndex);
-  return topologyNode < 0 ? _id : _topologyNodes[topologyNode].firstOwner;
+  return topologyNode < 0 ? _rank : _topologyNodes[topologyNode].firstOwner;
 }
 
 /**
- * Returns whether the rank owns any leaf below the cell. Ownership intervals
- * follow the space-filling curve, so their first and last ranks decide the whole
- * subtree without visiting descendants.
+ * Returns whether the rank owns a leaf below the cell. The ranks own contiguous intervals of the
+ * curve, so the range from the first to the last owner of the cell answers the query.
  */
 INLINE_METHOD bool
 peano4::topology::Tree::subtreeTouchesRank(const int cellIndex, const int rank) const {
   const auto& cell = getCell(cellIndex);
-  if (_topologyNodes.empty() or cell.ownerTreeId == rank) {
+  if (_topologyNodes.empty() or cell.ownerRank == rank) {
     return true;
   }
   const auto topologyNode = getTopologyNodeAt(cell.level, cell.latticeIndex);
@@ -586,11 +578,8 @@ peano4::topology::Tree::isVertexRefinedInPlan(
 }
 
 /**
- * Returns whether this rank materialises the block that holds the cell.
- *
- * A rank that materialises the whole domain holds every cell. A partitioned
- * rank holds its owned spawn-level blocks and one ring of neighbour blocks, so
- * the query coarsens the cell's lattice position onto its spawn-level block.
+ * Returns whether this rank materialises the spawn-level block of the cell. A partitioned rank
+ * materialises its own blocks and one ring of neighbour blocks.
  */
 INLINE_METHOD bool
 peano4::topology::Tree::isLocalBlockOfCell(

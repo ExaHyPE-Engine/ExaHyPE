@@ -38,7 +38,7 @@ namespace {
 } // namespace
 
 /**
- * Returns the format the name selects and stops the run on a name that names none.
+ * Returns the format of the given name and terminates on an unknown name.
  */
 tarch::plotter::Format
 tarch::plotter::parseFormat(const std::string& name) {

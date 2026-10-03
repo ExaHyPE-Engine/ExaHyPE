@@ -11,10 +11,8 @@ namespace peano4::grid {
 
 struct peano4::grid::GridVertex {
   /**
-   * A vertex is refined where the tree continues below it, hanging where a
-   * refinement transition cuts through it, and unrefined otherwise. The
-   * spacetree holds a settled structure, so a structure change is expressed by
-   * the transition sweep's own before and after masks.
+   * A vertex is refined where the tree continues below it, hanging where a cell of its level next to
+   * it does not exist, and unrefined otherwise.
    */
   enum class State : std::uint8_t { HangingVertex = 0, Unrefined = 1, Refined = 2 };
 

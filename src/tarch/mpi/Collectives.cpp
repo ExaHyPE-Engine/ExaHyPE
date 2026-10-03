@@ -8,8 +8,7 @@
 /**
  * Every blocking collective posts its non-blocking counterpart and completes it with
  * tarch::mpi::wait(), so a collective that never completes warns and aborts like a point-to-point
- * message. Each call creates and completes its collective, because an MPI implementation runs its
- * collective progress engine in every MPI call of every thread while a collective is pending.
+ * message.
  */
 namespace {
   int ibarrier(

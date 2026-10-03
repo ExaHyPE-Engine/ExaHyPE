@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/ParallelRegion.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/accelerator.h"
@@ -31,16 +32,16 @@
 
 namespace tarch::accelerator {
   template <typename Functor>
-  void parallelForOnHost(const Range& range, Functor functor);
+  INLINE_METHOD void parallelForOnHost(const Range& range, Functor functor);
 
   template <typename Functor>
-  void parallelFor(const Range& range, Functor functor);
+  INLINE_METHOD void parallelFor(const Range& range, Functor functor);
   template <typename Functor>
-  void parallelFor(const RangeMD<2>& range, Functor functor);
+  INLINE_METHOD void parallelFor(const RangeMD<2>& range, Functor functor);
   template <typename Functor>
-  void parallelFor(const RangeMD<3>& range, Functor functor);
+  INLINE_METHOD void parallelFor(const RangeMD<3>& range, Functor functor);
   template <typename Functor>
-  void parallelFor(const TeamRange& range, Functor functor);
+  INLINE_METHOD void parallelFor(const TeamRange& range, Functor functor);
 } // namespace tarch::accelerator
 
 #include "tarch/accelerator/ParallelForOnHost.cpph"

@@ -31,7 +31,7 @@ def transpose(matrix, rows):
 
 
 def documentation_lines(text):
-    """Returns the sentences of a documentation string, one line each and without indentation."""
+    """Returns the lines of ``text`` without indentation."""
     return [line.strip() for line in text.strip().split("\n")]
 
 
@@ -47,14 +47,16 @@ def table(name, entries, documentation):
 
 def computed_table(name, expression, documentation, nodes_per_axis):
     """
-    A table the generated C++ code computes from the quadrature nodes and
-    weights, because it depends on the subdivision factor of the grid, which
-    is a build-time constant the Python API does not know.
+    Returns a table that the generated C++ code computes from the quadrature nodes and
+    weights. The table depends on the subdivision factor, a build-time constant of the C++
+    code.
     """
     return {
         "name": name,
         "expression": expression,
-        "length": "peano4::SubdivisionFactor * {0} * {0}".format(nodes_per_axis),
+        "length": "static_cast<std::size_t>(peano4::SubdivisionFactor) * {0} * {0}".format(
+            nodes_per_axis
+        ),
         "documentation": documentation_lines(documentation),
     }
 
@@ -202,8 +204,8 @@ def add_operator_tables_to_dictionary(basis, dimensions, d):
 
 def generate_operator_tables(solver, output, d, precisions):
     """
-    Renders one class per entry of OPERATOR_TABLES, named after the solver and the table and
-    instantiated for every precision, with the constant accessors of its tables in a .cpph.
+    Generates the class template of every entry of OPERATOR_TABLES and instantiates it for
+    every precision. The class name is the solver name followed by the entry name.
     """
     template_directory = os.path.dirname(os.path.realpath(__file__)) + "/"
     for table_class in d["OPERATOR_TABLES"]:

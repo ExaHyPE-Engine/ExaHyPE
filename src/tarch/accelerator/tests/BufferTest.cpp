@@ -18,9 +18,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Doubles the entry of values at the index of the calling thread.
-   */
   struct DoubleEntry final {
     double* values{nullptr};
 
@@ -147,9 +144,6 @@ tarch::accelerator::tests::BufferTest::testPinnedBuffer() {
   validateEquals(buffer.getValues()[2], 3.0F);
 }
 
-/**
- * A copy between a device buffer and pinned host memory has ended when it returns.
- */
 void
 tarch::accelerator::tests::BufferTest::testPinnedCopiesEndBeforeTheyReturn() {
   constexpr std::size_t              LargeNumberOfEntries = std::size_t{1} << 22;

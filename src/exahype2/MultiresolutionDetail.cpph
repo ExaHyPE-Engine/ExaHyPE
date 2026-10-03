@@ -6,9 +6,6 @@
 #include "tarch/Sort.h"
 #include "tarch/la/Vector.h"
 
-/**
- * Returns the centres of the NumberOfVolumesPerAxis equidistant volumes of the unit interval.
- */
 template <std::size_t NumberOfVolumesPerAxis>
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr std::array<double, NumberOfVolumesPerAxis>
 exahype2::getVolumeCentresInUnitInterval() {
@@ -22,10 +19,9 @@ exahype2::getVolumeCentresInUnitInterval() {
 
 /**
  * Returns the largest relative residual max_v |s(v) - s_hat(v)| / (|s(v)| + floor) of the
- * least-squares affine fit s_hat of the indicator s over the AoS patch Q, infinity if an
- * indicator value is not finite, and zero for one node per axis. nodesInUnitInterval holds the
- * node positions in [0,1], symmetric about one half. A reflected or axis-swapped patch yields the
- * bitwise-identical detail if the indicator is invariant under that transformation.
+ * least-squares affine fit s_hat to the indicator s over the AoS patch Q. The node positions in
+ * nodesInUnitInterval lie in [0,1] and are symmetric about one half. A reflected or axis-swapped
+ * patch returns the bitwise identical detail if the indicator is invariant under that change.
  */
 template <std::size_t NumberOfNodesPerAxis, typename Value, typename Indicator>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -48,8 +44,7 @@ exahype2::computeMultiresolutionDetail(
   constexpr int NumberOfNodes   = static_cast<int>(NumberOfNodesPerAxis);
   constexpr int NumberOfVolumes = peano4::power(NumberOfNodes, DIMENSIONS);
 
-  // Deriving the upper half of the coordinates from the lower half by negation makes them
-  // antisymmetric to the last bit, so a reflected patch sees exactly negated coordinates.
+  // The upper half negates the lower half, so the coordinates are antisymmetric to the last bit.
   double nodeCoordinate[NumberOfNodes];
   for (int i = 0; i < NumberOfNodes / 2; i++) {
     assertion(nodesInUnitInterval[i] >= 0.0 and nodesInUnitInterval[i] <= 1.0, i, nodesInUnitInterval[i]);
@@ -60,8 +55,8 @@ exahype2::computeMultiresolutionDetail(
     nodeCoordinate[NumberOfNodes / 2] = 0.0;
   }
 
-  // The slope denominator sum_v xi_{v,d}^2 is identical for every axis d, and mirrored
-  // coordinates square to the same bits, so the sum needs no reordering.
+  // The slope denominator is the same for every axis. Mirrored coordinates square to the same
+  // bits, so its sum needs no sorting.
   double nodeCoordinateSquareSum = 0.0;
   for (int i = 0; i < NumberOfNodes; i++) {
     nodeCoordinateSquareSum += nodeCoordinate[i] * nodeCoordinate[i];
@@ -82,9 +77,8 @@ exahype2::computeMultiresolutionDetail(
     return std::numeric_limits<double>::infinity();
   }
 
-  // Summing in sorted order fixes one addition order per value multiset. A reflection or
-  // an axis swap permutes the values but keeps the multiset, so the sum is bitwise
-  // invariant under both.
+  // The sorted summation fixes the addition order, so the values permuted by a reflection or an
+  // axis swap give the bitwise identical sum.
   double scratch[NumberOfVolumes];
   for (int i = 0; i < NumberOfVolumes; i++) {
     scratch[i] = values[i];
@@ -102,9 +96,8 @@ exahype2::computeMultiresolutionDetail(
       const int linearised = peano4::dLinearised(counter, NumberOfNodes);
       scratch[linearised]  = values[linearised] * nodeCoordinate[counter(d)];
     });
-    // A reflection along d negates every product to the last bit, so summing the positive
-    // and the negative part separately, each in sorted order, negates the numerator to the
-    // last bit, while a permutation of the products leaves it untouched.
+    // A reflection along d negates every product. Summing the positive and the negative products
+    // separately in sorted order then negates the numerator to the last bit.
     tarch::sortAscending(scratch, NumberOfVolumes);
     int firstNonNegative = 0;
     while (firstNonNegative < NumberOfVolumes and scratch[firstNonNegative] < 0.0) {
@@ -125,8 +118,8 @@ exahype2::computeMultiresolutionDetail(
   double maxRelativeResidual = 0.0;
   peano4::dForEach(NumberOfNodes, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
     const int linearised = peano4::dLinearised(counter, NumberOfNodes);
-    // A reflection negates a slope together with its coordinate, so each term is bitwise
-    // invariant; an axis swap permutes the terms, which the sorted summation absorbs.
+    // A reflection negates a slope and its coordinate together, so each term keeps its bits. An
+    // axis swap permutes the terms, and the sorted summation keeps their sum.
     double correction[DIMENSIONS];
     for (int d = 0; d < DIMENSIONS; d++) {
       correction[d] = slope[d] * nodeCoordinate[counter(d)];
@@ -145,15 +138,8 @@ exahype2::computeMultiresolutionDetail(
 
 TARGET_DECLARE
 /**
- * Maps a relative multiresolution detail to a refinement command.
- *
- * @param detail relative representation error from
- *   exahype2::computeMultiresolutionDetail.
- * @param eps relative representation error tolerated before refinement.
- * @param coarsenSafetyFactor hysteresis ratio. Erasure requires a detail below
- *   eps/coarsenSafetyFactor. The default is exahype2::DefaultCoarsenSafetyFactor.
- *
- * A caller applies the admissible patch-size limits to the returned command.
+ * Returns the refinement command for a detail of computeMultiresolutionDetail(). A caller applies
+ * the admissible patch sizes to the returned command.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand
 exahype2::getRefinementCommandFromDetail(const double detail, const double eps, const double coarsenSafetyFactor) {
@@ -170,9 +156,8 @@ exahype2::getRefinementCommandFromDetail(const double detail, const double eps, 
 TARGET_DECLARE_END
 
 /**
- * Returns the refinement command of the largest detail of the indicators over the AoS patch Q,
- * whose one-dimensional node positions in [0,1] nodesInUnitInterval holds. A null Q during grid
- * construction returns Keep.
+ * Returns the refinement command for the largest detail of the indicators over the AoS patch Q,
+ * or Keep for the null Q of the grid construction.
  */
 template <std::size_t NumberOfNodesPerAxis, typename Value, typename... Indicators>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand

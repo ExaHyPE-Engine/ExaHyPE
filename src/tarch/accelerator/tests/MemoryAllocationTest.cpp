@@ -175,7 +175,7 @@ tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFunctio
 }
 
 /**
- * A device one host thread selects is the current device of every other host thread.
+ * The device that one host thread sets is the current device of every other host thread.
  */
 void
 tarch::accelerator::tests::MemoryAllocationTest::testTheCurrentDeviceHoldsForEveryHostThread() {

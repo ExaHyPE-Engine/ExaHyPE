@@ -30,9 +30,8 @@ struct peano4::Restriction final {
 };
 
 /**
- * Names the origin of one cell a rank sends: The old slot of the cell itself, the old slot of
- * its parent with the child's position, or the old slots of its children. Exactly one of the
- * three holds a valid slot.
+ * The old slots a rank reads one sent cell from: The cell's own slot, its parent's slot or its
+ * children's slots. Exactly one of the three is valid.
  */
 struct peano4::TransferredCell final {
   int keptSlot{-1};
@@ -42,8 +41,8 @@ struct peano4::TransferredCell final {
 };
 
 /**
- * Lists what one rank pair exchanges. The sent cells and the received slots stand in the
- * canonical order of level and lattice position, which both ranks derive alone.
+ * The cells this rank sends to a partner rank and the slots it receives from that rank. Both lists
+ * are sorted by level and lattice position, so both ranks derive the same order.
  */
 struct peano4::RankTransfer final {
   int                          rank{-1};
@@ -52,11 +51,10 @@ struct peano4::RankTransfer final {
 };
 
 /**
- * The slot moves of one regrid: A kept slot has no entry, every other slot of the new partition
- * is filled by one prolongation, one restriction or one receive, and the old slots of the
- * destroyed cells are freed. No new slot reuses a slot freed in the same regrid. The created
- * slots are the slots of the children of every refined cell and of the parent of every set of
- * coarsened siblings.
+ * The slot moves of one regrid. A prolongation, a restriction or a receive fills every new slot that
+ * no kept cell occupies, and no new slot reuses a slot freed in the same regrid. The created slots
+ * belong to the children of every refined cell and to the parent of every set of erased sibling
+ * leaves.
  */
 struct peano4::Regrid final {
   int                       oldNumberOfSlots{0};

@@ -9,7 +9,7 @@
 namespace {
   constexpr int DofsPerAxis = exahype2::dg::tests::KernelTestSetup::DofsPerAxis;
 
-  // Three-point Gauss-Legendre rule on the unit interval.
+  // The three-point Gauss-Legendre rule on the unit interval.
   const double QuadratureNodes[DofsPerAxis]   = {0.5 * (1.0 - std::sqrt(0.6)), 0.5, 0.5 * (1.0 + std::sqrt(0.6))};
   const double QuadratureWeights[DofsPerAxis] = {5.0 / 18.0, 8.0 / 18.0, 5.0 / 18.0};
 
@@ -152,7 +152,7 @@ exahype2::dg::tests::BasisTableSet::BasisTableSet() {
     inverseCellQuadratureWeights[cellNode] = 1.0 / weight;
   });
 
-  // Picard operator, the end-of-step value minus the temporal stiffness.
+  // The Picard operator is the end-of-step value minus the temporal stiffness.
   std::vector<double> picardOperator(KernelTestSetup::OperatorCardinality);
   for (int row = 0; row < DofsPerAxis; row++) {
     for (int column = 0; column < DofsPerAxis; column++) {

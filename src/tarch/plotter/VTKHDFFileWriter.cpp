@@ -12,8 +12,8 @@
 #include <hdf5.h>
 
 namespace {
-  // Paths of the .vtkhdf files this process has created. The first write to a path
-  // truncates the file and lays out its groups; every later write reopens and appends.
+  // Paths of the .vtkhdf files this process has created. The first write to a path truncates the
+  // file, and every later write appends to it.
   std::set<std::string>& getCreatedPaths() {
     static std::set<std::string> paths;
     return paths;
@@ -142,8 +142,8 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
   if (fileAccessProperties != H5P_DEFAULT) {
     H5Pclose(fileAccessProperties);
   }
-  // H5Pset_fapl_mpio duplicated the communicator into the file, and the file keeps that
-  // copy for the collective writes and the close.
+  // The file keeps its own copy of the communicator from H5Pset_fapl_mpio for the collective writes
+  // and the close.
   if (ioComm != MPI_COMM_NULL) {
     tarch::mpi::freeCommunicator(&ioComm);
   }
@@ -231,8 +231,8 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
     const hid_t   datasetCreationProperties = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_chunk(datasetCreationProperties, numberOfDimensions, chunkDimensions);
     if (compress) {
-      // The rank slabs tile each grown chunk of a compressed dataset, so every element
-      // is written and the pre-fill is skipped.
+      // The rank slabs tile each grown chunk of a compressed dataset, so the chunks need no fill
+      // before the write.
       H5Pset_fill_time(datasetCreationProperties, H5D_FILL_TIME_NEVER);
       H5Pset_shuffle(datasetCreationProperties);
       H5Pset_deflate(datasetCreationProperties, 1);
@@ -253,9 +253,8 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
     H5Sclose(dataSpace);
     return dimensions[0];
   };
-  // Extend a dataset to (currentRows + globalAdd) rows and write this rank's slab at
-  // the exclusive-prefix offset within the new block. With collective IO an empty
-  // rank issues a balanced empty write so the collective does not deadlock.
+  // Extends a dataset by globalAdd rows and writes the slab of this rank at localOffset within
+  // the new rows.
   const auto appendSlab = [&](
                             const std::string& name,
                             const int          numberOfDimensions,
@@ -290,9 +289,8 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
     }
     H5Sclose(fileSpace);
   };
-  // Appends one row to a 1D index dataset at the row the caller passes. The extend and
-  // the write are collective, the master supplies the value and every other rank joins
-  // with an empty selection.
+  // Appends one row to a 1D index dataset at the row the caller passes. The master writes the value,
+  // and every other rank joins the collective extend and write with an empty selection.
   const auto appendStepRow =
     [&](const std::string& name, const hid_t type, const void* const value, const hsize_t row) {
       const hid_t   dataset          = openDataset(name);
@@ -312,8 +310,8 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
       }
       H5Sclose(fileSpace);
     };
-  // Write the trailing Offsets sentinel. The preceding appendSlab already grew the extent
-  // collectively, so only the value is still missing.
+  // Writes value at position into the existing extent of a 1D dataset. The master writes the value,
+  // and every other rank joins the collective write with an empty selection.
   const auto writeInt64At = [&](const std::string& name, const hsize_t position, const long long value) {
     const hid_t dataset   = openDataset(name);
     const hid_t fileSpace = H5Dget_space(dataset);
@@ -365,8 +363,8 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
     createExtendible("/VTKHDF/NumberOfPoints", 1, 1, H5T_STD_I64LE, false);
     createExtendible("/VTKHDF/NumberOfCells", 1, 1, H5T_STD_I64LE, false);
     createExtendible("/VTKHDF/NumberOfConnectivityIds", 1, 1, H5T_STD_I64LE, false);
-    // Vectors are stored with 3 components and tensors with 9 so ParaView reads
-    // them back as vectors and tensors; see FileWriter::classifyField.
+    // FileWriter::classifyField pads vectors to 3 and tensors to 9 components, which ParaView reads
+    // as vectors and tensors.
     for (const auto& field : schema.pointFields) {
       createExtendible(
         "/VTKHDF/PointData/" + field.name,
@@ -408,17 +406,15 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
     H5Gclose(stepsGroup);
   }
 
-  // Current extents before this step (cumulative over all prior steps) - the offsets
-  // the VTKHDF reader expects in /VTKHDF/Steps.
+  // The extents before this step are the offsets the VTKHDF reader expects in /VTKHDF/Steps.
   const long long currentPoints       = static_cast<long long>(rowsOf("/VTKHDF/Points"));
   const long long currentConnectivity = static_cast<long long>(rowsOf("/VTKHDF/Connectivity"));
   const long long currentCells        = static_cast<long long>(rowsOf("/VTKHDF/Types"));
   const hsize_t   currentOffsets      = rowsOf("/VTKHDF/Offsets");
   const long long currentStep         = static_cast<long long>(rowsOf("/VTKHDF/Steps/Values"));
 
-  // Merge this rank's subdomains into one contiguous grid for the step. Points,
-  // connectivity and offsets are rebased to step-global indices so that the whole
-  // step is a single part (NumberOf*[step] = step totals, one entry per step).
+  // The subdomains of this rank merge into one grid with step-global indices, so the whole step
+  // is one part.
   std::vector<double>       pointsBuffer;
   std::vector<std::int64_t> connectivityBuffer, beforeOffsets;
   std::vector<std::uint8_t> typesBuffer;
@@ -444,8 +440,7 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
     connectivityCursor += subdomain->connectivity.size();
   }
 
-  // The buffers accumulate in double precision; single-precision output narrows
-  // them right before the write.
+  // A single-precision output narrows the double buffers right before the write.
   const bool writeDouble    = getDoublePrecisionOutput();
   const auto appendRealSlab = [&](
                                 const std::string&         name,
@@ -487,8 +482,8 @@ tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, const
     offsetCells,
     typesBuffer.data()
   );
-  // Offsets per step: One entry per cell plus a trailing sentinel that carries the
-  // connectivity total of the step, so the step block holds totalCells + 1 entries.
+  // Every step stores one offset per cell plus a trailing sentinel with the connectivity total of
+  // the step.
   appendSlab(
     "/VTKHDF/Offsets",
     1,

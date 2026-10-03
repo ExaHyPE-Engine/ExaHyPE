@@ -23,8 +23,8 @@ namespace {
   }
 
   int getNumberOfLocalCellsOfLevel(const peano4::Partition& partition, const int level) {
-    return partition.getCells(peano4::Dependence::Local, level).size
-      + partition.getCells(peano4::Dependence::Remote, level).size;
+    return partition.getCells(peano4::Adjacency::Local, level).size
+      + partition.getCells(peano4::Adjacency::Remote, level).size;
   }
 
   int getNumberOfReceivedSlots(const peano4::Regrid& regrid) {
@@ -55,9 +55,8 @@ peano4::tests::SpacetreeTest::run() {
 }
 
 /**
- * Every non-empty request set changes the plan before the tree stands, and on a standing level-one
- * grid an erase of the root changes nothing, a refine changes the plan and a repeated set answers
- * from the cache.
+ * Before the first build every non-empty set of requests changes the plan, and on the level-one grid
+ * an erase of the root changes nothing while a refinement does.
  */
 void
 peano4::tests::SpacetreeTest::testRejectedRequestsChangeNoPlan() {
@@ -105,9 +104,8 @@ peano4::tests::SpacetreeTest::testRejectedRequestsChangeNoPlan() {
 }
 
 /**
- * With live data a refinement keeps the slots of the coarse cells and fills every new fine cell by
- * one prolongation or one receive, and an erase fills every new coarse cell by one restriction or
- * one receive.
+ * With live data, a prolongation or a receive fills every new fine cell of a refinement, and a
+ * restriction or a receive fills every new coarse cell of an erase.
  */
 void
 peano4::tests::SpacetreeTest::testARegridWithLiveDataReturnsTheSlotMoves() {
@@ -165,7 +163,7 @@ peano4::tests::SpacetreeTest::testTheSpawnLevelOffersEnoughOwnershipUnits() {
   const int unitsOnLevelThree = static_cast<int>(getNumberOfOwnershipUnitsOnLevel(3));
 
   for (int targetLevel = 1; targetLevel <= 8; targetLevel++) {
-    // The rank counts sit right below and right above the ownership units of a level.
+    // The rank counts lie just below, at and just above the ownership units of a level.
     for (const int numberOfRanks :
          {1,
           2,
@@ -198,7 +196,7 @@ peano4::tests::SpacetreeTest::testTheSpawnLevelStaysAboveTheCells() {
 }
 
 /**
- * A grid with no complete block level below the root has to use the root as its spawn level.
+ * A grid with no complete block level below the root uses the root as its spawn level.
  */
 void
 peano4::tests::SpacetreeTest::testShallowGridsUseTheRootSpawnLevel() {
@@ -222,7 +220,7 @@ peano4::tests::SpacetreeTest::testTheSpawnLevelGrowsWithTheRankCount() {
   int previousSpawnLevel = peano4::Spacetree::deriveSpawnLevel(DeepEnough, 1);
   validateEquals(previousSpawnLevel, 0);
 
-  // The rank counts sit on the ownership units of a level and one rank above them.
+  // The rank counts lie at the ownership units of a level and one rank above them.
   for (const int numberOfRanks :
        {2,
         unitsOnLevelOne,
@@ -256,7 +254,7 @@ peano4::tests::SpacetreeTest::testDeepGridsKeepTheirSpawnLevelInRange() {
 }
 
 /**
- * A rank without cells of the one-cell grid reports the identities of the level reductions over the ranks.
+ * On the one-cell grid, a rank without cells reports the largest int as its minimum level.
  */
 void
 peano4::tests::SpacetreeTest::testARankWithoutCellsReportsNoLevel() {
@@ -284,9 +282,9 @@ peano4::tests::SpacetreeTest::testNoStatisticsStandBeforeTheFirstRegrid() {
   validateEquals(spacetree.getPartition().getNumberOfSlots(), 0);
   validateEquals(spacetree.getPartition().getNumberOfFaces(), 0);
   validate(spacetree.getPartition().getCells().isEmpty());
-  validate(spacetree.getPartition().getCells(peano4::Dependence::Local).isEmpty());
-  validate(spacetree.getPartition().getFaces(peano4::Dependence::Remote, peano4::FaceKind::Interior).isEmpty());
-  validate(spacetree.getPartition().getLevelJumps(peano4::Dependence::Local).isEmpty());
+  validate(spacetree.getPartition().getCells(peano4::Adjacency::Local).isEmpty());
+  validate(spacetree.getPartition().getFaces(peano4::Adjacency::Remote, peano4::FaceKind::Interior).isEmpty());
+  validate(spacetree.getPartition().getLevelJumps(peano4::Adjacency::Local).isEmpty());
   validate(spacetree.getPartition().getNeighbours().isEmpty());
   validateEquals(spacetree.getCellAt(0, tarch::la::Vector<DIMENSIONS, int>(0)), -1);
 }

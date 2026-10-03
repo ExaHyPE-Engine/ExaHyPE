@@ -17,9 +17,8 @@ tarch::plotter::HDF5FileWriter::HDF5FileWriter(const std::string& outputDirector
 
 int
 tarch::plotter::HDF5FileWriter::toXdmfType(const int vtkType) {
-  // Mapping based on XDMF Model and VTK File Formats; see CellTypes.h for the table.
   const CellTypeInfo* const info = lookupCellType(vtkType);
-  return info != nullptr ? info->xdmf : 0; // 0 == unknown/unstructured
+  return info != nullptr ? info->xdmf : 0; // Zero marks a cell type without XDMF representation.
 }
 
 std::string
@@ -48,7 +47,6 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
     localNumberOfCells += subdomain->types.size();
   }
 
-  // Number of entries of the XDMF mixed-topology stream.
   unsigned long long localTopologySize       = 0;
   const auto         computeXdmfTopologySize = [](const SubdomainBuffers& subdomain) {
     unsigned long long result            = 0;
@@ -120,14 +118,14 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
     unsigned long long       prefix[3] = {0ULL, 0ULL, 0ULL};
     unsigned long long       totals[3] = {0ULL, 0ULL, 0ULL};
 
-    // Inclusive prefix sums over the three size fields; subtract local to get exclusive offsets.
+    // The scan returns inclusive prefix sums, so the exclusive offsets subtract the local sizes.
     tarch::mpi::scan(local, prefix, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
     offsetPoints   = prefix[0] - local[0];
     offsetCells    = prefix[1] - local[1];
     offsetTopology = prefix[2] - local[2];
 
-    // Global file sizes (the metadata rank needs these for the XMF, everyone for the
-    // HDF5 dataspaces).
+    // The metadata rank needs the global sizes for the XMF file, and every rank for the HDF5
+    // dataspaces.
     tarch::mpi::allreduce(local, totals, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
     totalPoints   = totals[0];
     totalCells    = totals[1];
@@ -175,8 +173,8 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
   const hid_t linkCreationProperties = H5Pcreate(H5P_LINK_CREATE);
   H5Pset_create_intermediate_group(linkCreationProperties, 1);
 
-  // Closes the file and the property lists when a dataset write throws before the
-  // explicit closes at the end of this function. Disarmed on the success path.
+  // Closes the file and the property lists when a dataset write throws before the closes at the end
+  // of this function. The success path disarms the closer.
   class HandleCloser final {
   public:
     HandleCloser(const hid_t fileId, const hid_t linkCreationProperties, const hid_t dataTransferProperties) :
@@ -214,7 +212,7 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
                                const hid_t          type
                              ) {
     if (globalDimensions[0] == 0) {
-      return static_cast<hid_t>(-1); // Empty dataset globally
+      return static_cast<hid_t>(-1); // No rank has data for this dataset.
     }
 
     const hid_t fileSpace = H5Screate_simple(numberOfDimensions, globalDimensions, nullptr);
@@ -230,7 +228,7 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
     const hsize_t     chunkDimensions[2] = {std::max<hsize_t>(1, std::min(globalDimensions[0], targetRows)), columns};
     H5Pset_chunk(datasetCreationProperties, numberOfDimensions, chunkDimensions);
 
-    // The rank slabs tile the dataset exactly, so skip the default pre-write chunk fill.
+    // The rank slabs tile the dataset exactly, so the chunks need no fill before the write.
     H5Pset_fill_time(datasetCreationProperties, H5D_FILL_TIME_NEVER);
 
     H5Pset_shuffle(datasetCreationProperties);
@@ -288,8 +286,7 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
     }
   };
 
-  // Append the subdomain's cells to the XDMF mixed-topology stream, rebasing
-  // connectivity to global point indices.
+  // The XDMF mixed-topology stream counts the points globally.
   const auto appendXdmfTopology =
     [&](std::vector<std::int32_t>& topology, const SubdomainBuffers& subdomain, const unsigned long long pointBase) {
       std::int32_t connectivityIndex = 0;
@@ -318,8 +315,7 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
       }
     };
 
-  // The buffers accumulate in double precision; single-precision output narrows
-  // them right before the write.
+  // A single-precision output narrows the double buffers right before the write.
   const bool  writeDouble     = getDoublePrecisionOutput();
   const hid_t realStorageType = writeDouble ? H5T_NATIVE_DOUBLE : H5T_NATIVE_FLOAT;
   const auto  writeRealChunk  = [&](
@@ -395,8 +391,6 @@ tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[maybe
   const std::vector<DataField>& pointFields = schema.pointFields;
   const std::vector<DataField>& cellFields  = schema.cellFields;
 
-  // One merged collective write per point field. A vector is padded to 3 components
-  // and a tensor to 9, as classifyField() prescribes.
   for (std::size_t fieldIndex = 0; fieldIndex < pointFields.size(); ++fieldIndex) {
     const auto&         field              = pointFields[fieldIndex];
     const FieldLayout   layout             = classifyField(field.components);

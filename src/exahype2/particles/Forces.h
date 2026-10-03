@@ -46,8 +46,7 @@ enum class exahype2::particles::ForceType : int {
 
 TARGET_DECLARE
 /**
- * The parameters of the motion of a tracer set: The interpolation of the fluid state, the time
- * integration, the forces as the sum of ForceType values and the constants the forces read.
+ * Motion parameters of a tracer set. forceMethod is the sum of the enabled ForceType values.
  */
 struct exahype2::particles::Forces final {
   InterpolationScheme interpolationScheme{InterpolationScheme::None};
@@ -60,9 +59,6 @@ struct exahype2::particles::Forces final {
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool enables(ForceType force) const;
 };
 
-/**
- * The position, the velocity and the acceleration of one particle.
- */
 struct exahype2::particles::State final {
   tarch::la::Vector<DIMENSIONS, double> position{};
   tarch::la::Vector<DIMENSIONS, double> velocity{};
@@ -70,11 +66,6 @@ struct exahype2::particles::State final {
 };
 
 namespace exahype2::particles {
-  /**
-   * A traced particle stores the interpolated fluid density in its first data entry, then one
-   * entry per axis for the interpolated fluid velocity, the particle velocity and the particle
-   * acceleration, and closes with the mass and the radius.
-   */
   constexpr int FluidDensityAttribute         = 0;
   constexpr int FluidVelocityAttribute        = 1;
   constexpr int ParticleVelocityAttribute     = 1 + DIMENSIONS;

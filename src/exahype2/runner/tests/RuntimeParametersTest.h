@@ -29,6 +29,6 @@ private:
   void testThePlotFormatComesFromTheCommandLine();
   void testTheTableReadsTheCommandLineAndKeepsTheOtherArguments();
   void testTheTableReadsTheConfigurationFileBeforeTheCommandLine();
-  void testTheTableUsageNamesEveryEntryWithItsDefault();
+  void testTheTableUsageListsEveryEntryWithItsDefault();
   void testTheConfigurationFileSetsTheEngineParameters();
 };

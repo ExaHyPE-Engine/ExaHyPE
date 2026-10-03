@@ -83,7 +83,8 @@ class Solver(exahype2.solver.Solver):
         return super().statistics_metadata() + [("Patch Size", self._patch_size)]
 
     def _provides_max_eigenvalue(self):
-        """The Riemann solver returns the maximum wave speed of every face it solves."""
+        """Returns true for the max_eigenvalue PDE term and for a Riemann solver, which returns
+        the maximum wave speed of every face."""
         return self.pde_terms.is_set("max_eigenvalue") or self.pde_terms.is_set(
             "riemann_solver"
         )
@@ -110,9 +111,8 @@ class Solver(exahype2.solver.Solver):
         return includes
 
     def _render_tracer_update(self, tracer, d):
-        """A time step moves the tracers through the solution it read, so the tracers and the
-        fluid advance from the same state; the initialisation reads the initial condition.
-        """
+        """Returns the C++ call that moves one tracer set. A time step reads the previous
+        solution, so the tracers and the fluid advance from the same state."""
         fields = "".join(", {}".format(field) for field in tracer["FIELDS"])
         return (
             "::exahype2::fv::traceParticles<PatchSize, NumberOfData, {number_of_data}{fields}>(\n"

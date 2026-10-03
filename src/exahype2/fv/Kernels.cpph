@@ -33,7 +33,7 @@ exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecisio
   const int lowerCell = partition.getFaceCell(face, 0);
   const int slot      = lowerCell >= 0 ? lowerCell : partition.getFaceCell(face, 1);
   const int normal    = partition.getFaceNormal(face);
-  // The cell on the lower side of the face holds it as its upper face.
+  // The face is the upper face of the cell on its lower side.
   const int faceNumber = lowerCell >= 0 ? normal + DIMENSIONS : normal;
   Kernel::applyBoundaryConditions(
     halo.getChunk(face),

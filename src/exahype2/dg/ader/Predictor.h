@@ -28,11 +28,8 @@ namespace exahype2::dg::ader::tests {
 
 TARGET_DECLARE
 /**
- * The predictor phase of one cell of an ADER-DG solver. predict() runs the space-time predictor
- * of the system of Derived, NonlinearPredictor or LinearPredictor, writes the time-averaged face
- * states and face fluxes onto the halves of the faces the cell owns and subtracts the volume
- * integral of the time averages from the solution. Derived is the generated solver class, whose
- * IsLinear selects the predictor.
+ * The predictor phase of one cell of an ADER-DG solver. Derived::IsLinear selects LinearPredictor
+ * or NonlinearPredictor.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::ader::Predictor final {
@@ -43,7 +40,7 @@ public:
   using Nonlinear  = exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>;
 
   /**
-   * Values of the scratch block of one cell.
+   * The number of values in the scratch block of one cell.
    */
   static constexpr int ScratchSize = Derived::IsLinear ? Linear::Scratch::Size : Nonlinear::Scratch::Size;
 
@@ -74,8 +71,8 @@ private:
 };
 
 /**
- * The cells of one predictor sweep whose Picard iteration diverged and those whose iteration
- * stopped at its sweep limit. identity() and combine() reduce the counts of many cells.
+ * The numbers of cells of one predictor sweep whose Picard iteration diverged or stopped at its
+ * sweep limit.
  */
 struct exahype2::dg::ader::PredictionCounts final {
   using ValueType = exahype2::dg::ader::PredictionCounts;
@@ -88,11 +85,10 @@ struct exahype2::dg::ader::PredictionCounts final {
 };
 
 /**
- * Runs the predictor of every listed cell: The solution takes its volume integral, and the cell's
- * own half of every face takes the time-averaged face states and face fluxes. DivergenceMarks is
- * the status view of a limiter, in which a cell with a diverged Picard iteration marks itself, or
- * an empty type, and then the reduction counts those cells. The reduction counts the cells whose
- * Picard iteration stopped at its sweep limit in both cases.
+ * Runs the predictor of every listed cell and counts the cells whose Picard iteration stopped at
+ * its sweep limit. With a limiter, DivergenceMarks is its status view, where a diverged cell marks
+ * itself. Without a limiter, DivergenceMarks is an empty type and the reduction counts the
+ * diverged cells.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename DivergenceMarks>
 struct exahype2::dg::ader::PredictCells final {

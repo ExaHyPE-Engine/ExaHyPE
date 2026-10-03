@@ -21,9 +21,9 @@ void
 tarch::mpi::ThreadedCommunicationManager::progress() {}
 
 /**
- * Waits until every poller is idle, and a caller re-arms no poller during the call. A pass that
- * began before the call may report a state older than the arming of the caller, so the wait trusts
- * the second pass that completes after entry. After stop(), the pollers run on the calling thread.
+ * Waits until every poller is idle, while a caller re-arms no poller. The first pass that completes
+ * after entry may have begun before the call, so the wait trusts the second one. After stop(), the
+ * pollers run on the calling thread.
  */
 void
 tarch::mpi::ThreadedCommunicationManager::finishPendingWork() {

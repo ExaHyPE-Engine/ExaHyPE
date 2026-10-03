@@ -4,6 +4,7 @@
 
 #ifdef PEANO_WITH_NETCDF
 
+#include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Handles.h"
@@ -14,15 +15,15 @@
 #include <netcdf_par.h>
 
 namespace {
-  // Corner counts the fixed-width connectivity pads to, taken from the CellTypes table.
+  // The fixed-width connectivity pads every cell to these corner counts.
   constexpr int          MaxFaceNodes       = tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Quadrangle);
   constexpr int          MaxVolumeNodes     = tarch::plotter::getNumberOfNodesOf(tarch::plotter::CellType::Hexahedron);
   constexpr std::int32_t FillValue          = -1; // Marks an unused node of a padded connectivity
-  constexpr int          UgridHexahedronTag = 2;  // UGRID flag value; 0 is a tetrahedron, 1 a wedge
+  constexpr int          UgridHexahedronTag = 2;  // The UGRID shape flag, where 0 marks a tetrahedron and 1 a wedge.
 
   enum class MeshTopologyDimension { TwoD = 2, ThreeD = 3 };
 
-  // UGRID meshes carry 2D faces (triangle/quadrangle) or 3D volumes (hexahedron).
+  // A UGRID mesh consists of 2D faces or of 3D volumes.
   inline bool is2DCell(const int vtkType) {
     const tarch::plotter::CellTypeInfo* const info = tarch::plotter::lookupCellType(vtkType);
     return info != nullptr and info->dimension == 2;
@@ -103,7 +104,7 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
   const auto& rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm    comm          = rank.getCommunicator();
   bool        useParallelIO = rank.getNumberOfRanks() > 1;
-  bool        isMasterRank  = rank.isGlobalMaster();
+  const bool  isMasterRank  = rank.isGlobalMaster();
 
   // The collective netCDF calls run on a sub-communicator of the ranks that hold data.
   // A count-0 collective write to a compressed variable deadlocks parallel netCDF on
@@ -126,12 +127,9 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
       tarch::mpi::splitCommunicator(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
       if (not hasData) {
         _written = true;
-        return true; // The data-holding ranks write the file
+        return true; // The data-holding ranks write the file.
       }
-      comm       = ioComm;
-      int ioRank = 0;
-      tarch::mpi::getRank(ioComm, &ioRank);
-      isMasterRank = (ioRank == 0);
+      comm = ioComm;
     }
   }
 
@@ -163,8 +161,7 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
   const bool writeZCoordinate = is3DTopology or globalHas3DCoordinates;
   const int  maxElementNodes  = is3DTopology ? MaxVolumeNodes : MaxFaceNodes;
 
-  // Append the subdomain's element-node table to the merged buffer (padded to
-  // maxElementNodes per cell with FillValue), rebasing node indices to global.
+  // Every cell of the element-node table takes maxElementNodes entries, padded with FillValue.
   const auto appendElementNodes =
     [&](std::vector<int>& elementNodes, const SubdomainBuffers& subdomain, const unsigned long long pointBase) {
       const std::size_t base = elementNodes.size();
@@ -181,7 +178,7 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
             "NetCDFFileWriter encountered a cell type that is inconsistent with the mesh topology."
           );
         }
-        // The consistency check above guarantees a known 2D/3D cell, so info is non-null here.
+        assertion(info != nullptr, vtkType);
 
         const std::int32_t connectivityEnd = subdomain.offsets[cell];
         const std::int32_t numberOfNodes   = connectivityEnd - connectivityBegin;
@@ -231,6 +228,11 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
     totalElements = totals[1];
   }
 
+  constexpr auto LargestIndex = static_cast<unsigned long long>(std::numeric_limits<int>::max());
+  if (totalNodes > LargestIndex or totalElements > LargestIndex) {
+    throw std::runtime_error("NetCDFFileWriter cannot write node or element indices that exceed 32-bit integer range.");
+  }
+
   int ncid = -1;
 
   if (useParallelIO) {
@@ -251,8 +253,8 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
     check(nc_create(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, &ncid), "nc_create(" + filePath.string() + ")");
   }
 
-  // Closes the open file when a check() throws before the explicit nc_close at the end
-  // of this function. Disarmed on the success path.
+  // Closes the open file when a check() throws before the nc_close at the end of this function. The
+  // success path disarms the closer.
   class NcFileCloser final {
   public:
     explicit NcFileCloser(const int fileId) :
@@ -275,8 +277,7 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
     bool      _armed = true;
   } ncFileCloser(ncid);
 
-  // The payload variables are written whole, so the file needs no pre-filling. The
-  // connectivity index variables stay undefined on read, which their definition records.
+  // Every variable is written whole, so the file needs no fill values.
   int oldFill = 0;
   check(nc_set_fill(ncid, NC_NOFILL, &oldFill), "nc_set_fill(NO_FILL)");
 
@@ -309,7 +310,7 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
       const std::size_t chunks[1] = {chunkLength};
       check(nc_def_var_chunking(ncid, variableId, NC_CHUNKED, chunks), "chunking " + name);
       check(nc_def_var_deflate(ncid, variableId, 1, 1, 1), "deflate " + name);
-      // Size the cache to hold the chunk, so each slab is deflated once.
+      // The chunk cache fits one chunk, so every slab is deflated once.
       nc_set_var_chunk_cache(
         ncid,
         variableId,
@@ -361,9 +362,9 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
     std::string("def dim ") + maxElementDimName
   );
 
-  // A dimension without a same-named variable makes parallel netCDF-4 store an
-  // uncompressed, fully pre-allocated dimension scale. A chunked and deflated variable
-  // named after the dimension takes that place, and a reader treats it as a coordinate.
+  // A dimension without a same-named variable makes parallel netCDF-4 store an uncompressed, fully
+  // pre-allocated dimension scale. The two chunked and deflated variables below have the names of
+  // the node and element dimensions and store the node and element indices.
   int varNodeIndex = -1;
   check(
     nc_def_var(ncid, nodeDimName, NC_INT, 1, &dimNode, &varNodeIndex),
@@ -423,8 +424,7 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
     );
   }
 
-  // The buffers accumulate in double precision; single-precision output narrows them
-  // right before the write.
+  // A single-precision output narrows the double buffers right before the write.
   const bool    writeDouble     = getDoublePrecisionOutput();
   const nc_type realStorageType = writeDouble ? NC_DOUBLE : NC_FLOAT;
   int           varX            = -1;
@@ -526,8 +526,8 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
     configure1DVariable(varVolumeShapeType, totalElements, "volume_shape_type");
   }
 
-  // Empty ranks were dropped from the writing communicator, so the schema comes from the
-  // local reference without any exchange.
+  // The writing communicator contains only ranks with data, so the schema comes from the local
+  // reference.
   const FieldSchema             schema      = getFieldSchema(localData.reference);
   const std::vector<DataField>& pointFields = schema.pointFields;
   const std::vector<DataField>& cellFields  = schema.cellFields;
@@ -581,13 +581,13 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
   check(nc_enddef(ncid), "nc_enddef");
 
   if (useParallelIO) {
-    // Collective access (independent deadlocks because the file has an unlimited time
-    // dimension). A rank that registered field names but plotted nothing joins with a
-    // zero-length count, which the write sites below pass explicitly. The mesh-topology
-    // scalar is collective too, because a write from one rank alone diverges the ranks'
-    // metadata caches and deadlocks the collective metadata flush of nc_close.
+    // Every variable uses collective access, because independent access deadlocks on a file with
+    // an unlimited dimension. A rank without values joins every write with a zero count. A write
+    // of the mesh topology from one rank alone deadlocks the metadata flush of nc_close.
     check(nc_var_par_access(ncid, varMesh, NC_COLLECTIVE), "par_access mesh topology");
     check(nc_var_par_access(ncid, varTime, NC_COLLECTIVE), "par_access time");
+    check(nc_var_par_access(ncid, varNodeIndex, NC_COLLECTIVE), std::string("par_access ") + nodeDimName);
+    check(nc_var_par_access(ncid, varElementIndex, NC_COLLECTIVE), std::string("par_access ") + elementDimName);
     check(nc_var_par_access(ncid, varX, NC_COLLECTIVE), "par_access x");
     check(nc_var_par_access(ncid, varY, NC_COLLECTIVE), "par_access y");
     if (writeZCoordinate) {
@@ -619,9 +619,23 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
   }
 
   const int meshTopologyValue = 0;
-
-  // Every participating rank writes the same scalar into the mesh topology variable.
   check(nc_put_var_int(ncid, varMesh, &meshTopologyValue), "write mesh topology");
+
+  const auto writeIndices = [&](
+                              const int                variableId,
+                              const unsigned long long offset,
+                              const unsigned long long count,
+                              const std::string&       where
+                            ) {
+    std::vector<int> indices(static_cast<std::size_t>(count));
+    std::iota(indices.begin(), indices.end(), static_cast<int>(offset));
+    const int         placeholder     = 0;
+    const std::size_t start[1]        = {static_cast<std::size_t>(offset)};
+    const std::size_t writtenCount[1] = {static_cast<std::size_t>(count)};
+    check(nc_put_vara_int(ncid, variableId, start, writtenCount, count > 0 ? indices.data() : &placeholder), where);
+  };
+  writeIndices(varNodeIndex, offsetNodes, localNumberOfNodes, std::string("write ") + nodeDimName);
+  writeIndices(varElementIndex, offsetElements, localNumberOfElements, std::string("write ") + elementDimName);
 
   const auto writeVara1DReal = [&](
                                  const int                  varId,
@@ -644,7 +658,9 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
 
   // Each subdomain's interleaved XYZ buffer splits into one contiguous buffer per axis,
   // and each axis takes one collective write in which an empty rank writes count 0.
-  std::vector<double> mergedX, mergedY, mergedZ;
+  std::vector<double> mergedX;
+  std::vector<double> mergedY;
+  std::vector<double> mergedZ;
   mergedX.reserve(localNumberOfNodes);
   mergedY.reserve(localNumberOfNodes);
   if (writeZCoordinate) {
@@ -666,8 +682,6 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
     writeVara1DReal(varZ, mergedZ, offsetNodes, localNumberOfNodes, "write z");
   }
 
-  // The element-node tables of all subdomains merge into one buffer with node indices
-  // rebased to the global numbering, and one write stores it.
   {
     std::vector<int> mergedElementNodes;
     mergedElementNodes.reserve(localNumberOfElements * static_cast<std::size_t>(maxElementNodes));
@@ -711,8 +725,8 @@ tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, const
     );
   }
 
-  // The subdomain values are component-major, so each component gathers into one
-  // contiguous per-rank buffer before its write.
+  // The subdomain values interleave the components, so each component gathers into one contiguous
+  // buffer before its write.
   const auto writeMergedField =
     [&](const std::vector<int>& variableIds, const bool onNodes, const std::size_t fieldIndex) {
       const unsigned long long count  = onNodes ? localNumberOfNodes : localNumberOfElements;

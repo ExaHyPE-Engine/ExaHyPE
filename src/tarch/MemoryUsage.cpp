@@ -71,9 +71,8 @@ namespace {
 } // namespace
 
 /**
- * Returns the bytes a new allocation obtains without swapping. The kernel's estimate
- * MemAvailable adds the reclaimable page cache to the free memory; a kernel without the estimate
- * reports the free memory and the buffers.
+ * Returns the kernel's estimate MemAvailable of the bytes a new allocation obtains without swapping,
+ * or the free memory and the buffers on a kernel without that estimate.
  */
 std::uint64_t
 tarch::getAvailableMemoryInBytes() {

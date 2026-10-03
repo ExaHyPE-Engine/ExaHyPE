@@ -25,13 +25,8 @@ namespace exahype2::dg::ader::tests {
 
 TARGET_DECLARE
 /**
- * The space-time predictor of a nonlinear system. predict() runs a Picard iteration that solves
- * the local Cauchy problem of one cell of Derived on the space-time nodes, averages the state, the
- * flux and the source over the time step and writes the time-averaged face states and face fluxes
- * onto the faces of the cell. Derived is the generated solver class: Its DGOrder, NumberOfUnknowns
- * and NumberOfAuxiliaryVariables fix the layout, its static methods are the PDE terms, and a term
- * it does not declare has no buffer and no code. Every quantity is stored with the padded strides
- * of exahype2::dg::PaddedLayout.
+ * The Picard space-time predictor of a nonlinear system. A term that Derived does not declare has
+ * no buffer and no code. Every buffer uses the padded strides of exahype2::dg::PaddedLayout.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::ader::NonlinearPredictor final {
@@ -51,10 +46,8 @@ public:
     EvaluateNonconservativeProduct or EvaluateDiffusiveFlux or EvaluateDiffusiveSource;
 
   /**
-   * Extents and offsets of the one scratch block of predict(). The first time slice of the
-   * space-time state takes the time-averaged state, the flux holds one time slice, and the flux and
-   * the source of the first time node stay beside their running time averages. A term Derived does
-   * not declare has extent zero.
+   * The extents and offsets of the scratch block of predict(). The time-averaged state overwrites
+   * the first time slice of the space-time state, and the flux block stores one time slice.
    */
   struct Scratch final {
     static constexpr int SpaceTimeStateSize = CellLayout::PaddedNumberOfData * CellLayout::SpaceTimeNodes;

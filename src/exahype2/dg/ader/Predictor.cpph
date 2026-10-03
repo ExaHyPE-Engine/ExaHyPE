@@ -9,13 +9,9 @@
 
 TARGET_DECLARE
 /**
- * Runs the space-time predictor of one cell of Derived and subtracts the volume integral of its
- * time averages from the cell state; a linear Derived runs LinearPredictor::predict() with the
- * point sources inside the cell, every other Derived runs NonlinearPredictor::predict().
- * faceStates and faceFluxes point at the halves of the faces the cell writes. scratch holds
- * ScratchSize values; no other call reads the block while this call runs. pointSourceLocations
- * holds DIMENSIONS coordinates per point source of Derived. Returns the outcome of
- * NonlinearPredictor::predict() for a nonlinear Derived and zero for a linear one.
+ * Runs the space-time predictor of one cell and subtracts the volume integral of the time averages
+ * from cellState. scratch is a block of ScratchSize values that no other call reads while this
+ * call runs. Returns the outcome of NonlinearPredictor::predict(), or zero for a linear Derived.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -134,10 +130,9 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
 }
 
 /**
- * Adds the time-averaged source and subtracts the time-averaged flux divergence, both times the
- * time step. timeAveragedFlux holds the derivative of the flux along its own axis, one block per
- * axis in cell node order. sourceOfNode(cellNode, values) writes the time-averaged source of one
- * node into the padded values.
+ * Adds the time step times the time-averaged source minus the flux divergence to cellState.
+ * timeAveragedFlux stores the derivative of the flux along its own axis, one block per axis.
+ * sourceOfNode(cellNode, values) writes the time-averaged source of one node.
  */
 template <typename Derived, typename ComputePrecision>
 template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>

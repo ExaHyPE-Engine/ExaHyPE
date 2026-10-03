@@ -29,8 +29,8 @@ exahype2::particles::TrajectoryDatabase::TrajectoryDatabase(
 exahype2::particles::TrajectoryDatabase::~TrajectoryDatabase() { clear(); }
 
 /**
- * Each rank owns a part of the particles and writes its own file, so the name
- * carries the rank number as soon as more than one rank runs.
+ * Every rank writes its own file, so the file name contains the rank number when more than one
+ * rank runs.
  */
 std::string
 exahype2::particles::TrajectoryDatabase::getOutputFileName() const {
@@ -96,7 +96,7 @@ exahype2::particles::TrajectoryDatabase::writeUnwrittenSnapshots(std::ostream& f
     int&      writtenSnapshots     = _writtenSnapshotsPerParticle[particleEntry.first];
     const int numberOfNewSnapshots = totalSnapshots - writtenSnapshots;
     if (numberOfNewSnapshots > 0) {
-      // New snapshots sit at the front of the newest-first list; emit them oldest-first.
+      // The list stores the newest snapshot first, so the loop writes the new snapshots in reverse.
       std::vector<const Entry*> unwrittenSnapshots;
       unwrittenSnapshots.reserve(numberOfNewSnapshots);
       auto snapshotIterator = particleEntry.second.begin();
@@ -123,8 +123,8 @@ exahype2::particles::TrajectoryDatabase::resetWriteTracking() {
 }
 
 /**
- * Returns what a snapshot of the particle number at position x and timestamp does to the stored
- * snapshots. The caller holds _mutex.
+ * Returns the action for a snapshot of particle number at x and timestamp: Append, Replace or
+ * Ignore. The caller holds _mutex.
  */
 exahype2::particles::TrajectoryDatabase::AddSnapshotAction
 exahype2::particles::TrajectoryDatabase::getAction(
@@ -159,9 +159,8 @@ exahype2::particles::TrajectoryDatabase::getAction(
 }
 
 /**
- * Returns the action of getAction(), adds the position delta of the particle to _maxPositionDelta
- * and inserts an empty list for a particle that the database does not hold yet. The caller holds
- * _mutex.
+ * Returns the action of getAction(), raises _maxPositionDelta to the position delta of the particle
+ * and inserts an empty list for a new particle. The caller holds _mutex.
  */
 exahype2::particles::TrajectoryDatabase::AddSnapshotAction
 exahype2::particles::TrajectoryDatabase::prepareSnapshot(

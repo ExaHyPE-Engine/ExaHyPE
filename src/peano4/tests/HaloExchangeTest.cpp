@@ -33,8 +33,8 @@ namespace {
   using Exchange = peano4::HaloExchange<double>;
 
   /**
-   * Returns the value the owner of the given side writes into the given element of a face;
-   * both ranks derive it from the face's level, normal and lattice position alone.
+   * Returns the value the owner of side writes into element of a face. Both ranks derive it from the
+   * level, normal and lattice position of the face.
    */
   GPU_CALLABLE_METHOD double getExpectedValue(
     const peano4::Partition& partition,
@@ -51,7 +51,7 @@ namespace {
   }
 
   /**
-   * Returns the side this rank owns of every face, and -1 for a face no neighbour rank holds.
+   * Returns for every face the side this rank owns, or -1 for a face that no neighbour rank holds.
    */
   std::vector<int> getLocalSidesOfFaces(const peano4::Partition& partition) {
     std::vector<int> sides(static_cast<std::size_t>(partition.getNumberOfFaces()), -1);
@@ -73,7 +73,7 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * Writes the marker into one face and the expected value into the half this rank owns of it.
+   * Writes the marker into one face and the expected value into the half of it that this rank owns.
    */
   struct WriteLocalHalf final {
     peano4::Partition partition{};
@@ -126,7 +126,8 @@ namespace {
   TARGET_DECLARE_END
 
   /**
-   * Writes the marker into every face and the expected value into the half this rank owns of an exchanged face.
+   * Writes the marker into every face and the expected value into the half of every exchanged face
+   * that this rank owns.
    */
   void writeLocalHalves(
     Pool&                                  pool,
@@ -141,8 +142,8 @@ namespace {
   }
 
   /**
-   * Counts the face elements that differ from the expected value of their side on an exchanged face and from the
-   * marker elsewhere.
+   * Returns the number of face elements that differ from the expected value on an exchanged face or
+   * from the marker elsewhere.
    */
   int getNumberOfMismatches(
     const Pool&                            pool,
@@ -172,9 +173,8 @@ peano4::tests::HaloExchangeTest::run() {
 }
 
 /**
- * After the exchange the remote half of every exchanged face holds the value the partner rank
- * derived from the face identity, every other face keeps its marker, and one exchange serves a
- * regular, a refined and a periodic grid with two rounds each.
+ * After every exchange on a regular, a refined and a periodic grid, the remote half of every
+ * exchanged face stores the value of the partner rank and every other face keeps its marker.
  */
 void
 peano4::tests::HaloExchangeTest::testExchangeFillsTheRemoteHalves() {
@@ -226,8 +226,8 @@ peano4::tests::HaloExchangeTest::testExchangeFillsTheRemoteHalves() {
 }
 
 /**
- * Two exchanges of one pool post on distinct tags, which their first rebuild reserves, and every
- * rank reserves the same tags.
+ * Two exchanges of one pool get distinct tags in their first rebuild, and every rank reserves the
+ * same tags.
  */
 void
 peano4::tests::HaloExchangeTest::testExchangesHoldDistinctTags() {
@@ -254,7 +254,7 @@ peano4::tests::HaloExchangeTest::testExchangesHoldDistinctTags() {
 }
 
 /**
- * release() frees the entry table and the buffers and keeps the tag, so a rebuild serves the next partition.
+ * The release frees the buffers and keeps the tag, and the next rebuild restores a working exchange.
  */
 void
 peano4::tests::HaloExchangeTest::testReleaseFreesTheBuffersAndKeepsTheTag() {

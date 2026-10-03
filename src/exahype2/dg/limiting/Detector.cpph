@@ -30,7 +30,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::openInitialStatus(
 }
 
 /**
- * The status of the closed step becomes the previous status, and a troubled cell opens on the subcell scheme.
+ * Saves the solution and the status of the closed step. A cell that was troubled opens as Limited,
+ * every other cell as Regular.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -52,9 +53,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::openStep(
 }
 
 /**
- * Writes the extrema of the observables of Derived over the nodes, the Lobatto samples and the
- * subcell averages of a nodal state into extrema. A polynomial attains extrema between its nodes,
- * so the samples between the nodes widen the range of the nodes.
+ * Writes the observable extrema over the nodes, the Lobatto samples and the subcell averages into
+ * extrema. A polynomial attains extrema between its nodes, so the samples widen the range of the
+ * nodes.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -107,10 +108,10 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::widenExtrema(
 }
 
 /**
- * A cell whose predictor diverged holds no candidate and fails. A rejected cell turns troubled, a
- * cell that was troubled in the previous step stays on the subcell scheme as a limited cell, and
- * an accepted cell that leaves the subcell scheme reports the wave speeds of its candidate. The
- * status of the cell is written into its own half of every face.
+ * Checks candidate and writes the resulting status into status and the own half of every face. A
+ * rejected candidate or a diverged predictor turns the cell Troubled, and an accepted cell that was
+ * troubled stays Limited. Returns the wave speeds of an accepted candidate whose cell was not
+ * troubled, or empty maxima.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -177,9 +178,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidate(
 }
 
 /**
- * A neighbour of a troubled cell turns limited and stays on the subcell scheme for the following
- * step, a neighbour of a limited cell turns into a halo cell that supplies its subgrid. The lifted
- * status is written into the cell's own half of every face.
+ * Raises status by the statuses of the face neighbours and writes it into the own half of every
+ * face. A neighbour of a troubled cell turns Limited and stays on the subcell scheme in the next
+ * step. A neighbour of a limited cell turns Halo and supplies its subgrid.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -206,9 +207,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::spreadStatus(
 }
 
 /**
- * Returns whether the nodal interpolant of a cell leaves the range of the observables of its
- * sampled subcells, the sign of a discontinuous initial state; a detector without a discrete
- * maximum principle reports no cell.
+ * Returns whether the nodal interpolant leaves the relaxed observable range of the subcells. An
+ * overshoot indicates a discontinuous initial state. Without a discrete maximum principle, it
+ * returns false.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -239,9 +240,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::interpolantOscillat
 }
 
 /**
- * Lowers the minima and raises the maxima of extrema by the observables of every state, where the
- * states lie NumberOfData values apart. The merges keep a NaN, so an unphysical state stays visible
- * to the admissibility test.
+ * Widens extrema by the observables of every state, where the states lie NumberOfData values apart.
+ * The merges keep a NaN, so the maximum principle rejects an unphysical state.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -264,10 +264,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceObservableExt
 }
 
 /**
- * Projects the nodes onto SamplesPerAxis samples per axis and reduces the observables of every
- * sample into extrema. The matrix carries the input-node-major layout of
- * exahype2::dg::projectTensorProduct, and the contraction runs axis by axis over stack
- * intermediates, so the projected tensor is never stored as a whole.
+ * Projects the nodes onto SamplesPerAxis samples per axis and widens extrema by the observables of
+ * every sample. samplingMatrix has the layout of exahype2::dg::projectTensorProduct().
  */
 template <typename Derived, typename ComputePrecision>
 template <int SamplesPerAxis, typename StoragePrecision>
@@ -424,8 +422,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::isPhysicallyAdmissi
 }
 
 /**
- * Returns whether the observables of candidate stay within the relaxed reference extrema of the
- * cell; a detector without a discrete maximum principle grants every candidate.
+ * Returns whether the observables of candidate stay within the relaxed reference extrema. Without
+ * a discrete maximum principle, it returns true.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -488,8 +486,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesRelaxedMax
 }
 
 /**
- * Returns the relaxation the discrete maximum principle grants one observable. A solver with a
- * relaxation term replaces the specified parameter per observable.
+ * Returns the relaxation parameter of one observable, which Derived::dmpRelaxationParameter() can
+ * replace.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -543,11 +541,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesDiscreteMa
 }
 
 /**
- * Rounds an observable extremum to a coarser floating-point grid. Two mirror-image cells hold
- * bitwise-mirrored states, yet their extrema pass through tensor-product sums whose summation
- * order differs, so a verdict taken at the admissibility margin can flip in one cell and not in
- * its mirror image and seed a lasting asymmetry. Rounding to twelve fewer mantissa bits removes
- * this noise and stays orders of magnitude below any physical relaxation margin.
+ * Rounds an observable extremum to DiscardedMantissaBits fewer mantissa bits. The extrema of two
+ * mirror-image cells differ in their last bits, because their tensor-product sums add in different
+ * orders. The rounding keeps a check at the margin from failing in one of the two cells only.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -562,8 +558,7 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::quantiseObservableE
   }
   const int roundingStepExponent =
     std::ilogb(extremum) - (std::numeric_limits<StoragePrecision>::digits - 1 - DiscardedMantissaBits);
-  // An extremum this close to the bottom of the range has fewer mantissa bits left than the
-  // rounding would discard, and the step itself would stop being a normal number.
+  // Close to the smallest normal number, the rounding step would be subnormal.
   if (roundingStepExponent < std::numeric_limits<StoragePrecision>::min_exponent - 1) {
     return extremum;
   }
@@ -572,8 +567,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::quantiseObservableE
 }
 
 /**
- * Returns the wave-speed maxima of an accepted candidate over its nodes and its projected subcells
- * at the end of the time step; a solver with a fixed time step rule returns empty maxima.
+ * Returns the wave-speed maxima of an accepted candidate over its nodes and subcells at the end of
+ * the time step. A solver with a fixed time step rule returns empty maxima.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -756,7 +751,7 @@ exahype2::dg::limiting::SubcellSchemeCountsReduction::combine(const ValueType le
 }
 
 /**
- * Returns the first of the cells of block when numberOfBlocks blocks split numberOfCells cells evenly.
+ * Returns the first cell of block when numberOfBlocks blocks split numberOfCells cells evenly.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::dg::limiting::getFirstCellOfBlock(const int block, const int numberOfBlocks, const int numberOfCells) {

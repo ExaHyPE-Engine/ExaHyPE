@@ -25,10 +25,7 @@ REQUIRED_FIELDS = (LABEL_FIELD, CURVE_INDEX_FIELD)
 
 
 def cell_polygons(snapshot: MeshSnapshot) -> np.ndarray:
-    """Returns the corner coordinates of every cell as an (Ncells, 4, 2) array.
-
-    The first four corners of a cell form its quadrilateral; a 3D snapshot is rejected.
-    """
+    """Returns the first four corners of every cell of a 2D snapshot as an (Ncells, 4, 2) array."""
     if snapshot.points.shape[1] != 2:
         raise ValueError("The curve renderer draws 2D snapshots only")
     cells = np.asarray(snapshot.cells)
@@ -72,7 +69,7 @@ def label_colours(labels: np.ndarray) -> np.ndarray:
 def render_curve(
     snapshot: MeshSnapshot, title: str, output: Path, dpi: int = 300
 ) -> dict:
-    """Draws cells coloured by rank and joins the patch centres along the curve."""
+    """Draws the cells coloured by subdomain and joins the patch centres along the curve."""
     polygons = cell_polygons(snapshot)
     if len(polygons) == 0:
         raise ValueError("The decomposition renderer needs at least one cell")

@@ -13,7 +13,7 @@ namespace exahype2::particles {
   struct Particle;
 
   /**
-   * Names particle data entries as a type, so a dispatch over them needs no parameter pack.
+   * Compile-time list of particle data entries.
    */
   template <int... Fields>
   struct FieldList final {};
@@ -27,8 +27,8 @@ namespace exahype2::particles {
 
 TARGET_DECLARE
 /**
- * One particle as a kernel reads and writes it: The values array holds the DIMENSIONS
- * coordinates first and the numberOfData data entries behind them.
+ * View of one particle. The array values stores the DIMENSIONS coordinates first and then
+ * numberOfData data entries.
  */
 struct exahype2::particles::Particle final {
   double* values{nullptr};
@@ -43,8 +43,7 @@ struct exahype2::particles::Particle final {
 };
 
 /**
- * Trivially copyable description of a particle set a kernel reads: The values of every particle
- * and the slot of the cell that holds it.
+ * Trivially copyable view of a particle set for a kernel.
  */
 template <int NumberOfData>
 struct exahype2::particles::ParticleSetView final {
@@ -60,11 +59,9 @@ struct exahype2::particles::ParticleSetView final {
 TARGET_DECLARE_END
 
 /**
- * Holds the particles of one rank: The position and the data of every particle in a host array
- * and its device copy, its two-integer number and the slot of the cell that holds it. upload()
- * and download() copy only what changed since the last copy, and a kernel that writes the device
- * copy leaves the host values stale until download(). insert() and relocate() run on the host and
- * move every particle to the rank whose partition holds its position.
+ * Particles of one rank in a host array and a device copy. A kernel that writes the device copy
+ * leaves the host values stale until download(). insert() and relocate() run on the host and move
+ * every particle to the rank that owns its cell.
  */
 template <int NumberOfData>
 class exahype2::particles::ParticleSet final {
@@ -78,18 +75,18 @@ public:
   ParticleSet& operator=(ParticleSet&& other)      = delete;
   ~ParticleSet()                                   = default;
 
-  void insert(const peano4::Partition& partition, const std::vector<double>& candidates);
-  void relocate(const peano4::Partition& partition);
-  void upload();
-  void download();
-  void release();
+  INLINE_METHOD void insert(const peano4::Partition& partition, const std::vector<double>& candidates);
+  INLINE_METHOD void relocate(const peano4::Partition& partition);
+  INLINE_METHOD void upload();
+  INLINE_METHOD void download();
+  INLINE_METHOD void release();
 
-  [[nodiscard]] static int getSlotAt(
+  [[nodiscard]] static INLINE_METHOD int getSlotAt(
     const peano4::Partition&                     partition,
     const tarch::la::Vector<DIMENSIONS, double>& position
   );
 
-  [[nodiscard]] ParticleSetView<NumberOfData> getView();
+  [[nodiscard]] INLINE_METHOD ParticleSetView<NumberOfData> getView();
 
   [[nodiscard]] INLINE_METHOD int getSize() const noexcept;
   [[nodiscard]] INLINE_METHOD int getGlobalNumberOfParticles() const noexcept;
@@ -113,9 +110,9 @@ private:
   bool                               _deviceValuesAreCurrent{false};
   bool                               _deviceSlotsAreCurrent{false};
 
-  void locate(const peano4::Partition& partition);
-  void exchange(const peano4::Partition& partition);
-  void append(const double* values, int number0, int number1, int slot);
+  INLINE_METHOD void locate(const peano4::Partition& partition);
+  INLINE_METHOD void exchange(const peano4::Partition& partition);
+  INLINE_METHOD void append(const double* values, int number0, int number1, int slot);
 };
 
 #include "exahype2/particles/ParticleSet.cpph"

@@ -9,8 +9,7 @@ namespace peano4::tests {
 } // namespace peano4::tests
 
 /**
- * Checks the spawn level the spacetree derives and the regrids it runs on the process-wide
- * instance: The base grid, a rejected request set, a refinement with live data and the erase back.
+ * Checks the spawn level of the spacetree and the regrids of its singleton.
  */
 class peano4::tests::SpacetreeTest final : public tarch::tests::TestCase {
 public:

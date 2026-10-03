@@ -8,8 +8,7 @@
 #include <mpi.h>
 
 /**
- * Sets the interval between two recorded snapshots on every rank and names the output file on
- * the global master, the one rank that writes the series.
+ * Sets the output file name on the global master only, so only the global master writes the file.
  */
 void
 exahype2::ErrorMeasurement::open(const std::string& fileName, const double timeDeltaBetweenSnapshots) {
@@ -23,8 +22,8 @@ exahype2::ErrorMeasurement::open(const std::string& fileName, const double timeD
 }
 
 /**
- * Returns whether record() adds or replaces a snapshot at timeStamp. Every rank records the same
- * norms at the same time stamps, so every rank returns the same answer.
+ * Returns whether record() adds or replaces a snapshot at timeStamp. Every rank returns the same
+ * answer.
  */
 bool
 exahype2::ErrorMeasurement::isSnapshotDue(const double timeStamp) {
@@ -32,7 +31,7 @@ exahype2::ErrorMeasurement::isSnapshotDue(const double timeStamp) {
 }
 
 /**
- * Returns the buffer that holds NumberOfNorms errors for each of the numberOfCells cells.
+ * Returns a device buffer with room for NumberOfNorms errors per cell.
  */
 double*
 exahype2::ErrorMeasurement::getErrorsPerCell(const int numberOfCells) {
@@ -45,9 +44,8 @@ exahype2::ErrorMeasurement::getErrorsPerCell(const int numberOfCells) {
 }
 
 /**
- * Returns the L1, L2 and Linf norms at timeStamp of the error sums of all ranks and records them
- * on every rank. Collective over all ranks; the sums remain exact until every rank's sums are
- * merged.
+ * Merges the error sums of all ranks, records the L1, L2 and Linf norms at timeStamp and returns
+ * them. Every rank calls this function collectively.
  */
 std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
 exahype2::ErrorMeasurement::record(const ErrorSums& localSums, const double timeStamp) {

@@ -44,8 +44,6 @@ fv_solver.set_pde_terms(
 fv_solver.measure_error()
 project.add_solver(fv_solver)
 
-# The second finite-volume solver names its unknowns, stores them in single precision and
-# computes in double, takes a PDE term the project defines and measures the error of its tracers.
 godunov_solver = exahype2.fv.Solver(
     name="AllPDETermsGodunovFV",
     patch_size=4,

@@ -38,8 +38,7 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::GlobalTimeSeriesDatabaseTe
 
 void
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::run() {
-  // Only the global master writes the reduced global database, so a parallel run
-  // exercises it on that one rank and no two ranks write the same file.
+  // Only the global master writes the global database, so no two ranks write the same file.
   if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     return;
   }
@@ -51,9 +50,6 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::run() {
   testMethod(testADatabaseWithoutFileNameWritesNoFile);
 }
 
-/**
- * Every added snapshot reaches the file once and in the order of its time stamps.
- */
 void
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::testAppendsChronologicallyWithoutDuplication() {
   const std::string baseName = getTestFileBaseName("GlobalTimeSeriesDatabaseTest_append");
@@ -118,9 +114,6 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::testClearRewritesFileFromS
   std::filesystem::remove(fileName);
 }
 
-/**
- * A repeated time stamp overwrites the newest row in the file.
- */
 void
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::testARepeatedTimeStampOverwritesTheRowInTheFile() {
   const std::string baseName = getTestFileBaseName("GlobalTimeSeriesDatabaseTest_replace");

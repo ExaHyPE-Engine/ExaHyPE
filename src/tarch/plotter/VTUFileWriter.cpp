@@ -134,9 +134,8 @@ tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) const {
       return xmlHeader;
     }
 #else
-    // The block copies the raw bytes, because expandFieldComponents() returns by value
-    // and that temporary dies before the appended-data section is streamed. The length
-    // prefix is added at write time.
+    // The block copies the raw bytes, because the temporary that expandFieldComponents() returns
+    // is destroyed before the appended data is written. The write adds the length prefix.
     Block block;
     block.sizeBytes = dataBytes;
     block.binaryData.resize(static_cast<std::size_t>(dataBytes));
@@ -150,7 +149,7 @@ tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) const {
 #endif
   };
 
-  // Raw memory is written, so VTK must be told the byte order.
+  // The appended data is raw memory, so the file states the byte order.
   const std::uint16_t endianCheck    = 1;
   const bool          isLittleEndian = *reinterpret_cast<const std::uint8_t*>(&endianCheck) == 1;
   const std::string   byteOrder      = isLittleEndian ? "LittleEndian" : "BigEndian";
@@ -160,8 +159,7 @@ tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) const {
   compressorAttribute = " compressor=\"vtkZLibDataCompressor\"";
 #endif
 
-  // The buffers accumulate in double precision; single-precision output narrows
-  // them right before the write.
+  // A single-precision output narrows the double buffers right before the write.
   const bool writeDouble  = getDoublePrecisionOutput();
   const auto addRealBlock = [&](const std::string& name, const int components, const std::vector<double>& data) {
     return writeDouble ? addBlock("DataArray", "Float64", name, components, data)
@@ -172,8 +170,6 @@ tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) const {
     out << "    <Piece NumberOfPoints=\"" << (piece.pointsXYZ.size() / 3) << "\" NumberOfCells=\"" << piece.types.size()
         << "\">\n";
 
-    // A vector is padded to 3 components and a tensor to 9, as classifyField()
-    // prescribes.
     out << "      <PointData>\n";
     for (const auto& field : piece.pointFields) {
       const FieldLayout layout = classifyField(field.components);

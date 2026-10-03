@@ -8,9 +8,6 @@ namespace exahype2::particles::tests {
   class TrajectoryRecordingTest;
 } // namespace exahype2::particles::tests
 
-/**
- * Checks that a recording writes one row per particle of the rank inside the record window.
- */
 class exahype2::particles::tests::TrajectoryRecordingTest final : public tarch::tests::TestCase {
 public:
   TrajectoryRecordingTest();

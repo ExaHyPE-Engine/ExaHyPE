@@ -32,9 +32,6 @@ exahype2::runner::tests::ConsoleTest::run() {
   testMethod(testReportWrapsAWideLineInsideTheFrame);
 }
 
-/**
- * Only the two most significant non-zero units appear, the lower one zero-padded to two digits.
- */
 void
 exahype2::runner::tests::ConsoleTest::testDurationPicksTwoMostSignificantUnits() {
   validateEquals(exahype2::runner::Format::getDuration(45.0), std::string("45s"));
@@ -44,9 +41,6 @@ exahype2::runner::tests::ConsoleTest::testDurationPicksTwoMostSignificantUnits()
   validateEquals(exahype2::runner::Format::getDuration(0.0), std::string("0s"));
 }
 
-/**
- * A negative duration rounds to zero and a duration past the day cap collapses to the bounded text.
- */
 void
 exahype2::runner::tests::ConsoleTest::testDurationClampsAndStaysBounded() {
   validateEquals(exahype2::runner::Format::getDuration(-5.0), std::string("0s"));
@@ -127,9 +121,6 @@ exahype2::runner::tests::ConsoleTest::testWrapBreaksAfterTheSeparator() {
   validateEquals(fitting[0], std::string("Label    alpha = 1"));
 }
 
-/**
- * A line without a separator breaks at a space, and a line without a space breaks at the width.
- */
 void
 exahype2::runner::tests::ConsoleTest::testWrapFallsBackToSpacesAndTheWidth() {
   const auto words = exahype2::runner::wrapToDisplayWidth("aaaa bbbb cccc", 9, 2);
@@ -145,9 +136,6 @@ exahype2::runner::tests::ConsoleTest::testWrapFallsBackToSpacesAndTheWidth() {
   validateEquals(letters[2], std::string("ij"));
 }
 
-/**
- * A section title sits at the block indent and its entries one level deeper, aligned across sections.
- */
 void
 exahype2::runner::tests::ConsoleTest::testTableIndentsSectionsAndAlignsLabels() {
   exahype2::runner::Table table;

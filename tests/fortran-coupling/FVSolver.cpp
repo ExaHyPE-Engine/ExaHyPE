@@ -41,11 +41,9 @@ tests::exahype2::fortran::FVSolver::solveRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  // The Fortran solver returns the Clawpack fluctuations: The left-going
-  // fluctuation A^-dQ into FL and the right-going fluctuation A^+dQ into FR (for
-  // h, hu, hv). The Godunov kernel updates the left cell by -dt/h * FL and the
-  // right cell by +dt/h * FR, whereas wave propagation requires the right cell
-  // to receive -dt/h * A^+dQ, so the right-going fluctuation is negated.
+  // The Fortran solver writes the Clawpack fluctuations A^-dQ into FL and A^+dQ into FR. The Godunov
+  // kernel adds dt/h * FR to the right cell, but the right cell needs -dt/h * A^+dQ, so FR changes its
+  // sign.
   const double smax = rpn2_augmented_wrapper(QL, QR, FL, FR, &normal);
 
   FR[0] = -FR[0];

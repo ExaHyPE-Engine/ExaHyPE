@@ -42,9 +42,7 @@
 
 #define SIMD(...) _PRAGMA(omp simd __VA_ARGS__ simdlen(PEANO_WITH_SIMDLEN))
 
-// The nvcc host pass rejects "#pragma unroll" and the nvcc front-end rejects "#pragma GCC unroll",
-// so the device form appears only where one compiler compiles the pragma and never in nvcc's host
-// pass.
+// The nvcc host pass rejects "#pragma unroll", and the nvcc front-end rejects "#pragma GCC unroll".
 #if defined(__CUDA_ARCH__) or defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER) \
   or defined(__NVCOMPILER) or defined(__PGI)
 #define UNROLL(numberOfIterations) _PRAGMA(unroll numberOfIterations)

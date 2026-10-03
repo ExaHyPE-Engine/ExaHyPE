@@ -14,8 +14,7 @@ namespace {
 
 tarch::plotter::FileWriter::CellPlotter::CellPlotter(FileWriter& plotter, const int subdomainId) :
   _buffers(plotter.getPieceBuffers(subdomainId)),
-  // _buffers is declared first, so it is already bound here. A piece that
-  // already holds cells continues its connectivity where they left off.
+  // The initialisation reads _buffers, which the class declares first.
   _currentOffset(_buffers.offsets.empty() ? 0 : _buffers.offsets.back()) {}
 
 template <int N>

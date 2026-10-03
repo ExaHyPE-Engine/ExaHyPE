@@ -336,8 +336,8 @@ namespace {
   }
 
   /**
-   * Returns the value the dot-separated key names, or nullptr when a component is absent or when a
-   * component other than the last one holds no object.
+   * Returns the value at the dot-separated key, or nullptr when a component is missing or a
+   * component before the last one is no object.
    */
   const JSONValue* findValue(const JSONObject& root, const std::string& key) {
     const std::vector<std::string> path          = splitKey(key);
@@ -404,6 +404,9 @@ tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
 
 tarch::reader::JSONReader::~JSONReader() = default;
 
+/**
+ * Returns whether the key exists without marking it read.
+ */
 bool
 tarch::reader::JSONReader::hasKey(const std::string& key) const {
   return hasValue(_impl->root, key);
@@ -415,6 +418,9 @@ tarch::reader::JSONReader::markRead(const std::string& key) const {
   _impl->used.insert(key.substr(0, key.find('.')));
 }
 
+/**
+ * Returns the sorted top-level keys that no getter read.
+ */
 std::vector<std::string>
 tarch::reader::JSONReader::getUnusedKeys() const {
   std::vector<std::string> result;
@@ -423,7 +429,6 @@ tarch::reader::JSONReader::getUnusedKeys() const {
       result.push_back(entry.first);
     }
   }
-  // The root map iterates in an unspecified order, so the sort makes the result reproducible.
   std::sort(result.begin(), result.end());
   return result;
 }

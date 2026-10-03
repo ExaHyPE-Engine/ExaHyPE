@@ -9,11 +9,11 @@ def initial(pointwise_initial_conditions):
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   std::fill_n(Q, NumberOfData * NodesPerAxis * NodesPerAxis * NodesPerAxis, 0);
 
-  const tarch::la::Vector<DIMENSIONS, double> center = (*_curvi)(x);
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre = (*_curvi)(x);
 
   const auto initialiseNode = [&](
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& center,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     {{STORAGE_PRECISION}}* const Q
   ) -> void {"""
         + pointwise_initial_conditions
@@ -31,12 +31,11 @@ def initial(pointwise_initial_conditions):
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       Q[nodeOffset + Shortcuts::curveGrid + axis] = curvilinearPosition[axis];
     }
-    initialiseNode(curvilinearPosition, center, Q + nodeOffset);
+    initialiseNode(curvilinearPosition, cellCentre, Q + nodeOffset);
     nodeOffset += NumberOfData;
   });
 
-  // The derivatives of the curvilinear positions along the three reference axes accumulate row by
-  // row of the derivative operator into the metric entries.
+  // Differentiates the curvilinear positions along each reference axis into the metric entries.
   const tarch::la::Vector<DIMENSIONS, {{STORAGE_PRECISION}}> inverseCellSize =
     convertScalar<{{STORAGE_PRECISION}}>(invertEntries(h));
   const auto& derivativeOperator = DGMatrices<{{STORAGE_PRECISION}}>::getDerivativeOperator1D();
@@ -84,8 +83,8 @@ def initial(pointwise_initial_conditions):
     }
   }
 
-  // Every node replaces the derivatives of its positions by the inverse metric and stores the
-  // determinant of the metric as its Jacobian.
+  // Replaces the position derivatives of every node by the inverse metric and stores their
+  // determinant as the Jacobian.
   nodeOffset = 0;
   peano4::dForEach(NodesPerAxis, [&]([[maybe_unused]] const tarch::la::Vector<DIMENSIONS, int>& index) {
     {{STORAGE_PRECISION}}* const metric = Q + nodeOffset + Shortcuts::metricDerivative;
@@ -139,7 +138,7 @@ def eigenvalue():
   );
   double result = 1.0;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    const auto* const metric     = Q + Shortcuts::metricDerivative + axis * DIMENSIONS;
+    const auto* const metric     = Q + Shortcuts::metricDerivative + static_cast<std::ptrdiff_t>(axis) * DIMENSIONS;
     const auto        metricNorm = std::sqrt(metric[0] * metric[0] + metric[1] * metric[1] + metric[2] * metric[2]);
     result = std::max(result, static_cast<double>(metricNorm * Q[Shortcuts::cp]));
     result = std::max(result, static_cast<double>(metricNorm * Q[Shortcuts::cs]));
@@ -150,7 +149,7 @@ def eigenvalue():
 
 def flux():
     return """
-  const auto* const metric   = Q + Shortcuts::metricDerivative + normal * DIMENSIONS;
+  const auto* const metric   = Q + Shortcuts::metricDerivative + static_cast<std::ptrdiff_t>(normal) * DIMENSIONS;
   const auto* const stress   = Q + Shortcuts::sigma;
   const auto        jacobian = Q[Shortcuts::jacobian];
   std::fill_n(F, NumberOfUnknowns, 0.0);
@@ -162,7 +161,7 @@ def flux():
 
 def ncp():
     return """
-  const auto* const metric       = Q + Shortcuts::metricDerivative + normal * DIMENSIONS;
+  const auto* const metric       = Q + Shortcuts::metricDerivative + static_cast<std::ptrdiff_t>(normal) * DIMENSIONS;
   const auto* const velocityJump = deltaQ + Shortcuts::v;
   std::fill_n(BTimesDeltaQ, NumberOfUnknowns, 0.0);
   BTimesDeltaQ[Shortcuts::sigma + 0] = -metric[0] * velocityJump[0];
@@ -236,7 +235,6 @@ tarch::la::Vector<DIMENSIONS, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}:
 
 def abstractDeclarations():
     return """
-public:
   tarch::la::Vector<DIMENSIONS, double> invertProjection(tarch::la::Vector<DIMENSIONS, double> coordinates);
 
 protected:
@@ -246,14 +244,13 @@ protected:
 
 def init_grid_step_implementation(scenario_perturbations):
     return """
-  // The finest cell width the grid construction can reach.
   tarch::la::Vector<DIMENSIONS, double> minCellSize = DomainSize;
   const double minAdmissiblePatchSize = RuntimeParameters::getMinAdmissiblePatchSize();
   while (min(minCellSize) > minAdmissiblePatchSize) {
     minCellSize /= static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor);
   }
 
-  // The grid initialisation runs once per round of static AMR, and every round rebuilds the
-  // curvilinear mapping from scratch.
+  // The grid initialisation runs once per refinement round and rebuilds the curvilinear mapping
+  // every time.
   _curvi = std::make_unique<::exahype2::Curvi>(DomainOffset, DomainSize, minCellSize);
 """ + scenario_perturbations

@@ -13,9 +13,6 @@ namespace {
   constexpr int Depth        = 1;
   constexpr int NumberOfData = 2;
 
-  /**
-   * Places the exact position half a unit above the particle along the first axis and copies the data.
-   */
   struct ShiftedSolver final {
     static void analyticalSolution(
       const exahype2::particles::Particle* const particle,
@@ -34,7 +31,7 @@ namespace {
   };
 
   /**
-   * Deletes the time series file of the measurement on the global master, the one rank that writes it.
+   * Deletes the time series file, which only the global master writes.
    */
   void deleteTimeSeriesFile(const std::string& fileName) {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {

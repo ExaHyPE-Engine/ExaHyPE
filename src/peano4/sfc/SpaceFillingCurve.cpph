@@ -14,8 +14,7 @@ peano4::sfc::SpaceFillingCurve<CurveGrammar>::Child::getPositionWithinParent() c
 }
 
 /**
- * Returns the children of a cell in curve order for one curve state. The
- * table behind it is a constant-initialised static.
+ * Returns the children of a cell in curve order for one curve state.
  */
 template <class CurveGrammar>
 INLINE_METHOD const typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::ChildSequence&
@@ -25,13 +24,8 @@ peano4::sfc::SpaceFillingCurve<CurveGrammar>::getChildren(const int state) {
   return Table[state];
 }
 
-/**
- * Derives the child-order table from the productions: For every state, the
- * turtle walk of its production gives the child positions, and the
- * right-hand side gives the child states.
- */
 template <class CurveGrammar>
-constexpr typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::ChildOrder
+INLINE_METHOD constexpr typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::ChildOrder
 peano4::sfc::SpaceFillingCurve<CurveGrammar>::deriveChildOrder() {
   ChildOrder result{};
   for (int state = 0; state < NumberOfStates; state++) {
@@ -52,7 +46,7 @@ peano4::sfc::SpaceFillingCurve<CurveGrammar>::deriveChildOrder() {
 }
 
 template <class CurveGrammar>
-constexpr bool
+INLINE_METHOD constexpr bool
 peano4::sfc::SpaceFillingCurve<CurveGrammar>::productionsAreInSymbolOrder() {
   for (int state = 0; state < NumberOfStates; state++) {
     if (static_cast<int>(CurveGrammar::Productions[state].leftHandSide) != state) {
@@ -63,12 +57,11 @@ peano4::sfc::SpaceFillingCurve<CurveGrammar>::productionsAreInSymbolOrder() {
 }
 
 /**
- * Returns whether the turtle walk of every production stays within the
- * dimensions and visits each of the SubdivisionFactor^DIMENSIONS child
- * positions exactly once.
+ * Returns whether the turtle walk of every production stays within DIMENSIONS axes and visits every
+ * child position once.
  */
 template <class CurveGrammar>
-constexpr bool
+INLINE_METHOD constexpr bool
 peano4::sfc::SpaceFillingCurve<CurveGrammar>::everyProductionTilesTheCell() {
   for (int state = 0; state < NumberOfStates; state++) {
     for (const auto step : CurveGrammar::Productions[state].steps) {
@@ -97,12 +90,11 @@ peano4::sfc::SpaceFillingCurve<CurveGrammar>::everyProductionTilesTheCell() {
 }
 
 /**
- * Returns whether the curve is continuous across child boundaries: Within
- * every production, the exit point of a child coincides with the entry point
- * of the next child, both measured in child widths.
+ * Returns whether, within every production, the exit point of each child meets the entry point of
+ * the next child.
  */
 template <class CurveGrammar>
-constexpr bool
+INLINE_METHOD constexpr bool
 peano4::sfc::SpaceFillingCurve<CurveGrammar>::childrenConnect() {
   constexpr double ConnectionTolerance = 1e-9;
   const auto       entryPoints         = getLimitPointsWithin(0);
@@ -127,11 +119,11 @@ peano4::sfc::SpaceFillingCurve<CurveGrammar>::childrenConnect() {
 }
 
 /**
- * Walks the turtle steps of one production and returns the child positions,
- * shifted so the lowest visited corner is the origin.
+ * Returns the child positions that the turtle steps of one production visit, shifted so that the
+ * lowest position is the origin.
  */
 template <class CurveGrammar>
-constexpr std::array<
+INLINE_METHOD constexpr std::array<
   typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::Position,
   peano4::sfc::SpaceFillingCurve<CurveGrammar>::ChildrenPerCell
 >
@@ -156,15 +148,12 @@ peano4::sfc::SpaceFillingCurve<CurveGrammar>::getPositions(const int state) {
 }
 
 /**
- * Returns, for every state, the point in which the curve reaches the cell
- * boundary within the given child when the recursion is followed to its
- * limit, in units of the cell width. Child 0 yields the entry points, the
- * last child the exit points. The point of a state is the point of that
- * child's state scaled into the child's position, so the points are the
- * fixed point of this contraction, reached by iteration.
+ * Returns for every state the limit point of the curve within the given child, in cell widths.
+ * Child 0 yields the entry points and the last child the exit points. The points are the fixed point
+ * of a contraction, which the loop reaches by iteration.
  */
 template <class CurveGrammar>
-constexpr std::array<
+INLINE_METHOD constexpr std::array<
   typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::Point,
   peano4::sfc::SpaceFillingCurve<CurveGrammar>::NumberOfStates
 >

@@ -22,9 +22,10 @@ if(TARGET PeanoOptions)
     # A local of a device function stays private to its thread, so a team kernel keeps the data its
     # threads exchange in omp_pteam_mem_alloc memory.
     list(APPEND OFFLOADING_COMPILE_FLAGS -fopenmp-cuda-mode)
-    # The OpenMP optimiser needs more iterations than its default for the ADER-DG predictor kernel.
+    # The ADER-DG predictor kernel needs more OpenMP optimiser iterations than the default.
     list(APPEND OFFLOADING_COMPILE_FLAGS -mllvm=-openmp-opt-max-iterations=1024)
-    # A remark names a variable the OpenMP optimiser leaves in team memory or a kernel it cannot optimise.
+    # These remarks report the variables the OpenMP optimiser leaves in team memory and the kernels it
+    # cannot optimise.
     list(APPEND OFFLOADING_COMPILE_FLAGS -Rpass-missed=openmp-opt -Rpass-analysis=openmp-opt)
 
   elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")

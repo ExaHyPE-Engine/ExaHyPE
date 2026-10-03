@@ -11,10 +11,9 @@ namespace tarch::plotter {
 /**
  * Writer for the VTKHDF file format (https://docs.vtk.org/en/latest/vtk_file_formats/vtkhdf_file_format).
  *
- * Every writeToFile() call reopens the .vtkhdf file in append mode and adds one
- * step under /VTKHDF/Steps, so isOpen() returns true for the whole run. The
- * connectivity is part-local and stored as int64, and the Offsets array of each
- * part starts with a zero.
+ * Every writeToFile() call appends one step as one part under /VTKHDF/Steps, so isOpen() always
+ * returns true. The int64 connectivity of a step counts its points from zero, and the Offsets array
+ * of each step starts with a zero.
  */
 class tarch::plotter::VTKHDFFileWriter final : public tarch::plotter::FileWriter {
 public:

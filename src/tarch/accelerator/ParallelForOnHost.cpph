@@ -3,15 +3,12 @@
 
 namespace tarch::accelerator {
   /**
-   * Runs functor over the range on the host threads in every accelerator
-   * backend.
-   *
-   * Inside an enclosing parallel region a worksharing loop would bind to an
-   * inactive nested region and run serially, so the loop then becomes tasks the
-   * enclosing team executes.
+   * Runs functor over the range on the host threads in every accelerator backend. Inside a parallel
+   * region the loop becomes tasks of the enclosing team, because a nested worksharing loop runs
+   * serially.
    */
   template <typename Functor>
-  inline void parallelForOnHost(const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelForOnHost(const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
 #if defined(_OPENMP)
     if (omp_in_parallel()) {

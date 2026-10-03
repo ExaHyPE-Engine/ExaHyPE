@@ -13,10 +13,6 @@
 #include "tarch/mpi/Rank.h"
 
 namespace {
-  /**
-   * Stands in for a generated solver: The first unknown grows with the time stamp and the time
-   * step size, and the second one takes the first coordinate of the degree of freedom.
-   */
   struct LinearSolver {
     static INLINE_METHOD GPU_CALLABLE_METHOD void analyticalSolution(
       const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -31,14 +27,8 @@ namespace {
   };
 
   TARGET_DECLARE
-  /**
-   * Returns the L1 error of one cell; the L2 error is its square and the Linf error the same value.
-   */
   GPU_CALLABLE_METHOD double getErrorOfCell(const int cell) { return 0.5 * (cell + 1); }
 
-  /**
-   * Writes the three errors of every cell into the buffer of the measurement.
-   */
   struct WriteErrorsOfCell final {
     double* errors{nullptr};
 
@@ -53,7 +43,7 @@ namespace {
   TARGET_DECLARE_END
 
   /**
-   * Deletes the time series file of the measurement on the global master, the one rank that writes it.
+   * Deletes the time series file, which only the global master writes.
    */
   void deleteTimeSeriesFile(const std::string& fileName) {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -76,10 +66,6 @@ exahype2::tests::ErrorMeasurementTest::run() {
   testMethod(testTheOwnedBufferSumsTheErrorsOfEveryCell);
 }
 
-/**
- * Every rank finds a snapshot due for the newest recorded time stamp and one time delta after
- * it, and none before the measurement opens or within the time delta.
- */
 void
 exahype2::tests::ErrorMeasurementTest::testEveryRankFindsASnapshotDueForTheNewestTimeStampAndAfterTheTimeDelta() {
   exahype2::ErrorMeasurement measurement;
@@ -134,10 +120,6 @@ exahype2::tests::ErrorMeasurementTest::testRecordIsExactAcrossRankPartitions() {
   deleteTimeSeriesFile(fileName);
 }
 
-/**
- * The analytical solution reads the auxiliary variable of the degree of freedom, and the weighted
- * error against it reaches the accumulator of the caller.
- */
 void
 exahype2::tests::ErrorMeasurementTest::testSolutionErrorComparesAgainstTheAnalyticalSolutionAtTheDegreeOfFreedom() {
   constexpr std::array<int, 2> MeasuredUnknowns{0, 1};
@@ -154,9 +136,6 @@ exahype2::tests::ErrorMeasurementTest::testSolutionErrorComparesAgainstTheAnalyt
   validateNumericalEquals(errors[2], 2.0);
 }
 
-/**
- * The accumulation weights the listed unknowns and skips every other one.
- */
 void
 exahype2::tests::ErrorMeasurementTest::testAccumulationWeightsTheMeasuredUnknownsOnly() {
   constexpr std::array<int, 2> MeasuredUnknowns{0, 2};
@@ -171,10 +150,6 @@ exahype2::tests::ErrorMeasurementTest::testAccumulationWeightsTheMeasuredUnknown
   validateNumericalEquals(errors[2], 2.0);
 }
 
-/**
- * record() sums the L1 and L2 norms of every cell over all ranks, takes the maximum for the Linf
- * norm and records zero norms for empty sums.
- */
 void
 exahype2::tests::ErrorMeasurementTest::testRecordSumsTheIntegralNormsAndTakesTheMaximumAcrossRanks() {
   const auto rank          = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
@@ -200,9 +175,6 @@ exahype2::tests::ErrorMeasurementTest::testRecordSumsTheIntegralNormsAndTakesThe
   deleteTimeSeriesFile(fileName);
 }
 
-/**
- * The device sums of the cell errors in either order give bitwise the norms of the host sums.
- */
 void
 exahype2::tests::ErrorMeasurementTest::testDeviceSumsMatchTheHostSumsWhateverTheCellOrder() {
   constexpr int       NumberOfCells = 3000;
@@ -243,10 +215,6 @@ exahype2::tests::ErrorMeasurementTest::testDeviceSumsMatchTheHostSumsWhateverThe
   validateEquals(noSums.maxError, 0.0);
 }
 
-/**
- * record(numberOfCells, timeStamp) gives the norms of the errors a kernel wrote into the owned buffer, and release()
- * frees it.
- */
 void
 exahype2::tests::ErrorMeasurementTest::testTheOwnedBufferSumsTheErrorsOfEveryCell() {
   constexpr int              NumberOfCells = 5;

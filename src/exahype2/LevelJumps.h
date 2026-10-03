@@ -12,23 +12,24 @@ namespace exahype2 {
   struct ForEachLevelJump;
 
   template <typename Operation>
-  void interpolateCoarseFaces(
+  INLINE_METHOD void interpolateCoarseFaces(
     const peano4::Partition& partition,
-    peano4::Dependence       dependence,
+    peano4::Adjacency        adjacency,
     const Operation&         operation
   );
 
   template <typename Operation>
-  void restrictFineFaces(const peano4::Partition& partition, peano4::Dependence dependence, const Operation& operation);
+  INLINE_METHOD void restrictFineFaces(
+    const peano4::Partition& partition,
+    peano4::Adjacency        adjacency,
+    const Operation&         operation
+  );
 
   template <typename Operation>
-  void restrictFineFaces(const peano4::Partition& partition, const Operation& operation);
+  INLINE_METHOD void restrictFineFaces(const peano4::Partition& partition, const Operation& operation);
 } // namespace exahype2
 
 TARGET_DECLARE
-/**
- * Runs operation on one level jump of the span.
- */
 template <typename Operation>
 struct exahype2::ForEachLevelJump final {
   tarch::Span<const peano4::LevelJump> levelJumps{};

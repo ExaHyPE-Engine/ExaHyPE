@@ -5,7 +5,7 @@ namespace tarch::accelerator {
   // The cub library takes the reduction as a binary functor, so CubCombine wraps Op::combine.
   template <typename Op>
   struct CubCombine final {
-    __device__ __host__ typename Op::ValueType operator()(
+    INLINE_METHOD GPU_CALLABLE_METHOD typename Op::ValueType operator()(
       const typename Op::ValueType& left,
       const typename Op::ValueType& right
     ) const {
@@ -14,9 +14,10 @@ namespace tarch::accelerator {
   };
 
   // Every kernel that calls this routine runs CudaBlockSize threads per block. The barrier after
-  // the read of entry zero lets a thread call the routine again while another thread still reads.
+  // the read of entry zero keeps a thread that calls the routine again from overwriting the entry
+  // while another thread still reads it.
   template <typename Reducer, typename T>
-  __device__ inline T blockReduce(const T threadValue) {
+  INLINE_METHOD __device__ T blockReduce(const T threadValue) {
     __shared__ T blockValues[CudaBlockSize];
     const int    threadIndex = threadIdx.x;
     blockValues[threadIndex] = threadValue;
@@ -37,7 +38,7 @@ namespace tarch::accelerator {
    * host thread runs a whole team, so its partial value is already the team's result.
    */
   template <typename Reducer, typename T>
-  GPU_CALLABLE_METHOD inline void reduceOverTeam(
+  INLINE_METHOD GPU_CALLABLE_METHOD void reduceOverTeam(
     [[maybe_unused]] const CudaTeam& team,
     const T                          threadValue,
     const Reducer                    reducer
@@ -49,8 +50,8 @@ namespace tarch::accelerator {
     COMPILE_IF_ON_HOST(reducer.target = Reducer::combine(reducer.target, threadValue);)
   }
 
-  // The reducer parameter deduces Reducer, as the type of blockResults is a non-deduced context;
-  // the reducer's target is a host reference that no device thread dereferences.
+  // The reducer parameter deduces Reducer, because the type of blockResults is a non-deduced
+  // context. Its target is a host reference that no device thread dereferences.
   template <typename Reducer, typename Functor>
   __global__ void teamReduceKernel(
     const Functor                      functor,
@@ -94,7 +95,7 @@ namespace tarch::accelerator {
   // in a second call with that storage allocated. cudaMallocAsync and cudaFreeAsync need
   // CUDA Toolkit 11.2 or newer and a device with stream-ordered memory pools.
   template <typename CubCall>
-  inline void runCubReduction(const CubCall cubCall, const cudaStream_t stream) {
+  INLINE_METHOD void runCubReduction(const CubCall cubCall, const cudaStream_t stream) {
     void*       temporaryStorage      = nullptr;
     std::size_t temporaryStorageBytes = 0;
     CHECK_CUDA_ERROR(cubCall(temporaryStorage, temporaryStorageBytes));
@@ -104,7 +105,7 @@ namespace tarch::accelerator {
   }
 
   template <typename T>
-  inline void cubReduce(
+  INLINE_METHOD void cubReduce(
     [[maybe_unused]] const Max<T> reducer,
     const T* const                input,
     T* const                      output,
@@ -119,7 +120,7 @@ namespace tarch::accelerator {
     );
   }
   template <typename T>
-  inline void cubReduce(
+  INLINE_METHOD void cubReduce(
     [[maybe_unused]] const Min<T> reducer,
     const T* const                input,
     T* const                      output,
@@ -134,7 +135,7 @@ namespace tarch::accelerator {
     );
   }
   template <typename T>
-  inline void cubReduce(
+  INLINE_METHOD void cubReduce(
     [[maybe_unused]] const Sum<T> reducer,
     const T* const                input,
     T* const                      output,
@@ -149,7 +150,7 @@ namespace tarch::accelerator {
     );
   }
   template <typename Op, typename T>
-  inline void cubReduce(
+  INLINE_METHOD void cubReduce(
     [[maybe_unused]] const Custom<Op> reducer,
     const T* const                    input,
     T* const                          output,
@@ -174,7 +175,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer>
-  inline void finaliseReduction(
+  INLINE_METHOD void finaliseReduction(
     const Reducer                            reducer,
     const typename Reducer::ValueType* const deviceResult,
     const cudaStream_t                       stream
@@ -188,7 +189,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  GPU_CALLABLE_METHOD inline void parallelReduce(
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelReduce(
     const CudaTeam& team,
     const Range&    range,
     const Functor   functor,
@@ -202,7 +203,7 @@ namespace tarch::accelerator {
     tarch::accelerator::reduceOverTeam<Reducer>(team, threadAccumulator, reducer);
   }
   template <typename Reducer, typename Functor>
-  GPU_CALLABLE_METHOD inline void parallelReduce(
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelReduce(
     const CudaTeam&   team,
     const RangeMD<2>& range,
     const Functor     functor,
@@ -218,7 +219,7 @@ namespace tarch::accelerator {
     tarch::accelerator::reduceOverTeam<Reducer>(team, threadAccumulator, reducer);
   }
   template <typename Reducer, typename Functor>
-  GPU_CALLABLE_METHOD inline void parallelReduce(
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelReduce(
     const CudaTeam&   team,
     const RangeMD<3>& range,
     const Functor     functor,
@@ -236,7 +237,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -275,7 +276,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -302,7 +303,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     const int extentY = range.n[1];
@@ -315,7 +316,7 @@ namespace tarch::accelerator {
     );
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);

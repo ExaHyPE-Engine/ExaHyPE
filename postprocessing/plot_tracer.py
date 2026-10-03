@@ -8,7 +8,7 @@ def PlotTracer(argv=None):
 
     Plots one variable of one tracer over time.
 
-    The input is a CSV trajectory database of the exahype2.particles tracer action sets.
+    The input is a CSV database the ExaHyPE 2 tracers write.
 
     @param argv Argument list to parse. Defaults to sys.argv[1:].
     """
@@ -84,8 +84,7 @@ def PlotTracer(argv=None):
 
     var_name = "Value" if args.variable_name is None else args.variable_name
 
-    # The database is written with the plain file name, but users tend to pass it without the
-    # extension, so fall back to appending it.
+    # The file name may lack the .csv extension.
     candidates = [args.file_name, args.file_name + ".csv"]
     csvData = None
     for candidate in candidates:
@@ -104,8 +103,6 @@ def PlotTracer(argv=None):
     if not csvData:
         raise SystemExit("{} is empty".format(args.file_name))
 
-    # Extract some metadata about the positions of the various information in the csv file.
-    # These should always be the same but it's safer to check.
     header = csvData[0]
     timeIndex = header.index(" t")
     dataIndex = header.index(" data(0)") + args.v
@@ -120,11 +117,8 @@ def PlotTracer(argv=None):
             "--z was given but {} holds two-dimensional data".format(args.file_name)
         )
 
-    # Drop the header, plus any trailing blank line the writer may have left behind. Slicing the
-    # last row off unconditionally would discard a real snapshot in a file without one.
     csvData = [row for row in csvData[1:] if row]
 
-    # Filter out only the data from tracers at the specified positions
     def position_check(a):
         value = True
         if args.t_min is not None:
@@ -141,12 +135,7 @@ def PlotTracer(argv=None):
 
     csvData = [data for data in csvData if position_check(data)]
 
-    # Check how many tracers fit the filter by extracting the total numbers of number(0) and
-    # number(1) tuples that exist with the filter.
-    # The {number(0), number(1)} tuples should be unique for each tracer, therefore if there
-    # exists more than one value for either of these after filtering, there are multiple
-    # tracers that correspond to the filter.
-    # In the same way if there are none, none of the tracers correspond to the filter.
+    # The pair number(0), number(1) identifies a tracer.
     checkFirstIndexLength = set([data[firstNumberIndex] for data in csvData])
     checksecondIndexLength = set([data[secondNumberIndex] for data in csvData])
 
@@ -159,7 +148,6 @@ def PlotTracer(argv=None):
             "Specification was valid for more than one tracer, please clarify which you want through use of positions x, y and z"
         )
 
-    # Extract only the data from time and from the required value
     dt = []
     y = []
 
@@ -167,7 +155,6 @@ def PlotTracer(argv=None):
         dt.append(float(row[timeIndex]))
         y.append(float(row[dataIndex]))
 
-    # Sort this data in the direction of increasing time
     dt, y = zip(*sorted(zip(dt, y)))
 
     plt.plot(

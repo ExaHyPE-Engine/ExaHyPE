@@ -57,7 +57,7 @@ namespace {
   }
 
   /**
-   * Returns the derivative of the Lagrange basis function of node.
+   * Returns the constant derivative of the linear Lagrange basis function of node.
    */
   double getBasisDerivative(const int node) {
     const int other = 1 - node;
@@ -65,7 +65,7 @@ namespace {
   }
 
   /**
-   * Returns a new table in device memory, the memory the kernels read, with the values converted to Precision.
+   * Returns a new device table with the values converted to Precision.
    */
   template <typename Precision>
   Precision* getTableOf(const std::vector<double>& values) {
@@ -99,7 +99,7 @@ namespace {
   }
 
   /**
-   * The quadrature tables of the Gauss-Legendre basis of order one, in the layout of the generated tables.
+   * The Gauss-Legendre quadrature tables of order one in the layout of the generated tables.
    */
   template <typename Precision>
   class Quadrature final {
@@ -141,7 +141,7 @@ namespace {
   };
 
   /**
-   * The reference operators of the Gauss-Legendre basis of order one, in the layout of the generated tables.
+   * The Gauss-Legendre operators of order one in the layout of the generated tables.
    */
   template <typename Precision>
   class DGMatrices final {
@@ -186,7 +186,7 @@ namespace {
   };
 
   /**
-   * The PDE terms of every test solver: A copying boundary, no refinement, no wave speed, no flux.
+   * The PDE terms of every test solver without flux and wave speed.
    */
   template <typename Solver>
   struct CommonTerms {
@@ -237,7 +237,8 @@ namespace {
   /**
    * A solver with a linear initial condition, no flux and no wave speed, so a step changes nothing.
    */
-  struct LinearSolver final : exahype2::dg::rk::Solver<LinearSolver, double, double>, CommonTerms<LinearSolver> {
+  struct FixedRuleSolver final : exahype2::dg::rk::Solver<FixedRuleSolver, double, double>,
+                                 CommonTerms<FixedRuleSolver> {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -251,8 +252,8 @@ namespace {
     template <typename Precision>
     using DGMatrices = ::DGMatrices<Precision>;
 
-    LinearSolver() :
-      Solver(TimeStepFactor, "LinearSolver", {{"q", 1}}) {}
+    FixedRuleSolver() :
+      Solver(TimeStepFactor, "FixedRuleSolver", {{"q", 1}}) {}
 
     static INLINE_METHOD GPU_CALLABLE_METHOD double getProfile(const tarch::la::Vector<DIMENSIONS, double>& x) {
       double value = 1.0;
@@ -353,18 +354,11 @@ namespace {
     }
   };
 
-  /**
-   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
-   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
   }
 
-  /**
-   * Applies the refinement requests to the standing grid and moves the solver data through the
-   * regrid, so every slot the regrid keeps holds its data afterwards.
-   */
   template <typename Solver>
   void regridWithLiveData(
     Solver&                                       solver,
@@ -383,8 +377,8 @@ namespace {
   }
 
   int getNumberOfCellsOfLevel(const peano4::Partition& partition, const int level) {
-    return partition.getCells(peano4::Dependence::Local, level).size
-      + partition.getCells(peano4::Dependence::Remote, level).size;
+    return partition.getCells(peano4::Adjacency::Local, level).size
+      + partition.getCells(peano4::Adjacency::Remote, level).size;
   }
 
   exahype2::Limits getLimitsOfTheDomain() {
@@ -398,7 +392,8 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * Raises the accumulator for every node of one cell whose value differs from the expected value there.
+   * Increments the accumulator for every node of one cell whose value differs from the expected
+   * value there.
    */
   template <typename Pool, typename Expected>
   struct CountMismatchesAgainstExpected final {
@@ -426,9 +421,6 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Counts the nodes of every cell whose value differs from the expected value at the node.
-   */
   template <typename Solver, typename Expected>
   int getNumberOfMismatches(const Solver& solver, const peano4::Partition& partition, Expected expected) {
     int result = 0;
@@ -445,18 +437,12 @@ namespace {
     return result;
   }
 
-  /**
-   * Returns the profile of the linear solver at a position.
-   */
   struct LinearProfile final {
     GPU_CALLABLE_METHOD double operator()(const tarch::la::Vector<DIMENSIONS, double>& x) const {
-      return LinearSolver::getProfile(x);
+      return FixedRuleSolver::getProfile(x);
     }
   };
 
-  /**
-   * Returns one value at every position.
-   */
   struct ConstantProfile final {
     double value{0.0};
 
@@ -465,7 +451,7 @@ namespace {
     }
   };
 
-  int getNumberOfMismatchesAgainstTheProfile(const LinearSolver& solver, const peano4::Partition& partition) {
+  int getNumberOfMismatchesAgainstTheProfile(const FixedRuleSolver& solver, const peano4::Partition& partition) {
     return getNumberOfMismatches(solver, partition, LinearProfile{});
   }
 } // namespace
@@ -484,7 +470,7 @@ exahype2::dg::rk::tests::SolverTest::run() {
 }
 
 /**
- * Checks that the first time step after refinement uses the finer grid's stability bound.
+ * The first time step after a refinement uses the stability bound of the finer grid.
  */
 void
 exahype2::dg::rk::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
@@ -511,8 +497,8 @@ void
 exahype2::dg::rk::tests::SolverTest::testInitialisationWritesTheInitialConditionIntoEveryNode() {
   const auto& partition = buildGrid();
 
-  LinearSolver solver;
-  auto         constructionLimits           = getLimitsOfTheDomain();
+  FixedRuleSolver solver;
+  auto            constructionLimits        = getLimitsOfTheDomain();
   constructionLimits.maxAdmissiblePatchSize = CoarseWidth / SubdivisionFactor;
   solver.setLimits(constructionLimits);
   exahype2::RefinementRequests requests;
@@ -537,14 +523,14 @@ exahype2::dg::rk::tests::SolverTest::testInitialisationWritesTheInitialCondition
 }
 
 /**
- * The first step runs with a zero step size; every later one advances by the factor over the
- * square of the Runge-Kutta order times the mesh width over the admissible width.
+ * A time step without flux keeps the solution, and the time stamp advances by the fixed step size
+ * after a first step of size zero.
  */
 void
 exahype2::dg::rk::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp() {
   const auto& partition = buildGrid();
 
-  LinearSolver solver;
+  FixedRuleSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
   solver.allocate(partition);
   exahype2::RefinementRequests requests;
@@ -566,7 +552,7 @@ exahype2::dg::rk::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAnd
 }
 
 /**
- * Every stage of the unit source contributes the time step, so the weighted sum adds one time step.
+ * A unit source advances every node by the time step size.
  */
 void
 exahype2::dg::rk::tests::SolverTest::testASourceTermAdvancesEveryNodeByTheTimeStep() {
@@ -597,7 +583,7 @@ void
 exahype2::dg::rk::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution() {
   const auto& partition = buildGrid();
 
-  LinearSolver solver;
+  FixedRuleSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
   solver.allocate(partition);
   exahype2::RefinementRequests requests;
@@ -632,7 +618,7 @@ void
 exahype2::dg::rk::tests::SolverTest::testReleaseFreesEveryPool() {
   const auto& partition = buildGrid();
 
-  LinearSolver solver;
+  FixedRuleSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
   validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
   solver.allocate(partition);

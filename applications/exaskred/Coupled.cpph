@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 /**
- * The granular layer counts as submerged once a resolved water column covers it.
+ * Returns whether a water column above minimumWaterHeight covers the granular layer.
  */
 template <class Shortcuts, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -23,11 +23,8 @@ applications::exahype2::exaskred::coupled::getSlideGravity(
 }
 
 /**
- * Copies a state and zeroes each layer that is dry or nonfinite.
- *
- * The layers dry independently: A slide running over dry land keeps its flow
- * while the water above it is zeroed, and a water column keeps flowing where
- * the granular layer has drained away.
+ * Copies a state and zeroes each layer that is dry or not finite. The two layers dry independently
+ * of each other.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -78,11 +75,8 @@ applications::exahype2::exaskred::coupled::gatherSlideView(const T* const NOALIA
 }
 
 /**
- * Adds the advective and pressure fluxes of both layers.
- *
- * The water layer carries its pressure through the nonconservative product,
- * the granular layer through its depth-squared flux, so each layer keeps the
- * formulation its standalone scenarios validate.
+ * Writes the fluxes of both layers. The water pressure enters the nonconservative product and the
+ * granular pressure the flux, as in the standalone scenarios of each layer.
  */
 template <class Shortcuts, int NumberOfUnknowns, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -166,12 +160,9 @@ applications::exahype2::exaskred::coupled::maxEigenvalue(
 }
 
 /**
- * Adds both layers' hydrostatic products.
- *
- * The water layer presses against its depth and effective bathymetry
- * gradient, where the effective bathymetry is the terrain plus the granular
- * layer, so a moving slide lifts the water column and radiates a wave. The
- * granular layer feels the terrain slope under its buoyancy-reduced gravity.
+ * Writes the hydrostatic products of both layers. The water layer reads the gradient of the terrain
+ * plus the granular layer, so a moving slide lifts the water column. Under water, buoyancy reduces
+ * the gravity of the granular layer.
  */
 template <class Shortcuts, int NumberOfUnknowns, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -247,13 +238,9 @@ applications::exahype2::exaskred::coupled::diffusiveSourceTerm(
 }
 
 /**
- * Solves the nodal Riemann problems of one Galerkin face layer by layer.
- *
- * Each layer runs the well-balanced Rusanov solver on its own view: The water
- * over the effective bathymetry with constant gravity, the granular layer
- * over the terrain with buoyancy decided by the water column both sides
- * carry. Dry layers are sanitised first, and the terrain receives no flux.
- * Returns the larger maximal wave speed of the two layers.
+ * Solves the nodal Riemann problems of one Galerkin face with the well-balanced Rusanov solver, one
+ * layer at a time. The granular layer takes the submerged gravity where both sides are under water,
+ * and the terrain gets no flux. Returns the larger maximum wave speed of the two layers.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, int Order, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -396,8 +383,8 @@ applications::exahype2::exaskred::coupled::solveRiemannProblem(
 }
 
 /**
- * Solves one subcell interface layer by layer with the augmented-state
- * solver, mirroring the face treatment of the Galerkin scheme.
+ * Solves one subcell face with the augmented-state solver, one layer at a time like
+ * solveRiemannProblem().
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD double

@@ -54,7 +54,7 @@ if project.dimensions != 3:
         f"{project.dimensions}D."
     )
 
-# The plane between the two solvers is a cell boundary of the finest level; the low precision
+# The plane between the two solvers is a cell boundary of the finest level. The low-precision
 # solver owns the slab of one finest cell below the upper domain boundary.
 solver_interface_plane = (
     "(DomainOffset(1) + DomainSize(1) - DomainSize(1)"

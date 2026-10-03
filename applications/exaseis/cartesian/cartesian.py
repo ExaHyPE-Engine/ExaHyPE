@@ -42,8 +42,8 @@ project = exahype2.Project(
     ["applications", "exahype2", "exaseis"],
     "Cartesian",
     dimensions=3,
-    offset=[-4.5, 0.0, -4.5],  # thousand metres
-    size=[9.0, 9.0, 9.0],  # thousand metres
+    offset=[-4.5, 0.0, -4.5],  # kilometres
+    size=[9.0, 9.0, 9.0],  # kilometres
     periodic_bc=[False, False, False],
     executable="ExaSeis",
     min_end_time=args.end_time,

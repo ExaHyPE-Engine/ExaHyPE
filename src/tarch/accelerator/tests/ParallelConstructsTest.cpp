@@ -29,9 +29,6 @@ namespace {
     }
   };
 
-  /**
-   * Writes twice the linear index of the walk into values; extentY and extentZ shape the walk.
-   */
   struct WriteDoubledIndex final {
     double* values{nullptr};
     int     extentY{1};
@@ -48,9 +45,6 @@ namespace {
     }
   };
 
-  /**
-   * Writes twice the linear index of every entry of the range of one team into values.
-   */
   struct WriteDoubledIndexPerTeam final {
     double* values{nullptr};
     int     teamSize{0};
@@ -67,9 +61,6 @@ namespace {
     }
   };
 
-  /**
-   * Writes twice the linear index of every entry of the two-dimensional range of one team into values.
-   */
   struct WriteDoubledIndexPerTeam2D final {
     double* values{nullptr};
     int     extentX{0};
@@ -93,9 +84,6 @@ namespace {
     }
   };
 
-  /**
-   * Writes twice the linear index of every entry of the three-dimensional range of one team into values.
-   */
   struct WriteDoubledIndexPerTeam3D final {
     double* values{nullptr};
     int     extentX{0};
@@ -121,10 +109,6 @@ namespace {
     }
   };
 
-  /**
-   * Writes the linear index of every entry of the range of one team into scratch and twice the
-   * entry of scratch at the mirrored position of the team into values.
-   */
   struct MirrorWithinTeam final {
     double* scratch{nullptr};
     double* values{nullptr};
@@ -148,9 +132,6 @@ namespace {
     }
   };
 
-  /**
-   * Adds the entry of the walk to the accumulator; extentY and extentZ shape the walk.
-   */
   struct AddEntry final {
     const double* values{nullptr};
     int           extentY{1};
@@ -174,9 +155,6 @@ namespace {
     }
   };
 
-  /**
-   * Raises the accumulator of one team to the largest entry of the range of that team.
-   */
   struct RaiseMaximumPerTeam final {
     const double* values{nullptr};
     int           teamSize{0};
@@ -200,9 +178,6 @@ namespace {
     }
   };
 
-  /**
-   * Raises the accumulator of one team to the largest entry of the two-dimensional range of that team.
-   */
   struct RaiseMaximumPerTeam2D final {
     const double* values{nullptr};
     int           extentX{0};
@@ -228,9 +203,6 @@ namespace {
     }
   };
 
-  /**
-   * Raises the accumulator of one team to the largest entry of the three-dimensional range of that team.
-   */
   struct RaiseMaximumPerTeam3D final {
     const double* values{nullptr};
     int           extentX{0};
@@ -258,9 +230,6 @@ namespace {
     }
   };
 
-  /**
-   * Adds the one-based index of every entry of the flat, the two- and the three-dimensional range of one team.
-   */
   struct AddIndicesPerTeam final {
     int teamSize{0};
 
@@ -299,9 +268,6 @@ namespace {
     }
   };
 
-  /**
-   * Raises the two maxima of one team to the largest entry of the range of that team and its largest mirror.
-   */
   struct RaiseTwoMaximaPerTeam final {
     const double* values{nullptr};
     int           teamSize{0};
@@ -327,9 +293,6 @@ namespace {
     }
   };
 
-  /**
-   * Raises the two maxima to the largest entry of values and its largest mirror.
-   */
   struct RaiseTwoMaxima final {
     const double* values{nullptr};
 
@@ -341,9 +304,6 @@ namespace {
     }
   };
 
-  /**
-   * Lowers the accumulator to the smallest entry of values.
-   */
   struct LowerMinimumEntry final {
     const double* values{nullptr};
 
@@ -352,9 +312,6 @@ namespace {
     }
   };
 
-  /**
-   * Raises the accumulator to the largest entry of values.
-   */
   struct RaiseMaximumEntry final {
     const double* values{nullptr};
 
@@ -546,7 +503,7 @@ tarch::accelerator::tests::ParallelConstructsTest::testParallelForTeamRangeMD3()
 }
 
 /**
- * Checks that teamBarrier makes writes visible to the other team members.
+ * A teamBarrier call makes the writes of every team member visible to the other members.
  */
 void
 tarch::accelerator::tests::ParallelConstructsTest::testTeamBarrier() {
@@ -670,7 +627,7 @@ tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceTeam() {
 }
 
 /**
- * Checks seeded sums across consecutive team reductions.
+ * Consecutive reductions inside a team add up on top of the seeded target.
  */
 void
 tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceTeamSum() {
@@ -761,7 +718,7 @@ tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceCustom() {
 }
 
 /**
- * Checks a custom reduction over a flat range, seeded with a target the reduction has to keep.
+ * A custom reduction over a flat range keeps a seeded target that no entry exceeds.
  */
 void
 tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceCustomRange() {

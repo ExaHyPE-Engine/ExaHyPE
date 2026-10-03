@@ -42,13 +42,13 @@ boundary_conditions = """
     Qoutside[i] = Qinside[i];
   }
 
-  // Inlet boundary condition (x[0] = 0.0)
+  // The inlet lies at x[0] = 0.
   const double maxAdmissiblePatchSize = RuntimeParameters::getMaxAdmissiblePatchSize();
   if (tarch::la::smallerEquals(x[0], maxAdmissiblePatchSize)) {
     Qoutside[Shortcuts::rhoU + 0] = 1.0;
   }
 
-  // Outlet boundary condition
+  // The outlet lies at x[0] = DomainSize[0].
   if (tarch::la::greaterEquals(x[0], DomainSize[0] - maxAdmissiblePatchSize)) {
     Qoutside[Shortcuts::rhoU + 0] = Qinside[Shortcuts::rhoU + 0];
   }

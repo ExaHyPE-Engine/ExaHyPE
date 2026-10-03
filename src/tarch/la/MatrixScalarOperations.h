@@ -29,9 +29,6 @@ namespace tarch::la {
     const Scalar&         scalar
   );
 
-  /**
-   * Multiplies every component of the matrix with the scalar.
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix<Rows, Cols, Scalar> operator*(
     const Matrix<Rows, Cols, Scalar>& matrix,
@@ -53,9 +50,6 @@ namespace tarch::la {
     const Scalar&               scalar
   );
 
-  /**
-   * Multiplies every component of the matrix with the scalar.
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix<Rows, Cols, Scalar> operator*(
     const Scalar&                     scalar,

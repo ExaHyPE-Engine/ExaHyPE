@@ -12,6 +12,7 @@
 #include "exahype2/terms/RefinementCriterion.h"
 #include "peano4/Partition.h"
 #include "peano4/Regrid.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/MemoryLocation.h"
@@ -20,11 +21,6 @@ namespace exahype2::dg::rk {
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   class Solver;
 
-  /**
-   * A Runge-Kutta DG solver declares the terms every stage calls and the constants the node
-   * loops, the stage loop and the boundary update read. Its boundary conditions run in the
-   * compute precision.
-   */
   template <typename SolverType, typename Storage, typename Compute>
   concept SolverConcept = exahype2::terms::HasInitialCondition<SolverType, Storage>
     and exahype2::terms::HasBoundaryConditionsWhereNeeded<SolverType, Compute>
@@ -38,11 +34,8 @@ namespace exahype2::dg::rk {
 } // namespace exahype2::dg::rk
 
 /**
- * Advances the cells of one Runge-Kutta DG solver on the partition. Every stage writes the
- * volume terms of its stage state into the estimate pool, projects the stage state onto the
- * faces, solves the Riemann problems and adds the face integrals to the estimate; the final
- * state is the weighted sum of the estimates. Derived is the generated solver class as for
- * exahype2::dg::Solver, where DGOrder is the polynomial order, and adds RungeKuttaOrder.
+ * The Runge-Kutta DG solver family. Every stage writes one estimate per cell, and the new solution
+ * adds the weighted estimates. Derived also declares RungeKuttaOrder.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::dg::rk::Solver : public exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision> {
@@ -66,41 +59,45 @@ public:
   Solver& operator=(Solver&&)      = delete;
   ~Solver()                        = default;
 
-  Solver(
+  INLINE_METHOD Solver(
     double                                           timeStepFactor,
     const std::string&                               name,
     const std::vector<exahype2::plotter::DataField>& plottedFields
   );
 
-  void allocate(const peano4::Partition& partition);
-  void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
-  void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid, exahype2::RefinementRequests& requests);
-  void release();
+  INLINE_METHOD void allocate(const peano4::Partition& partition);
+  INLINE_METHOD void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void regrid(
+    const peano4::Partition&      partition,
+    const peano4::Regrid&         regrid,
+    exahype2::RefinementRequests& requests
+  );
+  INLINE_METHOD void release();
 
-  [[nodiscard]] tarch::AllocatedBytes getAllocatedBytes() const;
-  [[nodiscard]] double getTimeStepSizeFromCFL() const;
-  [[nodiscard]] double getFixedTimeStepSize() const;
-  [[nodiscard]] const EstimatePool& getEstimates() const;
+  [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
+  [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
+  [[nodiscard]] INLINE_METHOD double getFixedTimeStepSize() const;
+  [[nodiscard]] INLINE_METHOD const EstimatePool& getEstimates() const;
 
 private:
-  // Stage reads the PDE terms of Derived, so only function bodies and member initialisers name
-  // its constants: Derived is complete only once they are instantiated.
+  // Stage reads the PDE terms of Derived, which is complete only inside function bodies and member
+  // initialisers.
   using Stage = exahype2::dg::rk::Stage<Derived, ComputePrecision>;
 
   static constexpr int NumberOfRungeKuttaStages = Stage::Tableau::Stages;
 
-  void openStage(const peano4::Partition& partition, int stage, double timeStepSize);
-  void addFaceIntegrals(
+  INLINE_METHOD void openStage(const peano4::Partition& partition, int stage, double timeStepSize);
+  INLINE_METHOD void addFaceIntegrals(
     const peano4::Partition& partition,
-    peano4::Dependence       dependence,
+    peano4::Adjacency        adjacency,
     int                      stage,
     double                   timeStepSize
   );
-  [[nodiscard]] exahype2::dg::MaxEigenvalueStatistics combineFinalState(
+  [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics combineFinalState(
     const peano4::Partition& partition,
     double                   timeStepSize
   );
-  void reserveStageScratch(const peano4::Partition& partition);
+  INLINE_METHOD void reserveStageScratch(const peano4::Partition& partition);
 
   EstimatePool _estimates{Stage::EstimateValuesPerCell};
 

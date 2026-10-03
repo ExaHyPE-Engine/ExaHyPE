@@ -40,11 +40,8 @@ namespace exahype2::dg::rk::tests {
 
 TARGET_DECLARE
 /**
- * The explicit Runge-Kutta scheme of one order as a Butcher tableau: Nodes holds the fraction
- * of the time step every stage advances to, Matrix the weight of every earlier stage in a
- * stage, and Weights the weight of every stage in the final state. Order one is the explicit
- * Euler scheme, order two the midpoint scheme, order three Kutta's scheme and order four the
- * three-eighths scheme.
+ * The Butcher tableau of the explicit Runge-Kutta scheme of one order. Order one is the explicit
+ * Euler scheme, two the midpoint scheme, three Kutta's scheme and four the three-eighths rule.
  */
 template <>
 struct exahype2::dg::rk::ButcherTableau<1> final {
@@ -83,9 +80,8 @@ struct exahype2::dg::rk::ButcherTableau<4> final {
 };
 
 /**
- * One Runge-Kutta stage of one cell of Derived, the generated solver class, whose RungeKuttaOrder
- * picks the Butcher tableau. The estimates of a cell hold NumberOfUnknowns values per node, one
- * block per stage.
+ * One Runge-Kutta stage of one cell of Derived. The estimates of a cell store NumberOfUnknowns
+ * values per node, one block per stage.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::rk::Stage final {
@@ -185,9 +181,8 @@ private:
 };
 
 /**
- * Opens the stage on every listed cell: The estimate of the stage takes the volume terms of the
- * stage state, and the cell's own half of every face takes the face states and face fluxes of
- * that state. stageScratch holds one stage state per scratch chunk of the dispatch.
+ * Opens the stage on every listed cell. stageScratch stores one stage state per scratch chunk of
+ * the dispatch.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::rk::OpenStage final {
@@ -244,9 +239,8 @@ struct exahype2::dg::rk::AddStageFaceIntegrals final {
 };
 
 /**
- * Writes the weighted sum of the estimates over the solution of every listed cell, runs the
- * postprocessing of the patch and reduces the wave-speed maxima of the new solution of an
- * adaptive rule.
+ * Adds the weighted estimates to the solution of every listed cell, postprocesses it and reduces
+ * the wave-speed maxima with an adaptive rule.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::rk::CombineStages final {

@@ -92,8 +92,7 @@ max_eigenvalue = """
   return std::max(std::abs(normalVelocity - soundSpeed), std::abs(normalVelocity + soundSpeed));
 """.format(primitives=primitives)
 
-# Density and pressure preserve the blast's symmetries while detecting its
-# fronts.
+# Density and pressure have the symmetries of the blast and show its fronts.
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,

@@ -269,6 +269,10 @@ tarch::la::norm1(const Vector<4, Scalar>& vector) {
     + tarch::la::abs(vector._values[3]);
 }
 
+/**
+ * Rounds every square on its own before the sum, so swapping the first two components returns the
+ * same value bitwise.
+ */
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar
 tarch::la::norm2Squared(const Vector<Size, Scalar>& vector) {

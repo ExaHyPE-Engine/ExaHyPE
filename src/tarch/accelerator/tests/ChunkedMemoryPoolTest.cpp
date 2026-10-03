@@ -9,7 +9,7 @@
 
 namespace {
   TARGET_DECLARE
-  //! A cardinality that is not a multiple of the alignment block exercises the padding.
+  //! A chunk size that is no multiple of the alignment makes the pool pad every chunk.
   constexpr int ChunkSize = 5;
   TARGET_DECLARE_END
 
@@ -17,9 +17,6 @@ namespace {
 
   constexpr int MinimumSegmentSize = 1 << Pool::MinimumSegmentSizeExponent;
 
-  /**
-   * Writes a value that identifies the chunk into every element of it.
-   */
   void fillChunk(Pool& pool, const int slot, const double seed) {
     double* const chunk = pool.getChunk(slot);
     for (int element = 0; element < ChunkSize; element++) {
@@ -38,9 +35,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Writes the slot number into every element of the chunk of that slot.
-   */
   struct WriteSlotIntoEveryElement final {
     Pool::View chunks{};
 
@@ -52,9 +46,6 @@ namespace {
     }
   };
 
-  /**
-   * Adds every element of the chunk of one slot to the accumulator.
-   */
   struct AddElementsOfChunk final {
     Pool::ConstView chunks{};
 
@@ -228,8 +219,7 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testViewAddressesEveryChunk() 
 }
 
 /**
- * A device pool is written by a kernel through its view and read back by a reduction, so the
- * check never dereferences device memory on the host.
+ * A kernel writes every chunk of a device pool through its view.
  */
 void
 tarch::accelerator::tests::ChunkedMemoryPoolTest::testDeviceFillThroughView() {

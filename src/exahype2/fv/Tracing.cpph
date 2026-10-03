@@ -10,7 +10,7 @@
 
 TARGET_DECLARE
 /**
- * Returns the value of unknown in the volume of the patch that holds position.
+ * Returns the value of unknown in the patch volume that contains position.
  */
 template <int PatchSize, int NumberOfData, typename Storage>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -35,10 +35,9 @@ exahype2::fv::interpolatePiecewiseConstant(
 }
 
 /**
- * Returns the value of unknown at position from the multilinear interpolation between the
- * centres of the volumes around it. The weight of a corner volume is the product of the axis
- * weights 1 - |d|/h. Along an axis on which position lies beyond the first or the last volume
- * centre, the boundary volume keeps its weight, so the interpolant extends the boundary value.
+ * Returns the multilinear interpolation of unknown between the volume centres around position.
+ * Beyond the first or the last volume centre along an axis, the interpolant extends the boundary
+ * value.
  */
 template <int PatchSize, int NumberOfData, typename Storage>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -94,8 +93,7 @@ exahype2::fv::interpolatePiecewiseLinear(
 }
 
 /**
- * Writes the first unknowns of the patch at position into the particle: The k-th index of
- * FieldIndices names the data entry that receives unknown k. The scheme None writes nothing.
+ * Interpolates unknown k at position and writes it into the particle data entry FieldIndices[k].
  */
 template <int PatchSize, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -150,7 +148,7 @@ exahype2::fv::clampIntoPatch(
 }
 
 /**
- * Interpolates the fields the list names; the list carries the entries as a type.
+ * Deduces FieldIndices from the type of fields.
  */
 template <int PatchSize, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -175,13 +173,11 @@ exahype2::fv::interpolateFields(
 TARGET_DECLARE_END
 
 /**
- * Moves every particle of the set through the patch of its cell and sends every particle that
- * left its cell to the rank that holds it. A stage position of the integration outside the patch
- * reads the patch at its clamped image. Only a set that moves copies its values back to the host,
- * for the relocation.
+ * Moves every particle through the patch of its cell and sends it to the rank that owns its new
+ * cell. An integration stage outside the patch reads the patch at the clamped position.
  */
 template <int PatchSize, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
-void
+INLINE_METHOD void
 exahype2::fv::traceParticles(
   const peano4::Partition&                                partition,
   const Pool&                                             solution,

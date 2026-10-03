@@ -8,8 +8,8 @@
 #include <mpi.h>
 
 /**
- * Returns whether the database takes a snapshot of some particle of the rank at timeStamp. A time
- * stamp outside the closed window between initialRecordTime and lastRecordTime takes none.
+ * Returns whether database stores a snapshot of some particle of this rank at timeStamp within
+ * [initialRecordTime, lastRecordTime].
  */
 template <int NumberOfData>
 INLINE_METHOD bool
@@ -32,7 +32,8 @@ exahype2::particles::isSnapshotDue(
 }
 
 /**
- * Returns on every rank whether isSnapshotDue() holds on some rank. Every rank calls it at the same time.
+ * Returns on every rank whether isSnapshotDue() is true on some rank. Every rank calls this function
+ * collectively.
  */
 template <int NumberOfData>
 INLINE_METHOD bool
@@ -54,9 +55,8 @@ exahype2::particles::isSnapshotDueOnSomeRank(
 }
 
 /**
- * Adds one snapshot of every particle of the rank to the database. A time stamp outside the
- * closed window between initialRecordTime and lastRecordTime records nothing, and the particle
- * data leaves the device only when the database stores a snapshot of some particle.
+ * Adds a snapshot of every particle of this rank to database if isSnapshotDue() is true, and
+ * downloads the particle data only then.
  */
 template <int NumberOfData>
 INLINE_METHOD void

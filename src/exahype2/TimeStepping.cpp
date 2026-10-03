@@ -71,10 +71,6 @@ exahype2::TimeStepping::setLimits(const exahype2::Limits& limits) {
   _limits = limits;
 }
 
-/**
- * Commits the time step size the previous step admitted as the size of this step, clears the
- * wave speed maxima of this step and returns the size. A fixed rule keeps its size.
- */
 double
 exahype2::TimeStepping::startTimeStep() {
   if (_rule == Rule::Adaptive) {
@@ -106,9 +102,8 @@ exahype2::TimeStepping::raiseMaxScaledEigenvalue(const double eigenvalue) {
 }
 
 /**
- * Replaces both maxima of this step by their maxima over every rank. A rank whose maximum is
- * negative or not finite sends its bit pattern, and every rank takes that pattern as its
- * maximum, so every rank reads the same fault.
+ * Replaces both maxima of this step by their maxima over all ranks. A negative or non-finite
+ * maximum of one rank overwrites the maximum on every rank, so every rank reads the same fault.
  */
 void
 exahype2::TimeStepping::reduceMaxEigenvaluesAcrossRanks() {
@@ -179,10 +174,8 @@ exahype2::TimeStepping::reduceMeshWidthsAcrossRanks(const double localMinimum, c
 }
 
 /**
- * Stores the time step size the next time step takes: timeStepSizeFromCFL, or the distance
- * from the time stamp to the terminal time when that is smaller. A CFL time step size that is
- * negative or not finite is stored as it is and raises a non-critical assertion, and so does one
- * at the numerical zero.
+ * Stores timeStepSizeFromCFL as the size of the next step, clipped at the terminal time. A
+ * negative or non-finite size is stored unchanged.
  */
 void
 exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromCFL) {
@@ -200,8 +193,8 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
     return;
   }
   _admissibleTimeStepSizeOfNextStep = std::min(timeStepSizeFromCFL, timeStepSizeToTerminalTime);
-  // A step that leaves less than the rounding of the terminal time behind stretches onto it, so
-  // the run does not close with a step of a few times the machine epsilon.
+  // A step size within rounding of the remaining time grows to the remaining time, so no step of a
+  // few machine epsilons follows.
   const double terminalTimeTolerance = NumericalZero * std::max(1.0, std::abs(_limits.terminalTime));
   if (timeStepSizeToTerminalTime - _admissibleTimeStepSizeOfNextStep <= terminalTimeTolerance) {
     _admissibleTimeStepSizeOfNextStep = timeStepSizeToTerminalTime;
@@ -216,9 +209,6 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
   }
 }
 
-/**
- * Stores the size every following step of a fixed rule takes.
- */
 void
 exahype2::TimeStepping::setFixedTimeStepSize(const double timeStepSize) {
   assertion(_rule == Rule::Fixed);

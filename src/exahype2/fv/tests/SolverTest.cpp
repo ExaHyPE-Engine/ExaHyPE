@@ -38,8 +38,7 @@ namespace {
   TARGET_DECLARE_END
 
   /**
-   * A solver with one unknown on constant subcells, a linear initial condition, no flux and, with
-   * a fixed rule, no wave speed, so a step changes nothing.
+   * Solver without flux, whose fixed-rule time step leaves the linear initial condition unchanged.
    */
   template <exahype2::TimeStepping::Rule Rule>
   struct LinearSolverFor final : exahype2::fv::Solver<LinearSolverFor<Rule>, double, double> {
@@ -119,18 +118,11 @@ namespace {
 
   using LinearSolver = LinearSolverFor<exahype2::TimeStepping::Rule::Fixed>;
 
-  /**
-   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
-   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
   }
 
-  /**
-   * Applies the refinement requests to the standing grid and moves the solver data through the
-   * regrid, so every slot the regrid keeps holds its data afterwards.
-   */
   template <typename Solver>
   void regridWithLiveData(
     Solver&                                       solver,
@@ -149,8 +141,8 @@ namespace {
   }
 
   int getNumberOfCellsOfLevel(const peano4::Partition& partition, const int level) {
-    return partition.getCells(peano4::Dependence::Local, level).size
-      + partition.getCells(peano4::Dependence::Remote, level).size;
+    return partition.getCells(peano4::Adjacency::Local, level).size
+      + partition.getCells(peano4::Adjacency::Remote, level).size;
   }
 
   exahype2::Limits getLimitsOfTheDomain() {
@@ -163,10 +155,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Raises the accumulator for every volume of one cell whose value differs from the profile at
-   * the centre of the volume of level that covers it.
-   */
   struct CountMismatchesAgainstTheProfile final {
     peano4::Partition                partition{};
     LinearSolver::Patches::ConstView solution{};
@@ -208,9 +196,6 @@ namespace {
     }
   };
 
-  /**
-   * Raises the accumulator for every value of one cell that differs between the two solutions.
-   */
   struct CountDifferencesBetweenSolutions final {
     peano4::Partition                partition{};
     LinearSolver::Patches::ConstView current{};
@@ -228,9 +213,7 @@ namespace {
   TARGET_DECLARE_END
 
   /**
-   * Counts the volumes whose value differs from the profile at the centre of the volume of the
-   * given level that covers them: The volume itself on its own level, the covering coarse volume
-   * for a cell below that level.
+   * Returns the number of volumes whose value differs from the profile at the centre of the covering volume of level.
    */
   int getNumberOfMismatchesAgainstTheProfileOfLevel(
     const LinearSolver&      solver,
@@ -246,9 +229,6 @@ namespace {
     return mismatches;
   }
 
-  /**
-   * Counts the values of every cell that differ between the current and the previous solution.
-   */
   int getNumberOfDifferencesBetweenSolutions(const LinearSolver& solver, const peano4::Partition& partition) {
     int differences = 0;
     tarch::accelerator::parallelReduce(
@@ -276,9 +256,6 @@ exahype2::fv::tests::SolverTest::run() {
   testMethod(testReleaseFreesEveryPool);
 }
 
-/**
- * Checks the first time step on a refined grid against its smaller finite volumes.
- */
 void
 exahype2::fv::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
   const auto&                                             partition = buildGrid();
@@ -323,8 +300,7 @@ exahype2::fv::tests::SolverTest::testInitialisationWritesTheInitialConditionInto
 }
 
 /**
- * The first step runs with a zero step size; every later one advances by the factor times the
- * mesh width over the admissible width.
+ * The first step has size zero, every later one the factor times the mesh width over the admissible width.
  */
 void
 exahype2::fv::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp() {

@@ -9,8 +9,8 @@ namespace peano4::communication::tests {
 } // namespace peano4::communication::tests
 
 /**
- * Checks that the manager hands out distinct tags every rank agrees on and completes the
- * transfers it polls.
+ * Checks that the manager reserves the same distinct tags on every rank and completes the transfers
+ * it polls.
  */
 class peano4::communication::tests::CommunicationManagerTest final : public tarch::tests::TestCase {
 public:

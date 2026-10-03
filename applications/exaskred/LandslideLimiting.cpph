@@ -2,11 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 /**
- * Returns whether one state is finite, non-negative, and at rest when dry.
- *
- * A dry state may carry momentum only up to a tolerance derived from the dry
- * height and its gravity-wave velocity scale, so rounding noise on a drained
- * node never flags a cell while genuine flow on dry ground does.
+ * Returns whether a state is finite, has a non-negative height and is at rest when dry. A dry state
+ * may keep a momentum up to a rounding tolerance of the momentum scale of the dry height.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -43,13 +40,9 @@ applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerState(
 }
 
 /**
- * Returns whether every state of a cell is admissible and its friction stays
- * integrable.
- *
- * Beyond the per-state check, a wet, moving state must keep the cell-scaled
- * turbulent-friction stiffness below the given multiple of its gravity-wave
- * scale, so the explicit source update cannot dominate the admissible time
- * step by more than that factor.
+ * Returns whether every state of a cell is admissible and its friction stays integrable. For a wet,
+ * moving state, the turbulent-friction stiffness times the cell size stays below
+ * maxFrictionToWaveSpeedRatio times the wave speed.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -105,14 +98,9 @@ applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell(
 }
 
 /**
- * Returns whether the nodal height surface stays below the given curvature
- * bound.
- *
- * A rejected candidate often shows a single spiked node before it turns
- * unphysical, so the largest second difference of the height, in both index
- * directions, is compared against the local height span. A cell whose wettest
- * node is still dry passes, because a dry surface carries no meaningful
- * curvature.
+ * Returns whether the largest second difference of the nodal heights stays below maxCurvatureRatio
+ * times the height span of the cell. A single spiked node often precedes an unphysical state. A cell
+ * that is dry at every node passes.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -185,11 +173,9 @@ applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables(
 }
 
 /**
- * Widens the DMP relaxation of each observable to its dimensional floor.
- *
- * A drained region keeps the height observable within the dry height and the
- * momentum observables within the momentum a dry layer may carry, so rounding
- * noise around the wet-dry front never triggers the maximum principle.
+ * Returns the DMP relaxation of an observable, at least the dry height for the height and the dry
+ * momentum scale for a momentum. Rounding noise at the wet-dry front then cannot trigger the
+ * maximum principle.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(

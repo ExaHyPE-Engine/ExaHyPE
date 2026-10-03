@@ -11,7 +11,7 @@ namespace {
   using TimeoutPoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double>>;
 
   /**
-   * Warns about and aborts a wait on a request that the pending-request table does not hold.
+   * Warns about and aborts a wait on a request that the pending-request table does not track.
    */
   void reportUntrackedWait(
     const char*                 operation,
@@ -113,8 +113,7 @@ tarch::mpi::wait(MPI_Request* request, MPI_Status* status, std::source_location 
   while (not flag) {
     tarch::mpi::test(request, &flag, status, location);
     if (not flag) {
-      // The timeout check reads the clock and walks the pending-request table, which costs more
-      // than the request test, so it runs on the stride of the pacing.
+      // The timeout check costs more than the request test, so it runs on the stride of the pacing.
       if (pacing.reportProgressNow()) {
         if (not tarch::mpi::Diagnostics::getInstance().reportRequest(request, "MPI_Wait", location)) {
           reportUntrackedWait("MPI_Wait", location, startedWaiting, nextWarning, waitingStarted);

@@ -35,10 +35,6 @@ exahype2::particles::tests::TrajectoryRecordingTest::run() {
   testMethod(testASnapshotDueOnTheRankOfTheParticleIsDueOnEveryRank);
 }
 
-/**
- * Every rank finds a snapshot due when the database of the one rank that holds the particle takes
- * one, and none outside the record window or before the time delta passed.
- */
 void
 exahype2::particles::tests::TrajectoryRecordingTest::testASnapshotDueOnTheRankOfTheParticleIsDueOnEveryRank() {
   const int rank          = tarch::mpi::Rank::getInstance().getRank();

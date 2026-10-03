@@ -48,7 +48,7 @@ tarch::tasking::printUnmaskedThreads() {
 }
 
 /**
- * Counts the logical processors available through the process affinity mask.
+ * Returns the number of logical processors in the affinity mask of the process.
  */
 int
 tarch::tasking::getNumberOfUnmaskedThreads() {
@@ -72,9 +72,9 @@ tarch::tasking::getNumberOfUnmaskedThreads() {
 }
 
 /**
- * Returns whether the teams of the ranks on this node start more threads than the node or the
- * affinity mask of this rank holds logical processors. The thread count comes from
- * OMP_NUM_THREADS, as the OpenMP runtime fixes its wait policy when it starts.
+ * Returns whether the ranks on this node start more threads than the node or the affinity mask of
+ * this rank has logical processors. The thread count comes from OMP_NUM_THREADS, because the OpenMP
+ * runtime fixes its wait policy when it starts.
  */
 bool
 tarch::tasking::oversubscribesNode() {

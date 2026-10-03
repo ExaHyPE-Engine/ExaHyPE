@@ -9,8 +9,7 @@ namespace exahype2::dg::ader::tests {
 } // namespace exahype2::dg::ader::tests
 
 /**
- * Checks the prediction of one cell, the space-time predictor of its system followed by the
- * volume integral, against solutions it reproduces exactly.
+ * Checks the predictor phase of one cell against solutions it reproduces exactly.
  */
 class exahype2::dg::ader::tests::PredictorTest final : public tarch::tests::TestCase {
 public:

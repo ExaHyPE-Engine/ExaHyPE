@@ -1,17 +1,12 @@
 // This file is part of the ExaHyPE 2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 //
-// This is the *exercise* implementation of the shallow-water solver. The bodies
-// below are intentionally left as stubs: The project compiles and runs as is,
-// but the simulation does nothing physical until you fill in the TODOs. Work
-// through the steps in ShallowWater.ipynb. Worked solutions are given in the
-// documentation (pages "Part 2 - Solution to Exercise 1" and
-// "Part 2 - Solution to Exercise 2").
+// The function bodies are compilable stubs of the exercises in ShallowWater.ipynb. With the stubs,
+// Q keeps its initial state. The documentation pages "Part 2 - Solution to Exercise 1" and
+// "Part 2 - Solution to Exercise 2" contain the solutions.
 //
-// The conserved variables are addressed through the generated Shortcuts enum:
-//   Shortcuts::h        water height          (1 component)
-//   Shortcuts::hu       momentum h*u          (2 components: +0 is x, +1 is y)
-//   Shortcuts::b        bathymetry            (1 component)
+// Q stores the water height at Shortcuts::h, the momentum h*u at Shortcuts::hu + 0 and
+// Shortcuts::hu + 1, and the bathymetry at Shortcuts::b.
 #include "ADERDGSolver.h"
 
 void

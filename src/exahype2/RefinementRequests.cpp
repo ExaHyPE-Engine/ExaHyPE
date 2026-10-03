@@ -14,7 +14,7 @@
 
 namespace {
   /**
-   * Holds the erase vote of one child cell with the level and lattice position of its parent cell.
+   * Erase vote of one child cell, with the level and lattice position of its parent.
    */
   struct EraseVote final {
     int                                level{0};
@@ -22,7 +22,7 @@ namespace {
     int                                child{0};
     int                                slot{-1};
 
-    bool namesTheSameCell(const EraseVote& other) const noexcept {
+    [[nodiscard]] bool hasTheSameParentAs(const EraseVote& other) const noexcept {
       if (level != other.level) {
         return false;
       }
@@ -61,8 +61,7 @@ namespace {
   }
 
   /**
-   * Returns the erase votes of the cells below the root, sorted so the votes of one parent stand
-   * next to each other in the order of their children.
+   * Returns the erase votes of the cells below the root, sorted by parent and then by child.
    */
   std::vector<EraseVote> getSortedEraseVotes(
     const std::vector<std::uint8_t>& votes,
@@ -91,14 +90,14 @@ namespace {
   }
 
   /**
-   * Calls visit with the index of the first vote of every parent whose children all vote for
-   * the erase; the votes of that parent follow in the order of the children.
+   * Calls visit with the index of the first vote of every parent whose children all vote Erase.
+   * eraseVotes is sorted by parent and then by child.
    */
   template <typename Visitor>
   void forEachCompleteSiblingSet(const std::vector<EraseVote>& eraseVotes, const Visitor& visit) {
     for (std::size_t vote = 0; vote < eraseVotes.size();) {
       std::size_t next = vote + 1;
-      while (next < eraseVotes.size() and eraseVotes[next].namesTheSameCell(eraseVotes[vote])) {
+      while (next < eraseVotes.size() and eraseVotes[next].hasTheSameParentAs(eraseVotes[vote])) {
         assertion(
           eraseVotes[next].child > eraseVotes[next - 1].child,
           eraseVotes[next].child,
@@ -120,9 +119,6 @@ exahype2::RefinementRequests::clear(const int numberOfSlots) {
   _votes.assign(static_cast<std::size_t>(numberOfSlots), NoVote);
 }
 
-/**
- * Adds the commands indexed by slot for the cells on which the solver votes.
- */
 void
 exahype2::RefinementRequests::merge(
   const std::vector<exahype2::RefinementCommand>& commands,
@@ -146,9 +142,8 @@ exahype2::RefinementRequests::merge(const exahype2::RefinementCommand command, c
 }
 
 /**
- * Returns the requests of every rank in one sorted list. A refine request names the voting cell,
- * an erase request the parent whose child cells all vote for it. Collective over all ranks, so
- * every rank derives the same list.
+ * Returns the sorted refinement requests of all ranks. Every rank calls this function collectively
+ * and returns the same list.
  */
 std::vector<peano4::RefinementRequest>
 exahype2::RefinementRequests::getRefinementRequests(const peano4::Partition& partition) const {
@@ -174,9 +169,9 @@ exahype2::RefinementRequests::getRefinementRequests(const peano4::Partition& par
     requests.push_back(request);
   });
 
-  const auto&    rank          = tarch::mpi::Rank::getInstance();
-  const int      numberOfRanks = rank.getNumberOfRanks();
-  const MPI_Comm communicator  = rank.getCommunicator();
+  const auto& rank          = tarch::mpi::Rank::getInstance();
+  const int   numberOfRanks = rank.getNumberOfRanks();
+  MPI_Comm    communicator  = rank.getCommunicator();
   if (numberOfRanks > 1) {
     constexpr auto RequestSize = static_cast<int>(sizeof(peano4::RefinementRequest));
     const auto     localBytes  = static_cast<std::size_t>(requests.size()) * RequestSize;

@@ -13,9 +13,8 @@ int tarch::mpi::Rank::_nextFreeTag     = 0;
 tarch::mpi::Rank tarch::mpi::Rank::_singleton;
 
 /**
- * Reserves numberOfTags consecutive message tags and returns the first one. A caller reserves tags
- * during static initialisation, so a reservation writes a log line only after init() has read the
- * upper tag bound.
+ * Reserves numberOfTags consecutive message tags and returns the first one. A reservation during
+ * static initialisation, before init() reads the upper tag bound, skips the bound check.
  */
 int
 tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName, const int numberOfTags) {
@@ -34,10 +33,8 @@ tarch::mpi::Rank::isInitialised() const {
 }
 
 /**
- * Shuts the MPI environment down and runs before the final return statement of
- * main. Compilers differ in when they destroy a static object, so a shutdown from
- * a destructor can run after main returns, where Scalasca's instrumentation
- * reports an error.
+ * Finalises MPI. A caller calls it before main() returns, because Scalasca reports an error for an
+ * MPI shutdown from a static destructor.
  */
 void
 tarch::mpi::Rank::shutdown() {
@@ -82,13 +79,7 @@ tarch::mpi::Rank::validateReservedTagsAreSupported() {
 }
 
 /**
- * Initialises the MPI environment and the program instance. argc and argv are in
- * and out parameters, because an MPI implementation removes its own arguments
- * before it returns.
- *
- * @return Whether initialisation succeeded.
- *
- * @see shutdown
+ * Initialises MPI and returns whether it succeeded. MPI removes its own arguments from argc and argv.
  */
 bool
 tarch::mpi::Rank::init(int* const argc, char*** const argv) {
@@ -125,8 +116,7 @@ tarch::mpi::Rank::init(int* const argc, char*** const argv) {
     return false;
   }
 
-  // MPI_Comm_get_attr hands the upper tag bound out through a pointer to a void
-  // pointer, so the value is read from the pointer that comes back.
+  // MPI_Comm_get_attr() returns a pointer to the upper tag bound.
   int   attributeFound{0};
   void* rawMaximumTag{nullptr};
   MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, static_cast<void*>(&rawMaximumTag), &attributeFound);
@@ -139,8 +129,8 @@ tarch::mpi::Rank::init(int* const argc, char*** const argv) {
 
   MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
-  // Node layout: The split groups the ranks that address the same memory, the lowest rank of a group
-  // is the master of its node, and the number of masters is the number of nodes.
+  // The split groups the ranks of one node. The lowest rank of a node is its master, and the number
+  // of masters is the number of nodes.
   MPI_Comm nodeCommunicator{MPI_COMM_NULL};
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, _rank, MPI_INFO_NULL, &nodeCommunicator);
   int nodeRank{0};
@@ -156,33 +146,23 @@ tarch::mpi::Rank::init(int* const argc, char*** const argv) {
   return _initIsCalled;
 }
 
-/**
- * @return Number of distinct compute nodes the ranks run on.
- */
 int
 tarch::mpi::Rank::getNumberOfNodes() const {
   return _numberOfNodes;
 }
 
-/**
- * @return Number of ranks on the node of this rank, this rank included.
- */
 int
 tarch::mpi::Rank::getNumberOfRanksOnNode() const {
   return _numberOfRanksOnNode;
 }
 
-/**
- * @return Rank of this process among the ranks of its node, counted from zero.
- */
 int
 tarch::mpi::Rank::getRankOnNode() const {
   return _rankOnNode;
 }
 
 /**
- * @return Whether this rank is the lowest-ranked process on its node, which
- *   lets a caller count per-node data exactly once.
+ * Returns whether this rank is the lowest rank on its node.
  */
 bool
 tarch::mpi::Rank::isNodeMaster() const {
@@ -200,9 +180,6 @@ tarch::mpi::Rank::getNumberOfRanks() const {
   return _numberOfRanks;
 }
 
-/**
- * Returns the singleton instance. init() establishes its MPI state.
- */
 tarch::mpi::Rank&
 tarch::mpi::Rank::getInstance() {
   return _singleton;

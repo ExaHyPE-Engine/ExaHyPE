@@ -2,44 +2,39 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "CSVReader.h"
 
+/**
+ * Reads every line of the CSV file at filepath after the first skipFirstNLines lines.
+ */
 tarch::reader::CSVReader::CSVReader(const std::string& filepath, const int skipFirstNLines) {
-  std::ifstream csvFile(filepath.c_str());
+  std::ifstream csvFile(filepath);
   if (not csvFile.is_open()) {
-    std::stringstream ss;
-    ss << "Could not open CSV file at \"" << filepath << "\".";
-    throw std::runtime_error(ss.str());
+    throw std::runtime_error("Could not open CSV file at \"" + filepath + "\".");
   }
-  {
-    std::string line;
-    int         lineNumber = 0;
-    while (getline(csvFile, line)) {
-      ++lineNumber;
-      if (lineNumber > skipFirstNLines) {
-        csvLines.push_back(line);
-      }
+
+  std::string line;
+  int         lineNumber = 0;
+  while (std::getline(csvFile, line)) {
+    lineNumber++;
+    if (lineNumber > skipFirstNLines) {
+      _rows.push_back(line);
     }
   }
-  numberOfRows = csvLines.size();
 }
 
-tarch::reader::CSVReader::~CSVReader() {
-  numberOfRows = -1;
-  csvLines.clear();
-  csvLines.shrink_to_fit();
-}
-
-std::string
+/**
+ * Returns the row with the index rowIndex, counted from zero.
+ */
+const std::string&
 tarch::reader::CSVReader::getRow(const int rowIndex) const {
-  if (rowIndex >= numberOfRows) {
-    std::stringstream ss;
-    ss << "Illegal row index " << rowIndex << " for maximum number of rows " << numberOfRows << ".";
-    throw std::runtime_error(ss.str());
+  if (rowIndex < 0 or rowIndex >= getNumberOfRows()) {
+    throw std::runtime_error(
+      "Illegal row index " + std::to_string(rowIndex) + " for " + std::to_string(getNumberOfRows()) + " rows."
+    );
   }
-
-  return csvLines.at(rowIndex);
+  return _rows[static_cast<std::size_t>(rowIndex)];
 }
 
 int
 tarch::reader::CSVReader::getNumberOfRows() const {
-  return numberOfRows;
+  return static_cast<int>(_rows.size());
 }

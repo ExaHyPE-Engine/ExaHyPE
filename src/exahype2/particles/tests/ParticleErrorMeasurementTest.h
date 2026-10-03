@@ -8,9 +8,6 @@ namespace exahype2::particles::tests {
   class ParticleErrorMeasurementTest;
 } // namespace exahype2::particles::tests
 
-/**
- * Checks that the position errors of every particle of every rank reach the three norms.
- */
 class exahype2::particles::tests::ParticleErrorMeasurementTest final : public tarch::tests::TestCase {
 public:
   ParticleErrorMeasurementTest();

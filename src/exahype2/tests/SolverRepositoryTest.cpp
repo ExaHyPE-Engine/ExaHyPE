@@ -16,7 +16,7 @@ namespace {
   constexpr int Depth = 2;
 
   /**
-   * A solver with OwnsCells reports the cells it holds data on; the other one holds data on every cell.
+   * With OwnsCells, the solver reports its own number of cells, and without it the solver has data on every cell.
    */
   template <bool OwnsCells>
   struct RecordingSolver final {
@@ -89,8 +89,7 @@ exahype2::tests::SolverRepositoryTest::run() {
 }
 
 /**
- * The time stamps, cells, degrees of freedom and bytes of the project come from every solver, and a
- * solver without own cells counts every cell of the partition.
+ * A solver without its own cell count counts every cell of the partition.
  */
 void
 exahype2::tests::SolverRepositoryTest::testTheRepositoryReducesTheValuesOfEverySolver() {
@@ -123,9 +122,6 @@ exahype2::tests::SolverRepositoryTest::testTheRepositoryReducesTheValuesOfEveryS
   validateEquals(repository.getAllocatedBytes().device, std::size_t{256});
 }
 
-/**
- * Every phase call reaches every solver once, and an empty partition yields no refinement request.
- */
 void
 exahype2::tests::SolverRepositoryTest::testEveryPhaseCallReachesEverySolver() {
   RecordingSolver<false>     first;

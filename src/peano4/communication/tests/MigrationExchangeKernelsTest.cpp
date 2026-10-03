@@ -173,7 +173,8 @@ peano4::communication::tests::MigrationExchangeKernelsTest::testRestrictFillsThe
 }
 
 /**
- * The send buffer holds the kept cell, the interpolated child and the restricted parent in the order of the cells.
+ * The gather writes the kept cell, the interpolated child and the restricted parent into the send
+ * buffer in the order of the cells.
  */
 void
 peano4::communication::tests::MigrationExchangeKernelsTest::testGatherTakesEveryKindOfSentCell() {

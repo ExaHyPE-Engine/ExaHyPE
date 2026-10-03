@@ -17,8 +17,8 @@ namespace {
   constexpr int ChunkSize = 4;
 
   /**
-   * Raises the accumulator when the scratch chunk of the work item lies outside the chunks of
-   * memory or loses a value before the work item reads it back.
+   * Counts a work item whose scratch chunk lies outside memory or loses a value before the work
+   * item reads it back.
    */
   struct CountScratchViolation final {
     int* memory{nullptr};
@@ -43,9 +43,6 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Returns the number of work items of a dispatch over workItems that violate their scratch chunk.
-   */
   int getNumberOfScratchViolations(const int workItems, const int chunks, int* const memory) {
     int violations = 0;
     tarch::accelerator::parallelReduce(
@@ -67,8 +64,8 @@ tarch::accelerator::tests::ScratchTest::run() {
 }
 
 /**
- * Every work item of a dispatch names a chunk below the chunk count, and a work item that
- * writes its number into its chunk reads it back before the chunk changes hands.
+ * Every work item of a dispatch gets a chunk below the chunk count and reads back what it writes
+ * into it.
  */
 void
 tarch::accelerator::tests::ScratchTest::testEveryWorkItemNamesAChunkOfTheDispatch() {
@@ -85,7 +82,8 @@ tarch::accelerator::tests::ScratchTest::testEveryWorkItemNamesAChunkOfTheDispatc
 }
 
 /**
- * The chunks cover the team of the enclosing parallel region when a nested region would hold one thread.
+ * The chunks cover the team of the enclosing parallel region even when a nested region would run one
+ * thread.
  */
 void
 tarch::accelerator::tests::ScratchTest::testTheChunksCoverTheTeamOfTheEnclosingRegion() {

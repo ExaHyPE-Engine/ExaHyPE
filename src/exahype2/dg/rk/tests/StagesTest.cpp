@@ -20,8 +20,7 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * The layout constants of a generated solver of order two with three Runge-Kutta stages, two
-   * unknowns and one auxiliary variable; the stub solvers derive from it.
+   * The layout constants the stub solvers of the Runge-Kutta tests derive from.
    */
   struct StubLayout {
     static constexpr int DGOrder                    = 2;
@@ -53,9 +52,6 @@ namespace {
   constexpr double WaveSpeed             = 3.0;
   constexpr double UniformCellExtent     = 0.5;
 
-  /**
-   * A flux that scales the state by one plus the axis number.
-   */
   struct FluxTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
@@ -72,9 +68,6 @@ namespace {
     }
   };
 
-  /**
-   * A diffusive flux that sums one plus the axis number times the gradient over the axes.
-   */
   struct DiffusiveFluxTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       [[maybe_unused]] const double* NOALIAS const                  state,
@@ -95,9 +88,6 @@ namespace {
     }
   };
 
-  /**
-   * A source that scales the state by one plus the unknown number.
-   */
   struct SourceTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void sourceTerm(
       const double* NOALIAS const                                   state,
@@ -113,9 +103,6 @@ namespace {
     }
   };
 
-  /**
-   * A product that returns the gradient.
-   */
   struct ProductTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
       [[maybe_unused]] const double* NOALIAS const                  state,
@@ -134,7 +121,7 @@ namespace {
   };
 
   /**
-   * A wave speed that is WaveSpeed at the end of the time step of the tests.
+   * A wave speed that is nonzero only at the end of the time step of the tests.
    */
   struct WaveSpeedTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
@@ -159,9 +146,8 @@ namespace {
   struct WaveSpeedSolver final : StubLayout, WaveSpeedTerm {};
 
   /**
-   * The acoustic flux along an axis carries the velocity component of that axis into the
-   * pressure and the pressure into that velocity component, so a swap of two axes maps the flux
-   * onto itself.
+   * A solver whose acoustic flux along an axis couples the pressure with the velocity of that axis,
+   * so a swap of two axes maps the flux onto itself.
    */
   struct AcousticSolver final {
     static constexpr int DGOrder                    = StubLayout::DGOrder;
@@ -190,7 +176,7 @@ namespace {
   constexpr int AcousticUnknowns = AcousticSolver::NumberOfUnknowns;
 
   /**
-   * Returns the node that holds the values of the given node once the first two axes swap.
+   * Returns the node that node moves to when the first two axes swap.
    */
   int getMirroredNode(const int node) {
     const auto                         index = peano4::dDelinearised(node, NodesPerAxis);
@@ -201,7 +187,7 @@ namespace {
   }
 
   /**
-   * Returns the unknown that holds the value of the given unknown once the first two axes swap.
+   * Returns the unknown that unknown moves to when the first two axes swap.
    */
   int getMirroredUnknown(const int unknown) {
     if (unknown == 1) {
@@ -233,9 +219,6 @@ namespace {
     }
   }
 
-  /**
-   * Returns the quadrature weight of every face node as the product of the weights of its face axes.
-   */
   std::array<double, NodesPerFace> getFaceQuadratureWeights(const Tables& tables) {
     std::array<double, NodesPerFace> weights{};
     for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
@@ -250,9 +233,6 @@ namespace {
     return weights;
   }
 
-  /**
-   * Holds the face states and face fluxes of every face of one cell and the pointers the kernels take.
-   */
   struct FaceHalves final {
     double  states[peano4::FacesPerCell][StateValuesPerFace]{};
     double  fluxes[peano4::FacesPerCell][FluxValuesPerFace]{};
@@ -268,9 +248,6 @@ namespace {
   };
 
   TARGET_DECLARE
-  /**
-   * Points the face arrays of one cell into the flat buffers, one block per cell and face.
-   */
   INLINE_METHOD GPU_CALLABLE_METHOD void collectFacePointers(
     const int     cell,
     double* const faceStates,
@@ -285,9 +262,6 @@ namespace {
     }
   }
 
-  /**
-   * Opens the stage of one cell into its estimates and its faces.
-   */
   template <typename Solver>
   struct OpenStageOfCell final {
     typename StageOf<Solver>::Weights weights{};
@@ -326,9 +300,6 @@ namespace {
     }
   };
 
-  /**
-   * Closes the step of one cell over its cell state.
-   */
   struct CloseStepOfCell final {
     StageOf<FullSolver>::Weights weights{};
     double*                      cellStates{nullptr};
@@ -353,9 +324,6 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Opens the stage of every cell on the device and copies the estimates and the faces back.
-   */
   template <typename Solver>
   void openOnDevice(
     const Tables&                            tables,
@@ -397,9 +365,6 @@ namespace {
     deviceFaceFluxes.copyBack(faceFluxes);
   }
 
-  /**
-   * Closes the step of every cell on the device and copies the cell states back.
-   */
   void closeOnDevice(
     const exahype2::dg::tests::CellChain& geometry,
     const StageOf<FullSolver>::Weights&   weights,
@@ -535,7 +500,7 @@ exahype2::dg::rk::tests::StagesTest::testTheCombinationWritesInPlace() {
 }
 
 /**
- * A state that is constant over the cell has a flux whose divergence is zero bitwise.
+ * A constant state gives a zero flux divergence bitwise.
  */
 void
 exahype2::dg::rk::tests::StagesTest::testAConstantFluxGivesZerosBitwise() {
@@ -882,8 +847,8 @@ exahype2::dg::rk::tests::StagesTest::testAConstantStateOpensAStageWithAZeroEstim
 }
 
 /**
- * The face integrals change the estimate of the given stage like the face integral of the toolbox and leave the other
- * stages.
+ * The face integrals change the estimate of the given stage like exahype2::dg::addFaceIntegrals()
+ * and leave the other stages unchanged.
  */
 void
 exahype2::dg::rk::tests::StagesTest::testTheFaceIntegralsReachTheEstimateOfTheStageAlone() {
@@ -935,7 +900,8 @@ exahype2::dg::rk::tests::StagesTest::testTheFaceIntegralsReachTheEstimateOfTheSt
 }
 
 /**
- * The close writes the weighted sum of the estimates over the cell state and reports the wave speeds of that state.
+ * close() adds the weighted estimates to the cell state in place and reports the wave speeds of the
+ * result.
  */
 void
 exahype2::dg::rk::tests::StagesTest::testTheCloseWritesTheWeightedSumInPlaceAndReportsTheWaveSpeeds() {
@@ -1033,7 +999,7 @@ exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeOpensADiffusiveS
 }
 
 /**
- * Opens one stage of Derived on every cell of the cell chain on the device and on the host and compares the results.
+ * Checks that opening a stage of Derived on the device reproduces the serial host loop.
  */
 template <typename Derived>
 void

@@ -41,7 +41,7 @@ void
 tarch::database::GlobalTimeSeriesDatabase::writeUnwrittenSnapshots(std::ostream& file) {
   const int totalSnapshotCount     = static_cast<int>(_data.size());
   const int unwrittenSnapshotCount = totalSnapshotCount - _numberOfEntriesWrittenToFile;
-  // New rows sit at the front of the newest-first list; emit them oldest-first.
+  // The list stores the newest row first, so the unwritten rows are written in reverse.
   std::vector<const Snapshot*> unwrittenSnapshots;
   unwrittenSnapshots.reserve(unwrittenSnapshotCount);
   auto snapshot = _data.begin();
@@ -72,9 +72,8 @@ tarch::database::GlobalTimeSeriesDatabase::setDataName(const std::string& dataNa
 }
 
 /**
- * Determines whether a new measurement is appended as a new time stamp, replaces
- * the newest entry (same time stamp), or is discarded because not enough time
- * has passed.
+ * Returns whether a measurement at timestamp appends a row, replaces the newest row with the same
+ * time stamp, or comes too early and is ignored.
  */
 tarch::database::SnapshotDatabase::AddSnapshotAction
 tarch::database::GlobalTimeSeriesDatabase::getAction(const double timestamp) const {
@@ -99,10 +98,9 @@ tarch::database::GlobalTimeSeriesDatabase::isSnapshotDue(const double timestamp)
 }
 
 /**
- * Adds one measurement while holding the database lock across the decision and mutation: A
- * repeated time stamp replaces the newest row, and the next flush rewrites the file when that row
- * is on disk. A later accepted time stamp is prepended. A database without an output file name
- * keeps its rows in memory only.
+ * Adds one measurement. A repeated time stamp replaces the newest row, and the next flush rewrites
+ * the file when that row is on disk. A database without an output file name keeps its rows in
+ * memory only.
  */
 void
 tarch::database::GlobalTimeSeriesDatabase::addGlobalSnapshot(

@@ -9,8 +9,8 @@ import sys
 import numpy as np
 from scipy.spatial import cKDTree
 
-# The dual import works both as a package and when this script is
-# run directly from the postprocessing/ directory (see render_solution.py).
+# The first import works in the package, and the second one in a direct run from the
+# postprocessing/ directory.
 try:
     from postprocessing.solution_io import MeshSnapshot, SolutionSource
 except ImportError:
@@ -148,7 +148,7 @@ def mirror_values(values: np.ndarray, mirror: str, kind: str) -> np.ndarray:
 
 
 def cell_geometry(snapshot: MeshSnapshot) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Per-cell corner coordinates, centres and sizes in float64."""
+    """Returns the corner coordinates, the centres and the sizes of the cells in float64."""
     points = np.asarray(snapshot.points, dtype=np.float64)
     cells = snapshot.cells
     if not isinstance(cells, np.ndarray):
@@ -182,17 +182,15 @@ def check_snapshot(
             :, [second_axis, first_axis]
         ]
 
-    # Pair every mirrored cell with its nearest original cell. Sorting signature
-    # rows instead mispairs cells whose stored coordinates sit across a rounding
-    # boundary under the mirror arithmetic.
+    # Pair every mirrored cell with its nearest original cell, because the mirror
+    # arithmetic rounds the coordinates.
     tree = cKDTree(np.column_stack([centres, sizes]))
     distances, partners = tree.query(
         np.column_stack([mirrored_centres, mirrored_sizes])
     )
 
-    # Geometry tolerance per pair: Far above the float32 storage rounding of the
-    # coordinates and far below the cell's own width, so a cell displaced by a
-    # fraction of its size never passes, however small the cell.
+    # The tolerance lies far above the float32 rounding of the coordinates and far
+    # below the cell width.
     per_cell_tolerance = 1.0e-3 * sizes.min(axis=1)
     if bool((distances > per_cell_tolerance).any()) or len(np.unique(partners)) != len(
         partners
@@ -214,8 +212,8 @@ def check_snapshot(
             values = mirror_values(values, mirror, kind)
         if centering == "cell":
             return values.reshape(len(centres), -1)
-        # Nodal data: Bring each cell's nodes into a canonical order through the node
-        # offsets from the cell centre, quantised well below the node spacing.
+        # Nodal values sort by the offsets of their nodes from the cell centre, quantised well below
+        # the node spacing.
         base = mirrored_centres if transformed else centres
         offsets = (
             mirror_transform(corners, centre, mirror) if transformed else corners

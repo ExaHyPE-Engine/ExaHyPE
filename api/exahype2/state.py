@@ -6,10 +6,10 @@ import exahype2.codegen
 
 
 class State:
-    """Counts the unknowns and auxiliary variables of a solver and names their positions.
+    """The unknowns and auxiliary variables of a solver and the positions of named variables.
 
-    Named variables reach the generated code as the constants of ``<Name>VariableShortcuts``,
-    which the solver exposes as ``Shortcuts``.
+    The positions of named variables become the constants of ``<Name>VariableShortcuts``,
+    which the solver aliases as ``Shortcuts``.
     """
 
     def __init__(self, name, unknowns, auxiliary_variables):
@@ -70,7 +70,7 @@ class State:
         return bool(self._names)
 
     def indices_of(self, selection):
-        """Returns the unknown indices ``selection`` names.
+        """Returns the indices of the unknowns in ``selection``.
 
         ``selection`` is None for every unknown, one index or one variable name, or an
         iterable of indices and variable names.
@@ -117,7 +117,7 @@ class State:
         return result
 
     def generate_shortcuts(self, dictionary, namespace, output):
-        """Writes ``<Name>VariableShortcuts.h`` when the variables carry names."""
+        """Adds ``<Name>VariableShortcuts.h`` to the output when the variables have names."""
         if not self.has_names:
             return
         dictionary["USE_VARIABLE_SHORTCUTS"] = True

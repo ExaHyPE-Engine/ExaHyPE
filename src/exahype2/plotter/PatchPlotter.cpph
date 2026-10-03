@@ -8,13 +8,12 @@
 #include "tarch/accelerator/Range.h"
 
 /**
- * Writes one snapshot of the cells, one patch per cell, with one cell of the piece per finite
- * volume; every rank calls this at the same time. values holds the patch of every slot at
- * slot * valuesPerSlot, the volumes in linearised order with ValuesPerVolume values each. The
- * interior volume corners of the patches precede the corners on the patch faces in the piece.
+ * Writes one snapshot of the cells with one plot cell per finite volume. The patch of slot s
+ * starts at values + s * valuesPerSlot with ValuesPerVolume values per volume. Every rank calls
+ * this function collectively.
  */
 template <int VolumesPerAxis, int ValuesPerVolume, typename Precision>
-void
+INLINE_METHOD void
 exahype2::plotter::PatchPlotter::plotVolumes(
   const peano4::Partition&     partition,
   const tarch::Span<const int> cells,
@@ -87,12 +86,12 @@ exahype2::plotter::PatchPlotter::plotVolumes(
 }
 
 /**
- * Writes one snapshot of the cells, one patch per cell, with one point per node. values holds the
- * nodes of every slot at slot * valuesPerSlot with ValuesPerNode values each, and nodePositions
- * holds the NodesPerAxis node coordinates within the unit interval.
+ * Writes one snapshot of the cells with one plot point per node. The nodes of slot s start at
+ * values + s * valuesPerSlot with ValuesPerNode values per node, and nodePositions stores the
+ * NodesPerAxis node coordinates in the unit interval.
  */
 template <int NodesPerAxis, int ValuesPerNode, typename Precision>
-void
+INLINE_METHOD void
 exahype2::plotter::PatchPlotter::plotNodes(
   const peano4::Partition&     partition,
   const tarch::Span<const int> cells,
@@ -121,14 +120,12 @@ exahype2::plotter::PatchPlotter::plotNodes(
 }
 
 /**
- * Writes one snapshot with one point per node. A patch whose first status entry is at least
- * subcellStatus plots at every node the subcell that contains the node, so its points carry
- * subcell averages. subcellValues holds the subcells of every slot at slot * subcellValuesPerSlot,
- * and statuses holds statusEntriesPerSlot entries per slot or is null, so every patch plots its
- * nodes and no status field is written.
+ * Writes one snapshot with one plot point per node. A patch whose first status entry is at least
+ * subcellStatus plots at every node the value of the subcell that contains the node. With a null
+ * statuses, every patch plots its nodes and the snapshot has no status field.
  */
 template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
-void
+INLINE_METHOD void
 exahype2::plotter::PatchPlotter::plotNodes(
   const peano4::Partition&                     partition,
   const tarch::Span<const int>                 cells,
@@ -207,12 +204,11 @@ exahype2::plotter::PatchPlotter::plotNodes(
 }
 
 /**
- * Returns for every node of a patch the linearised index of the subcell that contains the node,
- * where SubcellsPerAxis subcells per axis tile the patch. A node on the boundary between two
- * subcells belongs to the upper one.
+ * Returns for every node of a patch the linearised index of the subcell that contains it. A node on
+ * the boundary between two subcells belongs to the upper one.
  */
 template <int NodesPerAxis, int SubcellsPerAxis>
-std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)>
+INLINE_METHOD std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)>
 exahype2::plotter::PatchPlotter::containingSubcells(const double* const nodePositions) {
   static_assert(NodesPerAxis > 0 and SubcellsPerAxis > 0);
   constexpr int NodesPerPatch = peano4::power(NodesPerAxis, DIMENSIONS);
@@ -232,13 +228,12 @@ exahype2::plotter::PatchPlotter::containingSubcells(const double* const nodePosi
 }
 
 /**
- * Appends every distinct volume corner on the faces of the patches to the points of the piece and
- * returns the point of every face corner of every patch, in the order of corners. Two corners are
- * one point if their integer lattice coordinates on the finest level of the partition coincide,
- * which also joins the corners of two patches across a level jump.
+ * Appends every distinct volume corner on the patch faces to the points of the piece and returns
+ * the point of every face corner of every patch. Corners with the same lattice coordinates on the
+ * finest level are one point, also across a level jump.
  */
 template <int VolumesPerAxis>
-std::vector<std::int32_t>
+INLINE_METHOD std::vector<std::int32_t>
 exahype2::plotter::PatchPlotter::appendFaceCorners(
   const peano4::Partition&                      partition,
   const tarch::Span<const int>                  cells,
@@ -289,12 +284,11 @@ exahype2::plotter::PatchPlotter::appendFaceCorners(
 }
 
 /**
- * Writes the cells of the piece between neighbouring points of a patch with PointsPerAxis points
- * per axis from firstCell on, where pointOfCorner maps a point of the patch in linearised order
- * onto its point in the piece.
+ * Writes the plot cells between neighbouring points of a patch from firstCell on. pointOfCorner
+ * maps a linearised point of the patch onto its point in the piece.
  */
 template <int PointsPerAxis, typename PointOfCorner>
-void
+INLINE_METHOD void
 exahype2::plotter::PatchPlotter::connectPatch(
   const PointOfCorner&                          pointOfCorner,
   const std::size_t                             firstCell,
@@ -318,11 +312,10 @@ exahype2::plotter::PatchPlotter::connectPatch(
 }
 
 /**
- * Copies the data fields of one state with valuesPerState values into entity of fields, which
- * holds the data fields in their order first.
+ * Copies the data fields of state into entity of fields, whose first entries are the data fields.
  */
 template <typename Precision>
-void
+INLINE_METHOD void
 exahype2::plotter::PatchPlotter::copyState(
   const Precision* const                              state,
   const int                                           valuesPerState,

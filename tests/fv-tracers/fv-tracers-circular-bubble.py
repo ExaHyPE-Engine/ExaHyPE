@@ -104,7 +104,6 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions
   Qoutside[Shortcuts::rho]  = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU] = -Qinside[Shortcuts::rhoU];
   Qoutside[Shortcuts::rhoV] = -Qinside[Shortcuts::rhoV];

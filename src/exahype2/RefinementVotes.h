@@ -26,10 +26,8 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * The refinement votes of one solver: One command per slot of the partition, cast on the device
- * by the refinement criterion of Derived within the admissible patch sizes of the limits, on
- * every cell of the partition or on a listed subset, and merged into the requests of the run for
- * the cells that voted. Every vote reserves the commands for the slots of the partition.
+ * Refinement votes of one solver, one command per slot of the partition. Every vote method
+ * computes the commands on the device and merges them into requests.
  */
 class exahype2::RefinementVotes final {
 public:
@@ -96,9 +94,6 @@ namespace exahype2 {
   );
 } // namespace exahype2
 
-/**
- * Votes on every cell of the grid under construction, whose patches hold no data yet.
- */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::VoteOnGridConstruction final {
   peano4::Partition            partition{};
@@ -109,9 +104,6 @@ struct exahype2::VoteOnGridConstruction final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/**
- * Votes on every listed cell from the patch of the cell.
- */
 template <typename Derived, typename SolutionView>
 struct exahype2::VoteOnRefinement final {
   peano4::Partition            partition{};

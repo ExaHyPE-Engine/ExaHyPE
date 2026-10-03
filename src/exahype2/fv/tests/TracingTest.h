@@ -8,9 +8,6 @@ namespace exahype2::fv::tests {
   class TracingTest;
 } // namespace exahype2::fv::tests
 
-/**
- * Checks the interpolation of a patch at a particle position and the tracing step of a particle.
- */
 class exahype2::fv::tests::TracingTest final : public tarch::tests::TestCase {
 public:
   TracingTest();
@@ -23,7 +20,7 @@ public:
   void run() override;
 
 private:
-  void testPiecewiseConstantReadsTheVolumeThatHoldsThePosition();
+  void testPiecewiseConstantReadsTheVolumeThatContainsThePosition();
   void testPiecewiseLinearReproducesALinearField();
   void testInterpolationOnRectangularPatches();
   void testClampIntoPatchProjectsOntoTheVolumeCentres();

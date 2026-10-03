@@ -12,28 +12,27 @@
 #include "tarch/mpi/Request.h"
 
 template <typename T>
-peano4::HaloExchange<T>::HaloExchange(Pool& pool) :
+INLINE_METHOD peano4::HaloExchange<T>::HaloExchange(Pool& pool) :
   _pool(pool),
   _halfSize(pool.getChunkSize() / 2),
   _entries(pool.getLocation()),
   _sendBuffer(pool.getLocation()),
   _receiveBuffer(pool.getLocation()) {
-  assertion(pool.getChunkSize() % 2 == 0, "A face chunk holds one half per side.", pool.getChunkSize());
+  assertion(pool.getChunkSize() % 2 == 0, "A face chunk stores one half per side.", pool.getChunkSize());
 }
 
 template <typename T>
-peano4::HaloExchange<T>::HaloExchange::~HaloExchange() noexcept {
+INLINE_METHOD peano4::HaloExchange<T>::HaloExchange::~HaloExchange() noexcept {
   assertion(not _inFlight, "An exchange is destroyed only after wait() has completed its last post().");
 }
 
 /**
- * Copies the exchanged faces of the partition into one entry table and sizes the buffers for
- * them. Runs after every build of the partition, while no post is in flight. The first call
- * reserves the tag of the exchange, so every rank reserves the tags of its exchanges in the order
- * of their first rebuild.
+ * Copies the exchanged faces of the partition into one entry table and sizes the buffers. A caller
+ * rebuilds after every build of the partition while no post is in flight. The first call reserves
+ * the tag, so every rank calls the first rebuild of its exchanges in the same order.
  */
 template <typename T>
-void
+INLINE_METHOD void
 peano4::HaloExchange<T>::rebuild(const peano4::Partition& partition) {
   assertion(not _inFlight);
   if (_tag == NoTag) {
@@ -74,10 +73,10 @@ peano4::HaloExchange<T>::rebuild(const peano4::Partition& partition) {
 }
 
 /**
- * Frees the entry table and the buffers; the tag stays reserved for the next rebuild.
+ * Frees the entry table and the buffers. The tag stays reserved for the next rebuild.
  */
 template <typename T>
-void
+INLINE_METHOD void
 peano4::HaloExchange<T>::release() {
   assertion(not _inFlight);
   _messages        = std::vector<Message>{};
@@ -93,7 +92,7 @@ peano4::HaloExchange<T>::release() {
  * neighbour rank. A caller leaves the exchanged faces of the pool unchanged until wait() returns.
  */
 template <typename T>
-void
+INLINE_METHOD void
 peano4::HaloExchange<T>::post() {
   assertion(not _inFlight);
   assertion(_tag != NoTag, "rebuild() precedes post().");
@@ -150,11 +149,11 @@ peano4::HaloExchange<T>::post() {
 }
 
 /**
- * Blocks until every message of the post has completed, then scatters the received halves
- * into the side of their faces the neighbour owns.
+ * Blocks until every message of the post has completed, then scatters the received halves into
+ * the side of each face that the neighbour owns.
  */
 template <typename T>
-void
+INLINE_METHOD void
 peano4::HaloExchange<T>::wait() {
   assertion(_inFlight);
 
@@ -183,7 +182,7 @@ peano4::HaloExchange<T>::wait() {
  * the requests while a post is in flight.
  */
 template <typename T>
-bool
+INLINE_METHOD bool
 peano4::HaloExchange<T>::pollMessages() {
   bool allCompleted = true;
   for (auto& request : _requests) {
@@ -209,9 +208,6 @@ peano4::HaloExchange<T>::getTag() const noexcept {
   return _tag;
 }
 
-/**
- * Returns the bytes of the entry table, the message runs, the requests and both transfer buffers.
- */
 template <typename T>
 INLINE_METHOD tarch::AllocatedBytes
 peano4::HaloExchange<T>::getAllocatedBytes() const noexcept {

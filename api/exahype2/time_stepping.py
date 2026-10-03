@@ -17,7 +17,8 @@ def _positive_finite(value, name):
 
 
 class Fixed:
-    """The time step size follows the smallest mesh width, scaled by the given factor."""
+    """The time step size is ``normalised_time_step_size`` on the coarsest admissible mesh and
+    shrinks with the smallest mesh width."""
 
     rule = "Fixed"
     adaptive = False

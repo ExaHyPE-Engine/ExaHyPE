@@ -1,12 +1,10 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include <omp.h>
-
 /**
- * Returns the scratch chunk of the caller inside a dispatch: The work item on a device, where
- * every work item runs at once, and the thread number on the host, where a thread runs its work
- * items one after the other.
+ * Returns the index of the scratch chunk of the caller inside a dispatch. The index is the work item
+ * on a device and the thread number on the host, where a thread runs its work items one after the
+ * other.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 tarch::accelerator::getScratchChunk([[maybe_unused]] const int workItem) {

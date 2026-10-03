@@ -17,8 +17,7 @@ applications::exahype2::exaskred::forcing::getCoriolisParameterOnSphere(
 }
 
 /**
- * Returns the Manning bed drag as the rate that multiplies the momentum. A column at or below
- * minimumWaterHeight gets no drag.
+ * Returns the Manning bed drag as the rate that multiplies the momentum.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::forcing::getManningFriction(

@@ -11,9 +11,6 @@ namespace applications::exahype2::exaskred {
   INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getLandslidePhysics();
 } // namespace applications::exahype2::exaskred
 
-/**
- * Returns the physical parameters of the granular layer.
- */
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
 applications::exahype2::exaskred::getLandslidePhysics() {
   return {
@@ -174,8 +171,8 @@ applications::exahype2::exaskred::ADERDGSolver::diffusiveSourceTerm(
 }
 
 /**
- * Returns the wave speed of the well-balanced Rusanov flux between the sanitised face states, so a
- * wet-dry front feeds no stale momenta of formally dry nodes into the dissipation or the jump terms.
+ * Returns the wave speed of the well-balanced Rusanov flux between the sanitised face states. The
+ * sanitisation keeps the momenta of dry nodes out of the dissipation and the jump terms.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
@@ -291,9 +288,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
 }
 
 /**
- * Returns whether every state of the granular layer is finite, non-negative, at rest on dry ground
- * and of integrable friction stiffness, and whether the height surface of a nodal candidate stays
- * below the curvature bound.
+ * Returns whether every state of the granular layer is finite, non-negative, at rest where dry and
+ * of integrable friction stiffness. A nodal candidate also needs a bounded height curvature.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(

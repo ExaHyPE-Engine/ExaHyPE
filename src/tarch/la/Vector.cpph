@@ -90,7 +90,7 @@ tarch::la::Vector<Size, Scalar>::getData() const {
 }
 
 template <int Size, typename Scalar>
-std::string
+INLINE_METHOD std::string
 toString(const tarch::la::Vector<Size, Scalar>& vector) {
   std::ostringstream os;
   os << "[";

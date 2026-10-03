@@ -47,19 +47,18 @@ position, so an application finds the cell that holds a position.
 # Spans
 
 Every list of the partition is ordered so that a group an application loops
-over is one contiguous span. peano4::Dependence::Local names a cell, face or level jump
-that reads the data of this rank only, peano4::Dependence::Remote one that
-reads a face half a neighbour rank sends.
+over is one contiguous span. A cell, face or level jump of
+peano4::Adjacency::Local reads the data of this rank only, one of
+peano4::Adjacency::Remote reads a face half a neighbour rank sends.
 
-- peano4::Partition::getCells() returns every cell, `getCells(dependence)`
-  the cells of one dependence and `getCells(dependence, level)` the cells of
-  one dependence and level, for an application that steps the levels one at a
-  time.
-- peano4::Partition::getFaces() returns the faces of one dependence and one
+- peano4::Partition::getCells() returns every cell, `getCells(adjacency)`
+  the local or the remote cells and `getCells(adjacency, level)` those of one
+  level, for an application that steps the levels one at a time.
+- peano4::Partition::getFaces() returns the local or the remote faces of one
   kind, or of a run of kinds in the order `Interior, Boundary, Hanging,
   Coarse, Intermediate`.
-- peano4::Partition::getLevelJumps() returns the level jumps of one
-  dependence, or of one dependence and the level of the coarse face.
+- peano4::Partition::getLevelJumps() returns the local or the remote level
+  jumps, or those whose coarse face lies on one level.
 
 The remote groups follow the local groups in every list, so an application
 runs the local groups while the halo messages travel and the remote groups

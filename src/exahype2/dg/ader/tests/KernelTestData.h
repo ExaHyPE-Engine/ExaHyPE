@@ -16,8 +16,7 @@ namespace exahype2::dg::ader::tests {
 
 TARGET_DECLARE
 /**
- * The layout constants of a generated solver of order two with two unknowns and one auxiliary
- * variable; the stub solvers of the ADER-DG tests derive from it.
+ * The layout constants the stub solvers of the ADER-DG tests derive from.
  */
 struct exahype2::dg::ader::tests::StubLayout {
   static constexpr int DGOrder                    = 2;
@@ -59,10 +58,8 @@ TARGET_DECLARE_END
 
 TARGET_DECLARE
 /**
- * Every callback depends on state, position and direction, so a wrong offset changes the result.
- * The stub declares every term the two predictors read: The nonlinear predictor takes the
- * diffusive flux, the source, the diffusive source and the product, the linear predictor the
- * flux, the product, the source, the material parameters and the point source.
+ * A solver with every term of both predictors. The terms depend on the state, the position and the
+ * direction, so a wrong offset changes the result.
  */
 struct exahype2::dg::ader::tests::StubSolver final : exahype2::dg::ader::tests::StubLayout {
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(

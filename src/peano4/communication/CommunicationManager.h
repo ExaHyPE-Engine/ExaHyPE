@@ -9,9 +9,8 @@ namespace peano4::communication {
 } // namespace peano4::communication
 
 /**
- * Owns the exchange communicator of the rank-boundary and migration messages, hands out the
- * message tags on it and drives the transfers a phase posts. init() creates the communicator
- * and is collective.
+ * Owns the communicator of the halo and migration messages, reserves their tags and polls the
+ * posted transfers. Every rank calls init() at the same time.
  */
 class peano4::communication::CommunicationManager final {
 public:
@@ -39,7 +38,7 @@ private:
   CommunicationManager() = default;
 
   /**
-   * Holds the poll of one posted transfer until the poll reports completion.
+   * The poll function of one posted transfer, kept until it reports completion.
    */
   struct InFlightTransfer final {
     std::function<bool()> poll{};
@@ -48,9 +47,6 @@ private:
 
   static peano4::communication::CommunicationManager _singleton;
 
-  /**
-   * Carries every message of the exchanges.
-   */
   MPI_Comm _exchangeCommunicator{MPI_COMM_NULL};
 
   /**
@@ -61,14 +57,13 @@ private:
   int _nextTag{0};
 
   /**
-   * Collects freshly registered transfers pushed lock-free by the posting threads. The poller
-   * is the single consumer and takes the whole list into its own polling set, so no lock sits
-   * on the polling loop.
+   * Lock-free stack of the transfers the posting threads register. The polling thread is its only
+   * consumer and moves the whole stack into its polling set.
    */
   std::atomic<InFlightTransfer*> _newInFlightTransfers{nullptr};
 
   /**
-   * Belongs exclusively to the polling thread, so its accesses need no synchronisation.
+   * Only the polling thread accesses this list, so it needs no synchronisation.
    */
   std::vector<std::unique_ptr<InFlightTransfer>> _transfersBeingPolled{};
 };

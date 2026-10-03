@@ -8,6 +8,7 @@ tarch::accelerator::cuda::ExecutionPolicy::ExecutionPolicy() :
   _state(Automatic),
   _gridSize(0),
   _blockSize(0),
+  _maxBlockSize(0),
   _sharedMemBytes(0),
   _stream(nullptr) {}
 
@@ -15,6 +16,7 @@ tarch::accelerator::cuda::ExecutionPolicy::ExecutionPolicy(int gridSize, int blo
   _state(0),
   _gridSize(0),
   _blockSize(0),
+  _maxBlockSize(0),
   _sharedMemBytes(0),
   _stream(nullptr) {
   setGridSize(gridSize);
@@ -31,6 +33,7 @@ tarch::accelerator::cuda::ExecutionPolicy::ExecutionPolicy(
   _state(0),
   _gridSize(0),
   _blockSize(0),
+  _maxBlockSize(0),
   _sharedMemBytes(0),
   _stream(nullptr) {
   setGridSize(gridSize);

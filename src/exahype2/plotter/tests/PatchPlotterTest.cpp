@@ -47,7 +47,7 @@ exahype2::plotter::tests::PatchPlotterTest::run() {
 }
 
 /**
- * Every node maps to the subcell that contains it, a node on a subcell boundary to the upper subcell.
+ * A node on a subcell boundary reads the upper subcell.
  */
 void
 exahype2::plotter::tests::PatchPlotterTest::testEveryNodeReadsTheSubcellThatContainsIt() {
@@ -73,10 +73,6 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryNodeReadsTheSubcellThatCont
   }
 }
 
-/**
- * A nodal snapshot holds one point per node of every patch, the cells between neighbouring nodes,
- * the data fields as point fields and the limiter status as cell field.
- */
 void
 exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOnePoint() {
   const int rank = tarch::mpi::Rank::getInstance().getRank();
@@ -135,11 +131,6 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOneP
   deleteOutputDirectory(outputDirectory);
 }
 
-/**
- * The rank's piece of a VTU snapshot holds one cell per volume, every volume corner of a
- * single-rank piece once, every named field, the level and the rank, and the time series file
- * lists the snapshot.
- */
 void
 exahype2::plotter::tests::PatchPlotterTest::testEveryVolumeOfEveryPatchBecomesOneCell() {
   const int rank          = tarch::mpi::Rank::getInstance().getRank();

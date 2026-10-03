@@ -3,19 +3,19 @@
 #pragma once
 
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
-#include "tarch/accelerator/cuda/Device.h" // To get access to the __device__ keyword
+#include "tarch/accelerator/cuda/Device.h"
 #endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
-#include "tarch/accelerator/hip/Device.h" // To get access to the __device__ keyword
+#include "tarch/accelerator/hip/Device.h"
 #endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
-#include "tarch/accelerator/kokkos/Device.h" // To get access to the KOKKOS_FUNCTION keyword
+#include "tarch/accelerator/kokkos/Device.h"
 #endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
-#include "tarch/accelerator/sycl/Device.h" // To get access to the ACPP_UNIVERSAL_TARGET attribute
+#include "tarch/accelerator/sycl/Device.h"
 #endif
 
 #include "tarch/CompilerSpecificSettings.h"
@@ -63,8 +63,8 @@
 #endif
 #endif
 
-// Device code reads a variable only if the variable carries DEVICE_VARIABLE, and host code reads
-// a separate host copy. The OpenMP target backend needs TARGET_DECLARE around the variable.
+// Device code reads only variables declared with DEVICE_VARIABLE, and host code reads a separate
+// host copy. The OpenMP target backend needs TARGET_DECLARE around such a variable.
 #if (defined(__CUDA_ARCH__) or defined(__HIP_DEVICE_COMPILE__)) and not defined(PEANO_WITH_GPU_BACKEND_OMPT)
 #define DEVICE_VARIABLE __device__
 #else

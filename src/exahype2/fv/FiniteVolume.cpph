@@ -43,11 +43,6 @@ exahype2::fv::getVolumeCentre(
   return volumeCentre;
 }
 
-/**
- * Returns the index of a volume in a face: The layer along the normal counts over both halves and
- * runs slowest, the tangential positions along the remaining axes in ascending axis order run
- * fastest.
- */
 template <int VolumesPerAxis, int HaloSize>
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::fv::getFaceVolumeIndex(
@@ -84,9 +79,9 @@ exahype2::fv::getFaceVolumeIndex(
 }
 
 /**
- * Solves the Riemann problem on the lower (side 0) or upper (side 1) face along normal of the
- * given volume and returns the largest wave speed. The face lies on the domain boundary when it
- * lies on a patch face whose bit is set in boundaryFaces.
+ * Solves the Riemann problem on the lower (side 0) or upper (side 1) face of volume along normal
+ * and returns the largest wave speed. Bit f of boundaryFaces marks patch face f as a domain
+ * boundary face.
  */
 template <typename SolverType, int VolumesPerAxis, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -161,9 +156,8 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::initialise(
 }
 
 /**
- * Fills the outer half of the face faceNumber of a cell on the domain boundary through the
- * boundary conditions of Derived, layer by layer from the inner half the cell wrote. A faceNumber
- * below DIMENSIONS names a lower face of the cell.
+ * Fills the outer half of the boundary face faceNumber from its inner half through the boundary
+ * conditions of Derived. Face i and face i+DIMENSIONS are the lower and the upper face along axis i.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -215,9 +209,8 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::applyBoundaryConditions(
 }
 
 /**
- * Copies the boundary layers of a patch into its own halves of its faces: Along every axis the
- * lower HaloSize layers into the upper half of the lower face and the upper layers into the lower
- * half of the upper face. The halves of the neighbours stay.
+ * Copies the HaloSize outermost layers of patch into the cell's own half of each face. The
+ * neighbours' halves stay unchanged.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -261,13 +254,9 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::projectOntoFaces(
 }
 
 /**
- * Fills one half of a fine face from the same half of the coarse face above it. Every fine
- * volume takes the coarse volume that covers it and a correction along each tangential axis:
- * With k the subdivision factor and c the coarse values, the fine volume at subposition s gets
- * (s - (k-1)/2) * (c_right - c_left) / (k * (right - left)), where right and left are the
- * neighbours of the coarse volume clamped to the face, and no correction where both coincide.
- * Every layer of the half maps onto the same layer, and a constant face returns its value
- * bitwise.
+ * Fills one half of a fine face from the same half of the coarse face. Every fine volume takes the
+ * covering coarse volume plus a tangential slope correction, with one-sided slopes at the face
+ * edges. A constant coarse face gives the bitwise identical fine face.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -331,8 +320,8 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::interpolateHalo(
             * slopeAlongFirstAxis(layer, iCell, jCell, unknown);
           StoragePrecision correction = iTerm;
           if constexpr (DIMENSIONS == 3) {
-            // Each axis term rounds on its own before the commutative sum, so a diagonal
-            // axis swap of the face commutes bitwise with the correction.
+            // Each axis term rounds on its own before the sum, so swapping the two tangential axes
+            // gives the bitwise identical correction.
             const int              jSubPosition = jGlobal % SubdivisionFactor;
             const StoragePrecision jTerm        = (static_cast<StoragePrecision>(jSubPosition) - SubVolumeCentre)
               * slopeAlongSecondAxis(layer, iCell, jCell, unknown);
@@ -346,9 +335,8 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::interpolateHalo(
 }
 
 /**
- * Fills one half of a fine face from the same half of the coarse face above it. Every fine
- * volume copies the coarse volume that covers it, so every fine value is a coarse value. Every
- * layer of the half maps onto the same layer.
+ * Fills one half of a fine face from the same half of the coarse face. Every fine volume copies
+ * the covering coarse volume.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -386,10 +374,9 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::injectHalo(
 }
 
 /**
- * Fills one half of a coarse face from the same half of the fine faces below it. Every coarse
- * volume takes the mean of the fine volumes that cover it as the correctly rounded quotient of
- * their exact sum, so the result is the same for every order of the fine faces and constant fine
- * faces return their value bitwise. Every layer of the half maps onto the same layer.
+ * Fills one half of a coarse face with the mean of the same half of the fine faces. The mean is
+ * the correctly rounded quotient of the exact sum, so the order of the fine faces does not change
+ * it.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -441,8 +428,8 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::restrictHalo(
 }
 
 /**
- * Fills one child patch from its parent: Every fine volume copies the coarse volume that covers
- * it. childPosition is the position of the child within the parent, the first axis fastest.
+ * Fills one child patch from its parent: Every fine volume copies the covering coarse volume.
+ * childPosition is the linearised position of the child in the parent.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -471,9 +458,8 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::interpolatePatch(
 }
 
 /**
- * Fills a parent patch from its children: Every coarse volume takes the mean of the fine volumes
- * that cover it as the correctly rounded quotient of their exact sum, so constant children return
- * their value bitwise.
+ * Fills a parent patch with the mean of its children. The mean is the correctly rounded quotient
+ * of the exact sum, so constant children give their value bitwise.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -510,11 +496,9 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::restrictPatch(
 }
 
 /**
- * Advances one patch from patch into updated by one time step with the reconstruction and the
- * time integration of Derived, runs the patch postprocessing of Derived on the result and
- * returns the largest wave speed of the step, raised to the wave speeds of the updated volumes;
- * a fixed rule returns zero. Bit f of boundaryFaces is set when face f of the patch lies on the
- * domain boundary.
+ * Writes patch after one time step into updated and returns the largest wave speed of the step
+ * and of the updated volumes. A fixed rule returns zero. Bit f of boundaryFaces marks patch face f
+ * as a domain boundary face.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -552,8 +536,8 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::update(
 }
 
 /**
- * Returns the largest wave speed of Derived over the volumes of patch at timeStamp; zero for a
- * fixed rule or a Derived without the eigenvalue term.
+ * Returns the largest wave speed over the volumes of patch, or zero for a fixed rule or a Derived
+ * without maxEigenvalue().
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -570,7 +554,7 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::reduceMaxEigenvalue(
 }
 
 /**
- * Writes the error norms of Derived over the volumes of patch into the NumberOfNorms entries of errors.
+ * Writes the L1 error, the squared L2 error and the largest error of patch into errors.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -583,7 +567,7 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::measureErrors(
   const double                                 timeStepSize,
   double* NOALIAS const                        errors
 ) {
-  // The static member lives in host memory, so the kernel reads a constant copy.
+  // Derived::MeasuredUnknowns is in host memory, so the kernel reads a constexpr copy.
   constexpr auto MeasuredUnknowns = Derived::MeasuredUnknowns;
   double         sums[exahype2::ErrorMeasurement::NumberOfNorms]{};
   forEachVolume(
@@ -613,9 +597,9 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::measureErrors(
 }
 
 /**
- * Calls functor(value, x, h, weight) for every volume of a patch in linearised order: The pointer
- * value addresses the first entry of the volume, x is its centre, h its size and weight its
- * measure. A constexpr function takes the execution space of its caller.
+ * Calls functor(value, x, h, weight) for every volume of the patch, with value pointing to the
+ * first entry of the volume, x its centre, h its size and weight its measure. As a constexpr
+ * function it runs in the execution space of its caller.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename Value, typename Functor>
@@ -640,10 +624,6 @@ exahype2::fv::FiniteVolume<Derived, ComputePrecision>::forEachVolume(
   });
 }
 
-/**
- * Raises maximum to the wave speeds of Derived along every axis at every volume of patch when
- * the rule is adaptive and Derived declares the eigenvalue term.
- */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void

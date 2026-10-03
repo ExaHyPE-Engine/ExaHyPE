@@ -13,7 +13,7 @@ namespace tarch::tasking {
 } // namespace tarch::tasking
 
 /**
- * Holds the thread count of the process, which init() fixes for every caller.
+ * The thread count of the process, which init() fixes for every caller.
  */
 class tarch::tasking::Runtime final {
 public:

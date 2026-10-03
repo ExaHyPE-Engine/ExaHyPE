@@ -39,10 +39,10 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
     """An ADER-DG solver of polynomial order ``order`` with one predictor and one corrector per
     time step.
 
-    ``basis`` is :class:`exahype2.dg.GaussLegendre` or :class:`exahype2.dg.GaussLobatto`;
+    ``basis`` is :class:`exahype2.dg.GaussLegendre` or :class:`exahype2.dg.GaussLobatto`.
     ``linear`` selects the linear predictor, which supports material parameters and point
-    sources; ``point_sources`` counts them; ``initialise_patches`` hands the initial condition
-    every node of a cell at once.
+    sources. ``point_sources`` is the number of point sources. ``initialise_patches`` passes
+    every node of a cell to the initial condition in one call.
     """
 
     SOLVER_FAMILY = "ader"
@@ -102,9 +102,9 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         return result
 
     def restrict_to_cells(self, predicate):
-        """Advances only the cells for which the C++ expression ``predicate`` on the cell centre
-        ``x`` and the cell width ``h`` holds; the faces to cells of a coupled solver take that
-        solver's traces."""
+        """Advances only the cells for which the C++ expression ``predicate`` in the cell centre
+        ``x`` and the cell width ``h`` is true. A face next to a cell of a coupled solver reads
+        the trace of that solver."""
         if not isinstance(predicate, str) or not predicate.strip():
             raise ValueError(
                 "[{}] restrict_to_cells takes a C++ expression on x and h.".format(
@@ -119,9 +119,9 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         return bool(self._owns_cell_predicate)
 
     def plot_faces(self, predicate):
-        """Writes the two traces of every face for which the C++ expression ``predicate`` on
-        the face centre ``x``, the cell width ``h`` and the axis ``normal`` holds into the
-        snapshots ``<name>-face``."""
+        """Writes the two traces of every face for which the C++ expression ``predicate`` is
+        true into the snapshots ``<name>-face``. The expression reads the face centre ``x``, the
+        cell width ``h`` and the normal axis ``normal``."""
         if not isinstance(predicate, str) or not predicate.strip():
             raise ValueError(
                 "[{}] plot_faces takes a C++ expression on x, h and normal.".format(
@@ -132,8 +132,8 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         return self
 
     def coupling_matrix_from(self, other):
-        """Returns the row-major Lagrange interpolation matrix from the face nodes of ``other``
-        onto the face nodes of this solver, the node of ``other`` as the major index."""
+        """Returns the Lagrange interpolation matrix from the face nodes of ``other`` onto the
+        face nodes of this solver, row-major with one row per node of ``other``."""
         return [
             repr(float(other.basis.value1D(point, node)))
             for node in range(other.basis.dofs_per_axis)
@@ -199,7 +199,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
             )
 
     def _table_class(self, table):
-        """The generated table class of this solver, fully qualified."""
+        """Returns the fully qualified name of a generated table class of this solver."""
         return "::" + "::".join(self._namespace + [self._name + table])
 
     def _solver_family_includes(self):
@@ -244,7 +244,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         ] + self._subcell_limiter_constants()
 
     def _table_precisions(self):
-        """The mesh transfer operators read double tables whatever the solver computes in."""
+        """Returns the solver precisions plus double for the mesh transfer operators."""
         result = list(self.precision.types)
         if "double" not in result:
             result.append("double")

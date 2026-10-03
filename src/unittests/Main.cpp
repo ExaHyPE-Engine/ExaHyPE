@@ -51,10 +51,9 @@ main(int argc, char** argv) {
   tarch::instrumentation::Log::setInfoOutputEnabled(false);
   tarch::instrumentation::Log::setWarningOutputEnabled(false);
 
-  // Every thread carries its own floating-point environment, so one trap is armed
-  // here, one per worker inside the parallel region and one around the tests. This
-  // trap is dropped before tarch::shutdown(), so a floating-point exception raised
-  // inside the MPI finalisation does not abort the run.
+  // Every thread has its own floating-point environment, so every thread arms a trap. The main
+  // thread resets this trap before tarch::shutdown(), so a floating-point exception inside the MPI
+  // finalisation does not abort the run.
   std::optional<tarch::FloatingPointExceptions::ScopedTrap> testProcessTrap(std::in_place, __FILE__, __LINE__);
   peano4::init(domainOffset, domainSize);
 

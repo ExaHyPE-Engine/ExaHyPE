@@ -1,3 +1,5 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import argparse
 import os, sys
 
@@ -117,7 +119,7 @@ project.output.makefile.add_h_file("../DynamicRuptureParameters.cpph", generated
 filename = args.scenario + "-o" + str(order) + "-" + str(args.precision)
 recorded_fields = ",".join(str(field) for field in range(theSolver.state.unknowns))
 
-# The tracers sit at the mesh positions of the physical coordinates and record every unknown.
+# invertProjection maps the physical tracer coordinates to mesh positions.
 tracer_particles = project.add_tracer(
     name="Tracer", particle_attributes=theSolver.state.unknowns
 )
@@ -138,8 +140,7 @@ theSolver.trace(
     initialisation=False,
 )
 
-# The fault tracers record the mean of the two face traces, and the slip and the slip rate as
-# the jump of the displacement u and the velocity v across the fault.
+# The jumps of u and v across the fault are the slip and the slip rate.
 if my_scenario.fault_coordinates:
     fault_particles = project.add_tracer(
         name="FaultTracer", particle_attributes=theSolver.state.unknowns

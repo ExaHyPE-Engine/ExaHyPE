@@ -21,9 +21,8 @@ namespace {{NAMESPACE | join("::")}} {
 } // namespace {{NAMESPACE | join("::")}}
 
 /**
- * Holds the parameters that the configuration file and the command line set. Storage holds the
- * parameters that a kernel reads, the admissible patch sizes and grid levels of the runtime
- * included, and HostStorage holds the strings.
+ * Parameters from the configuration file and the command line. A kernel reads Storage on the host
+ * or on the device. HostStorage stores the strings.
  */
 struct {{NAMESPACE | join("::")}}::RuntimeParameters final {
   struct Storage final {

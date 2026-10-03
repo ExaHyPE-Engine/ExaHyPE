@@ -97,11 +97,6 @@ public:
 
   INLINE_METHOD Curvi(const Point& domainOffset, const Point& domainSize, const Point& minCellSize);
 
-  /**
-   * The stored mappings close over everything they need by value, so that they never outlive the
-   * state they read. Transforming either half of a copy further would leave the two silently out of
-   * step.
-   */
   Curvi(const Curvi&)            = delete;
   Curvi(Curvi&&)                 = delete;
   Curvi& operator=(const Curvi&) = delete;

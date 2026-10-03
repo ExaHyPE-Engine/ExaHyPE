@@ -8,11 +8,6 @@ namespace exahype2::particles::tests {
   class ParticleSetTest;
 } // namespace exahype2::particles::tests
 
-/**
- * Checks that a particle set keeps the particles whose position a cell of the rank holds, that
- * a moved particle reaches the rank that holds its new position and that the device copy
- * carries the values to a kernel and back.
- */
 class exahype2::particles::tests::ParticleSetTest final : public tarch::tests::TestCase {
 public:
   ParticleSetTest();
@@ -27,7 +22,7 @@ public:
 private:
   void testInsertKeepsTheParticlesOfTheRank();
   void testAPositionOnAFaceBelongsToTheLowerCell();
-  void testRelocateMovesAParticleToTheCellThatHoldsIt();
+  void testRelocateMovesAParticleToTheCellThatContainsIt();
   void testInsertAndRelocateCountTheParticlesOfAllRanks();
   void testUploadAndDownloadCarryTheValues();
   void testAHostWriteReachesTheDeviceCopy();

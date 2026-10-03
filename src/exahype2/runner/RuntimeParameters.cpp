@@ -141,7 +141,7 @@ namespace {
 } // namespace
 
 /**
- * The value the storage holds at registration is the default the usage text reports.
+ * The value in the storage at registration becomes the default of the usage text.
  */
 void
 exahype2::runner::ParameterTable::add(const std::string& name, const Values values) {
@@ -176,7 +176,8 @@ exahype2::runner::ParameterTable::load(const tarch::reader::JSONReader* const re
 }
 
 /**
- * The arguments that name no entry keep their order, so the caller's own parser reads them afterwards.
+ * Arguments that match no entry stay in argv in their order, so the parser of the caller reads them
+ * afterwards.
  */
 void
 exahype2::runner::ParameterTable::load(
@@ -267,8 +268,7 @@ exahype2::runner::RuntimeParameters::formatTerminalTime(const double value) {
 }
 
 /**
- * Divides a length by the subdivision factor of the active curve once per level, so the result
- * is the width of a cell exponent levels below a cell of the given width.
+ * Returns the width of a cell exponent levels below a cell of width value.
  */
 double
 exahype2::runner::RuntimeParameters::divideBySubdivisionFactorPower(double value, const int exponent) {
@@ -429,8 +429,8 @@ exahype2::runner::RuntimeParameters::normaliseGridLevels() {
 }
 
 /**
- * Lowers the maximum terminal time to the environment variable PEANO_MAX_TERMINAL_TIME when it is
- * set, and the minimum terminal time to the maximum one, so a run never advances beyond the bound.
+ * Lowers the maximum terminal time to PEANO_MAX_TERMINAL_TIME if it is set, and the minimum
+ * terminal time to the maximum one.
  */
 void
 exahype2::runner::RuntimeParameters::boundTerminalTimes() {
@@ -672,8 +672,8 @@ exahype2::runner::RuntimeParameters::getMPIDeadlockTimeout() const {
 }
 
 /**
- * Returns whether to record the origin, partner and tag of every non-blocking request. The record
- * costs one table entry per request, so --timeoutWarning or --deadlockTimeout switches it on.
+ * Returns whether to record the origin, partner and tag of every non-blocking request. Setting a
+ * timeout switches it on.
  */
 bool
 exahype2::runner::RuntimeParameters::isMPIRequestTrackingEnabled() const {

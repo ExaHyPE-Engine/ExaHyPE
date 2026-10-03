@@ -24,7 +24,7 @@ public:
 {%- if USE_VARIABLE_SHORTCUTS %}
 
   /**
-   * Names the variable indices, so Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first variable.
+   * Indices of the variables by name, so Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first variable.
    */
   using Shortcuts = ::{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}VariableShortcuts;
 {%- endif %}
@@ -38,13 +38,14 @@ public:
 {%- if INITIALISE_PATCHES is defined %}
 
   /**
-   * The initial condition fills every node of a cell in one call.
+   * Whether the initial condition fills every node of a cell in one call.
    */
   static constexpr bool InitialisesPatches = {{ "true" if INITIALISE_PATCHES else "false" }};
 {%- endif %}
 
   /**
-   * The initial condition runs on the host and the cells are uploaded afterwards.
+   * Whether the initial condition fills a host copy of the cells, which the solver then copies to
+   * the device.
    */
   static constexpr bool InitialisesOnHost = {{ "true" if INITIALISE_ON_HOST else "false" }};
 {%- if NUMBER_OF_DMP_OBSERVABLES is defined and NUMBER_OF_DMP_OBSERVABLES > 0 %}

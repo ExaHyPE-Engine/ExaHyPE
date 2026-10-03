@@ -7,11 +7,8 @@
 
 namespace {
   /**
-   * Extract the body of the single <Grid> element of a self-contained per-step
-   * XDMF file, i.e. everything between the opening "<Grid ...>" tag and the
-   * closing "</Grid>". That body (the Topology, Geometry and Attribute elements
-   * with their DataItem references into the HDF5 file) is what gets inlined into
-   * the temporal collection.
+   * Returns the content of the only Grid element of a per-step XDMF file, which the temporal
+   * collection inlines.
    */
   std::string extractGridBody(const std::filesystem::path& perStepFile) {
     const std::ifstream input(perStepFile);
@@ -59,9 +56,10 @@ tarch::plotter::XDMFTimeSeriesWriter::writeTimeSeriesMetaFile(
       << "  <Grid Name=\"TimeSeries\" GridType=\"Collection\" CollectionType=\"Temporal\">\n";
 
   for (const auto& snapshot : _snapshots) {
-    const std::string gridBody = extractGridBody(directory / snapshot.filename);
-    out << "   <Grid Name=\"Step_" << snapshot.time << "\" GridType=\"Uniform\">\n"
-        << "    <Time Value=\"" << snapshot.time << "\"/>\n"
+    const std::string gridBody  = extractGridBody(directory / snapshot.filename);
+    const std::string timeStamp = tarch::plotter::getExactTimeStamp(snapshot.time);
+    out << "   <Grid Name=\"Step_" << timeStamp << "\" GridType=\"Uniform\">\n"
+        << "    <Time Value=\"" << timeStamp << "\"/>\n"
         << gridBody << "   </Grid>\n";
   }
 

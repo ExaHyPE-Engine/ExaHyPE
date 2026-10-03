@@ -12,7 +12,7 @@ The constants of `Derived` select the branches below.
 Every functor below, such as exahype2::fv::UpdatePatches, runs through tarch::accelerator::parallelFor() or tarch::accelerator::parallelReduce() with one work item per cell, face, level jump or particle.
 The host backend runs the work items on the OpenMP threads of the rank.
 A GPU backend runs the work items on the device.
-A cell, face or level jump of peano4::Dependence::Local reads no data of another rank, so it runs while the MPI messages of peano4::HaloExchange travel.
+A cell, face or level jump of peano4::Adjacency::Local reads no data of another rank, so it runs while the MPI messages of peano4::HaloExchange travel.
 
 # From the runner to the solver family
 

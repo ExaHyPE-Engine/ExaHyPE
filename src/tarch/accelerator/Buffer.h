@@ -13,8 +13,7 @@ namespace tarch::accelerator {
 
 /**
  * Owns trivially copyable elements in one memory location. Host code dereferences host-accessible
- * storage only. An allocation lands on the current device, which holds the elements until the next
- * allocation.
+ * storage only. allocate() places the elements on the device that is current at the call.
  */
 template <typename T>
 class tarch::accelerator::Buffer final {
@@ -23,21 +22,21 @@ class tarch::accelerator::Buffer final {
 public:
   Buffer()                                           = default;
   Buffer(const tarch::accelerator::Buffer<T>& other) = delete;
-  Buffer(tarch::accelerator::Buffer<T>&& other) noexcept;
+  INLINE_METHOD Buffer(tarch::accelerator::Buffer<T>&& other) noexcept;
   tarch::accelerator::Buffer<T>& operator=(const tarch::accelerator::Buffer<T>& other) = delete;
-  tarch::accelerator::Buffer<T>& operator=(tarch::accelerator::Buffer<T>&& other) noexcept;
-  ~Buffer() noexcept;
+  INLINE_METHOD tarch::accelerator::Buffer<T>& operator=(tarch::accelerator::Buffer<T>&& other) noexcept;
+  INLINE_METHOD ~Buffer() noexcept;
 
-  explicit Buffer(tarch::MemoryLocation location) noexcept;
-  Buffer(std::size_t size, tarch::MemoryLocation location);
+  INLINE_METHOD explicit Buffer(tarch::MemoryLocation location) noexcept;
+  INLINE_METHOD Buffer(std::size_t size, tarch::MemoryLocation location);
 
-  void allocate(std::size_t size);
-  void release() noexcept;
+  INLINE_METHOD void allocate(std::size_t size);
+  INLINE_METHOD void release() noexcept;
 
-  void copyFromHost(const T* source, std::size_t count);
-  void copyToHost(T* target, std::size_t count) const;
-  void setValues(const std::vector<T>& values);
-  [[nodiscard]] std::vector<T> getValues() const;
+  INLINE_METHOD void copyFromHost(const T* source, std::size_t count);
+  INLINE_METHOD void copyToHost(T* target, std::size_t count) const;
+  INLINE_METHOD void setValues(const std::vector<T>& values);
+  [[nodiscard]] INLINE_METHOD std::vector<T> getValues() const;
 
   [[nodiscard]] INLINE_METHOD T* getData() noexcept;
   [[nodiscard]] INLINE_METHOD const T* getData() const noexcept;

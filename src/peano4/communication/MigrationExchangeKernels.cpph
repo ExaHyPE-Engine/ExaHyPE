@@ -19,9 +19,6 @@ peano4::communication::RestrictChunks<T, Transfer>::operator()(const int entry) 
   transfer.restrictFromChildren(restriction.childSlots, pool.getChunk(restriction.parentSlot));
 }
 
-/**
- * A sent cell takes its chunk from its own old slot, from its parent or from its children.
- */
 template <typename T, typename Transfer>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 peano4::communication::GatherChunks<T, Transfer>::operator()(const int entry) const {

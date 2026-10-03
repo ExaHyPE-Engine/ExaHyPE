@@ -43,8 +43,8 @@ project = exahype2.Project(
     max_grid_levels=args.max_grid_levels,
 )
 
-# Placing the pulse on the diagonal and using identical reflecting walls
-# preserves symmetry under axis permutations.
+# The pulse lies on the diagonal and every wall reflects, so the solution stays symmetric under axis
+# permutations.
 initial_conditions = """
   const tarch::la::Vector<DIMENSIONS, double> sourceCentre(-0.7);
   const double distanceSquared = tarch::la::norm2Squared(x - sourceCentre);
@@ -73,8 +73,8 @@ flux = """
   F[Shortcuts::u + normal] = (1.0 / RHO) * Q[Shortcuts::p];
 """
 
-# Pressure and velocity magnitude preserve axis-permutation symmetry; unit
-# offsets keep relative detail bounded near the zero background.
+# Pressure and velocity magnitude are symmetric under axis permutations. The unit offsets bound the
+# relative detail near the zero background.
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,

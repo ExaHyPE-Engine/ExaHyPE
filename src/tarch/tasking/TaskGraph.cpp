@@ -15,7 +15,6 @@ namespace {
   std::atomic<bool> loggedConservativeDependencyWaitFallback{false};
 #endif
 
-  // Longer dependency lists use vector storage, so this buffer does not limit graph width.
   constexpr int StaticDependencyBufferSize = 16;
 
   bool containsRaw(char* const* const values, const int numberOfValues, const char* const candidate) {
@@ -121,9 +120,9 @@ tarch::tasking::spawnTask(
   [[maybe_unused]] char* const* const inTokenData                = filteredInDependencies.getData();
   [[maybe_unused]] char* const* const outTokenData               = filteredOutDependencies.getData();
 
-  // Each task clause names the task pointer in firstprivate. A compiler
-  // following OpenMP 4.5 defaults a const variable to the enclosing frame's
-  // copy, which the deferred task would read after this call has returned.
+  // Each task clause lists the task pointer in firstprivate. A compiler following OpenMP 4.5 defaults
+  // a const variable to the copy of the enclosing frame, which the deferred task would read after this
+  // call has returned.
   if (numberOfInputDependencies == 0 and numberOfOutputDependencies == 0) {
 #pragma omp task firstprivate(task)
     runAndDelete(task);
@@ -280,7 +279,6 @@ tarch::tasking::waitForDependencies(const std::span<void* const> dependencies) {
   if (numberOfDependencies == 0) {
     return;
   }
-  // One wait covers the whole list, so the caller registers with the runtime once per call.
 #pragma omp taskwait depend(iterator(dependencyIndex = 0 : numberOfDependencies), in : tokenData[dependencyIndex][0])
 #else
   if (dependencies.empty()) {

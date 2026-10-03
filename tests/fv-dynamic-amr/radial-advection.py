@@ -62,7 +62,7 @@ flux = """
   F[Shortcuts::rho] = (radius > 0.0 ? radialOffset(normal) / radius : 0.0) * Q[Shortcuts::rho];
 """
 
-# The unit offset keeps relative detail bounded where density is zero.
+# The unit offset bounds the relative detail where the density is zero.
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,

@@ -84,9 +84,6 @@ tarch::la::tests::VectorTest::testConstruction() {
   validateEquals(vector6[2], 3);
 }
 
-/**
- * A vector of every size built from a brace list is a constant expression that holds the list.
- */
 void
 tarch::la::tests::VectorTest::testListConstructionIsAConstantExpression() {
   constexpr tarch::la::Vector<1, double> Vector1{1.5};
@@ -110,9 +107,6 @@ tarch::la::tests::VectorTest::testListConstructionIsAConstantExpression() {
   }
 }
 
-/**
- * A default-constructed vector of every size is a constant expression that holds zeros.
- */
 void
 tarch::la::tests::VectorTest::testDefaultConstructionZeroesEveryEntry() {
   constexpr tarch::la::Vector<1, int>    Vector1{};
@@ -689,8 +683,8 @@ tarch::la::tests::VectorTest::testNaNComparesUnequal() {
 }
 
 /**
- * A component below the comparison value by less than the tolerance is smaller or equal but not
- * smaller, for the general size and every fixed size.
+ * oneSmaller() and oneSmallerEquals() treat a component within the tolerance of the comparison
+ * value as equal to it.
  */
 void
 tarch::la::tests::VectorTest::testSmallerComparisonsHonourTheTolerance() {
@@ -725,8 +719,7 @@ tarch::la::tests::VectorTest::testSmallerComparisonsHonourTheTolerance() {
 }
 
 /**
- * A vector and the vector with its first two components swapped have the same squared norm to the
- * last bit, which a fused multiply-add over the squares would break.
+ * Swapping the first two components of a vector keeps its squared norm bitwise.
  */
 void
 tarch::la::tests::VectorTest::testNorm2SquaredHoldsASwapOfTheFirstTwoComponents() {

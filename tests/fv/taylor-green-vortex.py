@@ -1,6 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
+import math
 
 import exahype2
 
@@ -13,7 +14,7 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
     parser.add_argument("-et", "--end-time", type=float, default=0.5)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
@@ -28,40 +29,33 @@ def parse_arguments():
 args = parse_arguments()
 
 initial_conditions = """
-  constexpr double U0 = 1.0; // Initial amplitude of velocity
-  constexpr double Pressure0 = 100 / GAMMA; // Reference pressure
+  constexpr double VelocityAmplitude = 1.0;
+  constexpr double ReferencePressure = 100 / GAMMA;
 
   Q[Shortcuts::rho]      = 1.0;
-  Q[Shortcuts::rhoU + 0] = U0 * std::sin(x(0)) * std::cos(x(1));
-  Q[Shortcuts::rhoU + 1] = -U0 * std::cos(x(0)) * std::sin(x(1));
+  Q[Shortcuts::rhoU + 0] = VelocityAmplitude * std::sin(x(0)) * std::cos(x(1));
+  Q[Shortcuts::rhoU + 1] = -VelocityAmplitude * std::cos(x(0)) * std::sin(x(1));
 #if DIMENSIONS == 3
   Q[Shortcuts::rhoU + 2] = 0.0;
 #endif
 
-  const double pressure = Pressure0 + (Q[Shortcuts::rho] * U0) * (1.0 / 4.0) * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)));
-  // Total energy: Internal energy plus kinetic energy.
-  Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5  * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]);
+  const double pressure = ReferencePressure + Q[Shortcuts::rho] * VelocityAmplitude * VelocityAmplitude / 4.0 * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)));
+  Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5 * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]);
 """
 
 analytical_solution = """
-  constexpr double Viscosity = 1.0;
-  const double C = 100.0 / GAMMA;
+  // The inviscid flux keeps the vortex steady up to compressibility effects.
+  constexpr double VelocityAmplitude = 1.0;
+  constexpr double ReferencePressure = 100 / GAMMA;
 
-  // Time decay factors for velocity and pressure
-  const double expVelocityFactor = std::exp(-2.0 * Viscosity * t);
-  const double expPressureFactor = std::exp(-4.0 * Viscosity * t);
-
-  solution[Shortcuts::rho] = 1.0;
-
-  solution[Shortcuts::rhoU + 0] = expVelocityFactor * std::sin(x(0)) * std::cos(x(1));
-  solution[Shortcuts::rhoU + 1] = -expVelocityFactor * std::cos(x(0)) * std::sin(x(1));
+  solution[Shortcuts::rho]      = 1.0;
+  solution[Shortcuts::rhoU + 0] = VelocityAmplitude * std::sin(x(0)) * std::cos(x(1));
+  solution[Shortcuts::rhoU + 1] = -VelocityAmplitude * std::cos(x(0)) * std::sin(x(1));
 #if DIMENSIONS == 3
   solution[Shortcuts::rhoU + 2] = 0.0;
 #endif
 
-  double pressure = expPressureFactor * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)))*(1.0 / 4.0) + C;
-
-  // Total energy: Internal energy plus kinetic energy.
+  const double pressure = ReferencePressure + solution[Shortcuts::rho] * VelocityAmplitude * VelocityAmplitude / 4.0 * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)));
   solution[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5 * (solution[Shortcuts::rhoU + 0] * solution[Shortcuts::rhoU + 0] + solution[Shortcuts::rhoU + 1] * solution[Shortcuts::rhoU + 1]);
 """
 
@@ -69,7 +63,7 @@ project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
     project_name="TaylorGreenVortex",
     dimensions=2,
-    size=[2 * 3.14159265359, 2 * 3.14159265359, 2 * 3.14159265359],
+    size=[2 * math.pi, 2 * math.pi, 2 * math.pi],
     offset=[0.0, 0.0, 0.0],
     periodic_bc=[True, True, True],
     min_end_time=args.end_time,

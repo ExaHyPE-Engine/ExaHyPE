@@ -6,8 +6,8 @@ import exahype2.codegen
 
 
 class Main:
-    """Writes ``<project>-main.{h,cpp}``: The main function, which hands the domain and the
-    repository callbacks to the runner."""
+    """Writes ``<project>-main.{h,cpp}``, whose main function passes the domain and the
+    solver repository callbacks to the runner."""
 
     def __init__(self, project):
         self.project = project
@@ -29,7 +29,8 @@ class Main:
         self.template_dictionary.setdefault("DEFAULT_MAX_TERMINAL_TIME", "-1.0")
 
     def construct_output(self, output, main_name):
-        """Adds the main files under ``main_name`` without a file extension."""
+        """Adds the header and the source file of the main function to ``output``.
+        ``main_name`` is their path without a file extension."""
         output.makefile.add_h_file(main_name + ".h", generated=True)
         output.makefile.add_cpp_file(main_name + ".cpp", generated=True)
         self._configure_template_dictionary()

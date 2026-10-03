@@ -31,8 +31,8 @@ void {{NAMESPACE | join("::")}}::RuntimeParameters::printUsage() {
 }
 
 /**
- * Copies the admissible patch sizes and the grid levels of the runtime into the storage a kernel
- * reads; the runtime parses its options before the application parameters load.
+ * Copies the admissible patch sizes and the grid levels of the runner into the storage a kernel
+ * reads. The runner parses its own options before it loads the application parameters.
  */
 void {{NAMESPACE | join("::")}}::RuntimeParameters::readGridParameters() {
   const auto& runtimeParameters   = ::exahype2::runner::RuntimeParameters::getInstance();

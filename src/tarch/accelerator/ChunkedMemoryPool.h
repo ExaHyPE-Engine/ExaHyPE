@@ -32,7 +32,7 @@ public:
   static constexpr int SegmentsPerFirstReservation = 16;
 
   /**
-   * Addresses the chunks from a kernel; a copy of it stays valid until the next reserve().
+   * Addresses the chunks from a kernel. A copy of the view stays valid until the next reserve().
    */
   struct View final {
     T* const* segments{nullptr};
@@ -54,17 +54,22 @@ public:
 
   ChunkedMemoryPool()                                                      = delete;
   ChunkedMemoryPool(const tarch::accelerator::ChunkedMemoryPool<T>& other) = delete;
-  ChunkedMemoryPool(tarch::accelerator::ChunkedMemoryPool<T>&& other) noexcept;
+  INLINE_METHOD ChunkedMemoryPool(tarch::accelerator::ChunkedMemoryPool<T>&& other) noexcept;
   tarch::accelerator::ChunkedMemoryPool<T>& operator=(const tarch::accelerator::ChunkedMemoryPool<T>& other) = delete;
-  tarch::accelerator::ChunkedMemoryPool<T>& operator=(tarch::accelerator::ChunkedMemoryPool<T>&& other) noexcept;
-  ~ChunkedMemoryPool() noexcept;
+  INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>& operator=(
+    tarch::accelerator::ChunkedMemoryPool<T>&& other
+  ) noexcept;
+  INLINE_METHOD ~ChunkedMemoryPool() noexcept;
 
-  explicit ChunkedMemoryPool(int chunkSize, tarch::MemoryLocation location = tarch::MemoryLocation::Device) noexcept;
+  INLINE_METHOD explicit ChunkedMemoryPool(
+    int                   chunkSize,
+    tarch::MemoryLocation location = tarch::MemoryLocation::Device
+  ) noexcept;
 
-  void reserve(int numberOfSlots);
-  void release() noexcept;
-  void copyToHost(std::vector<T>& target) const;
-  void copyFromHost(const std::vector<T>& source);
+  INLINE_METHOD void reserve(int numberOfSlots);
+  INLINE_METHOD void release() noexcept;
+  INLINE_METHOD void copyToHost(std::vector<T>& target) const;
+  INLINE_METHOD void copyFromHost(const std::vector<T>& source);
 
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::View getView() noexcept;
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::ConstView getView() const noexcept;
@@ -85,8 +90,8 @@ public:
   [[nodiscard]] INLINE_METHOD tarch::MemoryLocation getLocation() const noexcept;
 
 private:
-  void appendSegment();
-  void uploadSegmentTable();
+  INLINE_METHOD void appendSegment();
+  INLINE_METHOD void uploadSegmentTable();
 
   int                                        _chunkSize{0};
   int                                        _paddedChunkSize{0};

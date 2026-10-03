@@ -49,10 +49,6 @@ exahype2::plotter::tests::FacePlotterTest::run() {
   testMethod(testEveryFaceOfAnAdaptiveGridIsWrittenByOneRank);
 }
 
-/**
- * The faces of one plane across the ranks plot once each with one point per node, the cells
- * between the nodes, both halves of every field, the level and the rank.
- */
 void
 exahype2::plotter::tests::FacePlotterTest::testEverySelectedFaceBecomesItsNodesAndBothTraces() {
   const int rank = tarch::mpi::Rank::getInstance().getRank();
@@ -117,10 +113,6 @@ exahype2::plotter::tests::FacePlotterTest::testEverySelectedFaceBecomesItsNodesA
   deleteOutputDirectory(outputDirectory);
 }
 
-/**
- * Every interior, boundary and hanging face of a grid with level jumps next to the rank boundaries
- * is written by exactly one rank.
- */
 void
 exahype2::plotter::tests::FacePlotterTest::testEveryFaceOfAnAdaptiveGridIsWrittenByOneRank() {
   constexpr int AdaptiveDepth = peano4::tests::DepthWithCoarseCellsBesideTheCentreBlock;
@@ -129,12 +121,12 @@ exahype2::plotter::tests::FacePlotterTest::testEveryFaceOfAnAdaptiveGridIsWritte
   const auto& partition = peano4::Spacetree::getInstance().getPartition();
 
   int heldFaces = 0;
-  for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
+  for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
     for (const auto kind : {peano4::FaceKind::Interior, peano4::FaceKind::Boundary, peano4::FaceKind::Hanging}) {
-      heldFaces += partition.getFaces(dependence, kind).size;
+      heldFaces += partition.getFaces(adjacency, kind).size;
     }
   }
-  const int exchangedFaces = partition.getFaces(peano4::Dependence::Remote, peano4::FaceKind::Interior).size;
+  const int exchangedFaces = partition.getFaces(peano4::Adjacency::Remote, peano4::FaceKind::Interior).size;
 
   const int                 valuesPerFace = 2 * NodesPerFace * ValuesPerNode;
   const std::vector<double> values(static_cast<std::size_t>(partition.getNumberOfFaces()) * valuesPerFace, 0.0);

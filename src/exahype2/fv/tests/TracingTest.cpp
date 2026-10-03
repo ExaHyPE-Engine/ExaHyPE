@@ -34,9 +34,6 @@ namespace {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<double>;
   using Set      = exahype2::particles::ParticleSet<NumberOfParticleData>;
 
-  /**
-   * A linear field per unknown: Unknown k at position x is k + 1 + sum over the axes of (axis + 2) x(axis).
-   */
   double getLinearField(const int unknown, const tarch::la::Vector<DIMENSIONS, double>& x) {
     double value = unknown + 1.0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -45,9 +42,6 @@ namespace {
     return value;
   }
 
-  /**
-   * Fills a patch with the linear field at the volume centres.
-   */
   std::vector<double> getLinearPatch(
     const tarch::la::Vector<DIMENSIONS, double>& centre,
     const tarch::la::Vector<DIMENSIONS, double>& width
@@ -64,9 +58,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Writes velocity into the first unknown of every volume of a patch and zero into its other unknowns.
-   */
   struct FillVelocity final {
     peano4::Partition partition{};
     CellPool::View    solution{};
@@ -83,17 +74,13 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
-   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
   }
 
   /**
-   * Holds the partition of a regular grid partitioned over the ranks and a solution pool with a
-   * constant velocity along the first axis.
+   * Regular grid with a constant velocity along the first axis.
    */
   struct Grid final {
     const peano4::Partition& partition;
@@ -110,7 +97,7 @@ namespace {
   };
 
   /**
-   * The forces of a tracer that copies the fluid velocity into its own velocity and moves with it.
+   * Returns the forces of a tracer that takes the fluid velocity and moves with it.
    */
   exahype2::particles::Forces getFluidTracer() {
     exahype2::particles::Forces forces;
@@ -135,7 +122,7 @@ exahype2::fv::tests::TracingTest::TracingTest() :
 
 void
 exahype2::fv::tests::TracingTest::run() {
-  testMethod(testPiecewiseConstantReadsTheVolumeThatHoldsThePosition);
+  testMethod(testPiecewiseConstantReadsTheVolumeThatContainsThePosition);
   testMethod(testPiecewiseLinearReproducesALinearField);
   testMethod(testInterpolationOnRectangularPatches);
   testMethod(testClampIntoPatchProjectsOntoTheVolumeCentres);
@@ -143,9 +130,6 @@ exahype2::fv::tests::TracingTest::run() {
   testMethod(testStaticSamplingPreservesParticleData);
 }
 
-/**
- * Checks interpolation at one position using the spacing of each axis.
- */
 void
 exahype2::fv::tests::TracingTest::testInterpolationOnRectangularPatches() {
   const tarch::la::Vector<DIMENSIONS, double> centre(0.5);
@@ -183,7 +167,7 @@ exahype2::fv::tests::TracingTest::testInterpolationOnRectangularPatches() {
 }
 
 /**
- * Checks that static sampling writes only its named attributes, including sets without motion attributes.
+ * Static sampling writes only the named attributes, also in a set without motion attributes.
  */
 void
 exahype2::fv::tests::TracingTest::testStaticSamplingPreservesParticleData() {
@@ -225,7 +209,7 @@ exahype2::fv::tests::TracingTest::testStaticSamplingPreservesParticleData() {
 }
 
 void
-exahype2::fv::tests::TracingTest::testPiecewiseConstantReadsTheVolumeThatHoldsThePosition() {
+exahype2::fv::tests::TracingTest::testPiecewiseConstantReadsTheVolumeThatContainsThePosition() {
   const tarch::la::Vector<DIMENSIONS, double> centre(0.5);
   const tarch::la::Vector<DIMENSIONS, double> width(0.3);
   const auto                                  Q = getLinearPatch(centre, width);
@@ -257,8 +241,8 @@ exahype2::fv::tests::TracingTest::testPiecewiseConstantReadsTheVolumeThatHoldsTh
 }
 
 /**
- * The interpolation between the volume centres reproduces a linear field on either side of a
- * centre, and beyond the last centre of an axis it returns the value of the last volume.
+ * The interpolation reproduces a linear field between volume centres and returns the value of the last volume
+ * beyond the last centre.
  */
 void
 exahype2::fv::tests::TracingTest::testPiecewiseLinearReproducesALinearField() {

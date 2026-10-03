@@ -25,5 +25,5 @@ private:
   void testDescribeMeshUpdatesReportsTheSweepCountAndWallClock();
   void testDescribeRepetitionsCountsEveryPhaseInItsUnit();
   void testFinishStepSumsTheSolverBytesAndCellUpdates();
-  void testTheGridInitialisationRealisesOnlyTheVotesOfTheInitialCondition();
+  void testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition();
 };

@@ -11,8 +11,8 @@
 
 namespace applications::exahype2::exaskred::coupled {
   /**
-   * Index map that exposes the granular layer of the coupled state to the
-   * landslide kernels, which read a layer as (h, hu, hv) plus the terrain.
+   * Maps the indices h, hu and z that the landslide kernels read to the granular layer of the
+   * coupled state.
    */
   template <class Shortcuts>
   struct SlideLayer {
@@ -22,8 +22,8 @@ namespace applications::exahype2::exaskred::coupled {
   };
 
   /**
-   * Face view of the water layer: Thickness, momenta, and the effective
-   * bathymetry, which is the terrain plus the granular layer riding on it.
+   * Face view of the water layer: Thickness, momenta and the effective bathymetry, the terrain plus
+   * the granular layer.
    */
   struct WaterView {
     static constexpr int h    = 0;
@@ -34,8 +34,8 @@ namespace applications::exahype2::exaskred::coupled {
   };
 
   /**
-   * Face view of the granular layer: Thickness, momenta, the terrain, and the
-   * water column above the layer, which decides buoyancy and drag.
+   * Face view of the granular layer: Thickness, momenta, the terrain and the depth of the water
+   * above the layer, which switches on buoyancy.
    */
   struct SlideView {
     static constexpr int h          = 0;

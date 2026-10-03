@@ -7,9 +7,8 @@
 
 TARGET_DECLARE
 /**
- * Advances every volume from @p inputPatch into @p outputPatch and returns the maximum
- * eigenvalue encountered over the patch. Bit f of @p boundaryFaces is set when face f of the
- * patch lies on the domain boundary.
+ * Advances every volume from inputPatch into outputPatch and returns the largest wave speed of the
+ * step. Bit f of boundaryFaces marks patch face f as a domain boundary face.
  */
 template <
   typename Reconstruction,

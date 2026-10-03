@@ -21,6 +21,7 @@
 #include "peano4/MigrationExchange.h"
 #include "peano4/Partition.h"
 #include "peano4/Regrid.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -33,19 +34,10 @@ namespace exahype2::dg {
 } // namespace exahype2::dg
 
 /**
- * The solution pool, the two face pools, the exchanges, the refinement votes and the error
- * measurement of a discontinuous Galerkin solver family on the partition. Derived is the
- * generated solver class with the layout constants, the operator tables Quadrature and
- * DGMatrices and the PDE terms; StoragePrecision is the type of the nodal values,
- * ComputePrecision the type of the face states, the face fluxes and the kernels. A solver family
- * defines getTimeStepSizeFromCFL() and getFixedTimeStepSize(), which closeTimeStep() reads
- * through Derived.
- *
- * Between threads the cells meet only in the face pools: Every cell writes its own halves of its
- * faces, and the Riemann problems read both halves. Between ranks the own halves of every
- * exchanged face travel in _stateExchange and _fluxExchange. A solver with a cell predicate
- * advances only the cells the predicate owns and lists them and their Riemann faces grouped like
- * the spans of the partition.
+ * The base of the discontinuous Galerkin solver families, which define getTimeStepSizeFromCFL()
+ * and getFixedTimeStepSize(). StoragePrecision is the type of the nodal values, and
+ * ComputePrecision is the type of the face data and the kernels. A cell writes only its own halves
+ * of its faces, and the Riemann solver reads both halves.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::dg::Solver {
@@ -78,28 +70,39 @@ public:
   Solver& operator=(Solver&&)      = delete;
   ~Solver()                        = default;
 
-  Solver(
+  INLINE_METHOD Solver(
     double                                           timeStepFactor,
     const std::string&                               name,
     const std::vector<exahype2::plotter::DataField>& plottedFields
   );
 
-  void requestRefinementForGridConstruction(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
-  void allocate(const peano4::Partition& partition);
-  void initialise(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
-  void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid, exahype2::RefinementRequests& requests);
-  void plot(const peano4::Partition& partition, tarch::plotter::Format format, const std::string& outputDirectory);
-  void release();
+  INLINE_METHOD void requestRefinementForGridConstruction(
+    const peano4::Partition&      partition,
+    exahype2::RefinementRequests& requests
+  );
+  INLINE_METHOD void allocate(const peano4::Partition& partition);
+  INLINE_METHOD void initialise(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void regrid(
+    const peano4::Partition&      partition,
+    const peano4::Regrid&         regrid,
+    exahype2::RefinementRequests& requests
+  );
+  INLINE_METHOD void plot(
+    const peano4::Partition& partition,
+    tarch::plotter::Format   format,
+    const std::string&       outputDirectory
+  );
+  INLINE_METHOD void release();
 
-  void setLimits(const exahype2::Limits& limits);
-  void openErrorMeasurement(const std::string& fileName, double timeDeltaBetweenSnapshots);
-  [[nodiscard]] const exahype2::TimeStepping& getTimeStepping() const;
-  [[nodiscard]] const CellPool& getSolution() const;
-  [[nodiscard]] const StatePool& getFaceStates() const;
-  [[nodiscard]] const FluxPool& getFaceFluxes() const;
-  [[nodiscard]] tarch::AllocatedBytes getAllocatedBytes() const;
-  [[nodiscard]] int getNumberOfDoFs() const;
-  [[nodiscard]] int getNumberOfCells(const peano4::Partition& partition) const;
+  INLINE_METHOD void setLimits(const exahype2::Limits& limits);
+  INLINE_METHOD void openErrorMeasurement(const std::string& fileName, double timeDeltaBetweenSnapshots);
+  [[nodiscard]] INLINE_METHOD const exahype2::TimeStepping& getTimeStepping() const;
+  [[nodiscard]] INLINE_METHOD const CellPool& getSolution() const;
+  [[nodiscard]] INLINE_METHOD const StatePool& getFaceStates() const;
+  [[nodiscard]] INLINE_METHOD const FluxPool& getFaceFluxes() const;
+  [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
+  [[nodiscard]] INLINE_METHOD int getNumberOfDoFs() const;
+  [[nodiscard]] INLINE_METHOD int getNumberOfCells(const peano4::Partition& partition) const;
 
 protected:
   static constexpr bool EvaluateDiffusiveFlux = exahype2::terms::HasDiffusiveFlux<Derived, ComputePrecision>;
@@ -110,51 +113,43 @@ protected:
   static constexpr bool EvaluateDiffusiveSource    = exahype2::terms::HasDiffusiveSourceTerm<Derived, ComputePrecision>;
   static constexpr bool EvaluateMaterialParameters = exahype2::terms::HasMaterialParameters<Derived, ComputePrecision>;
 
-  /**
-   * Interpolates the face states and the face fluxes of a coarse face onto its fine faces.
-   */
-  using InterpolateHalves = exahype2::dg::InterpolateFaceHalves<Derived, ComputePrecision>;
-  /**
-   * Interpolates the face states of a coarse face onto its fine faces.
-   */
+  using InterpolateHalves      = exahype2::dg::InterpolateFaceHalves<Derived, ComputePrecision>;
   using InterpolateStateHalves = exahype2::dg::InterpolateFaceStateHalves<Derived, ComputePrecision>;
-  /**
-   * Restricts the fluxes of the fine faces of a level jump onto their coarse face.
-   */
-  using RestrictFluxes = exahype2::dg::RestrictFluxHalves<Derived, ComputePrecision>;
-  /**
-   * Restricts the face states of the fine faces of a level jump onto their coarse face.
-   */
-  using RestrictStates = exahype2::dg::RestrictStateHalves<Derived, ComputePrecision>;
+  using RestrictFluxes         = exahype2::dg::RestrictFluxHalves<Derived, ComputePrecision>;
+  using RestrictStates         = exahype2::dg::RestrictStateHalves<Derived, ComputePrecision>;
 
-  [[nodiscard]] tarch::Span<const int> getCells(const peano4::Partition& partition) const;
-  [[nodiscard]] tarch::Span<const int> getCells(
+  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(const peano4::Partition& partition) const;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(
     const peano4::Partition& partition,
-    peano4::Dependence       dependence
+    peano4::Adjacency        adjacency
   ) const;
-  [[nodiscard]] tarch::Span<const int> getCellsOnHost(const peano4::Partition& partition) const;
-  [[nodiscard]] tarch::Span<const int> getRiemannFaces(
+  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCellsOnHost(const peano4::Partition& partition) const;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getRiemannFaces(
     const peano4::Partition& partition,
-    peano4::Dependence       dependence
+    peano4::Adjacency        adjacency
   ) const;
-  [[nodiscard]] const StoragePrecision* downloadSolution();
-  [[nodiscard]] const ComputePrecision* downloadFaceStates();
-  void projectSolutionOntoFaces(const peano4::Partition& partition);
-  void projectSolutionOntoPlane(const peano4::Partition& partition, int normal, double position);
-  void solveRiemannProblems(
+  [[nodiscard]] INLINE_METHOD const StoragePrecision* downloadSolution();
+  [[nodiscard]] INLINE_METHOD const ComputePrecision* downloadFaceStates();
+  INLINE_METHOD void projectSolutionOntoFaces(const peano4::Partition& partition);
+  INLINE_METHOD void projectSolutionOntoPlane(const peano4::Partition& partition, int normal, double position);
+  INLINE_METHOD void solveRiemannProblems(
     const peano4::Partition& partition,
-    peano4::Dependence       dependence,
+    peano4::Adjacency        adjacency,
     double                   timeStamp,
     double                   timeStepSize
   );
-  void closeTimeStep(
+  INLINE_METHOD void closeTimeStep(
     const peano4::Partition&                     partition,
     double                                       timeStepSize,
     const exahype2::dg::MaxEigenvalueStatistics& statistics
   );
-  void measureError(const peano4::Partition& partition);
-  void voteOnRefinement(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
-  void plotFaces(const peano4::Partition& partition, tarch::plotter::Format format, const std::string& outputDirectory);
+  INLINE_METHOD void measureError(const peano4::Partition& partition);
+  INLINE_METHOD void voteOnRefinement(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void plotFaces(
+    const peano4::Partition& partition,
+    tarch::plotter::Format   format,
+    const std::string&       outputDirectory
+  );
 
   exahype2::TimeStepping _timeStepping;
 
@@ -163,7 +158,7 @@ protected:
   FluxPool  _faceFluxes{FluxValuesPerFace};
 
   /**
-   * The MPI exchanges of the own halves of every exchanged face with the neighbour ranks.
+   * The MPI exchanges of the own face halves with the neighbour ranks.
    */
   peano4::HaloExchange<ComputePrecision> _stateExchange{_faceStates};
   peano4::HaloExchange<ComputePrecision> _fluxExchange{_faceFluxes};
@@ -171,32 +166,35 @@ protected:
   exahype2::plotter::PatchPlotter _plotter;
 
   /**
-   * The 1D node positions and quadrature weights on the host, which the plots and a host initial condition read.
+   * Host copies of the 1D node positions and quadrature weights for the plots and a host initial
+   * condition.
    */
   std::vector<double> _nodePositionsOnHost{};
   std::vector<double> _nodeWeightsOnHost{};
 
 private:
-  void rebuildOwnedLists(const peano4::Partition& partition);
-  void reduceMeshWidths(const peano4::Partition& partition);
+  INLINE_METHOD void rebuildOwnedLists(const peano4::Partition& partition);
+  INLINE_METHOD void reduceMeshWidths(const peano4::Partition& partition);
 
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
 
   exahype2::RefinementVotes _votes{};
   /**
-   * The regrid sets it and the next time step clears it, so that step casts no refinement vote.
+   * regrid() sets it, and the next voteOnRefinement() clears it and casts no vote.
    */
   bool _meshChangedSinceLastTimeStep{false};
 
   /**
-   * The cells the cell predicate of Derived owns, the local cells first; empty without a predicate.
+   * The cells the cell predicate of Derived owns, the local cells first. The list is empty without
+   * a cell predicate.
    */
   tarch::accelerator::Buffer<int> _ownedCells{tarch::MemoryLocation::Device};
   std::vector<int>                _ownedCellsOnHost{};
   int                             _numberOfLocalOwnedCells{0};
 
   /**
-   * The interior, boundary and hanging faces with an owned cell, the local faces first; empty without a predicate.
+   * The interior, boundary and hanging faces beside an owned cell, the local faces first. The list
+   * is empty without a cell predicate.
    */
   tarch::accelerator::Buffer<int> _ownedRiemannFaces{tarch::MemoryLocation::Device};
   int                             _numberOfLocalOwnedRiemannFaces{0};

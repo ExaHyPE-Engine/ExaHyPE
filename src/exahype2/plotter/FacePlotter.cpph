@@ -12,14 +12,13 @@
 #include "tarch/plotter/FileWriter.h"
 
 /**
- * Writes one snapshot of every face for which plotsFace(faceCentre, cellWidth, normal) holds.
- * values holds the two halves of every face at face * valuesPerFace: The values of the lower cell
- * first and the values of the upper cell behind it, each with the face nodes in the order of the
- * tangential axes with the lower axis fastest and ValuesPerNode values per node. Every rank
- * calls this at the same time.
+ * Writes one snapshot of every face for which plotsFace(faceCentre, cellWidth, normal) is true.
+ * Face f starts at values + f * valuesPerFace with the lower half, followed by the upper half, each
+ * with ValuesPerNode values per node and the lower tangential axis fastest. Every rank calls this
+ * function collectively.
  */
 template <int NodesPerAxis, int ValuesPerNode, typename Precision, typename Predicate>
-void
+INLINE_METHOD void
 exahype2::plotter::FacePlotter::plot(
   const peano4::Partition&     partition,
   const Precision* const       values,

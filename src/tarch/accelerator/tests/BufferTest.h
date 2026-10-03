@@ -9,8 +9,8 @@ namespace tarch::accelerator::tests {
 } // namespace tarch::accelerator::tests
 
 /**
- * Checks that a buffer owns its array in the requested memory location and carries values to
- * and from the host.
+ * Checks that a buffer owns its array in the requested memory location and copies values to and
+ * from the host.
  */
 class tarch::accelerator::tests::BufferTest final : public tarch::tests::TestCase {
 public:

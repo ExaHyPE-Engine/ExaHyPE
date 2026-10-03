@@ -22,7 +22,7 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * Holds the exact sums of the L1 and the squared L2 errors and the largest error of a set of cells.
+ * Sums of the L1 and the squared L2 errors and the largest error of a set of cells.
  */
 struct exahype2::ErrorSums final {
   TARGET_DECLARE
@@ -38,11 +38,9 @@ struct exahype2::ErrorSums final {
 };
 
 /**
- * Merges the exact L1, L2 and Linf error sums of a solver against its analytical solution over
- * all ranks, so every rank and thread layout records the same norms, and writes them as a time
- * series. The errors of every cell live in one device buffer of the measurement: A kernel of
- * the solver writes NumberOfNorms values per cell into getErrorsPerCell() and record() sums
- * them in the memory the kernels read.
+ * Time series of the L1, L2 and Linf errors of a solver against its analytical solution. A solver
+ * kernel writes NumberOfNorms errors per cell into getErrorsPerCell(), and record() merges them
+ * over all ranks. The sums are exact, so the norms do not depend on the rank and thread layout.
  */
 class exahype2::ErrorMeasurement final {
 public:
@@ -84,9 +82,6 @@ private:
 };
 
 TARGET_DECLARE
-/**
- * Adds the errors of every numberOfPartialSums-th cell, starting at the cell of its index, into that partial sum.
- */
 struct exahype2::SumErrorsOfCells final {
   const double* errorsPerCell{nullptr};
   int           numberOfCells{0};
@@ -96,9 +91,6 @@ struct exahype2::SumErrorsOfCells final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int partialSum) const;
 };
 
-/**
- * Merges the partial sum stride entries further into the partial sum of an index divisible by twice stride.
- */
 struct exahype2::MergeErrorSums final {
   ErrorSums* partialSums{nullptr};
   int        stride{0};

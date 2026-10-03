@@ -19,9 +19,7 @@ exahype2::runner::makeCountStatistic(const char* const label, const long value) 
 }
 
 /**
- * Returns the statistics of one solver a time step report shows. The largest eigenvalue appears
- * under the adaptive time step rule, the troubled cell count, zero included, for a solver with a
- * limiter.
+ * Returns the statistics of one solver for the time step report.
  */
 template <typename Solver, typename AppendAdditionalStatistics>
 INLINE_METHOD std::pair<std::string, std::vector<exahype2::runner::SolverStatistic>>

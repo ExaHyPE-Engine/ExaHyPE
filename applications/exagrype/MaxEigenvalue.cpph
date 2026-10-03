@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 /**
- * Returns a bound on the coordinate signal speed along normal.
+ * Returns an upper bound on the coordinate signal speed along the axis normal.
  * The conformal metric must be positive definite.
  */
 template <class Shortcuts>

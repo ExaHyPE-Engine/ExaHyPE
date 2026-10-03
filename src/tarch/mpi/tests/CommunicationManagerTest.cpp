@@ -20,9 +20,6 @@ tarch::mpi::tests::CommunicationManagerTest::run() {
   testMethod(testDedicatedThreadNeedsAPeerAndAConfiguration);
 }
 
-/**
- * The dedicated thread runs if a caller enables it and the process has a peer.
- */
 void
 tarch::mpi::tests::CommunicationManagerTest::testDedicatedThreadNeedsAPeerAndAConfiguration() {
   const bool usedOnEntry = tarch::mpi::AbstractCommunicationManager::usesDedicatedThread();
@@ -39,9 +36,6 @@ tarch::mpi::tests::CommunicationManagerTest::testDedicatedThreadNeedsAPeerAndACo
   validateEquals(tarch::mpi::AbstractCommunicationManager::usesDedicatedThread(), usedOnEntry);
 }
 
-/**
- * One progress() call runs every poller once.
- */
 void
 tarch::mpi::tests::CommunicationManagerTest::testSerialProgressRunsEveryPollerOnce() {
   tarch::mpi::SerialCommunicationManager manager;
@@ -63,9 +57,6 @@ tarch::mpi::tests::CommunicationManagerTest::testSerialProgressRunsEveryPollerOn
   validateEquals(secondPollerInvocations, 2);
 }
 
-/**
- * finishPendingWork() keeps polling until every poller reports idle.
- */
 void
 tarch::mpi::tests::CommunicationManagerTest::testSerialFinishPendingWorkRunsUntilIdle() {
   constexpr int                          PassesUntilIdle = 4;
@@ -81,9 +72,6 @@ tarch::mpi::tests::CommunicationManagerTest::testSerialFinishPendingWorkRunsUnti
   validateEqualsWithParams1(pollerInvocations, PassesUntilIdle, pollerInvocations);
 }
 
-/**
- * The thread runs the pollers without a progress() call.
- */
 void
 tarch::mpi::tests::CommunicationManagerTest::testThreadedManagerPollsWithoutProgressCalls() {
   tarch::mpi::ThreadedCommunicationManager manager;
@@ -101,9 +89,6 @@ tarch::mpi::tests::CommunicationManagerTest::testThreadedManagerPollsWithoutProg
   validateWithParams1(pollerInvocations.load() >= 3, pollerInvocations.load());
 }
 
-/**
- * The wait returns only after the poller reports idle.
- */
 void
 tarch::mpi::tests::CommunicationManagerTest::testThreadedFinishPendingWorkWaitsForAnIdlePass() {
   constexpr int                            PassesUntilIdle = 3;
@@ -121,9 +106,6 @@ tarch::mpi::tests::CommunicationManagerTest::testThreadedFinishPendingWorkWaitsF
   validateWithParams1(passesAfterWait >= PassesUntilIdle, passesAfterWait);
 }
 
-/**
- * Without a running thread, the wait runs the pollers on the calling thread.
- */
 void
 tarch::mpi::tests::CommunicationManagerTest::testThreadedFinishPendingWorkAfterStopRunsInline() {
   constexpr int                            PassesUntilIdle = 2;

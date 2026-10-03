@@ -10,12 +10,6 @@
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/CompileTarget.h"
 
-/**
- * @file
- * The loop functors a finite-volume solver runs over the cells, the faces and the level jumps of
- * the partition. Every loop body calls one function of exahype2::fv::FiniteVolume on the patch or
- * face of its work item.
- */
 TARGET_DECLARE
 namespace exahype2::fv {
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getBoundaryFaceMask(const peano4::Partition& partition, int cell);
@@ -51,9 +45,6 @@ namespace exahype2::fv {
   struct PatchTransfer;
 } // namespace exahype2::fv
 
-/**
- * Writes the initial condition of Derived into the patch of every cell.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::InitialisePatches final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -65,9 +56,6 @@ struct exahype2::fv::InitialisePatches final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/**
- * Fills the outer half of every boundary face from its inner half through the boundary conditions of Derived.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ApplyBoundaryConditions final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -82,7 +70,7 @@ struct exahype2::fv::ApplyBoundaryConditions final {
 };
 
 /**
- * Fills the coarse-side halves of the fine faces of a level jump from the same half of its coarse face.
+ * Fills the coarse-side halves of the fine faces of a level jump from its coarse face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::InterpolateHaloHalves final {
@@ -96,8 +84,7 @@ struct exahype2::fv::InterpolateHaloHalves final {
 };
 
 /**
- * Fills the coarse-side halves of the fine faces of a level jump with copies of the coarse volumes
- * in the same half of its coarse face.
+ * Fills the coarse-side halves of the fine faces of a level jump with copies of its coarse face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::InjectHaloHalves final {
@@ -111,7 +98,7 @@ struct exahype2::fv::InjectHaloHalves final {
 };
 
 /**
- * Fills the fine-side half of the coarse face of a level jump from the same half of its fine faces.
+ * Fills the fine-side half of the coarse face of a level jump from its fine faces.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::RestrictHaloHalves final {
@@ -124,9 +111,6 @@ struct exahype2::fv::RestrictHaloHalves final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
-/**
- * Copies the boundary layers of the patch of every cell into its own half of every face of the cell.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ProjectPatchesOntoFaces final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -140,9 +124,6 @@ struct exahype2::fv::ProjectPatchesOntoFaces final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
-/**
- * Advances the patch of every listed cell from input into output and reduces the largest wave speed.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::UpdatePatches final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -160,9 +141,6 @@ struct exahype2::fv::UpdatePatches final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, double& accumulator) const;
 };
 
-/**
- * Reduces the largest wave speed of Derived over the volumes of the patch of every cell.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::MeasurePatchEigenvalues final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -175,9 +153,6 @@ struct exahype2::fv::MeasurePatchEigenvalues final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, double& accumulator) const;
 };
 
-/**
- * Writes the error norms of the patch of every cell into the NumberOfNorms entries of the cell.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::MeasurePatchErrors final {
   using Kernel   = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
@@ -195,10 +170,7 @@ struct exahype2::fv::MeasurePatchErrors final {
 };
 
 /**
- * Moves the patches of Derived through a regrid: copy() keeps a patch, interpolateFromParent()
- * fills the patch of a new child from its parent and restrictFromChildren() averages the
- * patches of erased children into their parent. Every function reads the source pool and
- * writes one patch into target.
+ * Fills patches of the new grid from source, the pool of the old grid, during a regrid.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::PatchTransfer final {

@@ -26,6 +26,25 @@ namespace {
     }
   }
 
+  std::vector<int> readIntVariable(const int ncid, const std::string& name, const std::size_t length) {
+    int variableId = -1;
+    checkNc(nc_inq_varid(ncid, name.c_str(), &variableId), "inq var " + name);
+    std::vector<int>  values(length, -1);
+    const std::size_t start[1] = {0};
+    const std::size_t count[1] = {length};
+    checkNc(nc_get_vara_int(ncid, variableId, start, count, values.data()), "read " + name);
+    return values;
+  }
+
+  bool isIndexSequence(const std::vector<int>& values) {
+    for (std::size_t index = 0; index < values.size(); index++) {
+      if (values[index] != static_cast<int>(index)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void validate3DHexMetadata(const std::string& filepath) {
     validateFileExists(filepath);
 
@@ -51,11 +70,13 @@ namespace {
     int       topologyDimension = 0;
     checkNc(nc_get_att_int(ncid, meshVar, "topology_dimension", &topologyDimension), "mesh3d topology_dimension");
 
-    const std::size_t nodeCount   = readDimensionLength("nMesh3d_node");
-    const std::size_t volumeCount = readDimensionLength("nMesh3d_volume");
+    const std::size_t      nodeCount     = readDimensionLength("nMesh3d_node");
+    const std::size_t      volumeCount   = readDimensionLength("nMesh3d_volume");
+    const std::vector<int> nodeIndices   = readIntVariable(ncid, "nMesh3d_node", nodeCount);
+    const std::vector<int> volumeIndices = readIntVariable(ncid, "nMesh3d_volume", volumeCount);
 
-    // The MPI scan gives rank 0 the offset 0, so the first volume belongs to rank 0 and
-    // its connectivity and node coordinates hold for every rank count.
+    // The MPI scan gives rank 0 the offset 0, so the checks of the first volume pass for every
+    // rank count.
     const int   volumeNodesVar       = readVarId("volume_nodes");
     std::size_t connectivityStart[2] = {0, 0};
     std::size_t connectivityCount[2] = {1, 8};
@@ -99,8 +120,11 @@ namespace {
     if (topologyDimension != 3) {
       throw std::runtime_error("Expected NetCDF topology_dimension 3 for the 3D hexahedron test.");
     }
-    if (nodeCount != static_cast<std::size_t>(8 * ranks) or volumeCount != static_cast<std::size_t>(ranks)) {
+    if (nodeCount != 8 * static_cast<std::size_t>(ranks) or volumeCount != static_cast<std::size_t>(ranks)) {
       throw std::runtime_error("Unexpected global node/volume count for the 3D hexahedron test.");
+    }
+    if (not isIndexSequence(nodeIndices) or not isIndexSequence(volumeIndices)) {
+      throw std::runtime_error("Expected the node and volume indices in nMesh3d_node and nMesh3d_volume.");
     }
     const int expectedConnectivity[8] = {0, 1, 2, 3, 4, 5, 6, 7};
     for (int i = 0; i < 8; ++i) {
@@ -143,9 +167,16 @@ namespace {
     std::size_t faceCount = 0;
     checkNc(nc_inq_dimlen(ncid, dimNodes, &nodeCount), "len nMesh2d_node");
     checkNc(nc_inq_dimlen(ncid, dimFaces, &faceCount), "len nMesh2d_face");
-    if (nodeCount != static_cast<std::size_t>(7 * ranks) or faceCount != static_cast<std::size_t>(2 * ranks)) {
+    if (nodeCount != 7 * static_cast<std::size_t>(ranks) or faceCount != 2 * static_cast<std::size_t>(ranks)) {
       nc_close(ncid);
       throw std::runtime_error("Unexpected global node/face count for multi-subdomain NetCDF test.");
+    }
+
+    const std::vector<int> nodeIndices = readIntVariable(ncid, "nMesh2d_node", nodeCount);
+    const std::vector<int> faceIndices = readIntVariable(ncid, "nMesh2d_face", faceCount);
+    if (not isIndexSequence(nodeIndices) or not isIndexSequence(faceIndices)) {
+      nc_close(ncid);
+      throw std::runtime_error("Expected the node and face indices in nMesh2d_node and nMesh2d_face.");
     }
 
     int faceNodesVar = -1;
@@ -178,7 +209,7 @@ namespace {
   }
 
   void cleanup(const std::string& filename) {
-    std::filesystem::path filePath(filename);
+    const std::filesystem::path filePath(filename);
     if (std::filesystem::exists(filePath)) {
       std::filesystem::remove(filePath);
     }
@@ -190,8 +221,7 @@ tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest() :
 
 void
 tarch::plotter::tests::NetCDFFileWriterTest::testHeterogeneousRanks() {
-  // Only the global master contributes geometry and a "Material" cell field, and every
-  // other rank leaves the plotter empty. writeToFile() stays collective for all ranks.
+  // Only the global master plots data, and every rank calls writeToFile().
   const std::string filename = "NetCDFTestHeterogeneous";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
@@ -203,12 +233,12 @@ tarch::plotter::tests::NetCDFFileWriterTest::testHeterogeneousRanks() {
       auto cellPlotter     = plotter.createCellPlotter(0);
       auto cellDataPlotter = plotter.createCellDataPlotter(0, "Material", 1);
 
-      int p0      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-      int p1      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-      int p2      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-      int p3      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
-      int quad[4] = {p0, p1, p2, p3};
-      int cell    = cellPlotter->plotQuadrangle(quad);
+      const int p0      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+      const int p1      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+      const int p2      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+      const int p3      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+      int       quad[4] = {p0, p1, p2, p3};
+      const int cell    = cellPlotter->plotQuadrangle(quad);
       cellDataPlotter->plotCellData(cell, 3.0);
     }
 
@@ -271,10 +301,10 @@ tarch::plotter::tests::NetCDFFileWriterTest::test2DSimpleTriangle() {
     auto vertexPlotter = plotter.createVertexPlotter(0);
     auto cellPlotter   = plotter.createCellPlotter(0);
 
-    int i0         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    int i1         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-    int i2         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.5, 1.0});
-    int indices[3] = {i0, i1, i2};
+    const int i0         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    const int i1         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+    const int i2         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.5, 1.0});
+    int       indices[3] = {i0, i1, i2};
 
     cellPlotter->plotTriangle(indices);
 
@@ -302,13 +332,13 @@ tarch::plotter::tests::NetCDFFileWriterTest::test2DQuadWithData() {
     auto vertexDataPlotter = plotter.createVertexDataPlotter(0, "Pressure", 1);
     auto cellDataPlotter   = plotter.createCellDataPlotter(0, "Velocity", 2);
 
-    int i0         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    int i1         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-    int i2         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-    int i3         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
-    int indices[4] = {i0, i1, i2, i3};
+    const int i0         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    const int i1         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+    const int i2         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+    const int i3         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+    int       indices[4] = {i0, i1, i2, i3};
 
-    int cellIndex = cellPlotter->plotQuadrangle(indices);
+    const int cellIndex = cellPlotter->plotQuadrangle(indices);
 
     vertexDataPlotter->plotVertexData(i0, 10.0);
     vertexDataPlotter->plotVertexData(i1, 11.0);
@@ -380,12 +410,12 @@ tarch::plotter::tests::NetCDFFileWriterTest::testMultipleSubdomains2DWithData() 
       auto vertexDataPlotter = plotter.createVertexDataPlotter(0, "Pressure", 1);
       auto cellDataPlotter   = plotter.createCellDataPlotter(0, "Material", 1);
 
-      int p0      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-      int p1      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-      int p2      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-      int p3      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
-      int quad[4] = {p0, p1, p2, p3};
-      int cell    = cellPlotter->plotQuadrangle(quad);
+      const int p0      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+      const int p1      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+      const int p2      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+      const int p3      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+      int       quad[4] = {p0, p1, p2, p3};
+      const int cell    = cellPlotter->plotQuadrangle(quad);
 
       vertexDataPlotter->plotVertexData(p0, 10.0);
       vertexDataPlotter->plotVertexData(p1, 11.0);
@@ -400,11 +430,11 @@ tarch::plotter::tests::NetCDFFileWriterTest::testMultipleSubdomains2DWithData() 
       auto vertexDataPlotter = plotter.createVertexDataPlotter(1, "Pressure", 1);
       auto cellDataPlotter   = plotter.createCellDataPlotter(1, "Material", 1);
 
-      int p0          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{2.0, 0.0});
-      int p1          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{3.0, 0.0});
-      int p2          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{2.5, 1.0});
-      int triangle[3] = {p0, p1, p2};
-      int cell        = cellPlotter->plotTriangle(triangle);
+      const int p0          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{2.0, 0.0});
+      const int p1          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{3.0, 0.0});
+      const int p2          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{2.5, 1.0});
+      int       triangle[3] = {p0, p1, p2};
+      const int cell        = cellPlotter->plotTriangle(triangle);
 
       vertexDataPlotter->plotVertexData(p0, 20.0);
       vertexDataPlotter->plotVertexData(p1, 21.0);
@@ -428,7 +458,7 @@ tarch::plotter::tests::NetCDFFileWriterTest::testUnevenSubdomainCounts() {
   const std::string filename = "NetCDFTestUneven";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
-  // Master holds 3 subdomains, every other rank 2 - non-zero but unequal counts.
+  // The master plots three subdomains and every other rank two.
   const int numberOfSubdomains = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
   {
     NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
@@ -440,12 +470,12 @@ tarch::plotter::tests::NetCDFFileWriterTest::testUnevenSubdomainCounts() {
       auto         cellPlotter     = plotter.createCellPlotter(subdomain);
       auto         cellDataPlotter = plotter.createCellDataPlotter(subdomain, "Material", 1);
       const double origin          = 100.0 * tarch::mpi::Rank::getInstance().getRank() + 2.0 * subdomain;
-      int          p0              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 0.0, 0.0});
-      int          p1              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 1.0, 0.0});
-      int          p2              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 1.0, 1.0});
-      int          p3              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 0.0, 1.0});
+      const int    p0              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 0.0, 0.0});
+      const int    p1              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 1.0, 0.0});
+      const int    p2              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 1.0, 1.0});
+      const int    p3              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 0.0, 1.0});
       int          quad[4]         = {p0, p1, p2, p3};
-      int          cell            = cellPlotter->plotQuadrangle(quad);
+      const int    cell            = cellPlotter->plotQuadrangle(quad);
       cellDataPlotter->plotCellData(cell, 1.0);
     }
     plotter.writeToFile(filename, 0);
@@ -455,20 +485,27 @@ tarch::plotter::tests::NetCDFFileWriterTest::testUnevenSubdomainCounts() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     validateFileExists(fullPath);
     const int         ranks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-    const std::size_t faces = static_cast<std::size_t>(3 + 2 * (ranks - 1)); // master 3, others 2
+    const std::size_t faces = 3 + 2 * static_cast<std::size_t>(ranks - 1);
     const std::size_t nodes = 4 * faces;
 
     int ncid = -1;
     checkNc(nc_open(fullPath.c_str(), NC_NOWRITE, &ncid), "nc_open(" + fullPath + ")");
-    int dimNodes = -1, dimFaces = -1;
+    int dimNodes = -1;
+    int dimFaces = -1;
     checkNc(nc_inq_dimid(ncid, "nMesh2d_node", &dimNodes), "inq nMesh2d_node");
     checkNc(nc_inq_dimid(ncid, "nMesh2d_face", &dimFaces), "inq nMesh2d_face");
-    std::size_t nodeCount = 0, faceCount = 0;
+    std::size_t nodeCount = 0;
+    std::size_t faceCount = 0;
     checkNc(nc_inq_dimlen(ncid, dimNodes, &nodeCount), "len nMesh2d_node");
     checkNc(nc_inq_dimlen(ncid, dimFaces, &faceCount), "len nMesh2d_face");
+    const std::vector<int> nodeIndices = readIntVariable(ncid, "nMesh2d_node", nodeCount);
+    const std::vector<int> faceIndices = readIntVariable(ncid, "nMesh2d_face", faceCount);
     checkNc(nc_close(ncid), "nc_close(" + fullPath + ")");
     if (nodeCount != nodes or faceCount != faces) {
       throw std::runtime_error("Unexpected merged node/face count for the uneven-subdomain NetCDF test.");
+    }
+    if (not isIndexSequence(nodeIndices) or not isIndexSequence(faceIndices)) {
+      throw std::runtime_error("Expected the node and face indices in nMesh2d_node and nMesh2d_face.");
     }
     cleanup(fullPath);
   }
@@ -510,7 +547,7 @@ tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows() {
     vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
     vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
 
-    // Data for only one of the two vertices, which the write validation rejects.
+    // The write validation rejects a field with a value for one of the two vertices only.
     vertexDataPlotter->plotVertexData(0, 5.0);
 
     plotter.writeToFile(filename, 0);
@@ -568,7 +605,7 @@ tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
 
 #else // PEANO_WITH_NETCDF
 
-// Dummy implementation for the build when NetCDF is disabled.
+// A build without NetCDF runs an empty test.
 tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest() :
   tarch::tests::TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
 

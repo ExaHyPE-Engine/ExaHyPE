@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "CPUFeatureDetection.h"
 
-// The x86 detection headers.
 #if defined(__x86_64__) or defined(_M_X64) or defined(__i386) or defined(_M_IX86)
 #define CPUFEAT_X86 1
 #if defined(_MSC_VER)
@@ -12,136 +11,104 @@
 #endif
 #endif
 
-// ARM detection headers (Linux specific for runtime SVE detection)
 #if defined(__linux__) and (defined(__aarch64__) or defined(_M_ARM64))
 #include <asm/hwcap.h>
 #include <sys/auxv.h>
 #ifndef HWCAP_SVE
-#define HWCAP_SVE (1 << 22) // The value of the header of an older kernel.
+#define HWCAP_SVE (1 << 22) // Older kernel headers lack HWCAP_SVE.
 #endif
 #endif
 
+namespace {
 #ifdef CPUFEAT_X86
-static void
-run_cpuid(int regs[4], int leaf, int subleaf = 0) {
+  void readCPUID(int (&registers)[4], const int leaf, const int subleaf) {
 #if defined(_MSC_VER)
-  __cpuidex(regs, leaf, subleaf);
+    __cpuidex(registers, leaf, subleaf);
 #else
-  __cpuid_count(leaf, subleaf, regs[0], regs[1], regs[2], regs[3]);
+    __cpuid_count(leaf, subleaf, registers[0], registers[1], registers[2], registers[3]);
 #endif
-}
+  }
 
-static bool
-check_xgetbv_avx_support() {
+  /**
+   * Returns whether the operating system saves the SSE and the AVX registers on a context switch.
+   */
+  bool isAVXStateEnabled() {
 #if defined(_MSC_VER)
-  unsigned long long mask = _xgetbv(0);
-  return (mask & 0x6) == 0x6;
+    const unsigned long long enabledStates = _xgetbv(0);
 #else
-  uint32_t eax, edx;
-  asm volatile("xgetbv" : "=a"(eax), "=d"(edx) : "c"(0));
-  uint64_t xcr0 = ((uint64_t)edx << 32) | eax;
-  return (xcr0 & 0x6) == 0x6;
+    std::uint32_t lowerBits;
+    std::uint32_t upperBits;
+    asm volatile("xgetbv" : "=a"(lowerBits), "=d"(upperBits) : "c"(0));
+    const std::uint64_t enabledStates = (static_cast<std::uint64_t>(upperBits) << 32) | lowerBits;
 #endif
-}
+    return (enabledStates & 0x6) == 0x6;
+  }
 #endif
 
+  const tarch::CPUFeatures& getCachedCPUFeatures() {
+    static const tarch::CPUFeatures features = tarch::CPUFeatures::detect();
+    return features;
+  }
+} // namespace
+
+/**
+ * Returns the SIMD instruction sets that the CPU and the operating system support.
+ */
 tarch::CPUFeatures
 tarch::CPUFeatures::detect() {
-  CPUFeatures f{};
+  tarch::CPUFeatures features{};
 
 #ifdef CPUFEAT_X86
-  int regs[4] = {};
+  int registers[4] = {};
+  readCPUID(registers, 1, 0);
 
-  run_cpuid(regs, 1);
+  const bool systemEnablesXSAVE = (registers[2] & (1 << 27)) != 0;
+  const bool processorHasAVX    = (registers[2] & (1 << 28)) != 0;
 
-  // Bit 27 of the second register carries the register save of the operating system, bit 28 the
-  // AVX hardware.
-  bool osXSAVE = regs[2] & (1 << 27);
-  bool avxHW   = regs[2] & (1 << 28);
+  features.sse2 = (registers[3] & (1 << 26)) != 0;
+  features.avx  = processorHasAVX and systemEnablesXSAVE and isAVXStateEnabled();
 
-  f.sse2 = regs[3] & (1 << 26);
-
-  // Check OS support for AVX (saving YMM registers)
-  bool avxOS = false;
-  if (osXSAVE and avxHW) {
-    avxOS = check_xgetbv_avx_support();
+  if (features.avx) {
+    readCPUID(registers, 7, 0);
+    features.avx2   = (registers[1] & (1 << 5)) != 0;
+    features.avx512 = (registers[1] & (1 << 16)) != 0;
   }
-
-  f.avx = avxHW and osXSAVE and avxOS;
-
-  // Extended features (leaf 7)
-  if (f.avx) {
-    run_cpuid(regs, 7, 0);
-    f.avx2   = regs[1] & (1 << 5);
-    f.avx512 = regs[1] & (1 << 16);
-  }
-
 #elif defined(__aarch64__) or defined(_M_ARM64)
-  // --- ARM AArch64 ---
-  f.neon = true;
-  f.sse2 = true; // Conceptually similar
-
-// SVE Detection
+  features.neon = true;
 #if defined(__linux__)
-  unsigned long hwcaps = getauxval(AT_HWCAP);
-  if (hwcaps & HWCAP_SVE) {
-    f.sve = true;
-  }
-#else
-#if defined(__ARM_FEATURE_SVE)
-  f.sve = true;
+  features.sve = (getauxval(AT_HWCAP) & HWCAP_SVE) != 0;
+#elif defined(__ARM_FEATURE_SVE)
+  features.sve = true;
 #endif
-#endif
-
 #elif defined(__ARM_NEON) or defined(__ARM_NEON__)
-  // --- 32-bit ARM or other fallback ---
-  f.neon = true;
-  f.sse2 = true;
+  features.neon = true;
 #endif
 
-  return f;
+  return features;
 }
 
-static const tarch::CPUFeatures&
-getCachedCPUFeatures() {
-  static tarch::CPUFeatures f = tarch::CPUFeatures::detect();
-  return f;
-}
-
+/**
+ * Returns the names of the supported instruction sets separated by commas, or None.
+ */
 std::string
 tarch::detectCPUFeatures() {
-  const auto&              f = getCachedCPUFeatures();
-  std::vector<std::string> features;
+  const tarch::CPUFeatures& features = getCachedCPUFeatures();
 
-  if (f.sse2) {
-    features.push_back("SSE2");
-  }
-  if (f.avx) {
-    features.push_back("AVX");
-  }
-  if (f.avx2) {
-    features.push_back("AVX2");
-  }
-  if (f.avx512) {
-    features.push_back("AVX512");
-  }
-  if (f.neon) {
-    features.push_back("NEON");
-  }
-  if (f.sve) {
-    features.push_back("SVE");
-  }
+  const std::pair<bool, const char*> namedFeatures[] = {
+    {features.sse2, "SSE2"},
+    {features.avx, "AVX"},
+    {features.avx2, "AVX2"},
+    {features.avx512, "AVX512"},
+    {features.neon, "NEON"},
+    {features.sve, "SVE"}
+  };
 
-  if (features.empty()) {
-    return "None";
-  }
-
-  std::ostringstream os;
-  for (size_t i = 0; i < features.size(); ++i) {
-    os << features[i];
-    if (i + 1 < features.size()) {
-      os << ", ";
+  std::string result;
+  for (const auto& [isSupported, name] : namedFeatures) {
+    if (isSupported) {
+      result += result.empty() ? "" : ", ";
+      result += name;
     }
   }
-  return os.str();
+  return result.empty() ? "None" : result;
 }

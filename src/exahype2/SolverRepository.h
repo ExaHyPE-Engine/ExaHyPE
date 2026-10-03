@@ -19,14 +19,13 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * Runs every phase on every solver of a project and reduces their answers. The repository
- * holds references, so every solver outlives it. The refinement votes of the solvers merge
- * into one request list, which every phase that votes commits collectively at its end.
+ * Runs every phase on every solver. Every solver outlives the repository. A phase that votes
+ * merges the votes of all solvers into one list of refinement requests.
  */
 template <typename... Solvers>
 class exahype2::SolverRepository final {
 public:
-  explicit SolverRepository(Solvers&... solvers);
+  INLINE_METHOD explicit SolverRepository(Solvers&... solvers);
 
   SolverRepository(const SolverRepository&)            = delete;
   SolverRepository(SolverRepository&&)                 = delete;

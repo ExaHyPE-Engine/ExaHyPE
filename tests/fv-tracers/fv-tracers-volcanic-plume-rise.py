@@ -122,27 +122,23 @@ initial_conditions = """
                        (x(1) >= plumeBaseY) and
                        (x(1) <= plumeTopY);
 
-  // Compute piecewise hydrostatic pressure
+  // The hydrostatic pressure at x is P0 plus the weight of the fluid column above x.
   double localPressure = 0.0;
 
   if (inPlumeColumn) {
     if (x(1) >= plumeTopY) {
-      // Above plume -> full cold column
       localPressure = P0 + GRAVITY * (DomainSize[1] - x(1)) * RHO_AMBIENT;
     } else if (x(1) < plumeBaseY) {
-      // Below plume -> lighter column above
       localPressure = P0 +
-              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT + // Cold part above plume
-              GRAVITY * (plumeTopY - plumeBaseY) * RHO_HOT +        // Plume region
-              GRAVITY * (plumeBaseY - x(1)) * RHO_AMBIENT;          // Local segment below plume
+              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT +
+              GRAVITY * (plumeTopY - plumeBaseY) * RHO_HOT +
+              GRAVITY * (plumeBaseY - x(1)) * RHO_AMBIENT;
     } else {
-      // Inside plume -> partial light column
       localPressure = P0 +
-              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT + // Cold part above plume
-              GRAVITY * (plumeTopY - x(1)) * RHO_HOT;               // Current plume slice
+              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT +
+              GRAVITY * (plumeTopY - x(1)) * RHO_HOT;
     }
   } else {
-    // Outside plume column -> pure cold fluid
     localPressure = P0 + GRAVITY * (DomainSize[1] - x(1)) * RHO_AMBIENT;
   }
 
@@ -156,19 +152,16 @@ initial_conditions = """
 
 boundary_conditions = """
   if (x(1) >= DomainSize[1] - 0.001) {
-    // Top boundary (outflow - zero gradient)
     Qoutside[0] = RHO_AMBIENT;
     Qoutside[1] = 0.0;
     Qoutside[2] = 0.0;
     Qoutside[3] = P0 / (GAMMA - 1.0);
   } else if (x(1) <= DomainOffset[1] + 0.001) {
-    // Bottom boundary (reflective)
     Qoutside[0] = Qinside[0];
     Qoutside[1] = Qinside[1];
     Qoutside[2] = -Qinside[2];
     Qoutside[3] = Qinside[3];
   } else if (x(0) <= DomainOffset[0] + 0.001 or x(0) >= DomainSize[0] - 0.001) {
-    // Left and right boundaries (outflow - zero gradient)
     Qoutside[0] = Qinside[0];
     Qoutside[1] = Qinside[1];
     Qoutside[2] = Qinside[2];

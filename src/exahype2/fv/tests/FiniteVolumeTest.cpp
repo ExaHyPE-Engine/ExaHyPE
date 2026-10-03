@@ -29,9 +29,6 @@ namespace {
   using LimitedLinear = exahype2::fv::reconstruction::LimitedLinear<Limiter>;
 
   TARGET_DECLARE
-  /**
-   * The boundary mask of a patch whose faces all lie inside the domain.
-   */
   constexpr int NoBoundaryFaces = 0;
 
   constexpr int    NumberOfVolumesPerAxis     = 4;
@@ -45,10 +42,6 @@ namespace {
   constexpr double PostprocessedValue         = 5.0;
   constexpr double ExactSolutionValue         = 2.0;
 
-  /**
-   * The layout a generated solver carries: PatchSizeOfLayout volumes per axis with Unknowns values
-   * each, the reconstruction Reconstruct and the single-step time integration.
-   */
   template <int PatchSizeOfLayout, int Unknowns, typename Reconstruct>
   struct Layout {
     static constexpr int PatchSize                  = PatchSizeOfLayout;
@@ -59,17 +52,14 @@ namespace {
     using TimeIntegration = exahype2::fv::timestepping::SingleStep;
   };
 
-  /**
-   * The layout of a generated solver whose patches the tests advance, with the time step rule the update reads.
-   */
   template <int PatchSizeOfLayout, int Unknowns, typename Reconstruct, Rule RuleOfScheme>
   struct SchemeLayout : Layout<PatchSizeOfLayout, Unknowns, Reconstruct> {
     static constexpr Rule TimeSteppingRule = RuleOfScheme;
   };
 
   /**
-   * Advection with AdvectionSpeed along every axis; the wave speed bounds the conservative and the non-conservative
-   * advection together.
+   * Advection with AdvectionSpeed along every axis. maxEigenvalue() also bounds the non-conservative advection of
+   * NcpTerm.
    */
   template <int Unknowns>
   struct AdvectionTerms {
@@ -101,9 +91,6 @@ namespace {
     }
   };
 
-  /**
-   * A non-conservative product that advects every unknown with NcpAdvectionSpeed.
-   */
   template <int Unknowns>
   struct NcpTerm {
     template <typename ComputePrecision>
@@ -123,9 +110,6 @@ namespace {
     }
   };
 
-  /**
-   * A source that grows every unknown at SourceRate.
-   */
   template <int Unknowns>
   struct SourceTerm {
     template <typename ComputePrecision>
@@ -143,9 +127,6 @@ namespace {
     }
   };
 
-  /**
-   * A diffusive source that adds Diffusivity times the sum of the gradient components of every unknown.
-   */
   template <int Unknowns>
   struct DiffusiveTerm {
     template <typename ComputePrecision>
@@ -169,7 +150,7 @@ namespace {
   };
 
   /**
-   * A Riemann solver whose fluxes carry the advection, the Rusanov diffusion and the non-conservative advection.
+   * Riemann solver whose fluxes include the non-conservative advection.
    */
   template <int Unknowns>
   struct RiemannNcpTerm {
@@ -201,9 +182,6 @@ namespace {
     }
   };
 
-  /**
-   * A reconstruction hook that reproduces the linear reconstruction of the scheme.
-   */
   struct ReconstructHook {
     template <typename ComputePrecision>
     static INLINE_METHOD GPU_CALLABLE_METHOD void reconstruct(
@@ -223,9 +201,6 @@ namespace {
     }
   };
 
-  /**
-   * A limiter hook that reproduces the Minmod limiter of the scheme.
-   */
   struct MinmodHook {
     template <typename ComputePrecision>
     static INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision limitedDifference(
@@ -245,7 +220,7 @@ namespace {
   };
 
   /**
-   * Copies the inner state into the outer half, the discrete homogeneous Neumann condition.
+   * Discrete homogeneous Neumann condition.
    */
   template <int Unknowns>
   struct CopyBoundaryTerm {
@@ -264,7 +239,7 @@ namespace {
   };
 
   /**
-   * Writes the inner value plus one into the outer half, so a volume written twice exceeds one.
+   * Writes the inner value plus one into the outer half, which marks every written volume.
    */
   template <int Unknowns>
   struct IncrementBoundaryTerm {
@@ -330,20 +305,11 @@ namespace {
   struct IncrementBoundarySolver final : Layout<NumberOfVolumesPerAxis, NumberOfUnknowns, Constant>,
                                          IncrementBoundaryTerm<NumberOfUnknowns> {};
 
-  /**
-   * The layout of the halo profile with every value an unknown, for the transfers across level jumps and regrids.
-   */
   using HaloProfileSolver = Layout<Setup::DofsPerAxis, Setup::NumberOfData, LimitedLinear<exahype2::fv::limiter::Zero>>;
   static_assert(HaloProfileSolver::Reconstruction::HaloSize == Setup::HaloSize);
 
-  /**
-   * Two unknowns on four volumes per axis with two halo layers, for the projection onto the faces.
-   */
   using ProjectionSolver = Layout<4, 2, LimitedLinear<exahype2::fv::limiter::Zero>>;
 
-  /**
-   * Advection whose speed along the first axis grows with time; the other axes stand still.
-   */
   struct TimeDependentAdvectionSolver final : SchemeLayout<
                                                 NumberOfVolumesPerAxis,
                                                 NumberOfUnknowns,
@@ -382,8 +348,7 @@ namespace {
   constexpr int AcousticUnknowns = 1 + DIMENSIONS;
 
   /**
-   * The acoustic flux along an axis carries the velocity component of that axis into the pressure
-   * and the pressure into that velocity component, so a swap of two axes maps the flux onto itself.
+   * Acoustics, whose flux maps onto itself under a swap of two axes.
    */
   struct AcousticSolver final : SchemeLayout<NumberOfVolumesPerAxis, AcousticUnknowns, Constant, Rule::Adaptive> {
     template <typename ComputePrecision>
@@ -469,10 +434,6 @@ namespace {
     }
   };
 
-  /**
-   * A solver whose wave speed is the first value of the state plus the axis, and whose postprocessing overwrites the
-   * first value.
-   */
   struct PostprocessingSolver final : SchemeLayout<NumberOfVolumesPerAxis, NumberOfUnknowns, Constant, Rule::Adaptive> {
     template <typename ComputePrecision>
     static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
@@ -499,9 +460,6 @@ namespace {
     }
   };
 
-  /**
-   * A solver whose initial condition stores the first coordinate, the volume width and the last coordinate.
-   */
   struct InitialConditionSolver final : Layout<NumberOfVolumesPerAxis, NumberOfUnknowns, Constant> {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                Q,
@@ -514,9 +472,6 @@ namespace {
     }
   };
 
-  /**
-   * A solver whose exact solution is ExactSolutionValue for the first unknown, the only measured one.
-   */
   struct ErrorSolver final : Layout<NumberOfVolumesPerAxis, NumberOfUnknowns, Constant> {
     static constexpr std::array<int, 1> MeasuredUnknowns{0};
 
@@ -533,9 +488,6 @@ namespace {
     }
   };
 
-  /**
-   * Returns one number whose digits hold the normal, the boundary flag and the face index of a Riemann problem.
-   */
   INLINE_METHOD GPU_CALLABLE_METHOD double encodeRiemannFace(
     const int  normal,
     const bool isBoundaryFace,
@@ -544,9 +496,6 @@ namespace {
     return normal + (isBoundaryFace ? 10.0 : 0.0) + 100.0 * faceIndex;
   }
 
-  /**
-   * Returns the encoded face arguments of every Riemann problem it solves.
-   */
   struct FaceRecordingSolver {
     static INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblem(
       [[maybe_unused]] const double* const                          QL,
@@ -568,9 +517,6 @@ namespace {
   using DeviceSolver = NcpAdvectionSolver<NumberOfVolumesPerAxis, LimitedLinear<exahype2::fv::limiter::Minmod>>;
   using DeviceKernel = exahype2::fv::FiniteVolume<DeviceSolver, double>;
 
-  /**
-   * Advances the patch of one cell of a device range and stores its wave speed.
-   */
   struct UpdatePatchOfCell final {
     const double* patches{nullptr};
     double*       updated{nullptr};
@@ -661,8 +607,8 @@ namespace {
   }
 
   /**
-   * Calls functor(volumeIndex, face, faceVolume) for every halo volume of every face of a patch,
-   * where volumeIndex is the position of the halo volume in the coordinates of the patch.
+   * Calls functor(volumeIndex, face, faceVolume) for every halo volume of the patch, with volumeIndex in patch
+   * coordinates.
    */
   template <int VolumesPerAxis, int HaloWidth, typename Functor>
   void forEachHaloVolume(Functor functor) {
@@ -712,9 +658,6 @@ namespace {
     );
   }
 
-  /**
-   * Returns the face pointers of a face storage with one vector per face.
-   */
   template <typename Precision>
   std::array<const Precision*, peano4::FacesPerCell> getFacePointersOf(
     const std::vector<std::vector<Precision>>& faceStorage
@@ -769,8 +712,7 @@ namespace {
   }
 
   /**
-   * Returns the L1 error of the advected profile against the exact solution at the end time, sampled at the volume
-   * centres.
+   * Returns the L1 error of the advected profile at endTime, sampled at the volume centres.
    */
   template <typename Solver, typename Profile>
   double getAdvectionError(const Profile profile, const int numberOfTimeSteps, const double endTime) {
@@ -787,7 +729,7 @@ namespace {
   }
 
   /**
-   * Returns a state that is the same field at the same volume index for every halo width.
+   * Returns a state that depends on the volume index only, so patches with different halo sizes read the same field.
    */
   double getLogicalState(const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int unknown) {
     double phase = 0.7 * (unknown + 1);
@@ -797,9 +739,6 @@ namespace {
     return 1.0 + 0.25 * std::sin(phase);
   }
 
-  /**
-   * Fills the halo of every face of a patch with the logical state at the halo volumes.
-   */
   template <typename Kernel>
   std::vector<std::vector<double>> getLogicalHalo() {
     std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(Kernel::ValuesPerFace, 0.0));
@@ -813,10 +752,6 @@ namespace {
     return faceStorage;
   }
 
-  /**
-   * Returns the largest difference between one step of the constant reconstruction and one of the zero-slope
-   * reconstruction on the logical state.
-   */
   template <typename ConstantSolver, typename ZeroSlopeSolver>
   double getZeroSlopeVersusConstantMaxDifference() {
     using ConstantKernel  = exahype2::fv::FiniteVolume<ConstantSolver, double>;
@@ -868,9 +803,6 @@ namespace {
     return maxDifference;
   }
 
-  /**
-   * Advances the logical state with periodic halos through the Minmod reconstruction of Solver.
-   */
   template <typename Solver>
   std::vector<double> advanceLogicalField(const int numberOfTimeSteps, const double timeStepSize) {
     using Kernel                 = exahype2::fv::FiniteVolume<Solver, double>;
@@ -918,9 +850,8 @@ namespace {
   }
 
   /**
-   * Advances the Sod tube. The halo along the first axis carries the untouched far field and the
-   * other halos copy the nearest interior volume, which is exact while the waves stay inside the
-   * patch and the solution does not vary along those axes.
+   * Advances the Sod tube with the initial far field in the halo along the first axis and copies of
+   * the nearest volume in the other halos. Both are exact while the waves stay inside the patch.
    */
   template <int VolumesPerAxis>
   std::vector<double> advanceSodTube(const int numberOfTimeSteps, const double timeStepSize) {
@@ -975,9 +906,6 @@ namespace {
     return q;
   }
 
-  /**
-   * Solves the Riemann problem on the face of side along normal of the volume at volumeIndex with Solver.
-   */
   template <typename Solver>
   double getEncodedRiemannFace(
     const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
@@ -1004,10 +932,6 @@ namespace {
     );
   }
 
-  /**
-   * Runs one update of Kernel on a uniform patch with uniform halos and returns the wave speed; the output lands in
-   * qOut.
-   */
   template <typename Kernel>
   double updateUniformPatch(const double uniformValue, const double timeStepSize, std::vector<double>& qOut) {
     const std::vector<double>              qIn(Kernel::ValuesPerPatch, uniformValue);
@@ -1030,9 +954,6 @@ namespace {
     );
   }
 
-  /**
-   * Returns the halo profile face of the coarse face with the profile at its volume centres.
-   */
   std::vector<double> getCoarseFaceWithProfile(const int normal) {
     std::vector<double> coarseFace(Setup::ValuesPerFace, 0.0);
     for (int layer = 0; layer < 2 * Setup::HaloSize; layer++) {
@@ -1049,9 +970,6 @@ namespace {
     return coarseFace;
   }
 
-  /**
-   * Returns a face that is constant per unknown.
-   */
   std::vector<double> getConstantFace() {
     std::vector<double> face(Setup::ValuesPerFace, 0.0);
     for (int volume = 0; volume < Setup::VolumesPerFace; volume++) {
@@ -1063,7 +981,7 @@ namespace {
   }
 
   /**
-   * Returns a patch of the halo profile layout with a distinct value per entry.
+   * Returns a patch with a distinct value in every entry.
    */
   std::vector<double> getRampPatch() {
     std::vector<double> patch(Setup::ValuesPerCell);
@@ -1073,9 +991,6 @@ namespace {
     return patch;
   }
 
-  /**
-   * Advances every cell on the device, copies the results back and returns the wave speeds.
-   */
   std::vector<double> updateOnDevice(
     const std::vector<double>&            patches,
     const std::vector<double>&            faces,
@@ -1182,9 +1097,6 @@ exahype2::fv::tests::FiniteVolumeTest::testTheFaceVolumeIndexRunsLayerSlowest() 
   }
 }
 
-/**
- * The vector form of the index equals the tangential form at every halo volume and numbers the volumes of a face once.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testBothFaceVolumeIndexFormsAgreeAndVisitEveryVolumeOnce() {
   for (int normal = 0; normal < DIMENSIONS; normal++) {
@@ -1213,9 +1125,6 @@ exahype2::fv::tests::FiniteVolumeTest::testBothFaceVolumeIndexFormsAgreeAndVisit
   }
 }
 
-/**
- * The loop hands every volume its value pointer, its centre, its size and its measure in linearised order.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testForEachVolumeVisitsEveryVolumeInLinearisedOrder() {
   using Kernel                                          = exahype2::fv::FiniteVolume<InitialConditionSolver, double>;
@@ -1252,9 +1161,6 @@ exahype2::fv::tests::FiniteVolumeTest::testForEachVolumeVisitsEveryVolumeInLinea
   }
 }
 
-/**
- * The accumulation takes the largest wave speed, converts the precision and, without assertions, keeps a fault.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testAccumulateMaxEigenvalueKeepsTheLargestAndAFault() {
   double maximum = 0.0;
@@ -1316,9 +1222,6 @@ exahype2::fv::tests::FiniteVolumeTest::testBoundaryConditionsCopyAUniformStateOn
   }
 }
 
-/**
- * With two halo layers the outer layer k mirrors the inner layer k of the same tangential volume.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testEachOuterLayerReadsTheMatchingInnerLayer() {
   using Kernel = exahype2::fv::FiniteVolume<CopyBoundaryMusclSolver, double>;
@@ -1386,10 +1289,6 @@ exahype2::fv::tests::FiniteVolumeTest::testEachOuterVolumeIsWrittenOnce() {
   }
 }
 
-/**
- * The lower face takes the lower boundary layers into its upper half, the upper face the upper layers into its lower
- * half.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testProjectionFillsTheOwnHalfOfEveryFace() {
   using Kernel             = exahype2::fv::FiniteVolume<ProjectionSolver, double>;
@@ -1432,9 +1331,6 @@ exahype2::fv::tests::FiniteVolumeTest::testProjectionFillsTheOwnHalfOfEveryFace(
   }
 }
 
-/**
- * The slope correction reproduces a profile linear along the tangential axes at every fine centre.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testHaloInterpolationReproducesALinearProfile() {
   using Kernel = exahype2::fv::FiniteVolume<HaloProfileSolver, double>;
@@ -1471,9 +1367,6 @@ exahype2::fv::tests::FiniteVolumeTest::testHaloInterpolationReproducesALinearPro
   }
 }
 
-/**
- * A face that is constant per unknown returns its values bitwise on every subface.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testAConstantFaceInterpolatesBitwise() {
   using Kernel                         = exahype2::fv::FiniteVolume<HaloProfileSolver, double>;
@@ -1503,9 +1396,6 @@ exahype2::fv::tests::FiniteVolumeTest::testAConstantFaceInterpolatesBitwise() {
   }
 }
 
-/**
- * Every fine volume of the injected half holds the coarse volume that covers it bitwise.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testHaloInjectionCopiesTheCoveringVolume() {
   using Kernel = exahype2::fv::FiniteVolume<HaloProfileSolver, double>;
@@ -1520,7 +1410,8 @@ exahype2::fv::tests::FiniteVolumeTest::testHaloInjectionCopiesTheCoveringVolume(
         for (int layer = 0; layer < 2 * Setup::HaloSize; layer++) {
           const bool inHalf = layer / Setup::HaloSize == side;
           for (int j = 0; j < Setup::SecondExtent; j++) {
-            const int coarseJ = DIMENSIONS == 3 ? (j + Setup::DofsPerAxis * secondSubface) / Setup::SubdivisionFactor : 0;
+            const int coarseJ =
+              DIMENSIONS == 3 ? (j + Setup::DofsPerAxis * secondSubface) / Setup::SubdivisionFactor : 0;
             for (int i = 0; i < Setup::DofsPerAxis; i++) {
               const int coarseI = (i + Setup::DofsPerAxis * firstSubface) / Setup::SubdivisionFactor;
               const int fineVolume =
@@ -1595,9 +1486,6 @@ exahype2::fv::tests::FiniteVolumeTest::testHaloRestrictionAveragesTheCoveringVol
   }
 }
 
-/**
- * Fine faces that are constant per unknown restrict to their values bitwise.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testConstantFineFacesRestrictBitwise() {
   using Kernel                       = exahype2::fv::FiniteVolume<HaloProfileSolver, double>;
@@ -1628,9 +1516,6 @@ exahype2::fv::tests::FiniteVolumeTest::testConstantFineFacesRestrictBitwise() {
   }
 }
 
-/**
- * Every fine volume copies its covering coarse volume.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testPatchInterpolationCopiesTheCoveringVolume() {
   using Kernel                     = exahype2::fv::FiniteVolume<HaloProfileSolver, double>;
@@ -1656,9 +1541,6 @@ exahype2::fv::tests::FiniteVolumeTest::testPatchInterpolationCopiesTheCoveringVo
   }
 }
 
-/**
- * The children of a parent restrict to the parent bitwise.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testPatchRestrictionInvertsTheInterpolation() {
   using Kernel                     = exahype2::fv::FiniteVolume<HaloProfileSolver, double>;
@@ -1683,9 +1565,7 @@ exahype2::fv::tests::FiniteVolumeTest::testPatchRestrictionInvertsTheInterpolati
 }
 
 /**
- * The first two fine volumes of the first child cover the first coarse volume; two values there
- * that cancel each other leave the small ones in the correctly rounded mean, and every other
- * coarse volume averages ones.
+ * Two cancelling large values in the first coarse volume leave the exact mean of the remaining ones.
  */
 void
 exahype2::fv::tests::FiniteVolumeTest::testPatchRestrictionAveragesExactly() {
@@ -1711,9 +1591,8 @@ exahype2::fv::tests::FiniteVolumeTest::testPatchRestrictionAveragesExactly() {
 }
 
 /**
- * A volume face on a patch face whose boundary bit is set reaches the Riemann solver as a
- * boundary face with the face number of that patch face; every other volume face arrives as an
- * interior face with the normal as its face index.
+ * A volume face on a boundary patch face reaches the Riemann solver with the patch face number, every other face
+ * with the normal.
  */
 void
 exahype2::fv::tests::FiniteVolumeTest::testAVolumeFaceOnTheDomainBoundaryReachesTheRiemannSolver() {
@@ -1744,9 +1623,6 @@ exahype2::fv::tests::FiniteVolumeTest::testAVolumeFaceOnTheDomainBoundaryReaches
   );
 }
 
-/**
- * A time step of size zero leaves the patch unchanged.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
   using Kernel = exahype2::fv::FiniteVolume<AdvectionSolver<NumberOfVolumesPerAxis, Constant>, double>;
@@ -1778,9 +1654,6 @@ exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
   }
 }
 
-/**
- * The update keeps a uniform state uniform and returns the wave speed of the advection.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testUniformStateIsPreserved() {
   using Kernel = exahype2::fv::FiniteVolume<AdvectionSolver<NumberOfVolumesPerAxis, Constant>, double>;
@@ -1821,8 +1694,8 @@ exahype2::fv::tests::FiniteVolumeTest::testASourceTermGrowsAUniformStateByItsRat
 }
 
 /**
- * A profile linear along the first axis loses the advection of its slope and gains the diffusive
- * source of the exact forward difference, which reads the halo at the last volume.
+ * A linear profile loses the advection of its slope and gains the diffusive source of its exact forward difference,
+ * which reads the halo at the last volume.
  */
 void
 exahype2::fv::tests::FiniteVolumeTest::testADiffusiveSourceTermReadsTheForwardDifference() {
@@ -1844,9 +1717,6 @@ exahype2::fv::tests::FiniteVolumeTest::testADiffusiveSourceTermReadsTheForwardDi
   }
 }
 
-/**
- * The limited linear reconstruction keeps a uniform state uniform.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearPreservesUniformState() {
   using Kernel = exahype2::fv::FiniteVolume<
@@ -1883,9 +1753,6 @@ exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearIntegratesTimeDependentA
   }
 }
 
-/**
- * The limited linear reconstruction converges at second order on a smooth advected profile.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearAverageConvergesAtSecondOrder() {
   using Average            = LimitedLinear<exahype2::fv::limiter::Average>;
@@ -1898,9 +1765,6 @@ exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearAverageConvergesAtSecond
   validateWithParams3(order > 1.7, coarseError, fineError, order);
 }
 
-/**
- * The constant reconstruction converges at first order on a smooth advected profile.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testConstantConvergesAtFirstOrder() {
   constexpr double EndTime = 0.12;
@@ -1940,10 +1804,6 @@ exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearMinmodKeepsStepInBounds(
   }
 }
 
-/**
- * Zero slopes reduce the limited reconstruction to the first-order splitting, with and without the non-conservative
- * product.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearZeroSlopesMatchConstant() {
   using ZeroSlope = LimitedLinear<exahype2::fv::limiter::Zero>;
@@ -1963,9 +1823,6 @@ exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearZeroSlopesMatchConstant(
   );
 }
 
-/**
- * A profile the flux and the non-conservative product advect together converges at second order.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearNcpAdvectionConvergesAtSecondOrder() {
   using Average            = LimitedLinear<exahype2::fv::limiter::Average>;
@@ -1978,9 +1835,6 @@ exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearNcpAdvectionConvergesAtS
   validateWithParams3(order > 1.7, coarseError, fineError, order);
 }
 
-/**
- * A Riemann solver of the generated class keeps the non-conservative advection inside each volume.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearCustomRiemannIncludesVolumeNonconservativeProduct() {
   constexpr double TimeStepSize = 0.01;
@@ -2002,9 +1856,6 @@ exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearCustomRiemannIncludesVol
   }
 }
 
-/**
- * Periodic face fluxes conserve the total mass of the patch.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testPeriodicAdvectionConservesMass() {
   constexpr int VolumesPerAxis = 27;
@@ -2056,9 +1907,6 @@ exahype2::fv::tests::FiniteVolumeTest::testPeriodicAdvectionConservesMass() {
   validateWithParams2(std::abs(massAfter - massBefore) <= 1e-11 * std::abs(massBefore), massBefore, massAfter);
 }
 
-/**
- * The shock-capturing path reaches the star states of the Sod tube.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() {
   constexpr int    VolumesPerAxis = DIMENSIONS == 2 ? 54 : 36;
@@ -2077,13 +1925,13 @@ exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() {
     validateWithParams2(density >= 0.125 - 1e-6, volume, density);
   }
 
-  // Exact star-region values of the standard Sod problem at the sampled plateau positions.
+  // Exact star-region values of the Sod problem.
   constexpr double StarPressure     = 0.30313;
   constexpr double StarVelocity     = 0.92745;
   constexpr double StarDensityLeft  = 0.42632;
   constexpr double StarDensityRight = 0.26557;
 
-  // The first axis runs fastest, so its volumes lead the patch.
+  // The first axis runs fastest, so the first volumes of the patch lie along it.
   const auto getVolumeAt = [](const double position) { return static_cast<int>(position * VolumesPerAxis); };
   const auto getValue    = [&q](const int volumeAlongFirstAxis, const int unknown) {
     return q[volumeAlongFirstAxis * SodUnknowns + unknown];
@@ -2115,8 +1963,7 @@ exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() {
 }
 
 /**
- * A patch whose state a swap of the first two axes maps onto itself keeps that symmetry to the
- * last bit, so every axis adds its flux difference in an order that the swap maps onto itself.
+ * A state symmetric under a swap of the first two axes stays symmetric to the last bit.
  */
 void
 exahype2::fv::tests::FiniteVolumeTest::testMirroredVolumesReceiveMirroredStates() {
@@ -2172,9 +2019,6 @@ exahype2::fv::tests::FiniteVolumeTest::testMirroredVolumesReceiveMirroredStates(
   }
 }
 
-/**
- * A reconstruct hook that reproduces the linear reconstruction changes nothing.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testReconstructionHookReproducingDefaultChangesNothing() {
   constexpr int    Steps        = 3;
@@ -2191,9 +2035,6 @@ exahype2::fv::tests::FiniteVolumeTest::testReconstructionHookReproducingDefaultC
   validateNumericalEquals(maxDifference, 0.0);
 }
 
-/**
- * A limitedDifference hook that reproduces the Minmod limiter changes nothing.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testLimiterHookReproducingMinmodChangesNothing() {
   constexpr int    Steps        = 3;
@@ -2210,9 +2051,6 @@ exahype2::fv::tests::FiniteVolumeTest::testLimiterHookReproducingMinmodChangesNo
   validateNumericalEquals(maxDifference, 0.0);
 }
 
-/**
- * The postprocessing overwrites the first value, and the returned wave speed reads the overwritten patch.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testThePostprocessingRunsBeforeTheWaveSpeedsOfTheUpdatedPatch() {
   using Kernel = exahype2::fv::FiniteVolume<PostprocessingSolver, double>;
@@ -2250,10 +2088,6 @@ exahype2::fv::tests::FiniteVolumeTest::testReduceMaxEigenvalueTakesTheLargestWav
   validateNumericalEquals(FixedKernel::reduceMaxEigenvalue(patch.data(), cellCentre, cellSize, 0.0), 0.0);
 }
 
-/**
- * A constant error of one half on the unit cell gives an L1 error of one half, a squared L2 error of one quarter and a
- * largest error of one half.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testMeasureErrorsSumsTheWeightedNorms() {
   using Kernel                                      = exahype2::fv::FiniteVolume<ErrorSolver, double>;
@@ -2270,9 +2104,6 @@ exahype2::fv::tests::FiniteVolumeTest::testMeasureErrorsSumsTheWeightedNorms() {
   validateNumericalEquals(errors[2], Error);
 }
 
-/**
- * Every cell of a device range receives the update and the wave speed of the serial host loop.
- */
 void
 exahype2::fv::tests::FiniteVolumeTest::testEveryCellOfADeviceRangeUpdatesLikeTheHost() {
   constexpr int                        Cells = exahype2::dg::tests::KernelTestSetup::NumberOfCells;

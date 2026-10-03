@@ -72,7 +72,7 @@ tarch::la::Matrix<Rows, Cols, Scalar>::operator()(int rowIndex, int colIndex) co
 }
 
 template <int Rows, int Cols, typename Scalar>
-std::string
+INLINE_METHOD std::string
 tarch::la::Matrix<Rows, Cols, Scalar>::toString() const {
   std::ostringstream os;
   os << "[";
@@ -94,8 +94,8 @@ tarch::la::Matrix<Rows, Cols, Scalar>::toString() const {
 }
 
 template <int Rows, int Cols, typename Scalar>
-std::string
-tarch::la::Matrix<Rows, Cols, Scalar>::toPrettyString(int numberOfDigits) const {
+INLINE_METHOD std::string
+tarch::la::Matrix<Rows, Cols, Scalar>::toPrettyString(const int numberOfDigits) const {
   std::ostringstream os;
   os << "[";
   os << std::setiosflags(std::ios::fixed) << std::setprecision(numberOfDigits);

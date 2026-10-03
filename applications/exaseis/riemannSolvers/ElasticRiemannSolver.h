@@ -93,8 +93,8 @@ namespace applications::exahype2::exaseis {
 } // namespace applications::exahype2::exaseis
 
 /**
- * Holds the material and the state of one side of a face node. The velocity and the traction are
- * given in the local basis of normal, firstTangent and secondTangent.
+ * The material and the state on one side of a face node. The velocity and the traction are in the
+ * local basis of normal, firstTangent and secondTangent.
  */
 template <typename Value>
 struct applications::exahype2::exaseis::FaceNodeSide final {
@@ -115,7 +115,7 @@ struct applications::exahype2::exaseis::FaceNodeSide final {
 };
 
 /**
- * Holds the velocity and the traction that the interface imposes on one side, in the local basis.
+ * The velocity and the traction the interface imposes on one side, in the local basis.
  */
 template <typename Value>
 struct applications::exahype2::exaseis::InterfaceValues final {

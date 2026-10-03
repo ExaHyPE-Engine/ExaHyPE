@@ -16,8 +16,8 @@
 #endif
 
 tarch::instrumentation::CommandLineSink::CommandLineSink() :
-  _stdoutSupportsAnsi(streamSupportsAnsi(1)),
-  _stderrSupportsAnsi(streamSupportsAnsi(2)) {
+  _stdoutSupportsANSI(streamSupportsANSI(1)),
+  _stderrSupportsANSI(streamSupportsANSI(2)) {
   configureOutputStreams();
 }
 
@@ -25,7 +25,7 @@ tarch::instrumentation::CommandLineSink::~CommandLineSink() { close(); }
 
 tarch::instrumentation::CommandLineSink&
 tarch::instrumentation::CommandLineSink::getInstance() {
-  // Process-lifetime storage keeps logging available during static destruction.
+  // The sink is never destroyed, so logging works during static destruction.
   static CommandLineSink& singleton = *new CommandLineSink();
   return singleton;
 }
@@ -39,7 +39,7 @@ tarch::instrumentation::CommandLineSink::configureOutputStreams() {
 }
 
 bool
-tarch::instrumentation::CommandLineSink::streamSupportsAnsi(const int fileDescriptor) {
+tarch::instrumentation::CommandLineSink::streamSupportsANSI(const int fileDescriptor) {
 #if defined(_WIN32)
   if (_isatty(fileDescriptor) == 0) {
     return false;
@@ -92,12 +92,12 @@ tarch::instrumentation::CommandLineSink::writeToStdOut(
 ) {
   const std::scoped_lock lock(_mutex);
 
-  const bool useAnsi = _stdoutSupportsAnsi and terminalStyle != TerminalStyle::Plain;
-  if (useAnsi) {
+  const bool useANSI = _stdoutSupportsANSI and terminalStyle != TerminalStyle::Plain;
+  if (useANSI) {
     std::cout << getANSIPrefix(terminalStyle);
   }
   std::cout << message;
-  if (useAnsi) {
+  if (useANSI) {
     std::cout << "\033[0m";
   }
   if (flush) {
@@ -113,12 +113,12 @@ tarch::instrumentation::CommandLineSink::writeToStdErr(
 ) {
   const std::scoped_lock lock(_mutex);
 
-  const bool useAnsi = _stderrSupportsAnsi and terminalStyle != TerminalStyle::Plain;
-  if (useAnsi) {
+  const bool useANSI = _stderrSupportsANSI and terminalStyle != TerminalStyle::Plain;
+  if (useANSI) {
     std::cerr << getANSIPrefix(terminalStyle);
   }
   std::cerr << message;
-  if (useAnsi) {
+  if (useANSI) {
     std::cerr << "\033[0m";
   }
   if (flush) {

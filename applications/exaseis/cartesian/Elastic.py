@@ -6,7 +6,7 @@ POINT_SOURCE_LOCATION = (0.0, 2.0, 0.0)
 
 def initial():
     return """
-  // The LOH1 scenario places a slower layer above y = 1.
+  // LOH1 places a slower layer between y = 0 and y = 1.
   const bool upperLayer = x(1) <= 1.0;
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     Q[unknown] = 0.0;
@@ -30,7 +30,7 @@ def boundary():
     Qoutside[Shortcuts::v + 2]     = 0.0;
     break;
   case 1:
-    // The free surface mirrors the stresses on the face and keeps the velocities.
+    // A free surface negates the traction on the face and copies the velocities.
     Qoutside[Shortcuts::sigma + 1] = -Qinside[Shortcuts::sigma + 1];
     Qoutside[Shortcuts::sigma + 3] = -Qinside[Shortcuts::sigma + 3];
     Qoutside[Shortcuts::sigma + 5] = -Qinside[Shortcuts::sigma + 5];

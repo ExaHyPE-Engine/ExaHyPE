@@ -9,9 +9,8 @@ namespace tarch::plotter {
 } // namespace tarch::plotter
 
 /**
- * Writes no index file, because one .vtkhdf file already holds every time step.
- * The snapshot name carries no time stamp, so each traversal appends to the
- * same file.
+ * Writes no index file, because one .vtkhdf file stores every time step. The snapshot name has no
+ * time stamp, so every snapshot appends to the same file.
  */
 class tarch::plotter::VTKHDFTimeSeriesWriter final : public tarch::plotter::TimeSeriesWriter {
 public:
@@ -25,5 +24,5 @@ public:
   void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const override;
 
 protected:
-  std::string getSnapshotName(const std::string& filename, const double time) const override;
+  [[nodiscard]] std::string getSnapshotName(const std::string& filename, double time) const override;
 };

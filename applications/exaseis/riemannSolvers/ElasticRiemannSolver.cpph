@@ -5,8 +5,8 @@
 
 TARGET_DECLARE
 /**
- * Returns the material, the velocity and the traction of the node whose data Q holds, with the
- * velocity and the traction rotated into the local basis of the face along normal.
+ * Returns the material and the state of the node data Q, with the velocity and the traction in the
+ * local basis of the face along the axis normal.
  */
 template <typename Shortcuts, typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaseis::FaceNodeSide<Value>
@@ -44,8 +44,8 @@ applications::exahype2::exaseis::getFaceNodeSide(const Value* const Q, const int
     side.normal[0] * stress[4] + side.normal[1] * stress[5] + side.normal[2] * stress[2]
   };
 
-  // Gram-Schmidt against the normal turns the y axis, or the z axis where the normal is parallel to
-  // the y axis, into the first tangent.
+  // The first tangent is the y axis, or the z axis for a normal parallel to the y axis,
+  // orthogonalised against the normal.
   constexpr Value Tolerance   = 1e-12;
   side.firstTangent[1]        = 1;
   const Value distanceToYAxis = std::sqrt(
@@ -105,9 +105,9 @@ applications::exahype2::exaseis::rotateIntoLocalBasis(
 }
 
 /**
- * Writes the velocity and the traction of a welded interface between left and right, which keep the
- * outgoing characteristics of both sides. Along a direction in which a side has no impedance, both
- * sides keep their velocities, and a side with impedance gets zero traction.
+ * Writes the velocity and the traction of a welded interface that keeps the outgoing characteristics
+ * of left and right. Along a direction where one side has no impedance, both sides keep their
+ * velocities and a side with impedance gets zero traction.
  */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -219,7 +219,7 @@ applications::exahype2::exaseis::writeFluxFluctuation(
   flux[Shortcuts::sigma + 5] = signedNorm * shear * (normal[2] * scaledPhysical[1] + normal[1] * scaledPhysical[2]);
 
   if constexpr (HasPerfectlyMatchedLayer<Shortcuts>) {
-    // The auxiliary variables of the layer hold nine entries per axis, the velocity entries first.
+    // The layer stores nine entries per axis: The velocity first, then the stress.
     for (int axis = 0; axis < 3; axis++) {
       Value* const layerFlux    = flux + Shortcuts::pml + 9 * axis;
       const Value  damping      = side.pmlDamping[axis];
@@ -246,10 +246,9 @@ applications::exahype2::exaseis::writeFluxFluctuation(
 }
 
 /**
- * Adds the flux fluctuation of every node of a face to the flux trace in FL, subtracts it from the
- * flux trace in FR, so both hold the numerical flux of their side, and returns the largest wave
- * speed on the face. solveInterface receives the node data of both sides, both sides of the node
- * and the interface values it writes.
+ * Adds the left flux fluctuation of every face node to the flux trace FL and subtracts the right one
+ * from FR, so both hold the numerical flux. Returns the largest wave speed on the face.
+ * solveInterface writes the interface values of one node.
  */
 template <
   typename Shortcuts,
@@ -302,9 +301,8 @@ applications::exahype2::exaseis::solveRiemannProblemOnFaceNodes(
 }
 
 /**
- * Solves the Riemann problems of a face between two elastic media or on the domain boundary and
- * returns the largest wave speed on it. The boundary face FreeSurfaceFace is a free surface, every
- * other boundary face absorbs.
+ * Solves the Riemann problem at every node of a face and returns the largest wave speed on it. The
+ * boundary face FreeSurfaceFace is a free surface, and every other boundary face absorbs.
  */
 template <
   typename Shortcuts,

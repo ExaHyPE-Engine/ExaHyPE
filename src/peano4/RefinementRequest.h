@@ -10,7 +10,7 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * Asks the spacetree to refine or to erase the cell at a level and lattice position.
+ * A request to refine or to erase the cell at a level and lattice position.
  */
 struct peano4::RefinementRequest {
 public:

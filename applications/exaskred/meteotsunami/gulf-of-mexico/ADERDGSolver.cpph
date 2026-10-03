@@ -28,8 +28,8 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   }
   const double sampled = bathymetrySampler.sampleBilinear("bathymetry", rasterPosition);
 
-  // The raster marks the cells it holds no survey for with a fill value far below any real sea
-  // floor, and those cells become open ocean of the reference depth.
+  // The raster marks unsurveyed cells with a fill value below any real sea floor. These cells
+  // become open ocean of the reference depth.
   const double referenceDepth = RuntimeParameters::referenceOceanDepth();
   const bool   surveyed       = std::isfinite(sampled) and sampled >= -RuntimeParameters::deepestSeaFloor();
   const double bathymetry     = surveyed ? sampled : -referenceDepth;
@@ -134,8 +134,8 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
 }
 
 /**
- * Writes the rotation, the bed drag and the atmospheric pressure gradient into S. The basin spans
- * thirteen degrees of latitude, so the Coriolis parameter follows the latitude of the point.
+ * Writes the rotation, the bed drag and the atmospheric pressure gradient into S. The basin spans a
+ * wide range of latitudes, so the Coriolis parameter follows the latitude of each point.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
@@ -154,8 +154,8 @@ applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
     return;
   }
 
-  // The raster carries the projection it was sampled on, so the scenario reads geographic
-  // coordinates through the same one.
+  // The raster was sampled on this projection, so its inverse maps the mesh coordinates to
+  // geographic ones.
   const applications::exahype2::exaskred::projection::AlbersEqualArea projection{
     .referenceLongitude     = RuntimeParameters::projectionCentralMeridian(),
     .referenceLatitude      = RuntimeParameters::projectionOriginLatitude(),
@@ -264,9 +264,9 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
 }
 
 /**
- * Returns false over the shelf and the coast, where the Galerkin face solver has no wet and dry
- * structure to fall back on. The augmented Riemann solver of the subcell scheme carries the
- * inundation cases, so a cell reaches that scheme before its water column thins.
+ * Returns false at the boundaries and over the shelf and the coast, where the Galerkin face solver
+ * has no wet-dry treatment. The augmented Riemann solver of the subcell scheme treats inundation, so
+ * a cell switches to that scheme before its water column thins.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(

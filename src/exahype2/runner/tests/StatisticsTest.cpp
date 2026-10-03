@@ -70,9 +70,6 @@ struct exahype2::runner::tests::StatisticsTest::PlainSolver final {
   };
 };
 
-/**
- * A solver with an adaptive rule and a limiter.
- */
 struct exahype2::runner::tests::StatisticsTest::LimitedSolver final {
   static constexpr bool HasLimiter = true;
   LimitedSolver() {
@@ -129,8 +126,7 @@ exahype2::runner::tests::StatisticsTest::run() {
 }
 
 /**
- * The synchronised view holds the sums, minima and maxima of the statistics every rank derives,
- * and counts a rank boundary face once.
+ * The global view counts a rank boundary face once.
  */
 void
 exahype2::runner::tests::StatisticsTest::testTheGlobalViewSumsAndBoundsTheRankStatistics() {
@@ -184,9 +180,6 @@ exahype2::runner::tests::StatisticsTest::testTheGlobalViewSumsAndBoundsTheRankSt
   validate(statistics.getGlobalProcessMemoryUsageInBytes() > 0);
 }
 
-/**
- * A snapshot fills the CPU memory rows, and the GPU memory rows only in a build with a GPU backend.
- */
 void
 exahype2::runner::tests::StatisticsTest::testSnapshotFillsTheMemoryRowsOfTheBuild() {
   using GridSnapshot = exahype2::runner::GridSnapshot;
@@ -214,9 +207,6 @@ exahype2::runner::tests::StatisticsTest::testSnapshotFillsTheMemoryRowsOfTheBuil
 #endif
 }
 
-/**
- * A filled row renders as value, suffix and bracketed detail under its section; an empty row stays out.
- */
 void
 exahype2::runner::tests::StatisticsTest::testDescribeGridSnapshotRendersFilledRows() {
   using GridSnapshot = exahype2::runner::GridSnapshot;
@@ -233,9 +223,6 @@ exahype2::runner::tests::StatisticsTest::testDescribeGridSnapshotRendersFilledRo
   validateEquals(lines[4], std::string("    Free    4.29 GiB of 15.56 GiB"));
 }
 
-/**
- * describeGridTransition() writes an arrow for a changed value and the value alone for an unchanged one.
- */
 void
 exahype2::runner::tests::StatisticsTest::testDescribeGridTransitionMarksChangedValuesOnly() {
   using GridSnapshot = exahype2::runner::GridSnapshot;
@@ -257,9 +244,6 @@ exahype2::runner::tests::StatisticsTest::testDescribeGridTransitionMarksChangedV
   validateEquals(lines[5], std::string("    Free             4.29 GiB → 4.10 GiB of 15.56 GiB"));
 }
 
-/**
- * The free memory continues the line of the used memory below the grid and the solver memory.
- */
 void
 exahype2::runner::tests::StatisticsTest::testUsedAndFreeMemoryFormOneLine() {
   using GridSnapshot = exahype2::runner::GridSnapshot;
@@ -333,9 +317,6 @@ exahype2::runner::tests::StatisticsTest::testASolverWithEigenvalueAndTroubledCel
   validateEquals(troubled.second[3].count, 5L);
 }
 
-/**
- * A solver without a limiter reports no troubled cells, although it offers the count.
- */
 void
 exahype2::runner::tests::StatisticsTest::testASolverWithoutLimiterReportsNoTroubledCells() {
   const UnlimitedSolver solver;

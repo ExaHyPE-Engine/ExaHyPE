@@ -6,8 +6,8 @@
 
 namespace exahype2::terms {
   /**
-   * The Riemann solver of the finite-volume subcells of a limited DG cell takes the arguments of
-   * HasRiemannSolver for one point of a subcell face.
+   * solveSubcellRiemannProblem() takes the arguments of solveRiemannProblem() for one point of a
+   * subcell face of a limited DG cell.
    */
   template <typename SolverType, typename Precision>
   concept HasSubcellRiemannSolver = requires(

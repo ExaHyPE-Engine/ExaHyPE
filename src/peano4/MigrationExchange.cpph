@@ -10,7 +10,7 @@
 #include "tarch/mpi/Request.h"
 
 template <typename T>
-peano4::MigrationExchange<T>::MigrationExchange(const tarch::MemoryLocation location) :
+INLINE_METHOD peano4::MigrationExchange<T>::MigrationExchange(const tarch::MemoryLocation location) :
   _prolongations(location),
   _restrictions(location),
   _sentCells(location),
@@ -19,16 +19,14 @@ peano4::MigrationExchange<T>::MigrationExchange(const tarch::MemoryLocation loca
   _receiveBuffer(location) {}
 
 /**
- * Fills the slots of the cells the regrid creates through the three device functions of the
- * transfer, copy(slot, target), interpolateFromParent(parentSlot, target, childPosition) and
- * restrictFromChildren(childSlots, target), which read old slots of the pool and write one chunk.
- * The prolongations and restrictions on this rank run while the messages of the other ranks
- * travel; no new slot reuses an old slot, so they write no chunk a message reads. Every rank calls
- * this at the same time, and the first call reserves the tag of the exchange.
+ * Fills the slots of the cells the regrid creates with the device functions copy(slot, target),
+ * interpolateFromParent(parentSlot, target, childPosition) and restrictFromChildren(childSlots,
+ * target) of transfer. No new slot reuses an old slot, so the local prolongations and restrictions
+ * run while the messages travel. Every rank calls this function at the same time.
  */
 template <typename T>
 template <typename Transfer>
-void
+INLINE_METHOD void
 peano4::MigrationExchange<T>::migrate(Pool& pool, const peano4::Regrid& regrid, const Transfer& transfer) {
   assertion(pool.getLocation() == _sendBuffer.getLocation());
   assertion(pool.getCapacity() >= regrid.newNumberOfSlots, pool.getCapacity(), regrid.newNumberOfSlots);
@@ -58,7 +56,7 @@ peano4::MigrationExchange<T>::migrate(Pool& pool, const peano4::Regrid& regrid, 
  */
 template <typename T>
 template <typename Transfer>
-void
+INLINE_METHOD void
 peano4::MigrationExchange<T>::postTransfers(
   const Pool&                              pool,
   const std::vector<peano4::RankTransfer>& transfers,
@@ -137,7 +135,7 @@ peano4::MigrationExchange<T>::postTransfers(
  * Waits for every message postTransfers() posted and copies every received chunk into its slot.
  */
 template <typename T>
-void
+INLINE_METHOD void
 peano4::MigrationExchange<T>::receiveTransfers(Pool& pool) {
   for (auto& request : _requests) {
     tarch::mpi::wait(&request);
@@ -158,10 +156,10 @@ peano4::MigrationExchange<T>::receiveTransfers(Pool& pool) {
 }
 
 /**
- * Frees every buffer; the tag stays reserved for the next migrate.
+ * Frees every buffer. The tag stays reserved for the next migrate().
  */
 template <typename T>
-void
+INLINE_METHOD void
 peano4::MigrationExchange<T>::release() {
   _prolongations.release();
   _restrictions.release();
@@ -177,9 +175,6 @@ peano4::MigrationExchange<T>::getTag() const noexcept {
   return _tag;
 }
 
-/**
- * Returns the bytes of the slot lists and both transfer buffers.
- */
 template <typename T>
 INLINE_METHOD tarch::AllocatedBytes
 peano4::MigrationExchange<T>::getAllocatedBytes() const noexcept {

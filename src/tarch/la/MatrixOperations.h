@@ -9,9 +9,6 @@
 
 TARGET_DECLARE
 namespace tarch::la {
-  /**
-   * Computes the sum of all entries of the matrix.
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar sum(const Matrix<Rows, Cols, Scalar>& matrix);
   template <typename Scalar>
@@ -63,11 +60,6 @@ namespace tarch::la {
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> getColumn(const Matrix<4, 4, Scalar>& matrix, int whichColumn);
 
-  /**
-   * Returns a matrix that holds the reciprocal of every entry.
-   *
-   * @see tarch::la::invert()
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix<Rows, Cols, Scalar> invertEntries(const Matrix<Rows, Cols, Scalar>& matrix);
   template <typename Scalar>
@@ -86,9 +78,6 @@ namespace tarch::la {
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar frobeniusNorm(const Matrix<4, 4, Scalar>& matrix);
 
-  /**
-   * Returns the largest absolute entry of the matrix.
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar elementMax(const Matrix<Rows, Cols, Scalar>& matrix);
   template <typename Scalar>

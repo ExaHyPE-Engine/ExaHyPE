@@ -19,7 +19,7 @@ namespace tarch {
  * Terminates the program when expr is false and prints the file, the line, expr and every value
  * after expr. The device branch prints the parameter names without values, because operator<< runs
  * on the host only. The host branch builds the message in a lambda, so a constexpr function may
- * carry an assertion.
+ * contain an assertion.
  */
 // clang-format off
 #define assertion(expr, ...) \

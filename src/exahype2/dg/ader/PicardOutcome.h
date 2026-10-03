@@ -7,7 +7,8 @@
 TARGET_DECLARE
 namespace exahype2::dg::ader {
   /**
-   * Returned by NonlinearPredictor::predict() when the sweep limit comes before the tolerance.
+   * Returned by NonlinearPredictor::predict() when the Picard iteration reaches its sweep limit
+   * before the tolerance.
    */
   constexpr int UnconvergedPicardIteration = -2;
 

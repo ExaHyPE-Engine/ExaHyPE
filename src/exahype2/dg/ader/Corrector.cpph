@@ -6,10 +6,9 @@
 
 TARGET_DECLARE
 /**
- * Adds the face integrals of one cell to its state, runs postprocessCell on the result and
- * returns the wave-speed maxima of that state at the updated time stamp; without
- * ReportEigenvalues the maxima are zero. faceFluxes points at the half of every face the cell
- * reads, which holds the difference between the numerical flux and the cell's own flux.
+ * Adds the face integrals to cellState, calls postprocessCell and returns the wave-speed maxima at
+ * the new time stamp. The maxima are zero without ReportEigenvalues. faceFluxes points to the
+ * flux half of every face that the cell reads.
  */
 template <typename Derived, typename ComputePrecision>
 template <bool ReportEigenvalues, typename StoragePrecision, typename Postprocessing>

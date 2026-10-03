@@ -24,7 +24,7 @@ namespace exahype2::dg::limiting::tests {
 
 TARGET_DECLARE
 /**
- * Sizes of the cells the limiter tests run with: Two nodes and three subcells per axis.
+ * The cell layout of the limiter tests.
  */
 struct exahype2::dg::limiting::tests::StubLayout final {
   static constexpr int    NodesPerAxis         = 2;
@@ -43,9 +43,8 @@ TARGET_DECLARE_END
 
 TARGET_DECLARE
 /**
- * A solver whose initial condition stores the first coordinate and the cell width, whose
- * observable is the first value, whose admissible states have a positive first value, whose wave
- * speed is the first value and whose flux grows with the direction.
+ * A solver with one observable, the first value, which is also its wave speed and must be
+ * positive.
  */
 template <exahype2::TimeStepping::Rule Rule>
 struct exahype2::dg::limiting::tests::StubSolverOf {
@@ -107,7 +106,7 @@ struct exahype2::dg::limiting::tests::RelaxedStubSolver final : exahype2::dg::li
 };
 
 /**
- * The stub solver with a subcell Riemann solver whose wave speed is two.
+ * The stub solver with a subcell Riemann solver.
  */
 struct exahype2::dg::limiting::tests::RiemannStubSolver final : exahype2::dg::limiting::tests::StubSolver {
   static constexpr double SubcellWaveSpeed = 2.0;
@@ -129,9 +128,8 @@ struct exahype2::dg::limiting::tests::RiemannStubSolver final : exahype2::dg::li
 TARGET_DECLARE_END
 
 /**
- * The projection tables of the two-node Gauss-Legendre basis and its three subcells: The basis
- * averaged over the subcells, the subcell a node lies in back onto the node, the basis at the
- * Lobatto nodes, and the quadrature points, in the layout of the generated tables.
+ * The projection tables of the two-node Gauss-Legendre basis and three subcells per axis in the
+ * layout of the generated tables.
  */
 struct exahype2::dg::limiting::tests::SubcellProjections final {
   static constexpr std::size_t ProjectionEntries =

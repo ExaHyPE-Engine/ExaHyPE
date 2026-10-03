@@ -5,9 +5,8 @@ import CurvilinearElastic
 
 def initial():
     return """
-  // The damping of an axis grows as the power PmlPower of the distance into the layer of PmlCellWidth
-  // cells at either domain face of the axis; the lower face of the axis PmlTop is a free surface
-  // without layer.
+  // The damping grows as the distance into the layer to the power PmlPower. The lower face of the
+  // axis PmlTop is a free surface without a layer.
   {
     constexpr int    NodesPerAxis       = DGOrder + 1;
     constexpr int    NumberOfData       = NumberOfUnknowns + NumberOfAuxiliaryVariables;
@@ -82,7 +81,7 @@ def algebraic_source():
   const auto firstLameParameter  = density * Q[Shortcuts::cp] * Q[Shortcuts::cp] - 2 * shearModulus;
   const auto longitudinalModulus = 2 * shearModulus + firstLameParameter;
   const auto inverseDensity      = 1 / density;
-  // The auxiliary variables of the layer hold nine entries per axis, the velocity entries first.
+  // The layer stores nine entries per axis: The velocity first, then the stress.
   const auto layer = [Q](const int axis, const int entry) { return Q[Shortcuts::pml + 9 * axis + entry]; };
 
   for (int component = 0; component < DIMENSIONS; component++) {

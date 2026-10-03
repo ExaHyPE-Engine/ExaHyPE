@@ -13,7 +13,7 @@ namespace exahype2::fv::timestepping {
 
 TARGET_DECLARE
 /**
- * Implements a one-stage explicit finite-volume time-stepping policy.
+ * One-stage explicit time-stepping scheme.
  */
 struct exahype2::fv::timestepping::SingleStep final {
   static constexpr int NumberOfStages = 1;

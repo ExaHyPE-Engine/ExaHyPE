@@ -81,7 +81,7 @@ def write_vtkhdf(path, times):
 
 
 def write_bare_hdf5(path):
-    """Writes one step in the bare HDF5 layout, whose topology carries element codes."""
+    """Writes one step in the bare HDF5 layout, whose topology stores element codes."""
     with h5py.File(path, "w") as handle:
         geometry = handle.create_group("geometry")
         points = np.asarray(QUAD_POINTS, dtype=float)
@@ -176,7 +176,7 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(_local_tag("{http://www.w3.org/XML}Grid"), "Grid")
 
     def test_decode_xdmf_topology_reads_a_uniform_stream(self):
-        # Element code 5 is the quadrilateral, so each cell carries four corners.
+        # Element code 5 is a quadrilateral with four corners.
         cells = _decode_xdmf_topology(np.asarray([5, 0, 1, 4, 3, 5, 1, 2, 5, 4]))
         np.testing.assert_array_equal(cells, [[0, 1, 4, 3], [1, 2, 5, 4]])
 

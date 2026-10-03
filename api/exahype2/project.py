@@ -19,10 +19,10 @@ from .main import Main
 
 
 class Project:
-    """A project generates one executable from its solvers.
+    """Generates and builds one executable from its solvers.
 
-    The terminal times and grid levels are the defaults the generated executable takes when the
-    command line names none.
+    The terminal times and grid levels are defaults that the command line of the executable
+    overrides.
     """
 
     _arguments = None
@@ -84,8 +84,8 @@ class Project:
 
     @staticmethod
     def _parse_arguments():
-        """Parses the command-line arguments every project takes; a script reads its own
-        arguments with ``parse_known_args`` next to them."""
+        """Parses the command-line arguments of every project once. A script parses its own
+        arguments with ``parse_known_args``."""
         if Project._arguments is None:
             parser = argparse.ArgumentParser(
                 allow_abbrev=False,
@@ -172,8 +172,8 @@ class Project:
         )
 
     def add_solver(self, solver):
-        """Appends a solver; a repeated solver name and a project that has already generated
-        its code both start a new solver set."""
+        """Appends a solver. A repeated solver name or a call after the code generation starts a
+        new solver set."""
         redeclaration = self._solver_set_generated or any(
             existing.name == solver.name for existing in self._solvers
         )
@@ -185,12 +185,13 @@ class Project:
         return solver
 
     def add_tracer(self, name, particle_attributes):
-        """Returns a tracer set; a solver moves it through ``Solver.trace``."""
+        """Returns a tracer set, which ``Solver.trace`` attaches to a solver."""
         return exahype2.particles.Tracers(name, particle_attributes)
 
     def couple(self, first, second):
-        """Couples two ADER-DG solvers of this project across the faces between the cells
-        their ``restrict_to_cells`` predicates own; ``first`` drives the time steps of both.
+        """Couples two ADER-DG solvers of this project on the faces between the cells that
+        their ``restrict_to_cells`` predicates select. The time step of ``first`` advances both
+        solvers with the smaller of their time step sizes.
         """
         for solver in (first, second):
             if solver not in self._solvers:
@@ -446,7 +447,7 @@ class Project:
         return fallback if value is None else str(value)
 
     def _configure_main(self):
-        # A non-increasing interval uses the minimum stamp as its sole completion criterion.
+        # The minimum terminal time alone ends a run whose maximum does not exceed it.
         max_terminal_time = self._max_terminal_time
         if (
             max_terminal_time is not None
@@ -472,8 +473,8 @@ class Project:
         )
 
     def _generate(self):
-        """Writes every generated file; the project state is put back afterwards, so a second
-        call generates the same files again."""
+        """Writes every generated file. The method restores the artefact and file lists
+        afterwards, so a second call generates the same files."""
         if not self._solvers:
             raise ValueError("The project has no solver.")
         self._solver_set_generated = True
@@ -607,7 +608,7 @@ class Project:
             raise
 
     def generate_and_build(self):
-        """Generates the project and compiles it unless the command line says generate only."""
+        """Generates the project and compiles it unless --generate-only is set."""
         log.info(
             "Generate project %s in %s",
             self.project_name,

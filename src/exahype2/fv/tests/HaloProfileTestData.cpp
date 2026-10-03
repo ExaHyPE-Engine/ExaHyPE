@@ -4,9 +4,6 @@
 
 #include "exahype2/fv/FiniteVolume.h"
 
-/**
- * Returns a profile that is linear along both tangential axes and distinct per layer and unknown.
- */
 double
 exahype2::fv::tests::getLinearHaloProfile(
   const int    layer,
@@ -25,9 +22,6 @@ exahype2::fv::tests::getFinePosition(const int volume, const int subface) {
   return (volume + HaloProfileSetup::DofsPerAxis * subface + 0.5) / HaloProfileSetup::SubdivisionFactor - 0.5;
 }
 
-/**
- * Returns the fine face of a subface with the profile at its volume centres.
- */
 std::vector<double>
 exahype2::fv::tests::getFineFaceWithProfile(const int normal, const int firstSubface, const int secondSubface) {
   using Setup = HaloProfileSetup;

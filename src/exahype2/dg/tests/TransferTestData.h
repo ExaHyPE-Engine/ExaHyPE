@@ -21,7 +21,7 @@ namespace exahype2::dg::tests {
 } // namespace exahype2::dg::tests
 
 /**
- * The basis of the transfer tests: Two Gauss-Legendre nodes per axis and two values per node.
+ * The Gauss-Legendre basis of the transfer tests.
  */
 struct exahype2::dg::tests::TransferSetup final {
   static constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
@@ -46,8 +46,7 @@ struct exahype2::dg::tests::TransferOperators final {
 };
 
 /**
- * Writes the linear profile at the nodes of one block of axes axes: The unit interval on every
- * axis for a negative block, the child interval of block on every axis otherwise.
+ * Writes the linear profile at the nodes of block, which setTransferCoordinatesOf() places.
  */
 template <int Nodes>
 void

@@ -16,8 +16,7 @@ namespace {
       if (base.empty()) {
         continue;
       }
-      // Probe with a per-process file name so concurrent ranks do not race on
-      // the probe, but hand back the base directory itself.
+      // The probe file name contains the process id, so concurrent ranks do not race on it.
       const std::filesystem::path probe = base / (".peano-write-probe-" + std::to_string(::getpid()));
       std::ofstream               stream(probe);
       if (stream.good()) {
@@ -33,10 +32,9 @@ namespace {
 } // namespace
 
 /**
- * Returns a directory a test writes its files into, and returns the same path
- * on every rank. The parallel plotters open one file collectively, so a
- * per-rank path would deadlock the open. The function probes the working
- * directory first and falls back to the system temporary directory.
+ * Returns the directory a test writes its files into, which is the same on every rank because the
+ * parallel plotters open one file collectively. The function probes the working directory first
+ * and falls back to the system temporary directory.
  */
 std::filesystem::path
 tarch::tests::getWritableTestDirectory() {

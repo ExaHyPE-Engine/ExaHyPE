@@ -9,7 +9,7 @@ namespace tarch::plotter {
 } // namespace tarch::plotter
 
 /**
- * Generates a master XDMF file by embedding the `<Grid>` body of the file of each time step.
+ * Writes a temporal XDMF collection that inlines the Grid element of every time step.
  */
 class tarch::plotter::XDMFTimeSeriesWriter final : public tarch::plotter::TimeSeriesWriter {
 public:

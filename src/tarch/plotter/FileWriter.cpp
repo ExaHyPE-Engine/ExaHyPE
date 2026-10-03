@@ -11,6 +11,10 @@ bool tarch::plotter::FileWriter::_doublePrecisionOutput = false;
 tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory) :
   _outputDirectory(outputDirectory) {}
 
+/**
+ * Claims one piece of the output file and returns its id. The file orders the pieces by orderKey,
+ * so the output does not depend on the order of concurrent claims.
+ */
 int
 tarch::plotter::FileWriter::acquirePiece(int orderKey) {
   const std::lock_guard<std::mutex> acquisitionGuard(_pieceAcquisitionMutex);
@@ -18,8 +22,8 @@ tarch::plotter::FileWriter::acquirePiece(int orderKey) {
     tarch::terminateWithError("Cannot acquire a plot piece, as the file has already been written.");
   }
 
-  // The order key decides where a piece lands in the file, so two pieces
-  // claiming the same one would write over each other.
+  // The order key sets the position of a piece in the file, so two pieces with one key would
+  // overwrite each other.
   if (not _claimedPieceOrderKeys.insert(orderKey).second) {
     tarch::terminateWithError("Plot piece order key " + std::to_string(orderKey) + " is already claimed.");
   }
@@ -35,11 +39,8 @@ tarch::plotter::FileWriter::isOpen() const {
 }
 
 /**
- * Selects the width the writers store their fields in.
- *
- * The setting reaches the file only. Every plotter accumulates its points and fields in
- * DataField, whose values are double, and narrows them as it writes, so single precision
- * halves the file and leaves the memory a plot holds unchanged.
+ * Sets whether the writers store the fields in double or in single precision. The plotters keep
+ * their values in double and narrow them as they write, so the setting changes the file size only.
  */
 void
 tarch::plotter::FileWriter::setDoublePrecisionOutput(const bool value) {
@@ -53,8 +54,7 @@ tarch::plotter::FileWriter::getDoublePrecisionOutput() {
 
 std::vector<std::pair<std::string, std::string>>
 tarch::plotter::FileWriter::getMPIFileHints() {
-  // Collective buffering for these large collective writes. The keys belong to ROMIO;
-  // other MPI-IO stacks ignore unknown keys.
+  // ROMIO reads these keys for collective buffering, and other MPI-IO stacks ignore them.
   return {
     {"romio_cb_write", "enable"},
     {"romio_ds_write", "disable"},
@@ -66,9 +66,8 @@ tarch::plotter::FileWriter::createOutputDirectory() const {
   int         success = 1;
   std::string failureReason;
 
-  // Only the global master touches the filesystem, and it records the outcome in a
-  // flag: A stop here would let the master leave the collective call below while the
-  // other ranks block on it forever.
+  // Only the global master touches the filesystem. It records a failure in a flag, because a stop
+  // here would leave the other ranks blocked in the collective call below.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     const std::filesystem::path outputPath(_outputDirectory);
 
@@ -98,8 +97,8 @@ tarch::plotter::FileWriter::createOutputDirectory() const {
     }
   }
 
-  // Agree on the outcome so every rank proceeds or stops together. This allreduce
-  // also synchronises the ranks, so no separate barrier is needed before they write.
+  // Every rank proceeds or stops together, and the allreduce synchronises the ranks before they
+  // write.
   int globalSuccess = success;
   tarch::mpi::allreduce(
     &success,
@@ -125,10 +124,8 @@ tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
     throw std::runtime_error("Plotter data identifier is empty.");
   }
 
-  // The identifier is written into VTU/XDMF XML, as an HDF5 dataset path
-  // component and as a NetCDF variable name. Reject the characters that would
-  // produce malformed XML, an invalid HDF5 path component, or a rejected NetCDF
-  // variable name.
+  // The identifier becomes an XML attribute, an HDF5 dataset path component and a NetCDF variable
+  // name, so these characters are illegal.
   const std::string illegalCharacters = " \t\n\r\"'<>&/\\";
   const std::size_t illegalPosition   = id.find_first_of(illegalCharacters);
   if (illegalPosition != std::string::npos) {
@@ -139,6 +136,10 @@ tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
   }
 }
 
+/**
+ * Returns the buffers of a piece. The lock guards the lookup against concurrent claims, and the
+ * returned reference stays valid without it.
+ */
 tarch::plotter::FileWriter::SubdomainBuffers&
 tarch::plotter::FileWriter::getPieceBuffers(int subdomainId) {
   const std::lock_guard<std::mutex> acquisitionGuard(_pieceAcquisitionMutex);
@@ -156,11 +157,8 @@ tarch::plotter::FileWriter::getPieceBuffers(int subdomainId) {
 }
 
 /**
- * Creates a vertex plotter with the requested treatment of coincident points.
- *
- * A vertex that two adjacent cells hold once reduces the geometry size for continuous
- * fields. A distinct vertex per cell keeps separate point-data values at the same
- * position, which a discontinuous field needs.
+ * Creates a vertex plotter. Merged vertices shrink the geometry of a continuous field, and a
+ * distinct vertex per cell keeps the separate values of a discontinuous field.
  */
 std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter>
 tarch::plotter::FileWriter::createVertexPlotter(const int subdomainId, const VertexMerging vertexMerging) {
@@ -383,6 +381,10 @@ tarch::plotter::FileWriter::classifyField(const int sourceComponents) {
   return {FieldKind::Generic, sourceComponents};
 }
 
+/**
+ * Returns the tuples of values widened from sourceComponents to writtenComponents, with zero in
+ * every added component.
+ */
 std::vector<double>
 tarch::plotter::FileWriter::expandFieldComponents(
   const std::vector<double>& values,
@@ -406,10 +408,8 @@ std::vector<float>
 tarch::plotter::FileWriter::narrowToFloat(const std::vector<double>& values) {
   std::vector<float> result(values.size());
   std::transform(values.begin(), values.end(), result.begin(), [](const double value) {
-    // The narrowing must not trap when floating-point exceptions are enabled:
-    // a value below float's normal range flushes to signed zero and a value
-    // beyond its finite range saturates, so every solution state remains
-    // plottable.
+    // A value below the normal float range flushes to signed zero and a value beyond the finite
+    // range saturates, so the narrowing raises no floating-point exception.
     if (std::abs(value) < static_cast<double>(std::numeric_limits<float>::min())) {
       return std::signbit(value) ? -0.0F : 0.0F;
     }
@@ -421,10 +421,12 @@ tarch::plotter::FileWriter::narrowToFloat(const std::vector<double>& values) {
   return result;
 }
 
+/**
+ * Returns the field names and component counts of localReference without communication. The
+ * collective writes run on the ranks with data only, so every participant has the same fields.
+ */
 tarch::plotter::FileWriter::FieldSchema
 tarch::plotter::FileWriter::getFieldSchema(const SubdomainBuffers* const localReference) {
-  // Names and component counts only; the field values are streamed from the
-  // subdomain buffers at write time.
   FieldSchema schema;
   if (localReference != nullptr) {
     const auto seed = [](std::vector<DataField>& target, const std::vector<DataField>& source) {

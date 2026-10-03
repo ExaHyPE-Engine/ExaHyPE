@@ -62,7 +62,7 @@ tarch::mpi::tests::DiagnosticsTest::run() {
 }
 
 /**
- * A registered request is found and named, and a cleared one is gone.
+ * The table reports a registered request and forgets a cleared one.
  */
 void
 tarch::mpi::tests::DiagnosticsTest::testRegisterReportClear() {
@@ -78,7 +78,7 @@ tarch::mpi::tests::DiagnosticsTest::testRegisterReportClear() {
 }
 
 /**
- * The table loses, duplicates or keeps no entry while two threads register, report and clear disjoint requests.
+ * Two threads that register, report and clear disjoint requests leave no stale entry behind.
  */
 void
 tarch::mpi::tests::DiagnosticsTest::testTableSurvivesConcurrentChurn() {

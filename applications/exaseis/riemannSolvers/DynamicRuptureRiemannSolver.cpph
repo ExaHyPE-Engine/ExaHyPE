@@ -10,9 +10,6 @@ namespace {
   TARGET_DECLARE
   [[maybe_unused]] DEVICE_VARIABLE applications::exahype2::exaseis::FaultPlane faultPlaneOnDevice;
 
-  /**
-   * Writes faultPlane into the device copy of the fault plane of this translation unit.
-   */
   struct WriteFaultPlaneOnDevice final {
     applications::exahype2::exaseis::FaultPlane faultPlane{};
 
@@ -62,7 +59,7 @@ applications::exahype2::exaseis::FaultPlane::get() {
 }
 
 /**
- * Returns whether the face with faceCentre and faceNormal of a cell of cellSize lies on the plane.
+ * Returns whether the face at faceCentre with the axis faceNormal lies within half a cell of the plane.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaseis::FaultPlane::containsFace(
@@ -92,9 +89,9 @@ applications::exahype2::exaseis::getBoxcar(const double coordinate, const Value 
 }
 
 /**
- * Returns the shear stress the fault at x holds under normalStress after slip, with a friction
- * coefficient that weakens linearly with the slip and with the time after the forced rupture.
- * Outside the cohesion box the cohesion grows by 1e10, which locks the fault there.
+ * Returns the frictional strength of the fault at x under normalStress after slip. The friction
+ * coefficient drops linearly with the slip and with the time after the forced rupture. Outside the
+ * cohesion box the fault is locked.
  */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD Value
@@ -130,9 +127,9 @@ applications::exahype2::exaseis::getFrictionalStrength(
 }
 
 /**
- * Writes the velocity and the traction of the fault interface between left and right with slip
- * weakening friction. The normal direction stays welded; along the tangents the fault slips where
- * the traction on it, the initial traction included, exceeds the frictional strength.
+ * Writes the interface velocity and traction of a fault node under slip-weakening friction. The
+ * normal direction stays welded. Along the tangents the fault slips where the traction plus the
+ * initial traction exceeds the frictional strength.
  */
 template <typename Shortcuts, typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -179,7 +176,6 @@ applications::exahype2::exaseis::solveFaultInterface(
   tractionFromCharacteristics[0] = pressureHarmonicMean
     * (rightCharacteristic[0] / right.pressureImpedance - leftCharacteristic[0] / left.pressureImpedance);
 
-  // The initial traction of the fault in the local basis of the right side.
   Value initialStress[6];
   writeInitialStress<Value>(
     x,
@@ -241,9 +237,9 @@ applications::exahype2::exaseis::solveFaultInterface(
 }
 
 /**
- * Solves the Riemann problems of a face of the dynamic rupture scenarios and returns the largest wave
- * speed on it. A face on the fault plane obeys the friction law, a boundary face FreeSurfaceFace is a
- * free surface, and every other boundary face absorbs.
+ * Solves the Riemann problem at every node of a face and returns the largest wave speed on it. A
+ * face on the fault plane obeys the friction law. The boundary face FreeSurfaceFace is a free
+ * surface, and every other boundary face absorbs.
  */
 template <
   typename Shortcuts,

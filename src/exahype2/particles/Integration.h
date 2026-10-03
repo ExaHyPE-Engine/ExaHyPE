@@ -21,7 +21,7 @@ namespace exahype2::particles {
     double       timeStepSize,
     double       factor
   );
-  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD State advanceMidpointStep(
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD State advanceSemiImplicitPartialStep(
     const State& current,
     double       timeStepSize,
     double       stepFraction

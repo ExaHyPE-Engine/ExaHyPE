@@ -15,7 +15,7 @@
 
 TARGET_DECLARE
 /**
- * Returns the half of a face that the cell which holds the face as faceNumber writes.
+ * Returns the half a cell writes on its face faceNumber.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::dg::getOwnHalf(const int faceNumber) {
@@ -23,8 +23,8 @@ exahype2::dg::getOwnHalf(const int faceNumber) {
 }
 
 /**
- * Returns the flux half a cell adds from its face faceNumber: Its own half, or the opposite half
- * of a coarse face, which holds the restricted flux of the fine faces below it.
+ * Returns the flux half a cell adds from its face faceNumber. A coarse face returns the opposite
+ * half, which stores the flux restricted from its fine faces.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::dg::getCorrectionHalf(const peano4::Partition& partition, const int face, const int faceNumber) {
@@ -34,7 +34,7 @@ exahype2::dg::getCorrectionHalf(const peano4::Partition& partition, const int fa
 
 /**
  * Writes the initial condition of Derived into the nodes of one cell. quadraturePoints and
- * quadratureWeights hold the tables in the memory the caller runs in.
+ * quadratureWeights lie in the memory space of the caller.
  */
 template <typename Derived, typename StoragePrecision, typename QuadraturePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -79,9 +79,7 @@ exahype2::dg::InitialiseCells<Derived, StoragePrecision>::operator()(const int e
 }
 
 /**
- * Writes the values of the polynomial of one cell on its faces in the precision of the faces:
- * faceStates holds the lower faces before the upper faces, and inside a face the lowest
- * tangential axis runs fastest.
+ * Extrapolates cellState to the faces of the cell, the lower faces first.
  */
 template <typename Derived, typename CellPrecision, typename FacePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -114,9 +112,8 @@ exahype2::dg::extrapolateStateToFaces(
 }
 
 /**
- * Evaluates the flux of Derived at every node of one cell and writes its values on the faces,
- * or writes zeros when Derived has no flux. A diffusive flux reads the gradient of the
- * polynomial along every axis.
+ * Evaluates the flux of Derived at every node and extrapolates it to the faces of the cell. A
+ * solver without a flux writes zeros.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -307,9 +304,8 @@ exahype2::dg::InterpolateFaceHalves<Derived, ComputePrecision>::operator()(const
 }
 
 /**
- * Fills the outer half of a boundary face through the boundary conditions of Derived. The
- * halves follow the negative and the positive side of the normal axis, and faceNumber names the
- * face from the cell inside.
+ * Fills the outer state half of a boundary face through the boundary conditions of Derived.
+ * faceNumber is the number of the face in the cell inside the domain.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -360,9 +356,9 @@ exahype2::dg::applyBoundaryConditions(
 }
 
 /**
- * Evaluates the flux of one side from the face states of that side, or writes zeros when Derived
- * has no flux. A diffusive flux takes the jump between the two sides divided by the cell extent
- * as the derivative along the normal and zero derivatives along the tangential axes.
+ * Evaluates the flux of Derived on the state half of side, or writes zeros when Derived has no
+ * flux. A diffusive flux uses the jump between the two halves over the cell extent as normal
+ * derivative and zero tangential derivatives.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -438,10 +434,9 @@ exahype2::dg::evaluateFluxOnFace(
 }
 
 /**
- * Replaces the fluxes of both sides by the difference between the Rusanov flux and the side's
- * own flux with the sign of the outward normal of that side, so two equal sides leave zeros
- * bitwise. The wave speeds come from the quadrature-weighted mean state of each side. The
- * nonconservative jump term enters both differences with the same sign.
+ * Overwrites both flux halves with the Rusanov flux minus the half's own flux, times the sign of
+ * the side's outward normal. Two equal sides return zeros bitwise. The wave speed of each side is
+ * taken at its quadrature-weighted mean state.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -539,10 +534,10 @@ exahype2::dg::solveRiemannProblem(
 }
 
 /**
- * Writes the difference between the linear Rusanov flux and each side's own flux, with the sign
- * of the outward normal of that side, from the state jump alone, so two equal sides leave zeros
- * bitwise. The material parameters of Derived multiply every term at the quadrature-weighted mean
- * of both sides.
+ * Overwrites both flux halves with the linear Rusanov flux minus the half's own flux, times the
+ * sign of the side's outward normal. The flux and the nonconservative product act on half the jump
+ * of the unknowns, so two equal sides return zeros bitwise. The material parameters at the
+ * quadrature-weighted mean state of both sides multiply both terms.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -684,11 +679,8 @@ exahype2::dg::solveLinearRiemannProblem(
 }
 
 /**
- * Replaces the fluxes of both halves by the difference between the numerical flux and the
- * half's own flux with the sign of the outward normal of that side: The Riemann solver of
- * Derived, the linear Rusanov flux or the nonlinear Rusanov flux. The Riemann solver of Derived
- * receives the two halves and writes the numerical flux of every side in place, so the own
- * fluxes are kept aside and subtracted afterwards.
+ * Overwrites both flux halves with the numerical flux minus the half's own flux, times the sign
+ * of the side's outward normal.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -772,12 +764,9 @@ exahype2::dg::solveRiemannProblemOnHalves(
 }
 
 /**
- * Solves the Riemann problem of one face and writes into both halves of faceFlux the difference
- * between the numerical flux and the half's own flux with the sign of that side's outward
- * normal. faceState and faceFlux hold the half of the lower side first. boundaryFaceNumber is
- * negative for a face between two cells; for a face on the domain boundary it names the face
- * from the cell inside, so the boundary conditions fill the outer half of the face states and
- * the flux of the outer half comes from the boundary state.
+ * Solves the Riemann problem of one face and overwrites both halves of faceFlux.
+ * boundaryFaceNumber is negative for an inner face. For a boundary face, it is the face number in
+ * the cell inside the domain, and the outer halves follow from the boundary conditions.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -859,7 +848,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::SolveRiemannProblems<Derived, ComputePrecision>::operator()(const int entry) const {
   const int face   = faces[entry];
   const int normal = partition.getFaceNormal(face);
-  // The cell on the lower side of a boundary face holds it as its upper face.
+  // A boundary face is the upper face of a cell on its lower side.
   int boundaryFaceNumber = -1;
   if (partition.getFaceKind(face) == peano4::FaceKind::Boundary) {
     boundaryFaceNumber = partition.getFaceCell(face, 0) >= 0 ? normal + DIMENSIONS : normal;
@@ -930,10 +919,9 @@ exahype2::dg::ForLevelJumpOnPlane<Operation>::operator()(const peano4::LevelJump
 }
 
 /**
- * Subtracts the integral of one face from the NumberOfUnknowns updates of cellNode in nodeUpdate.
- * faceFlux holds, per face node, the difference between the numerical flux and the cell's own
- * flux with the sign of the outward normal, so the lower face (orientation zero) and the upper
- * face (orientation one) enter through the same formula.
+ * Subtracts the integral over one face from the update of cellNode. faceFlux stores the signed
+ * flux differences of the Riemann solver, so the lower face (orientation zero) and the upper face
+ * (orientation one) use the same formula.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -986,10 +974,9 @@ exahype2::dg::addFaceIntegral(
 }
 
 /**
- * Subtracts the face integrals over all faces of one cell from the unknowns of cellValues, which
- * hold NumberOfValuesPerNode values per node. Per node, the two faces of an axis accumulate into
- * one buffer per axis before the buffers add up, so two mirror-image cells receive bitwise
- * mirrored updates, and a face whose flux differences are zero leaves the cell untouched bitwise.
+ * Subtracts the integrals over all faces of the cell from the unknowns of cellValues. The two
+ * faces of an axis add into one buffer per axis first, so two mirror-image cells receive bitwise
+ * mirrored updates.
  */
 template <typename Derived, int NumberOfValuesPerNode, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -1067,8 +1054,8 @@ exahype2::dg::MaxEigenvalueStatistics::combine(const ValueType left, const Value
 }
 
 /**
- * Raises the largest wave speed to the wave speed of every axis and the largest scaled wave
- * speed to the sum over the axes of the wave speed divided by the cell extent.
+ * Raises maxPhysicalEigenvalue to the wave speed of every axis and maxScaledEigenvalue to the sum
+ * of the wave speeds divided by the cell extents.
  */
 template <int Dimensions, typename EigenvalueEvaluator>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -1085,7 +1072,7 @@ exahype2::dg::MaxEigenvalueStatistics::accumulate(
     [[maybe_unused]] const bool physicalEigenvalueIsFinite = std::isfinite(physicalEigenvalue);
     assertion(physicalEigenvalueIsFinite and physicalEigenvalue >= 0.0, physicalEigenvalue, dimension);
     maxPhysicalEigenvalue = exahype2::MaxEigenvalueReduction::combine(maxPhysicalEigenvalue, physicalEigenvalue);
-    // A wave speed that is negative or not finite replaces the sum, so both maxima carry the fault.
+    // A wave speed that is negative or not finite replaces the sum, so both maxima report the fault.
     const double contribution = physicalEigenvalue / extent;
     if (exahype2::MaxEigenvalueReduction::isPhysicalValue(scaledEigenvalue)) {
       scaledEigenvalue = exahype2::MaxEigenvalueReduction::isPhysicalValue(contribution)
@@ -1127,9 +1114,8 @@ exahype2::dg::reduceMaxEigenvalues(
 }
 
 /**
- * Runs the patch postprocessing of Derived on the updated nodes of one cell and returns the
- * wave-speed maxima of those nodes at the end of the time step when ReportEigenvalues holds,
- * empty maxima otherwise.
+ * Postprocesses the updated nodes of one cell. Returns their wave-speed maxima at the end of the
+ * time step when ReportEigenvalues is true, empty maxima otherwise.
  */
 template <typename Derived, bool ReportEigenvalues, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
@@ -1180,7 +1166,7 @@ exahype2::dg::MeasureNodeEigenvalues<Derived, StoragePrecision>::operator()(
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::MeasureNodeErrors<Derived, StoragePrecision>::operator()(const int entry) const {
-  // The static member lives in host memory, so the kernel reads a constant copy.
+  // The static member is in host memory, so the kernel reads a constexpr copy.
   constexpr auto MeasuredUnknowns = Derived::MeasuredUnknowns;
   const int      slot             = cells[entry];
   double         errors[NumberOfNorms]{0.0, 0.0, 0.0};

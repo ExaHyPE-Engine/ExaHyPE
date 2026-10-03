@@ -17,6 +17,7 @@ set(SOURCES
   tests/TestCase.cpp
   tests/TreeTestCaseCollection.cpp
   tests/AssertionsTest.cpp
+  tests/CPUFeatureDetectionTest.cpp
   tests/MemoryUsageTest.cpp
   tests/NonCriticalAssertionsTest.cpp
   tests/SortTest.cpp
@@ -111,6 +112,7 @@ set(SOURCES
   plotter/tests/FormatTest.cpp
   plotter/tests/HDF5FileWriterTest.cpp
   plotter/tests/NetCDFFileWriterTest.cpp
+  plotter/tests/TimeSeriesWriterTest.cpp
   plotter/tests/VTKHDFFileWriterTest.cpp
   plotter/tests/VTUFileWriterTest.cpp
 
@@ -118,12 +120,15 @@ set(SOURCES
   reader/JSONReader.cpp
   reader/NetCDFFieldSampler.cpp
   reader/NetCDFFileReader.cpp
+  reader/tests/CSVReaderTest.cpp
   reader/tests/NetCDFFieldSamplerTest.cpp
   reader/tests/NetCDFFileReaderTest.cpp
   reader/tests/JSONReaderTest.cpp
 
   instrumentation/Measurement.cpp
   instrumentation/Watch.cpp
+  instrumentation/tests/CommandLineSinkTest.cpp
+  instrumentation/tests/WatchTest.cpp
 )
 
 set(GPU_SOURCES

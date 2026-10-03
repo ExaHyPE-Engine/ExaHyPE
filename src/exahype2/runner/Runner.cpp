@@ -61,8 +61,8 @@ namespace {
   }
 
   /**
-   * Names the point-to-point layer and the byte transports the run selected. An unset
-   * environment variable reports the library's own default.
+   * Returns the point-to-point layer and the byte transports that the environment selects, or the
+   * library default.
    */
   std::string getMPITransport() {
     // The report runs once at start-up before the tasking runtime creates any thread.
@@ -79,8 +79,8 @@ namespace {
   }
 
   /**
-   * Reports the total and the free space of the memory filesystem the OpenMP runtime and the
-   * byte transports of one node map their segments into.
+   * Returns the total and the free space of /dev/shm, where the OpenMP runtime and the byte
+   * transports of one node map their segments.
    */
   std::string getMemoryFilesystemHeadroom() {
     std::error_code error;
@@ -93,7 +93,7 @@ namespace {
   }
 
   /**
-   * Names the GPU backend the build selected and, when there is one, the devices it found.
+   * Returns the GPU backend of the build and, with a GPU backend, the number of its devices.
    */
   std::string getGPUBackendLabel() {
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
@@ -119,7 +119,7 @@ namespace {
   }
 
   /**
-   * Names whether the MPI library accepts pointers into CUDA device memory.
+   * Returns whether the MPI library accepts pointers into CUDA device memory.
    */
   std::string getGPUAwareMPILabel() {
 #if defined(OPEN_MPI) and defined(MPIX_CUDA_AWARE_SUPPORT)
@@ -218,7 +218,7 @@ exahype2::runner::Runner::launch(
   // A configuration error stops the process before MPI starts.
   parameters.configure(argc, argv);
 
-  // The runtime and the application parser read one file, whose usage tracking names the keys neither consumes.
+  // The runtime and the application parser read one file, so the keys that neither reads are unrecognised.
   auto* const configReader         = parameters.getConfigReader();
   const auto  applicationParserRan = static_cast<bool>(callbacks.loadApplicationParameters);
   if (applicationParserRan) {
@@ -302,8 +302,8 @@ exahype2::runner::Runner::launch(
   tarch::instrumentation::Log::setOutputFile(outputDirectory + parameters.getExecutableName() + ".log");
 
   peano4::init(domainOffset, domainSize, periodicBoundaries);
-  // Every rank schedules the same plan, so the first grid step builds the complete base grid with
-  // each rank owning its contiguous curve segment.
+  // Every rank schedules the same plan, so the first grid step builds the base grid with one
+  // contiguous curve segment per rank.
   peano4::Spacetree::getInstance().scheduleRegularGridConstruction(parameters.getGridLevels());
 
   if (callbacks.startSimulation) {
@@ -336,9 +336,8 @@ exahype2::runner::Runner::launch(
 }
 
 /**
- * Returns the step every rank continues with. The global master passes its choice and every
- * other rank NoStep, so the maximum over the ranks is the master's choice; the same reduction
- * carries the highest rank that raised a non-critical assertion to every rank.
+ * Returns the step of the global master, which every rank continues with. The same maximum
+ * reduction sends the highest rank with a non-critical assertion to every rank.
  */
 int
 exahype2::runner::Runner::exchangeStep(const int stepOfThisRank) {
@@ -375,8 +374,8 @@ exahype2::runner::Runner::Runner(
 }
 
 /**
- * Applies the refinement requests of the solvers to the grid. With live solver data a changed
- * grid moves the data through the solvers before the regrid closes.
+ * Applies the refinement requests of the solvers to the grid. With dataLive, the solvers move their
+ * data to a changed grid before the regrid finishes.
  */
 void
 exahype2::runner::Runner::regrid(const bool dataLive) {
@@ -419,8 +418,8 @@ exahype2::runner::Runner::executeStep(const Step step) {
 }
 
 /**
- * Reduces the global statistics of the step; every rank calls this after every step. Every step
- * but a time step reads the memory figures anew, so the grid and regrid reports show them current.
+ * Reduces the global statistics of the step. Every rank calls this function collectively after
+ * every step, and every step except a time step refreshes the memory figures.
  */
 void
 exahype2::runner::Runner::finishStep(const Step step) {
@@ -435,8 +434,8 @@ exahype2::runner::Runner::finishStep(const Step step) {
 }
 
 /**
- * Broadcasts the step, executes it and reduces the global statistics. Only the global master
- * calls this. Returns the wall time in seconds of the broadcast, the step and the reduction.
+ * Broadcasts, executes and reduces one step and returns its wall time in seconds. Only the global
+ * master calls this function.
  */
 double
 exahype2::runner::Runner::runStep(const Step step) {
@@ -502,7 +501,7 @@ exahype2::runner::Runner::run() {
 }
 
 /**
- * Writes the banners and the build, domain, time stepping, MPI and solver configuration.
+ * Writes the banners and the configuration report.
  */
 void
 exahype2::runner::Runner::reportConfiguration() {
@@ -615,9 +614,8 @@ exahype2::runner::Runner::reportConfiguration() {
 }
 
 /**
- * The first step builds the complete base grid; further steps run while the refinement
- * criterion asks for adaptive levels beyond it. A construction that has not settled after
- * MaximumMeshUpdateSweeps sweeps stops the run with an error.
+ * Builds the base grid in the first step and the adaptive levels that the refinement criterion
+ * asks for in further steps.
  */
 void
 exahype2::runner::Runner::constructGrid() {
@@ -642,9 +640,8 @@ exahype2::runner::Runner::constructGrid() {
       currentMinimumPatchSize     = statistics.getGlobalMinimumCellWidth();
       finishConditionSeenLastStep = false;
     }
-    // The grid converges once the finest cell reaches the coarsest admissible resolution and the
-    // stationary-regrid counter, which resets on every grid change, shows that the criterion asks
-    // for nothing further. The predicate has to hold on two consecutive steps.
+    // The construction settles when the finest cell reaches the coarsest admissible size and the
+    // last regrid changed nothing, on two consecutive steps.
     const bool converged = tarch::la::smallerEquals(currentMinimumPatchSize, coarsestAdmissiblePatchSize)
       and statistics.getGlobalNumberOfStationaryRegrids() >= 1;
     settled                     = converged and finishConditionSeenLastStep;
@@ -664,16 +661,15 @@ exahype2::runner::Runner::constructGrid() {
 }
 
 /**
- * Initialises the solution and adapts the mesh before time stepping. Every round realises the
- * votes of the initial condition in one regrid sweep, and the initial condition runs again on the
- * new grid, so every cell holds the analytic initial condition when it votes. A run whose
- * refinement requests still change the grid after the last round stops with an error.
+ * Initialises the solution and adapts the mesh before the time loop. Every round applies the
+ * refinement votes in one regrid sweep and initialises the new grid again, so every cell votes on
+ * the analytic initial condition.
  */
 void
 exahype2::runner::Runner::initialiseGrid() {
   SCOREP_USER_REGION(PhaseName::GridInitialisation, SCOREP_USER_REGION_TYPE_PHASE)
   double elapsedSeconds = runStep(Step::InitGrid);
-  // From the first initialised step on, a regrid has to preserve solver data across its topology transition.
+  // From the first initialisation on, a regrid keeps the solver data.
   peano4::Spacetree::getInstance().markPersistentDataLive();
   int rounds = 1;
   while (hasPendingMeshUpdates() and rounds < MaximumInitialisationRounds) {
@@ -707,7 +703,7 @@ exahype2::runner::Runner::initialiseGrid() {
 
 /**
  * Returns whether the refinement requests of the solvers change the refinement plan. Every rank
- * holds the same requests, so the answer is the same on every rank.
+ * returns the same answer.
  */
 bool
 exahype2::runner::Runner::hasPendingMeshUpdates() const {
@@ -725,8 +721,7 @@ exahype2::runner::Runner::describeMeshUpdates(const MeshUpdates& updates) {
 }
 
 /**
- * Renders how often a phase ran in its own unit: The time steps count as steps, the plots as
- * plots, the dynamic AMR phase as regrids and their sweeps, and every other phase as sweeps.
+ * Renders how often a phase ran, in steps, plots, regrids or sweeps.
  */
 std::string
 exahype2::runner::Runner::describeRepetitions(const std::string& phaseName, const int count, const int regrids) {
@@ -757,8 +752,8 @@ exahype2::runner::Runner::startMeshUpdates() {
 }
 
 /**
- * Writes the regrids collected so far behind a rule, if there are any, followed by the grid and
- * memory rows. Every arrow runs from the value before the first regrid to the value after the last.
+ * Writes the collected regrids behind a rule, followed by the grid and memory rows. Every arrow
+ * runs from the value before the first regrid to the value after the last.
  */
 void
 exahype2::runner::Runner::reportMeshUpdates() {
@@ -775,9 +770,8 @@ exahype2::runner::Runner::reportMeshUpdates() {
 }
 
 /**
- * Realises the refine and erase requests of the solvers in one regrid: Its sweeps run until the
- * requests change the refinement plan no further, so the caller resumes on a settled topology.
- * The regrids are collected across the calls, and a regrid reports them every
+ * Applies the refinement requests of the solvers in one regrid, whose sweeps run until the requests
+ * leave the refinement plan unchanged. A regrid reports the collected regrids every
  * SecondsBetweenMeshUpdateReports and before it stops the run.
  */
 void
@@ -807,8 +801,8 @@ exahype2::runner::Runner::applyMeshUpdates() {
 }
 
 /**
- * Runs one regrid sweep and adds it to the collected mesh updates; startsRegrid also counts a
- * regrid. Returns the wall clock seconds of the sweep.
+ * Runs one regrid sweep, adds it to the collected mesh updates and returns its wall clock in
+ * seconds. With startsRegrid, the sweep also counts a regrid.
  */
 double
 exahype2::runner::Runner::runMeshUpdateSweep(const bool startsRegrid) {
@@ -860,9 +854,8 @@ exahype2::runner::Runner::writeLabelled(
 }
 
 /**
- * Writes the time step behind a rule with the average step time since the previous report, one
- * line per solver and the throughput of those steps. Every value of a report starts in the value
- * column, so the column first widens for every label of the report.
+ * Writes the time step report with the average step time, one line per solver and the throughput
+ * since the previous report. The value column widens for every label before the first line.
  */
 void
 exahype2::runner::Runner::logTimeStep(
@@ -939,7 +932,7 @@ exahype2::runner::Runner::logTimeStep(
 }
 
 /**
- * Opens a section of the report behind a rule; a plot after a plot continues the open section.
+ * Opens a section of the report behind a rule. A plot after a plot continues the open section.
  */
 void
 exahype2::runner::Runner::openSection(const Section section) {
@@ -950,7 +943,7 @@ exahype2::runner::Runner::openSection(const Section section) {
 }
 
 /**
- * Writes the report line of one plot; the plot of the initial condition carries no snapshot number.
+ * Writes the report line of one plot. The plot of the initial condition has no snapshot number.
  */
 void
 exahype2::runner::Runner::logPlot(
@@ -979,10 +972,9 @@ exahype2::runner::Runner::logPlot(
 }
 
 /**
- * Alternates time steps, plots and regrids until the terminal time or the step budget is
- * reached. The mesh updates realise the refinement requests of a time step before the next plot
- * or time step; a run that terminates on a non-critical assertion dumps its final state on the
- * grid it has.
+ * Alternates time steps, plots and regrids until the terminal time or the step budget. The
+ * refinement requests of a time step change the grid before the next plot or time step. After a
+ * non-critical assertion, the loop plots the final state on the current grid and stops.
  */
 void
 exahype2::runner::Runner::runTimeLoop() {
@@ -1005,7 +997,7 @@ exahype2::runner::Runner::runTimeLoop() {
   const int  maxTimeSteps = parameters.getNumberOfTimeSteps();
   const bool stepLimited  = maxTimeSteps > 0;
 
-  // The value column leaves room for the step labels up to 999,999, so it moves only in longer runs.
+  // The value column leaves room for step labels up to ReservedSteps, so it moves only in longer runs.
   constexpr unsigned long ReservedSteps = 999999;
   widenValueColumn(
     BlockIndent,
@@ -1030,8 +1022,7 @@ exahype2::runner::Runner::runTimeLoop() {
     const double plotEnd          = maxTerminal < std::numeric_limits<double>::max() / 10.0 ? maxTerminal : minTerminal;
     const int    snapshots        = parameters.getNumberOfSnapshots();
     const double snapshotInterval = snapshots <= 0 ? 0.0 : plotEnd / snapshots;
-    // A run bounded by a fixed number of time steps ends at that step budget, so its snapshots
-    // spread over the steps.
+    // With a step budget, the snapshots spread evenly over the steps.
     const double stepPlotInterval =
       (stepLimited and snapshots > 0) ? static_cast<double>(maxTimeSteps) / snapshots : 0.0;
 
@@ -1068,9 +1059,9 @@ exahype2::runner::Runner::runTimeLoop() {
       not stepLimited and snapshotInterval > 0.0 and keepTimeStepping and completedPlots < snapshots - 1
       and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot)
     ) {
-      // The final-state dump at termination completes the numbered snapshot count, so the
-      // interval trigger stops one short. minStamp belongs to the slowest solver and maxStamp
-      // to the fastest, so the snapshot spacing follows the fastest solver.
+      // The final plot at termination completes the numbered snapshots, so the interval trigger
+      // stops one short. minStamp belongs to the slowest solver and maxStamp to the fastest, so the
+      // fastest solver sets the snapshot spacing.
       nextMinPlot += snapshotInterval;
       nextMaxPlot += snapshotInterval;
       if (nextMinPlot < minStamp) {
@@ -1097,7 +1088,7 @@ exahype2::runner::Runner::runTimeLoop() {
     }
 
     if (action == Action::Stop) {
-      // After a non-critical assertion the run dumps the final state alone, without a closing time step summary.
+      // After a non-critical assertion, the report ends with the final plot and no time step summary.
       if (not _stoppedAfterNonCriticalAssertion and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
         logTimeStep(
           _callbacks.getMinTimeStamp(),
@@ -1151,8 +1142,8 @@ exahype2::runner::Runner::runTimeLoop() {
     }
     ++completedTimeSteps;
 
-    // A step that tripped a non-critical assertion carries invalid data, such as a time step size
-    // from a zero eigenvalue; its report is skipped and the next iteration dumps the final state.
+    // A step with a non-critical assertion has invalid data, so it gets no report and the next
+    // iteration plots the final state.
     const auto now = std::chrono::steady_clock::now();
     if (
       not tarch::hasNonCriticalAssertionBeenViolated()

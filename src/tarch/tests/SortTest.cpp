@@ -36,9 +36,6 @@ tarch::tests::SortTest::testSortAscendingMatchesTheStandardSort() {
   }
 }
 
-/**
- * An empty range and a range of one entry stay unchanged.
- */
 void
 tarch::tests::SortTest::testSortAscendingKeepsEmptyAndSingleEntries() {
   tarch::sortAscending(static_cast<double*>(nullptr), 0);

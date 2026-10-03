@@ -18,7 +18,7 @@ namespace {
   constexpr double UntouchedValue = -7.0;
 
   /**
-   * Returns the wave speed at the time stamp after the step of the tests only.
+   * A solver whose wave speed is nonzero only at the end of the time step of the tests.
    */
   struct WaveSpeedSolver final {
     static constexpr int DGOrder                    = 1;
@@ -44,8 +44,8 @@ namespace {
   constexpr int CellStateSize       = CellLayout::NodesPerCell * CellLayout::NumberOfData;
 
   /**
-   * The nodes sit at the two ends of the reference interval, so a face integral reaches the nodes
-   * of that face alone.
+   * The nodes lie at the two ends of the reference interval, so a face integral changes only the
+   * nodes on that face.
    */
   struct Tables final {
     double faceQuadratureWeights[CellLayout::NodesPerFace]{};
@@ -67,7 +67,7 @@ namespace {
   }
 
   /**
-   * Returns the cell node that carries the given face node at the given position along the normal.
+   * Returns the cell node of face node faceNode at position normalIndex along direction.
    */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     int lowerAxesStride = 1;
@@ -79,9 +79,6 @@ namespace {
     return (higherAxesIndex * NodesPerAxis + normalIndex) * lowerAxesStride + lowerAxesIndex;
   }
 
-  /**
-   * Returns the index of the first value of a cell node in the cell state.
-   */
   int getStateIndexOf(const int cellNode) { return cellNode * CellLayout::NumberOfData; }
 
   double getCellStateEntry(const int cellNode) { return 1.0 + 0.25 * cellNode; }
@@ -96,9 +93,6 @@ namespace {
 
   tarch::la::Vector<DIMENSIONS, double> getCellSize() { return tarch::la::Vector<DIMENSIONS, double>(CellExtent); }
 
-  /**
-   * Holds the state of one cell and the flux differences its faces contribute.
-   */
   struct Cell final {
     double        faceFluxes[peano4::FacesPerCell][FluxElementsPerFace]{};
     double        cellState[CellStateSize]{};
@@ -124,9 +118,8 @@ namespace {
   }
 
   /**
-   * Writes the state the cell holds once the face integrals of both faces of every axis are in:
-   * Every face subtracts its flux difference times the quotient of the time step size and the cell
-   * extent from the cell nodes on that face.
+   * Writes the expected cell state after the correction: Every face subtracts its flux difference
+   * times the time step size over the cell extent from the nodes on that face.
    */
   void setExpectedCellState(double (&expected)[CellStateSize]) {
     constexpr double Contribution = TimeStepSize / CellExtent;
@@ -143,9 +136,6 @@ namespace {
     }
   }
 
-  /**
-   * Runs the correction of one cell, counts the postprocessing calls and returns the wave-speed maxima.
-   */
   template <bool ReportEigenvalues>
   exahype2::dg::MaxEigenvalueStatistics correct(Cell& cell, const Tables& tables, int& postprocessingCalls) {
     return exahype2::dg::ader::Corrector<WaveSpeedSolver, double>::correct<ReportEigenvalues>(
@@ -176,7 +166,7 @@ exahype2::dg::ader::tests::CorrectorTest::run() {
 }
 
 /**
- * The face integrals of the two faces of every axis reach the nodes those faces carry.
+ * The face integrals change the nodes on each face by the flux difference of that face.
  */
 void
 exahype2::dg::ader::tests::CorrectorTest::testTheFaceIntegralsReachTheCellState() {
@@ -203,7 +193,7 @@ exahype2::dg::ader::tests::CorrectorTest::testTheFaceIntegralsReachTheCellState(
 }
 
 /**
- * Faces whose flux differences are zero leave every node of the cell untouched bitwise.
+ * Zero flux differences leave the cell state unchanged bitwise.
  */
 void
 exahype2::dg::ader::tests::CorrectorTest::testZeroFluxDifferencesLeaveTheCellStateBitwise() {
@@ -228,7 +218,7 @@ exahype2::dg::ader::tests::CorrectorTest::testZeroFluxDifferencesLeaveTheCellSta
 }
 
 /**
- * The correction evaluates the wave speeds of the updated state at the updated time stamp.
+ * The corrector reports the wave speeds of the updated state at the new time stamp.
  */
 void
 exahype2::dg::ader::tests::CorrectorTest::testTheCorrectionReportsTheWaveSpeedsOfTheUpdatedState() {

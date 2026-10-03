@@ -25,7 +25,7 @@ LAYERS = {
 
 
 def layer_of(module):
-    """Returns the layer of a module name, the most specific table entry that prefixes it."""
+    """Returns the layer of the longest entry of LAYERS that prefixes the module name."""
     candidate = module
     while candidate:
         if candidate in LAYERS:
@@ -42,7 +42,7 @@ def module_name(path):
 
 
 def imported_modules(path, module):
-    """Returns the exahype2 modules a file imports, relative imports resolved."""
+    """Returns the exahype2 modules that a file imports, with relative imports resolved."""
     package = module if path.endswith("__init__.py") else module.rpartition(".")[0]
     with open(path) as source:
         tree = ast.parse(source.read(), path)

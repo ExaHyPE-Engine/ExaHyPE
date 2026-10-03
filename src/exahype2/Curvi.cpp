@@ -5,10 +5,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/la/ScalarOperations.h"
 
-/**
- * Asserts that normal is a valid direction which does not carry a transformation yet, and records
- * that it does from now on.
- */
 void
 exahype2::Curvi::reserveAxis(int normal) {
   assertion(normal >= 0 and normal < DIMENSIONS, "Coordinate direction out of range", normal, DIMENSIONS);
@@ -21,14 +17,9 @@ exahype2::Curvi::reserveAxis(int normal) {
 }
 
 /**
- * Moves one face of the domain by perturbation and stretches the interior along the face normal so
- * that it follows.
- *
- * @param faceIndex    Peano face index in [0, 2*DIMENSIONS). An index below DIMENSIONS denotes the
- *                     lower face along axis faceIndex, the remaining ones the upper face along
- *                     axis faceIndex-DIMENSIONS.
- * @param perturbation Offset of the face, as a function of the coordinates transverse to the face
- *                     normal.
+ * Moves the domain face faceIndex along its normal by perturbation and stretches the cells between
+ * it and the opposite face linearly. Face i and face i+DIMENSIONS are the lower and the upper face
+ * along axis i.
  */
 void
 exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
@@ -39,14 +30,11 @@ exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
 
   reserveAxis(normal);
 
-  // No earlier transformation touches this axis, so the domain still ends where the cartesian
-  // domain ends and both bounds are constants. That keeps the chain linear in the number of
-  // transformations and lets the forward and the inverse map measure against the same thing.
+  // No earlier transformation moves points along normal, so the cartesian bounds stay valid.
   const double lowerBound = _domainOffset[normal];
   const double upperBound = _domainOffset[normal] + _domainSize[normal];
 
-  // A point keeps its transverse coordinates across this transformation, so pinning the coordinate
-  // along normal onto the face makes the forward and the inverse map sample the same location.
+  // Both maps evaluate perturbation on the face, so they read the same offset.
   const double measurementPosition = isUpperFace ? upperBound : lowerBound;
 
   const Mapping oldPositionFunction = _positionFunction;
@@ -61,8 +49,6 @@ exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
       measurementPoint[normal] = measurementPosition;
       const double perturb     = perturbation(measurementPoint);
 
-      // A perturbation which reaches the opposite bound leaves nothing to stretch, and one which
-      // reaches past it turns the domain inside out.
       const double a = isUpperFace ? (upperBound + perturb - lowerBound) / (upperBound - lowerBound)
                                    : (upperBound - lowerBound - perturb) / (upperBound - lowerBound);
       assertion(tarch::la::greater(a, 0.0), "A perturbation may not collapse or invert the domain", a, perturb, normal);
@@ -103,27 +89,18 @@ exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
 }
 
 /**
- * Pins an interior interface to a cell boundary and stretches both sides so that they follow it.
- *
- * @param normal       Coordinate direction the interface is normal to, in [0, DIMENSIONS).
- * @param index        Index of the cell boundary the interface is pinned to. Has to lie strictly
- *                     inside the domain, i.e. be neither the lower nor the upper boundary.
- * @param position     Position the interface is moved to.
- * @param perturbation Offset added to position, as a function of the coordinates transverse to
- *                     normal.
- * @return The cartesian position of the cell boundary the interface was pinned to.
+ * Moves the interior cell boundary index along axis normal to position plus perturbation and
+ * stretches the cells on both sides linearly. Returns the cartesian position of that cell boundary.
  */
 double
 exahype2::Curvi::split(int normal, int index, double position, Perturbation perturbation) {
   reserveAxis(normal);
 
-  // The axis carries no earlier transformation, so both bounds are still the cartesian ones.
+  // No earlier transformation moves points along normal, so the cartesian bounds stay valid.
   const double lowerBound    = _domainOffset[normal];
   const double upperBound    = _domainOffset[normal] + _domainSize[normal];
   const double splitPosition = lowerBound + _minCellSize[normal] * index;
 
-  // A split pinned to either domain boundary leaves nothing to stretch on that side and divides
-  // by zero below.
   assertion(index >= 1, "An interface has to be pinned strictly inside the domain", index, normal);
   assertion(
     tarch::la::smaller(splitPosition, upperBound),
@@ -139,8 +116,7 @@ exahype2::Curvi::split(int normal, int index, double position, Perturbation pert
     [normal, position, splitPosition, lowerBound, upperBound, oldPositionFunction, perturbation](const Point& x) {
       Point solution = oldPositionFunction(x);
 
-      // Pinning the coordinate along normal onto the interface makes the sample point identical in
-      // the forward and the inverse direction, which the round trip depends on.
+      // Both maps evaluate perturbation on the interface, so they read the same offset.
       Point measurementPoint   = solution;
       measurementPoint[normal] = splitPosition;
       const double target      = position + perturbation(measurementPoint);

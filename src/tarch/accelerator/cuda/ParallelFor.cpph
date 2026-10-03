@@ -16,30 +16,28 @@ namespace tarch::accelerator {
     functor(static_cast<int>(blockIdx.x), CudaTeam{});
   }
 
-  /**
-   * Returns the index of the running thread within its team.
-   */
-  GPU_CALLABLE_METHOD inline int getThreadOfTeam([[maybe_unused]] const CudaTeam& team) {
+  INLINE_METHOD GPU_CALLABLE_METHOD int getThreadOfTeam([[maybe_unused]] const CudaTeam& team) {
     COMPILE_IF_ON_DEVICE(return static_cast<int>(threadIdx.x);)
     COMPILE_IF_ON_HOST(return 0;)
   }
 
-  /**
-   * Returns the number of threads of a team.
-   */
-  GPU_CALLABLE_METHOD inline int getNumberOfThreadsPerTeam([[maybe_unused]] const CudaTeam& team) {
+  INLINE_METHOD GPU_CALLABLE_METHOD int getNumberOfThreadsPerTeam([[maybe_unused]] const CudaTeam& team) {
     COMPILE_IF_ON_DEVICE(return static_cast<int>(blockDim.x);)
     COMPILE_IF_ON_HOST(return 1;)
   }
 
   template <typename Functor>
-  GPU_CALLABLE_METHOD inline void parallelFor(const CudaTeam& team, const Range& range, const Functor functor) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(const CudaTeam& team, const Range& range, const Functor functor) {
     for (int i = getThreadOfTeam(team); i < range.n; i += getNumberOfThreadsPerTeam(team)) {
       functor(i);
     }
   }
   template <typename Functor>
-  GPU_CALLABLE_METHOD inline void parallelFor(const CudaTeam& team, const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const CudaTeam&   team,
+    const RangeMD<2>& range,
+    const Functor     functor
+  ) {
     const int numberOfItems = range.n[0] * range.n[1];
     const int extentY       = range.n[1];
     for (int index = getThreadOfTeam(team); index < numberOfItems; index += getNumberOfThreadsPerTeam(team)) {
@@ -47,7 +45,11 @@ namespace tarch::accelerator {
     }
   }
   template <typename Functor>
-  GPU_CALLABLE_METHOD inline void parallelFor(const CudaTeam& team, const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const CudaTeam&   team,
+    const RangeMD<3>& range,
+    const Functor     functor
+  ) {
     const int numberOfItems = range.n[0] * range.n[1] * range.n[2];
     const int extentY       = range.n[1];
     const int extentZ       = range.n[2];
@@ -59,12 +61,12 @@ namespace tarch::accelerator {
   /**
    * One host thread runs a whole team, so the host pass has nothing to wait for.
    */
-  GPU_CALLABLE_METHOD inline void teamBarrier([[maybe_unused]] const CudaTeam& team) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier([[maybe_unused]] const CudaTeam& team) {
     COMPILE_IF_ON_DEVICE(__syncthreads();)
   }
 
   template <typename Functor>
-  inline void parallelFor(const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -84,7 +86,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     const int extentY = range.n[1];
@@ -94,7 +96,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -106,7 +108,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const TeamRange& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;

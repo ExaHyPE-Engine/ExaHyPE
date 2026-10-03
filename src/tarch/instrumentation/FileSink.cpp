@@ -6,7 +6,7 @@ tarch::instrumentation::FileSink::~FileSink() { close(); }
 
 tarch::instrumentation::FileSink&
 tarch::instrumentation::FileSink::getInstance() {
-  // Process-lifetime storage keeps logging available during static destruction.
+  // The sink is never destroyed, so logging works during static destruction.
   static FileSink& singleton = *new FileSink();
   return singleton;
 }

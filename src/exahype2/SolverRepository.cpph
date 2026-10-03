@@ -5,7 +5,7 @@
 #include "tarch/Assertions.h"
 
 template <typename... Solvers>
-exahype2::SolverRepository<Solvers...>::SolverRepository(Solvers&... solvers) :
+INLINE_METHOD exahype2::SolverRepository<Solvers...>::SolverRepository(Solvers&... solvers) :
   _solvers{solvers...} {}
 
 template <typename... Solvers>
@@ -38,10 +38,6 @@ exahype2::SolverRepository<Solvers...>::getMaxTimeStamp() const {
   return result;
 }
 
-/**
- * Returns the cells of this rank that hold data of the solver. A solver that reports its own
- * cells holds data on those alone; every other solver holds data on every cell of the partition.
- */
 template <typename... Solvers>
 template <typename Solver>
 INLINE_METHOD int
@@ -55,8 +51,7 @@ exahype2::SolverRepository<Solvers...>::getNumberOfCellsOf(const Solver& solver,
 }
 
 /**
- * Returns the cells of this rank that hold data of a solver, summed over the solvers, so a time
- * step updates this many cells.
+ * Returns the number of cell updates of one time step of all solvers on this rank.
  */
 template <typename... Solvers>
 INLINE_METHOD std::uint64_t
@@ -68,9 +63,6 @@ exahype2::SolverRepository<Solvers...>::getNumberOfSolverCells(const peano4::Par
   return result;
 }
 
-/**
- * Returns the degrees of freedom on the cells of this rank, summed over the solvers.
- */
 template <typename... Solvers>
 INLINE_METHOD std::uint64_t
 exahype2::SolverRepository<Solvers...>::getNumberOfCellDoFs(const peano4::Partition& partition) const {
@@ -90,9 +82,6 @@ exahype2::SolverRepository<Solvers...>::startSimulation() {
   forEachSolver([](auto& solver) { solver.startSimulation(); });
 }
 
-/**
- * Runs the finish hook of every solver, then frees the memory its allocate() took.
- */
 template <typename... Solvers>
 INLINE_METHOD void
 exahype2::SolverRepository<Solvers...>::finishSimulation() {
@@ -169,7 +158,7 @@ exahype2::SolverRepository<Solvers...>::getRefinementRequests() const {
 }
 
 /**
- * Derives the requests of the merged votes; collective over all ranks.
+ * Gathers the refinement requests of all ranks. Every rank calls this function collectively.
  */
 template <typename... Solvers>
 INLINE_METHOD void

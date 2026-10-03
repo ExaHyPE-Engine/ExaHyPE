@@ -5,7 +5,7 @@
 
 namespace tarch::accelerator {
   TARGET_DECLARE
-  // One partial value per thread of a custom team reduction.
+  // The team scratch stores one partial value per thread of a custom team reduction.
   constexpr int TeamScratchBytes = 16384;
 
   struct OmptTeam final {
@@ -14,7 +14,7 @@ namespace tarch::accelerator {
   using TeamHandle = OmptTeam;
 
   template <typename Functor>
-  inline void parallelFor([[maybe_unused]] const OmptTeam& team, const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelFor([[maybe_unused]] const OmptTeam& team, const Range& range, const Functor functor) {
 #pragma omp for
     for (int i = 0; i < range.n; ++i) {
       functor(i);
@@ -22,7 +22,11 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor([[maybe_unused]] const OmptTeam& team, const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(
+    [[maybe_unused]] const OmptTeam& team,
+    const RangeMD<2>&                range,
+    const Functor                    functor
+  ) {
 #pragma omp for collapse(2)
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
@@ -32,7 +36,11 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor([[maybe_unused]] const OmptTeam& team, const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(
+    [[maybe_unused]] const OmptTeam& team,
+    const RangeMD<3>&                range,
+    const Functor                    functor
+  ) {
 #pragma omp for collapse(3)
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
@@ -43,13 +51,13 @@ namespace tarch::accelerator {
     }
   }
 
-  inline void teamBarrier([[maybe_unused]] const OmptTeam& team) {
+  INLINE_METHOD void teamBarrier([[maybe_unused]] const OmptTeam& team) {
 #pragma omp barrier
   }
   TARGET_DECLARE_END
 
   template <typename Functor>
-  inline void parallelFor(const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -63,7 +71,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
@@ -81,7 +89,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -103,7 +111,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const TeamRange& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;

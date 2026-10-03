@@ -28,17 +28,14 @@ def parse_arguments():
 args = parse_arguments()
 
 initial_conditions = """
-  /**
-   * We scale the Gaussian's diameter with the maximum cell width, so it does not
-   * look like a discontinuous initial condition on a coarse mesh.
-   */
-
 #if DIMENSIONS == 2
   const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.3};
 #else
   const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.18, 0.3, 0.6};
 #endif
 
+  // The standard deviation of the Gaussian is the largest admissible patch size, so the coarsest
+  // grid resolves the Gaussian smoothly.
   const double peakDeviation = RuntimeParameters::getMaxAdmissiblePatchSize();
   const double distance = tarch::la::norm2(x - circleCentre);
   const double exponent = -(distance * distance) / 2.0 / peakDeviation / peakDeviation;
@@ -53,7 +50,6 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions
   Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
   Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];

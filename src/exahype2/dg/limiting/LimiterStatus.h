@@ -7,9 +7,9 @@
 
 namespace exahype2::dg::limiting {
   /**
-   * The role of a cell in the subcell limiter. Regular and Halo cells keep their Galerkin
-   * solution, Limited and Troubled cells recompute their step on the subcell scheme, and Troubled
-   * marks a cell whose candidate failed the admissibility test of the current step.
+   * The role of a cell in the subcell limiter. Limited and Troubled cells recompute their step on
+   * the subcell scheme, and the other cells keep their Galerkin solution. A Troubled cell failed
+   * the admissibility test in the current step.
    */
   enum class LimiterStatus : int { Regular = 0, Halo = 1, Limited = 2, Troubled = 3 };
 
@@ -20,8 +20,8 @@ namespace exahype2::dg::limiting {
 
   TARGET_DECLARE
   /**
-   * Number of spreading rounds that grow the subcell domain from a troubled cell out to its halo
-   * ring; every round lowers the status of a neighbour by one level.
+   * The number of spreading rounds from a troubled cell out to its halo ring. Every round lowers
+   * the status of a neighbour by one level.
    */
   constexpr int NumberOfSpreadRings = static_cast<int>(LimiterStatus::Troubled) - static_cast<int>(LimiterStatus::Halo);
 

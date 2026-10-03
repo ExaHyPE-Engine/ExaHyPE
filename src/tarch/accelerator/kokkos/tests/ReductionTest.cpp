@@ -10,9 +10,6 @@
 namespace {
   constexpr int ElementCount = 1024;
 
-  /**
-   * Adds the entry of values at index to the partial sum of the calling thread.
-   */
   struct AddEntry final {
     const int* values{nullptr};
 
@@ -33,8 +30,8 @@ tarch::accelerator::kokkos::tests::ReductionTest::testParallelReduction() {
   const std::vector<int> host(ElementCount, 1);
   const int              expectedSum = ElementCount;
 
-  // Device memory lives in Kokkos::DefaultExecutionSpace::memory_space, so a device kernel reads the
-  // raw pointer.
+  // allocateMemory() places device memory in Kokkos::DefaultExecutionSpace::memory_space, so a device
+  // kernel reads the raw pointer.
   int* deviceInput = tarch::allocateMemory<int>(ElementCount, tarch::MemoryLocation::Device);
   tarch::copyTo(deviceInput, host.data(), ElementCount, tarch::MemoryLocation::Device);
 

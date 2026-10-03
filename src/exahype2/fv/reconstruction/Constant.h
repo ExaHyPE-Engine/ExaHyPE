@@ -13,9 +13,7 @@ namespace exahype2::fv::reconstruction {
 
 TARGET_DECLARE
 /**
- * Piecewise-constant reconstruction, which yields the first-order Godunov
- * scheme. The two states meeting at an interface are the cell-centred values of
- * the two neighbouring volumes, so a single halo layer suffices.
+ * Piecewise-constant reconstruction, which gives the first-order Godunov scheme.
  */
 struct exahype2::fv::reconstruction::Constant final {
   static constexpr int HaloSize = 1;

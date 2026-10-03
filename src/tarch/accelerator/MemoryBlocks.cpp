@@ -63,8 +63,8 @@ tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
 }
 
 /**
- * Returns the tracked allocation size while holding the registry lock.
- * An unknown block terminates in debug builds.
+ * Returns the size of a bookmarked memory block, or zero outside a debug build. An unknown block
+ * terminates a debug build.
  */
 std::size_t
 tarch::accelerator::MemoryBlocks::getSizeOfMemoryBlock(void* memoryBlock) const {

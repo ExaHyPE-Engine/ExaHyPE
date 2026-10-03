@@ -3,21 +3,21 @@
 
 namespace tarch::accelerator {
   template <typename T>
-  inline auto getSYCLOperator([[maybe_unused]] const Max<T> reducer) {
+  INLINE_METHOD auto getSYCLOperator([[maybe_unused]] const Max<T> reducer) {
     return ::sycl::maximum<T>{};
   }
   template <typename T>
-  inline auto getSYCLOperator([[maybe_unused]] const Min<T> reducer) {
+  INLINE_METHOD auto getSYCLOperator([[maybe_unused]] const Min<T> reducer) {
     return ::sycl::minimum<T>{};
   }
   template <typename T>
-  inline auto getSYCLOperator([[maybe_unused]] const Sum<T> reducer) {
+  INLINE_METHOD auto getSYCLOperator([[maybe_unused]] const Sum<T> reducer) {
     return ::sycl::plus<T>{};
   }
 
   template <typename Op>
   struct SyclCombine final {
-    GPU_CALLABLE_METHOD typename Op::ValueType operator()(
+    INLINE_METHOD GPU_CALLABLE_METHOD typename Op::ValueType operator()(
       const typename Op::ValueType& left,
       const typename Op::ValueType& right
     ) const {
@@ -26,12 +26,17 @@ namespace tarch::accelerator {
   };
 
   template <typename Op>
-  inline auto getSYCLOperator([[maybe_unused]] const Custom<Op> reducer) {
+  INLINE_METHOD auto getSYCLOperator([[maybe_unused]] const Custom<Op> reducer) {
     return SyclCombine<Op>{};
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const SyclTeam& team, const Range& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(
+    const SyclTeam& team,
+    const Range&    range,
+    const Functor   functor,
+    const Reducer   reducer
+  ) {
     typename Reducer::ValueType threadAccumulator = Reducer::identity();
     const int                   localIndex        = static_cast<int>(team.item.get_local_id(0));
     const int                   localSize         = static_cast<int>(team.item.get_local_range(0));
@@ -45,7 +50,7 @@ namespace tarch::accelerator {
     }
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     const SyclTeam&   team,
     const RangeMD<2>& range,
     const Functor     functor,
@@ -66,7 +71,7 @@ namespace tarch::accelerator {
     }
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     const SyclTeam&   team,
     const RangeMD<3>& range,
     const Functor     functor,
@@ -89,7 +94,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -114,7 +119,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     const int extentY = range.n[1];
@@ -127,7 +132,7 @@ namespace tarch::accelerator {
     );
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -143,7 +148,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;

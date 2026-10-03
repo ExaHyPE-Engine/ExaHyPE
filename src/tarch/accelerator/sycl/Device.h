@@ -8,7 +8,7 @@
 
 namespace tarch::accelerator {
   /**
-   * Holds the SYCL work item of the running kernel. The item exists for the whole kernel, so a
+   * References the SYCL work item of the running kernel. The item exists for the whole kernel, so a
    * nested call may copy this handle by value. The scratch is work-group local memory for custom
    * team reductions.
    */

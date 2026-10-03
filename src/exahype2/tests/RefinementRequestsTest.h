@@ -21,7 +21,7 @@ public:
 
 private:
   void testKeepVotesRaiseNoRequest();
-  void testARefineVoteNamesTheCellOnEveryRank();
+  void testARefineVoteBecomesARequestOnEveryRank();
   void testAnEraseStandsOnceEveryChildVotes();
   void testRefineWinsAndKeepBeatsErase();
 };

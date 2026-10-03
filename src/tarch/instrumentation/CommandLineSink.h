@@ -18,25 +18,17 @@ public:
 
   static CommandLineSink& getInstance();
 
-  void writeToStdOut(
-    const std::string_view message,
-    const bool             flush,
-    const TerminalStyle    terminalStyle = TerminalStyle::Plain
-  );
-  void writeToStdErr(
-    const std::string_view message,
-    const bool             flush,
-    const TerminalStyle    terminalStyle = TerminalStyle::Plain
-  );
+  void writeToStdOut(std::string_view message, bool flush, TerminalStyle terminalStyle = TerminalStyle::Plain);
+  void writeToStdErr(std::string_view message, bool flush, TerminalStyle terminalStyle = TerminalStyle::Plain);
   void close();
 
 private:
   std::mutex _mutex{};
-  bool       _stdoutSupportsAnsi{false};
-  bool       _stderrSupportsAnsi{false};
+  bool       _stdoutSupportsANSI{false};
+  bool       _stderrSupportsANSI{false};
 
-  static bool streamSupportsAnsi(const int fileDescriptor);
-  static const char* getANSIPrefix(const TerminalStyle terminalStyle);
+  static bool streamSupportsANSI(int fileDescriptor);
+  static const char* getANSIPrefix(TerminalStyle terminalStyle);
 
   void configureOutputStreams();
 

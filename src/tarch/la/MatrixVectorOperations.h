@@ -9,9 +9,6 @@
 
 TARGET_DECLARE
 namespace tarch::la {
-  /**
-   * Returns the product of the matrix and the vector.
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> multiply(
     const Matrix<Rows, Cols, Scalar>& matrix,
@@ -34,9 +31,6 @@ namespace tarch::la {
     const Vector<4, Scalar>&    vector
   );
 
-  /**
-   * Adds alpha times the product of the matrix and v to r in place.
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD void matVec(
     const Matrix<Rows, Cols, Scalar>& matrix,

@@ -19,9 +19,9 @@ namespace exahype2::runner::tests {
 } // namespace exahype2::runner::tests
 
 /**
- * The runtime parameters of an application. Every entry names a scalar or an array in a storage
- * the caller owns. load() reads the configuration file first and the command line second, and it
- * removes the consumed arguments from the command line.
+ * Runtime parameters of an application, stored in variables the caller owns. load() reads the
+ * configuration file first and the command line second, and removes the consumed arguments from
+ * argv.
  */
 class exahype2::runner::ParameterTable final {
 public:
@@ -56,7 +56,7 @@ private:
 };
 
 /**
- * The runtime parameters of the engine, read from a JSON file and the command line.
+ * Runtime parameters of the engine, read from a JSON file and the command line.
  */
 class exahype2::runner::RuntimeParameters final {
 public:
@@ -122,8 +122,8 @@ private:
   friend class exahype2::runner::tests::RuntimeParametersTest;
 
   /**
-   * Seconds one MPI wait may take before a warning goes out and before the program aborts. The
-   * option --deadlockTimeout sets or disables the abort bound.
+   * Seconds an MPI wait may take before the warning and before the abort, where zero disables the
+   * bound.
    */
   double _MPITimeoutWarning{120.0};
   double _MPIDeadlockTimeout{600.0};

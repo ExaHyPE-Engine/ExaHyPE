@@ -8,7 +8,7 @@
 #include "tarch/tasking/TaskGraph.h"
 
 /**
- * Returns the upper bound on the chunk count runChunkedTasks() uses.
+ * Returns a strict upper bound of the chunk count of runChunkedTasks().
  */
 int
 peano4::topology::getMaximumNumberOfChunks() {
@@ -16,8 +16,8 @@ peano4::topology::getMaximumNumberOfChunks() {
 }
 
 /**
- * Returns the number of chunks runChunkedTasks() cuts a range into: At most two per thread, each
- * with at least minimumItemsPerChunk items, and one chunk for a range below two of them.
+ * Returns the number of chunks for runChunkedTasks(): At most two per thread and at least
+ * minimumItemsPerChunk items per chunk, or one chunk for a shorter range.
  */
 int
 peano4::topology::getNumberOfChunks(const int numberOfItems, const int minimumItemsPerChunk) {
@@ -31,11 +31,9 @@ peano4::topology::getNumberOfChunks(const int numberOfItems, const int minimumIt
 }
 
 /**
- * Runs a loop over an index range as one task per chunk. getNumberOfChunks()
- * decides the cut, and a single chunk runs in the calling thread. The callback
- * receives its chunk number, which stays below getMaximumNumberOfChunks(), so it
- * can accumulate into a buffer of its own, and a concatenation of those buffers
- * in chunk order reproduces the order of a serial loop.
+ * Runs processRange(chunkNumber, begin, end) as one task per chunk, or in the calling thread for a
+ * single chunk. The chunk number stays below getMaximumNumberOfChunks(), and the chunks cover the
+ * range in order, so per-chunk buffers concatenate to the order of a serial loop.
  */
 void
 peano4::topology::runChunkedTasks(

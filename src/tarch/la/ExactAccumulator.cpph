@@ -67,11 +67,8 @@ tarch::la::ExactAccumulator::round() const {
 }
 
 /**
- * Returns the running sum divided by the positive divisor, rounded to the
- * nearest double with ties to even. The magnitude of the exact sum is divided
- * limb by limb from the top and the remainder of that division feeds the
- * guard and sticky bits, so the result is the correctly rounded quotient and a sum of
- * divisor copies of one value returns that value bitwise.
+ * Returns the running sum divided by the positive divisor, correctly rounded to the nearest double
+ * with ties to even. A sum of divisor copies of one value returns that value bitwise.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 tarch::la::ExactAccumulator::roundQuotient(const int divisor) const {

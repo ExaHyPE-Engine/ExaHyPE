@@ -51,7 +51,7 @@ peano4::grid::tests::AutomatonStateTest::testRefineState() {
     }
   }
 
-  // A child's array slot is its position within the parent, with the first axis running fastest.
+  // The array index of a child is its linearised position in the parent, with the first axis running fastest.
   for (int i = 0; i < ChildrenPerCell; i++) {
     int remainingIndex = i;
     for (int d = 0; d < DIMENSIONS; d++) {
@@ -62,7 +62,7 @@ peano4::grid::tests::AutomatonStateTest::testRefineState() {
     }
   }
 
-  // Every child carries the curve state its parent's production assigns to its position.
+  // Every child gets the curve state that the grammar production of its parent assigns to its position.
   for (const auto& child : peano4::sfc::ActiveCurve::getChildren(coarseState.curveState)) {
     validateEqualsWithParams1(fineStates[child.linearisedPosition].curveState, child.state, child.linearisedPosition);
   }
@@ -72,10 +72,10 @@ void
 peano4::grid::tests::AutomatonStateTest::testSendAndReceiveInARing() {
   constexpr int Tag = 4321;
 
-  const auto&    rank          = tarch::mpi::Rank::getInstance();
-  const MPI_Comm communicator  = rank.getCommunicator();
-  const int      localRank     = rank.getRank();
-  const int      numberOfRanks = rank.getNumberOfRanks();
+  const auto& rank          = tarch::mpi::Rank::getInstance();
+  MPI_Comm    communicator  = rank.getCommunicator();
+  const int   localRank     = rank.getRank();
+  const int   numberOfRanks = rank.getNumberOfRanks();
 
   peano4::grid::AutomatonState sentState;
   sentState.level = 4 + localRank;

@@ -42,7 +42,7 @@ namespace {
   }
 
   /**
-   * Slots of one reduction record, in the three contiguous segments the operation sums, minimises and maximises.
+   * Slots of one reduction record, in three contiguous segments of sums, minima and maxima.
    */
   enum SumSlot {
     SumOfCells,
@@ -83,8 +83,8 @@ namespace {
   MPI_Op       StatisticsReductionOperation = MPI_OP_NULL;
 
   /**
-   * Applies sum, minimum and maximum to the fixed segments of each record. The parameter types
-   * follow MPI_User_function, which tarch::mpi::createOperation() takes.
+   * Sums, minimises and maximises the three segments of each record. The parameter types follow
+   * MPI_User_function, which tarch::mpi::createOperation() takes.
    */
   void reduceStatisticsRecords(
     void*                          incoming,
@@ -111,10 +111,9 @@ namespace {
   }
 
   /**
-   * Returns the reduction operation over whole statistics records and hands out the committed
-   * record datatype, creating both on first use. A record datatype keeps the segment offsets of
-   * the operation valid where the library pipelines a reduction, because it never splits inside
-   * an element. shutdownGlobalStatistics() releases both handles before MPI is finalised.
+   * Returns the reduction over whole statistics records and writes its datatype into recordType.
+   * Both are created on first use and freed by shutdownGlobalStatistics(). A record datatype keeps
+   * the segment offsets valid, since a pipelined reduction never splits an element.
    */
   MPI_Op getStatisticsReduction(MPI_Datatype& recordType) {
     if (StatisticsReductionOperation == MPI_OP_NULL) {
@@ -150,8 +149,8 @@ namespace {
   }
 
   /**
-   * Renders every row with a text under its section title. The free memory continues the line
-   * of the used memory when both carry a text.
+   * Renders every non-empty row under its section title. The free memory joins the line of the used
+   * memory if both are non-empty.
    */
   std::vector<std::string> renderRows(const std::array<std::string, exahype2::runner::GridSnapshot::RowCount>& texts) {
     using GridSnapshot  = exahype2::runner::GridSnapshot;
@@ -198,8 +197,8 @@ exahype2::runner::shutdownGlobalStatistics() {
 }
 
 /**
- * Records the bytes the solvers of this rank hold in host and in device memory; synchronise()
- * sums them over the ranks.
+ * Records the host and device bytes of the solvers of this rank. synchronise() sums them over the
+ * ranks.
  */
 void
 exahype2::runner::GlobalStatistics::setLocalSolverBytes(const std::size_t hostBytes, const std::size_t deviceBytes) {
@@ -208,8 +207,8 @@ exahype2::runner::GlobalStatistics::setLocalSolverBytes(const std::size_t hostBy
 }
 
 /**
- * Records the cells of this rank that hold solver data and their degrees of freedom, both summed
- * over the solvers; synchronise() sums them over the ranks.
+ * Records the solver cells and degrees of freedom of this rank, summed over the solvers.
+ * synchronise() sums them over the ranks.
  */
 void
 exahype2::runner::GlobalStatistics::setLocalCellUpdates(const std::uint64_t solverCells, const std::uint64_t cellDoFs) {
@@ -218,11 +217,9 @@ exahype2::runner::GlobalStatistics::setLocalCellUpdates(const std::uint64_t solv
 }
 
 /**
- * Reduces the local grid numbers into the global view with one blocking allreduce. The total and
- * the available memory of a node enter through its node master alone, so every node counts once.
- * The cell width travels as its bit pattern and the stationary counter with a sign bias, so both
- * stay order-preserving under an unsigned minimum. With refreshMemory set, the memory figures
- * are read anew.
+ * Reduces the local statistics of all ranks with one blocking allreduce. Only the node master adds
+ * the node memory, so every node counts once. The cell width is reduced as its bit pattern and the
+ * stationary counter with a sign bias, which keeps both ordered under an unsigned minimum.
  */
 void
 exahype2::runner::GlobalStatistics::synchronise(const bool refreshMemory) {
@@ -300,7 +297,7 @@ exahype2::runner::GlobalStatistics::synchronise(const bool refreshMemory) {
 
   _globalNumberOfInnerUnrefinedCells = sums[SumOfCells];
   _globalNumberOfInnerRefinedCells   = sums[SumOfRefinedCells];
-  // The two ranks next to a rank boundary face both count it, so the grid holds half of their sum.
+  // The ranks on both sides of a rank boundary face count it, so the grid has half of their sum.
   assertion(sums[SumOfRankBoundaryFaces] % 2 == 0, sums[SumOfRankBoundaryFaces]);
   assertion(sums[SumOfRankBoundaryFaces] / 2 <= sums[SumOfFaces], sums[SumOfRankBoundaryFaces], sums[SumOfFaces]);
   _globalNumberOfRankBoundaryFaces = sums[SumOfRankBoundaryFaces] / 2;
@@ -427,9 +424,8 @@ exahype2::runner::GlobalStatistics::getGlobalAvailableMemoryInBytes() const {
 }
 
 /**
- * Returns the percentage of the ideal speed-up the partition allows across the ranks. A rank is
- * one unit of work here, so the mean rank load is the even load and the heaviest rank sets the
- * makespan.
+ * Returns the percentage of the ideal speed-up that the partition allows. The mean rank load is the
+ * even load, and the heaviest rank sets the makespan.
  */
 double
 exahype2::runner::GlobalStatistics::getGlobalInterRankBalance() const {
@@ -537,7 +533,7 @@ exahype2::runner::collectGridSnapshot() {
 }
 
 /**
- * Renders every row that carries a value under its section title.
+ * Renders every row with a value under its section title.
  */
 std::vector<std::string>
 exahype2::runner::describeGridSnapshot(const exahype2::runner::GridSnapshot& snapshot) {
@@ -552,8 +548,8 @@ exahype2::runner::describeGridSnapshot(const exahype2::runner::GridSnapshot& sna
 }
 
 /**
- * Renders every row that carries a value after the transition, with the suffix and the detail of
- * after. A changed value reads "before → after".
+ * Renders every row with a value in after, with the suffix and the detail of after. A changed value
+ * reads "before → after".
  */
 std::vector<std::string>
 exahype2::runner::describeGridTransition(

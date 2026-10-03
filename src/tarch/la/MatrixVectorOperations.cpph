@@ -49,7 +49,7 @@ tarch::la::multiply(const Matrix<4, 4, Scalar>& matrix, const Vector<4, Scalar>&
 }
 
 /**
- * Compute r = r + alpha * M * v
+ * Adds alpha times the product of the matrix and v to r.
  */
 template <int Rows, int Cols, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD void

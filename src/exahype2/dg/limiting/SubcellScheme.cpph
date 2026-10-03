@@ -51,9 +51,9 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectNodesOn
 }
 
 /**
- * A cell that ran the Galerkin scheme in the previous step holds no subgrid, so it takes the
- * projection of its previous solution first; in the first step every subgrid holds the sampled
- * initial condition.
+ * Writes the subgrid onto the halo halves. A cell that ran the Galerkin scheme in the previous step
+ * first projects its previous solution onto the subgrid. In the first step, every subgrid stores
+ * the sampled initial condition.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -76,10 +76,10 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubgrid
 }
 
 /**
- * The evolved subgrid is written into evolvedSubcells first: A solver with a fallback
- * reconstruction repeats the step with it when a subcell of the evolved subgrid fails the
- * physical admissibility term. Bit f of boundaryFaces is set when face f lies on the domain
- * boundary. A solver with a fixed time step rule returns empty wave speeds.
+ * Advances the subgrid by one step, projects it onto the nodes and returns its wave speeds, or
+ * empty maxima with a fixed time step rule. A solver with a fallback reconstruction repeats the
+ * step with it when an evolved subcell fails the physical admissibility test. Bit f of
+ * boundaryFaces is set when face f lies on the domain boundary.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -177,9 +177,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::reduceMaxEigen
 }
 
 /**
- * Calls functor(values, x, h) for every subcell of a subgrid in linearised order, where x is the
- * centre exahype2::fv::getVolumeCentre() returns for the volume of the same index and h the
- * subcell size. A constexpr function takes the execution space of its caller.
+ * Calls functor(values, x, h) for every subcell in linearised order, with x the centre of the
+ * subcell and h its size.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename Value, typename Functor>
@@ -203,7 +202,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::forEachSubcell
 }
 
 /**
- * Runs the finite-volume scheme of the given reconstruction on one subgrid.
+ * Runs the finite-volume scheme with the reconstruction Reconstruct on one subgrid.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename Reconstruct, typename StoragePrecision>
@@ -476,7 +475,8 @@ exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecis
 }
 
 /**
- * Returns the subgrid a cell on the subcell scheme holds, or writes the projection of its nodes into projection.
+ * Returns the subgrid of a cell on the subcell scheme. Every other cell writes the projection of
+ * its nodes into projection and returns projection.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*

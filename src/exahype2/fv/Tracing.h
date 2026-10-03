@@ -64,7 +64,7 @@ namespace exahype2::fv {
   struct TraceParticles;
 
   template <int PatchSize, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
-  void traceParticles(
+  INLINE_METHOD void traceParticles(
     const peano4::Partition&                                partition,
     const Pool&                                             solution,
     double                                                  timeStepSize,
@@ -77,11 +77,6 @@ namespace exahype2::fv {
 } // namespace exahype2::fv
 
 TARGET_DECLARE
-/**
- * Moves one particle through the patch of its cell: Interpolates the fields of Fields at the
- * particle position, applies the forces, advances the particle by timeStepSize, reflects it at
- * the walls of the axes that are not periodic and wraps it through the periodic ones.
- */
 template <int PatchSize, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
 struct exahype2::fv::TraceParticles final {
   peano4::Partition                                          partition{};

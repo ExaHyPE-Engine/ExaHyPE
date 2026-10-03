@@ -14,15 +14,9 @@ namespace peano4::sfc {
 } // namespace peano4::sfc
 
 /**
- * Compiles a turtle grammar into the child-order table of a space-filling
- * curve.
- *
- * A curve state is the index of a grammar non-terminal. For every state the
- * table lists the children of a cell in curve order, each with its position
- * within the parent and the state of the child. The table is derived from
- * the productions when the class is instantiated, and the static assertions
- * reject a grammar whose productions are listed out of symbol order, do not
- * tile the cell with unit steps, or do not connect at the child boundaries.
+ * Compiles a turtle grammar into the child order of a space-filling curve. A curve state is the
+ * index of a grammar non-terminal. For every state, the table lists the children of a cell in curve
+ * order with their positions and states.
  */
 TARGET_DECLARE
 template <class CurveGrammar>
@@ -51,18 +45,18 @@ public:
 
   INLINE_METHOD static const ChildSequence& getChildren(int state);
 
-  static constexpr ChildOrder deriveChildOrder();
+  INLINE_METHOD static constexpr ChildOrder deriveChildOrder();
 
 private:
   using Position = std::array<int, DIMENSIONS>;
   using Point    = std::array<double, DIMENSIONS>;
 
-  static constexpr bool productionsAreInSymbolOrder();
-  static constexpr bool everyProductionTilesTheCell();
-  static constexpr bool childrenConnect();
+  INLINE_METHOD static constexpr bool productionsAreInSymbolOrder();
+  INLINE_METHOD static constexpr bool everyProductionTilesTheCell();
+  INLINE_METHOD static constexpr bool childrenConnect();
 
-  static constexpr std::array<Position, ChildrenPerCell> getPositions(int state);
-  static constexpr std::array<Point, NumberOfStates> getLimitPointsWithin(int child);
+  INLINE_METHOD static constexpr std::array<Position, ChildrenPerCell> getPositions(int state);
+  INLINE_METHOD static constexpr std::array<Point, NumberOfStates> getLimitPointsWithin(int child);
 
   static_assert(
     std::is_same_v<

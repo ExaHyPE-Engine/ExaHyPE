@@ -4,6 +4,7 @@
 
 #include "exahype2/plotter/PatchPlotter.h"
 #include "exahype2/plotter/Snapshot.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/plotter/Format.h"
 
 namespace peano4 {
@@ -15,10 +16,8 @@ namespace exahype2::plotter {
 } // namespace exahype2::plotter
 
 /**
- * Writes the two halves of every selected face of a rank as one piece of a snapshot file: One
- * point per face node at its quadrature position, one plot cell between neighbouring nodes,
- * and per field one point field with the values of the lower cell and one with the values of the
- * upper cell.
+ * Writes the two halves of every selected face of a rank into one piece of a snapshot file. Every
+ * field becomes one point field of the lower and one of the upper cell.
  */
 class exahype2::plotter::FacePlotter final {
 public:
@@ -30,7 +29,7 @@ public:
   ~FacePlotter()                             = default;
 
   template <int NodesPerAxis, int ValuesPerNode, typename Precision, typename Predicate>
-  void plot(
+  INLINE_METHOD void plot(
     const peano4::Partition& partition,
     const Precision*         values,
     int                      valuesPerFace,

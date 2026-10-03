@@ -6,9 +6,8 @@
 
 TARGET_DECLARE
 /**
- * Returns the neighbour @p offset volumes away along @p normal: The interior volume when it exists,
- * otherwise the matching layer of the halo in the left or right face of the patch. The halo
- * coordinate runs in the positive normal direction on both faces.
+ * Returns the neighbour offset volumes away along normal, read from the patch or from the halo of
+ * the lower or upper face.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
@@ -38,9 +37,9 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::getNeighbourAlongNormal(
 }
 
 /**
- * Evolves both boundary states by half a time step in the compute precision.
- * SolverType::limitedDifference and SolverType::reconstruct may replace the default reconstruction.
- * Auxiliary variables keep their extrapolated values during the half-step.
+ * Reconstructs the two face states of centreState and evolves them by half a time step. A
+ * SolverType with limitedDifference or reconstruct overrides the limiter or the linear
+ * reconstruction. Auxiliary variables keep their reconstructed values.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
@@ -251,8 +250,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::rusanovFaceFlux(
 }
 
 /**
- * Advances one volume with the MUSCL-Hancock update. A custom Riemann solver adds the
- * non-conservative product over the face jump to its fluxes.
+ * Adds the MUSCL-Hancock update of one volume to outputState. A custom Riemann solver includes the
+ * non-conservative product of the face jump in its fluxes.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
@@ -300,8 +299,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
   const double halfTimeStamp = timeStamp + 0.5 * timeStepSize;
   assertion(std::isfinite(halfTimeStamp), timeStamp, timeStepSize);
 
-  // Every axis adds its flux difference to one update, and that update enters outputState once,
-  // so two volumes that a mirror of the axes maps onto each other receive mirrored states.
+  // The axes add their flux differences into one update, which is added to outputState once, so
+  // mirrored volumes get mirrored states.
   StateUpdatePrecision axisUpdates[NumberOfUnknowns];
   SIMD()
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -488,7 +487,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
           leftGoingFluxRightFace,
           rightGoingFluxRightFace
         ));
-      // A custom Riemann solver may omit maxEigenvalue.
+      // A solver with solveRiemannProblem need not define maxEigenvalue, so this branch reads the
+      // wave speeds of the Riemann solver only.
       if constexpr (EvaluateMaxEigenvalue) {
         exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedLeft);
         exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedRight);
@@ -603,7 +603,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
     outputState[unknown] =
       static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + axisUpdates[unknown]);
   }
-  // Assertion diagnostics cannot run inside a vectorised loop.
+  // The assertion stays out of the SIMD loop, whose body must not emit diagnostics.
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     [[maybe_unused]] const bool outputStateIsFinite = std::isfinite(outputState[unknown]);
     assertion(outputStateIsFinite, unknown, outputState[unknown]);

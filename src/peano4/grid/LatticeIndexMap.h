@@ -9,12 +9,9 @@ namespace peano4::grid {
 } // namespace peano4::grid
 
 /**
- * Maps serialised lattice keys to entity indices on refined levels.
- *
- * A lattice key packs a vertex's or cell's lattice position into one
- * non-negative integer, so the map is a dense integer-to-integer table with
- * open addressing over one power-of-two key array. Sized once from the entity
- * count a level is about to hold, it fills without a rehash.
+ * Hash map from non-negative lattice keys to entity indices, with open addressing over a key array
+ * of power-of-two length. A map that reserve() sizes for the entities of a level fills without a
+ * rehash.
  */
 class peano4::grid::LatticeIndexMap final {
 public:
@@ -29,7 +26,7 @@ public:
   static constexpr std::int64_t TombstoneKey{-2};
 
   /**
-   * Reported for a key the map does not hold.
+   * The value find() returns for a missing key.
    */
   static constexpr int NoEntry{-1};
 
@@ -58,7 +55,7 @@ public:
 
 private:
   /**
-   * Keeps the slot mask valid before the first growth.
+   * Smallest length of the key array.
    */
   static constexpr std::size_t SmallestCapacity{8};
 
@@ -66,14 +63,14 @@ private:
   std::vector<int>          _values{};
 
   /**
-   * Keeps the key-array length minus one, allowing bitwise probe wrapping.
+   * The length of the key array minus one, so a probe wraps with a bitwise and.
    */
   std::size_t _slotMask{0};
 
   std::size_t _size{0};
 
   /**
-   * Tracks erased probe slots until growth clears them.
+   * Number of erased slots, which the next growth clears.
    */
   std::size_t _numberOfTombstones{0};
 

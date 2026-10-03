@@ -12,7 +12,7 @@ namespace tarch {
     Heap,
 
     /**
-     * Places the data on the device; a build without a GPU backend places it on the heap.
+     * Places the data on the device. A build without a GPU backend places it on the heap.
      */
     Device,
 
@@ -30,8 +30,8 @@ namespace tarch {
 } // namespace tarch
 
 /**
- * Bytes an object holds in the memory of the host and in the memory of a GPU. A build without a
- * GPU backend places device data in host memory, so all its bytes count as host bytes.
+ * The bytes an object occupies in host memory and in GPU memory. A build without a GPU backend
+ * places device data in host memory, so all its bytes count as host bytes.
  */
 struct tarch::AllocatedBytes final {
   std::size_t host{0};

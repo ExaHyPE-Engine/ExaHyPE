@@ -16,9 +16,6 @@ tarch::tests::MemoryUsageTest::run() {
   testMethod(testProcessAndNodeMemoryAreConsistent);
 }
 
-/**
- * A vector holds the bytes of its capacity, its unused capacity included.
- */
 void
 tarch::tests::MemoryUsageTest::testAllocatedBytesCountTheCapacity() {
   std::vector<double> values;

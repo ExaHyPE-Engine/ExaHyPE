@@ -19,9 +19,8 @@ static_assert(offsetof(peano4::RefinementRequest, level) > offsetof(peano4::Refi
 static_assert(offsetof(peano4::RefinementRequest, latticeIndex) > offsetof(peano4::RefinementRequest, level));
 
 /**
- * Orders requests by refinement control, level, then lattice position. The key covers every
- * field, so the sorted sequence is independent of the insertion order and a caller forms a
- * canonical request set.
+ * Orders requests by refinement control, then level, then lattice position. The key covers every
+ * field, so sorting yields the same sequence for every insertion order.
  */
 bool
 peano4::RefinementRequest::operator<(const RefinementRequest& other) const noexcept {

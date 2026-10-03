@@ -10,6 +10,7 @@
 #include "peano4/MigrationExchange.h"
 #include "peano4/Partition.h"
 #include "peano4/Regrid.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/MemoryLocation.h"
@@ -20,14 +21,9 @@ namespace exahype2::dg::limiting {
 } // namespace exahype2::dg::limiting
 
 /**
- * The a-posteriori subcell limiter of one ADER-DG solver: Every cell holds a status, a subgrid
- * of finite volumes and the solution of the previous time step. After the corrector the
- * candidate of every cell is tested against the physical admissibility term and the discrete
- * maximum principle of the solver; a rejected cell and its first ring of neighbours recompute
- * their step on the subcell scheme from the previous solution, and the second ring supplies its
- * subgrid. Derived is the generated solver class as for exahype2::dg::ader::Solver and adds
- * the subcell scheme, the observables of the discrete maximum principle and the projection
- * tables SubcellProjection between the nodes and the subcells.
+ * The a-posteriori subcell limiter of one ADER-DG solver. A cell whose candidate fails the
+ * physical admissibility test or the discrete maximum principle recomputes its step with its
+ * first ring of neighbours on the subcell scheme. The second ring supplies its subgrid.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::dg::limiting::SubcellLimiter final {
@@ -48,45 +44,45 @@ public:
   SubcellLimiter& operator=(SubcellLimiter&&)      = delete;
   ~SubcellLimiter()                                = default;
 
-  SubcellLimiter(double relaxationParameter, double differencesScaling);
+  INLINE_METHOD SubcellLimiter(double relaxationParameter, double differencesScaling);
 
-  void allocate(const peano4::Partition& partition);
-  void release();
-  [[nodiscard]] tarch::AllocatedBytes getAllocatedBytes() const;
+  INLINE_METHOD void allocate(const peano4::Partition& partition);
+  INLINE_METHOD void release();
+  [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
-  void initialise(const peano4::Partition& partition, const CellPool& solution);
-  void openTimeStep(const peano4::Partition& partition, const CellPool& solution);
-  [[nodiscard]] exahype2::dg::MaxEigenvalueStatistics closeTimeStep(
+  INLINE_METHOD void initialise(const peano4::Partition& partition, const CellPool& solution);
+  INLINE_METHOD void openTimeStep(const peano4::Partition& partition, const CellPool& solution);
+  [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics closeTimeStep(
     const peano4::Partition& partition,
     CellPool&                solution,
     double                   timeStamp,
     double                   timeStepSize
   );
-  void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid, const CellPool& solution);
+  INLINE_METHOD void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid, const CellPool& solution);
 
-  [[nodiscard]] typename StatusPool::View getStatuses();
-  [[nodiscard]] const int* downloadStatuses();
-  [[nodiscard]] const StoragePrecision* downloadSubcells();
-  [[nodiscard]] int getNumberOfTroubledCells() const;
-  [[nodiscard]] int getGlobalNumberOfTroubledCells() const;
-  [[nodiscard]] int getNumberOfRecomputedCells() const;
-  [[nodiscard]] int getNumberOfCellsOnSubcellScheme() const;
+  [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<int>::View getStatuses();
+  [[nodiscard]] INLINE_METHOD const int* downloadStatuses();
+  [[nodiscard]] INLINE_METHOD const StoragePrecision* downloadSubcells();
+  [[nodiscard]] INLINE_METHOD int getNumberOfTroubledCells() const;
+  [[nodiscard]] INLINE_METHOD int getGlobalNumberOfTroubledCells() const;
+  [[nodiscard]] INLINE_METHOD int getNumberOfRecomputedCells() const;
+  [[nodiscard]] INLINE_METHOD int getNumberOfCellsOnSubcellScheme() const;
 
 private:
-  void rebuild(const peano4::Partition& partition);
-  void sampleSubcells(const peano4::Partition& partition);
-  void clearFaces(const peano4::Partition& partition);
-  void openStep(const peano4::Partition& partition, const CellPool& solution);
-  void reduceReferenceExtrema(const peano4::Partition& partition);
-  [[nodiscard]] exahype2::dg::MaxEigenvalueStatistics judgeCandidates(
+  INLINE_METHOD void rebuild(const peano4::Partition& partition);
+  INLINE_METHOD void sampleSubcells(const peano4::Partition& partition);
+  INLINE_METHOD void clearFaces(const peano4::Partition& partition);
+  INLINE_METHOD void openStep(const peano4::Partition& partition, const CellPool& solution);
+  INLINE_METHOD void reduceReferenceExtrema(const peano4::Partition& partition);
+  [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics judgeCandidates(
     const peano4::Partition& partition,
     const CellPool&          solution,
     double                   timeStamp,
     double                   timeStepSize
   );
-  void spreadStatuses(const peano4::Partition& partition);
-  void listCellsOnSubcellScheme(const peano4::Partition& partition);
-  [[nodiscard]] exahype2::dg::MaxEigenvalueStatistics recompute(
+  INLINE_METHOD void spreadStatuses(const peano4::Partition& partition);
+  INLINE_METHOD void listCellsOnSubcellScheme(const peano4::Partition& partition);
+  [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics recompute(
     const peano4::Partition& partition,
     CellPool&                solution,
     double                   timeStamp,
@@ -94,7 +90,7 @@ private:
   );
 
   template <typename Interpolate, typename Restrict, typename Exchange, typename Work>
-  void exchangeFaces(
+  INLINE_METHOD void exchangeFaces(
     const peano4::Partition& partition,
     const Interpolate&       interpolation,
     const Restrict&          restriction,
@@ -132,7 +128,7 @@ private:
   };
   exahype2::dg::limiting::SubcellSchemeCounts _cellCounts{};
   /**
-   * Troubled cells of all ranks at the end of the last closeTimeStep().
+   * The number of troubled cells on all ranks at the end of the last closeTimeStep().
    */
   int _globalTroubledCells{0};
 

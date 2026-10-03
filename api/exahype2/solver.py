@@ -22,8 +22,8 @@ from .state import State
 class Solver:
     """One solver of a project.
 
-    Every generated C++ name (``<Name>``, ``<Name>Base``, ``<Name>PDETerms``,
-    ``instanceOf<Name>``) follows from ``name``.
+    ``name`` sets the generated C++ names ``<Name>``, ``<Name>Base``, ``<Name>PDETerms`` and
+    ``instanceOf<Name>``.
     """
 
     PDE_TERMS = {}
@@ -70,8 +70,8 @@ class Solver:
 
     @postprocess_updated_patch.setter
     def postprocess_updated_patch(self, kernel):
-        """Sets the C++ code that runs on every cell after its update; it reads and writes ``Q``,
-        the ``PointsPerCell`` updated points of the cell, and reads ``x``, ``h``, ``t`` and
+        """Sets the C++ code that runs on every cell after its update. The code reads and writes
+        the ``PointsPerCell`` updated points ``Q`` of the cell and reads ``x``, ``h``, ``t`` and
         ``dt``. ``True`` leaves the definition to the application."""
         self._postprocess_updated_patch = kernel
 
@@ -111,7 +111,7 @@ class Solver:
     def measure_error(self, file="Error", every=0.0, unknowns=None):
         """Records the L1, L2 and Linf errors against the ``analytical_solution`` PDE term.
 
-        ``every`` is the time between two records, zero for every time step; ``unknowns``
+        ``every`` is the time between two records, zero for every time step. ``unknowns``
         selects the compared unknowns by index or name.
         """
         if self._error_measurement is not None:
@@ -137,8 +137,9 @@ class Solver:
         return self
 
     def trace(self, tracers, forces=None, initialisation=True, time_steps=True):
-        """Moves the tracers through the solution after the grid initialisation and after every
-        time step the two flags select, with :class:`exahype2.particles.Forces`."""
+        """Moves the tracers through the solution with ``forces``, a
+        :class:`exahype2.particles.Forces`. ``initialisation`` and ``time_steps`` select whether
+        the tracers move after the grid initialisation and after every time step."""
         tracers.attach(self, forces, initialisation, time_steps)
         if len(tracers.forces.interpolated_fields) > self.state.number_of_values:
             raise ValueError(
@@ -196,15 +197,16 @@ class Solver:
         return self
 
     def initialise_on_host(self):
-        """Runs the initial condition on the host and uploads the cells afterwards, for an
-        initial condition that reads files or host objects."""
+        """Runs the initial condition on a host copy of the cells, which the solver then copies
+        to the device. An initial condition that reads files or host objects needs this.
+        """
         self._initialise_on_host = True
         self.pde_terms.run_on_host("initial_condition")
         return self
 
     def add_includes(self, *headers):
-        """Adds headers, as paths below ``src`` or below the generated directory, to
-        ``<Name>Base.h``, so the PDE terms see them."""
+        """Adds headers to ``<Name>Base.h``, so the PDE terms see them. A header path is
+        relative to ``src`` or to the generated directory."""
         self._includes += headers
         return self
 
@@ -258,7 +260,7 @@ class Solver:
 
     @property
     def dictionary(self):
-        """The template entries of the solver; ``build`` creates them once."""
+        """Returns the template entries of the solver, which ``build`` creates."""
         if self._dictionary is None:
             raise RuntimeError(
                 "[{}] the project has not built the solver.".format(self._name)
@@ -266,15 +268,15 @@ class Solver:
         return self._dictionary
 
     def _solver_type(self):
-        """The fully qualified C++ type of the solver."""
+        """Returns the fully qualified C++ type of the solver."""
         return "::" + "::".join(self._namespace + [self._name])
 
     def _add_solver_family_entries(self, d):
-        """A solver family adds its own entries here."""
+        """Adds the template entries of a solver family to ``d``."""
 
     def _hooks(self):
-        """Returns the static hooks of ``<Name>``, one pair of a :class:`PDETerm` and its inline
-        body per hook; an empty body omits the hook and ``True`` leaves its definition to the
+        """Returns the static hooks of ``<Name>`` as pairs of a :class:`PDETerm` and its inline
+        body. An empty body omits the hook, and ``True`` leaves its definition to the
         application."""
         return [
             (
@@ -284,7 +286,7 @@ class Solver:
         ]
 
     def _user_terms_inline(self):
-        """Returns whether the application registered ``<Name>.cpph``, which defines the
+        """Returns whether the application registered ``<Name>.cpph``. This file defines the
         user-defined terms and hooks inline, so the device calls them."""
         return self._name + ".cpph" in self._project.output.makefile.hfiles
 
@@ -294,15 +296,15 @@ class Solver:
         return self._name + ".cpp" in self._project.output.makefile.cppfiles
 
     def _render_tracer_update(self, tracer, d):
-        """A solver family renders the call that moves one tracer set through its solution here."""
+        """Returns the C++ call that moves one tracer set through the solution."""
         raise NotImplementedError("A solver family names its tracer update.")
 
     def _generate_solver_family_files(self, output, dictionary):
-        """A solver family adds the generated files its kernels read here."""
+        """Adds the generated files that the kernels of a solver family read."""
 
     def _render_solver_concept_assertion(self, d):
-        """Returns the ``static_assert`` of the solver family concept, which names the PDE terms
-        and the constants every kernel of the solver family reads."""
+        """Returns the ``static_assert`` of the solver family concept. The concept lists the PDE
+        terms and constants that the kernels of the solver family read."""
         arguments = "".join(
             ", " + d[entry] for entry in self.SOLVER_FAMILY_CONCEPT_PRECISIONS
         )
@@ -465,16 +467,16 @@ class Solver:
         )
 
     def _solver_family_constants(self):
-        """Returns the C++ lines of the constants and type aliases the generated class carries
-        for its solver family and the kernels, which read them through ``Derived``."""
+        """Returns the C++ constants and type aliases of the generated class, which the kernels
+        read through ``Derived``."""
         return []
 
     def _provides_max_eigenvalue(self):
-        """Returns whether the kernels obtain the maximum eigenvalue adaptive time stepping reads."""
+        """Returns whether the kernels compute the maximum eigenvalue for adaptive time stepping."""
         return self.pde_terms.is_set("max_eigenvalue")
 
     def _validate(self):
-        """Checks the PDE term configuration once the project generates."""
+        """Checks the configuration of the solver when the project generates its code."""
         if self.time_stepping.adaptive and not self._provides_max_eigenvalue():
             raise ValueError(
                 "[{}] adaptive time stepping needs the max_eigenvalue PDE term.".format(
@@ -519,7 +521,7 @@ class Solver:
             raise ValueError("[{}] traces every tracer set once.".format(self._name))
 
     def build(self, project):
-        """Creates the dictionary of the solver, then writes its C++ files."""
+        """Fills the dictionary of the solver and adds its C++ files to the output."""
         self._project = project
         self._dimensions = project.dimensions
         self._namespace = project.namespace

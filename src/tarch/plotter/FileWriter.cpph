@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 template <class T>
-void
+INLINE_METHOD void
 tarch::plotter::FileWriter::DataPlotter::writeTuple(const int index, const T* const values, const int numberOfValues) {
   assertion(index >= 0, index);
   assertion(values != nullptr);

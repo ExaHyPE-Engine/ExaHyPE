@@ -29,9 +29,8 @@ def parse_arguments():
 
 args = parse_arguments()
 
-# A constant velocity field carries every tracer through the periodic walls:
-# The tracer at (0.9, 0.5) leaves through the right wall, the one at
-# (0.5, 0.9) through the top wall and the one at (0.7, 0.8) through both.
+# A constant velocity field moves the tracers across the periodic boundaries on the
+# right and at the top.
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
     project_name=".",
@@ -98,8 +97,8 @@ tracers = project.add_tracer(
 
 tracers.insert_by_coordinates([[0.9, 0.5, 0.0], [0.5, 0.9, 0.0], [0.7, 0.8, 0.0]])
 
-# The fluid velocity becomes the tracer velocity and an explicit Euler step
-# moves the tracer with it; no force acts on the tracer.
+# The interpolation overwrites the tracer velocity u and v with the fluid velocity. An
+# explicit Euler step without forces moves each tracer with that velocity.
 fv_solver.trace(
     tracers,
     forces=exahype2.particles.Forces(

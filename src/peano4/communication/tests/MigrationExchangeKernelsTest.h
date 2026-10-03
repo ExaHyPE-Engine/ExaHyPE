@@ -9,8 +9,8 @@ namespace peano4::communication::tests {
 } // namespace peano4::communication::tests
 
 /**
- * Checks that the four kernels of a migration fill a child from its parent, a parent from its
- * children, the send buffer from every kind of sent cell and the received slots from the buffer.
+ * Checks that the migration kernels fill a child from its parent, a parent from its children, the
+ * send buffer from every kind of sent cell and the received slots from the receive buffer.
  */
 class peano4::communication::tests::MigrationExchangeKernelsTest final : public tarch::tests::TestCase {
 public:

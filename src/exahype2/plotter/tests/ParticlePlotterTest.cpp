@@ -41,9 +41,6 @@ exahype2::plotter::tests::ParticlePlotterTest::run() {
   testMethod(testEveryParticleBecomesOnePointWithItsNumberAndData);
 }
 
-/**
- * The ranks together write every particle once as one point with the fields Number and Data.
- */
 void
 exahype2::plotter::tests::ParticlePlotterTest::testEveryParticleBecomesOnePointWithItsNumberAndData() {
   const int rank = tarch::mpi::Rank::getInstance().getRank();

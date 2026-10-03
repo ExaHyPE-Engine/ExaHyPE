@@ -69,10 +69,8 @@ namespace exahype2::dg::limiting::tests {
 
 TARGET_DECLARE
 /**
- * The detection of troubled cells on one cell of Derived, the generated solver class. The extrema
- * of a cell are the minima of its NumberOfObservables observables followed by their maxima, and
- * mapDmpObservables(), dmpRelaxationParameter() and isPhysicallyAdmissible() of Derived are the
- * terms of the test.
+ * The troubled-cell detector of one cell of Derived. The extrema of a cell are the minima of its
+ * NumberOfObservables observables followed by their maxima.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::limiting::Detector final {
@@ -242,9 +240,8 @@ private:
 };
 
 /**
- * Opens every cell on the Galerkin scheme. With a discrete maximum principle a cell whose nodal
- * interpolant leaves the range of its sampled subcells marks itself troubled, as the interpolant
- * of a discontinuous state oscillates before the first candidate is tested.
+ * Opens every cell on the Galerkin scheme. With a discrete maximum principle, a cell whose nodal
+ * interpolant oscillates beyond its subcells starts on the subcell scheme.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::OpenInitialStatuses final {
@@ -265,9 +262,8 @@ struct exahype2::dg::limiting::OpenInitialStatuses final {
 };
 
 /**
- * Writes the identity of every face reduction into both halves of every face, so the outer half
- * of a boundary face adds nothing to a cell: The status Regular and empty extrema. Every value of
- * the subcell halo of the face becomes zero.
+ * Resets both halves of every face to the status Regular and empty extrema, so the outer half of a
+ * boundary face adds nothing. The subcell halo of the face becomes zero.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::ClearFaces final {
@@ -350,8 +346,9 @@ struct exahype2::dg::limiting::MergeNeighbourExtrema final {
 };
 
 /**
- * Judges the candidate of every cell, writes the verdict into its status and onto its faces, and
- * reduces the wave speeds of the accepted candidates that leave the subcell scheme.
+ * Checks the candidate of every cell and writes the resulting status into the cell and onto its
+ * faces. The wave speeds of the accepted candidates whose cells were not troubled reduce into the
+ * accumulator.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::JudgeCandidates final {
@@ -379,8 +376,8 @@ struct exahype2::dg::limiting::JudgeCandidates final {
 };
 
 /**
- * Lifts the status of every listed cell by the statuses its face neighbours wrote and writes the result onto its
- * faces.
+ * Raises the status of every listed cell by the statuses of its face neighbours and writes the
+ * result onto its faces.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::limiting::SpreadStatuses final {
@@ -396,8 +393,8 @@ struct exahype2::dg::limiting::SpreadStatuses final {
 };
 
 /**
- * The number of cells whose status is not Regular, of the cells that recompute, of the
- * recomputing cells that read local data only, and of the troubled cells.
+ * The numbers of cells whose status is not Regular, of recomputed cells, of recomputed local cells
+ * and of troubled cells.
  */
 struct exahype2::dg::limiting::SubcellSchemeCounts final {
   int cellsOnScheme{0};
@@ -417,10 +414,8 @@ struct exahype2::dg::limiting::SubcellSchemeCountsReduction final {
 };
 
 /**
- * Counts the cells of a block of consecutive cells whose status is not Regular, the ones that
- * recompute, the recomputing ones among the first numberOfLocalCells cells and the troubled
- * ones, writes the counts of the block into countsOfBlocks and adds them to counts. The blocks
- * split the cell list of the partition, which holds the local cells first.
+ * Writes the counts of one block of consecutive cells into countsOfBlocks and adds them to counts.
+ * The first numberOfLocalCells cells of the partition are the local ones.
  */
 struct exahype2::dg::limiting::CountCellsOnSubcellScheme final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
@@ -438,10 +433,9 @@ struct exahype2::dg::limiting::CountCellsOnSubcellScheme final {
 };
 
 /**
- * Writes the slot of every cell of a block whose status is not Regular into cellsOnScheme and the
- * slot of every cell of the block that recomputes into recomputedCells, behind the entries of the
- * earlier blocks, so both lists hold the local cells first and then the remote cells, each group
- * in the order of the partition.
+ * Writes the slots of the cells of one block that are not Regular into cellsOnScheme and of those
+ * that recompute into recomputedCells, behind the entries of the earlier blocks. Both lists keep
+ * the order of the partition, the local cells first.
  */
 struct exahype2::dg::limiting::ListCellsOnSubcellScheme final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
@@ -505,8 +499,8 @@ struct exahype2::dg::limiting::RestrictExtremaHalves final {
 };
 
 /**
- * Fills the status of a new cell of a regrid from the old cells: A child takes the status of
- * its parent, and a parent takes the entry-wise maximum of its children, the most limited status.
+ * Fills the status of a new cell of a regrid. A child copies the status of its parent, and a parent
+ * takes the entry-wise maximum of its children.
  */
 struct exahype2::dg::limiting::StatusTransfer final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;

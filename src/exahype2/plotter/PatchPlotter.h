@@ -4,6 +4,7 @@
 
 #include "exahype2/plotter/Snapshot.h"
 #include "peano4/Constants.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/plotter/FileWriter.h"
 #include "tarch/plotter/Format.h"
@@ -30,11 +31,9 @@ struct exahype2::plotter::DataField final {
 };
 
 /**
- * Writes the data of the grid cells of a rank, one patch per grid cell, as one piece of a snapshot
- * file. plotVolumes() writes one cell of the piece per finite volume with cell data, and the piece
- * holds every volume corner once. plotNodes() writes one point per node at its quadrature position
- * with point data and connects the neighbouring nodes of a patch to cells of the piece, so the
- * points of a patch belong to that patch alone.
+ * Writes the patches of the cells of a rank into one piece of a snapshot file. plotVolumes() writes
+ * cell data and stores every volume corner once. plotNodes() writes point data on separate points
+ * for every patch.
  */
 class exahype2::plotter::PatchPlotter final {
 public:
@@ -46,7 +45,7 @@ public:
   ~PatchPlotter()                              = default;
 
   template <int VolumesPerAxis, int ValuesPerVolume, typename Precision>
-  void plotVolumes(
+  INLINE_METHOD void plotVolumes(
     const peano4::Partition& partition,
     tarch::Span<const int>   cells,
     const Precision*         values,
@@ -57,7 +56,7 @@ public:
   );
 
   template <int NodesPerAxis, int ValuesPerNode, typename Precision>
-  void plotNodes(
+  INLINE_METHOD void plotNodes(
     const peano4::Partition& partition,
     tarch::Span<const int>   cells,
     const Precision*         values,
@@ -69,7 +68,7 @@ public:
   );
 
   template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
-  void plotNodes(
+  INLINE_METHOD void plotNodes(
     const peano4::Partition&               partition,
     tarch::Span<const int>                 cells,
     const Precision*                       values,
@@ -86,7 +85,7 @@ public:
   );
 
   template <int NodesPerAxis, int SubcellsPerAxis>
-  [[nodiscard]] static std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)> containingSubcells(
+  [[nodiscard]] static INLINE_METHOD std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)> containingSubcells(
     const double* nodePositions
   );
 
@@ -100,7 +99,7 @@ private:
   static constexpr std::size_t CurveIndexField      = 2;
 
   /**
-   * A volume corner of a patch and its index among the corners on the patch faces or among the interior corners.
+   * Whether a volume corner lies on a patch face, and its index among the face or the interior corners.
    */
   struct PatchCorner final {
     bool onFace{false};
@@ -110,7 +109,7 @@ private:
   [[nodiscard]] static std::vector<PatchCorner> classifyCorners(int cornersPerAxis);
 
   template <int VolumesPerAxis>
-  [[nodiscard]] static std::vector<std::int32_t> appendFaceCorners(
+  [[nodiscard]] static INLINE_METHOD std::vector<std::int32_t> appendFaceCorners(
     const peano4::Partition&                      partition,
     tarch::Span<const int>                        cells,
     const std::vector<PatchCorner>&               corners,
@@ -129,14 +128,14 @@ private:
   );
 
   template <int PointsPerAxis, typename PointOfCorner>
-  static void connectPatch(
+  static INLINE_METHOD void connectPatch(
     const PointOfCorner&                          pointOfCorner,
     std::size_t                                   firstCell,
     tarch::plotter::FileWriter::SubdomainBuffers& piece
   );
 
   template <typename Precision>
-  void copyState(
+  INLINE_METHOD void copyState(
     const Precision*                                    state,
     int                                                 valuesPerState,
     std::size_t                                         entity,

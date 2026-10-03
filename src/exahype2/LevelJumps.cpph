@@ -5,18 +5,18 @@
 #include "tarch/accelerator/Range.h"
 
 /**
- * Runs operation on the level jumps with the dependence, one level after the other from the
- * coarsest level down, so an interpolation reads a coarse face the level above has written.
+ * Runs operation on the level jumps of the given adjacency from the coarsest level down, because
+ * the coarse face of a jump can be the fine face of a jump on the next coarser level.
  */
 template <typename Operation>
-void
+INLINE_METHOD void
 exahype2::interpolateCoarseFaces(
   const peano4::Partition& partition,
-  const peano4::Dependence dependence,
+  const peano4::Adjacency  adjacency,
   const Operation&         operation
 ) {
   for (int level = 0; level <= partition.getMaximumLevel(); level++) {
-    const auto levelJumps = partition.onDevice().getLevelJumps(dependence, level);
+    const auto levelJumps = partition.onDevice().getLevelJumps(adjacency, level);
     if (not levelJumps.isEmpty()) {
       tarch::accelerator::parallelFor(
         tarch::accelerator::Range(levelJumps.size),
@@ -27,18 +27,18 @@ exahype2::interpolateCoarseFaces(
 }
 
 /**
- * Runs operation on the level jumps with the dependence, one level after the other from the
- * finest level up, so a restriction reads fine faces the level below has written.
+ * Runs operation on the level jumps of the given adjacency from the finest level up, because the
+ * fine face of a jump can be the coarse face of a jump on the next finer level.
  */
 template <typename Operation>
-void
+INLINE_METHOD void
 exahype2::restrictFineFaces(
   const peano4::Partition& partition,
-  const peano4::Dependence dependence,
+  const peano4::Adjacency  adjacency,
   const Operation&         operation
 ) {
   for (int level = partition.getMaximumLevel(); level >= 0; level--) {
-    const auto levelJumps = partition.onDevice().getLevelJumps(dependence, level);
+    const auto levelJumps = partition.onDevice().getLevelJumps(adjacency, level);
     if (not levelJumps.isEmpty()) {
       tarch::accelerator::parallelFor(
         tarch::accelerator::Range(levelJumps.size),
@@ -49,14 +49,14 @@ exahype2::restrictFineFaces(
 }
 
 /**
- * Runs operation on every level jump of the partition, one level after the other from the finest level up.
+ * Runs operation on every level jump of the partition from the finest level up.
  */
 template <typename Operation>
-void
+INLINE_METHOD void
 exahype2::restrictFineFaces(const peano4::Partition& partition, const Operation& operation) {
   for (int level = partition.getMaximumLevel(); level >= 0; level--) {
-    for (const auto dependence : {peano4::Dependence::Local, peano4::Dependence::Remote}) {
-      const auto levelJumps = partition.onDevice().getLevelJumps(dependence, level);
+    for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+      const auto levelJumps = partition.onDevice().getLevelJumps(adjacency, level);
       if (not levelJumps.isEmpty()) {
         tarch::accelerator::parallelFor(
           tarch::accelerator::Range(levelJumps.size),

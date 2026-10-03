@@ -26,9 +26,6 @@ namespace {
 
   using Set = exahype2::particles::ParticleSet<NumberOfData>;
 
-  /**
-   * Builds a regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
-   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -38,9 +35,6 @@ namespace {
     return peano4::Spacetree::getInstance().getCellAt(Depth, lattice);
   }
 
-  /**
-   * Returns one candidate particle: The position, then the data entries in ascending order.
-   */
   std::vector<double> getCandidateAt(const double first, const double second, const double firstData) {
     std::vector<double> values(ValuesPerParticle, 0.5);
     values[0] = first;
@@ -52,10 +46,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Raises the accumulator when the particle at index holds another slot than slots names or
-   * another first data entry than firstData, and writes secondData and firstCoordinate into it.
-   */
   struct CheckAndOverwriteParticle final {
     exahype2::particles::ParticleSetView<NumberOfData> particles{};
     const int*                                         slots{nullptr};
@@ -75,9 +65,8 @@ namespace {
   TARGET_DECLARE_END
 
   /**
-   * Uploads the set, counts in a dispatch the particles whose device copy holds another slot or
-   * first data entry than firstData, and writes data entry one and the first coordinate of every
-   * particle on the device.
+   * Returns the number of particles whose device copy has an unexpected slot or first data entry.
+   * The kernel also writes secondData and firstCoordinate into every particle on the device.
    */
   int getNumberOfMismatchesOfTheDeviceCopy(
     Set&         particles,
@@ -110,7 +99,7 @@ void
 exahype2::particles::tests::ParticleSetTest::run() {
   testMethod(testInsertKeepsTheParticlesOfTheRank);
   testMethod(testAPositionOnAFaceBelongsToTheLowerCell);
-  testMethod(testRelocateMovesAParticleToTheCellThatHoldsIt);
+  testMethod(testRelocateMovesAParticleToTheCellThatContainsIt);
   testMethod(testInsertAndRelocateCountTheParticlesOfAllRanks);
   testMethod(testUploadAndDownloadCarryTheValues);
   testMethod(testAHostWriteReachesTheDeviceCopy);
@@ -148,8 +137,7 @@ exahype2::particles::tests::ParticleSetTest::testInsertKeepsTheParticlesOfTheRan
 }
 
 /**
- * A position exactly on the face between two cells lies in the lower one, a position on the domain wall in the first
- * cell.
+ * A position on a face belongs to the lower cell, and a position on a domain wall to the cell at the wall.
  */
 void
 exahype2::particles::tests::ParticleSetTest::testAPositionOnAFaceBelongsToTheLowerCell() {
@@ -177,11 +165,8 @@ exahype2::particles::tests::ParticleSetTest::testAPositionOnAFaceBelongsToTheLow
   validateEquals(Set::getSlotAt(partition, outside), -1);
 }
 
-/**
- * A particle moved into another cell changes its slot or its rank, and the ranks together keep one particle.
- */
 void
-exahype2::particles::tests::ParticleSetTest::testRelocateMovesAParticleToTheCellThatHoldsIt() {
+exahype2::particles::tests::ParticleSetTest::testRelocateMovesAParticleToTheCellThatContainsIt() {
   const auto& partition = buildGrid();
   Set         particles;
   particles.insert(partition, getCandidateAt(0.05, 0.05, 1.0));
@@ -202,9 +187,6 @@ exahype2::particles::tests::ParticleSetTest::testRelocateMovesAParticleToTheCell
   }
 }
 
-/**
- * Every rank holds the particle count of all ranks after insert() and relocate(), also after a particle moves.
- */
 void
 exahype2::particles::tests::ParticleSetTest::testInsertAndRelocateCountTheParticlesOfAllRanks() {
   const auto&         partition = buildGrid();
@@ -247,9 +229,6 @@ exahype2::particles::tests::ParticleSetTest::testUploadAndDownloadCarryTheValues
   }
 }
 
-/**
- * A value written through the host particle reaches the device copy with the next upload().
- */
 void
 exahype2::particles::tests::ParticleSetTest::testAHostWriteReachesTheDeviceCopy() {
   const auto& partition = buildGrid();
@@ -262,10 +241,6 @@ exahype2::particles::tests::ParticleSetTest::testAHostWriteReachesTheDeviceCopy(
   validateEquals(getNumberOfMismatchesOfTheDeviceCopy(particles, 5.0, 7.0, 0.5), 0);
 }
 
-/**
- * A relocation in which no particle leaves its cell keeps the values a kernel wrote on the device,
- * and a later upload() leaves them in place.
- */
 void
 exahype2::particles::tests::ParticleSetTest::testRelocateKeepsTheDeviceValuesWhileNoParticleLeaves() {
   const auto& partition = buildGrid();

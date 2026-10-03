@@ -133,8 +133,7 @@ filename = args.scenario + "-o" + str(order) + "-" + str(args.precision)
 recorded_unknowns = 12
 recorded_fields = ",".join(str(field) for field in range(recorded_unknowns))
 
-# The tracers sit at the mesh positions of the physical coordinates and record the velocity,
-# the stress and the displacement.
+# The tracers record the velocity, the stress and the displacement, and skip the PML unknowns.
 tracer_particles = project.add_tracer(
     name="Tracer", particle_attributes=recorded_unknowns
 )
@@ -155,8 +154,7 @@ theSolver.trace(
     initialisation=False,
 )
 
-# The fault tracers record the mean of the two face traces, and the slip and the slip rate as
-# the jump of the displacement u and the velocity v across the fault.
+# The jumps of u and v across the fault are the slip and the slip rate.
 if my_scenario.fault_coordinates:
     fault_particles = project.add_tracer(
         name="FaultTracer", particle_attributes=recorded_unknowns

@@ -75,7 +75,6 @@
 #include <version>
 #endif
 
-// Valid in both C and C++.
 #include <fenv.h>
 #include <float.h>
 #include <stdio.h>

@@ -25,17 +25,14 @@ tarch::mpi::AbstractCommunicationManager::getInstance() {
 
 /**
  * Sets whether this process dedicates a thread to communication. A single-rank run never dedicates
- * a thread. The task runtime sizes its thread team by this decision, so the decision holds for the
- * whole run.
+ * a thread. The task runtime sizes its thread team by this setting, so it stays fixed for the whole
+ * run.
  */
 void
 tarch::mpi::AbstractCommunicationManager::configure(const bool communicationThreadEnabled) {
   _dedicatedThreadIsUsed = communicationThreadEnabled and tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1;
 }
 
-/**
- * Returns whether the process drives its communication on a thread of its own.
- */
 bool
 tarch::mpi::AbstractCommunicationManager::usesDedicatedThread() {
   return _dedicatedThreadIsUsed;
@@ -52,7 +49,7 @@ tarch::mpi::AbstractCommunicationManager::registerPoller(Poller poller) {
 }
 
 /**
- * Runs every registered poller once and reports whether all of them were idle.
+ * Runs every registered poller once and returns whether all of them were idle.
  */
 bool
 tarch::mpi::AbstractCommunicationManager::runPollersOnce() {

@@ -7,102 +7,34 @@ namespace tarch::instrumentation {
 } // namespace tarch::instrumentation
 
 /**
- * Measure CPU and wall clock time for an operation. Create an instance at the
- * beginning of the operation block you want to measure:
- *
- * <pre>
- *   void anyOperation() {
- *     tarch::instrumentation::Watch watch("MyClass", "anyOperation()", true);
- *     ...
- *   }
- * </pre>
- *
- * If requested, the result is written through logInfo() in the destructor. You can
- * also stop the watch explicitly and retrieve the elapsed CPU and wall clock
- * time through the getters.
- *
- * @author Tobias Weinzierl, Tobias Neckel
+ * Measures the CPU time and the wall clock time between start() and stop(). A watch created with
+ * plotResultInDestructor logs both times when it leaves its scope.
  */
-class tarch::instrumentation::Watch {
-private:
-  /**
-   * Whether the destructor logs the measured times.
-   */
-  bool _plotResultInDestructor;
-
-  /**
-   * Stores the name of the operation the watch is used within.
-   */
-  std::string _operationName;
-
-  /**
-   * Holds the clock ticks at the beginning of the time measurement.
-   */
-  std::clock_t _startClockTicks;
-
-  /**
-   * Holds the wall clock time at the beginning of the measurement.
-   */
-  std::chrono::steady_clock::time_point _startTime;
-
-  /**
-   * Holds the elapsed processor time.
-   */
-  std::clock_t _elapsedClockTicks;
-
-  /**
-   * Holds the elapsed wall clock time.
-   */
-  std::chrono::steady_clock::duration _elapsedTime;
-
-  /**
-   * Is the watch running?
-   */
-  bool _isRunning;
-
+class tarch::instrumentation::Watch final {
 public:
-  /**
-   * Construct a watch
-   *
-   * @param className     Unused.
-   * @param operationName Name of the operation the watch is used within.
-   * @param plotResultInDestructor Whether the destructor should log the result.
-   * @param startToTickImmediately Whether the constructor already starts the
-   *        measurement.
-   */
   Watch(
     [[maybe_unused]] const std::string& className,
     const std::string&                  operationName,
     bool                                plotResultInDestructor,
     bool                                startToTickImmediately = true
   );
+  Watch(const Watch&)            = delete;
+  Watch(Watch&&)                 = delete;
+  Watch& operator=(const Watch&) = delete;
+  Watch& operator=(Watch&&)      = delete;
+  ~Watch();
 
-  /**
-   * Stops the watch if necessary and logs the elapsed time if requested.
-   */
-  virtual ~Watch();
-
-  /**
-   * (Re)start the timer
-   *
-   * @see stop()
-   */
   void start();
-
-  /**
-   * Stop the timer
-   *
-   * @see start()
-   */
   void stop();
+  [[nodiscard]] double getCPUTime() const;
+  [[nodiscard]] double getCalendarTime() const;
 
-  /**
-   * @return CPU time in seconds
-   */
-  double getCPUTime() const;
-
-  /**
-   * @return Elapsed calendar time in seconds
-   */
-  double getCalendarTime() const;
+private:
+  bool                                  _plotResultInDestructor{false};
+  std::string                           _operationName{};
+  std::clock_t                          _startClockTicks{0};
+  std::chrono::steady_clock::time_point _startTime{};
+  std::clock_t                          _elapsedClockTicks{0};
+  std::chrono::steady_clock::duration   _elapsedTime{};
+  bool                                  _isRunning{false};
 };

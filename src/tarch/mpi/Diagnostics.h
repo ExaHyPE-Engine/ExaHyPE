@@ -13,11 +13,9 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 /**
- * Warns about a wait on a request that exceeds the warning threshold and terminates the program
- * when a wait exceeds the deadlock threshold. A table records the origin, the partner and the tag
- * of every tracked non-blocking request, so a timeout report names the request. Every access
- * claims a table slot with a compare-and-swap on its sequence word and releases it with a second
- * increment.
+ * Warns when a wait on a request exceeds the warning threshold and terminates the program when it
+ * exceeds the deadlock threshold. A table records the origin, the partner and the tag of every
+ * tracked request for the timeout report.
  */
 class tarch::mpi::Diagnostics final {
 public:
@@ -62,9 +60,8 @@ private:
   using TimeoutPoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double>>;
 
   /**
-   * An odd sequence marks a slot a writer holds, an even one a stable slot,
-   * and a stable slot with a null key is free. The payload fields are not
-   * atomic; the sequence orders every access to them.
+   * An odd sequence marks a slot a writer holds, and an even one a stable slot. A stable slot with
+   * a null key is free. The sequence orders every access to the non-atomic payload fields.
    */
   struct Slot {
     std::atomic<std::uint32_t>      sequence{0};

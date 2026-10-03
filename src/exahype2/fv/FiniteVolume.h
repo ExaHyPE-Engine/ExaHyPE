@@ -11,30 +11,23 @@
 
 /**
  * @file
- * The finite-volume scheme on the patch of one cell and the pieces the reconstruction schemes
- * build on. A patch holds PatchSize^DIMENSIONS volumes with one value per unknown and auxiliary
- * variable, the first axis running fastest. A face holds 2 * HaloSize layers of
- * PatchSize^(DIMENSIONS-1) volumes along its normal, the lower side's layers first and the first
- * tangential axis running fastest; the cell on a side writes the layers on that side, so the
- * lower cell writes the lower half of its upper face and the upper cell the upper half of its
- * lower face.
+ * A patch stores PatchSize^DIMENSIONS volumes of NumberOfData values each, the first axis running
+ * fastest. A face stores 2 * HaloSize layers of PatchSize^(DIMENSIONS-1) volumes, the lower half
+ * first and the first tangential axis running fastest. The cell on each side of a face writes the
+ * half on its side.
  */
 namespace exahype2::fv {
   template <typename Derived, typename ComputePrecision>
   class FiniteVolume;
 
   /**
-   * A reconstruction scheme forms the states that meet at a volume face and adds their flux
-   * divergence to the update; HaloSize is the number of layers its stencil reads.
+   * HaloSize is the number of neighbour layers the stencil reads.
    */
   template <typename ReconstructionPolicy>
   concept ReconstructionScheme = std::is_empty_v<ReconstructionPolicy> and requires {
     { ReconstructionPolicy::HaloSize } -> std::convertible_to<int>;
   };
 
-  /**
-   * A time-stepping scheme advances a patch by one time step in NumberOfStages evaluations.
-   */
   template <typename TimeSteppingPolicy>
   concept TimeSteppingScheme = std::is_empty_v<TimeSteppingPolicy> and requires {
     { TimeSteppingPolicy::NumberOfStages } -> std::convertible_to<int>;
@@ -97,9 +90,8 @@ namespace exahype2::fv::tests {
 
 TARGET_DECLARE
 /**
- * The finite-volume scheme on the patch of one cell of Derived, the generated solver class, whose
- * Reconstruction and TimeIntegration form the scheme and whose TimeSteppingRule decides whether
- * update() reports wave speeds.
+ * Finite-volume scheme on the patch of one cell. Derived::Reconstruction and
+ * Derived::TimeIntegration define the scheme.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::fv::FiniteVolume final {

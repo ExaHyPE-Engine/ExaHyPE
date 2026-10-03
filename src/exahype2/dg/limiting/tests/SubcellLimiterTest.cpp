@@ -27,7 +27,7 @@ namespace {
   TARGET_DECLARE
   constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
   /**
-   * The smallest depth whose regular grid holds at least three cells per axis.
+   * The smallest depth whose regular grid has at least three cells per axis.
    */
   constexpr int    Depth                = SubdivisionFactor >= 3 ? 1 : 2;
   constexpr int    CellsPerAxis         = peano4::power(SubdivisionFactor, Depth);
@@ -55,7 +55,7 @@ namespace {
   }
 
   /**
-   * Returns the derivative of the Lagrange basis function of node.
+   * Returns the constant derivative of the linear Lagrange basis function of node.
    */
   double getBasisDerivative(const int node) {
     const int other = 1 - node;
@@ -63,7 +63,7 @@ namespace {
   }
 
   /**
-   * Returns a new table in device memory, the memory the kernels read, with the values converted to Precision.
+   * Returns a new device table with the values converted to Precision.
    */
   template <typename Precision>
   Precision* getTableOf(const std::vector<double>& values) {
@@ -97,7 +97,7 @@ namespace {
   }
 
   /**
-   * The quadrature tables of the Gauss-Legendre basis of order one, in the layout of the generated tables.
+   * The Gauss-Legendre quadrature tables of order one in the layout of the generated tables.
    */
   template <typename Precision>
   class Quadrature final {
@@ -139,7 +139,7 @@ namespace {
   };
 
   /**
-   * The reference operators of the Gauss-Legendre basis of order one, in the layout of the generated tables.
+   * The Gauss-Legendre operators of order one in the layout of the generated tables.
    */
   template <typename Precision>
   class DGMatrices final {
@@ -210,8 +210,7 @@ namespace {
   };
 
   /**
-   * The projections of the limiter: The basis averaged over the three subcells, the subcell a
-   * node lies in back onto the node, and the basis at the Lobatto nodes.
+   * The projection tables of the limiter. A node takes the value of the subcell it lies in.
    */
   template <typename Precision>
   class SubcellProjection final {
@@ -255,7 +254,7 @@ namespace {
     exahype2::dg::ader::Solver<Solver, double, double, exahype2::dg::limiting::SubcellLimiter<Solver, double, double>>;
 
   /**
-   * The PDE terms of every test solver: A constant state, no flux, no wave speed, a copying boundary.
+   * The PDE terms of every test solver, under which a constant state stays constant.
    */
   struct CommonTerms {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
@@ -310,9 +309,6 @@ namespace {
     }
   };
 
-  /**
-   * A solver that accepts every candidate.
-   */
   struct AcceptingSolver final : SolverOf<AcceptingSolver>, CommonTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -348,9 +344,6 @@ namespace {
     }
   };
 
-  /**
-   * A solver that rejects every candidate.
-   */
   struct RejectingSolver final : SolverOf<RejectingSolver>, CommonTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -429,9 +422,6 @@ namespace {
     }
   };
 
-  /**
-   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
-   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -448,7 +438,7 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * Raises the accumulator for every node of one cell that differs from the constant state.
+   * Increments the accumulator for every node of one cell that differs from the constant state.
    */
   template <typename Pool>
   struct CountMismatchesAgainstTheConstantState final {
@@ -488,8 +478,8 @@ namespace {
   }
 
   /**
-   * Builds the regular grid, runs the initialisation and the given number of time steps of a
-   * solver on it and returns the partition of this rank.
+   * Initialises solver on the regular grid, runs steps time steps and returns the partition of this
+   * rank.
    */
   template <typename Solver>
   const peano4::Partition& advance(Solver& solver, const int steps) {
@@ -520,8 +510,8 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::run() {
 }
 
 /**
- * The boundary conditions of the subgrids fill the outer half of a boundary face beside a cell on
- * the subcell scheme and leave the face of a Regular cell as it was.
+ * The subgrid boundary conditions fill the outer half of a boundary face beside a cell on the
+ * subcell scheme and skip the faces of Regular cells.
  */
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditionsSkipTheCellsOffTheScheme() {
@@ -558,7 +548,7 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditi
   }
   statuses.copyFromHost(statusesOnHost);
 
-  const auto boundaryFaces = partition.onDevice().getFaces(peano4::Dependence::Local, peano4::FaceKind::Boundary);
+  const auto boundaryFaces = partition.onDevice().getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary);
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(boundaryFaces.size),
     exahype2::dg::limiting::ApplySubgridBoundaryConditions<CornerSolver, double, double>{
@@ -568,7 +558,7 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditi
   );
   halo.copyToHost(haloOnHost);
 
-  for (const int face : partition.getFaces(peano4::Dependence::Local, peano4::FaceKind::Boundary)) {
+  for (const int face : partition.getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary)) {
     const int  lowerCell = partition.getFaceCell(face, 0);
     const int  slot      = lowerCell >= 0 ? lowerCell : partition.getFaceCell(face, 1);
     const bool onScheme  = statusesOnHost[static_cast<std::size_t>(slot) * paddedStatus + StatusEntryIndex]
@@ -613,8 +603,7 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testARejectedFreeStreamRecomp
 }
 
 /**
- * The corner cell is troubled, its DIMENSIONS face neighbours are limited, and the cells two
- * faces away, DIMENSIONS along the axes and one per pair of axes, supply the halo.
+ * A troubled corner cell makes its face neighbours Limited and the cells two faces away Halo.
  */
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testOneTroubledCellSpreadsTwoRingsOfNeighbours() {

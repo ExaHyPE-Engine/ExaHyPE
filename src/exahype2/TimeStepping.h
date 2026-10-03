@@ -12,10 +12,8 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * Reduces the wave speeds of a time step to their maximum for the CFL condition of
- * exahype2::TimeStepping. combine() returns a wave speed that is negative or not finite as soon as
- * one operand is one, so a fault of a PDE term reaches the reduction across the ranks and the
- * assertion of the time step rule; identity() is zero.
+ * Maximum reduction of the wave speeds of a time step. combine() returns a negative or non-finite
+ * operand unchanged, so the reduction propagates a fault of a PDE term.
  */
 struct exahype2::MaxEigenvalueReduction final {
   using ValueType = double;
@@ -31,19 +29,16 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * The time stamp, the time step size and the bounds of one solver. An adaptive rule takes the
- * time step size the CFL condition of the solver family admits for the wave speeds and the mesh
- * widths of the last step, reduced across the ranks and clipped at the terminal time; a fixed
- * rule takes the size the solver family sets from the mesh widths. The wave speed maxima of a
- * step are raised by the kernels through exahype2::MaxEigenvalueReduction, reduced across the
- * ranks and read by the CFL condition.
+ * Time stamp, time step size and bounds of one solver. An adaptive rule takes the time step size
+ * that the CFL condition admits for the wave speeds and mesh widths of the last step. A fixed rule
+ * takes the size that the solver family computes from the mesh widths.
  */
 class exahype2::TimeStepping final {
 public:
   enum class Rule { Adaptive, Fixed };
 
   /**
-   * Names the eigenvalue maximum the CFL condition of the solver family divides by.
+   * Eigenvalue maximum that the CFL condition of the solver family divides by.
    */
   enum class Stability { PhysicalEigenvalue, ScaledEigenvalue };
 

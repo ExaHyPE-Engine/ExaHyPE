@@ -34,8 +34,8 @@ tarch::plotter::getNumberOfNodesOf(const tarch::plotter::CellType type) {
 }
 
 /**
- * Variable-length XDMF poly topologies use codes one through three and
- * require an explicit node count in mixed-topology streams.
+ * Returns whether an XDMF topology code denotes a variable-length poly topology, which stores an
+ * explicit node count in a mixed-topology stream.
  */
 INLINE_METHOD constexpr bool
 tarch::plotter::xdmfTypeNeedsNodeCount(const int xdmfType) {

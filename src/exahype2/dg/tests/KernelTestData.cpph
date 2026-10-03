@@ -95,10 +95,6 @@ exahype2::dg::tests::StubSolver::nonconservativeProduct(
   }
 }
 
-/**
- * Scales the values in place. The linear Riemann solver reads them back from
- * the same buffer.
- */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::tests::StubSolver::multiplyMaterialParameterMatrix(
   const double* NOALIAS const                                   state,
@@ -115,8 +111,7 @@ exahype2::dg::tests::StubSolver::multiplyMaterialParameterMatrix(
 }
 
 /**
- * Places a face relative to the centre of the cell that owns it, the way the
- * batched kernels address geometry: An owning cell plus a face number.
+ * Returns the centre of the face faceNumber of cell.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
 exahype2::dg::tests::getFaceCentreOf(

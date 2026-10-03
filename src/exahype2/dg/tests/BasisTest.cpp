@@ -18,9 +18,6 @@ namespace {
   constexpr int EntriesPerAxis             = CellNodes * NumberOfData;
   constexpr int PaddedNodeStride           = NumberOfData + 2;
 
-  /**
-   * Stands in for a generated solver of order two with two unknowns and one auxiliary variable.
-   */
   struct Order2Layout {
     static constexpr int DGOrder                    = NodesPerAxis - 1;
     static constexpr int NumberOfUnknowns           = ::NumberOfUnknowns;
@@ -28,7 +25,7 @@ namespace {
   };
 
   /**
-   * Stands in for a generated solver whose unknowns fill the vector width exactly.
+   * A solver layout whose unknowns fill the vector width exactly.
    */
   struct ExactWidthLayout {
     static constexpr int DGOrder                    = NodesPerAxis - 1;
@@ -37,7 +34,7 @@ namespace {
   };
 
   /**
-   * Stands in for a generated solver whose unknowns exceed the vector width by one.
+   * A solver layout whose unknowns exceed the vector width by one.
    */
   struct OneAboveWidthLayout {
     static constexpr int DGOrder                    = NodesPerAxis - 1;
@@ -49,7 +46,7 @@ namespace {
 
   constexpr int FluxAxisStride = CellNodes * PaddedCell::PaddedNumberOfUnknowns;
 
-  // Gauss-Legendre nodes of three points on the unit interval.
+  // The nodes of the three-point Gauss-Legendre rule on the unit interval.
   const double QuadratureNodes[NodesPerAxis] = {0.5 * (1.0 - std::sqrt(0.6)), 0.5, 0.5 * (1.0 + std::sqrt(0.6))};
 
   constexpr double QuadratureNodes1DP1[] = {0.21132486540518713, 0.7886751345948129};
@@ -118,7 +115,7 @@ namespace {
   };
 
   /**
-   * Returns the cell node that carries the face node of the face along direction in layer normalIndex.
+   * Returns the cell node of face node faceNode at position normalIndex along direction.
    */
   int getCellNodeInAxisOrder(const int direction, const int faceNode, const int normalIndex) {
     auto nodeIndex       = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
@@ -151,7 +148,8 @@ namespace {
   }
 
   /**
-   * An affine field lies in the nodal basis of order one and higher, so its interpolant returns it everywhere.
+   * Writes the affine field at the nodes of the cell into values. An interpolant of order one or
+   * higher reproduces it everywhere.
    */
   void fillAffineNodalValues(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
@@ -312,7 +310,8 @@ exahype2::dg::tests::BasisTest::run() {
 }
 
 /**
- * A cell holds one node per combination of the nodes along the axes, and a face one per tangential combination.
+ * A cell has one node per combination of axis nodes, and a face one per combination of tangential
+ * nodes.
  */
 void
 exahype2::dg::tests::BasisTest::testNodeCountsFollowTheNumberOfNodesPerAxis() {
@@ -354,7 +353,8 @@ exahype2::dg::tests::BasisTest::testEveryNodeIsPaddedToTheVectorWidth() {
 }
 
 /**
- * A cell holds one node per axis combination and a space-time block holds one cell per time node.
+ * The node counts of PaddedLayout follow the dimension count, and a space-time block has one cell
+ * per time node.
  */
 void
 exahype2::dg::tests::BasisTest::testTheNodeCountsFollowTheDimensionCount() {
@@ -444,7 +444,8 @@ exahype2::dg::tests::BasisTest::testGetQuadraturePointMapsTheReferenceNode() {
 }
 
 /**
- * Every node carries the weight of the cell volume divided by the node count.
+ * forEachNode() visits every node in order with its position, the cell size and its quadrature
+ * weight.
  */
 void
 exahype2::dg::tests::BasisTest::testVisitsEveryNodeWithItsQuadratureWeight() {
@@ -714,7 +715,7 @@ exahype2::dg::tests::BasisTest::testStridesAddressTheIntendedSlices() {
       }
       validateNumericalEquals(result[targetNode * ResultStride + entry], expected);
     }
-    // The padding between two result nodes is never touched.
+    // The padding between two result nodes stays unchanged.
     for (int entry = NumberOfEntries; entry < ResultStride; entry++) {
       validateNumericalEquals(result[targetNode * ResultStride + entry], 7.0);
     }
@@ -741,7 +742,7 @@ void
 exahype2::dg::tests::BasisTest::testTheDerivativeOfAConstantLineIsExactlyZero() {
   const DerivativeOperator derivativeOperator;
 
-  // Constants without an exact binary representation, so a plain product leaves rounding behind.
+  // The constants have no exact binary representation, so rounding errors would show.
   double values[NodesPerAxis * NumberOfEntries];
   for (int node = 0; node < NodesPerAxis; node++) {
     for (int entry = 0; entry < NumberOfEntries; entry++) {
@@ -774,7 +775,7 @@ void
 exahype2::dg::tests::BasisTest::testTheDerivativeActsOnTheDifferencesFromTheSmallestValue() {
   const DerivativeOperator derivativeOperator;
 
-  // A line that falls along the axis, so the smallest value sits at the last node.
+  // The line falls along the axis, so the smallest value is at the last node.
   double values[NodesPerAxis * NumberOfEntries];
   for (int node = 0; node < NodesPerAxis; node++) {
     for (int entry = 0; entry < NumberOfEntries; entry++) {
@@ -940,9 +941,8 @@ exahype2::dg::tests::BasisTest::testNarrowStorageIsDifferentiatedInTheComputePre
     cellSize
   );
 
-  // The stored values carry single-precision rounding, so the slope is met to
-  // that accuracy only. The state varies along the first axis alone, so the
-  // blocks of the other axes hold zero.
+  // The stored values have single-precision rounding errors, so the slope matches to that accuracy
+  // only. The state varies along the first axis alone, so the blocks of the other axes are zero.
   constexpr double Tolerance = 1.0e-5;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     const double expected = (axis == 0) ? 2.0 / cellSize(0) : 0.0;
@@ -960,7 +960,7 @@ exahype2::dg::tests::BasisTest::testTheGradientOfAConstantStateIsExactlyZero() {
   const DerivativeOperator derivativeOperator;
   const auto               cellSize = getCellSize();
 
-  // Constants without an exact binary representation, so a plain product leaves rounding behind.
+  // The constants have no exact binary representation, so rounding errors would show.
   double cellState[CellNodes * NumberOfData];
   for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int value = 0; value < NumberOfData; value++) {
@@ -1039,7 +1039,7 @@ exahype2::dg::tests::BasisTest::testAConstantFluxDifferentiatesToExactZeros() {
     inverseCellSize(axis) = 1.0 / cellSize(axis);
   }
 
-  // Constants without an exact binary representation, so a plain product leaves rounding behind.
+  // The constants have no exact binary representation, so rounding errors would show.
   double flux[DIMENSIONS * FluxAxisStride] = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
@@ -1059,8 +1059,7 @@ exahype2::dg::tests::BasisTest::testAConstantFluxDifferentiatesToExactZeros() {
 
 void
 exahype2::dg::tests::BasisTest::testAPaddedNodeStrideProjectsOnlyTheEntries() {
-  // The lanes behind the entries of a node carry a value that would dominate every face if the
-  // projection read them.
+  // The padding lanes store a value that would dominate every face if the projection read them.
   double field[CellNodes * PaddedNodeStride];
   for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int lane = 0; lane < PaddedNodeStride; lane++) {
@@ -1171,8 +1170,8 @@ exahype2::dg::tests::BasisTest::testTheLowerAndUpperFaceUseTheirOwnCoefficients(
 
 void
 exahype2::dg::tests::BasisTest::testTheFaceNodesRunWithTheLowestTangentialAxisFastest() {
-  // Every cell node carries its own value, and a coefficient vector that holds one at a single index
-  // hands the value of that node's line position to the face node.
+  // Every cell node has its own value, and a coefficient vector with a single one copies the value
+  // at that line position to the face node.
   double field[CellNodes * NumberOfData];
   for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int entry = 0; entry < NumberOfData; entry++) {
@@ -1381,7 +1380,7 @@ exahype2::dg::tests::BasisTest::testRestrictionIsTheInterpolationTransposedOverT
 }
 
 /**
- * The weighted restriction of children that all hold the constant one yields one at every coarse node.
+ * The weighted restriction of children that are all one gives one at every coarse node.
  */
 void
 exahype2::dg::tests::BasisTest::testWeightedRestrictionPreservesConstants() {

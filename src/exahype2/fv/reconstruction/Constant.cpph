@@ -6,10 +6,9 @@
 
 TARGET_DECLARE
 /**
- * Adds one volume's flux divergence to @p outputState with a Rusanov flux or the
- * solver's Riemann solver. Template flags enable non-conservative and diffusive
- * terms; the time-stepping policy owns source evaluation. The cell-centred
- * physical flux cancels between the two faces of the Rusanov path.
+ * Adds the flux divergence of one volume to outputState with a Rusanov flux or the Riemann solver
+ * of SolverType. The time-stepping scheme adds the source term. The centre flux cancels in the
+ * Rusanov difference of the two faces.
  */
 template <
   typename SolverType,
@@ -68,8 +67,6 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
         strideAlongNormal *= NumberOfVolumesPerAxis;
       }
 
-      // Forward difference needs the right neighbour: An interior volume if it
-      // exists, otherwise the halo layer in the right face of this patch.
       const StoragePrecision* NOALIAS rightStateInStorage = nullptr;
       if (volumeIndex(normal) + HaloSize < NumberOfVolumesPerAxis) {
         rightStateInStorage = &inputPatch[centreOffset + HaloSize * strideAlongNormal];
@@ -112,8 +109,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
     }
   }
 
-  // Every axis adds its flux difference to one update, and that update enters outputState once,
-  // so two volumes that a mirror of the axes maps onto each other receive mirrored states.
+  // The axes add their flux differences into one update, which is added to outputState once, so
+  // mirrored volumes get mirrored states.
   StateUpdatePrecision axisUpdates[NumberOfUnknowns];
   SIMD()
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -136,8 +133,6 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
       strideAlongNormal *= NumberOfVolumesPerAxis;
     }
 
-    // Left neighbour: An interior volume if it exists, otherwise the halo
-    // layer in the left face of this patch.
     const StoragePrecision* NOALIAS leftStateInStorage = nullptr;
     if (leftVolumeIndex(normal) >= 0) {
       leftStateInStorage = &inputPatch[centreOffset - HaloSize * strideAlongNormal];
@@ -148,8 +143,6 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
       leftStateInStorage     = &faceInputPatches[normal][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
     }
 
-    // Right neighbour: An interior volume if it exists, otherwise the halo
-    // layer in the right face of this patch.
     const StoragePrecision* NOALIAS rightStateInStorage = nullptr;
     if (rightVolumeIndex(normal) < NumberOfVolumesPerAxis) {
       rightStateInStorage = &inputPatch[centreOffset + HaloSize * strideAlongNormal];
@@ -235,8 +228,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
           leftGoingFluxRightFace,
           rightGoingFluxRightFace
         ));
-      // A solver that defines solveRiemannProblem need not define maxEigenvalue, so the wave
-      // speed the Riemann solver returns is the only eigenvalue this branch reads.
+      // A solver with solveRiemannProblem need not define maxEigenvalue, so this branch reads the
+      // wave speeds of the Riemann solver only.
       if constexpr (EvaluateMaxEigenvalue) {
         exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedLeft);
         exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedRight);
@@ -318,8 +311,6 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
       );
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        // Rusanov diffusion across both faces, scaled by the larger neighbouring
-        // eigenvalue and the jump in the conserved quantity.
         ComputePrecision fluxLeftFace  = -leftMaxEigenvalue * (centreStateForCompute[unknown] - leftState[unknown]);
         ComputePrecision fluxRightFace = -rightMaxEigenvalue * (rightState[unknown] - centreStateForCompute[unknown]);
         if constexpr (EvaluateFlux) {
@@ -341,8 +332,7 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
     outputState[unknown] =
       static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + axisUpdates[unknown]);
   }
-  // The finiteness check stays out of the vectorised loop, whose body must be free of the
-  // diagnostics an assertion emits.
+  // The assertion stays out of the SIMD loop, whose body must not emit diagnostics.
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     [[maybe_unused]] const bool outputStateIsFinite = std::isfinite(outputState[unknown]);
     assertion(outputStateIsFinite, unknown, outputState[unknown]);

@@ -21,9 +21,6 @@ namespace {
 
   using Control = peano4::RefinementRequest::RefinementControl;
 
-  /**
-   * Builds a regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
-   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
@@ -33,10 +30,7 @@ namespace {
     return peano4::Spacetree::getInstance().getCellAt(Depth, lattice);
   }
 
-  /**
-   * Returns whether the rank holds every child cell of the parent cell at the given lattice position.
-   */
-  bool holdsEveryChildOf(const tarch::la::Vector<DIMENSIONS, int>& parentLattice) {
+  bool ownsEveryChildOf(const tarch::la::Vector<DIMENSIONS, int>& parentLattice) {
     for (int child = 0; child < peano4::ChildrenPerCell; child++) {
       const auto                         childPosition = peano4::dDelinearised(child, peano4::SubdivisionFactor);
       tarch::la::Vector<DIMENSIONS, int> childLattice;
@@ -51,13 +45,13 @@ namespace {
   }
 
   /**
-   * Counts over all ranks the parents whose children all lie on one rank; the base grid is
-   * partitioned by cells, so a parent with children on two ranks never erases.
+   * Returns the number of parents whose children all lie on one rank, summed over the ranks. A
+   * parent with children on two ranks never erases.
    */
-  int getNumberOfParentsHeldWhole() {
+  int getNumberOfWhollyOwnedParents() {
     int wholeParents = 0;
     peano4::dForEach(peano4::SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& parentLattice) {
-      if (holdsEveryChildOf(parentLattice)) {
+      if (ownsEveryChildOf(parentLattice)) {
         wholeParents++;
       }
     });
@@ -65,12 +59,12 @@ namespace {
   }
 
   /**
-   * Returns whether the rank that owns the origin cell holds every sibling of it.
+   * Returns whether one rank owns the origin cell and all its siblings.
    */
-  bool originParentIsHeldWhole() { return peano4::tests::getGlobalSumOf(holdsEveryChildOf(Origin) ? 1 : 0) == 1; }
+  bool isOriginParentWhollyOwned() { return peano4::tests::getGlobalSumOf(ownsEveryChildOf(Origin) ? 1 : 0) == 1; }
 
   /**
-   * Holds the votes of one solver, one per slot of the partition.
+   * Votes of one solver, one per slot of the partition.
    */
   struct Votes final {
     std::vector<exahype2::RefinementCommand> commands;
@@ -105,17 +99,14 @@ namespace {
     return count;
   }
 
-  bool holdsARequestAt(
+  bool containsRequestAt(
     const std::vector<peano4::RefinementRequest>& requests,
     const int                                     level,
     const tarch::la::Vector<DIMENSIONS, int>&     lattice
   ) {
-    for (const auto& request : requests) {
-      if (request.level == level and request.latticeIndex == lattice) {
-        return true;
-      }
-    }
-    return false;
+    return std::ranges::any_of(requests, [&](const peano4::RefinementRequest& request) {
+      return request.level == level and request.latticeIndex == lattice;
+    });
   }
 } // namespace
 
@@ -125,7 +116,7 @@ exahype2::tests::RefinementRequestsTest::RefinementRequestsTest() :
 void
 exahype2::tests::RefinementRequestsTest::run() {
   testMethod(testKeepVotesRaiseNoRequest);
-  testMethod(testARefineVoteNamesTheCellOnEveryRank);
+  testMethod(testARefineVoteBecomesARequestOnEveryRank);
   testMethod(testAnEraseStandsOnceEveryChildVotes);
   testMethod(testRefineWinsAndKeepBeatsErase);
 }
@@ -141,7 +132,7 @@ exahype2::tests::RefinementRequestsTest::testKeepVotesRaiseNoRequest() {
 }
 
 void
-exahype2::tests::RefinementRequestsTest::testARefineVoteNamesTheCellOnEveryRank() {
+exahype2::tests::RefinementRequestsTest::testARefineVoteBecomesARequestOnEveryRank() {
   const auto& partition = buildGrid();
   Votes       votes(partition);
   votes.voteOnTheOriginCell(exahype2::RefinementCommand::Refine);
@@ -157,13 +148,13 @@ exahype2::tests::RefinementRequestsTest::testARefineVoteNamesTheCellOnEveryRank(
 }
 
 /**
- * Every parent whose children all vote on one rank erases; the parent of one child that keeps stays.
+ * Every parent whose children all vote Erase on one rank erases. One child that votes Keep keeps its parent.
  */
 void
 exahype2::tests::RefinementRequestsTest::testAnEraseStandsOnceEveryChildVotes() {
   const auto& partition         = buildGrid();
-  const int   wholeParents      = getNumberOfParentsHeldWhole();
-  const bool  originParentWhole = originParentIsHeldWhole();
+  const int   wholeParents      = getNumberOfWhollyOwnedParents();
+  const bool  originParentWhole = isOriginParentWhollyOwned();
   validate(wholeParents >= 1 or tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
 
   Votes votes(partition);
@@ -178,20 +169,16 @@ exahype2::tests::RefinementRequestsTest::testAnEraseStandsOnceEveryChildVotes() 
   for (const auto& request : refinementRequests) {
     validateEquals(request.level, Depth - 1);
   }
-  validateEquals(holdsARequestAt(refinementRequests, Depth - 1, Origin), originParentWhole);
+  validateEquals(containsRequestAt(refinementRequests, Depth - 1, Origin), originParentWhole);
 
   votes.voteOnTheOriginCell(exahype2::RefinementCommand::Keep);
   requests.clear(partition.getNumberOfSlots());
   requests.merge(votes.commands, partition.getCells());
   const auto requestsWithOneKeep = requests.getRefinementRequests(partition);
   validateEquals(static_cast<int>(requestsWithOneKeep.size()), wholeParents - (originParentWhole ? 1 : 0));
-  validate(not holdsARequestAt(requestsWithOneKeep, Depth - 1, Origin));
+  validate(not containsRequestAt(requestsWithOneKeep, Depth - 1, Origin));
 }
 
-/**
- * A keep of a second solver blocks every erase, and a refine of one solver names its cell and blocks the parent's
- * erase.
- */
 void
 exahype2::tests::RefinementRequestsTest::testRefineWinsAndKeepBeatsErase() {
   const auto& partition = buildGrid();
@@ -201,8 +188,8 @@ exahype2::tests::RefinementRequestsTest::testRefineWinsAndKeepBeatsErase() {
   Votes       refineVote(partition);
   refineVote.voteOnEveryCell(partition, exahype2::RefinementCommand::Erase);
   refineVote.voteOnTheOriginCell(exahype2::RefinementCommand::Refine);
-  const int  wholeParents      = getNumberOfParentsHeldWhole();
-  const bool originParentWhole = originParentIsHeldWhole();
+  const int  wholeParents      = getNumberOfWhollyOwnedParents();
+  const bool originParentWhole = isOriginParentWhollyOwned();
 
   exahype2::RefinementRequests keepAgainstErase;
   keepAgainstErase.clear(partition.getNumberOfSlots());
@@ -240,6 +227,6 @@ exahype2::tests::RefinementRequestsTest::testRefineWinsAndKeepBeatsErase() {
     getNumberOfRequestsWith(refinementRequests, Control::Erase),
     wholeParents - (originParentWhole ? 1 : 0)
   );
-  validate(holdsARequestAt(refinementRequests, Depth, Origin));
-  validate(not holdsARequestAt(refinementRequests, Depth - 1, Origin));
+  validate(containsRequestAt(refinementRequests, Depth, Origin));
+  validate(not containsRequestAt(refinementRequests, Depth - 1, Origin));
 }

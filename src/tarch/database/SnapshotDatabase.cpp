@@ -13,8 +13,7 @@ tarch::database::SnapshotDatabase::Snapshot::Snapshot(double timestamp, int numb
   data(numberOfDataEntries, 0.0) {}
 
 /**
- * Returns the name of the CSV file. The caller sets the file base name; the
- * suffix is added here.
+ * Returns the file base name with the suffix .csv.
  */
 std::string
 tarch::database::SnapshotDatabase::getOutputFileName() const {
@@ -22,10 +21,9 @@ tarch::database::SnapshotDatabase::getOutputFileName() const {
 }
 
 /**
- * Appends snapshots not yet on disk. The first flush truncates the file and
- * writes its header; later flushes append. Directory, open, or write failures
- * leave all snapshots marked as unwritten, so the next call retries by
- * rewriting the complete file.
+ * Writes the snapshots not yet on disk. The first flush truncates the file and writes the header,
+ * and later flushes append. A failed write marks every snapshot unwritten, so the next call
+ * rewrites the whole file.
  */
 void
 tarch::database::SnapshotDatabase::dumpCSVFile() {

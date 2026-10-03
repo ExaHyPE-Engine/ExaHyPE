@@ -252,9 +252,6 @@ tarch::la::min(const tarch::la::Vector<Size, Scalar>& lhs, const tarch::la::Vect
   return result;
 }
 
-/**
- * Returns the inner product of lhs and rhs.
- */
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar
 tarch::la::operator*(const tarch::la::Vector<Size, Scalar>& lhs, const tarch::la::Vector<Size, Scalar>& rhs) {

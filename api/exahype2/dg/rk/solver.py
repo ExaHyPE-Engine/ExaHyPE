@@ -31,10 +31,10 @@ def _pde_terms():
 
 
 class Solver(exahype2.solver.Solver):
-    """A Runge-Kutta DG solver of polynomial order ``dg_order`` whose time step runs one stage
-    per order ``rk_order`` of the Runge-Kutta scheme.
+    """A Runge-Kutta DG solver of polynomial order ``dg_order``. A time step runs ``rk_order``
+    Runge-Kutta stages.
 
-    ``basis`` is :class:`exahype2.dg.GaussLegendre` or :class:`exahype2.dg.GaussLobatto`;
+    ``basis`` is :class:`exahype2.dg.GaussLegendre` or :class:`exahype2.dg.GaussLobatto`.
     ``linear`` selects the linear Riemann solver, which supports material parameters.
     """
 
@@ -95,9 +95,9 @@ class Solver(exahype2.solver.Solver):
 
     @postprocess_updated_patch.setter
     def postprocess_updated_patch(self, kernel):
-        """Sets the C++ code that runs on every cell after the final combination of a time
-        step; it reads and writes ``Q``, the new nodes, and reads ``x``, ``h``, ``t`` and
-        ``dt``. ``True`` leaves the definition to the application."""
+        """Sets the C++ code that runs on every cell once the stages of a time step combine
+        into the new nodes ``Q``. The code reads and writes ``Q`` and reads ``x``, ``h``, ``t``
+        and ``dt``. ``True`` leaves the definition to the application."""
         self._postprocess_updated_patch = kernel
 
     def _validate(self):
@@ -120,7 +120,7 @@ class Solver(exahype2.solver.Solver):
             )
 
     def _table_class(self, table):
-        """The generated table class of this solver, fully qualified."""
+        """Returns the fully qualified name of a generated table class of this solver."""
         return "::" + "::".join(self._namespace + [self._name + table])
 
     def _solver_family_includes(self):
@@ -162,7 +162,7 @@ class Solver(exahype2.solver.Solver):
         ]
 
     def _table_precisions(self):
-        """The mesh transfer operators read double tables whatever the solver computes in."""
+        """Returns the solver precisions plus double for the mesh transfer operators."""
         result = list(self.precision.types)
         if "double" not in result:
             result.append("double")

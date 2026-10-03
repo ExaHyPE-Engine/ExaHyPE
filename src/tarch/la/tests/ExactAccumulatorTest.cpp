@@ -23,9 +23,6 @@ namespace {
     return accumulator.roundQuotient(entry + 1);
   }
 
-  /**
-   * Raises the accumulator by one when the rounded quotient of the entry holds other bits than expected.
-   */
   struct CountMismatch final {
     const std::uint64_t* expected{nullptr};
 
@@ -36,9 +33,6 @@ namespace {
     }
   };
 
-  /**
-   * Counts the entries whose quotient a dispatch rounds to other bits than expected holds.
-   */
   int getNumberOfDeviceMismatchesOf(const std::vector<std::uint64_t>& expectedOnHost) {
     tarch::accelerator::Buffer<std::uint64_t> expectedBits(tarch::MemoryLocation::Device);
     expectedBits.setValues(expectedOnHost);
@@ -68,9 +62,6 @@ tarch::la::tests::ExactAccumulatorTest::run() {
   testMethod(testDeviceRoundsLikeTheHost);
 }
 
-/**
- * Checks exact merging across a rounding tie, signed cancellation and repeated doubling.
- */
 void
 tarch::la::tests::ExactAccumulatorTest::testMergingPreservesLowBitsAndCancellation() {
   tarch::la::ExactAccumulator left;
@@ -124,8 +115,8 @@ tarch::la::tests::ExactAccumulatorTest::testCorrectRounding() {
   accumulator.add(std::ldexp(1.0, -60));
   validateNumericalEquals(accumulator.round(), TwoPower53 + 2.0);
 
-  // Values thousands of orders of magnitude apart coexist without absorption.
-  // A numerical comparison accepts any tiny value here, so the bits decide.
+  // Values six hundred orders of magnitude apart add up without absorption. A numerical comparison
+  // accepts any tiny value, so the bits decide.
   accumulator.clear();
   accumulator.add(1.0e300);
   accumulator.add(1.0e-300);
@@ -356,9 +347,6 @@ tarch::la::tests::ExactAccumulatorTest::testClear() {
   validateNumericalEquals(accumulator.round(), -1.5);
 }
 
-/**
- * A dispatch rounds every sum to the bits the host rounds it to.
- */
 void
 tarch::la::tests::ExactAccumulatorTest::testDeviceRoundsLikeTheHost() {
   constexpr int              NumberOfSums = 64;

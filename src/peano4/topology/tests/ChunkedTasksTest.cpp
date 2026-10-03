@@ -17,9 +17,8 @@ peano4::topology::tests::ChunkedTasksTest::run() {
 }
 
 /**
- * Every item of a range above the chunk minimum lands in exactly one chunk,
- * the chunks are contiguous and ascending, and their number stays below the
- * bound getMaximumNumberOfChunks() names.
+ * The chunks of a long range cover every item once, in ascending order and below
+ * getMaximumNumberOfChunks().
  */
 void
 peano4::topology::tests::ChunkedTasksTest::testChunksCoverTheRangeOnceInOrder() {
@@ -58,9 +57,8 @@ peano4::topology::tests::ChunkedTasksTest::testChunksCoverTheRangeOnceInOrder() 
 }
 
 /**
- * A range below two minimum chunks is one chunk, a range of two minimum chunks
- * is two, and a long range cuts into two chunks per thread, below the bound
- * getMaximumNumberOfChunks() names.
+ * A range below two chunk minimums is one chunk, a range of two minimums is two chunks, and a long
+ * range is two chunks per thread.
  */
 void
 peano4::topology::tests::ChunkedTasksTest::testNumberOfChunksFollowsTheMinimum() {

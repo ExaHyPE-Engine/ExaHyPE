@@ -37,9 +37,6 @@ namespace {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<double>;
   using Set      = exahype2::particles::ParticleSet<NumberOfParticleData>;
 
-  /**
-   * Returns the linear field of unknown k at x, which is k + 1 plus the sum over the axes of (axis + 2) x(axis).
-   */
   GPU_CALLABLE_METHOD double getLinearField(const int unknown, const tarch::la::Vector<DIMENSIONS, double>& x) {
     double value = unknown + 1.0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -67,9 +64,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Writes velocity into the first unknown of every node of a cell and zero into its other unknowns.
-   */
   struct FillNodeVelocity final {
     peano4::Partition partition{};
     CellPool::View    solution{};
@@ -86,18 +80,13 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Builds the regular grid of Depth levels partitioned over the ranks and returns the partition of this rank.
-   */
   const peano4::Partition& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getPartition();
   }
 
   /**
-   * Holds the partition of a regular grid partitioned over the ranks, a solution pool with a
-   * constant velocity along the first axis and the quadrature nodes in the memory the dispatches
-   * read.
+   * A regular grid with a solution of constant velocity along the first axis.
    */
   struct Grid final {
     const peano4::Partition&           partition;
@@ -155,10 +144,6 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Writes the linear field into the lower half of every face node and the field plus upperShift into its
-   * upper half.
-   */
   void fillFaceStates(const Grid& grid, FacePool& faceStates, const double upperShift) {
     tarch::accelerator::parallelFor(
       tarch::accelerator::Range(grid.partition.getNumberOfFaces()),
@@ -167,7 +152,7 @@ namespace {
   }
 
   /**
-   * The forces of a tracer that copies the fluid velocity into its own velocity and moves with it.
+   * Returns the forces of a tracer that moves with the fluid velocity.
    */
   exahype2::particles::Forces getFluidTracer() {
     exahype2::particles::Forces forces;
@@ -242,8 +227,8 @@ exahype2::dg::tests::TracingTest::testStaticSamplingPreservesParticleData() {
 }
 
 /**
- * A particle on the plane of the first cell boundary takes the mean of the two traces of the
- * face polynomial at its position and, for the named field, the upper trace minus the lower one.
+ * A particle on the plane receives the mean of the two face traces, and the named field receives
+ * their difference.
  */
 void
 exahype2::dg::tests::TracingTest::testFaceTracingWritesTheMeanAndTheJumpOfTheTraces() {
@@ -291,7 +276,8 @@ exahype2::dg::tests::TracingTest::testFaceTracingWritesTheMeanAndTheJumpOfTheTra
 }
 
 /**
- * The interpolation writes unknown k into the k-th named entry and leaves the other entries alone.
+ * The interpolation writes unknown k into the k-th named entry and leaves the other entries
+ * unchanged.
  */
 void
 exahype2::dg::tests::TracingTest::testInterpolateFieldsWritesThePolynomialIntoTheNamedEntries() {
@@ -333,8 +319,8 @@ exahype2::dg::tests::TracingTest::testInterpolateFieldsWritesThePolynomialIntoTh
 }
 
 /**
- * A tracer takes the fluid velocity of the polynomial and moves with it, wraps through a periodic
- * wall and reflects at a solid one.
+ * A tracer moves with the fluid velocity of the polynomial, wraps through a periodic wall and
+ * reflects at a solid one.
  */
 void
 exahype2::dg::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {

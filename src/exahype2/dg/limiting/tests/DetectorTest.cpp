@@ -48,9 +48,6 @@ namespace {
   constexpr double Tolerance        = 1.0e-12;
   constexpr double PositiveInfinity = std::numeric_limits<double>::infinity();
 
-  /**
-   * Returns the nodes of one cell, every node holding unknown and auxiliary.
-   */
   std::vector<double> getConstantNodes(const double unknown, const double auxiliary) {
     std::vector<double> nodes(Layout::ValuesPerCell);
     for (int node = 0; node < Layout::NodesPerCell; node++) {
@@ -60,9 +57,6 @@ namespace {
     return nodes;
   }
 
-  /**
-   * Returns a subgrid whose every subcell holds unknown and auxiliary.
-   */
   std::vector<double> getConstantSubgrid(const double unknown, const double auxiliary) {
     std::vector<double> subgrid(Layout::SubcellValuesPerCell);
     for (int subcell = 0; subcell < Layout::SubcellsPerCell; subcell++) {
@@ -85,8 +79,8 @@ namespace {
   }
 
   /**
-   * The status of one cell together with its own halves of its faces, as judgeCandidate() and spreadStatus() write
-   * them.
+   * The status of one cell with the face halves that judgeCandidate() and spreadStatus() read and
+   * write.
    */
   struct CellStatus final {
     int        status[exahype2::dg::limiting::NumberOfStatusEntries]{Regular, Regular, 0, 0};
@@ -104,9 +98,6 @@ namespace {
   };
 
   TARGET_DECLARE
-  /**
-   * Judges the candidate of one cell of a device range and adds its wave speeds to the accumulator.
-   */
   struct JudgeCandidateOfCell final {
     int*          statuses{nullptr};
     int*          faceStatuses{nullptr};
@@ -152,10 +143,6 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Judges the candidate of every cell on the device, copies the statuses and the face halves back and returns the
-   * wave speeds.
-   */
   exahype2::dg::MaxEigenvalueStatistics judgeOnDevice(
     const exahype2::dg::limiting::tests::SubcellProjections& tables,
     const exahype2::dg::tests::CellChain&                    geometry,
@@ -435,7 +422,7 @@ exahype2::dg::limiting::tests::DetectorTest::testWidenExtremaMergesTheMinimaAndT
 }
 
 /**
- * A steep interpolant over a constant subgrid leaves the sampled range, a constant interpolant stays inside.
+ * A steep interpolant over a constant subgrid leaves the sampled range, and a constant interpolant stays inside.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testOpenInitialStatusMarksAnOscillatingInterpolant() {
@@ -665,8 +652,8 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateRejectsACandidate
 }
 
 /**
- * A troubled neighbour lifts a cell to limited and marks it, a limited neighbour lifts it to halo, and a status never
- * drops.
+ * A cell takes the status its most limited neighbour gives, keeps a more limited status of its own and records a
+ * troubled neighbour.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testSpreadStatusLiftsByTheNeighbours() {
@@ -694,8 +681,7 @@ exahype2::dg::limiting::tests::DetectorTest::testSpreadStatusLiftsByTheNeighbour
 }
 
 /**
- * Clearing the faces writes Regular into both status halves and zeros into every value of the
- * subcell halo, whatever the halo held before.
+ * ClearFaces writes Regular into both status halves and zeros into the whole subcell halo.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testClearFacesWritesRegularAndZerosTheSubcellHalo() {
@@ -764,8 +750,7 @@ exahype2::dg::limiting::tests::DetectorTest::testAFixedRuleReportsNoWaveSpeeds()
 }
 
 /**
- * Every third cell was troubled, the predictor of one even cell diverged, and every odd cell's candidate leaves its
- * reference extrema.
+ * The candidate check of every cell of a device range reproduces the serial host loop.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testEveryCellOfADeviceRangeJudgesLikeTheHost() {
@@ -839,8 +824,8 @@ exahype2::dg::limiting::tests::DetectorTest::testEveryCellOfADeviceRangeJudgesLi
 }
 
 /**
- * The block kernels list the cells on the subcell scheme in the order of the partition, so the
- * local cells come first, and count the recomputing cells among the local ones.
+ * The block kernels count and list the cells on the subcell scheme in the order of the partition,
+ * the local cells first.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFirst() {
@@ -851,7 +836,7 @@ exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFi
   const auto& partition          = peano4::Spacetree::getInstance().getPartition();
   const auto  cells              = partition.getCells();
   const int   numberOfSlots      = partition.getNumberOfSlots();
-  const int   numberOfLocalCells = partition.getCells(peano4::Dependence::Local).size;
+  const int   numberOfLocalCells = partition.getCells(peano4::Adjacency::Local).size;
 
   tarch::accelerator::ChunkedMemoryPool<int> statuses(exahype2::dg::limiting::NumberOfStatusEntries);
   statuses.reserve(numberOfSlots);

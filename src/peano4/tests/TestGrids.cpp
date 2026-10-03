@@ -20,8 +20,7 @@ namespace {
 } // namespace
 
 /**
- * Builds the regular grid of the depth on the unit domain, partitioned over the ranks; the
- * spacetree forgets every earlier grid first.
+ * Builds the regular grid of depth on the unit domain over all ranks.
  */
 void
 peano4::tests::buildRegularGrid(const int depth, const std::bitset<DIMENSIONS>& periodicBoundaries) {
@@ -36,7 +35,7 @@ peano4::tests::buildRegularGrid(const int depth, const std::bitset<DIMENSIONS>& 
 }
 
 /**
- * Applies the requests to the standing grid without live data, so the partition is numbered afresh.
+ * Applies the requests to the current grid without live data, so the partition gets new slot numbers.
  */
 void
 peano4::tests::refineGrid(const std::vector<peano4::RefinementRequest>& requests) {
@@ -47,8 +46,7 @@ peano4::tests::refineGrid(const std::vector<peano4::RefinementRequest>& requests
 }
 
 /**
- * Returns the request that refines the cell in the centre of the base grid of the depth. The
- * refinement covers the cell, its neighbours and the ring around them, so the refined block
+ * Returns the request that refines the centre cell of the base grid of depth. The refined block
  * spans getNumberOfCellsPerAxisRefinedAroundTheCentre() cells per axis.
  */
 peano4::RefinementRequest

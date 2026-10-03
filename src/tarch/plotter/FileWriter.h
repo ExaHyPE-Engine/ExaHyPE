@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
 
 namespace tarch::plotter {
@@ -27,8 +28,8 @@ public:
   };
 
   /**
-   * The geometry and the fields of one piece: The points as x, y and z triples, the point
-   * indices of every cell, the end offset of every cell in that list and the cell types.
+   * The geometry and the fields of one piece. offsets stores the end of every cell in
+   * connectivity.
    */
   struct SubdomainBuffers {
     std::vector<double>       pointsXYZ{};
@@ -48,9 +49,8 @@ public:
   };
 
   /**
-   * Field names and component counts for a collective parallel write; the
-   * `values` of the DataFields stay empty. Every rank creates and writes the
-   * identical set of datasets, a rank without local data included.
+   * The field names and component counts of a collective write, with empty values. Every rank
+   * creates the same datasets, a rank without local data included.
    */
   struct FieldSchema {
     std::vector<DataField> pointFields{};
@@ -63,8 +63,8 @@ public:
 
   struct FieldLayout {
     FieldKind kind;
-    // Number of components written. A vector takes 3 components, padded with a
-    // zero z in 2D, and a tensor 9; a generic field keeps its source count.
+    // The number of written components is 3 for a vector, 9 for a tensor and the source count
+    // otherwise. A 2D vector gets a zero z.
     int writtenComponents;
   };
 
@@ -78,7 +78,7 @@ public:
     ~DataPlotter()                             = default;
 
     template <class T>
-    void writeTuple(const int index, const T* const values, const int numberOfValues);
+    INLINE_METHOD void writeTuple(int index, const T* values, int numberOfValues);
 
   private:
     std::vector<DataField>& _targetFields;
@@ -119,19 +119,19 @@ public:
     VertexDataPlotter& operator=(VertexDataPlotter&&)      = delete;
     ~VertexDataPlotter()                                   = default;
 
-    void plotVertexData(const int index, const double value);
-    void plotVertexData(const int index, const tarch::la::Vector<2, double>& value);
-    void plotVertexData(const int index, const tarch::la::Vector<3, double>& value);
-    void plotVertexData(const int index, const double* const values, const int numberOfValues);
+    void plotVertexData(int index, double value);
+    void plotVertexData(int index, const tarch::la::Vector<2, double>& value);
+    void plotVertexData(int index, const tarch::la::Vector<3, double>& value);
+    void plotVertexData(int index, const double* values, int numberOfValues);
 
     template <class T>
-    void plotVertexData(const int index, const T value);
+    INLINE_METHOD void plotVertexData(int index, T value);
     template <class T>
-    void plotVertexData(const int index, const tarch::la::Vector<2, T>& value);
+    INLINE_METHOD void plotVertexData(int index, const tarch::la::Vector<2, T>& value);
     template <class T>
-    void plotVertexData(const int index, const tarch::la::Vector<3, T>& value);
+    INLINE_METHOD void plotVertexData(int index, const tarch::la::Vector<3, T>& value);
     template <class T>
-    void plotVertexData(const int index, const T* const values, const int numberOfValues);
+    INLINE_METHOD void plotVertexData(int index, const T* values, int numberOfValues);
 
   private:
     DataPlotter _impl;
@@ -175,19 +175,19 @@ public:
     CellDataPlotter& operator=(CellDataPlotter&&)      = delete;
     ~CellDataPlotter()                                 = default;
 
-    void plotCellData(const int index, const double value);
-    void plotCellData(const int index, const tarch::la::Vector<2, double>& value);
-    void plotCellData(const int index, const tarch::la::Vector<3, double>& value);
-    void plotCellData(const int index, const double* const values, const int numberOfValues);
+    void plotCellData(int index, double value);
+    void plotCellData(int index, const tarch::la::Vector<2, double>& value);
+    void plotCellData(int index, const tarch::la::Vector<3, double>& value);
+    void plotCellData(int index, const double* values, int numberOfValues);
 
     template <class T>
-    void plotCellData(const int index, const T value);
+    INLINE_METHOD void plotCellData(int index, T value);
     template <class T>
-    void plotCellData(const int index, const tarch::la::Vector<2, T>& value);
+    INLINE_METHOD void plotCellData(int index, const tarch::la::Vector<2, T>& value);
     template <class T>
-    void plotCellData(const int index, const tarch::la::Vector<3, T>& value);
+    INLINE_METHOD void plotCellData(int index, const tarch::la::Vector<3, T>& value);
     template <class T>
-    void plotCellData(const int index, const T* const values, const int numberOfValues);
+    INLINE_METHOD void plotCellData(int index, const T* values, int numberOfValues);
 
   private:
     DataPlotter _impl;
@@ -200,20 +200,8 @@ public:
   FileWriter& operator=(FileWriter&&)      = delete;
   virtual ~FileWriter()                    = default;
 
-  /**
-   * Claims one piece of the output file and returns its id for the create
-   * calls. Any number of concurrent plot writers can claim pieces; the file
-   * orders them by the caller's key, so the output is deterministic however
-   * the writers are scheduled.
-   */
   int acquirePiece(int orderKey);
 
-  /**
-   * Validates the piece id and returns its buffer set, under the acquisition
-   * lock: Concurrent writers may still be claiming pieces, which grows the
-   * deque, and even a growing deque's size and element lookup must not be
-   * read unguarded. The returned reference stays valid without the lock.
-   */
   SubdomainBuffers& getPieceBuffers(int subdomainId);
 
   std::unique_ptr<VertexPlotter> createVertexPlotter(
@@ -247,31 +235,19 @@ protected:
   static void validateIdentifier(const std::string& id);
   void createOutputDirectory() const;
 
-  // MPI-IO hints for the parallel writers (collective buffering for the large
-  // collective writes).
   static std::vector<std::pair<std::string, std::string>> getMPIFileHints();
   SubdomainBuffersSequence getSubdomainBuffersSequenceForWriting() const;
 
-  // Field schema from the local reference, no MPI exchange. The parallel writers run
-  // their collective I/O on a sub-communicator of the data-holding ranks, so every
-  // participant has a non-null reference with the identical field list.
   static FieldSchema getFieldSchema(const SubdomainBuffers* const localReference);
 
-  // Classify a field by its source component count into the written width and
-  // role every writer uses (see FieldLayout).
   static FieldLayout classifyField(const int sourceComponents);
 
-  // Re-lay a component-major field buffer (values stored as
-  // [tuple0 comp0..compN, tuple1 ...]) from sourceComponents to writtenComponents
-  // per tuple, padding the extra trailing components with zero. Returns the input
-  // unchanged when the widths already match.
   static std::vector<double> expandFieldComponents(
     const std::vector<double>& values,
     const int                  sourceComponents,
     const int                  writtenComponents
   );
 
-  // Narrow a double buffer to float for single-precision output.
   static std::vector<float> narrowToFloat(const std::vector<double>& values);
 
   static bool hasSchemaOrGeometry(const SubdomainBuffers& buffers);

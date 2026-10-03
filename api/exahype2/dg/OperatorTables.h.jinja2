@@ -17,8 +17,8 @@ namespace {{ NAMESPACE | join("::") }} {
 {%- for line in TABLE_CLASS_DOCUMENTATION %}
  * {{ line }}
 {%- endfor %}
- * Every table returns its values as constants from get<Table>() on the host and the device, and
- * initialise() copies it into device memory, which the kernels read through the pointer <Table>.
+ * Each table T has an accessor getT() for the host and the device, and a pointer T to the device
+ * copy that initialise() allocates.
  */
 template <typename Precision>
 class {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }} final {

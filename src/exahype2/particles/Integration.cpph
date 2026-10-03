@@ -4,9 +4,6 @@
 #include "tarch/Assertions.h"
 
 TARGET_DECLARE
-/**
- * Returns the state with v + f dt a as velocity and x + f dt v as position, f the step fraction.
- */
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::State
 exahype2::particles::advancePartialStep(
   const exahype2::particles::State& current,
@@ -22,10 +19,6 @@ exahype2::particles::advancePartialStep(
   return state;
 }
 
-/**
- * Returns the state with the velocity of base plus f dt times the acceleration of update, the
- * position of base plus f dt times the velocity of update, and the acceleration of update.
- */
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::State
 exahype2::particles::advancePartialStepWithBase(
   const exahype2::particles::State& base,
@@ -44,10 +37,10 @@ exahype2::particles::advancePartialStepWithBase(
 }
 
 /**
- * Returns the state with v + f dt a as velocity and x + f dt times that new velocity as position.
+ * Returns the state after a partial step that moves the position with the updated velocity.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::State
-exahype2::particles::advanceMidpointStep(
+exahype2::particles::advanceSemiImplicitPartialStep(
   const exahype2::particles::State& current,
   const double                      timeStepSize,
   const double                      stepFraction
@@ -63,9 +56,9 @@ exahype2::particles::advanceMidpointStep(
 }
 
 /**
- * Advances the velocity and the acceleration of the particle by one time step with the
- * integration scheme of forces and returns the new position. A scheme with intermediate stages
- * calls interpolateAt(particle, position) and applyForces() at every stage position.
+ * Advances the velocity and the acceleration of particle by one time step and returns the new
+ * position. A scheme with intermediate stages calls interpolateAt(particle, position) and
+ * applyForces() at every stage position.
  */
 template <typename Interpolation>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
@@ -96,7 +89,7 @@ exahype2::particles::advance(
   case exahype2::particles::IntegrationScheme::Static:
     return currentState.position;
   case exahype2::particles::IntegrationScheme::SemiImplicitEuler:
-    finalState = exahype2::particles::advanceMidpointStep(currentState, timeStepSize, 1.0);
+    finalState = exahype2::particles::advanceSemiImplicitPartialStep(currentState, timeStepSize, 1.0);
     break;
   case exahype2::particles::IntegrationScheme::VelocityVerlet: {
     exahype2::particles::State midpointState;
@@ -163,9 +156,6 @@ exahype2::particles::advance(
   return finalState.position;
 }
 
-/**
- * Returns whether bit axis of periodicAxes is set.
- */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::particles::isPeriodic(const int periodicAxes, const int axis) {
   assertion(axis >= 0 and axis < DIMENSIONS, axis);
@@ -173,9 +163,8 @@ exahype2::particles::isPeriodic(const int periodicAxes, const int axis) {
 }
 
 /**
- * Mirrors position back into the domain along every axis that is not periodic and multiplies
- * the velocity of the particle along that axis by -dampingFactor. periodicAxes carries one bit
- * per periodic axis.
+ * Mirrors position back into the domain along every non-periodic axis and scales the velocity along
+ * that axis by -dampingFactor.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::particles::reflectAtWalls(

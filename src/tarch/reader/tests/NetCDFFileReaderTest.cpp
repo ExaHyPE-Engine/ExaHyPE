@@ -18,8 +18,7 @@ namespace {
     const std::string&         xKey     = "x",
     const std::string&         yKey     = "y"
   ) {
-    // The file name carries a per-run identifier, so two processes that write into the test
-    // directory at the same time do not overwrite each other's fixture.
+    // The file name contains a per-run identifier, so two processes never write the same fixture.
     static const std::string testRunIdentifier =
       std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
       + std::to_string(std::random_device{}());
@@ -85,14 +84,16 @@ tarch::reader::tests::NetCDFFileReaderTest::testOpenReadAndClose() {
     validate(ncid != -1);
     validateEquals(reader.getDimension(ncid, "x"), static_cast<std::size_t>(3));
     validateEquals(reader.getDimension(ncid, "y"), static_cast<std::size_t>(2));
+    validateEquals(reader.getDimension(ncid, "missing"), static_cast<std::size_t>(0));
 
     double xValues[3] = {};
     double yValues[2] = {};
     double zValues[6] = {};
 
-    validateEquals(reader.readVariable1D(ncid, "x", xValues), 0);
-    validateEquals(reader.readVariable1D(ncid, "y", yValues), 0);
-    validateEquals(reader.readVariable2D(ncid, "z", zValues), 0);
+    validateEquals(reader.readVariable(ncid, "x", xValues), 0);
+    validateEquals(reader.readVariable(ncid, "y", yValues), 0);
+    validateEquals(reader.readVariable(ncid, "z", zValues), 0);
+    validateEquals(reader.readVariable(ncid, "missing", zValues), -1);
 
     validateNumericalEquals(xValues[0], 1.0);
     validateNumericalEquals(xValues[2], 5.0);

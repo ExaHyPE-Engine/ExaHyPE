@@ -36,7 +36,7 @@ namespace tarch::la {
 } // namespace tarch::la
 
 template <int Size, typename Scalar>
-std::string toString(const tarch::la::Vector<Size, Scalar>& vector);
+INLINE_METHOD std::string toString(const tarch::la::Vector<Size, Scalar>& vector);
 
 template <int Size, typename Scalar>
 struct tarch::la::Vector {

@@ -14,9 +14,8 @@ tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(
     return;
   }
 
-  // ParaView associates a file-series meta file with a reader by the data
-  // extension embedded right before ".series" (e.g. "name.nc.series"). A bare
-  // "name.series" matches no reader, so embed the snapshot files' extension.
+  // ParaView picks the reader of a file series by the extension before .series, such as
+  // name.nc.series.
   std::string dataExtension;
   if (not _snapshots.empty()) {
     const std::string& firstFile = _snapshots.front().filename;
@@ -39,7 +38,8 @@ tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(
 
   for (size_t i = 0; i < _snapshots.size(); ++i) {
     const auto& entry = _snapshots[i];
-    out << "    { \"name\" : \"" << entry.filename << "\", \"time\" : " << entry.time << " }";
+    out << R"(    { "name" : ")" << entry.filename << R"(", "time" : )" << tarch::plotter::getExactTimeStamp(entry.time)
+        << " }";
 
     if (i < _snapshots.size() - 1) {
       out << ",";

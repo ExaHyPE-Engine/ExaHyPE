@@ -4,11 +4,10 @@
 #include "tarch/Assertions.h"
 
 /**
- * Records the norms of the position errors of the particles against the analytical solution of
- * SolverType at timeStamp and returns them; every rank calls it once a snapshot of measurement is
- * due. The analytical solution receives a copy of the particle, the time stamp, the time
- * step size and a buffer of DIMENSIONS plus NumberOfData entries whose first DIMENSIONS entries
- * are the exact position.
+ * Records and returns the norms of the position errors of the particles against
+ * SolverType::analyticalSolution(). Every rank calls this function collectively when a snapshot of
+ * measurement is due. The analytical solution writes the exact position into the first DIMENSIONS
+ * entries of its buffer.
  */
 template <typename SolverType, int NumberOfData>
 INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>

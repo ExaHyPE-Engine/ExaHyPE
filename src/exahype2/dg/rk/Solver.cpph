@@ -10,29 +10,23 @@
 #include "tarch/accelerator/Scratch.h"
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::Solver(
+INLINE_METHOD exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::Solver(
   const double                                     timeStepFactor,
   const std::string&                               name,
   const std::vector<exahype2::plotter::DataField>& plottedFields
 ) :
   Base(timeStepFactor, name, plottedFields) {}
 
-/**
- * Reserves the pools of the base and one estimate chunk per slot.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-void
+INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(const peano4::Partition& partition) {
   Base::allocate(partition);
   _estimates.reserve(partition.getNumberOfSlots());
   reserveStageScratch(partition);
 }
 
-/**
- * Sizes the stage scratch to the chunks the dispatch over the advanced cells needs.
- */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-void
+INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::reserveStageScratch(
   const peano4::Partition& partition
 ) {
@@ -45,7 +39,7 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::reserveSt
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-void
+INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
   Base::release();
   _estimates.release();
@@ -53,30 +47,25 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::release()
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-tarch::AllocatedBytes
+INLINE_METHOD tarch::AllocatedBytes
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return Base::getAllocatedBytes() + _estimates.getAllocatedBytes() + _stageScratch.getAllocatedBytes();
 }
 
 /**
- * Advances every cell by the time step size the previous time step proposed: Every stage writes
- * the volume terms of its stage state into the estimate, projects the stage state onto the
- * faces, solves the Riemann problem of every face and adds the face integrals to its estimate;
- * the final state combines the estimates. Between threads the cells meet only in the face pools,
- * where every cell writes its own halves and the Riemann problems read both halves; between
- * ranks the own halves of the exchanged faces travel in the state and flux exchanges while the
- * local faces solve their Riemann problems, and the fluxes restricted onto coarse faces travel
- * in the flux exchange while the local cells add their face integrals.
+ * Advances every cell by the time step size that the previous time step proposed. The ranks
+ * exchange the face halves of every stage while the local faces solve their Riemann problems and
+ * the restricted fluxes while the local cells add their face integrals.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-void
+INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeStep(
   const peano4::Partition&      partition,
   exahype2::RefinementRequests& requests
 ) {
   using Tableau               = typename Stage::Tableau;
-  constexpr auto Local        = peano4::Dependence::Local;
-  constexpr auto Remote       = peano4::Dependence::Remote;
+  constexpr auto Local        = peano4::Adjacency::Local;
+  constexpr auto Remote       = peano4::Adjacency::Remote;
   const double   timeStepSize = this->_timeStepping.startTimeStep();
 
   const typename Base::InterpolateHalves interpolateHalves{
@@ -118,7 +107,7 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTi
  * Moves the solution through the regrid and grows the estimate pool with the slot range.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-void
+INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   const peano4::Partition&      partition,
   const peano4::Regrid&         regrid,
@@ -134,7 +123,7 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
  * speed, damped by the square of the polynomial degree.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-double
+INLINE_METHOD double
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getTimeStepSizeFromCFL() const {
   if constexpr (UsesAdaptiveTimeStepping) {
     constexpr double CockburnShuDamping = 1.0 / (2.0 * Derived::RungeKuttaOrder - 1.0);
@@ -151,7 +140,7 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getTimeSt
  * damped by the square of the Runge-Kutta order.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-double
+INLINE_METHOD double
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getFixedTimeStepSize() const {
   const double maxAdmissibleMeshWidth = this->_timeStepping.getLimits().maxAdmissibleMeshWidth;
   assertion(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
@@ -160,17 +149,17 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getFixedT
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-const typename exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::EstimatePool&
+INLINE_METHOD const typename exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::EstimatePool&
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getEstimates() const {
   return _estimates;
 }
 
 /**
- * Opens one stage on every cell: The estimate of the stage takes the volume terms of the stage
- * state, and the cell's own half of every face takes the face states and face fluxes of that state.
+ * Writes the volume terms of the stage state of every cell into its estimate and the face states
+ * and fluxes of that state into its own face halves.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-void
+INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage(
   const peano4::Partition& partition,
   const int                stage,
@@ -206,17 +195,17 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage
 }
 
 /**
- * Adds the face integrals of every cell with the dependence to the estimate of the stage.
+ * Adds the face integrals of the local or the remote cells to the estimate of the stage.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-void
+INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::addFaceIntegrals(
   const peano4::Partition& partition,
-  const peano4::Dependence dependence,
+  const peano4::Adjacency  adjacency,
   const int                stage,
   const double             timeStepSize
 ) {
-  const auto cells = this->getCells(partition, dependence);
+  const auto cells = this->getCells(partition, adjacency);
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(cells.size),
     exahype2::dg::rk::AddStageFaceIntegrals<Derived, ComputePrecision>{
@@ -235,11 +224,11 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::addFaceIn
 }
 
 /**
- * Writes the weighted sum of the estimates over the solution of every cell, runs the
- * postprocessing of the patch and returns the wave-speed maxima of the new solution.
+ * Adds the weighted estimates to the solution of every cell and returns the wave-speed maxima of
+ * the new solution.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-exahype2::dg::MaxEigenvalueStatistics
+INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::combineFinalState(
   const peano4::Partition& partition,
   const double             timeStepSize

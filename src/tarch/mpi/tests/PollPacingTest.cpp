@@ -31,9 +31,6 @@ tarch::mpi::tests::PollPacingTest::run() {
   testMethod(testEveryWaitStartsTight);
 }
 
-/**
- * The first poll grants a turn.
- */
 void
 tarch::mpi::tests::PollPacingTest::testFirstPollReportsProgress() {
   tarch::mpi::PollPacing pacing;
@@ -41,7 +38,7 @@ tarch::mpi::tests::PollPacingTest::testFirstPollReportsProgress() {
 }
 
 /**
- * The gap between two turns doubles.
+ * The number of polls between two turns doubles.
  */
 void
 tarch::mpi::tests::PollPacingTest::testTurnsWidenWhileTheWaitLasts() {

@@ -5,8 +5,7 @@
 
 std::size_t
 tarch::plotter::FileWriter::VertexHash::operator()(const VertexKey& key) const {
-  // Mix the three coordinates with the constants of boost hash_combine, which
-  // spreads the structured integer coordinates over the buckets.
+  // The constants of boost hash_combine spread the structured integer coordinates over the buckets.
   std::size_t seed = 0;
   auto        mix  = [&seed](const std::int64_t value) {
     seed ^= std::hash<std::int64_t>()(value) + 0x9E3779B97F4A7C15ULL + (seed << 6) + (seed >> 2);
@@ -48,16 +47,13 @@ tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vector<3,
     return vertexIndex;
   };
 
-  // Distinct vertices keep separate point-data values at one position, as a
-  // discontinuous field requires.
   if (_vertexMerging == VertexMerging::Distinct) {
     return appendVertex();
   }
 
-  // Two adjacent patches reach a corner both of them hold through different
-  // arithmetic, so their coordinates agree only to roundoff. Quantising before
-  // the lookup collapses the two into one plotted point and maps both zeros
-  // onto the same key.
+  // Two adjacent patches compute a corner of both through different arithmetic, so the
+  // coordinates agree only up to round-off. The quantisation maps both, and both signed zeros,
+  // onto one key.
   const auto quantisedCoordinate = [](const double coordinate) {
     constexpr double InverseTolerance           = 1.0 / 1e-8;
     constexpr double MinimumQuantisedCoordinate = static_cast<double>(std::numeric_limits<std::int64_t>::lowest());

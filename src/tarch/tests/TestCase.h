@@ -18,11 +18,9 @@ namespace tarch::tests {
 } // namespace tarch::tests
 
 /**
- * Base class of one test case. A subclass implements run() and checks its
- * assumptions with the validate macros of TestMacros.h.
- *
- * A unit test of a library is registered by that library's own test suite, as
- * the linker drops a test that no translation unit calls.
+ * A subclass implements run() and checks its assumptions with the validate macros of TestMacros.h.
+ * The test suite of a library registers the tests of the library, because the linker drops a test
+ * that no translation unit calls.
  *
  * @author Tobias Weinzierl
  */

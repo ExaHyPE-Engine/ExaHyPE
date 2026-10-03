@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 cmake_host_system_information(RESULT logical_cores QUERY NUMBER_OF_LOGICAL_CORES)
-# A host that reports no core count would let the rank arithmetic below divide by zero.
 if(NOT logical_cores OR logical_cores LESS 1)
   set(logical_cores 1)
 endif()

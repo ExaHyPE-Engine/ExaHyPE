@@ -63,7 +63,8 @@ peano4::tests::RefinementRequestTest::testOperatorEquals() {
 }
 
 /**
- * A refine sorts before an erase, a coarser level before a finer one and the leading axis decides within a level.
+ * A refine sorts before an erase, a coarser level before a finer one, and the first axis decides within a
+ * level.
  */
 void
 peano4::tests::RefinementRequestTest::testOperatorLess() {
@@ -155,10 +156,10 @@ void
 peano4::tests::RefinementRequestTest::testMPI() {
   constexpr int Tag = 4242;
 
-  const auto&    rank          = tarch::mpi::Rank::getInstance();
-  const MPI_Comm communicator  = rank.getCommunicator();
-  const int      myRank        = rank.getRank();
-  const int      numberOfRanks = rank.getNumberOfRanks();
+  const auto& rank          = tarch::mpi::Rank::getInstance();
+  MPI_Comm    communicator  = rank.getCommunicator();
+  const int   myRank        = rank.getRank();
+  const int   numberOfRanks = rank.getNumberOfRanks();
 
   auto sentRequest = getRequest(
     (myRank % 2 == 0) ? peano4::RefinementRequest::RefinementControl::Refine

@@ -22,9 +22,7 @@ namespace exahype2::dg::ader {
 
 TARGET_DECLARE
 /**
- * The corrector phase of one cell of an ADER-DG solver. correct() adds the face integrals of the
- * numerical fluxes the faces of the cell hold to its solution, runs the postprocessing of Derived
- * and reports the wave speeds of the updated solution. Derived is the generated solver class.
+ * The corrector phase of one cell of an ADER-DG solver.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::ader::Corrector final {
@@ -49,8 +47,8 @@ public:
 };
 
 /**
- * Adds the face integrals of every listed cell to its solution, runs the postprocessing of the
- * patch and reduces the wave-speed maxima of the updated solution when ReportEigenvalues holds.
+ * Corrects every listed cell and reduces the wave-speed maxima of the updated solution when
+ * ReportEigenvalues is true.
  */
 template <typename Derived, bool ReportEigenvalues, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::ader::CorrectCells final {

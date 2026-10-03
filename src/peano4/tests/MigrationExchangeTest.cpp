@@ -30,7 +30,7 @@ namespace {
   constexpr int MarkerEntry = DIMENSIONS + 1;
 
   /**
-   * The marker names the origin of a chunk: Filled, copied, prolonged or restricted.
+   * The marker entry records how a chunk arrived: Filled, copied, prolonged or restricted.
    */
   constexpr double FilledMarker     = 1.0;
   constexpr double CopiedMarker     = 2.0;
@@ -62,7 +62,8 @@ namespace {
   };
 
   /**
-   * Writes the number of entries of one chunk that name another cell than the partition does.
+   * Writes the number of entries of one chunk that disagree with the cell of its slot or with a
+   * migration marker.
    */
   struct CountMismatchesInSlot final {
     peano4::Partition partition{};
@@ -146,9 +147,6 @@ namespace {
     );
   }
 
-  /**
-   * Counts the given slots whose chunk names another cell than the partition does or no migration wrote.
-   */
   int getNumberOfMismatchesInFilledSlots(
     const Pool&              pool,
     const peano4::Partition& partition,
@@ -166,8 +164,7 @@ namespace {
   }
 
   /**
-   * What one regrid moved over all ranks: The cells sent, the slots received, the slots filled
-   * locally from a parent or from children, and the filled slots that hold a wrong chunk.
+   * The moves of one regrid, summed over all ranks.
    */
   struct Outcome final {
     int sentCells{0};
@@ -177,7 +174,7 @@ namespace {
   };
 
   /**
-   * Runs one regrid with the requests over the pool and counts the filled slots that hold a wrong chunk.
+   * Runs one regrid with the requests, migrates the pool and returns the outcome.
    */
   Outcome migrateAndCount(Exchange& exchange, Pool& pool, const std::vector<peano4::RefinementRequest>& requests) {
     auto&          spacetree = peano4::Spacetree::getInstance();
@@ -215,7 +212,7 @@ namespace {
   }
 
   /**
-   * Builds the regular grid with live data and one chunk per cell that names the cell.
+   * Builds the regular grid with live data and writes the identity of every cell into its chunk.
    */
   void buildGridWithLiveChunks(Pool& pool) {
     peano4::tests::buildRegularGrid(Depth);
@@ -237,8 +234,8 @@ peano4::tests::MigrationExchangeTest::run() {
 }
 
 /**
- * A refinement and the erase back fill new slots from parents, from children and from other
- * ranks; every filled slot then holds the chunk of its cell, and every sent cell arrives somewhere.
+ * After a refinement and the erase back, every filled slot stores the chunk of its cell and every
+ * sent cell arrives.
  */
 void
 peano4::tests::MigrationExchangeTest::testEveryFilledSlotHoldsTheChunkOfItsCell() {
@@ -258,7 +255,7 @@ peano4::tests::MigrationExchangeTest::testEveryFilledSlotHoldsTheChunkOfItsCell(
 }
 
 /**
- * Two exchanges post on distinct tags, which their first migrate reserves, and every rank reserves the same tags.
+ * Two exchanges get distinct tags in their first migrate, and every rank reserves the same tags.
  */
 void
 peano4::tests::MigrationExchangeTest::testExchangesHoldDistinctTags() {
@@ -282,7 +279,8 @@ peano4::tests::MigrationExchangeTest::testExchangesHoldDistinctTags() {
 }
 
 /**
- * release() frees every buffer and keeps the tag, so the next migrate moves the chunks of a later regrid.
+ * The release frees every buffer and keeps the tag, and the next migrate moves the chunks of a later
+ * regrid correctly.
  */
 void
 peano4::tests::MigrationExchangeTest::testReleaseFreesTheBuffersAndKeepsTheTag() {

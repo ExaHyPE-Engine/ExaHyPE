@@ -32,8 +32,8 @@ namespace {
   }
 
   /**
-   * The file name carries a per-run identifier, so two processes in the test directory never overwrite each other's
-   * fixture. The caller deletes the file after reading it.
+   * Writes content to a new file whose name contains a per-run identifier, so two processes never overwrite each
+   * other's file. The caller deletes the file.
    */
   std::string writeConfiguration(const std::string& content) {
     static const std::string testRunIdentifier =
@@ -82,7 +82,7 @@ exahype2::runner::tests::RuntimeParametersTest::run() {
   testMethod(testThePlotFormatComesFromTheCommandLine);
   testMethod(testTheTableReadsTheCommandLineAndKeepsTheOtherArguments);
   testMethod(testTheTableReadsTheConfigurationFileBeforeTheCommandLine);
-  testMethod(testTheTableUsageNamesEveryEntryWithItsDefault);
+  testMethod(testTheTableUsageListsEveryEntryWithItsDefault);
   testMethod(testTheConfigurationFileSetsTheEngineParameters);
 }
 
@@ -150,9 +150,6 @@ exahype2::runner::tests::RuntimeParametersTest::testBothSpellingsOfTheLoadBalanc
   validateEquals(numberOfShortFormArguments, 1);
 }
 
-/**
- * A maximum terminal time from the command line or the environment lowers a larger minimum one.
- */
 void
 exahype2::runner::tests::RuntimeParametersTest::testTheMaximumTerminalTimeBoundsTheMinimumOne() {
   exahype2::runner::RuntimeParameters commandLineParameters;
@@ -182,9 +179,6 @@ exahype2::runner::tests::RuntimeParametersTest::testTheMaximumTerminalTimeBounds
   validateNumericalEquals(shorterRunParameters.getMaxTerminalTime(), 0.1);
 }
 
-/**
- * Without the option the plot format is the default of the build, and both spellings select one.
- */
 void
 exahype2::runner::tests::RuntimeParametersTest::testThePlotFormatComesFromTheCommandLine() {
   const exahype2::runner::RuntimeParameters defaultParameters;
@@ -266,7 +260,7 @@ exahype2::runner::tests::RuntimeParametersTest::testTheTableReadsTheConfiguratio
 }
 
 void
-exahype2::runner::tests::RuntimeParametersTest::testTheTableUsageNamesEveryEntryWithItsDefault() {
+exahype2::runner::tests::RuntimeParametersTest::testTheTableUsageListsEveryEntryWithItsDefault() {
   Storage    storage;
   const auto usage = getTableOf(storage).getUsage();
   validateTrue(usage.find("--speed <double> (default: 1.5).") != std::string::npos);
@@ -280,7 +274,7 @@ exahype2::runner::tests::RuntimeParametersTest::testTheTableUsageNamesEveryEntry
 }
 
 /**
- * A configuration file sets the engine parameters it names, and an MPI timeout switches the request tracking on.
+ * An MPI timeout in the configuration file switches the request tracking on.
  */
 void
 exahype2::runner::tests::RuntimeParametersTest::testTheConfigurationFileSetsTheEngineParameters() {

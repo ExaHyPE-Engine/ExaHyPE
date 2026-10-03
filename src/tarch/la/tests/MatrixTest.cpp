@@ -339,9 +339,6 @@ tarch::la::tests::MatrixTest::testNaNComparesUnequal() {
 #endif
 }
 
-/**
- * The component product of two matrices of the same shape multiplies the entries at equal positions.
- */
 void
 tarch::la::tests::MatrixTest::testComponentProductOfRectangularMatrices() {
   const tarch::la::Matrix<2, 3, int> lhs     = {1, 2, 3, 4, 5, 6};

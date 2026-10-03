@@ -5,7 +5,7 @@ namespace tarch::accelerator {
   template <typename Functor>
   struct LeagueFor final {
     Functor functor;
-    KOKKOS_INLINE_FUNCTION void operator()(const tarch::accelerator::KokkosTeam::MemberType& team) const {
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const tarch::accelerator::KokkosTeam::MemberType& team) const {
       functor(team.league_rank(), tarch::accelerator::KokkosTeam{team});
     }
   };
@@ -13,14 +13,16 @@ namespace tarch::accelerator {
   template <typename Functor>
   struct TeamFor1D final {
     Functor functor;
-    KOKKOS_INLINE_FUNCTION void operator()(const int i) const { functor(i); }
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int i) const { functor(i); }
   };
 
   template <typename Functor>
   struct TeamFor2D final {
     Functor functor;
     int     extentY;
-    KOKKOS_INLINE_FUNCTION void operator()(const int index) const { functor(index / extentY, index % extentY); }
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index) const {
+      functor(index / extentY, index % extentY);
+    }
   };
 
   template <typename Functor>
@@ -28,18 +30,26 @@ namespace tarch::accelerator {
     Functor functor;
     int     extentY;
     int     extentZ;
-    KOKKOS_INLINE_FUNCTION void operator()(const int index) const {
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index) const {
       functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ);
     }
   };
 
   template <typename Functor>
-  KOKKOS_INLINE_FUNCTION void parallelFor(const KokkosTeam& team, const Range& range, const Functor functor) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const KokkosTeam& team,
+    const Range&      range,
+    const Functor     functor
+  ) {
     Kokkos::parallel_for(Kokkos::TeamVectorRange(team.member, range.n), TeamFor1D<Functor>{functor});
   }
 
   template <typename Functor>
-  KOKKOS_INLINE_FUNCTION void parallelFor(const KokkosTeam& team, const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const KokkosTeam& team,
+    const RangeMD<2>& range,
+    const Functor     functor
+  ) {
     Kokkos::parallel_for(
       Kokkos::TeamVectorRange(team.member, range.n[0] * range.n[1]),
       TeamFor2D<Functor>{functor, range.n[1]}
@@ -47,19 +57,23 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  KOKKOS_INLINE_FUNCTION void parallelFor(const KokkosTeam& team, const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const KokkosTeam& team,
+    const RangeMD<3>& range,
+    const Functor     functor
+  ) {
     Kokkos::parallel_for(
       Kokkos::TeamVectorRange(team.member, range.n[0] * range.n[1] * range.n[2]),
       TeamFor3D<Functor>{functor, range.n[1], range.n[2]}
     );
   }
 
-  KOKKOS_INLINE_FUNCTION void teamBarrier(const KokkosTeam& team) { team.member.team_barrier(); }
+  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier(const KokkosTeam& team) { team.member.team_barrier(); }
 
   // Kokkos::parallel_for returns before a device execution space completes, so every host
   // overload fences before it returns.
   template <typename Functor>
-  inline void parallelFor(const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -69,7 +83,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
@@ -83,7 +97,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -101,7 +115,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const TeamRange& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;

@@ -11,9 +11,7 @@ namespace exahype2::plotter {
 } // namespace exahype2::plotter
 
 /**
- * Writes the particles of a rank as one piece of a snapshot file: One plot point per particle at
- * its position, with the cell fields Number, the two integers that name the particle, and Data,
- * the data entries of the particle.
+ * Writes the particles of a rank into one piece of a snapshot file, one plot point per particle.
  */
 class exahype2::plotter::ParticlePlotter final {
 public:
@@ -25,7 +23,12 @@ public:
   ~ParticlePlotter()                                 = default;
 
   template <typename Particles>
-  void plot(Particles& particles, double timeStamp, tarch::plotter::Format format, const std::string& outputDirectory);
+  INLINE_METHOD void plot(
+    Particles&             particles,
+    double                 timeStamp,
+    tarch::plotter::Format format,
+    const std::string&     outputDirectory
+  );
 
 private:
   static constexpr const char* OutputSubdirectory = "particle/";

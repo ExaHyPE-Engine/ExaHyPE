@@ -38,7 +38,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::getPaddedChunkSizeOf(const int chunkSi
 }
 
 template <typename T>
-tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(
+INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(
   const int                   chunkSize,
   const tarch::MemoryLocation location
 ) noexcept :
@@ -50,7 +50,9 @@ tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(
 }
 
 template <typename T>
-tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(tarch::accelerator::ChunkedMemoryPool<T>&& other) noexcept :
+INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(
+  tarch::accelerator::ChunkedMemoryPool<T>&& other
+) noexcept :
   _chunkSize(other._chunkSize),
   _paddedChunkSize(other._paddedChunkSize),
   _segments(std::move(other._segments)),
@@ -63,7 +65,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(tarch::accelerator::
 }
 
 template <typename T>
-tarch::accelerator::ChunkedMemoryPool<T>&
+INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>&
 tarch::accelerator::ChunkedMemoryPool<T>::operator=(tarch::accelerator::ChunkedMemoryPool<T>&& other) noexcept {
   if (this != &other) {
     release();
@@ -81,7 +83,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::operator=(tarch::accelerator::ChunkedM
 }
 
 template <typename T>
-tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool::~ChunkedMemoryPool() noexcept {
+INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool::~ChunkedMemoryPool() noexcept {
   release();
 }
 
@@ -89,7 +91,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool::~ChunkedMemoryPool(
  * Grows the capacity without moving existing chunks. The first reservation fixes the segment size.
  */
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::reserve(const int numberOfSlots) {
   assertion(numberOfSlots >= 0, numberOfSlots);
   if (numberOfSlots <= getCapacity()) {
@@ -107,7 +109,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::reserve(const int numberOfSlots) {
 }
 
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::appendSegment() {
   constexpr auto MaximumNumberOfSlots = static_cast<std::size_t>(std::numeric_limits<int>::max());
   if (static_cast<std::size_t>(getCapacity()) + static_cast<std::size_t>(getSegmentSize()) > MaximumNumberOfSlots) {
@@ -124,14 +126,14 @@ tarch::accelerator::ChunkedMemoryPool<T>::appendSegment() {
  * location of the pool, so a device view reads device memory only.
  */
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::uploadSegmentTable() {
   _segmentTable.allocate(_segmentBasesOnHost.size());
   _segmentTable.copyFromHost(_segmentBasesOnHost.data(), _segmentBasesOnHost.size());
 }
 
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::release() noexcept {
   _segments.clear();
   _segmentBasesOnHost.clear();
@@ -143,7 +145,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::release() noexcept {
  * Resizes target to the padded chunks of every slot of the pool and copies them into it.
  */
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::copyToHost(std::vector<T>& target) const {
   const auto valuesPerSegment = static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize);
   target.resize(_segments.size() * valuesPerSegment);
@@ -153,10 +155,10 @@ tarch::accelerator::ChunkedMemoryPool<T>::copyToHost(std::vector<T>& target) con
 }
 
 /**
- * Overwrites the padded chunks of every slot of the pool from source, which holds what copyToHost() writes.
+ * Overwrites the padded chunks of every slot of the pool from source in the layout of copyToHost().
  */
 template <typename T>
-void
+INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::copyFromHost(const std::vector<T>& source) {
   const auto valuesPerSegment = static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize);
   assertion(source.size() == _segments.size() * valuesPerSegment, source.size(), _segments.size(), valuesPerSegment);

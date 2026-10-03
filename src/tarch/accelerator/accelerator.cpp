@@ -11,10 +11,6 @@ namespace {
   std::atomic<bool> loggedMissingTaskloopSupport{false};
 } // namespace
 
-/**
- * Writes one warning per run that this toolchain offers no OpenMP taskloop. parallelFor() is a
- * template, so its fallback branch reaches this function from every translation unit that uses it.
- */
 void
 tarch::accelerator::reportMissingTaskloopSupportOnce() {
   if (not loggedMissingTaskloopSupport.exchange(true, std::memory_order_relaxed)) {
@@ -154,8 +150,8 @@ namespace {
 } // namespace
 
 /**
- * Selects the device of every kernel launch and of every allocation that names no device, for
- * every host thread. tarch::init() selects the device of the rank before the first allocation.
+ * Sets the device of every kernel launch and of every allocation without an explicit device, for
+ * all host threads. tarch::init() sets the device of the rank before the first allocation.
  */
 void
 tarch::accelerator::setCurrentDevice(const int device) {

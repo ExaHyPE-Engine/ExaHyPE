@@ -45,10 +45,8 @@ peano4::grid::AutomatonState::toString() const {
 }
 
 /**
- * Derives the states of the children of a cell. A child's slot in
- * fineGridStates is its position within the parent with the first axis
- * running fastest. The active curve supplies every child's position and curve
- * state.
+ * Derives the states of the children of a cell. The array fineGridStates stores the children by
+ * their linearised position in the parent, with the first axis running fastest.
  */
 void
 peano4::grid::AutomatonState::refineState(

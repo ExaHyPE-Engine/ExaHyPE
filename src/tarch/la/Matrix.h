@@ -29,9 +29,9 @@ public:
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar& operator()(int rowIndex, int colIndex);
   INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& operator()(int rowIndex, int colIndex) const;
 
-  std::string toString() const;
+  INLINE_METHOD std::string toString() const;
 
-  std::string toPrettyString(int numberOfDigits = 4) const;
+  INLINE_METHOD std::string toPrettyString(int numberOfDigits = 4) const;
 
   template <typename NewScalarType>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, NewScalarType> convertScalar() const;

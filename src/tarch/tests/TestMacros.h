@@ -3,10 +3,8 @@
 #pragma once
 
 /**
- * Calls a test method and writes a line to std::cerr when the method failed. The
- * validate macros of this file set the member _error the check reads.
- *
- * @param name Name of the method to call, written without parentheses.
+ * Calls the test method name, given without parentheses, and reports on std::cerr when a validate
+ * macro failed inside it.
  */
 #define testMethod(name) \
   { \
@@ -144,8 +142,7 @@
 /**
  * Compares two buffers of doubles entry by entry and fails the test when an entry of actual differs
  * from its entry of valid by more than tarch::tests::MaxUnitsInTheLastPlace units in the last place
- * of the largest magnitude of valid. Two compilers that fuse different multiply-adds, such as a host
- * and a device compiler, round one computation within this bound.
+ * of the largest magnitude of valid.
  */
 #define validateNumericalBuffersEquals(actual, valid) \
   { \

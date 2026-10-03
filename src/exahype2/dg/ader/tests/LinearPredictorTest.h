@@ -48,6 +48,7 @@ private:
   void testTheScratchBlocksFollowEachOtherWithoutOverlap();
   void testATermTheSolverLacksHasZeroExtent();
   void testThePredictorWritesTheTimeAveragesAndTheFacesAndLeavesTheCellState();
+  void testASolverWithoutFluxGetsZeroFaceFluxes();
   void testEveryCellOfADeviceRangeSelectsItsPointSources();
   void testEveryCellOfADeviceRangeMatchesTheHostPredictor();
 };

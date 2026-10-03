@@ -65,12 +65,11 @@ peano4::communication::tests::CommunicationManagerTest::testTagsAreDistinctAndEv
 }
 
 /**
- * The exchange communicator is a communicator of its own with the rank layout of the global
- * one.
+ * The exchange communicator differs from the global one and has the same ranks.
  */
 void
 peano4::communication::tests::CommunicationManagerTest::testTheExchangeCommunicatorIsSeparate() {
-  const MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
+  MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
   validate(communicator != MPI_COMM_NULL);
   validate(communicator != tarch::mpi::Rank::getInstance().getCommunicator());
 
@@ -83,8 +82,7 @@ peano4::communication::tests::CommunicationManagerTest::testTheExchangeCommunica
 }
 
 /**
- * A registered transfer is polled until its poll reports completion, and the progress engine
- * reports itself idle afterwards.
+ * The manager polls a registered transfer until it reports completion and then stops polling it.
  */
 void
 peano4::communication::tests::CommunicationManagerTest::testAPolledTransferCompletes() {

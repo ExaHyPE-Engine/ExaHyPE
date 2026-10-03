@@ -8,15 +8,10 @@ tarch::instrumentation::Watch::Watch(
   [[maybe_unused]] const std::string& className,
   const std::string&                  operationName,
   const bool                          plotResultInDestructor,
-  bool                                startToTickImmediately
+  const bool                          startToTickImmediately
 ) :
   _plotResultInDestructor(plotResultInDestructor),
-  _operationName(operationName),
-  _startClockTicks(0),
-  _startTime(),
-  _elapsedClockTicks(0),
-  _elapsedTime(),
-  _isRunning(startToTickImmediately) {
+  _operationName(operationName) {
   if (startToTickImmediately) {
     start();
   }
@@ -28,20 +23,10 @@ tarch::instrumentation::Watch::~Watch() {
   }
 
   if (_plotResultInDestructor) {
-    if (_operationName.empty()) {
-      logInfo(
-        "Total number of clock ticks within block (CPU time, calendar time): " << "(" << getCPUTime() << "s"
-                                                                               << "," << getCalendarTime() << "s"
-                                                                               << ")"
-      );
-    } else {
-      logInfo(
-        "Operation " << _operationName << ": Total number of clock ticks within block (CPU time, calendar time): "
-                     << "(" << getCPUTime() << "s"
-                     << "," << getCalendarTime() << "s"
-                     << ")"
-      );
-    }
+    logInfo(
+      (_operationName.empty() ? std::string("Block") : "Operation " + _operationName)
+      << ": CPU time " << getCPUTime() << " s, calendar time " << getCalendarTime() << " s."
+    );
   }
 }
 
@@ -74,14 +59,13 @@ tarch::instrumentation::Watch::stop() {
  */
 double
 tarch::instrumentation::Watch::getCPUTime() const {
-  const double elapsedTicks   = static_cast<double>(_elapsedClockTicks);
-  const double ticksPerSecond = static_cast<double>(CLOCKS_PER_SEC);
+  const auto elapsedTicks   = static_cast<double>(_elapsedClockTicks);
+  const auto ticksPerSecond = static_cast<double>(CLOCKS_PER_SEC);
   return elapsedTicks / ticksPerSecond;
 }
 
 /**
- * Returns the elapsed calendar time between the start and the stop command of
- * the timer, i.e. the wall clock time, in seconds.
+ * Returns the wall clock time in seconds between start() and stop().
  */
 double
 tarch::instrumentation::Watch::getCalendarTime() const {

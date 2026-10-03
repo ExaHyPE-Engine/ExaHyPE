@@ -70,8 +70,7 @@ namespace {
   }
 
   /**
-   * Writes a three-dimensional fixture. The values are stored as value(z, y, x), which is
-   * the layout the sampler's flat index assumes, so the first coordinate varies fastest.
+   * Writes a 3D fixture that stores its values as value(z, y, x).
    */
   std::string writeTempNetCDF3DFile(
     const std::string&         stem,

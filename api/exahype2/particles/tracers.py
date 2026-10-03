@@ -8,9 +8,9 @@ from .forces import Forces
 class Tracers:
     """The tracer particles one solver moves through its solution.
 
-    ``particle_attributes`` is the number of data entries per particle or a dictionary with an
-    ``unknowns`` dictionary of named entries. The insertions run once at the start of the grid
-    initialisation on the rank whose partition holds the position.
+    ``particle_attributes`` is the number of data entries per particle, or a dictionary whose
+    ``unknowns`` entry maps names to entry counts. The grid initialisation inserts every
+    particle once, on the rank that owns the cell at its position.
     """
 
     def __init__(self, name, particle_attributes):
@@ -66,9 +66,9 @@ class Tracers:
         return self._database is not None
 
     def insert_by_coordinates(self, coordinates, transform=None):
-        """Adds one particle per coordinate with zero data; a coordinate carries at least one
-        component per axis of the build. ``transform`` names a C++ callable of the solver that
-        maps every coordinate onto the position the particle takes."""
+        """Adds one particle with zero data per coordinate. A coordinate has at least one
+        component per axis of the build. ``transform`` is a C++ callable of the solver that maps
+        every coordinate to the particle position."""
         for coordinate in coordinates:
             entries = [float(component) for component in coordinate]
             if len(entries) < 2:
@@ -85,10 +85,10 @@ class Tracers:
         return self
 
     def sample_face_traces(self, normal, position, difference_fields=()):
-        """Writes into every particle on the plane at ``position`` along the axis ``normal``
-        the mean of the two traces of the solution on its face, and for the unknowns of
-        ``difference_fields`` the trace of the upper cell minus the trace of the lower cell;
-        both arguments are C++ expressions the solver evaluates."""
+        """Writes the mean of the two solution traces on its face into every particle on the
+        plane at ``position`` along the axis ``normal``. For the unknowns in
+        ``difference_fields``, a particle receives the trace of the upper cell minus the trace
+        of the lower cell. ``normal`` and ``position`` are C++ expressions."""
         self._face_traces = {
             "NORMAL": str(normal),
             "POSITION": str(position),
@@ -101,8 +101,8 @@ class Tracers:
         return self._face_traces is not None
 
     def insert_with_data(self, values, unknowns_per_particle=None):
-        """Adds particles with data: ``values`` is a C++ initialiser list, or a list of lists,
-        with the coordinates followed by the data entries per particle."""
+        """Adds particles with data. ``values`` is a C++ initialiser list or a list of lists,
+        with the coordinates of each particle followed by its data entries."""
         if (
             unknowns_per_particle is not None
             and int(unknowns_per_particle) != self._number_of_data
@@ -126,8 +126,8 @@ class Tracers:
         save_initial_position=False,
         initial_position_index=(1, 2, 3),
     ):
-        """Adds one particle per line of a coordinate file; ``save_initial_position`` writes
-        the coordinates into the data entries ``initial_position_index`` names."""
+        """Adds one particle per line of a coordinate file. ``save_initial_position`` copies
+        the coordinates into the data entries at ``initial_position_index``."""
         indices = [int(index) for index in initial_position_index]
         if len(indices) not in (2, 3):
             raise ValueError("The initial position needs one data index per axis.")
@@ -157,9 +157,10 @@ class Tracers:
         initial_record_time=-1,
         last_record_time=1e8,
     ):
-        """Appends a snapshot of every particle to a CSV file after every trace, once the
-        particle moved further than the position delta or more time than the time delta
-        passed, within the closed record window."""
+        """Appends a snapshot of a particle to a CSV file after a trace once the particle moved
+        further than the position delta or the time delta passed since its last snapshot. The
+        database records only between ``initial_record_time`` and ``last_record_time``, both
+        included."""
         self._database = {
             "FILENAME": str(filename),
             "POSITION_DELTA": repr(float(position_delta_between_two_snapshots)),

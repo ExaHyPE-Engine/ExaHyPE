@@ -17,8 +17,8 @@ peano4::communication::CommunicationManager::getInstance() {
 }
 
 /**
- * Determines the tag space every rank can address, creates the exchange communicator and
- * starts the progress engine with the transfer poller. Collective over all ranks.
+ * Reduces the tag upper bound over all ranks, duplicates the global communicator and starts the
+ * progress engine with the transfer poller. Every rank calls this function at the same time.
  */
 void
 peano4::communication::CommunicationManager::init() {
@@ -53,10 +53,9 @@ peano4::communication::CommunicationManager::init() {
 }
 
 /**
- * Completes every posted transfer, stops the progress engine and releases the exchange
- * communicator. The leading barrier keeps a rank from freeing while a neighbour still
- * exchanges, and the trailing one keeps a rank from running ahead into the rest of the
- * shutdown while a neighbour still holds the communicator.
+ * Completes every posted transfer, stops the progress engine and frees the exchange communicator.
+ * The two barriers keep a rank from freeing the communicator or leaving the shutdown while a
+ * neighbour still uses it.
  */
 void
 peano4::communication::CommunicationManager::shutdown() {
@@ -80,8 +79,8 @@ peano4::communication::CommunicationManager::getCommunicator() const {
 }
 
 /**
- * Returns the next unused tag of the exchange communicator. Every rank reserves its tags in
- * the same order, so the partners of an exchange hold the same tag without agreeing on it.
+ * Returns the next unused tag of the exchange communicator. Every rank reserves its tags in the
+ * same order, so both partners of an exchange get the same tag without communication.
  */
 int
 peano4::communication::CommunicationManager::reserveTag() {
@@ -95,9 +94,8 @@ peano4::communication::CommunicationManager::reserveTag() {
 }
 
 /**
- * Adds one posted transfer to the poller's list. The push is lock-free, so several threads post
- * concurrently: A poster replaces the list head and the poller takes the whole list in one
- * exchange.
+ * Pushes one posted transfer onto the lock-free stack of new transfers. Several threads may push at
+ * the same time, and the poller takes the whole stack in one exchange.
  */
 void
 peano4::communication::CommunicationManager::registerInFlightTransfer(std::function<bool()> pollTransfer) {
@@ -110,7 +108,7 @@ peano4::communication::CommunicationManager::registerInFlightTransfer(std::funct
 }
 
 /**
- * Polls every in-flight transfer once and drops the completed ones. Returns true when nothing
+ * Polls every in-flight transfer once and removes the completed ones. Returns whether no transfer
  * is left in flight.
  */
 bool

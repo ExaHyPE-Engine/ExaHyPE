@@ -10,9 +10,8 @@
 
 std::chrono::steady_clock::time_point tarch::instrumentation::Log::_startupTime{std::chrono::steady_clock::now()};
 
-// The default configuration and the snapshot store are heap objects that are
-// never freed. Destructors of other globals still write log messages, so the
-// configuration these pointers name stays valid throughout static destruction.
+// The default configuration and the snapshot store are never freed, because destructors of other
+// globals still write log messages.
 const tarch::instrumentation::Log::Configuration* const tarch::instrumentation::Log::_defaultConfiguration{
   new tarch::instrumentation::Log::Configuration{}
 };
@@ -187,8 +186,8 @@ tarch::instrumentation::Log::extractQualifiedFunctionName(std::string_view funct
 }
 
 /**
- * Returns a scope label such as namespace::Class::method(), derived from the
- * compiler function signature the macro call site passes in.
+ * Returns a scope label such as namespace::Class::method() from the function signature of the call
+ * site. A signature without a qualified name yields the file stem and the function name.
  */
 std::string
 tarch::instrumentation::Log::makeScopeName(

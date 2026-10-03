@@ -10,9 +10,8 @@
 
 TARGET_DECLARE
 /**
- * Writes the first unknowns of the nodal polynomial of the cell at position into the particle:
- * The k-th index of FieldIndices names the data entry that receives unknown k. The scheme None
- * writes nothing, every other scheme evaluates the polynomial.
+ * Writes unknown k of the cell polynomial at position into the particle data entry that is the
+ * k-th index of FieldIndices. The scheme None writes nothing.
  */
 template <int NodesPerAxis, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -46,9 +45,6 @@ exahype2::dg::interpolateFields(
   (particle.setData(FieldIndices, interpolateUnknown(unknown++)), ...);
 }
 
-/**
- * Interpolates the fields the list names; the list carries the entries as a type.
- */
 template <int NodesPerAxis, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::interpolateFields(
@@ -72,9 +68,6 @@ exahype2::dg::interpolateFields(
   );
 }
 
-/**
- * Returns whether value is one of the entries of the list.
- */
 template <int... Fields>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::dg::listsValue([[maybe_unused]] const exahype2::particles::FieldList<Fields...> fields, const int value) {
@@ -82,9 +75,8 @@ exahype2::dg::listsValue([[maybe_unused]] const exahype2::particles::FieldList<F
 }
 
 /**
- * Returns one value of the nodal polynomial of a face at position. The array values holds the
- * face nodes in the order of the tangential axes with the lower axis fastest, valuesPerNode
- * values each.
+ * Returns entry value of the nodal face polynomial at position. values stores valuesPerNode
+ * entries per face node, the lower tangential axis fastest.
  */
 template <int NodesPerAxis, typename Storage>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -125,11 +117,11 @@ exahype2::dg::evaluateFacePolynomial(
 TARGET_DECLARE_END
 
 /**
- * Writes the traces of the faces along normal into every particle of the set that sits on the
- * plane at position. The values of DifferenceFields carry the jump across the face.
+ * Writes the face values into every particle on the plane at position along normal. The fields
+ * DifferenceFields receive the jump across the face.
  */
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, int... DifferenceFields, typename Pool>
-void
+INLINE_METHOD void
 exahype2::dg::traceFaceValues(
   const peano4::Partition&                                partition,
   const Pool&                                             faceStates,
@@ -215,13 +207,11 @@ exahype2::dg::TraceFaceValues<NodesPerAxis, NumberOfData, NumberOfParticleData, 
 }
 
 /**
- * Moves every particle of the set through the solution of its cell and sends every particle that
- * left its cell to the rank that holds it. A stage position of the integration outside the cell
- * reads the polynomial extended beyond it. Only a set that moves copies its values back to the
- * host, for the relocation.
+ * Moves every particle through the solution of its cell and relocates every particle that left
+ * its cell. An integration stage outside the cell evaluates the cell polynomial beyond the cell.
  */
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
-void
+INLINE_METHOD void
 exahype2::dg::traceParticles(
   const peano4::Partition&                                partition,
   const Pool&                                             solution,

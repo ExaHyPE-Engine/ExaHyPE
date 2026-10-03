@@ -6,8 +6,8 @@
 
 namespace {
   /**
-   * Packs a lattice position the way the spacetree serialises one, so
-   * neighbouring positions differ in their low bits alone.
+   * Packs a lattice position like Tree::serialiseLatticeKey(), so neighbouring positions differ in
+   * their low bits only.
    */
   std::int64_t getLatticeKey(const int firstAxisPosition, const int secondAxisPosition) {
     constexpr int BitsPerAxis = 21;
@@ -36,7 +36,8 @@ peano4::grid::tests::LatticeIndexMapTest::run() {
 }
 
 /**
- * An empty map holds no bytes, a reserved one the key and value arrays of its capacity, which a clear keeps.
+ * The allocated bytes are zero for an empty map and the key and value arrays of the capacity after
+ * reserve() and clear().
  */
 void
 peano4::grid::tests::LatticeIndexMapTest::testBytesCountTheKeyAndValueArrays() {
@@ -203,7 +204,6 @@ peano4::grid::tests::LatticeIndexMapTest::testClearReleasesEveryEntry() {
   validateEquals(map.find(getLatticeKey(0, 1)), 5);
   validateEquals(map.getSize(), 1);
 
-  // Reserving drops what the map held.
   map.reserve(8);
   validateEquals(map.getSize(), 0);
   validateEquals(map.find(getLatticeKey(0, 1)), peano4::grid::LatticeIndexMap::NoEntry);
@@ -259,8 +259,7 @@ peano4::grid::tests::LatticeIndexMapTest::testEraseReportsWhetherItRemoved() {
 }
 
 /**
- * An erase leaves a tombstone, so a probe run still reaches every entry behind
- * the erased slot.
+ * A probe still reaches every entry behind an erased slot.
  */
 void
 peano4::grid::tests::LatticeIndexMapTest::testProbeChainsSurviveAnErase() {
@@ -292,8 +291,7 @@ peano4::grid::tests::LatticeIndexMapTest::testProbeChainsSurviveAnErase() {
 }
 
 /**
- * An erased slot takes an entry again, and the growth that drops the tombstones
- * keeps every key.
+ * An erased slot takes an entry again, and the growth that drops the tombstones keeps every key.
  */
 void
 peano4::grid::tests::LatticeIndexMapTest::testErasedSlotsTakeEntriesAgain() {

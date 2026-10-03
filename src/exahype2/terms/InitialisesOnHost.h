@@ -3,9 +3,6 @@
 #pragma once
 
 namespace exahype2::terms {
-  /**
-   * A solver whose initial condition runs on the host and uploads the cells afterwards sets this constant.
-   */
   template <typename SolverType>
   concept InitialisesOnHost = requires {
     { SolverType::InitialisesOnHost } -> std::convertible_to<bool>;

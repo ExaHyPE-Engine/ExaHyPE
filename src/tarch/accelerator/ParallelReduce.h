@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelRegion.h"
 #include "tarch/accelerator/Range.h"
@@ -35,13 +36,13 @@
 
 namespace tarch::accelerator {
   template <typename Reducer, typename Functor>
-  void parallelReduce(const Range& range, Functor functor, Reducer reducer);
+  INLINE_METHOD void parallelReduce(const Range& range, Functor functor, Reducer reducer);
   template <typename Reducer, typename Functor>
-  void parallelReduce(const RangeMD<2>& range, Functor functor, Reducer reducer);
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, Functor functor, Reducer reducer);
   template <typename Reducer, typename Functor>
-  void parallelReduce(const RangeMD<3>& range, Functor functor, Reducer reducer);
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, Functor functor, Reducer reducer);
   template <typename Reducer, typename Functor>
-  void parallelReduce(const TeamRange& range, Functor functor, Reducer reducer);
+  INLINE_METHOD void parallelReduce(const TeamRange& range, Functor functor, Reducer reducer);
 
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
   template <typename Reducer>

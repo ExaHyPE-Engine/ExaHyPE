@@ -9,8 +9,8 @@ namespace peano4::tests {
 } // namespace peano4::tests
 
 /**
- * Checks that an exchange fills the remote half of every exchanged face with the half the
- * neighbour rank wrote, leaves every other face untouched and serves one partition after another.
+ * Checks that an exchange fills the remote half of every exchanged face with the half the neighbour
+ * rank wrote, leaves every other face unchanged and works again after a rebuild.
  */
 class peano4::tests::HaloExchangeTest final : public tarch::tests::TestCase {
 public:

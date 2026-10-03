@@ -11,8 +11,8 @@ namespace exahype2::plotter {
 } // namespace exahype2::plotter
 
 /**
- * Holds the writers of one plot series: One file writer per snapshot and one time series
- * writer for the whole series.
+ * Writers of one plot series: One file writer per snapshot and one time series writer for the
+ * series.
  */
 class exahype2::plotter::Snapshot final {
 public:

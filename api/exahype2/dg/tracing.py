@@ -4,10 +4,10 @@ import textwrap
 
 
 def render_tracer_update(tracer, quadrature):
-    """Returns the C++ call that moves one tracer set through the nodal polynomial of a DG
-    solver family, or that samples the traces of the solution on the faces of the set's plane;
-    ``quadrature`` names the generated quadrature table class. A set that samples face traces
-    and records them samples only when its database or its error measurement records."""
+    """Returns the C++ call that moves one tracer set through the DG solution or samples the
+    face traces on the plane of the set. ``quadrature`` is the generated quadrature table
+    class. A set with a database or an error measurement samples the face traces only when one
+    of them has a snapshot due."""
     if tracer["FACE_TRACES"]:
         fields = "".join(
             ", {}".format(field) for field in tracer["FACE_TRACES"]["DIFFERENCE_FIELDS"]

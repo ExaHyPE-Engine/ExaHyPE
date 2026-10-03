@@ -14,8 +14,7 @@ namespace {
   using Setup = exahype2::fv::tests::HaloProfileSetup;
 
   /**
-   * Stands in for a generated solver: The patch layout of the halo profile with every value an unknown, which is all
-   * the transfer reads.
+   * Solver stand-in with the patch layout the transfer reads.
    */
   struct PatchLayout final {
     static constexpr int PatchSize                  = Setup::DofsPerAxis;
@@ -45,9 +44,6 @@ exahype2::fv::tests::KernelsTest::run() {
   testMethod(testRestrictionFromTheChildrenAveragesTheCoveredVolumes);
 }
 
-/**
- * A cell that survives the regrid keeps every value of its old slot.
- */
 void
 exahype2::fv::tests::KernelsTest::testCopyKeepsEveryValue() {
   CellPool pool(Setup::ValuesPerCell, tarch::MemoryLocation::Heap);
@@ -62,9 +58,6 @@ exahype2::fv::tests::KernelsTest::testCopyKeepsEveryValue() {
   }
 }
 
-/**
- * Every volume of a new child takes the value of the parent volume that covers it.
- */
 void
 exahype2::fv::tests::KernelsTest::testInterpolationFromTheParentCopiesTheCoveringVolume() {
   CellPool pool(Setup::ValuesPerCell, tarch::MemoryLocation::Heap);
@@ -90,9 +83,6 @@ exahype2::fv::tests::KernelsTest::testInterpolationFromTheParentCopiesTheCoverin
   }
 }
 
-/**
- * Every volume of a coarsened parent takes the mean of the child volumes it covers.
- */
 void
 exahype2::fv::tests::KernelsTest::testRestrictionFromTheChildrenAveragesTheCoveredVolumes() {
   CellPool pool(Setup::ValuesPerCell, tarch::MemoryLocation::Heap);

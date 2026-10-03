@@ -37,8 +37,8 @@ def userIncludes():
 
 
 def init_grid_step_implementation(scenario_perturbations):
-    """Returns the grid initialisation of the curvilinear solver, in which the scenario sets the
-    local faultNormal and faultPosition, followed by the copy of the fault plane to the devices.
+    """Returns the curvilinear grid initialisation, in which scenario_perturbations writes the
+    locals faultNormal and faultPosition for FaultPlane::set().
     """
     return CurvilinearElastic.init_grid_step_implementation(
         """
@@ -63,5 +63,5 @@ def fault_position():
 
 
 def fault_face_predicate():
-    """Returns the C++ expression that holds for a face on the fault plane."""
+    """Returns the C++ expression that is true for a face on the fault plane."""
     return FAULT_PLANE + ".containsFace(x, h, normal)"

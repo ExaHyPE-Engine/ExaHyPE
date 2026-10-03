@@ -3,9 +3,9 @@
 #include "ADERDGSolver.h"
 
 namespace {
-  constexpr double Rho        = 1.0;                      // density
-  constexpr double Cp         = 2.0;                      // P-wave (compressional) speed
-  constexpr double Cs         = 1.0;                      // S-wave (shear) speed
+  constexpr double Rho        = 1.0;
+  constexpr double Cp         = 2.0;                      // Compressional wave speed
+  constexpr double Cs         = 1.0;                      // Shear wave speed
   constexpr double Mu         = Rho * Cs * Cs;            // Lamé parameter mu
   constexpr double Lambda     = Rho * Cp * Cp - 2.0 * Mu; // Lamé parameter lambda
   constexpr double InverseRho = 1.0 / Rho;

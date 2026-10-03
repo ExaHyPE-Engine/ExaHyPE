@@ -10,9 +10,6 @@ namespace applications::exahype2::exaskred {
   INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getWaterAdmissibilityPhysics();
 } // namespace applications::exahype2::exaskred
 
-/**
- * Returns the physical parameters of the granular layer.
- */
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
 applications::exahype2::exaskred::getSlidePhysics() {
   return {
@@ -89,7 +86,7 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
 }
 
 /**
- * Refines a cell that carries slide material or a disturbed water surface and erases every other cell.
+ * Refines a cell with slide material or a disturbed water surface and erases every other cell.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
@@ -253,9 +250,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
 }
 
 /**
- * Returns whether both layers are finite, non-negative and at rest where dry, and whether the
- * granular layer keeps its friction stiffness integrable and its nodal height surface below the
- * curvature bound.
+ * Returns whether both layers are finite, non-negative and at rest where dry. The granular layer
+ * also needs an integrable friction stiffness and a bounded height curvature.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
@@ -301,8 +297,8 @@ applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
 }
 
 /**
- * Returns at least a decimetre floor for the water observables, since fjord waves reach metres and
- * the millimetre-scale admissibility threshold would flag every wave cell.
+ * Returns at least waterDmpRelaxation for the water observables. A relaxation as small as the dry
+ * threshold would flag every wave cell of the fjord.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(

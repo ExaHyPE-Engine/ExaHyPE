@@ -24,13 +24,9 @@ namespace exahype2::dg::ader::tests {
 
 TARGET_DECLARE
 /**
- * The space-time predictor of a linear system. predict() runs the Cauchy-Kovalewski recursion,
- * which builds the Taylor coefficients of the state of one cell of Derived one at a time and
- * integrates them over the time step, adds the point sources inside the cell to the coefficients
- * and writes the time-averaged face states and face fluxes onto the faces of the cell. Derived is
- * the generated solver class: Its DGOrder, NumberOfUnknowns and NumberOfAuxiliaryVariables fix the
- * layout, its static methods are the PDE terms, and a term it does not declare has no buffer and no
- * code. Every quantity is stored with the padded strides of exahype2::dg::PaddedLayout.
+ * The Cauchy-Kovalewski space-time predictor of a linear system. A term that Derived does not
+ * declare has no buffer and no code. Every buffer uses the padded strides of
+ * exahype2::dg::PaddedLayout.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::ader::LinearPredictor final {
@@ -48,10 +44,9 @@ public:
   static constexpr bool AccumulatesSource          = EvaluateSource;
 
   /**
-   * Extents and offsets of the one scratch block of predict(). The block holds the current Taylor
-   * coefficient of the state, the time-averaged state, the flux, one differentiated line of nodes
-   * and the point source samples. After predict() the flux holds the flux of the time-averaged
-   * state. A term Derived does not declare has extent zero.
+   * The extents and offsets of the scratch block of predict(). After predict(), the flux block
+   * stores the spatial terms of the time-averaged state along every axis: The flux derivative, the
+   * nonconservative product and the point sources.
    */
   struct Scratch final {
     static constexpr int StateSize             = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;

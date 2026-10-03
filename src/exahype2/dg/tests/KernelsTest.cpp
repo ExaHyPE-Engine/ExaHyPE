@@ -20,9 +20,6 @@
 
 namespace {
   TARGET_DECLARE
-  /**
-   * Stands in for a generated solver of order two with two unknowns and one auxiliary variable.
-   */
   struct Order2Layout {
     static constexpr int DGOrder                    = 2;
     static constexpr int NumberOfUnknowns           = 2;
@@ -56,9 +53,6 @@ namespace {
     }
   };
 
-  /**
-   * A diffusive flux that sums one plus the axis number times the gradient along that axis.
-   */
   struct DiffusiveFluxSolver final : Order2Layout {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       [[maybe_unused]] const double* NOALIAS const                  state,
@@ -104,7 +98,7 @@ namespace {
     double flux[peano4::FacesPerCell][FaceNodes * NumberOfUnknowns]{};
   };
 
-  // Gauss-Legendre nodes of three points on the unit interval.
+  // The nodes of the three-point Gauss-Legendre rule on the unit interval.
   const double QuadratureNodes[NodesPerAxis] = {0.5 * (1.0 - std::sqrt(0.6)), 0.5, 0.5 * (1.0 + std::sqrt(0.6))};
 
   /**
@@ -181,7 +175,7 @@ namespace {
   }
 
   /**
-   * Returns the cell node that carries the face node of the face along direction in layer normalIndex.
+   * Returns the cell node of face node faceNode at position normalIndex along direction.
    */
   int getCellNodeOf(const int direction, const int faceNode, const int normalIndex) {
     int lowerAxesStride = 1;
@@ -213,8 +207,7 @@ namespace {
   }
 
   /**
-   * Returns the position of a face node: The face centre along the normal and, along the
-   * tangential axes in ascending order, the quadrature node of the lexicographic face index.
+   * Returns the position of face node faceNode on the face faceNumber.
    */
   tarch::la::Vector<DIMENSIONS, double> getNodePositionOf(const int faceNumber, const int faceNode) {
     const int  direction  = faceNumber % DIMENSIONS;
@@ -240,9 +233,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Stands in for a generated solver of order one with two unknowns and Auxiliary auxiliary variables.
-   */
   template <int Auxiliary>
   struct Order1Layout {
     static constexpr int DGOrder                    = 1;
@@ -256,7 +246,8 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * Reports the first entry of the state as the wave speed, so a test steers the wave speed of each side.
+   * Returns the first entry of the state as the wave speed, so a test sets the wave speed of each
+   * side.
    */
   struct FirstEntryEigenvalue {
     static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
@@ -290,9 +281,6 @@ namespace {
     }
   };
 
-  /**
-   * A nonconservative product that adds the state jump of the unknowns.
-   */
   struct JumpProduct {
     static INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
       [[maybe_unused]] const double* NOALIAS const                  state,
@@ -331,7 +319,7 @@ namespace {
   };
 
   /**
-   * Doubles whatever it is handed, which shows that the matrix ran.
+   * Doubles the values, so a test sees that the matrix ran.
    */
   struct DoublingMaterial {
     static INLINE_METHOD GPU_CALLABLE_METHOD void multiplyMaterialParameterMatrix(
@@ -360,7 +348,7 @@ namespace {
   TARGET_DECLARE_END
 
   /**
-   * Weights that sum to one, so a uniform state averages to itself.
+   * Writes weights that sum to one, so a uniform state averages to itself.
    */
   void fillNormalisedWeights(double (&faceQuadratureWeights)[RiemannFaceNodes]) {
     for (int faceNode = 0; faceNode < RiemannFaceNodes; faceNode++) {
@@ -382,7 +370,7 @@ namespace {
   constexpr double UpperOwnFlux  = 20.0;
 
   /**
-   * Stands in for a generated solver of order one with one unknown; Linear picks the Riemann solver.
+   * A solver layout whose IsLinear selects the Riemann solver.
    */
   template <bool Linear>
   struct FaceLayout {
@@ -393,7 +381,8 @@ namespace {
   };
 
   /**
-   * Returns one number whose decimal digits hold the arguments a face kernel passes to the solver.
+   * Returns one number whose decimal digits encode the arguments a face kernel passes to the
+   * solver.
    */
   INLINE_METHOD GPU_CALLABLE_METHOD double encodeFaceArguments(
     const double timeStamp,
@@ -406,7 +395,8 @@ namespace {
   }
 
   /**
-   * Returns the wave speed at the time stamp of the tests only and a constant outside state.
+   * Terms with a wave speed that is nonzero only at the time stamp of the tests and a constant
+   * outside state.
    */
   struct FaceTerms {
     static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
@@ -438,7 +428,7 @@ namespace {
   struct LinearFaceSolver final : FaceLayout<true>, FaceTerms {};
 
   /**
-   * Its own Riemann solver adds the encoded face arguments to the fluxes of both sides.
+   * A solver whose Riemann solver adds the encoded face arguments to the fluxes of both sides.
    */
   struct FaceSolverWithRiemannSolver final : FaceLayout<false>, FaceTerms {
     static INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblem(
@@ -464,9 +454,6 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Holds the two halves of one face: The face states and the face fluxes of both sides.
-   */
   struct Face final {
     double faceState[2 * FaceStateSize]{};
     double faceFlux[2 * FaceFluxSize]{};
@@ -481,9 +468,6 @@ namespace {
     }
   }
 
-  /**
-   * Runs the Riemann solve of one face with the Riemann solver of Solver.
-   */
   template <typename Solver>
   void solveFace(Face& face, const int direction, const int boundaryFaceNumber) {
     const double quadraturePoints[2] = {0.0, 1.0};
@@ -506,7 +490,7 @@ namespace {
   }
 
   /**
-   * Stands in for a generated solver of order two with two unknowns; a face integral reads no auxiliary variable.
+   * A solver layout without NumberOfAuxiliaryVariables, which a face integral does not read.
    */
   struct FaceIntegralLayout {
     static constexpr int DGOrder          = 2;
@@ -569,8 +553,7 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * Reports the first unknown plus the axis number plus a quarter of the first coordinate, so
-   * the state, the direction and the node position all reach the result.
+   * A solver whose wave speed depends on the state, the direction and the node position.
    */
   struct EigenvalueStubSolver final {
     static constexpr int DGOrder                    = 1;
@@ -595,7 +578,7 @@ namespace {
   constexpr int ValuesPerTransferCell = TransferSetup::CellNodes * TransferSetup::ValuesPerNode;
 
   /**
-   * Stands in for a generated solver with the node layout of the transfer setup and every value an unknown.
+   * A solver layout with the nodes of the transfer setup and every value an unknown.
    */
   struct TransferLayout final {
     static constexpr int DGOrder                    = TransferSetup::NodesPerAxis - 1;
@@ -615,7 +598,7 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * Writes the state of one cell into the half of each of its faces that lies on its own side.
+   * Writes the state of one cell into its own half of each of its faces.
    */
   struct ExtrapolateStateOfCell final {
     const double*        cellStates{nullptr};
@@ -625,7 +608,7 @@ namespace {
     const double*        rightFaceCoefficients{nullptr};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int cell) const {
-      // The two cells at a face never touch the same entries.
+      // The two cells of a face write disjoint halves.
       double* facesOfCell[peano4::FacesPerCell];
       for (int face = 0; face < peano4::FacesPerCell; face++) {
         facesOfCell[face] = faceStates + faceIndices[cell * peano4::FacesPerCell + face] * Setup::FaceStateCardinality
@@ -672,7 +655,7 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * Writes the flux of one cell into the half of each of its faces that lies on its own side.
+   * Writes the flux of one cell into its own half of each of its faces.
    */
   struct ExtrapolateFluxOfCell final {
     const double*        cellStates{nullptr};
@@ -747,7 +730,7 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * Writes the flux of one side of one work face; the two sides write disjoint halves of the buffer.
+   * Writes the flux of one side of one work face. The two sides write disjoint halves.
    */
   struct EvaluateFluxOnFaceSide final {
     const double*        faceStates{nullptr};
@@ -879,9 +862,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Writes the Riemann flux of both sides of one work face.
-   */
   struct SolveRiemannProblemOfFace final {
     const double*        faceStates{nullptr};
     double*              faceFluxes{nullptr};
@@ -949,9 +929,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Writes the flux of the linear Riemann problem of both sides of one work face.
-   */
   struct SolveLinearRiemannProblemOfFace final {
     const double*        faceStates{nullptr};
     double*              faceFluxes{nullptr};
@@ -1019,9 +996,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Adds the integrals of the two faces along every axis of one cell to its estimate.
-   */
   struct AddFaceIntegralsOfCell final {
     double*              rightHandSideEstimates{nullptr};
     const double*        faceFluxes{nullptr};
@@ -1115,9 +1089,6 @@ namespace {
   }
 
   TARGET_DECLARE
-  /**
-   * Raises the maximum to the eigenvalue statistics of one cell.
-   */
   struct RaiseMaxEigenvaluesOfCell final {
     const double* cellStates{nullptr};
     const double* cellCentres{nullptr};
@@ -1280,7 +1251,7 @@ exahype2::dg::tests::KernelsTest::testAConstantStateReachesEveryFace() {
   double*     flux[peano4::FacesPerCell];
   collectPointers(buffers, state, flux);
 
-  // Constants without an exact binary representation, so a plain product leaves rounding behind.
+  // The constants have no exact binary representation, so rounding errors would show.
   double cellState[CellNodes * NumberOfData] = {};
   for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int value = 0; value < NumberOfData; value++) {
@@ -1349,7 +1320,7 @@ exahype2::dg::tests::KernelsTest::testTheTwoEndsUseTheirOwnCoefficients() {
   double*     flux[peano4::FacesPerCell];
   collectPointers(buffers, state, flux);
 
-  // A state that is linear along every axis with the slope two plus the axis number.
+  // The state is linear along every axis with the slope two plus the axis number.
   double cellState[CellNodes * NumberOfData];
   peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
     const int cellNode = peano4::dLinearised(node, NodesPerAxis);
@@ -1366,7 +1337,7 @@ exahype2::dg::tests::KernelsTest::testTheTwoEndsUseTheirOwnCoefficients() {
   const EndCoefficients coefficients;
   exahype2::dg::extrapolateStateToFaces<Order2Layout>(state, cellState, coefficients.left, coefficients.right);
 
-  // The lower face holds the line's value at zero, the upper face the value at one.
+  // The lower face receives the value of the line at zero, the upper face the value at one.
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       const int firstCellNode = getCellNodeOf(direction, faceNode, 0);
@@ -1393,7 +1364,7 @@ exahype2::dg::tests::KernelsTest::testTheTwoEndsUseTheirOwnCoefficients() {
 }
 
 /**
- * A constant state of float reaches every face node of double with its float value unchanged.
+ * A constant float state reaches every double face node with its float value unchanged.
  */
 void
 exahype2::dg::tests::KernelsTest::testAStateOfFloatReachesFacesOfDouble() {
@@ -1527,8 +1498,8 @@ exahype2::dg::tests::KernelsTest::testDiffusiveFluxIsExtrapolatedWithTheNodalGra
     cellState[entry] = 1.0 + 0.5 * entry - 0.01 * entry * entry;
   }
 
-  // The reference gradient applies the operator line by line, so the kernel's
-  // block layout is checked against a direct evaluation.
+  // The reference gradient applies the operator line by line, independent of the block layout of
+  // the kernel.
   double gradients[DIMENSIONS][CellNodes * NumberOfData] = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int line = 0; line < FaceNodes; line++) {
@@ -1646,8 +1617,8 @@ exahype2::dg::tests::KernelsTest::testEveryNodeSeesItsOwnPositionOnTheFace() {
       faceNumber
     );
 
-    // A zero inner state leaves the position alone in the outer state, and the
-    // normal coordinate of every node is the face centre's.
+    // With a zero inner state, the outer state records the node position, and every node has the
+    // normal coordinate of the face centre.
     const int direction = faceNumber % DIMENSIONS;
     for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       const auto   position   = getNodePositionOf(faceNumber, faceNode);
@@ -1703,8 +1674,8 @@ exahype2::dg::tests::KernelsTest::testFluxOnAFaceComesFromTheFaceState() {
         direction
       );
 
-      // The accumulating stub starts from a cleared flux, so every node holds the
-      // stub's multiple of the state of the selected side.
+      // The accumulating stub starts from a cleared flux, so every node stores the stub's multiple
+      // of the state of the selected side.
       for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
           validateNumericalEqualsWithParams3(
@@ -1752,8 +1723,8 @@ exahype2::dg::tests::KernelsTest::testDiffusiveFluxOnAFaceReadsTheJumpAlongTheNo
     rightState[entry] = 4.0 - 0.25 * entry;
   }
 
-  // Both sides see the same jump, so both fluxes hold the stub's multiple of
-  // the jump over the cell extent along the normal axis.
+  // Both sides see the same jump, so both fluxes equal the stub's multiple of the jump over the
+  // cell extent along the normal axis.
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     for (int side = 0; side < 2; side++) {
       double faceFlux[FaceNodes * NumberOfUnknowns] = {};
@@ -1847,7 +1818,7 @@ exahype2::dg::tests::KernelsTest::testEqualSidesLeaveZerosBitwise() {
   double faceQuadratureWeights[RiemannFaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
-  // Values without an exact binary representation, so a plain product leaves rounding behind.
+  // The values have no exact binary representation, so rounding errors would show.
   double leftFlux[RiemannFaceNodes * Unknowns];
   double rightFlux[RiemannFaceNodes * Unknowns];
   double leftState[RiemannFaceNodes * Data];
@@ -1921,8 +1892,8 @@ exahype2::dg::tests::KernelsTest::testJumpTermScalesWithTheLargerWaveSpeed() {
     0
   );
 
-  // The right side averages to 5, the left one to 3, so the larger speed wins; the own fluxes
-  // are zero, so the left side holds the numerical flux and the right side its negative.
+  // The right side averages to 5 and the left side to 3, so the larger wave speed is 5. The own
+  // fluxes are zero, so the left side stores the numerical flux and the right side its negative.
   constexpr double ExpectedMaxEigenvalue = 5.0;
   for (int faceNode = 0; faceNode < RiemannFaceNodes; faceNode++) {
     const int firstEntry = faceNode * Unknowns;
@@ -2039,7 +2010,7 @@ exahype2::dg::tests::KernelsTest::testNonconservativeProductEntersBothSidesAlike
 }
 
 /**
- * The buffer the nonconservative product reads carries the jump of every auxiliary variable next to the unknowns.
+ * The state jump the nonconservative product reads includes the jump of every auxiliary variable.
  */
 void
 exahype2::dg::tests::KernelsTest::testNonconservativeProductReadsTheAuxiliaryJump() {
@@ -2055,7 +2026,7 @@ exahype2::dg::tests::KernelsTest::testNonconservativeProductReadsTheAuxiliaryJum
   double rightState[RiemannFaceNodes * Data];
   for (int faceNode = 0; faceNode < RiemannFaceNodes; faceNode++) {
     const int firstEntry = faceNode * Data;
-    // The unknowns carry no jump, so only the auxiliary variable can reach the flux.
+    // The unknowns have no jump, so only the auxiliary variable can reach the flux.
     for (int unknown = 0; unknown < Unknowns; unknown++) {
       leftState[firstEntry + unknown]  = 1.0;
       rightState[firstEntry + unknown] = 1.0;
@@ -2098,7 +2069,7 @@ exahype2::dg::tests::KernelsTest::testLinearFormBuildsTheFluxFromTheStateJump() 
   double faceQuadratureWeights[RiemannFaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
-  // Nonzero incoming values prove the linear form starts from a clean slate.
+  // Nonzero initial values show that the linear form overwrites the fluxes.
   double leftFlux[RiemannFaceNodes * Unknowns];
   double rightFlux[RiemannFaceNodes * Unknowns];
   double leftState[RiemannFaceNodes * Data];
@@ -2130,8 +2101,8 @@ exahype2::dg::tests::KernelsTest::testLinearFormBuildsTheFluxFromTheStateJump() 
     0
   );
 
-  // Half the jump is one, the stub flux returns it unchanged, and the wave
-  // speed is the averaged first entry, which is three.
+  // The stub flux returns the half jump, and the wave speed is the larger side average of the first
+  // entry.
   constexpr double ExpectedFlux          = 1.0;
   constexpr double ExpectedMaxEigenvalue = 3.0;
   constexpr double ExpectedHalfStateJump = 1.0;
@@ -2176,8 +2147,8 @@ exahype2::dg::tests::KernelsTest::testLinearFormAddsTheNonconservativeProduct() 
     0
   );
 
-  // Flux and nonconservative product both return half the jump, so the central
-  // part doubles while the dissipation stays as it was.
+  // The central flux is the sum of the flux and the nonconservative product, which both return the
+  // half jump.
   constexpr double ExpectedCentralFlux   = 2.0;
   constexpr double ExpectedMaxEigenvalue = 3.0;
   constexpr double ExpectedHalfStateJump = 1.0;
@@ -2222,7 +2193,7 @@ exahype2::dg::tests::KernelsTest::testLinearFormAppliesTheMaterialParameterMatri
     0
   );
 
-  // The material parameter matrix doubles the flux the stub produced.
+  // The material parameter matrix doubles the stub flux.
   constexpr double ExpectedCentralFlux   = 2.0;
   constexpr double ExpectedMaxEigenvalue = 3.0;
   constexpr double ExpectedHalfStateJump = 1.0;
@@ -2233,7 +2204,8 @@ exahype2::dg::tests::KernelsTest::testLinearFormAppliesTheMaterialParameterMatri
 }
 
 /**
- * An interior face holds the Rusanov flux minus the lower own flux and the upper own flux minus the Rusanov flux.
+ * An interior face stores the Rusanov flux minus the lower own flux and the upper own flux minus
+ * the Rusanov flux.
  */
 void
 exahype2::dg::tests::KernelsTest::testAnInteriorFaceHoldsTheDifferencesToItsOwnFluxes() {
@@ -2251,8 +2223,8 @@ exahype2::dg::tests::KernelsTest::testAnInteriorFaceHoldsTheDifferencesToItsOwnF
 }
 
 /**
- * A boundary face takes the boundary state into its outer half and its inner half holds the difference to its own
- * flux.
+ * A boundary face writes the boundary state into its outer half and the difference to the own flux
+ * into its inner half.
  */
 void
 exahype2::dg::tests::KernelsTest::testABoundaryFaceTakesTheBoundaryState() {
@@ -2272,9 +2244,8 @@ exahype2::dg::tests::KernelsTest::testABoundaryFaceTakesTheBoundaryState() {
 }
 
 /**
- * The solver's own Riemann solver runs once with the stamp, the step size, the normal, the
- * boundary flag and the index of the face it writes, and its fluxes become the differences to the
- * own fluxes.
+ * The Riemann solver of the solver receives the face arguments, and its fluxes become the
+ * differences to the own fluxes.
  */
 void
 exahype2::dg::tests::KernelsTest::testTheSolversRiemannSolverReceivesTheFace() {
@@ -2340,8 +2311,7 @@ exahype2::dg::tests::KernelsTest::testEachCellNodeReceivesItsOwnFaceNode() {
   }
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    // Only one face node carries a flux, so the cell nodes that pick it up are
-    // exactly the ones the lifting is supposed to reach.
+    // Only one face node has a flux, so only the cell nodes on its normal line receive an update.
     for (int markedFaceNode = 0; markedFaceNode < FaceNodes; markedFaceNode++) {
       double    faceFlux[FaceNodes * NumberOfUnknowns] = {};
       const int markedEntry                            = markedFaceNode * NumberOfUnknowns;
@@ -2372,9 +2342,8 @@ exahype2::dg::tests::KernelsTest::testEachCellNodeReceivesItsOwnFaceNode() {
 }
 
 /**
- * The update holds NumberOfUnknowns entries per cell node, so every unknown of every cell node
- * receives its own face value and the entries behind the last cell node stay as the caller left
- * them.
+ * Every unknown of every cell node receives its own face value, and the entries behind the last
+ * cell node stay unchanged.
  */
 void
 exahype2::dg::tests::KernelsTest::testUpdateStridesByTheUnknowns() {
@@ -2605,8 +2574,8 @@ exahype2::dg::tests::KernelsTest::testReduceMaxEigenvaluesOverTheCellNodes() {
     0.0
   );
 
-  // The last node carries the largest state and the largest first coordinate,
-  // so both maxima come from that node, with every axis scaled by its own extent.
+  // The last node has the largest state and the largest first coordinate, so both maxima come
+  // from that node, with every axis scaled by its own extent.
   const double lastPosition   = cellCentre(0) - 0.5 * cellSize(0) + quadratureNodes[1] * cellSize(0);
   const double lastState      = 0.5 * (EigenvalueCellNodes - 1);
   double       expectedScaled = 0.0;
@@ -2731,7 +2700,7 @@ exahype2::dg::tests::KernelsTest::testTheStateRestrictionFillsTheFineSideOfTheCo
 }
 
 /**
- * A cell that survives the regrid keeps every value of its old slot.
+ * A cell that the regrid copies keeps every value bitwise.
  */
 void
 exahype2::dg::tests::KernelsTest::testCopyKeepsEveryValue() {
@@ -3012,7 +2981,7 @@ void
 exahype2::dg::tests::KernelsTest::testAddFaceIntegralOnTheDevice() {
   const exahype2::dg::tests::KernelOperators operators;
   const exahype2::dg::tests::CellChain       geometry;
-  // The lift accumulates, so both paths have to start from the same estimates.
+  // The face integrals add to the estimates, so both paths start from the same estimates.
   const std::vector<double> rightHandSideEstimates =
     exahype2::dg::tests::getRamp(Setup::AllRightHandSidesCardinality, 0.1, 0.003);
   const std::vector<double> faceFluxes =
@@ -3093,8 +3062,8 @@ exahype2::dg::tests::KernelsTest::testReduceMaxEigenvaluesOnTheDevice() {
     );
   }
 
-  // A maximum ignores the order in which the tree combines the cells, so the
-  // parallel reduction has to land on exactly the serial value.
+  // A maximum does not depend on the order of the combinations, so the parallel reduction matches
+  // the serial value exactly.
   validateNumericalEquals(deviceResult.maxScaledEigenvalue, hostResult.maxScaledEigenvalue);
   validateNumericalEquals(deviceResult.maxPhysicalEigenvalue, hostResult.maxPhysicalEigenvalue);
   validate(hostResult.maxPhysicalEigenvalue > 0.0);
