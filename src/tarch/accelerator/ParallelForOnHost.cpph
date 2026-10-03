@@ -12,26 +12,30 @@ namespace tarch::accelerator {
     assertion(range.n >= 0, range.n);
 #if defined(_OPENMP)
     if (omp_in_parallel()) {
-      constexpr int TasksPerThread = 4;
-      const int     numberOfTasks  = std::max(1, std::min(range.n, TasksPerThread * omp_get_num_threads()));
+      // OpenMP moves a task body into a function of its own, which inherits always_inline from the
+      // enclosing function and then breaks GCC and icpx, so the tasks start in a lambda.
+      [](const Range& range, const Functor& functor) {
+        constexpr int TasksPerThread = 4;
+        const int     numberOfTasks  = std::max(1, std::min(range.n, TasksPerThread * omp_get_num_threads()));
 #if defined(PEANO_OPENMP_TASKLOOP_SUPPORTED)
-      const auto numberOfItems = static_cast<unsigned long>(range.n);
+        const auto numberOfItems = static_cast<unsigned long>(range.n);
 #pragma omp taskloop default(none) num_tasks(numberOfTasks) firstprivate(numberOfItems) shared(functor)
-      for (unsigned long i = 0; i < numberOfItems; ++i) {
-        functor(static_cast<int>(i));
-      }
-#else
-      tarch::accelerator::reportMissingTaskloopSupportOnce();
-      for (int taskNumber = 0; taskNumber < numberOfTasks; taskNumber++) {
-        const int begin = static_cast<int>(static_cast<std::int64_t>(range.n) * taskNumber / numberOfTasks);
-        const int end   = static_cast<int>(static_cast<std::int64_t>(range.n) * (taskNumber + 1) / numberOfTasks);
-#pragma omp task firstprivate(begin, end) shared(functor)
-        for (int i = begin; i < end; i++) {
-          functor(i);
+        for (unsigned long i = 0; i < numberOfItems; ++i) {
+          functor(static_cast<int>(i));
         }
-      }
+#else
+        tarch::accelerator::reportMissingTaskloopSupportOnce();
+        for (int taskNumber = 0; taskNumber < numberOfTasks; taskNumber++) {
+          const int begin = static_cast<int>(static_cast<std::int64_t>(range.n) * taskNumber / numberOfTasks);
+          const int end   = static_cast<int>(static_cast<std::int64_t>(range.n) * (taskNumber + 1) / numberOfTasks);
+#pragma omp task firstprivate(begin, end) shared(functor)
+          for (int i = begin; i < end; i++) {
+            functor(i);
+          }
+        }
 #pragma omp taskwait
 #endif
+      }(range, functor);
       return;
     }
 #endif
