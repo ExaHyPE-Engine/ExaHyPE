@@ -103,10 +103,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WavePropaga
       const auto ML                 = QL[Shortcuts::O2] + QL[Shortcuts::O] + QL[Shortcuts::N2];
       const auto iML                = 1.0 / ML;
       const auto meanMolecularMassL = (MOLAR_MASS_NITROGEN * QL[Shortcuts::N2] + MOLAR_MASS_MOLECULAR_OXYGEN * QL[Shortcuts::O2] + MOLAR_MASS_ATOMIC_OXYGEN * QL[Shortcuts::O]) * iML; // in kg/mol
-      const auto pressureL          = QL[Shortcuts::rho] * UNIVERSAL_GAS_CONSTANT * QL[Shortcuts::T] / meanMolecularMassL;
-      assertion(pressureL > 0.0, ML, meanMolecularMassL, QL[Shortcuts::rho], QL[Shortcuts::T], pressureL);
+      
+      //not for our case because temperature is not updated
+      //const auto pressureL          = QL[Shortcuts::rho] * UNIVERSAL_GAS_CONSTANT * QL[Shortcuts::T] / meanMolecularMassL;
 
       const auto gammaL = (1.4 * (ML - QL[Shortcuts::O]) + 1.67 * QL[Shortcuts::O]) * iML;
+      const auto pressureL = (gammaL - 1.0) * (EL - 0.5 * (QL[Shortcuts::j]*QL[Shortcuts::j] + QL[Shortcuts::j+1]*QL[Shortcuts::j+1]) / rhoL);
+      assertion(pressureL > 0.0, ML, meanMolecularMassL, QL[Shortcuts::rho], QL[Shortcuts::T], pressureL);
+
       const auto HL     = (EL + pressureL) / QL[Shortcuts::rho];
 
       // right state
@@ -123,10 +127,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WavePropaga
       const auto MR                 = QR[Shortcuts::O2] + QR[Shortcuts::O] + QR[Shortcuts::N2];
       const auto iMR                = 1.0 / MR;
       const auto meanMolecularMassR = (MOLAR_MASS_NITROGEN * QR[Shortcuts::N2] + MOLAR_MASS_MOLECULAR_OXYGEN * QR[Shortcuts::O2] + MOLAR_MASS_ATOMIC_OXYGEN * QR[Shortcuts::O]) * iMR; // in kg/mol
-      const auto pressureR          = QR[Shortcuts::rho] * UNIVERSAL_GAS_CONSTANT * QR[Shortcuts::T] / meanMolecularMassR;
       assertion(pressureR > 0.0, MR, meanMolecularMassR, QR[Shortcuts::rho], QR[Shortcuts::T], pressureR);
 
       const auto gammaR = (1.4 * (MR - QR[Shortcuts::O]) + 1.67 * QR[Shortcuts::O]) * iMR;
+      const auto pressureL = (gammaR - 1.0) * (ER - 0.5 * (QR[Shortcuts::j]*QR[Shortcuts::j] + QR[Shortcuts::j+1]*QR[Shortcuts::j+1]) / rhoR);
+
+      
+      
       const auto HR     = (ER + pressureR) / QR[Shortcuts::rho];
 
 
