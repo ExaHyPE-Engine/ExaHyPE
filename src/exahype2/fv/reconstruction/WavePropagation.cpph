@@ -130,7 +130,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WavePropaga
       assertion(pressureR > 0.0, MR, meanMolecularMassR, QR[Shortcuts::rho], QR[Shortcuts::T], pressureR);
 
       const auto gammaR = (1.4 * (MR - QR[Shortcuts::O]) + 1.67 * QR[Shortcuts::O]) * iMR;
-      const auto pressureL = (gammaR - 1.0) * (ER - 0.5 * (QR[Shortcuts::j]*QR[Shortcuts::j] + QR[Shortcuts::j+1]*QR[Shortcuts::j+1]) / rhoR);
+      const auto pressureR = (gammaR - 1.0) * (ER - 0.5 * (QR[Shortcuts::j]*QR[Shortcuts::j] + QR[Shortcuts::j+1]*QR[Shortcuts::j+1]) / rhoR);
 
       
       
