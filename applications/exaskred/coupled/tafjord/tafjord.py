@@ -128,5 +128,5 @@ project.add_constant("maxHeightCurvatureRatio", 0.3)
 project.add_constant("mu", math.tan(math.pi / 180.0 * 25.0))
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
+project.output.makefile.add_h_file("ADERDGSolver.cpph")
 project.generate_and_build()

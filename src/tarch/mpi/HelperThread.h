@@ -7,11 +7,8 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 /**
- * Runs one polling function on a thread of its own.
- *
- * MPI progress must not depend on the task scheduler. A deferred task can sit
- * in the queue while another thread blocks inside MPI, so a rank whose queue
- * still owes its peers a message stalls them for as long as it holds it.
+ * Runs one polling function on a thread of its own. The MPI progress runs on this thread, because a
+ * deferred task can wait in the queue while another thread blocks inside MPI.
  */
 class tarch::mpi::HelperThread final {
 public:
@@ -24,7 +21,6 @@ public:
 
   void start();
   void stop();
-  void restart();
   bool hasFinished() const;
 
 private:

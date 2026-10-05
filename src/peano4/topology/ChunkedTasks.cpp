@@ -7,18 +7,20 @@
 #include "tarch/tasking/Runtime.h"
 #include "tarch/tasking/TaskGraph.h"
 
-/** Returns the upper bound on the chunk count runChunkedTasks() uses. */
-int peano4::topology::maximumNumberOfChunks() {
+/**
+ * Returns a strict upper bound of the chunk count of runChunkedTasks().
+ */
+int
+peano4::topology::getMaximumNumberOfChunks() {
   return 2 * std::max(tarch::tasking::Runtime::getInstance().getNumberOfThreads(), 1) + 1;
 }
 
 /**
- * Returns the number of chunks runChunkedTasks() cuts a range into. The caller
- * states the item count one chunk has to carry, and a range below two of them
- * runs as one chunk. Two chunks per thread let the runtime balance chunks of
- * unequal cost.
+ * Returns the number of chunks for runChunkedTasks(): At most two per thread and at least
+ * minimumItemsPerChunk items per chunk, or one chunk for a shorter range.
  */
-int peano4::topology::numberOfChunks(const int numberOfItems, const int minimumItemsPerChunk) {
+int
+peano4::topology::getNumberOfChunks(const int numberOfItems, const int minimumItemsPerChunk) {
   assertion(numberOfItems >= 0, numberOfItems);
   assertion(minimumItemsPerChunk > 0, minimumItemsPerChunk);
   const int numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
@@ -29,19 +31,18 @@ int peano4::topology::numberOfChunks(const int numberOfItems, const int minimumI
 }
 
 /**
- * Runs a loop over an index range as one task per chunk. numberOfChunks()
- * decides the cut, and a single chunk runs in the calling thread. The callback
- * receives its chunk number, which stays below maximumNumberOfChunks(), so it
- * can accumulate into a buffer of its own, and a concatenation of those buffers
- * in chunk order reproduces the order of a serial loop.
+ * Runs processRange(chunkNumber, begin, end) as one task per chunk, or in the calling thread for a
+ * single chunk. The chunk number stays below getMaximumNumberOfChunks(), and the chunks cover the
+ * range in order, so per-chunk buffers concatenate to the order of a serial loop.
  */
-void peano4::topology::runChunkedTasks(
+void
+peano4::topology::runChunkedTasks(
   const int                                 numberOfItems,
   const std::function<void(int, int, int)>& processRange,
   const int                                 minimumItemsPerChunk
 ) {
-  const int numberOfChunks = peano4::topology::numberOfChunks(numberOfItems, minimumItemsPerChunk);
-  assertion(numberOfChunks >= 1 and numberOfChunks < peano4::topology::maximumNumberOfChunks(), numberOfChunks);
+  const int numberOfChunks = peano4::topology::getNumberOfChunks(numberOfItems, minimumItemsPerChunk);
+  assertion(numberOfChunks >= 1 and numberOfChunks < peano4::topology::getMaximumNumberOfChunks(), numberOfChunks);
   if (numberOfChunks <= 1) {
     processRange(0, 0, numberOfItems);
     return;

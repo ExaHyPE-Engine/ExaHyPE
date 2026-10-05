@@ -3,13 +3,14 @@
 #pragma once
 
 #ifdef __cplusplus
-// NVC++ 25.7 requires <bit> before <algorithm> and <array> to expose std::bit_cast.
+// NVC++ 25.7 exposes std::bit_cast only if <bit> precedes <algorithm> and <array>.
 #if defined(__NVCOMPILER)
 #include <bit>
 #endif
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <bitset>
 #include <cassert>
 #include <cctype>
@@ -74,6 +75,7 @@
 #include <version>
 #endif
 
-// Valid in both C and C++.
+#include <fenv.h>
+#include <float.h>
 #include <stdio.h>
 #include <string.h>

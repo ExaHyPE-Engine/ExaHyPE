@@ -8,7 +8,8 @@ TARGET_DECLARE
  */
 template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
 template <int NumberOfVolumesPerAxis>
-INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeIsAvailable(
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeIsAvailable(
   const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
 ) {
   int axesOutsideOfPatch = 0;
@@ -25,7 +26,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::fv::reconstruction::WENO<Order,
 
 template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
 template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeState(
+INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*
+exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeState(
   const StoragePrecision* NOALIAS const     inputPatch,
   const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
@@ -34,15 +36,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstr
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
     if (volumeIndex(axis) < 0) {
-      overlapCell(axis) = volumeIndex(axis) + HaloSize;
-      const int overlapIndex =
-        exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, axis);
+      overlapCell(axis)      = volumeIndex(axis) + HaloSize;
+      const int overlapIndex = exahype2::fv::getFaceVolumeIndex(overlapCell, NumberOfVolumesPerAxis, HaloSize, axis);
       return &faceInputPatches[axis][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
     }
     if (volumeIndex(axis) >= NumberOfVolumesPerAxis) {
-      overlapCell(axis) = volumeIndex(axis) - NumberOfVolumesPerAxis + HaloSize;
-      const int overlapIndex =
-        exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, axis);
+      overlapCell(axis)      = volumeIndex(axis) - NumberOfVolumesPerAxis + HaloSize;
+      const int overlapIndex = exahype2::fv::getFaceVolumeIndex(overlapCell, NumberOfVolumesPerAxis, HaloSize, axis);
       return &faceInputPatches[axis + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
     }
   }
@@ -62,7 +62,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstr
  */
 template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
 template <int NumberOfData, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructAlongLine(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructAlongLine(
   const Tables&                         tables,
   const ComputePrecision* NOALIAS const lineValues,
   const bool* NOALIAS const             lineIsAvailable,
@@ -75,8 +76,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Order,
   for (int stencil = 0; stencil < Stencils; stencil++) {
     stencilIsAdmissible[stencil] = true;
     for (int volume = 0; volume < Nodes; volume++) {
-      stencilIsAdmissible[stencil] = stencilIsAdmissible[stencil]
-                                 and lineIsAvailable[Tables::firstVolumeOfStencil(stencil) + Order + volume];
+      stencilIsAdmissible[stencil] =
+        stencilIsAdmissible[stencil] and lineIsAvailable[Tables::firstVolumeOfStencil(stencil) + Order + volume];
     }
   }
 
@@ -94,22 +95,26 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Order,
       for (int node = 0; node < Nodes; node++) {
         ComputePrecision coefficient = ComputePrecision(0);
         for (int volume = 0; volume < Nodes; volume++) {
-          coefficient += static_cast<ComputePrecision>(
-                           tables.reconstructionMatrices[(stencil * Nodes + node) * Nodes + volume]
-                         )
-                       * lineValues[(firstPosition + volume) * NumberOfData + entry];
+          coefficient +=
+            static_cast<ComputePrecision>(tables.reconstructionMatrices[(stencil * Nodes + node) * Nodes + volume])
+            * lineValues[(firstPosition + volume) * NumberOfData + entry];
         }
         candidates[numberOfStencils][node] = coefficient;
       }
+      // Derivatives annihilate a constant. Remove it before evaluating the
+      // quadratic form, otherwise smooth single-precision data can produce
+      // a negative indicator through cancellation of large constant terms.
+      const ComputePrecision reference = candidates[numberOfStencils][0];
       ComputePrecision indicator = ComputePrecision(0);
       for (int row = 0; row < Nodes; row++) {
         for (int column = 0; column < Nodes; column++) {
           indicator += static_cast<ComputePrecision>(tables.oscillationIndicatorMatrix[row * Nodes + column])
-                     * candidates[numberOfStencils][row] * candidates[numberOfStencils][column];
+            * (candidates[numberOfStencils][row] - reference)
+            * (candidates[numberOfStencils][column] - reference);
         }
       }
       linearWeights[numberOfStencils]         = static_cast<ComputePrecision>(Tables::linearWeight(stencil));
-      oscillationIndicators[numberOfStencils] = indicator;
+      oscillationIndicators[numberOfStencils] = std::max(ComputePrecision(0), indicator);
       numberOfStencils++;
     }
     assertion(numberOfStencils > 0);
@@ -130,13 +135,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Order,
 /**
  * Writes the nodal polynomial of @p volumeIndex into @p nodalState, the first axis running
  * fastest. A @p sharedFace of -1 reads every available volume, a face number of the patch only
- * the volumes that the patch across that face holds, too. The sweep along one axis reads a buffer whose already swept axes hold nodes and whose
- * remaining axes hold the positions of the window, and writes the same with one more axis swept.
- * The two buffers take the @c ScratchSize entries of @p scratch.
+ * the volumes that the patch across that face holds, too. The sweep along one axis reads a buffer whose already swept
+ * axes hold nodes and whose remaining axes hold the positions of the window, and writes the same with one more axis
+ * swept. The two buffers take the @c ScratchSize entries of @p scratch.
  */
 template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
 template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructPolynomial(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructPolynomial(
   const StoragePrecision* NOALIAS const     inputPatch,
   const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
@@ -199,8 +205,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Order,
   }
 
   for (int sweptAxis = 0; sweptAxis < DIMENSIONS; sweptAxis++) {
-    const ComputePrecision* NOALIAS const input  = buffers[sweptAxis % 2];
-    ComputePrecision* NOALIAS const       output = sweptAxis == DIMENSIONS - 1 ? nodalState : buffers[(sweptAxis + 1) % 2];
+    const ComputePrecision* NOALIAS const input = buffers[sweptAxis % 2];
+    ComputePrecision* NOALIAS const output = sweptAxis == DIMENSIONS - 1 ? nodalState : buffers[(sweptAxis + 1) % 2];
 
     int inputStrides[DIMENSIONS];
     int outputStrides[DIMENSIONS];
@@ -247,9 +253,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Order,
         positionIndex(sweptAxis) += position - Order;
         lineIsAvailable[position] = isUsable(positionIndex);
         for (int entry = 0; entry < NumberOfData; entry++) {
-          lineValues[position * NumberOfData + entry] =
-            lineIsAvailable[position] ? input[(inputBase + position * inputStrides[sweptAxis]) * NumberOfData + entry]
-                                      : ComputePrecision(0);
+          lineValues[position * NumberOfData + entry] = lineIsAvailable[position]
+            ? input[(inputBase + position * inputStrides[sweptAxis]) * NumberOfData + entry]
+            : ComputePrecision(0);
         }
       }
 

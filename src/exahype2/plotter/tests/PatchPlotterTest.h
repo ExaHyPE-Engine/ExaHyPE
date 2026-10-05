@@ -20,9 +20,7 @@ public:
   void run() override;
 
 private:
-  void testNodalPatchPlotsOnePointPerNode();
-  void testNodalPatchReadsTheAlternativePatch();
-  void testCellPatchPlotsOneCellPerVolume();
-  void testCellPatchRunsTheCellDataPlotsOfTheCaller();
-  void testNodalPatchRunsTheCellDataPlotsOfTheCaller();
+  void testEveryVolumeOfEveryPatchBecomesOneCell();
+  void testEveryNodeOfEveryPatchBecomesOnePoint();
+  void testEveryNodeReadsTheSubcellThatContainsIt();
 };

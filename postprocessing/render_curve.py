@@ -19,15 +19,13 @@ try:
 except ImportError:
     from solution_io import MeshSnapshot, SolutionSource
 
-LABEL_FIELDS = ("Subdomain", "Subtree")
-CURVE_POSITION_FIELD = "CurvePosition"
+LABEL_FIELD = "Subdomain"
+CURVE_INDEX_FIELD = "CurveIndex"
+REQUIRED_FIELDS = (LABEL_FIELD, CURVE_INDEX_FIELD)
 
 
 def cell_polygons(snapshot: MeshSnapshot) -> np.ndarray:
-    """Returns the corner coordinates of every cell as an (Ncells, 4, 2) array.
-
-    The first four corners of a cell form its quadrilateral; a 3D snapshot is rejected.
-    """
+    """Returns the first four corners of every cell of a 2D snapshot as an (Ncells, 4, 2) array."""
     if snapshot.points.shape[1] != 2:
         raise ValueError("The curve renderer draws 2D snapshots only")
     cells = np.asarray(snapshot.cells)
@@ -41,21 +39,22 @@ def patch_centres_along_curve(
 ) -> np.ndarray:
     """Returns the centre of every patch in the order the curve visits the patches.
 
-    Every cell of one patch carries the same ``CurvePosition``, so the distinct values enumerate
-    the patches and sorting them follows the curve. Without the field every cell forms its own
-    patch and the centres keep their file order.
+    Every cell of one patch carries the curve index of its grid cell, so the distinct indices
+    enumerate the patches and sorting them follows the curve over all ranks, whatever order the
+    snapshot stores the cells in.
     """
-    centres = polygons.mean(axis=1)
-    if CURVE_POSITION_FIELD not in snapshot.cell_data:
-        return centres
-    positions = np.asarray(snapshot.cell_data[CURVE_POSITION_FIELD]).reshape(-1)
-    _, membership = np.unique(positions, return_inverse=True)
+    indices = np.asarray(snapshot.cell_data[CURVE_INDEX_FIELD]).reshape(
+        len(polygons), -1
+    )[:, 0]
+    _, membership = np.unique(indices, return_inverse=True)
+    membership = membership.reshape(-1)
     cells_per_patch = np.bincount(membership)
+    centres = polygons.mean(axis=1)
     return np.column_stack(
-        (
-            np.bincount(membership, weights=centres[:, 0]) / cells_per_patch,
-            np.bincount(membership, weights=centres[:, 1]) / cells_per_patch,
-        )
+        [
+            np.bincount(membership, weights=centres[:, axis]) / cells_per_patch
+            for axis in range(centres.shape[1])
+        ]
     )
 
 
@@ -70,35 +69,37 @@ def label_colours(labels: np.ndarray) -> np.ndarray:
 def render_curve(
     snapshot: MeshSnapshot, title: str, output: Path, dpi: int = 300
 ) -> dict:
-    """Draws the ranks and the tasks side by side into ``output`` and returns a summary."""
+    """Draws the cells coloured by subdomain and joins the patch centres along the curve."""
     polygons = cell_polygons(snapshot)
+    if len(polygons) == 0:
+        raise ValueError("The decomposition renderer needs at least one cell")
     centres = patch_centres_along_curve(snapshot, polygons)
-    figure, panels = plt.subplots(1, 2, figsize=(18, 9))
-    counts = {}
-    for axes, field in zip(panels, LABEL_FIELDS):
-        labels = np.asarray(snapshot.cell_data[field]).reshape(len(polygons), -1)[:, 0]
-        counts[field] = len(np.unique(labels))
-        axes.add_collection(
-            PolyCollection(
-                polygons,
-                facecolors=label_colours(labels),
-                edgecolors=(0, 0, 0, 0.25),
-                linewidths=0.2,
-            )
+    labels = np.asarray(snapshot.cell_data[LABEL_FIELD]).reshape(len(polygons), -1)[
+        :, 0
+    ]
+    subdomains = len(np.unique(labels))
+    figure, axes = plt.subplots(figsize=(9, 9))
+    axes.add_collection(
+        PolyCollection(
+            polygons,
+            facecolors=label_colours(labels),
+            edgecolors=(0, 0, 0, 0.25),
+            linewidths=0.2,
         )
-        axes.plot(centres[:, 0], centres[:, 1], color="black", linewidth=0.8)
-        axes.set_xlim(polygons[:, :, 0].min(), polygons[:, :, 0].max())
-        axes.set_ylim(polygons[:, :, 1].min(), polygons[:, :, 1].max())
-        axes.set_aspect("equal")
-        axes.set_title(f"{counts[field]} {field}s")
+    )
+    axes.plot(centres[:, 0], centres[:, 1], color="black", linewidth=0.8)
+    axes.set_xlim(polygons[:, :, 0].min(), polygons[:, :, 0].max())
+    axes.set_ylim(polygons[:, :, 1].min(), polygons[:, :, 1].max())
+    axes.set_aspect("equal")
     time = "" if snapshot.time is None else f", t={snapshot.time:.3g}"
-    figure.suptitle(f"{title}\n{len(centres)} Patches, {len(polygons)} Cells{time}")
+    axes.set_title(
+        f"{title}\n{subdomains} Subdomains, {len(centres)} Patches, {len(polygons)} Cells{time}"
+    )
     figure.savefig(output, dpi=dpi, bbox_inches="tight")
     plt.close(figure)
     return {
         "output": Path(output),
-        "subdomains": counts["Subdomain"],
-        "subtrees": counts["Subtree"],
+        "subdomains": subdomains,
         "patches": len(centres),
         "cells": len(polygons),
     }
@@ -126,7 +127,7 @@ def main(argv: list[str] | None = None) -> int:
     source = SolutionSource.locate(arguments.input)
     step = arguments.step if arguments.step >= 0 else source.count - 1
     snapshot = source.load(step)
-    missing = [field for field in LABEL_FIELDS if field not in snapshot.cell_data]
+    missing = [field for field in REQUIRED_FIELDS if field not in snapshot.cell_data]
     if missing:
         raise SystemExit(
             f"{', '.join(missing)} missing from the cell fields of {source.describe()}; "
@@ -137,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     output = output_dir / f"{source.name}-{step:04d}-decomposition.png"
     summary = render_curve(snapshot, source.name, output, arguments.dpi)
     print(
-        f"{summary['output']}: {summary['subdomains']} subdomains, {summary['subtrees']} subtrees, "
+        f"{summary['output']}: {summary['subdomains']} subdomains, "
         f"{summary['patches']} patches, {summary['cells']} cells"
     )
     return 0

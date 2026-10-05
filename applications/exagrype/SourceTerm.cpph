@@ -6,10 +6,8 @@
  * The conformal metric must be positive definite.
  */
 template <class Shortcuts>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::sourceTerm(
-  const double* const NOALIAS Q,
-  double* const NOALIAS       S
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exagrype::sourceTerm(const double* const NOALIAS Q, double* const NOALIAS S) {
   assertion(Q != nullptr and S != nullptr);
   const double alpha = std::fmax(1e-4, Q[Shortcuts::alpha]);
 

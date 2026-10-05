@@ -54,6 +54,12 @@ if project.dimensions != 3:
         f"{project.dimensions}D."
     )
 
+# The plane between the two solvers is a cell boundary of the finest level. The low-precision
+# solver owns the slab of one finest cell below the upper domain boundary.
+solver_interface_plane = (
+    "(DomainOffset(1) + DomainSize(1) - DomainSize(1)"
+    " / std::pow(peano4::sfc::ActiveCurve::SubdivisionFactor, RuntimeParameters::getGridLevels()))"
+)
 
 hpSolver = exahype2.dg.ader.Solver(
     name="hpElastic",
@@ -65,6 +71,7 @@ hpSolver = exahype2.dg.ader.Solver(
     point_sources=1,
     precision="fp64",
 )
+hpSolver.restrict_to_cells("x(1) < " + solver_interface_plane)
 
 lpSolver = exahype2.dg.ader.Solver(
     name="lpElastic",
@@ -76,44 +83,9 @@ lpSolver = exahype2.dg.ader.Solver(
     point_sources=1,
     precision="fp32",
 )
-
-if args.use_tracers:
-    tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
-
-    project.add_action_set_to_initialisation(
-        exahype2.particles.InsertTracersByCoordinates(
-            particle_set=tracer_particles,
-            coordinates=[
-                [0.000, 0.0, 0.693],
-                [0.000, 0.0, 5.543],
-                [0.000, 0.0, 10.392],
-                [0.490, 0.0, 0.490],
-                [3.919, 0.0, 3.919],
-                [7.348, 0.0, 7.3480],
-                [0.577, 0.0, 0.384],
-                [4.612, 0.0, 3.075],
-                [8.647, 0.0, 5.7640],
-            ],
-        )
-    )
-
-from fuseADERSolvers import fuse_ader_solvers
-
-# A cell boundary of the coarsest level is a cell boundary of every finer level.
-solver_interface_plane = (
-    "(DomainOffset[1] + DomainSize[1] - DomainSize[1]"
-    " / std::pow(peano4::sfc::ActiveCurve::SubdivisionFactor, ::runner::RuntimeParameters::getInstance().getGridLevels()))"
-)
-fuse_ader_solvers(
-    hpSolver,
-    lpSolver,
-    "( marker.getX()[1] < " + solver_interface_plane + " + 0.1*marker.getH()[1] )",
-    "( marker.getX()[1] > " + solver_interface_plane + " - 0.1*marker.getH()[1] )",
-)
-
+lpSolver.restrict_to_cells("x(1) > " + solver_interface_plane)
 
 for theSolver in [hpSolver, lpSolver]:
-
     theSolver.set_pde_terms(
         initial_condition=Elastic.initial(),
         boundary_conditions=Elastic.boundary(),
@@ -126,29 +98,45 @@ for theSolver in [hpSolver, lpSolver]:
     )
 
     theSolver.add_includes(
-        "../../applications/exaseis/riemannSolvers/cartesianRoutines.h",
-        "../../applications/exaseis/riemannSolvers/riemannsolverIsotropic.h",
+        "applications/exaseis/riemannSolvers/ElasticRiemannSolver.h",
         "peano4/sfc/ActiveCurve.h",
-        "runner/RuntimeParameters.h",
     )
 
     project.add_solver(theSolver)
 
-    if args.use_tracers:
-        theSolver.trace(
-            tracer_particles,
-            kernel="::exahype2::dg::projectAllValuesOntoParticle",
-            initialisation=False,
-        )
+project.output.makefile.add_include_directory("../..")
 
-        project.add_action_set_to_timestepping(
-            exahype2.particles.DumpTracerIntoDatabase(
-                particle_set=tracer_particles,
-                solver=theSolver,
-                filename="LOH1-" + theSolver.name,
-                time_delta_between_two_snapshots=0.01,
-                output_precision=10,
-            )
-        )
+project.couple(hpSolver, lpSolver)
+
+if args.use_tracers:
+    tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
+    tracer_particles.insert_by_coordinates(
+        [
+            [0.000, 0.0, 0.693],
+            [0.000, 0.0, 5.543],
+            [0.000, 0.0, 10.392],
+            [0.490, 0.0, 0.490],
+            [3.919, 0.0, 3.919],
+            [7.348, 0.0, 7.3480],
+            [0.577, 0.0, 0.384],
+            [4.612, 0.0, 3.075],
+            [8.647, 0.0, 5.7640],
+        ]
+    )
+    tracer_particles.dump_into_database(
+        filename="LOH1-" + hpSolver.name,
+        time_delta_between_two_snapshots=0.01,
+        output_precision=10,
+    )
+    hpSolver.trace(
+        tracer_particles,
+        exahype2.particles.Forces(
+            interpolation_scheme=2,
+            integration_scheme=0,
+            force_method=0,
+            fields_to_interpolate="0,1,2,3,4,5,6,7,8,9,10,11",
+        ),
+        initialisation=False,
+    )
 
 project.generate_and_build()

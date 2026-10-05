@@ -9,7 +9,7 @@ Peano and its extensions follow some very simplistic documentation paradigms:
 - Everything is in the code;
 - All documentation is created via \c doxygen;
 - What does not fit into the code is documented in separated files which also are processed by \c doxygen;
-- Code documentation should be in the header files for C/C++ code;
+- C++ declarations stay concise; Doxygen describes the corresponding definitions;
 - Further documentation files have the extension `.dox`.
 
 To generate the documentation, \c cd to your Peano directory, and type:
@@ -102,7 +102,7 @@ The new mainpage typically reads as follows
 
          \tableofcontents
 
-         \li \subpage action_sets
+         \li \subpage peano_partition
 
 */
 \endverbatim
@@ -185,8 +185,9 @@ and will contain a (multiline) text between them (describing, for example, a fun
  */
 \endverbatim
 
-The documentation of a function, class or namespace has to be put ***before*** the
-actual declaration, and it always in the header file in Peano.
+The documentation of a function or class goes before its definition.
+A function declaration in a header stays concise; its definition in a `.cpp`
+or `.cpph` file carries the Doxygen comment.
 
 
 In Python, a comment section must be wrapped differently, namely,

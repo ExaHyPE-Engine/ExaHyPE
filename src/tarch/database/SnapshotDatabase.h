@@ -27,10 +27,7 @@ protected:
   double _timeDelta{0.0};
 
   int  _precision{0};
-  bool _deltasAreRelative{false};
   bool _csvHeaderWritten{false};
-
-  static constexpr double DeltaCutoffThreshold = 1e-6;
 
   enum class AddSnapshotAction { Ignore, Append, Replace };
 
@@ -41,13 +38,11 @@ protected:
     Snapshot(double timestamp, int numberOfDataEntries);
   };
 
-  int _rank{-1};
-
   std::mutex _mutex{};
 
-  SnapshotDatabase(double timeDelta, bool deltasAreRelative);
+  explicit SnapshotDatabase(double timeDelta);
 
-  virtual std::string outputFileName() const;
+  virtual std::string getOutputFileName() const;
 
   virtual void prepareOutputStream(std::ostream& file) const = 0;
   virtual void writeHeader(std::ostream& file) const         = 0;

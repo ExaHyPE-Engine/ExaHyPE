@@ -25,7 +25,7 @@ namespace {
       JSONValue result = parseValue();
       skipWhitespace();
       if (not isAtEnd()) {
-        error("Unexpected trailing content");
+        error("The file must end after its top-level value");
       }
       return result;
     }
@@ -49,14 +49,15 @@ namespace {
 
     [[noreturn]] void error(const std::string& reason) const {
       std::stringstream message;
-      message << "Failed to parse JSON file \"" << _filepath << "\": " << reason << " at position " << _position << ".";
+      message << "The JSON reader cannot parse the file '" << _filepath << "' at position " << _position << ". "
+              << reason << ".";
       tarch::terminateWithError(message.str());
     }
 
     void expect(const char expected) {
       if (advance() != expected) {
         std::stringstream message;
-        message << "Expected '" << expected << "'";
+        message << "The JSON syntax expects '" << expected << "'";
         error(message.str());
       }
     }
@@ -65,7 +66,7 @@ namespace {
       for (const char ch : keyword) {
         if (advance() != ch) {
           std::stringstream message;
-          message << "Expected \"" << keyword << "\"";
+          message << "The JSON syntax expects \"" << keyword << "\"";
           error(message.str());
         }
       }
@@ -93,7 +94,7 @@ namespace {
         if (current() == '-' or std::isdigit(static_cast<unsigned char>(current())) != 0) {
           return parseNumber();
         }
-        error("Unexpected token");
+        error("The JSON syntax expects a value");
       }
     }
 
@@ -110,7 +111,7 @@ namespace {
       while (true) {
         skipWhitespace();
         if (current() != '"') {
-          error("Expected string key");
+          error("The JSON syntax expects a quoted key");
         }
         std::string key = parseString();
 
@@ -171,7 +172,7 @@ namespace {
 
     unsigned int parseHexDigit() {
       if (isAtEnd()) {
-        error("Incomplete unicode escape");
+        error("A unicode escape needs four hexadecimal digits");
       }
 
       const char ch = advance();
@@ -184,7 +185,7 @@ namespace {
       if (ch >= 'A' and ch <= 'F') {
         return 10U + static_cast<unsigned int>(ch - 'A');
       }
-      error("Invalid unicode escape");
+      error("A unicode escape needs four hexadecimal digits");
     }
 
     std::string parseString() {
@@ -198,7 +199,7 @@ namespace {
         }
         if (ch == '\\') {
           if (isAtEnd()) {
-            error("Incomplete escape sequence");
+            error("A backslash needs an escaped character after it");
           }
           switch (const char escaped = advance()) {
           case '"':
@@ -230,14 +231,14 @@ namespace {
             break;
           }
           default:
-            error("Invalid escape sequence");
+            error("A backslash escapes the characters \", \\, /, b, f, n, r, t and u only");
           }
         } else {
           result.push_back(ch);
         }
       }
 
-      error("Unterminated string");
+      error("A string must end with a quote");
     }
 
     JSONValue parseNumber() {
@@ -248,7 +249,7 @@ namespace {
       }
 
       if (std::isdigit(static_cast<unsigned char>(current())) == 0) {
-        error("Invalid number");
+        error("A number must start with a digit");
       }
 
       if (current() == '0') {
@@ -264,7 +265,7 @@ namespace {
         isFloatingPoint = true;
         advance();
         if (std::isdigit(static_cast<unsigned char>(current())) == 0) {
-          error("Invalid number");
+          error("A decimal point needs a digit after it");
         }
         while (std::isdigit(static_cast<unsigned char>(current())) != 0) {
           advance();
@@ -278,7 +279,7 @@ namespace {
           advance();
         }
         if (std::isdigit(static_cast<unsigned char>(current())) == 0) {
-          error("Invalid exponent");
+          error("An exponent needs at least one digit");
         }
         while (std::isdigit(static_cast<unsigned char>(current())) != 0) {
           advance();
@@ -292,7 +293,7 @@ namespace {
         auto       result = 0.0;
         const auto parsed = std::from_chars(token.data(), end, result);
         if (parsed.ec != std::errc{} or parsed.ptr != end) {
-          error("Failed to parse number");
+          error("A floating-point number must fit into a double-precision value");
         }
         return JSONValue{result};
       }
@@ -300,7 +301,7 @@ namespace {
       auto       result = 0;
       const auto parsed = std::from_chars(token.data(), end, result);
       if (parsed.ec != std::errc{} or parsed.ptr != end) {
-        error("Failed to parse number");
+        error("An integer must fit into 32 bits");
       }
       return JSONValue{result};
     }
@@ -310,7 +311,7 @@ namespace {
   const T& requireType(const JSONValue& value, const std::string& key, const char* expectedTypeName) {
     if (not std::holds_alternative<T>(value.data)) {
       std::stringstream message;
-      message << "JSON key \"" << key << "\" is not of type " << expectedTypeName << ".";
+      message << "The JSON key \"" << key << "\" expects a value of type " << expectedTypeName << ".";
       tarch::terminateWithError(message.str());
     }
     return std::get<T>(value.data);
@@ -336,8 +337,8 @@ namespace {
   }
 
   /**
-   * Returns the value the dot-separated key names, or nullptr when a component is absent or when a
-   * component other than the last one holds no object.
+   * Returns the value at the dot-separated key, or nullptr when a component is missing or a
+   * component before the last one is no object.
    */
   const JSONValue* findValue(const JSONObject& root, const std::string& key) {
     const std::vector<std::string> path          = splitKey(key);
@@ -366,7 +367,7 @@ namespace {
     const JSONValue* const value = findValue(root, key);
     if (value == nullptr) {
       std::stringstream message;
-      message << "JSON key \"" << key << "\" does not exist.";
+      message << "The JSON reader cannot find the key \"" << key << "\".";
       tarch::terminateWithError(message.str());
     }
     return *value;
@@ -386,7 +387,7 @@ tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
   std::ifstream input(filepath.c_str());
   if (not input.is_open()) {
     std::stringstream message;
-    message << "Could not open JSON file at \"" << filepath << "\".";
+    message << "The JSON reader cannot open the file '" << filepath << "'.";
     tarch::terminateWithError(message.str());
   }
 
@@ -396,7 +397,7 @@ tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
   JSONValue document = Parser(buffer.str(), filepath).parse();
   if (not std::holds_alternative<JSONObject>(document.data)) {
     std::stringstream message;
-    message << "JSON file \"" << filepath << "\" must contain a top-level object.";
+    message << "The JSON reader expects an object at the top level of the file '" << filepath << "'.";
     tarch::terminateWithError(message.str());
   }
   _impl->root = std::get<JSONObject>(std::move(document.data));
@@ -404,36 +405,49 @@ tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
 
 tarch::reader::JSONReader::~JSONReader() = default;
 
-bool tarch::reader::JSONReader::hasKey(const std::string& key) const { return hasValue(_impl->root, key); }
+/**
+ * Returns whether the key exists without marking it read.
+ */
+bool
+tarch::reader::JSONReader::hasKey(const std::string& key) const {
+  return hasValue(_impl->root, key);
+}
 
-void tarch::reader::JSONReader::markRead(const std::string& key) const {
+void
+tarch::reader::JSONReader::markRead(const std::string& key) const {
   // getUnusedKeys() lists top-level keys, so the insert records the top-level component only.
   _impl->used.insert(key.substr(0, key.find('.')));
 }
 
-std::vector<std::string> tarch::reader::JSONReader::getUnusedKeys() const {
+/**
+ * Returns the sorted top-level keys that no getter read.
+ */
+std::vector<std::string>
+tarch::reader::JSONReader::getUnusedKeys() const {
   std::vector<std::string> result;
   for (const auto& entry : _impl->root) {
     if (not _impl->used.contains(entry.first)) {
       result.push_back(entry.first);
     }
   }
-  // The root map iterates in an unspecified order, so the sort makes the result reproducible.
   std::sort(result.begin(), result.end());
   return result;
 }
 
-std::string tarch::reader::JSONReader::getString(const std::string& key) const {
+std::string
+tarch::reader::JSONReader::getString(const std::string& key) const {
   markRead(key);
   return requireType<std::string>(getValue(_impl->root, key), key, "string");
 }
 
-int tarch::reader::JSONReader::getInteger(const std::string& key) const {
+int
+tarch::reader::JSONReader::getInteger(const std::string& key) const {
   markRead(key);
   return requireType<int>(getValue(_impl->root, key), key, "integer");
 }
 
-double tarch::reader::JSONReader::getDouble(const std::string& key) const {
+double
+tarch::reader::JSONReader::getDouble(const std::string& key) const {
   markRead(key);
   const JSONValue& value = getValue(_impl->root, key);
   if (std::holds_alternative<int>(value.data)) {
@@ -442,28 +456,34 @@ double tarch::reader::JSONReader::getDouble(const std::string& key) const {
   return requireType<double>(value, key, "number");
 }
 
-bool tarch::reader::JSONReader::getBoolean(const std::string& key) const {
+bool
+tarch::reader::JSONReader::getBoolean(const std::string& key) const {
   markRead(key);
   return requireType<bool>(getValue(_impl->root, key), key, "boolean");
 }
 
-std::string tarch::reader::JSONReader::getString(const std::string& key, const std::string& fallback) const {
+std::string
+tarch::reader::JSONReader::getString(const std::string& key, const std::string& fallback) const {
   return hasKey(key) ? getString(key) : fallback;
 }
 
-int tarch::reader::JSONReader::getInteger(const std::string& key, const int fallback) const {
+int
+tarch::reader::JSONReader::getInteger(const std::string& key, const int fallback) const {
   return hasKey(key) ? getInteger(key) : fallback;
 }
 
-double tarch::reader::JSONReader::getDouble(const std::string& key, const double fallback) const {
+double
+tarch::reader::JSONReader::getDouble(const std::string& key, const double fallback) const {
   return hasKey(key) ? getDouble(key) : fallback;
 }
 
-bool tarch::reader::JSONReader::getBoolean(const std::string& key, const bool fallback) const {
+bool
+tarch::reader::JSONReader::getBoolean(const std::string& key, const bool fallback) const {
   return hasKey(key) ? getBoolean(key) : fallback;
 }
 
-std::vector<std::string> tarch::reader::JSONReader::getStringArray(const std::string& key) const {
+std::vector<std::string>
+tarch::reader::JSONReader::getStringArray(const std::string& key) const {
   markRead(key);
   const auto&              source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<std::string> result;
@@ -474,7 +494,8 @@ std::vector<std::string> tarch::reader::JSONReader::getStringArray(const std::st
   return result;
 }
 
-std::vector<int> tarch::reader::JSONReader::getIntegerArray(const std::string& key) const {
+std::vector<int>
+tarch::reader::JSONReader::getIntegerArray(const std::string& key) const {
   markRead(key);
   const auto&      source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<int> result;
@@ -485,7 +506,8 @@ std::vector<int> tarch::reader::JSONReader::getIntegerArray(const std::string& k
   return result;
 }
 
-std::vector<double> tarch::reader::JSONReader::getDoubleArray(const std::string& key) const {
+std::vector<double>
+tarch::reader::JSONReader::getDoubleArray(const std::string& key) const {
   markRead(key);
   const auto&         source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<double> result;
@@ -497,14 +519,15 @@ std::vector<double> tarch::reader::JSONReader::getDoubleArray(const std::string&
       result.push_back(std::get<double>(entry.data));
     } else {
       std::stringstream message;
-      message << "JSON key \"" << key << "\" contains a non-numeric array element.";
+      message << "The JSON key \"" << key << "\" expects an array of numbers.";
       tarch::terminateWithError(message.str());
     }
   }
   return result;
 }
 
-std::vector<bool> tarch::reader::JSONReader::getBooleanArray(const std::string& key) const {
+std::vector<bool>
+tarch::reader::JSONReader::getBooleanArray(const std::string& key) const {
   markRead(key);
   const auto&       source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<bool> result;

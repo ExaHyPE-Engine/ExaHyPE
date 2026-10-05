@@ -4,6 +4,7 @@
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
@@ -16,8 +17,14 @@ from postprocessing.render_curve import (
 from postprocessing.solution_io import MeshSnapshot
 
 
-def make_grid_snapshot(cells_per_axis: int, subdomains, subtrees=None) -> MeshSnapshot:
-    """Builds a unit-square grid whose cells are written row by row along x."""
+def make_grid_snapshot(
+    cells_per_axis: int, subdomains, curve_indices=None
+) -> MeshSnapshot:
+    """Builds a unit-square grid whose cells are written row by row along x.
+
+    Every cell is its own patch with its position in the file as curve index unless
+    curve_indices names the curve index of every cell.
+    """
     axis = np.linspace(0.0, 1.0, cells_per_axis + 1)
     points = np.asarray([[x, y] for y in axis for x in axis])
     cells = []
@@ -33,15 +40,19 @@ def make_grid_snapshot(cells_per_axis: int, subdomains, subtrees=None) -> MeshSn
                 ]
             )
     subdomains = np.asarray(subdomains, dtype=float)
-    subtrees = subdomains if subtrees is None else np.asarray(subtrees, dtype=float)
+    if curve_indices is None:
+        curve_indices = np.arange(len(subdomains))
     return MeshSnapshot(
         name="test",
         time=0.25,
         points=points,
         cells=np.asarray(cells),
         node_data={},
-        cell_data={"Subdomain": subdomains, "Subtree": subtrees},
-        field_order=[("Subdomain", "cell"), ("Subtree", "cell")],
+        cell_data={
+            "Subdomain": subdomains,
+            "CurveIndex": np.asarray(curve_indices, dtype=float),
+        },
+        field_order=[("Subdomain", "cell"), ("CurveIndex", "cell")],
     )
 
 
@@ -65,36 +76,38 @@ class RenderCurveTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             cell_polygons(snapshot)
 
-    def test_patch_centres_follow_the_curve_position_and_not_the_file_order(self):
-        snapshot = make_grid_snapshot(4, np.zeros(16))
-        polygons = cell_polygons(snapshot)
-        # Four patches of one grid row each, written in the file in reverse curve order.
-        snapshot.cell_data["CurvePosition"] = np.repeat([0.75, 0.5, 0.25, 0.0], 4)
-        centres = patch_centres_along_curve(snapshot, polygons)
+    def test_the_patch_centres_follow_the_curve_index_not_the_snapshot_order(self):
+        # The file stores the cells as (0.75, 0.25), (0.25, 0.25), (0.75, 0.75), (0.25, 0.75).
+        snapshot = make_grid_snapshot(2, [0, 0, 0, 0], curve_indices=[1, 0, 2, 3])
+        snapshot.cells = snapshot.cells[[1, 0, 3, 2]]
+        centres = patch_centres_along_curve(snapshot, cell_polygons(snapshot))
         np.testing.assert_allclose(
-            centres, [[0.5, 0.875], [0.5, 0.625], [0.5, 0.375], [0.5, 0.125]]
+            centres, [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]]
         )
 
-    def test_patch_centres_group_patches_of_any_cell_count(self):
-        snapshot = make_grid_snapshot(4, np.zeros(16))
-        polygons = cell_polygons(snapshot)
-        # A Finite Volume patch, an ADER-DG cell and a coarser cell carry different cell counts.
-        snapshot.cell_data["CurvePosition"] = np.concatenate(
-            [np.full(9, 0.1), np.full(4, 0.4), np.full(3, 0.8)]
-        )
-        centres = patch_centres_along_curve(snapshot, polygons)
-        cell_centres = polygons.mean(axis=1)
-        self.assertEqual(centres.shape, (3, 2))
-        np.testing.assert_allclose(centres[0], cell_centres[:9].mean(axis=0))
-        np.testing.assert_allclose(centres[1], cell_centres[9:13].mean(axis=0))
-        np.testing.assert_allclose(centres[2], cell_centres[13:].mean(axis=0))
+    def test_the_cells_of_one_patch_join_into_one_centre(self):
+        # The left and the right column form one patch each; the right one comes first on the curve.
+        snapshot = make_grid_snapshot(2, [0, 0, 0, 0], curve_indices=[7, 3, 7, 3])
+        centres = patch_centres_along_curve(snapshot, cell_polygons(snapshot))
+        np.testing.assert_allclose(centres, [[0.75, 0.5], [0.25, 0.5]])
 
-    def test_patch_centres_without_the_field_keep_one_patch_per_cell(self):
-        snapshot = make_grid_snapshot(4, np.zeros(16))
-        polygons = cell_polygons(snapshot)
-        np.testing.assert_allclose(
-            patch_centres_along_curve(snapshot, polygons), polygons.mean(axis=1)
-        )
+    def test_render_curve_joins_the_patch_centres_for_different_rank_labels(self):
+        snapshot = make_grid_snapshot(2, [0, 0, 0, 0], curve_indices=[1, 0, 2, 3])
+        centres = patch_centres_along_curve(snapshot, cell_polygons(snapshot))
+        with tempfile.TemporaryDirectory() as directory:
+            for labels in ([0, 0, 0, 0], [1, 1, 0, 0]):
+                snapshot.cell_data["Subdomain"] = np.asarray(labels)
+                with patch("matplotlib.axes.Axes.plot") as plot:
+                    render_curve(snapshot, "unit test", Path(directory) / "curve.png")
+                plot.assert_called_once()
+                np.testing.assert_allclose(plot.call_args.args[0], centres[:, 0])
+                np.testing.assert_allclose(plot.call_args.args[1], centres[:, 1])
+
+    def test_render_curve_rejects_an_empty_snapshot(self):
+        snapshot = make_grid_snapshot(1, [])
+        snapshot.cells = snapshot.cells[:0]
+        with self.assertRaisesRegex(ValueError, "at least one cell"):
+            render_curve(snapshot, "unit test", Path("unused.png"))
 
     def test_label_colours_give_one_colour_per_cell_and_the_same_colour_per_label(self):
         colours = label_colours(np.asarray([0.0, 1.0, 0.0, 12.0]))
@@ -102,27 +115,24 @@ class RenderCurveTest(unittest.TestCase):
         np.testing.assert_allclose(colours[0], colours[2])
         self.assertFalse(np.allclose(colours[0], colours[1]))
 
-    def test_render_curve_writes_an_image_and_counts_ranks_and_tasks(self):
-        snapshot = make_grid_snapshot(4, [0] * 8 + [1] * 8, [0, 1, 2, 3] * 4)
-        snapshot.cell_data["CurvePosition"] = np.repeat([0.0, 0.25, 0.5, 0.75], 4)
+    def test_render_curve_writes_an_image_and_counts_ranks_patches_and_cells(self):
+        snapshot = make_grid_snapshot(
+            4, [0] * 8 + [1] * 8, curve_indices=np.arange(16) // 2
+        )
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "curve.png"
             summary = render_curve(snapshot, "unit test", output)
             self.assertTrue(output.exists())
             self.assertGreater(output.stat().st_size, 0)
         self.assertEqual(summary["subdomains"], 2)
-        # The plotter writes the tree id, which is unique across the ranks.
-        self.assertEqual(summary["subtrees"], 4)
-        self.assertEqual(summary["patches"], 4)
+        self.assertEqual(summary["patches"], 8)
         self.assertEqual(summary["cells"], 16)
 
     def test_render_curve_counts_labels_that_start_at_one_and_skip_values(self):
-        # Three trees numbered 1, 2 and 4: The largest id exceeds the number of trees.
-        snapshot = make_grid_snapshot(4, np.zeros(16), [1] * 6 + [2] * 6 + [4] * 4)
+        snapshot = make_grid_snapshot(4, [1] * 6 + [2] * 6 + [4] * 4)
         with tempfile.TemporaryDirectory() as directory:
             summary = render_curve(snapshot, "unit test", Path(directory) / "curve.png")
-        self.assertEqual(summary["subtrees"], 3)
-        self.assertEqual(summary["subdomains"], 1)
+        self.assertEqual(summary["subdomains"], 3)
 
 
 if __name__ == "__main__":

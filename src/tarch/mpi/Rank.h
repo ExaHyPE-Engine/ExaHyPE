@@ -5,22 +5,12 @@
 #include <mpi.h>
 
 namespace tarch::mpi {
-  void abort(const int errorCode);
+  void abort(int errorCode);
   class Rank;
 } // namespace tarch::mpi
 
 /**
- * Represents one program instance within a cluster, i.e. one MPI rank. This
- * class is a singleton.
- *
- * A rank owns the MPI environment: init() brings it up and determines the
- * rank number, the number of ranks, the node layout and the supported thread
- * level, while shutdown() tears it down again. The class furthermore hands
- * out the message tags through reserveFreeTag(). The supervision of the
- * message exchange, i.e. the timeout warnings and the deadlock abort, lives
- * in tarch::mpi::Diagnostics.
- *
- * A detected MPI failure either stops initialisation or terminates the job.
+ * Singleton of one MPI rank, which hands out the message tags through reserveFreeTag().
  *
  * @author Tobias Weinzierl
  */
@@ -53,9 +43,11 @@ public:
 
   int getNumberOfNodes() const;
 
-  bool isNodeMaster() const;
+  int getNumberOfRanksOnNode() const;
 
-  int getProvidedThreadLevelSupport() const;
+  int getRankOnNode() const;
+
+  bool isNodeMaster() const;
 
 private:
   static Rank _singleton;
@@ -68,8 +60,10 @@ private:
   int  _numberOfRanks{-1};
   int  _providedThreadLevelSupport{-1};
 
-  // Node layout, computed once in init() so later queries need no collective.
+  // The call init() computes the node layout, so a query needs no collective call.
   int  _numberOfNodes{1};
+  int  _numberOfRanksOnNode{1};
+  int  _rankOnNode{0};
   bool _isNodeMaster{true};
 
   MPI_Comm _communicator{MPI_COMM_WORLD};

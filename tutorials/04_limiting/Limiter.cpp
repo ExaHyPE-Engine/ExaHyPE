@@ -4,13 +4,12 @@
 
 namespace {
   constexpr double Gamma = 1.4;
-  // The Euler equations describe a gas only while density and pressure are
-  // strictly positive, so a candidate that reaches either floor goes to the
-  // subcell scheme.
+  // An admissible state has a positive density and pressure. The subcell scheme recomputes every
+  // candidate with either value at or below its floor.
   constexpr double DensityFloor  = 1.0e-12;
   constexpr double PressureFloor = 1.0e-12;
 
-  // Positions in the observable vector the discrete maximum principle bounds.
+  // Indices of the observables that the discrete maximum principle bounds.
   constexpr int Density  = 0;
   constexpr int Velocity = 1;
   constexpr int Pressure = 1 + DIMENSIONS;
@@ -25,7 +24,8 @@ namespace {
   }
 } // namespace
 
-bool tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
+bool
+tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                  Q,
   const int                                    numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
@@ -33,8 +33,8 @@ bool tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
 ) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  // Q holds numberOfStates consecutive states: Every node of a candidate
-  // polynomial, or a single state when one finite-volume value is checked.
+  // Q stores numberOfStates consecutive states: The nodes or the subcells of a candidate, or one
+  // subcell.
   const double* state = Q;
   for (int stateNumber = 0; stateNumber < numberOfStates; ++stateNumber, state += NumberOfData) {
     for (int unknown = 0; unknown < NumberOfData; ++unknown) {
@@ -57,7 +57,8 @@ bool tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
   return true;
 }
 
-void tutorials::exahype2::limiting::ADERDGSolver::mapDmpObservables(
+void
+tutorials::exahype2::limiting::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
 ) {

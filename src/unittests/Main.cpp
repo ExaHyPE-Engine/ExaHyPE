@@ -3,7 +3,6 @@
 #include "exahype2/UnitTests.h"
 #include "peano4/Init.h"
 #include "peano4/UnitTests.h"
-#include "runner/UnitTests.h"
 #include "tarch/FloatingPointExceptions.h"
 #include "tarch/Init.h"
 #include "tarch/NonCriticalAssertions.h"
@@ -13,6 +12,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/tasking/Runtime.h"
+#include "tarch/tests/TestCase.h"
 
 namespace {
   int runTests() {
@@ -27,10 +27,9 @@ namespace {
     runTestCollection(tarch::getUnitTests());
     runTestCollection(peano4::getUnitTests());
     runTestCollection(exahype2::getUnitTests());
-    runTestCollection(runner::getUnitTests());
 
     if (numberOfErrors != 0) {
-      logError("Unit tests failed: " << numberOfErrors << ".");
+      logError("The unit tests report " << numberOfErrors << " errors.");
       return EXIT_FAILURE;
     }
 
@@ -38,7 +37,8 @@ namespace {
   }
 } // namespace
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
 #if DIMENSIONS == 2
   const tarch::la::Vector<DIMENSIONS, double> domainOffset = {0.0, 0.0};
   const tarch::la::Vector<DIMENSIONS, double> domainSize   = {1.0, 1.0};
@@ -51,10 +51,9 @@ int main(int argc, char** argv) {
   tarch::instrumentation::Log::setInfoOutputEnabled(false);
   tarch::instrumentation::Log::setWarningOutputEnabled(false);
 
-  // Every thread carries its own floating-point environment, so one trap is armed
-  // here, one per worker inside the parallel region and one around the tests. This
-  // trap is dropped before tarch::shutdown(), so a floating-point exception raised
-  // inside the MPI finalisation does not abort the run.
+  // Every thread has its own floating-point environment, so every thread arms a trap. The main
+  // thread resets this trap before tarch::shutdown(), so a floating-point exception inside the MPI
+  // finalisation does not abort the run.
   std::optional<tarch::FloatingPointExceptions::ScopedTrap> testProcessTrap(std::in_place, __FILE__, __LINE__);
   peano4::init(domainOffset, domainSize);
 
@@ -76,7 +75,7 @@ int main(int argc, char** argv) {
       }
 
       if (tarch::hasNonCriticalAssertionBeenViolated()) {
-        logError("Non-critical assertion has been triggered while running the unit tests. Quit.");
+        logError("A non-critical assertion fails in the unit tests.");
         returnCode = EXIT_FAILURE;
       }
     }

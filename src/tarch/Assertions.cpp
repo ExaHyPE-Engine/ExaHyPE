@@ -5,5 +5,8 @@
 #if PEANO_ASSERTIONS
 #include "tarch/Termination.h"
 
-void tarch::triggerAssertion(const std::string& assertionMessage) { tarch::terminateWithError(assertionMessage); }
+void
+tarch::triggerAssertion(const std::string& assertionMessage) {
+  tarch::terminateWithError(assertionMessage);
+}
 #endif

@@ -2,12 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <array>
-
-#include "exahype2/dg/ader/PredictorScratch.h"
+#include "exahype2/dg/Basis.h"
 #include "exahype2/fv/GaussLegendreBasis.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
+
+#include <array>
 
 namespace exahype2::fv::timestepping {
   template <typename Basis, typename Precision>
@@ -67,8 +67,8 @@ private:
   }
 
 public:
-  std::array<Precision, NumberOfNodes> quadraturePoints  = convert(Basis::nodes());
-  std::array<Precision, NumberOfNodes> quadratureWeights = convert(Basis::weights());
+  std::array<Precision, NumberOfNodes> quadraturePoints         = convert(Basis::nodes());
+  std::array<Precision, NumberOfNodes> quadratureWeights        = convert(Basis::weights());
   std::array<Precision, NumberOfNodes> inverseQuadratureWeights = [] {
     constexpr auto                       Weights = Basis::weights();
     std::array<Precision, NumberOfNodes> result{};
@@ -77,7 +77,7 @@ public:
     }
     return result;
   }();
-  std::array<Precision, NodesPerCell> cellQuadratureWeights = convert(cellWeights());
+  std::array<Precision, NodesPerCell> cellQuadratureWeights        = convert(cellWeights());
   std::array<Precision, NodesPerCell> inverseCellQuadratureWeights = [] {
     constexpr auto                      Weights = cellWeights();
     std::array<Precision, NodesPerCell> result{};
@@ -86,7 +86,7 @@ public:
     }
     return result;
   }();
-  std::array<Precision, NumberOfNodes * NumberOfNodes> stiffnessOperator = convert(stiffness());
+  std::array<Precision, NumberOfNodes * NumberOfNodes> stiffnessOperator           = convert(stiffness());
   std::array<Precision, NumberOfNodes * NumberOfNodes> stiffnessOperatorTransposed = [] {
     constexpr auto                                       Stiffness = stiffness();
     std::array<Precision, NumberOfNodes * NumberOfNodes> result{};
@@ -112,8 +112,8 @@ public:
     std::array<double, NumberOfNodes * NumberOfNodes> picardOperator{};
     for (int row = 0; row < NumberOfNodes; row++) {
       for (int column = 0; column < NumberOfNodes; column++) {
-        picardOperator[row * NumberOfNodes + column] = Basis::value(row, 1.0) * Basis::value(column, 1.0)
-                                                     - Stiffness[row * NumberOfNodes + column];
+        picardOperator[row * NumberOfNodes + column] =
+          Basis::value(row, 1.0) * Basis::value(column, 1.0) - Stiffness[row * NumberOfNodes + column];
       }
     }
     return convert(exahype2::fv::invertMatrix<NumberOfNodes>(picardOperator));
@@ -133,7 +133,7 @@ public:
     return result;
   }();
 
-  INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::BasisTables<Precision> view() const {
+  INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::BasisTables<Precision> view() const {
     return {
       .quadraturePoints             = quadraturePoints.data(),
       .quadratureWeights            = quadratureWeights.data(),

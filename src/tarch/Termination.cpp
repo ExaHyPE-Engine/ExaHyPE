@@ -10,15 +10,12 @@ namespace {
 } // namespace
 
 /**
- * Logs the first fatal message with its caller location, flushes pending output, and invokes the MPI-aware abort.
- * One atomic writer prevents concurrent failure paths from interleaving diagnostics or racing the abort; later
- * callers yield until the process ends.
+ * Logs the first fatal message with the location of its caller, flushes the output streams and
+ * calls tarch::mpi::abort(). An atomic flag lets the first caller write and abort, and every later
+ * caller yields until the process ends.
  */
-[[noreturn]] void tarch::terminateWithError(
-  const std::string_view     message,
-  const int                  errorCode,
-  const std::source_location location
-) {
+[[noreturn]] void
+tarch::terminateWithError(const std::string_view message, const int errorCode, const std::source_location location) {
   static std::atomic<TerminationOutputState> outputState{TerminationOutputState::Pending};
   auto                                       expectedState = TerminationOutputState::Pending;
   if (outputState.compare_exchange_strong(expectedState, TerminationOutputState::Writing)) {

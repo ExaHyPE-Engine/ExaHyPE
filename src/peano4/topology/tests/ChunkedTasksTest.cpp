@@ -8,7 +8,8 @@
 peano4::topology::tests::ChunkedTasksTest::ChunkedTasksTest() :
   TestCase("peano4::topology::tests::ChunkedTasksTest") {}
 
-void peano4::topology::tests::ChunkedTasksTest::run() {
+void
+peano4::topology::tests::ChunkedTasksTest::run() {
   testMethod(testChunksCoverTheRangeOnceInOrder);
   testMethod(testNumberOfChunksFollowsTheMinimum);
   testMethod(testASmallRangeRunsInOneChunk);
@@ -16,21 +17,21 @@ void peano4::topology::tests::ChunkedTasksTest::run() {
 }
 
 /**
- * Every item of a range above the chunk minimum lands in exactly one chunk,
- * the chunks are contiguous and ascending, and their number stays below the
- * bound maximumNumberOfChunks() names.
+ * The chunks of a long range cover every item once, in ascending order and below
+ * getMaximumNumberOfChunks().
  */
-void peano4::topology::tests::ChunkedTasksTest::testChunksCoverTheRangeOnceInOrder() {
+void
+peano4::topology::tests::ChunkedTasksTest::testChunksCoverTheRangeOnceInOrder() {
   constexpr int NumberOfItems        = 10000;
   constexpr int MinimumItemsPerChunk = 64;
 
   std::vector<std::atomic<int>>    visits(NumberOfItems);
-  std::vector<std::pair<int, int>> rangeOfChunk(peano4::topology::maximumNumberOfChunks(), {-1, -1});
+  std::vector<std::pair<int, int>> rangeOfChunk(peano4::topology::getMaximumNumberOfChunks(), {-1, -1});
   std::atomic<int>                 numberOfChunks{0};
   peano4::topology::runChunkedTasks(
     NumberOfItems,
     [&](const int chunkNumber, const int begin, const int end) {
-      validateWithParams1(chunkNumber >= 0 and chunkNumber < peano4::topology::maximumNumberOfChunks(), chunkNumber);
+      validateWithParams1(chunkNumber >= 0 and chunkNumber < peano4::topology::getMaximumNumberOfChunks(), chunkNumber);
       rangeOfChunk[chunkNumber] = {begin, end};
       numberOfChunks++;
       for (int itemNumber = begin; itemNumber < end; itemNumber++) {
@@ -50,31 +51,34 @@ void peano4::topology::tests::ChunkedTasksTest::testChunksCoverTheRangeOnceInOrd
     expectedBegin = rangeOfChunk[chunkNumber].second;
   }
   validateEquals(expectedBegin, NumberOfItems);
-  const int expectedNumberOfChunks = peano4::topology::numberOfChunks(NumberOfItems, MinimumItemsPerChunk);
+  const int expectedNumberOfChunks = peano4::topology::getNumberOfChunks(NumberOfItems, MinimumItemsPerChunk);
   const int actualNumberOfChunks   = numberOfChunks.load();
   validateEquals(actualNumberOfChunks, expectedNumberOfChunks);
 }
 
 /**
- * A range below two minimum chunks is one chunk, a range of two minimum chunks
- * is two, and a long range cuts into two chunks per thread, below the bound
- * maximumNumberOfChunks() names.
+ * A range below two chunk minimums is one chunk, a range of two minimums is two chunks, and a long
+ * range is two chunks per thread.
  */
-void peano4::topology::tests::ChunkedTasksTest::testNumberOfChunksFollowsTheMinimum() {
+void
+peano4::topology::tests::ChunkedTasksTest::testNumberOfChunksFollowsTheMinimum() {
   constexpr int MinimumItemsPerChunk = peano4::topology::DefaultMinimumItemsPerChunk;
   const int     numberOfThreads      = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   const int     chunksOfTwoMinimums  = numberOfThreads > 1 ? 2 : 1;
   const int     chunksOfLongRange    = numberOfThreads > 1 ? 2 * numberOfThreads : 1;
-  validateEquals(peano4::topology::numberOfChunks(0), 1);
-  validateEquals(peano4::topology::numberOfChunks(2 * MinimumItemsPerChunk - 1), 1);
-  validateEquals(peano4::topology::numberOfChunks(2 * MinimumItemsPerChunk), chunksOfTwoMinimums);
-  validateEquals(peano4::topology::numberOfChunks(64, 32), chunksOfTwoMinimums);
-  validateEquals(peano4::topology::numberOfChunks(1000 * MinimumItemsPerChunk), chunksOfLongRange);
-  validateWithParams1(chunksOfLongRange < peano4::topology::maximumNumberOfChunks(), chunksOfLongRange);
+  validateEquals(peano4::topology::getNumberOfChunks(0), 1);
+  validateEquals(peano4::topology::getNumberOfChunks(2 * MinimumItemsPerChunk - 1), 1);
+  validateEquals(peano4::topology::getNumberOfChunks(2 * MinimumItemsPerChunk), chunksOfTwoMinimums);
+  validateEquals(peano4::topology::getNumberOfChunks(64, 32), chunksOfTwoMinimums);
+  validateEquals(peano4::topology::getNumberOfChunks(1000 * MinimumItemsPerChunk), chunksOfLongRange);
+  validateWithParams1(chunksOfLongRange < peano4::topology::getMaximumNumberOfChunks(), chunksOfLongRange);
 }
 
-/** A range below two chunk minimums runs as one chunk in the calling thread. */
-void peano4::topology::tests::ChunkedTasksTest::testASmallRangeRunsInOneChunk() {
+/**
+ * A range below two chunk minimums runs as one chunk in the calling thread.
+ */
+void
+peano4::topology::tests::ChunkedTasksTest::testASmallRangeRunsInOneChunk() {
   constexpr int NumberOfItems = 100;
 
   int       numberOfChunks = 0;
@@ -95,8 +99,11 @@ void peano4::topology::tests::ChunkedTasksTest::testASmallRangeRunsInOneChunk() 
   validateEquals(chunkThread, callingThread);
 }
 
-/** An empty range calls the chunk body once with an empty range. */
-void peano4::topology::tests::ChunkedTasksTest::testAnEmptyRangeRunsOnce() {
+/**
+ * An empty range calls the chunk body once with an empty range.
+ */
+void
+peano4::topology::tests::ChunkedTasksTest::testAnEmptyRangeRunsOnce() {
   int numberOfChunks = 0;
   int itemsSeen      = 0;
   peano4::topology::runChunkedTasks(0, [&](const int chunkNumber, const int begin, const int end) {

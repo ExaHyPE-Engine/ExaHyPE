@@ -76,6 +76,7 @@ if project.dimensions != 3:
     raise ValueError(
         "The PML dynamic rupture ExaSeis application is three-dimensional."
     )
+DynamicRuptureElastic.add_runtime_parameters(project)
 
 theSolver = exahype2.dg.ader.Solver(
     name="ElasticSolver",
@@ -85,10 +86,10 @@ theSolver = exahype2.dg.ader.Solver(
         "rho": 1,
         "cp": 1,
         "cs": 1,
-        "dmp_pml": 3,
+        "pmlDamping": 3,
         "jacobian": 1,
-        "metric_derivative": 9,
-        "curve_grid": 3,
+        "metricDerivative": 9,
+        "curveGrid": 3,
     },
     time_stepping=exahype2.TimeStepping.Adaptive(0.9),
     basis=exahype2.dg.GaussLobatto,
@@ -111,48 +112,67 @@ theSolver.set_pde_terms(
 )
 
 theSolver.add_declarations(
-    CurvilinearElastic.abstractDeclarations()
-    + DynamicRuptureElastic.abstractDeclarations()
-    + PMLElastic.abstractDeclarations()
+    CurvilinearElastic.abstractDeclarations() + PMLElastic.abstractDeclarations()
 )
-theSolver.add_definitions(
-    CurvilinearElastic.abstractUserDefinitions()
-    + DynamicRuptureElastic.abstractUserDefinitions()
-)
+theSolver.add_definitions(CurvilinearElastic.abstractUserDefinitions())
 theSolver.on_start_grid_initialisation(
-    CurvilinearElastic.init_grid_step_implementation(my_scenario.domain_perturbations())
+    DynamicRuptureElastic.init_grid_step_implementation(
+        my_scenario.domain_perturbations()
+    )
 )
 theSolver.add_includes(*PMLDynamicRuptureElastic.userIncludes())
 project.add_constant("PmlTop", 1, "int")
 
 project.add_solver(theSolver)
+project.output.makefile.add_include_directory("../../..")
 project.output.makefile.add_h_file("../DynamicRuptureParameters.h", generated=True)
+project.output.makefile.add_h_file("../DynamicRuptureParameters.cpph", generated=True)
 
-project.add_action_set_to_timestepping(
-    exahype2.particles.CurviTracer(
-        coordinates=my_scenario.tracer_coordinates,
-        fault_coordinates=my_scenario.fault_coordinates,
-        solver=theSolver,
-        filename=args.scenario + "-o" + str(order) + "-" + str(args.precision),
+filename = args.scenario + "-o" + str(order) + "-" + str(args.precision)
+recorded_unknowns = 12
+recorded_fields = ",".join(str(field) for field in range(recorded_unknowns))
+
+# The tracers record the velocity, the stress and the displacement, and skip the PML unknowns.
+tracer_particles = project.add_tracer(
+    name="Tracer", particle_attributes=recorded_unknowns
+)
+tracer_particles.insert_by_coordinates(
+    my_scenario.tracer_coordinates, transform="invertProjection"
+)
+tracer_particles.dump_into_database(
+    filename=filename, time_delta_between_two_snapshots=0.01, output_precision=10
+)
+theSolver.trace(
+    tracer_particles,
+    exahype2.particles.Forces(
+        interpolation_scheme=2,
+        integration_scheme=0,
+        force_method=0,
+        fields_to_interpolate=recorded_fields,
+    ),
+    initialisation=False,
+)
+
+# The jumps of u and v across the fault are the slip and the slip rate.
+if my_scenario.fault_coordinates:
+    fault_particles = project.add_tracer(
+        name="FaultTracer", particle_attributes=recorded_unknowns
+    )
+    fault_particles.insert_by_coordinates(
+        my_scenario.fault_coordinates, transform="invertProjection"
+    )
+    fault_particles.sample_face_traces(
+        normal=DynamicRuptureElastic.fault_normal(),
+        position=DynamicRuptureElastic.fault_position(),
+        difference_fields=["u", "v"],
+    )
+    fault_particles.dump_into_database(
+        filename=filename + "-fault",
         time_delta_between_two_snapshots=0.01,
         output_precision=10,
-        unknowns_to_store=12,
     )
-)
+    theSolver.trace(fault_particles, initialisation=False)
 
-theSolver.add_face_plotter(
-    guard="""
-      ((marker.getSelectedFaceNumber() % DIMENSIONS) == repositories::"""
-    + theSolver.instance_name
-    + """.getFaultNormal()) and
-      std::abs(marker.getX()[repositories::"""
-    + theSolver.instance_name
-    + """.getFaultNormal()]-repositories::"""
-    + theSolver.instance_name
-    + """.getFaultPosition())< 0.5*marker.getH()[repositories::"""
-    + theSolver.instance_name
-    + """.getFaultNormal()]
-      """
-)
+theSolver.plot_faces(DynamicRuptureElastic.fault_face_predicate())
 
 project.generate_and_build()

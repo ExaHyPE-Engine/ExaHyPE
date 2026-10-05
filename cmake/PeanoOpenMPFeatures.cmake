@@ -3,11 +3,9 @@
 
 include_guard(GLOBAL)
 
-# Reports an OpenMP construct as supported only when the compiler accepts it in
-# silence. A compiler that accepts a construct and then names it in a warning
-# ignores the construct, so Peano takes the fallback. The probe runs on every
-# configuration and caches no verdict, so a change of compiler leaves no stale
-# answer behind.
+# Reports an OpenMP construct as supported only when no warning or remark mentions it, because a
+# compiler that warns about a construct ignores it. The probe runs at every configuration and
+# caches no result.
 function(_peano_check_openmp_construct construct_name construct_keyword probe_source out_var)
   string(MAKE_C_IDENTIFIER "${construct_name}" _peano_probe_identifier)
   set(_peano_probe_file "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/PeanoOpenMPProbe_${_peano_probe_identifier}.cpp")
@@ -70,21 +68,22 @@ function(peano_check_openmp_features)
   endif()
 
   _peano_check_openmp_construct(
-    "taskwait depend"
+    "taskwait depend(iterator)"
     "taskwait"
     "
     #include <omp.h>
 
     int main() {
-      char token{};
-      char* const tokenPointer = &token;
+      char tokenStorage[2]{};
+      char* tokens[2] = {&tokenStorage[0], &tokenStorage[1]};
+      const int numberOfTokens = 2;
 
       #pragma omp parallel
       #pragma omp single
       {
-        #pragma omp task depend(out: tokenPointer[0])
+        #pragma omp task depend(out: tokens[0][0])
         {}
-        #pragma omp taskwait depend(in: tokenPointer[0])
+        #pragma omp taskwait depend(iterator(i = 0 : numberOfTokens), in: tokens[i][0])
       }
 
       return 0;

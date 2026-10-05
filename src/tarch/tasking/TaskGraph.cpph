@@ -1,7 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-INLINE_METHOD void tarch::tasking::spawnTask(
+INLINE_METHOD void
+tarch::tasking::spawnTask(
   tarch::tasking::Task* const        task,
   const std::initializer_list<void*> inDependencies,
   const std::initializer_list<void*> outDependencies,

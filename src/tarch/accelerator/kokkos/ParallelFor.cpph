@@ -2,39 +2,66 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
-  // The nvcc and hipcc compilers reject an extended lambda inside a __host__ __device__
-  // function when the lambda's type is local to a function, so the team overloads wrap
-  // the caller's functor in a named functor.
+  /**
+   * Returns the team scratch of scratchBytes of team. Every call takes a new block from the pool
+   * of the team. A launch calls it once per team.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD unsigned char* takeTeamScratch(
+    const tarch::accelerator::KokkosTeam::MemberType& team,
+    const int                                         scratchBytes
+  ) {
+    return static_cast<unsigned char*>(team.team_shmem().get_shmem(static_cast<std::ptrdiff_t>(scratchBytes)));
+  }
+
+  template <typename Functor>
+  struct LeagueFor final {
+    Functor functor;
+    int     scratchBytes;
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const tarch::accelerator::KokkosTeam::MemberType& team) const {
+      functor(team.league_rank(), tarch::accelerator::KokkosTeam{team, takeTeamScratch(team, scratchBytes)});
+    }
+  };
+
   template <typename Functor>
   struct TeamFor1D final {
-    Functor                     functor;
-    KOKKOS_INLINE_FUNCTION void operator()(const int i) const { functor(i); }
+    Functor functor;
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int i) const { functor(i); }
   };
 
   template <typename Functor>
   struct TeamFor2D final {
-    Functor                     functor;
-    int                         extentY;
-    KOKKOS_INLINE_FUNCTION void operator()(const int index) const { functor(index / extentY, index % extentY); }
+    Functor functor;
+    int     extentY;
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index) const {
+      functor(index / extentY, index % extentY);
+    }
   };
 
   template <typename Functor>
   struct TeamFor3D final {
-    Functor                     functor;
-    int                         extentY;
-    int                         extentZ;
-    KOKKOS_INLINE_FUNCTION void operator()(const int index) const {
+    Functor functor;
+    int     extentY;
+    int     extentZ;
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index) const {
       functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ);
     }
   };
 
   template <typename Functor>
-  KOKKOS_INLINE_FUNCTION void parallelFor(const KokkosTeam& team, const Range& range, const Functor functor) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const KokkosTeam& team,
+    const Range&      range,
+    const Functor     functor
+  ) {
     Kokkos::parallel_for(Kokkos::TeamVectorRange(team.member, range.n), TeamFor1D<Functor>{functor});
   }
 
   template <typename Functor>
-  KOKKOS_INLINE_FUNCTION void parallelFor(const KokkosTeam& team, const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const KokkosTeam& team,
+    const RangeMD<2>& range,
+    const Functor     functor
+  ) {
     Kokkos::parallel_for(
       Kokkos::TeamVectorRange(team.member, range.n[0] * range.n[1]),
       TeamFor2D<Functor>{functor, range.n[1]}
@@ -42,32 +69,66 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  KOKKOS_INLINE_FUNCTION void parallelFor(const KokkosTeam& team, const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const KokkosTeam& team,
+    const RangeMD<3>& range,
+    const Functor     functor
+  ) {
     Kokkos::parallel_for(
       Kokkos::TeamVectorRange(team.member, range.n[0] * range.n[1] * range.n[2]),
       TeamFor3D<Functor>{functor, range.n[1], range.n[2]}
     );
   }
 
-  KOKKOS_INLINE_FUNCTION void teamBarrier(const KokkosTeam& team) { team.member.team_barrier(); }
+  INLINE_METHOD GPU_CALLABLE_METHOD int getThreadOfTeam(const KokkosTeam& team) { return team.member.team_rank(); }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD unsigned char* getTeamScratch(const KokkosTeam& team) { return team.scratch; }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD int getNumberOfThreadsPerTeam(const KokkosTeam& team) {
+    return team.member.team_size();
+  }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier(const KokkosTeam& team) { team.member.team_barrier(); }
+
+  /**
+   * Returns the threads per team of a launch that asks for requested threads: Whole warps up to
+   * KokkosThreadsPerTeam, or KokkosThreadsPerTeam for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamThreads(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::KokkosThreadsPerTeam;
+    }
+    assertion(requested > 0, requested);
+    const int warps = (requested + tarch::accelerator::ThreadsPerWarp - 1) / tarch::accelerator::ThreadsPerWarp;
+    return std::min(tarch::accelerator::KokkosThreadsPerTeam, warps * tarch::accelerator::ThreadsPerWarp);
+  }
+
+  /**
+   * Returns the team scratch bytes of a launch that asks for requested bytes, or TeamScratchBytes
+   * for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamScratchBytes(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::TeamScratchBytes;
+    }
+    assertion(requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes, requested);
+    return requested;
+  }
 
   // Kokkos::parallel_for returns before a device execution space completes, so every host
   // overload fences before it returns.
   template <typename Functor>
-  inline void parallelFor(const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
-    Kokkos::parallel_for(
-      Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, range.n),
-      KOKKOS_LAMBDA(const int i) { functor(i); }
-    );
+    Kokkos::parallel_for(Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, range.n), functor);
     Kokkos::fence();
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
@@ -75,13 +136,13 @@ namespace tarch::accelerator {
     }
     Kokkos::parallel_for(
       Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {range.n[0], range.n[1]}),
-      KOKKOS_LAMBDA(const int x, const int y) { functor(x, y); }
+      functor
     );
     Kokkos::fence();
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -93,24 +154,22 @@ namespace tarch::accelerator {
         {0, 0, 0},
         {range.n[0], range.n[1], range.n[2]}
       ),
-      KOKKOS_LAMBDA(const int x, const int y, const int z) { functor(x, y, z); }
+      functor
     );
     Kokkos::fence();
   }
 
   template <typename Functor>
-  inline void parallelFor(const TeamRange& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
-    const Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy(range.n, Kokkos::AUTO);
-    Kokkos::parallel_for(
-      policy,
-      KOKKOS_LAMBDA(const tarch::accelerator::KokkosTeam::MemberType& team) {
-        functor(team.league_rank(), tarch::accelerator::KokkosTeam{team});
-      }
-    );
+    const int scratchBytes = tarch::accelerator::getTeamScratchBytes(range.scratchBytes);
+    const Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy =
+      Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>(range.n, tarch::accelerator::getTeamThreads(range.threads))
+        .set_scratch_size(0, Kokkos::PerTeam(scratchBytes));
+    Kokkos::parallel_for(policy, LeagueFor<Functor>{functor, scratchBytes});
     Kokkos::fence();
   }
 } // namespace tarch::accelerator

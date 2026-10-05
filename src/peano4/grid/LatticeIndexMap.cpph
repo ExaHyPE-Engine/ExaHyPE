@@ -1,18 +1,17 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/Assertions.h"
+
 /**
- * Returns the slot a key probes first.
- *
- * The key is a packed lattice position, so neighbouring positions differ in
- * their low bits alone and would pile into one region of the table. The
- * multiply-shift finaliser spreads those bits over the whole word before the
- * mask cuts it down to a slot.
+ * Returns the slot a key probes first. Neighbouring lattice positions differ in their low bits only,
+ * so a multiply-shift finaliser spreads these bits over the word before the mask.
  */
-INLINE_METHOD std::size_t peano4::grid::LatticeIndexMap::firstSlotOf(const std::int64_t key) const {
+INLINE_METHOD std::size_t
+peano4::grid::LatticeIndexMap::getFirstSlot(const std::int64_t key) const {
   constexpr int           MixShift     = 33;
-  constexpr std::uint64_t FirstFactor  = 0xff51afd7ed558ccdULL;
-  constexpr std::uint64_t SecondFactor = 0xc4ceb9fe1a85ec53ULL;
+  constexpr std::uint64_t FirstFactor  = 0xFF51AFD7ED558CCDULL;
+  constexpr std::uint64_t SecondFactor = 0xC4CEB9FE1A85EC53ULL;
 
   auto mixed = static_cast<std::uint64_t>(key);
   mixed ^= mixed >> MixShift;
@@ -25,15 +24,14 @@ INLINE_METHOD std::size_t peano4::grid::LatticeIndexMap::firstSlotOf(const std::
 
 /**
  * Returns the value stored for a key, or NoEntry.
- *
- * Probing stops at the first free slot, since an insert would have taken it.
  */
-INLINE_METHOD int peano4::grid::LatticeIndexMap::find(const std::int64_t key) const {
+INLINE_METHOD int
+peano4::grid::LatticeIndexMap::find(const std::int64_t key) const {
   assertion(key >= 0, key);
   if (_keys.empty()) {
     return NoEntry;
   }
-  auto slot = firstSlotOf(key);
+  auto slot = getFirstSlot(key);
   while (true) {
     const auto occupant = _keys[slot];
     if (occupant == key) {
@@ -47,21 +45,17 @@ INLINE_METHOD int peano4::grid::LatticeIndexMap::find(const std::int64_t key) co
 }
 
 /**
- * Stores a value under a key unless the key is already held.
- *
- * Returns the value the map holds afterwards and whether this call stored it.
- * A caller assigning consecutive indices reads the second half to decide
- * whether to consume one.
- * A new entry reuses the first tombstone of its probe chain, so erased slots
- * recycle before the table grows.
+ * Stores value under key unless the map already has the key. Returns the value stored afterwards
+ * and whether this call stored it. A new entry reuses the first tombstone of its probe chain.
  */
-INLINE_METHOD std::pair<int, bool> peano4::grid::LatticeIndexMap::insert(const std::int64_t key, const int value) {
+INLINE_METHOD std::pair<int, bool>
+peano4::grid::LatticeIndexMap::insert(const std::int64_t key, const int value) {
   assertion(key >= 0, key);
   // Half the slots stay free, so a probe run stays short.
   if (2 * (_size + _numberOfTombstones + 1) > _keys.size()) {
     grow();
   }
-  auto        slot          = firstSlotOf(key);
+  auto        slot          = getFirstSlot(key);
   std::size_t insertionSlot = _keys.size();
   while (true) {
     const auto occupant = _keys[slot];
@@ -87,15 +81,16 @@ INLINE_METHOD std::pair<int, bool> peano4::grid::LatticeIndexMap::insert(const s
 }
 
 /**
- * Removes a key and returns whether it was held. The slot stays a tombstone
- * so probe chains across it keep working; the next growth drops it.
+ * Removes a key and returns whether the map had it. The slot becomes a tombstone, so probe chains
+ * across it stay intact until the next growth.
  */
-INLINE_METHOD bool peano4::grid::LatticeIndexMap::erase(const std::int64_t key) {
+INLINE_METHOD bool
+peano4::grid::LatticeIndexMap::erase(const std::int64_t key) {
   assertion(key >= 0, key);
   if (_keys.empty()) {
     return false;
   }
-  auto slot = firstSlotOf(key);
+  auto slot = getFirstSlot(key);
   while (true) {
     const auto occupant = _keys[slot];
     if (occupant == key) {
@@ -112,16 +107,23 @@ INLINE_METHOD bool peano4::grid::LatticeIndexMap::erase(const std::int64_t key) 
   }
 }
 
-INLINE_METHOD std::size_t peano4::grid::LatticeIndexMap::size() const { return _size; }
+INLINE_METHOD std::size_t
+peano4::grid::LatticeIndexMap::getSize() const {
+  return _size;
+}
+
+INLINE_METHOD std::size_t
+peano4::grid::LatticeIndexMap::getAllocatedBytes() const {
+  return _keys.capacity() * sizeof(std::int64_t) + _values.capacity() * sizeof(int);
+}
 
 /**
- * Hands every held key and its value to the callback.
- *
- * The order is the table's slot order, which a caller must not read anything
- * into: It follows from the hash and from the sequence the entries arrived in.
+ * Calls callback(key, value) for every entry in slot order. The slot order depends on the hash and
+ * on the insertion order, so a caller relies on no order.
  */
 template <typename Callback>
-INLINE_METHOD void peano4::grid::LatticeIndexMap::forEachEntry(const Callback& callback) const {
+INLINE_METHOD void
+peano4::grid::LatticeIndexMap::forEachEntry(const Callback& callback) const {
   for (std::size_t slot = 0; slot < _keys.size(); slot++) {
     if (_keys[slot] != EmptyKey and _keys[slot] != TombstoneKey) {
       callback(_keys[slot], _values[slot]);

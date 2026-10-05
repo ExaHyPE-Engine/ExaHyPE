@@ -1,6 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+TARGET_DECLARE
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>::Matrix() :
   _values() {}
@@ -24,22 +25,26 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>::Matrix(std::i
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<3, 3, Scalar>::rows() const {
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::Matrix<3, 3, Scalar>::getNumberOfRows() const {
   return 3;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<3, 3, Scalar>::cols() const {
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::Matrix<3, 3, Scalar>::getNumberOfColumns() const {
   return 3;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::Matrix<3, 3, Scalar>::size() const {
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::Matrix<3, 3, Scalar>::getSize() const {
   return 9;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Matrix<3, 3, Scalar>::operator()(int rowIndex, int colIndex) {
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar&
+tarch::la::Matrix<3, 3, Scalar>::operator()(int rowIndex, int colIndex) {
   assertion(rowIndex >= 0, 3, 3, rowIndex, colIndex, toString());
   assertion(colIndex >= 0, 3, 3, rowIndex, colIndex, toString());
   assertion(rowIndex < 3, 3, 3, rowIndex, colIndex, toString());
@@ -48,10 +53,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar& tarch::la::Matrix<3, 3, Scalar>::opera
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Matrix<3, 3, Scalar>::operator()(
-  int rowIndex,
-  int colIndex
-) const {
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar&
+tarch::la::Matrix<3, 3, Scalar>::operator()(int rowIndex, int colIndex) const {
   assertion(rowIndex >= 0, 3, 3, rowIndex, colIndex, toString());
   assertion(colIndex >= 0, 3, 3, rowIndex, colIndex, toString());
   assertion(rowIndex < 3, 3, 3, rowIndex, colIndex, toString());
@@ -60,7 +63,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD const Scalar& tarch::la::Matrix<3, 3, Scalar>:
 }
 
 template <typename Scalar>
-std::string tarch::la::Matrix<3, 3, Scalar>::toString() const {
+INLINE_METHOD std::string
+tarch::la::Matrix<3, 3, Scalar>::toString() const {
   std::ostringstream os;
   os << "[";
   for (int i = 0; i < 3; i++) {
@@ -81,7 +85,8 @@ std::string tarch::la::Matrix<3, 3, Scalar>::toString() const {
 }
 
 template <typename Scalar>
-std::string tarch::la::Matrix<3, 3, Scalar>::toPrettyString(int numberOfDigits) const {
+INLINE_METHOD std::string
+tarch::la::Matrix<3, 3, Scalar>::toPrettyString(const int numberOfDigits) const {
   std::ostringstream os;
   os << "[" << std::setiosflags(std::ios::fixed) << std::setprecision(numberOfDigits);
   for (int i = 0; i < 3; i++) {
@@ -105,8 +110,8 @@ std::string tarch::la::Matrix<3, 3, Scalar>::toPrettyString(int numberOfDigits) 
 
 template <typename Scalar>
 template <typename NewScalarType>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, NewScalarType> tarch::la::Matrix<3, 3, Scalar>::
-  convertScalar() const {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, NewScalarType>
+tarch::la::Matrix<3, 3, Scalar>::convertScalar() const {
   tarch::la::Matrix<3, 3, NewScalarType> result;
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
@@ -117,11 +122,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, NewScalarType> tarch::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar* tarch::la::Matrix<3, 3, Scalar>::data() {
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar*
+tarch::la::Matrix<3, 3, Scalar>::getData() {
   return _values;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* tarch::la::Matrix<3, 3, Scalar>::data() const {
+INLINE_METHOD GPU_CALLABLE_METHOD const Scalar*
+tarch::la::Matrix<3, 3, Scalar>::getData() const {
   return _values;
 }
+TARGET_DECLARE_END

@@ -34,8 +34,8 @@ class DynamicRuptureScenario(Scenario):
     }
 
     def generate_required_files(self):
-        # f_wy and f_wz are the half-widths of the boxcar in tauStrength(). A width of zero adds
-        # 1e10 cohesion over the whole fault and locks it, so no default exists.
+        # f_wy and f_wz are the half-widths of the cohesion box. A zero width locks the whole fault,
+        # so they have no default.
         missing = [
             key for key in self.requiredKeys if key not in self.dynamicRuptureDictionary
         ]
@@ -47,9 +47,12 @@ class DynamicRuptureScenario(Scenario):
                 + " in dynamicRuptureDictionary; the cohesion boxcar half-widths have no default."
             )
 
-        self.generate_file_from_template(
-            os.path.dirname(os.path.realpath(__file__))
-            + "/specs/DynamicRuptureParameters.h.jinja2",
-            "DynamicRuptureParameters.h",
-            self.dynamicRuptureDictionary,
-        )
+        for suffix in (".h", ".cpph"):
+            self.generate_file_from_template(
+                os.path.dirname(os.path.realpath(__file__))
+                + "/specs/DynamicRuptureParameters"
+                + suffix
+                + ".jinja2",
+                "DynamicRuptureParameters" + suffix,
+                self.dynamicRuptureDictionary,
+            )

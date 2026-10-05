@@ -8,15 +8,19 @@
 namespace tarch::tests {
   class TestCase;
 
+  /**
+   * Units in the last place by which two compilers may round one computation apart.
+   */
+  constexpr int MaxUnitsInTheLastPlace = 16;
+
   std::filesystem::path getWritableTestDirectory();
+  double getToleranceInUnitsInTheLastPlace(const std::vector<double>& reference);
 } // namespace tarch::tests
 
 /**
- * Base class of one test case. A subclass implements run() and checks its
- * assumptions with the validate macros of TestMacros.h.
- *
- * A unit test of a library is registered by that library's own test suite, as
- * the linker drops a test that no translation unit calls.
+ * A subclass implements run() and checks its assumptions with the validate macros of TestMacros.h.
+ * The test suite of a library registers the tests of the library, because the linker drops a test
+ * that no translation unit calls.
  *
  * @author Tobias Weinzierl
  */

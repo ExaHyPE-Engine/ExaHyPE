@@ -4,6 +4,10 @@
 
 #include "tarch/Assertions.h"
 
+/**
+ * The name has no ::, and an empty name makes a root collection that writes no progress line of its
+ * own.
+ */
 tarch::tests::TreeTestCaseCollection::TreeTestCaseCollection(
   const std::string& treeTestCaseCollectionName,
   bool               deleteTestCases,
@@ -31,25 +35,35 @@ tarch::tests::TreeTestCaseCollection::~TreeTestCaseCollection() {
   }
 }
 
-bool tarch::tests::TreeTestCaseCollection::isNameWithoutHierarchy(const std::string& testCaseName) {
+bool
+tarch::tests::TreeTestCaseCollection::isNameWithoutHierarchy(const std::string& testCaseName) {
   return testCaseName.rfind("::") == std::string::npos;
 }
 
-std::string tarch::tests::TreeTestCaseCollection::getFirstIdentifierInHierarchy(const std::string& testCaseName) {
+std::string
+tarch::tests::TreeTestCaseCollection::getFirstIdentifierInHierarchy(const std::string& testCaseName) {
   std::string result = testCaseName.substr(0, testCaseName.find("::"));
   assertion(isNameWithoutHierarchy(result), result, testCaseName);
   return result;
 }
 
-std::string tarch::tests::TreeTestCaseCollection::getRemainingPathWithoutIdentifier(const std::string& testCaseName) {
+std::string
+tarch::tests::TreeTestCaseCollection::getRemainingPathWithoutIdentifier(const std::string& testCaseName) {
   assertion(not isNameWithoutHierarchy(testCaseName));
   std::string result = testCaseName.substr(testCaseName.find("::") + 2);
   return result;
 }
 
-void tarch::tests::TreeTestCaseCollection::run() { run(""); }
+void
+tarch::tests::TreeTestCaseCollection::run() {
+  run("");
+}
 
-void tarch::tests::TreeTestCaseCollection::run(const std::string& prefix) {
+/**
+ * Runs every test case of the collection with prefix in front of its name.
+ */
+void
+tarch::tests::TreeTestCaseCollection::run(const std::string& prefix) {
   std::string progressMessage;
   if ((prefix + _testCaseName).length() > 0) {
     progressMessage = "Running test case collection \"" + prefix + _testCaseName + "\" ...";
@@ -85,11 +99,16 @@ void tarch::tests::TreeTestCaseCollection::run(const std::string& prefix) {
   }
 }
 
-void tarch::tests::TreeTestCaseCollection::addTestCase(TestCase* testCase) {
+void
+tarch::tests::TreeTestCaseCollection::addTestCase(TestCase* testCase) {
   addTestCase(testCase->getTestCaseName(), testCase);
 }
 
-void tarch::tests::TreeTestCaseCollection::addTestCase(const std::string& fullQualifiedPath, TestCase* testCase) {
+/**
+ * Adds testCase under fullQualifiedPath. The collection takes ownership if deleteTestCases is set.
+ */
+void
+tarch::tests::TreeTestCaseCollection::addTestCase(const std::string& fullQualifiedPath, TestCase* testCase) {
   if (isNameWithoutHierarchy(fullQualifiedPath)) {
     _testCases.push_back(testCase);
   } else {

@@ -10,113 +10,56 @@ the measurement.
 
 # Interpreting the decomposition
 
-@ref page_peano_runtime_analysis defines the reported fields. Three values
+@ref page_peano_runtime_analysis defines the reported fields. Two values
 separate common scaling limits:
 
-- `MPI Load Balance` measures geometric leaf balance across MPI ranks.
-- `Thread Ceiling` estimates the limit imposed by the largest subtree
-  task on each rank.
-- The phase report line `Utilisation` measures how much of the sweep window the
-  subtree tasks occupied across the available threads.
+- `Load Balance` measures the cell balance across the MPI ranks.
+- `Rank Boundary Faces` measures the halo traffic of the rank layout.
 
-The first two are structural bounds. The third includes the effects of task
-dependencies, rank-boundary waits, memory bandwidth, and the work that each
-callback performs.
+Both are structural bounds. The time of a phase includes the work of every
+dispatch, the halo waits and the memory bandwidth.
 
 # Inter-rank imbalance
 
-The adaptive owner table balances leaf counts at spawn-block or block-child
-granularity. A localised refined region can still leave one indivisible child
-heavier than the leaf count a rank targets. Application work can also be imbalanced
-even when leaf counts are equal.
+The ownership table balances cell counts at the granularity of the spawn-level
+blocks and their indivisible children. A localised refined region can leave
+one indivisible child heavier than the cell count a rank targets, and the
+application work can be imbalanced even when the cell counts are equal.
 
 Useful responses are:
 
 - Increase the regular base depth when coarse partition units limit the
   balance and the extra grid fits in memory.
 - Increase the global problem size so each rank receives more useful cells.
-- Reduce the MPI rank count when boundary and replicated-spine costs dominate
-  a small problem.
-- Use solver tasking or parallel kernels when leaf counts do not represent the
-  true work.
+- Reduce the MPI rank count when the rank-boundary faces and the replicated
+  spine dominate a small problem.
 
 Profiles and application counters determine whether expensive particles,
-limiters, source terms, or local solver variants correlate with the heavy
+limiters, source terms or local solver variants correlate with the heavy
 rank.
 
-# Intra-rank imbalance
+# Dispatch cost
 
-Standing sweeps derive subtree tasks from spawn-level blocks and nested heavy
-refined subtrees. Too few tasks, one dominant task, or a data container that
-only one task may enter lowers the attainable utilisation.
-
-- Increase the problem size or base depth when the tree exposes too few task
-  roots.
-- Inspect `Cells per Task` before attributing idle time to the scheduler.
-- Use solver-created tasks or parallel kernels when a single cell callback
-  dominates a balanced traversal task.
-- Treat particle steps separately: particle containers make their rank
-  traversal serial.
-
-A high intra-rank ceiling with low thread utilisation calls for a profile of
-the sweep. Ready-task starvation, interface dependencies, memory bandwidth,
-and work outside the traversal tasks have different remedies.
-
-# Boundary and replication overhead
-
-Every rank stores the structural spine needed to reach its local cells. A face
-or a vertex that two ranks hold also requires a local entity slot on each of
-them and a frozen partner slot.
-More ranks increase these costs and reduce the interior work available to hide
-the non-blocking boundary exchange.
-
-High `Spine Replication` together with good inter-rank balance indicates
-overdecomposition. A larger problem or fewer MPI ranks increases the ratio of
-owned work to structural and boundary data.
-
-# Standing-sweep replay
-
-The first standing traversal records its event streams. Later sweeps replay
-flat per-task buffers. A profile dominated by callback code therefore points
-to the application or solver kernels. A profile dominated by traversal merge,
-reduction, or wait regions points to task interfaces or rank-boundary traffic.
+A phase is a fixed sequence of dispatches over the cells and the faces of the
+partition. A profile dominated by the kernels points to the application
+kernels; a profile dominated by the halo exchange points to the rank layout.
+The local cells run while the halo messages travel, so a rank with few local
+cells cannot hide its exchange.
 
 # Adaptive mesh refinement
 
 Refinement-plan evaluation performs integer lattice work proportional to the
-request count. The substantial regrid costs are structure and topology
-construction, transition derivation, pool migration, and the transition
-sweep.
-
-A criterion can ask only from cells that already exist, so refinement over
-several additional levels requires several drains. Oscillating refine and
-erase decisions multiply this cost. Stable thresholds and a suitable regular
-base depth reduce repeated topology changes.
-
-The dynamic-AMR report separates sweep count, wall time, rank balance, task
-balance, and thread utilisation. Compare its before and after fields to see
-whether the new mesh also changes the decomposition.
-
-# Solver and kernel parallelism
-
-The traversal task graph parallelises independent mesh regions. A solver can
-also submit tasks through tarch::tasking or use parallel kernels inside one
-callback. These forms complement the geometric decomposition when the mesh
-does not provide enough independent subtree work.
-
-Tasks must contain enough work to amortise scheduling and dependency costs.
-Parallel kernels must preserve the callback's data ownership and complete
-before the callback exposes results that another event consumes.
+request count. The substantial regrid costs are the rebuild of the tree and
+the partition of the rank and the transfer of the changed cells. Oscillating refine
+and erase decisions multiply this cost; stable thresholds and a suitable base
+depth reduce repeated changes.
 
 # MPI analysis
 
-When adding ranks slows a run, compare leaves per rank, spine replication, and
-the amount of interior work first. If those remain healthy, profile boundary
-packing, MPI progress, and boundary-task waits. The exchange overlaps with
-interior tasks only while such tasks remain ready.
-
-Pinning can restrict the processors visible to a rank and therefore reduce the
-thread count selected by tarch::tasking::Runtime. Confirm the runtime's thread
-report before interpreting a hybrid scaling result.
+When adding ranks slows a run, compare the cells per rank, the rank-boundary
+faces and the local work first. If those remain healthy, profile the halo
+exchange and the collectives of the phase. Pinning can restrict the processors
+visible to a rank; confirm the thread report of the runtime before
+interpreting a hybrid scaling result.
 
 */

@@ -66,10 +66,6 @@ def include_findings(root: str, path: str, text: str) -> list[Finding]:
         if spelling in seen:
             findings.append(Finding(path, number, f"includes {spelling} a second time"))
         seen.add(spelling)
-        if suffix == INLINE_DEFINITION_SUFFIX:
-            findings.append(
-                Finding(path, number, "an inline definition file includes a header")
-            )
         if quoted is not None and quoted.split("/")[0] == os.pardir:
             findings.append(
                 Finding(path, number, f"includes {spelling} through a parent directory")

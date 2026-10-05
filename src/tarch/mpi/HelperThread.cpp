@@ -10,13 +10,11 @@ tarch::mpi::HelperThread::HelperThread(std::function<bool()> pollFunction) :
 tarch::mpi::HelperThread::~HelperThread() { stop(); }
 
 /**
- * Launches the thread and lets it poll until the function reports completion.
- *
- * The loop itself never pauses between two passes. How expensive a pass is
- * depends on what the polling function tests, so any back-off belongs to that
- * function.
+ * Starts the thread, which calls the polling function until the function returns true or stop()
+ * runs. The loop never pauses between two calls, so a back-off belongs to the polling function.
  */
-void tarch::mpi::HelperThread::start() {
+void
+tarch::mpi::HelperThread::start() {
   assertion(not _thread.joinable());
 
   _stopRequested.store(false, std::memory_order_relaxed);
@@ -30,12 +28,11 @@ void tarch::mpi::HelperThread::start() {
 }
 
 /**
- * Asks the thread to leave its loop and waits for it.
- *
- * A thread that never started or has already been taken down is left alone, so
- * the destructor and restart() can both call this unconditionally.
+ * Stops the loop of the thread and joins the thread. A call without a started thread returns at
+ * once, so the destructor calls it unconditionally.
  */
-void tarch::mpi::HelperThread::stop() {
+void
+tarch::mpi::HelperThread::stop() {
   if (not _thread.joinable()) {
     return;
   }
@@ -45,11 +42,10 @@ void tarch::mpi::HelperThread::stop() {
   _thread = std::thread();
 }
 
-/** Takes the thread down and brings it back up for the next round of polling. */
-void tarch::mpi::HelperThread::restart() {
-  stop();
-  start();
+/**
+ * Returns whether the polling function has returned true.
+ */
+bool
+tarch::mpi::HelperThread::hasFinished() const {
+  return _hasFinished.load(std::memory_order_acquire);
 }
-
-/** Returns whether the polling function has reported that it has nothing left to do. */
-bool tarch::mpi::HelperThread::hasFinished() const { return _hasFinished.load(std::memory_order_acquire); }

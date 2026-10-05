@@ -5,16 +5,14 @@
 
 namespace tarch::accelerator {
   TARGET_DECLARE
-  // One partial value per thread of a custom team reduction.
-  constexpr int TeamScratchBytes = 16384;
+  INLINE_METHOD int getThreadOfTeam([[maybe_unused]] const OmptTeam& team) { return omp_get_thread_num(); }
 
-  struct OmptTeam final {
-    unsigned char* scratch{nullptr};
-  };
-  using TeamHandle = OmptTeam;
+  INLINE_METHOD unsigned char* getTeamScratch(const OmptTeam& team) { return team.scratch; }
+
+  INLINE_METHOD int getNumberOfThreadsPerTeam([[maybe_unused]] const OmptTeam& team) { return omp_get_num_threads(); }
 
   template <typename Functor>
-  inline void parallelFor([[maybe_unused]] const OmptTeam& team, const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelFor([[maybe_unused]] const OmptTeam& team, const Range& range, const Functor functor) {
 #pragma omp for
     for (int i = 0; i < range.n; ++i) {
       functor(i);
@@ -22,7 +20,11 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor([[maybe_unused]] const OmptTeam& team, const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(
+    [[maybe_unused]] const OmptTeam& team,
+    const RangeMD<2>&                range,
+    const Functor                    functor
+  ) {
 #pragma omp for collapse(2)
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
@@ -32,7 +34,11 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor([[maybe_unused]] const OmptTeam& team, const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(
+    [[maybe_unused]] const OmptTeam& team,
+    const RangeMD<3>&                range,
+    const Functor                    functor
+  ) {
 #pragma omp for collapse(3)
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
@@ -43,53 +49,85 @@ namespace tarch::accelerator {
     }
   }
 
-  inline void teamBarrier([[maybe_unused]] const OmptTeam& team) {
+  INLINE_METHOD void teamBarrier([[maybe_unused]] const OmptTeam& team) {
 #pragma omp barrier
   }
   TARGET_DECLARE_END
 
+  /**
+   * Returns the threads per team a launch asks for when it requests requested threads: Whole
+   * warps up to OmptThreadsPerTeam, or OmptThreadsPerTeam for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamThreads(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::OmptThreadsPerTeam;
+    }
+    assertion(requested > 0, requested);
+    const int warps = (requested + tarch::accelerator::ThreadsPerWarp - 1) / tarch::accelerator::ThreadsPerWarp;
+    return std::min(tarch::accelerator::OmptThreadsPerTeam, warps * tarch::accelerator::ThreadsPerWarp);
+  }
+
+  /**
+   * Returns the team scratch bytes of a launch that asks for requested bytes: Every team provides
+   * TeamScratchBytes.
+   */
+  INLINE_METHOD int getTeamScratchBytes(const int requested) {
+    assertion(
+      requested == tarch::accelerator::TeamRange::BackendDefault
+        or (requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes),
+      requested
+    );
+    return tarch::accelerator::TeamScratchBytes;
+  }
+
   template <typename Functor>
-  inline void parallelFor(const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
-    const int device = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for device(device)
-    for (int i = 0; i < range.n; ++i) {
+    const int device        = tarch::accelerator::getCurrentDevice();
+    const int numberOfItems = range.n;
+#pragma omp target teams distribute parallel for firstprivate(functor) device(device)
+    for (int i = 0; i < numberOfItems; ++i) {
       functor(i);
     }
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
-    const int device = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(2) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
+    const int device  = tarch::accelerator::getCurrentDevice();
+    const int extentX = range.n[0];
+    const int extentY = range.n[1];
+#pragma omp target teams distribute parallel for collapse(2) firstprivate(functor) device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
         functor(x, y);
       }
     }
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
-    const int device = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(3) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
-        for (int z = 0; z < range.n[2]; ++z) {
+    const int device  = tarch::accelerator::getCurrentDevice();
+    const int extentX = range.n[0];
+    const int extentY = range.n[1];
+    const int extentZ = range.n[2];
+#pragma omp target teams distribute parallel for collapse(3) firstprivate(functor) device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
+        for (int z = 0; z < extentZ; ++z) {
           functor(x, y, z);
         }
       }
@@ -97,18 +135,22 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const TeamRange& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
-    const int device = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute device(device)
-    for (int i = 0; i < range.n; ++i) {
-      alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp                         parallel default(none) shared(functor, i, teamScratch)
-      {
-        functor(i, tarch::accelerator::OmptTeam{teamScratch});
+    const int device        = tarch::accelerator::getCurrentDevice();
+    const int numberOfTeams = range.n;
+    const int threads       = tarch::accelerator::getTeamThreads(range.threads);
+#pragma omp target teams num_teams(numberOfTeams) thread_limit(threads) firstprivate(functor) device(device)
+#pragma omp parallel num_threads(threads)
+    {
+      alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
+#pragma omp allocate(teamScratch) allocator(omp_pteam_mem_alloc)
+      for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
+        functor(team, tarch::accelerator::OmptTeam{teamScratch});
+#pragma omp barrier
       }
     }
   }

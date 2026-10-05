@@ -9,14 +9,23 @@
 
 namespace tarch::accelerator {
   /**
-   * Opaque team handle that binds the team member of the enclosing Kokkos lambda. That member
-   * lives for the whole body of the lambda, so a nested call may copy this handle by value.
+   * References the Kokkos team member of the running kernel and the team scratch of the launch. The
+   * member exists for the whole kernel, so a nested call may copy this handle by value.
    */
   struct KokkosTeam final {
     using MemberType = Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>::member_type;
     const MemberType& member;
+    unsigned char*    scratch{nullptr};
   };
   using TeamHandle = KokkosTeam;
+
+  inline constexpr int KokkosThreadsPerTeam = 256;
+  inline constexpr int ThreadsPerWarp       = 32;
+  // A team launch runs at most KokkosThreadsPerTeam threads per team with at most
+  // TeamScratchBytes of team scratch. A launch with TeamRange::BackendDefault runs
+  // DefaultThreadsPerTeam threads.
+  inline constexpr int DefaultThreadsPerTeam = KokkosThreadsPerTeam;
+  inline constexpr int TeamScratchBytes      = 16384;
 } // namespace tarch::accelerator
 
 #endif

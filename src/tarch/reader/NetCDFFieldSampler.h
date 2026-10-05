@@ -13,65 +13,37 @@ namespace tarch::reader {
 } // namespace tarch::reader
 
 /**
- * Samples one or more fields read from netCDF files at a point of the simulation domain.
- *
- * The sampler assumes that the netCDF variable holding the values is declared with its dimensions
- * in the reverse of the order the coordinate keys are given in, i.e. a 3D field addressed as
- * key = {"x", "y", "z"} has to be stored as value(z, y, x). That is the layout netCDF's own
- * row-major reader hands us, and it is what the flat index computed below assumes. Nothing
- * verifies it, so a file written the other way round samples silently transposed data.
- *
- * Only the 2D and 3D instantiations exist; both are explicitly instantiated in the .cpp.
+ * Samples fields from netCDF files at a point of the simulation domain. A field with the coordinate
+ * keys {"x", "y", "z"} has to store its values as value(z, y, x), and nothing checks this order.
  */
 template <int FieldDimensions = 2>
 class tarch::reader::NetCDFFieldSampler {
-  static_assert(
-    FieldDimensions == 2 or FieldDimensions == 3,
-    "NetCDFFieldSampler is only instantiated for two- and three-dimensional fields"
-  );
+  static_assert(FieldDimensions == 2 or FieldDimensions == 3, "The NetCDF reader reads 2D and 3D fields only.");
 
 public:
   struct FieldDescription {
     std::string name;
     std::string filePath;
     /**
-     * Name of the netCDF variable holding the values. The default collides with the conventional
-     * name of the third coordinate, so a 3D field practically always has to name it explicitly.
-     * parseFieldFile() rejects a description whose value key is also a coordinate key.
+     * The netCDF variable of the values, which has to differ from every coordinate key.
      */
     std::string valueKey = "z";
     /**
-     * Names of the netCDF variables holding the coordinates, one per field dimension, in the order
-     * the sampling routines expect their position argument in.
+     * The netCDF variables of the coordinates, in the order of the position argument of the
+     * samplers.
      */
-    std::array<std::string, FieldDimensions> key = defaultCoordinateKeys();
+    std::array<std::string, FieldDimensions> key = getDefaultCoordinateKeys();
   };
 
-  /**
-   * A sampler holds every field it was given in full, which runs to hundreds of megabytes for a
-   * topography or material file, and callers construct it in place as a function-local static. A
-   * copy would therefore only ever be an accident.
-   */
   NetCDFFieldSampler(const NetCDFFieldSampler&)            = delete;
   NetCDFFieldSampler(NetCDFFieldSampler&&)                 = delete;
   NetCDFFieldSampler& operator=(const NetCDFFieldSampler&) = delete;
   NetCDFFieldSampler& operator=(NetCDFFieldSampler&&)      = delete;
 
-  /**
-   * A file that carries its own coordinates needs no extent, and a simulation coordinate is then
-   * read as a coordinate of the stored mesh instead of being mapped onto it.
-   */
   explicit NetCDFFieldSampler(std::initializer_list<FieldDescription> fields);
 
   explicit NetCDFFieldSampler(const std::vector<FieldDescription>& fields);
 
-  /**
-   * Maps the simulation domain onto the coordinate range each field stores.
-   *
-   * The extents are taken as plain vectors, so a caller can write the two components in braces at
-   * the call. Wrapping them in an optional here would ask the language for two conversions at once,
-   * which it does not do.
-   */
   NetCDFFieldSampler(
     std::initializer_list<FieldDescription>           fields,
     const tarch::la::Vector<FieldDimensions, double>& lengthOfSimulationDomain,
@@ -86,36 +58,22 @@ public:
 
   ~NetCDFFieldSampler() = default;
 
-  /**
-   * Sample the value at the lower grid point in each coordinate direction.
-   *
-   * A coordinate outside the stored extent yields zero; an unknown field name is fatal.
-   */
   double samplePiecewiseConstant(
     const std::string&                         fieldName,
     tarch::la::Vector<FieldDimensions, double> position
   ) const;
 
-  /**
-   * Interpolate linearly between the surrounding grid points along every axis.
-   *
-   * The coordinate axes are assumed to be equidistant between their first and last stored
-   * coordinates. A coordinate outside the stored extent yields zero; an unknown field name
-   * is fatal.
-   */
   double sampleBilinear(const std::string& fieldName, tarch::la::Vector<FieldDimensions, double> position) const;
 
 private:
   struct Field {
     std::vector<double> values;
-    // std::size_t(0) rather than a plain 0, which is also a null pointer constant and would make
-    // the call ambiguous with Vector's pointer constructor.
+    // A plain 0 would select the pointer constructor of Vector.
     tarch::la::Vector<FieldDimensions, std::size_t> length =
       tarch::la::Vector<FieldDimensions, std::size_t>(std::size_t(0));
     tarch::la::Vector<FieldDimensions, double> firstElement = tarch::la::Vector<FieldDimensions, double>(0.0);
     tarch::la::Vector<FieldDimensions, double> lastElement  = tarch::la::Vector<FieldDimensions, double>(0.0);
-    // Resolved once per field, because a sampler without a configured extent maps each field
-    // onto the coordinate range that file itself stores.
+    // A sampler without an extent maps every field onto the coordinate range of its own file.
     tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain =
       tarch::la::Vector<FieldDimensions, double>(0.0);
     tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain =
@@ -128,7 +86,7 @@ private:
   std::optional<tarch::la::Vector<FieldDimensions, double>> _lengthOfSimulationDomain;
   std::optional<tarch::la::Vector<FieldDimensions, double>> _offsetOfSimulationDomain;
 
-  static std::array<std::string, FieldDimensions> defaultCoordinateKeys();
+  static std::array<std::string, FieldDimensions> getDefaultCoordinateKeys();
 
   void parseFieldFile(const FieldDescription& fieldDescription);
 

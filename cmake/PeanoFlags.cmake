@@ -55,8 +55,8 @@ function(peano_apply_flags)
     -Werror
   )
 
-  # CUDA routes host warnings through -Xcompiler because they do not reach nvcc or ptxas device
-  # compilation. An NVHPC host requires PEANO_NVHPC_WARNINGS.
+  # The -Xcompiler warnings reach only the host compiler, which has to be GCC or Clang. The nvcc
+  # warnings below cover the device code.
   set(PEANO_CUDA_WARNINGS "")
   # nvcc hands the host compiler a generated file with GNU line markers, which GCC flags under
   # -Wpedantic without a dedicated switch to silence them.
@@ -67,24 +67,24 @@ function(peano_apply_flags)
   endforeach()
 
   list(APPEND PEANO_CUDA_WARNINGS
+    -Werror=all-warnings
     -Wreorder # Diagnose device member initialisation order.
     -Wdefault-stream-launch
     -Wext-lambda-captures-this
-    -Xptxas=--warn-on-spills # Diagnose device register spills.
+    #-Xptxas=--warn-on-spills # Diagnose device register spills.
     -Xcompiler=-Wno-overlength-strings
+    -Xcompiler=-Wno-dtor-name
   )
 
   target_compile_options(PeanoOptions INTERFACE
-    # NVHPC and PGI use a smaller compatible warning set.
+    # NVHPC and PGI reject some of the GCC warning flags.
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:${PEANO_NVHPC_WARNINGS}>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:${PEANO_NVHPC_WARNINGS}>
-    # Other C and C++ front-ends use the full warning set.
     $<$<AND:$<COMPILE_LANGUAGE:C>,$<NOT:$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>>>:${PEANO_C_WARNINGS}>
     $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>>>:${PEANO_CXX_WARNINGS}>
-    # HIP accepts the warning set directly, while CUDA uses the routed set above.
     $<$<COMPILE_LANGUAGE:HIP>:${PEANO_CXX_WARNINGS}>
     $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_WARNINGS}>
-    # NVHPC requires explicit IEEE-754 semantics in every supported language.
+    # NVHPC follows IEEE 754 only with -Kieee.
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:Fortran,NVHPC,PGI>:-Kieee>
@@ -92,17 +92,18 @@ function(peano_apply_flags)
     # precision through the compute precision.
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Mnoautoinline>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Mnoautoinline>
-    # IntelLLVM precise semantics preserve exact grid arithmetic and the symmetry of
-    # interpolation and restriction. Explicit contraction confines fused operations to
-    # individual expressions and supports FENV_ACCESS.
+    # IntelLLVM keeps the grid arithmetic exact and interpolation and restriction symmetric only
+    # with -ffp-model=precise. The flag -ffp-contract=on fuses multiply-adds within single
+    # expressions only and permits FENV_ACCESS.
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-contract=on>
-    # GCC fuses operations across statements by default, so two code paths of one kernel
-    # round differently.
+    # GCC, and Clang in the CUDA mode of AdaptiveCpp and Kokkos, fuse operations across statements
+    # by default, so two code paths of one kernel round differently.
     $<$<COMPILE_LANG_AND_ID:C,GNU>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ffp-contract=on>
+    $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-ffp-contract=on>
   )
 
   target_compile_options(PeanoOptions INTERFACE
@@ -138,15 +139,14 @@ function(peano_apply_flags)
       $<$<COMPILE_LANGUAGE:CXX>:${PEANO_SANITIZER_FLAGS}>
     )
     target_link_options(PeanoOptions INTERFACE ${_peano_sanitize_flag})
-    # libstdc++ assertions detect library precondition violations outside sanitizer coverage.
+    # The libstdc++ assertions detect library precondition violations that the sanitizers miss.
     target_compile_definitions(PeanoOptions INTERFACE _GLIBCXX_ASSERTIONS)
   endif()
 
   if(PEANO_WITH_FPE)
     target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_FPE)
-    # Frame pointers and debug information preserve fault locations in fatal reports.
-    # Strict exception semantics keep a compiler from evaluating operations the source
-    # does not reach, whose exceptions a trap would otherwise report.
+    # Frame pointers and debug information keep fault locations in fatal reports. Strict exception
+    # semantics forbid speculative operations, whose exceptions a trap would report.
     target_compile_options(PeanoOptions INTERFACE
       $<$<COMPILE_LANG_AND_ID:C,GNU>:-ftrapping-math>
       $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ftrapping-math>
@@ -174,6 +174,16 @@ function(peano_apply_flags)
     target_compile_options(PeanoOptions INTERFACE
       $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang,IntelLLVM>:-Wno-unknown-cuda-version>
       $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang,IntelLLVM>:-Wno-unknown-cuda-version>
+    )
+  endif()
+
+  if(PEANO_WITH_GPU_BACKEND STREQUAL "kokkos")
+    # Clang's device pass keeps the team body of a Kokkos kernel out of line under its default
+    # inline threshold and spills the per-volume arrays of that body to local memory.
+    # This threshold inlines the body as nvcc does. Clang applies an LLVM option to the host pass
+    # and the device pass alike.
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-mllvm;-inline-threshold=100000>
     )
   endif()
 

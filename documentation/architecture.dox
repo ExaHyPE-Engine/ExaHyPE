@@ -5,105 +5,95 @@
 \tableofcontents
 
 A Peano 4 application is a generated C++ program organised into layers. The
-Python API describes data, algorithmic steps, and action sets, then emits the
-stand-alone C++ sources and build files.
+Python API describes the solvers, their PDE terms and the application
+features, then emits the stand-alone C++ sources and build files.
 
 # Code organisation
 
-The dependency order is tarch, peano4, and then either exahype2 or
-runner. The application target combines the runner with its selected
-simulation extension.
+The dependency order is tarch, peano4, and then exahype2. The runner lives
+in `exahype2::runner`; the application target joins the generated code with
+the ExaHyPE library.
 
-- **Technical architecture (`tarch`)** provides tasking, MPI wrappers,
-  accelerator support, logging, plotting, and small linear-algebra utilities.
-  It hides backend-specific APIs from the upper layers.
-- **Peano core (`peano4`)** owns the index-linked spacetree, traversal,
-  rank-boundary exchange, and the pool interface used by generated data. Its
-  sub-package `peano4::particles` adds the solver-independent particle model,
-  its vertex-associated storage and its sorting.
+- **Technical architecture (`tarch`)** provides the accelerator abstraction
+  (`tarch::accelerator::Buffer`, `tarch::accelerator::ChunkedMemoryPool`,
+  `parallelFor` and `parallelReduce`), tasking, MPI wrappers, logging,
+  plotting and small linear-algebra utilities. It hides backend-specific APIs
+  from the upper layers.
+- **Peano core (`peano4`)** owns the spacetree (`peano4::Spacetree`), the
+  partition of a rank (`peano4::Partition`) with the slot moves of a regrid
+  (`peano4::Regrid`), the halo exchange and the migration exchange
+  (`peano4::HaloExchange`, `peano4::MigrationExchange`) and the space-filling
+  curves.
 - **Extensions (`exahype2`)** assemble the core facilities into numerical
-  solver families and own the patch operations on top of the spacetree.
-- **Runner (`runner`)** executes generated program steps, coordinates the SPMD
-  control flow, and reports global statistics.
-- **Application code** supplies the problem-specific kernels, parameters, and
-  generated project description.
+  solver families, own the particles and the plotters, and run the
+  simulation through `exahype2::runner`.
+- **Application code** supplies the problem-specific PDE terms, parameters
+  and the generated project description.
 
 # Runtime architecture
 
-## Program steps
+## Phases
 
-The generated main registers each algorithmic step as a `runner::Step` and
-calls runner::launch(). The global master selects the phase and program step.
-runner::Engine distributes the same step identifier to every rank, executes
-the registered body, and synchronises the global statistics afterwards.
+The generated main hands `exahype2::runner::Runner::launch()` the domain, the
+periodic axes and the callbacks of the generated solver repository. The runner
+owns the control flow: configuration, grid construction, initialisation, the
+time loop with dynamic adaptivity and plotting, and the final report. Every
+rank runs the same phase; the global master decides the next step and
+`Runner::exchangeStep()` distributes it with one allreduce.
 
-A step constructs its observer, calls the static `prepareTraversal()` hook,
-passes the observer to peano4::topology::TopologyManager::traverse(), and calls
-`unprepareTraversal()` after every observer clone has finished.
+A phase calls one method of every solver through the generated
+`SolverRepository`: `allocate()`, `initialise()`, `performTimeStep()`,
+`regrid()`, `plot()`, `startSimulation()` and `finishSimulation()`. A solver
+family implements a phase as a sequence of dispatches over the partition, so
+there is no grid sweep and no per-cell callback.
 
 ## Grid representation and data pools
 
-Every MPI rank owns one peano4::topology::TopologyManager. Its
-peano4::topology::Tree holds flat cell, face, and vertex arrays linked by
-integer indices. Adjacent cells reference the same face and vertex indices.
-Periodic boundary entities are aliases of the same indices.
+Every MPI rank owns one peano4::Spacetree. It holds the refinement plan of the
+whole domain, the rank ownership table and the materialised structure of the
+local blocks. After grid construction and after every regrid the spacetree
+builds the peano4::Partition of the rank: the cells with their level and
+lattice position, the faces with their kind (interior, boundary, hanging,
+coarse or intermediate face of a level jump) and their two adjacent cells, the
+level jumps with their coarse face and fine faces, and the faces a neighbour
+rank holds too in canonical order. A kernel copies the partition by value and
+derives the centre and the width of every cell from its level and lattice
+position. @ref peano_partition describes the interface.
 
-The rank ownership table is identical on every rank, but the materialised
-structure is not: a rank builds the levels above the spawn level in full and,
-below it, only its own blocks plus one ring of neighbours. Everything outside
-that region is answered from the refinement plan by lattice arithmetic instead
-of being stored. Each cell carries its owning rank, and a traversal skips
-subtrees that do not touch the local rank. Solver data is allocated only for
-locally relevant entities in flat pools. peano4::grid::GridTraversalEvent maps
-tree entity indices to the corresponding rank-local pool slots.
+Solver data lives in pools: one tarch::accelerator::ChunkedMemoryPool per data
+type, indexed by the cell or face slot, allocated in device memory with a GPU
+backend and in heap memory otherwise. Cell slots survive a regrid; face slots
+are renumbered and their data rebuilt.
 
-## Traversal task graph
+## Dispatches and exchanges
 
-peano4::topology::TreeTraversal walks the tree in Peano curve order and emits
-the established observer callbacks. With several threads, the traversal
-decomposes the local curve segment into subtree tasks. Spawn-level blocks form
-the initial task roots, and heavy refined subtrees contribute deeper roots.
-Each task owns an observer clone and private traversal state.
-
-Standing traversals record their event streams. Later sweeps replay these
-flat recordings while the task graph schedules independent subtree tasks. A
-registered data container can reject subtree-task replication; the rank then
-traverses serially for that step.
-
-## Data consistency
-
-Cells have one owning rank. A face or a vertex that two ranks or two subtree
-tasks hold at the same time keeps a live copy for the current sweep and frozen
-copies for the partner state. The generated merge callbacks receive partner data before the first
-local touch that consumes it.
-
-Rank-boundary data is packed once per neighbour rank and data container after
-a sweep. Non-blocking transfers overlap the following sweep's interior tasks,
-and boundary tasks wait until the received frozen slots are ready. Intra-rank
-task interfaces use the same one-sweep-lag merge semantics without MPI.
+A solver family advances its solution with `parallelFor` and `parallelReduce`
+over the cell and face spans of the partition. Ranks exchange the halves of
+the faces both hold through peano4::HaloExchange: `post()` gathers the local
+halves into one buffer per neighbour rank and starts the messages, `wait()`
+scatters the received halves. Both ranks derive the message layout from the
+canonical face order, so no rank tells the other what it sends.
 
 ## Regridding
 
-Grid control events update a discrete refinement plan. Before solver data
-becomes persistent, a changed plan directly rebuilds the tree and runs a
-creational sweep. With live solver data, a stable single-owner delta appends or
-prunes in place. Other changes prepare the required migration structures and
-pool-slot mappings. Both paths emit one transition sweep with the required
-create and destroy events. The target plan also determines a new
-weight-balanced rank ownership table.
+Every solver votes on refinement per cell; the votes become
+peano4::RefinementRequest records, and exahype2::RefinementRequests gives
+every rank the same request set. The spacetree adopts the plan, rebuilds the
+partition and returns the peano4::Regrid that names the prolongations, the
+restrictions and the slots that change rank. Every solver's `regrid()` moves
+its cell pools through that record with the interpolation and restriction
+operators of its family and with peano4::MigrationExchange for the slots that
+move to another rank.
 
 # Python API
 
-The Python API models the generated program at two levels:
-
-- A domain-specific project describes solvers and application features.
-- A Peano project records data models, algorithmic steps, observers, and
-  action sets.
-
-`generate_and_build()` emits the C++ observers, repositories, program-step
-registry, main routine, and build files. Generated observers translate the
-generic traversal events into the action-set callbacks supplied by the
-application and its extension.
+The Python API models the generated program at one level: an
+exahype2.Project holds the solvers of the solver families
+(`exahype2.fv.Solver`, `exahype2.dg.ader.Solver`, `exahype2.dg.rk.Solver`),
+their PDE terms, tracers, constants and runtime parameters.
+`generate_and_build()` emits the solver classes with the PDE terms as static
+device-callable methods, the operator tables, the solver repository, the
+runtime parameters, the main routine and the build files.
 
 # Build variants
 

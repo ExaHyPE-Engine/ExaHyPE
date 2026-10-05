@@ -3,8 +3,9 @@
 #pragma once
 
 #include "{{SOLVER_NAME}}.h"
-
-#include "exahype2/SolverConcepts.h"
+{% for include in SOLVER_CONCEPT_INCLUDES %}
+#include "{{include}}"
+{%- endfor %}
 
 {{SOLVER_CONCEPT_ASSERTION}}
 {%- if SOLVER_PDE_TERM_ASSERTIONS %}

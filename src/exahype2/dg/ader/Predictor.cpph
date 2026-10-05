@@ -1,0 +1,287 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/dg/Kernels.h"
+#include "exahype2/dg/limiting/LimiterStatus.h"
+#include "peano4/Constants.h"
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/Scratch.h"
+
+TARGET_DECLARE
+/**
+ * Runs the space-time predictor of one cell on the threads of workers and subtracts the volume
+ * integral of the time averages from cellState. scratch is a block of ScratchSize values that no
+ * other call reads while this call runs. Returns the outcome of NonlinearPredictor::predict(), or
+ * zero for a linear Derived. A thread without a cell takes part in the barriers of the team and
+ * returns zero.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  ComputePrecision* const* const               faceStates,
+  ComputePrecision* const* const               faceFluxes,
+  StoragePrecision* NOALIAS const              cellState,
+  const double* NOALIAS const                  pointSourceLocations,
+  ComputePrecision* NOALIAS const              scratch,
+  const Tables&                                tables,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const TeamWorkers&                           workers
+) {
+  assertion(timeStamp >= 0.0, timeStamp, cellCentre);
+  assertion(timeStepSize >= 0.0, timeStepSize, cellCentre);
+  assertion(not workers.hasCell or faceStates != nullptr);
+  assertion(not workers.hasCell or faceFluxes != nullptr);
+  assertion(not workers.hasCell or cellState != nullptr);
+  assertion(not workers.hasCell or scratch != nullptr);
+
+  if constexpr (Derived::IsLinear) {
+    using Scratch = typename Linear::Scratch;
+
+    if (workers.hasCell and workers.thread == 0) {
+      if constexpr (Linear::EvaluatePointSources) {
+        static_assert(
+          Derived::NumberOfPointSources > 0,
+          "A solver that evaluates point sources needs at least one point source."
+        );
+        assertion(pointSourceLocations != nullptr);
+        int       pointSourceIndices[Derived::NumberOfPointSources];
+        const int numberOfPointSources =
+          Linear::selectPointSources(pointSourceIndices, pointSourceLocations, cellCentre, cellSize);
+        Linear::predict(
+          faceStates,
+          faceFluxes,
+          cellState,
+          scratch,
+          pointSourceIndices,
+          numberOfPointSources,
+          pointSourceLocations,
+          tables,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize
+        );
+      } else {
+        const int* const pointSourceIndices = nullptr;
+        Linear::predict(
+          faceStates,
+          faceFluxes,
+          cellState,
+          scratch,
+          pointSourceIndices,
+          0,
+          pointSourceLocations,
+          tables,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize
+        );
+      }
+    }
+    Nonlinear::synchronise(workers);
+    if (not workers.hasCell) {
+      return 0;
+    }
+    // The terms of a linear Derived are linear in the state and constant within the time step.
+    // The source of the time-averaged state is the time-averaged source.
+    const ComputePrecision* const timeAveragedState = scratch + Scratch::TimeAveragedStateOffset;
+    subtractTimeAveragedVolumeIntegral<Linear::AccumulatesFlux, Linear::AccumulatesSource>(
+      cellState,
+      scratch + Scratch::FluxOffset,
+      [&](const int cellNode, ComputePrecision* const values) {
+        if constexpr (Linear::AccumulatesSource) {
+          for (int unknown = 0; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
+            values[unknown] = static_cast<ComputePrecision>(0);
+          }
+          Derived::sourceTerm(
+            timeAveragedState + cellNode * CellLayout::PaddedNumberOfData,
+            cellCentre,
+            cellSize,
+            timeStamp,
+            timeStepSize,
+            values
+          );
+        }
+      },
+      timeStepSize,
+      workers
+    );
+    return 0;
+  } else {
+    using Scratch = typename Nonlinear::Scratch;
+
+    const int outcome = Nonlinear::predict(
+      faceStates,
+      faceFluxes,
+      cellState,
+      scratch,
+      tables,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      Derived::PicardResidualTolerance,
+      workers
+    );
+    if (not workers.hasCell) {
+      return outcome;
+    }
+    const ComputePrecision* const timeAveragedSource = scratch + Scratch::TimeAveragedSourceOffset;
+    subtractTimeAveragedVolumeIntegral<Nonlinear::AccumulatesFlux, Nonlinear::AccumulatesSource>(
+      cellState,
+      scratch + Scratch::TimeAveragedFluxOffset,
+      [&](const int cellNode, ComputePrecision* const values) {
+        for (int unknown = 0; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
+          values[unknown] = timeAveragedSource[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown];
+        }
+      },
+      timeStepSize,
+      workers
+    );
+    return outcome;
+  }
+}
+
+/**
+ * Returns the team scratch bytes a predictor launch with teams of teamThreads threads asks for.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getTeamScratchBytes(const int teamThreads) {
+  return Nonlinear::getTeamScratchBytes(teamThreads);
+}
+
+/**
+ * Adds the time step times the time-averaged source minus the flux divergence to cellState.
+ * timeAveragedFlux stores the derivative of the flux along its own axis, one block per axis.
+ * sourceOfNode(cellNode, values) writes the time-averaged source of one node. The threads split
+ * the nodes.
+ */
+template <typename Derived, typename ComputePrecision>
+template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::Predictor<Derived, ComputePrecision>::subtractTimeAveragedVolumeIntegral(
+  StoragePrecision* NOALIAS const                        cellState,
+  [[maybe_unused]] const ComputePrecision* NOALIAS const timeAveragedFlux,
+  [[maybe_unused]] const SourceOfNode&                   sourceOfNode,
+  const double                                           timeStepSize,
+  const TeamWorkers&                                     workers
+) {
+  constexpr int UnknownStride = CellLayout::PaddedNumberOfUnknowns;
+  constexpr int AxisStride    = UnknownStride * CellLayout::NodesPerCell;
+
+  using UpdatePrecision = std::common_type_t<ComputePrecision, double>;
+
+  [[maybe_unused]] ComputePrecision nodeSource[UnknownStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
+    if constexpr (AccumulatesSource) {
+      sourceOfNode(cellNode, nodeSource);
+    }
+    SIMD()
+    for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
+      const int entry  = cellNode * UnknownStride + unknown;
+      auto      update = static_cast<ComputePrecision>(0);
+      if constexpr (AccumulatesFlux) {
+        update = timeAveragedFlux[entry] + timeAveragedFlux[entry + AxisStride];
+        if constexpr (DIMENSIONS == 3) {
+          update += timeAveragedFlux[entry + 2 * AxisStride];
+        }
+      }
+      if constexpr (AccumulatesSource) {
+        update -= nodeSource[unknown];
+      }
+      cellState[cellNode * CellLayout::NumberOfData + unknown] -= static_cast<StoragePrecision>(
+        static_cast<UpdatePrecision>(timeStepSize) * static_cast<UpdatePrecision>(update)
+      );
+    }
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename DivergenceMarks>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, DivergenceMarks>::operator()(
+  const int                            entry,
+  const tarch::accelerator::TeamHandle team,
+  PredictionCounts&                    accumulator
+) const {
+  constexpr int StateValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
+  constexpr int FluxValuesPerFace  = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
+  using Nonlinear                  = exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>;
+
+  assertion(numberOfTeams > 0, numberOfTeams);
+  assertion(threadsPerCell > 0, threadsPerCell);
+  assertion(cells.size > 0, cells.size);
+  TeamWorkers workers = Nonlinear::getWorkers(team, threadsPerCell);
+  const bool  inGroup = workers.hasCell;
+  const int   chunk   = tarch::accelerator::getScratchChunk(entry) * workers.groups + (inGroup ? workers.group : 0);
+  assertion(chunk >= 0 and chunk < predictorScratchChunks, chunk, predictorScratchChunks, entry, workers.group);
+  PredictionCounts counts;
+  for (int first = entry * workers.groups; first < cells.size; first += numberOfTeams * workers.groups) {
+    workers.hasCell = inGroup and first + workers.group < cells.size;
+    // A thread without a cell keeps the barriers of the team on the pointers of the first cell.
+    const int         slot = cells[workers.hasCell ? first + workers.group : 0];
+    ComputePrecision* ownStateHalves[peano4::FacesPerCell];
+    ComputePrecision* ownFluxHalves[peano4::FacesPerCell];
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      const int face             = partition.getCellFace(slot, faceNumber);
+      const int half             = exahype2::dg::getOwnHalf(faceNumber);
+      ownStateHalves[faceNumber] = faceStates.getChunk(face) + half * StateValuesPerFace;
+      ownFluxHalves[faceNumber]  = faceFluxes.getChunk(face) + half * FluxValuesPerFace;
+    }
+    const int outcome = exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
+      partition.getCellCentre(slot),
+      partition.getCellWidth(slot),
+      ownStateHalves,
+      ownFluxHalves,
+      solution.getChunk(slot),
+      pointSourceLocations,
+      predictorScratch + chunk * predictorScratchSize,
+      tables,
+      timeStamp,
+      timeStepSize,
+      workers
+    );
+    // The threads of a cell see the same outcome. The first thread of the cell records it once.
+    if (workers.hasCell and workers.thread == 0) {
+      if (outcome == exahype2::dg::ader::DivergedPicardIteration) {
+        if constexpr (HasLimiter) {
+          divergenceMarks.getChunk(slot)[static_cast<int>(exahype2::dg::limiting::StatusEntry::PredictorDiverged)] = 1;
+        } else {
+          counts.divergedCells++;
+        }
+      } else if (outcome == exahype2::dg::ader::UnconvergedPicardIteration) {
+        if constexpr (HasLimiter) {
+          divergenceMarks.getChunk(slot)[static_cast<int>(exahype2::dg::limiting::StatusEntry::PredictorDiverged)] = 1;
+        } else {
+          counts.unconvergedCells++;
+        }
+      }
+    }
+    // The next cell reuses the scratch block once every thread is done with this one.
+    Nonlinear::synchronise(workers);
+  }
+  COMPILE_IF_ON_HOST(accumulator = PredictionCounts::combine(accumulator, counts);)
+  COMPILE_IF_ON_DEVICE(
+    const tarch::accelerator::Custom<exahype2::dg::ader::PredictionCounts> reducer{accumulator};
+    tarch::accelerator::reduceOverTeam(team, counts, reducer);
+  )
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::PredictionCounts
+exahype2::dg::ader::PredictionCounts::identity() {
+  return ValueType{};
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::PredictionCounts
+exahype2::dg::ader::PredictionCounts::combine(const ValueType left, const ValueType right) {
+  return ValueType{left.divergedCells + right.divergedCells, left.unconvergedCells + right.unconvergedCells};
+}
+TARGET_DECLARE_END

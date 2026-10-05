@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/Enumeration.h"
+#include "exahype2/fv/FiniteVolumeScheme.h"
 #include "exahype2/fv/weno/NonlinearWeights.h"
 #include "exahype2/fv/weno/Tables.h"
 #include "peano4/Constants.h"
@@ -46,6 +46,21 @@ struct exahype2::fv::reconstruction::WENO final {
 
   static constexpr int HaloSize = Order + 1;
 
+  template <
+    typename SolverType,
+    int  Volumes,
+    int  Unknowns,
+    int  Auxiliary,
+    bool Flux,
+    bool NCP,
+    bool Source,
+    bool Diffusion,
+    bool Riemann,
+    bool Eigenvalues,
+    typename StoragePrecision,
+    typename ComputePrecision>
+  using SweepTerms = exahype2::fv::NoTermRing;
+
   template <int NumberOfData>
   static constexpr int ScratchSize = 2 * peano4::power(2 * Order + 1, DIMENSIONS) * NumberOfData;
 
@@ -60,7 +75,9 @@ struct exahype2::fv::reconstruction::WENO final {
   );
 
   template <int NumberOfVolumesPerAxis>
-  INLINE_METHOD GPU_CALLABLE_METHOD static bool volumeIsAvailable(const tarch::la::Vector<DIMENSIONS, int>& volumeIndex);
+  INLINE_METHOD GPU_CALLABLE_METHOD static bool volumeIsAvailable(
+    const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
+  );
 
   template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static const StoragePrecision* volumeState(

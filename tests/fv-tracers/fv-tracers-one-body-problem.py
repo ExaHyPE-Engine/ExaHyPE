@@ -90,7 +90,7 @@ max_eigenvalue = """
 """
 
 analytical_solution = """
-  // Analytical solution for one-body problem with fixed central mass (circular orbit)
+  // A circular orbit around a fixed central mass.
   constexpr double GravitationalParameter = 10.0; // G*M
 
   constexpr double CentreX = 1.5;
@@ -106,23 +106,19 @@ analytical_solution = """
 
   const double angle = atan2(StartY - CentreY, StartX - CentreX) + omega * t;
 
-  // Position
   solution[0] = CentreX + r * cos(angle); // x
   solution[1] = CentreY + r * sin(angle); // y
 
-  // Velocity (perpendicular to radius)
   solution[5] = -r * omega * sin(angle); // vx
   solution[6] =  r * omega * cos(angle); // vy
 
-  // Acceleration (central)
   solution[7] = -GravitationalParameter / (r * r * r) * (solution[0] - CentreX); // ax
   solution[8] = -GravitationalParameter / (r * r * r) * (solution[1] - CentreY); // ay
 
-  // Other fields
-  solution[2] = 0.0;  // rho (density)
+  solution[2] = 0.0;  // rho
   solution[3] = 0.0;  // fluid_u
   solution[4] = 0.0;  // fluid_v
-  solution[9] = mass; // m (mass)
+  solution[9] = mass; // m
 """
 
 fv_solver = exahype2.fv.Solver(
@@ -157,19 +153,15 @@ tracer_attributes = {
 }
 
 tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
+    name="Tracers", particle_attributes=tracer_attributes
 )
 
-init_tracers = exahype2.particles.InsertParticlesByCoordinatesAndData(
-    particle_set=tracer_particles,
-    unknowns_per_particle=len(tracer_attributes["unknowns"]),
-    initial_data="""
+tracer_particles.insert_with_data(
+    """
   {2.0, 2.0, 0.0, 0.0, 0.0, -2.65914794847249380538e+00, 2.65914794847249424947e+00, -1.41421356237309474579e+01, -1.41421356237309474579e+01, 1.0}
 """,
+    unknowns_per_particle=len(tracer_attributes["unknowns"]),
 )
-
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
 
 fv_solver.trace(
     tracer_particles,
@@ -181,10 +173,6 @@ fv_solver.trace(
 )
 
 fv_solver.set_pde_terms(particle_analytical_solution=analytical_solution)
-fv_solver.measure_particle_error(
-    tracer_particles,
-    file="Error_" + Path(__file__).name,
-    descend_invocation_order=65536,  # After all other action sets
-)
+fv_solver.measure_particle_error(tracer_particles, file="Error_" + Path(__file__).name)
 
 project.generate_and_build()

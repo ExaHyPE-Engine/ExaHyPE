@@ -1,21 +1,18 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/Assertions.h"
+
+TARGET_DECLARE
 /**
- * Adds one finite double to the running sum without any rounding.
- *
- * The accumulator holds the exact sum as a fixed-point number spanning the whole
- * double range, so additions commute and associate like real numbers and the
- * rounded result cannot depend on the order in which values arrive. Each limb
- * keeps 32 value bits inside a signed 64-bit integer, which leaves headroom for
- * more than two billion additions between two clear() calls before a carry could
- * be lost. The mantissa of the incoming value touches at most three limbs.
+ * Adds a finite double exactly.
  */
-INLINE_METHOD void tarch::la::ExactAccumulator::add(double value) {
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::la::ExactAccumulator::add(const double value) {
   assertion(std::isfinite(value));
   const auto bits           = std::bit_cast<std::uint64_t>(value);
-  const auto biasedExponent = static_cast<int>((bits >> 52) & 0x7ff);
-  auto       mantissa       = bits & 0x000fffffffffffffULL;
+  const auto biasedExponent = static_cast<int>((bits >> 52) & 0x7FF);
+  auto       mantissa       = bits & 0x000FFFFFFFFFFFFFULL;
   if (biasedExponent != 0) {
     mantissa |= 0x0010000000000000ULL;
   }
@@ -36,4 +33,156 @@ INLINE_METHOD void tarch::la::ExactAccumulator::add(double value) {
   _limbs[limb + 2] += sign * high;
 }
 
-INLINE_METHOD void tarch::la::ExactAccumulator::clear() { std::fill_n(_limbs, NumberOfLimbs, std::int64_t{0}); }
+/**
+ * Adds the exact sum of other and propagates carries through both accumulators.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::la::ExactAccumulator::merge(const tarch::la::ExactAccumulator& other) {
+  std::int64_t leftCarry  = 0;
+  std::int64_t rightCarry = 0;
+  std::int64_t sumCarry   = 0;
+  for (int limb = 0; limb < NumberOfLimbs; limb++) {
+    const auto left  = _limbs[limb] + leftCarry;
+    const auto right = other._limbs[limb] + rightCarry;
+    const auto total = (left & LimbMask) + (right & LimbMask) + sumCarry;
+    leftCarry        = left >> BitsPerLimb;
+    rightCarry       = right >> BitsPerLimb;
+    sumCarry         = total >> BitsPerLimb;
+    _limbs[limb]     = total & LimbMask;
+  }
+  const auto sign = leftCarry + rightCarry + sumCarry;
+  assertion(sign == 0 or sign == -1, sign);
+  _limbs[NumberOfLimbs - 1] += sign * (LimbMask + 1);
+}
+
+/**
+ * Returns the exact running sum rounded to the nearest double with ties to even. The result does
+ * not depend on the order of the addends. A result outside the finite double range becomes signed
+ * infinity.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::ExactAccumulator::round() const {
+  return roundQuotient(1);
+}
+
+/**
+ * Returns the running sum divided by the positive divisor, correctly rounded to the nearest double
+ * with ties to even. A sum of divisor copies of one value returns that value bitwise.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::ExactAccumulator::roundQuotient(const int divisor) const {
+  assertion(divisor > 0, divisor);
+  std::int64_t digits[NumberOfLimbs];
+  std::int64_t carry = 0;
+  for (int limb = 0; limb < NumberOfLimbs; limb++) {
+    const std::int64_t total = _limbs[limb] + carry;
+    digits[limb]             = total & LimbMask;
+    carry                    = total >> BitsPerLimb;
+  }
+  assertion(carry == 0 or carry == -1);
+
+  const auto isNegative = carry == -1;
+  if (isNegative) {
+    std::int64_t borrow = 1;
+    for (int limb = 0; limb < NumberOfLimbs; limb++) {
+      const std::int64_t total = (~digits[limb] & LimbMask) + borrow;
+      digits[limb]             = total & LimbMask;
+      borrow                   = total >> BitsPerLimb;
+    }
+  }
+
+  std::int64_t remainder = 0;
+  for (int limb = NumberOfLimbs - 1; limb >= 0; limb--) {
+    const std::int64_t total = (remainder << BitsPerLimb) | digits[limb];
+    digits[limb]             = total / divisor;
+    remainder                = total % divisor;
+  }
+
+  int topLimb = NumberOfLimbs - 1;
+  while (topLimb >= 0 and digits[topLimb] == 0) {
+    topLimb--;
+  }
+  if (topLimb < 0) {
+    // A quotient below one unit of the fixed point is the smallest subnormal or zero.
+    const auto magnitudeBits = 2 * remainder > divisor ? std::uint64_t{1} : std::uint64_t{0};
+    const auto signField     = isNegative and remainder != 0 ? std::uint64_t{1} << 63 : std::uint64_t{0};
+    return std::bit_cast<double>(signField | magnitudeBits);
+  }
+
+  // A quotient below 2^64 units takes its guard bit from the first digit below the unit.
+  const auto fractionDigit     = static_cast<std::uint64_t>((remainder << BitsPerLimb) / divisor);
+  const auto fractionRemainder = (remainder << BitsPerLimb) % divisor;
+
+  const auto topDigit      = static_cast<std::uint64_t>(digits[topLimb]);
+  const auto digitBelow    = topLimb >= 1 ? static_cast<std::uint64_t>(digits[topLimb - 1]) : fractionDigit;
+  const auto digitFurther  = topLimb >= 2 ? static_cast<std::uint64_t>(digits[topLimb - 2])
+    : topLimb == 1                        ? fractionDigit
+                                          : 0;
+  const auto leadingZeros  = leadingZerosOfDigit(topDigit);
+  const auto exponentOfMsb = topLimb * BitsPerLimb + (BitsPerLimb - 1 - leadingZeros) - 1074;
+  const auto mantissaBits  = exponentOfMsb + 1075 < 53 ? exponentOfMsb + 1075 : 53;
+
+  auto remainderIsNonZero = topLimb >= 2 ? remainder != 0 : fractionRemainder != 0;
+  for (int limb = 0; limb < topLimb - 2; limb++) {
+    remainderIsNonZero = remainderIsNonZero or digits[limb] != 0;
+  }
+
+  // The top two digits joined hold at least 33 significant bits. With one further digit, they cover
+  // the mantissa, the guard bit and the start of the sticky range for every mantissa width.
+  const auto highBits          = (topDigit << BitsPerLimb) | digitBelow;
+  const auto significantLength = 2 * BitsPerLimb - leadingZeros;
+  const auto dropped           = significantLength - mantissaBits;
+
+  std::uint64_t mantissa;
+  bool          guard;
+  if (dropped > 0) {
+    mantissa = highBits >> dropped;
+    guard    = ((highBits >> (dropped - 1)) & 1) != 0;
+    remainderIsNonZero =
+      remainderIsNonZero or digitFurther != 0 or (highBits & ((std::uint64_t{1} << (dropped - 1)) - 1)) != 0;
+  } else {
+    // The mantissa and the guard bit consume the upper bits of the third digit. Its remaining lower
+    // bits feed the sticky decision.
+    mantissa = (highBits << -dropped) | (digitFurther >> (BitsPerLimb + dropped));
+    guard    = ((digitFurther >> (BitsPerLimb + dropped - 1)) & 1) != 0;
+    remainderIsNonZero =
+      remainderIsNonZero or (digitFurther & ((std::uint64_t{1} << (BitsPerLimb + dropped - 1)) - 1)) != 0;
+  }
+  if (guard and (remainderIsNonZero or (mantissa & 1) != 0)) {
+    mantissa++;
+  }
+
+  // Assembling the fields keeps a subnormal result exact, as scaling a
+  // significand into the subnormal range raises an underflow exception.
+  constexpr std::uint64_t InfinityBits         = 0x7FF0000000000000ULL;
+  const auto              exponentField        = static_cast<std::uint64_t>(exponentOfMsb - mantissaBits + 1075);
+  const auto              magnitudeBits        = (exponentField << 52) + mantissa;
+  const auto              roundedMagnitudeBits = magnitudeBits < InfinityBits ? magnitudeBits : InfinityBits;
+  const auto              signField            = isNegative ? std::uint64_t{1} << 63 : std::uint64_t{0};
+  return std::bit_cast<double>(signField | roundedMagnitudeBits);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::la::ExactAccumulator::clear() {
+  for (int limb = 0; limb < NumberOfLimbs; limb++) {
+    _limbs[limb] = 0;
+  }
+}
+
+/**
+ * Returns the number of leading zero bits of a nonzero digit of BitsPerLimb bits.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD int
+tarch::la::ExactAccumulator::leadingZerosOfDigit(const std::uint64_t digit) {
+  assertion(digit != 0 and digit <= static_cast<std::uint64_t>(LimbMask));
+  int           result = 0;
+  std::uint64_t value  = digit;
+  for (int width = BitsPerLimb / 2; width > 0; width /= 2) {
+    if (value >> (BitsPerLimb - width) == 0) {
+      result += width;
+      value <<= width;
+    }
+  }
+  return result;
+}
+TARGET_DECLARE_END

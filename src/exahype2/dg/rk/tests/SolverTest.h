@@ -20,12 +20,11 @@ public:
   void run() override;
 
 private:
-  void testStagesAlternateAfterInitialisation();
-  void testMeshRefinementSweepPrecedesTheStage();
-  void testPlotAfterInitialisationReturnsToTheFirstTimeStep();
-  void testSuspendedSweepSchedulesTheFirstStage();
-  void testAdaptiveTimeStepFollowsTheDampedEigenvalue();
-  void testFixedTimeStepFollowsTheSmallestCell();
-  void testSolversOfEqualParametersKeepSeparateStatistics();
-  void testSweepPredicatesFollowTheMarkerAndTheSweep();
+  void testInitialisationWritesTheInitialConditionIntoEveryNode();
+  void testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp();
+  void testASourceTermAdvancesEveryNodeByTheTimeStep();
+  void testARefinementAndTheEraseBackKeepTheSolution();
+  void testRefinementReducesTheNextAdaptiveTimeStep();
+  void testAPlotAllocatesHostCopiesOnlyWithAGPUBackend();
+  void testReleaseFreesEveryPool();
 };

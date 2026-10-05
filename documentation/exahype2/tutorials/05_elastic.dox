@@ -119,17 +119,17 @@ surfaces**, neither of which needs a code change:
 
 - **Distributed memory (MPI).** Launch under `mpirun -n N ./Elastic ...`: ExaHyPE
   decomposes the domain across the ranks and balances the load automatically. MPI
-  is built in by default; the banner reports `MPI   N Rank(s)` plus the
-  domain-decomposition `MPI Load Balance` statistics.
+  is built in by default; the banner reports `MPI   N Ranks on M Nodes` plus the
+  `Load Balance` of the `MPI Decomposition` statistics.
 - **Threads (OpenMP).** The thread count per rank is the `OMP_NUM_THREADS`
-  environment variable; the startup banner echoes it as `OpenMP   N Thread(s)`.
+  environment variable; the startup banner echoes it as `OpenMP   N Threads`.
 
 The notebook measures the first one, **MPI strong scaling**: it runs the same
 problem on 1, 2 and 4 ranks (one thread per rank, so the measurement is pure
-MPI), reads the `Average Time per Time Step` the solver prints (with plotting
+MPI), reads the `Average Time Step` the solver prints (with plotting
 off, `-ns 0`, to time pure compute), and plots the speedup against the ideal
 linear line. The gap is the usual strong-scaling reality - halo exchange between
-the subdomains, load imbalance and the serial fraction of the traversal.
+the subdomains, load imbalance and the serial fraction of the time step.
 
 # Exercise - Launch a Shear Wave
 

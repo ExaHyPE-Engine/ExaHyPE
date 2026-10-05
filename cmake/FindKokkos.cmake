@@ -1,9 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-#
-# Peano's Kokkos backend find-module. Invoked via find_package(Kokkos) (module
-# mode; it internally uses find_package(Kokkos CONFIG), which bypasses this
-# module, so there is no recursion).
 
 set(KOKKOS_VERSION "5.0.1" CACHE STRING "")
 
@@ -23,9 +19,6 @@ function(_kokkos_build_user_args out_var)
   if(_w MATCHES "^sm_([0-9]+)$")
     list(APPEND _args "-DKokkos_ENABLE_CUDA=ON" "-DKokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE=OFF")
     set(_sm "${CMAKE_MATCH_1}")
-    # sm_<cc> -> Kokkos NVIDIA arch option (Kokkos uses generation code names, so
-    # a lookup table is unavoidable). Architectures without an option in the
-    # pinned Kokkos release (e.g. sm_103, sm_121) fall through to the warning.
     set(_CUDA_MAP
       60  PASCAL60
       61  PASCAL61
@@ -51,11 +44,7 @@ function(_kokkos_build_user_args out_var)
 
   elseif(_w MATCHES "^gfx[0-9a-z]+$")
     list(APPEND _args "-DKokkos_ENABLE_HIP=ON")
-    # Kokkos names AMD GPU architectures Kokkos_ARCH_AMD_GFX<arch>, a direct
-    # upper-casing of the gfx target (gfx942 -> AMD_GFX942, gfx90a -> AMD_GFX90A),
-    # so no lookup table is needed and new gfx targets work automatically. If the
-    # installed Kokkos does not know the arch (e.g. gfx950 on Kokkos 5.0.x) it
-    # fails its own configure and reports the architectures it supports.
+    # A Kokkos release that does not know the gfx target fails its own configuration.
     string(TOUPPER "${_w}" _gfx_upper)
     list(APPEND _args "-DKokkos_ARCH_AMD_${_gfx_upper}=ON")
 
@@ -83,11 +72,12 @@ function(_kokkos_build_parallel_args out_var)
   endif()
 endfunction()
 
-# Application side: honour the settings exported by the core build.
+# An application uses the Kokkos package of the core build.
 if(DEFINED PEANO_KOKKOS_DIR AND NOT PEANO_KOKKOS_DIR STREQUAL "")
   set(Kokkos_DIR "${PEANO_KOKKOS_DIR}" CACHE PATH "Kokkos package config dir (from Peano core build)" FORCE)
 endif()
 
+# The CONFIG mode bypasses this module, so the call does not recurse.
 find_package(Kokkos CONFIG QUIET)
 
 if(NOT Kokkos_FOUND)
@@ -149,4 +139,11 @@ message(STATUS "Found Kokkos: ${Kokkos_DIR}")
 if(TARGET PeanoOptions)
   target_link_libraries(PeanoOptions INTERFACE Kokkos::kokkos)
   target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_KOKKOS PEANO_WITH_GPU_BACKEND)
+  # The nvcc_wrapper script passes -Werror to the host compiler only.
+  if(Kokkos_CXX_COMPILER_ID STREQUAL "NVIDIA")
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANGUAGE:CXX>:--expt-relaxed-constexpr>
+      $<$<COMPILE_LANGUAGE:CXX>:-Werror=all-warnings>
+    )
+  endif()
 endif()

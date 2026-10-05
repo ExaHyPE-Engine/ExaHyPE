@@ -20,7 +20,7 @@ given that we construct the host mesh from spacetree cells.
 
 @image html documentation/exahype2/solvers/block-structured.png
 
-Peano runs over the octants of the mesh, i.e. the patches.
+The solver family dispatches over the cells of the partition, one patch per cell.
 Per patch, it calls an ExaHyPE update kernel, which takes the patch and moves it forwards in time by a given @f$ \Delta t @f$.
 ExaHyPE is shipped with several update schemes. You can also write your own
 numerical scheme manually.
@@ -58,9 +58,8 @@ Here are some details about the data used within the kernels:
 
 Each Finite Volume solver embeds @f$N \times N@f$ patches
 into the octants (cells of the spacetree).
-ExaHyPE is built on top of Peano, and Peano realises a strict element-wise
-traversal, i.e. there's no way to access the neighbour cell of a cell
-directly. However, we can use the faces.
+A kernel reads the patch of one cell and never the patch of a neighbour
+cell directly. However, we can use the faces.
 
 We embed a @f$ 2N@f$ @f$ (d = 2) @f$ or
 @f$2N^2 @f$ @f$ (d=3) @f$, respectively, patches into each face. Let
@@ -75,23 +74,23 @@ information from the neighbour patch.
 
 ### Keeping face and patch data consistent
 
-Projecting the patches onto the face data structures and back is a
-mechanical task. Therefore, we offer action sets to relieve you from the
-pain to recode it over and over again. The solver adds them to its
-algorithmic steps:
+Projecting the patches onto the face halos and back is a mechanical task the
+solver family exahype2::fv::Solver runs as dispatches: every cell writes the
+boundary layers of its updated patch into its own half of its @f$2d@f$ faces,
+the halo exchange carries the halves of the exchanged faces, and every level
+jump interpolates the coarse half onto its fine faces and averages the fine
+halves onto its coarse face.
 
 @image html documentation/exahype2/solvers/ProjectPatchOntoFaces.png
 
-The image above illustrates what `ProjectPatchOntoFaces` does: It knows
-the dimensions of both the patches and the face auxiliary data
-structures and copies the right data from the cell into the @f$2^d@f$
-faces when we leave a cell throughout the grid traversal.
+The image above illustrates the projection: the dimensions of the patch and
+of the face halo fix which layer of the cell lands in which half of a face.
 
 
 ## Code organisation
 
-The @ref page_exahype2_blockstructured "patch operations" offer most of the
-basic data structures and action sets.
+The @ref page_exahype2_blockstructured "patch operations" offer the
+enumeration, the interpolation and the restriction the kernels read.
 
 
 On the Python API side, the class `exahype2.fv.Solver` describes a Finite
@@ -100,8 +99,11 @@ The scheme of a solver, `exahype2.fv.Godunov`, `exahype2.fv.MusclHancock` or
 `exahype2.fv.Weno`, picks the reconstruction and the time stepping of the
 compute kernel. `exahype2.fv.Weno` is the ADER-WENO scheme of Dumbser et al.:
 a polynomial WENO reconstruction evolved by the space-time predictor of the
-ADER-DG solvers. Every Finite Volume solver advances its patches in one grid
-sweep.
+ADER-DG solvers. Every
+Finite Volume solver advances its patches in one sequence of dispatches per
+time step: while the halo messages travel the boundary faces, the local level
+jumps and the local cells; then the remote level jumps, the remote cells, the
+face projection and the restriction of the level jumps.
 
 ## Implementation
 

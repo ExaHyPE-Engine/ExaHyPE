@@ -4,10 +4,6 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
-namespace tarch {
-  std::ostream& align(std::ostream& out);
-} // namespace tarch
-
 namespace tarch::instrumentation {
   class Log;
 } // namespace tarch::instrumentation
@@ -62,7 +58,6 @@ public:
   static void warningWithScopeName(std::string_view scopeName, std::string_view message);
   static void errorWithScopeName(std::string_view scopeName, std::string_view message);
 
-  static void setLogColumnSeparator(const std::string& separator = " ");
   static void setLogTimeStamp(bool value = true);
   static void setLogTimeStampHumanReadable(bool value = true);
   static void setLogMachineName(bool value = true);
@@ -72,24 +67,7 @@ public:
   static void setInfoOutputEnabled(bool value = true);
   static void setWarningOutputEnabled(bool value = true);
 
-  static void setLogFormat(
-    const std::string& columnSeparator,
-    bool               logTimeStamp,
-    bool               logTimeStampHumanReadable,
-    bool               logMachineName,
-    bool               logThreadName,
-    bool               logMessageType,
-    bool               logScopeName,
-    const std::string& outputLogFileName
-  );
-
   static void setOutputFile(const std::string& outputLogFileName);
-
-  static void setDebug(bool enabled);
-  static void enableDebugScopePrefix(const std::string& scopePrefix);
-  static void clearDebugFilter();
-
-  static std::string getScopeName(std::string_view className, std::string_view methodName);
 
   static void close();
 
@@ -100,8 +78,6 @@ private:
 
   static constexpr std::string::size_type NumberOfStandardColumnSpaces{12};
   static constexpr std::string::size_type NumberOfScopeColumnSpaces{55};
-  static constexpr std::string::size_type MinimumAlignedMessagePrefixWidth{24};
-  static constexpr char                   AlignmentMarker{'\x1f'};
 
   struct Configuration {
     std::string              logColumnSeparator{" "};
@@ -156,8 +132,6 @@ private:
 
   static std::string getTimeStampHumanReadable(long int timestampNanoseconds);
 
-  static std::string alignMessage(std::string_view message, std::string::size_type messageStartColumn);
-
   static std::string constructMessageString(
     std::string_view     messageType,
     long int             timestampNanoseconds,
@@ -199,5 +173,4 @@ private:
   static std::vector<std::unique_ptr<const Configuration>>* const _configurationSnapshots;
   static std::atomic<const Configuration*>                        _configuration;
   static std::once_flag                                           _debugFilterEnvironmentOnce;
-  static std::atomic<std::string::size_type>                      _alignedMessagePrefixColumn;
 };

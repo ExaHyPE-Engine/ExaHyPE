@@ -1,204 +1,429 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-/**
- * Claims the piece of one tree, lets the caller create its cell fields and creates the plotters
- * of the node fields. The file keeps the fields in the order of the creation calls, so the
- * caller's fields precede the curve position. Each node field starts where the one before it ends.
- */
-template <typename CreateCellDataPlotters>
-INLINE_METHOD void exahype2::plotter::NodalPatchPlotter::open(
-  Snapshot&                     snapshot,
-  const int                     treeId,
-  const std::vector<DataField>& fields,
-  CreateCellDataPlotters        createCellDataPlotters
-) {
-  _piece.open(snapshot, treeId, tarch::plotter::FileWriter::VertexMerging::Distinct);
-  createCellDataPlotters();
-  _curvePositionPlotter = _piece.createCellDataPlotter("CurvePosition", 1);
+#include "peano4/Loop.h"
+#include "peano4/Partition.h"
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/ChunkedMemoryPool.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/plotter/CellTypes.h"
 
-  _fields.clear();
-  int offset = 0;
-  for (const auto& field : fields) {
-    _fields.push_back({_piece.createVertexDataPlotter(field.name, field.components), field.components, offset});
-    offset += field.components;
-  }
+/**
+ * Writes one snapshot of the cells with one plot cell per finite volume and the interior
+ * volume corners of the patches before the corners on the patch faces. Every rank calls this at
+ * the same time. The chunk of a slot in values holds the volumes of its patch in linearised order
+ * with ValuesPerVolume values each.
+ */
+template <int VolumesPerAxis, int ValuesPerVolume, typename Precision>
+INLINE_METHOD void
+exahype2::plotter::PatchPlotter::plotVolumes(
+  const peano4::Partition&                                partition,
+  const tarch::Span<const int>                            cells,
+  const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
+  const double                                            timeStamp,
+  const tarch::plotter::Format                            format,
+  const std::string&                                      outputDirectory
+) {
+  static_assert(VolumesPerAxis > 0 and ValuesPerVolume > 0);
+  constexpr int CornersPerAxis          = VolumesPerAxis + 1;
+  constexpr int CellsPerPatch           = peano4::power(VolumesPerAxis, DIMENSIONS);
+  constexpr int CornersPerPatch         = peano4::power(CornersPerAxis, DIMENSIONS);
+  constexpr int InteriorCornersPerPatch = peano4::power(VolumesPerAxis - 1, DIMENSIONS);
+  constexpr int FaceCornersPerPatch     = CornersPerPatch - InteriorCornersPerPatch;
+  assertion(cells.size >= 0 and cells.size <= partition.getNumberOfSlots(), cells.size, partition.getNumberOfSlots());
+  assertion(values.isHostAccessible());
+  assertion(values.getChunkSize() >= CellsPerPatch * ValuesPerVolume, values.getChunkSize());
+
+  const auto             corners          = classifyCorners(CornersPerAxis);
+  const FaceCornerPoints faceCornerPoints = numberFaceCorners<VolumesPerAxis>(partition, cells, corners);
+  const std::size_t      interiorCorners  = static_cast<std::size_t>(cells.size) * InteriorCornersPerPatch;
+  const auto             facePoints       = static_cast<std::size_t>(faceCornerPoints.firstPointOfPatch.back());
+  tarch::plotter::Mesh   mesh = createMesh(cells.size, CellsPerPatch, interiorCorners + facePoints, false, false);
+  const double           rank = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
+
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
+    const int          cell                = cells[patch];
+    const std::size_t  firstCell           = static_cast<std::size_t>(patch) * CellsPerPatch;
+    const std::size_t  firstInteriorCorner = static_cast<std::size_t>(patch) * InteriorCornersPerPatch;
+    const std::size_t  firstFaceCorner     = static_cast<std::size_t>(patch) * FaceCornersPerPatch;
+    const std::int32_t firstOwnedPoint     = faceCornerPoints.firstPointOfPatch[static_cast<std::size_t>(patch)];
+    const auto         centre              = partition.getCellCentre(cell);
+    const auto         width               = partition.getCellWidth(cell);
+    const auto         pointOfCorner       = [&](const PatchCorner& patchCorner) {
+      return patchCorner.onFace ? interiorCorners
+          + static_cast<std::size_t>(faceCornerPoints.pointOfFaceCorner[firstFaceCorner + patchCorner.index])
+                                : firstInteriorCorner + static_cast<std::size_t>(patchCorner.index);
+    };
+    peano4::dForEach(CornersPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& cornerIndex) {
+      const PatchCorner& patchCorner =
+        corners[static_cast<std::size_t>(peano4::dLinearised(cornerIndex, CornersPerAxis))];
+      if (
+        patchCorner.onFace and faceCornerPoints.pointOfFaceCorner[firstFaceCorner + patchCorner.index] < firstOwnedPoint
+      ) {
+        return;
+      }
+      const std::size_t point = pointOfCorner(patchCorner);
+      assertion(point * 3 < mesh.pointsXYZ.size(), point, mesh.pointsXYZ.size());
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        const double fraction            = static_cast<double>(cornerIndex(axis)) / VolumesPerAxis;
+        mesh.pointsXYZ[point * 3 + axis] = centre(axis) - 0.5 * width(axis) + fraction * width(axis);
+      }
+      for (int axis = DIMENSIONS; axis < 3; axis++) {
+        mesh.pointsXYZ[point * 3 + axis] = 0.0;
+      }
+    });
+    connectPatch<CornersPerAxis>(
+      [&](const int corner) {
+        return static_cast<std::int32_t>(pointOfCorner(corners[static_cast<std::size_t>(corner)]));
+      },
+      firstCell,
+      mesh
+    );
+    std::fill_n(
+      mesh.cellFields[_fields.size() + RefinementLevelField].values.begin() + firstCell,
+      CellsPerPatch,
+      static_cast<double>(partition.getCellLevel(cell))
+    );
+    std::fill_n(mesh.cellFields[_fields.size() + SubdomainField].values.begin() + firstCell, CellsPerPatch, rank);
+    std::fill_n(
+      mesh.cellFields[_fields.size() + CurveIndexField].values.begin() + firstCell,
+      CellsPerPatch,
+      static_cast<double>(partition.getCellCurveIndex(cell))
+    );
+    const Precision* const volumes = values.getChunk(cell);
+    for (int volume = 0; volume < CellsPerPatch; volume++) {
+      copyState(volumes + volume * ValuesPerVolume, ValuesPerVolume, firstCell + volume, mesh.cellFields);
+    }
+  });
+  write(mesh, timeStamp, format, outputDirectory);
 }
 
 /**
- * Claims the piece of one tree, lets the caller create its cell fields and creates the plotters
- * of the cell fields. The file keeps the fields in the order of the creation calls, so the
- * caller's fields precede the curve position. Each cell field starts where the one before it ends.
+ * Writes one snapshot of the cells with one point per node. The chunk of a slot in values holds
+ * the nodes of its cell with ValuesPerNode values each. The array nodePositions holds the
+ * NodesPerAxis node coordinates within the unit interval.
  */
-template <typename CreateCellDataPlotters>
-INLINE_METHOD void exahype2::plotter::CellPatchPlotter::open(
-  Snapshot&                     snapshot,
-  const int                     treeId,
-  const std::vector<DataField>& fields,
-  CreateCellDataPlotters        createCellDataPlotters
+template <int NodesPerAxis, int ValuesPerNode, typename Precision>
+INLINE_METHOD void
+exahype2::plotter::PatchPlotter::plotNodes(
+  const peano4::Partition&                                partition,
+  const tarch::Span<const int>                            cells,
+  const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
+  const double* const                                     nodePositions,
+  const double                                            timeStamp,
+  const tarch::plotter::Format                            format,
+  const std::string&                                      outputDirectory
 ) {
-  _piece.open(snapshot, treeId, tarch::plotter::FileWriter::VertexMerging::Merged);
-  createCellDataPlotters();
-  _curvePositionPlotter = _piece.createCellDataPlotter("CurvePosition", 1);
-
-  _fields.clear();
-  int offset = 0;
-  for (const auto& field : fields) {
-    _fields.push_back({_piece.createCellDataPlotter(field.name, field.components), field.components, offset});
-    offset += field.components;
-  }
+  plotNodes<NodesPerAxis, ValuesPerNode, NodesPerAxis, Precision>(
+    partition,
+    cells,
+    values,
+    nodePositions,
+    nullptr,
+    nullptr,
+    0,
+    timeStamp,
+    format,
+    outputDirectory
+  );
 }
 
 /**
- * Plots one cell of a patch whose values sit on the nodes. The node values reach the plot
- * points one to one, unless the caller hands over an alternative patch: Then every plot point
- * reads the value of the nearest degree of freedom of that patch.
+ * Writes one snapshot with one point per node. A patch whose first entry in statuses is at least
+ * subcellStatus plots at every node the subcell of subcellValues that contains the node. With a
+ * null statuses every patch plots its nodes without a status field.
  */
-template <
-  int PointsPerAxis,
-  int UnknownsPerPoint,
-  int AlternativePointsPerAxis,
-  typename Precision,
-  typename CellDataPlots>
-INLINE_METHOD void exahype2::plotter::NodalPatchPlotter::plotCell(
-  const peano4::dataview::CellMarker&          marker,
-  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-  const std::array<double, PointsPerAxis>&     mappingAlongAxis,
-  const Precision* const                       patch,
-  const bool                                   useAlternativePatch,
-  const std::type_identity_t<Precision>* const alternativePatch,
-  CellDataPlots                                cellDataPlots
+template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
+INLINE_METHOD void
+exahype2::plotter::PatchPlotter::plotNodes(
+  const peano4::Partition&                                                            partition,
+  const tarch::Span<const int>                                                        cells,
+  const tarch::accelerator::ChunkedMemoryPool<Precision>&                             values,
+  const double* const                                                                 nodePositions,
+  const tarch::accelerator::ChunkedMemoryPool<std::type_identity_t<Precision>>* const subcellValues,
+  const tarch::accelerator::ChunkedMemoryPool<int>* const                             statuses,
+  const int                                                                           subcellStatus,
+  const double                                                                        timeStamp,
+  const tarch::plotter::Format                                                        format,
+  const std::string&                                                                  outputDirectory
 ) {
-  static_assert(PointsPerAxis > 0);
-  static_assert(UnknownsPerPoint > 0);
-  static_assert(AlternativePointsPerAxis > 0);
-  assertion(_piece.isOpen());
-  assertion(patch != nullptr);
-  assertion(not useAlternativePatch or alternativePatch != nullptr);
-  for ([[maybe_unused]] const auto& field : _fields) {
-    assertion(field.offset + field.components <= UnknownsPerPoint, field.offset, field.components, UnknownsPerPoint);
-  }
-
-  constexpr int TotalPoints =
-    DIMENSIONS == 2 ? PointsPerAxis * PointsPerAxis : PointsPerAxis * PointsPerAxis * PointsPerAxis;
-
-  const auto& patchSize       = marker.getH();
-  const auto  patchOffset     = marker.getX() - patchSize * 0.5;
-  const auto  refinementLevel = marker.level;
-  const auto  curvePosition   = peano4::sfc::ActiveCurve::curveParameter(
-    tarch::la::divideComponents(marker.getX() - domainOffset, domainSize),
-    refinementLevel
+  static_assert(NodesPerAxis > 1 and ValuesPerNode > 0 and SubcellsPerAxis > 0);
+  constexpr int NodesPerPatch = peano4::power(NodesPerAxis, DIMENSIONS);
+  constexpr int CellsPerPatch = peano4::power(NodesPerAxis - 1, DIMENSIONS);
+  assertion(cells.size >= 0 and cells.size <= partition.getNumberOfSlots(), cells.size, partition.getNumberOfSlots());
+  assertion(values.isHostAccessible());
+  assertion(values.getChunkSize() >= NodesPerPatch * ValuesPerNode, values.getChunkSize());
+  assertion(nodePositions != nullptr);
+  assertion(statuses == nullptr or (statuses->isHostAccessible() and subcellValues != nullptr));
+  assertion(statuses == nullptr or subcellValues->isHostAccessible());
+  assertion(
+    statuses == nullptr or subcellValues->getChunkSize() >= peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerNode,
+    subcellValues->getChunkSize()
   );
 
-  const auto alternativePatchOffset = [&](const tarch::la::Vector<DIMENSIONS, int>& point) {
-    int index  = 0;
-    int stride = 1;
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      const int indexAlongAxis = std::clamp(
-        static_cast<int>(mappingAlongAxis[point(axis)] * AlternativePointsPerAxis),
-        0,
-        AlternativePointsPerAxis - 1
-      );
-      index += indexAlongAxis * stride;
-      stride *= AlternativePointsPerAxis;
+  const auto           subcellOfNode = containingSubcells<NodesPerAxis, SubcellsPerAxis>(nodePositions);
+  const bool           hasStatus     = statuses != nullptr;
+  const std::size_t    nodes         = static_cast<std::size_t>(cells.size) * NodesPerPatch;
+  tarch::plotter::Mesh mesh          = createMesh(cells.size, CellsPerPatch, nodes, true, hasStatus);
+  const std::size_t    statusField   = mesh.cellFields.size() - 1;
+  const double         rank          = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
+    const int              cell          = cells[patch];
+    const std::size_t      firstCell     = static_cast<std::size_t>(patch) * CellsPerPatch;
+    const std::size_t      firstPoint    = static_cast<std::size_t>(patch) * NodesPerPatch;
+    const int              status        = hasStatus ? statuses->getChunk(cell)[0] : 0;
+    const bool             plotsSubcells = hasStatus and status >= subcellStatus;
+    const Precision* const states        = plotsSubcells ? subcellValues->getChunk(cell) : values.getChunk(cell);
+    const auto             centre        = partition.getCellCentre(cell);
+    const auto             width         = partition.getCellWidth(cell);
+    peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
+      const int node = peano4::dLinearised(nodeIndex, NodesPerAxis);
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        mesh.pointsXYZ[(firstPoint + node) * 3 + axis] =
+          centre(axis) - 0.5 * width(axis) + nodePositions[nodeIndex(axis)] * width(axis);
+      }
+      for (int axis = DIMENSIONS; axis < 3; axis++) {
+        mesh.pointsXYZ[(firstPoint + node) * 3 + axis] = 0.0;
+      }
+      const int stateOfNode = plotsSubcells ? subcellOfNode[static_cast<std::size_t>(node)] : node;
+      copyState(states + stateOfNode * ValuesPerNode, ValuesPerNode, firstPoint + node, mesh.pointFields);
+    });
+    connectPatch<NodesPerAxis>(
+      [&](const int node) { return static_cast<std::int32_t>(firstPoint + node); },
+      firstCell,
+      mesh
+    );
+    std::fill_n(
+      mesh.cellFields[RefinementLevelField].values.begin() + firstCell,
+      CellsPerPatch,
+      static_cast<double>(partition.getCellLevel(cell))
+    );
+    std::fill_n(mesh.cellFields[SubdomainField].values.begin() + firstCell, CellsPerPatch, rank);
+    std::fill_n(
+      mesh.cellFields[CurveIndexField].values.begin() + firstCell,
+      CellsPerPatch,
+      static_cast<double>(partition.getCellCurveIndex(cell))
+    );
+    if (hasStatus) {
+      std::fill_n(mesh.cellFields[statusField].values.begin() + firstCell, CellsPerPatch, static_cast<double>(status));
     }
-    return index * UnknownsPerPoint;
+  });
+  write(mesh, timeStamp, format, outputDirectory);
+}
+
+/**
+ * Returns for every node of a patch the linearised index of the subcell that contains the node.
+ * SubcellsPerAxis subcells per axis tile the patch. A node on the boundary between two subcells
+ * belongs to the upper one.
+ */
+template <int NodesPerAxis, int SubcellsPerAxis>
+INLINE_METHOD std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)>
+exahype2::plotter::PatchPlotter::containingSubcells(const double* const nodePositions) {
+  static_assert(NodesPerAxis > 0 and SubcellsPerAxis > 0);
+  constexpr int NodesPerPatch = peano4::power(NodesPerAxis, DIMENSIONS);
+  assertion(nodePositions != nullptr);
+  std::array<int, NodesPerPatch> result{};
+  peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
+    const int                          node = peano4::dLinearised(nodeIndex, NodesPerAxis);
+    tarch::la::Vector<DIMENSIONS, int> subcell;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const double position = nodePositions[nodeIndex(axis)];
+      assertion(position >= 0.0 and position <= 1.0, node, axis, position);
+      subcell(axis) = std::clamp(static_cast<int>(position * SubcellsPerAxis), 0, SubcellsPerAxis - 1);
+    }
+    result[static_cast<std::size_t>(node)] = peano4::dLinearised(subcell, SubcellsPerAxis);
+  });
+  return result;
+}
+
+/**
+ * Numbers the distinct volume corners on the faces of the patches in the order of their first
+ * appearance in cells. Corners with the same integer lattice coordinates on the finest level are one
+ * point.
+ */
+template <int VolumesPerAxis>
+INLINE_METHOD exahype2::plotter::PatchPlotter::FaceCornerPoints
+exahype2::plotter::PatchPlotter::numberFaceCorners(
+  const peano4::Partition&        partition,
+  const tarch::Span<const int>    cells,
+  const std::vector<PatchCorner>& corners
+) {
+  constexpr int          CornersPerAxis      = VolumesPerAxis + 1;
+  constexpr int          CornersPerPatch     = peano4::power(CornersPerAxis, DIMENSIONS);
+  constexpr int          FaceCornersPerPatch = CornersPerPatch - peano4::power(VolumesPerAxis - 1, DIMENSIONS);
+  constexpr std::int32_t EmptySlot           = std::numeric_limits<std::int32_t>::max();
+  constexpr std::size_t  SlotsPerTask        = std::size_t{1} << 16;
+  assertion(corners.size() == static_cast<std::size_t>(CornersPerPatch), corners.size());
+  assertion(static_cast<std::int64_t>(cells.size) * FaceCornersPerPatch < EmptySlot, cells.size);
+
+  std::array<int, FaceCornersPerPatch> cornerOfFaceCorner{};
+  for (int corner = 0; corner < CornersPerPatch; corner++) {
+    const PatchCorner& patchCorner = corners[static_cast<std::size_t>(corner)];
+    if (patchCorner.onFace) {
+      assertion(patchCorner.index >= 0 and patchCorner.index < FaceCornersPerPatch, corner, patchCorner.index);
+      cornerOfFaceCorner[static_cast<std::size_t>(patchCorner.index)] = corner;
+    }
+  }
+
+  const auto getLatticeKey = [&](const std::int32_t faceCorner) {
+    const int  patch       = faceCorner / FaceCornersPerPatch;
+    const int  cell        = cells[patch];
+    const auto cornerIndex = peano4::dDelinearised(
+      cornerOfFaceCorner[static_cast<std::size_t>(faceCorner % FaceCornersPerPatch)],
+      CornersPerAxis
+    );
+    const auto   lattice = partition.getCellLattice(cell);
+    std::int64_t spacing = 1;
+    for (int level = partition.getCellLevel(cell); level < partition.getMaximumLevel(); level++) {
+      spacing *= peano4::SubdivisionFactor;
+    }
+    std::array<std::int64_t, DIMENSIONS> key{};
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      key[static_cast<std::size_t>(axis)] =
+        (static_cast<std::int64_t>(lattice(axis)) * VolumesPerAxis + cornerIndex(axis)) * spacing;
+    }
+    return key;
   };
 
-  std::array<int, TotalPoints> vertexIndices{};
-
-  peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& point) {
-    const int pointIndex = peano4::dLinearised(point, PointsPerAxis);
-
-    tarch::la::Vector<DIMENSIONS, double> position;
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      position(axis) = patchOffset(axis) + patchSize(axis) * mappingAlongAxis[point(axis)];
+  const std::size_t numberOfFaceCorners = static_cast<std::size_t>(cells.size) * FaceCornersPerPatch;
+  const std::size_t numberOfSlots       = std::bit_ceil(std::max<std::size_t>(2 * numberOfFaceCorners, 1));
+  const std::size_t slotMask            = numberOfSlots - 1;
+  const std::size_t numberOfSlotTasks   = (numberOfSlots + SlotsPerTask - 1) / SlotsPerTask;
+  tarch::plotter::MeshArray<std::int32_t> ownerOfSlot(numberOfSlots);
+  tarch::plotter::MeshArray<std::size_t>  slotOfFaceCorner(numberOfFaceCorners);
+  tarch::accelerator::parallelForOnHost(
+    tarch::accelerator::Range(static_cast<int>(numberOfSlotTasks)),
+    [&](const int task) {
+      const std::size_t firstSlot = static_cast<std::size_t>(task) * SlotsPerTask;
+      std::fill(
+        ownerOfSlot.begin() + firstSlot,
+        ownerOfSlot.begin() + std::min(firstSlot + SlotsPerTask, numberOfSlots),
+        EmptySlot
+      );
     }
-    vertexIndices[pointIndex] = _piece.plotVertex(position);
+  );
 
-    const Precision* const pointData =
-      useAlternativePatch ? alternativePatch + alternativePatchOffset(point) : patch + pointIndex * UnknownsPerPoint;
-    for (const auto& field : _fields) {
-      field.plotter->plotVertexData(vertexIndices[pointIndex], pointData + field.offset, field.components);
+  // A slot holds the smallest face corner of one lattice key.
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
+    for (int faceIndex = 0; faceIndex < FaceCornersPerPatch; faceIndex++) {
+      const std::int32_t faceCorner = patch * FaceCornersPerPatch + faceIndex;
+      const auto         key        = getLatticeKey(faceCorner);
+      std::size_t        slot       = hashLatticeKey(key) & slotMask;
+      while (true) {
+        std::atomic_ref<std::int32_t> owner(ownerOfSlot[slot]);
+        std::int32_t                  currentOwner = EmptySlot;
+        if (owner.compare_exchange_strong(currentOwner, faceCorner, std::memory_order_relaxed)) {
+          break;
+        }
+        if (getLatticeKey(currentOwner) == key) {
+          while (faceCorner < currentOwner
+                 and not owner.compare_exchange_weak(currentOwner, faceCorner, std::memory_order_relaxed)) {
+          }
+          break;
+        }
+        slot = (slot + 1) & slotMask;
+      }
+      slotOfFaceCorner[static_cast<std::size_t>(faceCorner)] = slot;
     }
   });
 
-  peano4::dForEach(PointsPerAxis - 1, [&](const tarch::la::Vector<DIMENSIONS, int>& cell) {
-    const int firstVertex = peano4::dLinearised(cell, PointsPerAxis);
-
-    std::array<int, peano4::VerticesPerCell> vertices{};
-    for (int corner = 0; corner < peano4::VerticesPerCell; corner++) {
-      int offset = 0;
-      int stride = 1;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        offset += CellCorners[corner][axis] * stride;
-        stride *= PointsPerAxis;
+  FaceCornerPoints result;
+  result.firstPointOfPatch.assign(static_cast<std::size_t>(cells.size) + 1, 0);
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
+    std::int32_t ownedPoints = 0;
+    for (int faceIndex = 0; faceIndex < FaceCornersPerPatch; faceIndex++) {
+      const std::int32_t faceCorner = patch * FaceCornersPerPatch + faceIndex;
+      if (ownerOfSlot[slotOfFaceCorner[static_cast<std::size_t>(faceCorner)]] == faceCorner) {
+        ownedPoints++;
       }
-      vertices[corner] = vertexIndices[firstVertex + offset];
     }
+    result.firstPointOfPatch[static_cast<std::size_t>(patch) + 1] = ownedPoints;
+  });
+  std::partial_sum(result.firstPointOfPatch.begin(), result.firstPointOfPatch.end(), result.firstPointOfPatch.begin());
 
-    const int cellIndex = _piece.plotCell(vertices);
-    _piece.plotCellMarkers(cellIndex, refinementLevel);
-    _curvePositionPlotter->plotCellData(cellIndex, curvePosition);
-    cellDataPlots(cellIndex);
+  result.pointOfFaceCorner.resize(numberOfFaceCorners);
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
+    std::int32_t point = result.firstPointOfPatch[static_cast<std::size_t>(patch)];
+    for (int faceIndex = 0; faceIndex < FaceCornersPerPatch; faceIndex++) {
+      const std::int32_t faceCorner = patch * FaceCornersPerPatch + faceIndex;
+      if (ownerOfSlot[slotOfFaceCorner[static_cast<std::size_t>(faceCorner)]] == faceCorner) {
+        result.pointOfFaceCorner[static_cast<std::size_t>(faceCorner)] = point;
+        point++;
+      }
+    }
+    assertion(point == result.firstPointOfPatch[static_cast<std::size_t>(patch) + 1], patch, point);
+  });
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
+    for (int faceIndex = 0; faceIndex < FaceCornersPerPatch; faceIndex++) {
+      const std::int32_t faceCorner = patch * FaceCornersPerPatch + faceIndex;
+      const std::int32_t owner      = ownerOfSlot[slotOfFaceCorner[static_cast<std::size_t>(faceCorner)]];
+      if (owner != faceCorner) {
+        assertion(owner < faceCorner, owner, faceCorner);
+        result.pointOfFaceCorner[static_cast<std::size_t>(faceCorner)] =
+          result.pointOfFaceCorner[static_cast<std::size_t>(owner)];
+      }
+    }
+  });
+  return result;
+}
+
+/**
+ * Writes the corners, the end offsets and the types of the cells of mesh between neighbouring
+ * points of a patch with PointsPerAxis points per axis from firstCell on. The functor pointOfCorner
+ * maps a point of the patch in linearised order onto its point in mesh.
+ */
+template <int PointsPerAxis, typename PointOfCorner>
+INLINE_METHOD void
+exahype2::plotter::PatchPlotter::connectPatch(
+  const PointOfCorner&  pointOfCorner,
+  const std::size_t     firstCell,
+  tarch::plotter::Mesh& mesh
+) {
+  static_assert(PointsPerAxis > 1);
+  constexpr int  CellsPerAxis   = PointsPerAxis - 1;
+  constexpr int  CornersPerCell = peano4::VerticesPerCell;
+  constexpr auto CellType =
+    DIMENSIONS == 2 ? tarch::plotter::CellType::Quadrangle : tarch::plotter::CellType::Hexahedron;
+  assertion(firstCell + peano4::power(CellsPerAxis, DIMENSIONS) <= mesh.types.size(), firstCell, mesh.types.size());
+  peano4::dForEach(CellsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& cellIndex) {
+    const int cell = peano4::dLinearised(cellIndex, CellsPerAxis);
+    for (int corner = 0; corner < CornersPerCell; corner++) {
+      tarch::la::Vector<DIMENSIONS, int> pointIndex;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        pointIndex(axis) = cellIndex(axis) + CellCorners[corner][axis];
+      }
+      const int point                                                 = peano4::dLinearised(pointIndex, PointsPerAxis);
+      mesh.connectivity[(firstCell + cell) * CornersPerCell + corner] = pointOfCorner(point);
+    }
+    mesh.offsets[firstCell + cell] = static_cast<std::int32_t>((firstCell + cell + 1) * CornersPerCell);
+    mesh.types[firstCell + cell]   = static_cast<std::uint8_t>(CellType);
   });
 }
 
 /**
- * Plots one cell of a patch whose values sit on the finite volumes.
+ * Copies the data fields of one state with valuesPerState values into entity of fields. The vector
+ * fields holds the data fields first and in their order.
  */
-template <int VolumesPerAxis, int UnknownsPerVolume, typename Precision, typename CellDataPlots>
-INLINE_METHOD void exahype2::plotter::CellPatchPlotter::plotCell(
-  const peano4::dataview::CellMarker&          marker,
-  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-  const Precision* const                       patch,
-  CellDataPlots                                cellDataPlots
-) {
-  static_assert(VolumesPerAxis > 0);
-  static_assert(UnknownsPerVolume > 0);
-  assertion(_piece.isOpen());
-  assertion(patch != nullptr);
-  for ([[maybe_unused]] const auto& field : _fields) {
-    assertion(field.offset + field.components <= UnknownsPerVolume, field.offset, field.components, UnknownsPerVolume);
+template <typename Precision>
+INLINE_METHOD void
+exahype2::plotter::PatchPlotter::copyState(
+  const Precision* const                    state,
+  const int                                 valuesPerState,
+  const std::size_t                         entity,
+  std::vector<tarch::plotter::Mesh::Field>& fields
+) const {
+  assertion(state != nullptr);
+  assertion(fields.size() >= _fields.size(), fields.size(), _fields.size());
+  int firstComponent = 0;
+  for (std::size_t field = 0; field < _fields.size(); field++) {
+    const int components = _fields[field].components;
+    for (int component = 0; component < components; component++) {
+      fields[field].values[entity * components + component] = static_cast<double>(state[firstComponent + component]);
+    }
+    firstComponent += components;
   }
-
-  const auto& patchSize       = marker.getH();
-  const auto  patchOffset     = marker.getX() - patchSize * 0.5;
-  const auto  refinementLevel = marker.level;
-  const auto  volumeSize      = patchSize / static_cast<double>(VolumesPerAxis);
-  const auto  curvePosition   = peano4::sfc::ActiveCurve::curveParameter(
-    tarch::la::divideComponents(marker.getX() - domainOffset, domainSize),
-    refinementLevel
-  );
-
-  peano4::dForEach(VolumesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
-    tarch::la::Vector<DIMENSIONS, double> volumeAsDouble;
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      volumeAsDouble(axis) = static_cast<double>(volume(axis));
-    }
-    const auto volumeOffset = patchOffset + tarch::la::multiplyComponents(volumeAsDouble, volumeSize);
-
-    std::array<int, peano4::VerticesPerCell> vertices{};
-    for (int corner = 0; corner < peano4::VerticesPerCell; corner++) {
-      auto cornerPosition = volumeOffset;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        if (CellCorners[corner][axis] == 1) {
-          cornerPosition(axis) = volumeOffset(axis) + volumeSize(axis);
-        }
-      }
-      vertices[corner] = _piece.plotVertex(cornerPosition);
-    }
-
-    const int cellIndex = _piece.plotCell(vertices);
-    _piece.plotCellMarkers(cellIndex, refinementLevel);
-    _curvePositionPlotter->plotCellData(cellIndex, curvePosition);
-
-    const Precision* const volumeData = patch + peano4::dLinearised(volume, VolumesPerAxis) * UnknownsPerVolume;
-    for (const auto& field : _fields) {
-      field.plotter->plotCellData(cellIndex, volumeData + field.offset, field.components);
-    }
-    cellDataPlots(cellIndex);
-  });
+  assertion(firstComponent <= valuesPerState, firstComponent, valuesPerState);
 }

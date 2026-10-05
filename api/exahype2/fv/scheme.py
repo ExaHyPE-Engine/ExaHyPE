@@ -46,7 +46,7 @@ class SubcellScheme:
         self._time_stepping = time_stepping
         self._halo_width = halo_width
         self._fallback_reconstruction = fallback_reconstruction
-        self._includes = includes or ["exahype2/fv/FiniteVolume.h"]
+        self._includes = includes or ["exahype2/fv/FiniteVolumeScheme.h"]
 
     @property
     def reconstruction(self):
@@ -80,7 +80,7 @@ class Godunov:
             time_stepping="::exahype2::fv::timestepping::SingleStep",
             halo_width=self.halo_width,
             includes=[
-                "exahype2/fv/FiniteVolume.h",
+                "exahype2/fv/FiniteVolumeScheme.h",
                 "exahype2/fv/reconstruction/Constant.h",
                 "exahype2/fv/timestepping/SingleStep.h",
             ],
@@ -102,8 +102,8 @@ class MusclHancock:
     def __init__(self, limiter=Limiter.minmod):
         if not isinstance(limiter, str) or not limiter.startswith("::"):
             raise ValueError(
-                "The limiter is a policy type name of exahype2.fv.Limiter; a C++ body belongs "
-                "to the limited_difference term."
+                "The MUSCL-Hancock scheme expects a limiter of exahype2.fv.Limiter. A C++ "
+                "limiter body belongs into the limited_difference PDE term."
             )
         self.limiter = limiter
 
@@ -118,7 +118,7 @@ class MusclHancock:
                 "::exahype2::fv::reconstruction::LimitedLinear<::exahype2::fv::limiter::Zero>"
             ),
             includes=[
-                "exahype2/fv/FiniteVolume.h",
+                "exahype2/fv/FiniteVolumeScheme.h",
                 "exahype2/fv/limiter/SlopeLimiter.h",
                 "exahype2/fv/reconstruction/LimitedLinear.h",
                 "exahype2/fv/timestepping/SingleStep.h",
@@ -167,7 +167,7 @@ class Weno:
             time_stepping="::exahype2::fv::timestepping::ADER",
             halo_width=self.halo_width,
             includes=[
-                "exahype2/fv/FiniteVolume.h",
+                "exahype2/fv/FiniteVolumeScheme.h",
                 "exahype2/fv/reconstruction/WENO.h",
                 "exahype2/fv/timestepping/ADER.h",
                 "exahype2/fv/weno/NonlinearWeights.h",

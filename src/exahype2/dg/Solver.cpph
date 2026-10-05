@@ -1,0 +1,734 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/LevelJumps.h"
+#include "exahype2/terms/CellPredicate.h"
+#include "exahype2/terms/FacePredicate.h"
+#include "exahype2/terms/MeasuredUnknowns.h"
+#include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Vector.h"
+
+/**
+ * timeStepFactor is the CFL relaxation of an adaptive rule or the normalised time step size of
+ * a fixed rule.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::Solver(
+  const double                                     timeStepFactor,
+  const std::string&                               name,
+  const std::vector<exahype2::plotter::DataField>& plottedFields
+) :
+  _timeStepping{Derived::TimeSteppingRule, timeStepFactor, exahype2::TimeStepping::Stability::ScaledEigenvalue},
+  _plotter(name, plottedFields) {
+  if constexpr (exahype2::terms::HasFacePredicate<Derived>) {
+    _facePlotter.emplace(name + "-face", plottedFields);
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::requestRefinementForGridConstruction(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
+) {
+  _votes.voteOnGridConstruction<Derived, StoragePrecision>(partition, _timeStepping.getLimits(), requests);
+}
+
+/**
+ * Allocates the operator tables, the pools and the exchanges. Every rank calls this at the same
+ * time. The exchanges of every solver then take the same MPI tags.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(const peano4::Partition& partition) {
+  Quadrature<double>::initialise();
+  DGMatrices<double>::initialise();
+  if constexpr (not std::is_same_v<ComputePrecision, double>) {
+    Quadrature<ComputePrecision>::initialise();
+    DGMatrices<ComputePrecision>::initialise();
+  }
+  if constexpr (
+    not std::is_same_v<StoragePrecision, double> and not std::is_same_v<StoragePrecision, ComputePrecision>
+  ) {
+    Quadrature<StoragePrecision>::initialise();
+    DGMatrices<StoragePrecision>::initialise();
+  }
+  _nodePositionsOnHost.resize(NodesPerAxis);
+  _nodeWeightsOnHost.resize(NodesPerAxis);
+  tarch::copyFrom(
+    Quadrature<double>::QuadraturePoints1D,
+    _nodePositionsOnHost.data(),
+    NodesPerAxis,
+    tarch::MemoryLocation::Device
+  );
+  tarch::copyFrom(
+    Quadrature<double>::QuadratureWeights1D,
+    _nodeWeightsOnHost.data(),
+    NodesPerAxis,
+    tarch::MemoryLocation::Device
+  );
+
+  _solution.reserve(partition.getNumberOfSlots());
+  _faceStates.reserve(partition.getNumberOfFaces());
+  _faceFluxes.reserve(partition.getNumberOfFaces());
+  _stateExchange.rebuild(partition);
+  _fluxExchange.rebuild(partition);
+  rebuildOwnedLists(partition);
+  reduceMeshWidths(partition);
+}
+
+/**
+ * Writes the initial condition of Derived on the host into every cell and votes on the refinement.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
+) {
+  CellPool   copyOnHost{ValuesPerCell, tarch::MemoryLocation::Heap};
+  CellPool&  solution = _solution.download(copyOnHost);
+  const auto cells    = partition.getCells();
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int entry) {
+    const int slot = cells[entry];
+    exahype2::dg::initialiseNodes<Derived>(
+      partition.getCellCentre(slot),
+      partition.getCellWidth(slot),
+      _nodePositionsOnHost.data(),
+      _nodeWeightsOnHost.data(),
+      solution.getChunk(slot)
+    );
+  });
+  _solution.upload(solution);
+
+  reduceMeshWidths(partition);
+  measureError(partition);
+  _meshChangedSinceLastTimeStep = false;
+  voteOnRefinement(partition, requests);
+}
+
+/**
+ * Moves the solution into the slots of the new partition and recomputes the time step size. The
+ * next time step fills the face pools.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
+  const peano4::Partition&      partition,
+  const peano4::Regrid&         regrid,
+  exahype2::RefinementRequests& requests
+) {
+  assertion(regrid.newNumberOfSlots >= regrid.oldNumberOfSlots, regrid.newNumberOfSlots, regrid.oldNumberOfSlots);
+  _solution.reserve(regrid.newNumberOfSlots);
+  _migration.migrate(
+    _solution,
+    regrid,
+    exahype2::dg::RegridCells<Derived, StoragePrecision>{
+      std::as_const(_solution).getView(),
+      DGMatrices<double>::ProlongationMatrix1D,
+      DGMatrices<double>::WeightedRestrictionMatrix1D
+    }
+  );
+
+  _faceStates.reserve(partition.getNumberOfFaces());
+  _faceFluxes.reserve(partition.getNumberOfFaces());
+  _stateExchange.rebuild(partition);
+  _fluxExchange.rebuild(partition);
+  rebuildOwnedLists(partition);
+  reduceMeshWidths(partition);
+  _meshChangedSinceLastTimeStep = true;
+  const auto& solverFamily      = static_cast<const Derived&>(*this);
+  if constexpr (UsesAdaptiveTimeStepping) {
+    if (
+      _timeStepping.getTimeStepSizeOfNextStep() > 0.0
+      and _timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime
+    ) {
+      const auto                            cells = getCells(partition);
+      exahype2::dg::MaxEigenvalueStatistics statistics;
+      tarch::accelerator::parallelReduce(
+        tarch::accelerator::Range(cells.size),
+        exahype2::dg::MeasureNodeEigenvalues<Derived, StoragePrecision>{
+          partition.onDevice(),
+          cells,
+          std::as_const(_solution).getView(),
+          Quadrature<StoragePrecision>::QuadraturePoints1D,
+          _timeStepping.getTimeStamp()
+        },
+        tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{statistics}
+      );
+      _timeStepping.raiseMaxEigenvalue(statistics.maxPhysicalEigenvalue);
+      _timeStepping.raiseMaxScaledEigenvalue(statistics.maxScaledEigenvalue);
+      _timeStepping.reduceMaxEigenvaluesAcrossRanks();
+      if (_timeStepping.hasPositiveStabilityEigenvalue()) {
+        _timeStepping.setAdmissibleTimeStepSize(solverFamily.getTimeStepSizeFromCFL());
+      }
+    }
+  } else if (_timeStepping.getTimeStepSize() > 0.0) {
+    _timeStepping.setFixedTimeStepSize(solverFamily.getFixedTimeStepSize());
+  }
+
+  std::vector<int> createdCells;
+  createdCells.reserve(regrid.createdSlots.size());
+  for (const int slot : regrid.createdSlots) {
+    assertion(slot >= 0 and slot < partition.getNumberOfSlots(), slot, partition.getNumberOfSlots());
+    if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+      if (not Derived::ownsCell(partition.getCellCentre(slot), partition.getCellWidth(slot))) {
+        continue;
+      }
+    }
+    createdCells.push_back(slot);
+  }
+  _votes.voteOnCells<Derived>(
+    partition,
+    createdCells,
+    std::as_const(_solution).getView(),
+    _timeStepping.getLimits(),
+    _timeStepping.getTimeStamp(),
+    requests
+  );
+}
+
+/**
+ * Writes one snapshot with one plot point per node. Every rank calls this at the same time.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
+  const peano4::Partition&     partition,
+  const tarch::plotter::Format format,
+  const std::string&           outputDirectory
+) {
+  _plotter.template plotNodes<NodesPerAxis, NumberOfData>(
+    partition,
+    getCellsOnHost(partition),
+    downloadSolution(),
+    _nodePositionsOnHost.data(),
+    _timeStepping.getTimeStamp(),
+    format,
+    outputDirectory
+  );
+  plotFaces(partition, format, outputDirectory);
+}
+
+/**
+ * Frees every buffer and operator table. None outlives the accelerator runtime.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
+  _solution.release();
+  _faceStates.release();
+  _faceFluxes.release();
+  _stateExchange.release();
+  _fluxExchange.release();
+  _migration.release();
+  _votes.release();
+  _ownedCells.release();
+  _ownedCellsOnHost        = std::vector<int>{};
+  _numberOfLocalOwnedCells = 0;
+  _ownedRiemannFaces.release();
+  _numberOfLocalOwnedRiemannFaces = 0;
+  _errorMeasurement.release();
+  _solutionOnHost.release();
+  _faceStatesOnHost.release();
+  _nodePositionsOnHost = std::vector<double>{};
+  _nodeWeightsOnHost   = std::vector<double>{};
+
+  Quadrature<double>::deallocate();
+  DGMatrices<double>::deallocate();
+  if constexpr (not std::is_same_v<ComputePrecision, double>) {
+    Quadrature<ComputePrecision>::deallocate();
+    DGMatrices<ComputePrecision>::deallocate();
+  }
+  if constexpr (
+    not std::is_same_v<StoragePrecision, double> and not std::is_same_v<StoragePrecision, ComputePrecision>
+  ) {
+    Quadrature<StoragePrecision>::deallocate();
+    DGMatrices<StoragePrecision>::deallocate();
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::setLimits(const exahype2::Limits& limits) {
+  _timeStepping.setLimits(limits);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::openErrorMeasurement(
+  const std::string& fileName,
+  const double       timeDeltaBetweenSnapshots
+) {
+  static_assert(
+    exahype2::terms::HasMeasuredUnknowns<Derived>,
+    "The error measurement of the solver expects an analytical solution and the unknowns to measure."
+  );
+  _errorMeasurement.open(fileName, timeDeltaBetweenSnapshots);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD const exahype2::TimeStepping&
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getTimeStepping() const {
+  return _timeStepping;
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD const typename exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::CellPool&
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getSolution() const {
+  return _solution;
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD const typename exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::StatePool&
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getFaceStates() const {
+  return _faceStates;
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD const typename exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::FluxPool&
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getFaceFluxes() const {
+  return _faceFluxes;
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD tarch::AllocatedBytes
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
+  return _solution.getAllocatedBytes() + _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes()
+    + _stateExchange.getAllocatedBytes() + _fluxExchange.getAllocatedBytes() + _migration.getAllocatedBytes()
+    + _votes.getAllocatedBytes() + _ownedCells.getAllocatedBytes() + _ownedRiemannFaces.getAllocatedBytes()
+    + _errorMeasurement.getAllocatedBytes() + _solutionOnHost.getAllocatedBytes()
+    + _faceStatesOnHost.getAllocatedBytes()
+    + tarch::AllocatedBytes::onHost(
+           tarch::getAllocatedBytesOf(_ownedCellsOnHost) + tarch::getAllocatedBytesOf(_nodePositionsOnHost)
+           + tarch::getAllocatedBytesOf(_nodeWeightsOnHost)
+    );
+}
+
+/**
+ * Returns the number of values of one cell, auxiliary variables included.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD int
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getNumberOfDoFs() const {
+  return ValuesPerCell;
+}
+
+/**
+ * Returns the number of cells the solver advances on this rank.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD int
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getNumberOfCells(
+  const peano4::Partition& partition
+) const {
+  return getCellsOnHost(partition).size;
+}
+
+/**
+ * Returns the slots of the cells the solver advances, in device memory.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD tarch::Span<const int>
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getCells(const peano4::Partition& partition) const {
+  if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+    return {_ownedCells.getData(), static_cast<int>(_ownedCells.getSize())};
+  } else {
+    return partition.onDevice().getCells();
+  }
+}
+
+/**
+ * Returns the slots of the local or the remote cells the solver advances, in device memory.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD tarch::Span<const int>
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getCells(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency
+) const {
+  if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+    const int numberOfCells = static_cast<int>(_ownedCells.getSize());
+    return adjacency == peano4::Adjacency::Local
+      ? tarch::Span<const int>{_ownedCells.getData(), _numberOfLocalOwnedCells}
+      : tarch::Span<const int>{
+          _ownedCells.getData() + _numberOfLocalOwnedCells,
+          numberOfCells - _numberOfLocalOwnedCells
+        };
+  } else {
+    return partition.onDevice().getCells(adjacency);
+  }
+}
+
+/**
+ * Returns the slots of the cells the solver advances, in host memory.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD tarch::Span<const int>
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getCellsOnHost(
+  const peano4::Partition& partition
+) const {
+  if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+    return {_ownedCellsOnHost.data(), static_cast<int>(_ownedCellsOnHost.size())};
+  } else {
+    return partition.getCells();
+  }
+}
+
+/**
+ * Returns the local or the remote interior, boundary and hanging faces beside a cell the solver
+ * advances, in device memory.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD tarch::Span<const int>
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getRiemannFaces(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency
+) const {
+  if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+    const int numberOfFaces = static_cast<int>(_ownedRiemannFaces.getSize());
+    return adjacency == peano4::Adjacency::Local
+      ? tarch::Span<const int>{_ownedRiemannFaces.getData(), _numberOfLocalOwnedRiemannFaces}
+      : tarch::Span<const int>{
+          _ownedRiemannFaces.getData() + _numberOfLocalOwnedRiemannFaces,
+          numberOfFaces - _numberOfLocalOwnedRiemannFaces
+        };
+  } else {
+    return partition.onDevice().getFaces(adjacency, peano4::FaceKind::Interior, peano4::FaceKind::Hanging);
+  }
+}
+
+/**
+ * Returns the solution pool if host code reads it. Otherwise returns its copy in _solutionOnHost.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD const typename exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::CellPool&
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::downloadSolution() {
+  return std::as_const(_solution).download(_solutionOnHost);
+}
+
+/**
+ * Returns the face state pool if host code reads it. Otherwise returns its copy in _faceStatesOnHost.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD const typename exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::StatePool&
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::downloadFaceStates() {
+  return std::as_const(_faceStates).download(_faceStatesOnHost);
+}
+
+/**
+ * Overwrites the face states with the solution, interpolates them across the level jumps and
+ * writes the boundary states. Every rank calls this at the same time.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::projectSolutionOntoFaces(
+  const peano4::Partition& partition
+) {
+  assertion(partition.getNumberOfFaces() <= _faceStates.getCapacity(), partition.getNumberOfFaces());
+  const auto project = [this, &partition](const peano4::Adjacency adjacency) {
+    const auto cells = getCells(partition, adjacency);
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(cells.size),
+      exahype2::dg::ProjectSolutionOntoFaces<Derived, StoragePrecision, ComputePrecision>{
+        partition.onDevice(),
+        cells,
+        std::as_const(_solution).getView(),
+        _faceStates.getView(),
+        DGMatrices<ComputePrecision>::BasisFunctionValuesLeft1D,
+        DGMatrices<ComputePrecision>::BasisFunctionValuesRight1D
+      }
+    );
+  };
+  const InterpolateStateHalves interpolate{_faceStates.getView(), DGMatrices<double>::ProlongationMatrix1D};
+  project(peano4::Adjacency::Remote);
+  _stateExchange.post();
+  project(peano4::Adjacency::Local);
+  exahype2::interpolateCoarseFaces(partition, peano4::Adjacency::Local, interpolate);
+  _stateExchange.wait();
+  exahype2::interpolateCoarseFaces(partition, peano4::Adjacency::Remote, interpolate);
+
+  const auto riemannFaces = getRiemannFaces(partition, peano4::Adjacency::Local);
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(riemannFaces.size),
+    exahype2::dg::ApplyBoundaryConditions<Derived, ComputePrecision>{
+      partition.onDevice(),
+      riemannFaces,
+      _faceStates.getView(),
+      Quadrature<ComputePrecision>::QuadraturePoints1D,
+      _timeStepping.getTimeStamp()
+    }
+  );
+}
+
+/**
+ * Overwrites the face states on the plane at position along normal with the solution and fills
+ * both halves of every level jump on the plane. Every rank calls this at the same time.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::projectSolutionOntoPlane(
+  const peano4::Partition& partition,
+  const int                normal,
+  const double             position
+) {
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  assertion(partition.getNumberOfFaces() <= _faceStates.getCapacity(), partition.getNumberOfFaces());
+  const auto project = [this, &partition, normal, position](const peano4::Adjacency adjacency) {
+    const auto cells = getCells(partition, adjacency);
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(cells.size),
+      exahype2::dg::ProjectSolutionOntoPlane<Derived, StoragePrecision, ComputePrecision>{
+        partition.onDevice(),
+        cells,
+        std::as_const(_solution).getView(),
+        _faceStates.getView(),
+        DGMatrices<ComputePrecision>::BasisFunctionValuesLeft1D,
+        DGMatrices<ComputePrecision>::BasisFunctionValuesRight1D,
+        normal,
+        position
+      }
+    );
+  };
+  const exahype2::dg::ForLevelJumpOnPlane<InterpolateStateHalves> interpolate{
+    partition.onDevice(),
+    normal,
+    position,
+    InterpolateStateHalves{_faceStates.getView(), DGMatrices<double>::ProlongationMatrix1D}
+  };
+  const exahype2::dg::ForLevelJumpOnPlane<RestrictStates> restrictStates{
+    partition.onDevice(),
+    normal,
+    position,
+    RestrictStates{_faceStates.getView(), DGMatrices<double>::WeightedRestrictionMatrix1D}
+  };
+  project(peano4::Adjacency::Remote);
+  _stateExchange.post();
+  project(peano4::Adjacency::Local);
+  exahype2::interpolateCoarseFaces(partition, peano4::Adjacency::Local, interpolate);
+  _stateExchange.wait();
+  exahype2::interpolateCoarseFaces(partition, peano4::Adjacency::Remote, interpolate);
+  exahype2::restrictFineFaces(partition, peano4::Adjacency::Remote, restrictStates);
+  _stateExchange.post();
+  exahype2::restrictFineFaces(partition, peano4::Adjacency::Local, restrictStates);
+  _stateExchange.wait();
+}
+
+/**
+ * Solves the Riemann problems on the local or the remote faces of getRiemannFaces().
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::solveRiemannProblems(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency,
+  const double             timeStamp,
+  const double             timeStepSize
+) {
+  const auto faces = getRiemannFaces(partition, adjacency);
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(faces.size),
+    exahype2::dg::SolveRiemannProblems<Derived, ComputePrecision>{
+      partition.onDevice(),
+      faces,
+      _faceStates.getView(),
+      _faceFluxes.getView(),
+      Quadrature<ComputePrecision>::QuadraturePoints1D,
+      Quadrature<ComputePrecision>::QuadratureWeightsOnFace,
+      timeStamp,
+      timeStepSize
+    }
+  );
+}
+
+/**
+ * Advances the time stamp and sets the time step size of the next time step from the CFL
+ * condition or the fixed rule of the solver family.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::closeTimeStep(
+  const peano4::Partition&                     partition,
+  const double                                 timeStepSize,
+  const exahype2::dg::MaxEigenvalueStatistics& statistics
+) {
+  _timeStepping.advanceTimeStamp(timeStepSize);
+  reduceMeshWidths(partition);
+  const auto& solverFamily = static_cast<const Derived&>(*this);
+  if constexpr (UsesAdaptiveTimeStepping) {
+    _timeStepping.raiseMaxEigenvalue(statistics.maxPhysicalEigenvalue);
+    _timeStepping.raiseMaxScaledEigenvalue(statistics.maxScaledEigenvalue);
+    _timeStepping.reduceMaxEigenvaluesAcrossRanks();
+    if (
+      _timeStepping.hasPositiveStabilityEigenvalue()
+      and _timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime
+    ) {
+      _timeStepping.setAdmissibleTimeStepSize(solverFamily.getTimeStepSizeFromCFL());
+    }
+  } else {
+    _timeStepping.setFixedTimeStepSize(solverFamily.getFixedTimeStepSize());
+  }
+}
+
+/**
+ * Records the error norms of the solution when a snapshot is due at the time stamp.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::measureError(const peano4::Partition& partition) {
+  if constexpr (exahype2::terms::HasMeasuredUnknowns<Derived>) {
+    const double timeStamp = _timeStepping.getTimeStamp();
+    if (not _errorMeasurement.isSnapshotDue(timeStamp)) {
+      return;
+    }
+    const auto cells = getCells(partition);
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(cells.size),
+      exahype2::dg::MeasureNodeErrors<Derived, StoragePrecision>{
+        partition.onDevice(),
+        cells,
+        std::as_const(_solution).getView(),
+        Quadrature<StoragePrecision>::QuadraturePoints1D,
+        Quadrature<StoragePrecision>::QuadratureWeights1D,
+        _errorMeasurement.getErrorsPerCell(cells.size),
+        timeStamp,
+        _timeStepping.getTimeStepSizeOfLastStep()
+      }
+    );
+    _errorMeasurement.record(cells.size, timeStamp);
+  }
+}
+
+/**
+ * Casts the refinement votes of the cells the solver advances. The first call after a regrid
+ * casts none.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::voteOnRefinement(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
+) {
+  if (_meshChangedSinceLastTimeStep) {
+    _meshChangedSinceLastTimeStep = false;
+    return;
+  }
+  if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+    _votes.voteOnCells<Derived>(
+      partition,
+      _ownedCellsOnHost,
+      std::as_const(_solution).getView(),
+      _timeStepping.getLimits(),
+      _timeStepping.getTimeStamp(),
+      requests
+    );
+  } else {
+    _votes.voteOnEveryCell<Derived>(
+      partition,
+      std::as_const(_solution).getView(),
+      _timeStepping.getLimits(),
+      _timeStepping.getTimeStamp(),
+      requests
+    );
+  }
+}
+
+/**
+ * Plots the solution on the faces that plotsFace() of Derived selects.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::plotFaces(
+  const peano4::Partition&     partition,
+  const tarch::plotter::Format format,
+  const std::string&           outputDirectory
+) {
+  if constexpr (exahype2::terms::HasFacePredicate<Derived>) {
+    assertion(_facePlotter.has_value());
+    projectSolutionOntoFaces(partition);
+    _facePlotter->template plot<NodesPerAxis, NumberOfData>(
+      partition,
+      downloadFaceStates(),
+      _nodePositionsOnHost.data(),
+      _timeStepping.getTimeStamp(),
+      format,
+      outputDirectory,
+      [](
+        const tarch::la::Vector<DIMENSIONS, double>& x,
+        const tarch::la::Vector<DIMENSIONS, double>& h,
+        const int                                    normal
+      ) { return Derived::plotsFace(x, h, normal); }
+    );
+  }
+}
+
+/**
+ * Lists the cells the cell predicate owns and the Riemann faces beside them, the local entries
+ * first. A solver without a cell predicate lists nothing.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwnedLists(
+  [[maybe_unused]] const peano4::Partition& partition
+) {
+  if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+    std::vector<char> owned(static_cast<std::size_t>(partition.getNumberOfSlots()), 0);
+    std::vector<int>  cells;
+    for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+      for (const int slot : partition.getCells(adjacency)) {
+        if (Derived::ownsCell(partition.getCellCentre(slot), partition.getCellWidth(slot))) {
+          owned[static_cast<std::size_t>(slot)] = 1;
+          cells.push_back(slot);
+        }
+      }
+      if (adjacency == peano4::Adjacency::Local) {
+        _numberOfLocalOwnedCells = static_cast<int>(cells.size());
+      }
+    }
+    _ownedCells.setValues(cells);
+    _ownedCellsOnHost = std::move(cells);
+
+    std::vector<int> riemannFaces;
+    for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+      for (const int face : partition.getFaces(adjacency, peano4::FaceKind::Interior, peano4::FaceKind::Hanging)) {
+        bool advanced = false;
+        for (int side = 0; side < 2; side++) {
+          const int slot = partition.getFaceCell(face, side);
+          advanced       = advanced or (slot >= 0 and owned[static_cast<std::size_t>(slot)] != 0);
+        }
+        if (advanced) {
+          riemannFaces.push_back(face);
+        }
+      }
+      if (adjacency == peano4::Adjacency::Local) {
+        _numberOfLocalOwnedRiemannFaces = static_cast<int>(riemannFaces.size());
+      }
+    }
+    _ownedRiemannFaces.setValues(riemannFaces);
+  }
+}
+
+/**
+ * Reduces the smallest and the largest cell width over all ranks.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::reduceMeshWidths(
+  const peano4::Partition& partition
+) {
+  double minimum = std::numeric_limits<double>::infinity();
+  double maximum = 0.0;
+  if (not partition.getCells().isEmpty()) {
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      minimum = std::min(minimum, partition.getWidthOfLevel(partition.getMaximumLevel(), axis));
+      maximum = std::max(maximum, partition.getWidthOfLevel(partition.getMinimumLevel(), axis));
+    }
+  }
+  _timeStepping.reduceMeshWidthsAcrossRanks(minimum, maximum);
+}

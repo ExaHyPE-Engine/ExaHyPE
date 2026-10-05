@@ -53,9 +53,9 @@ solver = exahype2.dg.rk.Solver(
     linear=True,
 )
 
-# Placing the source on the domain diagonal preserves axis-permutation symmetry
-# in the solution and refinement pattern. Unit offsets keep the detail
-# indicators well scaled at the ambient state.
+# The pulse lies on the diagonal and every wall reflects, so the solution and the refinement stay
+# symmetric under axis permutations. The unit offsets bound the relative detail near the zero
+# background.
 solver.set_pde_terms(
     initial_condition="""
   const tarch::la::Vector<DIMENSIONS, double> sourceCentre(-0.7);
@@ -76,16 +76,17 @@ solver.set_pde_terms(
     refinement_criterion="""
   return ::exahype2::refineOnDetail(
     Q,
-    DGOrder + 1,
+    Quadrature<double>::getQuadraturePoints1D(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    kernels::RKDGSolver::Quadrature<double>::QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
     [](const double* const values) {
       double velocitySquared = 0.0;
       for (int d = 0; d < DIMENSIONS; d++) {
-        velocitySquared += values[Shortcuts::u + d] * values[Shortcuts::u + d];
+        const double velocity = values[Shortcuts::u + d];
+        const double square   = velocity * velocity;
+        velocitySquared += square;
       }
       return 1.0 + RHO * WAVE_SPEED * std::sqrt(velocitySquared);
     }

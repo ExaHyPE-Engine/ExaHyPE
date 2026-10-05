@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#define COMPILER_HAS_UTS_NAME
-#define COMPILER_HAS_TIMESPEC
-
 #if not defined(__APPLE__)
 #define COMPILER_HAS_SYSINFO
 #define COMPILER_HAS_PROC_STAT
@@ -45,14 +42,11 @@
 
 #define SIMD(...) _PRAGMA(omp simd __VA_ARGS__ simdlen(PEANO_WITH_SIMDLEN))
 
-// The nvcc host pass rejects "#pragma unroll" and the nvcc front-end rejects "#pragma GCC unroll",
-// so the device form appears only where one compiler compiles the pragma and never in nvcc's host
-// pass.
 #if defined(__CUDA_ARCH__) or defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER) \
   or defined(__NVCOMPILER) or defined(__PGI)
 #define UNROLL(numberOfIterations) _PRAGMA(unroll numberOfIterations)
 #elif defined(__CUDACC__)
-#define UNROLL(numberOfIterations) /* No operation: nvcc host pass rejects both unroll spellings. */
+#define UNROLL(numberOfIterations) /* No operation. */
 #elif defined(__GNUC__) and (__GNUC__ >= 8)
 #define UNROLL(numberOfIterations) _PRAGMA(GCC unroll numberOfIterations)
 #elif defined(_MSC_VER)

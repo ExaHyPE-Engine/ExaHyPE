@@ -4,24 +4,21 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
-void tarch::accelerator::hip::checkError(hipError_t code, const char* expr, const char* file, int line) {
-  if (code != hipSuccess) {
-    (void)hipDeviceSynchronize();
-    (void)hipDeviceReset();
-    std::stringstream ss;
-    ss << "HIP assertion in " << expr << " " << file << "(" << line << "): " << hipGetErrorString(code);
-    throw std::runtime_error(ss.str());
-  }
-}
+#include "tarch/Termination.h"
 
-void tarch::accelerator::hip::checkLastError(const char* file, int line) {
-  hipError_t code = hipGetLastError();
+void
+tarch::accelerator::hip::checkError(
+  const hipError_t  code,
+  const char* const expr,
+  const char* const file,
+  const int         line
+) {
   if (code != hipSuccess) {
-    (void)hipDeviceSynchronize();
-    (void)hipDeviceReset();
-    std::stringstream ss;
-    ss << "HIP assertion in " << file << "(" << line << "):" << hipGetErrorString(code);
-    throw std::runtime_error(ss.str());
+    static_cast<void>(hipDeviceSynchronize());
+    static_cast<void>(hipDeviceReset());
+    std::ostringstream message;
+    message << "The HIP call " << expr << " in " << file << "(" << line << ") failed: " << hipGetErrorString(code);
+    tarch::terminateWithError(message.str());
   }
 }
 

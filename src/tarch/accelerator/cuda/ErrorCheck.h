@@ -8,20 +8,11 @@
 
 namespace tarch::accelerator::cuda {
   void checkError(cudaError_t code, const char* expr, const char* file, int line);
-  void checkLastError(const char* file, int line);
 } // namespace tarch::accelerator::cuda
 
 #define CHECK_CUDA_ERROR(ans) \
   do { \
     tarch::accelerator::cuda::checkError((ans), #ans, __FILE__, __LINE__); \
   } while (0)
-#if PEANO_DEBUG
-#define CHECK_CUDA_LAST_ERROR() \
-  { \
-    tarch::accelerator::cuda::checkLastError(__FILE__, __LINE__); \
-  }
-#else
-#define CHECK_CUDA_LAST_ERROR()
-#endif
 
 #endif // defined(PEANO_WITH_GPU_BACKEND_CUDA)

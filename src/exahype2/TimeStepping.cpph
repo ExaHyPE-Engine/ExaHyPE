@@ -1,0 +1,89 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::MaxEigenvalueReduction::identity() {
+  return 0.0;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::MaxEigenvalueReduction::combine(const double left, const double right) {
+  if (not isPhysicalValue(left)) {
+    return left;
+  }
+  if (not isPhysicalValue(right)) {
+    return right;
+  }
+  return right > left ? right : left;
+}
+
+/**
+ * Returns true when value is a finite number that is not negative. Both comparisons return
+ * false for a NaN.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::MaxEigenvalueReduction::isPhysicalValue(const double value) {
+  return value >= 0.0 and value <= std::numeric_limits<double>::max();
+}
+TARGET_DECLARE_END
+
+INLINE_METHOD const exahype2::Limits&
+exahype2::TimeStepping::getLimits() const {
+  return _limits;
+}
+
+INLINE_METHOD exahype2::TimeStepping::Rule
+exahype2::TimeStepping::getRule() const {
+  return _rule;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getFactor() const {
+  return _factor;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getTimeStamp() const {
+  return _timeStamp;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getTimeStepSize() const {
+  return _timeStepSize;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getTimeStepSizeOfLastStep() const {
+  return _timeStepSizeOfLastStep;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getTimeStepSizeOfNextStep() const {
+  return _rule == Rule::Adaptive ? _admissibleTimeStepSizeOfNextStep : _timeStepSize;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getMinMeshWidth() const {
+  return _minMeshWidth;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getMaxMeshWidth() const {
+  return _maxMeshWidth;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getMaxEigenvalue() const {
+  return _maxEigenvalue;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getMaxEigenvalueOfThisStep() const {
+  return _maxEigenvalueOfThisStep;
+}
+
+INLINE_METHOD double
+exahype2::TimeStepping::getMaxScaledEigenvalueOfThisStep() const {
+  return _maxScaledEigenvalueOfThisStep;
+}

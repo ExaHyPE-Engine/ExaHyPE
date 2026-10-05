@@ -1,0 +1,239 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "DynamicRuptureParameters.h"
+
+#include "tarch/Assertions.h"
+
+TARGET_DECLARE
+/**
+ * Returns whether the face at faceCentre with the axis faceNormal lies within half a cell of the plane.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaseis::FaultPlane::containsFace(
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const int                                    faceNormal
+) const {
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  return faceNormal == normal and std::abs(faceCentre[normal] - position) < 0.5 * cellSize[normal];
+}
+
+/**
+ * Returns one inside the open interval of halfWidth around zero, one half on its bounds and zero
+ * outside, each within a tolerance.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+applications::exahype2::exaseis::getBoxcar(const double coordinate, const Value halfWidth) {
+  constexpr Value Tolerance = 1e-8;
+  const auto      position  = static_cast<Value>(coordinate);
+  if ((-halfWidth + Tolerance) < position and position < (halfWidth - Tolerance)) {
+    return 1.0;
+  }
+  if (std::abs(-halfWidth - position) <= Tolerance or std::abs(position - halfWidth) <= Tolerance) {
+    return 0.5;
+  }
+  return 0.0;
+}
+
+/**
+ * Returns the frictional strength of the fault at x under normalStress after slip. The friction
+ * coefficient drops linearly with the slip and with the time after the forced rupture. Outside the
+ * cohesion box, a large cohesion locks the fault.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+applications::exahype2::exaseis::getFrictionalStrength(
+  const Value         normalStress,
+  const Value         slip,
+  const double* const x,
+  const double        t
+) {
+  Value       cohesion             = getCohesion<Value>(x);
+  const Value forcedRuptureTime    = getForcedRuptureTime<Value>(x);
+  const Value criticalSlipDistance = getCriticalSlipDistance<Value>(x);
+  const Value boxcarY              = getBoxcar<Value>(x[1] - CohesionBoxCentreY, CohesionBoxHalfWidthY);
+  const Value boxcarZ              = getBoxcar<Value>(x[2] - CohesionBoxCentreZ, CohesionBoxHalfWidthZ);
+  cohesion += static_cast<Value>(1e10) * (1 - boxcarY * boxcarZ);
+
+  Value forcedWeakening = 0;
+  if (static_cast<Value>(t) < forcedRuptureTime) {
+    forcedWeakening = 0;
+  } else if (
+    ForcedRuptureDuration > 0.00001
+    and static_cast<Value>(t) < forcedRuptureTime + static_cast<Value>(ForcedRuptureDuration)
+  ) {
+    forcedWeakening = (static_cast<Value>(t) - forcedRuptureTime) / static_cast<Value>(ForcedRuptureDuration);
+  } else {
+    forcedWeakening = 1;
+  }
+
+  const Value frictionCoefficient = static_cast<Value>(StaticFrictionCoefficient)
+    - static_cast<Value>(StaticFrictionCoefficient - DynamicFrictionCoefficient)
+      * std::max<Value>(forcedWeakening, std::min<Value>(slip, criticalSlipDistance) / criticalSlipDistance);
+  return cohesion + frictionCoefficient * std::max<Value>(0.0, normalStress);
+}
+
+/**
+ * Writes the interface velocity and traction of a fault node under slip-weakening friction. The
+ * normal direction stays welded. Along the tangents the fault slips where the traction plus the
+ * initial traction exceeds the frictional strength.
+ */
+template <typename Shortcuts, typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaseis::solveFaultInterface(
+  const Value* const         leftData,
+  const Value* const         rightData,
+  const FaceNodeSide<Value>& left,
+  const FaceNodeSide<Value>& right,
+  const double               t,
+  InterfaceValues<Value>&    leftInterface,
+  InterfaceValues<Value>&    rightInterface
+) {
+  Value leftDisplacement[3];
+  Value rightDisplacement[3];
+  rotateIntoLocalBasis(left, leftData + Shortcuts::u, leftDisplacement);
+  rotateIntoLocalBasis(right, rightData + Shortcuts::u, rightDisplacement);
+  const Value slip = std::sqrt(
+    (rightDisplacement[2] - leftDisplacement[2]) * (rightDisplacement[2] - leftDisplacement[2])
+    + (rightDisplacement[1] - leftDisplacement[1]) * (rightDisplacement[1] - leftDisplacement[1])
+  );
+  const double x[3]{
+    static_cast<double>(leftData[Shortcuts::curveGrid + 0]),
+    static_cast<double>(leftData[Shortcuts::curveGrid + 1]),
+    static_cast<double>(leftData[Shortcuts::curveGrid + 2])
+  };
+
+  Value rightCharacteristic[3];
+  Value leftCharacteristic[3];
+  Value tractionFromCharacteristics[3];
+  for (int direction = 0; direction < 3; direction++) {
+    const Value rightImpedance     = direction == 0 ? right.pressureImpedance : right.shearImpedance;
+    const Value leftImpedance      = direction == 0 ? left.pressureImpedance : left.shearImpedance;
+    rightCharacteristic[direction] = rightImpedance * right.velocity[direction] + right.traction[direction];
+    leftCharacteristic[direction]  = leftImpedance * left.velocity[direction] - left.traction[direction];
+  }
+  const Value shearHarmonicMean =
+    (right.shearImpedance * left.shearImpedance) / (right.shearImpedance + left.shearImpedance);
+  const Value pressureHarmonicMean =
+    (right.pressureImpedance * left.pressureImpedance) / (right.pressureImpedance + left.pressureImpedance);
+  tractionFromCharacteristics[2] =
+    shearHarmonicMean * (rightCharacteristic[2] / right.shearImpedance - leftCharacteristic[2] / left.shearImpedance);
+  tractionFromCharacteristics[1] =
+    shearHarmonicMean * (rightCharacteristic[1] / right.shearImpedance - leftCharacteristic[1] / left.shearImpedance);
+  tractionFromCharacteristics[0] = pressureHarmonicMean
+    * (rightCharacteristic[0] / right.pressureImpedance - leftCharacteristic[0] / left.pressureImpedance);
+
+  Value initialStress[6];
+  writeInitialStress<Value>(
+    x,
+    initialStress[0],
+    initialStress[1],
+    initialStress[2],
+    initialStress[3],
+    initialStress[4],
+    initialStress[5]
+  );
+  const Value initialPhysicalTraction[3]{
+    right.normal[0] * initialStress[0] + right.normal[1] * initialStress[3] + right.normal[2] * initialStress[4],
+    right.normal[0] * initialStress[3] + right.normal[1] * initialStress[1] + right.normal[2] * initialStress[5],
+    right.normal[0] * initialStress[4] + right.normal[1] * initialStress[5] + right.normal[2] * initialStress[2]
+  };
+  Value initialTraction[3];
+  rotateIntoLocalBasis(right, initialPhysicalTraction, initialTraction);
+  initialTraction[2] = initialTraction[2] + getAdditionalShearStress<Value>(x);
+
+  leftInterface.velocity[0]  = (rightCharacteristic[0] - tractionFromCharacteristics[0]) / right.pressureImpedance;
+  leftInterface.traction[0]  = tractionFromCharacteristics[0];
+  rightInterface.velocity[0] = (leftCharacteristic[0] + tractionFromCharacteristics[0]) / left.pressureImpedance;
+  rightInterface.traction[0] = tractionFromCharacteristics[0];
+
+  const Value lockingStress = std::sqrt(
+    std::pow(initialTraction[2] + tractionFromCharacteristics[2], 2)
+    + std::pow(initialTraction[1] + tractionFromCharacteristics[1], 2)
+  );
+  const Value normalStress       = std::max<Value>(0.0, -(initialTraction[0] + tractionFromCharacteristics[0]));
+  const Value frictionalStrength = getFrictionalStrength<Value>(normalStress, slip, x, t);
+
+  Value slipRate[3]{};
+  if (lockingStress >= frictionalStrength) {
+    const Value firstTangentStress  = tractionFromCharacteristics[1] + initialTraction[1];
+    const Value secondTangentStress = tractionFromCharacteristics[2] + initialTraction[2];
+    const Value stressTransfer      = std::sqrt(std::pow(firstTangentStress, 2) + std::pow(secondTangentStress, 2));
+    const Value slipVelocity        = (stressTransfer - frictionalStrength) / shearHarmonicMean;
+    slipRate[1]                     = firstTangentStress / (shearHarmonicMean + frictionalStrength / slipVelocity);
+    slipRate[2]                     = secondTangentStress / (shearHarmonicMean + frictionalStrength / slipVelocity);
+    for (int direction = 1; direction < 3; direction++) {
+      const Value stressOnFault =
+        (direction == 1 ? firstTangentStress : secondTangentStress) - shearHarmonicMean * slipRate[direction];
+      leftInterface.traction[direction]  = stressOnFault - initialTraction[direction];
+      rightInterface.traction[direction] = stressOnFault - initialTraction[direction];
+    }
+  } else {
+    for (int direction = 1; direction < 3; direction++) {
+      leftInterface.traction[direction]  = tractionFromCharacteristics[direction];
+      rightInterface.traction[direction] = tractionFromCharacteristics[direction];
+    }
+  }
+  for (int direction = 1; direction < 3; direction++) {
+    rightInterface.velocity[direction] =
+      (leftInterface.traction[direction] + leftCharacteristic[direction]) / left.shearImpedance + slipRate[direction];
+    leftInterface.velocity[direction] =
+      (rightCharacteristic[direction] - rightInterface.traction[direction]) / right.shearImpedance
+      - slipRate[direction];
+  }
+}
+
+/**
+ * Solves the Riemann problem at every node of a face and returns the largest wave speed on it. A
+ * face on the fault plane obeys the friction law. The boundary face FreeSurfaceFace is a free
+ * surface. Every other boundary face absorbs.
+ */
+template <
+  typename Shortcuts,
+  typename Value,
+  int NodesPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfData,
+  int FreeSurfaceFace
+>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaseis::solveDynamicRuptureRiemannProblem(
+  const Value* const QL,
+  const Value* const QR,
+  const double       t,
+  const int          normal,
+  const bool         isBoundaryFace,
+  const bool         isFaultFace,
+  const int          faceIndex,
+  Value* const       FL,
+  Value* const       FR
+) {
+  const Value reflection = faceIndex == FreeSurfaceFace ? 1 : 0;
+  return solveRiemannProblemOnFaceNodes<Shortcuts, Value, NodesPerAxis, NumberOfUnknowns, NumberOfData>(
+    QL,
+    QR,
+    normal,
+    [isFaultFace, isBoundaryFace, faceIndex, reflection, t](
+      const Value* const         leftData,
+      const Value* const         rightData,
+      const FaceNodeSide<Value>& left,
+      const FaceNodeSide<Value>& right,
+      InterfaceValues<Value>&    leftInterface,
+      InterfaceValues<Value>&    rightInterface
+    ) {
+      if (isFaultFace) {
+        solveFaultInterface<Shortcuts>(leftData, rightData, left, right, t, leftInterface, rightInterface);
+      } else if (isBoundaryFace) {
+        leftInterface  = getBoundaryInterface(left, faceIndex < DIMENSIONS, reflection);
+        rightInterface = getBoundaryInterface(right, faceIndex < DIMENSIONS, reflection);
+      } else {
+        solveInteriorInterface(left, right, leftInterface, rightInterface);
+      }
+    },
+    FL,
+    FR
+  );
+}
+TARGET_DECLARE_END

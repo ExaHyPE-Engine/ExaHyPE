@@ -114,28 +114,19 @@ tracers = project.add_tracer(
     },
 )
 
-init_tracers = exahype2.particles.InsertTracersByCoordinates(
-    particle_set=tracers,
-    coordinates=[[0.25, 0.5, 0.5], [0.5, 0.5, 0.5], [0.75, 0.5, 0.5]],
-)
+tracers.insert_by_coordinates([[0.25, 0.5, 0.5], [0.5, 0.5, 0.5], [0.75, 0.5, 0.5]])
 
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
-
+# The tracers read the velocity components once after the initialisation and stay in place.
 fv_solver.trace(
     tracers,
-    kernel="::exahype2::fv::updateParticleState<0, 1, 2>",
-    arguments="""
-  *particle,
-  fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-  marker,
-  {{PATCH_SIZE}},
-  {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-  fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
-  {1,1,1},
-  {0,0,0},
-  {1,0,0}
-""",
+    forces=exahype2.particles.Forces(
+        interpolation_scheme=2,
+        integration_scheme=0,
+        force_method=0,
+        fields_to_interpolate=",".join(
+            str(1 + axis) for axis in range(project.dimensions)
+        ),
+    ),
     time_steps=False,
 )
 

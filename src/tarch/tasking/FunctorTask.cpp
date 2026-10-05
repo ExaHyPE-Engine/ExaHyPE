@@ -5,4 +5,7 @@
 tarch::tasking::FunctorTask::FunctorTask(std::function<void()> taskFunctor) :
   _taskFunctor(std::move(taskFunctor)) {}
 
-void tarch::tasking::FunctorTask::run() { _taskFunctor(); }
+void
+tarch::tasking::FunctorTask::run() {
+  _taskFunctor();
+}

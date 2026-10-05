@@ -6,300 +6,334 @@
 #include "tarch/mpi/Rank.h"
 
 #ifdef PEANO_WITH_ZLIB
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+
 #include <zlib.h>
 #endif
 
-tarch::plotter::VTUFileWriter::VTUFileWriter(const std::string& outputDirectory) :
-  tarch::plotter::FileWriter(outputDirectory) {}
+namespace {
+  constexpr const char* ByteOrder = std::endian::native == std::endian::little ? "LittleEndian" : "BigEndian";
 
-std::string tarch::plotter::VTUFileWriter::getFileExtension() const { return ".pvtu"; }
+  struct AppendedArray final {
+    std::string   type{};
+    std::string   name{};
+    int           writtenComponents{1};
+    const double* values{nullptr};
+    int           sourceComponents{1};
+    std::size_t   tuples{0};
 
-bool tarch::plotter::VTUFileWriter::writeToFile(const std::string& filename, [[maybe_unused]] const double time) {
-  if (_written) {
-    throw std::runtime_error("Cannot write a plotter file more than once.");
-  }
+    const std::byte* data{nullptr};
+    std::size_t      bytes{0};
 
-  createOutputDirectory();
-
-  writeVTU(filename);
-
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    writePVTU(filename);
-  }
-
-  _written = true;
-  return true;
-}
-
-void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) const {
-  const auto            rank    = tarch::mpi::Rank::getInstance().getRank();
-  const std::string     vtuFile = filename + "-rank-" + std::to_string(rank) + ".vtu";
-  std::filesystem::path filePath(_outputDirectory);
-  filePath /= vtuFile;
-
-  std::ofstream out(filePath, std::ios::binary | std::ios::trunc);
-  if (not out) {
-    tarch::terminateWithError("Failed to open '" + filePath.string() + "'.");
-  }
-
-  const auto localData = getSubdomainBuffersSequenceForWriting();
-
-  // Every subdomain is empty: The file holds one piece without points and cells.
-  if (localData.reference == nullptr) {
-    out << "<?xml version=\"1.0\"?>\n"
-        << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n"
-        << "  <UnstructuredGrid>\n"
-        << "    <Piece NumberOfPoints=\"0\" NumberOfCells=\"0\">\n"
-        << "      <Points></Points>\n"
-        << "      <Cells></Cells>\n"
-        << "    </Piece>\n"
-        << "  </UnstructuredGrid>\n"
-        << "</VTKFile>\n";
-    if (not out) {
-      tarch::terminateWithError("Failed to write '" + filePath.string() + "'.");
-    }
-    return;
-  }
-
-  struct Block {
-    std::uint64_t             sizeBytes = 0;
-    std::vector<std::uint8_t> binaryData;
+    std::vector<std::uint64_t>                        header{};
+    std::vector<tarch::plotter::MeshArray<std::byte>> compressedBlocks{};
   };
-  std::vector<Block> appendedBlocks;
 
-  std::uint64_t currentFileOffset = 0;
-
-  const auto addBlock = [&](
-                          const std::string& tagName,
-                          const std::string& type,
-                          const std::string& name,
-                          const int          components,
-                          const auto&        values
-                        ) -> std::string {
-    std::ostringstream stream;
-    stream << "        <" << tagName << " type=\"" << type << "\" Name=\"" << name << "\"";
-    if (components > 1) {
-      stream << " NumberOfComponents=\"" << components << "\"";
+  std::uint64_t getAppendedBytes(const AppendedArray& array) {
+    std::uint64_t result = array.header.size() * sizeof(std::uint64_t);
+    if (array.compressedBlocks.empty()) {
+      return result + array.bytes;
     }
-    stream << " format=\"appended\" offset=\"" << currentFileOffset << "\"/>\n";
-    const std::string xmlHeader = stream.str();
-
-    using T                       = typename std::decay_t<decltype(values)>::value_type;
-    const std::uint64_t dataBytes = static_cast<std::uint64_t>(values.size()) * sizeof(T);
+    for (const auto& block : array.compressedBlocks) {
+      result += block.size();
+    }
+    return result;
+  }
 
 #ifdef PEANO_WITH_ZLIB
-    {
-      static_assert(
-        sizeof(uLong) >= 8,
-        "ZLib's 'uLong' holds only 32 bits on this platform, so a buffer above four "
-        "gigabytes cannot be compressed in one call. Disable ZLib in the CMake configuration."
-      );
+  constexpr std::size_t BlockBytes = std::size_t{1} << 16;
 
-      Block block;
-
-      uLongf destinationLength = compressBound(static_cast<uLong>(dataBytes));
-
-      std::uint64_t header[4];
-      header[0] = 1;         // Number of blocks
-      header[1] = dataBytes; // Block size
-      header[2] = dataBytes; // Last block size
-
-      const std::size_t headerBytes = 4 * sizeof(std::uint64_t);
-
-      block.binaryData.resize(headerBytes + static_cast<std::size_t>(destinationLength));
-      std::memcpy(block.binaryData.data(), header, 3 * sizeof(std::uint64_t));
-
-      const int status = compress(
-        reinterpret_cast<Bytef*>(block.binaryData.data() + headerBytes),
-        &destinationLength,
-        reinterpret_cast<const Bytef*>(values.data()),
-        static_cast<uLong>(dataBytes)
-      );
-      if (status != Z_OK) {
-        tarch::terminateWithError("Zlib compression failed while writing '" + filePath.string() + "'.");
+  /**
+   * Compresses the bytes at data in blocks of BlockBytes bytes in parallel into the zlib format of
+   * VTK.
+   */
+  void compressInBlocks(const std::byte* const data, AppendedArray& array) {
+    assertion(array.bytes == 0 or data != nullptr, array.name, array.bytes);
+    const std::size_t numberOfBlocks = (array.bytes + BlockBytes - 1) / BlockBytes;
+    assertion(numberOfBlocks <= static_cast<std::size_t>(std::numeric_limits<int>::max()), numberOfBlocks);
+    array.compressedBlocks.resize(numberOfBlocks);
+    tarch::accelerator::parallelForOnHost(
+      tarch::accelerator::Range(static_cast<int>(numberOfBlocks)),
+      [&](const int block) {
+        const std::size_t firstByte       = static_cast<std::size_t>(block) * BlockBytes;
+        const std::size_t blockBytes      = std::min(BlockBytes, array.bytes - firstByte);
+        auto&             compressedBlock = array.compressedBlocks[static_cast<std::size_t>(block)];
+        uLongf            compressedBytes = compressBound(static_cast<uLong>(blockBytes));
+        compressedBlock.resize(compressedBytes);
+        const int status = compress2(
+          reinterpret_cast<Bytef*>(compressedBlock.data()),
+          &compressedBytes,
+          reinterpret_cast<const Bytef*>(data + firstByte),
+          static_cast<uLong>(blockBytes),
+          Z_DEFAULT_COMPRESSION
+        );
+        if (status != Z_OK) {
+          tarch::terminateWithError("Zlib cannot compress the plot data '" + array.name + "'.");
+        }
+        compressedBlock.resize(compressedBytes);
+        compressedBlock.shrink_to_fit();
       }
-
-      const std::uint64_t compressedSize = destinationLength;
-      std::memcpy(block.binaryData.data() + 3 * sizeof(std::uint64_t), &compressedSize, sizeof(std::uint64_t));
-
-      block.binaryData.resize(headerBytes + static_cast<std::size_t>(destinationLength));
-
-      currentFileOffset += static_cast<std::uint64_t>(block.binaryData.size());
-      appendedBlocks.push_back(std::move(block));
-      return xmlHeader;
+    );
+    array.header = {numberOfBlocks, BlockBytes, array.bytes % BlockBytes};
+    for (const auto& block : array.compressedBlocks) {
+      array.header.push_back(block.size());
     }
-#else
-    // The block copies the raw bytes, because expandFieldComponents() returns by value
-    // and that temporary dies before the appended-data section is streamed. The length
-    // prefix is added at write time.
-    Block block;
-    block.sizeBytes = dataBytes;
-    block.binaryData.resize(static_cast<std::size_t>(dataBytes));
-    if (dataBytes > 0) {
-      std::memcpy(block.binaryData.data(), values.data(), static_cast<std::size_t>(dataBytes));
-    }
-
-    currentFileOffset += sizeof(std::uint64_t) + dataBytes;
-    appendedBlocks.push_back(std::move(block));
-    return xmlHeader;
+  }
 #endif
+} // namespace
+
+tarch::plotter::Format
+tarch::plotter::VTUFileWriter::getFormat() const {
+  return Format::VTU;
+}
+
+void
+tarch::plotter::VTUFileWriter::write(
+  const Mesh&        mesh,
+  const std::string& outputDirectory,
+  const std::string& filename,
+  const double       time
+) {
+  validateMesh(mesh);
+  createOutputDirectory(outputDirectory);
+
+  const std::filesystem::path directory(outputDirectory);
+  const std::string           snapshotName = getSnapshotName(filename, time);
+  const int                   rank         = tarch::mpi::Rank::getInstance().getRank();
+  writeVTU(mesh, directory / (snapshotName + "-rank-" + std::to_string(rank) + ".vtu"));
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    _snapshots.push_back({time, snapshotName + ".pvtu"});
+    writePVTU(mesh, directory / (snapshotName + ".pvtu"), snapshotName);
+    writePVD(directory / (filename + ".pvd"));
+  }
+}
+
+void
+tarch::plotter::VTUFileWriter::writeVTU(const Mesh& mesh, const std::filesystem::path& filePath) {
+  std::ofstream out(filePath, std::ios::binary | std::ios::trunc);
+  if (not out) {
+    tarch::terminateWithError("The plotter cannot open the file '" + filePath.string() + "'.");
+  }
+
+  const bool        writeDouble = getDoublePrecisionOutput();
+  const std::string realType    = writeDouble ? "Float64" : "Float32";
+  const std::size_t realBytes   = writeDouble ? sizeof(double) : sizeof(float);
+
+  std::vector<AppendedArray> arrays;
+  std::size_t                scratchBytes = 0;
+  const auto addRealArray = [&](const std::string& name, const int components, const MeshArray<double>& values) {
+    assertion(values.size() % static_cast<std::size_t>(components) == 0, name, values.size(), components);
+    const int         written = classifyField(components).writtenComponents;
+    const std::size_t tuples  = values.size() / static_cast<std::size_t>(components);
+    const std::size_t bytes   = tuples * static_cast<std::size_t>(written) * realBytes;
+    arrays.push_back({realType, name, written, values.data(), components, tuples, nullptr, bytes});
+    if (not writeDouble or components != written) {
+      scratchBytes = std::max(scratchBytes, bytes);
+    }
+  };
+  const auto addArray = [&](const std::string& type, const std::string& name, const auto& values) {
+    arrays.push_back(
+      {type,
+       name,
+       1,
+       nullptr,
+       1,
+       values.size(),
+       reinterpret_cast<const std::byte*>(values.data()),
+       values.size() * sizeof(values[0])}
+    );
+  };
+  for (const auto& field : mesh.pointFields) {
+    addRealArray(field.name, field.components, field.values);
+  }
+  for (const auto& field : mesh.cellFields) {
+    addRealArray(field.name, field.components, field.values);
+  }
+  addRealArray("Points", 3, mesh.pointsXYZ);
+  addArray("Int32", "connectivity", mesh.connectivity);
+  addArray("Int32", "offsets", mesh.offsets);
+  addArray("UInt8", "types", mesh.types);
+
+  MeshArray<std::byte> scratch(scratchBytes);
+  const auto           getBytes = [&](const AppendedArray& array) {
+    if (array.values == nullptr) {
+      return array.data;
+    }
+    if (writeDouble and array.sourceComponents == array.writtenComponents) {
+      return reinterpret_cast<const std::byte*>(array.values);
+    }
+    assertion(array.bytes <= scratch.size(), array.name, array.bytes, scratch.size());
+    if (writeDouble) {
+      copyTuples(
+        array.values,
+        array.sourceComponents,
+        array.sourceComponents,
+        array.writtenComponents,
+        array.tuples,
+        reinterpret_cast<double*>(scratch.data())
+      );
+    } else {
+      copyTuples(
+        array.values,
+        array.sourceComponents,
+        array.sourceComponents,
+        array.writtenComponents,
+        array.tuples,
+        reinterpret_cast<float*>(scratch.data())
+      );
+    }
+    return static_cast<const std::byte*>(scratch.data());
   };
 
-  // Raw memory is written, so VTK must be told the byte order.
-  const std::uint16_t endianCheck    = 1;
-  const bool          isLittleEndian = *reinterpret_cast<const std::uint8_t*>(&endianCheck) == 1;
-  const std::string   byteOrder      = isLittleEndian ? "LittleEndian" : "BigEndian";
+  for (auto& array : arrays) {
+#ifdef PEANO_WITH_ZLIB
+    compressInBlocks(getBytes(array), array);
+#else
+    array.header = {array.bytes};
+#endif
+  }
 
-  std::string compressorAttribute = "";
+  std::string compressorAttribute;
 #ifdef PEANO_WITH_ZLIB
   compressorAttribute = " compressor=\"vtkZLibDataCompressor\"";
 #endif
 
-  // The buffers accumulate in double precision; single-precision output narrows
-  // them right before the write.
-  const bool writeDouble  = getDoublePrecisionOutput();
-  const auto addRealBlock = [&](const std::string& name, const int components, const std::vector<double>& data) {
-    return writeDouble ? addBlock("DataArray", "Float64", name, components, data)
-                       : addBlock("DataArray", "Float32", name, components, narrowToFloat(data));
-  };
-
-  const auto writePiece = [&](const SubdomainBuffers& piece) {
-    out << "    <Piece NumberOfPoints=\"" << (piece.pointsXYZ.size() / 3) << "\" NumberOfCells=\"" << piece.types.size()
-        << "\">\n";
-
-    // A vector is padded to 3 components and a tensor to 9, as classifyField()
-    // prescribes.
-    out << "      <PointData>\n";
-    for (const auto& field : piece.pointFields) {
-      const FieldLayout layout = classifyField(field.components);
-      out << addRealBlock(
-        field.name,
-        layout.writtenComponents,
-        expandFieldComponents(field.values, field.components, layout.writtenComponents)
-      );
+  std::uint64_t appendedOffset = 0;
+  const auto    writeDataArray = [&](const AppendedArray& array) {
+    out << "        <DataArray type=\"" << array.type << "\" Name=\"" << array.name << "\"";
+    if (array.writtenComponents > 1) {
+      out << " NumberOfComponents=\"" << array.writtenComponents << "\"";
     }
-    out << "      </PointData>\n";
-
-    out << "      <CellData>\n";
-    for (const auto& field : piece.cellFields) {
-      const FieldLayout layout = classifyField(field.components);
-      out << addRealBlock(
-        field.name,
-        layout.writtenComponents,
-        expandFieldComponents(field.values, field.components, layout.writtenComponents)
-      );
-    }
-    out << "      </CellData>\n";
-
-    out << "      <Points>\n";
-    out << addRealBlock("Points", 3, piece.pointsXYZ);
-    out << "      </Points>\n";
-
-    out << "      <Cells>\n";
-    out << addBlock("DataArray", "Int32", "connectivity", 1, piece.connectivity);
-    out << addBlock("DataArray", "Int32", "offsets", 1, piece.offsets);
-    out << addBlock("DataArray", "UInt8", "types", 1, piece.types);
-    out << "      </Cells>\n";
-
-    out << "    </Piece>\n";
+    out << " format=\"appended\" offset=\"" << appendedOffset << "\"/>\n";
+    appendedOffset += getAppendedBytes(array);
   };
+  const std::size_t numberOfPointFields = mesh.pointFields.size();
+  assertion(arrays.size() == numberOfPointFields + mesh.cellFields.size() + 4, arrays.size(), numberOfPointFields);
 
   out << "<?xml version=\"1.0\"?>\n";
-  out << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"" << byteOrder << "\" header_type=\"UInt64\""
+  out << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"" << ByteOrder << "\" header_type=\"UInt64\""
       << compressorAttribute << ">\n";
   out << "  <UnstructuredGrid>\n";
-  if (localData.payloads.empty()) {
-    writePiece(*localData.reference);
-  } else {
-    for (const SubdomainBuffers* const piece : localData.payloads) {
-      writePiece(*piece);
-    }
+  out << "    <Piece NumberOfPoints=\"" << (mesh.pointsXYZ.size() / 3) << "\" NumberOfCells=\"" << mesh.types.size()
+      << "\">\n";
+  out << "      <PointData>\n";
+  for (std::size_t array = 0; array < numberOfPointFields; array++) {
+    writeDataArray(arrays[array]);
   }
+  out << "      </PointData>\n";
+  out << "      <CellData>\n";
+  for (std::size_t array = numberOfPointFields; array < arrays.size() - 4; array++) {
+    writeDataArray(arrays[array]);
+  }
+  out << "      </CellData>\n";
+  out << "      <Points>\n";
+  writeDataArray(arrays[arrays.size() - 4]);
+  out << "      </Points>\n";
+  out << "      <Cells>\n";
+  for (std::size_t array = arrays.size() - 3; array < arrays.size(); array++) {
+    writeDataArray(arrays[array]);
+  }
+  out << "      </Cells>\n";
+  out << "    </Piece>\n";
   out << "  </UnstructuredGrid>\n";
 
   out << "  <AppendedData encoding=\"raw\">\n";
-  out << "_"; // Separator
-
-  for (const auto& block : appendedBlocks) {
+  out << "_";
+  for (const auto& array : arrays) {
+    out.write(
+      reinterpret_cast<const char*>(array.header.data()),
+      static_cast<std::streamsize>(array.header.size() * sizeof(std::uint64_t))
+    );
 #ifdef PEANO_WITH_ZLIB
-    out.write(reinterpret_cast<const char*>(block.binaryData.data()), block.binaryData.size());
-#else
-    out.write(reinterpret_cast<const char*>(&block.sizeBytes), sizeof(std::uint64_t));
-    if (block.sizeBytes > 0) {
-      out.write(reinterpret_cast<const char*>(block.binaryData.data()), block.binaryData.size());
+    for (const auto& block : array.compressedBlocks) {
+      out.write(reinterpret_cast<const char*>(block.data()), static_cast<std::streamsize>(block.size()));
     }
+#else
+    out.write(reinterpret_cast<const char*>(getBytes(array)), static_cast<std::streamsize>(array.bytes));
 #endif
   }
-
   out << "\n  </AppendedData>\n";
   out << "</VTKFile>\n";
+  out.close();
   if (not out) {
-    tarch::terminateWithError("Failed to write '" + filePath.string() + "'.");
+    tarch::terminateWithError("The plotter cannot write the file '" + filePath.string() + "'.");
   }
 }
 
-void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) const {
-  const std::string     pvtuFile = filename + ".pvtu";
-  std::filesystem::path filePath(_outputDirectory);
-  filePath /= pvtuFile;
-
+void
+tarch::plotter::VTUFileWriter::writePVTU(
+  const Mesh&                  mesh,
+  const std::filesystem::path& filePath,
+  const std::string&           snapshotName
+) {
   std::ofstream out(filePath);
   if (not out) {
-    tarch::terminateWithError("Failed to open '" + filePath.string() + "'.");
+    tarch::terminateWithError("The plotter cannot open the file '" + filePath.string() + "'.");
   }
 
-  const std::uint16_t endianCheck = 1;
-  const std::string   byteOrder =
-    (*reinterpret_cast<const std::uint8_t*>(&endianCheck) == 1) ? "LittleEndian" : "BigEndian";
+  const std::string realTypeName = getDoublePrecisionOutput() ? "Float64" : "Float32";
 
-  const SubdomainBuffers* const reference    = findReferenceSubdomain();
-  const std::string             realTypeName = getDoublePrecisionOutput() ? "Float64" : "Float32";
+  const auto writeDataArrays = [&](const std::vector<Mesh::Field>& fields) {
+    for (const auto& field : fields) {
+      const int written = classifyField(field.components).writtenComponents;
+      out << "      <PDataArray type=\"" << realTypeName << "\" Name=\"" << field.name << "\"";
+      if (written > 1) {
+        out << " NumberOfComponents=\"" << written << "\"";
+      }
+      out << "/>\n";
+    }
+  };
 
   out << "<?xml version=\"1.0\"?>\n";
-  out << "<VTKFile type=\"PUnstructuredGrid\" version=\"1.0\" byte_order=\"" << byteOrder
+  out << "<VTKFile type=\"PUnstructuredGrid\" version=\"1.0\" byte_order=\"" << ByteOrder
       << "\" header_type=\"UInt64\">\n";
   out << "  <PUnstructuredGrid GhostLevel=\"0\">\n";
-
   out << "    <PPointData>\n";
-  if (reference != nullptr) {
-    for (const auto& field : reference->pointFields) {
-      const int written = classifyField(field.components).writtenComponents;
-      out << "      <PDataArray type=\"" << realTypeName << "\" Name=\"" << field.name << "\"";
-      if (written > 1) {
-        out << " NumberOfComponents=\"" << written << "\"";
-      }
-      out << "/>\n";
-    }
-  }
+  writeDataArrays(mesh.pointFields);
   out << "    </PPointData>\n";
-
   out << "    <PCellData>\n";
-  if (reference != nullptr) {
-    for (const auto& field : reference->cellFields) {
-      const int written = classifyField(field.components).writtenComponents;
-      out << "      <PDataArray type=\"" << realTypeName << "\" Name=\"" << field.name << "\"";
-      if (written > 1) {
-        out << " NumberOfComponents=\"" << written << "\"";
-      }
-      out << "/>\n";
-    }
-  }
+  writeDataArrays(mesh.cellFields);
   out << "    </PCellData>\n";
-
   out << "    <PPoints>\n";
   out << "      <PDataArray type=\"" << realTypeName << "\" NumberOfComponents=\"3\"/>\n";
   out << "    </PPoints>\n";
 
-  const int totalRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  for (int rankNumber = 0; rankNumber < totalRanks; ++rankNumber) {
-    const std::string pieceName = filename + "-rank-" + std::to_string(rankNumber) + ".vtu";
+  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  for (int rank = 0; rank < numberOfRanks; ++rank) {
     // A reader resolves the Source path relative to the .pvtu file.
-    out << "    <Piece Source=\"" << pieceName << "\"/>\n";
+    out << "    <Piece Source=\"" << snapshotName << "-rank-" << rank << ".vtu\"/>\n";
   }
 
   out << "  </PUnstructuredGrid>\n";
   out << "</VTKFile>\n";
+  out.close();
   if (not out) {
-    tarch::terminateWithError("Failed to write '" + filePath.string() + "'.");
+    tarch::terminateWithError("The plotter cannot write the file '" + filePath.string() + "'.");
+  }
+}
+
+void
+tarch::plotter::VTUFileWriter::writePVD(const std::filesystem::path& filePath) const {
+  std::ofstream out(filePath);
+  if (not out) {
+    tarch::terminateWithError("The plotter cannot open the file '" + filePath.string() + "'.");
+  }
+
+  out << "<?xml version=\"1.0\"?>\n"
+      << "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n"
+      << "  <Collection>\n";
+
+  for (const auto& snapshot : _snapshots) {
+    out << R"(    <DataSet timestep=")" << getExactTimeStamp(snapshot.time) << R"(" group="" part="0" file=")"
+        << snapshot.file << "\"/>\n";
+  }
+
+  out << "  </Collection>\n"
+      << "</VTKFile>\n";
+  out.close();
+  if (not out) {
+    tarch::terminateWithError("The plotter cannot write the file '" + filePath.string() + "'.");
   }
 }

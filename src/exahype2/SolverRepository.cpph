@@ -1,159 +1,167 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "peano4/Partition.h"
+#include "tarch/Assertions.h"
+
 template <typename... Solvers>
-exahype2::SolverRepository<Solvers...>::SolverRepository(Solvers&... solvers) :
+INLINE_METHOD exahype2::SolverRepository<Solvers...>::SolverRepository(Solvers&... solvers) :
   _solvers{solvers...} {}
 
 template <typename... Solvers>
 template <typename Operation>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::forEachSolver(const Operation& operation) {
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::forEachSolver(const Operation& operation) {
   std::apply([&operation](Solvers&... solvers) { (operation(solvers), ...); }, _solvers);
 }
 
 template <typename... Solvers>
 template <typename Operation>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::forEachSolver(const Operation& operation) const {
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::forEachSolver(const Operation& operation) const {
   std::apply([&operation](const Solvers&... solvers) { (operation(solvers), ...); }, _solvers);
 }
 
 template <typename... Solvers>
-INLINE_METHOD double exahype2::SolverRepository<Solvers...>::getMinTimeStamp() const {
+INLINE_METHOD double
+exahype2::SolverRepository<Solvers...>::getMinTimeStamp() const {
   double result = std::numeric_limits<double>::max();
-  forEachSolver([&result](const auto& solver) { result = std::min(result, solver.getMinTimeStamp()); });
+  forEachSolver([&result](const auto& solver) { result = std::min(result, solver.getTimeStepping().getTimeStamp()); });
   return result;
 }
 
 template <typename... Solvers>
-INLINE_METHOD double exahype2::SolverRepository<Solvers...>::getMaxTimeStamp() const {
+INLINE_METHOD double
+exahype2::SolverRepository<Solvers...>::getMaxTimeStamp() const {
   double result = 0.0;
-  forEachSolver([&result](const auto& solver) { result = std::max(result, solver.getMaxTimeStamp()); });
+  forEachSolver([&result](const auto& solver) { result = std::max(result, solver.getTimeStepping().getTimeStamp()); });
   return result;
+}
+
+template <typename... Solvers>
+template <typename Solver>
+INLINE_METHOD int
+exahype2::SolverRepository<Solvers...>::getNumberOfCellsOf(const Solver& solver, const peano4::Partition& partition) {
+  int numberOfCells = partition.getCells().size;
+  if constexpr (requires { solver.getNumberOfCells(partition); }) {
+    numberOfCells = solver.getNumberOfCells(partition);
+  }
+  assertion(numberOfCells >= 0, numberOfCells);
+  return numberOfCells;
 }
 
 /**
- * A time step size that is not finite and non-negative survives the reduction, so one such
- * solver makes the result invalid.
+ * Returns the number of cell updates of one time step of all solvers on this rank.
  */
 template <typename... Solvers>
-INLINE_METHOD double exahype2::SolverRepository<Solvers...>::getMinTimeStepSize() const {
-  double result = std::numeric_limits<double>::max();
-  forEachSolver([&result](const auto& solver) {
-    result = exahype2::NonNegativeReduction::minimum(result, solver.getMinTimeStepSize());
+INLINE_METHOD std::uint64_t
+exahype2::SolverRepository<Solvers...>::getNumberOfSolverCells(const peano4::Partition& partition) const {
+  std::uint64_t result = 0;
+  forEachSolver([&result, &partition](const auto& solver) {
+    result += static_cast<std::uint64_t>(getNumberOfCellsOf(solver, partition));
   });
   return result;
 }
 
 template <typename... Solvers>
-INLINE_METHOD double exahype2::SolverRepository<Solvers...>::getMaxTimeStepSize() const {
-  double result = 0.0;
-  forEachSolver([&result](const auto& solver) {
-    result = exahype2::NonNegativeReduction::maximum(result, solver.getMaxTimeStepSize());
-  });
-  return result;
-}
-
-template <typename... Solvers>
-INLINE_METHOD int exahype2::SolverRepository<Solvers...>::getNumberOfDoFs() const {
-  int result = 0;
-  forEachSolver([&result](const auto& solver) {
-    const auto numberOfDoFs = solver.getNumberOfDoFs();
+INLINE_METHOD std::uint64_t
+exahype2::SolverRepository<Solvers...>::getNumberOfCellDoFs(const peano4::Partition& partition) const {
+  std::uint64_t result = 0;
+  forEachSolver([&result, &partition](const auto& solver) {
+    const int numberOfDoFs = solver.getNumberOfDoFs();
     assertion(numberOfDoFs >= 0, numberOfDoFs);
-    result += numberOfDoFs;
+    result +=
+      static_cast<std::uint64_t>(getNumberOfCellsOf(solver, partition)) * static_cast<std::uint64_t>(numberOfDoFs);
   });
   return result;
 }
 
-/**
- * A plot writes the solution of every solver, so one solver in the middle of its time step
- * postpones it.
- */
 template <typename... Solvers>
-INLINE_METHOD bool exahype2::SolverRepository<Solvers...>::mayPlot() const {
-  bool result = true;
-  forEachSolver([&result](const auto& solver) { result = result and solver.mayPlot(); });
-  return result;
-}
-
-/**
- * The sweeps of the solvers interleave, so the first grid sweep of one solver's time step is a
- * first grid sweep of the project.
- */
-template <typename... Solvers>
-INLINE_METHOD bool exahype2::SolverRepository<Solvers...>::isFirstGridSweepOfTimeStep() const {
-  bool result = false;
-  forEachSolver([&result](const auto& solver) { result = result or solver.isFirstGridSweepOfTimeStep(); });
-  return result;
-}
-
-template <typename... Solvers>
-INLINE_METHOD bool exahype2::SolverRepository<Solvers...>::isLastGridSweepOfTimeStep() const {
-  bool result = false;
-  forEachSolver([&result](const auto& solver) { result = result or solver.isLastGridSweepOfTimeStep(); });
-  return result;
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startGridConstructionStep() {
-  forEachSolver([](auto& solver) { solver.startGridConstructionStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishGridConstructionStep() {
-  forEachSolver([](auto& solver) { solver.finishGridConstructionStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startGridInitialisationStep() {
-  forEachSolver([](auto& solver) { solver.startGridInitialisationStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishGridInitialisationStep() {
-  forEachSolver([](auto& solver) { solver.finishGridInitialisationStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startDynamicMeshRefinementStep() {
-  forEachSolver([](auto& solver) { solver.startDynamicMeshRefinementStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishDynamicMeshRefinementStep() {
-  forEachSolver([](auto& solver) { solver.finishDynamicMeshRefinementStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startTimeStep() {
-  forEachSolver([](auto& solver) { solver.startTimeStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishTimeStep() {
-  forEachSolver([](auto& solver) { solver.finishTimeStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startPlottingStep() {
-  forEachSolver([](auto& solver) { solver.startPlottingStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishPlottingStep() {
-  forEachSolver([](auto& solver) { solver.finishPlottingStep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::suspendSolversForOneGridSweep() {
-  forEachSolver([](auto& solver) { solver.suspendSolversForOneGridSweep(); });
-}
-
-template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startSimulation() {
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::startSimulation() {
   forEachSolver([](auto& solver) { solver.startSimulation(); });
 }
 
 template <typename... Solvers>
-INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishSimulation() {
-  forEachSolver([](auto& solver) { solver.finishSimulation(); });
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::finishSimulation() {
+  forEachSolver([](auto& solver) {
+    solver.finishSimulation();
+    solver.release();
+  });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::allocate(const peano4::Partition& partition) {
+  forEachSolver([&partition](auto& solver) { solver.allocate(partition); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD tarch::AllocatedBytes
+exahype2::SolverRepository<Solvers...>::getAllocatedBytes() const {
+  tarch::AllocatedBytes result{};
+  forEachSolver([&result](const auto& solver) { result += solver.getAllocatedBytes(); });
+  return result;
+}
+
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::requestRefinementForGridConstruction(const peano4::Partition& partition) {
+  _refinementRequests.clear(partition.getNumberOfSlots());
+  forEachSolver([this, &partition](auto& solver) {
+    solver.requestRefinementForGridConstruction(partition, _refinementRequests);
+  });
+  commitRefinementRequests(partition);
+}
+
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::initialise(const peano4::Partition& partition) {
+  _refinementRequests.clear(partition.getNumberOfSlots());
+  forEachSolver([this, &partition](auto& solver) { solver.initialise(partition, _refinementRequests); });
+  commitRefinementRequests(partition);
+}
+
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::performTimeStep(const peano4::Partition& partition) {
+  _refinementRequests.clear(partition.getNumberOfSlots());
+  forEachSolver([this, &partition](auto& solver) { solver.performTimeStep(partition, _refinementRequests); });
+  commitRefinementRequests(partition);
+}
+
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::regrid(const peano4::Partition& partition, const peano4::Regrid& regrid) {
+  _refinementRequests.clear(partition.getNumberOfSlots());
+  forEachSolver([this, &partition, &regrid](auto& solver) { solver.regrid(partition, regrid, _refinementRequests); });
+  commitRefinementRequests(partition);
+}
+
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::plot(
+  const peano4::Partition&     partition,
+  const tarch::plotter::Format format,
+  const std::string&           outputDirectory
+) {
+  forEachSolver([&partition, format, &outputDirectory](auto& solver) {
+    solver.plot(partition, format, outputDirectory);
+  });
+}
+
+template <typename... Solvers>
+INLINE_METHOD const std::vector<peano4::RefinementRequest>&
+exahype2::SolverRepository<Solvers...>::getRefinementRequests() const {
+  return _requestsOfTheRun;
+}
+
+/**
+ * Gathers the refinement requests of all ranks. Every rank calls this function collectively.
+ */
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::commitRefinementRequests(const peano4::Partition& partition) {
+  _requestsOfTheRun = _refinementRequests.getRefinementRequests(partition);
 }

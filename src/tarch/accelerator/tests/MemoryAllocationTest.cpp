@@ -7,7 +7,6 @@
 #include "tarch/tests/TestMacros.h"
 
 namespace {
-  constexpr int                                  DeviceId     = tarch::accelerator::Device::DefaultDevice;
   constexpr std::size_t                          ElementCount = 4;
   constexpr std::size_t                          ByteCount    = ElementCount * sizeof(int);
   constexpr std::array<tarch::MemoryLocation, 3> MemoryLocations{
@@ -18,27 +17,29 @@ namespace {
 } // namespace
 
 tarch::accelerator::tests::MemoryAllocationTest::MemoryAllocationTest() :
-  TestCase("tarch::accelerator::tests::MemoryAllocationTest") {}
+  tarch::tests::TestCase("tarch::accelerator::tests::MemoryAllocationTest") {}
 
-void tarch::accelerator::tests::MemoryAllocationTest::run() {
+void
+tarch::accelerator::tests::MemoryAllocationTest::run() {
   testMethod(testAllocateRawData);
   testMethod(testAllocateMemory);
-  testMethod(testZeroedHeapMemory);
   testMethod(testLocationSpecificAllocators);
   testMethod(testLocationSpecificCopyFunctions);
+  testMethod(testTheCurrentDeviceHoldsForEveryHostThread);
 }
 
-void tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
-  MemoryBlocks::getInstance().clear();
+void
+tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
+  const int device = tarch::accelerator::getCurrentDevice();
 
   for (const tarch::MemoryLocation location : MemoryLocations) {
     std::array<int, ElementCount> source{2, 4, 6, 8};
     std::array<int, ElementCount> target{0, 0, 0, 0};
 
-    void* rawData = tarch::accelerator::allocateRawData(ByteCount, location, DeviceId);
+    void* rawData = tarch::accelerator::allocateRawData(ByteCount, location, device);
 
-    tarch::accelerator::copyTo(rawData, source.data(), ByteCount, location, DeviceId);
-    tarch::accelerator::copyFrom(rawData, target.data(), ByteCount, location, DeviceId);
+    tarch::accelerator::copyTo(rawData, source.data(), ByteCount, location, device);
+    tarch::accelerator::copyFrom(rawData, target.data(), ByteCount, location, device);
 
 #if PEANO_DEBUG
     const std::size_t trackedSize = MemoryBlocks::getInstance().getSizeOfMemoryBlock(rawData);
@@ -46,8 +47,8 @@ void tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
     const bool copiedCorrectly  = target == source;
     const bool allocationWorked = rawData != nullptr;
 
-    tarch::accelerator::freeRawData(rawData, location, DeviceId);
-    tarch::accelerator::freeRawData(nullptr, location, DeviceId);
+    tarch::accelerator::freeRawData(rawData, location, device);
+    tarch::accelerator::freeRawData(nullptr, location, device);
 
     validateWithParams1(allocationWorked, toString(location));
     validateWithParams1(copiedCorrectly, toString(location));
@@ -55,21 +56,18 @@ void tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
     validateWithParams2(trackedSize == ByteCount, toString(location), trackedSize);
 #endif
   }
-
-  MemoryBlocks::getInstance().clear();
 }
 
-void tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
-  MemoryBlocks::getInstance().clear();
-
+void
+tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
   for (const tarch::MemoryLocation location : MemoryLocations) {
     std::array<int, ElementCount> source{11, 13, 17, 19};
     std::array<int, ElementCount> target{0, 0, 0, 0};
 
-    int* data = tarch::allocateMemory<int>(ElementCount, location, DeviceId);
+    int* data = tarch::allocateMemory<int>(ElementCount, location);
 
-    tarch::copyTo(data, source.data(), ElementCount, location, DeviceId);
-    tarch::copyFrom(data, target.data(), ElementCount, location, DeviceId);
+    tarch::copyTo(data, source.data(), ElementCount, location);
+    tarch::copyFrom(data, target.data(), ElementCount, location);
 
 #if PEANO_DEBUG
     const std::size_t trackedSize = MemoryBlocks::getInstance().getSizeOfMemoryBlock(data);
@@ -77,8 +75,8 @@ void tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
     const bool allocationWorked = data != nullptr;
     const bool copiedCorrectly  = target == source;
 
-    tarch::freeMemory(data, location, DeviceId);
-    tarch::freeMemory(nullptr, location, DeviceId);
+    tarch::freeMemory(data, location);
+    tarch::freeMemory(nullptr, location);
 
     validateWithParams1(allocationWorked, toString(location));
     validateWithParams1(copiedCorrectly, toString(location));
@@ -86,29 +84,11 @@ void tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
     validateWithParams2(trackedSize == ByteCount, toString(location), trackedSize);
 #endif
   }
-
-  MemoryBlocks::getInstance().clear();
 }
 
-/**
- * A zeroed heap buffer reads as zero, is aligned and keeps a written value.
- */
-void tarch::accelerator::tests::MemoryAllocationTest::testZeroedHeapMemory() {
-  constexpr std::size_t BytesAcrossPages = 3 * 4096 + 40;
-  auto* const data = static_cast<unsigned char*>(tarch::accelerator::allocateZeroedHeapMemory(BytesAcrossPages));
-
-  validate(data != nullptr);
-  validateEquals(reinterpret_cast<std::uintptr_t>(data) % PEANO_WITH_ALIGNMENT, 0);
-  validate(std::all_of(data, data + BytesAcrossPages, [](const unsigned char byte) { return byte == 0; }));
-
-  data[BytesAcrossPages - 1] = 7;
-  validateEquals(data[BytesAcrossPages - 1], 7);
-
-  tarch::accelerator::freeZeroedHeapMemory(data, BytesAcrossPages);
-}
-
-void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificAllocators() {
-  MemoryBlocks::getInstance().clear();
+void
+tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificAllocators() {
+  const int device = tarch::accelerator::getCurrentDevice();
 
   for (const tarch::MemoryLocation location : MemoryLocations) {
     void* data = nullptr;
@@ -118,10 +98,10 @@ void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificAlloca
       data = tarch::accelerator::allocateHeapMemory(ByteCount);
       break;
     case tarch::MemoryLocation::Device:
-      data = tarch::accelerator::allocateDeviceMemory(ByteCount, DeviceId);
+      data = tarch::accelerator::allocateDeviceMemory(ByteCount, device);
       break;
     case tarch::MemoryLocation::Pinned:
-      data = tarch::accelerator::allocatePinnedMemory(ByteCount, DeviceId);
+      data = tarch::accelerator::allocatePinnedMemory(ByteCount, device);
       break;
     }
 
@@ -133,22 +113,21 @@ void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificAlloca
         tarch::accelerator::freeHeapMemory(data);
         break;
       case tarch::MemoryLocation::Device:
-        tarch::accelerator::freeDeviceMemory(data, DeviceId);
+        tarch::accelerator::freeDeviceMemory(data, device);
         break;
       case tarch::MemoryLocation::Pinned:
-        tarch::accelerator::freePinnedMemory(data, DeviceId);
+        tarch::accelerator::freePinnedMemory(data, device);
         break;
       }
     }
 
     validateWithParams1(allocationWorked, toString(location));
   }
-
-  MemoryBlocks::getInstance().clear();
 }
 
-void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFunctions() {
-  MemoryBlocks::getInstance().clear();
+void
+tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFunctions() {
+  const int device = tarch::accelerator::getCurrentDevice();
 
   for (const tarch::MemoryLocation location : MemoryLocations) {
     std::array<int, ElementCount> source{5, 10, 15, 20};
@@ -162,14 +141,14 @@ void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFu
       tarch::accelerator::copyFromHeapMemory(data, target.data(), ByteCount);
       break;
     case tarch::MemoryLocation::Device:
-      data = tarch::accelerator::allocateDeviceMemory(ByteCount, DeviceId);
-      tarch::accelerator::copyToDeviceMemory(data, source.data(), ByteCount, DeviceId);
-      tarch::accelerator::copyFromDeviceMemory(data, target.data(), ByteCount, DeviceId);
+      data = tarch::accelerator::allocateDeviceMemory(ByteCount, device);
+      tarch::accelerator::copyToDeviceMemory(data, source.data(), ByteCount, device);
+      tarch::accelerator::copyFromDeviceMemory(data, target.data(), ByteCount, device);
       break;
     case tarch::MemoryLocation::Pinned:
-      data = tarch::accelerator::allocatePinnedMemory(ByteCount, DeviceId);
-      tarch::accelerator::copyToPinnedMemory(data, source.data(), ByteCount, DeviceId);
-      tarch::accelerator::copyFromPinnedMemory(data, target.data(), ByteCount, DeviceId);
+      data = tarch::accelerator::allocatePinnedMemory(ByteCount, device);
+      tarch::accelerator::copyToPinnedMemory(data, source.data(), ByteCount, device);
+      tarch::accelerator::copyFromPinnedMemory(data, target.data(), ByteCount, device);
       break;
     }
 
@@ -182,10 +161,10 @@ void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFu
         tarch::accelerator::freeHeapMemory(data);
         break;
       case tarch::MemoryLocation::Device:
-        tarch::accelerator::freeDeviceMemory(data, DeviceId);
+        tarch::accelerator::freeDeviceMemory(data, device);
         break;
       case tarch::MemoryLocation::Pinned:
-        tarch::accelerator::freePinnedMemory(data, DeviceId);
+        tarch::accelerator::freePinnedMemory(data, device);
         break;
       }
     }
@@ -193,6 +172,21 @@ void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFu
     validateWithParams1(allocationWorked, toString(location));
     validateWithParams1(copiedCorrectly, toString(location));
   }
+}
 
-  MemoryBlocks::getInstance().clear();
+/**
+ * The device that one host thread sets is the current device of every other host thread.
+ */
+void
+tarch::accelerator::tests::MemoryAllocationTest::testTheCurrentDeviceHoldsForEveryHostThread() {
+  const int deviceOfTheRank = tarch::accelerator::getCurrentDevice();
+  const int selectedDevice  = deviceOfTheRank + 1;
+  int       deviceOfAnotherThread{-1};
+
+  tarch::accelerator::setCurrentDevice(selectedDevice);
+  std::thread([&deviceOfAnotherThread]() { deviceOfAnotherThread = tarch::accelerator::getCurrentDevice(); }).join();
+  tarch::accelerator::setCurrentDevice(deviceOfTheRank);
+
+  validateEquals(deviceOfAnotherThread, selectedDevice);
+  validateEquals(tarch::accelerator::getCurrentDevice(), deviceOfTheRank);
 }

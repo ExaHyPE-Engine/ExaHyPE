@@ -7,8 +7,7 @@
 
 namespace {
   std::string writeTempFile(const std::string& stem, const std::string& content) {
-    // The file name carries a per-run identifier, so two processes that write into the test
-    // directory at the same time do not overwrite each other's fixture.
+    // The file name contains a per-run identifier, so two processes never write the same fixture.
     static const std::string testRunIdentifier =
       std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
       + std::to_string(std::random_device{}());
@@ -20,7 +19,7 @@ namespace {
     std::ofstream output(path);
     if (not output.is_open()) {
       std::stringstream message;
-      message << "Failed to create temporary file \"" << path.string() << "\".";
+      message << "The test cannot create the temporary file '" << path.string() << "'.";
       tarch::terminateWithError(message.str());
     }
     output << content;
@@ -31,12 +30,14 @@ namespace {
 tarch::reader::tests::JSONReaderTest::JSONReaderTest() :
   tarch::tests::TestCase("tarch::reader::tests::JSONReaderTest") {}
 
-void tarch::reader::tests::JSONReaderTest::run() {
+void
+tarch::reader::tests::JSONReaderTest::run() {
   testMethod(testReadPrimitivesAndArrays);
   testMethod(testUnusedKeys);
 }
 
-void tarch::reader::tests::JSONReaderTest::testReadPrimitivesAndArrays() {
+void
+tarch::reader::tests::JSONReaderTest::testReadPrimitivesAndArrays() {
   const std::string path = writeTempFile(
     "peano-json-reader-valid",
     R"({
@@ -94,7 +95,8 @@ void tarch::reader::tests::JSONReaderTest::testReadPrimitivesAndArrays() {
   std::filesystem::remove(path);
 }
 
-void tarch::reader::tests::JSONReaderTest::testUnusedKeys() {
+void
+tarch::reader::tests::JSONReaderTest::testUnusedKeys() {
   const std::string path = writeTempFile("peano-json-reader-unused", R"({ "alpha": 1, "beta": 2, "gamma": 3 })");
 
   {

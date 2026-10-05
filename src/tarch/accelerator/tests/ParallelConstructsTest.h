@@ -19,8 +19,7 @@ public:
 
   void run() override;
 
-  // The test bodies launch extended __device__ lambdas, which nvcc forbids
-  // inside private or protected member functions.
+private:
   void testParallelForOnHost();
   void testParallelFor();
   void testParallelForRangeMD2();
@@ -40,4 +39,12 @@ public:
   void testParallelReduceTeamRangeMD3();
   void testParallelReduceCustom();
   void testParallelReduceCustomRange();
+  void testReductionScratchKeepsAnAddressThatFits();
+  void testWaitForDeviceCompletesTheLaunchedLoop();
+  void testAReductionOverManyTeamsSumsEveryTeam();
+  void testReduceOverTeamCombinesEveryThread();
+  void testEveryTeamRunsTheDefaultNumberOfThreads();
+  void testATeamLaunchRunsTheRequestedThreads();
+  void testTeamScratchMirrorsWithinTheTeam();
+  void testTheDeviceRunsADefaultTeamAtOnce();
 };

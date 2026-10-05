@@ -13,18 +13,9 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 /**
- * Supervises the message exchange of one rank.
- *
- * A wait that exceeds the warning threshold reports itself, and one that
- * exceeds the deadlock threshold terminates the program. The pending-request
- * table records the origin, the partner and the tag of every non-blocking
- * request, so a timeout names the request it waits on, and the warnings and
- * the abort also work while the table is switched off.
- *
- * The table is a fixed array of seqlock-guarded slots: A writer claims a slot
- * by a compare-and-swap on the slot's sequence word and releases it with a
- * second increment, and a reader accepts a slot only when the sequence is even
- * and unchanged across its read.
+ * Warns when a wait on a request exceeds the warning threshold and terminates the program when it
+ * exceeds the deadlock threshold. A table records the origin, the partner and the tag of every
+ * tracked request for the timeout report.
  */
 class tarch::mpi::Diagnostics final {
 public:
@@ -51,27 +42,6 @@ public:
 
   [[nodiscard]] bool useTimeoutChecks() const;
 
-  void setDeadlockWarningTimeStamp();
-
-  void setDeadlockTimeoutTimeStamp();
-
-  void writeTimeoutWarning(
-    const std::string& className,
-    const std::string& methodName,
-    int                communicationPartnerRank,
-    int                tag,
-    int                numberOfExpectedMessages = 1
-  );
-
-  void triggerDeadlockTimeout(
-    const std::string& className,
-    const std::string& methodName,
-    int                communicationPartnerRank,
-    int                tag,
-    int                numberOfExpectedMessages = 1,
-    const std::string& comment                  = ""
-  );
-
   void plotMessageQueues();
 
   void registerRequest(
@@ -90,9 +60,8 @@ private:
   using TimeoutPoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double>>;
 
   /**
-   * An odd sequence marks a slot a writer holds, an even one a stable slot,
-   * and a stable slot with a null key is free. The payload fields are not
-   * atomic; the sequence orders every access to them.
+   * An odd sequence marks a slot a writer holds, and an even one a stable slot. A stable slot with
+   * a null key is free. The sequence orders every access to the non-atomic payload fields.
    */
   struct Slot {
     std::atomic<std::uint32_t>      sequence{0};
@@ -106,7 +75,9 @@ private:
     TimeoutPoint                    nextWarningAt{};
   };
 
-  /** Power of two, so the probe sequence wraps by masking. */
+  /**
+   * Power of two, so the probe sequence wraps by masking.
+   */
   static constexpr std::size_t TableSize = 1024;
 
   static Diagnostics _singleton;
@@ -114,23 +85,18 @@ private:
   Diagnostics()  = default;
   ~Diagnostics() = default;
 
-  static std::size_t slotIndex(const MPI_Request* request, std::size_t displacement);
-
-  [[nodiscard]] bool exceededTimeoutWarningThreshold() const;
-
-  [[nodiscard]] bool exceededDeadlockThreshold() const;
+  static std::size_t getSlotIndex(const MPI_Request* request, std::size_t displacement);
 
   std::chrono::duration<double> _timeoutWarning{0};
   std::chrono::duration<double> _deadlockTimeout{0};
-
-  std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double>> _globalTimeoutWarning{};
-  std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double>> _globalTimeoutDeadlock{};
 
   bool _requestTrackingEnabled{false};
 
   std::array<Slot, TableSize> _slots{};
 
-  /** Lets a completion skip the table walk while nothing is tracked. */
+  /**
+   * Lets a completion skip the table walk while nothing is tracked.
+   */
   std::atomic<int> _pendingCount{0};
 
   /**

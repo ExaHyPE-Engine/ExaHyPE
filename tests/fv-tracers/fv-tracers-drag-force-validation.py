@@ -1,13 +1,13 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+"""
+A test of particles that settle under gravity, buoyancy and drag forces.
+"""
+
 import argparse
 from pathlib import Path
 
 import exahype2
-
-"""
-This is a particle settling simulation with buoyancy and drag forces.
-"""
 
 interpolation_methods = {
     "None": 0,
@@ -31,7 +31,7 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
     parser.add_argument(
         "-interp",
@@ -94,44 +94,37 @@ max_eigenvalue = """
 """
 
 analytical_solution = """
+  // A sphere sinks under gravity, buoyancy and Stokes drag through the resting fluid. The entries
+  // of solution are the position and the tracer data of tracer_attributes.
   constexpr double GravitationalAcceleration = 1.0;
   constexpr double DynamicViscosity          = 1.0;
+  constexpr double FluidDensity              = 1.0;
 
   const double mass     = particle->getData(7);
   const double radius   = particle->getData(8);
+  const double initialX = particle->getData(9);
+  const double initialY = particle->getData(10);
 
-  const double volume            = (4.0/3.0) * M_PI * radius*radius*radius;
-  const double particleDensity   = mass / volume;
-  const double fluidDensity      = 1.0;
-  const double densityDifference = particleDensity - fluidDensity;
+  const double volume          = (4.0 / 3.0) * tarch::la::PI * radius * radius * radius;
+  const double particleDensity = mass / volume;
+  const double acceleration    = (particleDensity - FluidDensity) * GravitationalAcceleration / particleDensity;
+  const double relaxationTime  = mass / (6.0 * tarch::la::PI * DynamicViscosity * radius);
+  const double terminalSpeed   = acceleration * relaxationTime;
+  const double decay           = std::exp(-t / relaxationTime);
 
-  // Buoyant acceleration (effective gravitational acceleration)
-  const double effectiveAcceleration = densityDifference * GravitationalAcceleration / particleDensity;
-  // Stokes drag relaxation time
-  const double tau = mass / (6.0 * M_PI * DynamicViscosity * radius);
-  // Terminal speed (buoyancy + drag)
-  const double vs = effectiveAcceleration * tau;
-
-  const double expTerm = std::exp(- t / tau);
-  const double vy      = -vs * (1.0 - expTerm);
-  const double y       = 2.5 + (
-                          - vs * t    // Long-term drift
-                          + vs * tau  // Offset so y(0)=2.5
-                          * (1.0 - expTerm)
-                        );
-
-  solution[0] = 1.5;    // x(t)=const
-  solution[1] = y;      // y(t)
-
-  solution[2] = fluidDensity;
-  solution[3] = 0.0;    // Fluid u
-  solution[4] = 0.0;    // Fluid v
-
-  solution[5] = 0.0;    // Particle u
-  solution[6] = vy;     // Particle v(t)
-
-  solution[7] = mass;   // Keep mass at index 7
-  solution[8] = radius; // Keep radius at index 8
+  solution[0]  = initialX;
+  solution[1]  = initialY + (-terminalSpeed * t + terminalSpeed * relaxationTime * (1.0 - decay));
+  solution[2]  = FluidDensity;
+  solution[3]  = 0.0;
+  solution[4]  = 0.0;
+  solution[5]  = 0.0;
+  solution[6]  = -terminalSpeed * (1.0 - decay);
+  solution[7]  = 0.0;
+  solution[8]  = -acceleration * decay;
+  solution[9]  = mass;
+  solution[10] = radius;
+  solution[11] = initialX;
+  solution[12] = initialY;
 """
 
 fv_solver = exahype2.fv.Solver(
@@ -161,30 +154,28 @@ tracer_attributes = {
         "v": 1,
         "a_x": 1,
         "a_y": 1,
-        "m": 1,
-        "d": 1,
+        "mass": 1,
+        "radius": 1,
+        "initial_x": 1,
+        "initial_y": 1,
     }
 }
 
 tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
+    name="Tracers", particle_attributes=tracer_attributes
 )
 
-init_tracers = exahype2.particles.InsertParticlesByCoordinatesAndData(
-    particle_set=tracer_particles,
-    unknowns_per_particle=len(tracer_attributes["unknowns"]),
-    initial_data="""
+tracer_particles.insert_with_data(
+    """
   {
-    2.0, 2.5, 0.0, 0.0, 0.0, 0, 0, 0, 0.0, 0.01, 0.1,
-    1.5, 2.5, 0.0, 0.0, 0.0, 0, 0, 0, 0.0, 0.1,  0.1,
-    1.0, 2.5, 0.0, 0.0, 0.0, 0, 0, 0, 0.0, 0.5,  0.1,
-    0.5, 2.5, 0.0, 0.0, 0.0, 0, 0, 0, 0.0, 1.0,  0.1
+    2.0, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.1, 2.0, 2.5,
+    1.5, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1,  0.1, 1.5, 2.5,
+    1.0, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5,  0.1, 1.0, 2.5,
+    0.5, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,  0.1, 0.5, 2.5
   }
 """,
+    unknowns_per_particle=len(tracer_attributes["unknowns"]),
 )
-
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
 
 fv_solver.trace(
     tracer_particles,
@@ -200,10 +191,6 @@ fv_solver.trace(
 )
 
 fv_solver.set_pde_terms(particle_analytical_solution=analytical_solution)
-fv_solver.measure_particle_error(
-    tracer_particles,
-    file="Error_" + Path(__file__).name,
-    descend_invocation_order=65536,  # After all other action sets
-)
+fv_solver.measure_particle_error(tracer_particles, file="Error_" + Path(__file__).name)
 
 project.generate_and_build()

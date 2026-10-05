@@ -13,45 +13,94 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   __global__ void teamKernel(const Functor functor) {
-    functor(static_cast<int>(blockIdx.x), HipTeam{});
+    extern __shared__ unsigned char teamScratch[];
+    functor(static_cast<int>(blockIdx.x), HipTeam{teamScratch});
+  }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD int getThreadOfTeam([[maybe_unused]] const HipTeam& team) {
+    COMPILE_IF_ON_DEVICE(return static_cast<int>(threadIdx.x);)
+    COMPILE_IF_ON_HOST(return 0;)
+  }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD unsigned char* getTeamScratch(const HipTeam& team) { return team.scratch; }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD int getNumberOfThreadsPerTeam([[maybe_unused]] const HipTeam& team) {
+    COMPILE_IF_ON_DEVICE(return static_cast<int>(blockDim.x);)
+    COMPILE_IF_ON_HOST(return 1;)
+  }
+
+  /**
+   * Waits for every thread of the team on a device. One host thread runs a whole team, so the
+   * host has nothing to wait for.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier([[maybe_unused]] const HipTeam& team) {
+    COMPILE_IF_ON_DEVICE(__syncthreads();)
+  }
+
+  /**
+   * Returns the threads per team of a launch that asks for requested threads: Whole warps up to
+   * HipBlockSize, or HipBlockSize for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamThreads(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::HipBlockSize;
+    }
+    assertion(requested > 0, requested);
+    const int warps = (requested + tarch::accelerator::ThreadsPerWarp - 1) / tarch::accelerator::ThreadsPerWarp;
+    return std::min(tarch::accelerator::HipBlockSize, warps * tarch::accelerator::ThreadsPerWarp);
+  }
+
+  /**
+   * Returns the shared memory per team of a launch that asks for requested bytes, or
+   * TeamScratchBytes for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamScratchBytes(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::TeamScratchBytes;
+    }
+    assertion(requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes, requested);
+    return requested;
   }
 
   template <typename Functor>
-  __device__ inline void parallelFor([[maybe_unused]] const HipTeam& team, const Range& range, const Functor functor) {
-    for (int i = threadIdx.x; i < range.n; i += blockDim.x) {
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(const HipTeam& team, const Range& range, const Functor functor) {
+    for (int i = getThreadOfTeam(team); i < range.n; i += getNumberOfThreadsPerTeam(team)) {
       functor(i);
     }
   }
   template <typename Functor>
-  __device__ inline void parallelFor(
-    [[maybe_unused]] const HipTeam& team,
-    const RangeMD<2>&               range,
-    const Functor                   functor
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const HipTeam&    team,
+    const RangeMD<2>& range,
+    const Functor     functor
   ) {
     const int numberOfItems = range.n[0] * range.n[1];
     const int extentY       = range.n[1];
-    for (int index = threadIdx.x; index < numberOfItems; index += blockDim.x) {
+    for (int index = getThreadOfTeam(team); index < numberOfItems; index += getNumberOfThreadsPerTeam(team)) {
       functor(index / extentY, index % extentY);
     }
   }
   template <typename Functor>
-  __device__ inline void parallelFor(
-    [[maybe_unused]] const HipTeam& team,
-    const RangeMD<3>&               range,
-    const Functor                   functor
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelFor(
+    const HipTeam&    team,
+    const RangeMD<3>& range,
+    const Functor     functor
   ) {
     const int numberOfItems = range.n[0] * range.n[1] * range.n[2];
     const int extentY       = range.n[1];
     const int extentZ       = range.n[2];
-    for (int index = threadIdx.x; index < numberOfItems; index += blockDim.x) {
+    for (int index = getThreadOfTeam(team); index < numberOfItems; index += getNumberOfThreadsPerTeam(team)) {
       functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ);
     }
   }
 
-  __device__ inline void teamBarrier([[maybe_unused]] const HipTeam& team) { __syncthreads(); }
-
+  /**
+   * Launches the loop on the stream of the current device and returns. The stream runs launches
+   * and copies in order, so a later launch reads what this one wrote; a caller that reads device
+   * memory on the host without copyFrom() or a reduction calls waitForDevice() first.
+   */
   template <typename Functor>
-  inline void parallelFor(const Range& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -62,15 +111,15 @@ namespace tarch::accelerator {
       tarch::accelerator::HipMaxNumberOfBlocks
     );
     tarch::accelerator::
-      flatKernel1D<<<numberOfBlocks, tarch::accelerator::HipBlockSize, 0, tarch::accelerator::deviceStreamGet()>>>(
+      flatKernel1D<<<numberOfBlocks, tarch::accelerator::HipBlockSize, 0, tarch::accelerator::getDeviceStream()>>>(
         functor,
         range.n
       );
-    CHECK_HIP_ERROR(hipStreamSynchronize(tarch::accelerator::deviceStreamGet()));
+    CHECK_HIP_ERROR(hipGetLastError());
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     const int extentY = range.n[1];
@@ -80,7 +129,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -91,15 +140,23 @@ namespace tarch::accelerator {
     });
   }
 
+  /**
+   * Launches one block per team on the stream of the current device and returns, like the loop
+   * over a Range.
+   */
   template <typename Functor>
-  inline void parallelFor(const TeamRange& range, const Functor functor) {
+  INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
     CHECK_HIP_ERROR(hipSetDevice(tarch::accelerator::getCurrentDevice()));
-    tarch::accelerator::
-      teamKernel<<<range.n, tarch::accelerator::HipBlockSize, 0, tarch::accelerator::deviceStreamGet()>>>(functor);
-    CHECK_HIP_ERROR(hipStreamSynchronize(tarch::accelerator::deviceStreamGet()));
+    tarch::accelerator::teamKernel<<<
+      range.n,
+      tarch::accelerator::getTeamThreads(range.threads),
+      tarch::accelerator::getTeamScratchBytes(range.scratchBytes),
+      tarch::accelerator::getDeviceStream()
+    >>>(functor);
+    CHECK_HIP_ERROR(hipGetLastError());
   }
 } // namespace tarch::accelerator

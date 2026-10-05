@@ -1,49 +1,56 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-INLINE_METHOD constexpr int peano4::sfc::Grammar::axisOf(const Step step) { return static_cast<int>(step) / 2; }
+INLINE_METHOD constexpr int
+peano4::sfc::Grammar::getAxis(const Step step) {
+  return static_cast<int>(step) / 2;
+}
 
-INLINE_METHOD constexpr int peano4::sfc::Grammar::directionOf(const Step step) {
+INLINE_METHOD constexpr int
+peano4::sfc::Grammar::getDirection(const Step step) {
   return static_cast<int>(step) % 2 == 0 ? -1 : 1;
 }
 
 /**
- * Builds one production from its textbook form: The left-hand side followed
- * by the right-hand side, in which child non-terminals and turtle steps
- * alternate. Every symbol's type is checked against its position, so a step
- * in a child slot or a child in a step slot does not compile.
+ * Builds one production from the left-hand side and the right-hand side, in which child
+ * non-terminals and turtle steps alternate. A step at a child position or a child at a step
+ * position does not compile.
  */
 template <class NonTerminal, class... Symbols>
-constexpr peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> peano4::sfc::Grammar::production(
-  const NonTerminal leftHandSide,
-  Symbols... symbols
-) {
-  static_assert(sizeof...(Symbols) % 2 == 1, "A right-hand side alternates children and steps and ends with a child.");
+INLINE_METHOD constexpr peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2>
+peano4::sfc::Grammar::production(const NonTerminal leftHandSide, Symbols... symbols) {
+  static_assert(sizeof...(Symbols) % 2 == 1, "A rule of the space-filling curve must end with a child.");
   peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> result{leftHandSide, {}, {}};
   peano4::sfc::Grammar::placeSymbols<0>(result, symbols...);
   return result;
 }
 
 template <std::size_t Position, class NonTerminal, int NumberOfChildren>
-constexpr void peano4::sfc::Grammar::placeSymbols(
-  [[maybe_unused]] peano4::sfc::Production<NonTerminal, NumberOfChildren>& result
-) {}
+INLINE_METHOD constexpr void
+peano4::sfc::Grammar::placeSymbols([[maybe_unused]] peano4::sfc::Production<NonTerminal, NumberOfChildren>& result) {}
 
 /**
  * Writes the symbol at Position into the child array or the step array of the
  * production and recurses over the remaining symbols.
  */
 template <std::size_t Position, class NonTerminal, int NumberOfChildren, class Symbol, class... Symbols>
-constexpr void peano4::sfc::Grammar::placeSymbols(
+INLINE_METHOD constexpr void
+peano4::sfc::Grammar::placeSymbols(
   peano4::sfc::Production<NonTerminal, NumberOfChildren>& result,
   const Symbol                                            symbol,
   Symbols... symbols
 ) {
   if constexpr (Position % 2 == 0) {
-    static_assert(std::is_same_v<Symbol, NonTerminal>, "Even positions hold child non-terminals.");
+    static_assert(
+      std::is_same_v<Symbol, NonTerminal>,
+      "A rule of the space-filling curve must alternate children and steps."
+    );
     result.children[Position / 2] = symbol;
   } else {
-    static_assert(std::is_same_v<Symbol, peano4::sfc::Grammar::Step>, "Odd positions hold turtle steps.");
+    static_assert(
+      std::is_same_v<Symbol, peano4::sfc::Grammar::Step>,
+      "A rule of the space-filling curve must alternate children and steps."
+    );
     result.steps[Position / 2] = symbol;
   }
   peano4::sfc::Grammar::placeSymbols<Position + 1>(result, symbols...);

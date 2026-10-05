@@ -11,24 +11,11 @@ LAYERS = {
     "exahype2.log": 0,
     "exahype2.codegen": 0,
     "exahype2.precision": 0,
-    "exahype2.datamodel": 1,
-    "exahype2.actionsets.action_set": 1,
-    "exahype2.actionsets.user_action_set": 1,
-    "exahype2.actionsets.observer": 1,
-    "exahype2.actionsets.step": 1,
-    "exahype2.actionsets.steps": 1,
-    "exahype2.actionsets.cell_label": 1,
-    "exahype2.actionsets.face_label": 1,
-    "exahype2.plotter": 2,
-    "exahype2.particles": 2,
-    "exahype2.particles.particle_error_measurement": 3,
-    "exahype2.actionsets": 3,
-    "exahype2.solver": 3,
     "exahype2.state": 3,
     "exahype2.pde_terms": 3,
+    "exahype2.particles": 3,
     "exahype2.time_stepping": 3,
-    "exahype2.layout": 3,
-    "exahype2.error_measurement": 3,
+    "exahype2.solver": 3,
     "exahype2.fv": 4,
     "exahype2.dg": 4,
     "exahype2.main": 5,
@@ -38,7 +25,7 @@ LAYERS = {
 
 
 def layer_of(module):
-    """Returns the layer of a module name, the most specific table entry that prefixes it."""
+    """Returns the layer of the longest entry of LAYERS that prefixes the module name."""
     candidate = module
     while candidate:
         if candidate in LAYERS:
@@ -55,7 +42,7 @@ def module_name(path):
 
 
 def imported_modules(path, module):
-    """Returns the exahype2 modules a file imports, relative imports resolved."""
+    """Returns the exahype2 modules that a file imports, with relative imports resolved."""
     package = module if path.endswith("__init__.py") else module.rpartition(".")[0]
     with open(path) as source:
         tree = ast.parse(source.read(), path)

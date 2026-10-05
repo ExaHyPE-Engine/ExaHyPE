@@ -7,12 +7,13 @@ namespace tarch::tasking {
 
   int getNumberOfUnmaskedThreads();
 
+  bool oversubscribesNode();
+
   std::string printUnmaskedThreads();
 } // namespace tarch::tasking
 
 /**
- * One process-wide instance keeps the backend's thread-count decision
- * consistent across task producers.
+ * The thread count of the process, which init() fixes for every caller.
  */
 class tarch::tasking::Runtime final {
 public:
@@ -27,9 +28,9 @@ public:
   bool init();
   void shutdown();
   bool isInitialised() const;
-  int  getNumberOfThreads() const;
-  int  getCoreNumber() const;
-  int  getThreadNumber() const;
+  int getNumberOfThreads() const;
+  int getCoreNumber() const;
+  int getThreadNumber() const;
 
 private:
   Runtime() = default;

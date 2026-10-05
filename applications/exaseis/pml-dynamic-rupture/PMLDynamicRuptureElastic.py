@@ -1,19 +1,22 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
+
 def algebraic_source():
     return """
-  // From ExaSeis' "phd" tag (PMLSlipWeakening.cpp, line 468); the Zenodo release omits this term.
-  S[Shortcuts::u+0] = Q[Shortcuts::v+0];
-  S[Shortcuts::u+1] = Q[Shortcuts::v+1];
-  S[Shortcuts::u+2] = Q[Shortcuts::v+2];
+  // The "phd" tag of ExaSeis adds this term in PMLSlipWeakening.cpp, line 468, and its Zenodo release
+  // omits it.
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    S[Shortcuts::u + axis] = Q[Shortcuts::v + axis];
+  }
 """
 
 
 def userIncludes():
     return [
-        "DynamicRuptureParameters.h",
-        "../riemannSolvers/riemannsolverPMLDynamicRupture.h",
+        "applications/exaseis/riemannSolvers/DynamicRuptureRiemannSolver.h",
         "exahype2/Curvi.h",
-        "exahype2/dg/DGUtils.h",
+        "exahype2/dg/Basis.h",
+        "peano4/sfc/ActiveCurve.h",
         "tarch/reader/NetCDFFieldSampler.h",
     ]

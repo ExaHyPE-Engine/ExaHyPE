@@ -2,82 +2,29 @@
 
 \page tarch_plotting Plotting
 
-All plotting in Peano is typically realised through the files in tarch/plotter.
-An action set dumps the data. To do so, it owns one file writer, and its
-observer clones write into that writer. Each clone claims one ordered
-piece, and the writer combines these pieces into one snapshot per action set
-and time stamp.
+The classes in `tarch/plotter` write unstructured meshes and their fields. A
+caller fills a tarch::plotter::Mesh with the points, the cells and the fields of
+its rank and passes the mesh to tarch::plotter::FileWriter::write().
 
+## File writers
 
-## Action set pattern
+A file writer writes the snapshots of one plot series. Every rank calls write()
+for every snapshot at the same time. The function
+tarch::plotter::createFileWriter() creates the writer of a format.
 
-Plotting action sets create the file writer in `prepareTraversal()`. Each
-observer clone claims its piece in `beginTraversal()` and fills that piece
-during its callbacks. `unprepareTraversal()` writes the completed snapshot
-after all clones have joined. The action set owns its writers through
-`std::unique_ptr`.
-
-
-## File writers and time series
-
-The plotting is split into two responsibilities. The actual data of one
-traversal is written through a concrete subclass of the abstract
-tarch::plotter::FileWriter. Peano ships VTU (tarch::plotter::VTUFileWriter),
-HDF5 (tarch::plotter::HDF5FileWriter) and NetCDF
-(tarch::plotter::NetCDFFileWriter) implementations. A file writer receives an
-output directory. `acquirePiece()` allocates an ordered piece, and the
-`create...()` factory methods bind vertex, cell, and data plotters to it.
-
-The bookkeeping over all snapshots, i.e. the index/meta file that ties the
-individual snapshots into one time series, is written separately by a subclass
-of tarch::plotter::TimeSeriesWriter. VTU uses
-tarch::plotter::PVDTimeSeriesWriter, HDF5 uses
-tarch::plotter::XDMFTimeSeriesWriter, and NetCDF uses
-tarch::plotter::JSONTimeSeriesWriter. VTKHDF keeps its time steps in one file.
-
-A plotting action set typically owns both writers as `std::unique_ptr`. The time
-series writer is created once and kept alive for the whole simulation, while
-the file writer is recreated for each snapshot with empty piece buffers:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  if (_timeSeriesWriter == nullptr) {
-    _timeSeriesWriter = std::make_unique<tarch::plotter::PVDTimeSeriesWriter>();
-  }
-
-  _fileWriter.reset();
-  _fileWriter = std::make_unique<tarch::plotter::VTUFileWriter>(outputPath);
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Each observer clone claims its piece with a unique ordering key before it
-creates the associated data plotters:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  const int pieceId = _fileWriter->acquirePiece(observerId);
-  auto cellPlotter = _fileWriter->createCellPlotter(pieceId);
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Once a traversal has filled the file writer, the snapshot is committed and
-registered with the time series in one go:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  _timeSeriesWriter->writeSnapshotFile(filename, time, *_fileWriter);
-  _timeSeriesWriter->writeTimeSeriesMetaFile(
-    outputPath, filename
-  );
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-writeSnapshotFile() delegates to the file writer to dump the actual snapshot
-and remembers the (time, filename) pair, and writeTimeSeriesMetaFile() rewrites
-the index/meta file so that the new snapshot becomes visible to the
-post-processing tools.
-
+- The class tarch::plotter::VTUFileWriter writes one `.vtu` file per rank, one
+  `.pvtu` file per snapshot and one `.pvd` file that lists the snapshots.
+- The class tarch::plotter::VTKHDFFileWriter appends every snapshot as a step to
+  one `.vtkhdf` file.
+- The class tarch::plotter::HDF5FileWriter writes one `.h5` file and one `.xmf`
+  file per snapshot and one `.xmf` file that embeds the grids of all snapshots.
+- The class tarch::plotter::NetCDFFileWriter writes one UGRID file per snapshot
+  and one `.nc.series` file that lists the snapshots.
 
 ## Parallel plotting
 
-The concrete file writer owns the MPI coordination for a snapshot. VTU writes
-one `.vtu` file per rank and a global `.pvtu` descriptor; collective HDF5 and
-NetCDF writers agree on a field schema, including on empty ranks. Time-series
-metadata is written by the global master where the format requires it.
-
+The VTKHDF, HDF5 and NetCDF writers write the meshes of all ranks into one file
+through MPI-IO. Every rank passes a mesh with the same fields. The global master
+writes the files that list the snapshots.
 
 */

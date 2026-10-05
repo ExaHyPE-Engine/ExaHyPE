@@ -1,0 +1,28 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+{%- for table in TABLES %}
+
+/**
+{%- for line in table.documentation %}
+ * {{ line }}
+{%- endfor %}
+ */
+template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr std::array<Precision, {{ table.length }}> {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }}<Precision>::get{{ table.name }}() {
+{%- if table.expression is defined %}
+  constexpr int    NodesPerAxis                    = {{ DG_ORDER }} + 1;
+  constexpr double QuadratureNodes1D[NodesPerAxis] = {{ QUADRATURE_NODES_1D }};
+{%- if "QuadratureWeights1D" in table.expression %}
+  constexpr double QuadratureWeights1D[NodesPerAxis] = {{ QUADRATURE_WEIGHTS_1D }};
+{%- endif %}
+  constexpr auto   Values                          = {{ table.expression }};
+{%- else %}
+  constexpr double Values[{{ table.length }}] = {{ table.rendered }};
+{%- endif %}
+  std::array<Precision, {{ table.length }}> result{};
+  for (std::size_t entry = 0; entry < result.size(); entry++) {
+    result[entry] = static_cast<Precision>(Values[entry]);
+  }
+  return result;
+}
+{%- endfor %}

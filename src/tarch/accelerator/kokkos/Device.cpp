@@ -12,7 +12,8 @@ namespace {
   int numberOfDevices = 0;
 } // namespace
 
-bool tarch::accelerator::Device::init() {
+bool
+tarch::accelerator::Device::init() {
   Kokkos::initialize();
   numberOfDevices = Kokkos::num_devices();
 
@@ -31,14 +32,29 @@ bool tarch::accelerator::Device::init() {
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() {
+void
+tarch::accelerator::Device::shutdown() {
   Kokkos::fence();
   Kokkos::finalize();
   numberOfDevices = 0;
 }
 
-bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
+bool
+tarch::accelerator::Device::isInitialised() const {
+  return numberOfDevices > 0;
+}
 
-int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
+/**
+ * Returns the threads the default execution space runs at once.
+ */
+int
+tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
+  return std::max(1, static_cast<int>(Kokkos::DefaultExecutionSpace().concurrency()));
+}
+
+int
+tarch::accelerator::Device::getNumberOfDevices() const {
+  return numberOfDevices;
+}
 
 #endif // defined(PEANO_WITH_GPU_BACKEND_KOKKOS)

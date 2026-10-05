@@ -9,31 +9,37 @@ namespace applications::exahype2::exaskred::riemann {
     constexpr double ZeroTolerance        = 1e-5;
 
     enum class WetDryState {
-      DryDry,           // Both cells are dry.
-      WetWet,           // Both cells are wet.
-      WetDryInundation, // 1st cell: wet, 2nd cell: dry. 1st cell lies higher than the 2nd one.
-      WetDryWall, // 1st cell: wet, 2nd cell: dry. 1st cell lies lower than the 2nd one. Momentum is not large enough to
-                  // overcome the difference.
-      WetDryWallInundation, // 1st cell: wet, 2nd cell: dry. 1st cell lies lower than the 2nd one. Momentum is large
-                            // enough to overcome the difference.
-      DryWetInundation,     // 1st cell: dry, 2nd cell: wet. 1st cell lies lower than the 2nd one.
-      DryWetWall, // 1st cell: dry, 2nd cell: wet. 1st cell lies higher than the 2nd one. Momentum is not large enough
-                  // to overcome the difference.
-      DryWetWallInundation // 1st cell: dry, 2nd cell: wet. 1st cell lies higher than the 2nd one. Momentum is large
-                           // enough to overcome the difference.
+      // Both cells are dry.
+      DryDry,
+      // Both cells are wet.
+      WetWet,
+      // The wet first cell lies higher than the dry second cell.
+      WetDryInundation,
+      // The wet first cell lies lower than the dry second cell, and its momentum cannot overcome the difference.
+      WetDryWall,
+      // The wet first cell lies lower than the dry second cell, and its momentum overcomes the difference.
+      WetDryWallInundation,
+      // The dry first cell lies lower than the wet second cell.
+      DryWetInundation,
+      // The dry first cell lies higher than the wet second cell, whose momentum cannot overcome the difference.
+      DryWetWall,
+      // The dry first cell lies higher than the wet second cell, whose momentum overcomes the difference.
+      DryWetWallInundation
     };
 
     /// The wave structure of the homogeneous Riemann problem.
     enum class RiemannStructure {
-      DrySingleRarefaction,  // 1st wave family: contact discontinuity; 2nd wave family: rarefaction.
-      SingleRarefactionDry,  // 1st wave family: rarefaction; 2nd wave family: contact discontinuity.
-      ShockShock,            // 1st wave family: shock; 2nd wave family: shock.
-      ShockRarefaction,      // 1st wave family: shock; 2nd wave family: rarefaction.
-      RarefactionShock,      // 1st wave family: rarefaction; 2nd wave family: shock.
-      RarefactionRarefaction // 1st wave family: rarefaction; 2nd wave family: rarefaction.
+      DrySingleRarefaction,  // Contact discontinuity in the first wave family, rarefaction in the second.
+      SingleRarefactionDry,  // Rarefaction in the first wave family, contact discontinuity in the second.
+      ShockShock,            // Shocks in both wave families.
+      ShockRarefaction,      // Shock in the first wave family, rarefaction in the second.
+      RarefactionShock,      // Rarefaction in the first wave family, shock in the second.
+      RarefactionRarefaction // Rarefactions in both wave families.
     };
 
-    /** Returns the wave structure the two states span. */
+    /**
+     * Returns the wave structure of the Riemann problem between the two states.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD RiemannStructure determineRiemannStructure(
       const T& hLeft,
@@ -73,7 +79,9 @@ namespace applications::exahype2::exaskred::riemann {
       }
     }
 
-    /** Solves the three-by-three linear system with Cramer's rule, following the Clawpack implementation. */
+    /**
+     * Solves the three-by-three linear system with Cramer's rule, following the Clawpack implementation.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD void solveLinearEquation(
       const T matrix[3][3],
@@ -104,7 +112,9 @@ namespace applications::exahype2::exaskred::riemann {
       }
     }
 
-    /** Returns the middle-state height estimate of the homogeneous Riemann problem and fills the middle wave speeds. */
+    /**
+     * Returns the middle-state height estimate of the homogeneous Riemann problem and fills the middle wave speeds.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD T computeMiddleState(
       const T&          hLeft,
@@ -150,45 +160,7 @@ namespace applications::exahype2::exaskred::riemann {
           uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(3.0) * std::sqrt(g * hMiddle);
         return hMiddle;
       } else if (riemannStructure == RiemannStructure::ShockShock) {
-        /*
-         * Compute All-Shock Riemann Solution
-         *  \cite[ch. 13.7]{LeVeque2002}
-         *
-         * Compute middle state h_m
-         * => Solve non-linear scalar equation by Newton's method
-         *    u_l - (h_m - h_l) \sqrt{\frac{g}{2} \left( \frac{1}{h_m} + \frac{1}{h_l} \right) }
-         * =  u_r + (h_m - h_r) \sqrt{\frac{g}{2} \left( \frac{1}{h_m} + \frac{1}{h_r} \right) }
-         *
-         * Therefore determine the root of phi_{ss}:
-         *\begin{equation}
-         *  \begin{matrix}
-         *    \phi_{ss}(h) =&&  u_r - u_l +
-         *                  (h-h_l) \sqrt{
-         *                            \frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_l} \right)
-         *                          } \\
-         *             &&  +(h-h_r) \sqrt{
-         *                            \frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_r} \right)
-         *                          }
-         *  \end{matrix}
-         *\end{equation}
-         *
-         *\begin{equation}
-         *  \begin{matrix}
-         *    \phi_{ss}'(h) = &&\sqrt{\frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_l} \right) }
-         *                      +\sqrt{\frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_r} \right) }\\
-         *                    && -\frac{g}{4}
-         *                        \frac{h-h_l}
-         *                        {
-         *                         h^2\sqrt{\frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_l} \right) }
-         *                        }-
-         *                        \frac{g}{4}
-         *                        \frac{h-h_r}
-         *                        {
-         *                         h^2\sqrt{\frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_r} \right) }
-         *                        }
-         *  \end{matrix}
-         *\end{equation}
-         */
+        // Newton's method finds the root of the all-shock function phi_ss (\cite[ch. 13.7]{LeVeque2002}).
         hZero = hMax;
         for (int i = 0; i < NewtonIterations; ++i) {
           gLeft   = std::sqrt(static_cast<T>(0.5) * g * (T{1} / hZero + T{1} / hLeft));
@@ -213,38 +185,7 @@ namespace applications::exahype2::exaskred::riemann {
       } else if (
         riemannStructure == RiemannStructure::ShockRarefaction or riemannStructure == RiemannStructure::RarefactionShock
       ) {
-        /*
-         * Compute middle state h_m
-         * => Solve non-linear scalar equation by Newton's method
-         *
-         * Therefore determine the root of phi_{sr}/phi_{rs}:
-         *\begin{equation}
-         *  \begin{matrix}
-         *    h_{min} = \min(h_l, h_r)\\
-         *    h_{max} = \max(h_l, h_r)
-         *  \end{matrix}
-         *\end{equation}
-         *\begin{equation}
-         *  \begin{matrix}
-         *    \phi_{sr}(h) = \phi_{rs}(h) =&& u_r - u_l + (h - h_{min}) \sqrt{
-         *                                            \frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_{min}} \right)
-         *                                          } \\
-         *               && + 2 (\sqrt{gh} - \sqrt{gh_{max}})
-         *  \end{matrix}
-         *\end{equation}
-         *\begin{equation}
-         *    \phi'_{sr}(h) = \phi'_{rs}(h) = \sqrt{\frac{g}{2} \left( \frac{1}{h} + \frac{1}{h_{min}} \right)  }
-         *                     -\frac{g}{4} \frac{h-h_{min}}
-         *                        { h^2
-         *                          \sqrt{
-         *                            \frac{g}{2}  \left(\frac{1}{h} + \frac{1}{h_{min}} \right)
-         *                          }
-         *                        }
-         *                     + \sqrt{\frac{g}{h}}
-         *\end{equation}
-         *
-         * This implementation does not calculate the phi derivative here
-         */
+        // Newton's method with a secant slope finds the root of the shock-rarefaction function phi_sr.
         hZero = hMin;
         for (int i = 0; i < NewtonIterations; ++i) {
           phiZero = uDiff + static_cast<T>(2.0) * (std::sqrt(g * hZero) - std::sqrt(g * hMax))
@@ -269,7 +210,10 @@ namespace applications::exahype2::exaskred::riemann {
       return hMiddle;
     }
 
-    /** Classifies the wet-dry configuration of the interface and prepares wall-boundary states where needed. */
+    /**
+     * Classifies the wet-dry configuration of the interface. A wall configuration overwrites the dry
+     * side with the mirrored wet state.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD WetDryState determineWetDryState(
       T&                hLeft,
@@ -290,7 +234,6 @@ namespace applications::exahype2::exaskred::riemann {
       const T&          g,
       const T&          hThreshold
     ) {
-      // The wet-wet case comes first as the most frequent branch.
       WetDryState wetDryState;
       if (hLeft > hThreshold and hRight > hThreshold) {
         wetDryState = WetDryState::WetWet;
@@ -347,7 +290,9 @@ namespace applications::exahype2::exaskred::riemann {
       return wetDryState;
     }
 
-    /** Decomposes the interface jump into the three f-waves of the augmented method and fills their speeds. */
+    /**
+     * Decomposes the interface jump into the three f-waves of the augmented method and fills their speeds.
+     */
     template <class T>
     INLINE_METHOD GPU_CALLABLE_METHOD void computeWaveDecomposition(
       T&                hLeft,
@@ -373,12 +318,10 @@ namespace applications::exahype2::exaskred::riemann {
       const T&          g,
       const T&          hThreshold
     ) {
-      // The characteristic speeds of the two outer states.
       T characteristicSpeeds[2];
       characteristicSpeeds[0] = uLeft - sqrtGhLeft;
       characteristicSpeeds[1] = uRight + sqrtGhRight;
 
-      // The Roe averages of the two states.
       const T hRoe = static_cast<T>(0.5) * (hRight + hLeft);
       T       uRoe = uLeft * sqrthLeft + uRight * sqrthRight;
       uRoe /= (sqrthLeft + sqrthRight);
@@ -393,14 +336,13 @@ namespace applications::exahype2::exaskred::riemann {
         hMiddle = computeMiddleState(hLeft, hRight, uLeft, uRight, riemannStructure, middleSpeeds, g, hThreshold);
       }
 
-      // Extended Einfeldt speeds combine the Einfeldt speeds with the middle-state speeds
-      // (\cite[ch. 5.2]{George2008}, \cite[ch. 6.8]{George2006}). The paper derives
-      // lambdaStarHStarMinus and Plus differently; both reference implementations use the
-      // approximated middle speeds of computeMiddleState, and so does this one.
+      // The extended Einfeldt speeds combine the Einfeldt speeds with the middle-state speeds
+      // (\cite[ch. 5.2]{George2008}, \cite[ch. 6.8]{George2006}). The middle-state speeds come from
+      // computeMiddleState, as in both reference implementations, and differ from the paper.
       T lambdaStarHStarMinus = middleSpeeds[0];
       T lambdaStarHStarPlus  = middleSpeeds[1];
 
-      // A dry side leaves its characteristic speed undefined, so that side's bound rests on the remaining speeds.
+      // A dry side has no characteristic speed, so its bound takes the remaining speeds only.
       T extEinfeldtSpeeds[2] = {0, 0};
       if (hLeft > hThreshold and hRight > hThreshold) {
         extEinfeldtSpeeds[0] = std::min(characteristicSpeeds[0], roeSpeeds[0]);
@@ -425,8 +367,8 @@ namespace applications::exahype2::exaskred::riemann {
       eigenValues[0] = extEinfeldtSpeeds[0];
       eigenValues[2] = extEinfeldtSpeeds[1];
 
-      // The first and third eigenvector follow the characteristic fields of the two-dimensional shallow water
-      // equations.
+      // The first and third eigenvectors follow the characteristic fields of the two-dimensional
+      // shallow water equations.
       T eigenVectors[3][3];
       eigenVectors[0][0] = 1;
       eigenVectors[0][2] = 1;
@@ -437,9 +379,8 @@ namespace applications::exahype2::exaskred::riemann {
       eigenVectors[2][0] = eigenValues[0] * eigenValues[0];
       eigenVectors[2][2] = eigenValues[2] * eigenValues[2];
 
-      // The rarefaction corrector wave, the second wave of the paper
-      // (\cite[ch. 6.7.2]{George2006}, \cite[ch. 5.1]{George2008}). The middle
-      // height must exceed the dry threshold so the depth stays non-negative.
+      // The second wave is the rarefaction corrector wave (\cite[ch. 6.7.2]{George2006},
+      // \cite[ch. 5.1]{George2008}). A middle height above the dry threshold keeps the depth non-negative.
       bool strongRarefaction = false;
       if (
         (riemannStructure == RiemannStructure::ShockRarefaction
@@ -447,10 +388,10 @@ namespace applications::exahype2::exaskred::riemann {
          or riemannStructure == RiemannStructure::RarefactionRarefaction)
         and hMiddle > hThreshold
       ) {
-        // The GeoClaw implementation supplies these barriers; the literature gives no explicit bounds.
+        // The barriers come from GeoClaw, since the literature gives no explicit bounds.
         T rareBarrier[2] = {static_cast<T>(0.5), static_cast<T>(0.9)};
 
-        // A transsonic rarefaction in either wave family lowers the barrier.
+        // A transonic rarefaction in either wave family lowers the barrier.
         if (
           (riemannStructure == RiemannStructure::RarefactionShock
            or riemannStructure == RiemannStructure::RarefactionRarefaction)
@@ -493,8 +434,6 @@ namespace applications::exahype2::exaskred::riemann {
         strongRarefaction = false;
       }
 
-      // Without a strong rarefaction the second eigenvector takes the simple form;
-      // otherwise it depends on the corrector wave's speed.
       if (not strongRarefaction) {
         eigenValues[1]     = static_cast<T>(0.5) * (eigenValues[0] + eigenValues[2]);
         eigenVectors[0][1] = 0.0;
@@ -506,8 +445,7 @@ namespace applications::exahype2::exaskred::riemann {
         eigenVectors[2][1] = eigenValues[1] * eigenValues[1];
       }
 
-      // The delta vector of the wave decomposition holds the jumps in height,
-      // momentum, and momentum flux.
+      // The right-hand side is the jump in height, momentum and momentum flux.
       T rightHandSide[3];
       rightHandSide[0] = hRight - hLeft;
       rightHandSide[1] = huRight - huLeft;
@@ -528,9 +466,7 @@ namespace applications::exahype2::exaskred::riemann {
       steadyStateWave[0] = -(bRight - bLeft);
       steadyStateWave[1] = -g * static_cast<T>(0.5) * (hRight + hLeft) * (bRight - bLeft);
 
-      // The steady-state wave follows the iterated Clawpack formulation rather
-      // than the closed form of the paper: one iteration is more stable than
-      // either the closed form or several iterations.
+      // One iteration of the Clawpack formulation keeps the steady-state wave stable.
       T hLeftIter   = hLeft;
       T hRightIter  = hRight;
       T uLeftIter   = uLeft;
@@ -573,7 +509,7 @@ namespace applications::exahype2::exaskred::riemann {
           sonicFlow = true;
         }
 
-        // Several limitations for the wave, following George2008 and the Clawpack implementation.
+        // The bounds of the steady-state wave follow George2008 and Clawpack.
         if (sonicFlow) {
           steadyStateWave[0] = -(bRight - bLeft);
         } else {
@@ -607,11 +543,10 @@ namespace applications::exahype2::exaskred::riemann {
         steadyStateWave[1] =
           std::max(steadyStateWave[1], g * std::min(-hLeftIter * (bRight - bLeft), -hRightIter * (bRight - bLeft)));
 
-        // The steady-state wave leaves the state delta as described in George2008; the momentum jump carries no source.
+        // Only the jumps in height and momentum flux contain the steady-state wave (George2008).
         rightHandSide[0] -= steadyStateWave[0];
         rightHandSide[2] -= steadyStateWave[1];
 
-        // The beta coefficients of the flux waves follow from the linear system.
         solveLinearEquation(eigenVectors, rightHandSide, beta);
 
         if (
@@ -660,7 +595,7 @@ namespace applications::exahype2::exaskred::riemann {
 
       // The flux waves follow George2008, extended as in Clawpack by the flux updates of the transverse component.
       if (wetDryState == WetDryState::WetDryWall) {
-        // A wall boundary sends zero ghost updates, so only the left-going wave carries a contribution.
+        // A wall boundary sends zero ghost updates, so only the left-going wave contributes.
         fWaves[0][0] = beta[0] * eigenVectors[1][0];
         fWaves[1][0] = beta[0] * eigenVectors[2][0];
         fWaves[2][0] = beta[0] * eigenVectors[1][0];
@@ -672,7 +607,7 @@ namespace applications::exahype2::exaskred::riemann {
         waveSpeeds[0] = eigenValues[0];
         waveSpeeds[1] = waveSpeeds[2] = 0.0;
       } else if (wetDryState == WetDryState::DryWetWall) {
-        // A wall boundary sends zero ghost updates, so only the right-going wave carries a contribution.
+        // A wall boundary sends zero ghost updates, so only the right-going wave contributes.
         fWaves[0][2] = beta[2] * eigenVectors[1][2];
         fWaves[1][2] = beta[2] * eigenVectors[2][2];
         fWaves[2][2] = beta[2] * eigenVectors[1][2];
@@ -688,15 +623,14 @@ namespace applications::exahype2::exaskred::riemann {
         waveSpeeds[1] = eigenValues[1];
         waveSpeeds[2] = eigenValues[2];
 
-        // The second and third component of the augmented decomposition form the
-        // f-waves; the first component's copy carries the transverse velocity.
+        // The second and third eigenvector components form the f-waves.
         for (int waveNumber = 0; waveNumber < 3; waveNumber++) {
           fWaves[0][waveNumber] = beta[waveNumber] * eigenVectors[1][waveNumber];
           fWaves[1][waveNumber] = beta[waveNumber] * eigenVectors[2][waveNumber];
           fWaves[2][waveNumber] = beta[waveNumber] * eigenVectors[1][waveNumber];
         }
 
-        // The transverse-momentum flux huv improves the representation, following Clawpack.
+        // The third row is the flux of the transverse momentum huv, as in Clawpack.
         fWaves[2][0] = fWaves[2][0] * vLeft;
         fWaves[2][2] = fWaves[2][2] * vRight;
         fWaves[2][1] = hRight * uRight * vRight - hLeft * uLeft * vLeft - fWaves[2][0] - fWaves[2][2];
@@ -785,7 +719,6 @@ namespace applications::exahype2::exaskred::riemann {
     T       vLeft          = 0;
     T       vRight         = 0;
 
-    // The middle-state height of the augmented homogeneous Riemann problem, filled by computeMiddleState.
     T hMiddle = 0;
 
     RiemannStructure riemannStructure;
@@ -801,7 +734,7 @@ namespace applications::exahype2::exaskred::riemann {
       FR[BathymetryIndex] = T{};
     }
 
-    // A dry side folds its residual depth into the bed and rests; a wet side derives its velocities.
+    // A dry side adds its residual depth to the bed and stays at rest. A wet side derives its velocities.
     if (hLeft > hThreshold) {
       uLeft = huLeft / hLeft;
       vLeft = hvLeft / hLeft;
@@ -840,7 +773,6 @@ namespace applications::exahype2::exaskred::riemann {
       hThreshold
     );
 
-    // A dry region needs no computation.
     if (wetDryState == WetDryState::DryDry) {
       return 0;
     }
@@ -852,7 +784,7 @@ namespace applications::exahype2::exaskred::riemann {
     const T sqrtGhLeft  = sqrtG * sqrthLeft;
     const T sqrtGhRight = sqrtG * sqrthRight;
 
-    // The three waves and their speeds; the third row carries the transverse components.
+    // A row of fWaves is one component of the f-waves, a column one wave.
     T fWaves[3][3];
     T waveSpeeds[3];
 
@@ -881,9 +813,7 @@ namespace applications::exahype2::exaskred::riemann {
       hThreshold
     );
 
-    // The three propagating waves form the left- and right-going fluctuations,
-    // A^-\delta Q = \sum_{s_i < 0} \beta_i r_i and A^+\delta Q = \sum_{s_i > 0} \beta_i r_i;
-    // a standing wave contributes half to each side.
+    // The waves form the left- and right-going fluctuations, and a standing wave adds half to each side.
     for (int waveNumber = 0; waveNumber < 3; waveNumber++) {
       if (waveSpeeds[waveNumber] < T{}) {
         FL[Shortcuts::h] += fWaves[0][waveNumber];
@@ -905,10 +835,10 @@ namespace applications::exahype2::exaskred::riemann {
 
     const auto cfl = dt > 0.0 and h(normal) > 0.0 ? static_cast<T>(dt / h(normal)) : T{};
     if (std::isfinite(cfl) and cfl > T{}) {
-      constexpr auto PerFaceShare = static_cast<T>(1.0 / (2.0 * DIMENSIONS));
+      constexpr auto PerFaceFraction = static_cast<T>(1.0 / (2.0 * DIMENSIONS));
 
       const auto leftDrain  = std::fmax(FL[Shortcuts::h], T{});
-      const auto leftBudget = PerFaceShare * std::fmax(hLeft, T{});
+      const auto leftBudget = PerFaceFraction * std::fmax(hLeft, T{});
       if (leftDrain > T{} and cfl * leftDrain > leftBudget) {
         const auto factor = leftBudget / (cfl * leftDrain);
         FL[Shortcuts::h] *= factor;
@@ -917,7 +847,7 @@ namespace applications::exahype2::exaskred::riemann {
       }
 
       const auto rightDrain  = std::fmax(-FR[Shortcuts::h], T{});
-      const auto rightBudget = PerFaceShare * std::fmax(hRight, T{});
+      const auto rightBudget = PerFaceFraction * std::fmax(hRight, T{});
       if (rightDrain > T{} and cfl * rightDrain > rightBudget) {
         const auto factor = rightBudget / (cfl * rightDrain);
         FR[Shortcuts::h] *= factor;
@@ -963,5 +893,4 @@ namespace applications::exahype2::exaskred::riemann {
 
     return std::max(std::abs(waveSpeeds[0]), std::max(std::abs(waveSpeeds[1]), std::abs(waveSpeeds[2])));
   }
-
 } // namespace applications::exahype2::exaskred::riemann

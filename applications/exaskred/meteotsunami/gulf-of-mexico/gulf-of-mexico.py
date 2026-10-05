@@ -111,7 +111,5 @@ for name, kind, value in (
 project.add_constant("g", 9.81)
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("../../AlbersEqualArea.cpp")
-project.output.makefile.add_cpp_file("../../Forcing.cpp")
-project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
+project.output.makefile.add_h_file("ADERDGSolver.cpph")
 project.generate_and_build()

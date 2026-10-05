@@ -36,7 +36,7 @@ namespace applications::exahype2::exaskred::landslide {
     const T* const NOALIAS     Q
   );
 
-  INLINE_METHOD GPU_CALLABLE_METHOD double granularLayerDmpRelaxationParameter(
+  INLINE_METHOD GPU_CALLABLE_METHOD double getGranularLayerDMPRelaxationParameter(
     const int      observable,
     const double   specifiedRelaxationParameter,
     const Physics& physics

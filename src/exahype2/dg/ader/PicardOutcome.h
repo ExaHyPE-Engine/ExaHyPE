@@ -2,18 +2,20 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 TARGET_DECLARE
 namespace exahype2::dg::ader {
   /**
-   * Returned by spaceTimePredictor() when the sweep limit comes before the tolerance.
+   * Returned by NonlinearPredictor::predict() when the Picard iteration reaches its sweep limit
+   * before the tolerance.
    */
-  inline constexpr int UnconvergedPicardIteration = -2;
+  constexpr int UnconvergedPicardIteration = -2;
 
   /**
-   * Returned by spaceTimePredictor() when an iterate is not finite or leaves the divergence bound.
+   * Returned by NonlinearPredictor::predict() when an iterate is not finite or leaves the
+   * divergence bound.
    */
-  inline constexpr int DivergedPicardIteration = -1;
+  constexpr int DivergedPicardIteration = -1;
 } // namespace exahype2::dg::ader
 TARGET_DECLARE_END

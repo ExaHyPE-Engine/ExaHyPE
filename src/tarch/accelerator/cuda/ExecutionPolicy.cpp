@@ -8,6 +8,7 @@ tarch::accelerator::cuda::ExecutionPolicy::ExecutionPolicy() :
   _state(Automatic),
   _gridSize(0),
   _blockSize(0),
+  _maxBlockSize(0),
   _sharedMemBytes(0),
   _stream(nullptr) {}
 
@@ -15,6 +16,7 @@ tarch::accelerator::cuda::ExecutionPolicy::ExecutionPolicy(int gridSize, int blo
   _state(0),
   _gridSize(0),
   _blockSize(0),
+  _maxBlockSize(0),
   _sharedMemBytes(0),
   _stream(nullptr) {
   setGridSize(gridSize);
@@ -31,6 +33,7 @@ tarch::accelerator::cuda::ExecutionPolicy::ExecutionPolicy(
   _state(0),
   _gridSize(0),
   _blockSize(0),
+  _maxBlockSize(0),
   _sharedMemBytes(0),
   _stream(nullptr) {
   setGridSize(gridSize);
@@ -39,19 +42,38 @@ tarch::accelerator::cuda::ExecutionPolicy::ExecutionPolicy(
   setStream(stream);
 }
 
-int tarch::accelerator::cuda::ExecutionPolicy::getConfigState() const { return _state; }
+int
+tarch::accelerator::cuda::ExecutionPolicy::getConfigState() const {
+  return _state;
+}
 
-int tarch::accelerator::cuda::ExecutionPolicy::getGridSize() const { return _gridSize; }
+int
+tarch::accelerator::cuda::ExecutionPolicy::getGridSize() const {
+  return _gridSize;
+}
 
-int tarch::accelerator::cuda::ExecutionPolicy::getBlockSize() const { return _blockSize; }
+int
+tarch::accelerator::cuda::ExecutionPolicy::getBlockSize() const {
+  return _blockSize;
+}
 
-int tarch::accelerator::cuda::ExecutionPolicy::getMaxBlockSize() const { return _maxBlockSize; }
+int
+tarch::accelerator::cuda::ExecutionPolicy::getMaxBlockSize() const {
+  return _maxBlockSize;
+}
 
-std::size_t tarch::accelerator::cuda::ExecutionPolicy::getSharedMemBytes() const { return _sharedMemBytes; }
+std::size_t
+tarch::accelerator::cuda::ExecutionPolicy::getSharedMemBytes() const {
+  return _sharedMemBytes;
+}
 
-cudaStream_t tarch::accelerator::cuda::ExecutionPolicy::getStream() const { return _stream; }
+cudaStream_t
+tarch::accelerator::cuda::ExecutionPolicy::getStream() const {
+  return _stream;
+}
 
-std::size_t tarch::accelerator::cuda::ExecutionPolicy::availableSharedBytesPerBlock(
+std::size_t
+tarch::accelerator::cuda::ExecutionPolicy::getAvailableSharedBytesPerBlock(
   std::size_t sharedMemPerMultiprocessor,
   std::size_t sharedSizeBytesStatic,
   int         blocksPerSM,
@@ -62,7 +84,8 @@ std::size_t tarch::accelerator::cuda::ExecutionPolicy::availableSharedBytesPerBl
   return bytes - sharedSizeBytesStatic;
 }
 
-void tarch::accelerator::cuda::ExecutionPolicy::setGridSize(int size) {
+void
+tarch::accelerator::cuda::ExecutionPolicy::setGridSize(int size) {
   _gridSize = size;
   if (_gridSize > 0) {
     _state |= GridSize;
@@ -71,7 +94,8 @@ void tarch::accelerator::cuda::ExecutionPolicy::setGridSize(int size) {
   }
 }
 
-void tarch::accelerator::cuda::ExecutionPolicy::setBlockSize(int size) {
+void
+tarch::accelerator::cuda::ExecutionPolicy::setBlockSize(int size) {
   _blockSize = size;
   if (_blockSize > 0) {
     _state |= BlockSize;
@@ -80,13 +104,20 @@ void tarch::accelerator::cuda::ExecutionPolicy::setBlockSize(int size) {
   }
 }
 
-void tarch::accelerator::cuda::ExecutionPolicy::setMaxBlockSize(int size) { _maxBlockSize = size; }
+void
+tarch::accelerator::cuda::ExecutionPolicy::setMaxBlockSize(int size) {
+  _maxBlockSize = size;
+}
 
-void tarch::accelerator::cuda::ExecutionPolicy::setSharedMemBytes(std::size_t bytes) {
+void
+tarch::accelerator::cuda::ExecutionPolicy::setSharedMemBytes(std::size_t bytes) {
   _sharedMemBytes = bytes;
   _state |= SharedMemory;
 }
 
-void tarch::accelerator::cuda::ExecutionPolicy::setStream(cudaStream_t stream) { _stream = stream; }
+void
+tarch::accelerator::cuda::ExecutionPolicy::setStream(cudaStream_t stream) {
+  _stream = stream;
+}
 
 #endif

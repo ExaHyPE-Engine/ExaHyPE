@@ -1,26 +1,45 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "exahype2/TimeStepping.h"
+#include "tarch/Assertions.h"
+
 TARGET_DECLARE
 /**
- * Forms the two boundary-extrapolated states of one volume along @p normal and
- * evolves them by half a time step. The three states are converted to the
- * compute precision first, so the limiter and the half-step run in that
- * precision even when the patch is stored in a lower one. The @c Limiter maps
- * this neighbourhood onto the limited difference of each unknown, unless the
- * solver defines a static @c limitedDifference method, which then supplies the
- * differences instead and lets a scenario limit a derived quantity such as a
- * pressure perturbation. The default
- * extrapolation adds and subtracts half that difference; a solver that defines
- * a static @c reconstruct method replaces it, which lets a scenario keep a
- * physical quantity such as a hydrostatic pressure in balance across the two
- * boundaries. The auxiliary variables are extrapolated but not evolved in time.
- * The half-step uses the flux balance across this volume in direction
- * @p normal alone, minus the own-direction non-conservative product of the
- * volume state with the limited differences, plus the source term of the
- * volume state. Both boundaries therefore receive the same time increment,
- * and the stencil stays on the axis-aligned line, so the scheme never needs a
- * diagonal neighbour that the face exchange cannot supply.
+ * Returns the neighbour offset volumes away along normal, read from the patch or from the halo of
+ * the lower or upper face.
+ */
+template <exahype2::fv::limiter::SlopeLimiter Limiter>
+template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*
+exahype2::fv::reconstruction::LimitedLinear<Limiter>::getNeighbourAlongNormal(
+  const StoragePrecision* NOALIAS const     inputPatch,
+  const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
+  const int                                 centreOffset,
+  const int                                 strideAlongNormal,
+  const int                                 normal,
+  const int                                 offset
+) {
+  const int neighbourIndexAlongNormal = volumeIndex(normal) + offset;
+  if (neighbourIndexAlongNormal >= 0 and neighbourIndexAlongNormal < NumberOfVolumesPerAxis) {
+    return &inputPatch[centreOffset + offset * strideAlongNormal];
+  }
+  tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+  if (neighbourIndexAlongNormal < 0) {
+    overlapCell(normal)    = neighbourIndexAlongNormal + HaloSize;
+    const int overlapIndex = exahype2::fv::getFaceVolumeIndex(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+    return &faceInputPatches[normal][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
+  }
+  overlapCell(normal)    = neighbourIndexAlongNormal - NumberOfVolumesPerAxis + HaloSize;
+  const int overlapIndex = exahype2::fv::getFaceVolumeIndex(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+  return &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
+}
+
+/**
+ * Reconstructs the two face states of centreState and evolves them by half a time step. A
+ * SolverType with limitedDifference or reconstruct overrides the limiter or the linear
+ * reconstruction. Auxiliary variables keep their reconstructed values.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
@@ -31,8 +50,10 @@ template <
   bool EvaluateNonconservativeProduct,
   bool EvaluateSource,
   typename StoragePrecision,
-  typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLinear<Limiter>::evolveFaceStates(
+  typename ComputePrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::LimitedLinear<Limiter>::evolveFaceStates(
   const StoragePrecision* NOALIAS const        leftState,
   const StoragePrecision* NOALIAS const        centreState,
   const StoragePrecision* NOALIAS const        rightState,
@@ -45,6 +66,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
   ComputePrecision* NOALIAS const              evolvedPlusState
 ) {
   using GeometryPrecision = decltype(ComputePrecision{} * double{});
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
   ComputePrecision leftStateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   ComputePrecision centreStateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   ComputePrecision rightStateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -160,49 +183,257 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       }
     }
 
-    const ComputePrecision inverseSize = static_cast<ComputePrecision>(
+    const auto inverseSize = static_cast<ComputePrecision>(
       static_cast<GeometryPrecision>(1.0) / static_cast<GeometryPrecision>(volumeSize(normal))
     );
+    // A fused multiply-add pairs the half step with the state it advances. Every compiler then
+    // rounds the evolved states the same way.
+    const GeometryPrecision halfStepFactor = static_cast<GeometryPrecision>(0.5)
+      * static_cast<GeometryPrecision>(timeStepSize) * static_cast<GeometryPrecision>(inverseSize);
     SIMD()
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      const ComputePrecision halfStep = static_cast<ComputePrecision>(
-        static_cast<GeometryPrecision>(0.5) * static_cast<GeometryPrecision>(timeStepSize)
-        * static_cast<GeometryPrecision>(inverseSize) * static_cast<GeometryPrecision>(predictorUpdate[unknown])
+      const auto update          = static_cast<GeometryPrecision>(predictorUpdate[unknown]);
+      evolvedMinusState[unknown] = static_cast<ComputePrecision>(
+        std::fma(halfStepFactor, update, static_cast<GeometryPrecision>(evolvedMinusState[unknown]))
       );
-      evolvedMinusState[unknown] += halfStep;
-      evolvedPlusState[unknown] += halfStep;
+      evolvedPlusState[unknown] = static_cast<ComputePrecision>(
+        std::fma(halfStepFactor, update, static_cast<GeometryPrecision>(evolvedPlusState[unknown]))
+      );
     }
 
     if constexpr (EvaluateSource) {
       ComputePrecision sources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       SolverType::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
+      const GeometryPrecision sourceFactor =
+        static_cast<GeometryPrecision>(0.5) * static_cast<GeometryPrecision>(timeStepSize);
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        const ComputePrecision sourceHalfStep = static_cast<ComputePrecision>(
-          static_cast<GeometryPrecision>(0.5) * static_cast<GeometryPrecision>(timeStepSize)
-          * static_cast<GeometryPrecision>(sources[unknown])
+        const auto source          = static_cast<GeometryPrecision>(sources[unknown]);
+        evolvedMinusState[unknown] = static_cast<ComputePrecision>(
+          std::fma(sourceFactor, source, static_cast<GeometryPrecision>(evolvedMinusState[unknown]))
         );
-        evolvedMinusState[unknown] += sourceHalfStep;
-        evolvedPlusState[unknown] += sourceHalfStep;
+        evolvedPlusState[unknown] = static_cast<ComputePrecision>(
+          std::fma(sourceFactor, source, static_cast<GeometryPrecision>(evolvedPlusState[unknown]))
+        );
       }
+    }
+  }
+  for (int unknown = 0; unknown < NumberOfData; unknown++) {
+    assertion(std::isfinite(evolvedMinusState[unknown]) and std::isfinite(evolvedPlusState[unknown]), unknown, normal);
+  }
+}
+
+/**
+ * Writes the Rusanov flux into faceFlux and returns its maximum wave speed.
+ */
+template <exahype2::fv::limiter::SlopeLimiter Limiter>
+template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::reconstruction::LimitedLinear<Limiter>::rusanovFaceFlux(
+  const ComputePrecision* NOALIAS const        leftState,
+  const ComputePrecision* NOALIAS const        rightState,
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+  const int                                    normal,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  ComputePrecision* NOALIAS const              faceFlux
+) {
+  const ComputePrecision leftMaxEigenvalue =
+    SolverType::maxEigenvalue(leftState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
+  const ComputePrecision rightMaxEigenvalue =
+    SolverType::maxEigenvalue(rightState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
+  assertion(exahype2::MaxEigenvalueReduction::isPhysicalValue(leftMaxEigenvalue), leftMaxEigenvalue, normal);
+  assertion(exahype2::MaxEigenvalueReduction::isPhysicalValue(rightMaxEigenvalue), rightMaxEigenvalue, normal);
+  const ComputePrecision maxEigenvalue =
+    rightMaxEigenvalue > leftMaxEigenvalue ? rightMaxEigenvalue : leftMaxEigenvalue;
+
+  ComputePrecision leftFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  ComputePrecision rightFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  if constexpr (EvaluateFlux) {
+    SolverType::flux(leftState, faceCentre, volumeSize, timeStamp, timeStepSize, normal, leftFluxes);
+    SolverType::flux(rightState, faceCentre, volumeSize, timeStamp, timeStepSize, normal, rightFluxes);
+  }
+
+  // A fused multiply-add pairs the Rusanov diffusion with the average flux. The two halves of
+  // that average are exact. Every compiler then rounds the face flux the same way.
+  const ComputePrecision diffusionFactor = -static_cast<ComputePrecision>(0.5) * maxEigenvalue;
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    const ComputePrecision averageFlux = EvaluateFlux ? static_cast<ComputePrecision>(0.5) * leftFluxes[unknown]
+        + static_cast<ComputePrecision>(0.5) * rightFluxes[unknown]
+                                                      : ComputePrecision{0};
+    faceFlux[unknown] = std::fma(diffusionFactor, rightState[unknown] - leftState[unknown], averageFlux);
+  }
+  return maxEigenvalue;
+}
+
+/**
+ * Evolves the face states of one state along every axis from the state and its two neighbours.
+ */
+template <exahype2::fv::limiter::SlopeLimiter Limiter>
+template <
+  typename SolverType,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateCustomRiemann,
+  typename StoragePrecision,
+  typename ComputePrecision
+>
+INLINE_METHOD void
+exahype2::fv::reconstruction::LimitedLinear<Limiter>::StateTerms<
+  SolverType,
+  NumberOfVolumesPerAxis,
+  NumberOfUnknowns,
+  NumberOfAuxiliaryVariables,
+  EvaluateFlux,
+  EvaluateNonconservativeProduct,
+  EvaluateSource,
+  EvaluateCustomRiemann,
+  StoragePrecision,
+  ComputePrecision
+>::
+  evaluate(
+    const StoragePrecision* NOALIAS const                         patch,
+    const StoragePrecision* NOALIAS const                         faces[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, int>&                     volumeIndex,
+    const int                                                     centreOffset,
+    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
+    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& patchSize,
+    const tarch::la::Vector<DIMENSIONS, double>&                  volumeCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&                  volumeSize,
+    const double                                                  timeStamp,
+    const double                                                  timeStepSize
+  ) {
+  constexpr int NumberOfData      = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  int           strideAlongNormal = NumberOfData;
+  for (int normal = 0; normal < DIMENSIONS; normal++) {
+    const StoragePrecision* NOALIAS const lowerState = getNeighbourAlongNormal<NumberOfVolumesPerAxis, NumberOfData>(
+      patch,
+      faces,
+      volumeIndex,
+      centreOffset,
+      strideAlongNormal,
+      normal,
+      -1
+    );
+    const StoragePrecision* NOALIAS const upperState = getNeighbourAlongNormal<NumberOfVolumesPerAxis, NumberOfData>(
+      patch,
+      faces,
+      volumeIndex,
+      centreOffset,
+      strideAlongNormal,
+      normal,
+      1
+    );
+    evolveFaceStates<
+      SolverType,
+      NumberOfUnknowns,
+      NumberOfData,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource
+    >(lowerState,
+      patch + centreOffset,
+      upperState,
+      volumeCentre,
+      volumeSize,
+      normal,
+      timeStamp,
+      timeStepSize,
+      minus[normal],
+      plus[normal]);
+    strideAlongNormal *= NumberOfVolumesPerAxis;
+  }
+}
+
+/**
+ * Evaluates the terms of the face between the lower and the upper evolved state into face. side
+ * is 0 for the lower and 1 for the upper face of the volume with volumeIndex. A face of that
+ * volume on the domain boundary reaches the Riemann solver of the solver class as such.
+ */
+template <exahype2::fv::limiter::SlopeLimiter Limiter>
+template <
+  typename SolverType,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfData,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateCustomRiemann,
+  typename ComputePrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::LimitedLinear<Limiter>::evaluateFaceTerms(
+  const ComputePrecision* NOALIAS const                                                                 lowerState,
+  const ComputePrecision* NOALIAS const                                                                 upperState,
+  const tarch::la::Vector<DIMENSIONS, double>&                                                          faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&                                                          volumeSize,
+  const double                                                                                          timeStamp,
+  const double                                                                                          timeStepSize,
+  const int                                                                                             normal,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, int>&                                            volumeIndex,
+  [[maybe_unused]] const int                                                                            side,
+  [[maybe_unused]] const int                                                                            boundaryFaces,
+  FaceTerms<NumberOfUnknowns, EvaluateNonconservativeProduct, EvaluateCustomRiemann, ComputePrecision>& face
+) {
+  if constexpr (EvaluateCustomRiemann) {
+    face.maxWaveSpeed =
+      static_cast<ComputePrecision>(exahype2::fv::solveRiemannProblemOnVolumeFace<SolverType, NumberOfVolumesPerAxis>(
+        lowerState,
+        upperState,
+        faceCentre,
+        volumeSize,
+        timeStamp,
+        timeStepSize,
+        normal,
+        volumeIndex,
+        side,
+        boundaryFaces,
+        face.leftGoingFlux,
+        face.rightGoingFlux
+      ));
+  } else {
+    rusanovFaceFlux<SolverType, NumberOfUnknowns, EvaluateFlux>(
+      lowerState,
+      upperState,
+      faceCentre,
+      volumeSize,
+      normal,
+      timeStamp,
+      timeStepSize,
+      face.flux
+    );
+    if constexpr (EvaluateNonconservativeProduct) {
+      ComputePrecision averageState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      ComputePrecision stateJump[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      SIMD()
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        averageState[unknown] = static_cast<ComputePrecision>(0.5) * (lowerState[unknown] + upperState[unknown]);
+        stateJump[unknown]    = upperState[unknown] - lowerState[unknown];
+      }
+      SolverType::nonconservativeProduct(
+        averageState,
+        stateJump,
+        faceCentre,
+        volumeSize,
+        timeStamp,
+        timeStepSize,
+        normal,
+        face.nonconservativeProduct
+      );
     }
   }
 }
 
 /**
- * Advances one volume with the MUSCL-Hancock update. For every direction we
- * evolve the boundary states of the two neighbours and of this volume, then
- * feed the states that meet at each interface to the Riemann solver. The left
- * face uses the left neighbour's right-boundary state and this volume's
- * left-boundary state; the right face uses this volume's right-boundary state
- * and the right neighbour's left-boundary state. The non-conservative product
- * consists of half the product over the jump at either face plus a volume
- * part over the two evolved boundary states of this volume. Their average is
- * the half-time volume state and their difference is the limited difference,
- * since the flux part of the half-step cancels in both. With zero slopes every
- * jump sits at the faces and the treatment degenerates to the splitting of
- * the first-order scheme. The reconstruction does not support a diffusive
- * source term.
+ * Advances one volume with the MUSCL-Hancock update. A custom Riemann solver adds the
+ * non-conservative product over the face jump to its fluxes. The evolved states of the interior
+ * neighbours and the terms of the lower face come from the ring terms when it holds them. The
+ * terms of the upper face go into the ring for the neighbour above.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
@@ -217,8 +448,11 @@ template <
   bool EvaluateCustomRiemann,
   bool EvaluateMaxEigenvalue,
   typename StoragePrecision,
-  typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
+  typename ComputePrecision,
+  typename Terms
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
   const StoragePrecision* NOALIAS const        inputPatch,
   const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
@@ -230,49 +464,49 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
   const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
+  [[maybe_unused]] const int                   boundaryFaces,
   StoragePrecision* NOALIAS const              outputState,
-  double&                                      maxEigenvalueAfterTimeStep
+  double&                                      maxEigenvalueAfterTimeStep,
+  [[maybe_unused]] Terms&                      terms
 ) {
-  static_assert(
-    not EvaluateDiffusiveSource,
-    "The LimitedLinear reconstruction does not support a diffusive source term."
-  );
+  static_assert(not EvaluateDiffusiveSource, "The limited linear reconstruction cannot add a diffusive source term.");
 
-  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr int  NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr bool StoresTerms  = Terms::Lookahead > 0;
+  using Face = FaceTerms<NumberOfUnknowns, EvaluateNonconservativeProduct, EvaluateCustomRiemann, ComputePrecision>;
+  using GeometryPrecision    = decltype(ComputePrecision{} * double{});
+  using StateUpdatePrecision = decltype(StoragePrecision{} + ComputePrecision{});
+  const int volume           = centreOffset / NumberOfData;
 
+  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp);
+  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
+  const double halfTimeStamp = timeStamp + 0.5 * timeStepSize;
+  assertion(std::isfinite(halfTimeStamp), timeStamp, timeStepSize);
+
+  // The axes add their flux differences into one update that enters outputState once. Mirrored
+  // volumes then get mirrored states.
+  StateUpdatePrecision axisUpdates[NumberOfUnknowns];
+  SIMD()
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    axisUpdates[unknown] = static_cast<StateUpdatePrecision>(0);
+  }
+
+  int strideInVolumes = 1;
   for (int normal = 0; normal < DIMENSIONS; normal++) {
-    int strideAlongNormal = NumberOfData;
-    for (int dimension = 0; dimension < normal; dimension++) {
-      strideAlongNormal *= NumberOfVolumesPerAxis;
-    }
+    const int strideAlongNormal = strideInVolumes * NumberOfData;
 
     auto leftVolumeIndex  = volumeIndex;
     auto rightVolumeIndex = volumeIndex;
     leftVolumeIndex(normal) -= 1;
     rightVolumeIndex(normal) += 1;
-    [[maybe_unused]] const auto [leftVolumeSize, leftVolumeCentre] =
-      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
-        patchCentre,
-        patchSize,
-        leftVolumeIndex
-      );
-    [[maybe_unused]] const auto [rightVolumeSize, rightVolumeCentre] =
-      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
-        patchCentre,
-        patchSize,
-        rightVolumeIndex
-      );
+    [[maybe_unused]] const auto leftVolumeCentre =
+      exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, leftVolumeIndex);
+    [[maybe_unused]] const auto rightVolumeCentre =
+      exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, rightVolumeIndex);
+    const bool leftInside  = leftVolumeIndex(normal) >= 0;
+    const bool rightInside = rightVolumeIndex(normal) < NumberOfVolumesPerAxis;
 
-    const StoragePrecision* NOALIAS const leftLeftState = exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
-      inputPatch,
-      faceInputPatches,
-      volumeIndex,
-      centreOffset,
-      strideAlongNormal,
-      normal,
-      -2
-    );
-    const StoragePrecision* NOALIAS const leftState = exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
+    const StoragePrecision* NOALIAS const leftState = getNeighbourAlongNormal<NumberOfVolumesPerAxis, NumberOfData>(
       inputPatch,
       faceInputPatches,
       volumeIndex,
@@ -281,7 +515,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       normal,
       -1
     );
-    const StoragePrecision* NOALIAS const rightState = exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
+    const StoragePrecision* NOALIAS const rightState = getNeighbourAlongNormal<NumberOfVolumesPerAxis, NumberOfData>(
       inputPatch,
       faceInputPatches,
       volumeIndex,
@@ -290,100 +524,259 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       normal,
       1
     );
-    const StoragePrecision* NOALIAS const rightRightState = exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
-      inputPatch,
-      faceInputPatches,
-      volumeIndex,
-      centreOffset,
-      strideAlongNormal,
-      normal,
-      2
-    );
 
+    // The evolved states come from the ring for the volume and its interior neighbours. A halo
+    // neighbour and, without a ring, every state is evolved here.
     [[maybe_unused]] ComputePrecision leftNeighbourMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision                  leftNeighbourPlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision                  centreMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision                  centrePlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision                  rightNeighbourMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    [[maybe_unused]] ComputePrecision leftNeighbourPlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    [[maybe_unused]] ComputePrecision centreMinusBuffer[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    [[maybe_unused]] ComputePrecision centrePlusBuffer[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    [[maybe_unused]] ComputePrecision rightNeighbourMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     [[maybe_unused]] ComputePrecision rightNeighbourPlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    const ComputePrecision* NOALIAS   centreMinus = centreMinusBuffer;
+    const ComputePrecision* NOALIAS   centrePlus  = centrePlusBuffer;
+    const ComputePrecision* NOALIAS   leftPlus    = leftNeighbourPlus;
+    const ComputePrecision* NOALIAS   rightMinus  = rightNeighbourMinus;
+    bool                              evolveLeft  = true;
+    bool                              evolveRight = true;
+    if constexpr (StoresTerms) {
+      centreMinus = terms.at(volume).minus[normal];
+      centrePlus  = terms.at(volume).plus[normal];
+      if (leftInside) {
+        leftPlus   = terms.at(volume - strideInVolumes).plus[normal];
+        evolveLeft = false;
+      }
+      if (rightInside) {
+        rightMinus  = terms.at(volume + strideInVolumes).minus[normal];
+        evolveRight = false;
+      }
+    } else {
+      evolveFaceStates<
+        SolverType,
+        NumberOfUnknowns,
+        NumberOfData,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource
+      >(leftState,
+        centreState,
+        rightState,
+        volumeCentre,
+        volumeSize,
+        normal,
+        timeStamp,
+        timeStepSize,
+        centreMinusBuffer,
+        centrePlusBuffer);
+    }
+    if (evolveLeft) {
+      const StoragePrecision* NOALIAS const leftLeftState =
+        getNeighbourAlongNormal<NumberOfVolumesPerAxis, NumberOfData>(
+          inputPatch,
+          faceInputPatches,
+          volumeIndex,
+          centreOffset,
+          strideAlongNormal,
+          normal,
+          -2
+        );
+      evolveFaceStates<
+        SolverType,
+        NumberOfUnknowns,
+        NumberOfData,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource
+      >(leftLeftState,
+        leftState,
+        centreState,
+        leftVolumeCentre,
+        volumeSize,
+        normal,
+        timeStamp,
+        timeStepSize,
+        leftNeighbourMinus,
+        leftNeighbourPlus);
+    }
+    if (evolveRight) {
+      const StoragePrecision* NOALIAS const rightRightState =
+        getNeighbourAlongNormal<NumberOfVolumesPerAxis, NumberOfData>(
+          inputPatch,
+          faceInputPatches,
+          volumeIndex,
+          centreOffset,
+          strideAlongNormal,
+          normal,
+          2
+        );
+      evolveFaceStates<
+        SolverType,
+        NumberOfUnknowns,
+        NumberOfData,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource
+      >(centreState,
+        rightState,
+        rightRightState,
+        rightVolumeCentre,
+        volumeSize,
+        normal,
+        timeStamp,
+        timeStepSize,
+        rightNeighbourMinus,
+        rightNeighbourPlus);
+    }
 
-    evolveFaceStates<
-      SolverType,
-      NumberOfUnknowns,
-      NumberOfData,
-      EvaluateFlux,
-      EvaluateNonconservativeProduct,
-      EvaluateSource>(
-      leftLeftState,
-      leftState,
-      centreState,
-      leftVolumeCentre,
-      volumeSize,
-      normal,
-      timeStamp,
-      timeStepSize,
-      leftNeighbourMinus,
-      leftNeighbourPlus
-    );
-    evolveFaceStates<
-      SolverType,
-      NumberOfUnknowns,
-      NumberOfData,
-      EvaluateFlux,
-      EvaluateNonconservativeProduct,
-      EvaluateSource>(
-      leftState,
-      centreState,
-      rightState,
-      volumeCentre,
-      volumeSize,
-      normal,
-      timeStamp,
-      timeStepSize,
-      centreMinus,
-      centrePlus
-    );
-    evolveFaceStates<
-      SolverType,
-      NumberOfUnknowns,
-      NumberOfData,
-      EvaluateFlux,
-      EvaluateNonconservativeProduct,
-      EvaluateSource>(
-      centreState,
-      rightState,
-      rightRightState,
-      rightVolumeCentre,
-      volumeSize,
-      normal,
-      timeStamp,
-      timeStepSize,
-      rightNeighbourMinus,
-      rightNeighbourPlus
-    );
+    auto leftFaceCentre(leftVolumeCentre);
+    leftFaceCentre(normal) += 0.5 * volumeSize(normal);
+    auto rightFaceCentre(volumeCentre);
+    rightFaceCentre(normal) += 0.5 * volumeSize(normal);
 
-    exahype2::fv::reconstruction::accumulateFluxDivergenceFromFaceStates<
+    // The lower face comes from the ring when the neighbour below is an interior volume. That
+    // volume evaluated it as its upper face. The upper face is evaluated here and goes into the ring.
+    [[maybe_unused]] Face leftFaceBuffer;
+    [[maybe_unused]] Face rightFaceBuffer;
+    const Face*           leftFace         = &leftFaceBuffer;
+    Face*                 rightFace        = &rightFaceBuffer;
+    bool                  evaluateLeftFace = true;
+    if constexpr (StoresTerms) {
+      rightFace = &terms.at(volume).upperFace[normal];
+      if (leftInside) {
+        leftFace         = &terms.at(volume - strideInVolumes).upperFace[normal];
+        evaluateLeftFace = false;
+      }
+    }
+    if (evaluateLeftFace) {
+      evaluateFaceTerms<
+        SolverType,
+        NumberOfVolumesPerAxis,
+        NumberOfUnknowns,
+        NumberOfData,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateCustomRiemann
+      >(leftPlus,
+        centreMinus,
+        leftFaceCentre,
+        volumeSize,
+        halfTimeStamp,
+        timeStepSize,
+        normal,
+        volumeIndex,
+        0,
+        boundaryFaces,
+        leftFaceBuffer);
+    }
+    evaluateFaceTerms<
       SolverType,
       NumberOfVolumesPerAxis,
       NumberOfUnknowns,
       NumberOfData,
       EvaluateFlux,
       EvaluateNonconservativeProduct,
-      EvaluateCustomRiemann,
-      EvaluateMaxEigenvalue>(
-      leftNeighbourPlus,
-      centreMinus,
-      centrePlus,
-      rightNeighbourMinus,
-      patchSize,
-      volumeCentre,
+      EvaluateCustomRiemann
+    >(centrePlus,
+      rightMinus,
+      rightFaceCentre,
       volumeSize,
-      normal,
-      timeStamp,
+      halfTimeStamp,
       timeStepSize,
-      outputState,
-      maxEigenvalueAfterTimeStep
+      normal,
+      volumeIndex,
+      1,
+      boundaryFaces,
+      *rightFace);
+
+    const auto scale = static_cast<ComputePrecision>(
+      (static_cast<GeometryPrecision>(timeStepSize) * static_cast<GeometryPrecision>(NumberOfVolumesPerAxis))
+      / static_cast<GeometryPrecision>(patchSize(normal))
     );
+
+    [[maybe_unused]] ComputePrecision volumeNonconservativeProduct[NumberOfUnknowns]
+      __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    if constexpr (EvaluateNonconservativeProduct) {
+      ComputePrecision averageState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      ComputePrecision stateJump[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      SIMD()
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        averageState[unknown] = static_cast<ComputePrecision>(0.5) * (centreMinus[unknown] + centrePlus[unknown]);
+        stateJump[unknown]    = centrePlus[unknown] - centreMinus[unknown];
+      }
+      SolverType::nonconservativeProduct(
+        averageState,
+        stateJump,
+        volumeCentre,
+        volumeSize,
+        halfTimeStamp,
+        timeStepSize,
+        normal,
+        volumeNonconservativeProduct
+      );
+    }
+
+    if constexpr (EvaluateCustomRiemann) {
+      // A solver with solveRiemannProblem need not define maxEigenvalue. This branch reads the wave
+      // speeds of the Riemann solver only.
+      if constexpr (EvaluateMaxEigenvalue) {
+        exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, leftFace->maxWaveSpeed);
+        exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, rightFace->maxWaveSpeed);
+      }
+
+      // The term of the axis rounds through a fused multiply-add with a zero addend before it
+      // joins the sum. Both axis orders then add the same rounded terms under every contraction rule.
+      SIMD()
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        ComputePrecision divergence = leftFace->rightGoingFlux[unknown] - rightFace->leftGoingFlux[unknown];
+        if constexpr (EvaluateNonconservativeProduct) {
+          divergence -= volumeNonconservativeProduct[unknown];
+        }
+        const auto contribution = static_cast<StateUpdatePrecision>(std::fma(scale, divergence, ComputePrecision{0}));
+        axisUpdates[unknown] += contribution;
+      }
+    } else {
+      [[maybe_unused]] ComputePrecision accumulatedNonconservativeProduct[NumberOfUnknowns]
+        __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      if constexpr (EvaluateNonconservativeProduct) {
+        SIMD()
+        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          accumulatedNonconservativeProduct[unknown] =
+            static_cast<ComputePrecision>(0.5) * leftFace->nonconservativeProduct[unknown];
+        }
+        SIMD()
+        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          accumulatedNonconservativeProduct[unknown] +=
+            static_cast<ComputePrecision>(0.5) * rightFace->nonconservativeProduct[unknown];
+        }
+        SIMD()
+        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          accumulatedNonconservativeProduct[unknown] += volumeNonconservativeProduct[unknown];
+        }
+      }
+
+      // The term of the axis rounds through a fused multiply-add with a zero addend before it
+      // joins the sum. Both axis orders then add the same rounded terms under every contraction rule.
+      SIMD()
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        ComputePrecision divergence = leftFace->flux[unknown] - rightFace->flux[unknown];
+        if constexpr (EvaluateNonconservativeProduct) {
+          divergence -= accumulatedNonconservativeProduct[unknown];
+        }
+        const auto contribution = static_cast<StateUpdatePrecision>(std::fma(scale, divergence, ComputePrecision{0}));
+        axisUpdates[unknown] += contribution;
+      }
+    }
+    strideInVolumes *= NumberOfVolumesPerAxis;
+  }
+
+  SIMD()
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    outputState[unknown] =
+      static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + axisUpdates[unknown]);
+  }
+  // The assertion stays out of the SIMD loop, whose body must not emit diagnostics.
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    assertion(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }
 }
 TARGET_DECLARE_END

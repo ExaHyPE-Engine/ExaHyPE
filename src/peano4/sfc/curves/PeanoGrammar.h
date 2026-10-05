@@ -3,22 +3,20 @@
 #pragma once
 
 #include "peano4/sfc/Grammar.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace peano4::sfc {
   struct PeanoGrammar;
 } // namespace peano4::sfc
 
 /**
- * Declares the Peano curve through its turtle grammar.
- *
- * The two-dimensional productions are those of Michael Bader, Space-Filling
- * Curves, Springer 2013, Sect. 3.3, with the two axes swapped so the curve
- * runs along axis 0 first. P enters a cell at its origin corner, Q is P
- * reflected along axis 1, R is P reflected along axis 0 and S is P reflected
- * along both axes. In three dimensions every production stacks three
- * two-dimensional productions along axis 2: The production of its own symbol,
- * the one of the symbol reflected along both other axes, and its own again.
+ * The Peano curve as a turtle grammar after Michael Bader, Space-Filling Curves, Springer 2013,
+ * section 3.3, with the axes swapped so that the curve runs along axis 0 first. P enters a cell at
+ * its origin corner, and Q, R and S are P reflected along axis 1, axis 0 and both axes. In 3D, every
+ * production stacks along axis 2 its own 2D production, the one reflected along both other axes and
+ * its own again.
  */
+TARGET_DECLARE
 struct peano4::sfc::PeanoGrammar final : peano4::sfc::Grammar {
   static constexpr std::string_view Name{"Peano"};
 
@@ -28,7 +26,6 @@ struct peano4::sfc::PeanoGrammar final : peano4::sfc::Grammar {
 
   static constexpr NonTerminal StartSymbol{P};
 
-  // The productions are laid out one turtle row per line, so the table reads like the textbook figure.
   // clang-format off
 #if DIMENSIONS == 2
   static constexpr std::array Productions{
@@ -87,3 +84,4 @@ struct peano4::sfc::PeanoGrammar final : peano4::sfc::Grammar {
 #endif
   // clang-format on
 };
+TARGET_DECLARE_END

@@ -8,9 +8,6 @@ namespace exahype2::dg::ader::tests {
   class SolverTest;
 } // namespace exahype2::dg::ader::tests
 
-/**
- * Checks the sweep states and the time step size of the ADER-DG solver.
- */
 class exahype2::dg::ader::tests::SolverTest final : public tarch::tests::TestCase {
 public:
   SolverTest();
@@ -23,15 +20,14 @@ public:
   void run() override;
 
 private:
-  void testPredictionPrecedesTheTimeStep();
-  void testInitialPredictionSweepKeepsTheTimeStep();
-  void testHangingFacesInsertAPredictionSweep();
-  void testPlotAndSuspensionResumeAtTheRightSweep();
-  void testLimiterStatesMapOntoTheGalerkinStates();
-  void testAdaptiveTimeStepFollowsTheScaledEigenvalue();
-  void testAFixedSolverStepsWithAFractionOfTheSmallestMeshWidth();
-  void testALimitedSolverWalksThroughATroubledTimeStep();
-  void testSolversOfEqualParametersKeepSeparateStatistics();
-  void testSweepPredicatesFollowTheMarkerAndTheSweep();
-  void testUnconvergedPredictionsAreReportedWhenTheTimeStepCloses();
+  void testInitialisationWritesTheInitialConditionIntoEveryNode();
+  void testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp();
+  void testARefinementAndTheEraseBackKeepTheSolution();
+  void testRefinementReducesTheNextAdaptiveTimeStep();
+  void testTwoCoupledSolversExchangeTheirTracesAndAdvanceTogether();
+  void testTheCellAndFaceGroupsSplitAtTheRankBoundary();
+  void testTheProjectionWritesTheTracesOfTheSolutionIntoBothHalvesOfEveryInteriorFace();
+  void testTheProjectionOntoAPlaneWritesTheTracesOfTheSolutionIntoItsFaces();
+  void testTheProjectionOntoAPlaneWritesBothHalvesOfTheCoarseFacesOfTheLevelJumps();
+  void testReleaseFreesEveryPool();
 };

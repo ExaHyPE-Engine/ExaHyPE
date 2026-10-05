@@ -8,16 +8,10 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/tasking/Runtime.h"
 
-std::ostream& tarch::align(std::ostream& out) {
-  out.put('\x1f');
-  return out;
-}
-
 std::chrono::steady_clock::time_point tarch::instrumentation::Log::_startupTime{std::chrono::steady_clock::now()};
 
-// The default configuration and the snapshot store are heap objects that are
-// never freed. Destructors of other globals still write log messages, so the
-// configuration these pointers name stays valid throughout static destruction.
+// The default configuration and the snapshot store are never freed, because destructors of other
+// globals still write log messages.
 const tarch::instrumentation::Log::Configuration* const tarch::instrumentation::Log::_defaultConfiguration{
   new tarch::instrumentation::Log::Configuration{}
 };
@@ -32,8 +26,6 @@ std::atomic<const tarch::instrumentation::Log::Configuration*> tarch::instrument
 };
 
 std::once_flag tarch::instrumentation::Log::_debugFilterEnvironmentOnce;
-
-std::atomic<std::string::size_type> tarch::instrumentation::Log::_alignedMessagePrefixColumn{0};
 
 namespace {
   bool isGlobalMasterRankOrMpiUninitialised() {
@@ -51,24 +43,30 @@ namespace {
     return value.substr(0, last);
   }
 
-  std::mutex& configurationMutex() {
+  std::mutex& getConfigurationMutex() {
     static std::mutex mutex;
     return mutex;
   }
 } // namespace
 
-const tarch::instrumentation::Log::Configuration& tarch::instrumentation::Log::getConfiguration() {
+const tarch::instrumentation::Log::Configuration&
+tarch::instrumentation::Log::getConfiguration() {
   return *_configuration.load(std::memory_order_acquire);
 }
 
-bool tarch::instrumentation::Log::isInfoOutputEnabled() {
+bool
+tarch::instrumentation::Log::isInfoOutputEnabled() {
   return getConfiguration().infoOutputEnabled and isGlobalMasterRankOrMpiUninitialised();
 }
 
-bool tarch::instrumentation::Log::isWarningOutputEnabled() { return getConfiguration().warningOutputEnabled; }
+bool
+tarch::instrumentation::Log::isWarningOutputEnabled() {
+  return getConfiguration().warningOutputEnabled;
+}
 
-void tarch::instrumentation::Log::updateConfiguration(const std::function<void(Configuration&)>& update) {
-  const std::scoped_lock lock(configurationMutex());
+void
+tarch::instrumentation::Log::updateConfiguration(const std::function<void(Configuration&)>& update) {
+  const std::scoped_lock lock(getConfigurationMutex());
   auto                   next = std::make_unique<Configuration>(getConfiguration());
   update(*next);
 
@@ -77,11 +75,13 @@ void tarch::instrumentation::Log::updateConfiguration(const std::function<void(C
   _configuration.store(configuration, std::memory_order_release);
 }
 
-bool tarch::instrumentation::Log::isWhitespace(char value) noexcept {
+bool
+tarch::instrumentation::Log::isWhitespace(char value) noexcept {
   return value == ' ' or value == '\t' or value == '\n' or value == '\r';
 }
 
-std::string_view tarch::instrumentation::Log::trimView(std::string_view value) noexcept {
+std::string_view
+tarch::instrumentation::Log::trimView(std::string_view value) noexcept {
   std::size_t first = 0;
   while (first < value.size() and isWhitespace(value[first])) {
     first++;
@@ -95,9 +95,13 @@ std::string_view tarch::instrumentation::Log::trimView(std::string_view value) n
   return value.substr(first, last - first);
 }
 
-std::string tarch::instrumentation::Log::trim(std::string_view value) { return std::string(trimView(value)); }
+std::string
+tarch::instrumentation::Log::trim(std::string_view value) {
+  return std::string(trimView(value));
+}
 
-std::string_view tarch::instrumentation::Log::getFileNameStem(std::string_view fileName) noexcept {
+std::string_view
+tarch::instrumentation::Log::getFileNameStem(std::string_view fileName) noexcept {
   const std::size_t lastSeparator = fileName.find_last_of("/\\");
   const std::size_t begin         = lastSeparator == std::string_view::npos ? 0 : lastSeparator + 1;
   const std::size_t lastDot       = fileName.find_last_of('.');
@@ -109,7 +113,8 @@ std::string_view tarch::instrumentation::Log::getFileNameStem(std::string_view f
   return fileName.substr(begin);
 }
 
-std::string tarch::instrumentation::Log::extractQualifiedFunctionName(std::string_view functionSignature) {
+std::string
+tarch::instrumentation::Log::extractQualifiedFunctionName(std::string_view functionSignature) {
   functionSignature = trimView(functionSignature);
 
   const std::size_t templateSuffix = functionSignature.find(" [");
@@ -181,10 +186,11 @@ std::string tarch::instrumentation::Log::extractQualifiedFunctionName(std::strin
 }
 
 /**
- * Returns a scope label such as namespace::Class::method(), derived from the
- * compiler function signature the macro call site passes in.
+ * Returns a scope label such as namespace::Class::method() from the function signature of the call
+ * site. A signature without a qualified name yields the file stem and the function name.
  */
-std::string tarch::instrumentation::Log::makeScopeName(
+std::string
+tarch::instrumentation::Log::makeScopeName(
   std::string_view functionSignature,
   std::string_view functionName,
   std::string_view fileName
@@ -205,7 +211,8 @@ std::string tarch::instrumentation::Log::makeScopeName(
   return qualifiedFunctionName;
 }
 
-void tarch::instrumentation::Log::appendColumn(
+void
+tarch::instrumentation::Log::appendColumn(
   std::string&           result,
   const std::string&     separator,
   std::string::size_type width,
@@ -222,7 +229,8 @@ void tarch::instrumentation::Log::appendColumn(
   }
 }
 
-void tarch::instrumentation::Log::appendMessageColumn(
+void
+tarch::instrumentation::Log::appendMessageColumn(
   std::string&           result,
   const std::string&     separator,
   std::string::size_type width,
@@ -239,7 +247,8 @@ void tarch::instrumentation::Log::appendMessageColumn(
   }
 }
 
-std::string tarch::instrumentation::Log::getTimeStampHumanReadable(long int timestampNanoseconds) {
+std::string
+tarch::instrumentation::Log::getTimeStampHumanReadable(long int timestampNanoseconds) {
   long int      timestampSeconds = timestampNanoseconds / 1000 / 1000 / 1000;
   constexpr int SecondsPerHour   = 60 * 60;
   long int      hours            = timestampSeconds / SecondsPerHour;
@@ -270,38 +279,8 @@ std::string tarch::instrumentation::Log::getTimeStampHumanReadable(long int time
   return result;
 }
 
-std::string tarch::instrumentation::Log::alignMessage(
-  std::string_view       message,
-  std::string::size_type messageStartColumn
-) {
-  const std::size_t marker = message.find(AlignmentMarker);
-  if (marker == std::string_view::npos) {
-    return std::string(message);
-  }
-
-  const std::string_view prefix    = message.substr(0, marker);
-  const std::string_view suffix    = message.substr(marker + 1);
-  const auto requestedPrefixColumn = messageStartColumn + std::max(MinimumAlignedMessagePrefixWidth, prefix.size());
-
-  auto prefixColumn = _alignedMessagePrefixColumn.load(std::memory_order_relaxed);
-  while (prefixColumn < requestedPrefixColumn
-         and not _alignedMessagePrefixColumn
-                   .compare_exchange_weak(prefixColumn, requestedPrefixColumn, std::memory_order_relaxed)) {
-  }
-  prefixColumn = std::max(prefixColumn, requestedPrefixColumn);
-
-  const auto prefixEndColumn = messageStartColumn + prefix.size();
-  const auto separatorSpaces = prefixColumn - prefixEndColumn + 1;
-
-  std::string result;
-  result.reserve(prefix.size() + separatorSpaces + suffix.size());
-  result.append(prefix.data(), prefix.size());
-  result.append(separatorSpaces, ' ');
-  result.append(suffix.data(), suffix.size());
-  return result;
-}
-
-std::string tarch::instrumentation::Log::constructMessageString(
+std::string
+tarch::instrumentation::Log::constructMessageString(
   std::string_view     messageType,
   long int             timestampNanoseconds,
   int                  rank,
@@ -312,8 +291,8 @@ std::string tarch::instrumentation::Log::constructMessageString(
 ) {
   std::string result;
   result.reserve(
-    message.size() + MinimumAlignedMessagePrefixWidth + scopeName.size() + messageType.size()
-    + configuration.logColumnSeparator.size() * 7 + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
+    message.size() + scopeName.size() + messageType.size() + configuration.logColumnSeparator.size() * 7
+    + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
   );
 
   if (configuration.logTimeStamp) {
@@ -344,18 +323,14 @@ std::string tarch::instrumentation::Log::constructMessageString(
     appendColumn(result, configuration.logColumnSeparator, NumberOfScopeColumnSpaces, scopeName);
   }
 
-  if (message.find(AlignmentMarker) == std::string_view::npos) {
-    appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimRightView(message));
-  } else {
-    const std::string alignedMessage = alignMessage(message, result.size() + configuration.logColumnSeparator.size());
-    appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimRightView(alignedMessage));
-  }
+  appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimRightView(message));
   result += '\n';
 
   return result;
 }
 
-void tarch::instrumentation::Log::configureDebugFilter() {
+void
+tarch::instrumentation::Log::configureDebugFilter() {
   std::call_once(_debugFilterEnvironmentOnce, []() {
     bool                     debugEnabledByDefault = false;
     std::vector<std::string> debugScopePrefixes;
@@ -394,7 +369,8 @@ void tarch::instrumentation::Log::configureDebugFilter() {
   });
 }
 
-bool tarch::instrumentation::Log::debugMessagesAreConfigured() {
+bool
+tarch::instrumentation::Log::debugMessagesAreConfigured() {
   if (not isGlobalMasterRankOrMpiUninitialised()) {
     return false;
   }
@@ -404,7 +380,8 @@ bool tarch::instrumentation::Log::debugMessagesAreConfigured() {
   return configuration.debugEnabledByDefault or not configuration.debugScopePrefixes.empty();
 }
 
-bool tarch::instrumentation::Log::debugMessagesAreEnabled(std::string_view scopeName) {
+bool
+tarch::instrumentation::Log::debugMessagesAreEnabled(std::string_view scopeName) {
   if (not debugMessagesAreConfigured()) {
     return false;
   }
@@ -423,7 +400,8 @@ bool tarch::instrumentation::Log::debugMessagesAreEnabled(std::string_view scope
   return false;
 }
 
-void tarch::instrumentation::Log::writeFormattedLine(
+void
+tarch::instrumentation::Log::writeFormattedLine(
   std::string_view     line,
   ConsoleStream        consoleStream,
   bool                 flushConsole,
@@ -452,7 +430,8 @@ void tarch::instrumentation::Log::writeFormattedLine(
   }
 }
 
-void tarch::instrumentation::Log::writeMessage(
+void
+tarch::instrumentation::Log::writeMessage(
   std::string_view messageType,
   long int         timestampNanoseconds,
   int              rank,
@@ -472,7 +451,8 @@ void tarch::instrumentation::Log::writeMessage(
   writeFormattedLine(outputMessage, consoleStream, flushConsole, messageType, configuration);
 }
 
-tarch::instrumentation::Log::Context tarch::instrumentation::Log::createContext() {
+tarch::instrumentation::Log::Context
+tarch::instrumentation::Log::createContext() {
   return {
     getTimeStamp(),
     tarch::mpi::Rank::getInstance().getRank(),
@@ -480,123 +460,68 @@ tarch::instrumentation::Log::Context tarch::instrumentation::Log::createContext(
   };
 }
 
-void tarch::instrumentation::Log::flushBeforeAssertion() {
+void
+tarch::instrumentation::Log::flushBeforeAssertion() {
   CommandLineSink::getInstance().close();
   FileSink::getInstance().close();
 }
 
-long int tarch::instrumentation::Log::getTimeStamp() {
+long int
+tarch::instrumentation::Log::getTimeStamp() {
   const auto now    = std::chrono::steady_clock::now();
   long int   result = std::chrono::duration_cast<std::chrono::nanoseconds>(now - _startupTime).count();
   assertion(result >= 0, result);
   return result;
 }
 
-std::string tarch::instrumentation::Log::getScopeName(std::string_view className, std::string_view methodName) {
-  std::string result;
-  result.reserve(className.size() + methodName.size() + 4);
-  result.append(className.data(), className.size());
-  result += "::";
-  result.append(methodName.data(), methodName.size());
-  result += "()";
-  return result;
-}
-
-void tarch::instrumentation::Log::setLogColumnSeparator(const std::string& separator) {
-  updateConfiguration([&](Configuration& configuration) { configuration.logColumnSeparator = separator; });
-}
-
-void tarch::instrumentation::Log::setLogTimeStamp(bool value) {
+void
+tarch::instrumentation::Log::setLogTimeStamp(bool value) {
   updateConfiguration([&](Configuration& configuration) { configuration.logTimeStamp = value; });
 }
 
-void tarch::instrumentation::Log::setLogTimeStampHumanReadable(bool value) {
+void
+tarch::instrumentation::Log::setLogTimeStampHumanReadable(bool value) {
   updateConfiguration([&](Configuration& configuration) { configuration.logTimeStampHumanReadable = value; });
 }
 
-void tarch::instrumentation::Log::setLogMachineName(bool value) {
+void
+tarch::instrumentation::Log::setLogMachineName(bool value) {
   updateConfiguration([&](Configuration& configuration) { configuration.logMachineName = value; });
 }
 
-void tarch::instrumentation::Log::setLogThreadName(bool value) {
+void
+tarch::instrumentation::Log::setLogThreadName(bool value) {
   updateConfiguration([&](Configuration& configuration) { configuration.logThreadName = value; });
 }
 
-void tarch::instrumentation::Log::setLogMessageType(bool value) {
+void
+tarch::instrumentation::Log::setLogMessageType(bool value) {
   updateConfiguration([&](Configuration& configuration) { configuration.logMessageType = value; });
 }
 
-void tarch::instrumentation::Log::setLogScopeName(bool value) {
+void
+tarch::instrumentation::Log::setLogScopeName(bool value) {
   updateConfiguration([&](Configuration& configuration) { configuration.logScopeName = value; });
 }
 
-void tarch::instrumentation::Log::setInfoOutputEnabled(bool value) {
+void
+tarch::instrumentation::Log::setInfoOutputEnabled(bool value) {
   updateConfiguration([&](Configuration& configuration) { configuration.infoOutputEnabled = value; });
 }
 
-void tarch::instrumentation::Log::setWarningOutputEnabled(bool value) {
+void
+tarch::instrumentation::Log::setWarningOutputEnabled(bool value) {
   updateConfiguration([&](Configuration& configuration) { configuration.warningOutputEnabled = value; });
 }
 
-void tarch::instrumentation::Log::setLogFormat(
-  const std::string& columnSeparator,
-  bool               logTimeStamp,
-  bool               logTimeStampHumanReadable,
-  bool               logMachineName,
-  bool               logThreadName,
-  bool               logMessageType,
-  bool               logScopeName,
-  const std::string& outputLogFileName
-) {
-  updateConfiguration([&](Configuration& configuration) {
-    configuration.logColumnSeparator        = columnSeparator;
-    configuration.logTimeStamp              = logTimeStamp;
-    configuration.logTimeStampHumanReadable = logTimeStampHumanReadable;
-    configuration.logMachineName            = logMachineName;
-    configuration.logThreadName             = logThreadName;
-    configuration.logMessageType            = logMessageType;
-    configuration.logScopeName              = logScopeName;
-    configuration.outputFileName            = outputLogFileName;
-  });
-  FileSink::getInstance().setOutputFile(outputLogFileName);
-}
-
-void tarch::instrumentation::Log::setOutputFile(const std::string& outputLogFileName) {
+void
+tarch::instrumentation::Log::setOutputFile(const std::string& outputLogFileName) {
   updateConfiguration([&](Configuration& configuration) { configuration.outputFileName = outputLogFileName; });
   FileSink::getInstance().setOutputFile(outputLogFileName);
 }
 
-void tarch::instrumentation::Log::setDebug(bool enabled) {
-  updateConfiguration([&](Configuration& configuration) {
-    configuration.debugFilterConfigured = true;
-    configuration.debugEnabledByDefault = enabled;
-    if (not enabled) {
-      configuration.debugScopePrefixes.clear();
-    }
-  });
-}
-
-void tarch::instrumentation::Log::enableDebugScopePrefix(const std::string& scopePrefix) {
-  updateConfiguration([&](Configuration& configuration) {
-    configuration.debugFilterConfigured = true;
-
-    if (scopePrefix.empty() or scopePrefix == "*") {
-      configuration.debugEnabledByDefault = true;
-    } else {
-      configuration.debugScopePrefixes.push_back(scopePrefix);
-    }
-  });
-}
-
-void tarch::instrumentation::Log::clearDebugFilter() {
-  updateConfiguration([](Configuration& configuration) {
-    configuration.debugFilterConfigured = true;
-    configuration.debugEnabledByDefault = false;
-    configuration.debugScopePrefixes.clear();
-  });
-}
-
-void tarch::instrumentation::Log::close() {
+void
+tarch::instrumentation::Log::close() {
   CommandLineSink::getInstance().close();
   FileSink::getInstance().close();
 }

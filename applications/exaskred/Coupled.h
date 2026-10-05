@@ -11,8 +11,8 @@
 
 namespace applications::exahype2::exaskred::coupled {
   /**
-   * Index map that exposes the granular layer of the coupled state to the
-   * landslide kernels, which read a layer as (h, hu, hv) plus the terrain.
+   * Maps the indices h, hu and z that the landslide kernels read to the granular layer of the
+   * coupled state.
    */
   template <class Shortcuts>
   struct SlideLayer {
@@ -22,8 +22,8 @@ namespace applications::exahype2::exaskred::coupled {
   };
 
   /**
-   * Face view of the water layer: thickness, momenta, and the effective
-   * bathymetry, which is the terrain plus the granular layer riding on it.
+   * Face view of the water layer: Thickness, momenta and the effective bathymetry, the terrain plus
+   * the granular layer.
    */
   struct WaterView {
     static constexpr int h    = 0;
@@ -34,15 +34,15 @@ namespace applications::exahype2::exaskred::coupled {
   };
 
   /**
-   * Face view of the granular layer: thickness, momenta, the terrain, and the
-   * water column above the layer, which decides buoyancy and drag.
+   * Face view of the granular layer: Thickness, momenta, the terrain and the depth of the water
+   * above the layer, which switches on buoyancy.
    */
   struct SlideView {
     static constexpr int h          = 0;
     static constexpr int hu         = 1;
     static constexpr int hv         = 2;
     static constexpr int z          = 3;
-    static constexpr int waterDepth = 4;
+    static constexpr int WaterDepth = 4;
     static constexpr int Size       = 5;
   };
 
@@ -50,7 +50,7 @@ namespace applications::exahype2::exaskred::coupled {
   INLINE_METHOD GPU_CALLABLE_METHOD bool isSlideSubmerged(const T* const NOALIAS Q, const double minimumWaterHeight);
 
   template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double slideGravity(
+  INLINE_METHOD GPU_CALLABLE_METHOD double getSlideGravity(
     const T* const NOALIAS    Q,
     const landslide::Physics& physics,
     const double              minimumWaterHeight
@@ -124,7 +124,7 @@ namespace applications::exahype2::exaskred::coupled {
   );
 
   template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, int Order, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD void riemannSolver(
+  INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblem(
     const T* const NOALIAS                       QL,
     const T* const NOALIAS                       QR,
     const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -139,7 +139,7 @@ namespace applications::exahype2::exaskred::coupled {
   );
 
   template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblem(
+  INLINE_METHOD GPU_CALLABLE_METHOD double solveSubcellRiemannProblem(
     const T* const NOALIAS                       QL,
     const T* const NOALIAS                       QR,
     const tarch::la::Vector<DIMENSIONS, double>& x,

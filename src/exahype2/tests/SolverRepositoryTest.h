@@ -21,6 +21,5 @@ public:
 
 private:
   void testTheRepositoryReducesTheValuesOfEverySolver();
-  void testAPlotNeedsEverySolverAndASweepFlagNeedsOne();
-  void testEverySweepCallReachesEverySolver();
+  void testEveryPhaseCallReachesEverySolver();
 };

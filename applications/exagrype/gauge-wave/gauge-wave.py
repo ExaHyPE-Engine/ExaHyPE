@@ -34,25 +34,6 @@ constants = {
     **{f"CCZ4{name}": (value, "int") for name, value in int_parameters.items()},
 }
 
-max_eigenvalue = """
-  return ::applications::exahype2::exagrype::maxEigenvalue<Shortcuts>(Q, normal);
-"""
-
-nonconservative_product = """
-  ::applications::exahype2::exagrype::nonconservativeProduct<Shortcuts>(Q, deltaQ, normal, BTimesDeltaQ);
-"""
-
-source_term = """
-  ::applications::exahype2::exagrype::sourceTerm<Shortcuts>(Q, S);
-"""
-
-solver_includes = [
-    "applications/exagrype/EnforceCCZ4Constraints.h",
-    "applications/exagrype/MaxEigenvalue.h",
-    "applications/exagrype/NonconservativeProduct.h",
-    "applications/exagrype/SourceTerm.h",
-]
-
 
 def parse_arguments():
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
@@ -126,13 +107,6 @@ if args.solver == "fv":
         time_stepping=exahype2.TimeStepping.Adaptive(0.1),
         scheme=exahype2.fv.Godunov(),
     )
-    solver.postprocess_updated_patch = """
-  ::applications::exahype2::exagrype::enforceCCZ4Constraints<::applications::exahype2::exagrype::CCZ4Solver::Shortcuts>(
-    QOut,
-    {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
-  );
-"""
 elif args.solver == "aderdg":
     solver = exahype2.dg.ader.Solver(
         name="CCZ4Solver",
@@ -141,13 +115,6 @@ elif args.solver == "aderdg":
         auxiliary_variables=0,
         time_stepping=exahype2.TimeStepping.Adaptive(0.1),
     )
-    solver.postprocess_updated_patch = """
-  ::applications::exahype2::exagrype::enforceCCZ4Constraints<::applications::exahype2::exagrype::CCZ4Solver::Shortcuts>(
-    QNew,
-    {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}},
-    {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
-  );
-"""
 else:
     solver = exahype2.dg.rk.Solver(
         name="CCZ4Solver",
@@ -157,23 +124,16 @@ else:
         auxiliary_variables=0,
         time_stepping=exahype2.TimeStepping.Adaptive(0.1),
     )
-    solver.postprocess_updated_cell_after_final_linear_combination = """
-  ::applications::exahype2::exagrype::enforceCCZ4Constraints<::applications::exahype2::exagrype::CCZ4Solver::Shortcuts>(
-    newQ,
-    {{NUMBER_OF_DOFS_PER_CELL}},
-    {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
-  );
-"""
 
 solver.set_pde_terms(
     initial_condition=True,
-    boundary_conditions=True,
     refinement_criterion=True,
-    ncp=nonconservative_product,
-    source=source_term,
-    max_eigenvalue=max_eigenvalue,
+    ncp=True,
+    source=True,
+    max_eigenvalue=True,
     analytical_solution=True,
 )
+solver.postprocess_updated_patch = True
 
 if args.solver == "fv":
     solver.measure_error(file="Error_GaugeWave_FV", every=args.end_time / 100.0)
@@ -182,13 +142,11 @@ elif args.solver == "aderdg":
 else:
     solver.measure_error(file="Error_GaugeWave_RKDG", every=args.end_time / 100.0)
 
-solver.add_includes(*solver_includes)
-
 project.add_solver(solver)
 
 for const_name, (const_value, const_type) in constants.items():
     project.add_constant(const_name, const_value, const_type)
 
 project.output.makefile.add_include_directory("../../..")
-project.output.makefile.add_cpp_file("CCZ4Solver.cpp")
+project.output.makefile.add_h_file("CCZ4Solver.cpph")
 project.generate_and_build()

@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 TARGET_DECLARE
 namespace tarch::la {
@@ -10,30 +11,12 @@ namespace tarch::la {
   constexpr double E                         = 2.7182818284590452353602874713526624977572;
   constexpr double NUMERICAL_ZERO_DIFFERENCE = 1.0e-8;
 
-  /**
-   * Like `relativeEps()`, but never scales by values smaller than `1.0`.
-   */
-  double relativeEpsNormalisedAgainstValueGreaterOne(
-    double valueA,
-    double valueB = std::numeric_limits<double>::min(),
-    double eps    = NUMERICAL_ZERO_DIFFERENCE
-  );
+  INLINE_METHOD GPU_CALLABLE_METHOD double max(double a, double b, double c);
 
-  /**
-   * Scale `eps` with the larger absolute input value.
-   */
-  double relativeEps(
-    double valueA,
-    double valueB = std::numeric_limits<double>::min(),
-    double eps    = NUMERICAL_ZERO_DIFFERENCE
-  );
+  INLINE_METHOD GPU_CALLABLE_METHOD double min(double a, double b, double c);
 
-  double max(double a, double b, double c);
-
-  double min(double a, double b, double c);
-
-  double pow(double base, double exponent);
-
-  double convertAbsoluteIntoRelativeValue(double referenceValue, double value);
+  INLINE_METHOD GPU_CALLABLE_METHOD double pow(double base, double exponent);
 } // namespace tarch::la
 TARGET_DECLARE_END
+
+#include "tarch/la/Scalar.cpph"

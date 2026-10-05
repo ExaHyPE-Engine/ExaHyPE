@@ -11,7 +11,7 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
     parser.add_argument("-et", "--end-time", type=float, default=0.1)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
@@ -62,7 +62,9 @@ solver = exahype2.dg.ader.Solver(
 
 solver.set_pde_terms(
     initial_condition="""
-  double r = std::sqrt((x[0] - 0.5) * (x[0] - 0.5) + (x[1] - 0.5) * (x[1] - 0.5));
+  const double firstSquare  = (x[0] - 0.5) * (x[0] - 0.5);
+  const double secondSquare = (x[1] - 0.5) * (x[1] - 0.5);
+  const double r            = std::sqrt(firstSquare + secondSquare);
   Q[0] = 1.;
   Q[1] = 0.;
   Q[2] = 0.;
@@ -73,39 +75,33 @@ solver.set_pde_terms(
 """,
     refinement_criterion="""
   auto result = ::exahype2::RefinementCommand::Keep;
-  double r = std::sqrt((x[0] - 0.5) * (x[0] - 0.5) + (x[1] - 0.5) * (x[1] - 0.5));
+  const double firstSquare  = (x[0] - 0.5) * (x[0] - 0.5);
+  const double secondSquare = (x[1] - 0.5) * (x[1] - 0.5);
+  const double r            = std::sqrt(firstSquare + secondSquare);
   if (r < 0.2) {
     result = ::exahype2::RefinementCommand::Refine;
   }
   return result;
 """,
     max_eigenvalue="""
-  constexpr double grav = 9.81;
+  constexpr double Gravity = 9.81;
   const double u = Q[1 + normal] / Q[0];
-  const double c = std::sqrt(grav * Q[0]);
+  const double c = std::sqrt(Gravity * Q[0]);
   return std::max(std::abs(u + c), std::abs(u - c));
 """,
     flux="""
-  const double ih = 1.0 / Q[0];
+  const double inverseHeight = 1.0 / Q[0];
   F[0] = Q[1 + normal];
-  F[1] = Q[1 + normal] * Q[1] * ih;
-  F[2] = Q[1 + normal] * Q[2] * ih;
+  F[1] = Q[1 + normal] * Q[1] * inverseHeight;
+  F[2] = Q[1 + normal] * Q[2] * inverseHeight;
   F[3] = 0.0;
 """,
     ncp="""
-  constexpr double grav = 9.81;
-  BTimesDeltaQ[0]       = 0.0;
-  switch (normal) {
-  case 0:
-    BTimesDeltaQ[1] = grav * Q[0] * (deltaQ[0] + deltaQ[3]);
-    BTimesDeltaQ[2] = 0.0;
-    break;
-  case 1:
-    BTimesDeltaQ[1] = 0.0;
-    BTimesDeltaQ[2] = grav * Q[0] * (deltaQ[0] + deltaQ[3]);
-    break;
-  }
-  BTimesDeltaQ[3] = 0.0;
+  constexpr double Gravity = 9.81;
+  BTimesDeltaQ[0]          = 0.0;
+  BTimesDeltaQ[1 + normal] = Gravity * Q[0] * (deltaQ[0] + deltaQ[3]);
+  BTimesDeltaQ[2 - normal] = 0.0;
+  BTimesDeltaQ[3]          = 0.0;
 """,
 )
 

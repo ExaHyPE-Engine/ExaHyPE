@@ -2,18 +2,12 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .Scenario import Scenario
 
-import os
-
 
 class LOH1(Scenario):
     """
-     Part of a series of benchmarks by the SeISmic MOdeling Web INterfacE (Sismowine)
-
-    Single point-source in a domain composed of two homogeneous media
-    stacked atop one another.
-    Purpose: Assess the precision of modeling a planar free surface and planar internal interface.
-
-    The description of the scenario can be found at: https://sismowine.org/model/WP2_LOH1.pdf
+    The Sismowine benchmark LOH1: A point source in two stacked homogeneous layers tests the
+    modelling of a planar free surface and a planar internal interface
+    (https://sismowine.org/model/WP2_LOH1.pdf).
     """
 
     domain_offset = [-2.025, 0.0, -2.025]
@@ -38,17 +32,17 @@ class LOH1(Scenario):
   _curvi->split(
     1,
     1.0,
-    [](tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
+    []([[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
   );
 """
 
     def initial_conditions(self):
         return """
-      if( x[1] <= (1.0 + 1.0e-6) && center[1] < 1.0) {
+      if (x[1] <= (1.0 + 1.0e-6) and cellCentre[1] < 1.0) {
         Q[Shortcuts::rho] = 2.6;
         Q[Shortcuts::cp ] = 4.0;
         Q[Shortcuts::cs ] = 2.0;
-      }else if(x[1] >= (1.0 - 1.0e-6) && center[1] > 1.0){
+      } else if (x[1] >= (1.0 - 1.0e-6) and cellCentre[1] > 1.0) {
         Q[Shortcuts::rho] = 2.7;
         Q[Shortcuts::cp ] = 6.0;
         Q[Shortcuts::cs ] = 3.464;
@@ -59,16 +53,16 @@ class LOH1(Scenario):
         return """
   std::fill_n(forceVector, 9, 0.);
 
-  auto jacobian = Q[Shortcuts::jacobian];
+  const auto jacobian = Q[Shortcuts::jacobian];
 
-  assertion(n == 0, "Only a single pointSource for LOH1",n);
+  assertion(n == 0, n);
 
   constexpr double t0 = 0.1;
   constexpr double M0 = 1000.0;
 
-  double f = M0*t/(t0*t0)*std::exp(-t/t0);
+  const double sourceTimeFunction = M0*t/(t0*t0)*std::exp(-t/t0);
 
-  forceVector[Shortcuts::sigma + 4] = f;
+  forceVector[Shortcuts::sigma + 4] = sourceTimeFunction;
 
   for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = forceVector[i] / jacobian;
@@ -77,9 +71,9 @@ class LOH1(Scenario):
 
     def init_point_source(self):
         return """
-  tarch::la::Vector<DIMENSIONS, double> ps = _curvi->invertProjection({0., 2., 0.});
+  const tarch::la::Vector<DIMENSIONS, double> sourceLocation = _curvi->invertProjection({0., 2., 0.});
 
-  pointSourceLocation[0][0] = ps[0];
-  pointSourceLocation[0][1] = ps[1];
-  pointSourceLocation[0][2] = ps[2];
+  location[0][0] = sourceLocation[0];
+  location[0][1] = sourceLocation[1];
+  location[0][2] = sourceLocation[2];
 """

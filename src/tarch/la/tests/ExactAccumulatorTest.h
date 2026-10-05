@@ -21,9 +21,12 @@ public:
 
 private:
   void testCorrectRounding();
+  void testCorrectlyRoundedQuotient();
   void testOrderInvariance();
+  void testMergingPreservesLowBitsAndCancellation();
   void testNegationSymmetry();
   void testSubnormalsAndZero();
   void testOverflow();
   void testClear();
+  void testDeviceRoundsLikeTheHost();
 };

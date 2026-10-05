@@ -12,10 +12,10 @@ from .helper import get_jinja2_template
 
 
 class Makefile(object):
-    """Represents the created Makefile of a Peano 4 project"""
+    """Collects the sources and settings of a project and writes its build files."""
 
     class Mode(Enum):
-        """The build type of a generated project; the member names are the command-line words."""
+        """Build type of a project. The value of --build-mode is a member name."""
 
         Release = 0
         Asserts = 1
@@ -23,8 +23,8 @@ class Makefile(object):
 
     def protected_files(self):
         """
-        Returns the set of normalised relative paths the user registered as non-generated
-        source files (via add_h_file/add_cpp_file/add_fortran_file).
+        Returns the normalised relative paths of the files the user adds. The code generation
+        never overwrites these files.
         """
         return set(
             os.path.normpath(filename)
@@ -49,7 +49,6 @@ class Makefile(object):
         self.d["LINK_OPTIONS"] = []
         self.d["DIMENSIONS"] = "2"
         self.d["EXECUTABLENAME"] = ""
-        self.d["SIMDLEN"] = "1"
         self.d["GPU"] = "no"
         self.d["CMAKE_BUILD_DIR"] = ""
         self.d["CMAKE_GENERATOR"] = ""
@@ -65,7 +64,7 @@ class Makefile(object):
     def _append_unique(self, key, value, force=False):
         if value in self.d[key] and not force:
             log.warning(
-                "%s %s is already present. Ignored as force attribute is not set",
+                "The Makefile skips the duplicate %s entry %s.",
                 key,
                 value,
             )
@@ -90,7 +89,7 @@ class Makefile(object):
         self.clear_user_files()
 
     def clear_user_files(self):
-        """Clears user source registrations when the solver set is replaced."""
+        """Removes the user's source files from the build."""
         self.hfiles = []
         self.cppfiles = []
         self.fortranfiles = []
@@ -106,7 +105,9 @@ class Makefile(object):
     def set_mode(self, mode):
         """Sets the build type, a :class:`Makefile.Mode`."""
         if not isinstance(mode, Makefile.Mode):
-            raise TypeError("The build mode is a Makefile.Mode, got {!r}.".format(mode))
+            raise TypeError(
+                "The build mode expects a Makefile.Mode value (got {!r}).".format(mode)
+            )
         self.d["MODE"] = mode.name
 
     def add_compile_definition(self, name, value=None, force=False):
@@ -129,8 +130,7 @@ class Makefile(object):
 
     def parse_configuration_outcome(self):
         """
-        Locates the Peano CMake package and reads the
-        configuration needed by Python code generation.
+        Finds the Peano build directory and reads the settings of its PeanoConfig.cmake.
         """
         if "PEANO_SRC_ROOT_DIR" in os.environ:
             search_start = os.environ["PEANO_SRC_ROOT_DIR"]
@@ -139,8 +139,6 @@ class Makefile(object):
 
         self.d["CMAKE_BUILD_DIR"] = ""
 
-        # PEANO_CMAKE_BUILD_DIR is an alias for PEANO_BUILD_DIR;
-        # the latter takes precedence when both are set.
         if "PEANO_BUILD_DIR" in os.environ:
             self.d["CMAKE_BUILD_DIR"] = os.environ["PEANO_BUILD_DIR"]
         elif "PEANO_CMAKE_BUILD_DIR" in os.environ:
@@ -166,7 +164,7 @@ class Makefile(object):
                     break
                 parent = os.path.dirname(curr)
                 if parent == curr:
-                    break  # Reached filesystem root
+                    break
                 curr = parent
 
         if self.d["CMAKE_BUILD_DIR"] != "":
@@ -175,7 +173,9 @@ class Makefile(object):
             )
             if not os.path.isfile(peano_config_file):
                 raise Exception(
-                    "Cannot locate the PeanoConfig.cmake file: " + peano_config_file
+                    "The code generator cannot find the file '"
+                    + peano_config_file
+                    + "'."
                 )
 
             with open(peano_config_file, "r") as input:
@@ -192,9 +192,7 @@ class Makefile(object):
                             if match.group(2) is not None
                             else match.group(3)
                         )
-                        if key == "PEANO_WITH_SIMDLEN":
-                            self.d["SIMDLEN"] = value
-                        elif key == "PEANO_WITH_GPU_BACKEND":
+                        if key == "PEANO_WITH_GPU_BACKEND":
                             self.d["GPU"] = value
                         elif key == "PEANO_CMAKE_GENERATOR":
                             self.d["CMAKE_GENERATOR"] = value
@@ -213,7 +211,8 @@ class Makefile(object):
                         elif key == "PEANO_WITH_NETCDF":
                             self.d["WITH_NETCDF"] = value
 
-            # VTU needs no library; HDF5 and NetCDF formats need the library the build found.
+            # A format that needs HDF5 or NetCDF is available unless the build switched that
+            # library off.
             self.available_plot_formats = {"vtu"}
             for plot_format, config_key in (
                 ("hdf5", "WITH_HDF5"),
@@ -226,16 +225,11 @@ class Makefile(object):
 
         else:
             raise Exception(
-                """
-  Error: parse_configuration_outcome() could not locate a valid CMake build directory
-  (containing PeanoConfig.cmake) starting from:
-  """
+                "The code generator cannot find a CMake build directory with the file "
+                "PeanoConfig.cmake in '"
                 + search_start
-                + """
-  and searching upwards through its parents.
-
-  Run CMake first, or set PEANO_BUILD_DIR (or its alias PEANO_CMAKE_BUILD_DIR) explicitly.
-  """
+                + "' or its parent directories. Run CMake first or set the environment "
+                "variable PEANO_BUILD_DIR or PEANO_CMAKE_BUILD_DIR."
             )
 
     def add_h_file(self, filename, generated=False):
@@ -259,7 +253,6 @@ class Makefile(object):
 
     def add_cpp_file(self, filename, generated=False, is_gpu_kernel=False):
         if generated:
-            # Non-generated file takes precedence over generated files.
             if (
                 self.generated_cppfiles.count(filename) == 0
                 and self.cppfiles.count(filename) == 0
@@ -284,11 +277,6 @@ class Makefile(object):
             self.generated_gpu_cppfiles.remove(filename)
 
     def add_fortran_file(self, filename, generated=False):
-        """
-        Adds a new Fortran file.
-
-        Fortran needs its files in translation order.
-        """
         if generated:
             if (
                 self.generated_fortranfiles.count(filename) == 0
@@ -309,10 +297,10 @@ class Makefile(object):
 
     def generate(self, directory, generated_subdir=None):
         """
-        The build files .gitignore, CMakeLists.txt and Makefile are always overwritten.
+        Overwrites the files .gitignore, CMakeLists.txt and Makefile in directory.
 
-        :param generated_subdir: Subfolder (relative to directory) the generated
-            C++ sources live in. None keeps everything flat.
+        :param generated_subdir: Folder of the generated C++ sources, relative to directory.
+            None puts them into directory.
         """
         prefix = generated_subdir + "/" if generated_subdir else ""
         self.d["GENERATED_SUBDIR"] = generated_subdir or ""

@@ -73,7 +73,7 @@ The name determines the generated C++ class *and* the output file prefix, so we
 reuse it when visualising. The unknowns are given as a dictionary so we can
 address them by name in C++ (`v` has multiplicity two for the two velocity
 components). The factor 0.9 of the adaptive time stepping is the usual safety
-factor on the stable time-step size. Because the system is linear, `linear`
+factor on the stable time step size. Because the system is linear, `linear`
 switches on the optimised linear ADER-DG kernels, and `point_sources` counts the
 sources we inject.
 

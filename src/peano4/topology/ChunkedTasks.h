@@ -2,14 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/StdAfx.h"
-
 namespace peano4::topology {
   constexpr int DefaultMinimumItemsPerChunk = 4096;
 
-  int maximumNumberOfChunks();
+  int getMaximumNumberOfChunks();
 
-  int numberOfChunks(int numberOfItems, int minimumItemsPerChunk = DefaultMinimumItemsPerChunk);
+  int getNumberOfChunks(int numberOfItems, int minimumItemsPerChunk = DefaultMinimumItemsPerChunk);
 
   void runChunkedTasks(
     int                                       numberOfItems,

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/ParallelRegion.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/accelerator.h"
@@ -27,26 +28,42 @@
 #include "tarch/accelerator/sycl/Device.h"
 
 #include <sycl/sycl.hpp>
+#elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
+#include "tarch/accelerator/ompt/Device.h"
 #endif
 
 namespace tarch::accelerator {
   template <typename Functor>
-  void parallelForOnHost(const Range& range, Functor functor);
+  INLINE_METHOD void parallelForOnHost(const Range& range, Functor functor);
 
   template <typename Functor>
-  void parallelFor(const Range& range, Functor functor);
+  INLINE_METHOD void parallelFor(const Range& range, Functor functor);
   template <typename Functor>
-  void parallelFor(const RangeMD<2>& range, Functor functor);
+  INLINE_METHOD void parallelFor(const RangeMD<2>& range, Functor functor);
   template <typename Functor>
-  void parallelFor(const RangeMD<3>& range, Functor functor);
+  INLINE_METHOD void parallelFor(const RangeMD<3>& range, Functor functor);
   template <typename Functor>
-  void parallelFor(const TeamRange& range, Functor functor);
+  INLINE_METHOD void parallelFor(const TeamRange& range, Functor functor);
+
+  INLINE_METHOD int getTeamThreads(int requested);
+  INLINE_METHOD int getTeamScratchBytes(int requested);
+
+#if (not defined(PEANO_WITH_GPU_BACKEND_CUDA) and not defined(PEANO_WITH_GPU_BACKEND_HIP)) or defined(__CUDACC__) \
+  or defined(__HIPCC__)
+  TARGET_DECLARE
+  INLINE_METHOD GPU_CALLABLE_METHOD int getThreadOfTeam(const TeamHandle& team);
+  INLINE_METHOD GPU_CALLABLE_METHOD int getNumberOfThreadsPerTeam(const TeamHandle& team);
+  INLINE_METHOD GPU_CALLABLE_METHOD unsigned char* getTeamScratch(const TeamHandle& team);
+  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier(const TeamHandle& team);
+  TARGET_DECLARE_END
+#endif
+#if not defined(PEANO_WITH_GPU_BACKEND)
+  INLINE_METHOD unsigned char* getTeamScratchOfThread();
+#endif
 } // namespace tarch::accelerator
 
 #include "tarch/accelerator/ParallelForOnHost.cpph"
 
-// A CUDA or HIP kernel launch compiles in a translation unit of that language only, so a plain
-// C++ translation unit of such a build defines parallelForOnHost alone.
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #include "tarch/accelerator/kokkos/ParallelFor.cpph"
 #elif defined(PEANO_WITH_GPU_BACKEND_CUDA)

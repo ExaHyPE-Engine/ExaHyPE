@@ -52,11 +52,10 @@ initial_conditions = """
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
-    NumberOfFiniteVolumesPerAxisPerPatch,
+    ::exahype2::getVolumeCentresInUnitInterval<PatchSize>(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    nullptr,
     [](const double* const values) { return 1.0 + values[Shortcuts::q]; }
   );
 """
@@ -76,7 +75,6 @@ solver = exahype2.fv.Solver(
 
 solver.set_pde_terms(
     initial_condition=initial_conditions,
-    boundary_conditions=True,
     refinement_criterion=refinement_criterion,
     max_eigenvalue="return 1.0;",
     flux=flux,

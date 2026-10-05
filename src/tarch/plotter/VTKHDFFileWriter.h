@@ -9,23 +9,23 @@ namespace tarch::plotter {
 } // namespace tarch::plotter
 
 /**
- * Writer for the VTKHDF file format (https://docs.vtk.org/en/latest/vtk_file_formats/vtkhdf_file_format).
- *
- * Every writeToFile() call reopens the .vtkhdf file in append mode and adds one
- * step under /VTKHDF/Steps, so isOpen() returns true for the whole run. The
- * connectivity is part-local and stored as int64, and the Offsets array of each
- * part starts with a zero.
+ * Appends one step to a file of the VTKHDF format
+ * (https://docs.vtk.org/en/latest/vtk_file_formats/vtkhdf_file_format) per call of write(). The
+ * meshes of all ranks form one part of the step.
  */
 class tarch::plotter::VTKHDFFileWriter final : public tarch::plotter::FileWriter {
 public:
-  explicit VTKHDFFileWriter(const std::string& outputDirectory);
-  VTKHDFFileWriter(const VTKHDFFileWriter&)            = delete;
-  VTKHDFFileWriter(VTKHDFFileWriter&&)                 = delete;
-  VTKHDFFileWriter& operator=(const VTKHDFFileWriter&) = delete;
-  VTKHDFFileWriter& operator=(VTKHDFFileWriter&&)      = delete;
-  ~VTKHDFFileWriter() override                         = default;
+  VTKHDFFileWriter()                                         = default;
+  VTKHDFFileWriter(const VTKHDFFileWriter& other)            = delete;
+  VTKHDFFileWriter(VTKHDFFileWriter&& other)                 = delete;
+  VTKHDFFileWriter& operator=(const VTKHDFFileWriter& other) = delete;
+  VTKHDFFileWriter& operator=(VTKHDFFileWriter&& other)      = delete;
+  ~VTKHDFFileWriter() override                               = default;
 
-  bool        isOpen() const override;
-  bool        writeToFile(const std::string& filename, const double time) override;
-  std::string getFileExtension() const override;
+  void write(const Mesh& mesh, const std::string& outputDirectory, const std::string& filename, double time) override;
+
+  [[nodiscard]] Format getFormat() const override;
+
+private:
+  std::set<std::string> _createdFiles{};
 };

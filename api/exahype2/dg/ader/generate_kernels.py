@@ -17,5 +17,7 @@ def generate_kernels(solver, dictionary, output):
             solver._basis.InversePicardOperator1DDocumentation,
         )
     )
+    if solver.subcell_limiter_is_enabled:
+        dictionary["OPERATOR_TABLES"].append(solver._subcell_limiter_table_class())
 
     generate_operator_tables(solver, output, dictionary, dictionary["TABLE_PRECISIONS"])

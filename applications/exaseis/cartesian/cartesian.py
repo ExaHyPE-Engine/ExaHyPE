@@ -42,8 +42,8 @@ project = exahype2.Project(
     ["applications", "exahype2", "exaseis"],
     "Cartesian",
     dimensions=3,
-    offset=[-4.5, 0.0, -4.5],  # thousand metres
-    size=[9.0, 9.0, 9.0],  # thousand metres
+    offset=[-4.5, 0.0, -4.5],  # kilometres
+    size=[9.0, 9.0, 9.0],  # kilometres
     periodic_bc=[False, False, False],
     executable="ExaSeis",
     min_end_time=args.end_time,
@@ -77,47 +77,40 @@ theSolver.set_pde_terms(
     point_source_locations=Elastic.init_point_source(),
 )
 
-theSolver.add_includes(
-    "../riemannSolvers/cartesianRoutines.h",
-    "../riemannSolvers/riemannsolverIsotropic.h",
-)
+theSolver.add_includes("applications/exaseis/riemannSolvers/ElasticRiemannSolver.h")
 
 project.add_solver(theSolver)
+project.output.makefile.add_include_directory("../../..")
 
 if args.use_tracers:
     tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
-
-    project.add_action_set_to_initialisation(
-        exahype2.particles.InsertTracersByCoordinates(
-            particle_set=tracer_particles,
-            coordinates=[
-                [0.000, 0.0, 0.693],
-                [0.000, 0.0, 5.543],
-                [0.000, 0.0, 10.392],
-                [0.490, 0.0, 0.490],
-                [3.919, 0.0, 3.919],
-                [7.348, 0.0, 7.3480],
-                [0.577, 0.0, 0.384],
-                [4.612, 0.0, 3.075],
-                [8.647, 0.0, 5.7640],
-            ],
-        )
+    tracer_particles.insert_by_coordinates(
+        [
+            [0.000, 0.0, 0.693],
+            [0.000, 0.0, 5.543],
+            [0.000, 0.0, 10.392],
+            [0.490, 0.0, 0.490],
+            [3.919, 0.0, 3.919],
+            [7.348, 0.0, 7.3480],
+            [0.577, 0.0, 0.384],
+            [4.612, 0.0, 3.075],
+            [8.647, 0.0, 5.7640],
+        ]
     )
-
+    tracer_particles.dump_into_database(
+        filename="LOH1",
+        time_delta_between_two_snapshots=0.01,
+        output_precision=10,
+    )
     theSolver.trace(
         tracer_particles,
-        kernel="::exahype2::dg::projectAllValuesOntoParticle",
+        exahype2.particles.Forces(
+            interpolation_scheme=2,
+            integration_scheme=0,
+            force_method=0,
+            fields_to_interpolate="0,1,2,3,4,5,6,7,8,9,10,11",
+        ),
         initialisation=False,
-    )
-
-    project.add_action_set_to_timestepping(
-        exahype2.particles.DumpTracerIntoDatabase(
-            particle_set=tracer_particles,
-            solver=theSolver,
-            filename="LOH1",
-            time_delta_between_two_snapshots=0.01,
-            output_precision=10,
-        )
     )
 
 project.generate_and_build()

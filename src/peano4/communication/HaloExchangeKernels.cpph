@@ -1,0 +1,22 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "peano4/Partition.h"
+
+TARGET_DECLARE
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::GatherHaloHalves<T>::operator()(const int index) const {
+  const int entry   = index / halfSize;
+  const int element = index - entry * halfSize;
+  send[index]       = pool.getChunk(entries[entry].face)[entries[entry].side * halfSize + element];
+}
+
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::ScatterHaloHalves<T>::operator()(const int index) const {
+  const int entry                                                                    = index / halfSize;
+  const int element                                                                  = index - entry * halfSize;
+  pool.getChunk(entries[entry].face)[(1 - entries[entry].side) * halfSize + element] = received[index];
+}
+TARGET_DECLARE_END

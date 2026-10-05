@@ -22,11 +22,9 @@ namespace {
   }
 } // namespace
 
-/**
- * @return The conventional coordinate variable names for this number of field dimensions.
- */
 template <int FieldDimensions>
-std::array<std::string, FieldDimensions> tarch::reader::NetCDFFieldSampler<FieldDimensions>::defaultCoordinateKeys() {
+std::array<std::string, FieldDimensions>
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::getDefaultCoordinateKeys() {
   if constexpr (FieldDimensions == 3) {
     return {"x", "y", "z"};
   } else {
@@ -41,6 +39,9 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::NetCDFFieldSampler(std::init
   }
 }
 
+/**
+ * Maps the simulation domain onto the coordinate range of every field.
+ */
 template <int FieldDimensions>
 tarch::reader::NetCDFFieldSampler<FieldDimensions>::NetCDFFieldSampler(
   std::initializer_list<FieldDescription>           fields,
@@ -75,61 +76,58 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::NetCDFFieldSampler(
 }
 
 template <int FieldDimensions>
-void tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDescription& fieldDescription) {
+void
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDescription& fieldDescription) {
   logDebug(
     "Parse field " << fieldDescription.name << " from " << fieldDescription.filePath << " with keys ("
                    << fieldDescription.valueKey << ", " << coordinateKeysToString(fieldDescription) << ")"
   );
 
   if (fieldDescription.name.empty()) {
-    tarch::terminateWithError("Field name must not be empty.");
+    tarch::terminateWithError("A NetCDF field expects a name.");
   }
   if (_fields.find(fieldDescription.name) != _fields.end()) {
-    tarch::terminateWithError("Field \"" + fieldDescription.name + "\" is configured multiple times.");
+    tarch::terminateWithError(
+      "The configuration may name the NetCDF field \"" + fieldDescription.name + "\" once only."
+    );
   }
   for (int i = 0; i < FieldDimensions; i++) {
     if (fieldDescription.key[i].empty()) {
       tarch::terminateWithError(
-        "Coordinate key " + std::to_string(i) + " of field \"" + fieldDescription.name + "\" is empty."
+        "Coordinate key " + std::to_string(i) + " of the NetCDF field \"" + fieldDescription.name + "\" expects a name."
       );
     }
-    // The default value key is "z", which is also the conventional name of the third coordinate. A
-    // three-dimensional field that leaves its variable unnamed would read the coordinate array as
-    // if it held the values.
+    // The default value key z is the conventional name of the third coordinate.
     if (fieldDescription.key[i] == fieldDescription.valueKey) {
       tarch::terminateWithError(
-        "Field \"" + fieldDescription.name + "\" uses \"" + fieldDescription.valueKey
-        + "\" both as its value key and as a coordinate key."
+        "The value key \"" + fieldDescription.valueKey + "\" of the NetCDF field \"" + fieldDescription.name
+        + "\" must differ from its coordinate keys."
       );
     }
   }
 
-  int ncid = -1;
-
-  if ((ncid = _netCDFFileReader.open(fieldDescription.filePath)) == -1) {
-    std::stringstream message;
-    message << "Field file " << fieldDescription.filePath << " could not be opened.";
-    tarch::terminateWithError(message.str());
+  const int ncid = _netCDFFileReader.open(fieldDescription.filePath);
+  if (ncid == -1) {
+    tarch::terminateWithError("The NetCDF reader cannot open the file '" + fieldDescription.filePath + "'.");
   }
 
   Field field;
 
   for (int i = 0; i < FieldDimensions; i++) {
-    if ((field.length[i] = _netCDFFileReader.getDimension(ncid, fieldDescription.key[i].c_str())) == 0) {
-      tarch::terminateWithError("Field dimension \"" + fieldDescription.key[i] + "\" could not be read.");
+    field.length[i] = _netCDFFileReader.getDimension(ncid, fieldDescription.key[i].c_str());
+    if (field.length[i] == 0) {
+      tarch::terminateWithError("The NetCDF reader cannot read the dimension \"" + fieldDescription.key[i] + "\".");
     }
 
     {
       std::vector<double> coordinates(field.length[i], 0.0);
-      if (_netCDFFileReader.readVariable1D(ncid, fieldDescription.key[i].c_str(), coordinates.data()) == -1) {
-        tarch::terminateWithError("Field coordinates \"" + fieldDescription.key[i] + "\" could not be read.");
+      if (_netCDFFileReader.readVariable(ncid, fieldDescription.key[i].c_str(), coordinates.data()) == -1) {
+        tarch::terminateWithError("The NetCDF reader cannot read the coordinates \"" + fieldDescription.key[i] + "\".");
       }
       field.firstElement[i] = coordinates.front();
       field.lastElement[i]  = coordinates.back();
     }
 
-    // A sampler without a configured extent maps this field onto the coordinate range the
-    // file itself stores, so a caller that owns no domain description needs to supply none.
     field.lengthOfSimulationDomain[i] = _lengthOfSimulationDomain.has_value()
       ? (*_lengthOfSimulationDomain)[i]
       : field.lastElement[i] - field.firstElement[i];
@@ -137,38 +135,35 @@ void tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const Fi
       _offsetOfSimulationDomain.has_value() ? (*_offsetOfSimulationDomain)[i] : field.firstElement[i];
   }
 
-  // Compile-time branch, so that the two-dimensional instantiation never has to contain an
-  // expression indexing the third component of a two-component vector, even as dead code.
-  if constexpr (FieldDimensions == 3) {
-    field.values.resize(field.length[0] * field.length[1] * field.length[2], 0.0);
-    if (_netCDFFileReader.readVariable3D(ncid, fieldDescription.valueKey.c_str(), field.values.data()) == -1) {
-      tarch::terminateWithError("Field values could not be read.");
-    }
-  } else {
-    field.values.resize(field.length[0] * field.length[1], 0.0);
-    if (_netCDFFileReader.readVariable2D(ncid, fieldDescription.valueKey.c_str(), field.values.data()) == -1) {
-      tarch::terminateWithError("Field values could not be read.");
-    }
+  std::size_t numberOfValues = 1;
+  for (int i = 0; i < FieldDimensions; i++) {
+    numberOfValues *= field.length[i];
+  }
+  field.values.resize(numberOfValues, 0.0);
+  if (_netCDFFileReader.readVariable(ncid, fieldDescription.valueKey.c_str(), field.values.data()) == -1) {
+    tarch::terminateWithError("The NetCDF reader cannot read the values of the field \"" + fieldDescription.name + "\".");
   }
 
   if (_netCDFFileReader.close(ncid) == -1) {
-    tarch::terminateWithError("Field file could not be closed.");
+    tarch::terminateWithError("The NetCDF reader cannot close the file '" + fieldDescription.filePath + "'.");
   }
 
   _fields.emplace(fieldDescription.name, std::move(field));
 }
 
 /**
- * @return The field's value at position, or 0 if position falls outside the field's extent.
+ * Returns the value at the lower grid point along every axis, or zero outside the stored extent.
+ * An unknown field name terminates.
  */
 template <int FieldDimensions>
-double tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConstant(
+double
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConstant(
   const std::string&                         fieldName,
   tarch::la::Vector<FieldDimensions, double> position
 ) const {
   const auto fieldIterator = _fields.find(fieldName);
   if (fieldIterator == _fields.end()) {
-    tarch::terminateWithError("Unknown NetCDF field \"" + fieldName + "\".");
+    tarch::terminateWithError("The NetCDF reader cannot find the field \"" + fieldName + "\".");
   }
 
   const Field& field = fieldIterator->second;
@@ -191,21 +186,27 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConsta
     .values[transformIndexCDFRangeToArray(positionInCDFRange, field.firstElement, field.lastElement, field.length)];
 }
 
+/**
+ * Interpolates linearly between the surrounding grid points along every axis, which have to be
+ * equidistant. A position outside the stored extent returns zero, and an unknown field name
+ * terminates.
+ */
 template <int FieldDimensions>
-double tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
+double
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
   const std::string&                         fieldName,
   tarch::la::Vector<FieldDimensions, double> position
 ) const {
   const auto fieldIterator = _fields.find(fieldName);
   if (fieldIterator == _fields.end()) {
-    tarch::terminateWithError("Unknown NetCDF field \"" + fieldName + "\".");
+    tarch::terminateWithError("The NetCDF reader cannot find the field \"" + fieldName + "\".");
   }
 
   const Field& field = fieldIterator->second;
 
   tarch::la::Vector<FieldDimensions, std::size_t> lowerIndex(std::size_t(0));
   tarch::la::Vector<FieldDimensions, std::size_t> upperIndex(std::size_t(0));
-  tarch::la::Vector<FieldDimensions, double>      fraction(0.0);
+  tarch::la::Vector<FieldDimensions, double> fraction(0.0);
 
   for (int i = 0; i < FieldDimensions; i++) {
     const double coordinate = transformSimulationCoordinateToCDFRange(
@@ -233,8 +234,8 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
     fraction[i]   = continuousIndex - static_cast<double>(lowerIndex[i]);
   }
 
-  // Blend the 2^d surrounding grid points. The first coordinate varies fastest in the stored
-  // array, so the flat index accumulates from the last dimension downwards.
+  // The interpolation blends the 2^d surrounding grid points. The first coordinate varies fastest in
+  // the stored array, so the flat index accumulates from the last dimension downwards.
   double result = 0.0;
   for (int corner = 0; corner < (1 << FieldDimensions); corner++) {
     double      weight    = 1.0;
@@ -251,12 +252,12 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
 }
 
 /**
- * Transforms a coordinate from the simulation plane to the netCDF plane.
- *
- * @return Index in netCDF space, in [minIndexOfCDFspaceInZDirection, maxIndexOfCDFspaceInZDirection].
+ * Maps a simulation coordinate linearly onto the netCDF coordinate range from
+ * minIndexOfCDFspaceInZDirection to maxIndexOfCDFspaceInZDirection.
  */
 template <int FieldDimensions>
-double tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCoordinateToCDFRange(
+double
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCoordinateToCDFRange(
   double coordinateOfDimensionZInSimulationSpace,
   double sizeOfSimulationSpaceInZDirection,
   double minIndexOfCDFspaceInZDirection,
@@ -273,14 +274,12 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCo
 }
 
 /**
- * Transforms a coordinate tuple from the netCDF plane to a flat array index.
- *
- * The first coordinate varies fastest, matching the storage order documented on the class.
- *
- * @return Index in [0, product of lengthOfDimensionsInCDFMesh).
+ * Returns the flat array index of the grid point at or below a netCDF coordinate tuple, with the
+ * first coordinate varying fastest.
  */
 template <int FieldDimensions>
-std::size_t tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCDFRangeToArray(
+std::size_t
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCDFRangeToArray(
   tarch::la::Vector<FieldDimensions, double>      coordinatesInCDFMesh,
   tarch::la::Vector<FieldDimensions, double>      firstCoordinatesInCDFMesh,
   tarch::la::Vector<FieldDimensions, double>      lastCoordinatesInCDFMesh,
@@ -298,7 +297,7 @@ std::size_t tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCD
     );
   };
 
-  // A three-dimensional field holds more than 2^31 entries, so the flat index needs std::size_t.
+  // A 3D field can exceed 2^31 entries, so the flat index is a std::size_t.
   std::size_t index  = 0;
   std::size_t length = 1;
   for (int i = 0; i < FieldDimensions; i++) {
@@ -316,7 +315,8 @@ std::size_t tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCD
 }
 
 template <int FieldDimensions>
-bool tarch::reader::NetCDFFieldSampler<FieldDimensions>::isCoordinateInRange(
+bool
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::isCoordinateInRange(
   double coordinate,
   double firstCoordinate,
   double lastCoordinate

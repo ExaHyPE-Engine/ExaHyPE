@@ -13,18 +13,47 @@ namespace {
   int numberOfDevices = 0;
 } // namespace
 
-bool tarch::accelerator::Device::init() {
+bool
+tarch::accelerator::Device::init() {
   numberOfDevices = omp_get_num_devices();
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() {
+void
+tarch::accelerator::Device::shutdown() {
 #pragma omp taskwait
+  tarch::accelerator::releaseReductionScratch();
   numberOfDevices = 0;
 }
 
-bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
+bool
+tarch::accelerator::Device::isInitialised() const {
+  return numberOfDevices > 0;
+}
 
-int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
+int
+tarch::accelerator::Device::getNumberOfDevices() const {
+  return numberOfDevices;
+}
+
+/**
+ * Returns the threads the current device runs at once: The teams of a launch without a team
+ * count times their threads. The OpenMP runtime picks that team count from the device.
+ */
+int
+tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
+  const int device  = tarch::accelerator::getCurrentDevice();
+  int       teams   = 0;
+  int       threads = 0;
+#pragma omp target teams map(from : teams, threads) device(device)
+#pragma omp parallel
+  {
+    if (omp_get_team_num() == 0 and omp_get_thread_num() == 0) {
+      teams   = omp_get_num_teams();
+      threads = omp_get_num_threads();
+    }
+  }
+  return std::max(1, teams * threads);
+}
 
 #endif // defined(PEANO_WITH_GPU_BACKEND_OMPT)

@@ -7,8 +7,11 @@
 
 namespace applications::exahype2::exaskred::shallowwater {
   template <typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD T
-  regularisedVelocity(const T waterHeight, const T momentum, const double minimumWaterHeight);
+  INLINE_METHOD GPU_CALLABLE_METHOD T regularisedVelocity(
+    const T      waterHeight,
+    const T      momentum,
+    const double minimumWaterHeight
+  );
 
   template <class Shortcuts, int NumberOfUnknowns, typename T>
   INLINE_METHOD GPU_CALLABLE_METHOD void flux(

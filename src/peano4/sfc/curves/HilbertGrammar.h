@@ -3,27 +3,20 @@
 #pragma once
 
 #include "peano4/sfc/Grammar.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace peano4::sfc {
   struct HilbertGrammar;
 } // namespace peano4::sfc
 
 /**
- * Declares the Hilbert curve through its turtle grammar.
- *
- * The two-dimensional productions are those of Michael Bader, Space-Filling
- * Curves, Springer 2013, Sect. 3.1. H enters a cell at its origin corner and
- * leaves it at the corner on the far side of axis 0. A is H reflected along
- * the diagonal, C is H rotated by 180 degrees and B is C reflected along the
- * diagonal.
- *
- * The three-dimensional productions are Bader's grammar with twelve
- * non-terminals, Sect. 8.1.3. A non-terminal names the signed axis
- * permutation that maps the pattern xyz onto it: The letters give the images
- * of the axes x, y, z, and an upper-case letter stands for a barred letter in
- * the book, a negated axis. The pattern xyz enters the cell at its origin
- * corner and leaves it at the corner on the far side of axis 2.
+ * The Hilbert curve as a turtle grammar after Michael Bader, Space-Filling Curves, Springer 2013,
+ * sections 3.1 and 8.1.3. In 2D, H runs from the origin corner to the next corner along axis 0, C is
+ * H rotated by 180 degrees, and A and B are H and C reflected along the diagonal. In 3D, the letters
+ * of a non-terminal are the images of the axes x, y and z, and xyz runs from the origin corner to
+ * the next corner along axis 2.
  */
+TARGET_DECLARE
 struct peano4::sfc::HilbertGrammar final : peano4::sfc::Grammar {
   static constexpr std::string_view Name{"Hilbert"};
 
@@ -41,7 +34,7 @@ struct peano4::sfc::HilbertGrammar final : peano4::sfc::Grammar {
     production(C, B, Down, C, Left, C, Up, A)
   };
 #elif DIMENSIONS == 3
-  // The case of each letter carries the axis sign the class comment describes.
+  // An uppercase letter is a negated axis, a barred letter in the book.
   enum NonTerminal : std::uint8_t {
     xyz,
     xYZ,
@@ -75,3 +68,4 @@ struct peano4::sfc::HilbertGrammar final : peano4::sfc::Grammar {
   };
 #endif
 };
+TARGET_DECLARE_END

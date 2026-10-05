@@ -53,9 +53,8 @@ solver = exahype2.dg.ader.Solver(
     point_sources=1,
 )
 
-# The off-centre Gaussian source lies on the domain diagonal, so rigid-wall
-# reflections preserve permutation symmetry. The detail criterion tracks the
-# radiated ring.
+# The point source lies off the centre on the domain diagonal, so the wall reflections keep the
+# permutation symmetry. The detail criterion refines the radiated ring.
 solver.set_pde_terms(
     initial_condition="""
   Q[Shortcuts::p] = 0.0;
@@ -71,8 +70,8 @@ solver.set_pde_terms(
   Qoutside[Shortcuts::u + normal] = -Qinside[Shortcuts::u + normal];
 """,
     refinement_criterion="""
-  // The uniform state has no detail before the source fires, so its neighbourhood
-  // requires explicit refinement during injection.
+  // The state has no detail before the source fires, so the neighbourhood of the source refines
+  // explicitly during the injection.
   constexpr double SourcePeakTime   = 0.1;
   constexpr double SourcePulseWidth = 0.03;
   const tarch::la::Vector<DIMENSIONS, double> sourceLocation(-0.7);
@@ -82,16 +81,17 @@ solver.set_pde_terms(
   }
   return ::exahype2::refineOnDetail(
     Q,
-    DGOrder + 1,
+    Quadrature<double>::getQuadraturePoints1D(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    kernels::ADERDGSolver::Quadrature<double>::QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
     [](const double* const values) {
       double velocitySquared = 0.0;
       for (int d = 0; d < DIMENSIONS; d++) {
-        velocitySquared += values[Shortcuts::u + d] * values[Shortcuts::u + d];
+        const double velocity = values[Shortcuts::u + d];
+        const double square   = velocity * velocity;
+        velocitySquared += square;
       }
       return 1.0 + RHO * WAVE_SPEED * std::sqrt(velocitySquared);
     }

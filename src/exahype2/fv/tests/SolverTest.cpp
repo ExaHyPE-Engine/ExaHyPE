@@ -2,210 +2,562 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SolverTest.h"
 
+#include "exahype2/Limits.h"
+#include "exahype2/RefinementCommand.h"
+#include "exahype2/RefinementRequests.h"
+#include "exahype2/TimeStepping.h"
+#include "exahype2/fv/FiniteVolumeScheme.h"
 #include "exahype2/fv/Solver.h"
-#include "peano4/dataview/CellMarker.h"
-#include "peano4/dataview/FaceMarker.h"
+#include "exahype2/fv/reconstruction/Constant.h"
+#include "exahype2/fv/timestepping/SingleStep.h"
+#include "peano4/Constants.h"
+#include "peano4/Loop.h"
+#include "peano4/Partition.h"
+#include "peano4/RefinementRequest.h"
+#include "peano4/Regrid.h"
+#include "peano4/Spacetree.h"
+#include "peano4/tests/TestGrids.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/Termination.h"
+#include "tarch/accelerator/CompileTarget.h"
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/plotter/Format.h"
 
 namespace {
-  constexpr int PatchSize        = 4;
-  constexpr int NumberOfUnknowns = 2;
+  TARGET_DECLARE
+  constexpr int    Depth          = peano4::tests::DepthWithCoarseCellsBesideTheCentreBlock;
+  constexpr int    CellsPerAxis   = peano4::power(peano4::SubdivisionFactor, Depth);
+  constexpr int    RegularCells   = peano4::power(CellsPerAxis, DIMENSIONS);
+  constexpr double CoarseWidth    = 1.0 / CellsPerAxis;
+  constexpr int    PatchSize      = 2;
+  constexpr int    ValuesPerPatch = peano4::power(PatchSize, DIMENSIONS);
+  constexpr double TimeStepFactor = 0.5;
+  constexpr double Tolerance      = 1.0e-12;
+  TARGET_DECLARE_END
 
-  class Adaptive final
-    : public exahype2::fv::Solver<Adaptive, PatchSize, NumberOfUnknowns, 0, exahype2::AdaptiveTimeStepping> {
-  public:
-    Adaptive() :
-      Solver(0.5) {}
+  /**
+   * LinearSolverFor evolves one unknown on constant subcells from a linear initial condition without
+   * flux. Under the fixed rule it reports no wave speed.
+   */
+  template <exahype2::TimeStepping::Rule Rule>
+  struct LinearSolverFor final : exahype2::fv::Solver<LinearSolverFor<Rule>, double, double> {
+    using Base = exahype2::fv::Solver<LinearSolverFor<Rule>, double, double>;
 
-    void startSimulation() override {}
-    void finishSimulation() override {}
+    static constexpr int PatchSize                  = ::PatchSize;
+    static constexpr int NumberOfUnknowns           = 1;
+    static constexpr int NumberOfAuxiliaryVariables = 0;
 
-  protected:
-    [[nodiscard]] double minTerminalTime() const override { return 10.0; }
-    [[nodiscard]] double maxAdmissibleMeshWidth() const override { return 1.0; }
+    using Reconstruction  = exahype2::fv::reconstruction::Constant;
+    using TimeIntegration = exahype2::fv::timestepping::SingleStep;
+
+    static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = Rule;
+
+    LinearSolverFor() :
+      Base(TimeStepFactor, "LinearSolver", {{"q", 1}}) {}
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD double getProfile(const tarch::la::Vector<DIMENSIONS, double>& x) {
+      double value = 1.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        value += (axis + 2.0) * x(axis);
+      }
+      return value;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
+      double* const                                                 Q,
+      const tarch::la::Vector<DIMENSIONS, double>&                  x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+    ) {
+      Q[0] = getProfile(x);
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void boundaryConditions(
+      const double* const                                           inside,
+      double* const                                                 outside,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const int                                    normal
+    ) {
+      outside[0] = inside[0];
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand refinementCriterion(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t
+    ) {
+      return exahype2::RefinementCommand::Keep;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const int                                    normal
+    ) {
+      return Rule == exahype2::TimeStepping::Rule::Adaptive ? 1.0 : 0.0;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const int                                    normal,
+      double* const                                                 F
+    ) {
+      F[0] = 0.0;
+    }
   };
 
-  class SecondAdaptive final
-    : public exahype2::fv::Solver<SecondAdaptive, PatchSize, NumberOfUnknowns, 0, exahype2::AdaptiveTimeStepping> {
-  public:
-    SecondAdaptive() :
-      Solver(0.5) {}
+  using LinearSolver = LinearSolverFor<exahype2::TimeStepping::Rule::Fixed>;
 
-    void startSimulation() override {}
-    void finishSimulation() override {}
+  TARGET_DECLARE
+  constexpr double PostprocessedValue     = 20.0;
+  constexpr double PostprocessedWaveSpeed = 2.0;
+  TARGET_DECLARE_END
 
-  protected:
-    [[nodiscard]] double minTerminalTime() const override { return 10.0; }
-    [[nodiscard]] double maxAdmissibleMeshWidth() const override { return 1.0; }
+  /**
+   * PostprocessingSolver works like LinearSolverFor and writes PostprocessedValue into every updated
+   * volume in its patch postprocessing. Its wave speed on such a volume is PostprocessedWaveSpeed.
+   */
+  struct PostprocessingSolver final : exahype2::fv::Solver<PostprocessingSolver, double, double> {
+    using Base = exahype2::fv::Solver<PostprocessingSolver, double, double>;
+
+    static constexpr int PatchSize                  = ::PatchSize;
+    static constexpr int NumberOfUnknowns           = 1;
+    static constexpr int NumberOfAuxiliaryVariables = 0;
+
+    using Reconstruction  = exahype2::fv::reconstruction::Constant;
+    using TimeIntegration = exahype2::fv::timestepping::SingleStep;
+
+    static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Adaptive;
+
+    PostprocessingSolver() :
+      Base(TimeStepFactor, "PostprocessingSolver", {{"q", 1}}) {}
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
+      double* const                                                 Q,
+      const tarch::la::Vector<DIMENSIONS, double>&                  x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+    ) {
+      Q[0] = LinearSolver::getProfile(x);
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void boundaryConditions(
+      const double* const                                           inside,
+      double* const                                                 outside,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const int                                    normal
+    ) {
+      outside[0] = inside[0];
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand refinementCriterion(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t
+    ) {
+      return exahype2::RefinementCommand::Keep;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
+      const double* const                                           Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const int                                    normal
+    ) {
+      return Q[0] == PostprocessedValue ? PostprocessedWaveSpeed : 1.0;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const int                                    normal,
+      double* const                                                 F
+    ) {
+      F[0] = 0.0;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void postprocessUpdatedPatch(
+      double* const                                                 Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt
+    ) {
+      for (int value = 0; value < ValuesPerPatch; value++) {
+        Q[value] = PostprocessedValue;
+      }
+    }
   };
 
-  class Fixed final : public exahype2::fv::Solver<Fixed, PatchSize, NumberOfUnknowns, 0, exahype2::FixedTimeStepping> {
-  public:
-    Fixed() :
-      Solver(0.1) {}
-
-    void startSimulation() override {}
-    void finishSimulation() override {}
-
-  protected:
-    [[nodiscard]] double maxAdmissibleMeshWidth() const override { return 2.0; }
-  };
-
-  template <typename SolverType>
-  std::string state(const SolverType& solver) {
-    return SolverType::toString(solver.getSolverState());
+  const peano4::Partition& buildGrid() {
+    peano4::tests::buildRegularGrid(Depth);
+    return peano4::Spacetree::getInstance().getPartition();
   }
 
+  /**
+   * Applies the refinement requests to the standing grid and moves the solver data through the
+   * regrid. Every slot the regrid keeps then holds its data.
+   */
+  template <typename Solver>
+  void regridWithLiveData(
+    Solver&                                       solver,
+    const std::vector<peano4::RefinementRequest>& refinementRequests,
+    exahype2::RefinementRequests&                 requests
+  ) {
+    auto&          spacetree = peano4::Spacetree::getInstance();
+    peano4::Regrid regrid;
+    if (not spacetree.regrid(refinementRequests, regrid)) {
+      tarch::terminateWithError("The regrid of the test grid must change the grid.");
+    }
+    const auto& partition = spacetree.getPartition();
+    requests.clear(partition.getNumberOfSlots());
+    solver.regrid(partition, regrid, requests);
+    spacetree.finishRegrid();
+  }
+
+  int getNumberOfCellsOfLevel(const peano4::Partition& partition, const int level) {
+    return partition.getCells(peano4::Adjacency::Local, level).size
+      + partition.getCells(peano4::Adjacency::Remote, level).size;
+  }
+
+  exahype2::Limits getLimitsOfTheDomain() {
+    exahype2::Limits limits;
+    limits.terminalTime           = 1.0;
+    limits.minAdmissiblePatchSize = 0.0;
+    limits.maxAdmissiblePatchSize = 1.0;
+    limits.maxAdmissibleMeshWidth = CoarseWidth / PatchSize;
+    return limits;
+  }
+
+  TARGET_DECLARE
+  /**
+   * Adds one to the accumulator for every volume of one cell whose value differs from the profile
+   * at the centre of the volume of level that covers it.
+   */
+  struct CountMismatchesAgainstTheProfile final {
+    peano4::Partition                partition{};
+    LinearSolver::Patches::ConstView solution{};
+    int                              level{0};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, int& accumulator) const {
+      const int                             cell      = partition.getCells()[entry];
+      const int                             cellLevel = partition.getCellLevel(cell);
+      const auto                            lattice   = partition.getCellLattice(cell);
+      tarch::la::Vector<DIMENSIONS, double> coarseCentre;
+      tarch::la::Vector<DIMENSIONS, double> coarseWidth;
+      tarch::la::Vector<DIMENSIONS, int>    childPosition(0);
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        if (cellLevel == level) {
+          coarseCentre(axis) = partition.getCellCentre(cell, axis);
+          coarseWidth(axis)  = partition.getCellWidth(cell, axis);
+        } else {
+          const int parentLattice = lattice(axis) / peano4::SubdivisionFactor;
+          coarseWidth(axis)       = partition.getWidthOfLevel(level, axis);
+          coarseCentre(axis)      = partition.getDomainOffset()(axis) + (parentLattice + 0.5) * coarseWidth(axis);
+          childPosition(axis)     = lattice(axis) % peano4::SubdivisionFactor;
+        }
+      }
+      const double* const values = solution.getChunk(cell);
+      peano4::dForEach(PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& fineVolume) {
+        tarch::la::Vector<DIMENSIONS, int> coarseVolume;
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          coarseVolume(axis) = cellLevel == level
+            ? fineVolume(axis)
+            : (fineVolume(axis) + PatchSize * childPosition(axis)) / peano4::SubdivisionFactor;
+        }
+        const auto centre = exahype2::fv::getVolumeCentre(coarseCentre, coarseWidth, PatchSize, coarseVolume);
+        if (
+          std::abs(values[peano4::dLinearised(fineVolume, PatchSize)] - LinearSolver::getProfile(centre)) > Tolerance
+        ) {
+          accumulator++;
+        }
+      });
+    }
+  };
+
+  /**
+   * Adds one to the accumulator for every value of one cell that differs from PostprocessedValue.
+   */
+  struct CountValuesWithoutPostprocessing final {
+    peano4::Partition                        partition{};
+    PostprocessingSolver::Patches::ConstView solution{};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, int& accumulator) const {
+      const int cell = partition.getCells()[entry];
+      for (int value = 0; value < ValuesPerPatch; value++) {
+        if (solution.getChunk(cell)[value] != PostprocessedValue) {
+          accumulator++;
+        }
+      }
+    }
+  };
+
+  TARGET_DECLARE_END
+
+  /**
+   * Returns the number of volumes whose value differs from the profile at the centre of the
+   * covering volume of level.
+   */
   template <typename SolverType>
-  void enterTimeStepping(SolverType& solver) {
-    solver.startGridInitialisationStep();
-    solver.finishGridInitialisationStep();
-    solver.startTimeStep();
+  int getNumberOfMismatchesAgainstTheProfileOfLevel(
+    const SolverType&        solver,
+    const peano4::Partition& partition,
+    const int                level
+  ) {
+    int mismatches = 0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(partition.getCells().size),
+      CountMismatchesAgainstTheProfile{partition.onDevice(), solver.getSolution().getView(), level},
+      tarch::accelerator::Sum<int>{mismatches}
+    );
+    return mismatches;
+  }
+
+  /**
+   * Counts the values of every cell that the patch postprocessing has not overwritten.
+   */
+  int getNumberOfValuesWithoutPostprocessing(const PostprocessingSolver& solver, const peano4::Partition& partition) {
+    int values = 0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(partition.getCells().size),
+      CountValuesWithoutPostprocessing{partition.onDevice(), solver.getSolution().getView()},
+      tarch::accelerator::Sum<int>{values}
+    );
+    return values;
   }
 } // namespace
 
 exahype2::fv::tests::SolverTest::SolverTest() :
   tarch::tests::TestCase("exahype2::fv::tests::SolverTest") {}
 
-void exahype2::fv::tests::SolverTest::run() {
-  testMethod(testStatesFollowTheSweeps);
-  testMethod(testUpdateFeedsTheStatistics);
-  testMethod(testAdaptiveTimeStepFollowsTheEigenvalue);
-  testMethod(testFixedTimeStepScalesWithTheMeshWidth);
-  testMethod(testSolversOfEqualParametersKeepSeparateStatistics);
-  testMethod(testSweepPredicatesFollowTheMarkerAndTheSweep);
+void
+exahype2::fv::tests::SolverTest::run() {
+  testMethod(testInitialisationWritesTheInitialConditionIntoEveryVolume);
+  testMethod(testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp);
+  testMethod(testARefinementAndTheEraseBackKeepTheSolution);
+  testMethod(testRefinementReducesTheNextAdaptiveTimeStep);
+  testMethod(testThePostprocessingOfTheUpdatedPatchFeedsTheNextTimeStep);
+  testMethod(testAPlotAllocatesHostCopiesOnlyWithAGPUBackend);
+  testMethod(testReleaseFreesEveryPool);
 }
 
-/** Checks that the solver state follows the grid construction, initialisation, time step, suspension and plot. */
-void exahype2::fv::tests::SolverTest::testStatesFollowTheSweeps() {
-  Adaptive solver;
-  validateEquals(state(solver), std::string("GridConstruction"));
-  solver.startGridConstructionStep();
-  solver.finishGridConstructionStep();
-
-  solver.startGridInitialisationStep();
-  validateEquals(state(solver), std::string("GridInitialisation"));
-  validateEquals(solver.mayPlot(), true);
-  validateEquals(solver.hasStoredFaceData(), false);
-  solver.finishGridInitialisationStep();
-  validateEquals(solver.hasStoredFaceData(), true);
-
-  solver.startTimeStep();
-  validateEquals(state(solver), std::string("TimeStep"));
-  validateEquals(solver.isFirstGridSweepOfTimeStep(), true);
-  validateEquals(solver.isLastGridSweepOfTimeStep(), true);
-
-  solver.suspendSolversForOneGridSweep();
-  validateEquals(state(solver), std::string("Suspended"));
-  solver.startTimeStep();
-  validateEquals(state(solver), std::string("TimeStep"));
-
-  solver.startPlottingStep();
-  validateEquals(state(solver), std::string("Plotting"));
+/**
+ * After one step every volume holds PostprocessedValue and PostprocessedWaveSpeed sets the size
+ * of the next step.
+ */
+void
+exahype2::fv::tests::SolverTest::testThePostprocessingOfTheUpdatedPatchFeedsTheNextTimeStep() {
+  const auto&          partition = buildGrid();
+  PostprocessingSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(partition);
+  exahype2::RefinementRequests requests;
+  requests.clear(partition.getNumberOfSlots());
+  solver.initialise(partition, requests);
+  validate(getNumberOfValuesWithoutPostprocessing(solver, partition) > 0);
+  solver.performTimeStep(partition, requests);
+  validateEquals(getNumberOfValuesWithoutPostprocessing(solver, partition), 0);
+  validateNumericalEquals(
+    solver.getTimeStepping().getTimeStepSizeOfNextStep(),
+    TimeStepFactor * CoarseWidth / (PatchSize * DIMENSIONS * PostprocessedWaveSpeed)
+  );
+  solver.release();
 }
 
-/** Checks that the cell updates of a sweep reach the patch size, time step size and time stamp statistics. */
-void exahype2::fv::tests::SolverTest::testUpdateFeedsTheStatistics() {
-  Adaptive solver;
-  enterTimeStepping(solver);
-  solver.update(0.1, 0.0, 1.0, 1.0);
-  solver.updateTimeStampAndPatchSize(0.0, 0.5, 1.0);
-  solver.setMaxEigenvalue(1.0);
-  solver.reduceLocalUpdates();
-  solver.finishTimeStep();
-
-  validateNumericalEquals(solver.getMinPatchSize(), 0.5);
-  validateNumericalEquals(solver.getMaxPatchSize(), 1.0);
-  validateNumericalEquals(solver.getMinTimeStepSize(), 0.1);
-  validateNumericalEquals(solver.getMinTimeStamp(), 0.0);
-  validateEquals(solver.getNumberOfDoFs(), peano4::power(PatchSize, DIMENSIONS) * NumberOfUnknowns);
+/**
+ * A refinement shrinks the next adaptive time step with the smaller finite volumes.
+ */
+void
+exahype2::fv::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
+  const auto&                                             partition = buildGrid();
+  LinearSolverFor<exahype2::TimeStepping::Rule::Adaptive> solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(partition);
+  exahype2::RefinementRequests requests;
+  requests.clear(partition.getNumberOfSlots());
+  solver.initialise(partition, requests);
+  solver.performTimeStep(partition, requests);
+  peano4::Spacetree::getInstance().markPersistentDataLive();
+  regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
+  requests.clear(partition.getNumberOfSlots());
+  solver.performTimeStep(partition, requests);
+  validateNumericalEquals(
+    solver.getTimeStepping().getTimeStepSizeOfLastStep(),
+    TimeStepFactor * CoarseWidth / (PatchSize * peano4::SubdivisionFactor * DIMENSIONS)
+  );
+  solver.release();
 }
 
-/** Checks that the admissible time step size of an adaptive solver follows the reduced maximum eigenvalue. */
-void exahype2::fv::tests::SolverTest::testAdaptiveTimeStepFollowsTheEigenvalue() {
-  Adaptive solver;
-  enterTimeStepping(solver);
-  solver.update(0.1, 0.0, 1.0, 1.0);
-  solver.setMaxEigenvalue(2.0);
-  solver.reduceLocalUpdates();
-  solver.finishTimeStep();
-  validateNumericalEquals(solver.getMaxEigenvalue(), 2.0);
+void
+exahype2::fv::tests::SolverTest::testInitialisationWritesTheInitialConditionIntoEveryVolume() {
+  const auto& partition = buildGrid();
 
-  // The proposal of one time step is the admissible size of the next one.
-  solver.startTimeStep();
-  validateNumericalEquals(solver.getTimeStepSize(), 0.5 * (1.0 / PatchSize) / (DIMENSIONS * 2.0));
+  LinearSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(partition);
+  exahype2::RefinementRequests requests;
+  requests.clear(partition.getNumberOfSlots());
+  requests.merge(exahype2::RefinementCommand::Erase, partition.getCells());
+  solver.initialise(partition, requests);
+
+  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0);
+  validateEquals(solver.getNumberOfDoFs(), ValuesPerPatch);
+  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
+  validateNumericalEquals(solver.getTimeStepping().getMinMeshWidth(), CoarseWidth / PatchSize);
+  validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth / PatchSize);
+  validate(solver.getAllocatedBytes().getTotal() > 0);
+  validate(requests.getRefinementRequests(partition).empty());
+  solver.release();
 }
 
-/** Checks that the time step size of a fixed solver scales with the smallest mesh width. */
-void exahype2::fv::tests::SolverTest::testFixedTimeStepScalesWithTheMeshWidth() {
-  Fixed solver;
-  enterTimeStepping(solver);
-  solver.update(0.0, 0.0, 1.0, 1.0);
-  solver.reduceLocalUpdates();
-  solver.finishTimeStep();
-  validateNumericalEquals(solver.getTimeStepSize(), 0.1 * (1.0 / PatchSize) / 2.0);
+/**
+ * The first step runs with a zero step size. Every later one advances by the factor times the
+ * mesh width over the admissible width.
+ */
+void
+exahype2::fv::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp() {
+  const auto& partition = buildGrid();
+
+  LinearSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(partition);
+  exahype2::RefinementRequests requests;
+  requests.clear(partition.getNumberOfSlots());
+  solver.initialise(partition, requests);
+  validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), 0.0);
+
+  for (int step = 0; step < 3; step++) {
+    requests.clear(partition.getNumberOfSlots());
+    solver.performTimeStep(partition, requests);
+    const double expectedStepSize = step == 0 ? 0.0 : TimeStepFactor;
+    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0, step);
+    validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStamp(), step * TimeStepFactor, step);
+    validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSizeOfLastStep(), expectedStepSize, step);
+    validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSize(), TimeStepFactor, step);
+  }
+  validate(requests.getRefinementRequests(partition).empty());
+  solver.release();
 }
 
-/** Checks that two solvers that reach the same class template collect their cells in records of their own. */
-void exahype2::fv::tests::SolverTest::testSolversOfEqualParametersKeepSeparateStatistics() {
-  constexpr double FirstSolverTimeStamp  = 5.0;
-  constexpr double SecondSolverTimeStamp = 2.0;
-  constexpr double CoarsePatchSize       = 1.0;
-  constexpr double FinePatchSize         = 0.5;
+/**
+ * A refinement and the erase back return the coarse solution within rounding.
+ */
+void
+exahype2::fv::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution() {
+  const auto& partition = buildGrid();
 
-  Adaptive       first;
-  SecondAdaptive second;
-  enterTimeStepping(first);
-  enterTimeStepping(second);
+  LinearSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(partition);
+  exahype2::RefinementRequests requests;
+  requests.clear(partition.getNumberOfSlots());
+  solver.initialise(partition, requests);
+  solver.performTimeStep(partition, requests);
+  const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
+  peano4::Spacetree::getInstance().markPersistentDataLive();
 
-  first.update(0.1, FirstSolverTimeStamp, CoarsePatchSize, CoarsePatchSize);
-  second.update(0.1, SecondSolverTimeStamp, FinePatchSize, FinePatchSize);
-  first.setMaxEigenvalue(1.0);
-  second.setMaxEigenvalue(1.0);
-  first.reduceLocalUpdates();
-  second.reduceLocalUpdates();
-  first.finishTimeStep();
-  second.finishTimeStep();
+  regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
+  validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize / peano4::SubdivisionFactor);
+  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(partition, Depth + 1)) > 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0);
+  validateNumericalEquals(
+    solver.getTimeStepping().getMinMeshWidth(),
+    CoarseWidth / (peano4::SubdivisionFactor * PatchSize)
+  );
+  validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth / PatchSize);
 
-  validateNumericalEquals(first.getMinTimeStamp(), FirstSolverTimeStamp);
-  validateNumericalEquals(first.getMinPatchSize(), CoarsePatchSize);
-  validateNumericalEquals(second.getMinTimeStamp(), SecondSolverTimeStamp);
-  validateNumericalEquals(second.getMinPatchSize(), FinePatchSize);
+  requests.clear(partition.getNumberOfSlots());
+  solver.performTimeStep(partition, requests);
+  validateNumericalEquals(
+    solver.getTimeStepping().getTimeStepSizeOfLastStep(),
+    coarseTimeStepSize / peano4::SubdivisionFactor
+  );
+  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0);
+
+  regridWithLiveData(solver, peano4::tests::getErasureOfEveryCell(Depth), requests);
+  validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize);
+  validateEquals(partition.getMaximumLevel(), Depth);
+  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0);
+  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
+  solver.release();
 }
 
-/** Checks which cells and faces hold a patch in each sweep, and that a refined one holds none. */
-void exahype2::fv::tests::SolverTest::testSweepPredicatesFollowTheMarkerAndTheSweep() {
-  peano4::dataview::CellMarker cell;
-  peano4::dataview::FaceMarker face;
-  face.select(0);
+/**
+ * A plot writes the .vtu file of every rank and allocates a host copy of the solution only in a
+ * build with a GPU backend.
+ */
+void
+exahype2::fv::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend() {
+  const auto& partition = buildGrid();
+  const auto& rank      = tarch::mpi::Rank::getInstance();
 
-  Adaptive solver;
-  validateEquals(solver.storesCellData(cell), false);
-  validateEquals(solver.storesFaceData(face), false);
-  validateEquals(solver.loadsCellData(cell), false);
-  validateEquals(solver.loadsFaceData(face), false);
+  LinearSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(partition);
+  exahype2::RefinementRequests requests;
+  requests.clear(partition.getNumberOfSlots());
+  solver.initialise(partition, requests);
 
-  solver.startGridInitialisationStep();
-  validateEquals(solver.storesCellData(cell), true);
-  validateEquals(solver.providesCellDataToKernels(cell), true);
-  validateEquals(solver.storesFaceData(face), true);
-  validateEquals(solver.loadsCellData(cell), false);
-  validateEquals(solver.loadsFaceData(face), false);
-  solver.finishGridInitialisationStep();
+  const std::string outputDirectory =
+    (tarch::tests::getWritableTestDirectory() / "FiniteVolumeSolverPlotTest").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "patch/");
+  const tarch::AllocatedBytes bytesBeforePlot = solver.getAllocatedBytes();
+  solver.plot(partition, tarch::plotter::Format::VTU, outputDirectory);
+  const tarch::AllocatedBytes bytesAfterPlot = solver.getAllocatedBytes();
 
-  solver.startTimeStep();
-  validateEquals(solver.loadsCellData(cell), true);
-  validateEquals(solver.loadsFaceData(face), true);
+  const auto&           solution = solver.getSolution();
+  LinearSolver::Patches solutionCopy(solution.getChunkSize(), tarch::MemoryLocation::Heap);
+  static_cast<void>(solution.download(solutionCopy));
+  validateEquals(bytesAfterPlot.host, bytesBeforePlot.host + solutionCopy.getAllocatedBytes().host);
+  validateEquals(bytesAfterPlot.device, bytesBeforePlot.device);
+  const std::string           vtuName = "LinearSolver-0_000000-rank-" + std::to_string(rank.getRank()) + ".vtu";
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch" / vtuName;
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  solver.release();
 
-  cell.flags = peano4::dataview::CellMarker::WillBeRefined;
-  validateEquals(solver.storesCellData(cell), false);
-  validateEquals(solver.providesCellDataToKernels(cell), false);
+  tarch::mpi::barrier(rank.getCommunicator());
+  if (rank.isGlobalMaster()) {
+    std::filesystem::remove_all(outputDirectory);
+  }
+}
 
-  cell.flags = peano4::dataview::CellMarker::HasBeenRefined;
-  validateEquals(solver.loadsCellData(cell), false);
+/**
+ * The allocated bytes of a solver cover its solution pool until release() frees every byte.
+ */
+void
+exahype2::fv::tests::SolverTest::testReleaseFreesEveryPool() {
+  const auto& partition = buildGrid();
 
-  face.willBeRefinedMask = 1;
-  validateEquals(solver.storesFaceData(face), false);
-
-  face.hasBeenRefinedMask = 1;
-  validateEquals(solver.loadsFaceData(face), false);
+  LinearSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
+  solver.allocate(partition);
+  const tarch::AllocatedBytes solutionBytes = solver.getSolution().getAllocatedBytes();
+  validate(solutionBytes.getTotal() > 0);
+  validate(solver.getAllocatedBytes().host >= solutionBytes.host);
+  validate(solver.getAllocatedBytes().device >= solutionBytes.device);
+  solver.release();
+  validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
 }

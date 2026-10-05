@@ -16,76 +16,80 @@ namespace {
   thread_local std::unordered_map<int, hipStream_t> activeStreams;
 } // namespace
 
-bool tarch::accelerator::Device::init() {
+bool
+tarch::accelerator::Device::init() {
   logDebug("-----------------------------------------");
   CHECK_HIP_ERROR(hipGetDeviceCount(&numberOfDevices));
   for (int device = 0; device < numberOfDevices; device++) {
-    CHECK_HIP_ERROR(hipSetDevice(device));
-    CHECK_HIP_ERROR(hipFree(nullptr));
-    const hipDeviceProp_t* properties = &hip::DevicePropertiesCache::get();
-    std::size_t            freeBytes  = 0;
-    std::size_t            totalBytes = 0;
-    CHECK_HIP_ERROR(hipMemGetInfo(&freeBytes, &totalBytes));
+    hipDeviceProp_t properties{};
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&properties, device));
 
-    logInfo("[" << device << "]: " << properties->name);
-    logDebug("  " << properties->major << "." << properties->minor << " CC");
-    logDebug(
-      "  " << freeBytes / (1024 * 1024) << " MB free of " << totalBytes / (1024 * 1024) << " MB total global memory"
-    );
-    logDebug("  " << properties->totalConstMem << " bytes constant memory");
-    logDebug("  " << properties->multiProcessorCount << " SMs");
-    logDebug("  " << properties->maxThreadsPerMultiProcessor << " threads per SM");
-    logDebug("  " << properties->regsPerMultiprocessor << " registers per SM");
-    logDebug("  " << properties->sharedMemPerMultiprocessor << " bytes shared memory per SM");
-    logDebug("  " << properties->maxThreadsPerBlock << " threads per block");
-    logDebug("  " << properties->regsPerBlock << " registers per block");
-    logDebug("  " << properties->sharedMemPerBlock << " bytes shared memory per block");
-    logDebug("  " << properties->warpSize << " threads per warp");
+    logInfo("[" << device << "]: " << properties.name);
+    logDebug("  " << properties.major << "." << properties.minor << " CC");
+    logDebug("  " << properties.totalGlobalMem / (1024 * 1024) << " MB global memory");
+    logDebug("  " << properties.totalConstMem << " bytes constant memory");
+    logDebug("  " << properties.multiProcessorCount << " SMs");
+    logDebug("  " << properties.maxThreadsPerMultiProcessor << " threads per SM");
+    logDebug("  " << properties.regsPerMultiprocessor << " registers per SM");
+    logDebug("  " << properties.sharedMemPerMultiprocessor << " bytes shared memory per SM");
+    logDebug("  " << properties.maxThreadsPerBlock << " threads per block");
+    logDebug("  " << properties.regsPerBlock << " registers per block");
+    logDebug("  " << properties.sharedMemPerBlock << " bytes shared memory per block");
+    logDebug("  " << properties.warpSize << " threads per warp");
   }
   logDebug("-----------------------------------------");
 
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() {
-  for (int device = 0; device < numberOfDevices; device++) {
-    CHECK_HIP_ERROR(hipSetDevice(device));
-    CHECK_HIP_ERROR(hipDeviceSynchronize());
-  }
-
-  for (int device = 0; device < numberOfDevices; device++) {
-    CHECK_HIP_ERROR(hipSetDevice(device));
-    CHECK_HIP_ERROR(hipDeviceReset());
-  }
+/**
+ * Synchronises and resets the device of this rank, the only device the rank holds a context on.
+ */
+void
+tarch::accelerator::Device::shutdown() {
+  assertion(
+    tarch::accelerator::getCurrentDevice() < numberOfDevices,
+    tarch::accelerator::getCurrentDevice(),
+    numberOfDevices
+  );
+  CHECK_HIP_ERROR(hipSetDevice(tarch::accelerator::getCurrentDevice()));
+  CHECK_HIP_ERROR(hipDeviceSynchronize());
+  tarch::accelerator::releaseReductionScratch();
+  CHECK_HIP_ERROR(hipDeviceReset());
 
   activeStreams.clear();
   numberOfDevices = 0;
 }
 
-bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices > 0; }
-
-int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
-
-hipStream_t tarch::accelerator::deviceStreamCreate() {
-  hipStream_t stream = nullptr;
-  CHECK_HIP_ERROR(hipStreamCreate(&stream));
-  return stream;
+bool
+tarch::accelerator::Device::isInitialised() const {
+  return numberOfDevices > 0;
 }
 
-void tarch::accelerator::deviceStreamDestroy(hipStream_t* stream) {
-  CHECK_HIP_ERROR(hipStreamDestroy(*stream));
-  *stream = nullptr;
+int
+tarch::accelerator::Device::getNumberOfDevices() const {
+  return numberOfDevices;
 }
 
-void tarch::accelerator::deviceStreamSync(hipStream_t stream) { CHECK_HIP_ERROR(hipStreamSynchronize(stream)); }
+/**
+ * Returns the threads the current device runs at once: Its multiprocessors times the threads
+ * one multiprocessor holds.
+ */
+int
+tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
+  const hipDeviceProp_t& properties = tarch::accelerator::hip::DevicePropertiesCache::getProperties();
+  return std::max(1, properties.multiProcessorCount * properties.maxThreadsPerMultiProcessor);
+}
 
-void tarch::accelerator::deviceStreamSet(hipStream_t stream) {
+void
+tarch::accelerator::setDeviceStream(hipStream_t stream) {
   int device = 0;
   CHECK_HIP_ERROR(hipGetDevice(&device));
   activeStreams[device] = stream;
 }
 
-hipStream_t tarch::accelerator::deviceStreamGet() {
+hipStream_t
+tarch::accelerator::getDeviceStream() {
   int device = 0;
   CHECK_HIP_ERROR(hipGetDevice(&device));
   const auto activeStream = activeStreams.find(device);

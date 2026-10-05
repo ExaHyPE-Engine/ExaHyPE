@@ -3,27 +3,34 @@
 #include "TreeTest.h"
 
 #include "peano4/Constants.h"
-#include "peano4/grid/GridControlEvent.h"
+#include "peano4/RefinementRequest.h"
+#include "peano4/grid/GridVertex.h"
 #include "peano4/sfc/ActiveCurve.h"
 #include "peano4/topology/Tree.h"
+#include "tarch/la/Vector.h"
 
 namespace {
   constexpr int Depth             = 2;
-  constexpr int TreeId            = 0;
+  constexpr int LocalRank         = 0;
   constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
   constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
 
-  /** Cells per axis on the base depth. */
+  /**
+   * Cells per axis on the base depth.
+   */
   constexpr int CellsPerAxis = peano4::power(SubdivisionFactor, Depth);
 
-  /** Lattice position of the cell the refinement-plan tests request from, clear of the walls. */
+  /**
+   * Lattice position of the cell the refinement-plan tests request, away from the boundary.
+   */
   constexpr int RequestedCell = CellsPerAxis / 2;
 } // namespace
 
 peano4::topology::tests::TreeTest::TreeTest() :
   TestCase("peano4::topology::tests::TreeTest") {}
 
-void peano4::topology::tests::TreeTest::run() {
+void
+peano4::topology::tests::TreeTest::run() {
   testMethod(testRegularGridSizes);
   testMethod(testCellLinks);
   testMethod(testDenseCellLookupMatchesTheLattice);
@@ -36,69 +43,41 @@ void peano4::topology::tests::TreeTest::run() {
   testMethod(testRefinementPlanRoundKeepsLevelsWithoutRequests);
   testMethod(testRefinementPlanEraseKeepsFlagsBetweenRefinedCells);
   testMethod(testVertexBetweenRefinedCellsIsPersistent);
-  testMethod(testAppendedDeltaMatchesADirectBuild);
-  testMethod(testPlanViewFromDeltaMatchesADirectBuild);
   testMethod(testBalancedOwnersFromPlan);
-  testMethod(testTheBalancedPartitionKeepsBaseFamiliesWhole);
+  testMethod(testTheBalancedPartitionKeepsSiblingLeavesTogether);
   testMethod(testRankLoadsOfADeeperOwnershipPlan);
-  testMethod(testAPartitionSplittingALeafFamilyIsDetected);
+  testMethod(testAPartitionSplittingSiblingLeavesIsDetected);
   testMethod(testARankWithoutABlockMaterialisesNothingBelowTheSpawnLevel);
   testMethod(testAPartitionedBuildLinksEveryEntityOnce);
-  testMethod(testRefinementDeltaAppendsCellsOnTheOwningRankOnly);
+  testMethod(testBytesGrowWithTheGrid);
 }
 
 /**
- * A refinement delta two levels below the spawn level appends cells on every
- * rank that materialises the block of the refined cells and on no other rank.
- * A rank materialises its own block and one ring of neighbour blocks, so the
- * spawn level holds at least three blocks per axis and one rank owns one
- * block. The flagged vertex sits in the domain corner, so its adjacent cells
- * lie in the last block along every axis, and the ranks that materialise that
- * block own the CellsPerVertex blocks around the corner.
+ * The bytes of a tree cover at least its cells and vertices and grow with the depth.
  */
-void peano4::topology::tests::TreeTest::testRefinementDeltaAppendsCellsOnTheOwningRankOnly() {
-  constexpr int SpawnLevel               = SubdivisionFactor >= 3 ? 1 : 2;
-  constexpr int DeltaDepth               = SpawnLevel + 2;
-  constexpr int BlocksPerAxis            = peano4::power(SubdivisionFactor, SpawnLevel);
-  constexpr int NumberOfRanks            = peano4::power(BlocksPerAxis, DIMENSIONS);
-  constexpr int CellsPerAxisOnDeltaDepth = peano4::power(SubdivisionFactor, DeltaDepth);
+void
+peano4::topology::tests::TreeTest::testBytesGrowWithTheGrid() {
+  const tarch::la::Vector<DIMENSIONS, double> offset(0.0);
+  const tarch::la::Vector<DIMENSIONS, double> width(1.0);
 
-  const tarch::la::Vector<DIMENSIONS, double>  offset(0.0);
-  const tarch::la::Vector<DIMENSIONS, double>  width(1.0);
-  const peano4::topology::Tree::RefinementPlan emptyPlan;
-  peano4::topology::Tree::RefinementPlan       refinementPlan;
-  refinementPlan.emplace_back().emplace_back(CellsPerAxisOnDeltaDepth - 1);
+  peano4::topology::Tree shallow(0, offset, width);
+  shallow.buildRegularGrid(1);
+  validate(
+    shallow.getAllocatedBytes() >= shallow.getNumberOfCells() * sizeof(peano4::topology::TreeCell)
+      + shallow.getNumberOfVertices() * sizeof(peano4::grid::GridVertex)
+  );
 
-  const peano4::topology::Tree planningTree(TreeId, offset, width);
-  const auto             ownershipPlan = planningTree.deriveBalancedBlockOwners(DeltaDepth, NumberOfRanks, emptyPlan);
-  peano4::topology::Tree view(TreeId, offset, width);
-  view.buildPlanQueryTables(DeltaDepth, refinementPlan);
-
-  int ranksWithAppendedCells = 0;
-  for (int treeId = 0; treeId < NumberOfRanks; treeId++) {
-    peano4::topology::Tree tree(treeId, offset, width);
-    tree.buildRegularGrid(DeltaDepth, SpawnLevel, NumberOfRanks, emptyPlan, &ownershipPlan);
-    const auto cellsBeforeDelta = tree.getNumberOfCells();
-    tree.appendRefinementDelta(view, refinementPlan, refinementPlan);
-    const auto appendedCells = tree.getNumberOfCells() - cellsBeforeDelta;
-    if (appendedCells > 0) {
-      ranksWithAppendedCells++;
-      validateEqualsWithParams1(
-        appendedCells,
-        static_cast<std::size_t>(peano4::CellsPerVertex * ChildrenPerCell),
-        treeId
-      );
-    }
-  }
-  validateEquals(ranksWithAppendedCells, peano4::CellsPerVertex);
+  peano4::topology::Tree deep(0, offset, width);
+  deep.buildRegularGrid(2);
+  validate(deep.getAllocatedBytes() > shallow.getAllocatedBytes());
 }
 
 /**
- * A partitioned build answers every cell, vertex and face lattice lookup with
- * the index its cells link to, and no index stands for two lattice positions,
- * with and without a periodic axis.
+ * In a partitioned build with and without a periodic axis, every cell, vertex and face lookup returns
+ * the index the cells point to, and no index belongs to two lattice positions.
  */
-void peano4::topology::tests::TreeTest::testAPartitionedBuildLinksEveryEntityOnce() {
+void
+peano4::topology::tests::TreeTest::testAPartitionedBuildLinksEveryEntityOnce() {
   constexpr int PartitionedDepth = 4;
   constexpr int SpawnLevel       = 1;
   constexpr int NumberOfRanks    = 2;
@@ -106,7 +85,7 @@ void peano4::topology::tests::TreeTest::testAPartitionedBuildLinksEveryEntityOnc
   peano4::topology::Tree::RefinementPlan refinementPlan;
   refinementPlan.emplace_back().emplace_back(5);
 
-  const auto latticeKeyOf = [](const tarch::la::Vector<DIMENSIONS, int>& lattice) {
+  const auto getLatticeKeyOf = [](const tarch::la::Vector<DIMENSIONS, int>& lattice) {
     std::int64_t key = 0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       key = key * 4096 + lattice(axis);
@@ -180,7 +159,7 @@ void peano4::topology::tests::TreeTest::testAPartitionedBuildLinksEveryEntityOnc
           );
           validateEqualsWithParams2(tree.getVertex(vertexIndex).level, cell.level, periodic, rank);
 #if PEANO_DEBUG
-          // A periodic wall vertex carries the lower wall's position in every block.
+          // A periodic boundary vertex has the position of the lower boundary in every block.
           for (int axis = 0; axis < DIMENSIONS; axis++) {
             validateNumericalEqualsWithParams3(
               tree.getVertex(vertexIndex).getX(axis),
@@ -191,8 +170,8 @@ void peano4::topology::tests::TreeTest::testAPartitionedBuildLinksEveryEntityOnc
             );
           }
 #endif
-          const auto [entry, isNew] = latticeOfVertexIndex.insert({vertexIndex, latticeKeyOf(cornerLattice)});
-          validateEqualsWithParams3(entry->second, latticeKeyOf(cornerLattice), periodic, rank, vertexIndex);
+          const auto [entry, isNew] = latticeOfVertexIndex.insert({vertexIndex, getLatticeKeyOf(cornerLattice)});
+          validateEqualsWithParams3(entry->second, getLatticeKeyOf(cornerLattice), periodic, rank, vertexIndex);
           static_cast<void>(isNew);
         }
         for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
@@ -214,8 +193,8 @@ void peano4::topology::tests::TreeTest::testAPartitionedBuildLinksEveryEntityOnc
             faceLattice(normal) = 0;
           }
           faceLattice(normal) += normal * 4096 * 4096;
-          const auto [entry, isNew] = latticeOfFaceIndex.insert({faceIndex, latticeKeyOf(faceLattice)});
-          validateEqualsWithParams3(entry->second, latticeKeyOf(faceLattice), periodic, rank, faceIndex);
+          const auto [entry, isNew] = latticeOfFaceIndex.insert({faceIndex, getLatticeKeyOf(faceLattice)});
+          validateEqualsWithParams3(entry->second, getLatticeKeyOf(faceLattice), periodic, rank, faceIndex);
           static_cast<void>(isNew);
         }
       }
@@ -225,10 +204,10 @@ void peano4::topology::tests::TreeTest::testAPartitionedBuildLinksEveryEntityOnc
 }
 
 /**
- * A rank the ownership plan hands no block materialises nothing below the
- * spawn level.
+ * A rank without a block in the ownership plan materialises nothing below the spawn level.
  */
-void peano4::topology::tests::TreeTest::testARankWithoutABlockMaterialisesNothingBelowTheSpawnLevel() {
+void
+peano4::topology::tests::TreeTest::testARankWithoutABlockMaterialisesNothingBelowTheSpawnLevel() {
   constexpr int SpawnLevel              = 1;
   constexpr int OwningRankId            = 0;
   constexpr int NumberOfRanks           = 4096;
@@ -245,8 +224,7 @@ void peano4::topology::tests::TreeTest::testARankWithoutABlockMaterialisesNothin
   );
   const auto ownershipPlan = planningTree.deriveBalancedBlockOwners(Depth, NumberOfRanks, refinementPlan);
 
-  // Far more ranks than the plan can hand work to, so the ranks above the
-  // highest owner it names hold nothing at all.
+  // The plan has far fewer leaves than ranks, so the ranks above its highest owner own nothing.
   int highestOwner = -1;
   for (int nodeIndex = 0; nodeIndex < ownershipPlan[1]; nodeIndex++) {
     const auto planOffset = OwnershipPlanHeaderSize + nodeIndex * TopologyNodeStride;
@@ -255,9 +233,9 @@ void peano4::topology::tests::TreeTest::testARankWithoutABlockMaterialisesNothin
   validate(highestOwner >= 0 and highestOwner < NumberOfRanks - 1);
   const int rankWithoutABlock = highestOwner + 1;
 
-  const auto numberOfCellsOfRank = [&](const int treeId) {
+  const auto getNumberOfCellsOfRank = [&](const int rank) {
     peano4::topology::Tree tree(
-      treeId,
+      rank,
       tarch::la::Vector<DIMENSIONS, double>(0.0),
       tarch::la::Vector<DIMENSIONS, double>(1.0)
     );
@@ -265,27 +243,27 @@ void peano4::topology::tests::TreeTest::testARankWithoutABlockMaterialisesNothin
     return tree.getNumberOfCells();
   };
 
-  // The spawn level and everything above it is dense on every rank; a rank
-  // without a block adds nothing below it.
+  // Every rank stores the levels up to the spawn level densely, and a rank without a block stores
+  // nothing below.
   std::size_t cellsToTheSpawnLevel = 0;
   for (int level = 0; level <= SpawnLevel; level++) {
     std::size_t cellsOnLevel = 1;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      cellsOnLevel *= peano4::topology::cellsPerAxis(level);
+      cellsOnLevel *= peano4::topology::getCellsPerAxis(level);
     }
     cellsToTheSpawnLevel += cellsOnLevel;
   }
 
-  validateEquals(numberOfCellsOfRank(rankWithoutABlock), cellsToTheSpawnLevel);
-  validate(numberOfCellsOfRank(OwningRankId) > cellsToTheSpawnLevel);
+  validateEquals(getNumberOfCellsOfRank(rankWithoutABlock), cellsToTheSpawnLevel);
+  validate(getNumberOfCellsOfRank(OwningRankId) > cellsToTheSpawnLevel);
 }
 
 /**
- * The derived ownership plan is deterministic across trees, every topology node
- * names a rank range inside the rank count and covers its children's ranges,
- * and the built tree answers the same ownership from its cells.
+ * The ownership plan is the same on every tree, every node covers the rank ranges of its children,
+ * and the built tree reports the same owners for its cells.
  */
-void peano4::topology::tests::TreeTest::testBalancedOwnersFromPlan() {
+void
+peano4::topology::tests::TreeTest::testBalancedOwnersFromPlan() {
   constexpr int SpawnLevel              = 1;
   constexpr int NumberOfRanks           = 4;
   constexpr int OwnershipPlanHeaderSize = 2;
@@ -295,22 +273,21 @@ void peano4::topology::tests::TreeTest::testBalancedOwnersFromPlan() {
   refinementPlan.emplace_back().emplace_back(RequestedCell);
 
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
   const auto ownershipPlan = tree.deriveBalancedBlockOwners(Depth, NumberOfRanks, refinementPlan);
 
   const peano4::topology::Tree replicaTree(
-    TreeId + 1,
+    LocalRank + 1,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
   validate(ownershipPlan == replicaTree.deriveBalancedBlockOwners(Depth, NumberOfRanks, refinementPlan));
 
-  // Every leaf of the plan's structure belongs to one rank: The regular grid
-  // plus the cells around the flagged vertex, each replaced by its
-  // children.
+  // The leaves of the plan are the regular grid plus the children of the cells around the flagged
+  // vertex, which replace these cells.
   std::int64_t expectedLeaves = 1;
   for (int level = 0; level < Depth; level++) {
     expectedLeaves *= ChildrenPerCell;
@@ -344,8 +321,8 @@ void peano4::topology::tests::TreeTest::testBalancedOwnersFromPlan() {
       validateEquals(firstOwner, lastOwner);
       continue;
     }
-    // A node carries children only where a rank boundary crosses it, so its
-    // range spans more than one rank and covers every child's range.
+    // A node has children only where a rank boundary crosses it, so its range spans several ranks and
+    // covers the ranges of its children.
     validate(firstOwner < lastOwner);
     validate(childrenBlock > nodeIndex and childrenBlock + ChildrenPerCell <= numberOfTopologyNodes);
     for (int childPosition = 0; childPosition < ChildrenPerCell; childPosition++) {
@@ -356,10 +333,8 @@ void peano4::topology::tests::TreeTest::testBalancedOwnersFromPlan() {
 
   tree.buildRegularGrid(Depth, SpawnLevel, NumberOfRanks, refinementPlan, &ownershipPlan);
 
-  // The tree materialises its owned spawn blocks plus one ring of
-  // neighbours, so the built structure holds a subset of the domain's
-  // leaves. A parent precedes its children in the cell array, so one backward
-  // pass gathers the ranks owning a materialised leaf below every cell.
+  // The tree materialises a subset of the leaves of the domain. A parent precedes its children in the
+  // cell array, so one backward pass collects for every cell the owners of its materialised leaves.
   std::vector<std::bitset<NumberOfRanks>> ranksBelowCell(tree.getNumberOfCells());
   for (int cellIndex = static_cast<int>(tree.getNumberOfCells()) - 1; cellIndex >= 0; cellIndex--) {
     if (tree.isRefined(cellIndex)) {
@@ -368,19 +343,18 @@ void peano4::topology::tests::TreeTest::testBalancedOwnersFromPlan() {
       }
       continue;
     }
-    const auto owner = tree.getCell(cellIndex).ownerTreeId;
+    const auto owner = tree.getCell(cellIndex).ownerRank;
     validate(owner >= 0 and owner < NumberOfRanks);
     ranksBelowCell[cellIndex].set(owner);
   }
   // The tree's own leaves always materialise.
-  validate(ranksBelowCell[peano4::topology::Tree::RootCell].test(TreeId));
+  validate(ranksBelowCell[peano4::topology::Tree::RootCell].test(LocalRank));
 
   for (int cellIndex = 0; cellIndex < static_cast<int>(tree.getNumberOfCells()); cellIndex++) {
     const auto& cell  = tree.getCell(cellIndex);
     const auto& ranks = ranksBelowCell[cellIndex];
-    // Every materialised leaf's owner lies inside its ancestors' ownership
-    // intervals, and a cell's owner is its interval's first rank whether or
-    // not that rank's leaves materialise here.
+    // The owner of every materialised leaf lies in the owner interval of each ancestor, and the owner
+    // of a cell is the first rank of its interval.
     for (int rank = 0; rank < NumberOfRanks; rank++) {
       if (ranks.test(rank)) {
         validate(tree.subtreeTouchesRank(cellIndex, rank));
@@ -390,7 +364,7 @@ void peano4::topology::tests::TreeTest::testBalancedOwnersFromPlan() {
         tree.subtreeTouchesRank(cellIndex, rank)
       );
     }
-    validateEquals(tree.getOwnerOfCellAt(cell.level, cell.latticeIndex), cell.ownerTreeId);
+    validateEquals(tree.getOwnerOfCellAt(cell.level, cell.latticeIndex), cell.ownerRank);
   }
 }
 
@@ -398,9 +372,8 @@ namespace {
   constexpr int ManyRanks = 4096;
 
   /**
-   * Flags every vertex of the children of the cell the given position names on
-   * the level above, so those children are all refined and the partition
-   * descends through that cell.
+   * Flags every vertex of the children of the cell with coordinate parentCell on every axis, so all
+   * its children refine and the partition descends through the cell.
    */
   void flagVerticesOfCellChildren(std::vector<tarch::la::Vector<DIMENSIONS, int>>& flags, const int parentCell) {
     constexpr int VerticesPerAxis  = SubdivisionFactor + 1;
@@ -420,10 +393,11 @@ namespace {
     }
   }
 
-  /** Returns a plan that refines one cell of every level below the base depth in full, three levels deep. */
-  peano4::topology::Tree::RefinementPlan threeLevelPlan() {
-    // Each level's flags cover the children of a cell the coarser level's
-    // flags refine.
+  /**
+   * Returns a plan that refines all children of one cell on each of three levels below the base depth.
+   */
+  peano4::topology::Tree::RefinementPlan getThreeLevelPlan() {
+    // The flags of each level cover the children of a cell that the flags of the coarser level refine.
     constexpr int MiddleCell  = SubdivisionFactor - 1;
     constexpr int DeepestCell = SubdivisionFactor * MiddleCell + 1;
 
@@ -436,15 +410,15 @@ namespace {
 } // namespace
 
 /**
- * An ownership plan derived from a plan without leaf families splits no cell
- * with a leaf child, and it does so under a shallower plan whose leaves it
- * splits.
+ * An ownership plan splits no cell with a leaf child of its own refinement plan, but the ownership
+ * plan of a deeper refinement plan splits the leaves of a shallower one.
  */
-void peano4::topology::tests::TreeTest::testAPartitionSplittingALeafFamilyIsDetected() {
-  const auto                                   deepPlan = threeLevelPlan();
+void
+peano4::topology::tests::TreeTest::testAPartitionSplittingSiblingLeavesIsDetected() {
+  const auto                                   deepPlan = getThreeLevelPlan();
   const peano4::topology::Tree::RefinementPlan shallowPlan(deepPlan.begin(), deepPlan.begin() + 1);
   const peano4::topology::Tree                 tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -457,17 +431,18 @@ void peano4::topology::tests::TreeTest::testAPartitionSplittingALeafFamilyIsDete
 }
 
 /**
- * The balanced partition of a regular grid hands every rank whole families of
- * base-depth leaves below the spawn level.
+ * The balanced partition of a regular grid gives every rank whole groups of sibling leaves on the
+ * base depth.
  */
-void peano4::topology::tests::TreeTest::testTheBalancedPartitionKeepsBaseFamiliesWhole() {
-  // The spawn level rises with the rank count and falls with the children per
-  // cell, so the base depth keeps one level of families below it.
+void
+peano4::topology::tests::TreeTest::testTheBalancedPartitionKeepsSiblingLeavesTogether() {
+  // The spawn level grows with the rank count and shrinks with the children per cell, so this depth
+  // keeps one level of sibling leaves below the spawn level.
   constexpr int DeepDepth = SubdivisionFactor >= 3 ? 3 : 4;
 
   const peano4::topology::Tree::RefinementPlan emptyPlan;
   const peano4::topology::Tree                 tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -483,15 +458,16 @@ void peano4::topology::tests::TreeTest::testTheBalancedPartitionKeepsBaseFamilie
 }
 
 /**
- * An ownership plan derived from a deeper refinement plan counts a cell it
- * splits and the shallower plan keeps as a leaf for the split's first rank.
+ * The ownership plan of a deeper refinement plan counts a leaf of a shallower plan that it splits for
+ * the first rank of the split.
  */
-void peano4::topology::tests::TreeTest::testRankLoadsOfADeeperOwnershipPlan() {
-  const auto                                   deepPlan = threeLevelPlan();
+void
+peano4::topology::tests::TreeTest::testRankLoadsOfADeeperOwnershipPlan() {
+  const auto                                   deepPlan = getThreeLevelPlan();
   const peano4::topology::Tree::RefinementPlan shallowPlan(deepPlan.begin(), deepPlan.begin() + 1);
 
   const peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -506,8 +482,8 @@ void peano4::topology::tests::TreeTest::testRankLoadsOfADeeperOwnershipPlan() {
   }
   validateEquals(deepOwnershipPlan[1], expectedTopologyNodes);
 
-  // The flags of the shallow plan cover the corners of one cell's children, so
-  // they refine one cell per axis more than the subdivision factor.
+  // The flags of the shallow plan cover the corners of the children of one cell, so they refine the
+  // subdivision factor plus one cells per axis.
   std::int64_t shallowLeaves       = 1;
   std::int64_t refinedShallowCells = 1;
   for (int level = 0; level < Depth; level++) {
@@ -526,9 +502,10 @@ void peano4::topology::tests::TreeTest::testRankLoadsOfADeeperOwnershipPlan() {
   validateEquals(totalLoad, shallowLeaves);
 }
 
-void peano4::topology::tests::TreeTest::testRegularGridSizes() {
+void
+peano4::topology::tests::TreeTest::testRegularGridSizes() {
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -540,8 +517,8 @@ void peano4::topology::tests::TreeTest::testRegularGridSizes() {
     std::size_t cellsOnLevel    = 1;
     std::size_t verticesOnLevel = 1;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      cellsOnLevel *= peano4::topology::cellsPerAxis(level);
-      verticesOnLevel *= peano4::topology::cellsPerAxis(level) + 1;
+      cellsOnLevel *= peano4::topology::getCellsPerAxis(level);
+      verticesOnLevel *= peano4::topology::getCellsPerAxis(level) + 1;
     }
     expectedCells += cellsOnLevel;
     expectedVertices += verticesOnLevel;
@@ -553,16 +530,16 @@ void peano4::topology::tests::TreeTest::testRegularGridSizes() {
 }
 
 /**
- * Every dense cell answers getCellAt() with its own index, on every level
- * and with a periodic axis.
+ * getCellAt() returns the index of every dense cell on every level, also with a periodic axis.
  */
-void peano4::topology::tests::TreeTest::testDenseCellLookupMatchesTheLattice() {
+void
+peano4::topology::tests::TreeTest::testDenseCellLookupMatchesTheLattice() {
   constexpr int LookupDepth = 4;
   for (const bool periodic : {false, true}) {
     std::bitset<DIMENSIONS> periodicBoundaries;
     periodicBoundaries[0] = periodic;
     peano4::topology::Tree tree(
-      TreeId,
+      LocalRank,
       tarch::la::Vector<DIMENSIONS, double>(0.0),
       tarch::la::Vector<DIMENSIONS, double>(1.0),
       periodicBoundaries
@@ -580,9 +557,10 @@ void peano4::topology::tests::TreeTest::testDenseCellLookupMatchesTheLattice() {
   }
 }
 
-void peano4::topology::tests::TreeTest::testCellLinks() {
+void
+peano4::topology::tests::TreeTest::testCellLinks() {
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -595,7 +573,7 @@ void peano4::topology::tests::TreeTest::testCellLinks() {
 
   for (int cellIndex = 0; cellIndex < static_cast<int>(tree.getNumberOfCells()); cellIndex++) {
     const auto& cell = tree.getCell(cellIndex);
-    validateEquals(cell.ownerTreeId, TreeId);
+    validateEquals(cell.ownerRank, LocalRank);
     validateEquals(tree.isRefined(cellIndex), (cell.level < Depth));
     if (not tree.isRefined(cellIndex)) {
       continue;
@@ -619,18 +597,18 @@ void peano4::topology::tests::TreeTest::testCellLinks() {
   constexpr int                          DeepestSparseLevel = 12;
   peano4::topology::Tree::RefinementPlan deepRefinementPlan(DeepestSparseLevel);
   for (int level = 0; level < DeepestSparseLevel; level++) {
-    deepRefinementPlan[level].emplace_back(peano4::topology::cellsPerAxis(level));
+    deepRefinementPlan[level].emplace_back(peano4::topology::getCellsPerAxis(level));
   }
   peano4::topology::Tree deepTree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
   deepTree.buildRegularGrid(0, 0, 1, deepRefinementPlan);
 
-  // Keeping one sparse map per normal preserves all lattice bits at depths
-  // where a combined face key would need more than 64 bits in three dimensions.
-  const int                   cellsPerAxisOnDeepestLevel = peano4::topology::cellsPerAxis(DeepestSparseLevel);
+  // One sparse map per normal keeps every lattice bit at depths where a face key with the normal would
+  // need more than 64 bits in 3D.
+  const int                   cellsPerAxisOnDeepestLevel = peano4::topology::getCellsPerAxis(DeepestSparseLevel);
   std::array<int, DIMENSIONS> faceIndices{};
   for (int normal = 0; normal < DIMENSIONS; normal++) {
     tarch::la::Vector<DIMENSIONS, int> faceLattice(cellsPerAxisOnDeepestLevel - 1);
@@ -643,16 +621,16 @@ void peano4::topology::tests::TreeTest::testCellLinks() {
   }
 }
 
-void peano4::topology::tests::TreeTest::testAdjacentCellsReferenceOneVertex() {
+void
+peano4::topology::tests::TreeTest::testAdjacentCellsReferenceOneVertex() {
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
   tree.buildRegularGrid(Depth);
 
-  // A cell and its neighbour along axis 0 reference the vertices of the face
-  // between them through the same vertex indices.
+  // A cell and its neighbour along axis 0 point to the same indices for the vertices between them.
   const auto  leftCellIndex  = tree.getChild(peano4::topology::Tree::RootCell, 0);
   const auto  rightCellIndex = tree.getChild(peano4::topology::Tree::RootCell, 1);
   const auto& leftCell       = tree.getCell(leftCellIndex);
@@ -665,9 +643,10 @@ void peano4::topology::tests::TreeTest::testAdjacentCellsReferenceOneVertex() {
   }
 }
 
-void peano4::topology::tests::TreeTest::testVertexContent() {
+void
+peano4::topology::tests::TreeTest::testVertexContent() {
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -675,7 +654,7 @@ void peano4::topology::tests::TreeTest::testVertexContent() {
 
   for (int cellIndex = 0; cellIndex < static_cast<int>(tree.getNumberOfCells()); cellIndex++) {
     const auto& cell                = tree.getCell(cellIndex);
-    const int   cellsPerAxisOnLevel = peano4::topology::cellsPerAxis(cell.level);
+    const int   cellsPerAxisOnLevel = peano4::topology::getCellsPerAxis(cell.level);
     const bool  isFinestLevel       = cell.level == Depth;
 
     for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
@@ -686,8 +665,7 @@ void peano4::topology::tests::TreeTest::testVertexContent() {
         == (isFinestLevel ? peano4::grid::GridVertex::State::Unrefined : peano4::grid::GridVertex::State::Refined)
       );
 
-      // The vertex answers one owner per surrounding cell position; positions
-      // outside the domain carry no owner.
+      // Every adjacency entry inside the domain returns this rank, and every entry outside returns -1.
       tarch::la::Vector<DIMENSIONS, int> vertexLattice(0);
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         vertexLattice(axis) = cell.latticeIndex(axis) + ((vertexNumber >> axis) & 1);
@@ -701,7 +679,7 @@ void peano4::topology::tests::TreeTest::testVertexContent() {
         }
         validateEquals(
           tree.getAdjacentCellOwnerAt(cell.level, vertexLattice, adjacencyEntry),
-          (isInsideDomain ? TreeId : -1)
+          (isInsideDomain ? LocalRank : -1)
         );
       }
     }
@@ -710,27 +688,27 @@ void peano4::topology::tests::TreeTest::testVertexContent() {
   std::bitset<DIMENSIONS> periodicBoundaries;
   periodicBoundaries.set();
   peano4::topology::Tree periodicTree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0),
     periodicBoundaries
   );
   periodicTree.buildRegularGrid(Depth);
 
-  // Every canonical vertex of the wrapped grid sees local cells all around;
-  // the wrapped duplicates alias them by lattice position.
+  // On the periodic grid, every canonical vertex has local cells at all adjacency entries, and a
+  // wrapped corner maps to its canonical vertex.
   std::size_t expectedCanonicalVertices = 0;
   for (int level = 0; level <= Depth; level++) {
     std::size_t verticesOnLevel = 1;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      verticesOnLevel *= peano4::topology::cellsPerAxis(level);
+      verticesOnLevel *= peano4::topology::getCellsPerAxis(level);
     }
     expectedCanonicalVertices += verticesOnLevel;
   }
   std::unordered_set<std::int64_t> canonicalCornerKeys;
   for (int cellIndex = 0; cellIndex < static_cast<int>(periodicTree.getNumberOfCells()); cellIndex++) {
     const auto& cell                = periodicTree.getCell(cellIndex);
-    const int   cellsPerAxisOnLevel = peano4::topology::cellsPerAxis(cell.level);
+    const int   cellsPerAxisOnLevel = peano4::topology::getCellsPerAxis(cell.level);
     for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
       tarch::la::Vector<DIMENSIONS, int> vertexLattice(0);
       std::int64_t                       cornerKey = cell.level;
@@ -752,9 +730,10 @@ void peano4::topology::tests::TreeTest::testVertexContent() {
   validateEquals(canonicalCornerKeys.size(), expectedCanonicalVertices);
 }
 
-void peano4::topology::tests::TreeTest::testRefinementPlanDilation() {
+void
+peano4::topology::tests::TreeTest::testRefinementPlanDilation() {
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -762,12 +741,10 @@ void peano4::topology::tests::TreeTest::testRefinementPlanDilation() {
   plan[0].emplace_back(RequestedCell);
   tree.buildRegularGrid(Depth, 0, 1, plan);
 
-  // A refine request from the requested cell covers that cell and one full cell of
-  // every neighbour, so every still-unrefined corner of the block of three cells
-  // around it per axis is flagged. Those are the four vertices from one below the
-  // cell to two above it per axis, all but the one the plan already refines.
-  peano4::grid::GridControlEvent refineRequest;
-  refineRequest.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Refine);
+  // A refine request flags every unrefined corner of the three cells per axis around the requested
+  // cell. These are the four vertices per axis from one below the cell to two above it.
+  peano4::RefinementRequest refineRequest;
+  refineRequest.setRefinementControl(peano4::RefinementRequest::RefinementControl::Refine);
   refineRequest.level        = Depth;
   refineRequest.latticeIndex = tarch::la::Vector<DIMENSIONS, int>(RequestedCell);
 
@@ -786,12 +763,13 @@ void peano4::topology::tests::TreeTest::testRefinementPlanDilation() {
 }
 
 /**
- * A request from a fine cell also reaches the coarse leaves beside the refinement
- * transition, so the refined region dilates outward by a ring.
+ * A request from a fine cell also flags the coarse vertices beside the refinement transition, so the
+ * refined region grows by one ring.
  */
-void peano4::topology::tests::TreeTest::testRefinementPlanCoarseDilation() {
+void
+peano4::topology::tests::TreeTest::testRefinementPlanCoarseDilation() {
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -799,14 +777,13 @@ void peano4::topology::tests::TreeTest::testRefinementPlanCoarseDilation() {
   plan[0].emplace_back(RequestedCell);
   tree.buildRegularGrid(Depth, 0, 1, plan);
 
-  // The fine cell is the first child of the coarse cell below the requested one.
-  // Its band covers that coarse cell and its lower neighbour per axis, so the
-  // coarse vertices from two below the requested cell up to the requested cell are
-  // flagged: The ring outside the fine region.
-  constexpr int                  CoarseCell = RequestedCell - 1;
-  constexpr int                  CoarseRing = RequestedCell - 2;
-  peano4::grid::GridControlEvent refineRequest;
-  refineRequest.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Refine);
+  // The fine cell is the first child of the coarse cell below the requested one. Its band covers this
+  // coarse cell and its lower neighbour per axis, which flags the ring of coarse vertices outside the
+  // fine region.
+  constexpr int             CoarseCell = RequestedCell - 1;
+  constexpr int             CoarseRing = RequestedCell - 2;
+  peano4::RefinementRequest refineRequest;
+  refineRequest.setRefinementControl(peano4::RefinementRequest::RefinementControl::Refine);
   refineRequest.level        = Depth + 1;
   refineRequest.latticeIndex = tarch::la::Vector<DIMENSIONS, int>(SubdivisionFactor * CoarseCell);
 
@@ -825,24 +802,24 @@ void peano4::topology::tests::TreeTest::testRefinementPlanCoarseDilation() {
 }
 
 /**
- * A refine request raised beside a periodic wrap flags as many vertices as the
- * same request raised in the interior.
+ * A refine request next to the periodic boundary flags as many vertices as one inside the domain.
  */
-void peano4::topology::tests::TreeTest::testRefinementPlanWrapsOnAPeriodicAxis() {
+void
+peano4::topology::tests::TreeTest::testRefinementPlanWrapsOnAPeriodicAxis() {
   std::bitset<DIMENSIONS> periodicBoundaries;
   periodicBoundaries.set();
 
-  const auto flaggedVerticesOfRequestAt = [&periodicBoundaries](const int firstCellPosition) {
+  const auto getFlaggedVerticesOfRequestAt = [&periodicBoundaries](const int firstCellPosition) {
     peano4::topology::Tree tree(
-      TreeId,
+      LocalRank,
       tarch::la::Vector<DIMENSIONS, double>(0.0),
       tarch::la::Vector<DIMENSIONS, double>(1.0),
       periodicBoundaries
     );
     tree.buildRegularGrid(Depth);
 
-    peano4::grid::GridControlEvent refineRequest;
-    refineRequest.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Refine);
+    peano4::RefinementRequest refineRequest;
+    refineRequest.setRefinementControl(peano4::RefinementRequest::RefinementControl::Refine);
     refineRequest.level        = Depth;
     refineRequest.latticeIndex = tarch::la::Vector<DIMENSIONS, int>(firstCellPosition);
 
@@ -851,17 +828,17 @@ void peano4::topology::tests::TreeTest::testRefinementPlanWrapsOnAPeriodicAxis()
     return plan.empty() ? std::size_t(0) : plan[0].size();
   };
 
-  // The centre of the lattice is as far from the wrap as a cell gets, so its
-  // band never reaches it.
-  const auto interiorFlags = flaggedVerticesOfRequestAt(peano4::topology::cellsPerAxis(Depth) / 2);
+  // The band of the centre cell does not reach the periodic boundary.
+  const auto interiorFlags = getFlaggedVerticesOfRequestAt(peano4::topology::getCellsPerAxis(Depth) / 2);
   validate(interiorFlags > 0);
-  validateEquals(flaggedVerticesOfRequestAt(0), interiorFlags);
-  validateEquals(flaggedVerticesOfRequestAt(peano4::topology::cellsPerAxis(Depth) - 1), interiorFlags);
+  validateEquals(getFlaggedVerticesOfRequestAt(0), interiorFlags);
+  validateEquals(getFlaggedVerticesOfRequestAt(peano4::topology::getCellsPerAxis(Depth) - 1), interiorFlags);
 }
 
-void peano4::topology::tests::TreeTest::testRefinementPlanErase() {
+void
+peano4::topology::tests::TreeTest::testRefinementPlanErase() {
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -869,13 +846,13 @@ void peano4::topology::tests::TreeTest::testRefinementPlanErase() {
   plan[0].emplace_back(RequestedCell);
   tree.buildRegularGrid(Depth, 0, 1, plan);
 
-  // Erase requests naming every cell adjacent to the flagged vertex unflag it, and the
-  // trailing empty level drops from the plan. The requests are the parent cells the
-  // consensus has already promoted to, so each names one whole cell of the base depth.
-  std::vector<peano4::grid::GridControlEvent> eraseRequests;
+  // Erase requests for every cell around the flagged vertex remove its flag, and the empty level
+  // drops. Each request names a base-depth cell, as a caller promotes an erase request to the parent
+  // cell.
+  std::vector<peano4::RefinementRequest> eraseRequests;
   for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
-    peano4::grid::GridControlEvent eraseRequest;
-    eraseRequest.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Erase);
+    peano4::RefinementRequest eraseRequest;
+    eraseRequest.setRefinementControl(peano4::RefinementRequest::RefinementControl::Erase);
     eraseRequest.level = Depth;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       eraseRequest.latticeIndex(axis) = RequestedCell - 1 + ((adjacencyEntry >> axis) & 1);
@@ -889,7 +866,7 @@ void peano4::topology::tests::TreeTest::testRefinementPlanErase() {
   std::bitset<DIMENSIONS> periodicBoundaries;
   periodicBoundaries.set(0);
   peano4::topology::Tree periodicTree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0),
     periodicBoundaries
@@ -897,24 +874,23 @@ void peano4::topology::tests::TreeTest::testRefinementPlanErase() {
   peano4::topology::Tree::RefinementPlan periodicPlan(2);
   periodicPlan[0].emplace_back(0);
   auto fineVertexAcrossWrap = tarch::la::Vector<DIMENSIONS, int>(0);
-  fineVertexAcrossWrap(0)   = SubdivisionFactor * peano4::topology::cellsPerAxis(Depth) - 1;
+  fineVertexAcrossWrap(0)   = SubdivisionFactor * peano4::topology::getCellsPerAxis(Depth) - 1;
   periodicPlan[1].push_back(fineVertexAcrossWrap);
   periodicTree.buildRegularGrid(Depth, 0, 1, periodicPlan);
 
-  // Both cells the coarse flag sits between want to be erased, one of them reached
-  // across the periodic wrap.
-  std::vector<peano4::grid::GridControlEvent> periodicEraseRequests;
-  for (const int firstAxisPosition : {0, peano4::topology::cellsPerAxis(Depth) - 1}) {
-    peano4::grid::GridControlEvent eraseRequest;
-    eraseRequest.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Erase);
+  // The erase requests cover both cells around the coarse flag, one of them across the periodic boundary.
+  std::vector<peano4::RefinementRequest> periodicEraseRequests;
+  for (const int firstAxisPosition : {0, peano4::topology::getCellsPerAxis(Depth) - 1}) {
+    peano4::RefinementRequest eraseRequest;
+    eraseRequest.setRefinementControl(peano4::RefinementRequest::RefinementControl::Erase);
     eraseRequest.level           = Depth;
     eraseRequest.latticeIndex    = tarch::la::Vector<DIMENSIONS, int>(0);
     eraseRequest.latticeIndex(0) = firstAxisPosition;
     periodicEraseRequests.push_back(eraseRequest);
   }
 
-  // The fine flag across the periodic wrap still depends on the coarse flag,
-  // so the coarse level cannot disappear in this erase round.
+  // The fine flag across the periodic boundary depends on the coarse flag, so the coarse flag stays
+  // in this round.
   validate(not periodicTree.updateRefinementPlan(periodicEraseRequests, periodicPlan));
   validateEquals(periodicPlan.size(), 2U);
   validateEquals(periodicPlan[0].size(), 1U);
@@ -922,15 +898,13 @@ void peano4::topology::tests::TreeTest::testRefinementPlanErase() {
 }
 
 /**
- * A refine request on the base depth flags the corners of its band there and
- * leaves the finer level as it stands, an erase request on the finer level
- * removes that level's last flag and drops the level, and every level stays
- * sorted by lattice key without a duplicate.
+ * A round changes only the levels its requests touch and keeps every level sorted by lattice key
+ * without duplicates.
  */
-void peano4::topology::tests::TreeTest::testRefinementPlanRoundKeepsLevelsWithoutRequests() {
-  // The lattice carries the coarse flag, the band of the refine request and an
-  // unrefined cell between them, so the base depth follows the subdivision
-  // factor.
+void
+peano4::topology::tests::TreeTest::testRefinementPlanRoundKeepsLevelsWithoutRequests() {
+  // The lattice has room for the coarse flag, the band of the refine request and an unrefined cell
+  // between them, so the depth depends on the subdivision factor.
   constexpr int RoundDepth          = SubdivisionFactor >= 3 ? Depth : Depth + 1;
   constexpr int RoundCellsPerAxis   = peano4::power(SubdivisionFactor, RoundDepth);
   constexpr int CoarseFlag          = RoundCellsPerAxis / 2;
@@ -946,10 +920,10 @@ void peano4::topology::tests::TreeTest::testRefinementPlanRoundKeepsLevelsWithou
     }
   };
 
-  // The coarse flag refines the two cells per axis that meet at it, and the
-  // fine flag sits on the corner where the children of those cells meet.
+  // The coarse flag refines the two cells per axis around it, and the fine flag lies on the corner
+  // where the children of these cells meet.
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -959,10 +933,10 @@ void peano4::topology::tests::TreeTest::testRefinementPlanRoundKeepsLevelsWithou
   tree.buildRegularGrid(RoundDepth, 0, 1, plan);
   const auto standingFineLevel = plan[1];
 
-  // A refine request of the base depth covers the neighbourhood of its own
-  // cell, whose corners all lie away from the coarse flag.
-  peano4::grid::GridControlEvent refineRequest;
-  refineRequest.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Refine);
+  // A refine request on the base depth covers the neighbourhood of its cell, whose corners all lie
+  // away from the coarse flag.
+  peano4::RefinementRequest refineRequest;
+  refineRequest.setRefinementControl(peano4::RefinementRequest::RefinementControl::Refine);
   refineRequest.level        = RoundDepth;
   refineRequest.latticeIndex = tarch::la::Vector<DIMENSIONS, int>(RequestedCellOfBand);
   validate(tree.updateRefinementPlan({refineRequest}, plan));
@@ -975,14 +949,14 @@ void peano4::topology::tests::TreeTest::testRefinementPlanRoundKeepsLevelsWithou
   validateEquals(plan[0].size(), 1 + numberOfBandCorners);
   validateSorted(plan);
 
-  // Erase requests naming every fine cell around the fine flag remove it, so
-  // the fine level drops and the coarse level stays as it is.
+  // Erase requests for every fine cell around the fine flag remove it, so the fine level drops and the
+  // coarse level stays.
   tree.buildRegularGrid(RoundDepth, 0, 1, plan);
-  const auto                                  standingCoarseLevel = plan[0];
-  std::vector<peano4::grid::GridControlEvent> eraseRequests;
+  const auto                             standingCoarseLevel = plan[0];
+  std::vector<peano4::RefinementRequest> eraseRequests;
   for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
-    peano4::grid::GridControlEvent eraseRequest;
-    eraseRequest.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Erase);
+    peano4::RefinementRequest eraseRequest;
+    eraseRequest.setRefinementControl(peano4::RefinementRequest::RefinementControl::Erase);
     eraseRequest.level = RoundDepth + 1;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       eraseRequest.latticeIndex(axis) = FineFlag - 1 + ((adjacencyEntry >> axis) & 1);
@@ -996,13 +970,14 @@ void peano4::topology::tests::TreeTest::testRefinementPlanRoundKeepsLevelsWithou
 }
 
 /**
- * An erase block whose every cell keeps a flagged corner on the block's rim
- * coarsens no cell, and a block of one neighbourhood coarsens its centre cell
- * and drops exactly that cell's corner flags.
+ * Erase requests that leave every cell with a flagged corner on the rim coarsen no cell, and erase
+ * requests for a whole neighbourhood coarsen its centre cell and remove only the corner flags of
+ * that cell.
  */
-void peano4::topology::tests::TreeTest::testRefinementPlanEraseKeepsFlagsBetweenRefinedCells() {
-  // The flagged block, the cells it refines and one unrefined ring around them
-  // stay inside the lattice, so the base depth follows the subdivision factor.
+void
+peano4::topology::tests::TreeTest::testRefinementPlanEraseKeepsFlagsBetweenRefinedCells() {
+  // The flagged block, the cells it refines and one unrefined ring around them fit into the lattice, so
+  // the depth depends on the subdivision factor.
   constexpr int  EraseDepth              = SubdivisionFactor >= 3 ? Depth : Depth + 1;
   constexpr int  EraseCellsPerAxis       = peano4::power(SubdivisionFactor, EraseDepth);
   constexpr int  FlaggedVerticesPerAxis  = peano4::NeighbourhoodWidth + 1;
@@ -1011,7 +986,7 @@ void peano4::topology::tests::TreeTest::testRefinementPlanEraseKeepsFlagsBetween
   constexpr auto NumberOfFlaggedVertices = static_cast<std::size_t>(peano4::power(FlaggedVerticesPerAxis, DIMENSIONS));
 
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
@@ -1027,15 +1002,15 @@ void peano4::topology::tests::TreeTest::testRefinementPlanEraseKeepsFlagsBetween
   }
   tree.buildRegularGrid(EraseDepth, 0, 1, plan);
 
-  const auto eraseRequestsForBlock = [](const tarch::la::Vector<DIMENSIONS, int>& blockCellsPerAxis) {
-    std::vector<peano4::grid::GridControlEvent> eraseRequests;
-    int                                         numberOfCells = 1;
+  const auto getEraseRequestsForBlock = [](const tarch::la::Vector<DIMENSIONS, int>& blockCellsPerAxis) {
+    std::vector<peano4::RefinementRequest> eraseRequests;
+    int                                    numberOfCells = 1;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       numberOfCells *= blockCellsPerAxis(axis);
     }
     for (int cellNumber = 0; cellNumber < numberOfCells; cellNumber++) {
-      peano4::grid::GridControlEvent eraseRequest;
-      eraseRequest.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Erase);
+      peano4::RefinementRequest eraseRequest;
+      eraseRequest.setRefinementControl(peano4::RefinementRequest::RefinementControl::Erase);
       eraseRequest.level   = EraseDepth;
       auto remainingNumber = cellNumber;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -1047,17 +1022,17 @@ void peano4::topology::tests::TreeTest::testRefinementPlanEraseKeepsFlagsBetween
     return eraseRequests;
   };
 
-  // One neighbourhood along the first axis and one cell less along every other
-  // one: The vertices between the block's cells are candidates, and every cell
-  // around them keeps a flagged corner on the rim.
+  // The block spans one neighbourhood along the first axis and one cell less along the other axes. The
+  // vertices between its cells are candidates, and every cell around them keeps a flagged corner on
+  // the rim.
   tarch::la::Vector<DIMENSIONS, int> partialBlock(peano4::NeighbourhoodWidth - 1);
   partialBlock(0) = peano4::NeighbourhoodWidth;
-  validate(not tree.updateRefinementPlan(eraseRequestsForBlock(partialBlock), plan));
+  validate(not tree.updateRefinementPlan(getEraseRequestsForBlock(partialBlock), plan));
   validateEquals(plan.size(), 1U);
   validateEquals(plan[0].size(), NumberOfFlaggedVertices);
 
   const tarch::la::Vector<DIMENSIONS, int> wholeBlock(peano4::NeighbourhoodWidth);
-  validate(tree.updateRefinementPlan(eraseRequestsForBlock(wholeBlock), plan));
+  validate(tree.updateRefinementPlan(getEraseRequestsForBlock(wholeBlock), plan));
   validateEquals(plan.size(), 1U);
   validateEquals(plan[0].size(), NumberOfFlaggedVertices - peano4::VerticesPerCell);
   for (const auto& flaggedVertex : plan[0]) {
@@ -1072,23 +1047,21 @@ void peano4::topology::tests::TreeTest::testRefinementPlanEraseKeepsFlagsBetween
 }
 
 /**
- * A fine vertex on the side between two refined cells of the base depth is
- * persistent, in the plan query and in the built structure, while a fine
- * vertex on a side towards an unrefined cell hangs.
+ * A fine vertex between two refined base-depth cells is persistent in the plan and in the built tree,
+ * and a fine vertex towards an unrefined cell hangs.
  */
-void peano4::topology::tests::TreeTest::testVertexBetweenRefinedCellsIsPersistent() {
-  // The two cells, the flags on their outer corners and the unrefined cell
-  // beside them stay clear of the walls.
+void
+peano4::topology::tests::TreeTest::testVertexBetweenRefinedCellsIsPersistent() {
+  // The two cells, their flags and the unrefined cell beside them lie away from the boundary.
   constexpr int FirstCell = CellsPerAxis / 2 - 1;
 
   peano4::topology::Tree tree(
-    TreeId,
+    LocalRank,
     tarch::la::Vector<DIMENSIONS, double>(0.0),
     tarch::la::Vector<DIMENSIONS, double>(1.0)
   );
-  // The first cell refines through its lower corner and its first-axis
-  // neighbour through its upper one, so the corners on the side between them
-  // carry no flag.
+  // The first cell refines through its lower corner and its neighbour along the first axis through its
+  // upper corner, so the corners between them have no flag.
   peano4::topology::Tree::RefinementPlan plan(1);
   plan[0].emplace_back(FirstCell);
   auto farCorner = tarch::la::Vector<DIMENSIONS, int>(FirstCell);
@@ -1096,188 +1069,19 @@ void peano4::topology::tests::TreeTest::testVertexBetweenRefinedCellsIsPersisten
   plan[0].push_back(farCorner);
   tree.buildRegularGrid(Depth, 0, 1, plan);
 
-  const int fineLevel = Depth + 1;
-  // A fine vertex on the side between the two cells.
-  auto sideBetweenCellsVertex = tarch::la::Vector<DIMENSIONS, int>(SubdivisionFactor * FirstCell + 1);
-  sideBetweenCellsVertex(0)   = SubdivisionFactor * (FirstCell + 1);
+  const int fineLevel              = Depth + 1;
+  auto      sideBetweenCellsVertex = tarch::la::Vector<DIMENSIONS, int>(SubdivisionFactor * FirstCell + 1);
+  sideBetweenCellsVertex(0)        = SubdivisionFactor * (FirstCell + 1);
   validate(tree.isVertexPersistentInPlan(fineLevel, sideBetweenCellsVertex));
   const int sideBetweenCellsVertexIndex = tree.getVertexAt(fineLevel, sideBetweenCellsVertex);
   validate(sideBetweenCellsVertexIndex >= 0);
   validate(tree.getVertex(sideBetweenCellsVertexIndex).getState() != peano4::grid::GridVertex::State::HangingVertex);
 
-  // A fine vertex on the first cell's side towards the unrefined cell beyond
-  // it along the second axis.
+  // A fine vertex on the side of the first cell towards the unrefined cell along the second axis.
   auto outerSideVertex = tarch::la::Vector<DIMENSIONS, int>(SubdivisionFactor * FirstCell + 1);
   outerSideVertex(1)   = SubdivisionFactor * (FirstCell + 1);
   validate(not tree.isVertexPersistentInPlan(fineLevel, outerSideVertex));
   const int outerSideVertexIndex = tree.getVertexAt(fineLevel, outerSideVertex);
   validate(outerSideVertexIndex >= 0);
   validate(tree.getVertex(outerSideVertexIndex).getState() == peano4::grid::GridVertex::State::HangingVertex);
-}
-
-/**
- * A tree built for a plan and then appended to the plan's dilation through a
- * plan-query view holds every cell of a tree built for the dilated plan
- * directly, with the same vertex state at every corner.
- */
-void peano4::topology::tests::TreeTest::testAppendedDeltaMatchesADirectBuild() {
-  const tarch::la::Vector<DIMENSIONS, double> offset(0.0);
-  const tarch::la::Vector<DIMENSIONS, double> width(1.0);
-  peano4::topology::Tree                      tree(TreeId, offset, width);
-  peano4::topology::Tree::RefinementPlan      plan(1);
-  plan[0].emplace_back(4);
-  tree.buildRegularGrid(Depth, 0, 1, plan);
-  const auto numberOfCellsBefore = tree.getNumberOfCells();
-
-  peano4::grid::GridControlEvent refineRequest;
-  refineRequest.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Refine);
-  refineRequest.level        = Depth;
-  refineRequest.latticeIndex = tarch::la::Vector<DIMENSIONS, int>(4);
-  auto dilatedPlan           = plan;
-  validate(tree.updateRefinementPlan({refineRequest}, dilatedPlan));
-  validate(dilatedPlan[0].size() > plan[0].size());
-  peano4::topology::Tree::RefinementPlan addedFlags(1);
-  for (const auto& flaggedVertex : dilatedPlan[0]) {
-    if (
-      peano4::topology::Tree::latticeKeyPrecedes(plan[0][0], flaggedVertex)
-      or peano4::topology::Tree::latticeKeyPrecedes(flaggedVertex, plan[0][0])
-    ) {
-      addedFlags[0].push_back(flaggedVertex);
-    }
-  }
-  validateEquals(addedFlags[0].size(), dilatedPlan[0].size() - 1);
-
-  peano4::topology::Tree view(TreeId, offset, width);
-  view.buildPlanQueryTables(Depth, dilatedPlan);
-  const auto extent = tree.appendRefinementDelta(view, dilatedPlan, addedFlags);
-  validateEquals(static_cast<std::size_t>(extent.firstAppendedCell), numberOfCellsBefore);
-
-  peano4::topology::Tree direct(TreeId, offset, width);
-  direct.buildRegularGrid(Depth, 0, 1, dilatedPlan);
-  validateEquals(tree.getNumberOfCells(), direct.getNumberOfCells());
-  validateEquals(tree.getNumberOfVertices(), direct.getNumberOfVertices());
-  validateEquals(tree.getNumberOfFaces(), direct.getNumberOfFaces());
-  for (std::size_t directCellIndex = 0; directCellIndex < direct.getNumberOfCells(); directCellIndex++) {
-    const auto& directCell = direct.getCell(static_cast<int>(directCellIndex));
-    const int   cellIndex  = tree.getCellAt(directCell.level, directCell.latticeIndex);
-    validateWithParams2(cellIndex >= 0, directCell.level, directCell.latticeIndex);
-    const bool treeCellIsLeaf   = tree.getCell(cellIndex).childrenBlock < 0;
-    const bool directCellIsLeaf = directCell.childrenBlock < 0;
-    validateEqualsWithParams2(treeCellIsLeaf, directCellIsLeaf, directCell.level, directCell.latticeIndex);
-    for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
-      auto cornerLattice = directCell.latticeIndex;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        cornerLattice(axis) += (vertexNumber >> axis) & 1;
-      }
-      const int vertexIndex = tree.getVertexAt(directCell.level, cornerLattice);
-      validateWithParams2(vertexIndex >= 0, directCell.level, cornerLattice);
-      const auto expectedState = direct.getVertex(directCell.vertexIndices[vertexNumber]).getState();
-      validateEqualsWithParams2(
-        static_cast<int>(tree.getVertex(vertexIndex).getState()),
-        static_cast<int>(expectedState),
-        directCell.level,
-        cornerLattice
-      );
-    }
-  }
-}
-
-/**
- * A plan-query view derived from a standing structure and a delta answers every
- * refinement, existence and persistence query like the view built from the new
- * plan alone.
- */
-void peano4::topology::tests::TreeTest::testPlanViewFromDeltaMatchesADirectBuild() {
-  // The coarse flags move by one cell per axis, and every fine flag sits on
-  // the first interior corner of the cell it refines.
-  constexpr int RemovedCoarseFlag = CellsPerAxis / 2 - 1;
-  constexpr int KeptCoarseFlag    = RemovedCoarseFlag + 1;
-  constexpr int AddedCoarseFlag   = RemovedCoarseFlag + 2;
-  constexpr int KeptFineFlag      = SubdivisionFactor * (RemovedCoarseFlag - 1) + 1;
-  constexpr int RemovedFineFlag   = SubdivisionFactor * RemovedCoarseFlag + 1;
-  constexpr int AddedFineFlag     = SubdivisionFactor * KeptCoarseFlag + 1;
-
-  const tarch::la::Vector<DIMENSIONS, double> offset(0.0);
-  const tarch::la::Vector<DIMENSIONS, double> width(1.0);
-
-  peano4::topology::Tree::RefinementPlan standingPlan(2);
-  standingPlan[0].emplace_back(RemovedCoarseFlag);
-  standingPlan[0].emplace_back(KeptCoarseFlag);
-  standingPlan[1].emplace_back(KeptFineFlag);
-  standingPlan[1].emplace_back(RemovedFineFlag);
-  peano4::topology::Tree::RefinementPlan newPlan(2);
-  newPlan[0].emplace_back(KeptCoarseFlag);
-  newPlan[0].emplace_back(AddedCoarseFlag);
-  newPlan[1].emplace_back(KeptFineFlag);
-  newPlan[1].emplace_back(AddedFineFlag);
-  peano4::topology::Tree::RefinementPlan addedFlags(2);
-  addedFlags[0].emplace_back(AddedCoarseFlag);
-  addedFlags[1].emplace_back(AddedFineFlag);
-  peano4::topology::Tree::RefinementPlan removedFlags(2);
-  removedFlags[0].emplace_back(RemovedCoarseFlag);
-  removedFlags[1].emplace_back(RemovedFineFlag);
-
-  // The cell of the kept fine flag lies below the coarse cell the removed
-  // coarse flag refines, the cell of the added fine flag below a cell both
-  // plans refine.
-  const auto keptFineFlagCell  = tarch::la::Vector<DIMENSIONS, int>(SubdivisionFactor * (RemovedCoarseFlag - 1));
-  const auto addedFineFlagCell = tarch::la::Vector<DIMENSIONS, int>(SubdivisionFactor * KeptCoarseFlag);
-
-  peano4::topology::Tree standing(TreeId, offset, width);
-  standing.buildRegularGrid(Depth, 0, 1, standingPlan);
-  validate(standing.isCellRefinedInPlan(Depth + 1, keptFineFlagCell));
-
-  peano4::topology::Tree view(TreeId, offset, width);
-  view.buildPlanQueryTablesFrom(Depth, standing, newPlan, addedFlags, removedFlags);
-  peano4::topology::Tree direct(TreeId, offset, width);
-  direct.buildPlanQueryTables(Depth, newPlan);
-
-  // The parent of the kept fine flag lost its refinement, so its children
-  // are unrefined; the added fine flag refines below a kept parent.
-  validate(not direct.isCellRefinedInPlan(Depth + 1, keptFineFlagCell));
-  validate(direct.isCellRefinedInPlan(Depth + 1, addedFineFlagCell));
-
-  for (int level = Depth; level <= Depth + 2; level++) {
-    const int cellsPerAxisOnLevel      = peano4::topology::cellsPerAxis(level);
-    int       numberOfLatticePositions = 1;
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      numberOfLatticePositions *= cellsPerAxisOnLevel + 1;
-    }
-    for (int position = 0; position < numberOfLatticePositions; position++) {
-      tarch::la::Vector<DIMENSIONS, int> lattice(0);
-      int                                remaining      = position;
-      bool                               isCellPosition = true;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        lattice(axis) = remaining % (cellsPerAxisOnLevel + 1);
-        remaining /= cellsPerAxisOnLevel + 1;
-        isCellPosition = isCellPosition and lattice(axis) < cellsPerAxisOnLevel;
-      }
-      validateEqualsWithParams2(
-        view.isVertexRefinedInPlan(level, lattice),
-        direct.isVertexRefinedInPlan(level, lattice),
-        level,
-        lattice
-      );
-      validateEqualsWithParams2(
-        view.isVertexPersistentInPlan(level, lattice),
-        direct.isVertexPersistentInPlan(level, lattice),
-        level,
-        lattice
-      );
-      if (isCellPosition) {
-        validateEqualsWithParams2(
-          view.cellExistsInPlan(level, lattice),
-          direct.cellExistsInPlan(level, lattice),
-          level,
-          lattice
-        );
-        validateEqualsWithParams2(
-          view.isCellRefinedInPlan(level, lattice),
-          direct.isCellRefinedInPlan(level, lattice),
-          level,
-          lattice
-        );
-      }
-    }
-  }
 }

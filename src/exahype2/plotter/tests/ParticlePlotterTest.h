@@ -20,6 +20,5 @@ public:
   void run() override;
 
 private:
-  void testPlotsEveryLocalParticleOfTheVertex();
-  void testSkipsTheVertexOnAnUpperPeriodicWall();
+  void testEveryParticleBecomesOnePointWithItsNumberAndData();
 };

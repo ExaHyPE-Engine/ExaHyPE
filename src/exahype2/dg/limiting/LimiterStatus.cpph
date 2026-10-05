@@ -1,0 +1,33 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Returns whether a cell of this status recomputes its step on the subcell scheme.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr bool
+exahype2::dg::limiting::runsSubcellScheme(const LimiterStatus status) {
+  return static_cast<int>(status) >= static_cast<int>(exahype2::dg::limiting::LimiterStatus::Limited);
+}
+
+/**
+ * Returns the more limited of two statuses, so a face half merged across threads or ranks does
+ * not depend on the order of the merges.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr exahype2::dg::limiting::LimiterStatus
+exahype2::dg::limiting::mergeLimiterStatus(const LimiterStatus left, const LimiterStatus right) {
+  return static_cast<int>(left) > static_cast<int>(right) ? left : right;
+}
+
+/**
+ * Returns the status a cell takes from a neighbour of status neighbourStatus in a spreading
+ * round. Troubled gives Limited, Limited gives Halo, and every other status gives Regular.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr exahype2::dg::limiting::LimiterStatus
+exahype2::dg::limiting::spreadLimiterStatus(const LimiterStatus neighbourStatus) {
+  const int loweredStatus = static_cast<int>(neighbourStatus) - 1;
+  return loweredStatus > static_cast<int>(exahype2::dg::limiting::LimiterStatus::Regular)
+    ? static_cast<exahype2::dg::limiting::LimiterStatus>(loweredStatus)
+    : exahype2::dg::limiting::LimiterStatus::Regular;
+}
+TARGET_DECLARE_END
