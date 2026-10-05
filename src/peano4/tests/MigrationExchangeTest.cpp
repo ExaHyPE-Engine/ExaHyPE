@@ -181,7 +181,7 @@ namespace {
     const auto&    partition = spacetree.getPartition();
     peano4::Regrid regrid;
     if (not spacetree.regrid(requests, regrid)) {
-      tarch::terminateWithError("The regrid of the test grid changed nothing.");
+      tarch::terminateWithError("The regrid of the test grid must change the grid.");
     }
     pool.reserve(partition.getNumberOfSlots());
 

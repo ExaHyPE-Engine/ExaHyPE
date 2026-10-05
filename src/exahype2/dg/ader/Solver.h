@@ -68,7 +68,8 @@ public:
   using LimiterType = std::conditional_t<HasLimiter, Limiter, exahype2::dg::ader::NoLimiter>;
   /**
    * The Picard iteration of the predictor stops once the Euclidean distance between two
-   * iterates falls below this value.
+   * iterates falls below this value. A cell stops at the rounding distance of its iterates in
+   * ComputePrecision when that distance is larger.
    */
   static constexpr double PicardResidualTolerance = 1e-7;
 
@@ -129,8 +130,8 @@ private:
 
   using LimiterSlot = std::conditional_t<HasLimiter, std::optional<Limiter>, exahype2::dg::ader::NoLimiter>;
 
-  // Predictor::ScratchSize reads the PDE terms of Derived, which is complete only inside function
-  // bodies.
+  // Predictor::ScratchSize reads the PDE terms of Derived. Only function bodies name it. Derived is
+  // complete only once a function body is instantiated.
   using Predictor = exahype2::dg::ader::Predictor<Derived, ComputePrecision>;
 
   [[nodiscard]] static INLINE_METHOD exahype2::dg::BasisTables<ComputePrecision> getBasisTables();
@@ -159,6 +160,10 @@ private:
   );
   INLINE_METHOD void rebuildCouplingFaces(const peano4::Partition& partition);
   INLINE_METHOD void reservePredictorScratch(const peano4::Partition& partition);
+  [[nodiscard]] static INLINE_METHOD int getPredictorTeamThreads();
+  [[nodiscard]] static INLINE_METHOD int getPredictorThreadsPerCell();
+  [[nodiscard]] static INLINE_METHOD int getNumberOfPredictorChunks(int cells);
+  [[nodiscard]] static INLINE_METHOD int getNumberOfPredictorTeams(int cells);
 
   tarch::accelerator::Buffer<double> _pointSourceLocations{tarch::MemoryLocation::Device};
 

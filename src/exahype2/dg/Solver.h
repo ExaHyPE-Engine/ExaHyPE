@@ -128,8 +128,8 @@ protected:
     const peano4::Partition& partition,
     peano4::Adjacency        adjacency
   ) const;
-  [[nodiscard]] INLINE_METHOD const StoragePrecision* downloadSolution();
-  [[nodiscard]] INLINE_METHOD const ComputePrecision* downloadFaceStates();
+  [[nodiscard]] INLINE_METHOD const CellPool& downloadSolution();
+  [[nodiscard]] INLINE_METHOD const StatePool& downloadFaceStates();
   INLINE_METHOD void projectSolutionOntoFaces(const peano4::Partition& partition);
   INLINE_METHOD void projectSolutionOntoPlane(const peano4::Partition& partition, int normal, double position);
   INLINE_METHOD void solveRiemannProblems(
@@ -201,8 +201,8 @@ private:
 
   exahype2::ErrorMeasurement _errorMeasurement{};
 
-  std::vector<StoragePrecision>                 _solutionOnHost{};
-  std::vector<ComputePrecision>                 _faceStatesOnHost{};
+  CellPool                                      _solutionOnHost{ValuesPerCell, tarch::MemoryLocation::Heap};
+  StatePool                                     _faceStatesOnHost{StateValuesPerFace, tarch::MemoryLocation::Heap};
   std::optional<exahype2::plotter::FacePlotter> _facePlotter{};
 };
 

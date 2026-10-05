@@ -24,5 +24,6 @@ private:
   void testARejectedFreeStreamRecomputesEveryCellAndKeepsTheConstant();
   void testOneTroubledCellSpreadsTwoRingsOfNeighbours();
   void testTheSubgridBoundaryConditionsSkipTheCellsOffTheScheme();
+  void testAPlotAllocatesHostCopiesOnlyWithAGPUBackend();
   void testReleaseFreesEveryPool();
 };

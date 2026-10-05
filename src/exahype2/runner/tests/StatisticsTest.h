@@ -28,7 +28,7 @@ private:
   void testSnapshotFillsTheMemoryRowsOfTheBuild();
   void testDescribeGridSnapshotRendersFilledRows();
   void testDescribeGridTransitionMarksChangedValuesOnly();
-  void testUsedAndFreeMemoryFormOneLine();
+  void testResidentAndFreeMemoryFormOneLine();
   void testValueRangeAndCountCarryTheirKind();
   void testASolverWithoutEigenvalueReportsStepAndMeshWidth();
   void testASolverWithEigenvalueAndTroubledCellsAppendsBoth();

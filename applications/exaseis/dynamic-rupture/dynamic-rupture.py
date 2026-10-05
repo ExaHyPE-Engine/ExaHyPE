@@ -69,6 +69,7 @@ project = exahype2.Project(
 )
 if project.dimensions != 3:
     raise ValueError("The dynamic rupture ExaSeis application is three-dimensional.")
+DynamicRuptureElastic.add_runtime_parameters(project)
 
 theSolver = exahype2.dg.ader.Solver(
     name="ElasticSolver",
@@ -108,8 +109,6 @@ theSolver.on_start_grid_initialisation(
     )
 )
 theSolver.add_includes(*DynamicRuptureElastic.userIncludes())
-# The initial condition reads the curvilinear mapping and the NetCDF samplers of the host.
-theSolver.initialise_on_host()
 
 project.add_solver(theSolver)
 project.output.makefile.add_include_directory("../../..")

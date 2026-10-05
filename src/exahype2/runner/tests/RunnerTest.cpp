@@ -21,7 +21,7 @@ void
 exahype2::runner::tests::RunnerTest::run() {
   testMethod(testTheMasterStepReachesEveryRank);
   testMethod(testTheTerminationStepReachesEveryRank);
-  testMethod(testDescribeMeshUpdatesReportsTheSweepCountAndWallClock);
+  testMethod(testDescribeMeshUpdatesReportsTheStepCountAndWallClock);
   testMethod(testDescribeRepetitionsCountsEveryPhaseInItsUnit);
   testMethod(testFinishStepSumsTheSolverBytesAndCellUpdates);
   testMethod(testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition);
@@ -46,23 +46,23 @@ exahype2::runner::tests::RunnerTest::testTheTerminationStepReachesEveryRank() {
 }
 
 void
-exahype2::runner::tests::RunnerTest::testDescribeMeshUpdatesReportsTheSweepCountAndWallClock() {
-  exahype2::runner::Runner::MeshUpdates singleSweep;
-  singleSweep.regrids   = 1;
-  singleSweep.sweeps    = 1;
-  singleSweep.wallClock = 0.25;
+exahype2::runner::tests::RunnerTest::testDescribeMeshUpdatesReportsTheStepCountAndWallClock() {
+  exahype2::runner::Runner::MeshUpdates singleStep;
+  singleStep.regrids   = 1;
+  singleStep.steps     = 1;
+  singleStep.wallClock = 0.25;
   validateEquals(
-    exahype2::runner::Runner::describeMeshUpdates(singleSweep),
-    std::string("(0.2500 s) · 1 Regrid · 1 Sweep")
+    exahype2::runner::Runner::describeMeshUpdates(singleStep),
+    std::string("(0.2500 s) · 1 Regrid · 1 Step")
   );
 
-  exahype2::runner::Runner::MeshUpdates severalSweeps;
-  severalSweeps.regrids   = 12;
-  severalSweeps.sweeps    = 2048;
-  severalSweeps.wallClock = 12.5;
+  exahype2::runner::Runner::MeshUpdates severalSteps;
+  severalSteps.regrids   = 12;
+  severalSteps.steps     = 2048;
+  severalSteps.wallClock = 12.5;
   validateEquals(
-    exahype2::runner::Runner::describeMeshUpdates(severalSweeps),
-    std::string("(12.5000 s) · 12 Regrids · 2,048 Sweeps")
+    exahype2::runner::Runner::describeMeshUpdates(severalSteps),
+    std::string("(12.5000 s) · 12 Regrids · 2,048 Steps")
   );
 }
 
@@ -71,12 +71,10 @@ exahype2::runner::tests::RunnerTest::testDescribeRepetitionsCountsEveryPhaseInIt
   validateEquals(exahype2::runner::Runner::describeRepetitions("Time Step", 1, 0), std::string("1 Step"));
   validateEquals(exahype2::runner::Runner::describeRepetitions("Time Step", 1024, 0), std::string("1,024 Steps"));
   validateEquals(exahype2::runner::Runner::describeRepetitions("Plot", 3, 0), std::string("3 Plots"));
-  validateEquals(
-    exahype2::runner::Runner::describeRepetitions("Dynamic AMR", 2, 1),
-    std::string("1 Regrid · 2 Sweeps")
-  );
-  validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Construction", 5, 0), std::string("5 Sweeps"));
-  validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Initialisation", 1, 0), std::string("1 Sweep"));
+  validateEquals(exahype2::runner::Runner::describeRepetitions("Dynamic AMR", 2, 1), std::string("1 Regrid · 2 Steps"));
+  validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Construction", 5, 0), std::string("5 Steps"));
+  validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Initialisation", 1, 0), std::string("1 Round"));
+  validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Initialisation", 2, 0), std::string("2 Rounds"));
 }
 
 void

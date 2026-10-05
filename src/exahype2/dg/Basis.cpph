@@ -366,7 +366,7 @@ exahype2::dg::extrapolateNodalFieldToFacePair(
   const CoefficientPrecision* NOALIAS const rightFaceCoefficients,
   const int                                 direction
 ) {
-  static_assert(NodeStride >= NumberOfEntries, "A node holds every entry.");
+  static_assert(NodeStride >= NumberOfEntries);
 
   constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
 
@@ -433,7 +433,7 @@ exahype2::dg::extrapolateNodalFieldToFacePair(
 template <int Dimensions, int InputDofs, int OutputDofs, int ValuesPerDof, typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::projectTensorProduct(const Value* const input, Value* const output, const Value* const matrix) {
-  static_assert(Dimensions >= 1 and Dimensions <= 3, "The projection supports one to three dimensions.");
+  static_assert(Dimensions >= 1 and Dimensions <= 3, "The projection of nodal values supports 1D, 2D and 3D only.");
   if constexpr (Dimensions == 1) {
     for (int outputX = 0; outputX < OutputDofs; outputX++) {
       for (int entry = 0; entry < ValuesPerDof; entry++) {

@@ -50,6 +50,12 @@ namespace tarch::accelerator {
 
   void setCurrentDevice(int device);
   int getCurrentDevice();
+  void waitForDevice();
+
+  void* lockReductionScratch(std::size_t sizeInBytes);
+  void* getReductionStaging(std::size_t sizeInBytes);
+  void unlockReductionScratch();
+  void releaseReductionScratch();
 
   void reportMissingTaskloopSupportOnce();
 } // namespace tarch::accelerator
@@ -73,7 +79,7 @@ namespace tarch {
     MemoryLocation location,
     int            device = accelerator::getCurrentDevice()
   ) {
-    static_assert(sizeof(To) == sizeof(From), "Data type mismatch");
+    static_assert(sizeof(To) == sizeof(From), "The source and the target of a copy need values of equal size.");
     accelerator::copyTo(to, from, count * sizeof(To), location, device);
   }
 
@@ -85,7 +91,7 @@ namespace tarch {
     MemoryLocation location,
     int            device = accelerator::getCurrentDevice()
   ) {
-    static_assert(sizeof(From) == sizeof(To), "Data type mismatch");
+    static_assert(sizeof(From) == sizeof(To), "The source and the target of a copy need values of equal size.");
     accelerator::copyFrom(from, to, count * sizeof(From), location, device);
   }
 } // namespace tarch

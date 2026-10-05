@@ -69,14 +69,18 @@ class Solver(exahype2.solver.Solver):
         self.scheme = Godunov() if scheme is None else scheme
         if not isinstance(self.scheme, (Godunov, MusclHancock)):
             raise TypeError(
-                "scheme is exahype2.fv.Godunov() or exahype2.fv.MusclHancock(...)."
+                "The finite-volume solver supports the schemes exahype2.fv.Godunov() and "
+                "exahype2.fv.MusclHancock(...) only."
             )
         if (
             isinstance(patch_size, bool)
             or not isinstance(patch_size, int)
             or patch_size < 1
         ):
-            raise ValueError("patch_size is a positive integer.")
+            raise ValueError(
+                "The finite-volume solver expects a positive integer patch_size "
+                "(got {!r}).".format(patch_size)
+            )
         self._patch_size = patch_size
 
     def statistics_metadata(self):
@@ -95,14 +99,16 @@ class Solver(exahype2.solver.Solver):
             "max_eigenvalue"
         ):
             raise ValueError(
-                "[{}] the max_eigenvalue PDE term is required when no Riemann solver is set.".format(
+                "The solver {} without a Riemann solver needs the max_eigenvalue PDE term.".format(
                     self._name
                 )
             )
         if isinstance(self.scheme, MusclHancock) and self.pde_terms.is_set(
             "diffusive_source"
         ):
-            raise ValueError("MUSCL-Hancock does not support diffusive source terms.")
+            raise ValueError(
+                "The MUSCL-Hancock scheme cannot add diffusive source terms."
+            )
 
     def _solver_family_includes(self):
         includes = list(self.scheme.subcell_scheme().includes)
@@ -111,13 +117,13 @@ class Solver(exahype2.solver.Solver):
         return includes
 
     def _render_tracer_update(self, tracer, d):
-        """Returns the C++ call that moves one tracer set. A time step reads the previous
-        solution, so the tracers and the fluid advance from the same state."""
+        """Returns the C++ call that moves one tracer set through the patches of the solution.
+        After a time step, the patches hold the updated solution."""
         fields = "".join(", {}".format(field) for field in tracer["FIELDS"])
         return (
             "::exahype2::fv::traceParticles<PatchSize, NumberOfData, {number_of_data}{fields}>(\n"
             "  partition,\n"
-            "  initialisation ? getSolution() : getPreviousSolution(),\n"
+            "  getSolution(),\n"
             "  timeStepSize,\n"
             "  _{name},\n"
             "  _{name}Forces,\n"

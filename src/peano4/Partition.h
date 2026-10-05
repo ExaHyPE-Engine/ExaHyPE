@@ -40,7 +40,8 @@ enum class peano4::Adjacency : std::uint8_t { Local, Remote };
 
 /**
  * One level jump of the partition: A coarse face and the fine faces one level below it. The coarse
- * cell lies on side coarseSide of the coarse face, the fine cells on the other side.
+ * cell lies on side coarseSide of the coarse face. The cell of a hanging fine face lies on the other
+ * side.
  */
 struct peano4::LevelJump final {
   int coarseFace{-1};
@@ -91,6 +92,11 @@ public:
   ) const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(Adjacency adjacency) const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(Adjacency adjacency, int level) const noexcept;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(
+    Adjacency adjacency,
+    int       firstLevel,
+    int       lastLevel
+  ) const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const Neighbour> getNeighbours() const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const ExchangedFace> getExchangedFaces(
     const Neighbour& neighbour

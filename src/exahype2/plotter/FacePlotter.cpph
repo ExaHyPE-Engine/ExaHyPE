@@ -5,6 +5,7 @@
 #include "peano4/Loop.h"
 #include "peano4/Partition.h"
 #include "tarch/Assertions.h"
+#include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/mpi/Rank.h"
@@ -13,29 +14,29 @@
 
 /**
  * Writes one snapshot of every face for which plotsFace(faceCentre, cellWidth, normal) is true.
- * Face f starts at values + f * valuesPerFace with the lower half, followed by the upper half, each
- * with ValuesPerNode values per node and the lower tangential axis fastest. Every rank calls this
- * function collectively.
+ * The chunk of a face in values stores the half of the lower cell before the half of the upper
+ * cell, each with ValuesPerNode values per face node and the lower tangential axis fastest. Every
+ * rank calls this function collectively.
  */
 template <int NodesPerAxis, int ValuesPerNode, typename Precision, typename Predicate>
 INLINE_METHOD void
 exahype2::plotter::FacePlotter::plot(
-  const peano4::Partition&     partition,
-  const Precision* const       values,
-  const int                    valuesPerFace,
-  const double* const          quadratureNodes,
-  const double                 timeStamp,
-  const tarch::plotter::Format format,
-  const std::string&           outputDirectory,
-  const Predicate&             plotsFace
+  const peano4::Partition&                                partition,
+  const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
+  const double* const                                     quadratureNodes,
+  const double                                            timeStamp,
+  const tarch::plotter::Format                            format,
+  const std::string&                                      outputDirectory,
+  const Predicate&                                        plotsFace
 ) {
+  using Values = tarch::plotter::MeshArray<double>;
   static_assert(NodesPerAxis > 0 and ValuesPerNode > 0);
   constexpr int  NodesPerFace   = peano4::power(NodesPerAxis, DIMENSIONS - 1);
   constexpr int  CellsPerFace   = peano4::power(NodesPerAxis - 1, DIMENSIONS - 1);
   constexpr int  CornersPerCell = peano4::VerticesPerCell / 2;
   constexpr auto CellType = DIMENSIONS == 2 ? tarch::plotter::CellType::Line : tarch::plotter::CellType::Quadrangle;
-  assertion(values != nullptr or partition.getNumberOfFaces() == 0);
-  assertion(valuesPerFace >= 2 * NodesPerFace * ValuesPerNode, valuesPerFace);
+  assertion(values.isHostAccessible());
+  assertion(values.getChunkSize() >= 2 * NodesPerFace * ValuesPerNode, values.getChunkSize());
   assertion(quadratureNodes != nullptr);
   for ([[maybe_unused]] const auto& field : _fields) {
     assertion(field.components > 0, field.name, field.components);
@@ -47,35 +48,25 @@ exahype2::plotter::FacePlotter::plot(
       faces.push_back(face);
     }
   }
-  const auto        numberOfFaces  = faces.size();
-  const auto        numberOfCells  = numberOfFaces * CellsPerFace;
-  const auto        numberOfPoints = numberOfFaces * NodesPerFace;
-  const std::string directory      = outputDirectory + OutputSubdirectory;
-  const int         rank           = tarch::mpi::Rank::getInstance().getRank();
+  const auto numberOfFaces  = faces.size();
+  const auto numberOfCells  = numberOfFaces * CellsPerFace;
+  const auto numberOfPoints = numberOfFaces * NodesPerFace;
+  const int  rank           = tarch::mpi::Rank::getInstance().getRank();
 
-  _snapshot.openFile(format, directory, timeStamp);
-  auto& writer = _snapshot.getFileWriter();
-  auto& piece  = writer.getPieceBuffers(writer.acquirePiece(rank));
-
-  piece.pointsXYZ.assign(numberOfPoints * 3, 0.0);
-  piece.connectivity.resize(numberOfCells * CornersPerCell);
-  piece.offsets.resize(numberOfCells);
-  piece.types.assign(numberOfCells, static_cast<std::uint8_t>(CellType));
-  piece.pointFields.clear();
-  piece.cellFields.clear();
+  tarch::plotter::Mesh mesh;
+  mesh.pointsXYZ.assign(numberOfPoints * 3, 0.0);
+  mesh.connectivity.resize(numberOfCells * CornersPerCell);
+  mesh.offsets.resize(numberOfCells);
+  mesh.types.assign(numberOfCells, static_cast<std::uint8_t>(CellType));
   [[maybe_unused]] int plottedValues = 0;
   for (const auto& field : _fields) {
-    piece.pointFields.push_back(
-      {field.name + "L", field.components, std::vector<double>(numberOfPoints * field.components)}
-    );
-    piece.pointFields.push_back(
-      {field.name + "R", field.components, std::vector<double>(numberOfPoints * field.components)}
-    );
+    mesh.pointFields.push_back({field.name + "L", field.components, Values(numberOfPoints * field.components)});
+    mesh.pointFields.push_back({field.name + "R", field.components, Values(numberOfPoints * field.components)});
     plottedValues += field.components;
   }
   assertion(plottedValues <= ValuesPerNode, plottedValues, ValuesPerNode);
-  piece.cellFields.push_back({"RefinementLevel", 1, std::vector<double>(numberOfCells)});
-  piece.cellFields.push_back({"Subdomain", 1, std::vector<double>(numberOfCells, static_cast<double>(rank))});
+  mesh.cellFields.push_back({"RefinementLevel", 1, Values(numberOfCells)});
+  mesh.cellFields.push_back({"Subdomain", 1, Values(numberOfCells, static_cast<double>(rank))});
 
   tarch::accelerator::parallelForOnHost(
     tarch::accelerator::Range(static_cast<int>(numberOfFaces)),
@@ -86,7 +77,7 @@ exahype2::plotter::FacePlotter::plot(
       const auto             width      = partition.getFaceWidth(face);
       const std::size_t      firstPoint = static_cast<std::size_t>(entry) * NodesPerFace;
       const std::size_t      firstCell  = static_cast<std::size_t>(entry) * CellsPerFace;
-      const Precision* const lower      = values + static_cast<std::size_t>(face) * valuesPerFace;
+      const Precision* const lower      = values.getChunk(face);
       const Precision* const upper      = lower + NodesPerFace * ValuesPerNode;
 
       for (int node = 0; node < NodesPerFace; node++) {
@@ -96,16 +87,16 @@ exahype2::plotter::FacePlotter::plot(
           if (axis != normal) {
             coordinate = centre(axis) - 0.5 * width(axis) + quadratureNodes[nodeIndex(axis)] * width(axis);
           }
-          piece.pointsXYZ[(firstPoint + node) * 3 + axis] = coordinate;
+          mesh.pointsXYZ[(firstPoint + node) * 3 + axis] = coordinate;
         }
         int firstComponent = 0;
         for (std::size_t field = 0; field < _fields.size(); field++) {
           const int components = _fields[field].components;
           for (int component = 0; component < components; component++) {
             const int value = node * ValuesPerNode + firstComponent + component;
-            piece.pointFields[2 * field].values[(firstPoint + node) * components + component] =
+            mesh.pointFields[2 * field].values[(firstPoint + node) * components + component] =
               static_cast<double>(lower[value]);
-            piece.pointFields[2 * field + 1].values[(firstPoint + node) * components + component] =
+            mesh.pointFields[2 * field + 1].values[(firstPoint + node) * components + component] =
               static_cast<double>(upper[value]);
           }
           firstComponent += components;
@@ -121,14 +112,18 @@ exahype2::plotter::FacePlotter::plot(
             node += (cellIndex(tangential) + CellCorners[corner][tangential]) * stride;
             stride *= NodesPerAxis;
           }
-          piece.connectivity[(firstCell + cell) * CornersPerCell + corner] =
+          mesh.connectivity[(firstCell + cell) * CornersPerCell + corner] =
             static_cast<std::int32_t>(firstPoint) + node;
         }
-        piece.offsets[firstCell + cell] = static_cast<std::int32_t>((firstCell + cell + 1) * CornersPerCell);
-        piece.cellFields[0].values[firstCell + cell] = static_cast<double>(partition.getFaceLevel(face));
+        mesh.offsets[firstCell + cell] = static_cast<std::int32_t>((firstCell + cell + 1) * CornersPerCell);
+        mesh.cellFields[0].values[firstCell + cell] = static_cast<double>(partition.getFaceLevel(face));
       }
     }
   );
 
-  _snapshot.writeFile(directory, _filename);
+  if (_fileWriter == nullptr) {
+    _fileWriter = tarch::plotter::createFileWriter(format);
+  }
+  assertion(_fileWriter->getFormat() == format);
+  _fileWriter->write(mesh, outputDirectory + OutputSubdirectory, _filename, timeStamp);
 }

@@ -37,6 +37,7 @@ set(SOURCES
   accelerator/tests/BufferTest.cpp
   accelerator/tests/ChunkedMemoryPoolTest.cpp
   accelerator/tests/DeviceCopiesTest.cpp
+  accelerator/tests/DeviceCopiesTestData.cpp
   accelerator/tests/MemoryAllocationTest.cpp
   accelerator/tests/ParallelConstructsTest.cpp
   accelerator/tests/ScratchTest.cpp
@@ -94,25 +95,17 @@ set(SOURCES
   tasking/tests/RuntimeTest.cpp
   tasking/tests/TaskGraphTest.cpp
 
-  plotter/CellDataPlotter.cpp
-  plotter/CellPlotter.cpp
   plotter/FileWriter.cpp
   plotter/Format.cpp
   plotter/HDF5FileWriter.cpp
-  plotter/JSONTimeSeriesWriter.cpp
   plotter/NetCDFFileWriter.cpp
-  plotter/PVDTimeSeriesWriter.cpp
-  plotter/TimeSeriesWriter.cpp
-  plotter/VertexDataPlotter.cpp
-  plotter/VertexPlotter.cpp
   plotter/VTKHDFFileWriter.cpp
-  plotter/VTKHDFTimeSeriesWriter.cpp
   plotter/VTUFileWriter.cpp
-  plotter/XDMFTimeSeriesWriter.cpp
+  plotter/tests/FileWriterTest.cpp
   plotter/tests/FormatTest.cpp
   plotter/tests/HDF5FileWriterTest.cpp
+  plotter/tests/Meshes.cpp
   plotter/tests/NetCDFFileWriterTest.cpp
-  plotter/tests/TimeSeriesWriterTest.cpp
   plotter/tests/VTKHDFFileWriterTest.cpp
   plotter/tests/VTUFileWriterTest.cpp
 
@@ -135,6 +128,7 @@ set(GPU_SOURCES
   accelerator/tests/BufferTest.cpp
   accelerator/tests/ChunkedMemoryPoolTest.cpp
   accelerator/tests/DeviceCopiesTest.cpp
+  accelerator/tests/DeviceCopiesTestData.cpp
   accelerator/tests/ParallelConstructsTest.cpp
   accelerator/tests/ScratchTest.cpp
   la/tests/ExactAccumulatorTest.cpp

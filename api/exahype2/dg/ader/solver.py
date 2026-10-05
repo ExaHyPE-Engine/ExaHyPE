@@ -67,17 +67,23 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         super().__init__(name, unknowns, auxiliary_variables, time_stepping, precision)
         if basis not in (GaussLegendreBasis, GaussLobattoBasis):
             raise ValueError(
-                "basis is exahype2.dg.GaussLegendre or exahype2.dg.GaussLobatto."
+                "The ADER-DG solver supports the bases exahype2.dg.GaussLegendre and "
+                "exahype2.dg.GaussLobatto only."
             )
         if isinstance(order, bool) or not isinstance(order, int) or order < 0:
-            raise ValueError("order is a non-negative integer.")
+            raise ValueError(
+                "The ADER-DG solver expects a non-negative integer order (got {!r}).".format(
+                    order
+                )
+            )
         if (
             not isinstance(point_sources, int)
             or isinstance(point_sources, bool)
             or point_sources < 0
         ):
             raise ValueError(
-                "point_sources counts the point sources and cannot be negative."
+                "The ADER-DG solver expects a non-negative integer number of point sources "
+                "(got {!r}).".format(point_sources)
             )
         self._order = order
         self._basis = basis(order + 1)
@@ -107,7 +113,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         the trace of that solver."""
         if not isinstance(predicate, str) or not predicate.strip():
             raise ValueError(
-                "[{}] restrict_to_cells takes a C++ expression on x and h.".format(
+                "The solver {} expects a C++ expression on x and h in restrict_to_cells.".format(
                     self._name
                 )
             )
@@ -124,7 +130,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         cell width ``h`` and the normal axis ``normal``."""
         if not isinstance(predicate, str) or not predicate.strip():
             raise ValueError(
-                "[{}] plot_faces takes a C++ expression on x, h and normal.".format(
+                "The solver {} expects a C++ expression on x, h and normal in plot_faces.".format(
                     self._name
                 )
             )
@@ -148,30 +154,33 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
             or self.pde_terms.is_set("point_source")
         ):
             raise ValueError(
-                "Material parameters and point sources are only available for linear kernels."
+                "The ADER-DG solver supports material parameters and point sources with linear "
+                "kernels only."
             )
         if self._is_linear and (
             self.pde_terms.is_set("diffusive_flux")
             or self.pde_terms.is_set("diffusive_source")
         ):
             raise ValueError(
-                "Linear ADER-DG does not support diffusive fluxes or source terms."
+                "The linear ADER-DG solver cannot add diffusive fluxes or diffusive sources."
             )
         if self.pde_terms.is_set("flux") and self.pde_terms.is_set("diffusive_flux"):
-            raise ValueError("A solver sets flux or diffusive_flux, not both.")
+            raise ValueError(
+                "A solver takes either the flux or the diffusive_flux PDE term."
+            )
         point_source_pde_terms = [
             self.pde_terms.is_set("point_source"),
             self.pde_terms.is_set("point_source_locations"),
         ]
         if self._number_of_point_sources > 0 and not all(point_source_pde_terms):
             raise ValueError(
-                "[{}] point sources need the point_source and point_source_locations PDE terms.".format(
+                "The solver {} with point sources needs the point_source and point_source_locations PDE terms.".format(
                     self._name
                 )
             )
         if self._number_of_point_sources == 0 and any(point_source_pde_terms):
             raise ValueError(
-                "[{}] the point_source and point_source_locations PDE terms need point_sources > 0.".format(
+                "The solver {} needs point_sources > 0 for the point_source and point_source_locations PDE terms.".format(
                     self._name
                 )
             )
@@ -179,7 +188,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
             "max_eigenvalue"
         ):
             raise ValueError(
-                "[{}] the max_eigenvalue PDE term is required when no Riemann solver is set.".format(
+                "The solver {} without a Riemann solver needs the max_eigenvalue PDE term.".format(
                     self._name
                 )
             )
@@ -193,7 +202,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
             self.pde_terms.is_set(term) for term in limiter_terms
         ):
             raise ValueError(
-                "[{}] the PDE terms {} need add_subcell_limiter().".format(
+                "The solver {} needs add_subcell_limiter() for the PDE terms {}.".format(
                     self._name, ", ".join(limiter_terms)
                 )
             )

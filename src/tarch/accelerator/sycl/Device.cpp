@@ -49,7 +49,7 @@ tarch::accelerator::Device::init() {
   }
 
   if (syclQueues.empty()) {
-    tarch::terminateWithError("No accelerator devices found. Please check your driver installation.");
+    tarch::terminateWithError("The SYCL runtime needs an accelerator device with a working driver.");
   }
 
   return isInitialised();
@@ -60,6 +60,7 @@ tarch::accelerator::Device::shutdown() {
   for (auto& queue : syclQueues) {
     queue.second.wait();
   }
+  tarch::accelerator::releaseReductionScratch();
   syclQueues.clear();
 }
 
@@ -71,6 +72,18 @@ tarch::accelerator::Device::isInitialised() const {
 int
 tarch::accelerator::Device::getNumberOfDevices() const {
   return static_cast<int>(syclQueues.size());
+}
+
+/**
+ * Returns the work items the current device runs at once: Its compute units times the largest
+ * work group one compute unit holds.
+ */
+int
+tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
+  const sycl::device device = syclQueues[tarch::accelerator::getCurrentDevice()].get_device();
+  const auto         units  = static_cast<int>(device.get_info<sycl::info::device::max_compute_units>());
+  const auto         items  = static_cast<int>(device.get_info<sycl::info::device::max_work_group_size>());
+  return std::max(1, units * items);
 }
 
 /**

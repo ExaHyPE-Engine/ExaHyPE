@@ -3,13 +3,7 @@
 #include "Format.h"
 
 #include "tarch/Termination.h"
-#include "tarch/plotter/FileWriter.h"
-#include "tarch/plotter/JSONTimeSeriesWriter.h"
-#include "tarch/plotter/PVDTimeSeriesWriter.h"
-#include "tarch/plotter/TimeSeriesWriter.h"
-#include "tarch/plotter/VTKHDFTimeSeriesWriter.h"
 #include "tarch/plotter/VTUFileWriter.h"
-#include "tarch/plotter/XDMFTimeSeriesWriter.h"
 
 #if defined(PEANO_WITH_HDF5)
 #include "tarch/plotter/HDF5FileWriter.h"
@@ -38,7 +32,7 @@ namespace {
 } // namespace
 
 /**
- * Returns the format of the given name and terminates on an unknown name.
+ * Returns the format of name. Terminates for an unknown name.
  */
 tarch::plotter::Format
 tarch::plotter::parseFormat(const std::string& name) {
@@ -48,7 +42,7 @@ tarch::plotter::parseFormat(const std::string& name) {
     }
   }
   tarch::terminateWithError(
-    "Unknown plot format \"" + name + "\". The known formats are " + getKnownFormatNames() + "."
+    "The plotter supports the formats " + getKnownFormatNames() + " only (got \"" + name + "\")."
   );
 }
 
@@ -59,7 +53,7 @@ tarch::plotter::toString(const Format format) {
       return name;
     }
   }
-  tarch::terminateWithError("The plot format has no name.");
+  tarch::terminateWithError("The plotter supports the formats " + getKnownFormatNames() + " only.");
 }
 
 /**
@@ -84,7 +78,7 @@ tarch::plotter::isAvailable(const Format format) {
     return false;
 #endif
   }
-  tarch::terminateWithError("The plot format is unknown.");
+  tarch::terminateWithError("The plotter supports the formats " + getKnownFormatNames() + " only.");
 }
 
 /**
@@ -96,40 +90,24 @@ tarch::plotter::getDefaultFormat() {
 }
 
 std::unique_ptr<tarch::plotter::FileWriter>
-tarch::plotter::createFileWriter(const Format format, const std::string& outputDirectory) {
-  if (not isAvailable(format)) {
-    tarch::terminateWithError("This build links no library for the plot format \"" + toString(format) + "\".");
-  }
+tarch::plotter::createFileWriter(const Format format) {
   switch (format) {
   case Format::VTU:
-    return std::make_unique<VTUFileWriter>(outputDirectory);
+    return std::make_unique<VTUFileWriter>();
 #if defined(PEANO_WITH_HDF5)
   case Format::HDF5:
-    return std::make_unique<HDF5FileWriter>(outputDirectory);
+    return std::make_unique<HDF5FileWriter>();
   case Format::VTKHDF:
-    return std::make_unique<VTKHDFFileWriter>(outputDirectory);
+    return std::make_unique<VTKHDFFileWriter>();
 #endif
 #if defined(PEANO_WITH_NETCDF)
   case Format::NetCDF:
-    return std::make_unique<NetCDFFileWriter>(outputDirectory);
+    return std::make_unique<NetCDFFileWriter>();
 #endif
   default:
     break;
   }
-  tarch::terminateWithError("This build links no library for the plot format \"" + toString(format) + "\".");
-}
-
-std::unique_ptr<tarch::plotter::TimeSeriesWriter>
-tarch::plotter::createTimeSeriesWriter(const Format format) {
-  switch (format) {
-  case Format::VTU:
-    return std::make_unique<PVDTimeSeriesWriter>();
-  case Format::HDF5:
-    return std::make_unique<XDMFTimeSeriesWriter>();
-  case Format::NetCDF:
-    return std::make_unique<JSONTimeSeriesWriter>();
-  case Format::VTKHDF:
-    return std::make_unique<VTKHDFTimeSeriesWriter>();
-  }
-  tarch::terminateWithError("The plot format is unknown.");
+  tarch::terminateWithError(
+    "This build cannot write the plot format \"" + toString(format) + "\". Rebuild with the library of this format."
+  );
 }

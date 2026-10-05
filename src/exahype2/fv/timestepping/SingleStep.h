@@ -31,17 +31,20 @@ struct exahype2::fv::timestepping::SingleStep final {
     bool EvaluateCustomRiemann,
     bool EvaluateMaxEigenvalue,
     typename StoragePrecision,
-    typename ComputePrecision
+    typename ComputePrecision,
+    typename Terms
   >
-  INLINE_METHOD GPU_CALLABLE_METHOD static double apply(
+  INLINE_METHOD GPU_CALLABLE_METHOD static double applyToVolume(
+    int                                          volume,
     const StoragePrecision* NOALIAS              inputPatch,
-    StoragePrecision* NOALIAS                    outputPatch,
     const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
     const tarch::la::Vector<DIMENSIONS, double>& patchSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          boundaryFaces
+    int                                          boundaryFaces,
+    Terms&                                       terms,
+    StoragePrecision* NOALIAS                    updatedState
   );
 };
 TARGET_DECLARE_END

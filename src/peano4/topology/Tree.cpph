@@ -19,7 +19,7 @@ peano4::topology::getCellsPerAxis(const int level) {
   int           result            = 1;
   for (int currentLevel = 0; currentLevel < level; currentLevel++) {
     if (result > std::numeric_limits<int>::max() / SubdivisionFactor) {
-      tarch::terminateWithError("The grid level exceeds the supported integer range.");
+      tarch::terminateWithError("The cells per axis of a grid level must fit into a 32-bit integer.");
     }
     result *= SubdivisionFactor;
   }

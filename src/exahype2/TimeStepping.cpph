@@ -18,9 +18,13 @@ exahype2::MaxEigenvalueReduction::combine(const double left, const double right)
   return right > left ? right : left;
 }
 
+/**
+ * Returns true when value is a finite number that is not negative. Both comparisons return
+ * false for a NaN.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::MaxEigenvalueReduction::isPhysicalValue(const double value) {
-  return std::isfinite(value) and value >= 0.0;
+  return value >= 0.0 and value <= std::numeric_limits<double>::max();
 }
 TARGET_DECLARE_END
 

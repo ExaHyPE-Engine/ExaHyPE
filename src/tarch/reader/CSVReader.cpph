@@ -12,14 +12,15 @@ tarch::reader::CSVReader::extractFundamentalTypeFromRow(
   const int          valueIndex,
   const std::string& row
 ) {
-  static_assert(std::is_fundamental_v<T>, "CSVReader extracts fundamental types only.");
+  static_assert(std::is_fundamental_v<T>, "The CSV reader reads fundamental types only.");
 
   std::size_t entryBegin = 0;
   for (int entry = 0; entry < valueIndex; entry++) {
     const std::size_t separatorPosition = row.find(separator, entryBegin);
     if (separatorPosition == std::string::npos) {
       throw std::runtime_error(
-        "Row \"" + row + "\" has no entry " + std::to_string(valueIndex) + " for the separator \"" + separator + "\"."
+        "The CSV reader cannot find value " + std::to_string(valueIndex) + " with the separator \"" + separator
+        + "\" in the row \"" + row + "\"."
       );
     }
     entryBegin = separatorPosition + 1;
@@ -31,7 +32,7 @@ tarch::reader::CSVReader::extractFundamentalTypeFromRow(
   T                  extractedValue{};
   if (not(entryStream >> extractedValue)) {
     throw std::runtime_error(
-      "Entry " + std::to_string(valueIndex) + " of row \"" + row + "\" does not parse as the requested type."
+      "The CSV reader cannot parse value " + std::to_string(valueIndex) + " of the row \"" + row + "\"."
     );
   }
   return extractedValue;

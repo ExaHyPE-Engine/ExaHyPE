@@ -5,17 +5,17 @@
 #include "tarch/tests/TestCase.h"
 
 namespace exahype2::fv::tests {
-  class FiniteVolumeTest;
+  class FiniteVolumeSchemeTest;
 } // namespace exahype2::fv::tests
 
-class exahype2::fv::tests::FiniteVolumeTest final : public tarch::tests::TestCase {
+class exahype2::fv::tests::FiniteVolumeSchemeTest final : public tarch::tests::TestCase {
 public:
-  FiniteVolumeTest();
-  FiniteVolumeTest(const FiniteVolumeTest& other)            = delete;
-  FiniteVolumeTest(FiniteVolumeTest&& other)                 = delete;
-  FiniteVolumeTest& operator=(const FiniteVolumeTest& other) = delete;
-  FiniteVolumeTest& operator=(FiniteVolumeTest&& other)      = delete;
-  ~FiniteVolumeTest() override                               = default;
+  FiniteVolumeSchemeTest();
+  FiniteVolumeSchemeTest(const FiniteVolumeSchemeTest& other)            = delete;
+  FiniteVolumeSchemeTest(FiniteVolumeSchemeTest&& other)                 = delete;
+  FiniteVolumeSchemeTest& operator=(const FiniteVolumeSchemeTest& other) = delete;
+  FiniteVolumeSchemeTest& operator=(FiniteVolumeSchemeTest&& other)      = delete;
+  ~FiniteVolumeSchemeTest() override                                     = default;
 
   void run() override;
 
@@ -60,4 +60,7 @@ private:
   void testReduceMaxEigenvalueTakesTheLargestWaveSpeedOverTheVolumes();
   void testMeasureErrorsSumsTheWeightedNorms();
   void testEveryCellOfADeviceRangeUpdatesLikeTheHost();
+  void testTheTermRingKeepsAWindowOfEntries();
+  void testTheSweepUpdatesLikeTheVolumeUpdates();
+  void testTheSweepUpdatesInPlaceLikeIntoASecondPatch();
 };

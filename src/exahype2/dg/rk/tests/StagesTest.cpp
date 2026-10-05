@@ -146,8 +146,8 @@ namespace {
   struct WaveSpeedSolver final : StubLayout, WaveSpeedTerm {};
 
   /**
-   * A solver whose acoustic flux along an axis couples the pressure with the velocity of that axis,
-   * so a swap of two axes maps the flux onto itself.
+   * A solver whose acoustic flux along an axis couples the pressure with the velocity of that axis.
+   * A swap of two axes maps the flux onto itself.
    */
   struct AcousticSolver final {
     static constexpr int DGOrder                    = StubLayout::DGOrder;
@@ -399,6 +399,7 @@ exahype2::dg::rk::tests::StagesTest::run() {
   testMethod(testTheCombinationWeighsTheEstimatesAndCopiesTheAuxiliaryVariables);
   testMethod(testAZeroWeightSkipsAnUnwrittenEstimate);
   testMethod(testTheCombinationWritesInPlace);
+  testMethod(testTheCombinationRoundsEveryWeightedEstimateOnce);
   testMethod(testAConstantFluxGivesZerosBitwise);
   testMethod(testTheDivergenceOfALinearFluxIsItsSlope);
   testMethod(testTheSourceTermIsScaledByTheTimeStep);
@@ -496,6 +497,39 @@ exahype2::dg::rk::tests::StagesTest::testTheCombinationWritesInPlace() {
 
   for (int entry = 0; entry < StateValuesPerCell; entry++) {
     validateEqualsWithParams1(cellState[entry], target[entry], entry);
+  }
+}
+
+/**
+ * The combination adds every weighted estimate with one rounding.
+ */
+void
+exahype2::dg::rk::tests::StagesTest::testTheCombinationRoundsEveryWeightedEstimateOnce() {
+  double cellState[StateValuesPerCell];
+  for (int entry = 0; entry < StateValuesPerCell; entry++) {
+    cellState[entry] = 2.0 + 0.5 * entry;
+  }
+  double estimates[EstimateValuesPerCell];
+  for (int entry = 0; entry < EstimateValuesPerCell; entry++) {
+    estimates[entry] = 1.0 + entry;
+  }
+  const StageOf<InertSolver>::Weights weights{1.0 / 6.0, 2.0 / 3.0, 1.0 / 6.0};
+  double                              target[StateValuesPerCell];
+
+  StageOf<InertSolver>::combineEstimates(weights, cellState, estimates, target);
+
+  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      double expected = cellState[cellNode * NumberOfData + unknown];
+      for (int stage = 0; stage < NumberOfStages; stage++) {
+        expected = std::fma(
+          weights[static_cast<std::size_t>(stage)],
+          estimates[stage * UnknownsPerStage + cellNode * NumberOfUnknowns + unknown],
+          expected
+        );
+      }
+      validateEqualsWithParams2(target[cellNode * NumberOfData + unknown], expected, cellNode, unknown);
+    }
   }
 }
 
@@ -628,8 +662,8 @@ exahype2::dg::rk::tests::StagesTest::testTheNonconservativeProductSeesTheNodalGr
     TimeStepSize
   );
 
-  // The stub returns the gradient, which is the physical slope along the last axis and zero
-  // along the others, and the kernel subtracts it times the time step.
+  // The kernel subtracts the time step times the gradient that the stub returns. That gradient
+  // equals the physical slope along the last axis and zero along the others.
   const double expected = -TimeStepSize * Slope / cellSize(DIMENSIONS - 1);
   for (int entry = 0; entry < UnknownsPerStage; entry++) {
     validateNumericalEqualsWithParams1(estimate[entry], expected, entry);
@@ -660,8 +694,8 @@ exahype2::dg::rk::tests::StagesTest::testTheDiffusiveFluxSeesTheNodalGradients()
     TimeStepSize
   );
 
-  // Only the gradient along the last axis is non-zero, so the stub returns the same constant
-  // flux along every axis, whose divergence is zero.
+  // Only the gradient along the last axis is non-zero. The stub then returns a constant flux with
+  // zero divergence along every axis.
   for (int entry = 0; entry < UnknownsPerStage; entry++) {
     validateNumericalEqualsWithParams1(estimate[entry], 0.0, entry);
   }

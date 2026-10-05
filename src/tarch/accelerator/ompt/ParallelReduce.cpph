@@ -16,6 +16,35 @@ namespace tarch::accelerator {
     typename Op::ValueType value{};
   };
 
+  /**
+   * Combines the partial value of every thread of the team into the target of the reducer. The
+   * partial values pass through the team scratch and merge in thread order.
+   */
+  template <typename Reducer>
+  INLINE_METHOD void reduceOverTeam(
+    const OmptTeam&                   team,
+    const typename Reducer::ValueType threadValue,
+    const Reducer                     reducer
+  ) {
+    using ValueType = typename Reducer::ValueType;
+    static_assert(
+      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
+      "The scratch memory of a team must hold one reduction value per thread."
+    );
+    ValueType* const partials      = reinterpret_cast<ValueType*>(team.scratch);
+    partials[omp_get_thread_num()] = threadValue;
+#pragma omp barrier
+#pragma omp master
+    {
+      ValueType teamValue = Reducer::identity();
+      for (int thread = 0; thread < omp_get_num_threads(); thread++) {
+        teamValue = Reducer::combine(teamValue, partials[thread]);
+      }
+      reducer.target = Reducer::combine(reducer.target, teamValue);
+    }
+#pragma omp barrier
+  }
+
   template <typename T, typename Functor>
   INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
@@ -81,7 +110,7 @@ namespace tarch::accelerator {
     using ValueType = typename Op::ValueType;
     static_assert(
       sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The custom value exceeds the team scratch."
+      "The scratch memory of a team must hold one reduction value per thread."
     );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for nowait
@@ -173,7 +202,7 @@ namespace tarch::accelerator {
     using ValueType = typename Op::ValueType;
     static_assert(
       sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The custom value exceeds the team scratch."
+      "The scratch memory of a team must hold one reduction value per thread."
     );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for collapse(2) nowait
@@ -273,7 +302,7 @@ namespace tarch::accelerator {
     using ValueType = typename Op::ValueType;
     static_assert(
       sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The custom value exceeds the team scratch."
+      "The scratch memory of a team must hold one reduction value per thread."
     );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for collapse(3) nowait
@@ -540,12 +569,15 @@ namespace tarch::accelerator {
     using ValueType                = typename Reducer::ValueType;
     const int        device        = tarch::accelerator::getCurrentDevice();
     const int        numberOfTeams = range.n;
-    ValueType* const teamResults   = tarch::allocateMemory<ValueType>(range.n, tarch::MemoryLocation::Device, device);
-#pragma omp target teams num_teams(numberOfTeams) is_device_ptr(teamResults) firstprivate(functor) device(device)
-#pragma omp parallel
+    const int        threads       = tarch::accelerator::getTeamThreads(range.threads);
+    const auto       resultBytes   = static_cast<std::size_t>(range.n) * sizeof(ValueType);
+    ValueType* const teamResults   = static_cast<ValueType*>(tarch::accelerator::lockReductionScratch(resultBytes));
+#pragma omp target teams num_teams(numberOfTeams) thread_limit(threads) is_device_ptr(teamResults) \
+  firstprivate(functor) device(device)
+#pragma omp parallel num_threads(threads)
     {
       // A static of a class type with default member initialisers needs an initialisation at run
-      // time, so teamAccumulatorBytes stores the team accumulator as raw bytes.
+      // time. teamAccumulatorBytes therefore holds the accumulator of the team as raw storage.
       alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
       alignas(ValueType) static unsigned char            teamAccumulatorBytes[sizeof(ValueType)];
 #pragma omp allocate(teamScratch, teamAccumulatorBytes) allocator(omp_pteam_mem_alloc)
@@ -562,12 +594,12 @@ namespace tarch::accelerator {
         }
       }
     }
-    std::vector<ValueType> hostResults(range.n);
-    tarch::copyFrom(teamResults, hostResults.data(), range.n, tarch::MemoryLocation::Device, device);
-    for (const ValueType& teamResult : hostResults) {
-      reducer.target = Reducer::combine(reducer.target, teamResult);
+    auto* const hostResults = static_cast<ValueType*>(tarch::accelerator::getReductionStaging(resultBytes));
+    tarch::copyFrom(teamResults, hostResults, range.n, tarch::MemoryLocation::Device, device);
+    for (int team = 0; team < range.n; team++) {
+      reducer.target = Reducer::combine(reducer.target, hostResults[team]);
     }
-    tarch::freeMemory(teamResults, tarch::MemoryLocation::Device, device);
+    tarch::accelerator::unlockReductionScratch();
   }
 } // namespace tarch::accelerator
 

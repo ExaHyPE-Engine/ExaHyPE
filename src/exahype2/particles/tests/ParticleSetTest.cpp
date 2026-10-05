@@ -62,6 +62,32 @@ namespace {
       particle.setX(0, firstCoordinate);
     }
   };
+
+  /**
+   * Raises data entry one of every particle by one and moves the particle whose first data entry
+   * is target to the position with every coordinate equal to coordinate. The functor marks and
+   * counts every particle that it moves out of its cell.
+   */
+  struct MoveParticleOnDevice final {
+    exahype2::particles::ParticleSetView<NumberOfData> particles{};
+    peano4::Partition                                  partition{};
+    double                                             target{0.0};
+    double                                             coordinate{0.0};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index, int& numberOfMovedParticles) const {
+      exahype2::particles::Particle particle = particles.getParticle(index);
+      particle.setData(1, particle.getData(1) + 1.0);
+      if (particle.getData(0) != target) {
+        return;
+      }
+      const tarch::la::Vector<DIMENSIONS, double> position(coordinate);
+      particle.setX(position);
+      if (not particles.isInsideCell(partition, index, position, tarch::la::Vector<DIMENSIONS, double>(0.0))) {
+        particles.markAsMovedOutOfCell(index);
+        numberOfMovedParticles++;
+      }
+    }
+  };
   TARGET_DECLARE_END
 
   /**
@@ -105,10 +131,60 @@ exahype2::particles::tests::ParticleSetTest::run() {
   testMethod(testAHostWriteReachesTheDeviceCopy);
   testMethod(testRelocateKeepsTheDeviceValuesWhileNoParticleLeaves);
   testMethod(testReleaseFreesEveryArray);
+  testMethod(testAParticleMarkedOnTheDeviceMovesToTheCellThatContainsIt);
 }
 
 /**
- * Three candidates lie in the domain and two outside it, so the ranks together keep three.
+ * relocateParticlesMovedOutOfCells() puts a particle that a kernel moved and marked into the cell
+ * that holds it and keeps the device values of the other particles.
+ */
+void
+exahype2::particles::tests::ParticleSetTest::testAParticleMarkedOnTheDeviceMovesToTheCellThatContainsIt() {
+  const auto&         partition = buildGrid();
+  std::vector<double> candidates;
+  for (const auto& candidate :
+       {getCandidateAt(0.1, 0.1, 10.0), getCandidateAt(0.5, 0.5, 20.0), getCandidateAt(0.9, 0.9, 30.0)}) {
+    candidates.insert(candidates.end(), candidate.begin(), candidate.end());
+  }
+  Set particles;
+  particles.insert(partition, candidates);
+  validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 3);
+
+  const auto moveOnTheDevice = [&](const double target) {
+    particles.upload();
+    const auto view                   = particles.getView();
+    int        numberOfMovedParticles = 0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(view.numberOfParticles),
+      MoveParticleOnDevice{view, partition.onDevice(), target, 0.95},
+      tarch::accelerator::Sum<int>{numberOfMovedParticles}
+    );
+    particles.relocateParticlesMovedOutOfCells(partition, numberOfMovedParticles);
+    return numberOfMovedParticles;
+  };
+
+  const int numberOfMovedParticles = moveOnTheDevice(20.0);
+  validateEquals(peano4::tests::getGlobalSumOf(numberOfMovedParticles), 1);
+  validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 3);
+  validateEquals(particles.getGlobalNumberOfParticles(), 3);
+  particles.download();
+  for (int index = 0; index < particles.getSize(); index++) {
+    validateEqualsWithParams1(particles.getSlot(index), Set::getSlotAt(partition, particles.getPosition(index)), index);
+    validateNumericalEqualsWithParams1(particles.getData(index)[1], particles.getData(index)[0] + 2.0, index);
+    if (particles.getData(index)[0] == 20.0) {
+      validateNumericalEquals(particles.getPosition(index)(0), 0.95);
+    }
+  }
+
+  validateEquals(peano4::tests::getGlobalSumOf(moveOnTheDevice(-1.0)), 0);
+  particles.download();
+  for (int index = 0; index < particles.getSize(); index++) {
+    validateNumericalEqualsWithParams1(particles.getData(index)[1], particles.getData(index)[0] + 3.0, index);
+  }
+}
+
+/**
+ * Of three candidates in the domain and two outside it, the ranks together keep three.
  */
 void
 exahype2::particles::tests::ParticleSetTest::testInsertKeepsTheParticlesOfTheRank() {

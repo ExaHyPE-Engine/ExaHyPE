@@ -18,10 +18,7 @@ namespace tarch::reader {
  */
 template <int FieldDimensions = 2>
 class tarch::reader::NetCDFFieldSampler {
-  static_assert(
-    FieldDimensions == 2 or FieldDimensions == 3,
-    "NetCDFFieldSampler is only instantiated for two- and three-dimensional fields"
-  );
+  static_assert(FieldDimensions == 2 or FieldDimensions == 3, "The NetCDF reader reads 2D and 3D fields only.");
 
 public:
   struct FieldDescription {

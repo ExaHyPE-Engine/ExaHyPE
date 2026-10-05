@@ -304,6 +304,79 @@ namespace {
     }
   };
 
+  /**
+   * Copies the entries of one team into the team scratch and writes twice the mirrored entries
+   * back. Every entry passes through the scratch of another thread.
+   */
+  struct MirrorThroughTeamScratch final {
+    double* values{nullptr};
+    int     teamSize{0};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      const int                            team,
+      const tarch::accelerator::TeamHandle teamHandle
+    ) const {
+      double* const entries = values + static_cast<std::ptrdiff_t>(team) * teamSize;
+      auto* const   scratch = reinterpret_cast<double*>(tarch::accelerator::getTeamScratch(teamHandle));
+      const int     size    = teamSize;
+      tarch::accelerator::parallelFor(teamHandle, tarch::accelerator::Range(size), [=](const int index) {
+        scratch[index] = entries[index];
+      });
+      tarch::accelerator::teamBarrier(teamHandle);
+      tarch::accelerator::parallelFor(teamHandle, tarch::accelerator::Range(size), [=](const int index) {
+        entries[index] = 2.0 * scratch[size - 1 - index];
+      });
+    }
+  };
+
+  /**
+   * Adds the one-based index of every thread of one team to the accumulator of the team.
+   */
+  struct AddThreadIndicesPerTeam final {
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      [[maybe_unused]] const int           team,
+      const tarch::accelerator::TeamHandle teamHandle,
+      double&                              teamAccumulator
+    ) const {
+      const auto threadValue = static_cast<double>(tarch::accelerator::getThreadOfTeam(teamHandle) + 1);
+      tarch::accelerator::reduceOverTeam(teamHandle, threadValue, tarch::accelerator::Sum<double>{teamAccumulator});
+    }
+  };
+
+  /**
+   * Lowers the accumulator of the team to the number of threads the smallest team runs.
+   */
+  struct LowerNumberOfThreadsPerTeam final {
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      [[maybe_unused]] const int           team,
+      const tarch::accelerator::TeamHandle teamHandle,
+      int&                                 teamAccumulator
+    ) const {
+      tarch::accelerator::reduceOverTeam(
+        teamHandle,
+        tarch::accelerator::getNumberOfThreadsPerTeam(teamHandle),
+        tarch::accelerator::Min<int>{teamAccumulator}
+      );
+    }
+  };
+
+  /**
+   * Raises the accumulator of the team to the number of threads the largest team runs.
+   */
+  struct RaiseNumberOfThreadsPerTeam final {
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      [[maybe_unused]] const int           team,
+      const tarch::accelerator::TeamHandle teamHandle,
+      int&                                 teamAccumulator
+    ) const {
+      tarch::accelerator::reduceOverTeam(
+        teamHandle,
+        tarch::accelerator::getNumberOfThreadsPerTeam(teamHandle),
+        tarch::accelerator::Max<int>{teamAccumulator}
+      );
+    }
+  };
+
   struct LowerMinimumEntry final {
     const double* values{nullptr};
 
@@ -346,6 +419,173 @@ tarch::accelerator::tests::ParallelConstructsTest::run() {
   testMethod(testParallelReduceTeamRangeMD3);
   testMethod(testParallelReduceCustom);
   testMethod(testParallelReduceCustomRange);
+  testMethod(testReductionScratchKeepsAnAddressThatFits);
+  testMethod(testWaitForDeviceCompletesTheLaunchedLoop);
+  testMethod(testAReductionOverManyTeamsSumsEveryTeam);
+  testMethod(testReduceOverTeamCombinesEveryThread);
+  testMethod(testEveryTeamRunsTheDefaultNumberOfThreads);
+  testMethod(testATeamLaunchRunsTheRequestedThreads);
+  testMethod(testTeamScratchMirrorsWithinTheTeam);
+  testMethod(testTheDeviceRunsADefaultTeamAtOnce);
+}
+
+/**
+ * The device runs at least the threads of one default team at once.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testTheDeviceRunsADefaultTeamAtOnce() {
+  const int threads = tarch::accelerator::Device::getInstance().getNumberOfConcurrentThreads();
+  validateWithParams1(threads >= tarch::accelerator::DefaultThreadsPerTeam, threads);
+}
+
+/**
+ * Every team reads back through its scratch of TeamScratchBytes what its threads wrote there.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testTeamScratchMirrorsWithinTheTeam() {
+  constexpr int NumberOfTeams = 8;
+  constexpr int TeamSize      = 8;
+  static_assert(TeamSize * sizeof(double) <= tarch::accelerator::TeamScratchBytes);
+  auto* const data = tarch::allocateMemory<double>(NumberOfEntries, tarch::MemoryLocation::Device);
+
+  std::array<double, NumberOfEntries> hostValues{};
+  for (int i = 0; i < NumberOfEntries; ++i) {
+    hostValues[i] = static_cast<double>(i + 1);
+  }
+  tarch::copyTo(data, hostValues.data(), NumberOfEntries, tarch::MemoryLocation::Device);
+
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::TeamRange(NumberOfTeams),
+    MirrorThroughTeamScratch{data, TeamSize}
+  );
+
+  tarch::copyFrom(data, hostValues.data(), NumberOfEntries, tarch::MemoryLocation::Device);
+  tarch::freeMemory(data, tarch::MemoryLocation::Device);
+
+  bool correct = true;
+  for (int team = 0; team < NumberOfTeams; ++team) {
+    for (int i = 0; i < TeamSize; ++i) {
+      const double expected = 2.0 * static_cast<double>(team * TeamSize + TeamSize - 1 - i + 1);
+      correct               = correct and (hostValues[team * TeamSize + i] == expected);
+    }
+  }
+  validate(correct);
+}
+
+/**
+ * The team reduction of the one-based thread indices returns their sum over every thread of every
+ * team.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testReduceOverTeamCombinesEveryThread() {
+  constexpr int NumberOfTeams = 5;
+  constexpr int Threads       = tarch::accelerator::DefaultThreadsPerTeam;
+  double        result        = 0.0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(NumberOfTeams),
+    AddThreadIndicesPerTeam{},
+    tarch::accelerator::Sum<double>{result}
+  );
+  validateWithParams1(result == NumberOfTeams * (Threads * (Threads + 1) / 2.0), result);
+}
+
+/**
+ * Every team of a launch with TeamRange::BackendDefault runs at least DefaultThreadsPerTeam
+ * threads.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testEveryTeamRunsTheDefaultNumberOfThreads() {
+  constexpr int NumberOfTeams = 5;
+  int           fewestThreads = std::numeric_limits<int>::max();
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(NumberOfTeams),
+    LowerNumberOfThreadsPerTeam{},
+    tarch::accelerator::Min<int>{fewestThreads}
+  );
+  validateWithParams1(fewestThreads >= tarch::accelerator::DefaultThreadsPerTeam, fewestThreads);
+}
+
+/**
+ * Every team of a launch that asks for a number of threads and bytes of scratch runs
+ * getTeamThreads() of that number and mirrors its values through the requested scratch.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testATeamLaunchRunsTheRequestedThreads() {
+  constexpr int                       NumberOfTeams    = 6;
+  constexpr int                       RequestedThreads = 40;
+  constexpr int                       TeamSize         = 8;
+  constexpr int                       Entries          = NumberOfTeams * TeamSize;
+  constexpr int                       ScratchBytes     = TeamSize * static_cast<int>(sizeof(double));
+  const int                           expectedThreads  = tarch::accelerator::getTeamThreads(RequestedThreads);
+  const tarch::accelerator::TeamRange range(NumberOfTeams, RequestedThreads, ScratchBytes);
+
+  int fewestThreads = std::numeric_limits<int>::max();
+  int mostThreads   = 0;
+  tarch::accelerator::parallelReduce(range, LowerNumberOfThreadsPerTeam{}, tarch::accelerator::Min<int>{fewestThreads});
+  tarch::accelerator::parallelReduce(range, RaiseNumberOfThreadsPerTeam{}, tarch::accelerator::Max<int>{mostThreads});
+  validateEqualsWithParams1(fewestThreads, expectedThreads, RequestedThreads);
+  validateEqualsWithParams1(mostThreads, expectedThreads, RequestedThreads);
+
+  auto* const data = tarch::allocateMemory<double>(Entries, tarch::MemoryLocation::Device);
+
+  std::array<double, Entries> hostValues{};
+  for (int i = 0; i < Entries; ++i) {
+    hostValues[i] = static_cast<double>(i + 1);
+  }
+  tarch::copyTo(data, hostValues.data(), Entries, tarch::MemoryLocation::Device);
+
+  tarch::accelerator::parallelFor(range, MirrorThroughTeamScratch{data, TeamSize});
+
+  tarch::copyFrom(data, hostValues.data(), Entries, tarch::MemoryLocation::Device);
+  tarch::freeMemory(data, tarch::MemoryLocation::Device);
+
+  bool correct = true;
+  for (int team = 0; team < NumberOfTeams; ++team) {
+    for (int i = 0; i < TeamSize; ++i) {
+      const double expected = 2.0 * static_cast<double>(team * TeamSize + TeamSize - 1 - i + 1);
+      correct               = correct and (hostValues[team * TeamSize + i] == expected);
+    }
+  }
+  validate(correct);
+}
+
+/**
+ * A team reduction over more teams than the host combines directly returns the full sum.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testAReductionOverManyTeamsSumsEveryTeam() {
+  constexpr int    NumberOfTeams = 20000;
+  constexpr int    TeamSize      = 8;
+  constexpr double InitialResult = 17.0;
+  double           result        = InitialResult;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(NumberOfTeams),
+    AddIndicesPerTeam{TeamSize},
+    tarch::accelerator::Sum<double>{result}
+  );
+  constexpr double Entries = NumberOfTeams * TeamSize;
+  validateWithParams1(result == InitialResult + 3.0 * Entries * (Entries + 1) / 2.0, result);
+}
+
+/**
+ * After waitForDevice() the host reads every value a loop wrote into pinned memory.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testWaitForDeviceCompletesTheLaunchedLoop() {
+  auto* const data = tarch::allocateMemory<double>(NumberOfEntries, tarch::MemoryLocation::Pinned);
+  for (int i = 0; i < NumberOfEntries; ++i) {
+    data[i] = -1.0;
+  }
+
+  tarch::accelerator::parallelFor(tarch::accelerator::Range(NumberOfEntries), WriteDoubledIndex{data});
+  tarch::accelerator::waitForDevice();
+
+  bool correct = true;
+  for (int i = 0; i < NumberOfEntries; ++i) {
+    correct = correct and (data[i] == static_cast<double>(2 * i));
+  }
+  tarch::freeMemory(data, tarch::MemoryLocation::Pinned);
+  validate(correct);
 }
 
 void
@@ -503,7 +743,7 @@ tarch::accelerator::tests::ParallelConstructsTest::testParallelForTeamRangeMD3()
 }
 
 /**
- * A teamBarrier call makes the writes of every team member visible to the other members.
+ * teamBarrier() makes the writes of every thread of a team visible to the other threads of the team.
  */
 void
 tarch::accelerator::tests::ParallelConstructsTest::testTeamBarrier() {
@@ -627,7 +867,7 @@ tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceTeam() {
 }
 
 /**
- * Consecutive reductions inside a team add up on top of the seeded target.
+ * A team reduction adds the indices of every team to the value that seeds the sum.
  */
 void
 tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceTeamSum() {
@@ -718,7 +958,7 @@ tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceCustom() {
 }
 
 /**
- * A custom reduction over a flat range keeps a seeded target that no entry exceeds.
+ * A custom reduction over a flat range keeps a seeded maximum that no entry exceeds.
  */
 void
 tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceCustomRange() {
@@ -783,4 +1023,29 @@ tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceMax() {
 
   tarch::freeMemory(data, tarch::MemoryLocation::Device);
   validateWithParams1(result == static_cast<double>(NumberOfEntries), result);
+}
+
+/**
+ * A reduction scratch request that fits the last allocation returns its address again.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testReductionScratchKeepsAnAddressThatFits() {
+  void* const small = tarch::accelerator::lockReductionScratch(64);
+  validate(small != nullptr);
+  tarch::accelerator::unlockReductionScratch();
+  void* const smallAgain = tarch::accelerator::lockReductionScratch(32);
+  tarch::accelerator::unlockReductionScratch();
+  validateEquals(smallAgain, small);
+  void* const large = tarch::accelerator::lockReductionScratch(4096);
+  validate(large != nullptr);
+  tarch::accelerator::unlockReductionScratch();
+  void* const largeAgain   = tarch::accelerator::lockReductionScratch(4096);
+  void* const staging      = tarch::accelerator::getReductionStaging(16);
+  void* const stagingAgain = tarch::accelerator::getReductionStaging(8);
+  tarch::accelerator::unlockReductionScratch();
+  validateEquals(largeAgain, large);
+  validateEquals(stagingAgain, staging);
+  tarch::accelerator::releaseReductionScratch();
+  validate(tarch::accelerator::lockReductionScratch(8) != nullptr);
+  tarch::accelerator::unlockReductionScratch();
 }

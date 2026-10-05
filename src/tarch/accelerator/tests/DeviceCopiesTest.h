@@ -20,6 +20,6 @@ public:
   void run() override;
 
 private:
-  void testAKernelReadsTheValueOfTheLastUpload();
+  void testTheKernelsOfTwoTranslationUnitsReadTheLastUpload();
   void testHostCodeAndAKernelReadTheSameConstants();
 };

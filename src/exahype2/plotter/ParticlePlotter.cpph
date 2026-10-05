@@ -13,8 +13,8 @@ exahype2::plotter::ParticlePlotter::ParticlePlotter(std::string filename) :
 }
 
 /**
- * Writes one snapshot of the particles of every rank. Particles has the interface of
- * exahype2::particles::ParticleSet. Every rank calls this function collectively.
+ * Writes one snapshot of the particles of every rank in the order of their numbers. Particles has
+ * the interface of exahype2::particles::ParticleSet. Every rank calls this function collectively.
  */
 template <typename Particles>
 INLINE_METHOD void
@@ -24,49 +24,53 @@ exahype2::plotter::ParticlePlotter::plot(
   const tarch::plotter::Format format,
   const std::string&           outputDirectory
 ) {
+  using Values               = tarch::plotter::MeshArray<double>;
   constexpr int NumberOfData = Particles::ValuesPerParticle - DIMENSIONS;
   static_assert(NumberOfData >= 0);
   particles.download();
-  const auto        numberOfParticles = static_cast<std::size_t>(particles.getSize());
-  const std::string directory         = outputDirectory + OutputSubdirectory;
-  const int         rank              = tarch::mpi::Rank::getInstance().getRank();
+  const auto numberOfParticles = static_cast<std::size_t>(particles.getSize());
+  const int  rank              = tarch::mpi::Rank::getInstance().getRank();
 
-  _snapshot.openFile(format, directory, timeStamp);
-  auto& writer = _snapshot.getFileWriter();
-  auto& piece  = writer.getPieceBuffers(writer.acquirePiece(rank));
-
-  piece.pointsXYZ.assign(numberOfParticles * 3, 0.0);
-  piece.connectivity.resize(numberOfParticles);
-  piece.offsets.resize(numberOfParticles);
-  piece.types.assign(numberOfParticles, static_cast<std::uint8_t>(tarch::plotter::CellType::Vertex));
-  piece.pointFields.clear();
-  piece.cellFields.clear();
-  piece.cellFields.push_back({"Number", 2, std::vector<double>(numberOfParticles * 2)});
+  tarch::plotter::Mesh mesh;
+  mesh.pointsXYZ.assign(numberOfParticles * 3, 0.0);
+  mesh.connectivity.resize(numberOfParticles);
+  mesh.offsets.resize(numberOfParticles);
+  mesh.types.assign(numberOfParticles, static_cast<std::uint8_t>(tarch::plotter::CellType::Vertex));
+  mesh.cellFields.push_back({"Number", 2, Values(numberOfParticles * 2)});
   if constexpr (NumberOfData > 0) {
-    piece.cellFields.push_back({"Data", NumberOfData, std::vector<double>(numberOfParticles * NumberOfData)});
+    mesh.cellFields.push_back({"Data", NumberOfData, Values(numberOfParticles * NumberOfData)});
   }
-  piece.cellFields.push_back({"RefinementLevel", 1, std::vector<double>(numberOfParticles, 1.0)});
-  piece.cellFields.push_back({"Subdomain", 1, std::vector<double>(numberOfParticles, static_cast<double>(rank))});
+  mesh.cellFields.push_back({"RefinementLevel", 1, Values(numberOfParticles, 1.0)});
+  mesh.cellFields.push_back({"Subdomain", 1, Values(numberOfParticles, static_cast<double>(rank))});
 
+  std::vector<int> order(numberOfParticles);
+  std::iota(order.begin(), order.end(), 0);
+  std::sort(order.begin(), order.end(), [&particles](const int left, const int right) {
+    return particles.getNumber(left) < particles.getNumber(right);
+  });
   for (std::size_t particle = 0; particle < numberOfParticles; particle++) {
-    const int  index    = static_cast<int>(particle);
+    const int  index    = order[particle];
     const auto position = particles.getPosition(index);
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      piece.pointsXYZ[particle * 3 + static_cast<std::size_t>(axis)] = position(axis);
+      mesh.pointsXYZ[particle * 3 + static_cast<std::size_t>(axis)] = position(axis);
     }
-    piece.connectivity[particle] = static_cast<std::int32_t>(particle);
-    piece.offsets[particle]      = static_cast<std::int32_t>(particle + 1);
+    mesh.connectivity[particle] = static_cast<std::int32_t>(particle);
+    mesh.offsets[particle]      = static_cast<std::int32_t>(particle + 1);
 
-    const auto number                            = particles.getNumber(index);
-    piece.cellFields[0].values[particle * 2]     = static_cast<double>(number.first);
-    piece.cellFields[0].values[particle * 2 + 1] = static_cast<double>(number.second);
+    const auto number                           = particles.getNumber(index);
+    mesh.cellFields[0].values[particle * 2]     = static_cast<double>(number.first);
+    mesh.cellFields[0].values[particle * 2 + 1] = static_cast<double>(number.second);
     if constexpr (NumberOfData > 0) {
       const double* const data = particles.getData(index);
       for (int entry = 0; entry < NumberOfData; entry++) {
-        piece.cellFields[1].values[particle * NumberOfData + static_cast<std::size_t>(entry)] = data[entry];
+        mesh.cellFields[1].values[particle * NumberOfData + static_cast<std::size_t>(entry)] = data[entry];
       }
     }
   }
 
-  _snapshot.writeFile(directory, _filename);
+  if (_fileWriter == nullptr) {
+    _fileWriter = tarch::plotter::createFileWriter(format);
+  }
+  assertion(_fileWriter->getFormat() == format);
+  _fileWriter->write(mesh, outputDirectory + OutputSubdirectory, _filename, timeStamp);
 }

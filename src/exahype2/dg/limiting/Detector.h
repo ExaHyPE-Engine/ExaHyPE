@@ -17,10 +17,16 @@ namespace exahype2::dg::limiting {
   class Detector;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct ReduceSampledExtrema;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct OpenInitialStatuses;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct ClearFaces;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct WriteExtremaOntoFaces;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct OpenStep;
@@ -29,10 +35,9 @@ namespace exahype2::dg::limiting {
   struct ReduceReferenceExtrema;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-  struct WriteExtremaOntoFaces;
-
-  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct MergeNeighbourExtrema;
+
+  struct JudgedCells;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct JudgeCandidates;
@@ -80,18 +85,29 @@ public:
   static constexpr int  NumberOfObservables  = Derived::NumberOfObservables;
   static constexpr bool UsesMaximumPrinciple = NumberOfObservables > 0;
   static constexpr int  ExtremaPerCell       = UsesMaximumPrinciple ? 2 * NumberOfObservables : 2;
-  static constexpr int  ExtremaValuesPerFace = 2 * ExtremaPerCell;
-  static constexpr int  StatusValuesPerFace  = 2;
+  /**
+   * A face half holds one set of extrema per merge round and per axis the round leaves out: The
+   * extrema of the cell, then its extrema widened along one other axis, then along both other axes.
+   */
+  static constexpr int ExtremaSetsPerHalf   = DIMENSIONS == 2 ? 2 : 4;
+  static constexpr int ExtremaValuesPerFace = 2 * ExtremaSetsPerHalf * ExtremaPerCell;
+  static constexpr int StatusValuesPerFace  = 2;
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatus(
     int* NOALIAS                    status,
     const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS subcells,
+    const StoragePrecision* NOALIAS sampledExtrema,
     const StoragePrecision* NOALIAS nodesToLobatto,
     const StoragePrecision* NOALIAS nodesToSubcells,
     StoragePrecision                relaxationParameter,
     StoragePrecision                differencesScaling
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void reduceSampledExtrema(
+    StoragePrecision* NOALIAS       extrema,
+    const StoragePrecision* NOALIAS subcells
   );
 
   template <typename StoragePrecision>
@@ -132,7 +148,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    StoragePrecision* NOALIAS                    candidateExtrema
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void spreadStatus(
@@ -147,7 +164,7 @@ private:
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool interpolantOscillates(
     const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS subcells,
+    const StoragePrecision* NOALIAS sampledExtrema,
     const StoragePrecision* NOALIAS nodesToLobatto,
     const StoragePrecision* NOALIAS nodesToSubcells,
     StoragePrecision                relaxationParameter,
@@ -191,11 +208,12 @@ private:
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool satisfiesMaximumPrinciple(
     const StoragePrecision* NOALIAS candidate,
+    const StoragePrecision* NOALIAS candidateSubcells,
     const StoragePrecision* NOALIAS referenceExtrema,
     const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells,
     StoragePrecision                relaxationParameter,
-    StoragePrecision                differencesScaling
+    StoragePrecision                differencesScaling,
+    StoragePrecision* NOALIAS       candidateExtrema
   );
 
   template <typename StoragePrecision>
@@ -230,7 +248,6 @@ private:
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics candidateEigenvalues(
     const StoragePrecision* NOALIAS              candidate,
-    const StoragePrecision* NOALIAS              candidateSubcells,
     const StoragePrecision* NOALIAS              quadraturePoints,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -240,8 +257,24 @@ private:
 };
 
 /**
- * Opens every cell on the Galerkin scheme. With a discrete maximum principle, a cell whose nodal
- * interpolant oscillates beyond its subcells starts on the subcell scheme.
+ * Writes the observable extrema of the sampled subcells of every cell into its reference extrema.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::dg::limiting::ReduceSampledExtrema final {
+  using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
+  using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+
+  peano4::Partition            partition{};
+  typename CellPool::ConstView subcells{};
+  typename CellPool::View      referenceExtrema{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+};
+
+/**
+ * Opens every cell on the Galerkin scheme. With a discrete maximum principle a cell marks itself
+ * troubled when its nodal interpolant leaves the sampled extrema of the cell and its neighbours
+ * (Dumbser, Zanotti, Loubère and Diot, J. Comput. Phys. 278 (2014) 47-75).
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::OpenInitialStatuses final {
@@ -251,7 +284,7 @@ struct exahype2::dg::limiting::OpenInitialStatuses final {
 
   peano4::Partition            partition{};
   typename CellPool::ConstView nodes{};
-  typename CellPool::ConstView subcells{};
+  typename CellPool::ConstView sampledExtrema{};
   typename StatusPool::View    statuses{};
   const StoragePrecision*      nodesToLobatto{nullptr};
   const StoragePrecision*      nodesToSubcells{nullptr};
@@ -262,8 +295,8 @@ struct exahype2::dg::limiting::OpenInitialStatuses final {
 };
 
 /**
- * Resets both halves of every face to the status Regular and empty extrema, so the outer half of a
- * boundary face adds nothing. The subcell halo of the face becomes zero.
+ * Resets both halves of every face to the status Regular and empty extrema. The outer half of a
+ * boundary face then adds nothing. The subcell halo of the face becomes zero.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::ClearFaces final {
@@ -279,7 +312,24 @@ struct exahype2::dg::limiting::ClearFaces final {
 };
 
 /**
- * Copies the solution of every cell into its previous solution and opens its status for the step.
+ * Copies the reference extrema of a cell into the first set of its own half of every face.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::dg::limiting::WriteExtremaOntoFaces final {
+  using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
+  using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+
+  peano4::Partition            partition{};
+  typename CellPool::ConstView referenceExtrema{};
+  typename CellPool::View      extremaFaces{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeCell(int slot) const;
+};
+
+/**
+ * Copies the solution of every cell into its previous solution, opens its status for the step and
+ * copies its reference extrema onto its faces.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::OpenStep final {
@@ -291,20 +341,22 @@ struct exahype2::dg::limiting::OpenStep final {
   typename CellPool::ConstView solution{};
   typename CellPool::View      previousSolution{};
   typename StatusPool::View    statuses{};
+  typename CellPool::ConstView referenceExtrema{};
+  typename CellPool::View      extremaFaces{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
 /**
- * Writes the observable extrema of the previous solution of every cell into its reference extrema.
+ * Writes the observable extrema of the solution of every listed cell into its reference extrema.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::ReduceReferenceExtrema final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
-  typename CellPool::ConstView previousSolution{};
+  tarch::Span<const int>       cells{};
+  typename CellPool::ConstView solution{};
   typename CellPool::View      referenceExtrema{};
   const StoragePrecision*      nodesToLobatto{nullptr};
   const StoragePrecision*      nodesToSubcells{nullptr};
@@ -313,42 +365,58 @@ struct exahype2::dg::limiting::ReduceReferenceExtrema final {
 };
 
 /**
- * Copies the reference extrema of every cell into its own halves of its two faces along axis.
- */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-struct exahype2::dg::limiting::WriteExtremaOntoFaces final {
-  using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
-  using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
-
-  peano4::Partition            partition{};
-  typename CellPool::ConstView referenceExtrema{};
-  typename CellPool::View      extremaFaces{};
-  int                          axis{0};
-
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
-};
-
-/**
- * Widens the reference extrema of every listed cell by the extrema its two face neighbours along axis wrote.
+ * Runs one of the DIMENSIONS merge rounds on every listed cell. Round r widens the sets that round
+ * r - 1 wrote onto the faces by the face neighbours along every axis at once and writes the sets of
+ * the next round. Every axis order gives the same result, also at a level jump. After the last
+ * round the reference extrema of a cell cover every cell it touches at a vertex.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::MergeNeighbourExtrema final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
-  tarch::Span<const int>       cells{};
-  typename CellPool::View      referenceExtrema{};
-  typename CellPool::ConstView extremaFaces{};
-  int                          axis{0};
+  peano4::Partition       partition{};
+  tarch::Span<const int>  cells{};
+  typename CellPool::View referenceExtrema{};
+  typename CellPool::View extremaFaces{};
+  int                     round{1};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision* getSet(
+    int  slot,
+    int  faceNumber,
+    bool ownHalf,
+    int  set
+  ) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void widenAlongAxis(StoragePrecision* extrema, int slot, int axis, int set) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeAlongAxis(
+    const StoragePrecision* extrema,
+    int                     slot,
+    int                     axis,
+    int                     set
+  ) const;
 };
 
 /**
- * Checks the candidate of every cell and writes the resulting status into the cell and onto its
- * faces. The wave speeds of the accepted candidates whose cells were not troubled reduce into the
- * accumulator.
+ * The wave speeds of the accepted candidates, the number of cells that recompute and the number of
+ * troubled cells.
+ */
+struct exahype2::dg::limiting::JudgedCells final {
+  using ValueType = exahype2::dg::limiting::JudgedCells;
+
+  exahype2::dg::MaxEigenvalueStatistics statistics{};
+  int                                   recomputedCells{0};
+  int                                   troubledCells{0};
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType identity();
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType combine(ValueType left, ValueType right);
+};
+
+/**
+ * Runs the last merge round on the reference extrema of every cell and judges its candidate
+ * against them. Writes the verdict into the status and onto the faces and the extrema of the
+ * candidate into the reference extrema of the cell.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::JudgeCandidates final {
@@ -360,7 +428,8 @@ struct exahype2::dg::limiting::JudgeCandidates final {
   typename CellPool::ConstView candidates{};
   typename StatusPool::View    statuses{};
   typename StatusPool::View    faceStatuses{};
-  typename CellPool::ConstView referenceExtrema{};
+  typename CellPool::View      referenceExtrema{};
+  typename CellPool::ConstView extremaFaces{};
   const StoragePrecision*      nodesToLobatto{nullptr};
   const StoragePrecision*      nodesToSubcells{nullptr};
   const StoragePrecision*      quadraturePoints{nullptr};
@@ -369,10 +438,7 @@ struct exahype2::dg::limiting::JudgeCandidates final {
   double                       timeStamp{0.0};
   double                       timeStepSize{0.0};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
-    int                                    entry,
-    exahype2::dg::MaxEigenvalueStatistics& accumulator
-  ) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, exahype2::dg::limiting::JudgedCells& accumulator) const;
 };
 
 /**

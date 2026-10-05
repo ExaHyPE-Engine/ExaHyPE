@@ -101,8 +101,6 @@ theSolver.on_start_grid_initialisation(
     CurvilinearElastic.init_grid_step_implementation(my_scenario.domain_perturbations())
 )
 theSolver.add_includes(*CurvilinearElastic.userIncludes())
-# The initial condition reads the curvilinear mapping and the NetCDF samplers of the host.
-theSolver.initialise_on_host()
 
 project.add_solver(theSolver)
 project.output.makefile.add_include_directory("../../..")

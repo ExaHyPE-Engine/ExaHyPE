@@ -56,10 +56,9 @@ tarch::la::ExactAccumulator::merge(const tarch::la::ExactAccumulator& other) {
 }
 
 /**
- * Returns the running sum rounded to the nearest double, with ties to even.
- * The limbs hold the exact sum, so the result is the same for every order in
- * which the addends arrived. A result outside the finite double range becomes
- * signed infinity.
+ * Returns the exact running sum rounded to the nearest double with ties to even. The result does
+ * not depend on the order of the addends. A result outside the finite double range becomes signed
+ * infinity.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 tarch::la::ExactAccumulator::round() const {
@@ -128,9 +127,8 @@ tarch::la::ExactAccumulator::roundQuotient(const int divisor) const {
     remainderIsNonZero = remainderIsNonZero or digits[limb] != 0;
   }
 
-  // The top two digits joined hold at least 33 significant bits, so together
-  // with one further digit they cover the mantissa, the guard bit, and the
-  // start of the sticky range for every possible mantissa width.
+  // The top two digits joined hold at least 33 significant bits. With one further digit, they cover
+  // the mantissa, the guard bit and the start of the sticky range for every mantissa width.
   const auto highBits          = (topDigit << BitsPerLimb) | digitBelow;
   const auto significantLength = 2 * BitsPerLimb - leadingZeros;
   const auto dropped           = significantLength - mantissaBits;
@@ -143,8 +141,8 @@ tarch::la::ExactAccumulator::roundQuotient(const int divisor) const {
     remainderIsNonZero =
       remainderIsNonZero or digitFurther != 0 or (highBits & ((std::uint64_t{1} << (dropped - 1)) - 1)) != 0;
   } else {
-    // The third digit is partly consumed by the mantissa and the guard bit, so
-    // only its remaining lower bits feed the sticky decision.
+    // The mantissa and the guard bit consume the upper bits of the third digit. Its remaining lower
+    // bits feed the sticky decision.
     mantissa = (highBits << -dropped) | (digitFurther >> (BitsPerLimb + dropped));
     guard    = ((digitFurther >> (BitsPerLimb + dropped - 1)) & 1) != 0;
     remainderIsNonZero =
@@ -172,8 +170,7 @@ tarch::la::ExactAccumulator::clear() {
 }
 
 /**
- * Returns the number of leading zero bits of a nonzero digit of BitsPerLimb bits. A CUDA device
- * kernel returns wrong counts from std::countl_zero, so the count halves the search range.
+ * Returns the number of leading zero bits of a nonzero digit of BitsPerLimb bits.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 tarch::la::ExactAccumulator::leadingZerosOfDigit(const std::uint64_t digit) {

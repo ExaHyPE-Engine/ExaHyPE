@@ -2,7 +2,21 @@
 # use, please see the copyright notice at www.peano-framework.org
 import CurvilinearElastic
 
-FAULT_PLANE = "applications::exahype2::exaseis::FaultPlane::get()"
+RUNTIME_PARAMETERS = "applications::exahype2::exaseis::RuntimeParameters"
+FAULT_PLANE = (
+    "applications::exahype2::exaseis::FaultPlane{"
+    + RUNTIME_PARAMETERS
+    + "::faultNormal(), "
+    + RUNTIME_PARAMETERS
+    + "::faultPosition()}"
+)
+
+
+def add_runtime_parameters(project):
+    """Registers the runtime parameters faultNormal and faultPosition that the grid initialisation
+    sets."""
+    project.add_runtime_parameter("faultNormal", "int", 0)
+    project.add_runtime_parameter("faultPosition", "double", 0.0)
 
 
 def algebraic_source():
@@ -15,15 +29,20 @@ def algebraic_source():
 
 
 def riemann_solver():
-    return """
+    return (
+        """
+  const bool isFaultFace = """
+        + fault_face_predicate()
+        + """;
   return applications::exahype2::exaseis::solveDynamicRuptureRiemannProblem<
     Shortcuts,
     {{COMPUTE_PRECISION}},
     DGOrder + 1,
     NumberOfUnknowns,
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
-    1>(QL, QR, x, h, t, normal, isBoundaryFace, faceIndex, FL, FR);
+    1>(QL, QR, t, normal, isBoundaryFace, isFaultFace, faceIndex, FL, FR);
 """
+    )
 
 
 def userIncludes():
@@ -38,7 +57,8 @@ def userIncludes():
 
 def init_grid_step_implementation(scenario_perturbations):
     """Returns the curvilinear grid initialisation, in which scenario_perturbations writes the
-    locals faultNormal and faultPosition for FaultPlane::set().
+    locals faultNormal and faultPosition. The initialisation copies them into the runtime
+    parameters of the same names.
     """
     return CurvilinearElastic.init_grid_step_implementation(
         """
@@ -47,19 +67,24 @@ def init_grid_step_implementation(scenario_perturbations):
 """
         + scenario_perturbations
         + """
-  applications::exahype2::exaseis::FaultPlane::set(faultNormal, faultPosition);
+  """
+        + RUNTIME_PARAMETERS
+        + """::setFaultNormal(faultNormal);
+  """
+        + RUNTIME_PARAMETERS
+        + """::setFaultPosition(faultPosition);
 """
     )
 
 
 def fault_normal():
     """Returns the C++ expression of the axis that the fault plane is orthogonal to."""
-    return FAULT_PLANE + ".normal"
+    return RUNTIME_PARAMETERS + "::faultNormal()"
 
 
 def fault_position():
     """Returns the C++ expression of the position of the fault plane along its normal."""
-    return FAULT_PLANE + ".position"
+    return RUNTIME_PARAMETERS + "::faultPosition()"
 
 
 def fault_face_predicate():

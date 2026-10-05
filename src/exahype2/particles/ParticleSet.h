@@ -22,6 +22,9 @@ namespace exahype2::particles {
   struct ParticleSetView;
 
   template <int NumberOfData>
+  struct CompactParticlesMovedOutOfCells;
+
+  template <int NumberOfData>
   class ParticleSet;
 } // namespace exahype2::particles
 
@@ -43,25 +46,51 @@ struct exahype2::particles::Particle final {
 };
 
 /**
- * Trivially copyable view of a particle set for a kernel.
+ * Trivially copyable view of a particle set for a kernel. markAsMovedOutOfCell() records in the slot
+ * array that a kernel moved the particle out of its cell. ParticleSet::relocateParticlesMovedOutOfCells()
+ * reads the marks.
  */
 template <int NumberOfData>
 struct exahype2::particles::ParticleSetView final {
   static constexpr int ValuesPerParticle = DIMENSIONS + NumberOfData;
 
-  int        numberOfParticles{0};
-  double*    values{nullptr};
-  const int* slots{nullptr};
+  int     numberOfParticles{0};
+  double* values{nullptr};
+  int*    slots{nullptr};
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD Particle getParticle(int index) const;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getSlot(int index) const;
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool hasMovedOutOfCell(int index) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void markAsMovedOutOfCell(int index) const;
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool isInsideCell(
+    const peano4::Partition&                     partition,
+    int                                          index,
+    const tarch::la::Vector<DIMENSIONS, double>& position,
+    const tarch::la::Vector<DIMENSIONS, double>& domainOffset
+  ) const;
+};
+
+/**
+ * Copies the values of the particle movedParticles[entry] into movedValues and moves the particle
+ * fillers[entry] from the tail of the set into the vacated entry. A kernel calls it once per
+ * moved particle.
+ */
+template <int NumberOfData>
+struct exahype2::particles::CompactParticlesMovedOutOfCells final {
+  ParticleSetView<NumberOfData> particles{};
+  double*                       movedValues{nullptr};
+  const int*                    movedParticles{nullptr};
+  const int*                    fillers{nullptr};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 TARGET_DECLARE_END
 
 /**
  * Particles of one rank in a host array and a device copy. A kernel that writes the device copy
  * leaves the host values stale until download(). insert() and relocate() run on the host and move
- * every particle to the rank that owns its cell.
+ * every particle to the rank that owns its cell. relocateParticlesMovedOutOfCells() copies only the
+ * particles that a kernel marked as moved out of their cell.
  */
 template <int NumberOfData>
 class exahype2::particles::ParticleSet final {
@@ -77,6 +106,7 @@ public:
 
   INLINE_METHOD void insert(const peano4::Partition& partition, const std::vector<double>& candidates);
   INLINE_METHOD void relocate(const peano4::Partition& partition);
+  INLINE_METHOD void relocateParticlesMovedOutOfCells(const peano4::Partition& partition, int numberOfMovedParticles);
   INLINE_METHOD void upload();
   INLINE_METHOD void download();
   INLINE_METHOD void release();
@@ -98,6 +128,8 @@ public:
   [[nodiscard]] INLINE_METHOD int getSlot(int index) const;
 
 private:
+  static constexpr int MinimumDeviceCapacity = 64;
+
   std::vector<double> _values{};
   std::vector<int>    _numbers{};
   std::vector<int>    _slots{};
@@ -106,12 +138,28 @@ private:
 
   tarch::accelerator::Buffer<double> _valuesOnDevice{tarch::MemoryLocation::Device};
   tarch::accelerator::Buffer<int>    _slotsOnDevice{tarch::MemoryLocation::Device};
+  tarch::accelerator::Buffer<int>    _movedParticlesOnDevice{tarch::MemoryLocation::Device};
+  tarch::accelerator::Buffer<int>    _fillersOnDevice{tarch::MemoryLocation::Device};
+  tarch::accelerator::Buffer<double> _movedValuesOnDevice{tarch::MemoryLocation::Device};
   bool                               _hostValuesAreCurrent{true};
   bool                               _deviceValuesAreCurrent{false};
   bool                               _deviceSlotsAreCurrent{false};
 
-  INLINE_METHOD void locate(const peano4::Partition& partition);
-  INLINE_METHOD void exchange(const peano4::Partition& partition);
+  INLINE_METHOD void takeMovedParticlesFromTheDevice(
+    int                  numberOfMovedParticles,
+    std::vector<double>& values,
+    std::vector<int>&    numbers
+  );
+  INLINE_METHOD void placeParticles(
+    const peano4::Partition&   partition,
+    const std::vector<double>& values,
+    const std::vector<int>&    numbers
+  );
+  INLINE_METHOD void appendArrivals(
+    const std::vector<double>& values,
+    const std::vector<int>&    numbers,
+    const std::vector<int>&    slots
+  );
   INLINE_METHOD void append(const double* values, int number0, int number1, int slot);
 };
 

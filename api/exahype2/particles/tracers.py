@@ -22,9 +22,13 @@ class Tracers:
         ):
             self._number_of_data = particle_attributes
         else:
-            raise TypeError("particle_attributes is an integer or a dictionary.")
+            raise TypeError(
+                "A tracer set expects an integer or a dictionary as particle_attributes."
+            )
         if self._number_of_data < 0:
-            raise ValueError("A tracer carries a non-negative number of data entries.")
+            raise ValueError(
+                "A tracer set expects a non-negative number of data entries."
+            )
         self._coordinates = []
         self._coordinate_transform = None
         self._data = []
@@ -72,12 +76,12 @@ class Tracers:
         for coordinate in coordinates:
             entries = [float(component) for component in coordinate]
             if len(entries) < 2:
-                raise ValueError("A coordinate carries at least two components.")
+                raise ValueError("A tracer coordinate needs at least two components.")
             self._coordinates.append(entries)
         if transform is not None:
             if self._coordinate_transform not in (None, str(transform)):
                 raise ValueError(
-                    "[{}] maps its coordinates through one transform.".format(
+                    "The tracer set {} maps its coordinates through one transform only.".format(
                         self._name
                     )
                 )
@@ -108,7 +112,7 @@ class Tracers:
             and int(unknowns_per_particle) != self._number_of_data
         ):
             raise ValueError(
-                "[{}] carries {} data entries per particle, not {}.".format(
+                "The tracer set {} stores {} data entries per particle (got {}).".format(
                     self._name, self._number_of_data, unknowns_per_particle
                 )
             )
@@ -133,7 +137,7 @@ class Tracers:
             raise ValueError("The initial position needs one data index per axis.")
         if save_initial_position and max(indices) >= self._number_of_data:
             raise ValueError(
-                "[{}] has no data entry {} for the initial position.".format(
+                "The tracer set {} needs a data entry {} for the initial position.".format(
                     self._name, max(indices)
                 )
             )
@@ -175,12 +179,18 @@ class Tracers:
     def attach(self, solver, forces, initialisation, time_steps):
         """Binds the tracers to the solver that moves them."""
         if self._solver is not None and self._solver is not solver:
-            raise ValueError("[{}] is traced by one solver.".format(self._name))
+            raise ValueError(
+                "The tracer set {} follows one solver only.".format(self._name)
+            )
         if forces is not None and not isinstance(forces, Forces):
-            raise TypeError("forces is an exahype2.particles.Forces.")
+            raise TypeError(
+                "A tracer set expects forces of the type exahype2.particles.Forces."
+            )
         if self._face_traces is not None and forces is not None:
             raise ValueError(
-                "[{}] samples face traces and takes no forces.".format(self._name)
+                "The tracer set {} samples face traces and cannot take forces.".format(
+                    self._name
+                )
             )
         self._solver = solver
         self._forces = forces if forces is not None else Forces()
@@ -189,7 +199,7 @@ class Tracers:
         for field in self._forces.interpolated_fields:
             if field >= self._number_of_data:
                 raise ValueError(
-                    "[{}] has no data entry {} to interpolate into.".format(
+                    "The tracer set {} needs a data entry {} to interpolate into.".format(
                         self._name, field
                     )
                 )
@@ -202,7 +212,7 @@ class Tracers:
             or every < 0
         ):
             raise ValueError(
-                "[{}] every is a finite non-negative time, got {!r}.".format(
+                "The tracer set {} expects a finite non-negative time for every (got {!r}).".format(
                     self._name, every
                 )
             )
@@ -220,7 +230,7 @@ class Tracers:
             expected = dimensions + self._number_of_data
             if len(particle) != expected:
                 raise ValueError(
-                    "[{}] expects {} values per particle, got {}.".format(
+                    "The tracer set {} expects {} values per particle (got {}).".format(
                         self._name, expected, len(particle)
                     )
                 )
@@ -230,18 +240,20 @@ class Tracers:
     def dictionary(self, dimensions):
         """Returns the template entries of the tracers for a build of ``dimensions``."""
         if self._solver is None:
-            raise ValueError("[{}] is not traced by a solver.".format(self._name))
+            raise ValueError(
+                "The tracer set {} needs a solver that traces it.".format(self._name)
+            )
         for coordinate in self._coordinates:
             if len(coordinate) < dimensions:
                 raise ValueError(
-                    "[{}] has a coordinate with fewer than {} components.".format(
+                    "The tracer set {} needs {} components per coordinate.".format(
                         self._name, dimensions
                     )
                 )
         for file in self._files:
             if len(file["INITIAL_POSITION_INDEX"]) < dimensions:
                 raise ValueError(
-                    "[{}] needs {} initial position indices.".format(
+                    "The tracer set {} needs {} initial position indices.".format(
                         self._name, dimensions
                     )
                 )

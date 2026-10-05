@@ -48,7 +48,7 @@ class Project:
             dimensions = arguments.dimensions
         if sys.version_info < (3, 11):
             log.warning(
-                "Python 3.11 or higher is recommended to support all features. Current version: %s",
+                "The code generator needs Python 3.11 or newer for all features (got %s).",
                 sys.version,
             )
 
@@ -196,27 +196,31 @@ class Project:
         for solver in (first, second):
             if solver not in self._solvers:
                 raise ValueError(
-                    "[{}] belongs to the project before it is coupled.".format(
+                    "The solver {} must belong to the project before the coupling.".format(
                         solver.name
                     )
                 )
             if not hasattr(solver, "coupling_matrix_from"):
                 raise ValueError(
-                    "[{}] is not an ADER-DG solver and cannot be coupled.".format(
+                    "The project couples ADER-DG solvers only (got the solver {}).".format(
                         solver.name
                     )
                 )
             if not solver.owns_cells:
                 raise ValueError(
-                    "[{}] restricts itself to cells before it is coupled.".format(
+                    "The solver {} must restrict itself to cells before the coupling.".format(
                         solver.name
                     )
                 )
         if first is second:
-            raise ValueError("[{}] cannot couple with itself.".format(first.name))
+            raise ValueError(
+                "The project cannot couple the solver {} with itself.".format(
+                    first.name
+                )
+            )
         if first.state.number_of_values != second.state.number_of_values:
             raise ValueError(
-                "[{}] and [{}] carry different numbers of values per node.".format(
+                "The coupled solvers {} and {} must store the same number of values per node.".format(
                     first.name, second.name
                 )
             )
@@ -231,11 +235,12 @@ class Project:
         self._constants[name] = {"name": name, "value": str(value), "type": cpp_type}
 
     def add_runtime_parameter(self, name, parameter_type, default_value):
-        """Registers a parameter the executable reads from config.json and the command line. The
-        generated RuntimeParameters::<name>() returns it."""
+        """Registers a parameter that the executable reads from config.json and the command line.
+        The generated RuntimeParameters::<name>() returns it in host code and in kernels. The
+        generated RuntimeParameters::set<Name>() overwrites it at run time."""
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
             raise ValueError(
-                f"Invalid runtime parameter name '{name}'. Use a valid C++ identifier."
+                f"The runtime parameter name '{name}' must be a valid C++ identifier."
             )
 
         is_array = isinstance(parameter_type, (tuple, list))
@@ -248,7 +253,7 @@ class Project:
             array_size = parameter_type[1]
             if base_type not in ("double", "int", "bool"):
                 raise ValueError(
-                    f"Unsupported array runtime parameter base type '{base_type}'. Supported types are: double, int, bool."
+                    f"An array runtime parameter supports the base types double, int and bool only (got '{base_type}')."
                 )
             if (
                 not isinstance(array_size, int)
@@ -270,7 +275,7 @@ class Project:
             array_size = None
             if base_type not in ("double", "int", "bool", "string"):
                 raise ValueError(
-                    f"Unsupported runtime parameter type '{base_type}'. Supported types are: double, int, bool, string."
+                    f"A runtime parameter supports the types double, int, bool and string only (got '{base_type}')."
                 )
 
         expected_types = {
@@ -332,6 +337,7 @@ class Project:
         self._runtime_parameters.append(
             {
                 "name": name,
+                "setter": "set" + name[0].upper() + name[1:],
                 "cpp_type": cpp_type,
                 "return_type": return_type,
                 "is_array": is_array,
@@ -476,7 +482,7 @@ class Project:
         """Writes every generated file. The method restores the artefact and file lists
         afterwards, so a second call generates the same files."""
         if not self._solvers:
-            raise ValueError("The project has no solver.")
+            raise ValueError("The project needs at least one solver.")
         self._solver_set_generated = True
         self.output.makefile.parse_configuration_outcome()
         self._makefile_configured = True
@@ -495,6 +501,10 @@ class Project:
             for solver in self._solvers:
                 log.debug("Prepare solver %s.", solver.name)
                 solver.build(self)
+            self.output.readme.cites_subcell_limiter = any(
+                getattr(solver, "subcell_limiter_is_enabled", False)
+                for solver in self._solvers
+            )
 
             self._generate_constants()
             self._generate_solver_repository()
@@ -530,7 +540,9 @@ class Project:
             captured.append(line)
         process.stdout.close()
         if process.wait() != 0:
-            raise Exception("{} failed:\n{}".format(action, "".join(captured).strip()))
+            raise Exception(
+                "The {} fails:\n{}".format(action, "".join(captured).strip())
+            )
 
     def _build(self):
         arguments = Project._parse_arguments()
@@ -604,7 +616,7 @@ class Project:
             self.is_built = False
             self.build_was_successful = False
             log.error("%s", error)
-            log.error("Compile was not successful")
+            log.error("The build of the project fails.")
             raise
 
     def generate_and_build(self):
@@ -631,7 +643,7 @@ class Project:
         if rebuild_if_required and not (self.is_built and self.build_was_successful):
             self.generate_and_build()
         if rebuild_if_required and not (self.is_built and self.build_was_successful):
-            log.error("Cannot run as code compilation has not been successful")
+            log.error("The project cannot run without a successful build.")
             return False
 
         invocation = list(prefix) if prefix else []
@@ -654,15 +666,15 @@ class Project:
                     if sink:
                         sink.write(line)
             if process.returncode != 0:
-                log.error("Run failed with exit code %s", process.returncode)
+                log.error("The run ends with the exit code %s.", process.returncode)
                 return False
             log.info(
                 "Run completed without error code, but check for warnings and numerical assertions/errors"
             )
             return True
         except Exception as error:
-            log.error("Run of application was not successful: %s", error)
-            log.error("Invocation: %s", invocation)
+            log.error("The run fails: %s", error)
+            log.error("The run uses the command line %s.", invocation)
             return False
         finally:
             if sink:

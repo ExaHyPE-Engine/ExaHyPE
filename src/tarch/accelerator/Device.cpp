@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Device.h"
 
+#include <omp.h>
+
 tarch::accelerator::Device&
 tarch::accelerator::Device::getInstance() {
   static Device instance;
@@ -26,6 +28,14 @@ tarch::accelerator::Device::isInitialised() const {
 int
 tarch::accelerator::Device::getNumberOfDevices() const {
   return 0;
+}
+
+/**
+ * Returns the threads of the host that run a dispatch at once.
+ */
+int
+tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
+  return std::max(1, omp_get_max_threads());
 }
 
 #endif // PEANO_WITH_GPU_BACKEND

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "HaloProfileTestData.h"
 
-#include "exahype2/fv/FiniteVolume.h"
+#include "exahype2/fv/FiniteVolumeScheme.h"
 
 double
 exahype2::fv::tests::getLinearHaloProfile(

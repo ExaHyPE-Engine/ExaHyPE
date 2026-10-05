@@ -219,5 +219,6 @@ private:
   void numberCellsAlongCurve(const std::vector<CellRecord>& records);
   void assemblePartitions();
   [[nodiscard]] tarch::AllocatedBytes getPartitionBytes() const noexcept;
+  [[nodiscard]] std::size_t getTreeBytes() const noexcept;
   [[nodiscard]] std::int64_t getLatticeKey(int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const;
 };

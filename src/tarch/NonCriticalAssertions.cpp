@@ -24,14 +24,14 @@ tarch::triggerNonCriticalAssertion(
   int expected = -1;
   if (not rankWhichHasSetNonCriticalAssertion
             .compare_exchange_strong(expected, tarch::mpi::Rank::getInstance().getRank())) {
-    logDebug("A non-critical assertion failed in (" << file << ":" << line << "): " << expression);
+    logDebug("A non-critical assertion fails in (" << file << ":" << line << "): " << expression);
     logDebug("A non-critical assertion has already put this rank into shutdown mode.");
     return;
   }
 
-  logError("A non-critical assertion failed in (" << file << ":" << line << "): " << expression);
+  logError("A non-critical assertion fails in (" << file << ":" << line << "): " << expression);
   logError(parameterValuePairs);
-  logError("The application will write its output and shut down.");
+  logError("The rank writes its output and shuts down.");
 }
 
 bool

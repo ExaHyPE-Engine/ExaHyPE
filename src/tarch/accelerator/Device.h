@@ -8,8 +8,15 @@ namespace tarch::accelerator {
   class Device;
 
 #if not defined(PEANO_WITH_GPU_BACKEND)
-  struct CpuTeam {};
+  // One host thread runs a whole team; the scratch is a buffer of TeamScratchBytes of that thread.
+  struct CpuTeam {
+    unsigned char* scratch{nullptr};
+  };
   using TeamHandle = CpuTeam;
+
+  inline constexpr int ThreadsPerWarp        = 1;
+  inline constexpr int DefaultThreadsPerTeam = 1;
+  inline constexpr int TeamScratchBytes      = 16384;
 #endif
 } // namespace tarch::accelerator
 
@@ -35,6 +42,8 @@ public:
   bool isInitialised() const;
 
   int getNumberOfDevices() const;
+
+  int getNumberOfConcurrentThreads() const;
 
 private:
   Device()                               = default;

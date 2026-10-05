@@ -40,14 +40,17 @@ tarch::database::SnapshotDatabase::dumpCSVFile() {
     std::error_code directoryError;
     std::filesystem::create_directories(outputPath.parent_path(), directoryError);
     if (directoryError) {
-      logError("Could not create output directory " << outputPath.parent_path() << ": " << directoryError.message());
+      logError(
+        "The snapshot database cannot create the directory " << outputPath.parent_path() << " ("
+                                                             << directoryError.message() << ")."
+      );
       return;
     }
   }
 
   std::ofstream file(fileName, writeHeaderNow ? std::ios::trunc : std::ios::app);
   if (not file.is_open()) {
-    logError("Could not open snapshot database file " << fileName << ".");
+    logError("The snapshot database cannot open the file '" << fileName << "'.");
     return;
   }
 
@@ -61,7 +64,7 @@ tarch::database::SnapshotDatabase::dumpCSVFile() {
   if (file.good()) {
     _csvHeaderWritten = true;
   } else {
-    logError("Could not write snapshot database file " << fileName << ".");
+    logError("The snapshot database cannot write the file '" << fileName << "'.");
     resetWriteTracking();
     _csvHeaderWritten = false;
   }

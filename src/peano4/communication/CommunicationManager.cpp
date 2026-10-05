@@ -31,7 +31,7 @@ peano4::communication::CommunicationManager::init() {
     &attributeFound
   );
   if (attributeFound == 0 or tagUpperBound == nullptr) {
-    tarch::terminateWithError("Could not determine MPI_TAG_UB for the global communicator.");
+    tarch::terminateWithError("The MPI library cannot report its largest message tag.");
   }
 
   const int localTagUpperBound = *tagUpperBound;
@@ -87,7 +87,7 @@ peano4::communication::CommunicationManager::reserveTag() {
   assertion(_exchangeCommunicator != MPI_COMM_NULL);
   if (_nextTag > _tagUpperBound) {
     tarch::terminateWithError(
-      "The exchange communicator has no tag left: Every tag up to " + std::to_string(_tagUpperBound) + " is reserved."
+      "The MPI library provides message tags up to " + std::to_string(_tagUpperBound) + " only."
     );
   }
   return _nextTag++;

@@ -40,12 +40,12 @@
 #endif
 // clang-format on
 
-static_assert(sizeof(void*) == 8, "Assuming a 64-bit build with 8-byte pointers");
-static_assert(std::numeric_limits<float>::is_iec559, "Float must be an IEEE 754 type");
-static_assert(std::numeric_limits<double>::is_iec559, "Double must be an IEEE 754 type");
-static_assert(CHAR_BIT == 8, "A byte must have 8 bits");
-static_assert(sizeof(char) == 1, "Char must be one byte");
-static_assert(sizeof(short) == 2, "Short must be two bytes");
-static_assert(sizeof(int) == 4, "Int must be four bytes");
-static_assert(sizeof(long long) == 8, "Long long must be eight bytes");
-static_assert('A' == 65, "The execution character set must be ASCII");
+static_assert(sizeof(void*) == 8, "The build supports 64-bit platforms only.");
+static_assert(std::numeric_limits<float>::is_iec559, "The build supports IEEE 754 single-precision numbers only.");
+static_assert(std::numeric_limits<double>::is_iec559, "The build supports IEEE 754 double-precision numbers only.");
+static_assert(CHAR_BIT == 8, "The build supports 8-bit bytes only.");
+static_assert(sizeof(char) == 1, "The build supports 1-byte characters only.");
+static_assert(sizeof(short) == 2, "The build supports 2-byte short integers only.");
+static_assert(sizeof(int) == 4, "The build supports 4-byte integers only.");
+static_assert(sizeof(long long) == 8, "The build supports 8-byte long long integers only.");
+static_assert('A' == 65, "The build supports the ASCII character set only.");

@@ -4,8 +4,9 @@
 #include "exahype2/particles/Integration.h"
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
-#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
 #include "tarch/la/ScalarOperations.h"
 
 TARGET_DECLARE
@@ -35,9 +36,10 @@ exahype2::fv::interpolatePiecewiseConstant(
 }
 
 /**
- * Returns the multilinear interpolation of unknown between the volume centres around position.
- * Beyond the first or the last volume centre along an axis, the interpolant extends the boundary
- * value.
+ * Returns the value of unknown at position from the multilinear interpolation between the
+ * centres of the volumes around it. The weight of a corner volume is the product of the axis
+ * weights 1 - |d|/h. Beyond the first or the last volume centre along an axis, the interpolant
+ * stays constant along that axis.
  */
 template <int PatchSize, int NumberOfData, typename Storage>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -105,7 +107,7 @@ exahype2::fv::interpolateFields(
   const tarch::la::Vector<DIMENSIONS, double>&   position,
   exahype2::particles::Particle&                 particle
 ) {
-  static_assert(sizeof...(FieldIndices) <= NumberOfData, "Every interpolated field reads one unknown.");
+  static_assert(sizeof...(FieldIndices) <= NumberOfData, "A tracer interpolates the fields of the solver only.");
   if (scheme == exahype2::particles::InterpolationScheme::None) {
     return;
   }
@@ -148,7 +150,7 @@ exahype2::fv::clampIntoPatch(
 }
 
 /**
- * Deduces FieldIndices from the type of fields.
+ * Interpolates the fields the list names as a type.
  */
 template <int PatchSize, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -173,8 +175,11 @@ exahype2::fv::interpolateFields(
 TARGET_DECLARE_END
 
 /**
- * Moves every particle through the patch of its cell and sends it to the rank that owns its new
- * cell. An integration stage outside the patch reads the patch at the clamped position.
+ * Moves every particle of the set through the patch of its cell, sends every particle that left
+ * its cell to the rank that holds it, and then samples the fields of every moved particle in the
+ * patch that holds it. A stage position of the integration outside the patch reads the patch at
+ * its clamped image. The kernel marks the particles that left their cell and counts them. Only
+ * those leave the device.
  */
 template <int PatchSize, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
 INLINE_METHOD void
@@ -189,32 +194,54 @@ exahype2::fv::traceParticles(
   const int                                               periodicAxes
 ) {
   assertion(timeStepSize >= 0.0, timeStepSize);
-  if (particles.getSize() == 0) {
-    particles.relocate(partition);
+  int numberOfMovedParticles = 0;
+  if (particles.getSize() > 0) {
+    particles.upload();
+    const auto set = particles.getView();
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(set.numberOfParticles),
+      exahype2::fv::TraceParticles<
+        PatchSize,
+        NumberOfData,
+        NumberOfParticleData,
+        exahype2::particles::FieldList<FieldIndices...>,
+        Pool
+      >{partition.onDevice(), solution.getView(), timeStepSize, set, forces, domainOffset, domainWidth, periodicAxes},
+      tarch::accelerator::Sum<int>{numberOfMovedParticles}
+    );
+  }
+  if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
     return;
   }
-  particles.upload();
-  const auto set = particles.getView();
-  tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(set.numberOfParticles),
-    exahype2::fv::TraceParticles<
-      PatchSize,
-      NumberOfData,
-      NumberOfParticleData,
-      exahype2::particles::FieldList<FieldIndices...>,
-      Pool
-    >{partition.onDevice(), solution.getView(), timeStepSize, set, forces, domainOffset, domainWidth, periodicAxes}
-  );
-  if (forces.integrationScheme != exahype2::particles::IntegrationScheme::Static) {
-    particles.download();
+  particles.relocateParticlesMovedOutOfCells(partition, numberOfMovedParticles);
+  // Every moved particle samples the fields of the cell that holds it now.
+  if (timeStepSize > 0.0 and particles.getSize() > 0) {
+    particles.upload();
+    const auto set                         = particles.getView();
+    int        movedParticlesAfterSampling = 0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(set.numberOfParticles),
+      exahype2::fv::TraceParticles<
+        PatchSize,
+        NumberOfData,
+        NumberOfParticleData,
+        exahype2::particles::FieldList<FieldIndices...>,
+        Pool
+      >{partition.onDevice(), solution.getView(), 0.0, set, forces, domainOffset, domainWidth, periodicAxes, true},
+      tarch::accelerator::Sum<int>{movedParticlesAfterSampling}
+    );
+    assertion(movedParticlesAfterSampling == 0, movedParticlesAfterSampling);
   }
-  particles.relocate(partition);
 }
 
+/**
+ * Raises numberOfMovedParticles by one for a particle whose new position lies outside its cell.
+ */
 template <int PatchSize, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::TraceParticles<PatchSize, NumberOfData, NumberOfParticleData, Fields, Pool>::operator()(
-  const int index
+  const int index,
+  int&      numberOfMovedParticles
 ) const {
   constexpr double              WallDamping = 0.8;
   exahype2::particles::Particle particle    = particles.getParticle(index);
@@ -240,7 +267,7 @@ exahype2::fv::TraceParticles<PatchSize, NumberOfData, NumberOfParticleData, Fiel
       );
     };
   interpolateAt(particle, particle.getX());
-  if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
+  if (samplesOnly or forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
     return;
   }
   exahype2::particles::applyForces(particle, particle.getX(), forces, domainOffset, domainWidth);
@@ -249,4 +276,8 @@ exahype2::fv::TraceParticles<PatchSize, NumberOfData, NumberOfParticleData, Fiel
   exahype2::particles::reflectAtWalls(particle, newPosition, WallDamping, domainOffset, domainWidth, periodicAxes);
   exahype2::particles::wrapIntoDomain(newPosition, domainOffset, domainWidth, periodicAxes);
   particle.setX(newPosition);
+  if (not particles.isInsideCell(partition, index, newPosition, domainOffset)) {
+    particles.markAsMovedOutOfCell(index);
+    numberOfMovedParticles++;
+  }
 }

@@ -1,22 +1,18 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 {%- set runtime_parameters = NAMESPACE | join("::") ~ "::RuntimeParameters" %}
+{%- set runtime_parameters_on_device = "tarch::accelerator::getDeviceCopy<" ~ runtime_parameters ~ "::Storage>()" %}
 {%- set kernel_parameters = RUNTIME_PARAMETERS | rejectattr("is_string") | list %}
 
 #include "tarch/accelerator/DeviceCopies.h"
 
 namespace {
   TARGET_DECLARE
-  [[maybe_unused]] DEVICE_VARIABLE {{ runtime_parameters }}::Storage runtimeParametersOnDevice;
-
-  /**
-   * Copies storage into the device variable of this translation unit.
-   */
   struct WriteRuntimeParametersOnDevice final {
     {{ runtime_parameters }}::Storage storage{};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()([[maybe_unused]] const int workItem) const {
-      COMPILE_IF_ON_DEVICE(runtimeParametersOnDevice = storage;)
+      {{ runtime_parameters_on_device }} = storage;
     }
   };
   TARGET_DECLARE_END
@@ -35,29 +31,29 @@ INLINE_METHOD const {{ parameter.return_type }}& {{ runtime_parameters }}::{{ pa
 
 TARGET_DECLARE
 INLINE_METHOD GPU_CALLABLE_METHOD double {{ runtime_parameters }}::getMaxAdmissiblePatchSize() {
-  COMPILE_IF_ON_DEVICE(return runtimeParametersOnDevice.maxAdmissiblePatchSize;)
-  COMPILE_IF_ON_HOST(return _storage.maxAdmissiblePatchSize;)
+  COMPILE_IF_ON_DEVICE(return {{ runtime_parameters_on_device }}.maxAdmissiblePatchSize;)
+  COMPILE_IF_ON_HOST(return getStorage().maxAdmissiblePatchSize;)
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double {{ runtime_parameters }}::getMinAdmissiblePatchSize() {
-  COMPILE_IF_ON_DEVICE(return runtimeParametersOnDevice.minAdmissiblePatchSize;)
-  COMPILE_IF_ON_HOST(return _storage.minAdmissiblePatchSize;)
+  COMPILE_IF_ON_DEVICE(return {{ runtime_parameters_on_device }}.minAdmissiblePatchSize;)
+  COMPILE_IF_ON_HOST(return getStorage().minAdmissiblePatchSize;)
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD int {{ runtime_parameters }}::getGridLevels() {
-  COMPILE_IF_ON_DEVICE(return runtimeParametersOnDevice.gridLevels;)
-  COMPILE_IF_ON_HOST(return _storage.gridLevels;)
+  COMPILE_IF_ON_DEVICE(return {{ runtime_parameters_on_device }}.gridLevels;)
+  COMPILE_IF_ON_HOST(return getStorage().gridLevels;)
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD int {{ runtime_parameters }}::getMaxGridLevels() {
-  COMPILE_IF_ON_DEVICE(return runtimeParametersOnDevice.maxGridLevels;)
-  COMPILE_IF_ON_HOST(return _storage.maxGridLevels;)
+  COMPILE_IF_ON_DEVICE(return {{ runtime_parameters_on_device }}.maxGridLevels;)
+  COMPILE_IF_ON_HOST(return getStorage().maxGridLevels;)
 }
 {%- for parameter in kernel_parameters %}
 
 INLINE_METHOD GPU_CALLABLE_METHOD {{ parameter.return_type }} {{ runtime_parameters }}::{{ parameter.name }}() {
-  COMPILE_IF_ON_DEVICE(return runtimeParametersOnDevice.{{ parameter.name }};)
-  COMPILE_IF_ON_HOST(return _storage.{{ parameter.name }};)
+  COMPILE_IF_ON_DEVICE(return {{ runtime_parameters_on_device }}.{{ parameter.name }};)
+  COMPILE_IF_ON_HOST(return getStorage().{{ parameter.name }};)
 }
 {%- endfor %}
 TARGET_DECLARE_END

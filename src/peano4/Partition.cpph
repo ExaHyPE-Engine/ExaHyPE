@@ -105,12 +105,24 @@ peano4::Partition::getLevelJumps(const Adjacency adjacency) const noexcept {
  */
 INLINE_METHOD tarch::Span<const peano4::LevelJump>
 peano4::Partition::getLevelJumps(const Adjacency adjacency, const int level) const noexcept {
-  assertion(level >= 0, level);
-  if (_numberOfLevelJumps == 0 or level > _maximumLevel) {
+  return getLevelJumps(adjacency, level, level);
+}
+
+/**
+ * Returns the level jumps whose coarse face lies on a level from firstLevel to lastLevel.
+ */
+INLINE_METHOD tarch::Span<const peano4::LevelJump>
+peano4::Partition::getLevelJumps(
+  const Adjacency adjacency,
+  const int       firstLevel,
+  const int       lastLevel
+) const noexcept {
+  assertion(firstLevel >= 0 and firstLevel <= lastLevel, firstLevel, lastLevel);
+  if (_numberOfLevelJumps == 0 or firstLevel > _maximumLevel) {
     return {};
   }
-  const int first = _levelJumpRanges[getRangeIndexOfLevel(adjacency, level)];
-  const int end   = _levelJumpRanges[getRangeIndexOfLevel(adjacency, level + 1)];
+  const int first = _levelJumpRanges[getRangeIndexOfLevel(adjacency, firstLevel)];
+  const int end   = _levelJumpRanges[getRangeIndexOfLevel(adjacency, std::min(lastLevel, _maximumLevel) + 1)];
   return {_levelJumps + first, end - first};
 }
 

@@ -373,6 +373,10 @@ namespace {
     }
   }
 
+  /**
+   * Runs the predictor of the cells of one team. A thread behind the last cell still calls
+   * predict() to reach the barriers of the team.
+   */
   struct PredictorOfCell final {
     exahype2::dg::BasisTables<double> tables{};
     double*                           cellStates{nullptr};
@@ -382,17 +386,26 @@ namespace {
     int*                              sweeps{nullptr};
     const double*                     cellCentres{nullptr};
     const double*                     cellSizes{nullptr};
+    int                               threadsPerCell{1};
 
-    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int cell) const {
-      double* faceState[peano4::FacesPerCell];
-      double* faceFlux[peano4::FacesPerCell];
-      collectFacePointers(cell, faceStates, faceFluxes, faceState, faceFlux);
-      const int                                   coordinateOffset = cell * DIMENSIONS;
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      const int                            team,
+      const tarch::accelerator::TeamHandle handle
+    ) const {
+      exahype2::dg::ader::TeamWorkers workers =
+        Predictor<exahype2::dg::ader::tests::StubSolver>::getWorkers(handle, threadsPerCell);
+      const int cell    = team * workers.groups + workers.group;
+      workers.hasCell   = workers.hasCell and cell < Setup::NumberOfCells;
+      const int pointed = workers.hasCell ? cell : 0;
+      double*   faceState[peano4::FacesPerCell];
+      double*   faceFlux[peano4::FacesPerCell];
+      collectFacePointers(pointed, faceStates, faceFluxes, faceState, faceFlux);
+      const int                                   coordinateOffset = pointed * DIMENSIONS;
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
       const tarch::la::Vector<DIMENSIONS, double> cellSize(cellSizes + coordinateOffset);
-      const int                                   stateOffset   = cell * Setup::CellStateCardinality;
-      const int                                   scratchOffset = cell * StubScratch::Size;
-      sweeps[cell] = Predictor<exahype2::dg::ader::tests::StubSolver>::predict(
+      const int                                   stateOffset   = pointed * Setup::CellStateCardinality;
+      const int                                   scratchOffset = pointed * StubScratch::Size;
+      const int                                   outcome = Predictor<exahype2::dg::ader::tests::StubSolver>::predict(
         faceState,
         faceFlux,
         cellStates + stateOffset,
@@ -402,8 +415,12 @@ namespace {
         cellSize,
         Setup::TimeStamp,
         Setup::TimeStepSize,
-        Setup::PicardTolerance
+        Setup::PicardTolerance,
+        workers
       );
+      if (workers.hasCell and workers.thread == 0) {
+        sweeps[cell] = outcome;
+      }
     }
   };
   TARGET_DECLARE_END
@@ -427,8 +444,15 @@ namespace {
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
 
+    const int threadsPerTeam = tarch::accelerator::getTeamThreads(CellLayout::NodesPerCell);
+    const int threadsPerCell = std::min(CellLayout::NodesPerCell, threadsPerTeam);
+    const int cellsPerTeam   = threadsPerTeam / threadsPerCell;
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(Setup::NumberOfCells),
+      tarch::accelerator::TeamRange(
+        (Setup::NumberOfCells + cellsPerTeam - 1) / cellsPerTeam,
+        threadsPerTeam,
+        Predictor<exahype2::dg::ader::tests::StubSolver>::getTeamScratchBytes(threadsPerTeam)
+      ),
       PredictorOfCell{
         deviceTables.getView(),
         deviceCellStates.getData(),
@@ -437,7 +461,8 @@ namespace {
         deviceScratch.getData(),
         deviceSweeps.getData(),
         deviceCellCentres.getData(),
-        deviceCellSizes.getData()
+        deviceCellSizes.getData(),
+        threadsPerCell
       }
     );
 
@@ -461,6 +486,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::run() {
   testMethod(testAPicardSystemWithoutTermsReproducesTheInitialState);
   testMethod(testTheResidualIsTheSquaredDistanceOfTheIterates);
   testMethod(testAnUnboundedIterateReportsDivergence);
+  testMethod(testAToleranceWithoutAFiniteScaleCountsEveryChange);
   testMethod(testTheGradientOfAConstantVanishes);
   testMethod(testALinearStateHasTheExactGradient);
   testMethod(testTheFluxIsAskedForOncePerNodeAndAxis);
@@ -473,7 +499,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::run() {
   testMethod(testTheScratchBlocksFollowEachOtherWithoutOverlap);
   testMethod(testATermTheSolverLacksHasZeroExtent);
   testMethod(testThePredictorWritesTheTimeAveragesAndTheFacesAndLeavesTheCellState);
-  testMethod(testAnUnreachableToleranceReportsUnconvergedPicardIteration);
+  testMethod(testAZeroSquaredToleranceReportsUnconvergedPicardIteration);
+  testMethod(testTheToleranceGrowsToTheRoundingDistanceOfTheCell);
+  testMethod(testAToleranceBelowTheRoundingDistanceKeepsTheTimeAverages);
   testMethod(testEveryCellOfADeviceRangeMatchesTheHostPredictor);
 }
 
@@ -552,7 +580,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAConstantFluxHasNoDiverge
   const Tables tables;
   const auto   inverseCellSize = getInverseCellSize();
 
-  // The constant has no exact binary representation, so rounding errors would show.
+  // The double nearest to 5/3 is inexact. Every product with it rounds.
   double flux[DIMENSIONS * FluxAxisStride];
   for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
     flux[entry] = 5.0 / 3.0;
@@ -564,15 +592,18 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAConstantFluxHasNoDiverge
   }
 
   for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-    Predictor<StubLayout>::subtractFluxDivergence(
-      rightHandSide,
-      flux,
-      tables.stiffnessOperatorTransposed.data(),
-      tables.cellQuadratureWeights.data(),
-      inverseCellSize,
-      0.25,
-      timeNode
-    );
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      Predictor<StubLayout>::subtractFluxDivergence(
+        rightHandSide,
+        flux,
+        tables.stiffnessOperatorTransposed.data(),
+        tables.cellQuadratureWeights.data(),
+        inverseCellSize,
+        0.25,
+        timeNode,
+        axis
+      );
+    }
   }
 
   for (int entry = 0; entry < CellLayout::SpaceTimeNodes * UnknownStride; entry++) {
@@ -590,7 +621,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testALinearFluxSubtractsItsEx
   const Tables tables;
   const auto   inverseCellSize = getInverseCellSize();
 
-  // The flux of an axis is linear along that axis alone, so its derivative is the slope.
+  // The flux of an axis is linear along that axis alone. Its derivative is the slope.
   double flux[DIMENSIONS * FluxAxisStride] = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
@@ -604,15 +635,18 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testALinearFluxSubtractsItsEx
 
   double rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride] = {};
 
-  Predictor<StubLayout>::subtractFluxDivergence(
-    rightHandSide,
-    flux,
-    tables.stiffnessOperatorTransposed.data(),
-    tables.cellQuadratureWeights.data(),
-    inverseCellSize,
-    TimeStepSize,
-    MarkedTimeNode
-  );
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    Predictor<StubLayout>::subtractFluxDivergence(
+      rightHandSide,
+      flux,
+      tables.stiffnessOperatorTransposed.data(),
+      tables.cellQuadratureWeights.data(),
+      inverseCellSize,
+      TimeStepSize,
+      MarkedTimeNode,
+      axis
+    );
+  }
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     const int    spaceTimeNode = MarkedTimeNode * CellLayout::NodesPerCell + cellNode;
@@ -660,7 +694,7 @@ void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testAPicardSystemWithoutTermsReproducesTheInitialState() {
   const Tables tables;
 
-  // The values have no exact binary representation, so rounding errors would show.
+  // The double nearest to one third is inexact. Every product with these values rounds.
   double cellState[CellStateSize];
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int value = 0; value < NumberOfData; value++) {
@@ -676,15 +710,16 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAPicardSystemWithoutTerms
     Predictor<StubLayout>::clearRightHandSide(rightHandSide, timeNode);
   }
 
-  double updatedTimeSlice[NodesPerAxis * UnknownStride] = {};
-
-  const double squaredResidual = Predictor<StubLayout>::solvePicardSystem(
-    spaceTimeState,
-    updatedTimeSlice,
-    rightHandSide,
-    cellState,
-    tables.inversePicardOperator.data(),
-    tables.inverseCellQuadratureWeights.data()
+  const double squaredResidual = Predictor<StubLayout>::getSquaredResidual(
+    Predictor<StubLayout>::solvePicardSystem(
+      spaceTimeState,
+      rightHandSide,
+      cellState,
+      tables.inversePicardOperator.data(),
+      tables.inverseCellQuadratureWeights.data(),
+      1.0
+    ),
+    1.0
   );
 
   validateEquals(squaredResidual, 0.0);
@@ -706,7 +741,8 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAPicardSystemWithoutTerms
 }
 
 /**
- * The solve returns the squared distance between the new and the previous iterate and stores the new one.
+ * The solve returns the squared distance between the new and the previous iterate and stores the
+ * new one, and the distance is bitwise the same when the nodes arrive in reversed order.
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheResidualIsTheSquaredDistanceOfTheIterates() {
@@ -721,7 +757,6 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheResidualIsTheSquaredDi
   const double cellState[CellStateSize]                                  = {};
   double       spaceTimeState[CellLayout::SpaceTimeNodes * StateStride]  = {};
   double       rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride] = {};
-  double       updatedTimeSlice[NodesPerAxis * UnknownStride]            = {};
 
   double expectedResidual = 0.0;
   for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
@@ -734,16 +769,43 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheResidualIsTheSquaredDi
     }
   }
 
-  const double squaredResidual = Predictor<StubLayout>::solvePicardSystem(
-    spaceTimeState,
-    updatedTimeSlice,
-    rightHandSide,
-    cellState,
-    inversePicardOperator,
-    inverseCellQuadratureWeights
+  const double squaredResidual = Predictor<StubLayout>::getSquaredResidual(
+    Predictor<StubLayout>::solvePicardSystem(
+      spaceTimeState,
+      rightHandSide,
+      cellState,
+      inversePicardOperator,
+      inverseCellQuadratureWeights,
+      2.0 * expectedResidual
+    ),
+    2.0 * expectedResidual
   );
 
   validateNumericalEquals(squaredResidual, expectedResidual);
+
+  double reversedState[CellLayout::SpaceTimeNodes * StateStride]           = {};
+  double reversedRightHandSide[CellLayout::SpaceTimeNodes * UnknownStride] = {};
+  for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        const int reversedNode = CellLayout::NodesPerCell - 1 - cellNode;
+        reversedRightHandSide[(timeNode * CellLayout::NodesPerCell + reversedNode) * UnknownStride + unknown] =
+          1.0 + 0.5 * (cellNode + unknown + timeNode);
+      }
+    }
+  }
+  const double reversedResidual = Predictor<StubLayout>::getSquaredResidual(
+    Predictor<StubLayout>::solvePicardSystem(
+      reversedState,
+      reversedRightHandSide,
+      cellState,
+      inversePicardOperator,
+      inverseCellQuadratureWeights,
+      2.0 * expectedResidual
+    ),
+    2.0 * expectedResidual
+  );
+  validateEquals(reversedResidual, squaredResidual);
 
   for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
@@ -760,13 +822,16 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheResidualIsTheSquaredDi
     }
   }
 
-  const double secondResidual = Predictor<StubLayout>::solvePicardSystem(
-    spaceTimeState,
-    updatedTimeSlice,
-    rightHandSide,
-    cellState,
-    inversePicardOperator,
-    inverseCellQuadratureWeights
+  const double secondResidual = Predictor<StubLayout>::getSquaredResidual(
+    Predictor<StubLayout>::solvePicardSystem(
+      spaceTimeState,
+      rightHandSide,
+      cellState,
+      inversePicardOperator,
+      inverseCellQuadratureWeights,
+      1.0
+    ),
+    1.0
   );
 
   validateNumericalEquals(secondResidual, 0.0);
@@ -788,29 +853,93 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAnUnboundedIterateReports
   const double cellState[CellStateSize]                                  = {};
   double       spaceTimeState[CellLayout::SpaceTimeNodes * StateStride]  = {};
   double       rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride] = {};
-  double       updatedTimeSlice[NodesPerAxis * UnknownStride]            = {};
 
   rightHandSide[0]               = 1e30;
-  const double unboundedResidual = Predictor<StubLayout>::solvePicardSystem(
-    spaceTimeState,
-    updatedTimeSlice,
-    rightHandSide,
-    cellState,
-    inversePicardOperator,
-    inverseCellQuadratureWeights
+  const double unboundedResidual = Predictor<StubLayout>::getSquaredResidual(
+    Predictor<StubLayout>::solvePicardSystem(
+      spaceTimeState,
+      rightHandSide,
+      cellState,
+      inversePicardOperator,
+      inverseCellQuadratureWeights,
+      1.0
+    ),
+    1.0
   );
   validate(not std::isfinite(unboundedResidual));
 
   rightHandSide[0]                = std::numeric_limits<double>::quiet_NaN();
-  const double notANumberResidual = Predictor<StubLayout>::solvePicardSystem(
-    spaceTimeState,
-    updatedTimeSlice,
-    rightHandSide,
-    cellState,
-    inversePicardOperator,
-    inverseCellQuadratureWeights
+  const double notANumberResidual = Predictor<StubLayout>::getSquaredResidual(
+    Predictor<StubLayout>::solvePicardSystem(
+      spaceTimeState,
+      rightHandSide,
+      cellState,
+      inversePicardOperator,
+      inverseCellQuadratureWeights,
+      1.0
+    ),
+    1.0
   );
   validate(not std::isfinite(notANumberResidual));
+}
+
+/**
+ * Only a squared tolerance above 2^-961 sums a change below it into the residual.
+ */
+void
+exahype2::dg::ader::tests::NonlinearPredictorTest::testAToleranceWithoutAFiniteScaleCountsEveryChange() {
+  constexpr double TwoToTheMinus961 = 0x1p-961;
+  constexpr double Change           = 0x1p-500;
+
+  double inversePicardOperator[OperatorEntries];
+  fillIdentity(inversePicardOperator);
+
+  double inverseCellQuadratureWeights[CellLayout::NodesPerCell];
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    inverseCellQuadratureWeights[cellNode] = 1.0;
+  }
+
+  const double cellState[CellStateSize] = {};
+  const double squaredTolerances[]      = {0.0, 1.0e-300, TwoToTheMinus961, std::nextafter(TwoToTheMinus961, 1.0)};
+  for (const double squaredTolerance : squaredTolerances) {
+    double spaceTimeState[CellLayout::SpaceTimeNodes * StateStride]  = {};
+    double rightHandSide[CellLayout::SpaceTimeNodes * UnknownStride] = {};
+
+    const double unchangedResidual = Predictor<StubLayout>::getSquaredResidual(
+      Predictor<StubLayout>::solvePicardSystem(
+        spaceTimeState,
+        rightHandSide,
+        cellState,
+        inversePicardOperator,
+        inverseCellQuadratureWeights,
+        squaredTolerance
+      ),
+      squaredTolerance
+    );
+    validateEqualsWithParams1(unchangedResidual, 0.0, squaredTolerance);
+
+    rightHandSide[0]             = Change;
+    const double changedResidual = Predictor<StubLayout>::getSquaredResidual(
+      Predictor<StubLayout>::solvePicardSystem(
+        spaceTimeState,
+        rightHandSide,
+        cellState,
+        inversePicardOperator,
+        inverseCellQuadratureWeights,
+        squaredTolerance
+      ),
+      squaredTolerance
+    );
+    if (squaredTolerance > TwoToTheMinus961) {
+      validateWithParams2(
+        changedResidual > 0.0 and changedResidual < squaredTolerance,
+        changedResidual,
+        squaredTolerance
+      );
+    } else {
+      validateEqualsWithParams1(changedResidual, squaredTolerance, squaredTolerance);
+    }
+  }
 }
 
 /**
@@ -1279,7 +1408,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheFirstTimeNodeRestartsT
     0
   );
 
-  // The first time slice of the state is zero, so the source of SourceSolver is the time of that slice.
+  // The first time slice of the state is zero. The source of SourceSolver is the time of that slice.
   const double sourceOfFirstTimeNode = TimeStamp + tables.quadraturePoints[0] * TimeStepSize;
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
@@ -1389,7 +1518,6 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheScratchBlocksFollowEac
   validateEquals(Scratch::FirstSourceSize, UnknownStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::TimeAveragedSourceSize, UnknownStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::StateGradientSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-  validateEquals(Scratch::UpdatedTimeSliceSize, NodesPerAxis * UnknownStride);
 
   validateEquals(Scratch::SpaceTimeStateOffset, 0);
   validateEquals(Scratch::TimeAveragedStateOffset, Scratch::SpaceTimeStateOffset);
@@ -1400,8 +1528,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheScratchBlocksFollowEac
   validateEquals(Scratch::FirstSourceOffset, Scratch::TimeAveragedFluxOffset + Scratch::TimeAveragedFluxSize);
   validateEquals(Scratch::TimeAveragedSourceOffset, Scratch::FirstSourceOffset + Scratch::FirstSourceSize);
   validateEquals(Scratch::StateGradientOffset, Scratch::TimeAveragedSourceOffset + Scratch::TimeAveragedSourceSize);
-  validateEquals(Scratch::UpdatedTimeSliceOffset, Scratch::StateGradientOffset + Scratch::StateGradientSize);
-  validateEquals(Scratch::Size, Scratch::UpdatedTimeSliceOffset + Scratch::UpdatedTimeSliceSize);
+  validateEquals(Scratch::Size, Scratch::StateGradientOffset + Scratch::StateGradientSize);
 }
 
 /**
@@ -1425,7 +1552,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testATermTheSolverLacksHasZer
   validate(not Bare::NeedsStateGradient);
   validate(Bare::Scratch::Size < Full::Scratch::Size);
 
-  // The nonconservative product enters the source, so it needs the source buffers without a source term.
+  // The nonconservative product enters the source. It needs the source buffers without a source term.
   validate(Product::AccumulatesSource);
   validate(Product::NeedsStateGradient);
   validate(Product::Scratch::FirstSourceSize > 0);
@@ -1574,11 +1701,61 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
 }
 
 /**
- * A tolerance the sweeps cannot reach returns UnconvergedPicardIteration with the time averages of the last sweep.
+ * A zero state under a tolerance whose square rounds to zero stops at the sweep limit and returns
+ * UnconvergedPicardIteration.
  */
 void
-exahype2::dg::ader::tests::NonlinearPredictorTest::testAnUnreachableToleranceReportsUnconvergedPicardIteration() {
-  // The square of the tolerance rounds to zero, so no squared residual falls below it.
+exahype2::dg::ader::tests::NonlinearPredictorTest::testAZeroSquaredToleranceReportsUnconvergedPicardIteration() {
+  // No squared residual falls below zero, and a zero state has the rounding distance zero.
+  constexpr double UnreachableTolerance = 1.0e-200;
+
+  const Tables                                tables;
+  const auto                                  cellSize = getCellSize();
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
+
+  const double cellState[CellStateSize] = {};
+  FaceBuffers  faces;
+  double       scratch[ProfileScratch::Size] = {};
+
+  const int outcome = Predictor<ProfileSolver>::predict(
+    faces.statePointers,
+    faces.fluxPointers,
+    cellState,
+    scratch,
+    tables.getView(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize,
+    UnreachableTolerance
+  );
+  validateEquals(outcome, exahype2::dg::ader::UnconvergedPicardIteration);
+}
+
+/**
+ * The squared tolerance is the square of the Picard tolerance or of two units in the last place
+ * of the largest unknown of the first node, whichever is larger.
+ */
+void
+exahype2::dg::ader::tests::NonlinearPredictorTest::testTheToleranceGrowsToTheRoundingDistanceOfTheCell() {
+  double cellState[CellStateSize] = {};
+  cellState[0]                    = -8.0;
+  cellState[NumberOfUnknowns - 1] = 3.0;
+  const double rounding           = 2.0 * std::numeric_limits<double>::epsilon() * 8.0;
+
+  validateEquals(Predictor<ProfileSolver>::getSquaredTolerance(cellState, 1.0e-7), 1.0e-7 * 1.0e-7);
+  validateEquals(Predictor<ProfileSolver>::getSquaredTolerance(cellState, 1.0e-200), rounding * rounding);
+
+  const double zeroState[CellStateSize] = {};
+  validateEquals(Predictor<ProfileSolver>::getSquaredTolerance(zeroState, 1.0e-7), 1.0e-7 * 1.0e-7);
+}
+
+/**
+ * A tolerance below the rounding distance of the iterates stops at that distance or at the sweep
+ * limit with the time averages of the converged iteration.
+ */
+void
+exahype2::dg::ader::tests::NonlinearPredictorTest::testAToleranceBelowTheRoundingDistanceKeepsTheTimeAverages() {
   constexpr double UnreachableTolerance = 1.0e-200;
 
   const Tables                                tables;
@@ -1619,7 +1796,10 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAnUnreachableToleranceRep
   );
 
   validateWithParams1(convergedOutcome > 0, convergedOutcome);
-  validateEquals(unconvergedOutcome, exahype2::dg::ader::UnconvergedPicardIteration);
+  validateWithParams1(
+    unconvergedOutcome >= convergedOutcome or unconvergedOutcome == exahype2::dg::ader::UnconvergedPicardIteration,
+    unconvergedOutcome
+  );
 
   for (int entry = 0; entry < CellLayout::NodesPerCell * StateStride; entry++) {
     validateNumericalEqualsWithParams1(

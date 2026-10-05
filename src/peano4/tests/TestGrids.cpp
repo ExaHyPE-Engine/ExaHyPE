@@ -30,7 +30,7 @@ peano4::tests::buildRegularGrid(const int depth, const std::bitset<DIMENSIONS>& 
   spacetree.scheduleRegularGridConstruction(depth);
   peano4::Regrid regrid;
   if (not spacetree.regrid({}, regrid)) {
-    tarch::terminateWithError("The construction of the regular test grid changed nothing.");
+    tarch::terminateWithError("The construction of the regular test grid must change the grid.");
   }
 }
 
@@ -41,7 +41,7 @@ void
 peano4::tests::refineGrid(const std::vector<peano4::RefinementRequest>& requests) {
   peano4::Regrid regrid;
   if (not peano4::Spacetree::getInstance().regrid(requests, regrid)) {
-    tarch::terminateWithError("The refinement of the test grid changed nothing.");
+    tarch::terminateWithError("The refinement of the test grid must change the grid.");
   }
 }
 

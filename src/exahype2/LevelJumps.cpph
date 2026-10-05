@@ -1,12 +1,28 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/Assertions.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/Range.h"
 
+INLINE_METHOD bool
+exahype2::holdsIntermediateFace(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency,
+  const int                level
+) {
+  assertion(level >= 0 and level <= partition.getMaximumLevel(), level, partition.getMaximumLevel());
+  const auto intermediateFaces = partition.getFaces(adjacency, peano4::FaceKind::Intermediate);
+  return std::any_of(intermediateFaces.begin(), intermediateFaces.end(), [&partition, level](const int face) {
+    return partition.getFaceLevel(face) == level;
+  });
+}
+
 /**
- * Runs operation on the level jumps of the given adjacency from the coarsest level down, because
- * the coarse face of a jump can be the fine face of a jump on the next coarser level.
+ * Runs operation on the level jumps of the given adjacency in one dispatch per run of levels from
+ * the coarsest run down. A level with an intermediate face is the coarsest level of its run. The
+ * level jumps of such a level read the intermediate faces that the level jumps one level coarser
+ * write.
  */
 template <typename Operation>
 INLINE_METHOD void
@@ -15,20 +31,28 @@ exahype2::interpolateCoarseFaces(
   const peano4::Adjacency  adjacency,
   const Operation&         operation
 ) {
-  for (int level = 0; level <= partition.getMaximumLevel(); level++) {
-    const auto levelJumps = partition.onDevice().getLevelJumps(adjacency, level);
+  const int maximumLevel = partition.getMaximumLevel();
+  int       firstLevel   = 0;
+  for (int level = 1; level <= maximumLevel + 1; level++) {
+    if (level <= maximumLevel and not exahype2::holdsIntermediateFace(partition, adjacency, level)) {
+      continue;
+    }
+    assertion(firstLevel < level, firstLevel, level);
+    const auto levelJumps = partition.onDevice().getLevelJumps(adjacency, firstLevel, level - 1);
     if (not levelJumps.isEmpty()) {
       tarch::accelerator::parallelFor(
         tarch::accelerator::Range(levelJumps.size),
         exahype2::ForEachLevelJump<Operation>{levelJumps, operation}
       );
     }
+    firstLevel = level;
   }
 }
 
 /**
- * Runs operation on the level jumps of the given adjacency from the finest level up, because the
- * fine face of a jump can be the coarse face of a jump on the next finer level.
+ * Runs operation on the level jumps of the given adjacency in one dispatch per run of levels from
+ * the finest run up. A level with an intermediate face is the coarsest level of its run. The level
+ * jumps one level coarser read the intermediate faces that the level jumps of such a level write.
  */
 template <typename Operation>
 INLINE_METHOD void
@@ -37,33 +61,32 @@ exahype2::restrictFineFaces(
   const peano4::Adjacency  adjacency,
   const Operation&         operation
 ) {
-  for (int level = partition.getMaximumLevel(); level >= 0; level--) {
-    const auto levelJumps = partition.onDevice().getLevelJumps(adjacency, level);
+  int lastLevel = partition.getMaximumLevel();
+  for (int level = lastLevel; level >= 0; level--) {
+    if (level > 0 and not exahype2::holdsIntermediateFace(partition, adjacency, level)) {
+      continue;
+    }
+    assertion(level <= lastLevel, level, lastLevel);
+    const auto levelJumps = partition.onDevice().getLevelJumps(adjacency, level, lastLevel);
     if (not levelJumps.isEmpty()) {
       tarch::accelerator::parallelFor(
         tarch::accelerator::Range(levelJumps.size),
         exahype2::ForEachLevelJump<Operation>{levelJumps, operation}
       );
     }
+    lastLevel = level - 1;
   }
 }
 
 /**
- * Runs operation on every level jump of the partition from the finest level up.
+ * Runs operation on every level jump of the partition, one adjacency after the other. The level
+ * jumps of one adjacency read no face that the level jumps of the other adjacency write.
  */
 template <typename Operation>
 INLINE_METHOD void
 exahype2::restrictFineFaces(const peano4::Partition& partition, const Operation& operation) {
-  for (int level = partition.getMaximumLevel(); level >= 0; level--) {
-    for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
-      const auto levelJumps = partition.onDevice().getLevelJumps(adjacency, level);
-      if (not levelJumps.isEmpty()) {
-        tarch::accelerator::parallelFor(
-          tarch::accelerator::Range(levelJumps.size),
-          exahype2::ForEachLevelJump<Operation>{levelJumps, operation}
-        );
-      }
-    }
+  for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+    exahype2::restrictFineFaces(partition, adjacency, operation);
   }
 }
 

@@ -24,8 +24,8 @@ private:
   void testTheCriterionDecidesWithinTheAdmissibleSizes();
   void testARefineVoteAtTheSmallestSizeTurnsIntoKeep();
   void testAnEraseVoteThatWouldPassTheLargestSizeTurnsIntoKeep();
-  void testTheCountSkipsKeepVotes();
   void testTheVotesOnEveryCellReachTheRequests();
   void testGridConstructionRefinesEveryCellAboveTheLargestSize();
   void testOnlyTheListedCellsVote();
+  void testLimitsThatFixTheMeshSkipTheVotes();
 };

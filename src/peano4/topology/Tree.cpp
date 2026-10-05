@@ -150,7 +150,7 @@ peano4::topology::Tree::validateAndGetMaximumLevel(const int depth, const Refine
     tarch::terminateWithError("The grid depth has to be non-negative.");
   }
   if (refinementPlan.size() > static_cast<std::size_t>(std::numeric_limits<int>::max() - depth)) {
-    tarch::terminateWithError("The refinement plan exceeds the supported level range.");
+    tarch::terminateWithError("The refinement plan must fit into the level range of the tree.");
   }
 
   const int              maximumLevel             = depth + static_cast<int>(refinementPlan.size());
@@ -158,7 +158,7 @@ peano4::topology::Tree::validateAndGetMaximumLevel(const int depth, const Refine
   std::int64_t           cellsPerAxisOnMaximumLevel{1};
   for (int level = 0; level < maximumLevel; level++) {
     if (cellsPerAxisOnMaximumLevel > MaximumLatticeCoordinate / SubdivisionFactor) {
-      tarch::terminateWithError("The grid depth exceeds the lattice key range.");
+      tarch::terminateWithError("The grid depth must fit into the coordinate range of the tree.");
     }
     cellsPerAxisOnMaximumLevel *= SubdivisionFactor;
   }
@@ -217,7 +217,7 @@ peano4::topology::Tree::buildRegularGrid(
       or ownershipPlan.size()
         != OwnershipPlanHeaderSize + static_cast<std::size_t>(ownershipPlan[1]) * TopologyNodeStride
     ) {
-      tarch::terminateWithError("The rank ownership plan is invalid.");
+      tarch::terminateWithError("The rank ownership plan must start with its header and list three entries per node.");
     }
     const auto numberOfTopologyNodes = ownershipPlan[1];
     _topologyNodes.resize(numberOfTopologyNodes);
@@ -229,7 +229,10 @@ peano4::topology::Tree::buildRegularGrid(
       const bool childrenAreValid =
         childrenBlock == -1 or (childrenBlock > nodeIndex and childrenBlock <= numberOfTopologyNodes - ChildrenPerCell);
       if (firstOwner < 0 or firstOwner > lastOwner or lastOwner >= numberOfRanks or not childrenAreValid) {
-        tarch::terminateWithError("The rank ownership plan is invalid.");
+        tarch::terminateWithError(
+          "Each node of the rank ownership plan must name an ordered range of existing ranks and list its children "
+          "after itself."
+        );
       }
       _topologyNodes[nodeIndex] = {firstOwner, lastOwner, childrenBlock};
     }
@@ -339,7 +342,7 @@ peano4::topology::Tree::buildRegularGrid(
       or numberOfFaces > std::numeric_limits<int>::max()
     ) {
       tarch::terminateWithError(
-        "A regular grid of depth " + std::to_string(depth) + " exceeds the tree's 32-bit index range."
+        "A regular grid of depth " + std::to_string(depth) + " must fit into the 32-bit index range of the tree."
       );
     }
   }
@@ -516,7 +519,7 @@ peano4::topology::Tree::buildRegularGrid(
         or numberOfFaces > std::numeric_limits<int>::max()
       ) {
         tarch::terminateWithError(
-          "A regular grid of depth " + std::to_string(depth) + " exceeds the tree's 32-bit index range."
+          "A regular grid of depth " + std::to_string(depth) + " must fit into the 32-bit index range of the tree."
         );
       }
       buildInterleaveTable(level, level - wholeLevelsUpTo);
@@ -924,7 +927,7 @@ peano4::topology::Tree::buildRegularGrid(
       or numberOfFaces > std::numeric_limits<int>::max()
     ) {
       tarch::terminateWithError(
-        "An adaptive grid over depth " + std::to_string(depth) + " exceeds the tree's 32-bit index range."
+        "An adaptive grid over depth " + std::to_string(depth) + " must fit into the 32-bit index range of the tree."
       );
     }
   }
@@ -1652,7 +1655,7 @@ peano4::topology::Tree::derivePlanLeafWeights(const int depth, const RefinementP
   regularLeafWeights.assign(depth + 1, 1);
   for (int level = depth - 1; level >= 0; level--) {
     if (regularLeafWeights[level + 1] > std::numeric_limits<int>::max() / ChildrenPerCell) {
-      tarch::terminateWithError("The refinement plan exceeds the tree's 32-bit index range.");
+      tarch::terminateWithError("The refinement plan must fit into the 32-bit index range of the tree.");
     }
     regularLeafWeights[level] = regularLeafWeights[level + 1] * ChildrenPerCell;
   }
@@ -1693,7 +1696,7 @@ peano4::topology::Tree::deriveRankLoads(
     ownershipPlan.size() < OwnershipPlanHeaderSize or ownershipPlan[0] != OwnershipPlanMarker or ownershipPlan[1] < 1
     or ownershipPlan.size() != OwnershipPlanHeaderSize + static_cast<std::size_t>(ownershipPlan[1]) * TopologyNodeStride
   ) {
-    tarch::terminateWithError("The rank ownership plan is invalid.");
+    tarch::terminateWithError("The rank ownership plan must start with its header and list three entries per node.");
   }
   const int  numberOfTopologyNodes = ownershipPlan[1];
   const auto planLeafWeights       = derivePlanLeafWeights(depth, refinementPlan);
@@ -1710,7 +1713,7 @@ peano4::topology::Tree::deriveRankLoads(
     const int  lastOwner     = ownershipPlan[planOffset + 1];
     const int  childrenBlock = ownershipPlan[planOffset + 2];
     if (firstOwner < 0 or firstOwner > lastOwner or lastOwner >= numberOfRanks) {
-      tarch::terminateWithError("The rank ownership plan is invalid.");
+      tarch::terminateWithError("Each node of the rank ownership plan must name an ordered range of existing ranks.");
     }
     // An ownership plan of a deeper refinement plan may split a leaf of this plan, and the first rank
     // of the split owns the leaf.
@@ -1720,7 +1723,7 @@ peano4::topology::Tree::deriveRankLoads(
       return;
     }
     if (childrenBlock <= nodeIndex or childrenBlock > numberOfTopologyNodes - ChildrenPerCell) {
-      tarch::terminateWithError("The rank ownership plan is invalid.");
+      tarch::terminateWithError("Each node of the rank ownership plan must list its children after itself.");
     }
     for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
       tarch::la::Vector<DIMENSIONS, int> childLattice(0);
@@ -1753,7 +1756,7 @@ peano4::topology::Tree::ownershipPlanSplitsCellWithLeafChild(
     ownershipPlan.size() < OwnershipPlanHeaderSize or ownershipPlan[0] != OwnershipPlanMarker or ownershipPlan[1] < 1
     or ownershipPlan.size() != OwnershipPlanHeaderSize + static_cast<std::size_t>(ownershipPlan[1]) * TopologyNodeStride
   ) {
-    tarch::terminateWithError("The rank ownership plan is invalid.");
+    tarch::terminateWithError("The rank ownership plan must start with its header and list three entries per node.");
   }
   const int  numberOfTopologyNodes = ownershipPlan[1];
   const auto planLeafWeights       = derivePlanLeafWeights(depth, refinementPlan);
@@ -1772,7 +1775,7 @@ peano4::topology::Tree::ownershipPlanSplitsCellWithLeafChild(
       return false;
     }
     if (childrenBlock <= nodeIndex or childrenBlock > numberOfTopologyNodes - ChildrenPerCell) {
-      tarch::terminateWithError("The rank ownership plan is invalid.");
+      tarch::terminateWithError("Each node of the rank ownership plan must list its children after itself.");
     }
     for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
       tarch::la::Vector<DIMENSIONS, int> childLattice(0);
@@ -1850,7 +1853,7 @@ peano4::topology::Tree::deriveBalancedBlockOwners(
   const auto rootLattice = tarch::la::Vector<DIMENSIONS, int>(0);
   const auto totalWeight = getLeafWeight(0, rootLattice);
   if (totalWeight < 1 or totalWeight > std::numeric_limits<int>::max()) {
-    tarch::terminateWithError("The refinement plan exceeds the tree's 32-bit index range.");
+    tarch::terminateWithError("The refinement plan must fit into the 32-bit index range of the tree.");
   }
   const auto numberOfActiveRanks = static_cast<int>(std::min<std::int64_t>(numberOfRanks, totalWeight));
 
@@ -1955,7 +1958,7 @@ peano4::topology::Tree::deriveBalancedBlockOwners(
     }
     assertion(level < maximumLevel, level, maximumLevel);
     if (topologyNodes.size() > static_cast<std::size_t>(std::numeric_limits<int>::max() - ChildrenPerCell)) {
-      tarch::terminateWithError("The rank ownership plan exceeds the tree's index range.");
+      tarch::terminateWithError("The rank ownership plan must fit into the 32-bit index range of the tree.");
     }
     const auto childrenBlock                  = static_cast<int>(topologyNodes.size());
     topologyNodes[topologyNode].childrenBlock = childrenBlock;

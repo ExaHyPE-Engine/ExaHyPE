@@ -170,6 +170,16 @@ function(peano_apply_flags)
     )
   endif()
 
+  if(PEANO_WITH_GPU_BACKEND STREQUAL "kokkos")
+    # Clang's device pass keeps the team body of a Kokkos kernel out of line under its default
+    # inline threshold and spills the per-volume arrays of that body to local memory.
+    # This threshold inlines the body as nvcc does. Clang applies an LLVM option to the host pass
+    # and the device pass alike.
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-mllvm;-inline-threshold=100000>
+    )
+  endif()
+
   if(NOT PEANO_WITH_SANITIZER STREQUAL "none" OR PEANO_WITH_FPE)
     target_compile_options(PeanoOptions INTERFACE
       $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang,IntelLLVM>:-Wno-pass-failed>

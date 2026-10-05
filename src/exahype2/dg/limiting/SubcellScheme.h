@@ -5,7 +5,7 @@
 #include "exahype2/TimeStepping.h"
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/Kernels.h"
-#include "exahype2/fv/FiniteVolume.h"
+#include "exahype2/fv/FiniteVolumeScheme.h"
 #include "exahype2/fv/Kernels.h"
 #include "exahype2/terms/DiffusiveSourceTerm.h"
 #include "exahype2/terms/Flux.h"
@@ -19,14 +19,14 @@
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/CompileTarget.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Reducer.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::limiting {
   template <typename Derived, typename ComputePrecision>
   class SubcellScheme;
-
-  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-  struct SampleSubcells;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct ProjectSubgridsOntoFaces;
@@ -52,7 +52,7 @@ TARGET_DECLARE
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::limiting::SubcellScheme final {
 public:
-  using Subgrid = exahype2::fv::FiniteVolume<Derived, ComputePrecision>;
+  using Subgrid = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
 
   static constexpr int  NodesPerAxis               = Derived::DGOrder + 1;
   static constexpr int  SubcellsPerAxis            = Derived::PatchSize;
@@ -69,7 +69,7 @@ public:
   static constexpr bool ReportEigenvalues = Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive;
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void sampleInitialCondition(
+  static INLINE_METHOD void sampleInitialCondition(
     StoragePrecision* NOALIAS                    subcells,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
@@ -102,6 +102,32 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     int                                          boundaryFaces,
+    double                                       timeStamp,
+    double                                       timeStepSize
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics recomputeInTeam(
+    tarch::accelerator::TeamHandle               team,
+    StoragePrecision* NOALIAS                    nodes,
+    StoragePrecision* NOALIAS                    subcells,
+    StoragePrecision* NOALIAS                    evolvedSubcells,
+    const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS              subcellsToNodes,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    int                                          boundaryFaces,
+    double                                       timeStamp,
+    double                                       timeStepSize
+  );
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
+  reduceMaxEigenvaluesOfSubcell(
+    const StoragePrecision* NOALIAS              subcells,
+    int                                          subcell,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize
   );
@@ -146,6 +172,14 @@ private:
     const StoragePrecision* NOALIAS subcells,
     StoragePrecision* NOALIAS       nodes,
     const StoragePrecision* NOALIAS subcellsToNodes
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectSubcellsOntoNode(
+    const StoragePrecision* NOALIAS subcells,
+    StoragePrecision* NOALIAS       nodes,
+    const StoragePrecision* NOALIAS subcellsToNodes,
+    int                             node
   );
 };
 
@@ -243,20 +277,6 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
 };
 
 /**
- * Writes the initial condition of Derived at the subcell centres of every cell.
- */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-struct exahype2::dg::limiting::SampleSubcells final {
-  using Kernel   = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
-  using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
-
-  peano4::Partition       partition{};
-  typename CellPool::View subcells{};
-
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
-};
-
-/**
  * Writes the subgrid of every listed cell onto its own halo halves. A cell that enters the
  * subcell scheme after the first step first takes the projection of its previous solution.
  */
@@ -314,6 +334,7 @@ struct exahype2::dg::limiting::RecomputeSubcells final {
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                                    entry,
+    tarch::accelerator::TeamHandle         team,
     exahype2::dg::MaxEigenvalueStatistics& accumulator
   ) const;
 };

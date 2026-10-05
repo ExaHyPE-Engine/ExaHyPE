@@ -50,7 +50,7 @@ namespace {
     if (value == "false" or value == "0" or value == "no" or value == "off") {
       return false;
     }
-    tarch::terminateWithError("Value \"" + value + "\" of runtime parameter \"" + key + "\" is not a boolean.");
+    tarch::terminateWithError("Runtime parameter \"" + key + "\" expects a boolean (got \"" + value + "\").");
   }
 
   template <typename Scalar>
@@ -96,8 +96,8 @@ namespace {
   void assign(const std::vector<Scalar>& source, Scalar* const values, const int size, const std::string& name) {
     if (source.size() < static_cast<std::size_t>(size)) {
       tarch::terminateWithError(
-        "Runtime parameter \"" + name + "\" needs " + std::to_string(size) + " entries and carries "
-        + std::to_string(source.size()) + "."
+        "Runtime parameter \"" + name + "\" expects " + std::to_string(size) + " entries (got "
+        + std::to_string(source.size()) + ")."
       );
     }
     std::copy_n(source.begin(), size, values);
@@ -285,7 +285,7 @@ exahype2::runner::RuntimeParameters::parseInteger(const std::string& value, cons
   auto              result = 0;
   const auto        parsed = std::from_chars(value.data(), end, result);
   if (parsed.ec != std::errc{} or parsed.ptr != end) {
-    tarch::terminateWithError("Value \"" + value + "\" of runtime parameter \"" + key + "\" is not an integer.");
+    tarch::terminateWithError("Runtime parameter \"" + key + "\" expects an integer (got \"" + value + "\").");
   }
   return result;
 }
@@ -297,7 +297,7 @@ exahype2::runner::RuntimeParameters::parseDouble(const std::string& value, const
   const auto        parsed = std::from_chars(value.data(), end, result);
   if (parsed.ec != std::errc{} or parsed.ptr != end) {
     tarch::terminateWithError(
-      "Value \"" + value + "\" of runtime parameter \"" + key + "\" is not a floating point number."
+      "Runtime parameter \"" + key + "\" expects a floating-point number (got \"" + value + "\")."
     );
   }
   return result;
@@ -319,7 +319,7 @@ exahype2::runner::RuntimeParameters::consumeValue(
   const std::string& argument
 ) {
   if (index + 1 >= argc) {
-    tarch::terminateWithError("Command line argument \"" + argument + "\" carries no value.");
+    tarch::terminateWithError("Command line argument \"" + argument + "\" expects a value.");
   }
   ++index;
   return argv[index];
@@ -418,13 +418,17 @@ exahype2::runner::RuntimeParameters::normaliseGridLevels() {
     _gridLevels = _maxGridLevels;
   }
   if (_gridLevels < 1) {
-    tarch::terminateWithError("Grid levels must be at least one.");
+    tarch::terminateWithError(
+      "Runtime parameter \"minGridLevels\" expects at least 1 (got " + std::to_string(_gridLevels) + ")."
+    );
   }
   if (_maxGridLevels < 1) {
-    tarch::terminateWithError("Maximum grid levels must be at least one.");
+    tarch::terminateWithError(
+      "Runtime parameter \"maxGridLevels\" expects at least 1 (got " + std::to_string(_maxGridLevels) + ")."
+    );
   }
   if (_maxGridLevels < _gridLevels) {
-    tarch::terminateWithError("Maximum grid levels must be greater than or equal to the coarsest grid level.");
+    tarch::terminateWithError("Runtime parameter \"maxGridLevels\" expects at least the value of \"minGridLevels\".");
   }
 }
 
@@ -445,30 +449,35 @@ void
 exahype2::runner::RuntimeParameters::validateParameterRanges() const {
   if (not std::isfinite(_minTerminalTime) or _minTerminalTime < 0.0) {
     tarch::terminateWithError(
-      "Terminal time must be finite and non-negative (got " + formatDefault(_minTerminalTime) + ")."
+      "Runtime parameters \"endTime\" and \"minTerminalTime\" expect a finite non-negative time (got "
+      + formatDefault(_minTerminalTime) + ")."
     );
   }
   if (not std::isfinite(_maxTerminalTime)) {
-    tarch::terminateWithError("Maximum terminal time must be finite.");
+    tarch::terminateWithError("Runtime parameter \"maxTerminalTime\" expects a finite time.");
   }
   if (not std::isfinite(_firstPlotTimeStamp) or _firstPlotTimeStamp < 0.0) {
     tarch::terminateWithError(
-      "First plot time stamp must be finite and non-negative (got " + formatDefault(_firstPlotTimeStamp) + ")."
+      "Runtime parameter \"firstPlotTimeStamp\" expects a finite non-negative time (got "
+      + formatDefault(_firstPlotTimeStamp) + ")."
     );
   }
   if (not std::isfinite(_timeStepLogInterval) or _timeStepLogInterval <= 0.0) {
     tarch::terminateWithError(
-      "Time step log interval must be finite and positive (got " + formatDefault(_timeStepLogInterval) + " s)."
+      "Runtime parameter \"timeStepLogInterval\" expects a finite positive number of seconds (got "
+      + formatDefault(_timeStepLogInterval) + ")."
     );
   }
   if (not std::isfinite(_MPITimeoutWarning) or _MPITimeoutWarning < 0.0) {
     tarch::terminateWithError(
-      "MPI timeout warning must be finite and non-negative (got " + formatDefault(_MPITimeoutWarning) + " s)."
+      "Runtime parameter \"timeoutWarning\" expects a finite non-negative number of seconds (got "
+      + formatDefault(_MPITimeoutWarning) + ")."
     );
   }
   if (not std::isfinite(_MPIDeadlockTimeout) or _MPIDeadlockTimeout < 0.0) {
     tarch::terminateWithError(
-      "MPI deadlock timeout must be finite and non-negative (got " + formatDefault(_MPIDeadlockTimeout) + " s)."
+      "Runtime parameter \"deadlockTimeout\" expects a finite non-negative number of seconds (got "
+      + formatDefault(_MPIDeadlockTimeout) + ")."
     );
   }
 }

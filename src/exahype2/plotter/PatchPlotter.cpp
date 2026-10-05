@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PatchPlotter.h"
 
-#include "tarch/mpi/Rank.h"
-#include "tarch/plotter/CellTypes.h"
-
 exahype2::plotter::PatchPlotter::PatchPlotter(std::string filename, std::vector<DataField> fields) :
   _filename(std::move(filename)),
   _fields(std::move(fields)) {
@@ -39,50 +36,74 @@ exahype2::plotter::PatchPlotter::classifyCorners(const int cornersPerAxis) {
   return result;
 }
 
+std::uint64_t
+exahype2::plotter::PatchPlotter::hashLatticeKey(const std::array<std::int64_t, DIMENSIONS>& key) {
+  constexpr std::uint64_t GoldenRatio = 0x9E3779B97F4A7C15ULL;
+  std::uint64_t           result      = 0;
+  for (const std::int64_t coordinate : key) {
+    result ^= static_cast<std::uint64_t>(coordinate) + GoldenRatio + (result << 6) + (result >> 2);
+  }
+  result ^= result >> 30;
+  result *= 0xBF58476D1CE4E5B9ULL;
+  result ^= result >> 27;
+  result *= 0x94D049BB133111EBULL;
+  result ^= result >> 31;
+  return result;
+}
+
 /**
- * Opens the snapshot file, sizes the piece of this rank and returns its id. The cell fields
- * RefinementLevel, Subdomain, CurveIndex and, with writesStatus, LimiterStatus follow the data
- * fields. All plot cells of one patch carry the curve index of its grid cell, which a single
- * precision plot file holds exactly up to 2^24 grid cells.
+ * Returns a mesh with the arrays of the patches and numberOfPoints points. The data fields become
+ * point fields or cell fields, followed by the cell fields RefinementLevel, Subdomain, CurveIndex
+ * and, with writesStatus, LimiterStatus. The arrays stay uninitialised. The caller writes every
+ * entry. Every plot cell of a patch stores the curve index of its grid cell. A single-precision
+ * plot file stores the curve indices of up to 2^24 grid cells exactly.
  */
-int
-exahype2::plotter::PatchPlotter::openPiece(
-  const int                    numberOfPatches,
-  const int                    cellsPerPatch,
-  const std::size_t            numberOfPoints,
-  const bool                   writesPointData,
-  const bool                   writesStatus,
+tarch::plotter::Mesh
+exahype2::plotter::PatchPlotter::createMesh(
+  const int         numberOfPatches,
+  const int         cellsPerPatch,
+  const std::size_t numberOfPoints,
+  const bool        writesPointData,
+  const bool        writesStatus
+) const {
+  using Values = tarch::plotter::MeshArray<double>;
+  assertion(numberOfPatches >= 0, numberOfPatches);
+  assertion(cellsPerPatch > 0, cellsPerPatch);
+  const auto numberOfCells = static_cast<std::size_t>(numberOfPatches) * cellsPerPatch;
+
+  tarch::plotter::Mesh mesh;
+  mesh.pointsXYZ.resize(numberOfPoints * 3);
+  mesh.connectivity.resize(numberOfCells * peano4::VerticesPerCell);
+  mesh.offsets.resize(numberOfCells);
+  mesh.types.resize(numberOfCells);
+  for (const auto& field : _fields) {
+    auto&      fields   = writesPointData ? mesh.pointFields : mesh.cellFields;
+    const auto entities = writesPointData ? numberOfPoints : numberOfCells;
+    fields.push_back({field.name, field.components, Values(entities * field.components)});
+  }
+  mesh.cellFields.push_back({"RefinementLevel", 1, Values(numberOfCells)});
+  mesh.cellFields.push_back({"Subdomain", 1, Values(numberOfCells)});
+  mesh.cellFields.push_back({"CurveIndex", 1, Values(numberOfCells)});
+  if (writesStatus) {
+    mesh.cellFields.push_back({"LimiterStatus", 1, Values(numberOfCells)});
+  }
+  return mesh;
+}
+
+/**
+ * Writes mesh as the snapshot at timeStamp. Every rank calls this at the same time with the same
+ * format.
+ */
+void
+exahype2::plotter::PatchPlotter::write(
+  const tarch::plotter::Mesh&  mesh,
   const double                 timeStamp,
   const tarch::plotter::Format format,
   const std::string&           outputDirectory
 ) {
-  assertion(numberOfPatches >= 0, numberOfPatches);
-  assertion(cellsPerPatch > 0, cellsPerPatch);
-  constexpr auto CellType =
-    DIMENSIONS == 2 ? tarch::plotter::CellType::Quadrangle : tarch::plotter::CellType::Hexahedron;
-  const auto numberOfCells = static_cast<std::size_t>(numberOfPatches) * cellsPerPatch;
-  const int  rank          = tarch::mpi::Rank::getInstance().getRank();
-
-  _snapshot.openFile(format, outputDirectory + OutputSubdirectory, timeStamp);
-  auto&     writer  = _snapshot.getFileWriter();
-  const int pieceId = writer.acquirePiece(rank);
-  auto&     piece   = writer.getPieceBuffers(pieceId);
-  piece.pointsXYZ.assign(numberOfPoints * 3, 0.0);
-  piece.connectivity.resize(numberOfCells * peano4::VerticesPerCell);
-  piece.offsets.resize(numberOfCells);
-  piece.types.assign(numberOfCells, static_cast<std::uint8_t>(CellType));
-  piece.pointFields.clear();
-  piece.cellFields.clear();
-  for (const auto& field : _fields) {
-    auto&      fields   = writesPointData ? piece.pointFields : piece.cellFields;
-    const auto entities = writesPointData ? numberOfPoints : numberOfCells;
-    fields.push_back({field.name, field.components, std::vector<double>(entities * field.components)});
+  if (_fileWriter == nullptr) {
+    _fileWriter = tarch::plotter::createFileWriter(format);
   }
-  piece.cellFields.push_back({"RefinementLevel", 1, std::vector<double>(numberOfCells)});
-  piece.cellFields.push_back({"Subdomain", 1, std::vector<double>(numberOfCells, static_cast<double>(rank))});
-  piece.cellFields.push_back({"CurveIndex", 1, std::vector<double>(numberOfCells)});
-  if (writesStatus) {
-    piece.cellFields.push_back({"LimiterStatus", 1, std::vector<double>(numberOfCells)});
-  }
-  return pieceId;
+  assertion(_fileWriter->getFormat() == format);
+  _fileWriter->write(mesh, outputDirectory + OutputSubdirectory, _filename, timeStamp);
 }

@@ -4,6 +4,9 @@
 
 #include "Constants.h"
 #include "exahype2/runner/RuntimeParameters.h"
+{%- if RUNTIME_PARAMETERS | rejectattr("is_string") | list %}
+#include "tarch/accelerator/DeviceCopies.h"
+{%- endif %}
 
 {{NAMESPACE | join("::")}}::RuntimeParameters::Storage     {{NAMESPACE | join("::")}}::RuntimeParameters::_storage;
 {{NAMESPACE | join("::")}}::RuntimeParameters::HostStorage {{NAMESPACE | join("::")}}::RuntimeParameters::_hostStorage;
@@ -55,3 +58,17 @@ void {{NAMESPACE | join("::")}}::RuntimeParameters::load(
   getParameterTable(_storage, _hostStorage).load(reader, argc, argv);
   readGridParameters();
 }
+{%- for parameter in RUNTIME_PARAMETERS %}
+{%- if parameter.is_string %}
+
+void {{NAMESPACE | join("::")}}::RuntimeParameters::{{ parameter.setter }}(const {{ parameter.cpp_type }}& value) {
+  _hostStorage.{{ parameter.name }} = value;
+}
+{%- else %}
+
+void {{NAMESPACE | join("::")}}::RuntimeParameters::{{ parameter.setter }}(const {{ parameter.cpp_type }}{{ "&" if parameter.is_array }} value) {
+  _storage.{{ parameter.name }} = value;
+  tarch::accelerator::uploadDeviceCopies();
+}
+{%- endif %}
+{%- endfor %}

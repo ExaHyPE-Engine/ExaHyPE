@@ -28,8 +28,8 @@ def cpp_type(precision):
     """Returns the C++ type of a precision name such as ``"float"`` or ``"fp64"``."""
     if precision not in PRECISIONS:
         raise ValueError(
-            "Unknown precision '{}'. Known precisions are {}.".format(
-                precision, ", ".join(PRECISIONS)
+            "The solver supports the precisions {} only (got '{}').".format(
+                ", ".join(PRECISIONS), precision
             )
         )
     return PRECISIONS[precision]

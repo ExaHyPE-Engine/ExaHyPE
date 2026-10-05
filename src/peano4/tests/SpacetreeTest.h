@@ -32,6 +32,9 @@ private:
   void testARankWithoutCellsReportsNoLevel();
   void testRejectedRequestsChangeNoPlan();
   void testARegridWithLiveDataReturnsTheSlotMoves();
+  void testTheTreeBytesCountTheSpareTree();
+  void testThePartitionBytesCountTheFreedSlots();
+  void testTheTreeBytesCountTheEvaluatedPlan();
   void testTheCellLookupFindsEveryCellAndNothingElse();
   void testThePeriodicBoundariesReturnTheInitialisedValue();
 };

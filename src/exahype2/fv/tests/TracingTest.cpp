@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "TracingTest.h"
 
-#include "exahype2/fv/FiniteVolume.h"
+#include "exahype2/fv/FiniteVolumeScheme.h"
 #include "exahype2/fv/Tracing.h"
 #include "exahype2/particles/Forces.h"
 #include "exahype2/particles/ParticleSet.h"
@@ -295,7 +295,9 @@ exahype2::fv::tests::TracingTest::testClampIntoPatchProjectsOntoTheVolumeCentres
 }
 
 /**
- * One explicit Euler step moves the tracer by the fluid velocity times the step size and keeps it in the domain.
+ * One explicit Euler step moves the tracer by the fluid velocity times the step size and keeps it
+ * in the domain. The tracer samples the fluid velocity at its new position, also after a wall
+ * reflected it.
  */
 void
 exahype2::fv::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
@@ -315,6 +317,7 @@ exahype2::fv::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
     exahype2::particles::ParticleVelocityAttribute + DIMENSIONS - 1
   >(grid.partition, grid.solution, TimeStepSize, particles, getFluidTracer(), DomainOffset, DomainWidth, 0);
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 1);
+  particles.download();
   for (int index = 0; index < particles.getSize(); index++) {
     validateNumericalEquals(particles.getPosition(index)(0), 0.1 + Velocity * TimeStepSize);
     validateNumericalEquals(particles.getPosition(index)(DIMENSIONS - 1), 0.5);
@@ -339,6 +342,7 @@ exahype2::fv::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
     DomainWidth,
     FirstAxisPeriodic);
   validateEquals(peano4::tests::getGlobalSumOf(wrapped.getSize()), 1);
+  wrapped.download();
   for (int index = 0; index < wrapped.getSize(); index++) {
     validateNumericalEquals(wrapped.getPosition(index)(0), 0.9 + Velocity * TimeStepSize - 1.0);
   }
@@ -353,8 +357,9 @@ exahype2::fv::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
     exahype2::particles::ParticleVelocityAttribute + DIMENSIONS - 1
   >(grid.partition, grid.solution, TimeStepSize, reflected, getFluidTracer(), DomainOffset, DomainWidth, 0);
   validateEquals(peano4::tests::getGlobalSumOf(reflected.getSize()), 1);
+  reflected.download();
   for (int index = 0; index < reflected.getSize(); index++) {
     validateNumericalEquals(reflected.getPosition(index)(0), 1.0 - (0.9 + Velocity * TimeStepSize - 1.0));
-    validateNumericalEquals(reflected.getData(index)[exahype2::particles::ParticleVelocityAttribute], -0.8 * Velocity);
+    validateNumericalEquals(reflected.getData(index)[exahype2::particles::ParticleVelocityAttribute], Velocity);
   }
 }

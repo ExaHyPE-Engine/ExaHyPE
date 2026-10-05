@@ -20,7 +20,8 @@ public:
   void run() override;
 
 private:
-  void testTheInterpolationsVisitEveryLevelJumpOnceCoarsestLevelFirst();
-  void testTheRestrictionVisitsEveryLevelJumpOnceFinestLevelFirst();
-  void testTheGroupedRestrictionsVisitEveryLevelJumpOnceFinestLevelFirst();
+  void testHoldsIntermediateFaceReturnsFalseOnEveryLevelOfTheRefinedGrid();
+  void testTheInterpolationsVisitEveryLevelJumpOnceAfterTheWritesOfItsCoarseFace();
+  void testTheRestrictionVisitsEveryLevelJumpOnceAfterTheWritesOfItsFineFaces();
+  void testTheGroupedRestrictionsVisitEveryLevelJumpOnceAfterTheWritesOfItsFineFaces();
 };

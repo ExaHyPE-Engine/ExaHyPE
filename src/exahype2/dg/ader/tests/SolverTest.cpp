@@ -416,7 +416,7 @@ namespace {
     auto&          spacetree = peano4::Spacetree::getInstance();
     peano4::Regrid regrid;
     if (not spacetree.regrid(refinementRequests, regrid)) {
-      tarch::terminateWithError("The regrid of the test grid changed nothing.");
+      tarch::terminateWithError("The regrid of the test grid must change the grid.");
     }
     const auto& partition = spacetree.getPartition();
     requests.clear(partition.getNumberOfSlots());

@@ -2,11 +2,23 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
+  /**
+   * Returns the team scratch of scratchBytes of team. Every call takes a new block from the pool
+   * of the team. A launch calls it once per team.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD unsigned char* takeTeamScratch(
+    const tarch::accelerator::KokkosTeam::MemberType& team,
+    const int                                         scratchBytes
+  ) {
+    return static_cast<unsigned char*>(team.team_shmem().get_shmem(static_cast<std::ptrdiff_t>(scratchBytes)));
+  }
+
   template <typename Functor>
   struct LeagueFor final {
     Functor functor;
+    int     scratchBytes;
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const tarch::accelerator::KokkosTeam::MemberType& team) const {
-      functor(team.league_rank(), tarch::accelerator::KokkosTeam{team});
+      functor(team.league_rank(), tarch::accelerator::KokkosTeam{team, takeTeamScratch(team, scratchBytes)});
     }
   };
 
@@ -68,7 +80,40 @@ namespace tarch::accelerator {
     );
   }
 
+  INLINE_METHOD GPU_CALLABLE_METHOD int getThreadOfTeam(const KokkosTeam& team) { return team.member.team_rank(); }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD unsigned char* getTeamScratch(const KokkosTeam& team) { return team.scratch; }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD int getNumberOfThreadsPerTeam(const KokkosTeam& team) {
+    return team.member.team_size();
+  }
+
   INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier(const KokkosTeam& team) { team.member.team_barrier(); }
+
+  /**
+   * Returns the threads per team of a launch that asks for requested threads: Whole warps up to
+   * KokkosThreadsPerTeam, or KokkosThreadsPerTeam for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamThreads(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::KokkosThreadsPerTeam;
+    }
+    assertion(requested > 0, requested);
+    const int warps = (requested + tarch::accelerator::ThreadsPerWarp - 1) / tarch::accelerator::ThreadsPerWarp;
+    return std::min(tarch::accelerator::KokkosThreadsPerTeam, warps * tarch::accelerator::ThreadsPerWarp);
+  }
+
+  /**
+   * Returns the team scratch bytes of a launch that asks for requested bytes, or TeamScratchBytes
+   * for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamScratchBytes(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::TeamScratchBytes;
+    }
+    assertion(requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes, requested);
+    return requested;
+  }
 
   // Kokkos::parallel_for returns before a device execution space completes, so every host
   // overload fences before it returns.
@@ -120,8 +165,11 @@ namespace tarch::accelerator {
     if (range.n <= 0) {
       return;
     }
-    const Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy(range.n, Kokkos::AUTO);
-    Kokkos::parallel_for(policy, LeagueFor<Functor>{functor});
+    const int scratchBytes = tarch::accelerator::getTeamScratchBytes(range.scratchBytes);
+    const Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy =
+      Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>(range.n, tarch::accelerator::getTeamThreads(range.threads))
+        .set_scratch_size(0, Kokkos::PerTeam(scratchBytes));
+    Kokkos::parallel_for(policy, LeagueFor<Functor>{functor, scratchBytes});
     Kokkos::fence();
   }
 } // namespace tarch::accelerator

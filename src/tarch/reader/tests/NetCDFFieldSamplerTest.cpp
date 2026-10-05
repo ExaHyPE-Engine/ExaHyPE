@@ -36,12 +36,12 @@ namespace {
 
     auto check = [&](const int status, const std::string& operation) {
       if (status != NC_NOERR) {
-        throw std::runtime_error(operation + ": " + nc_strerror(status));
+        throw std::runtime_error("The test fixture cannot " + operation + ": " + nc_strerror(status));
       }
     };
 
     if (zValues.size() != xValues.size() * yValues.size()) {
-      throw std::runtime_error("Invalid fixture dimensions.");
+      throw std::runtime_error("The test fixture needs one value per grid point.");
     }
 
     int ncid   = -1;
@@ -51,20 +51,20 @@ namespace {
     int yVarId = -1;
     int zVarId = -1;
 
-    check(nc_create(path.string().c_str(), NC_CLOBBER | NC_NETCDF4, &ncid), "Failed to create test NetCDF file");
-    check(nc_def_dim(ncid, xKey.c_str(), xValues.size(), &xDimId), "Failed to define x dimension");
-    check(nc_def_dim(ncid, yKey.c_str(), yValues.size(), &yDimId), "Failed to define y dimension");
-    check(nc_def_var(ncid, xKey.c_str(), NC_DOUBLE, 1, &xDimId, &xVarId), "Failed to define x variable");
-    check(nc_def_var(ncid, yKey.c_str(), NC_DOUBLE, 1, &yDimId, &yVarId), "Failed to define y variable");
+    check(nc_create(path.string().c_str(), NC_CLOBBER | NC_NETCDF4, &ncid), "create the NetCDF file");
+    check(nc_def_dim(ncid, xKey.c_str(), xValues.size(), &xDimId), "define the x dimension");
+    check(nc_def_dim(ncid, yKey.c_str(), yValues.size(), &yDimId), "define the y dimension");
+    check(nc_def_var(ncid, xKey.c_str(), NC_DOUBLE, 1, &xDimId, &xVarId), "define the x variable");
+    check(nc_def_var(ncid, yKey.c_str(), NC_DOUBLE, 1, &yDimId, &yVarId), "define the y variable");
 
     const int dimensions[2] = {yDimId, xDimId};
-    check(nc_def_var(ncid, valueKey.c_str(), NC_DOUBLE, 2, dimensions, &zVarId), "Failed to define field variable");
+    check(nc_def_var(ncid, valueKey.c_str(), NC_DOUBLE, 2, dimensions, &zVarId), "define the field variable");
 
-    check(nc_enddef(ncid), "Failed to end NetCDF definition mode");
-    check(nc_put_var_double(ncid, xVarId, xValues.data()), "Failed to write x values");
-    check(nc_put_var_double(ncid, yVarId, yValues.data()), "Failed to write y values");
-    check(nc_put_var_double(ncid, zVarId, zValues.data()), "Failed to write field values");
-    check(nc_close(ncid), "Failed to close test NetCDF file");
+    check(nc_enddef(ncid), "end the definition mode");
+    check(nc_put_var_double(ncid, xVarId, xValues.data()), "write the x values");
+    check(nc_put_var_double(ncid, yVarId, yValues.data()), "write the y values");
+    check(nc_put_var_double(ncid, zVarId, zValues.data()), "write the field values");
+    check(nc_close(ncid), "close the NetCDF file");
 
     return path.string();
   }
@@ -84,12 +84,12 @@ namespace {
 
     auto check = [&](const int status, const std::string& operation) {
       if (status != NC_NOERR) {
-        throw std::runtime_error(operation + ": " + nc_strerror(status));
+        throw std::runtime_error("The test fixture cannot " + operation + ": " + nc_strerror(status));
       }
     };
 
     if (fieldValues.size() != xValues.size() * yValues.size() * zValues.size()) {
-      throw std::runtime_error("Invalid fixture dimensions.");
+      throw std::runtime_error("The test fixture needs one value per grid point.");
     }
 
     int ncid       = -1;
@@ -101,23 +101,23 @@ namespace {
     int zVarId     = -1;
     int fieldVarId = -1;
 
-    check(nc_create(path.string().c_str(), NC_CLOBBER | NC_NETCDF4, &ncid), "Failed to create test NetCDF file");
-    check(nc_def_dim(ncid, "x", xValues.size(), &xDimId), "Failed to define x dimension");
-    check(nc_def_dim(ncid, "y", yValues.size(), &yDimId), "Failed to define y dimension");
-    check(nc_def_dim(ncid, "z", zValues.size(), &zDimId), "Failed to define z dimension");
-    check(nc_def_var(ncid, "x", NC_DOUBLE, 1, &xDimId, &xVarId), "Failed to define x variable");
-    check(nc_def_var(ncid, "y", NC_DOUBLE, 1, &yDimId, &yVarId), "Failed to define y variable");
-    check(nc_def_var(ncid, "z", NC_DOUBLE, 1, &zDimId, &zVarId), "Failed to define z variable");
+    check(nc_create(path.string().c_str(), NC_CLOBBER | NC_NETCDF4, &ncid), "create the NetCDF file");
+    check(nc_def_dim(ncid, "x", xValues.size(), &xDimId), "define the x dimension");
+    check(nc_def_dim(ncid, "y", yValues.size(), &yDimId), "define the y dimension");
+    check(nc_def_dim(ncid, "z", zValues.size(), &zDimId), "define the z dimension");
+    check(nc_def_var(ncid, "x", NC_DOUBLE, 1, &xDimId, &xVarId), "define the x variable");
+    check(nc_def_var(ncid, "y", NC_DOUBLE, 1, &yDimId, &yVarId), "define the y variable");
+    check(nc_def_var(ncid, "z", NC_DOUBLE, 1, &zDimId, &zVarId), "define the z variable");
 
     const int dimensions[3] = {zDimId, yDimId, xDimId};
-    check(nc_def_var(ncid, valueKey.c_str(), NC_DOUBLE, 3, dimensions, &fieldVarId), "Failed to define field variable");
+    check(nc_def_var(ncid, valueKey.c_str(), NC_DOUBLE, 3, dimensions, &fieldVarId), "define the field variable");
 
-    check(nc_enddef(ncid), "Failed to end NetCDF definition mode");
-    check(nc_put_var_double(ncid, xVarId, xValues.data()), "Failed to write x values");
-    check(nc_put_var_double(ncid, yVarId, yValues.data()), "Failed to write y values");
-    check(nc_put_var_double(ncid, zVarId, zValues.data()), "Failed to write z values");
-    check(nc_put_var_double(ncid, fieldVarId, fieldValues.data()), "Failed to write field values");
-    check(nc_close(ncid), "Failed to close test NetCDF file");
+    check(nc_enddef(ncid), "end the definition mode");
+    check(nc_put_var_double(ncid, xVarId, xValues.data()), "write the x values");
+    check(nc_put_var_double(ncid, yVarId, yValues.data()), "write the y values");
+    check(nc_put_var_double(ncid, zVarId, zValues.data()), "write the z values");
+    check(nc_put_var_double(ncid, fieldVarId, fieldValues.data()), "write the field values");
+    check(nc_close(ncid), "close the NetCDF file");
 
     return path.string();
   }

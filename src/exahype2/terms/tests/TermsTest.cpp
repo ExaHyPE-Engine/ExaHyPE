@@ -16,7 +16,6 @@
 #include "exahype2/terms/FacePredicate.h"
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/InitialCondition.h"
-#include "exahype2/terms/InitialisesOnHost.h"
 #include "exahype2/terms/InitialisesPatches.h"
 #include "exahype2/terms/LimitedDifference.h"
 #include "exahype2/terms/MaterialParameters.h"
@@ -199,7 +198,6 @@ struct exahype2::terms::tests::TermsTest::Complete {
     const tarch::la::Vector<DIMENSIONS, double>& h,
     int                                          normal
   );
-  static constexpr bool InitialisesOnHost  = true;
   static constexpr bool InitialisesPatches = true;
 };
 
@@ -282,7 +280,6 @@ struct exahype2::terms::tests::TermsTest::Defective final {
     bool                                         isBoundaryFace,
     int                                          faceIndex
   );
-  static constexpr bool InitialisesOnHost = false;
 };
 
 exahype2::terms::tests::TermsTest::TermsTest() :
@@ -324,7 +321,6 @@ exahype2::terms::tests::TermsTest::testEveryTermOfACompleteSolverSatisfiesItsCon
   validateEquals((exahype2::terms::HasParticleAnalyticalSolution<Complete, Tracer>), true);
   validateEquals((exahype2::terms::HasCellPredicate<Complete>), true);
   validateEquals((exahype2::terms::HasFacePredicate<Complete>), true);
-  validateEquals((exahype2::terms::InitialisesOnHost<Complete>), true);
   validateEquals((exahype2::terms::InitialisesPatches<Complete>), true);
   // A term written for double is not the term for float.
   validateEquals((exahype2::terms::HasFlux<Complete, float>), false);
@@ -344,7 +340,6 @@ exahype2::terms::tests::TermsTest::testAMissingOrMistypedTermFailsItsConcept() {
   validateEquals((exahype2::terms::HasPostprocessUpdatedPatch<Defective, double>), false);
   validateEquals((exahype2::terms::HasCellPredicate<Defective>), false);
   validateEquals((exahype2::terms::HasFacePredicate<Defective>), false);
-  validateEquals((exahype2::terms::InitialisesOnHost<Defective>), false);
   validateEquals((exahype2::terms::InitialisesPatches<Defective>), false);
 }
 

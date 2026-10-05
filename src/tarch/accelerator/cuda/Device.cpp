@@ -7,6 +7,7 @@
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/cuda/DevicePropertiesCache.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Info.h"
 
@@ -55,6 +56,7 @@ tarch::accelerator::Device::shutdown() {
   );
   CHECK_CUDA_ERROR(cudaSetDevice(tarch::accelerator::getCurrentDevice()));
   CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+  tarch::accelerator::releaseReductionScratch();
   CHECK_CUDA_ERROR(cudaDeviceReset());
 
   activeStreams.clear();
@@ -69,6 +71,16 @@ tarch::accelerator::Device::isInitialised() const {
 int
 tarch::accelerator::Device::getNumberOfDevices() const {
   return numberOfDevices;
+}
+
+/**
+ * Returns the threads the current device runs at once: Its multiprocessors times the threads
+ * one multiprocessor holds.
+ */
+int
+tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
+  const cudaDeviceProp& properties = tarch::accelerator::cuda::DevicePropertiesCache::getProperties();
+  return std::max(1, properties.multiProcessorCount * properties.maxThreadsPerMultiProcessor);
 }
 
 void

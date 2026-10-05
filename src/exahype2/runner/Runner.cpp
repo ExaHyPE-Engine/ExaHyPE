@@ -88,8 +88,8 @@ namespace {
     if (error) {
       return "Unavailable";
     }
-    return exahype2::runner::Format::getMemory(space.capacity) + " Total · "
-      + exahype2::runner::Format::getMemory(space.available) + " Free";
+    return "Free " + exahype2::runner::Format::getMemory(space.available) + " of "
+      + exahype2::runner::Format::getMemory(space.capacity);
   }
 
   /**
@@ -190,7 +190,7 @@ exahype2::runner::Runner::getStepName(const Step step) {
   case Step::DynamicAMR:
     return PhaseName::DynamicAMR;
   }
-  tarch::terminateWithError("The program step has no name.");
+  tarch::terminateWithError("Each step of a run needs a phase name in the statistics.");
 }
 
 /**
@@ -233,8 +233,8 @@ exahype2::runner::Runner::launch(
         joined += key;
       }
       tarch::terminateWithError(
-        "Unrecognised keys in configuration file \"" + parameters.getConfigFilePath() + "\": " + joined
-        + ". Run with --help to list the available runtime options."
+        "The configuration file '" + parameters.getConfigFilePath()
+        + "' accepts the runtime options of --help only (got " + joined + ")."
       );
     }
   }
@@ -248,8 +248,7 @@ exahype2::runner::Runner::launch(
       unrecognised += argv[index];
     }
     tarch::terminateWithError(
-      "Unrecognised command-line arguments: " + unrecognised
-      + ". Run with --help to list the available runtime options."
+      "The command line accepts the runtime options of --help only (got " + unrecognised + ")."
     );
   }
 
@@ -279,7 +278,8 @@ exahype2::runner::Runner::launch(
     std::filesystem::create_directories(outputDirectory, outputDirectoryError);
     if (outputDirectoryError) {
       tarch::terminateWithError(
-        "Cannot create output directory \"" + outputDirectory + "\": " + outputDirectoryError.message()
+        "The runner cannot create the output directory '" + outputDirectory + "' (" + outputDirectoryError.message()
+        + ")."
       );
     }
     const auto      outputGitignore = std::filesystem::path(outputDirectory) / ".gitignore";
@@ -287,13 +287,13 @@ exahype2::runner::Runner::launch(
     const bool      outputGitignoreExists = std::filesystem::exists(outputGitignore, outputGitignoreError);
     if (outputGitignoreError) {
       tarch::terminateWithError(
-        "Cannot inspect output ignore file \"" + outputGitignore.string() + "\": " + outputGitignoreError.message()
+        "The runner cannot check the file '" + outputGitignore.string() + "' (" + outputGitignoreError.message() + ")."
       );
     }
     if (not outputGitignoreExists) {
       std::ofstream gitignore(outputGitignore);
       if (not gitignore) {
-        tarch::terminateWithError("Cannot create output ignore file \"" + outputGitignore.string() + "\".");
+        tarch::terminateWithError("The runner cannot create the file '" + outputGitignore.string() + "'.");
       }
       gitignore << "*\n";
     }
@@ -629,13 +629,13 @@ exahype2::runner::Runner::constructGrid() {
   auto       currentMinimumPatchSize     = std::numeric_limits<double>::max();
   bool       finishConditionSeenLastStep = false;
   bool       settled                     = false;
-  int        sweeps                      = 0;
-  while (not settled and sweeps < MaximumMeshUpdateSweeps) {
+  int        steps                       = 0;
+  while (not settled and steps < MaximumMeshUpdateSteps) {
     {
       SCOREP_USER_REGION(PhaseName::GridConstruction, SCOREP_USER_REGION_TYPE_COMMON)
       static_cast<void>(runStep(Step::CreateGrid));
     }
-    sweeps++;
+    steps++;
     if (tarch::la::smaller(statistics.getGlobalMinimumCellWidth(), currentMinimumPatchSize)) {
       currentMinimumPatchSize     = statistics.getGlobalMinimumCellWidth();
       finishConditionSeenLastStep = false;
@@ -649,20 +649,20 @@ exahype2::runner::Runner::constructGrid() {
   }
   if (not settled) {
     tarch::terminateWithError(
-      "The grid construction did not settle within " + std::to_string(MaximumMeshUpdateSweeps)
-      + " sweeps: The refinement criterion still changes the grid."
+      "The refinement criterion must stop changing the grid within " + std::to_string(MaximumMeshUpdateSteps)
+      + " construction steps."
     );
   }
   constructionWatch.stop();
   _report.line(
     std::string(BlockIndent, ' ') + "Grid Constructed " + Format::getWallClock(constructionWatch.getCalendarTime())
-    + " · " + describeRepetitions(PhaseName::GridConstruction, sweeps, 0)
+    + " · " + describeRepetitions(PhaseName::GridConstruction, steps, 0)
   );
 }
 
 /**
  * Initialises the solution and adapts the mesh before the time loop. Every round applies the
- * refinement votes in one regrid sweep and initialises the new grid again, so every cell votes on
+ * refinement votes in one regrid step and initialises the new grid again. Every cell then votes on
  * the analytic initial condition.
  */
 void
@@ -673,10 +673,10 @@ exahype2::runner::Runner::initialiseGrid() {
   peano4::Spacetree::getInstance().markPersistentDataLive();
   int rounds = 1;
   while (hasPendingMeshUpdates() and rounds < MaximumInitialisationRounds) {
-    if (not _meshUpdatesStarted or _meshUpdates.sweeps == 0) {
+    if (not _meshUpdatesStarted or _meshUpdates.steps == 0) {
       startMeshUpdates();
     }
-    runMeshUpdateSweep(true);
+    runMeshUpdateStep(true);
     elapsedSeconds += runStep(Step::InitGrid);
     rounds++;
   }
@@ -693,7 +693,7 @@ exahype2::runner::Runner::initialiseGrid() {
     std::string(BlockIndent, ' ') + "Grid Initialised " + Format::getWallClock(elapsedSeconds) + " · "
     + describeRepetitions(PhaseName::GridInitialisation, rounds, 0)
   );
-  if (_meshUpdates.sweeps > 0) {
+  if (_meshUpdates.steps > 0) {
     _report.line(std::string(BlockIndent, ' ') + PhaseName::DynamicAMR + " " + describeMeshUpdates(_meshUpdates));
   }
   startMeshUpdates();
@@ -711,17 +711,17 @@ exahype2::runner::Runner::hasPendingMeshUpdates() const {
 }
 
 /**
- * Renders the wall clock, the regrids and their sweeps since the previous report.
+ * Renders the wall clock, the regrids and their steps since the previous report.
  */
 std::string
 exahype2::runner::Runner::describeMeshUpdates(const MeshUpdates& updates) {
-  assertion(updates.regrids >= 0 and updates.sweeps >= updates.regrids, updates.regrids, updates.sweeps);
+  assertion(updates.regrids >= 0 and updates.steps >= updates.regrids, updates.regrids, updates.steps);
   return Format::getWallClock(updates.wallClock) + " · "
-    + describeRepetitions(PhaseName::DynamicAMR, updates.sweeps, updates.regrids);
+    + describeRepetitions(PhaseName::DynamicAMR, updates.steps, updates.regrids);
 }
 
 /**
- * Renders how often a phase ran, in steps, plots, regrids or sweeps.
+ * Renders how often a phase ran, in plots, regrids and steps, rounds or steps.
  */
 std::string
 exahype2::runner::Runner::describeRepetitions(const std::string& phaseName, const int count, const int regrids) {
@@ -729,16 +729,16 @@ exahype2::runner::Runner::describeRepetitions(const std::string& phaseName, cons
   const auto getCountOf = [](const int number, const std::string& singular) {
     return Format::getGroupedNumber(static_cast<unsigned long>(number)) + " " + singular + (number == 1 ? "" : "s");
   };
-  if (phaseName == PhaseName::TimeStep) {
-    return getCountOf(count, "Step");
-  }
   if (phaseName == PhaseName::Plot) {
     return getCountOf(count, "Plot");
   }
   if (phaseName == PhaseName::DynamicAMR) {
-    return getCountOf(regrids, "Regrid") + " · " + getCountOf(count, "Sweep");
+    return getCountOf(regrids, "Regrid") + " · " + getCountOf(count, "Step");
   }
-  return getCountOf(count, "Sweep");
+  if (phaseName == PhaseName::GridInitialisation) {
+    return getCountOf(count, "Round");
+  }
+  return getCountOf(count, "Step");
 }
 
 /**
@@ -757,7 +757,7 @@ exahype2::runner::Runner::startMeshUpdates() {
  */
 void
 exahype2::runner::Runner::reportMeshUpdates() {
-  if (_meshUpdates.sweeps == 0) {
+  if (_meshUpdates.steps == 0) {
     return;
   }
   _meshUpdates.after = exahype2::runner::collectGridSnapshot();
@@ -770,22 +770,22 @@ exahype2::runner::Runner::reportMeshUpdates() {
 }
 
 /**
- * Applies the refinement requests of the solvers in one regrid, whose sweeps run until the requests
+ * Applies the refinement requests of the solvers in one regrid. Its steps run until the requests
  * leave the refinement plan unchanged. A regrid reports the collected regrids every
  * SecondsBetweenMeshUpdateReports and before it stops the run.
  */
 void
 exahype2::runner::Runner::applyMeshUpdates() {
   SCOREP_USER_REGION(PhaseName::DynamicAMR, SCOREP_USER_REGION_TYPE_PHASE)
-  if (not _meshUpdatesStarted or _meshUpdates.sweeps == 0) {
+  if (not _meshUpdatesStarted or _meshUpdates.steps == 0) {
     startMeshUpdates();
   }
-  int    sweepsOfThisRegrid{0};
+  int    stepsOfThisRegrid{0};
   double secondsSinceLastReport{0.0};
-  while (hasPendingMeshUpdates() and sweepsOfThisRegrid < MaximumMeshUpdateSweeps) {
-    // A report inside the regrid resets the collection, so the regrid counts itself on its first sweep.
-    secondsSinceLastReport += runMeshUpdateSweep(sweepsOfThisRegrid == 0);
-    sweepsOfThisRegrid++;
+  while (hasPendingMeshUpdates() and stepsOfThisRegrid < MaximumMeshUpdateSteps) {
+    // A report inside the regrid resets the collection, so the regrid counts itself on its first step.
+    secondsSinceLastReport += runMeshUpdateStep(stepsOfThisRegrid == 0);
+    stepsOfThisRegrid++;
     if (secondsSinceLastReport >= SecondsBetweenMeshUpdateReports) {
       reportMeshUpdates();
       secondsSinceLastReport = 0.0;
@@ -794,18 +794,18 @@ exahype2::runner::Runner::applyMeshUpdates() {
   if (hasPendingMeshUpdates()) {
     reportMeshUpdates();
     std::ostringstream message;
-    message << "The dynamic AMR phase did not settle within " << MaximumMeshUpdateSweeps
-            << " sweeps: The solvers still request mesh updates.";
+    message << "The solvers must stop requesting mesh updates within " << MaximumMeshUpdateSteps
+            << " dynamic AMR steps.";
     tarch::terminateWithError(message.str());
   }
 }
 
 /**
- * Runs one regrid sweep, adds it to the collected mesh updates and returns its wall clock in
- * seconds. With startsRegrid, the sweep also counts a regrid.
+ * Runs one regrid step, adds it to the collected mesh updates and returns its wall clock in
+ * seconds. With startsRegrid, the step also counts a regrid.
  */
 double
-exahype2::runner::Runner::runMeshUpdateSweep(const bool startsRegrid) {
+exahype2::runner::Runner::runMeshUpdateStep(const bool startsRegrid) {
   if (startsRegrid) {
     _meshUpdates.regrids++;
     _numberOfRegrids++;
@@ -814,7 +814,7 @@ exahype2::runner::Runner::runMeshUpdateSweep(const bool startsRegrid) {
   assertion(elapsedSeconds >= 0.0, elapsedSeconds);
   _meshUpdates.wallClock += elapsedSeconds;
   _meshUpdateMeasurement.setValue(elapsedSeconds);
-  _meshUpdates.sweeps++;
+  _meshUpdates.steps++;
   return elapsedSeconds;
 }
 
@@ -1039,7 +1039,7 @@ exahype2::runner::Runner::runTimeLoop() {
     if (tarch::hasNonCriticalAssertionBeenViolated()) {
       if (not _stoppedAfterNonCriticalAssertion) {
         _stoppedAfterNonCriticalAssertion = true;
-        logError("Non-critical assertion has been triggered in code. Dump final state and terminate.");
+        logError("A non-critical assertion fails. The runner writes the final snapshot and stops.");
         action = Action::Plot;
       } else {
         action = Action::Stop;
@@ -1050,7 +1050,7 @@ exahype2::runner::Runner::runTimeLoop() {
     ) {
       nextPlotAtStep += stepPlotInterval;
       if (nextPlotAtStep <= static_cast<double>(completedTimeSteps)) {
-        logWarning("Asked to plot more often than once per time step; postponing the next plot.");
+        logWarning("The runner writes at most one snapshot per time step.");
         nextPlotAtStep = static_cast<double>(completedTimeSteps) + 1.0;
       }
       justWroteSnapshot = true;
@@ -1065,10 +1065,10 @@ exahype2::runner::Runner::runTimeLoop() {
       nextMinPlot += snapshotInterval;
       nextMaxPlot += snapshotInterval;
       if (nextMinPlot < minStamp) {
-        logWarning("Asked to plot more often than the time step size allows; postponing the next plot.");
+        logWarning("The runner writes at most one snapshot per time step.");
         nextMinPlot = minStamp + snapshotInterval;
       } else if (nextMaxPlot < maxStamp) {
-        logWarning("Asked to plot more often than the time step size allows; postponing the next plot.");
+        logWarning("The runner writes at most one snapshot per time step.");
         nextMaxPlot = maxStamp + snapshotInterval;
       }
       nextMaxPlot       = std::max(nextMaxPlot, nextMinPlot);

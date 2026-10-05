@@ -10,6 +10,7 @@
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/CompileTarget.h"
+#include "tarch/accelerator/ParallelFor.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::ader {
@@ -55,8 +56,11 @@ public:
     ComputePrecision* NOALIAS                    scratch,
     const Tables&                                tables,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const TeamWorkers&                           workers = TeamWorkers{}
   );
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getTeamScratchBytes(int teamThreads);
 
 private:
   friend class exahype2::dg::ader::tests::PredictorTest;
@@ -66,7 +70,8 @@ private:
     StoragePrecision* NOALIAS       cellState,
     const ComputePrecision* NOALIAS timeAveragedFlux,
     const SourceOfNode&             sourceOfNode,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const TeamWorkers&              workers = TeamWorkers{}
   );
 };
 
@@ -85,10 +90,10 @@ struct exahype2::dg::ader::PredictionCounts final {
 };
 
 /**
- * Runs the predictor of every listed cell and counts the cells whose Picard iteration stopped at
- * its sweep limit. With a limiter, DivergenceMarks is its status view, where a diverged cell marks
- * itself. Without a limiter, DivergenceMarks is an empty type and the reduction counts the
- * diverged cells.
+ * Runs the predictor of every listed cell on teams with threadsPerCell threads per cell. With a
+ * limiter, DivergenceMarks is its status view, where a cell whose Picard iteration diverged or
+ * stopped at its sweep limit marks itself. Without a limiter, DivergenceMarks is an empty type and
+ * the reduction counts those cells.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename DivergenceMarks>
 struct exahype2::dg::ader::PredictCells final {
@@ -102,6 +107,8 @@ struct exahype2::dg::ader::PredictCells final {
 
   peano4::Partition                           partition{};
   tarch::Span<const int>                      cells{};
+  int                                         numberOfTeams{0};
+  int                                         threadsPerCell{1};
   typename CellPool::View                     solution{};
   typename StatePool::View                    faceStates{};
   typename FluxPool::View                     faceFluxes{};
@@ -109,11 +116,16 @@ struct exahype2::dg::ader::PredictCells final {
   const double*                               pointSourceLocations{nullptr};
   ComputePrecision*                           predictorScratch{nullptr};
   int                                         predictorScratchSize{0};
+  int                                         predictorScratchChunks{0};
   DivergenceMarks                             divergenceMarks{};
   double                                      timeStamp{0.0};
   double                                      timeStepSize{0.0};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, PredictionCounts& accumulator) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+    int                            entry,
+    tarch::accelerator::TeamHandle team,
+    PredictionCounts&              accumulator
+  ) const;
 };
 TARGET_DECLARE_END
 

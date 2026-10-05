@@ -4,7 +4,6 @@
 
 #include "tarch/plotter/FileWriter.h"
 #include "tarch/plotter/Format.h"
-#include "tarch/plotter/TimeSeriesWriter.h"
 
 tarch::plotter::tests::FormatTest::FormatTest() :
   TestCase("tarch::plotter::tests::FormatTest") {}
@@ -51,20 +50,20 @@ tarch::plotter::tests::FormatTest::testTheDefaultFormatIsAvailable() {
   validateEquals(defaultIsVtkhdf, hdf5Available);
 }
 
+/**
+ * For every available format, createFileWriter() returns a writer of this format.
+ */
 void
 tarch::plotter::tests::FormatTest::testTheWritersOfAnAvailableFormatExist() {
-  const std::string directory = (tarch::tests::getWritableTestDirectory() / "FormatTest").string() + "/";
   for (const auto format :
        {tarch::plotter::Format::VTU,
         tarch::plotter::Format::HDF5,
         tarch::plotter::Format::NetCDF,
         tarch::plotter::Format::VTKHDF}) {
     if (tarch::plotter::isAvailable(format)) {
-      const auto fileWriter = tarch::plotter::createFileWriter(format, directory);
+      const auto fileWriter = tarch::plotter::createFileWriter(format);
       validateWithParams1(fileWriter != nullptr, tarch::plotter::toString(format));
-      validateWithParams1(fileWriter->isOpen(), tarch::plotter::toString(format));
-      const auto timeSeriesWriter = tarch::plotter::createTimeSeriesWriter(format);
-      validateWithParams1(timeSeriesWriter != nullptr, tarch::plotter::toString(format));
+      validateWithParams1(fileWriter->getFormat() == format, tarch::plotter::toString(format));
     }
   }
 }

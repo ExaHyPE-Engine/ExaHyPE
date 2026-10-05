@@ -29,7 +29,7 @@ namespace {
     runTestCollection(exahype2::getUnitTests());
 
     if (numberOfErrors != 0) {
-      logError("Unit tests failed: " << numberOfErrors << ".");
+      logError("The unit tests report " << numberOfErrors << " errors.");
       return EXIT_FAILURE;
     }
 
@@ -75,7 +75,7 @@ main(int argc, char** argv) {
       }
 
       if (tarch::hasNonCriticalAssertionBeenViolated()) {
-        logError("Non-critical assertion has been triggered while running the unit tests. Quit.");
+        logError("A non-critical assertion fails in the unit tests.");
         returnCode = EXIT_FAILURE;
       }
     }

@@ -23,7 +23,8 @@ namespace exahype2::dg::limiting {
 /**
  * The a-posteriori subcell limiter of one ADER-DG solver. A cell whose candidate fails the
  * physical admissibility test or the discrete maximum principle recomputes its step with its
- * first ring of neighbours on the subcell scheme. The second ring supplies its subgrid.
+ * first ring of neighbours on the subcell scheme. The second ring supplies its subgrid. The scheme
+ * follows Dumbser, Zanotti, Loubère and Diot, J. Comput. Phys. 278 (2014) 47-75.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::dg::limiting::SubcellLimiter final {
@@ -61,8 +62,8 @@ public:
   INLINE_METHOD void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid, const CellPool& solution);
 
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<int>::View getStatuses();
-  [[nodiscard]] INLINE_METHOD const int* downloadStatuses();
-  [[nodiscard]] INLINE_METHOD const StoragePrecision* downloadSubcells();
+  [[nodiscard]] INLINE_METHOD const StatusPool& downloadStatuses();
+  [[nodiscard]] INLINE_METHOD const CellPool& downloadSubcells();
   [[nodiscard]] INLINE_METHOD int getNumberOfTroubledCells() const;
   [[nodiscard]] INLINE_METHOD int getGlobalNumberOfTroubledCells() const;
   [[nodiscard]] INLINE_METHOD int getNumberOfRecomputedCells() const;
@@ -73,8 +74,9 @@ private:
   INLINE_METHOD void sampleSubcells(const peano4::Partition& partition);
   INLINE_METHOD void clearFaces(const peano4::Partition& partition);
   INLINE_METHOD void openStep(const peano4::Partition& partition, const CellPool& solution);
-  INLINE_METHOD void reduceReferenceExtrema(const peano4::Partition& partition);
-  [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics judgeCandidates(
+  INLINE_METHOD void reduceExtrema(tarch::Span<const int> cells, const CellPool& solution);
+  INLINE_METHOD void mergeNeighbourExtrema(const peano4::Partition& partition, bool mergeLastRound);
+  [[nodiscard]] INLINE_METHOD exahype2::dg::limiting::JudgedCells judgeCandidates(
     const peano4::Partition& partition,
     const CellPool&          solution,
     double                   timeStamp,
@@ -115,8 +117,8 @@ private:
   peano4::MigrationExchange<StoragePrecision> _subcellMigration{_subcells.getLocation()};
   peano4::MigrationExchange<int>              _statusMigration{_statuses.getLocation()};
 
-  std::vector<int>              _statusesOnHost{};
-  std::vector<StoragePrecision> _subcellsOnHost{};
+  StatusPool _statusesOnHost{exahype2::dg::limiting::NumberOfStatusEntries, tarch::MemoryLocation::Heap};
+  CellPool   _subcellsOnHost{SubcellScheme::SubcellValuesPerCell, tarch::MemoryLocation::Heap};
 
   /**
    * The slots of the cells whose status is not Regular and of the cells that recompute, one entry per cell.
@@ -131,6 +133,10 @@ private:
    * The number of troubled cells on all ranks at the end of the last closeTimeStep().
    */
   int _globalTroubledCells{0};
+  /**
+   * True while the reference extrema of every cell are the extrema of its solution.
+   */
+  bool _holdsExtremaOfSolution{false};
 
   /**
    * One evolved subgrid per scratch chunk of the recompute dispatch.

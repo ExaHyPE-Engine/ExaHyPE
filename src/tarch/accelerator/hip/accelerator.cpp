@@ -87,4 +87,15 @@ tarch::accelerator::copyFromPinnedMemory(
   std::memcpy(target, source, sizeInBytes);
 }
 
+/**
+ * Blocks until every launch and copy on the stream of the current device has completed. A
+ * parallelFor() on this backend returns before its launch completes; copyFrom() and every
+ * reduction wait for the stream themselves, so a caller waits here only before it reads device
+ * memory in another way, such as through MPI.
+ */
+void
+tarch::accelerator::waitForDevice() {
+  CHECK_HIP_ERROR(hipStreamSynchronize(getDeviceStream()));
+}
+
 #endif // defined(PEANO_WITH_GPU_BACKEND_HIP)

@@ -4,6 +4,8 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 
+#include "tarch/CompilerSpecificSettings.h"
+
 #include <sycl/sycl.hpp>
 
 namespace tarch::accelerator {
@@ -18,10 +20,16 @@ namespace tarch::accelerator {
   };
   using TeamHandle = SyclTeam;
 
-  inline constexpr int SyclLocalSize        = 256;
-  inline constexpr int SyclTeamScratchBytes = 16384;
+  inline constexpr int SyclLocalSize  = 256;
+  inline constexpr int ThreadsPerWarp = 32;
+  // A team launch runs one work group per team of at most SyclLocalSize work items with at most
+  // TeamScratchBytes of local memory. A launch with TeamRange::BackendDefault runs
+  // DefaultThreadsPerTeam work items.
+  inline constexpr int DefaultThreadsPerTeam = SyclLocalSize;
+  inline constexpr int TeamScratchBytes      = 16384;
 
   void* getSYCLQueue(int number);
+  INLINE_METHOD int getTeamScratchWords(int requested);
 } // namespace tarch::accelerator
 
 #endif

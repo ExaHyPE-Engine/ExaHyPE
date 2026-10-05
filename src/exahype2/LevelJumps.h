@@ -11,6 +11,12 @@ namespace exahype2 {
   template <typename Operation>
   struct ForEachLevelJump;
 
+  INLINE_METHOD bool holdsIntermediateFace(
+    const peano4::Partition& partition,
+    peano4::Adjacency        adjacency,
+    int                      level
+  );
+
   template <typename Operation>
   INLINE_METHOD void interpolateCoarseFaces(
     const peano4::Partition& partition,

@@ -109,8 +109,6 @@ theSolver.on_start_grid_initialisation(
     CurvilinearElastic.init_grid_step_implementation(my_scenario.domain_perturbations())
 )
 theSolver.add_includes(*PMLElastic.userIncludes())
-# The initial condition reads the curvilinear mapping and the NetCDF samplers of the host.
-theSolver.initialise_on_host()
 project.add_constant("PmlTop", 1, "int")
 
 project.add_solver(theSolver)

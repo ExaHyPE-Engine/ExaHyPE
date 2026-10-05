@@ -5,13 +5,11 @@
 
 namespace tarch::accelerator {
   TARGET_DECLARE
-  // The team scratch stores one partial value per thread of a custom team reduction.
-  constexpr int TeamScratchBytes = 16384;
+  INLINE_METHOD int getThreadOfTeam([[maybe_unused]] const OmptTeam& team) { return omp_get_thread_num(); }
 
-  struct OmptTeam final {
-    unsigned char* scratch{nullptr};
-  };
-  using TeamHandle = OmptTeam;
+  INLINE_METHOD unsigned char* getTeamScratch(const OmptTeam& team) { return team.scratch; }
+
+  INLINE_METHOD int getNumberOfThreadsPerTeam([[maybe_unused]] const OmptTeam& team) { return omp_get_num_threads(); }
 
   template <typename Functor>
   INLINE_METHOD void parallelFor([[maybe_unused]] const OmptTeam& team, const Range& range, const Functor functor) {
@@ -55,6 +53,32 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   TARGET_DECLARE_END
+
+  /**
+   * Returns the threads per team a launch asks for when it requests requested threads: Whole
+   * warps up to OmptThreadsPerTeam, or OmptThreadsPerTeam for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamThreads(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::OmptThreadsPerTeam;
+    }
+    assertion(requested > 0, requested);
+    const int warps = (requested + tarch::accelerator::ThreadsPerWarp - 1) / tarch::accelerator::ThreadsPerWarp;
+    return std::min(tarch::accelerator::OmptThreadsPerTeam, warps * tarch::accelerator::ThreadsPerWarp);
+  }
+
+  /**
+   * Returns the team scratch bytes of a launch that asks for requested bytes: Every team provides
+   * TeamScratchBytes.
+   */
+  INLINE_METHOD int getTeamScratchBytes(const int requested) {
+    assertion(
+      requested == tarch::accelerator::TeamRange::BackendDefault
+        or (requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes),
+      requested
+    );
+    return tarch::accelerator::TeamScratchBytes;
+  }
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
@@ -118,8 +142,9 @@ namespace tarch::accelerator {
     }
     const int device        = tarch::accelerator::getCurrentDevice();
     const int numberOfTeams = range.n;
-#pragma omp target teams num_teams(numberOfTeams) firstprivate(functor) device(device)
-#pragma omp parallel
+    const int threads       = tarch::accelerator::getTeamThreads(range.threads);
+#pragma omp target teams num_teams(numberOfTeams) thread_limit(threads) firstprivate(functor) device(device)
+#pragma omp parallel num_threads(threads)
     {
       alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
 #pragma omp allocate(teamScratch) allocator(omp_pteam_mem_alloc)

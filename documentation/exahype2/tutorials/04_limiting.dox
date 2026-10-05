@@ -122,7 +122,7 @@ the state then grows without bound, the reported maximum eigenvalue jumps by mor
 than an order of magnitude, and the time step collapses with it.
 
 You do not have to interrupt anything. Once the time step underflows, ExaHyPE
-trips a noncritical assertion on it, dumps the final state and shuts down within
+trips a non-critical assertion on it, dumps the final state and shuts down within
 seconds, and the non-zero exit status makes the run cell raise. The dumped
 snapshot is worth plotting: its densities and energies are many orders of
 magnitude away from anything physical, and both signs appear where only positive

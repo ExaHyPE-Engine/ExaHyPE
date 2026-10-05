@@ -63,8 +63,6 @@
 #endif
 #endif
 
-// Device code reads only variables declared with DEVICE_VARIABLE, and host code reads a separate
-// host copy. The OpenMP target backend needs TARGET_DECLARE around such a variable.
 #if (defined(__CUDA_ARCH__) or defined(__HIP_DEVICE_COMPILE__)) and not defined(PEANO_WITH_GPU_BACKEND_OMPT)
 #define DEVICE_VARIABLE __device__
 #else

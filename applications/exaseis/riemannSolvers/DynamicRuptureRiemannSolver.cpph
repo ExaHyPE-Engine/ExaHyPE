@@ -4,60 +4,8 @@
 #include "DynamicRuptureParameters.h"
 
 #include "tarch/Assertions.h"
-#include "tarch/accelerator/DeviceCopies.h"
-
-namespace {
-  TARGET_DECLARE
-  [[maybe_unused]] DEVICE_VARIABLE applications::exahype2::exaseis::FaultPlane faultPlaneOnDevice;
-
-  struct WriteFaultPlaneOnDevice final {
-    applications::exahype2::exaseis::FaultPlane faultPlane{};
-
-    INLINE_METHOD GPU_CALLABLE_METHOD void operator()([[maybe_unused]] const int workItem) const {
-      COMPILE_IF_ON_DEVICE(faultPlaneOnDevice = faultPlane;)
-    }
-  };
-  TARGET_DECLARE_END
-
-  [[maybe_unused]] const bool faultPlaneOnDeviceIsAdded = tarch::accelerator::addDeviceCopy<WriteFaultPlaneOnDevice>(
-    applications::exahype2::exaseis::FaultPlane::getHostCopy()
-  );
-} // namespace
-
-/**
- * Stores the fault plane on the host and copies it to every device copy.
- */
-INLINE_METHOD void
-applications::exahype2::exaseis::FaultPlane::set(const int normal, const double position) {
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
-  getStoredHostCopy() = FaultPlane{normal, position};
-  tarch::accelerator::uploadDeviceCopies();
-}
-
-/**
- * Returns the fault plane that set() stored last.
- */
-INLINE_METHOD const applications::exahype2::exaseis::FaultPlane&
-applications::exahype2::exaseis::FaultPlane::getHostCopy() {
-  return getStoredHostCopy();
-}
-
-INLINE_METHOD applications::exahype2::exaseis::FaultPlane&
-applications::exahype2::exaseis::FaultPlane::getStoredHostCopy() {
-  static FaultPlane hostCopy;
-  return hostCopy;
-}
 
 TARGET_DECLARE
-/**
- * Returns the device copy on the device and the host copy on the host.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaseis::FaultPlane
-applications::exahype2::exaseis::FaultPlane::get() {
-  COMPILE_IF_ON_DEVICE(return faultPlaneOnDevice;)
-  COMPILE_IF_ON_HOST(return getHostCopy();)
-}
-
 /**
  * Returns whether the face at faceCentre with the axis faceNormal lies within half a cell of the plane.
  */
@@ -67,6 +15,7 @@ applications::exahype2::exaseis::FaultPlane::containsFace(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const int                                    faceNormal
 ) const {
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
   return faceNormal == normal and std::abs(faceCentre[normal] - position) < 0.5 * cellSize[normal];
 }
 
@@ -91,7 +40,7 @@ applications::exahype2::exaseis::getBoxcar(const double coordinate, const Value 
 /**
  * Returns the frictional strength of the fault at x under normalStress after slip. The friction
  * coefficient drops linearly with the slip and with the time after the forced rupture. Outside the
- * cohesion box the fault is locked.
+ * cohesion box, a large cohesion locks the fault.
  */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD Value
@@ -239,7 +188,7 @@ applications::exahype2::exaseis::solveFaultInterface(
 /**
  * Solves the Riemann problem at every node of a face and returns the largest wave speed on it. A
  * face on the fault plane obeys the friction law. The boundary face FreeSurfaceFace is a free
- * surface, and every other boundary face absorbs.
+ * surface. Every other boundary face absorbs.
  */
 template <
   typename Shortcuts,
@@ -251,19 +200,17 @@ template <
 >
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaseis::solveDynamicRuptureRiemannProblem(
-  const Value* const                           QL,
-  const Value* const                           QR,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const int                                    normal,
-  const bool                                   isBoundaryFace,
-  const int                                    faceIndex,
-  Value* const                                 FL,
-  Value* const                                 FR
+  const Value* const QL,
+  const Value* const QR,
+  const double       t,
+  const int          normal,
+  const bool         isBoundaryFace,
+  const bool         isFaultFace,
+  const int          faceIndex,
+  Value* const       FL,
+  Value* const       FR
 ) {
-  const bool  isFaultFace = FaultPlane::get().containsFace(x, h, normal);
-  const Value reflection  = faceIndex == FreeSurfaceFace ? 1 : 0;
+  const Value reflection = faceIndex == FreeSurfaceFace ? 1 : 0;
   return solveRiemannProblemOnFaceNodes<Shortcuts, Value, NodesPerAxis, NumberOfUnknowns, NumberOfData>(
     QL,
     QR,

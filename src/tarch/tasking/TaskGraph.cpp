@@ -226,10 +226,7 @@ tarch::tasking::spawnTask(
     runAndDelete(task);
   } else {
     if (not loggedConservativeSpawnTaskFallback.exchange(true, std::memory_order_relaxed)) {
-      logWarning(
-        "OpenMP iterator dependencies are unavailable on this toolchain, so a task with dependencies waits for them "
-        "and runs inline. Expect degraded performance."
-      );
+      logWarning("The compiler does not support OpenMP iterator dependencies. The tasks with dependencies run slower.");
     }
 
     for (int dependencyIndex = 0; dependencyIndex < filteredInDependencies.getSize(); dependencyIndex++) {
@@ -286,10 +283,7 @@ tarch::tasking::waitForDependencies(const std::span<void* const> dependencies) {
   }
 
   if (not loggedConservativeDependencyWaitFallback.exchange(true, std::memory_order_relaxed)) {
-    logWarning(
-      "OpenMP dependent task waits are unavailable on this toolchain, so a dependency wait waits for every child "
-      "task. Expect degraded performance."
-    );
+    logWarning("The compiler does not support OpenMP task waits with dependencies. The task waits run slower.");
   }
 
 #pragma omp taskwait

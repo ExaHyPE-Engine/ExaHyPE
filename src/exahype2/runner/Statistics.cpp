@@ -140,7 +140,7 @@ namespace {
     {"Memory", "GPU Grid"},
     {"Memory", "CPU Solver Data"},
     {"Memory", "GPU Solver Data"},
-    {"Memory", "Used"},
+    {"Memory", "Resident"},
     {"Memory", "Free"},
   }};
 
@@ -149,18 +149,19 @@ namespace {
   }
 
   /**
-   * Renders every non-empty row under its section title. The free memory joins the line of the used
-   * memory if both are non-empty.
+   * Renders every non-empty row under its section title. The free memory joins the line of the
+   * resident memory if both are non-empty.
    */
   std::vector<std::string> renderRows(const std::array<std::string, exahype2::runner::GridSnapshot::RowCount>& texts) {
-    using GridSnapshot  = exahype2::runner::GridSnapshot;
-    const bool joinFree = not texts[GridSnapshot::MemoryUsed].empty() and not texts[GridSnapshot::MemoryFree].empty();
+    using GridSnapshot = exahype2::runner::GridSnapshot;
+    const bool joinFree =
+      not texts[GridSnapshot::MemoryResident].empty() and not texts[GridSnapshot::MemoryFree].empty();
     exahype2::runner::Table report;
     for (int row = 0; row < GridSnapshot::RowCount; row++) {
       if (texts[row].empty() or (joinFree and row == GridSnapshot::MemoryFree)) {
         continue;
       }
-      const auto text = joinFree and row == GridSnapshot::MemoryUsed
+      const auto text = joinFree and row == GridSnapshot::MemoryResident
         ? texts[row] + " · Free " + texts[GridSnapshot::MemoryFree]
         : texts[row];
       report.add(RowLabels[row].section, RowLabels[row].label, text);
@@ -497,7 +498,7 @@ exahype2::runner::collectGridSnapshot() {
     };
   }
 
-  entries[GridSnapshot::MemoryUsed] = {
+  entries[GridSnapshot::MemoryResident] = {
     exahype2::runner::Format::getMemory(statistics.getGlobalProcessMemoryUsageInBytes()),
     "",
     ""

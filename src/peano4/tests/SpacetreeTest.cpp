@@ -50,13 +50,15 @@ peano4::tests::SpacetreeTest::run() {
   testMethod(testARankWithoutCellsReportsNoLevel);
   testMethod(testRejectedRequestsChangeNoPlan);
   testMethod(testARegridWithLiveDataReturnsTheSlotMoves);
+  testMethod(testTheTreeBytesCountTheSpareTree);
+  testMethod(testThePartitionBytesCountTheFreedSlots);
+  testMethod(testTheTreeBytesCountTheEvaluatedPlan);
   testMethod(testTheCellLookupFindsEveryCellAndNothingElse);
   testMethod(testThePeriodicBoundariesReturnTheInitialisedValue);
 }
 
 /**
- * Before the first build every non-empty set of requests changes the plan, and on the level-one grid
- * an erase of the root changes nothing while a refinement does.
+ * requestsChangePlan() returns true only for a request set that changes the plan.
  */
 void
 peano4::tests::SpacetreeTest::testRejectedRequestsChangeNoPlan() {
@@ -104,8 +106,8 @@ peano4::tests::SpacetreeTest::testRejectedRequestsChangeNoPlan() {
 }
 
 /**
- * With live data, a prolongation or a receive fills every new fine cell of a refinement, and a
- * restriction or a receive fills every new coarse cell of an erase.
+ * A regrid with live data keeps the slots of the surviving cells and fills every new cell by one
+ * prolongation, one restriction or one receive.
  */
 void
 peano4::tests::SpacetreeTest::testARegridWithLiveDataReturnsTheSlotMoves() {
@@ -150,6 +152,74 @@ peano4::tests::SpacetreeTest::testARegridWithLiveDataReturnsTheSlotMoves() {
     coarseCellsAfterErase + peano4::tests::getGlobalSumOf(getNumberOfLocalCellsOfLevel(partition, Depth + 1))
   );
   spacetree.finishRegrid();
+}
+
+/**
+ * After a refinement and the erase back the tree bytes count the standing tree and the spare tree
+ * that the next regrid reuses.
+ */
+void
+peano4::tests::SpacetreeTest::testTheTreeBytesCountTheSpareTree() {
+  constexpr int Depth = 1;
+  peano4::tests::buildRegularGrid(Depth);
+  auto&             spacetree      = peano4::Spacetree::getInstance();
+  const std::size_t bytesOfOneTree = spacetree.getStatistics().treeBytes;
+  validate(bytesOfOneTree > sizeof(peano4::topology::Tree));
+  spacetree.markPersistentDataLive();
+
+  peano4::Regrid regrid;
+  validateTrue(spacetree.regrid({peano4::tests::getRefinementOfCentreCell(Depth)}, regrid));
+  spacetree.finishRegrid();
+  validateTrue(spacetree.regrid(peano4::tests::getErasureOfEveryCell(Depth), regrid));
+  spacetree.finishRegrid();
+  validateWithParams2(
+    spacetree.getStatistics().treeBytes > 3 * bytesOfOneTree / 2,
+    spacetree.getStatistics().treeBytes,
+    bytesOfOneTree
+  );
+}
+
+/**
+ * finishRegrid() adds the growth of the free list after an erase to the partition bytes.
+ */
+void
+peano4::tests::SpacetreeTest::testThePartitionBytesCountTheFreedSlots() {
+  constexpr int Depth = 1;
+  peano4::tests::buildRegularGrid(Depth);
+  auto&       spacetree  = peano4::Spacetree::getInstance();
+  const auto& statistics = spacetree.getStatistics();
+  spacetree.markPersistentDataLive();
+
+  peano4::Regrid regrid;
+  validateTrue(spacetree.regrid({peano4::tests::getRefinementOfCentreCell(Depth)}, regrid));
+  spacetree.finishRegrid();
+  validateTrue(spacetree.regrid(peano4::tests::getErasureOfEveryCell(Depth), regrid));
+  const std::size_t bytesBeforeFinish = statistics.partitionBytes.host;
+  spacetree.finishRegrid();
+  validateWithParams2(
+    statistics.partitionBytes.host >= bytesBeforeFinish,
+    statistics.partitionBytes.host,
+    bytesBeforeFinish
+  );
+  const int grownBytes = static_cast<int>(statistics.partitionBytes.host - bytesBeforeFinish);
+  validateWithParams1(peano4::tests::getGlobalSumOf(grownBytes) > 0, grownBytes);
+}
+
+/**
+ * The tree bytes count the plan that requestsChangePlan() evaluates and keeps for the next regrid.
+ */
+void
+peano4::tests::SpacetreeTest::testTheTreeBytesCountTheEvaluatedPlan() {
+  constexpr int Depth = 1;
+  peano4::tests::buildRegularGrid(Depth);
+  auto&             spacetree   = peano4::Spacetree::getInstance();
+  const std::size_t bytesBefore = spacetree.getStatistics().treeBytes;
+  validateTrue(spacetree.requestsChangePlan({peano4::tests::getRefinementOfCentreCell(Depth)}));
+  validateWithParams2(
+    spacetree.getStatistics().treeBytes > bytesBefore,
+    spacetree.getStatistics().treeBytes,
+    bytesBefore
+  );
 }
 
 /**

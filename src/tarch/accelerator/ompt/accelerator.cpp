@@ -73,4 +73,10 @@ tarch::accelerator::copyFromPinnedMemory(
   std::memcpy(target, source, sizeInBytes);
 }
 
+/**
+ * A target region of this backend returns after its completion, so there is nothing to wait for.
+ */
+void
+tarch::accelerator::waitForDevice() {}
+
 #endif // defined(PEANO_WITH_GPU_BACKEND_OMPT)

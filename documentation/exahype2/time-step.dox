@@ -46,25 +46,24 @@ exahype2::fv::Solver::performTimeStep():
 1. exahype2::TimeStepping::startTimeStep() returns the time step size.
 2. peano4::HaloExchange::post() sends the own halves of the exchanged faces to the neighbour ranks with MPI.
 3. exahype2::fv::Solver::applyBoundaryConditions() runs exahype2::fv::ApplyBoundaryConditions on the boundary faces.
-4. exahype2::fv::FiniteVolume::applyBoundaryConditions() calls `Derived::boundaryConditions()`.
+4. exahype2::fv::FiniteVolumeScheme::applyBoundaryConditions() calls `Derived::boundaryConditions()`.
 5. exahype2::interpolateCoarseFaces() runs exahype2::fv::InterpolateHaloHalves on the local level jumps.
-6. exahype2::fv::Solver::updatePatches() updates the local cells.
+6. exahype2::fv::Solver::updatePatches() updates the patches of the local cells in place.
 7. peano4::HaloExchange::wait() writes the halves of the neighbour ranks.
 8. exahype2::interpolateCoarseFaces() runs on the remote level jumps.
-9. exahype2::fv::Solver::updatePatches() updates the remote cells.
-10. `std::swap()` turns the updated patches into the solution.
-11. exahype2::fv::Solver::projectOntoFaces() copies the outer layers of every patch into its own face halves.
-12. exahype2::restrictFineFaces() runs exahype2::fv::RestrictHaloHalves.
-13. exahype2::TimeStepping::advanceTimeStamp() adds the time step size to the time stamp.
-14. exahype2::fv::Solver::reduceMeshWidths() reduces the mesh widths across the ranks.
-15. exahype2::fv::Solver::proposeTimeStepSize() sets the size of the next step.
-16. exahype2::fv::Solver::measureError() records the error norms when a snapshot is due.
-17. exahype2::RefinementVotes::voteOnEveryCell() calls `Derived::refinementCriterion()`, except in the first time step after a regrid.
+9. exahype2::fv::Solver::updatePatches() updates the patches of the remote cells in place.
+10. exahype2::fv::Solver::projectOntoFaces() copies the outer layers of every patch into its own face halves.
+11. exahype2::restrictFineFaces() runs exahype2::fv::RestrictHaloHalves.
+12. exahype2::TimeStepping::advanceTimeStamp() adds the time step size to the time stamp.
+13. exahype2::fv::Solver::reduceMeshWidths() reduces the mesh widths across the ranks.
+14. exahype2::fv::Solver::proposeTimeStepSize() sets the size of the next step.
+15. exahype2::fv::Solver::measureError() records the error norms when a snapshot is due.
+16. exahype2::RefinementVotes::voteOnEveryCell() calls `Derived::refinementCriterion()`, except in the first time step after a regrid.
 
 exahype2::fv::Solver::updatePatches():
 
-1. exahype2::fv::UpdatePatches calls exahype2::fv::FiniteVolume::update() on every cell of the list.
-2. exahype2::fv::timestepping::SingleStep::apply(), the `Derived::TimeIntegration`, visits every volume:
+1. exahype2::fv::UpdatePatches calls exahype2::fv::FiniteVolumeScheme::computeVolumeUpdate() on every volume of every cell of the list, through exahype2::fv::FiniteVolumeScheme::update() on the host and with one thread per volume on a device.
+2. exahype2::fv::timestepping::SingleStep::applyToVolume(), the `Derived::TimeIntegration`, advances one volume:
    1. `Derived::sourceTerm()` adds the source.
    2. `Derived::Reconstruction::accumulateFluxDivergence()` adds the flux divergence.
    3. exahype2::fv::reconstruction::Constant::accumulateFluxDivergence() calls `Derived::diffusiveSourceTerm()`.
@@ -72,7 +71,7 @@ exahype2::fv::Solver::updatePatches():
    5. With exahype2::terms::HasRiemannSolver, exahype2::fv::solveRiemannProblemOnVolumeFace() calls `Derived::solveRiemannProblem()`.
    6. Without exahype2::terms::HasRiemannSolver, a Rusanov flux calls `Derived::flux()`, `Derived::nonconservativeProduct()` and `Derived::maxEigenvalue()`.
 3. `Derived::postprocessUpdatedPatch()` runs on the updated patch.
-4. exahype2::fv::FiniteVolume::raiseMaxEigenvalue() calls `Derived::maxEigenvalue()` on the updated patch under an adaptive rule.
+4. exahype2::fv::FiniteVolumeScheme::getMaxEigenvalueOfVolume() calls `Derived::maxEigenvalue()` on every updated volume under an adaptive rule.
 5. tarch::accelerator::parallelReduce() reduces the wave speeds over the cells with exahype2::MaxEigenvalueReduction.
 
 # Discontinuous Galerkin faces
@@ -130,12 +129,12 @@ exahype2::dg::ader::Solver::predict():
    2. exahype2::dg::ader::LinearPredictor::evaluateFlux() calls `Derived::flux()` for every Taylor term.
    3. exahype2::dg::ader::LinearPredictor::addNonconservativeProduct() calls `Derived::nonconservativeProduct()` for every Taylor term.
    4. exahype2::dg::ader::LinearPredictor::applyMaterialParameterMatrix() calls `Derived::multiplyMaterialParameterMatrix()` for every Taylor term.
-   5. exahype2::dg::ader::LinearPredictor::evaluateSource() calls `Derived::sourceTerm()` for every Taylor term.
+   5. exahype2::dg::ader::LinearPredictor::overwriteStateWithLinearSource() calls `Derived::sourceTerm()`.
 4. For a nonlinear `Derived`, exahype2::dg::ader::NonlinearPredictor::predict() repeats Picard sweeps until the residual falls below `Derived::PicardResidualTolerance` or the sweeps reach their limit:
    1. exahype2::dg::ader::NonlinearPredictor::evaluateSpaceTimeFlux() calls `Derived::flux()`.
    2. exahype2::dg::ader::NonlinearPredictor::evaluateSpaceTimeSource() calls `Derived::sourceTerm()`, `Derived::diffusiveSourceTerm()` and `Derived::nonconservativeProduct()`.
    3. exahype2::dg::ader::NonlinearPredictor::solvePicardSystem() returns the residual of the sweep.
-   4. exahype2::dg::ader::NonlinearPredictor::averageOverTime() averages the space-time values over the time step after the last sweep.
+   4. exahype2::dg::ader::NonlinearPredictor::averageStateOverTime() averages the space-time state over the time step after the last sweep.
 5. Both predictors write the time-averaged face states and face fluxes into the own face halves with exahype2::dg::extrapolateNodalFieldToFacePair().
 6. exahype2::dg::ader::Predictor::subtractTimeAveragedVolumeIntegral() applies the time-averaged flux divergence and source to the solution.
 7. exahype2::dg::ader::PredictCells marks the limiter status of a cell whose Picard iteration diverged.
@@ -184,7 +183,7 @@ exahype2::dg::limiting::SubcellLimiter::recompute():
 3. exahype2::dg::limiting::SubcellLimiter::exchangeFaces() sends the subgrid halo halves to the neighbour ranks.
 4. exahype2::dg::limiting::RecomputeSubcells runs on the local cells while the halves travel, then on the remote cells.
 5. exahype2::dg::limiting::SubcellScheme::recompute() runs on every recomputed cell:
-   1. exahype2::dg::limiting::SubcellScheme::advanceSubcells() runs exahype2::fv::FiniteVolume::update() on the subgrid.
+   1. exahype2::dg::limiting::SubcellScheme::advanceSubcells() runs exahype2::fv::FiniteVolumeScheme::update() on the subgrid.
    2. exahype2::dg::limiting::SubcellScheme::SubgridSolver calls the PDE terms of `Derived` for that update.
    3. exahype2::dg::limiting::SubcellScheme::SubgridSolver calls `Derived::solveSubcellRiemannProblem()` for the Riemann problem.
    4. exahype2::dg::limiting::SubcellScheme::advanceSubcells() repeats the step with `Derived::FallbackReconstruction` when `Derived::isPhysicallyAdmissible()` rejects a subcell.
@@ -241,8 +240,8 @@ exahype2::TimeStepping starts with a time step size of zero, so the first time s
 exahype2::runner::Runner::runTimeLoop() calls exahype2::runner::Runner::applyMeshUpdates() before the next plot or time step when the votes of the last phase change the refinement plan.
 
 1. exahype2::runner::Runner::hasPendingMeshUpdates() calls peano4::Spacetree::requestsChangePlan().
-2. exahype2::runner::Runner::applyMeshUpdates() repeats exahype2::runner::Runner::runMeshUpdateSweep() while the votes change the plan.
-3. exahype2::runner::Runner::runMeshUpdateSweep() calls exahype2::runner::Runner::runStep() with exahype2::runner::Runner::Step::DynamicAMR.
+2. exahype2::runner::Runner::applyMeshUpdates() repeats exahype2::runner::Runner::runMeshUpdateStep() while the votes change the plan.
+3. exahype2::runner::Runner::runMeshUpdateStep() calls exahype2::runner::Runner::runStep() with exahype2::runner::Runner::Step::DynamicAMR.
 4. exahype2::runner::Runner::regrid() calls peano4::Spacetree::regrid().
 5. peano4::Spacetree::regrid() applies the requests to the refinement plan.
 6. peano4::Spacetree::regrid() assigns blocks to other ranks when dynamic load balancing is on.

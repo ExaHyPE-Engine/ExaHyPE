@@ -10,7 +10,6 @@
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/ParallelFor.h"
@@ -108,10 +107,10 @@ exahype2::tests::RefinementVotesTest::run() {
   testMethod(testTheCriterionDecidesWithinTheAdmissibleSizes);
   testMethod(testARefineVoteAtTheSmallestSizeTurnsIntoKeep);
   testMethod(testAnEraseVoteThatWouldPassTheLargestSizeTurnsIntoKeep);
-  testMethod(testTheCountSkipsKeepVotes);
   testMethod(testTheVotesOnEveryCellReachTheRequests);
   testMethod(testGridConstructionRefinesEveryCellAboveTheLargestSize);
   testMethod(testOnlyTheListedCellsVote);
+  testMethod(testLimitsThatFixTheMeshSkipTheVotes);
 }
 
 void
@@ -159,24 +158,6 @@ exahype2::tests::RefinementVotesTest::testAnEraseVoteThatWouldPassTheLargestSize
     getNumberOf(getVoteOf(exahype2::RefinementCommand::Erase, width)),
     getNumberOf(exahype2::RefinementCommand::Keep)
   );
-}
-
-void
-exahype2::tests::RefinementVotesTest::testTheCountSkipsKeepVotes() {
-  const int                         cells[]    = {0, 1, 2};
-  const exahype2::RefinementCommand commands[] = {
-    exahype2::RefinementCommand::Keep,
-    exahype2::RefinementCommand::Refine,
-    exahype2::RefinementCommand::Erase
-  };
-
-  const exahype2::CountRefinementVotes count{tarch::Span<const int>{cells, 3}, commands};
-  int                                  votes = 0;
-  for (int entry = 0; entry < 3; entry++) {
-    count(entry, votes);
-  }
-
-  validateEquals(votes, 2);
 }
 
 void
@@ -268,4 +249,26 @@ exahype2::tests::RefinementVotesTest::testOnlyTheListedCellsVote() {
     requests
   );
   validate(not requests.getRefinementRequests(partition).empty());
+}
+
+void
+exahype2::tests::RefinementVotesTest::testLimitsThatFixTheMeshSkipTheVotes() {
+  const auto&      partition     = buildGrid();
+  const int        numberOfSlots = partition.getNumberOfSlots();
+  const double     width         = partition.getWidthOfLevel(partition.getMaximumLevel(), 0);
+  exahype2::Limits fixingLimits;
+  fixingLimits.minAdmissiblePatchSize = width;
+  fixingLimits.maxAdmissiblePatchSize = width;
+  validate(not exahype2::RefinementVotes::canRefineOrErase(partition, fixingLimits));
+  validate(exahype2::RefinementVotes::canRefineOrErase(partition, getLimitsAroundTheGrid()));
+
+  Pool pool(1, tarch::MemoryLocation::Device);
+  pool.reserve(numberOfSlots);
+  writeCommandIntoEveryCell(pool, partition, exahype2::RefinementCommand::Refine);
+  exahype2::RefinementVotes    votes;
+  exahype2::RefinementRequests requests;
+  requests.clear(numberOfSlots);
+  votes.voteOnEveryCell<StubSolver>(partition, std::as_const(pool).getView(), fixingLimits, TimeStamp, requests);
+  validate(requests.getRefinementRequests(partition).empty());
+  votes.release();
 }

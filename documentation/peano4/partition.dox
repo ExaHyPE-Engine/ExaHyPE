@@ -4,71 +4,73 @@
 
 \tableofcontents
 
-peano4::Spacetree owns the tree of one rank, cuts the tree along the
-space-filling curve into one peano4::Partition per rank and runs every regrid.
-An application reads the partition of its rank and stores its data in pools
-indexed by the slots of that partition. There is no grid sweep: a phase runs
-dispatches over the spans of the partition.
+peano4::Spacetree owns the tree of one rank. It cuts the tree along the
+space-filling curve into one peano4::Partition per rank. It runs every regrid.
+An application reads the partition of its rank. It stores its data in pools
+that the slots of that partition index. A phase runs dispatches over the spans
+of the partition.
 
 @image html documentation/peano4/partition.svg
 
-The figure shows, from left to right, the spacetree cut along the curve into
-the partitions of three ranks; the cells and faces of one partition with their
-slots, the faces a neighbour rank holds too and one level jump; and the slot
-moves of one regrid.
+The figure shows from left to right:
+
+- the spacetree cut along the curve into the partitions of three ranks,
+- the cells and faces of one partition with their slots, the faces a
+  neighbour rank holds too and one level jump,
+- the slot moves of one regrid.
 
 # Cells, faces and level jumps
 
-- A cell is an unrefined cell of the tree the rank owns. Its slot survives
-  every regrid that keeps the cell. peano4::Partition::getCellLevel(),
+- A cell is an unrefined cell of the tree the rank owns. A cell keeps its
+  slot across every regrid that keeps the cell. peano4::Partition::getCellLevel(),
   peano4::Partition::getCellLattice(), peano4::Partition::getCellCentre() and
   peano4::Partition::getCellWidth() return its level, its integer lattice
   position on that level and the geometry the kernel derives from them.
   peano4::Partition::getCellFace() returns the slot of the face with number
-  `n`; the faces below `DIMENSIONS` are the lower faces along the axes, the
-  faces from `DIMENSIONS` on the upper ones.
-- A face is numbered afresh by every regrid. peano4::Partition::getFaceKind()
+  `n`. The faces below `DIMENSIONS` are the lower faces along the axes. The
+  faces from `DIMENSIONS` on are the upper ones.
+- Every regrid numbers the faces afresh. peano4::Partition::getFaceKind()
   returns peano4::FaceKind::Interior, `Boundary`, `Hanging` (the fine face of
   a level jump), `Coarse` (the coarse face of a level jump) or
   `Intermediate` (a face of a chain of level jumps that no cell holds).
   peano4::Partition::getFaceCell() returns the cell on the lower or the upper
-  side of the face; a side without a cell of this rank holds -1.
+  side of the face. It returns -1 for a side without a cell of this rank.
 - A peano4::LevelJump names a coarse face, the side of its coarse cell and
   its fine faces in subface order.
 - A face two ranks hold appears in the partition of both ranks, each with its
   own cell on one side. peano4::Partition::getNeighbours() lists the
-  neighbour ranks and peano4::Partition::getExchangedFaces() the faces this
-  rank and the neighbour hold, in the canonical order (level, normal, lattice)
-  both ranks derive without agreeing on it.
+  neighbour ranks. peano4::Partition::getExchangedFaces() lists the faces that
+  this rank and a neighbour hold in the canonical order (level, normal,
+  lattice). Both ranks derive that order without a message.
 
 peano4::Spacetree::getCellAt() returns the cell of a level and lattice
-position, so an application finds the cell that holds a position.
+position. An application finds the cell that holds a position with it.
 
 # Spans
 
-Every list of the partition is ordered so that a group an application loops
-over is one contiguous span. A cell, face or level jump of
-peano4::Adjacency::Local reads the data of this rank only, one of
-peano4::Adjacency::Remote reads a face half a neighbour rank sends.
+The partition orders every list so that a group an application loops over is
+one contiguous span. peano4::Adjacency::Local names a cell, face or level jump
+that reads the data of this rank only. peano4::Adjacency::Remote names one
+that reads a face half a neighbour rank sends.
 
-- peano4::Partition::getCells() returns every cell, `getCells(adjacency)`
-  the local or the remote cells and `getCells(adjacency, level)` those of one
-  level, for an application that steps the levels one at a time.
+- peano4::Partition::getCells() returns every cell. `getCells(adjacency)`
+  returns the local or the remote cells. `getCells(adjacency, level)` returns
+  those of one level for an application that steps the levels one at a time.
 - peano4::Partition::getFaces() returns the local or the remote faces of one
   kind, or of a run of kinds in the order `Interior, Boundary, Hanging,
   Coarse, Intermediate`.
 - peano4::Partition::getLevelJumps() returns the local or the remote level
-  jumps, or those whose coarse face lies on one level.
+  jumps, or those whose coarse face lies on one level or on a run of levels.
 
-The remote groups follow the local groups in every list, so an application
-runs the local groups while the halo messages travel and the remote groups
+The remote groups follow the local groups in every list. An application runs
+the local groups while MPI transfers the halo messages and the remote groups
 after peano4::HaloExchange::wait().
 
 # One step
 
-The pseudocode names every call an application needs; `n` runs over the faces
-of a cell and `solution` and `halo` are pools with one chunk per cell slot and
-per face.
+The pseudocode names every call an application needs. `n` runs over the faces
+of a cell. `solution` and `halo` are pools with one chunk per cell slot and per
+face.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 const peano4::Partition& partition = peano4::Spacetree::getInstance().getPartition();
@@ -90,13 +92,12 @@ if (peano4::Spacetree::getInstance().regrid(requests, regrid)) { migration.migra
 
 The host reads the partition of peano4::Spacetree::getPartition(). A kernel
 copies peano4::Partition::onDevice() by value and reads one cell or face
-through the getters that take a slot or a face; in a CPU build both are the
-same object. Every array exists once per memory location that reads it.
+through the getters that take a slot or a face. In a CPU build both are the
+same object. Every array exists once in each memory from which code reads it.
 
 Every data type of an application is one tarch::accelerator::ChunkedMemoryPool
-per rank, allocated in device memory when a GPU backend is active and in heap
-memory otherwise. `pool.getChunk(slot)` is the data of the entity at that
-slot.
+per rank. The pool lies in device memory with a GPU backend and in heap memory
+otherwise. `pool.getChunk(slot)` returns the data of the entity at that slot.
 
 # The regrid
 
@@ -105,10 +106,10 @@ records, rebuilds the partition and fills a peano4::Regrid: the prolongations
 (the parent's old slot, the child's new slot and its position), the
 restrictions (the parent's new slot and the children's old slots), the sends
 and receives per neighbour rank in canonical order, the slots the regrid frees
-and the slots it creates. A new slot never reuses a slot freed in the same
-regrid, so every dispatch of the transfer reads and writes disjoint slots of
-the same pool. peano4::MigrationExchange::migrate() moves one pool through the
-record; peano4::Spacetree::finishRegrid() closes the regrid once every pool
-has moved.
+and the slots it creates. A new slot never reuses a slot that the same regrid
+frees. Every dispatch of the transfer therefore reads and writes disjoint slots
+of one pool. peano4::MigrationExchange::migrate() moves one pool through the
+record. peano4::Spacetree::finishRegrid() closes the regrid after migrate()
+moves the last pool.
 
 */

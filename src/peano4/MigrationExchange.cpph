@@ -4,9 +4,11 @@
 #include "peano4/communication/CommunicationManager.h"
 #include "peano4/communication/MigrationExchangeKernels.h"
 #include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
 #include "tarch/Termination.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/mpi/Request.h"
 
 template <typename T>
@@ -19,10 +21,10 @@ INLINE_METHOD peano4::MigrationExchange<T>::MigrationExchange(const tarch::Memor
   _receiveBuffer(location) {}
 
 /**
- * Fills the slots of the cells the regrid creates with the device functions copy(slot, target),
- * interpolateFromParent(parentSlot, target, childPosition) and restrictFromChildren(childSlots,
- * target) of transfer. No new slot reuses an old slot, so the local prolongations and restrictions
- * run while the messages travel. Every rank calls this function at the same time.
+ * Fills the slots of the cells that the regrid creates through the device functions copy(slot,
+ * target), interpolateFromParent(parentSlot, target, childPosition) and
+ * restrictFromChildren(childSlots, target) of the transfer. The fills on this rank run while the
+ * messages travel and write no slot that a message reads. Every rank calls this at the same time.
  */
 template <typename T>
 template <typename Transfer>
@@ -86,6 +88,8 @@ peano4::MigrationExchange<T>::postTransfers(
       tarch::accelerator::Range(static_cast<int>(sentCells.size())),
       peano4::communication::GatherChunks<T, Transfer>{_sentCells.getData(), _sendBuffer.getData(), transfer, chunkSize}
     );
+    // The sends below read the send buffer without a copy. The gather has to be complete first.
+    tarch::accelerator::waitForDevice();
   }
 
   MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
@@ -99,7 +103,7 @@ peano4::MigrationExchange<T>::postTransfers(
     constexpr auto    LargestMessage = static_cast<std::size_t>(std::numeric_limits<int>::max());
     if (sentValues * sizeof(T) > LargestMessage or receivedValues * sizeof(T) > LargestMessage) {
       tarch::terminateWithError(
-        "The migration message to rank " + std::to_string(rankTransfer.rank) + " exceeds one message."
+        "The migration message to rank " + std::to_string(rankTransfer.rank) + " must fit into one MPI message."
       );
     }
     if (receivedValues > 0) {
@@ -156,7 +160,7 @@ peano4::MigrationExchange<T>::receiveTransfers(Pool& pool) {
 }
 
 /**
- * Frees every buffer. The tag stays reserved for the next migrate().
+ * Frees every buffer and the MPI requests. The tag stays reserved for the next migrate().
  */
 template <typename T>
 INLINE_METHOD void
@@ -167,6 +171,7 @@ peano4::MigrationExchange<T>::release() {
   _receivedSlots.release();
   _sendBuffer.release();
   _receiveBuffer.release();
+  _requests = std::vector<MPI_Request>{};
 }
 
 template <typename T>
@@ -179,5 +184,6 @@ template <typename T>
 INLINE_METHOD tarch::AllocatedBytes
 peano4::MigrationExchange<T>::getAllocatedBytes() const noexcept {
   return _prolongations.getAllocatedBytes() + _restrictions.getAllocatedBytes() + _sentCells.getAllocatedBytes()
-    + _receivedSlots.getAllocatedBytes() + _sendBuffer.getAllocatedBytes() + _receiveBuffer.getAllocatedBytes();
+    + _receivedSlots.getAllocatedBytes() + _sendBuffer.getAllocatedBytes() + _receiveBuffer.getAllocatedBytes()
+    + tarch::AllocatedBytes::onHost(tarch::getAllocatedBytesOf(_requests));
 }

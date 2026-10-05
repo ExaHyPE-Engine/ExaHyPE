@@ -8,6 +8,8 @@
 #include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
+#include "tarch/accelerator/ChunkedMemoryPool.h"
+#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/plotter/Format.h"
@@ -26,13 +28,31 @@ namespace {
   }
 
   /**
-   * Deletes the output directory on the global master once every rank has read its piece back.
+   * Deletes the output directory on the global master once every rank has read its file back.
    */
   void deleteOutputDirectory(const std::string& outputDirectory) {
     tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       std::filesystem::remove_all(outputDirectory);
     }
+  }
+
+  /**
+   * Returns a pool in host memory with one chunk of chunkSize entries per slot of the partition and
+   * value in every entry.
+   */
+  template <typename T>
+  tarch::accelerator::ChunkedMemoryPool<T> getFilledPool(
+    const peano4::Partition& partition,
+    const int                chunkSize,
+    const T                  value
+  ) {
+    tarch::accelerator::ChunkedMemoryPool<T> pool(chunkSize, tarch::MemoryLocation::Heap);
+    pool.reserve(partition.getNumberOfSlots());
+    for (int slot = 0; slot < pool.getCapacity(); slot++) {
+      std::fill_n(pool.getChunk(slot), chunkSize, value);
+    }
+    return pool;
   }
 } // namespace
 
@@ -84,12 +104,10 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOneP
   constexpr int                   StatusEntries   = 4;
   constexpr int                   SubcellStatus   = 2;
   constexpr std::array<double, 2> Nodes{0.25, 0.75};
-  const int                       valuesPerSlot        = VolumesPerPatch * ValuesPerVolume;
-  const int                       subcellValuesPerSlot = peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerVolume;
-  const auto                      numberOfSlots        = static_cast<std::size_t>(partition.getNumberOfSlots());
-  const std::vector<double>       values(numberOfSlots * valuesPerSlot, 1.0);
-  const std::vector<double>       subcellValues(numberOfSlots * subcellValuesPerSlot, 2.0);
-  const std::vector<int>          statuses(numberOfSlots * StatusEntries, SubcellStatus);
+  constexpr int                   SubcellValuesPerCell = peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerVolume;
+  const auto                      values        = getFilledPool(partition, VolumesPerPatch * ValuesPerVolume, 1.0);
+  const auto                      subcellValues = getFilledPool(partition, SubcellValuesPerCell, 2.0);
+  const auto                      statuses      = getFilledPool(partition, StatusEntries, SubcellStatus);
   const std::string               outputDirectory =
     (tarch::tests::getWritableTestDirectory() / "PatchPlotterNodalTest").string() + "/";
   std::filesystem::create_directories(outputDirectory + "patch/");
@@ -97,32 +115,29 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOneP
   plotter.plotNodes<VolumesPerAxis, ValuesPerVolume, SubcellsPerAxis, double>(
     partition,
     cells,
-    values.data(),
-    valuesPerSlot,
+    values,
     Nodes.data(),
-    subcellValues.data(),
-    subcellValuesPerSlot,
-    statuses.data(),
-    StatusEntries,
+    &subcellValues,
+    &statuses,
     SubcellStatus,
     0.5,
     tarch::plotter::Format::VTU,
     outputDirectory
   );
 
-  const std::filesystem::path piece = std::filesystem::path(outputDirectory) / "patch"
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch"
     / ("PatchPlotterNodalTest-0_500000-rank-" + std::to_string(rank) + ".vtu");
-  validateWithParams1(std::filesystem::exists(piece), piece.string());
-  const std::string content        = getFileContent(piece);
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  const std::string content        = getFileContent(vtuPath);
   const int         numberOfCells  = cells.size * peano4::power(VolumesPerAxis - 1, DIMENSIONS);
   const int         numberOfPoints = cells.size * VolumesPerPatch;
   validateWithParams1(
     content.find("NumberOfCells=\"" + std::to_string(numberOfCells) + "\"") != std::string::npos,
-    piece.string()
+    vtuPath.string()
   );
   validateWithParams1(
     content.find("NumberOfPoints=\"" + std::to_string(numberOfPoints) + "\"") != std::string::npos,
-    piece.string()
+    vtuPath.string()
   );
   validate(content.find("<PointData") != std::string::npos);
   validate(content.find("Name=\"pair\"") != std::string::npos);
@@ -139,13 +154,12 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryVolumeOfEveryPatchBecomesOn
   const auto& partition = peano4::Spacetree::getInstance().getPartition();
   const auto  cells     = partition.getCells();
 
-  const int           valuesPerSlot = VolumesPerPatch * ValuesPerVolume;
-  std::vector<double> values(static_cast<std::size_t>(partition.getNumberOfSlots()) * valuesPerSlot, 0.0);
+  auto values = getFilledPool(partition, VolumesPerPatch * ValuesPerVolume, 0.0);
   for (const int cell : cells) {
+    double* const volumes = values.getChunk(cell);
     for (int volume = 0; volume < VolumesPerPatch; volume++) {
       for (int value = 0; value < ValuesPerVolume; value++) {
-        values[static_cast<std::size_t>(cell * valuesPerSlot + volume * ValuesPerVolume + value)] =
-          100.0 * cell + 10.0 * volume + value;
+        volumes[volume * ValuesPerVolume + value] = 100.0 * cell + 10.0 * volume + value;
       }
     }
   }
@@ -156,28 +170,27 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryVolumeOfEveryPatchBecomesOn
   plotter.plotVolumes<VolumesPerAxis, ValuesPerVolume, double>(
     partition,
     cells,
-    values.data(),
-    valuesPerSlot,
+    values,
     0.25,
     tarch::plotter::Format::VTU,
     outputDirectory
   );
 
-  const std::filesystem::path piece = std::filesystem::path(outputDirectory) / "patch"
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch"
     / ("PatchPlotterTest-0_250000-rank-" + std::to_string(rank) + ".vtu");
-  validateWithParams1(std::filesystem::exists(piece), piece.string());
-  const std::string content       = getFileContent(piece);
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  const std::string content       = getFileContent(vtuPath);
   const int         numberOfCells = cells.size * VolumesPerPatch;
   validateWithParams1(
     content.find("NumberOfCells=\"" + std::to_string(numberOfCells) + "\"") != std::string::npos,
-    piece.string()
+    vtuPath.string()
   );
   if (numberOfRanks == 1) {
     const int volumesPerDomainAxis = peano4::power(peano4::SubdivisionFactor, Depth) * VolumesPerAxis;
     const int numberOfPoints       = peano4::power(volumesPerDomainAxis + 1, DIMENSIONS);
     validateWithParams1(
       content.find("NumberOfPoints=\"" + std::to_string(numberOfPoints) + "\"") != std::string::npos,
-      piece.string()
+      vtuPath.string()
     );
   }
   validate(content.find("Name=\"scalar\"") != std::string::npos);
@@ -186,7 +199,7 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryVolumeOfEveryPatchBecomesOn
   validate(content.find("Name=\"Subdomain\"") != std::string::npos);
   validate(content.find("Name=\"CurveIndex\"") != std::string::npos);
 
-  // The global master writes the time series file, so only it reads the file back.
+  // The global master writes the time series file and reads it back.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     const std::filesystem::path series = std::filesystem::path(outputDirectory) / "patch" / "PatchPlotterTest.pvd";
     validateWithParams1(std::filesystem::exists(series), series.string());

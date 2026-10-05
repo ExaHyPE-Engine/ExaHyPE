@@ -25,5 +25,6 @@ private:
   void testASourceTermAdvancesEveryNodeByTheTimeStep();
   void testARefinementAndTheEraseBackKeepTheSolution();
   void testRefinementReducesTheNextAdaptiveTimeStep();
+  void testAPlotAllocatesHostCopiesOnlyWithAGPUBackend();
   void testReleaseFreesEveryPool();
 };

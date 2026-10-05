@@ -13,7 +13,8 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   __global__ void teamKernel(const Functor functor) {
-    functor(static_cast<int>(blockIdx.x), HipTeam{});
+    extern __shared__ unsigned char teamScratch[];
+    functor(static_cast<int>(blockIdx.x), HipTeam{teamScratch});
   }
 
   INLINE_METHOD GPU_CALLABLE_METHOD int getThreadOfTeam([[maybe_unused]] const HipTeam& team) {
@@ -21,9 +22,44 @@ namespace tarch::accelerator {
     COMPILE_IF_ON_HOST(return 0;)
   }
 
+  INLINE_METHOD GPU_CALLABLE_METHOD unsigned char* getTeamScratch(const HipTeam& team) { return team.scratch; }
+
   INLINE_METHOD GPU_CALLABLE_METHOD int getNumberOfThreadsPerTeam([[maybe_unused]] const HipTeam& team) {
     COMPILE_IF_ON_DEVICE(return static_cast<int>(blockDim.x);)
     COMPILE_IF_ON_HOST(return 1;)
+  }
+
+  /**
+   * Waits for every thread of the team on a device. One host thread runs a whole team, so the
+   * host has nothing to wait for.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier([[maybe_unused]] const HipTeam& team) {
+    COMPILE_IF_ON_DEVICE(__syncthreads();)
+  }
+
+  /**
+   * Returns the threads per team of a launch that asks for requested threads: Whole warps up to
+   * HipBlockSize, or HipBlockSize for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamThreads(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::HipBlockSize;
+    }
+    assertion(requested > 0, requested);
+    const int warps = (requested + tarch::accelerator::ThreadsPerWarp - 1) / tarch::accelerator::ThreadsPerWarp;
+    return std::min(tarch::accelerator::HipBlockSize, warps * tarch::accelerator::ThreadsPerWarp);
+  }
+
+  /**
+   * Returns the shared memory per team of a launch that asks for requested bytes, or
+   * TeamScratchBytes for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamScratchBytes(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::TeamScratchBytes;
+    }
+    assertion(requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes, requested);
+    return requested;
   }
 
   template <typename Functor>
@@ -59,12 +95,10 @@ namespace tarch::accelerator {
   }
 
   /**
-   * One host thread runs a whole team, so the host pass has nothing to wait for.
+   * Launches the loop on the stream of the current device and returns. The stream runs launches
+   * and copies in order, so a later launch reads what this one wrote; a caller that reads device
+   * memory on the host without copyFrom() or a reduction calls waitForDevice() first.
    */
-  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier([[maybe_unused]] const HipTeam& team) {
-    COMPILE_IF_ON_DEVICE(__syncthreads();)
-  }
-
   template <typename Functor>
   INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
@@ -81,7 +115,7 @@ namespace tarch::accelerator {
         functor,
         range.n
       );
-    CHECK_HIP_ERROR(hipStreamSynchronize(tarch::accelerator::getDeviceStream()));
+    CHECK_HIP_ERROR(hipGetLastError());
   }
 
   template <typename Functor>
@@ -106,6 +140,10 @@ namespace tarch::accelerator {
     });
   }
 
+  /**
+   * Launches one block per team on the stream of the current device and returns, like the loop
+   * over a Range.
+   */
   template <typename Functor>
   INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
@@ -113,8 +151,12 @@ namespace tarch::accelerator {
       return;
     }
     CHECK_HIP_ERROR(hipSetDevice(tarch::accelerator::getCurrentDevice()));
-    tarch::accelerator::
-      teamKernel<<<range.n, tarch::accelerator::HipBlockSize, 0, tarch::accelerator::getDeviceStream()>>>(functor);
-    CHECK_HIP_ERROR(hipStreamSynchronize(tarch::accelerator::getDeviceStream()));
+    tarch::accelerator::teamKernel<<<
+      range.n,
+      tarch::accelerator::getTeamThreads(range.threads),
+      tarch::accelerator::getTeamScratchBytes(range.scratchBytes),
+      tarch::accelerator::getDeviceStream()
+    >>>(functor);
+    CHECK_HIP_ERROR(hipGetLastError());
   }
 } // namespace tarch::accelerator

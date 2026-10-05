@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/plotter/Snapshot.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/plotter/FileWriter.h"
 #include "tarch/plotter/Format.h"
 
 namespace exahype2::plotter {
@@ -11,16 +11,16 @@ namespace exahype2::plotter {
 } // namespace exahype2::plotter
 
 /**
- * Writes the particles of a rank into one piece of a snapshot file, one plot point per particle.
+ * Writes the particles of a rank into the snapshots of a plot series, one plot point per particle.
  */
 class exahype2::plotter::ParticlePlotter final {
 public:
   INLINE_METHOD explicit ParticlePlotter(std::string filename);
-  ParticlePlotter(const ParticlePlotter&)            = delete;
-  ParticlePlotter(ParticlePlotter&&)                 = delete;
-  ParticlePlotter& operator=(const ParticlePlotter&) = delete;
-  ParticlePlotter& operator=(ParticlePlotter&&)      = delete;
-  ~ParticlePlotter()                                 = default;
+  ParticlePlotter(const ParticlePlotter& other)            = delete;
+  ParticlePlotter(ParticlePlotter&& other)                 = delete;
+  ParticlePlotter& operator=(const ParticlePlotter& other) = delete;
+  ParticlePlotter& operator=(ParticlePlotter&& other)      = delete;
+  ~ParticlePlotter()                                       = default;
 
   template <typename Particles>
   INLINE_METHOD void plot(
@@ -33,8 +33,8 @@ public:
 private:
   static constexpr const char* OutputSubdirectory = "particle/";
 
-  std::string _filename;
-  Snapshot    _snapshot{};
+  std::string                                 _filename;
+  std::unique_ptr<tarch::plotter::FileWriter> _fileWriter{};
 };
 
 #include "exahype2/plotter/ParticlePlotter.cpph"

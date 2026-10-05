@@ -76,6 +76,7 @@ if project.dimensions != 3:
     raise ValueError(
         "The PML dynamic rupture ExaSeis application is three-dimensional."
     )
+DynamicRuptureElastic.add_runtime_parameters(project)
 
 theSolver = exahype2.dg.ader.Solver(
     name="ElasticSolver",
@@ -120,8 +121,6 @@ theSolver.on_start_grid_initialisation(
     )
 )
 theSolver.add_includes(*PMLDynamicRuptureElastic.userIncludes())
-# The initial condition reads the curvilinear mapping and the NetCDF samplers of the host.
-theSolver.initialise_on_host()
 project.add_constant("PmlTop", 1, "int")
 
 project.add_solver(theSolver)

@@ -125,8 +125,7 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::close(
 
 /**
  * Writes the cell state plus the weighted estimates into target and copies the auxiliary
- * variables. An estimate with a zero weight is not read, so the estimates of later stages may
- * still be unwritten. target may alias cellState.
+ * variables. The combination reads no estimate whose weight is zero. target may alias cellState.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision, typename TargetPrecision>
@@ -150,12 +149,16 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::combineEstimates(
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       const int stateEntry = cellNode * NumberOfData + unknown;
       auto      value      = static_cast<AccumulatePrecision>(cellState[stateEntry]);
+      // std::fma gives every inlined copy of this function the same rounding.
       for (int stage = 0; stage < Tableau::Stages; stage++) {
         if (weights[stage] != 0.0) {
-          value += static_cast<AccumulatePrecision>(weights[stage])
-            * static_cast<AccumulatePrecision>(
-                     estimates[stage * UnknownsPerStage + cellNode * NumberOfUnknowns + unknown]
-            );
+          value = std::fma(
+            static_cast<AccumulatePrecision>(weights[stage]),
+            static_cast<AccumulatePrecision>(
+              estimates[stage * UnknownsPerStage + cellNode * NumberOfUnknowns + unknown]
+            ),
+            value
+          );
         }
       }
       target[stateEntry] = static_cast<TargetPrecision>(value);
@@ -168,10 +171,9 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::combineEstimates(
 }
 
 /**
- * Overwrites estimate with the time step times the volume terms of the stage state: The
- * strong-form flux divergence, the source and the nonconservative product. A constant flux gives
- * zeros bitwise. Every axis completes a line update before the update enters estimate, so
- * mirror-image cells receive bitwise mirrored estimates.
+ * Overwrites estimate with the time step times the flux divergence, the source and the
+ * nonconservative product of stageState. A flux that is constant over the cell gives zeros
+ * bitwise. Two mirror-image cells receive bitwise mirrored estimates.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void

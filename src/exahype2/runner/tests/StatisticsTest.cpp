@@ -117,7 +117,7 @@ exahype2::runner::tests::StatisticsTest::run() {
   testMethod(testSnapshotFillsTheMemoryRowsOfTheBuild);
   testMethod(testDescribeGridSnapshotRendersFilledRows);
   testMethod(testDescribeGridTransitionMarksChangedValuesOnly);
-  testMethod(testUsedAndFreeMemoryFormOneLine);
+  testMethod(testResidentAndFreeMemoryFormOneLine);
   testMethod(testValueRangeAndCountCarryTheirKind);
   testMethod(testASolverWithoutEigenvalueReportsStepAndMeshWidth);
   testMethod(testASolverWithEigenvalueAndTroubledCellsAppendsBoth);
@@ -193,7 +193,7 @@ exahype2::runner::tests::StatisticsTest::testSnapshotFillsTheMemoryRowsOfTheBuil
     exahype2::runner::Format::getMemory(statistics.getGlobalSolverHostBytes())
   );
   validate(not snapshot.entries[GridSnapshot::MemoryCPUGrid].value.empty());
-  validate(not snapshot.entries[GridSnapshot::MemoryUsed].value.empty());
+  validate(not snapshot.entries[GridSnapshot::MemoryResident].value.empty());
   validate(not snapshot.entries[GridSnapshot::MemoryFree].value.empty());
 #if defined(PEANO_WITH_GPU_BACKEND)
   validateEquals(
@@ -240,32 +240,34 @@ exahype2::runner::tests::StatisticsTest::testDescribeGridTransitionMarksChangedV
   validateEquals(lines.size(), std::size_t{6});
   validateEquals(lines[1], std::string("    Cells            81 → 633  (Refined 79)"));
   validateEquals(lines[2], std::string("    Levels           2 .. 4"));
+  validateEquals(lines[3], std::string("  Memory"));
   validateEquals(lines[4], std::string("    CPU Solver Data  19.55 MiB → 24.10 MiB"));
   validateEquals(lines[5], std::string("    Free             4.29 GiB → 4.10 GiB of 15.56 GiB"));
 }
 
 void
-exahype2::runner::tests::StatisticsTest::testUsedAndFreeMemoryFormOneLine() {
+exahype2::runner::tests::StatisticsTest::testResidentAndFreeMemoryFormOneLine() {
   using GridSnapshot = exahype2::runner::GridSnapshot;
   GridSnapshot before;
   GridSnapshot after;
-  before.entries[GridSnapshot::MemoryCPUGrid] = {"3.04 MiB", "", ""};
-  after.entries[GridSnapshot::MemoryCPUGrid]  = {"3.04 MiB", "", ""};
-  before.entries[GridSnapshot::MemoryUsed]    = {"75.56 MiB", "", ""};
-  after.entries[GridSnapshot::MemoryUsed]     = {"109.91 MiB", "", ""};
-  before.entries[GridSnapshot::MemoryFree]    = {"13.45 GiB", "", " of 15.56 GiB"};
-  after.entries[GridSnapshot::MemoryFree]     = {"13.42 GiB", "", " of 15.56 GiB"};
+  before.entries[GridSnapshot::MemoryCPUGrid]  = {"3.04 MiB", "", ""};
+  after.entries[GridSnapshot::MemoryCPUGrid]   = {"3.04 MiB", "", ""};
+  before.entries[GridSnapshot::MemoryResident] = {"75.56 MiB", "", ""};
+  after.entries[GridSnapshot::MemoryResident]  = {"109.91 MiB", "", ""};
+  before.entries[GridSnapshot::MemoryFree]     = {"13.45 GiB", "", " of 15.56 GiB"};
+  after.entries[GridSnapshot::MemoryFree]      = {"13.42 GiB", "", " of 15.56 GiB"};
 
   const auto snapshot = exahype2::runner::describeGridSnapshot(before);
   validateEquals(snapshot.size(), std::size_t{3});
+  validateEquals(snapshot[0], std::string("  Memory"));
   validateEquals(snapshot[1], std::string("    CPU Grid  3.04 MiB"));
-  validateEquals(snapshot[2], std::string("    Used      75.56 MiB · Free 13.45 GiB of 15.56 GiB"));
+  validateEquals(snapshot[2], std::string("    Resident  75.56 MiB · Free 13.45 GiB of 15.56 GiB"));
 
   const auto transition = exahype2::runner::describeGridTransition(before, after);
   validateEquals(transition.size(), std::size_t{3});
   validateEquals(
     transition[2],
-    std::string("    Used      75.56 MiB → 109.91 MiB · Free 13.45 GiB → 13.42 GiB of 15.56 GiB")
+    std::string("    Resident  75.56 MiB → 109.91 MiB · Free 13.45 GiB → 13.42 GiB of 15.56 GiB")
   );
 }
 

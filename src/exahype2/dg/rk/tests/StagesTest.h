@@ -26,6 +26,7 @@ private:
   void testTheCombinationWeighsTheEstimatesAndCopiesTheAuxiliaryVariables();
   void testAZeroWeightSkipsAnUnwrittenEstimate();
   void testTheCombinationWritesInPlace();
+  void testTheCombinationRoundsEveryWeightedEstimateOnce();
   void testAConstantFluxGivesZerosBitwise();
   void testTheDivergenceOfALinearFluxIsItsSlope();
   void testTheSourceTermIsScaledByTheTimeStep();

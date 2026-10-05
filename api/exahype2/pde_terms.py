@@ -91,7 +91,7 @@ def render_stub_definition(term, precision, dictionary):
         precision,
         dictionary,
         "",
-        'tarch::terminateWithError("{}::{} is not implemented.");'.format(
+        'tarch::terminateWithError("The solver {} must define the PDE term {}.");'.format(
             dictionary["SOLVER_NAME"], term.cpp
         ),
     )
@@ -126,6 +126,7 @@ def initial_condition():
             COORDINATES + " h",
         ),
         precision="storage",
+        gpu=False,
     )
 
 
@@ -489,15 +490,14 @@ class PDETerms:
     def __init__(self, table):
         self._table = dict(table)
         self._values = {}
-        self._host_only = set()
 
     def set(self, **pde_terms):
         """Stores every named PDE term. ``None`` and ``False`` remove a PDE term."""
         for name, value in pde_terms.items():
             if name not in self._table:
                 raise ValueError(
-                    "Unknown PDE term '{}'. This solver family supports {}.".format(
-                        name, ", ".join(sorted(self._table))
+                    "The solver family supports the PDE terms {} only (got '{}').".format(
+                        ", ".join(sorted(self._table)), name
                     )
                 )
             if value is None or value is False:
@@ -506,17 +506,10 @@ class PDETerms:
                 self._values[name] = value
             else:
                 raise TypeError(
-                    "A PDE term is True, a C++ body or absent, got {!r} for '{}'.".format(
-                        value, name
+                    "The PDE term '{}' expects True, False, None or a C++ body (got {!r}).".format(
+                        name, value
                     )
                 )
-
-    def run_on_host(self, name):
-        """Marks the named PDE term to render without the device attribute, so it may read host
-        objects."""
-        if name not in self._table:
-            raise ValueError("Unknown PDE term '{}'.".format(name))
-        self._host_only.add(name)
 
     def names(self):
         return list(self._table)
@@ -545,10 +538,7 @@ class PDETerms:
         return [
             term.cpp
             for name, term in self._table.items()
-            if term.gpu
-            and name not in self._host_only
-            and self.is_user_defined(name)
-            and not user_terms_inline
+            if term.gpu and self.is_user_defined(name) and not user_terms_inline
         ]
 
     def flags(self):
@@ -573,9 +563,6 @@ class PDETerms:
             return [dictionary["STORAGE_PRECISION"]]
         return list(dictionary["COMPUTATION_PRECISIONS"])
 
-    def _attributes(self, name, term):
-        return get_inline_attributes(term.gpu and name not in self._host_only)
-
     def names_with_inline_bodies(self):
         """Returns the declared terms whose body comes from the script or the table's default."""
         return [
@@ -584,18 +571,19 @@ class PDETerms:
             if self.is_declared(name) and not self.is_user_defined(name)
         ]
 
-    def render_declarations(self, dictionary, user_terms_inline):
-        """Returns the declarations of every declared term for ``<Name>.h``. With
-        ``user_terms_inline``, the user-defined terms get the inline attributes, because the
-        application's ``<Name>.cpph`` defines them."""
+    def render_declarations(self, dictionary, user_terms_inline, on_device):
+        """Returns the declarations in ``<Name>.h`` of the declared terms that run on the device
+        for ``on_device`` and of the host-only terms otherwise. With ``user_terms_inline``, the
+        user-defined terms get the inline attributes. The application's ``<Name>.cpph`` defines
+        them."""
         blocks = []
         for name, term in self._table.items():
-            if not self.is_declared(name):
+            if not self.is_declared(name) or term.gpu != on_device:
                 continue
             attributes = (
                 ""
                 if self.is_user_defined(name) and not user_terms_inline
-                else self._attributes(name, term)
+                else get_inline_attributes(term.gpu)
             )
             for precision in self._precisions_of(term, dictionary):
                 blocks.append(
@@ -603,11 +591,16 @@ class PDETerms:
                 )
         return "\n\n".join(blocks)
 
-    def render_definitions(self, dictionary):
-        """Returns the definitions of the terms with an inline body in ``<Name>.cpph``."""
+    def render_definitions(self, dictionary, on_device):
+        """Returns the definitions in ``<Name>.cpph`` of the terms with an inline body that run on
+        the device for ``on_device`` and of the host-only ones otherwise."""
         blocks = []
         for name, term in self._table.items():
-            if not self.is_declared(name) or self.is_user_defined(name):
+            if (
+                not self.is_declared(name)
+                or self.is_user_defined(name)
+                or term.gpu != on_device
+            ):
                 continue
             for precision in self._precisions_of(term, dictionary):
                 blocks.append(
@@ -615,7 +608,7 @@ class PDETerms:
                         term,
                         precision,
                         dictionary,
-                        self._attributes(name, term),
+                        get_inline_attributes(term.gpu),
                         self._rendered_body(name, precision, dictionary),
                     )
                 )
@@ -653,13 +646,12 @@ class PDETerms:
                     for argument in term.concept_arguments
                 )
                 blocks.append(
-                    'static_assert(\n  ::exahype2::terms::{}<{}{}>,\n  "{}::{} is missing, is not static or has a wrong signature; see {}"\n);'.format(
+                    'static_assert(\n  ::exahype2::terms::{}<{}{}>,\n  "The solver {} must define the PDE term {} as a static function with the expected signature."\n);'.format(
                         term.concept,
                         solver,
                         arguments,
                         dictionary["SOLVER_NAME"],
                         term.cpp,
-                        _concept_header(term.concept),
                     )
                 )
         return "\n".join(blocks)

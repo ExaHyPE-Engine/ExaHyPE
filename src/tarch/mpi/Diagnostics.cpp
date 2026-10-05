@@ -160,10 +160,10 @@ tarch::mpi::Diagnostics::plotMessageQueues() {
   MPI_Status status;
   MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
   if (flag == 0) {
-    logError("There are no messages from any sender in the MPI queue.");
+    logError("The MPI queue is empty.");
   } else {
     logError(
-      "There is still a message in the queue from rank " << status.MPI_SOURCE << " with tag " << status.MPI_TAG << "."
+      "The MPI queue still holds a message from rank " << status.MPI_SOURCE << " with tag " << status.MPI_TAG << "."
     );
   }
 }

@@ -2,6 +2,40 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
+  /**
+   * Returns the work items per team of a launch that asks for requested work items: Whole
+   * sub-groups up to SyclLocalSize, or SyclLocalSize for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamThreads(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::SyclLocalSize;
+    }
+    assertion(requested > 0, requested);
+    const int warps = (requested + tarch::accelerator::ThreadsPerWarp - 1) / tarch::accelerator::ThreadsPerWarp;
+    return std::min(tarch::accelerator::SyclLocalSize, warps * tarch::accelerator::ThreadsPerWarp);
+  }
+
+  /**
+   * Returns the local memory per team of a launch that asks for requested bytes, or
+   * TeamScratchBytes for TeamRange::BackendDefault.
+   */
+  INLINE_METHOD int getTeamScratchBytes(const int requested) {
+    if (requested == tarch::accelerator::TeamRange::BackendDefault) {
+      return tarch::accelerator::TeamScratchBytes;
+    }
+    assertion(requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes, requested);
+    return requested;
+  }
+
+  /**
+   * Returns the 64-bit words of the local accessor of a team launch: At least one word. The
+   * address of its first entry then exists.
+   */
+  INLINE_METHOD int getTeamScratchWords(const int requested) {
+    constexpr auto WordBytes = static_cast<int>(sizeof(std::uint64_t));
+    return std::max(1, (tarch::accelerator::getTeamScratchBytes(requested) + WordBytes - 1) / WordBytes);
+  }
+
   template <typename Functor>
   INLINE_METHOD void parallelFor(const SyclTeam& team, const Range& range, const Functor functor) {
     const int localIndex = static_cast<int>(team.item.get_local_id(0));
@@ -32,7 +66,19 @@ namespace tarch::accelerator {
     }
   }
 
-  INLINE_METHOD void teamBarrier(const SyclTeam& team) { ::sycl::group_barrier(team.item.get_group()); }
+  INLINE_METHOD GPU_CALLABLE_METHOD int getThreadOfTeam(const SyclTeam& team) {
+    return static_cast<int>(team.item.get_local_id(0));
+  }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD unsigned char* getTeamScratch(const SyclTeam& team) { return team.scratch; }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD int getNumberOfThreadsPerTeam(const SyclTeam& team) {
+    return static_cast<int>(team.item.get_local_range(0));
+  }
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier(const SyclTeam& team) {
+    ::sycl::group_barrier(team.item.get_group());
+  }
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
@@ -96,14 +142,12 @@ namespace tarch::accelerator {
     }
     auto& queue =
       *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(tarch::accelerator::getCurrentDevice()));
-    const ::sycl::nd_range<1> groupedRange(
-      ::sycl::range<1>(range.n * tarch::accelerator::SyclLocalSize),
-      ::sycl::range<1>(tarch::accelerator::SyclLocalSize)
-    );
+    const int                 threads = tarch::accelerator::getTeamThreads(range.threads);
+    const ::sycl::nd_range<1> groupedRange(::sycl::range<1>(range.n * threads), ::sycl::range<1>(threads));
     queue
       .submit([&](::sycl::handler& handler) {
         const ::sycl::local_accessor<std::uint64_t, 1> scratch(
-          ::sycl::range<1>(tarch::accelerator::SyclTeamScratchBytes / sizeof(std::uint64_t)),
+          ::sycl::range<1>(tarch::accelerator::getTeamScratchWords(range.scratchBytes)),
           handler
         );
         handler.parallel_for(groupedRange, [=](const ::sycl::nd_item<1> item) {

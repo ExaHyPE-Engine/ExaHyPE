@@ -24,5 +24,7 @@ private:
   void testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp();
   void testARefinementAndTheEraseBackKeepTheSolution();
   void testRefinementReducesTheNextAdaptiveTimeStep();
+  void testThePostprocessingOfTheUpdatedPatchFeedsTheNextTimeStep();
+  void testAPlotAllocatesHostCopiesOnlyWithAGPUBackend();
   void testReleaseFreesEveryPool();
 };

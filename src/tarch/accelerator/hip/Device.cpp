@@ -7,6 +7,7 @@
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/hip/DevicePropertiesCache.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Info.h"
 
@@ -53,6 +54,7 @@ tarch::accelerator::Device::shutdown() {
   );
   CHECK_HIP_ERROR(hipSetDevice(tarch::accelerator::getCurrentDevice()));
   CHECK_HIP_ERROR(hipDeviceSynchronize());
+  tarch::accelerator::releaseReductionScratch();
   CHECK_HIP_ERROR(hipDeviceReset());
 
   activeStreams.clear();
@@ -67,6 +69,16 @@ tarch::accelerator::Device::isInitialised() const {
 int
 tarch::accelerator::Device::getNumberOfDevices() const {
   return numberOfDevices;
+}
+
+/**
+ * Returns the threads the current device runs at once: Its multiprocessors times the threads
+ * one multiprocessor holds.
+ */
+int
+tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
+  const hipDeviceProp_t& properties = tarch::accelerator::hip::DevicePropertiesCache::getProperties();
+  return std::max(1, properties.multiProcessorCount * properties.maxThreadsPerMultiProcessor);
 }
 
 void

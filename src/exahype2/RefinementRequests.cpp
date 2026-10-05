@@ -176,7 +176,7 @@ exahype2::RefinementRequests::getRefinementRequests(const peano4::Partition& par
     constexpr auto RequestSize = static_cast<int>(sizeof(peano4::RefinementRequest));
     const auto     localBytes  = static_cast<std::size_t>(requests.size()) * RequestSize;
     if (localBytes > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-      tarch::terminateWithError("The refinement requests of one rank exceed one message.");
+      tarch::terminateWithError("The refinement requests of one rank must fit into one MPI message.");
     }
     std::vector<int> byteCounts(static_cast<std::size_t>(numberOfRanks), 0);
     const int        localByteCount = static_cast<int>(localBytes);
@@ -188,7 +188,7 @@ exahype2::RefinementRequests::getRefinementRequests(const peano4::Partition& par
       totalBytes += static_cast<std::size_t>(byteCounts[static_cast<std::size_t>(other)]);
     }
     if (totalBytes > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-      tarch::terminateWithError("The refinement requests of all ranks exceed one message.");
+      tarch::terminateWithError("The refinement requests of all ranks must fit into one MPI message.");
     }
     std::vector<peano4::RefinementRequest> gathered(totalBytes / RequestSize);
     tarch::mpi::allgatherv(

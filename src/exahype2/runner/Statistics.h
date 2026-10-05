@@ -136,7 +136,7 @@ struct exahype2::runner::GridSnapshot {
     MemoryGPUGrid,
     MemoryCPUSolverData,
     MemoryGPUSolverData,
-    MemoryUsed,
+    MemoryResident,
     MemoryFree,
     RowCount
   };

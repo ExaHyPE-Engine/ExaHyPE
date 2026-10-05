@@ -2,28 +2,22 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
-  // The hipcub library takes the reduction as a binary functor, so HipcubCombine wraps Op::combine.
-  template <typename Op>
-  struct HipcubCombine final {
-    INLINE_METHOD GPU_CALLABLE_METHOD typename Op::ValueType operator()(
-      const typename Op::ValueType& left,
-      const typename Op::ValueType& right
-    ) const {
-      return Op::combine(left, right);
-    }
-  };
-
-  // Every kernel that calls this routine runs HipBlockSize threads per block. The barrier after
-  // the read of entry zero keeps a thread that calls the routine again from overwriting the entry
-  // while another thread still reads it.
+  // Every kernel that calls this routine runs at most HipBlockSize threads per block. The barrier
+  // after the read of entry zero keeps a thread that calls the routine again from overwriting the
+  // entry while another thread still reads it.
   template <typename Reducer, typename T>
   INLINE_METHOD __device__ T blockReduce(const T threadValue) {
     __shared__ T blockValues[HipBlockSize];
     const int    threadIndex = threadIdx.x;
+    const auto   threads     = static_cast<int>(blockDim.x);
     blockValues[threadIndex] = threadValue;
     __syncthreads();
-    for (int half = HipBlockSize / 2; half > 0; half >>= 1) {
-      if (threadIndex < half) {
+    int span = 1;
+    while (span < threads) {
+      span <<= 1;
+    }
+    for (int half = span / 2; half > 0; half >>= 1) {
+      if (threadIndex < half and threadIndex + half < threads) {
         blockValues[threadIndex] = Reducer::combine(blockValues[threadIndex], blockValues[threadIndex + half]);
       }
       __syncthreads();
@@ -37,21 +31,21 @@ namespace tarch::accelerator {
    * Combines the partial value of every thread of the team into the target of the reducer. One
    * host thread runs a whole team, so its partial value is already the team's result.
    */
-  template <typename Reducer, typename T>
+  template <typename Reducer>
   INLINE_METHOD GPU_CALLABLE_METHOD void reduceOverTeam(
-    [[maybe_unused]] const HipTeam& team,
-    const T                         threadValue,
-    const Reducer                   reducer
+    [[maybe_unused]] const HipTeam&   team,
+    const typename Reducer::ValueType threadValue,
+    const Reducer                     reducer
   ) {
     COMPILE_IF_ON_DEVICE(
-      const T blockResult = tarch::accelerator::blockReduce<Reducer>(threadValue);
+      const typename Reducer::ValueType blockResult = tarch::accelerator::blockReduce<Reducer>(threadValue);
       if (threadIdx.x == 0) { reducer.target = Reducer::combine(reducer.target, blockResult); }
     )
     COMPILE_IF_ON_HOST(reducer.target = Reducer::combine(reducer.target, threadValue);)
   }
 
-  // The reducer parameter deduces Reducer, because the type of blockResults is a non-deduced
-  // context. Its target is a host reference that no device thread dereferences.
+  // The parameter reducer deduces Reducer for the non-deduced type of blockResults. Its target is a
+  // host reference that no device thread dereferences.
   template <typename Reducer, typename Functor>
   __global__ void teamReduceKernel(
     const Functor                      functor,
@@ -59,12 +53,13 @@ namespace tarch::accelerator {
     typename Reducer::ValueType* const blockResults
   ) {
     __shared__ typename Reducer::ValueType teamAccumulator;
+    extern __shared__ unsigned char        teamScratch[];
     if (threadIdx.x == 0) {
       teamAccumulator = Reducer::identity();
     }
     __syncthreads();
 
-    functor(static_cast<int>(blockIdx.x), HipTeam{}, teamAccumulator);
+    functor(static_cast<int>(blockIdx.x), HipTeam{teamScratch}, teamAccumulator);
 
     __syncthreads();
     if (threadIdx.x == 0) {
@@ -91,100 +86,65 @@ namespace tarch::accelerator {
     }
   }
 
-  // The hipcub library reports the size of its temporary storage in a first call and
-  // reduces in a second call with that storage allocated.
-  template <typename HipcubCall>
-  INLINE_METHOD void runHipcubReduction(const HipcubCall hipcubCall, const hipStream_t stream) {
-    void*       temporaryStorage      = nullptr;
-    std::size_t temporaryStorageBytes = 0;
-    CHECK_HIP_ERROR(hipcubCall(temporaryStorage, temporaryStorageBytes));
-    CHECK_HIP_ERROR(hipMallocAsync(&temporaryStorage, temporaryStorageBytes, stream));
-    CHECK_HIP_ERROR(hipcubCall(temporaryStorage, temporaryStorageBytes));
-    CHECK_HIP_ERROR(hipFreeAsync(temporaryStorage, stream));
-  }
+  // The host combines at most HostReductionEntries block results. More block results pass through
+  // a second reduction on the device first.
+  inline constexpr int HostReductionEntries = 16384;
 
-  template <typename T>
-  INLINE_METHOD void hipcubReduce(
-    [[maybe_unused]] const Max<T> reducer,
-    const T* const                input,
-    T* const                      output,
-    const int                     numberOfItems,
-    const hipStream_t             stream
-  ) {
-    tarch::accelerator::runHipcubReduction(
-      [&](void* const temporaryStorage, std::size_t& temporaryStorageBytes) {
-        return hipcub::DeviceReduce::Max(temporaryStorage, temporaryStorageBytes, input, output, numberOfItems, stream);
-      },
-      stream
-    );
-  }
-  template <typename T>
-  INLINE_METHOD void hipcubReduce(
-    [[maybe_unused]] const Min<T> reducer,
-    const T* const                input,
-    T* const                      output,
-    const int                     numberOfItems,
-    const hipStream_t             stream
-  ) {
-    tarch::accelerator::runHipcubReduction(
-      [&](void* const temporaryStorage, std::size_t& temporaryStorageBytes) {
-        return hipcub::DeviceReduce::Min(temporaryStorage, temporaryStorageBytes, input, output, numberOfItems, stream);
-      },
-      stream
-    );
-  }
-  template <typename T>
-  INLINE_METHOD void hipcubReduce(
-    [[maybe_unused]] const Sum<T> reducer,
-    const T* const                input,
-    T* const                      output,
-    const int                     numberOfItems,
-    const hipStream_t             stream
-  ) {
-    tarch::accelerator::runHipcubReduction(
-      [&](void* const temporaryStorage, std::size_t& temporaryStorageBytes) {
-        return hipcub::DeviceReduce::Sum(temporaryStorage, temporaryStorageBytes, input, output, numberOfItems, stream);
-      },
-      stream
-    );
-  }
-  template <typename Op, typename T>
-  INLINE_METHOD void hipcubReduce(
-    [[maybe_unused]] const Custom<Op> reducer,
-    const T* const                    input,
-    T* const                          output,
-    const int                         numberOfItems,
-    const hipStream_t                 stream
-  ) {
-    tarch::accelerator::runHipcubReduction(
-      [&](void* const temporaryStorage, std::size_t& temporaryStorageBytes) {
-        return hipcub::DeviceReduce::Reduce(
-          temporaryStorage,
-          temporaryStorageBytes,
-          input,
-          output,
-          numberOfItems,
-          HipcubCombine<Op>{},
-          Op::identity(),
-          stream
-        );
-      },
-      stream
+  INLINE_METHOD int getNumberOfSecondStageBlocks(const int numberOfBlocks) {
+    if (numberOfBlocks <= HostReductionEntries) {
+      return 0;
+    }
+    return std::min(
+      (numberOfBlocks + tarch::accelerator::HipBlockSize - 1) / tarch::accelerator::HipBlockSize,
+      tarch::accelerator::HipMaxNumberOfBlocks
     );
   }
 
   template <typename Reducer>
+  struct CombineBlockResults final {
+    const typename Reducer::ValueType* blockResults{nullptr};
+
+    INLINE_METHOD __device__ void operator()(const int block, typename Reducer::ValueType& accumulator) const {
+      accumulator = Reducer::combine(accumulator, blockResults[block]);
+    }
+  };
+
+  // The block results lie in the scratch, followed by room for the second-stage results. The copy
+  // into pinned host memory runs on the stream. The host waits for the stream once and combines the
+  // copied results in order.
+  template <typename Reducer>
   INLINE_METHOD void finaliseReduction(
-    const Reducer                            reducer,
-    const typename Reducer::ValueType* const deviceResult,
-    const hipStream_t                        stream
+    const Reducer                      reducer,
+    typename Reducer::ValueType* const blockResults,
+    const int                          numberOfBlocks,
+    const hipStream_t                  stream
   ) {
-    typename Reducer::ValueType hostResult = Reducer::identity();
-    CHECK_HIP_ERROR(
-      hipMemcpyAsync(&hostResult, deviceResult, sizeof(typename Reducer::ValueType), hipMemcpyDeviceToHost, stream)
-    );
+    using ValueType                    = typename Reducer::ValueType;
+    const ValueType* results           = blockResults;
+    int              numberOfResults   = numberOfBlocks;
+    const int        secondStageBlocks = getNumberOfSecondStageBlocks(numberOfBlocks);
+    if (secondStageBlocks > 0) {
+      ValueType* const secondStage = blockResults + numberOfBlocks;
+      tarch::accelerator::flatReduceKernel1D<<<secondStageBlocks, tarch::accelerator::HipBlockSize, 0, stream>>>(
+        CombineBlockResults<Reducer>{blockResults},
+        reducer,
+        numberOfBlocks,
+        secondStage
+      );
+      CHECK_HIP_ERROR(hipGetLastError());
+      results         = secondStage;
+      numberOfResults = secondStageBlocks;
+    }
+    const std::size_t bytes       = static_cast<std::size_t>(numberOfResults) * sizeof(ValueType);
+    auto* const       hostResults = static_cast<ValueType*>(tarch::accelerator::getReductionStaging(bytes));
+    CHECK_HIP_ERROR(hipMemcpyAsync(hostResults, results, bytes, hipMemcpyDeviceToHost, stream));
     CHECK_HIP_ERROR(hipStreamSynchronize(stream));
-    reducer.target = Reducer::combine(reducer.target, hostResult);
+    ValueType result = Reducer::identity();
+    for (int entry = 0; entry < numberOfResults; entry++) {
+      result = Reducer::combine(result, hostResults[entry]);
+    }
+    reducer.target = Reducer::combine(reducer.target, result);
+    tarch::accelerator::unlockReductionScratch();
   }
 
   template <typename Reducer, typename Functor>
@@ -249,9 +209,9 @@ namespace tarch::accelerator {
       tarch::accelerator::HipMaxNumberOfBlocks
     );
 
-    ValueType* const blockResults =
-      tarch::allocateMemory<ValueType>(numberOfBlocks, tarch::MemoryLocation::Device, device);
-    ValueType* const deviceResult = tarch::allocateMemory<ValueType>(1, tarch::MemoryLocation::Device, device);
+    ValueType* const blockResults = static_cast<ValueType*>(tarch::accelerator::lockReductionScratch(
+      static_cast<std::size_t>(numberOfBlocks + getNumberOfSecondStageBlocks(numberOfBlocks)) * sizeof(ValueType)
+    ));
 
     tarch::accelerator::flatReduceKernel1D<<<
       numberOfBlocks,
@@ -259,18 +219,8 @@ namespace tarch::accelerator {
       0,
       tarch::accelerator::getDeviceStream()
     >>>(functor, reducer, range.n, blockResults);
-    tarch::accelerator::hipcubReduce(
-      reducer,
-      blockResults,
-      deviceResult,
-      numberOfBlocks,
-      tarch::accelerator::getDeviceStream()
-    );
-    tarch::accelerator::finaliseReduction(reducer, deviceResult, tarch::accelerator::getDeviceStream());
-
-    // finaliseReduction synchronises the stream before the scratch buffers are freed.
-    tarch::freeMemory(blockResults, tarch::MemoryLocation::Device, device);
-    tarch::freeMemory(deviceResult, tarch::MemoryLocation::Device, device);
+    CHECK_HIP_ERROR(hipGetLastError());
+    tarch::accelerator::finaliseReduction(reducer, blockResults, numberOfBlocks, tarch::accelerator::getDeviceStream());
   }
 
   template <typename Reducer, typename Functor>
@@ -283,26 +233,18 @@ namespace tarch::accelerator {
     const int device = tarch::accelerator::getCurrentDevice();
     CHECK_HIP_ERROR(hipSetDevice(device));
 
-    ValueType* const blockResults = tarch::allocateMemory<ValueType>(range.n, tarch::MemoryLocation::Device, device);
-    ValueType* const deviceResult = tarch::allocateMemory<ValueType>(1, tarch::MemoryLocation::Device, device);
+    ValueType* const blockResults = static_cast<ValueType*>(tarch::accelerator::lockReductionScratch(
+      static_cast<std::size_t>(range.n + getNumberOfSecondStageBlocks(range.n)) * sizeof(ValueType)
+    ));
 
-    tarch::accelerator::
-      teamReduceKernel<<<range.n, tarch::accelerator::HipBlockSize, 0, tarch::accelerator::getDeviceStream()>>>(
-        functor,
-        reducer,
-        blockResults
-      );
-    tarch::accelerator::hipcubReduce(
-      reducer,
-      blockResults,
-      deviceResult,
+    tarch::accelerator::teamReduceKernel<<<
       range.n,
+      tarch::accelerator::getTeamThreads(range.threads),
+      tarch::accelerator::getTeamScratchBytes(range.scratchBytes),
       tarch::accelerator::getDeviceStream()
-    );
-    tarch::accelerator::finaliseReduction(reducer, deviceResult, tarch::accelerator::getDeviceStream());
-
-    tarch::freeMemory(blockResults, tarch::MemoryLocation::Device, device);
-    tarch::freeMemory(deviceResult, tarch::MemoryLocation::Device, device);
+    >>>(functor, reducer, blockResults);
+    CHECK_HIP_ERROR(hipGetLastError());
+    tarch::accelerator::finaliseReduction(reducer, blockResults, range.n, tarch::accelerator::getDeviceStream());
   }
 
   template <typename Reducer, typename Functor>

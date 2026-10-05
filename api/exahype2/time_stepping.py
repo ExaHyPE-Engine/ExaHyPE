@@ -11,7 +11,7 @@ def _positive_finite(value, name):
         or value <= 0
     ):
         raise ValueError(
-            "{} must be a finite positive number, got {!r}.".format(name, value)
+            "{} must be a finite positive number (got {!r}).".format(name, value)
         )
     return value
 
@@ -55,6 +55,6 @@ def of(value):
     if isinstance(value, (Fixed, Adaptive)):
         return value
     raise TypeError(
-        "time_stepping must be TimeStepping.Fixed(...) or TimeStepping.Adaptive(...), "
-        "got {!r}.".format(value)
+        "The solver expects TimeStepping.Fixed(...) or TimeStepping.Adaptive(...) as "
+        "time_stepping (got {!r}).".format(value)
     )

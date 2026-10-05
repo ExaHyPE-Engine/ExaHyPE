@@ -2,6 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
+  /**
+   * Combines the partial value of the thread into the target of the reducer. One host thread
+   * runs a whole team, so its partial value is the team's result.
+   */
+  template <typename Reducer>
+  INLINE_METHOD void reduceOverTeam(
+    [[maybe_unused]] const CpuTeam&   team,
+    const typename Reducer::ValueType threadValue,
+    const Reducer                     reducer
+  ) {
+    reducer.target = Reducer::combine(reducer.target, threadValue);
+  }
+
   template <typename Reducer, typename Functor>
   INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const CpuTeam& team,
@@ -177,23 +190,20 @@ namespace tarch::accelerator {
     reducer.target = Reducer::combine(reducer.target, accumulator);
   }
 
+  /**
+   * Runs every team on one host thread and reduces the partial values of the teams like a range
+   * reduction.
+   */
   template <typename Reducer, typename Functor>
   INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     using ValueType = typename Reducer::ValueType;
-    std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());
-    tarch::accelerator::runInParallelRegion([&]() {
-      ValueType partial = Reducer::identity();
-#pragma omp for schedule(static) nowait
-      for (int i = 0; i < range.n; ++i) {
-        functor(i, tarch::accelerator::CpuTeam{}, partial);
-      }
-      partials[static_cast<std::size_t>(omp_get_thread_num())] = partial;
-    });
-    ValueType accumulator = Reducer::identity();
-    for (const ValueType& partial : partials) {
-      accumulator = Reducer::combine(accumulator, partial);
-    }
-    reducer.target = Reducer::combine(reducer.target, accumulator);
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(range.n),
+      [&functor](const int team, ValueType& partial) {
+        functor(team, tarch::accelerator::CpuTeam{tarch::accelerator::getTeamScratchOfThread()}, partial);
+      },
+      reducer
+    );
   }
 } // namespace tarch::accelerator

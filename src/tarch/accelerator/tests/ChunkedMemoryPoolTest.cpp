@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ChunkedMemoryPoolTest.h"
 
+#include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelReduce.h"
@@ -93,6 +94,7 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::run() {
   testMethod(testMoveTransfersSegments);
   testMethod(testRelease);
   testMethod(testHostCopiesRoundTrip);
+  testMethod(testHostCodeReadsAndWritesEveryChunkThroughDownloadAndUpload);
 }
 
 void
@@ -137,8 +139,8 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testReserveAllocatesWholeSegme
 }
 
 /**
- * The first reservation sizes a segment to a sixteenth of the reserved slots, rounded up to a
- * power of two and never below the minimum.
+ * The first reservation sizes a segment to the smallest power of two at or above both a sixteenth
+ * of the reserved slots and the minimum.
  */
 void
 tarch::accelerator::tests::ChunkedMemoryPoolTest::testSegmentSizeFollowsTheFirstReservation() {
@@ -219,7 +221,7 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testViewAddressesEveryChunk() 
 }
 
 /**
- * A kernel writes every chunk of a device pool through its view.
+ * A reduction reads back the chunks that a kernel writes through the view of a device pool.
  */
 void
 tarch::accelerator::tests::ChunkedMemoryPoolTest::testDeviceFillThroughView() {
@@ -236,7 +238,8 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testDeviceFillThroughView() {
 }
 
 /**
- * A pool on the heap counts its segments as host bytes, and a device pool of a GPU build as device bytes.
+ * A pool counts its segments and its segment table in its memory location and its host arrays as host bytes until
+ * release() frees them.
  */
 void
 tarch::accelerator::tests::ChunkedMemoryPoolTest::testAllocatedBytes() {
@@ -244,21 +247,27 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testAllocatedBytes() {
   validateEquals(pool.getAllocatedBytes().getTotal(), 0);
 
   pool.reserve(4);
-  const auto expectedBytes =
+  validateEquals(pool.getNumberOfSegments(), 1);
+  const auto segmentBytes =
     static_cast<std::size_t>(pool.getCapacity()) * static_cast<std::size_t>(pool.getPaddedChunkSize()) * sizeof(double);
-  validateEquals(pool.getAllocatedBytes().host, expectedBytes);
+  const auto tableBytes     = sizeof(double*);
+  const auto hostArrayBytes = sizeof(tarch::accelerator::Buffer<double>) + sizeof(double*);
+  validateEquals(pool.getSegment(0).getSizeInBytes(), segmentBytes);
+  validateEquals(pool.getAllocatedBytes().host, segmentBytes + tableBytes + hostArrayBytes);
   validateEquals(pool.getAllocatedBytes().device, 0);
-  validateEquals(pool.getSegment(0).getSizeInBytes(), pool.getAllocatedBytes().getTotal());
 
   Pool devicePool(ChunkSize, tarch::MemoryLocation::Device);
   devicePool.reserve(4);
 #if defined(PEANO_WITH_GPU_BACKEND)
-  validateEquals(devicePool.getAllocatedBytes().device, expectedBytes);
-  validateEquals(devicePool.getAllocatedBytes().host, 0);
+  validateEquals(devicePool.getAllocatedBytes().device, segmentBytes + tableBytes);
+  validateEquals(devicePool.getAllocatedBytes().host, hostArrayBytes);
 #else
-  validateEquals(devicePool.getAllocatedBytes().host, expectedBytes);
+  validateEquals(devicePool.getAllocatedBytes().host, segmentBytes + tableBytes + hostArrayBytes);
   validateEquals(devicePool.getAllocatedBytes().device, 0);
 #endif
+
+  pool.release();
+  validateEquals(pool.getAllocatedBytes().getTotal(), 0);
 }
 
 void
@@ -329,4 +338,39 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testHostCopiesRoundTrip() {
   for (int slot = 0; slot < pool.getCapacity(); slot++) {
     validateWithParams1(chunkHolds(pool, slot, slot + 1.0), slot);
   }
+}
+
+/**
+ * Host code reads and writes every chunk of a growing device pool through download() and upload().
+ */
+void
+tarch::accelerator::tests::ChunkedMemoryPoolTest::testHostCodeReadsAndWritesEveryChunkThroughDownloadAndUpload() {
+  Pool pool(ChunkSize);
+  pool.reserve(MinimumSegmentSize + 1);
+  writeSlotIntoEveryElement(pool, pool.getCapacity());
+  Pool copyOnHost(ChunkSize, tarch::MemoryLocation::Heap);
+
+  const Pool& chunks = std::as_const(pool).download(copyOnHost);
+  validate(chunks.isHostAccessible());
+  validateEquals(&chunks == &pool, pool.isHostAccessible());
+  validateEquals(copyOnHost.getCapacity(), pool.isHostAccessible() ? 0 : pool.getCapacity());
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    const double* const chunk = chunks.getChunk(slot);
+    for (int element = 0; element < ChunkSize; element++) {
+      validateEqualsWithParams2(chunk[element], static_cast<double>(slot), slot, element);
+    }
+  }
+
+  pool.reserve(pool.getCapacity() + 1);
+  Pool& writableChunks = pool.download(copyOnHost);
+  validateEquals(writableChunks.getCapacity(), pool.getCapacity());
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    fillChunk(writableChunks, slot, slot);
+  }
+  pool.upload(writableChunks);
+
+  const auto   numberOfSlots = static_cast<double>(pool.getCapacity());
+  const double expectedSum =
+    ChunkSize * numberOfSlots * (numberOfSlots - 1.0) / 2.0 + numberOfSlots * ChunkSize * (ChunkSize - 1.0) / 2.0;
+  validateNumericalEquals(getSumOfElements(pool, pool.getCapacity()), expectedSum);
 }

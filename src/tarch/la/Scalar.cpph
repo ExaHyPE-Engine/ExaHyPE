@@ -1,7 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-static_assert(tarch::la::NUMERICAL_ZERO_DIFFERENCE > 0.0, "Scalar tolerances should be positive");
+static_assert(tarch::la::NUMERICAL_ZERO_DIFFERENCE > 0.0, "The numerical comparisons accept positive tolerances only.");
 
 TARGET_DECLARE
 INLINE_METHOD GPU_CALLABLE_METHOD double

@@ -58,8 +58,16 @@ hold their data in its memory, and the GPU interleaves their kernels.
 
 ## Provide the PDE terms without state
 
-A PDE term runs on the device as a function without state: It reads its
-arguments and global constants and cannot modify the solver object.
+A PDE term runs on the device as a function without state. It reads its
+arguments, global constants and runtime parameters. It cannot modify the solver
+object.
+
+A runtime parameter holds a value that changes from run to run.
+`project.add_runtime_parameter(name, type, default)` registers it. The
+executable reads it from `config.json` and the command line. Host code and every
+term read it with the generated `RuntimeParameters::<name>()`. The application
+overwrites it at run time with `RuntimeParameters::set<Name>(value)`, for example
+in a grid-initialisation hook, and every later kernel reads the new value.
 
 The simplest path is to let the Python API generate these terms for you.
 Most ExaHyPE solvers allow you to insert the realisation of a routine directly

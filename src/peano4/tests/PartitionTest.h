@@ -8,10 +8,6 @@ namespace peano4::tests {
   class PartitionTest;
 } // namespace peano4::tests
 
-/**
- * Checks the lists of the partition on regular, refined and periodic grids, across a regrid and in
- * the device twin, and the numbering of the cells along the curve over all ranks.
- */
 class peano4::tests::PartitionTest final : public tarch::tests::TestCase {
 public:
   PartitionTest();
@@ -25,7 +21,7 @@ public:
 
 private:
   void testTheRegularGridLinksEveryFaceToItsCells();
-  void testThePeriodicGridHasNoBoundaryFaces();
+  void testEveryFaceOfThePeriodicGridIsInterior();
   void testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace();
   void testTheListsGroupByAdjacencyLevelAndKind();
   void testARegridKeepsTheSlotsOfSurvivingCellsAndReusesFreedOnes();

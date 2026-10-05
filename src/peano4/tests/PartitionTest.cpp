@@ -131,7 +131,7 @@ peano4::tests::PartitionTest::PartitionTest() :
 void
 peano4::tests::PartitionTest::run() {
   testMethod(testTheRegularGridLinksEveryFaceToItsCells);
-  testMethod(testThePeriodicGridHasNoBoundaryFaces);
+  testMethod(testEveryFaceOfThePeriodicGridIsInterior);
   testMethod(testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace);
   testMethod(testTheListsGroupByAdjacencyLevelAndKind);
   testMethod(testARegridKeepsTheSlotsOfSurvivingCellsAndReusesFreedOnes);
@@ -177,7 +177,7 @@ peano4::tests::PartitionTest::testTheRegularGridLinksEveryFaceToItsCells() {
     peano4::tests::getGlobalSumOf(getNumberOfFacesOfKind(partition, peano4::FaceKind::Boundary)),
     2 * DIMENSIONS * facesPerNormal
   );
-  // An exchanged face lies in the partition of both ranks, so the sum over the ranks counts it twice.
+  // An exchanged face lies in the partition of both ranks. The sum over the ranks counts it twice.
   validateEquals(
     peano4::tests::getGlobalSumOf(getNumberOfFacesOfKind(partition, peano4::FaceKind::Interior))
       - peano4::tests::getGlobalSumOf(getNumberOfExchangedFaces(partition)) / 2,
@@ -235,7 +235,7 @@ peano4::tests::PartitionTest::testTheRegularGridLinksEveryFaceToItsCells() {
 }
 
 void
-peano4::tests::PartitionTest::testThePeriodicGridHasNoBoundaryFaces() {
+peano4::tests::PartitionTest::testEveryFaceOfThePeriodicGridIsInterior() {
   std::bitset<DIMENSIONS> periodic;
   periodic.set();
   peano4::tests::buildRegularGrid(Depth, periodic);
@@ -256,8 +256,8 @@ peano4::tests::PartitionTest::testThePeriodicGridHasNoBoundaryFaces() {
 }
 
 /**
- * Every face between the refined centre block and a coarse cell forms one level jump, which the rank
- * of the fine cells registers.
+ * Every face between the block of the centre refinement and a coarse cell is one level jump of the
+ * rank that owns the fine cells.
  */
 void
 peano4::tests::PartitionTest::testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace() {
@@ -275,7 +275,7 @@ peano4::tests::PartitionTest::testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace
       + partition.getCells(peano4::Adjacency::Remote, level).size;
   };
 
-  // A failed check ends the test on its rank alone, so every global sum runs before the first check.
+  // A failed check ends the test on its rank alone. Every global sum runs before the first check.
   const int globalCoarseCells = peano4::tests::getGlobalSumOf(cellsOfLevel(Depth));
   const int globalFineCells   = peano4::tests::getGlobalSumOf(cellsOfLevel(Depth + 1));
   const int globalLevelJumps  = peano4::tests::getGlobalSumOf(getNumberOfLevelJumps(partition));
@@ -299,6 +299,9 @@ peano4::tests::PartitionTest::testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace
     validateEquals(partition.getLevelJumps(adjacency, Depth).size, partition.getLevelJumps(adjacency).size);
     validate(partition.getLevelJumps(adjacency, Depth + 1).isEmpty());
     validate(partition.getLevelJumps(adjacency, Depth - 1).isEmpty());
+    validateEquals(partition.getLevelJumps(adjacency, 0, Depth + 1).size, partition.getLevelJumps(adjacency).size);
+    validate(partition.getLevelJumps(adjacency, 0, Depth + 1).data == partition.getLevelJumps(adjacency).data);
+    validate(partition.getLevelJumps(adjacency, Depth + 1, Depth + 2).isEmpty());
     for (const auto& levelJump : partition.getLevelJumps(adjacency)) {
       validateEquals(levelJump.level, Depth);
       validate(partition.getFaceKind(levelJump.coarseFace) == peano4::FaceKind::Coarse);
@@ -385,7 +388,7 @@ peano4::tests::PartitionTest::testTheListsGroupByAdjacencyLevelAndKind() {
     }
   }
   validateEquals(cellsInLevelSpans, partition.getCells().size);
-  // The own side of an exchanged coarse face has no cell where the fine cells below it fill that half.
+  // An exchanged face is a coarse face or holds a cell on its own side.
   for (const auto& neighbour : partition.getNeighbours()) {
     for (const auto& entry : partition.getExchangedFaces(neighbour)) {
       const bool ownSideFilled = partition.getFaceCell(entry.face, entry.side) >= 0
@@ -529,8 +532,8 @@ peano4::tests::PartitionTest::testTheExchangedFacesMatchAcrossRanks() {
         keys.push_back(lattice);
         keys.push_back(entry.side);
       }
-      int numberOfKeys = static_cast<int>(keys.size());
-      int partnerKeys  = 0;
+      const int numberOfKeys = static_cast<int>(keys.size());
+      int       partnerKeys  = 0;
       tarch::mpi::sendrecv(
         &numberOfKeys,
         1,

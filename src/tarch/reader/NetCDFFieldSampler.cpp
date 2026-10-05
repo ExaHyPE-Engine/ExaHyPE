@@ -84,29 +84,31 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDe
   );
 
   if (fieldDescription.name.empty()) {
-    tarch::terminateWithError("Field name must not be empty.");
+    tarch::terminateWithError("A NetCDF field expects a name.");
   }
   if (_fields.find(fieldDescription.name) != _fields.end()) {
-    tarch::terminateWithError("Field \"" + fieldDescription.name + "\" is configured multiple times.");
+    tarch::terminateWithError(
+      "The configuration may name the NetCDF field \"" + fieldDescription.name + "\" once only."
+    );
   }
   for (int i = 0; i < FieldDimensions; i++) {
     if (fieldDescription.key[i].empty()) {
       tarch::terminateWithError(
-        "Coordinate key " + std::to_string(i) + " of field \"" + fieldDescription.name + "\" is empty."
+        "Coordinate key " + std::to_string(i) + " of the NetCDF field \"" + fieldDescription.name + "\" expects a name."
       );
     }
     // The default value key z is the conventional name of the third coordinate.
     if (fieldDescription.key[i] == fieldDescription.valueKey) {
       tarch::terminateWithError(
-        "Field \"" + fieldDescription.name + "\" uses \"" + fieldDescription.valueKey
-        + "\" both as its value key and as a coordinate key."
+        "The value key \"" + fieldDescription.valueKey + "\" of the NetCDF field \"" + fieldDescription.name
+        + "\" must differ from its coordinate keys."
       );
     }
   }
 
   const int ncid = _netCDFFileReader.open(fieldDescription.filePath);
   if (ncid == -1) {
-    tarch::terminateWithError("Field file " + fieldDescription.filePath + " could not be opened.");
+    tarch::terminateWithError("The NetCDF reader cannot open the file '" + fieldDescription.filePath + "'.");
   }
 
   Field field;
@@ -114,13 +116,13 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDe
   for (int i = 0; i < FieldDimensions; i++) {
     field.length[i] = _netCDFFileReader.getDimension(ncid, fieldDescription.key[i].c_str());
     if (field.length[i] == 0) {
-      tarch::terminateWithError("Field dimension \"" + fieldDescription.key[i] + "\" could not be read.");
+      tarch::terminateWithError("The NetCDF reader cannot read the dimension \"" + fieldDescription.key[i] + "\".");
     }
 
     {
       std::vector<double> coordinates(field.length[i], 0.0);
       if (_netCDFFileReader.readVariable(ncid, fieldDescription.key[i].c_str(), coordinates.data()) == -1) {
-        tarch::terminateWithError("Field coordinates \"" + fieldDescription.key[i] + "\" could not be read.");
+        tarch::terminateWithError("The NetCDF reader cannot read the coordinates \"" + fieldDescription.key[i] + "\".");
       }
       field.firstElement[i] = coordinates.front();
       field.lastElement[i]  = coordinates.back();
@@ -139,11 +141,11 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDe
   }
   field.values.resize(numberOfValues, 0.0);
   if (_netCDFFileReader.readVariable(ncid, fieldDescription.valueKey.c_str(), field.values.data()) == -1) {
-    tarch::terminateWithError("Field values could not be read.");
+    tarch::terminateWithError("The NetCDF reader cannot read the values of the field \"" + fieldDescription.name + "\".");
   }
 
   if (_netCDFFileReader.close(ncid) == -1) {
-    tarch::terminateWithError("Field file could not be closed.");
+    tarch::terminateWithError("The NetCDF reader cannot close the file '" + fieldDescription.filePath + "'.");
   }
 
   _fields.emplace(fieldDescription.name, std::move(field));
@@ -161,7 +163,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConstant(
 ) const {
   const auto fieldIterator = _fields.find(fieldName);
   if (fieldIterator == _fields.end()) {
-    tarch::terminateWithError("Unknown NetCDF field \"" + fieldName + "\".");
+    tarch::terminateWithError("The NetCDF reader cannot find the field \"" + fieldName + "\".");
   }
 
   const Field& field = fieldIterator->second;
@@ -197,7 +199,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
 ) const {
   const auto fieldIterator = _fields.find(fieldName);
   if (fieldIterator == _fields.end()) {
-    tarch::terminateWithError("Unknown NetCDF field \"" + fieldName + "\".");
+    tarch::terminateWithError("The NetCDF reader cannot find the field \"" + fieldName + "\".");
   }
 
   const Field& field = fieldIterator->second;

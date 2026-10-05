@@ -39,4 +39,12 @@ private:
   void testParallelReduceTeamRangeMD3();
   void testParallelReduceCustom();
   void testParallelReduceCustomRange();
+  void testReductionScratchKeepsAnAddressThatFits();
+  void testWaitForDeviceCompletesTheLaunchedLoop();
+  void testAReductionOverManyTeamsSumsEveryTeam();
+  void testReduceOverTeamCombinesEveryThread();
+  void testEveryTeamRunsTheDefaultNumberOfThreads();
+  void testATeamLaunchRunsTheRequestedThreads();
+  void testTeamScratchMirrorsWithinTheTeam();
+  void testTheDeviceRunsADefaultTeamAtOnce();
 };

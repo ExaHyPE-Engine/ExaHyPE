@@ -41,37 +41,30 @@ namespace applications::exahype2::exaseis {
     int FreeSurfaceFace
   >
   INLINE_METHOD GPU_CALLABLE_METHOD double solveDynamicRuptureRiemannProblem(
-    const Value*                                 QL,
-    const Value*                                 QR,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    double                                       t,
-    int                                          normal,
-    bool                                         isBoundaryFace,
-    int                                          faceIndex,
-    Value*                                       FL,
-    Value*                                       FR
+    const Value* QL,
+    const Value* QR,
+    double       t,
+    int          normal,
+    bool         isBoundaryFace,
+    bool         isFaultFace,
+    int          faceIndex,
+    Value*       FL,
+    Value*       FR
   );
 } // namespace applications::exahype2::exaseis
 
 /**
- * The fault plane orthogonal to the axis normal at position, in mesh coordinates.
+ * The fault lies orthogonal to the axis normal at position along that axis, in mesh coordinates.
  */
 struct applications::exahype2::exaseis::FaultPlane final {
   int    normal{0};
   double position{0.0};
 
-  static INLINE_METHOD void set(int normal, double position);
-  [[nodiscard]] static INLINE_METHOD const FaultPlane& getHostCopy();
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD FaultPlane get();
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool containsFace(
     const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     int                                          faceNormal
   ) const;
-
-private:
-  [[nodiscard]] static INLINE_METHOD FaultPlane& getStoredHostCopy();
 };
 
 #include "DynamicRuptureRiemannSolver.cpph"

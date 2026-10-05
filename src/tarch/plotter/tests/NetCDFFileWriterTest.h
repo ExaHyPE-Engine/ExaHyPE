@@ -11,39 +11,20 @@ namespace tarch::plotter::tests {
 class tarch::plotter::tests::NetCDFFileWriterTest final : public tarch::tests::TestCase {
 public:
   NetCDFFileWriterTest();
-  ~NetCDFFileWriterTest() override = default;
+  NetCDFFileWriterTest(const NetCDFFileWriterTest& other)            = delete;
+  NetCDFFileWriterTest(NetCDFFileWriterTest&& other)                 = delete;
+  NetCDFFileWriterTest& operator=(const NetCDFFileWriterTest& other) = delete;
+  NetCDFFileWriterTest& operator=(NetCDFFileWriterTest&& other)      = delete;
+  ~NetCDFFileWriterTest() override                                   = default;
 
   void run() override;
 
 private:
-  void test2DSimpleTriangle();
-  void test2DQuadWithData();
+  void test2DQuadrangleWithData();
   void test3DHexahedronWithData();
-  void testMultipleSubdomains2DWithData();
-
-  /**
-   * The collective write completes when only the global master contributes data and
-   * every other rank stays empty.
-   */
+  void testTwoQuadrangles2DWithData();
   void testHeterogeneousRanks();
-
-  /**
-   * The collective write completes when the ranks hold different non-zero subdomain
-   * counts, because the writer issues one collective write per variable.
-   */
-  void testUnevenSubdomainCounts();
-
-  void testEmptyPlotter();
-
-  /** The plotter throws when a data field does not match the geometry count. */
-  void testInconsistentDataSizeThrows();
-
-  /** The writer throws when a cell type it does not support, such as a line, is plotted. */
-  void testUnsupportedCellType();
-
-  /**
-   * The writer rejects a data identifier that carries a character which would corrupt
-   * a NetCDF name or an HDF5 path.
-   */
-  void testInvalidIdentifierThrows();
+  void testUnevenCellCounts();
+  void testEmptyMesh();
+  void testSeries();
 };

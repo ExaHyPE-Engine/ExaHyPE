@@ -84,6 +84,7 @@ namespace {
    */
   struct CellStatus final {
     int        status[exahype2::dg::limiting::NumberOfStatusEntries]{Regular, Regular, 0, 0};
+    double     candidateExtrema[Layout::ExtremaPerCell]{};
     int        faceHalves[peano4::FacesPerCell]{};
     int        neighbourHalves[peano4::FacesPerCell]{};
     int*       ownStatusHalves[peano4::FacesPerCell]{};
@@ -121,6 +122,7 @@ namespace {
       const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
       const tarch::la::Vector<DIMENSIONS, double> cellSize(cellSizes + coordinateOffset);
+      double                                      candidateExtrema[Layout::ExtremaPerCell];
       accumulator = exahype2::dg::MaxEigenvalueStatistics::combine(
         accumulator,
         Judge::judgeCandidate(
@@ -136,7 +138,8 @@ namespace {
           cellCentre,
           cellSize,
           Layout::TimeStamp,
-          Layout::TimeStepSize
+          Layout::TimeStepSize,
+          candidateExtrema
         )
       );
     }
@@ -428,13 +431,15 @@ void
 exahype2::dg::limiting::tests::DetectorTest::testOpenInitialStatusMarksAnOscillatingInterpolant() {
   const exahype2::dg::limiting::tests::SubcellProjections tables;
   const std::vector<double>                               subcells = getConstantSubgrid(2.0, 0.0);
-  int status[exahype2::dg::limiting::NumberOfStatusEntries]{Troubled, Troubled, 1, 1};
+  int    status[exahype2::dg::limiting::NumberOfStatusEntries]{Troubled, Troubled, 1, 1};
+  double sampledExtrema[Judge::ExtremaPerCell];
+  Judge::reduceSampledExtrema(sampledExtrema, subcells.data());
 
   const std::vector<double> steepNodes = getSteepNodes(tables.quadraturePoints);
   Judge::openInitialStatus(
     status,
     steepNodes.data(),
-    subcells.data(),
+    sampledExtrema,
     tables.nodesToLobatto.data(),
     tables.nodesToSubcells.data(),
     NoRelaxation,
@@ -449,7 +454,7 @@ exahype2::dg::limiting::tests::DetectorTest::testOpenInitialStatusMarksAnOscilla
   Judge::openInitialStatus(
     status,
     constantNodes.data(),
-    subcells.data(),
+    sampledExtrema,
     tables.nodesToLobatto.data(),
     tables.nodesToSubcells.data(),
     NoRelaxation,
@@ -498,7 +503,8 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateMarksAnInadmissib
     centre,
     width,
     Layout::TimeStamp,
-    Layout::TimeStepSize
+    Layout::TimeStepSize,
+    cell.candidateExtrema
   );
 
   validateEquals(cell.status[StatusIndex], Troubled);
@@ -539,7 +545,8 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateKeepsATroubledCel
     centre,
     width,
     Layout::TimeStamp,
-    Layout::TimeStepSize
+    Layout::TimeStepSize,
+    cell.candidateExtrema
   );
 
   validateEquals(cell.status[StatusIndex], Limited);
@@ -575,7 +582,8 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateReportsTheWaveSpe
     centre,
     width,
     Layout::TimeStamp,
-    Layout::TimeStepSize
+    Layout::TimeStepSize,
+    cell.candidateExtrema
   );
 
   validateEquals(cell.status[StatusIndex], Regular);
@@ -614,7 +622,8 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateFailsADivergedPre
     centre,
     width,
     Layout::TimeStamp,
-    Layout::TimeStepSize
+    Layout::TimeStepSize,
+    cell.candidateExtrema
   ));
 
   validateEquals(cell.status[StatusIndex], Troubled);
@@ -644,7 +653,8 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateRejectsACandidate
     centre,
     width,
     Layout::TimeStamp,
-    Layout::TimeStepSize
+    Layout::TimeStepSize,
+    cell.candidateExtrema
   ));
 
   validateEquals(cell.status[StatusIndex], Troubled);
@@ -741,7 +751,8 @@ exahype2::dg::limiting::tests::DetectorTest::testAFixedRuleReportsNoWaveSpeeds()
     centre,
     width,
     Layout::TimeStamp,
-    Layout::TimeStepSize
+    Layout::TimeStepSize,
+    cell.candidateExtrema
   );
 
   validateEquals(cell.status[StatusIndex], Regular);
@@ -789,6 +800,7 @@ exahype2::dg::limiting::tests::DetectorTest::testEveryCellOfADeviceRangeJudgesLi
     const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
     const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
     const tarch::la::Vector<DIMENSIONS, double> cellSize(geometry.cellSizes.data() + coordinateOffset);
+    double                                      candidateExtrema[Layout::ExtremaPerCell];
     hostStatistics = exahype2::dg::MaxEigenvalueStatistics::combine(
       hostStatistics,
       Judge::judgeCandidate(
@@ -804,7 +816,8 @@ exahype2::dg::limiting::tests::DetectorTest::testEveryCellOfADeviceRangeJudgesLi
         cellCentre,
         cellSize,
         Layout::TimeStamp,
-        Layout::TimeStepSize
+        Layout::TimeStepSize,
+        candidateExtrema
       )
     );
   }

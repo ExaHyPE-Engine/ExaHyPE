@@ -51,7 +51,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::performTimeStep(
 {%- endif %}
   SolverFamily::performTimeStep(partition, requests);
 {%- if TRACERS %}
-  traceTracers(partition, getTimeStepping().getTimeStepSizeOfLastStep(), false);
+  // A solver that a coupling partner drives advances inside the step of that partner.
+  if (getTimeStepping().getTimeStamp() > _timeStampOfLastTracing) {
+    traceTracers(partition, getTimeStepping().getTimeStepSizeOfLastStep(), false);
+  }
 {%- endif %}
 {%- if FINISH_TIME_STEP_IMPLEMENTATION.strip() %}
   {{FINISH_TIME_STEP_IMPLEMENTATION.strip()}}
@@ -182,14 +185,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::insertTracers(const peano4::Part
 }
 
 /**
- * Moves the tracer sets that update in this phase, then records the snapshots and the position
- * errors of every set.
+ * Moves the tracer sets that update in this phase and records the snapshots and the position errors
+ * of every set.
  */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
   const peano4::Partition& partition,
   const double             timeStepSize,
   const bool               initialisation
 ) {
+  _timeStampOfLastTracing = getTimeStepping().getTimeStamp();
+{%- if TRACERS_RECORD %}
+  const double timeStamp = _timeStampOfLastTracing;
+{%- endif %}
 {%- for tracer in TRACERS %}
 {%- if tracer.INITIALISATION and tracer.TIME_STEPS %}
   {{tracer.UPDATE_CALL | indent(2)}}
@@ -205,17 +212,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
 {%- if tracer.DATABASE and tracer.INITIALISATION %}
   ::exahype2::particles::recordSnapshots(
     _{{tracer.NAME}},
-    getTimeStepping().getTimeStamp(),
+    timeStamp,
     {{tracer.DATABASE.INITIAL_RECORD_TIME}},
     {{tracer.DATABASE.LAST_RECORD_TIME}},
     _{{tracer.NAME}}Database
   );
 {%- elif tracer.DATABASE %}
-  // Only the time steps write the data of this set, so it has no values to record after the initialisation.
+  // Only the time steps write the data of this set. The initialisation records nothing.
   if (not initialisation) {
     ::exahype2::particles::recordSnapshots(
       _{{tracer.NAME}},
-      getTimeStepping().getTimeStamp(),
+      timeStamp,
       {{tracer.DATABASE.INITIAL_RECORD_TIME}},
       {{tracer.DATABASE.LAST_RECORD_TIME}},
       _{{tracer.NAME}}Database
@@ -223,10 +230,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
   }
 {%- endif %}
 {%- if tracer.ERROR %}
-  if (_{{tracer.NAME}}ErrorMeasurement.isSnapshotDue(getTimeStepping().getTimeStamp())) {
+  if (_{{tracer.NAME}}ErrorMeasurement.isSnapshotDue(timeStamp)) {
     ::exahype2::particles::measurePositionErrors<{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}>(
       _{{tracer.NAME}},
-      getTimeStepping().getTimeStamp(),
+      timeStamp,
       timeStepSize,
       _{{tracer.NAME}}ErrorMeasurement
     );

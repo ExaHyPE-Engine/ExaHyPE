@@ -63,14 +63,17 @@ private:
       typename std::remove_cv_t<decltype(CurveGrammar::Productions)>::value_type,
       peano4::sfc::Production<NonTerminal, ChildrenPerCell>
     >,
-    "Every production lists SubdivisionFactor^DIMENSIONS children."
+    "A rule of the space-filling curve must list as many children as a cell contains."
   );
-  static_assert(productionsAreInSymbolOrder(), "Every production is listed at the index of its left-hand side.");
+  static_assert(
+    productionsAreInSymbolOrder(),
+    "The space-filling curve must list each rule at the position of its symbol."
+  );
   static_assert(
     everyProductionTilesTheCell(),
-    "Every production visits each child once with unit steps inside the cell."
+    "A rule of the space-filling curve must visit every child of a cell once in unit steps."
   );
-  static_assert(childrenConnect(), "The exit point of every child meets the entry point of its successor.");
+  static_assert(childrenConnect(), "The space-filling curve must enter each child where it leaves the previous child.");
 };
 TARGET_DECLARE_END
 

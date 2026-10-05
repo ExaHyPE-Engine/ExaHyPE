@@ -25,7 +25,7 @@ namespace {
       JSONValue result = parseValue();
       skipWhitespace();
       if (not isAtEnd()) {
-        error("Unexpected trailing content");
+        error("The file must end after its top-level value");
       }
       return result;
     }
@@ -49,14 +49,15 @@ namespace {
 
     [[noreturn]] void error(const std::string& reason) const {
       std::stringstream message;
-      message << "Failed to parse JSON file \"" << _filepath << "\": " << reason << " at position " << _position << ".";
+      message << "The JSON reader cannot parse the file '" << _filepath << "' at position " << _position << ". "
+              << reason << ".";
       tarch::terminateWithError(message.str());
     }
 
     void expect(const char expected) {
       if (advance() != expected) {
         std::stringstream message;
-        message << "Expected '" << expected << "'";
+        message << "The JSON syntax expects '" << expected << "'";
         error(message.str());
       }
     }
@@ -65,7 +66,7 @@ namespace {
       for (const char ch : keyword) {
         if (advance() != ch) {
           std::stringstream message;
-          message << "Expected \"" << keyword << "\"";
+          message << "The JSON syntax expects \"" << keyword << "\"";
           error(message.str());
         }
       }
@@ -93,7 +94,7 @@ namespace {
         if (current() == '-' or std::isdigit(static_cast<unsigned char>(current())) != 0) {
           return parseNumber();
         }
-        error("Unexpected token");
+        error("The JSON syntax expects a value");
       }
     }
 
@@ -110,7 +111,7 @@ namespace {
       while (true) {
         skipWhitespace();
         if (current() != '"') {
-          error("Expected string key");
+          error("The JSON syntax expects a quoted key");
         }
         std::string key = parseString();
 
@@ -171,7 +172,7 @@ namespace {
 
     unsigned int parseHexDigit() {
       if (isAtEnd()) {
-        error("Incomplete unicode escape");
+        error("A unicode escape needs four hexadecimal digits");
       }
 
       const char ch = advance();
@@ -184,7 +185,7 @@ namespace {
       if (ch >= 'A' and ch <= 'F') {
         return 10U + static_cast<unsigned int>(ch - 'A');
       }
-      error("Invalid unicode escape");
+      error("A unicode escape needs four hexadecimal digits");
     }
 
     std::string parseString() {
@@ -198,7 +199,7 @@ namespace {
         }
         if (ch == '\\') {
           if (isAtEnd()) {
-            error("Incomplete escape sequence");
+            error("A backslash needs an escaped character after it");
           }
           switch (const char escaped = advance()) {
           case '"':
@@ -230,14 +231,14 @@ namespace {
             break;
           }
           default:
-            error("Invalid escape sequence");
+            error("A backslash escapes the characters \", \\, /, b, f, n, r, t and u only");
           }
         } else {
           result.push_back(ch);
         }
       }
 
-      error("Unterminated string");
+      error("A string must end with a quote");
     }
 
     JSONValue parseNumber() {
@@ -248,7 +249,7 @@ namespace {
       }
 
       if (std::isdigit(static_cast<unsigned char>(current())) == 0) {
-        error("Invalid number");
+        error("A number must start with a digit");
       }
 
       if (current() == '0') {
@@ -264,7 +265,7 @@ namespace {
         isFloatingPoint = true;
         advance();
         if (std::isdigit(static_cast<unsigned char>(current())) == 0) {
-          error("Invalid number");
+          error("A decimal point needs a digit after it");
         }
         while (std::isdigit(static_cast<unsigned char>(current())) != 0) {
           advance();
@@ -278,7 +279,7 @@ namespace {
           advance();
         }
         if (std::isdigit(static_cast<unsigned char>(current())) == 0) {
-          error("Invalid exponent");
+          error("An exponent needs at least one digit");
         }
         while (std::isdigit(static_cast<unsigned char>(current())) != 0) {
           advance();
@@ -292,7 +293,7 @@ namespace {
         auto       result = 0.0;
         const auto parsed = std::from_chars(token.data(), end, result);
         if (parsed.ec != std::errc{} or parsed.ptr != end) {
-          error("Failed to parse number");
+          error("A floating-point number must fit into a double-precision value");
         }
         return JSONValue{result};
       }
@@ -300,7 +301,7 @@ namespace {
       auto       result = 0;
       const auto parsed = std::from_chars(token.data(), end, result);
       if (parsed.ec != std::errc{} or parsed.ptr != end) {
-        error("Failed to parse number");
+        error("An integer must fit into 32 bits");
       }
       return JSONValue{result};
     }
@@ -310,7 +311,7 @@ namespace {
   const T& requireType(const JSONValue& value, const std::string& key, const char* expectedTypeName) {
     if (not std::holds_alternative<T>(value.data)) {
       std::stringstream message;
-      message << "JSON key \"" << key << "\" is not of type " << expectedTypeName << ".";
+      message << "The JSON key \"" << key << "\" expects a value of type " << expectedTypeName << ".";
       tarch::terminateWithError(message.str());
     }
     return std::get<T>(value.data);
@@ -366,7 +367,7 @@ namespace {
     const JSONValue* const value = findValue(root, key);
     if (value == nullptr) {
       std::stringstream message;
-      message << "JSON key \"" << key << "\" does not exist.";
+      message << "The JSON reader cannot find the key \"" << key << "\".";
       tarch::terminateWithError(message.str());
     }
     return *value;
@@ -386,7 +387,7 @@ tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
   std::ifstream input(filepath.c_str());
   if (not input.is_open()) {
     std::stringstream message;
-    message << "Could not open JSON file at \"" << filepath << "\".";
+    message << "The JSON reader cannot open the file '" << filepath << "'.";
     tarch::terminateWithError(message.str());
   }
 
@@ -396,7 +397,7 @@ tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
   JSONValue document = Parser(buffer.str(), filepath).parse();
   if (not std::holds_alternative<JSONObject>(document.data)) {
     std::stringstream message;
-    message << "JSON file \"" << filepath << "\" must contain a top-level object.";
+    message << "The JSON reader expects an object at the top level of the file '" << filepath << "'.";
     tarch::terminateWithError(message.str());
   }
   _impl->root = std::get<JSONObject>(std::move(document.data));
@@ -518,7 +519,7 @@ tarch::reader::JSONReader::getDoubleArray(const std::string& key) const {
       result.push_back(std::get<double>(entry.data));
     } else {
       std::stringstream message;
-      message << "JSON key \"" << key << "\" contains a non-numeric array element.";
+      message << "The JSON key \"" << key << "\" expects an array of numbers.";
       tarch::terminateWithError(message.str());
     }
   }

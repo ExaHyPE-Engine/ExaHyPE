@@ -171,8 +171,7 @@ exahype2::refineOnDetail(
 ) {
   static_assert(
     sizeof...(Indicators) > 0,
-    "refineOnDetail() needs at least one indicator. Without one the detail stays zero, which "
-    "maps to Erase."
+    "The refinement criterion on the detail of the solution expects at least one indicator."
   );
 
   if (Q == nullptr) {

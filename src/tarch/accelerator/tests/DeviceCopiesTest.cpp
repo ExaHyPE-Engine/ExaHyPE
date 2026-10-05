@@ -9,36 +9,19 @@
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/tests/DeviceCopiesTestData.h"
 #include "tarch/la/Vector.h"
 
 namespace {
   TARGET_DECLARE
-  double                                                 hostValue{0.0};
-  [[maybe_unused]] DEVICE_VARIABLE double                deviceValue;
   DEVICE_VARIABLE constexpr tarch::la::Vector<2, double> ConstantVector{1.5, -2.5};
   DEVICE_VARIABLE constexpr double                       ConstantScalar = 4.0;
-
-  struct WriteDeviceValue final {
-    double value{0.0};
-
-    INLINE_METHOD GPU_CALLABLE_METHOD void operator()([[maybe_unused]] const int workItem) const {
-      COMPILE_IF_ON_DEVICE(deviceValue = value;)
-    }
-  };
-
-  /**
-   * Returns the device copy on the device and the host value on the host.
-   */
-  INLINE_METHOD GPU_CALLABLE_METHOD double getValue() {
-    COMPILE_IF_ON_DEVICE(return deviceValue;)
-    COMPILE_IF_ON_HOST(return hostValue;)
-  }
 
   struct ReadValue final {
     double* target{nullptr};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()([[maybe_unused]] const int workItem) const {
-      *target = getValue();
+      *target = tarch::accelerator::getDeviceCopy<double>();
     }
   };
 
@@ -56,8 +39,6 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  const bool deviceValueIsAdded = tarch::accelerator::addDeviceCopy<WriteDeviceValue>(hostValue);
-
   double getValueOfAKernel() {
     tarch::accelerator::Buffer<double> target(1, tarch::MemoryLocation::Device);
     tarch::accelerator::parallelFor(tarch::accelerator::Range(1), ReadValue{target.getData()});
@@ -72,21 +53,26 @@ tarch::accelerator::tests::DeviceCopiesTest::DeviceCopiesTest() :
 
 void
 tarch::accelerator::tests::DeviceCopiesTest::run() {
-  testMethod(testAKernelReadsTheValueOfTheLastUpload);
+  testMethod(testTheKernelsOfTwoTranslationUnitsReadTheLastUpload);
   testMethod(testHostCodeAndAKernelReadTheSameConstants);
 }
 
+/**
+ * The kernels of two translation units read the host value of the last upload.
+ */
 void
-tarch::accelerator::tests::DeviceCopiesTest::testAKernelReadsTheValueOfTheLastUpload() {
+tarch::accelerator::tests::DeviceCopiesTest::testTheKernelsOfTwoTranslationUnitsReadTheLastUpload() {
   validate(deviceValueIsAdded);
 
-  hostValue = 42.5;
+  tarch::accelerator::tests::hostValue = 42.5;
   tarch::accelerator::uploadDeviceCopies();
   validateNumericalEquals(getValueOfAKernel(), 42.5);
+  validateNumericalEquals(tarch::accelerator::tests::getValueOfAKernelOfTheTestData(), 42.5);
 
-  hostValue = -3.0;
+  tarch::accelerator::tests::hostValue = -3.0;
   tarch::accelerator::uploadDeviceCopies();
   validateNumericalEquals(getValueOfAKernel(), -3.0);
+  validateNumericalEquals(tarch::accelerator::tests::getValueOfAKernelOfTheTestData(), -3.0);
 }
 
 /**

@@ -6,7 +6,9 @@
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
 
 TARGET_DECLARE
 /**
@@ -25,7 +27,7 @@ exahype2::dg::interpolateFields(
   exahype2::particles::Particle&                 particle
 ) {
   static_assert(NodesPerAxis > 0);
-  static_assert(sizeof...(FieldIndices) <= NumberOfData, "Every interpolated field reads one unknown.");
+  static_assert(sizeof...(FieldIndices) <= NumberOfData, "A tracer interpolates the fields of the solver only.");
   if (scheme == exahype2::particles::InterpolationScheme::None) {
     return;
   }
@@ -132,7 +134,7 @@ exahype2::dg::traceFaceValues(
 ) {
   static_assert(
     ((DifferenceFields >= 0 and DifferenceFields < NumberOfData) and ...),
-    "Every difference field is a value."
+    "A face trace takes its difference fields from the values of the solver only."
   );
   assertion(normal >= 0 and normal < DIMENSIONS, normal);
   assertion(quadratureNodes != nullptr);
@@ -207,8 +209,10 @@ exahype2::dg::TraceFaceValues<NodesPerAxis, NumberOfData, NumberOfParticleData, 
 }
 
 /**
- * Moves every particle through the solution of its cell and relocates every particle that left
- * its cell. An integration stage outside the cell evaluates the cell polynomial beyond the cell.
+ * Moves every particle through the solution of its cell, relocates every particle that left its
+ * cell and then samples the fields of every moved particle in its new cell. An integration stage
+ * outside the cell evaluates the cell polynomial beyond the cell. The kernel marks the particles
+ * that left their cell and counts them. Only those leave the device.
  */
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
 INLINE_METHOD void
@@ -225,40 +229,71 @@ exahype2::dg::traceParticles(
 ) {
   assertion(timeStepSize >= 0.0, timeStepSize);
   assertion(quadratureNodes != nullptr);
-  if (particles.getSize() == 0) {
-    particles.relocate(partition);
+  int numberOfMovedParticles = 0;
+  if (particles.getSize() > 0) {
+    particles.upload();
+    const auto set = particles.getView();
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(set.numberOfParticles),
+      exahype2::dg::TraceParticles<
+        NodesPerAxis,
+        NumberOfData,
+        NumberOfParticleData,
+        exahype2::particles::FieldList<FieldIndices...>,
+        Pool
+      >{partition.onDevice(),
+        solution.getView(),
+        quadratureNodes,
+        timeStepSize,
+        set,
+        forces,
+        domainOffset,
+        domainWidth,
+        periodicAxes},
+      tarch::accelerator::Sum<int>{numberOfMovedParticles}
+    );
+  }
+  if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
     return;
   }
-  particles.upload();
-  const auto set = particles.getView();
-  tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(set.numberOfParticles),
-    exahype2::dg::TraceParticles<
-      NodesPerAxis,
-      NumberOfData,
-      NumberOfParticleData,
-      exahype2::particles::FieldList<FieldIndices...>,
-      Pool
-    >{partition.onDevice(),
-      solution.getView(),
-      quadratureNodes,
-      timeStepSize,
-      set,
-      forces,
-      domainOffset,
-      domainWidth,
-      periodicAxes}
-  );
-  if (forces.integrationScheme != exahype2::particles::IntegrationScheme::Static) {
-    particles.download();
+  particles.relocateParticlesMovedOutOfCells(partition, numberOfMovedParticles);
+  // Every moved particle samples the fields of the cell that holds it now.
+  if (timeStepSize > 0.0 and particles.getSize() > 0) {
+    particles.upload();
+    const auto set                         = particles.getView();
+    int        movedParticlesAfterSampling = 0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(set.numberOfParticles),
+      exahype2::dg::TraceParticles<
+        NodesPerAxis,
+        NumberOfData,
+        NumberOfParticleData,
+        exahype2::particles::FieldList<FieldIndices...>,
+        Pool
+      >{partition.onDevice(),
+        solution.getView(),
+        quadratureNodes,
+        0.0,
+        set,
+        forces,
+        domainOffset,
+        domainWidth,
+        periodicAxes,
+        true},
+      tarch::accelerator::Sum<int>{movedParticlesAfterSampling}
+    );
+    assertion(movedParticlesAfterSampling == 0, movedParticlesAfterSampling);
   }
-  particles.relocate(partition);
 }
 
+/**
+ * Raises numberOfMovedParticles by one for a particle whose new position lies outside its cell.
+ */
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::TraceParticles<NodesPerAxis, NumberOfData, NumberOfParticleData, Fields, Pool>::operator()(
-  const int index
+  const int index,
+  int&      numberOfMovedParticles
 ) const {
   constexpr double              WallDamping = 0.8;
   exahype2::particles::Particle particle    = particles.getParticle(index);
@@ -285,7 +320,7 @@ exahype2::dg::TraceParticles<NodesPerAxis, NumberOfData, NumberOfParticleData, F
       );
     };
   interpolateAt(particle, particle.getX());
-  if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
+  if (samplesOnly or forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
     return;
   }
   exahype2::particles::applyForces(particle, particle.getX(), forces, domainOffset, domainWidth);
@@ -294,4 +329,8 @@ exahype2::dg::TraceParticles<NodesPerAxis, NumberOfData, NumberOfParticleData, F
   exahype2::particles::reflectAtWalls(particle, newPosition, WallDamping, domainOffset, domainWidth, periodicAxes);
   exahype2::particles::wrapIntoDomain(newPosition, domainOffset, domainWidth, periodicAxes);
   particle.setX(newPosition);
+  if (not particles.isInsideCell(partition, index, newPosition, domainOffset)) {
+    particles.markAsMovedOutOfCell(index);
+    numberOfMovedParticles++;
+  }
 }

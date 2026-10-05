@@ -28,4 +28,5 @@ private:
   void testAHostWriteReachesTheDeviceCopy();
   void testRelocateKeepsTheDeviceValuesWhileNoParticleLeaves();
   void testReleaseFreesEveryArray();
+  void testAParticleMarkedOnTheDeviceMovesToTheCellThatContainsIt();
 };

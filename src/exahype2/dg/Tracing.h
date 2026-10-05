@@ -103,7 +103,8 @@ struct exahype2::dg::TraceFaceValues final {
 };
 
 /**
- * Interpolates the fields of Fields to one particle and moves the particle by timeStepSize.
+ * Interpolates the fields of Fields to one particle and moves the particle by timeStepSize. With
+ * samplesOnly the kernel stops after the interpolation.
  */
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
 struct exahype2::dg::TraceParticles final {
@@ -116,8 +117,9 @@ struct exahype2::dg::TraceParticles final {
   tarch::la::Vector<DIMENSIONS, double>                      domainOffset{};
   tarch::la::Vector<DIMENSIONS, double>                      domainWidth{};
   int                                                        periodicAxes{0};
+  bool                                                       samplesOnly{false};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int index) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int index, int& numberOfMovedParticles) const;
 };
 TARGET_DECLARE_END
 

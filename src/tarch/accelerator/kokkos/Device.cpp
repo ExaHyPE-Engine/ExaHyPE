@@ -44,6 +44,14 @@ tarch::accelerator::Device::isInitialised() const {
   return numberOfDevices > 0;
 }
 
+/**
+ * Returns the threads the default execution space runs at once.
+ */
+int
+tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
+  return std::max(1, static_cast<int>(Kokkos::DefaultExecutionSpace().concurrency()));
+}
+
 int
 tarch::accelerator::Device::getNumberOfDevices() const {
   return numberOfDevices;

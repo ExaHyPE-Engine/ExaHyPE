@@ -18,7 +18,7 @@ set(SOURCES
   tests/SolverRepositoryTest.cpp
   tests/TimeSteppingTest.cpp
 
-  fv/tests/FiniteVolumeTest.cpp
+  fv/tests/FiniteVolumeSchemeTest.cpp
   fv/tests/HaloProfileTestData.cpp
   fv/tests/KernelsTest.cpp
   fv/tests/SolverTest.cpp
@@ -53,7 +53,6 @@ set(SOURCES
 
   plotter/FacePlotter.cpp
   plotter/PatchPlotter.cpp
-  plotter/Snapshot.cpp
   runner/Console.cpp
   runner/Runner.cpp
   runner/RuntimeParameters.cpp
@@ -80,7 +79,7 @@ set(GPU_SOURCES
   dg/rk/tests/StagesTest.cpp
   dg/tests/KernelsTest.cpp
   dg/tests/TracingTest.cpp
-  fv/tests/FiniteVolumeTest.cpp
+  fv/tests/FiniteVolumeSchemeTest.cpp
   fv/tests/SolverTest.cpp
   fv/tests/TracingTest.cpp
   particles/tests/ParticleErrorMeasurementTest.cpp

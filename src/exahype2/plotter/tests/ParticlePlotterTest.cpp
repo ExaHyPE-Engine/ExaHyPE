@@ -23,7 +23,7 @@ namespace {
   }
 
   /**
-   * Deletes the output directory on the global master once every rank has read its piece back.
+   * Deletes the output directory on the global master once every rank has read its file back.
    */
   void deleteOutputDirectory(const std::string& outputDirectory) {
     tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
@@ -65,19 +65,19 @@ exahype2::plotter::tests::ParticlePlotterTest::testEveryParticleBecomesOnePointW
   plotter.plot(particles, 0.25, tarch::plotter::Format::VTU, outputDirectory);
 
   const int                   plottedParticles = peano4::tests::getGlobalSumOf(particles.getSize());
-  const std::filesystem::path piece            = std::filesystem::path(outputDirectory) / "particle"
+  const std::filesystem::path vtuPath          = std::filesystem::path(outputDirectory) / "particle"
     / ("ParticlePlotterTest-0_250000-rank-" + std::to_string(rank) + ".vtu");
-  const std::string content = getFileContent(piece);
+  const std::string content = getFileContent(vtuPath);
   deleteOutputDirectory(outputDirectory);
 
   validateEquals(plottedParticles, NumberOfParticles);
   validateWithParams1(
     content.find("NumberOfPoints=\"" + std::to_string(particles.getSize()) + "\"") != std::string::npos,
-    piece.string()
+    vtuPath.string()
   );
   validateWithParams1(
     content.find("NumberOfCells=\"" + std::to_string(particles.getSize()) + "\"") != std::string::npos,
-    piece.string()
+    vtuPath.string()
   );
   validate(content.find("Name=\"Number\"") != std::string::npos);
   validate(content.find("Name=\"Data\"") != std::string::npos);

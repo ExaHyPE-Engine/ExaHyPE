@@ -253,7 +253,8 @@ peano4::Spacetree::requestsChangePlan(const std::vector<RefinementRequest>& requ
 
 /**
  * Returns whether the requests change the current plan and writes the changed plan into
- * updatedPlan. The function caches the last set of requests and its result.
+ * updatedPlan. The function caches the last set of requests and its result. The statistics count
+ * the bytes of a new cached set.
  */
 bool
 peano4::Spacetree::derivePlanUpdate(
@@ -274,6 +275,7 @@ peano4::Spacetree::derivePlanUpdate(
   _lastEvaluatedRequests     = requests;
   _lastEvaluatedPlanUpdate   = updatedPlan;
   _lastEvaluationChangedPlan = planChanged;
+  _statistics.treeBytes      = getTreeBytes();
   return planChanged;
 }
 
@@ -384,7 +386,7 @@ peano4::Spacetree::votePersistentDataLive() {
  */
 bool
 peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid& regrid) {
-  assertion(not _regridPending, "finishRegrid() has to follow every regrid that returned the slot moves.");
+  assertion(not _regridPending, "A regrid starts only after the previous regrid finishes.");
   votePersistentDataLive();
 
   if (_tree == nullptr) {
@@ -434,7 +436,7 @@ peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid
 
 /**
  * Appends the slots the last regrid freed to the free list. A caller calls this function once it
- * has moved its data.
+ * has moved its data. The statistics count the bytes of the grown list.
  */
 void
 peano4::Spacetree::finishRegrid() {
@@ -442,7 +444,8 @@ peano4::Spacetree::finishRegrid() {
   _arrays.freeSlots
     .insert(_arrays.freeSlots.end(), _arrays.slotsFreedByRegrid.begin(), _arrays.slotsFreedByRegrid.end());
   _arrays.slotsFreedByRegrid.clear();
-  _regridPending = false;
+  _statistics.partitionBytes = getPartitionBytes();
+  _regridPending             = false;
 }
 
 /**
@@ -468,7 +471,7 @@ peano4::Spacetree::deriveStatistics() {
     + _partition.getFaces(Adjacency::Remote, FaceKind::Hanging).size;
   _statistics.numberOfExchangedFaces = static_cast<int>(_arrays.exchangedFaces.size());
   _statistics.partitionBytes         = getPartitionBytes();
-  _statistics.treeBytes              = _tree->getAllocatedBytes();
+  _statistics.treeBytes              = getTreeBytes();
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     _statistics.minimumCellWidth(axis) = _arrays.cells.empty() ? std::numeric_limits<double>::max()
                                                                : _partition.getWidthOfLevel(_arrays.maximumLevel, axis);
@@ -603,9 +606,7 @@ peano4::Spacetree::rebuildPartition(const peano4::topology::Tree& previousTree, 
     return result;
   };
   const auto beyondOneLevel = []() {
-    tarch::terminateWithError(
-      "A regrid changed the level of a cell by more than one, which the slot moves do not carry."
-    );
+    tarch::terminateWithError("A regrid changes the level of a cell by at most one level.");
   };
 
   std::map<int, std::vector<std::pair<TransferKey, TransferredCell>>> sent;
@@ -751,6 +752,27 @@ peano4::Spacetree::rebuildPartition(const peano4::topology::Tree& previousTree, 
   }
 }
 
+/**
+ * Returns the bytes of the tree, of the spare trees that the next builds reuse, of the refinement
+ * plans, of the block owners and of the last evaluated requests.
+ */
+std::size_t
+peano4::Spacetree::getTreeBytes() const noexcept {
+  std::size_t result = sizeof(peano4::topology::Tree) + _tree->getAllocatedBytes()
+    + tarch::getAllocatedBytesOf(_spareTrees) + tarch::getAllocatedBytesOf(_blockOwners)
+    + tarch::getAllocatedBytesOf(_lastEvaluatedRequests);
+  for (const auto& spareTree : _spareTrees) {
+    result += sizeof(peano4::topology::Tree) + spareTree->getAllocatedBytes();
+  }
+  for (const auto* const plan : {&_refinementPlan, &_lastEvaluatedPlanUpdate}) {
+    result += tarch::getAllocatedBytesOf(*plan);
+    for (const auto& flagsOfLevel : *plan) {
+      result += tarch::getAllocatedBytesOf(flagsOfLevel);
+    }
+  }
+  return result;
+}
+
 tarch::AllocatedBytes
 peano4::Spacetree::getPartitionBytes() const noexcept {
   std::size_t hostBytes = tarch::getAllocatedBytesOf(_arrays.widthOfLevel) + tarch::getAllocatedBytesOf(_arrays.cells)
@@ -764,9 +786,13 @@ peano4::Spacetree::getPartitionBytes() const noexcept {
     + tarch::getAllocatedBytesOf(_arrays.levelJumpRanges) + tarch::getAllocatedBytesOf(_arrays.neighbours)
     + tarch::getAllocatedBytesOf(_arrays.exchangedFaces) + tarch::getAllocatedBytesOf(_arrays.faceOfTreeFace)
     + tarch::getAllocatedBytesOf(_arrays.levelJumpOfCoarseFace) + tarch::getAllocatedBytesOf(_arrays.cellSlotOfLattice)
-    + tarch::getAllocatedBytesOf(_arrays.freeSlots) + tarch::getAllocatedBytesOf(_arrays.slotsFreedByRegrid);
+    + tarch::getAllocatedBytesOf(_arrays.freeSlots) + tarch::getAllocatedBytesOf(_arrays.slotsFreedByRegrid)
+    + tarch::getAllocatedBytesOf(_arrays.neighbourFaces);
   for (const auto& cellSlotOfLattice : _arrays.cellSlotOfLattice) {
     hostBytes += cellSlotOfLattice.getAllocatedBytes();
+  }
+  for (const auto& neighbourFaces : _arrays.neighbourFaces) {
+    hostBytes += tarch::getAllocatedBytesOf(neighbourFaces.faces);
   }
   return tarch::AllocatedBytes::onHost(hostBytes) + _deviceArrays.cells.getAllocatedBytes()
     + _deviceArrays.cellLevel.getAllocatedBytes() + _deviceArrays.cellLattice.getAllocatedBytes()

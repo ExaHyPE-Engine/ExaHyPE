@@ -19,7 +19,7 @@ namespace {
     std::ofstream output(path);
     if (not output.is_open()) {
       std::stringstream message;
-      message << "Failed to create temporary file \"" << path.string() << "\".";
+      message << "The test cannot create the temporary file '" << path.string() << "'.";
       tarch::terminateWithError(message.str());
     }
     output << content;

@@ -64,8 +64,10 @@ struct exahype2::runner::SolverRepositoryCallbacks {
 
 /**
  * Drives one simulation on every rank. The global master broadcasts every step it runs, and every
- * other rank runs the received steps until the termination step. A regrid runs sweeps until the
- * refinement requests of the solvers leave the refinement plan unchanged.
+ * other rank runs the received steps until the termination step. The grid construction runs
+ * CreateGrid steps and a regrid runs DynamicAMR steps until the refinement requests of the solvers
+ * leave the refinement plan unchanged. Every round of the grid initialisation runs one InitGrid
+ * step.
  */
 class exahype2::runner::Runner final {
 public:
@@ -115,10 +117,10 @@ private:
    */
   static constexpr double SecondsBetweenMeshUpdateReports = 5.0;
   /**
-   * Upper bound on the sweeps of the grid construction and of one regrid. A phase that reaches it
+   * Upper bound on the steps of the grid construction and of one regrid. A phase that reaches it
    * stops the run with an error.
    */
-  static constexpr int MaximumMeshUpdateSweeps = 1024;
+  static constexpr int MaximumMeshUpdateSteps = 1024;
   /**
    * Upper bound on the initialisation rounds. Refinement requests that still change the grid after
    * the last round stop the run with an error.
@@ -127,7 +129,7 @@ private:
 
   struct MeshUpdates {
     int          regrids{0};
-    int          sweeps{0};
+    int          steps{0};
     double       wallClock{0.0};
     GridSnapshot before{};
     GridSnapshot after{};
@@ -208,7 +210,7 @@ private:
   void initialiseGrid();
   [[nodiscard]] bool hasPendingMeshUpdates() const;
   void applyMeshUpdates();
-  double runMeshUpdateSweep(bool startsRegrid);
+  double runMeshUpdateStep(bool startsRegrid);
   void reportMeshUpdates();
   void startMeshUpdates();
   void runTimeLoop();

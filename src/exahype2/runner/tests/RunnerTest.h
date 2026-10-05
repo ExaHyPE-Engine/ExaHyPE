@@ -22,7 +22,7 @@ public:
 private:
   void testTheMasterStepReachesEveryRank();
   void testTheTerminationStepReachesEveryRank();
-  void testDescribeMeshUpdatesReportsTheSweepCountAndWallClock();
+  void testDescribeMeshUpdatesReportsTheStepCountAndWallClock();
   void testDescribeRepetitionsCountsEveryPhaseInItsUnit();
   void testFinishStepSumsTheSolverBytesAndCellUpdates();
   void testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition();

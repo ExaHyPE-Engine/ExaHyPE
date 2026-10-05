@@ -17,7 +17,7 @@
 #include "exahype2/dg/tests/KernelsTest.h"
 #include "exahype2/dg/tests/TracingTest.h"
 #include "exahype2/fv/limiter/tests/SlopeLimiterTest.h"
-#include "exahype2/fv/tests/FiniteVolumeTest.h"
+#include "exahype2/fv/tests/FiniteVolumeSchemeTest.h"
 #include "exahype2/fv/tests/KernelsTest.h"
 #include "exahype2/fv/tests/SolverTest.h"
 #include "exahype2/fv/tests/TracingTest.h"
@@ -57,7 +57,7 @@ exahype2::getUnitTests() {
   result->addTestCase(new exahype2::tests::SolverRepositoryTest());
   result->addTestCase(new exahype2::tests::TimeSteppingTest());
 
-  result->addTestCase(new exahype2::fv::tests::FiniteVolumeTest());
+  result->addTestCase(new exahype2::fv::tests::FiniteVolumeSchemeTest());
   result->addTestCase(new exahype2::fv::tests::KernelsTest());
   result->addTestCase(new exahype2::fv::tests::SolverTest());
   result->addTestCase(new exahype2::fv::tests::TracingTest());

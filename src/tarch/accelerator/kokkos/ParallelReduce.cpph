@@ -44,11 +44,16 @@ namespace tarch::accelerator {
   template <typename Functor, typename ValueType>
   struct LeagueReduce final {
     Functor functor;
+    int     scratchBytes;
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
       const tarch::accelerator::KokkosTeam::MemberType& team,
       ValueType&                                        accumulator
     ) const {
-      functor(team.league_rank(), tarch::accelerator::KokkosTeam{team}, accumulator);
+      functor(
+        team.league_rank(),
+        tarch::accelerator::KokkosTeam{team, takeTeamScratch(team, scratchBytes)},
+        accumulator
+      );
     }
   };
 
@@ -78,6 +83,21 @@ namespace tarch::accelerator {
       functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ, accumulator);
     }
   };
+
+  /**
+   * Combines the partial value of every thread of the team into the target of the reducer.
+   */
+  template <typename Reducer>
+  INLINE_METHOD GPU_CALLABLE_METHOD void reduceOverTeam(
+    const KokkosTeam&           team,
+    typename Reducer::ValueType threadValue,
+    const Reducer               reducer
+  ) {
+    team.member.team_reduce(tarch::accelerator::getKokkosReducer(Reducer{threadValue}));
+    Kokkos::single(Kokkos::PerTeam(team.member), [&]() {
+      reducer.target = Reducer::combine(reducer.target, threadValue);
+    });
+  }
 
   template <typename Reducer, typename Functor>
   INLINE_METHOD GPU_CALLABLE_METHOD void parallelReduce(
@@ -203,13 +223,16 @@ namespace tarch::accelerator {
     if (range.n <= 0) {
       return;
     }
-    using ValueType                                                       = typename Reducer::ValueType;
-    ValueType                                               partialResult = Reducer::identity();
-    const Reducer                                           partialReducer{partialResult};
-    const Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy(range.n, Kokkos::AUTO);
+    using ValueType             = typename Reducer::ValueType;
+    ValueType     partialResult = Reducer::identity();
+    const Reducer partialReducer{partialResult};
+    const int     scratchBytes = tarch::accelerator::getTeamScratchBytes(range.scratchBytes);
+    const Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy =
+      Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>(range.n, tarch::accelerator::getTeamThreads(range.threads))
+        .set_scratch_size(0, Kokkos::PerTeam(scratchBytes));
     Kokkos::parallel_reduce(
       policy,
-      LeagueReduce<Functor, ValueType>{functor},
+      LeagueReduce<Functor, ValueType>{functor, scratchBytes},
       tarch::accelerator::getKokkosReducer(partialReducer)
     );
     reducer.target = Reducer::combine(reducer.target, partialResult);

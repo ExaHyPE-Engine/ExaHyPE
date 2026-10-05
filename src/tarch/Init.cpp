@@ -20,7 +20,7 @@ tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
     tarch::mpi::Diagnostics::getInstance().setDeadlockTimeout(configuration.mpiDeadlockTimeout);
     tarch::mpi::Diagnostics::getInstance().setRequestTracking(configuration.mpiRequestTrackingEnabled);
   } else {
-    tarch::terminateWithError("Cannot initialise parallel environment.");
+    tarch::terminateWithError("The MPI library cannot start.");
   }
 
   // The communication thread reserves one core, so this call runs before the task runtime sizes
@@ -28,11 +28,11 @@ tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
   tarch::mpi::AbstractCommunicationManager::configure(configuration.communicationThreadEnabled);
 
   if (not tarch::tasking::Runtime::getInstance().init()) {
-    tarch::terminateWithError("Cannot initialise multithreading environment.");
+    tarch::terminateWithError("The task runtime cannot start.");
   }
 
   if (not tarch::accelerator::Device::getInstance().init()) {
-    tarch::terminateWithError("Cannot initialise accelerator environment.");
+    tarch::terminateWithError("The accelerator runtime cannot start.");
   }
   // The ranks of a node take the devices of the node in turn. The selection precedes the first
   // allocation, because every buffer allocates on the current device.

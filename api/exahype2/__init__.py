@@ -33,4 +33,4 @@ def __getattr__(name):
         globals()[name] = value
         return value
 
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    raise AttributeError(f"The module {__name__!r} cannot find the attribute {name!r}.")

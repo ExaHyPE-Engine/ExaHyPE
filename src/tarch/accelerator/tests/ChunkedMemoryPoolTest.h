@@ -36,4 +36,5 @@ private:
   void testMoveTransfersSegments();
   void testRelease();
   void testHostCopiesRoundTrip();
+  void testHostCodeReadsAndWritesEveryChunkThroughDownloadAndUpload();
 };

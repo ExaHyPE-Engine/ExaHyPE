@@ -19,27 +19,41 @@ namespace tarch::accelerator {
    */
   template <int D>
   struct RangeMD {
-    static_assert(D == 2 or D == 3, "A RangeMD has two or three dimensions.");
+    static_assert(D == 2 or D == 3, "A multidimensional parallel loop supports 2D and 3D only.");
     int n[D];
 
     GPU_CALLABLE_METHOD constexpr RangeMD(int nx, int ny) :
       n{nx, ny} {
-      static_assert(D == 2, "The constructor with two extents requires D == 2.");
+      static_assert(D == 2, "Only a 2D parallel loop takes two extents.");
     }
     GPU_CALLABLE_METHOD constexpr RangeMD(int nx, int ny, int nz) :
       n{nx, ny, nz} {
-      static_assert(D == 3, "The constructor with three extents requires D == 3.");
+      static_assert(D == 3, "Only a 3D parallel loop takes three extents.");
     }
   };
 
   /**
    * Covers n independent teams, which a GPU backend maps onto thread blocks or work groups. The
    * kernel of one team calls parallelFor() or parallelReduce() with the team and an inner Range or
-   * RangeMD.
+   * RangeMD. threads is the number of threads per team the launch asks for, and scratchBytes the
+   * size of the team scratch the kernel reads through getTeamScratch(). getTeamThreads() of the
+   * backend returns the threads it runs for a request. BackendDefault asks for the most threads
+   * and for TeamScratchBytes of scratch.
    */
   struct TeamRange {
+    static constexpr int BackendDefault = -1;
+
     int n;
+    int threads;
+    int scratchBytes;
+
     GPU_CALLABLE_METHOD constexpr explicit TeamRange(int size) :
-      n(size) {}
+      n(size),
+      threads(BackendDefault),
+      scratchBytes(BackendDefault) {}
+    GPU_CALLABLE_METHOD constexpr TeamRange(int size, int threadsPerTeam, int bytesOfTeamScratch) :
+      n(size),
+      threads(threadsPerTeam),
+      scratchBytes(bytesOfTeamScratch) {}
   };
 } // namespace tarch::accelerator

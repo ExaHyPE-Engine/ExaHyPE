@@ -7,24 +7,39 @@
 {% for include in SOLVER_INCLUDES_WITH_PATH %}
 #include "{{include}}"
 {%- endfor %}
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace {{NAMESPACE | join("::")}} {
   class {{SOLVER_NAME}};
   class {{CLASSNAME}};
-} // namespace {{NAMESPACE | join("::")}}
-
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public {{SOLVER_FAMILY_CLASS}} {
-public:
-  using SolverFamily = {{SOLVER_FAMILY_CLASS}};
 {%- if SOLVER_FAMILY_CONSTANTS %}
-{% for line in SOLVER_FAMILY_CONSTANTS %}
+  struct {{CLASSNAME}}Constants;
+{%- endif %}
+} // namespace {{NAMESPACE | join("::")}}
+{%- if SOLVER_FAMILY_CONSTANTS %}
+
+TARGET_DECLARE
+/**
+ * The constants of the solver family. The kernels read them on the host and on the device.
+ */
+struct {{NAMESPACE | join("::")}}::{{CLASSNAME}}Constants {
+{%- for line in SOLVER_FAMILY_CONSTANTS %}
   {{line}}
 {%- endfor %}
+};
+TARGET_DECLARE_END
 {%- endif %}
+
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} :
+  public {{SOLVER_FAMILY_CLASS}}{% if SOLVER_FAMILY_CONSTANTS %},
+  public {{CLASSNAME}}Constants{% endif %} {
+public:
+  using SolverFamily = {{SOLVER_FAMILY_CLASS}};
 {%- if USE_VARIABLE_SHORTCUTS %}
 
   /**
-   * Indices of the variables by name, so Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first variable.
+   * Names the variable indices. The expression Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first
+   * variable.
    */
   using Shortcuts = ::{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}VariableShortcuts;
 {%- endif %}
@@ -42,12 +57,6 @@ public:
    */
   static constexpr bool InitialisesPatches = {{ "true" if INITIALISE_PATCHES else "false" }};
 {%- endif %}
-
-  /**
-   * Whether the initial condition fills a host copy of the cells, which the solver then copies to
-   * the device.
-   */
-  static constexpr bool InitialisesOnHost = {{ "true" if INITIALISE_ON_HOST else "false" }};
 {%- if NUMBER_OF_DMP_OBSERVABLES is defined and NUMBER_OF_DMP_OBSERVABLES > 0 %}
 
   static constexpr int NumberOfDMPObservables = {{NUMBER_OF_DMP_OBSERVABLES}};
@@ -85,6 +94,9 @@ public:
     std::vector<::exahype2::runner::SolverStatistic>& statistics
   ) const;
 {%- endif %}
+{%- if TRACERS %}
+  void traceTracers(const peano4::Partition& partition, double timeStepSize, bool initialisation);
+{%- endif %}
 {%- if SOLVER_BASE_USER_DECLARATIONS.strip() %}
 
   {{SOLVER_BASE_USER_DECLARATIONS.strip()}}
@@ -115,8 +127,8 @@ private:
   ::exahype2::ErrorMeasurement _{{tracer.NAME}}ErrorMeasurement{};
 {%- endif %}
 {%- endfor %}
+  double _timeStampOfLastTracing{0.0};
 
   void insertTracers(const peano4::Partition& partition);
-  void traceTracers(const peano4::Partition& partition, double timeStepSize, bool initialisation);
 {%- endif %}
 };

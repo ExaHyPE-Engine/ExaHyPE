@@ -9,20 +9,20 @@
 namespace exahype2::particles {
   template <int NumberOfData>
   [[nodiscard]] INLINE_METHOD bool isSnapshotDue(
-    const ParticleSet<NumberOfData>& particles,
-    double                           timeStamp,
-    double                           initialRecordTime,
-    double                           lastRecordTime,
-    TrajectoryDatabase&              database
+    ParticleSet<NumberOfData>& particles,
+    double                     timeStamp,
+    double                     initialRecordTime,
+    double                     lastRecordTime,
+    TrajectoryDatabase&        database
   );
 
   template <int NumberOfData>
   [[nodiscard]] INLINE_METHOD bool isSnapshotDueOnSomeRank(
-    const ParticleSet<NumberOfData>& particles,
-    double                           timeStamp,
-    double                           initialRecordTime,
-    double                           lastRecordTime,
-    TrajectoryDatabase&              database
+    ParticleSet<NumberOfData>& particles,
+    double                     timeStamp,
+    double                     initialRecordTime,
+    double                     lastRecordTime,
+    TrajectoryDatabase&        database
   );
 
   template <int NumberOfData>

@@ -8,6 +8,7 @@
 #include "exahype2/terms/PointSourceLocations.h"
 #include "tarch/Assertions.h"
 #include "tarch/Termination.h"
+#include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
@@ -21,7 +22,8 @@
 #include <mpi.h>
 
 /**
- * Returns the CFL factor of the ADER-DG scheme of the given polynomial order.
+ * Returns the CFL factor of the ADER-DG scheme of the given polynomial order. The factors up to
+ * order 4 stem from the von Neumann analysis of Dumbser, Balsara, Toro and Munz (2008).
  */
 INLINE_METHOD constexpr double
 exahype2::dg::ader::getCFLFactor(const int order) {
@@ -53,10 +55,10 @@ INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePreci
   const std::vector<exahype2::plotter::DataField>& plottedFields
 ) :
   Base(timeStepFactor, name, plottedFields) {
-  static_assert(not HasLimiter, "A solver with a limiter takes the relaxation parameters of the limiter.");
+  static_assert(not HasLimiter, "The solver with a limiter expects the relaxation parameters of the limiter.");
   static_assert(
     Derived::DGOrder >= 0 and Derived::DGOrder < 16,
-    "The CFL factors of the ADER-DG scheme cover the orders 0 to 15."
+    "The ADER-DG solver supports the orders 0 to 15 only."
   );
 }
 
@@ -74,10 +76,10 @@ INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePreci
 ) :
   Base(timeStepFactor, name, plottedFields),
   _limiter(std::in_place, relaxationParameter, differencesScaling) {
-  static_assert(HasLimiter, "A solver without a limiter takes no relaxation parameters.");
+  static_assert(HasLimiter, "Only a solver with a limiter takes relaxation parameters.");
   static_assert(
     Derived::DGOrder >= 0 and Derived::DGOrder < 16,
-    "The CFL factors of the ADER-DG scheme cover the orders 0 to 15."
+    "The ADER-DG solver supports the orders 0 to 15 only."
   );
 }
 
@@ -99,11 +101,63 @@ INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::reservePredictorScratch(
   const peano4::Partition& partition
 ) {
-  const auto chunks =
-    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(this->getNumberOfCells(partition)));
+  const auto chunks = static_cast<std::size_t>(getNumberOfPredictorChunks(this->getNumberOfCells(partition)));
   if (_predictorScratch.getSize() < chunks * Predictor::ScratchSize) {
     _predictorScratch.allocate(chunks * Predictor::ScratchSize);
   }
+}
+
+/**
+ * Returns the threads per team of a predictor launch that asks for one thread per node of a cell.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+INLINE_METHOD int
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getPredictorTeamThreads() {
+  return tarch::accelerator::getTeamThreads(Predictor::CellLayout::NodesPerCell);
+}
+
+/**
+ * Returns the number of threads that advance one cell in a predictor launch. Every group of this
+ * many threads of a team advances its own cell.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+INLINE_METHOD int
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getPredictorThreadsPerCell() {
+  if constexpr (Derived::IsLinear) {
+    return 1;
+  }
+  return std::min(Predictor::CellLayout::NodesPerCell, getPredictorTeamThreads());
+}
+
+/**
+ * Returns the number of scratch chunks of a predictor dispatch over cells. Every cell group of a
+ * running team takes one chunk.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+INLINE_METHOD int
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getNumberOfPredictorChunks(
+  const int cells
+) {
+  const int groups = getPredictorTeamThreads() / getPredictorThreadsPerCell();
+  return tarch::accelerator::getNumberOfScratchChunks(getNumberOfPredictorTeams(cells)) * groups;
+}
+
+/**
+ * Returns the number of teams of a predictor dispatch over cells. The host launches one team per
+ * cell. A device launches one team per group of cells, at most as many as it runs at once.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+INLINE_METHOD int
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getNumberOfPredictorTeams(
+  const int cells
+) {
+  if (tarch::accelerator::getNumberOfScratchChunks(cells) < cells) {
+    return cells;
+  }
+  const int teamThreads     = getPredictorTeamThreads();
+  const int groups          = teamThreads / getPredictorThreadsPerCell();
+  const int concurrentTeams = tarch::accelerator::Device::getInstance().getNumberOfConcurrentThreads() / teamThreads;
+  return std::max(1, std::min((cells + groups - 1) / groups, concurrentTeams));
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
@@ -145,7 +199,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   if constexpr (Derived::NumberOfPointSources > 0) {
     static_assert(
       exahype2::terms::HasPointSourceLocations<Derived, Derived::NumberOfPointSources>,
-      "A solver with point sources declares initPointSourceLocations()."
+      "The point sources of the solver expect their locations."
     );
     double locations[Derived::NumberOfPointSources][DIMENSIONS];
     Derived::initPointSourceLocations(locations);
@@ -253,7 +307,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 ) {
   static_assert(
     exahype2::terms::HasCellPredicate<Derived> and exahype2::terms::HasCellPredicate<typename Partner::DerivedType>,
-    "Both coupled solvers restrict themselves to cells through ownsCell()."
+    "Each coupled solver expects its cells through restrict_to_cells."
   );
   static_assert(Partner::NumberOfData == NumberOfData, "Coupled solvers store the same number of values per node.");
   assertion(not _drivenByPartner and not _coupledTimeStep);
@@ -343,6 +397,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     }
     this->closeTimeStep(partition, timeStepSize, statistics);
     partner.closeTimeStep(partition, timeStepSize, partnerStatistics);
+    if constexpr (requires { partner.traceTracers(partition, timeStepSize, false); }) {
+      partner.traceTracers(partition, timeStepSize, false);
+    }
     reportUnconvergedPredictions();
     partner.reportUnconvergedPredictions();
     this->measureError(partition);
@@ -455,7 +512,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
         if (kind != peano4::FaceKind::Interior) {
           tarch::terminateWithError(
             "The coupling face " + toString(partition.getFaceLattice(face)) + " on level "
-            + std::to_string(partition.getFaceLevel(face)) + " lies on a level jump."
+            + std::to_string(partition.getFaceLevel(face)) + " must lie away from level jumps."
           );
         }
         couplingFaces.push_back(face);
@@ -489,8 +546,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Writes one snapshot. With a limiter, every plot cell stores its status, and a limited cell plots
- * at every node the subcell that contains the node.
+ * Writes one snapshot. With a limiter, every plot cell stores its status. A limited cell plots at
+ * every node the subcell that contains the node.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
@@ -504,12 +561,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
       partition,
       this->getCellsOnHost(partition),
       this->downloadSolution(),
-      this->_solution.getPaddedChunkSize(),
       this->_nodePositionsOnHost.data(),
-      _limiter->downloadSubcells(),
-      Limiter::CellPool::getPaddedChunkSizeOf(Limiter::SubcellScheme::SubcellValuesPerCell),
-      _limiter->downloadStatuses(),
-      Limiter::StatusPool::getPaddedChunkSizeOf(exahype2::dg::limiting::NumberOfStatusEntries),
+      &_limiter->downloadSubcells(),
+      &_limiter->downloadStatuses(),
       static_cast<int>(exahype2::dg::limiting::LimiterStatus::Limited),
       this->_timeStepping.getTimeStamp(),
       format,
@@ -579,9 +633,10 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Runs the space-time predictor of every cell. A diverged Picard iteration marks its cell for the
- * limiter, or terminates the run without a limiter. A cell whose Picard iteration stops at its
- * sweep limit continues with the last iterate.
+ * Runs the space-time predictor of every cell. A solver with a limiter marks every cell whose
+ * Picard iteration diverges or stops at its sweep limit for the limiter. A solver without a
+ * limiter terminates the run on a diverged cell and continues an unconverged cell with the last
+ * iterate.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
@@ -591,8 +646,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 ) {
   assertion(
     _predictorScratch.getSize()
-    >= static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(this->getNumberOfCells(partition)))
-      * Predictor::ScratchSize
+    >= static_cast<std::size_t>(getNumberOfPredictorChunks(this->getNumberOfCells(partition))) * Predictor::ScratchSize
   );
   exahype2::dg::ader::PredictionCounts counts;
   if constexpr (HasLimiter) {
@@ -601,7 +655,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     counts = predictCells(partition, timeStepSize, exahype2::dg::ader::NoLimiter{});
     if (counts.divergedCells > 0) {
       tarch::terminateWithError(
-        "The space-time predictor diverged in " + std::to_string(counts.divergedCells) + " cells."
+        "The space-time predictor diverges in " + std::to_string(counts.divergedCells) + " cells."
       );
     }
   }
@@ -611,7 +665,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 
 /**
  * Warns on the global master when the Picard iteration of any cell stopped at its sweep limit in
- * this time step. Every rank calls this at the end of every time step.
+ * this time step. With a limiter, _unconvergedPredictions stays zero. Every rank calls this at the
+ * end of every time step.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
@@ -629,18 +684,17 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     _unconvergedPredictions = 0;
     if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       logWarning(
-        "The Picard iteration of " << globalPredictions << " cells stopped at its sweep limit with a residual above "
-                                   << Derived::PicardResidualTolerance
-                                   << " at t = " << this->_timeStepping.getTimeStamp()
-                                   << "; the cells continue with the last iterate."
+        "The Picard iteration of " << globalPredictions
+                                   << " cells reaches its sweep limit at t = " << this->_timeStepping.getTimeStamp()
+                                   << " before it converges. The cells continue with the last iterate."
       );
     }
   }
 }
 
 /**
- * Runs the predictor kernel and returns the numbers of cells whose Picard iteration diverged
- * without a mark or stopped at its sweep limit.
+ * Runs the predictor kernel and returns the numbers of the diverged and the unconverged cells.
+ * With a limiter, the kernel marks these cells in divergenceMarks and returns zero counts.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 template <typename DivergenceMarks>
@@ -652,11 +706,18 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 ) {
   const auto                           cells = this->getCells(partition);
   exahype2::dg::ader::PredictionCounts counts;
+  if (cells.size == 0) {
+    return counts;
+  }
+  const int numberOfTeams  = getNumberOfPredictorTeams(cells.size);
+  const int threadsPerTeam = getPredictorTeamThreads();
   tarch::accelerator::parallelReduce(
-    tarch::accelerator::Range(cells.size),
+    tarch::accelerator::TeamRange(numberOfTeams, threadsPerTeam, Predictor::getTeamScratchBytes(threadsPerTeam)),
     exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, DivergenceMarks>{
       partition.onDevice(),
       cells,
+      numberOfTeams,
+      getPredictorThreadsPerCell(),
       this->_solution.getView(),
       this->_faceStates.getView(),
       this->_faceFluxes.getView(),
@@ -664,6 +725,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
       _pointSourceLocations.getData(),
       _predictorScratch.getData(),
       Predictor::ScratchSize,
+      static_cast<int>(_predictorScratch.getSize() / Predictor::ScratchSize),
       divergenceMarks,
       this->_timeStepping.getTimeStamp(),
       timeStepSize
@@ -675,8 +737,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 
 /**
  * Adds the face integrals of the local or the remote cells to their solution and returns the
- * wave-speed maxima of the updated solution. With a limiter, the maxima are zero and the limiter
- * reports them.
+ * wave-speed maxima of the updated solution. With a limiter, the maxima are zero.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics

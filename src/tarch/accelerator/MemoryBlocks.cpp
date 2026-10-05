@@ -27,8 +27,8 @@ tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
 
   if (not _memoryBlockTable.empty()) {
     logWarning(
-      "Detected " << _memoryBlockTable.size() << " memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank()
-                  << "."
+      "Rank " << tarch::mpi::Rank::getInstance().getRank() << " ends with " << _memoryBlockTable.size()
+              << " unfreed memory blocks."
     );
   } else {
     logInfo("Did not detect any memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank() << ".");
@@ -55,7 +55,7 @@ tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
   const std::scoped_lock lock(_memoryBlockMutex);
   const auto             memoryBlockEntry = _memoryBlockTable.find(memoryBlock);
   if (memoryBlockEntry == _memoryBlockTable.end()) {
-    tarch::terminateWithError("Attempt to remove an invalid memory block. It may have been removed already.");
+    tarch::terminateWithError("The memory block table removes each registered block once only.");
   }
   logDebug("Removed memory block at " << memoryBlock << ".");
   _memoryBlockTable.erase(memoryBlockEntry);
@@ -72,7 +72,7 @@ tarch::accelerator::MemoryBlocks::getSizeOfMemoryBlock(void* memoryBlock) const 
   const std::scoped_lock lock(_memoryBlockMutex);
   const auto             memoryBlockEntry = _memoryBlockTable.find(memoryBlock);
   if (memoryBlockEntry == _memoryBlockTable.end()) {
-    tarch::terminateWithError("Cannot query the size of an unregistered memory block.");
+    tarch::terminateWithError("The memory block table reports the size of registered blocks only.");
   }
   return memoryBlockEntry->second;
 #else

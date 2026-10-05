@@ -34,10 +34,10 @@
 #include "tarch/mpi/tests/PingPongTest.h"
 #include "tarch/mpi/tests/PollPacingTest.h"
 #include "tarch/mpi/tests/RankTest.h"
+#include "tarch/plotter/tests/FileWriterTest.h"
 #include "tarch/plotter/tests/FormatTest.h"
 #include "tarch/plotter/tests/HDF5FileWriterTest.h"
 #include "tarch/plotter/tests/NetCDFFileWriterTest.h"
-#include "tarch/plotter/tests/TimeSeriesWriterTest.h"
 #include "tarch/plotter/tests/VTKHDFFileWriterTest.h"
 #include "tarch/plotter/tests/VTUFileWriterTest.h"
 #include "tarch/reader/tests/CSVReaderTest.h"
@@ -108,10 +108,10 @@ tarch::getUnitTests() {
   result->addTestCase(new tarch::tasking::tests::RuntimeTest());
   result->addTestCase(new tarch::tasking::tests::TaskGraphTest());
 
+  result->addTestCase(new tarch::plotter::tests::FileWriterTest());
   result->addTestCase(new tarch::plotter::tests::FormatTest());
   result->addTestCase(new tarch::plotter::tests::HDF5FileWriterTest());
   result->addTestCase(new tarch::plotter::tests::NetCDFFileWriterTest());
-  result->addTestCase(new tarch::plotter::tests::TimeSeriesWriterTest());
   result->addTestCase(new tarch::plotter::tests::VTKHDFFileWriterTest());
   result->addTestCase(new tarch::plotter::tests::VTUFileWriterTest());
 

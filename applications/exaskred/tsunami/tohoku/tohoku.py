@@ -80,7 +80,6 @@ aderdg_solver.add_subcell_limiter(
     dmp_relaxation_parameter=10000.0,
     dmp_differences_scaling=10000.0,
 )
-aderdg_solver.initialise_on_host()
 
 project.add_solver(aderdg_solver)
 

@@ -4,10 +4,9 @@
 
 namespace tarch::plotter {
   class FileWriter;
-  class TimeSeriesWriter;
 
   /**
-   * The file formats a run selects at start-up.
+   * Lists the file formats of the plots.
    */
   enum class Format { VTU, HDF5, NetCDF, VTKHDF };
 
@@ -15,7 +14,5 @@ namespace tarch::plotter {
   [[nodiscard]] std::string toString(Format format);
   [[nodiscard]] bool isAvailable(Format format);
   [[nodiscard]] Format getDefaultFormat();
-
-  [[nodiscard]] std::unique_ptr<FileWriter> createFileWriter(Format format, const std::string& outputDirectory);
-  [[nodiscard]] std::unique_ptr<TimeSeriesWriter> createTimeSeriesWriter(Format format);
+  [[nodiscard]] std::unique_ptr<FileWriter> createFileWriter(Format format);
 } // namespace tarch::plotter

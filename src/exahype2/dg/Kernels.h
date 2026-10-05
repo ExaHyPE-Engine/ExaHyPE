@@ -31,17 +31,19 @@ namespace exahype2::dg {
     int                      faceNumber
   );
 
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getBoundaryFaceNumber(
+    const peano4::Partition& partition,
+    int                      face
+  );
+
   template <typename Derived, typename StoragePrecision, typename QuadraturePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void initialiseNodes(
+  INLINE_METHOD void initialiseNodes(
     const tarch::la::Vector<DIMENSIONS, double>& centre,
     const tarch::la::Vector<DIMENSIONS, double>& width,
     const QuadraturePrecision*                   quadraturePoints,
     const QuadraturePrecision*                   quadratureWeights,
     StoragePrecision*                            nodes
   );
-
-  template <typename Derived, typename StoragePrecision>
-  struct InitialiseCells;
 
   template <typename Derived, typename CellPrecision, typename FacePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateStateToFaces(
@@ -160,6 +162,9 @@ namespace exahype2::dg {
   );
 
   template <typename Derived, typename ComputePrecision>
+  struct ApplyBoundaryConditions;
+
+  template <typename Derived, typename ComputePrecision>
   struct SolveRiemannProblems;
 
   template <typename Derived, typename ComputePrecision>
@@ -251,18 +256,6 @@ struct exahype2::dg::MaxEigenvalueStatistics final {
   );
 };
 
-template <typename Derived, typename StoragePrecision>
-struct exahype2::dg::InitialiseCells final {
-  using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
-
-  peano4::Partition       partition{};
-  typename CellPool::View solution{};
-  const StoragePrecision* quadraturePoints{nullptr};
-  const StoragePrecision* quadratureWeights{nullptr};
-
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
-};
-
 /**
  * Writes the solution of every listed cell into the own state half of each of its faces.
  */
@@ -343,6 +336,23 @@ struct exahype2::dg::InterpolateFaceHalves final {
   const double*            prolongationMatrix{nullptr};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
+/**
+ * Writes the boundary state of the inner half of every listed boundary face at timeStamp into
+ * its outer half. Every other listed face stays as it is.
+ */
+template <typename Derived, typename ComputePrecision>
+struct exahype2::dg::ApplyBoundaryConditions final {
+  using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+
+  peano4::Partition        partition{};
+  tarch::Span<const int>   faces{};
+  typename StatePool::View faceStates{};
+  const ComputePrecision*  quadraturePoints{nullptr};
+  double                   timeStamp{0.0};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
 /**

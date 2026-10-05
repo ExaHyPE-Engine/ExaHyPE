@@ -64,7 +64,7 @@ class Makefile(object):
     def _append_unique(self, key, value, force=False):
         if value in self.d[key] and not force:
             log.warning(
-                "%s %s is already present. Ignored as force attribute is not set",
+                "The Makefile skips the duplicate %s entry %s.",
                 key,
                 value,
             )
@@ -105,7 +105,9 @@ class Makefile(object):
     def set_mode(self, mode):
         """Sets the build type, a :class:`Makefile.Mode`."""
         if not isinstance(mode, Makefile.Mode):
-            raise TypeError("The build mode is a Makefile.Mode, got {!r}.".format(mode))
+            raise TypeError(
+                "The build mode expects a Makefile.Mode value (got {!r}).".format(mode)
+            )
         self.d["MODE"] = mode.name
 
     def add_compile_definition(self, name, value=None, force=False):
@@ -171,7 +173,9 @@ class Makefile(object):
             )
             if not os.path.isfile(peano_config_file):
                 raise Exception(
-                    "Cannot locate the PeanoConfig.cmake file: " + peano_config_file
+                    "The code generator cannot find the file '"
+                    + peano_config_file
+                    + "'."
                 )
 
             with open(peano_config_file, "r") as input:
@@ -221,16 +225,11 @@ class Makefile(object):
 
         else:
             raise Exception(
-                """
-  Error: parse_configuration_outcome() could not locate a valid CMake build directory
-  (containing PeanoConfig.cmake) starting from:
-  """
+                "The code generator cannot find a CMake build directory with the file "
+                "PeanoConfig.cmake in '"
                 + search_start
-                + """
-  and searching upwards through its parents.
-
-  Run CMake first, or set PEANO_BUILD_DIR (or its alias PEANO_CMAKE_BUILD_DIR) explicitly.
-  """
+                + "' or its parent directories. Run CMake first or set the environment "
+                "variable PEANO_BUILD_DIR or PEANO_CMAKE_BUILD_DIR."
             )
 
     def add_h_file(self, filename, generated=False):

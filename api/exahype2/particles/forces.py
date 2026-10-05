@@ -38,18 +38,20 @@ class Forces:
         self.force_method = int(force_method)
         if self.interpolation_scheme not in self.INTERPOLATION_SCHEMES:
             raise ValueError(
-                "interpolation_scheme is one of {}.".format(
+                "The particle forces support the interpolation_scheme values {} only.".format(
                     sorted(self.INTERPOLATION_SCHEMES)
                 )
             )
         if self.integration_scheme not in self.INTEGRATION_SCHEMES:
             raise ValueError(
-                "integration_scheme is one of {}.".format(
+                "The particle forces support the integration_scheme values {} only.".format(
                     sorted(self.INTEGRATION_SCHEMES)
                 )
             )
         if self.force_method < 0 or self.force_method > 15:
-            raise ValueError("force_method is a bit mask between 0 and 15.")
+            raise ValueError(
+                "The particle forces expect a force_method bit mask from 0 to 15."
+            )
         self.fields_to_interpolate = self._parse_fields(fields_to_interpolate)
         self.mu = str(mu)
         self.gravity_magnitude = str(gravity_magnitude)
@@ -69,11 +71,13 @@ class Forces:
         for entry in entries:
             if isinstance(entry, bool) or int(entry) < 0:
                 raise ValueError(
-                    "fields_to_interpolate names particle data entries by their index."
+                    "The particle forces expect data entry indices in fields_to_interpolate."
                 )
             fields.append(int(entry))
         if len(set(fields)) != len(fields):
-            raise ValueError("fields_to_interpolate names every data entry once.")
+            raise ValueError(
+                "The particle forces expect each data entry once in fields_to_interpolate."
+            )
         return fields
 
     @property

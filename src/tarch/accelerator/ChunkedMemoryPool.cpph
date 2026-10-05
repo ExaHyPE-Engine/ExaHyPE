@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 #include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
 #include "tarch/Termination.h"
 
 template <typename T>
@@ -113,7 +114,7 @@ INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::appendSegment() {
   constexpr auto MaximumNumberOfSlots = static_cast<std::size_t>(std::numeric_limits<int>::max());
   if (static_cast<std::size_t>(getCapacity()) + static_cast<std::size_t>(getSegmentSize()) > MaximumNumberOfSlots) {
-    tarch::terminateWithError("A pool has more slots than the 32-bit parallel range supports.");
+    tarch::terminateWithError("A memory pool must fit its slots into the 32-bit range of a parallel loop.");
   }
   auto& segment = _segments.emplace_back(_location);
   segment.allocate(static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize));
@@ -123,7 +124,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::appendSegment() {
 
 /**
  * Copies the segment bases into the table that the views read. The table lies in the memory
- * location of the pool, so a device view reads device memory only.
+ * location of the pool. A device view reads device memory only.
  */
 template <typename T>
 INLINE_METHOD void
@@ -135,8 +136,8 @@ tarch::accelerator::ChunkedMemoryPool<T>::uploadSegmentTable() {
 template <typename T>
 INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::release() noexcept {
-  _segments.clear();
-  _segmentBasesOnHost.clear();
+  _segments           = std::vector<tarch::accelerator::Buffer<T>>{};
+  _segmentBasesOnHost = std::vector<T*>{};
   _segmentTable.release();
   _segmentSizeExponent = 0;
 }
@@ -164,6 +165,85 @@ tarch::accelerator::ChunkedMemoryPool<T>::copyFromHost(const std::vector<T>& sou
   assertion(source.size() == _segments.size() * valuesPerSegment, source.size(), _segments.size(), valuesPerSegment);
   for (std::size_t segment = 0; segment < _segments.size(); segment++) {
     _segments[segment].copyFromHost(source.data() + segment * valuesPerSegment, valuesPerSegment);
+  }
+}
+
+/**
+ * Returns this pool if host code reads its chunks. Otherwise returns copyOnHost after
+ * copySegmentsTo() fills it.
+ */
+template <typename T>
+INLINE_METHOD const tarch::accelerator::ChunkedMemoryPool<T>&
+tarch::accelerator::ChunkedMemoryPool<T>::download(tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost) const {
+  if (isHostAccessible()) {
+    return *this;
+  }
+  copySegmentsTo(copyOnHost);
+  return copyOnHost;
+}
+
+/**
+ * Returns this pool if host code reads and writes its chunks. Otherwise returns copyOnHost after
+ * copySegmentsTo() fills it. A later upload() copies the writes back into this pool.
+ */
+template <typename T>
+INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>&
+tarch::accelerator::ChunkedMemoryPool<T>::download(tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost) {
+  if (isHostAccessible()) {
+    return *this;
+  }
+  copySegmentsTo(copyOnHost);
+  return copyOnHost;
+}
+
+/**
+ * Overwrites the chunks of every slot with those of copyOnHost, the pool that download() returns.
+ * A pool that host code reads copies nothing.
+ */
+template <typename T>
+INLINE_METHOD void
+tarch::accelerator::ChunkedMemoryPool<T>::upload(const tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost) {
+  if (isHostAccessible()) {
+    assertion(&copyOnHost == this);
+    return;
+  }
+  assertion(copyOnHost.isHostAccessible());
+  assertion(
+    copyOnHost._segmentSizeExponent == _segmentSizeExponent and copyOnHost._segments.size() == _segments.size(),
+    copyOnHost._segmentSizeExponent,
+    _segmentSizeExponent,
+    copyOnHost._segments.size(),
+    _segments.size()
+  );
+  const auto valuesPerSegment = static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize);
+  for (std::size_t segment = 0; segment < _segments.size(); segment++) {
+    _segments[segment].copyFromHost(copyOnHost._segments[segment].getData(), valuesPerSegment);
+  }
+}
+
+/**
+ * Resizes copyOnHost to the segment size and the number of segments of this pool and copies the
+ * chunks of every slot into it. The pool copyOnHost keeps its segments while the layout of this
+ * pool stays the same.
+ */
+template <typename T>
+INLINE_METHOD void
+tarch::accelerator::ChunkedMemoryPool<T>::copySegmentsTo(tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost) const {
+  assertion(copyOnHost.isHostAccessible());
+  assertion(copyOnHost._chunkSize == _chunkSize, copyOnHost._chunkSize, _chunkSize);
+  if (copyOnHost._segmentSizeExponent != _segmentSizeExponent or copyOnHost._segments.size() > _segments.size()) {
+    copyOnHost.release();
+  }
+  copyOnHost._segmentSizeExponent = _segmentSizeExponent;
+  if (copyOnHost._segments.size() < _segments.size()) {
+    while (copyOnHost._segments.size() < _segments.size()) {
+      copyOnHost.appendSegment();
+    }
+    copyOnHost.uploadSegmentTable();
+  }
+  const auto valuesPerSegment = static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize);
+  for (std::size_t segment = 0; segment < _segments.size(); segment++) {
+    _segments[segment].copyToHost(copyOnHost._segments[segment].getData(), valuesPerSegment);
   }
 }
 
@@ -242,7 +322,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::getCapacity() const noexcept {
 }
 
 /**
- * Returns the slots per segment, which is zero before the first reservation.
+ * Returns the slots per segment. The count is zero before the first reservation.
  */
 template <typename T>
 INLINE_METHOD int
@@ -256,17 +336,39 @@ tarch::accelerator::ChunkedMemoryPool<T>::getNumberOfSegments() const noexcept {
   return static_cast<int>(_segments.size());
 }
 
+/**
+ * Returns the bytes of the segments and of the segment table in the memory location of the pool
+ * and the bytes of the host arrays of the segment handles and bases.
+ */
 template <typename T>
 INLINE_METHOD tarch::AllocatedBytes
 tarch::accelerator::ChunkedMemoryPool<T>::getAllocatedBytes() const noexcept {
   return tarch::AllocatedBytes::in(
-    _location,
-    static_cast<std::size_t>(getCapacity()) * static_cast<std::size_t>(_paddedChunkSize) * sizeof(T)
-  );
+           _location,
+           static_cast<std::size_t>(getCapacity()) * static_cast<std::size_t>(_paddedChunkSize) * sizeof(T)
+         )
+    + _segmentTable.getAllocatedBytes()
+    + tarch::AllocatedBytes::onHost(
+           tarch::getAllocatedBytesOf(_segments) + tarch::getAllocatedBytesOf(_segmentBasesOnHost)
+    );
 }
 
 template <typename T>
 INLINE_METHOD tarch::MemoryLocation
 tarch::accelerator::ChunkedMemoryPool<T>::getLocation() const noexcept {
   return _location;
+}
+
+/**
+ * Returns whether host code reads and writes the chunks. A build without a GPU backend places the
+ * device memory on the heap.
+ */
+template <typename T>
+INLINE_METHOD bool
+tarch::accelerator::ChunkedMemoryPool<T>::isHostAccessible() const noexcept {
+#if defined(PEANO_WITH_GPU_BACKEND)
+  return _location != tarch::MemoryLocation::Device;
+#else
+  return true;
+#endif
 }

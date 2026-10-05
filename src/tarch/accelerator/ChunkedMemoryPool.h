@@ -21,7 +21,7 @@ template <typename T>
 class tarch::accelerator::ChunkedMemoryPool final {
   static_assert(
     std::is_trivial_v<T> and std::is_standard_layout_v<T>,
-    "The element type has to be trivial and standard-layout so a chunk is a flat byte range."
+    "A memory pool stores trivial standard-layout values only."
   );
 
 public:
@@ -71,6 +71,14 @@ public:
   INLINE_METHOD void copyToHost(std::vector<T>& target) const;
   INLINE_METHOD void copyFromHost(const std::vector<T>& source);
 
+  [[nodiscard]] INLINE_METHOD const tarch::accelerator::ChunkedMemoryPool<T>& download(
+    tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost
+  ) const;
+  [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>& download(
+    tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost
+  );
+  INLINE_METHOD void upload(const tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost);
+
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::View getView() noexcept;
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::ConstView getView() const noexcept;
 
@@ -88,10 +96,12 @@ public:
   [[nodiscard]] INLINE_METHOD int getNumberOfSegments() const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::MemoryLocation getLocation() const noexcept;
+  [[nodiscard]] INLINE_METHOD bool isHostAccessible() const noexcept;
 
 private:
   INLINE_METHOD void appendSegment();
   INLINE_METHOD void uploadSegmentTable();
+  INLINE_METHOD void copySegmentsTo(tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost) const;
 
   int                                        _chunkSize{0};
   int                                        _paddedChunkSize{0};

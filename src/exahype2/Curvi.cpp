@@ -7,12 +7,13 @@
 
 void
 exahype2::Curvi::reserveAxis(int normal) {
-  assertion(normal >= 0 and normal < DIMENSIONS, "Coordinate direction out of range", normal, DIMENSIONS);
   assertion(
-    not _axisIsTransformed[normal],
-    "Each coordinate direction may carry at most one transformation, see Curvi's preconditions",
-    normal
+    normal >= 0 and normal < DIMENSIONS,
+    "A curvilinear transformation acts on the axes of the domain only.",
+    normal,
+    DIMENSIONS
   );
+  assertion(not _axisIsTransformed[normal], "Each axis takes one curvilinear transformation only.", normal);
   _axisIsTransformed[normal] = true;
 }
 
@@ -23,7 +24,12 @@ exahype2::Curvi::reserveAxis(int normal) {
  */
 void
 exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
-  assertion(faceIndex >= 0 and faceIndex < 2 * DIMENSIONS, "Face index out of range", faceIndex, DIMENSIONS);
+  assertion(
+    faceIndex >= 0 and faceIndex < 2 * DIMENSIONS,
+    "A perturbation acts on the faces of the domain only.",
+    faceIndex,
+    DIMENSIONS
+  );
 
   const int  normal      = faceIndex % DIMENSIONS;
   const bool isUpperFace = faceIndex >= DIMENSIONS;
@@ -51,7 +57,7 @@ exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
 
       const double a = isUpperFace ? (upperBound + perturb - lowerBound) / (upperBound - lowerBound)
                                    : (upperBound - lowerBound - perturb) / (upperBound - lowerBound);
-      assertion(tarch::la::greater(a, 0.0), "A perturbation may not collapse or invert the domain", a, perturb, normal);
+      assertion(tarch::la::greater(a, 0.0), "A perturbation must keep the domain width positive.", a, perturb, normal);
 
       if (isUpperFace) {
         solution[normal] = lowerBound + (solution[normal] - lowerBound) * a;
@@ -76,7 +82,7 @@ exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
 
       const double a = isUpperFace ? (upperBound + perturb - lowerBound) / (upperBound - lowerBound)
                                    : (upperBound - lowerBound - perturb) / (upperBound - lowerBound);
-      assertion(tarch::la::greater(a, 0.0), "A perturbation may not collapse or invert the domain", a, perturb, normal);
+      assertion(tarch::la::greater(a, 0.0), "A perturbation must keep the domain width positive.", a, perturb, normal);
 
       if (isUpperFace) {
         solution[normal] = (solution[normal] - lowerBound) / a + lowerBound;
@@ -101,10 +107,10 @@ exahype2::Curvi::split(int normal, int index, double position, Perturbation pert
   const double upperBound    = _domainOffset[normal] + _domainSize[normal];
   const double splitPosition = lowerBound + _minCellSize[normal] * index;
 
-  assertion(index >= 1, "An interface has to be pinned strictly inside the domain", index, normal);
+  assertion(index >= 1, "An interface must lie strictly inside the domain.", index, normal);
   assertion(
     tarch::la::smaller(splitPosition, upperBound),
-    "An interface has to be pinned strictly inside the domain",
+    "An interface must lie strictly inside the domain.",
     splitPosition,
     upperBound,
     normal

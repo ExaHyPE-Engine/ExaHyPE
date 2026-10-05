@@ -21,8 +21,6 @@ namespace exahype2 {
 
   template <typename Derived, typename SolutionView>
   struct VoteOnRefinement;
-
-  struct CountRefinementVotes;
 } // namespace exahype2
 
 /**
@@ -66,12 +64,16 @@ public:
 
   INLINE_METHOD void release();
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
+  [[nodiscard]] static INLINE_METHOD bool canRefineOrErase(
+    const peano4::Partition& partition,
+    const exahype2::Limits&  limits
+  );
 
 private:
   INLINE_METHOD void reserve(int numberOfSlots);
   INLINE_METHOD void merge(
     const peano4::Partition&      partition,
-    tarch::Span<const int>        cellsOnDevice,
+    int                           votes,
     tarch::Span<const int>        cellsOnHost,
     exahype2::RefinementRequests& requests
   );
@@ -94,6 +96,10 @@ namespace exahype2 {
   );
 } // namespace exahype2
 
+/**
+ * Calls the refinement criterion of Derived on one cell of a grid under construction, whose
+ * patch holds no data yet, and adds one to the accumulator when the command differs from Keep.
+ */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::VoteOnGridConstruction final {
   peano4::Partition            partition{};
@@ -101,9 +107,13 @@ struct exahype2::VoteOnGridConstruction final {
   double                       maxAdmissibleSize{0.0};
   double                       minAdmissibleSize{0.0};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, int& accumulator) const;
 };
 
+/**
+ * Calls the refinement criterion of Derived on the patch of one listed cell and adds one to the
+ * accumulator when the command differs from Keep.
+ */
 template <typename Derived, typename SolutionView>
 struct exahype2::VoteOnRefinement final {
   peano4::Partition            partition{};
@@ -113,13 +123,6 @@ struct exahype2::VoteOnRefinement final {
   double                       maxAdmissibleSize{0.0};
   double                       minAdmissibleSize{0.0};
   double                       timeStamp{0.0};
-
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
-};
-
-struct exahype2::CountRefinementVotes final {
-  tarch::Span<const int>             cells{};
-  const exahype2::RefinementCommand* commands{nullptr};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, int& accumulator) const;
 };

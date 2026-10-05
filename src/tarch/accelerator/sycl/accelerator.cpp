@@ -73,4 +73,13 @@ tarch::accelerator::copyFromPinnedMemory(
   std::memcpy(target, source, sizeInBytes);
 }
 
+/**
+ * Blocks until the queue of the current device has completed its work.
+ */
+void
+tarch::accelerator::waitForDevice() {
+  sycl::queue& queue = *static_cast<sycl::queue*>(getSYCLQueue(getCurrentDevice()));
+  queue.wait();
+}
+
 #endif // defined(PEANO_WITH_GPU_BACKEND_SYCL)

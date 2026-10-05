@@ -9,15 +9,96 @@
 
 namespace {
   std::atomic<bool> loggedMissingTaskloopSupport{false};
+
+  /**
+   * GrowingAllocation holds a memory block that grows when a request exceeds its capacity. The
+   * block lives until releaseReductionScratch(). The lock of lockReductionScratch() covers both
+   * blocks.
+   */
+  struct GrowingAllocation final {
+    tarch::MemoryLocation location{tarch::MemoryLocation::Device};
+    void*                 data{nullptr};
+    std::size_t           capacity{0};
+    int                   device{tarch::accelerator::Device::DefaultDevice};
+  };
+
+  GrowingAllocation reductionScratch{tarch::MemoryLocation::Device};
+  GrowingAllocation reductionStaging{tarch::MemoryLocation::Pinned};
+  std::atomic<bool> reductionScratchLocked{false};
+
+  void release(GrowingAllocation& allocation) {
+    if (allocation.data != nullptr) {
+      tarch::freeMemory(allocation.data, allocation.location, allocation.device);
+    }
+    allocation.data     = nullptr;
+    allocation.capacity = 0;
+  }
+
+  /**
+   * Returns the address of the block with at least sizeInBytes bytes on the current device. A
+   * larger request or another current device frees the old block and allocates a new one. The old
+   * address is then invalid.
+   */
+  void* grow(GrowingAllocation& allocation, const std::size_t sizeInBytes) {
+    assertion(sizeInBytes > 0, sizeInBytes);
+    const int device = tarch::accelerator::getCurrentDevice();
+    if (sizeInBytes > allocation.capacity or device != allocation.device) {
+      release(allocation);
+      allocation.device   = device;
+      allocation.data     = tarch::allocateMemory<char>(sizeInBytes, allocation.location, device);
+      allocation.capacity = sizeInBytes;
+    }
+    return allocation.data;
+  }
 } // namespace
+
+/**
+ * Returns device memory of at least sizeInBytes bytes for the partial values of a reduction and
+ * locks it until unlockReductionScratch(). One reduction at a time holds the lock. A second host
+ * thread that starts a reduction while the first one runs fails the assertion. The memory lives
+ * until releaseReductionScratch().
+ */
+void*
+tarch::accelerator::lockReductionScratch(const std::size_t sizeInBytes) {
+  [[maybe_unused]] const bool wasLocked = reductionScratchLocked.exchange(true, std::memory_order_acquire);
+  assertion(not wasLocked, sizeInBytes);
+  return grow(reductionScratch, sizeInBytes);
+}
+
+/**
+ * Returns pinned host memory of at least sizeInBytes bytes that receives the partial values of the
+ * reduction that holds the lock.
+ */
+void*
+tarch::accelerator::getReductionStaging(const std::size_t sizeInBytes) {
+  assertion(reductionScratchLocked.load(std::memory_order_relaxed), sizeInBytes);
+  return grow(reductionStaging, sizeInBytes);
+}
+
+/**
+ * Releases the lock of lockReductionScratch() once the reduction has read its partial values.
+ */
+void
+tarch::accelerator::unlockReductionScratch() {
+  [[maybe_unused]] const bool wasLocked = reductionScratchLocked.exchange(false, std::memory_order_release);
+  assertion(wasLocked);
+}
+
+/**
+ * Frees the memory of both reduction buffers. The device shutdown calls this before it destroys
+ * the device context. No reduction holds the lock then.
+ */
+void
+tarch::accelerator::releaseReductionScratch() {
+  assertion(not reductionScratchLocked.load(std::memory_order_relaxed));
+  release(reductionScratch);
+  release(reductionStaging);
+}
 
 void
 tarch::accelerator::reportMissingTaskloopSupportOnce() {
   if (not loggedMissingTaskloopSupport.exchange(true, std::memory_order_relaxed)) {
-    logWarning(
-      "OpenMP taskloop is unavailable on this toolchain, so a parallel range spawns one task per chunk. Expect "
-      "degraded performance."
-    );
+    logWarning("The compiler does not support OpenMP taskloops. The parallel loops run slower.");
   }
 }
 
@@ -224,4 +305,8 @@ tarch::accelerator::copyFromPinnedMemory(
 ) {
   copyFromHeapMemory(source, target, sizeInBytes);
 }
+
+void
+tarch::accelerator::waitForDevice() {}
+
 #endif // PEANO_WITH_GPU_BACKEND

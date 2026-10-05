@@ -30,6 +30,7 @@ private:
   void testAPicardSystemWithoutTermsReproducesTheInitialState();
   void testTheResidualIsTheSquaredDistanceOfTheIterates();
   void testAnUnboundedIterateReportsDivergence();
+  void testAToleranceWithoutAFiniteScaleCountsEveryChange();
   void testTheGradientOfAConstantVanishes();
   void testALinearStateHasTheExactGradient();
   void testTheFluxIsAskedForOncePerNodeAndAxis();
@@ -42,7 +43,9 @@ private:
   void testTheScratchBlocksFollowEachOtherWithoutOverlap();
   void testATermTheSolverLacksHasZeroExtent();
   void testThePredictorWritesTheTimeAveragesAndTheFacesAndLeavesTheCellState();
-  void testAnUnreachableToleranceReportsUnconvergedPicardIteration();
+  void testAZeroSquaredToleranceReportsUnconvergedPicardIteration();
+  void testTheToleranceGrowsToTheRoundingDistanceOfTheCell();
+  void testAToleranceBelowTheRoundingDistanceKeepsTheTimeAverages();
   void testEveryCellOfADeviceRangeMatchesTheHostPredictor();
 
   template <typename Derived>

@@ -28,10 +28,14 @@ identify a small local workload relative to the halo traffic.
 
 # Memory
 
-`CPU Grid` and `GPU Grid` report the bytes of the partition and the tree in
-host and device memory, `CPU Solver Data` and `GPU Solver Data` the bytes of
-the application data, and `Used` the resident set of the process with the free
-and the total memory of the node.
+The first lines of the `Memory` section sum the bytes the pools allocate over
+the ranks. `CPU Grid` and `GPU Grid` hold the partition and the tree in host and
+device memory, `CPU Solver Data` and `GPU Solver Data` the application data.
+`Resident` sums the resident set of the processes, the pages they have written,
+over the ranks. `Free` continues that line with the available and the total
+memory of the nodes. Linux backs an allocated page with memory on its first
+write, so `Resident` can stay below the allocated bytes until the time steps
+have written every pool.
 
 # Regridding
 

@@ -21,8 +21,8 @@ namespace {{NAMESPACE | join("::")}} {
 } // namespace {{NAMESPACE | join("::")}}
 
 /**
- * Parameters from the configuration file and the command line. A kernel reads Storage on the host
- * or on the device. HostStorage stores the strings.
+ * Holds the parameters that the configuration file, the command line and the setters write.
+ * Storage holds the parameters that a kernel reads. HostStorage holds the strings.
  */
 struct {{NAMESPACE | join("::")}}::RuntimeParameters final {
   struct Storage final {
@@ -54,6 +54,11 @@ struct {{NAMESPACE | join("::")}}::RuntimeParameters final {
   static INLINE_METHOD const {{ parameter.return_type }}& {{ parameter.name }}();
 {%- else %}
   static INLINE_METHOD GPU_CALLABLE_METHOD {{ parameter.return_type }} {{ parameter.name }}();
+{%- endif %}
+{%- if parameter.is_string or parameter.is_array %}
+  static void {{ parameter.setter }}(const {{ parameter.cpp_type }}& value);
+{%- else %}
+  static void {{ parameter.setter }}({{ parameter.cpp_type }} value);
 {%- endif %}
 {%- endfor %}
 

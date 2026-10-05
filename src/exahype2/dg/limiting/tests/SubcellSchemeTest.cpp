@@ -7,7 +7,7 @@
 #include "exahype2/dg/limiting/SubcellScheme.h"
 #include "exahype2/dg/limiting/tests/LimiterTestData.h"
 #include "exahype2/dg/tests/KernelTestData.h"
-#include "exahype2/fv/FiniteVolume.h"
+#include "exahype2/fv/FiniteVolumeScheme.h"
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/MaxEigenvalue.h"
 #include "exahype2/terms/RiemannSolver.h"
@@ -179,6 +179,26 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::run() {
   testMethod(testAFixedRuleReportsNoWaveSpeeds);
   testMethod(testAGalerkinCellProjectsItsPreviousSolutionOntoTheSubgridAndTheFaces);
   testMethod(testEveryCellOfADeviceRangeRecomputesLikeTheHost);
+  testMethod(testEveryNodeProjectsLikeTheWholeCell);
+}
+
+/**
+ * Every node projected on its own equals the node of the projection of the whole cell.
+ */
+void
+exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryNodeProjectsLikeTheWholeCell() {
+  const exahype2::dg::limiting::tests::SubcellProjections tables;
+  std::vector<double>                                     subcells(Layout::SubcellValuesPerCell);
+  for (std::size_t entry = 0; entry < subcells.size(); entry++) {
+    subcells[entry] = 1.0 + 0.37 * static_cast<double>(entry % 11) - 0.05 * static_cast<double>(entry);
+  }
+  std::vector<double> whole(Layout::ValuesPerCell);
+  std::vector<double> nodeByNode(Layout::ValuesPerCell);
+  Scheme::projectSubcellsOntoNodes(subcells.data(), whole.data(), tables.subcellsToNodes.data());
+  for (int node = 0; node < Layout::ValuesPerCell / Layout::NumberOfData; node++) {
+    Scheme::projectSubcellsOntoNode(subcells.data(), nodeByNode.data(), tables.subcellsToNodes.data(), node);
+  }
+  validateNumericalBuffersEquals(nodeByNode, whole);
 }
 
 void

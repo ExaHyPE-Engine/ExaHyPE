@@ -22,17 +22,19 @@ class State:
 
     def _count(self, data):
         if isinstance(data, bool):
-            raise TypeError("A variable count is an int or a dictionary, not a bool.")
+            raise TypeError(
+                "A variable count expects an int or a dictionary (got a bool)."
+            )
         if isinstance(data, int):
             if data < 0:
-                raise ValueError("A variable count cannot be negative.")
+                raise ValueError("A variable count expects a non-negative int.")
             return data
         if isinstance(data, dict):
             for name, count in data.items():
                 if count <= 0:
                     raise ValueError(
-                        "Variable '{}' has an invalid count of {}. Every component count "
-                        "is greater than zero.".format(name, count)
+                        "The variable '{}' needs a positive component count "
+                        "(got {}).".format(name, count)
                     )
             self._names.extend(data.keys())
             self._plot_description.update(data)
@@ -40,7 +42,7 @@ class State:
                 self._positions.append(self._positions[-1] + count)
             return sum(data.values())
         raise TypeError(
-            "Invalid type '{}'. A variable count is an int or a dictionary.".format(
+            "A variable count expects an int or a dictionary (got '{}').".format(
                 type(data).__name__
             )
         )
@@ -82,12 +84,14 @@ class State:
         indices = []
         for item in selection:
             if isinstance(item, bool):
-                raise TypeError("A measured unknown is an int or a str, not a bool.")
+                raise TypeError(
+                    "A measured unknown expects an int or a str (got a bool)."
+                )
             if isinstance(item, str):
                 if item not in self._names:
                     raise ValueError(
-                        "Unknown variable name '{}'. Known names are {}.".format(
-                            item, self._names
+                        "The measured unknowns accept the variable names {} only (got '{}').".format(
+                            self._names, item
                         )
                     )
                 position = self._names.index(item)
@@ -98,7 +102,7 @@ class State:
                 indices.append(item)
             else:
                 raise TypeError(
-                    "A measured unknown is an int or a str, got {}.".format(
+                    "A measured unknown expects an int or a str (got {}).".format(
                         type(item).__name__
                     )
                 )
@@ -106,14 +110,16 @@ class State:
         for index in indices:
             if index < 0 or index >= self._unknowns:
                 raise ValueError(
-                    "Unknown index {} is out of range [0, {}).".format(
-                        index, self._unknowns
+                    "A measured unknown expects an index below {} (got {}).".format(
+                        self._unknowns, index
                     )
                 )
             if index not in result:
                 result.append(index)
         if not result:
-            raise ValueError("The selection of measured unknowns is empty.")
+            raise ValueError(
+                "The selection of measured unknowns needs at least one unknown."
+            )
         return result
 
     def generate_shortcuts(self, dictionary, namespace, output):

@@ -2,6 +2,42 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
+  INLINE_METHOD int getThreadOfTeam([[maybe_unused]] const CpuTeam& team) { return 0; }
+
+  INLINE_METHOD int getNumberOfThreadsPerTeam([[maybe_unused]] const CpuTeam& team) { return 1; }
+
+  INLINE_METHOD unsigned char* getTeamScratch(const CpuTeam& team) { return team.scratch; }
+
+  /**
+   * Returns the threads per team of a launch that asks for requested threads: One host thread
+   * runs a whole team.
+   */
+  INLINE_METHOD int getTeamThreads(const int requested) {
+    assertion(requested == tarch::accelerator::TeamRange::BackendDefault or requested > 0, requested);
+    return 1;
+  }
+
+  /**
+   * Returns the team scratch bytes of a launch that asks for requested bytes: Every host thread
+   * provides TeamScratchBytes.
+   */
+  INLINE_METHOD int getTeamScratchBytes(const int requested) {
+    assertion(
+      requested == tarch::accelerator::TeamRange::BackendDefault
+        or (requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes),
+      requested
+    );
+    return tarch::accelerator::TeamScratchBytes;
+  }
+
+  /**
+   * Returns the team scratch of the calling host thread.
+   */
+  INLINE_METHOD unsigned char* getTeamScratchOfThread() {
+    alignas(PEANO_WITH_ALIGNMENT) thread_local unsigned char teamScratch[TeamScratchBytes];
+    return teamScratch;
+  }
+
   template <typename Functor>
   INLINE_METHOD void parallelFor([[maybe_unused]] const CpuTeam& team, const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
@@ -77,11 +113,8 @@ namespace tarch::accelerator {
   template <typename Functor>
   INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
-    tarch::accelerator::runInParallelRegion([&]() {
-#pragma omp for schedule(static)
-      for (int i = 0; i < range.n; ++i) {
-        functor(i, tarch::accelerator::CpuTeam{});
-      }
+    tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(range.n), [&functor](const int team) {
+      functor(team, tarch::accelerator::CpuTeam{tarch::accelerator::getTeamScratchOfThread()});
     });
   }
 } // namespace tarch::accelerator

@@ -72,7 +72,6 @@ aderdg_solver.set_pde_terms(
     physical_admissibility=True,
 )
 aderdg_solver.add_subcell_limiter(exahype2.fv.Godunov())
-aderdg_solver.initialise_on_host()
 
 project.add_solver(aderdg_solver)
 

@@ -175,8 +175,8 @@ exahype2::particles::TrajectoryDatabase::prepareSnapshot(
   }
   if (action == AddSnapshotAction::Replace) {
     logWarning(
-      "Particle " << number.first << "x" << number.second << " has two locations " << x << " and "
-                  << snapshots.front().x << " for same time stamp " << timestamp << ". This is inconsistent."
+      "Particle " << number.first << "x" << number.second << " must stay at one location per time stamp (got " << x
+                  << " and " << snapshots.front().x << " at time " << timestamp << ")."
     );
   }
   return action;
@@ -243,8 +243,8 @@ exahype2::particles::TrajectoryDatabase::addParticleSnapshot(
     const std::scoped_lock lock(_mutex);
     if (not _data.empty() and _numberOfDataPointsPerParticle != numberOfDataEntries) {
       std::ostringstream message;
-      message << "Inconsistent number of particle data entries: database expects " << _numberOfDataPointsPerParticle
-              << " but received " << numberOfDataEntries << ".";
+      message << "The trajectory database expects " << _numberOfDataPointsPerParticle
+              << " data entries per particle (got " << numberOfDataEntries << ").";
       tarch::terminateWithError(message.str());
     }
     assertion(_numberOfDataPointsPerParticle == numberOfDataEntries or _data.empty());

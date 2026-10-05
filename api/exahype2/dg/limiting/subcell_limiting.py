@@ -35,15 +35,15 @@ class SubcellLimiting:
         equation 23).
         """
         if self.subcell_limiter_is_enabled:
-            raise RuntimeError("The subcell limiter is already configured.")
+            raise RuntimeError("A solver takes one subcell limiter only.")
         if not isinstance(scheme, (Godunov, MusclHancock)):
             raise TypeError(
-                "The subcell limiter scheme is exahype2.fv.Godunov() or "
-                "exahype2.fv.MusclHancock(...)."
+                "The subcell limiter supports the schemes exahype2.fv.Godunov() and "
+                "exahype2.fv.MusclHancock() only."
             )
         if self.precision.storage not in ("float", "double"):
             raise ValueError(
-                "The subcell limiter supports float and double solution storage."
+                "The subcell limiter supports float and double solution storage only."
             )
         subcells_per_axis = 2 * self._order + 1
         if scheme.halo_width > subcells_per_axis:
@@ -54,11 +54,13 @@ class SubcellLimiting:
             )
         if number_of_dmp_observables < 0:
             raise ValueError(
-                "The number of discrete-maximum-principle observables cannot be negative."
+                "The subcell limiter expects a non-negative number of "
+                "discrete-maximum-principle observables."
             )
         if dmp_relaxation_parameter < 0.0 or dmp_differences_scaling < 0.0:
             raise ValueError(
-                "The discrete-maximum-principle relaxation parameters cannot be negative."
+                "The subcell limiter expects non-negative relaxation parameters of the "
+                "discrete maximum principle."
             )
 
         self._subcell_limiter_scheme = scheme
@@ -78,8 +80,8 @@ class SubcellLimiting:
             "physical_admissibility"
         ):
             raise ValueError(
-                "The subcell limiter needs the physical_admissibility PDE term, a positive "
-                "number of DMP observables, or both."
+                "The subcell limiter needs the physical_admissibility PDE term or a positive "
+                "number of DMP observables."
             )
         if self._subcell_limiter_uses_dmp and not self.pde_terms.is_set(
             "dmp_observables"
@@ -89,9 +91,8 @@ class SubcellLimiting:
             )
         if getattr(self, "_initialise_patches", False):
             raise ValueError(
-                "The subcell limiter samples the initial condition at subcell centres, "
-                "which needs the pointwise initial condition; initialise_patches=True "
-                "supplies no subcell layout."
+                "The subcell limiter needs the pointwise initial condition and cannot work "
+                "with initialise_patches=True."
             )
 
     def _subcell_limiter_includes(self):

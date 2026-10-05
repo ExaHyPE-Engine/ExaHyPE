@@ -4,11 +4,11 @@
 
 static_assert(
   std::is_standard_layout_v<peano4::grid::GridVertex>,
-  "A grid vertex travels between ranks as raw bytes, so its layout has to be standard."
+  "The ranks exchange standard-layout grid vertices only."
 );
 static_assert(
   std::is_trivially_copyable_v<peano4::grid::GridVertex>,
-  "A grid vertex travels between ranks as raw bytes, so it has to be trivially copyable."
+  "The ranks exchange trivially copyable grid vertices only."
 );
 
 std::ostream&

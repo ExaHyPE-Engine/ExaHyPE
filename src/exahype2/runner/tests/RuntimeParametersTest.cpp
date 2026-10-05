@@ -44,7 +44,7 @@ namespace {
       / std::filesystem::path("parameter-table-" + testRunIdentifier + "-" + std::to_string(counter++) + ".json");
     std::ofstream output(path);
     if (not output.is_open()) {
-      tarch::terminateWithError("Failed to create temporary file \"" + path.string() + "\".");
+      tarch::terminateWithError("The test cannot create the temporary file '" + path.string() + "'.");
     }
     output << content;
     return path.string();

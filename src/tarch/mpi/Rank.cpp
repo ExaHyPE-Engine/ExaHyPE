@@ -42,7 +42,7 @@ tarch::mpi::Rank::shutdown() {
 
   const int errorCode = MPI_Finalize();
   if (errorCode != MPI_SUCCESS) {
-    logError(tarch::mpi::mpiReturnValueToString(errorCode));
+    logError("The MPI library cannot shut down: " << tarch::mpi::mpiReturnValueToString(errorCode));
   }
 
   _rank         = -1;
@@ -73,7 +73,8 @@ tarch::mpi::Rank::validateReservedTagsAreSupported() {
   }
 
   logWarning(
-    "The maximum MPI tag value is " << _maximumTagValue << " but tag " << highestReservedTag << " has been reserved."
+    "The MPI library provides message tags up to " << _maximumTagValue << " only. The reserved tags reach "
+                                                   << highestReservedTag << "."
   );
   return false;
 }
@@ -85,33 +86,27 @@ bool
 tarch::mpi::Rank::init(int* const argc, char*** const argv) {
   int mpiResult = MPI_Init_thread(argc, argv, MPI_THREAD_MULTIPLE, &_providedThreadLevelSupport);
   if (mpiResult == MPI_SUCCESS and _providedThreadLevelSupport != MPI_THREAD_MULTIPLE) {
-    std::cerr << "Error: MPI implementation does not support MPI_THREAD_MULTIPLE. The supported multithreading level "
-                 "is "
-              << _providedThreadLevelSupport << ", the required level is " << MPI_THREAD_MULTIPLE << "." << std::endl;
-    std::cerr << "The application requires MPI_THREAD_MULTIPLE. Aborting." << std::endl;
+    std::cerr << "The MPI library must support calls from several threads at once." << std::endl;
     MPI_Abort(MPI_COMM_WORLD, -1);
     return false;
   }
 
   if (mpiResult != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t Initialisation failed: " + tarch::mpi::mpiReturnValueToString(mpiResult)
-        + " (no logging available yet)"
-              << std::endl;
+    std::cerr << "The MPI library cannot start: " + tarch::mpi::mpiReturnValueToString(mpiResult) << std::endl;
     return false;
   }
 
   mpiResult = MPI_Comm_size(MPI_COMM_WORLD, &_numberOfRanks);
   if (mpiResult != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t Initialisation failed: " + tarch::mpi::mpiReturnValueToString(mpiResult)
-        + " (no logging available yet)"
+    std::cerr << "The MPI library cannot count the ranks: " + tarch::mpi::mpiReturnValueToString(mpiResult)
               << std::endl;
     return false;
   }
 
   mpiResult = MPI_Comm_rank(MPI_COMM_WORLD, &_rank);
   if (mpiResult != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t Initialisation failed: " + tarch::mpi::mpiReturnValueToString(mpiResult)
-        + " (no logging available yet)"
+    std::cerr << "The MPI library cannot report the rank of this process: "
+        + tarch::mpi::mpiReturnValueToString(mpiResult)
               << std::endl;
     return false;
   }
@@ -123,7 +118,7 @@ tarch::mpi::Rank::init(int* const argc, char*** const argv) {
   if (attributeFound != 0) {
     _maximumTagValue = *static_cast<int*>(rawMaximumTag);
   } else {
-    std::cerr << "init(int*,char***)\t Could not query the maximum tag value" << std::endl;
+    std::cerr << "The MPI library cannot report its largest message tag." << std::endl;
     return false;
   }
 

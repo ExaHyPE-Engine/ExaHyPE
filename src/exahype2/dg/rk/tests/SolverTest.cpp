@@ -23,6 +23,9 @@
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/plotter/Format.h"
 
 namespace {
   TARGET_DECLARE
@@ -235,10 +238,10 @@ namespace {
   };
 
   /**
-   * A solver with a linear initial condition, no flux and no wave speed, so a step changes nothing.
+   * The layout and the linear initial condition of the fixed-rule test solvers. Without flux and
+   * wave speed a step changes nothing.
    */
-  struct FixedRuleSolver final : exahype2::dg::rk::Solver<FixedRuleSolver, double, double>,
-                                 CommonTerms<FixedRuleSolver> {
+  struct FixedRuleTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -246,14 +249,6 @@ namespace {
     static constexpr bool IsLinear                   = false;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
-
-    template <typename Precision>
-    using Quadrature = ::Quadrature<Precision>;
-    template <typename Precision>
-    using DGMatrices = ::DGMatrices<Precision>;
-
-    FixedRuleSolver() :
-      Solver(TimeStepFactor, "FixedRuleSolver", {{"q", 1}}) {}
 
     static INLINE_METHOD GPU_CALLABLE_METHOD double getProfile(const tarch::la::Vector<DIMENSIONS, double>& x) {
       double value = 1.0;
@@ -269,6 +264,44 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
     ) {
       Q[0] = getProfile(x);
+    }
+  };
+
+  /**
+   * A solver with the linear initial condition.
+   */
+  struct FixedRuleSolver final : exahype2::dg::rk::Solver<FixedRuleSolver, double, double>,
+                                 CommonTerms<FixedRuleSolver>,
+                                 FixedRuleTerms {
+    template <typename Precision>
+    using Quadrature = ::Quadrature<Precision>;
+    template <typename Precision>
+    using DGMatrices = ::DGMatrices<Precision>;
+
+    FixedRuleSolver() :
+      Solver(TimeStepFactor, "FixedRuleSolver", {{"q", 1}}) {}
+  };
+
+  /**
+   * A solver with the linear initial condition whose plots write every face.
+   */
+  struct FacePlottingFixedRuleSolver final : exahype2::dg::rk::Solver<FacePlottingFixedRuleSolver, double, double>,
+                                             CommonTerms<FacePlottingFixedRuleSolver>,
+                                             FixedRuleTerms {
+    template <typename Precision>
+    using Quadrature = ::Quadrature<Precision>;
+    template <typename Precision>
+    using DGMatrices = ::DGMatrices<Precision>;
+
+    FacePlottingFixedRuleSolver() :
+      Solver(TimeStepFactor, "FixedRuleSolver", {{"q", 1}}) {}
+
+    static bool plotsFace(
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const int                                    normal
+    ) {
+      return true;
     }
   };
 
@@ -313,7 +346,7 @@ namespace {
   };
 
   /**
-   * A solver with a constant initial condition and a unit source, so a step adds the time step size.
+   * A solver with a constant initial condition and a unit source. A step adds the time step size.
    */
   struct SourceSolver final : exahype2::dg::rk::Solver<SourceSolver, double, double>, CommonTerms<SourceSolver> {
     static constexpr int  DGOrder                    = ::Order;
@@ -368,7 +401,7 @@ namespace {
     auto&          spacetree = peano4::Spacetree::getInstance();
     peano4::Regrid regrid;
     if (not spacetree.regrid(refinementRequests, regrid)) {
-      tarch::terminateWithError("The regrid of the test grid changed nothing.");
+      tarch::terminateWithError("The regrid of the test grid must change the grid.");
     }
     const auto& partition = spacetree.getPartition();
     requests.clear(partition.getNumberOfSlots());
@@ -466,6 +499,7 @@ exahype2::dg::rk::tests::SolverTest::run() {
   testMethod(testASourceTermAdvancesEveryNodeByTheTimeStep);
   testMethod(testARefinementAndTheEraseBackKeepTheSolution);
   testMethod(testRefinementReducesTheNextAdaptiveTimeStep);
+  testMethod(testAPlotAllocatesHostCopiesOnlyWithAGPUBackend);
   testMethod(testReleaseFreesEveryPool);
 }
 
@@ -612,6 +646,64 @@ exahype2::dg::rk::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSoluti
   validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
   validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
   solver.release();
+}
+
+/**
+ * A plot writes the node file and the face file of every rank with the boundary state in the outer
+ * half of every boundary face and allocates host copies only in a build with a GPU backend.
+ */
+void
+exahype2::dg::rk::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend() {
+  const auto& partition = buildGrid();
+  const auto& rank      = tarch::mpi::Rank::getInstance();
+
+  FacePlottingFixedRuleSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(partition);
+  exahype2::RefinementRequests requests;
+  requests.clear(partition.getNumberOfSlots());
+  solver.initialise(partition, requests);
+
+  const std::string outputDirectory =
+    (tarch::tests::getWritableTestDirectory() / "DiscontinuousGalerkinSolverPlotTest").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "patch/");
+  std::filesystem::create_directories(outputDirectory + "face/");
+  const tarch::AllocatedBytes bytesBeforePlot = solver.getAllocatedBytes();
+  solver.plot(partition, tarch::plotter::Format::VTU, outputDirectory);
+  const tarch::AllocatedBytes bytesAfterPlot = solver.getAllocatedBytes();
+
+  const auto&                         solution   = solver.getSolution();
+  const auto&                         faceStates = solver.getFaceStates();
+  FacePlottingFixedRuleSolver::CellPool  solutionCopy(solution.getChunkSize(), tarch::MemoryLocation::Heap);
+  FacePlottingFixedRuleSolver::StatePool faceStatesCopy(faceStates.getChunkSize(), tarch::MemoryLocation::Heap);
+  static_cast<void>(solution.download(solutionCopy));
+  const auto& faceStatesOnHost = faceStates.download(faceStatesCopy);
+  validateEquals(
+    bytesAfterPlot.host,
+    bytesBeforePlot.host + solutionCopy.getAllocatedBytes().host + faceStatesCopy.getAllocatedBytes().host
+  );
+  validateEquals(bytesAfterPlot.device, bytesBeforePlot.device);
+  const std::string           vtuSuffix = "-0_000000-rank-" + std::to_string(rank.getRank()) + ".vtu";
+  const std::filesystem::path nodeVtuPath =
+    std::filesystem::path(outputDirectory) / "patch" / ("FixedRuleSolver" + vtuSuffix);
+  const std::filesystem::path faceVtuPath =
+    std::filesystem::path(outputDirectory) / "face" / ("FixedRuleSolver-face" + vtuSuffix);
+  validateWithParams1(std::filesystem::exists(nodeVtuPath), nodeVtuPath.string());
+  validateWithParams1(std::filesystem::exists(faceVtuPath), faceVtuPath.string());
+
+  constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
+  for (const int face : partition.getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary)) {
+    const double* const halves = faceStatesOnHost.getChunk(face);
+    for (int node = 0; node < NodesPerFace; node++) {
+      validateEqualsWithParams2(halves[node], halves[NodesPerFace + node], face, node);
+    }
+  }
+  solver.release();
+
+  tarch::mpi::barrier(rank.getCommunicator());
+  if (rank.isGlobalMaster()) {
+    std::filesystem::remove_all(outputDirectory);
+  }
 }
 
 void

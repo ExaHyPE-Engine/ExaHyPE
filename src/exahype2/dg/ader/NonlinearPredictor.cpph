@@ -3,15 +3,24 @@
 
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
-#include "tarch/la/ExactAccumulator.h"
+#include "tarch/accelerator/Device.h"
 #include "tarch/la/VectorOperations.h"
 
 TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::PicardResidual::add(const PicardResidual& other) {
+  const std::uint64_t sum = lowLimb + other.lowLimb;
+  highLimb += other.highLimb + (sum < lowLimb ? 1 : 0);
+  lowLimb  = sum;
+  exceeds  = exceeds or other.exceeds;
+  diverged = diverged or other.diverged;
+}
+
 /**
- * Solves the local Cauchy problem of one cell with a Picard iteration and extrapolates the
- * time-averaged state and flux to the faces. On return, the time-averaged flux in scratch stores
- * its derivative along its own axis. Returns the number of sweeps, UnconvergedPicardIteration or
- * DivergedPicardIteration.
+ * Solves the local Cauchy problem of one cell with a Picard iteration on the threads of workers
+ * and extrapolates the time-averaged state and flux to the faces. On return, the time-averaged
+ * flux in scratch stores its derivative along its own axis. Returns the number of sweeps,
+ * UnconvergedPicardIteration or DivergedPicardIteration, and zero on a thread without a cell.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -26,7 +35,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const double                                 picardTolerance
+  const double                                 picardTolerance,
+  const TeamWorkers&                           workers
 ) {
   constexpr int NodesPerAxis          = CellLayout::NodesPerAxis;
   constexpr int NumberOfUnknowns      = CellLayout::NumberOfUnknowns;
@@ -34,6 +44,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
 
   assertion(timeStepSize >= 0.0, timeStepSize);
   assertion(picardTolerance > 0.0, picardTolerance);
+  assertion(workers.thread >= 0 and workers.thread < workers.threads, workers.thread, workers.threads);
 
   ComputePrecision* NOALIAS const spaceTimeState     = scratch + Scratch::SpaceTimeStateOffset;
   ComputePrecision* NOALIAS const rightHandSide      = scratch + Scratch::RightHandSideOffset;
@@ -43,141 +54,400 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   ComputePrecision* NOALIAS const firstSource        = scratch + Scratch::FirstSourceOffset;
   ComputePrecision* NOALIAS const timeAveragedSource = scratch + Scratch::TimeAveragedSourceOffset;
   ComputePrecision* NOALIAS const stateGradient      = scratch + Scratch::StateGradientOffset;
-  ComputePrecision* NOALIAS const updatedTimeSlice   = scratch + Scratch::UpdatedTimeSliceOffset;
 
-  const auto inverseCellSize = tarch::la::convertScalar<ComputePrecision>(tarch::la::invertEntries(cellSize));
+  const auto   inverseCellSize = tarch::la::convertScalar<ComputePrecision>(tarch::la::invertEntries(cellSize));
+  const double squaredTolerance =
+    workers.hasCell ? getSquaredTolerance(cellState, picardTolerance) : picardTolerance * picardTolerance;
 
-  initialiseState(spaceTimeState, cellState);
+  bool active = workers.hasCell;
+  if (active) {
+    initialiseState(spaceTimeState, cellState, workers);
+  }
 
   int  numberOfSweeps = 0;
   bool converged      = false;
   bool diverged       = false;
-  for (; numberOfSweeps < MaximumNumberOfSweeps; numberOfSweeps++) {
+  bool anyActive      = isAnyActive(workers, active);
+  while (anyActive) {
     for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
-      if constexpr (NeedsStateGradient) {
-        computeSpaceTimeGradient(stateGradient, spaceTimeState, tables.derivativeOperator, inverseCellSize, timeNode);
+      // The other threads read the state slice and the gradient of the previous time node until
+      // here.
+      synchronise(workers);
+      if (active) {
+        if constexpr (NeedsStateGradient) {
+          computeSpaceTimeGradient(
+            stateGradient,
+            spaceTimeState,
+            tables.derivativeOperator,
+            inverseCellSize,
+            timeNode,
+            workers
+          );
+        }
+        clearRightHandSide(rightHandSide, timeNode, workers);
       }
+      synchronise(workers);
 
       // The later time nodes read the flux of the first time node for the time average.
       ComputePrecision* const fluxOfTimeNode = timeNode == 0 ? firstFlux : flux;
       if constexpr (EvaluateFlux) {
-        evaluateSpaceTimeFlux(
-          fluxOfTimeNode,
-          spaceTimeState,
-          stateGradient,
-          tables.quadraturePoints,
-          cellCentre,
-          cellSize,
-          timeStamp,
-          timeStepSize,
-          timeNode
-        );
-        averageFluxOverTime(timeAveragedFlux, fluxOfTimeNode, firstFlux, tables.quadratureWeights[timeNode], timeNode);
-      }
-
-      clearRightHandSide(rightHandSide, timeNode);
-
-      if constexpr (EvaluateFlux) {
-        subtractFluxDivergence(
-          rightHandSide,
-          fluxOfTimeNode,
-          tables.stiffnessOperatorTransposed,
-          tables.cellQuadratureWeights,
-          inverseCellSize,
-          timeStepSize,
-          timeNode
-        );
+        if (active) {
+          evaluateSpaceTimeFlux(
+            fluxOfTimeNode,
+            spaceTimeState,
+            stateGradient,
+            tables.quadraturePoints,
+            cellCentre,
+            cellSize,
+            timeStamp,
+            timeStepSize,
+            timeNode,
+            workers
+          );
+        }
+        synchronise(workers);
+        if (active) {
+          averageFluxOverTime(
+            timeAveragedFlux,
+            fluxOfTimeNode,
+            firstFlux,
+            tables.quadratureWeights[timeNode],
+            timeNode,
+            workers
+          );
+        }
+        // The lines of one axis write disjoint nodes. The axes add to the same nodes in ascending order.
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          if (active) {
+            subtractFluxDivergence(
+              rightHandSide,
+              fluxOfTimeNode,
+              tables.stiffnessOperatorTransposed,
+              tables.cellQuadratureWeights,
+              inverseCellSize,
+              timeStepSize,
+              timeNode,
+              axis,
+              workers
+            );
+          }
+          synchronise(workers);
+        }
       }
 
       if constexpr (AccumulatesSource) {
-        evaluateSpaceTimeSource(
-          rightHandSide,
-          firstSource,
-          timeAveragedSource,
-          spaceTimeState,
-          stateGradient,
-          tables.quadraturePoints,
-          tables.quadratureWeights,
-          tables.cellQuadratureWeights,
-          cellCentre,
-          cellSize,
-          timeStamp,
-          timeStepSize,
-          timeNode
-        );
+        if (active) {
+          evaluateSpaceTimeSource(
+            rightHandSide,
+            firstSource,
+            timeAveragedSource,
+            spaceTimeState,
+            stateGradient,
+            tables.quadraturePoints,
+            tables.quadratureWeights,
+            tables.cellQuadratureWeights,
+            cellCentre,
+            cellSize,
+            timeStamp,
+            timeStepSize,
+            timeNode,
+            workers
+          );
+        }
       }
     }
+    synchronise(workers);
 
-    const double squaredResidual = solvePicardSystem(
-      spaceTimeState,
-      updatedTimeSlice,
-      rightHandSide,
-      cellState,
-      tables.inversePicardOperator,
-      tables.inverseCellQuadratureWeights
-    );
-
-    if (not std::isfinite(squaredResidual)) {
-      diverged = true;
-      break;
+    PicardResidual ownResidual;
+    if (active) {
+      ownResidual = solvePicardSystem(
+        spaceTimeState,
+        rightHandSide,
+        cellState,
+        tables.inversePicardOperator,
+        tables.inverseCellQuadratureWeights,
+        squaredTolerance,
+        workers
+      );
     }
-    if (squaredResidual < picardTolerance * picardTolerance) {
-      converged = true;
-      break;
+    const PicardResidual residual = combineOverGroup(workers, ownResidual);
+    if (active) {
+      numberOfSweeps++;
+      const double squaredResidual = getSquaredResidual(residual, squaredTolerance);
+      if (not std::isfinite(squaredResidual)) {
+        diverged = true;
+      } else if (squaredResidual < squaredTolerance) {
+        converged = true;
+      }
+      active = not diverged and not converged and numberOfSweeps < MaximumNumberOfSweeps;
     }
+    anyActive = isAnyActive(workers, active);
   }
+  synchronise(workers);
 
-  averageStateOverTime(spaceTimeState, tables.quadratureWeights);
+  if (workers.hasCell) {
+    averageStateOverTime(spaceTimeState, tables.quadratureWeights, workers);
+  }
+  synchronise(workers);
   const ComputePrecision* const timeAveragedState = spaceTimeState;
 
-  UNROLL(DIMENSIONS)
-  for (int direction = 0; direction < DIMENSIONS; direction++) {
-    exahype2::dg::extrapolateNodalFieldToFacePair<
-      NodesPerAxis,
-      CellLayout::NumberOfData,
-      CellLayout::PaddedNumberOfData,
-      ComputePrecision,
-      ComputePrecision,
-      ComputePrecision
-    >(faceStates[direction],
-      faceStates[direction + DIMENSIONS],
-      timeAveragedState,
-      tables.leftFaceCoefficients,
-      tables.rightFaceCoefficients,
-      direction);
-    if constexpr (EvaluateFlux) {
+  if (workers.hasCell) {
+    for (int direction = workers.thread; direction < DIMENSIONS; direction += workers.threads) {
       exahype2::dg::extrapolateNodalFieldToFacePair<
         NodesPerAxis,
-        NumberOfUnknowns,
-        CellLayout::PaddedNumberOfUnknowns,
+        CellLayout::NumberOfData,
+        CellLayout::PaddedNumberOfData,
         ComputePrecision,
         ComputePrecision,
         ComputePrecision
-      >(faceFluxes[direction],
-        faceFluxes[direction + DIMENSIONS],
-        timeAveragedFlux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
+      >(faceStates[direction],
+        faceStates[direction + DIMENSIONS],
+        timeAveragedState,
         tables.leftFaceCoefficients,
         tables.rightFaceCoefficients,
         direction);
-    } else {
-      for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
-        faceFluxes[direction][entry]              = static_cast<ComputePrecision>(0);
-        faceFluxes[direction + DIMENSIONS][entry] = static_cast<ComputePrecision>(0);
+      if constexpr (EvaluateFlux) {
+        exahype2::dg::extrapolateNodalFieldToFacePair<
+          NodesPerAxis,
+          NumberOfUnknowns,
+          CellLayout::PaddedNumberOfUnknowns,
+          ComputePrecision,
+          ComputePrecision,
+          ComputePrecision
+        >(faceFluxes[direction],
+          faceFluxes[direction + DIMENSIONS],
+          timeAveragedFlux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
+          tables.leftFaceCoefficients,
+          tables.rightFaceCoefficients,
+          direction);
+      } else {
+        for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
+          faceFluxes[direction][entry]              = static_cast<ComputePrecision>(0);
+          faceFluxes[direction + DIMENSIONS][entry] = static_cast<ComputePrecision>(0);
+        }
       }
     }
   }
+  synchronise(workers);
 
   if constexpr (EvaluateFlux) {
-    exahype2::dg::differentiateFluxInPlace<Derived>(timeAveragedFlux, tables.derivativeOperator, inverseCellSize);
+    if (workers.hasCell and workers.thread == 0) {
+      exahype2::dg::differentiateFluxInPlace<Derived>(timeAveragedFlux, tables.derivativeOperator, inverseCellSize);
+    }
+    synchronise(workers);
   }
 
+  if (not workers.hasCell) {
+    return 0;
+  }
   if (diverged) {
     return exahype2::dg::ader::DivergedPicardIteration;
   }
   if (not converged) {
     return exahype2::dg::ader::UnconvergedPicardIteration;
   }
-  return numberOfSweeps + 1;
+  return numberOfSweeps;
+}
+
+/**
+ * Returns the calling device thread as a worker of a team that runs cells on threadsPerCell
+ * threads each: The threads of the team split into groups of threadsPerCell consecutive threads,
+ * and the threads behind the last full group receive no cell. A team smaller than threadsPerCell
+ * runs one cell on all of its threads. On the host the call runs one cell on one thread without a
+ * team.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::TeamWorkers
+exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getWorkers(
+  [[maybe_unused]] const tarch::accelerator::TeamHandle& team,
+  [[maybe_unused]] const int                             threadsPerCell
+) {
+  assertion(threadsPerCell > 0, threadsPerCell);
+  TeamWorkers workers;
+  COMPILE_IF_ON_DEVICE(workers.teamThread  = tarch::accelerator::getThreadOfTeam(team);
+                       workers.teamThreads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+                       workers.threads = threadsPerCell < workers.teamThreads ? threadsPerCell : workers.teamThreads;
+                       workers.groups  = workers.teamThreads / workers.threads;
+                       workers.group   = workers.teamThread / workers.threads;
+                       workers.thread  = workers.teamThread - workers.group * workers.threads;
+                       workers.hasCell = workers.group < workers.groups;
+                       workers.team    = &team;
+                       workers.scratch = tarch::accelerator::getTeamScratch(team);)
+  return workers;
+}
+
+/**
+ * Waits until every thread of the team reaches this point. A team of one thread returns at once.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::synchronise(const TeamWorkers& workers) {
+  if (workers.teamThreads > 1) {
+    assertion(workers.team != nullptr, workers.teamThread, workers.teamThreads);
+    COMPILE_IF_ON_DEVICE(tarch::accelerator::teamBarrier(*workers.team);)
+  }
+}
+
+/**
+ * Returns the bytes at the start of the aligned team scratch that combineOverGroup() and
+ * isAnyActive() use: Two limbs and two flags per thread of the team, rounded up to
+ * PEANO_WITH_ALIGNMENT.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getReservedTeamScratchBytes(const int teamThreads) {
+  assertion(teamThreads > 0, teamThreads);
+  const int bytes = teamThreads * (2 * static_cast<int>(sizeof(std::uint64_t)) + 2);
+  return ((bytes + PEANO_WITH_ALIGNMENT - 1) / PEANO_WITH_ALIGNMENT) * PEANO_WITH_ALIGNMENT;
+}
+
+/**
+ * Returns the team scratch bytes a launch of teams of teamThreads threads asks for: The reserved
+ * bytes and the alignment slack. A team of one thread needs none.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getTeamScratchBytes(const int teamThreads) {
+  assertion(teamThreads > 0, teamThreads);
+  if (teamThreads == 1) {
+    return 0;
+  }
+  return getReservedTeamScratchBytes(teamThreads) + PEANO_WITH_ALIGNMENT;
+}
+
+/**
+ * Returns the team scratch of workers rounded up to PEANO_WITH_ALIGNMENT. A caller asks for the
+ * bytes of getTeamScratchBytes() at the launch.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD unsigned char*
+exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getAlignedTeamScratch(const TeamWorkers& workers) {
+  assertion(workers.scratch != nullptr, workers.teamThread, workers.teamThreads);
+  const auto           address = reinterpret_cast<std::uintptr_t>(workers.scratch);
+  const std::uintptr_t aligned =
+    (address + PEANO_WITH_ALIGNMENT - 1) & ~static_cast<std::uintptr_t>(PEANO_WITH_ALIGNMENT - 1);
+  return reinterpret_cast<unsigned char*>(aligned);
+}
+
+/**
+ * Returns the sum of the residuals of the threads of the group of workers, the same value on every
+ * thread of the group: Every thread of the team writes its limbs and flag into the reserved start
+ * of the aligned team scratch, and every thread adds the entries of its group in thread order. A
+ * team of one thread returns residual. A thread without a group returns an empty residual.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::PicardResidual
+exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::combineOverGroup(
+  const TeamWorkers&    workers,
+  const PicardResidual& residual
+) {
+  if (workers.teamThreads == 1) {
+    return residual;
+  }
+  PicardResidual sum;
+  auto* const    limbs              = reinterpret_cast<std::uint64_t*>(getAlignedTeamScratch(workers));
+  auto* const    flags              = reinterpret_cast<unsigned char*>(limbs + 2 * workers.teamThreads);
+  limbs[2 * workers.teamThread]     = residual.highLimb;
+  limbs[2 * workers.teamThread + 1] = residual.lowLimb;
+  flags[workers.teamThread] = static_cast<unsigned char>((residual.exceeds ? 1 : 0) + (residual.diverged ? 2 : 0));
+  synchronise(workers);
+  if (workers.group < workers.groups) {
+    const int first = workers.group * workers.threads;
+    for (int other = first; other < first + workers.threads; other++) {
+      PicardResidual part;
+      part.highLimb = limbs[2 * other];
+      part.lowLimb  = limbs[2 * other + 1];
+      part.exceeds  = (flags[other] & 1) != 0;
+      part.diverged = (flags[other] & 2) != 0;
+      sum.add(part);
+    }
+  }
+  synchronise(workers);
+  return sum;
+}
+
+/**
+ * Returns whether any thread of the team passes active, the same value on every thread. A team of
+ * one thread returns active.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::isAnyActive(
+  const TeamWorkers& workers,
+  const bool         active
+) {
+  if (workers.teamThreads == 1) {
+    return active;
+  }
+  unsigned char* const flags =
+    getAlignedTeamScratch(workers) + workers.teamThreads * (2 * static_cast<int>(sizeof(std::uint64_t)) + 1);
+  flags[workers.teamThread] = active ? 1 : 0;
+  synchronise(workers);
+  bool any = false;
+  for (int other = 0; other < workers.teamThreads; other++) {
+    any = any or flags[other] != 0;
+  }
+  synchronise(workers);
+  return any;
+}
+
+/**
+ * Returns the squared tolerance of the Picard iteration of one cell. The tolerance is
+ * picardTolerance, or the distance that the rounding of ComputePrecision leaves between two
+ * iterates of the cell when that distance is larger. The largest unknown of the first node of
+ * cellState scales that distance.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getSquaredTolerance(
+  const StoragePrecision* NOALIAS const cellState,
+  const double                          picardTolerance
+) {
+  // Two converged iterates of the cell differ by up to RoundingUnits units in the last place of
+  // the largest unknown. The first node stands for the cell. Every thread of the cell reads it.
+  constexpr double RoundingUnits = 2.0;
+  constexpr double RoundingOfCell =
+    RoundingUnits * static_cast<double>(std::numeric_limits<ComputePrecision>::epsilon());
+  constexpr double SquaredRounding = RoundingOfCell * RoundingOfCell;
+  assertion(cellState != nullptr);
+  assertion(picardTolerance > 0.0, picardTolerance);
+
+  double largestMagnitude = 0.0;
+  for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
+    const double magnitude = std::abs(static_cast<double>(cellState[unknown]));
+    largestMagnitude       = magnitude > largestMagnitude ? magnitude : largestMagnitude;
+  }
+  const double squaredRoundingOfCell = SquaredRounding * largestMagnitude * largestMagnitude;
+  const double squaredTolerance      = picardTolerance * picardTolerance;
+  return squaredRoundingOfCell > squaredTolerance ? squaredRoundingOfCell : squaredTolerance;
+}
+
+/**
+ * Returns the squared residual as a double. A diverged iterate yields infinity. A square at or
+ * above squaredTolerance yields squaredTolerance.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getSquaredResidual(
+  const PicardResidual& residual,
+  const double          squaredTolerance
+) {
+  constexpr double TwoToThe63 = 9223372036854775808.0;
+  constexpr double TwoToThe64 = 18446744073709551616.0;
+  if (residual.diverged) {
+    return std::numeric_limits<double>::infinity();
+  }
+  if (residual.exceeds) {
+    return squaredTolerance;
+  }
+  // solvePicardSystem() leaves both limbs zero for every squaredTolerance whose scale overflows.
+  if (residual.highLimb == 0 and residual.lowLimb == 0) {
+    return 0.0;
+  }
+  const double scale = TwoToThe63 / squaredTolerance;
+  assertion(std::isfinite(scale), squaredTolerance);
+  return (static_cast<double>(residual.highLimb) * TwoToThe64 + static_cast<double>(residual.lowLimb)) / scale;
 }
 
 /**
@@ -188,11 +458,12 @@ template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::initialiseState(
   ComputePrecision* NOALIAS const       spaceTimeState,
-  const StoragePrecision* NOALIAS const cellState
+  const StoragePrecision* NOALIAS const cellState,
+  const TeamWorkers&                    workers
 ) {
   constexpr int SliceSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     ComputePrecision* NOALIAS const localState = spaceTimeState + CellLayout::PaddedNumberOfData * cellNode;
     for (int value = CellLayout::NumberOfData; value < CellLayout::PaddedNumberOfData; value++) {
       localState[value] = static_cast<ComputePrecision>(0);
@@ -200,11 +471,10 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::initialiseSta
     for (int value = 0; value < CellLayout::NumberOfData; value++) {
       localState[value] = static_cast<ComputePrecision>(cellState[CellLayout::NumberOfData * cellNode + value]);
     }
-  }
-
-  for (int timeNode = 1; timeNode < CellLayout::NodesPerAxis; timeNode++) {
-    for (int entry = 0; entry < SliceSize; entry++) {
-      spaceTimeState[timeNode * SliceSize + entry] = spaceTimeState[entry];
+    for (int timeNode = 1; timeNode < CellLayout::NodesPerAxis; timeNode++) {
+      for (int value = 0; value < CellLayout::PaddedNumberOfData; value++) {
+        spaceTimeState[timeNode * SliceSize + CellLayout::PaddedNumberOfData * cellNode + value] = localState[value];
+      }
     }
   }
 }
@@ -220,19 +490,21 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::computeSpaceT
   const ComputePrecision* NOALIAS const                  spaceTimeState,
   const ComputePrecision* NOALIAS const                  derivativeOperator,
   const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
-  const int                                              timeNode
+  const int                                              timeNode,
+  const TeamWorkers&                                     workers
 ) {
   constexpr int NodesPerAxis     = CellLayout::NodesPerAxis;
   constexpr int NumberOfUnknowns = CellLayout::NumberOfUnknowns;
   constexpr int StateStride      = CellLayout::PaddedNumberOfData;
   constexpr int GradientStride   = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride       = GradientStride * CellLayout::NodesPerCell;
+  constexpr int LinesPerAxis     = CellLayout::NodesPerAxisIn3D * NodesPerAxis;
 
   assertion(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
 
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
-    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
       for (int unknown = NumberOfUnknowns; unknown < GradientStride; unknown++) {
         stateGradient[axis * AxisStride + cellNode * GradientStride + unknown] = static_cast<ComputePrecision>(0);
       }
@@ -241,62 +513,62 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::computeSpaceT
 
   const ComputePrecision* NOALIAS const timeSlice = spaceTimeState + timeNode * CellLayout::NodesPerCell * StateStride;
 
-  for (int z = 0; z < CellLayout::NodesPerAxisIn3D; z++) {
-    for (int y = 0; y < NodesPerAxis; y++) {
-      const int firstNode = (z * NodesPerAxis + y) * NodesPerAxis;
-      exahype2::dg::differentiateAlongAxis<
-        NumberOfUnknowns,
-        NodesPerAxis,
-        StateStride,
-        NodesPerAxis,
-        GradientStride,
-        true,
-        ComputePrecision,
-        ComputePrecision
-      >(stateGradient + firstNode * GradientStride,
-        timeSlice + firstNode * StateStride,
-        derivativeOperator,
-        inverseCellSize(0));
-    }
+  for (int line = workers.thread; line < LinesPerAxis; line += workers.threads) {
+    const int z         = line / NodesPerAxis;
+    const int y         = line - z * NodesPerAxis;
+    const int firstNode = (z * NodesPerAxis + y) * NodesPerAxis;
+    exahype2::dg::differentiateAlongAxis<
+      NumberOfUnknowns,
+      NodesPerAxis,
+      StateStride,
+      NodesPerAxis,
+      GradientStride,
+      true,
+      ComputePrecision,
+      ComputePrecision
+    >(stateGradient + firstNode * GradientStride,
+      timeSlice + firstNode * StateStride,
+      derivativeOperator,
+      inverseCellSize(0));
   }
 
-  for (int z = 0; z < CellLayout::NodesPerAxisIn3D; z++) {
-    for (int x = 0; x < NodesPerAxis; x++) {
-      const int firstNode = z * NodesPerAxis * NodesPerAxis + x;
-      exahype2::dg::differentiateAlongAxis<
-        NumberOfUnknowns,
-        NodesPerAxis,
-        StateStride * NodesPerAxis,
-        NodesPerAxis,
-        GradientStride * NodesPerAxis,
-        true,
-        ComputePrecision,
-        ComputePrecision
-      >(stateGradient + firstNode * GradientStride + AxisStride,
-        timeSlice + firstNode * StateStride,
-        derivativeOperator,
-        inverseCellSize(1));
-    }
+  for (int line = workers.thread; line < LinesPerAxis; line += workers.threads) {
+    const int z         = line / NodesPerAxis;
+    const int x         = line - z * NodesPerAxis;
+    const int firstNode = z * NodesPerAxis * NodesPerAxis + x;
+    exahype2::dg::differentiateAlongAxis<
+      NumberOfUnknowns,
+      NodesPerAxis,
+      StateStride * NodesPerAxis,
+      NodesPerAxis,
+      GradientStride * NodesPerAxis,
+      true,
+      ComputePrecision,
+      ComputePrecision
+    >(stateGradient + firstNode * GradientStride + AxisStride,
+      timeSlice + firstNode * StateStride,
+      derivativeOperator,
+      inverseCellSize(1));
   }
 
   if constexpr (DIMENSIONS == 3) {
-    for (int y = 0; y < NodesPerAxis; y++) {
-      for (int x = 0; x < NodesPerAxis; x++) {
-        const int firstNode = y * NodesPerAxis + x;
-        exahype2::dg::differentiateAlongAxis<
-          NumberOfUnknowns,
-          NodesPerAxis,
-          StateStride * NodesPerAxis * NodesPerAxis,
-          NodesPerAxis,
-          GradientStride * NodesPerAxis * NodesPerAxis,
-          true,
-          ComputePrecision,
-          ComputePrecision
-        >(stateGradient + firstNode * GradientStride + 2 * AxisStride,
-          timeSlice + firstNode * StateStride,
-          derivativeOperator,
-          inverseCellSize(DIMENSIONS - 1));
-      }
+    for (int line = workers.thread; line < NodesPerAxis * NodesPerAxis; line += workers.threads) {
+      const int y         = line / NodesPerAxis;
+      const int x         = line - y * NodesPerAxis;
+      const int firstNode = y * NodesPerAxis + x;
+      exahype2::dg::differentiateAlongAxis<
+        NumberOfUnknowns,
+        NodesPerAxis,
+        StateStride * NodesPerAxis * NodesPerAxis,
+        NodesPerAxis,
+        GradientStride * NodesPerAxis * NodesPerAxis,
+        true,
+        ComputePrecision,
+        ComputePrecision
+      >(stateGradient + firstNode * GradientStride + 2 * AxisStride,
+        timeSlice + firstNode * StateStride,
+        derivativeOperator,
+        inverseCellSize(DIMENSIONS - 1));
     }
   }
 }
@@ -316,7 +588,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
   const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
   const double                                           timeStamp,
   const double                                           timeStepSize,
-  const int                                              timeNode
+  const int                                              timeNode,
+  const TeamWorkers&                                     workers
 ) {
   constexpr int NodesPerAxis       = CellLayout::NodesPerAxis;
   constexpr int FluxStride         = CellLayout::PaddedNumberOfUnknowns;
@@ -332,7 +605,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
     + static_cast<TimePrecision>(quadraturePoints[timeNode]) * static_cast<TimePrecision>(timeStepSize)
   );
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     const int  spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
     const auto nodePosition  = exahype2::dg::getQuadraturePoint(
       cellCentre,
@@ -366,9 +639,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
 }
 
 /**
- * Adds weight times the difference between flux and firstFlux to the time-averaged flux, which the
- * first time node initialises with firstFlux. A flux that is constant in time returns its value
- * bitwise.
+ * Adds weight times the difference between flux and firstFlux to timeAveragedFlux. At timeNode
+ * zero, the function first overwrites timeAveragedFlux with firstFlux. A flux that is constant in
+ * time returns its value bitwise.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -377,48 +650,59 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::averageFluxOv
   const ComputePrecision* const   flux,
   const ComputePrecision* const   firstFlux,
   const ComputePrecision          weight,
-  const int                       timeNode
+  const int                       timeNode,
+  const TeamWorkers&              workers
 ) {
   constexpr int FluxEntries = DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
 
   assertion(timeNode >= 0 and timeNode < CellLayout::NodesPerAxis, timeNode);
   assertion(timeNode > 0 or flux == firstFlux, timeNode);
 
-  if (timeNode == 0) {
+  if (workers.threads == 1) {
+    if (timeNode == 0) {
+      for (int entry = 0; entry < FluxEntries; entry++) {
+        timeAveragedFlux[entry] = firstFlux[entry];
+      }
+    }
+    SIMD()
     for (int entry = 0; entry < FluxEntries; entry++) {
+      timeAveragedFlux[entry] += weight * (flux[entry] - firstFlux[entry]);
+    }
+    return;
+  }
+  for (int entry = workers.thread; entry < FluxEntries; entry += workers.threads) {
+    if (timeNode == 0) {
       timeAveragedFlux[entry] = firstFlux[entry];
     }
-  }
-  SIMD()
-  for (int entry = 0; entry < FluxEntries; entry++) {
     timeAveragedFlux[entry] += weight * (flux[entry] - firstFlux[entry]);
   }
 }
 
 /**
  * Zeroes the right-hand side of one time node. The Picard system solves for the difference from
- * the cell state, so the right-hand side collects only the flux divergence and the sources.
+ * the cell state. The right-hand side collects only the flux divergence and the sources.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::clearRightHandSide(
   ComputePrecision* NOALIAS const rightHandSide,
-  const int                       timeNode
+  const int                       timeNode,
+  const TeamWorkers&              workers
 ) {
+  constexpr int SliceEntries = CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell;
+
   assertion(timeNode >= 0 and timeNode < CellLayout::NodesPerAxis, timeNode);
 
-  ComputePrecision* NOALIAS const timeSlice =
-    rightHandSide + CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * timeNode;
-  for (int entry = 0; entry < CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell; entry++) {
+  ComputePrecision* NOALIAS const timeSlice = rightHandSide + SliceEntries * timeNode;
+  for (int entry = workers.thread; entry < SliceEntries; entry += workers.threads) {
     timeSlice[entry] = static_cast<ComputePrecision>(0);
   }
 }
 
 /**
- * Subtracts the flux divergence of one time node from the right-hand side of the Picard system.
- * The transposed stiffness operator includes the quadrature weight of its own axis, so the scaling
- * adds the weights of time and of the other axes. Every axis completes a line update before the
- * update enters the right-hand side, so mirror-image cells receive mirrored right-hand sides.
+ * Subtracts the derivative of flux along axis from the time slice timeNode of rightHandSide. The
+ * scaling multiplies the transposed stiffness operator by the weights of time and of the other
+ * axes. A caller runs the axes in ascending order with a barrier between two calls.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -429,26 +713,27 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::subtractFluxD
   const ComputePrecision* NOALIAS const                  cellQuadratureWeights,
   const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
   const double                                           timeStepSize,
-  const int                                              timeNode
+  const int                                              timeNode,
+  const int                                              axis,
+  const TeamWorkers&                                     workers
 ) {
   constexpr int NodesPerAxis   = CellLayout::NodesPerAxis;
   constexpr int NodeStride     = CellLayout::PaddedNumberOfUnknowns;
   constexpr int FluxAxisStride = CellLayout::NodesPerCell * NodeStride;
+  constexpr int LinesPerAxis   = CellLayout::NodesPerAxisIn3D * NodesPerAxis;
 
   assertion(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
+  assertion(axis >= 0 and axis < DIMENSIONS, axis);
+  assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
 
-  // The right-hand side spans every time node, and the flux spans one time slice.
-  const int timeSliceOffset = timeNode * CellLayout::NodesPerCell * NodeStride;
+  // The right-hand side spans every time node. The flux spans one time slice.
+  const int              timeSliceOffset    = timeNode * CellLayout::NodesPerCell * NodeStride;
+  const ComputePrecision timeStepByCellSize = static_cast<ComputePrecision>(timeStepSize) * inverseCellSize(axis);
 
-  ComputePrecision timeStepByCellSize[DIMENSIONS];
-  UNROLL(DIMENSIONS)
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
-    timeStepByCellSize[axis] = static_cast<ComputePrecision>(timeStepSize) * inverseCellSize(axis);
-  }
-
-  for (int z = 0; z < CellLayout::NodesPerAxisIn3D; z++) {
-    for (int y = 0; y < NodesPerAxis; y++) {
+  if (axis == 0) {
+    for (int line = workers.thread; line < LinesPerAxis; line += workers.threads) {
+      const int        z          = line / NodesPerAxis;
+      const int        y          = line - z * NodesPerAxis;
       const int        lineNode   = (timeNode * CellLayout::NodesPerAxisIn3D + z) * NodesPerAxis + y;
       const int        lineOffset = lineNode * NodesPerAxis * NodeStride;
       ComputePrecision lineUpdate[NodesPerAxis * NodeStride];
@@ -465,7 +750,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::subtractFluxD
         flux + (lineOffset - timeSliceOffset),
         stiffnessOperatorTransposed,
         -cellQuadratureWeights[lineNode],
-        timeStepByCellSize[0]);
+        timeStepByCellSize);
       for (int node = 0; node < NodesPerAxis; node++) {
         SIMD()
         for (int entry = 0; entry < NodeStride; entry++) {
@@ -473,10 +758,10 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::subtractFluxD
         }
       }
     }
-  }
-
-  for (int z = 0; z < CellLayout::NodesPerAxisIn3D; z++) {
-    for (int x = 0; x < NodesPerAxis; x++) {
+  } else if (axis == 1) {
+    for (int line = workers.thread; line < LinesPerAxis; line += workers.threads) {
+      const int z        = line / NodesPerAxis;
+      const int x        = line - z * NodesPerAxis;
       const int lineNode = (timeNode * CellLayout::NodesPerAxisIn3D + z) * NodesPerAxis + x;
       const int lineOffset =
         ((timeNode * CellLayout::NodesPerAxisIn3D + z) * NodesPerAxis * NodesPerAxis + x) * NodeStride;
@@ -494,7 +779,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::subtractFluxD
         flux + (lineOffset - timeSliceOffset) + FluxAxisStride,
         stiffnessOperatorTransposed,
         -cellQuadratureWeights[lineNode],
-        timeStepByCellSize[1]);
+        timeStepByCellSize);
       for (int node = 0; node < NodesPerAxis; node++) {
         SIMD()
         for (int entry = 0; entry < NodeStride; entry++) {
@@ -502,34 +787,32 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::subtractFluxD
         }
       }
     }
-  }
-
-  if constexpr (DIMENSIONS == 3) {
-    for (int y = 0; y < NodesPerAxis; y++) {
-      for (int x = 0; x < NodesPerAxis; x++) {
-        const int        lineNode   = (timeNode * CellLayout::NodesPerAxisIn3D + y) * NodesPerAxis + x;
-        const int        lineOffset = ((timeNode * NodesPerAxis * NodesPerAxis + y) * NodesPerAxis + x) * NodeStride;
-        ComputePrecision lineUpdate[NodesPerAxis * NodeStride];
-        exahype2::dg::differentiateAlongAxis<
-          NodeStride,
-          NodesPerAxis,
-          NodeStride * NodesPerAxis * NodesPerAxis,
-          NodesPerAxis,
-          NodeStride,
-          true,
-          ComputePrecision,
-          ComputePrecision
-        >(lineUpdate,
-          flux + (lineOffset - timeSliceOffset) + 2 * FluxAxisStride,
-          stiffnessOperatorTransposed,
-          -cellQuadratureWeights[lineNode],
-          timeStepByCellSize[DIMENSIONS - 1]);
-        for (int node = 0; node < NodesPerAxis; node++) {
-          SIMD()
-          for (int entry = 0; entry < NodeStride; entry++) {
-            rightHandSide[lineOffset + node * NodeStride * NodesPerAxis * NodesPerAxis + entry] +=
-              lineUpdate[node * NodeStride + entry];
-          }
+  } else if constexpr (DIMENSIONS == 3) {
+    for (int line = workers.thread; line < NodesPerAxis * NodesPerAxis; line += workers.threads) {
+      const int        y          = line / NodesPerAxis;
+      const int        x          = line - y * NodesPerAxis;
+      const int        lineNode   = (timeNode * CellLayout::NodesPerAxisIn3D + y) * NodesPerAxis + x;
+      const int        lineOffset = ((timeNode * NodesPerAxis * NodesPerAxis + y) * NodesPerAxis + x) * NodeStride;
+      ComputePrecision lineUpdate[NodesPerAxis * NodeStride];
+      exahype2::dg::differentiateAlongAxis<
+        NodeStride,
+        NodesPerAxis,
+        NodeStride * NodesPerAxis * NodesPerAxis,
+        NodesPerAxis,
+        NodeStride,
+        true,
+        ComputePrecision,
+        ComputePrecision
+      >(lineUpdate,
+        flux + (lineOffset - timeSliceOffset) + 2 * FluxAxisStride,
+        stiffnessOperatorTransposed,
+        -cellQuadratureWeights[lineNode],
+        timeStepByCellSize);
+      for (int node = 0; node < NodesPerAxis; node++) {
+        SIMD()
+        for (int entry = 0; entry < NodeStride; entry++) {
+          rightHandSide[lineOffset + node * NodeStride * NodesPerAxis * NodesPerAxis + entry] +=
+            lineUpdate[node * NodeStride + entry];
         }
       }
     }
@@ -556,9 +839,13 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
   const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
   const double                                           timeStamp,
   const double                                           timeStepSize,
-  const int                                              timeNode
+  const int                                              timeNode,
+  const TeamWorkers&                                     workers
 ) {
-  static_assert(AccumulatesSource, "The source of a node sums at least one term.");
+  static_assert(
+    AccumulatesSource,
+    "The source of the predictor expects a source term, a diffusive source term or a nonconservative product."
+  );
 
   constexpr int NodesPerAxis       = CellLayout::NodesPerAxis;
   constexpr int NumberOfUnknowns   = CellLayout::NumberOfUnknowns;
@@ -583,7 +870,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
 
   const ComputePrecision weight = quadratureWeights[timeNode];
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     const int spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
     for (int unknown = 0; unknown < SourceStride; unknown++) {
       localSource[unknown] = static_cast<ComputePrecision>(0);
@@ -640,7 +927,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
     }
 
     if constexpr (EvaluateNonconservativeProduct) {
-      // The products of all axes add up before localSource subtracts them, so mirror-image cells
+      // The products of all axes add up before localSource subtracts them. Mirror-image cells then
       // receive mirrored sources.
       ComputePrecision axisProducts[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       SIMD(aligned(axisProducts : PEANO_WITH_ALIGNMENT))
@@ -699,29 +986,37 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
 
 /**
  * Solves the time system of one Picard sweep and returns the squared distance between the new and
- * the previous iterate. A zero right-hand side returns the cell state bitwise. A value that is not
- * finite or lies outside the divergence bound returns an infinite distance.
+ * the previous iterate as an exact fixed-point sum. A zero right-hand side leaves the cell state
+ * bitwise in every time node. A value that is not finite or lies outside the divergence bound
+ * returns a diverged residual.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD double
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::PicardResidual
 exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::solvePicardSystem(
   ComputePrecision* NOALIAS const       spaceTimeState,
-  ComputePrecision* NOALIAS const       updatedTimeSlice,
   const ComputePrecision* NOALIAS const rightHandSide,
   const StoragePrecision* NOALIAS const cellState,
   const ComputePrecision* NOALIAS const inversePicardOperator,
-  const ComputePrecision* NOALIAS const inverseCellQuadratureWeights
+  const ComputePrecision* NOALIAS const inverseCellQuadratureWeights,
+  const double                          squaredTolerance,
+  const TeamWorkers&                    workers
 ) {
-  constexpr int  NodesPerAxis    = CellLayout::NodesPerAxis;
-  constexpr int  NodeStride      = CellLayout::PaddedNumberOfUnknowns;
-  constexpr auto DivergenceBound = static_cast<ComputePrecision>(1e20);
+  constexpr int    NodesPerAxis     = CellLayout::NodesPerAxis;
+  constexpr int    NodeStride       = CellLayout::PaddedNumberOfUnknowns;
+  constexpr auto   DivergenceBound  = static_cast<ComputePrecision>(1e20);
+  constexpr double TwoToThe63       = 9223372036854775808.0;
+  constexpr double TwoToTheMinus961 = 0x1p-961;
+  assertion(squaredTolerance >= 0.0, squaredTolerance);
 
-  // The exact accumulator makes the residual independent of the node order, so mirror-image cells
-  // stop after the same number of sweeps.
-  tarch::la::ExactAccumulator squaredResidual;
+  // TwoToThe63 / squaredTolerance overflows for every squaredTolerance at or below 2^-961.
+  const bool     representable = squaredTolerance > TwoToTheMinus961;
+  const double   scale         = representable ? TwoToThe63 / squaredTolerance : 0.0;
+  PicardResidual residual;
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  ComputePrecision updatedTimeSlice[NodesPerAxis * NodeStride];
+
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     exahype2::dg::applyOperatorAlongAxis<
       NodeStride,
       NodesPerAxis,
@@ -748,17 +1043,20 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::solvePicardSy
           not std::isfinite(newValue) or newValue < -DivergenceBound or newValue > DivergenceBound
           or not std::isfinite(previousValue) or previousValue < -DivergenceBound or previousValue > DivergenceBound
         ) {
-          return std::numeric_limits<double>::infinity();
+          return PicardResidual{0, 0, true, true};
         }
-        const double difference = static_cast<double>(newValue) - static_cast<double>(previousValue);
+        const double difference = static_cast<double>(newValue - previousValue);
         const double square     = difference * difference;
-        squaredResidual.add(square);
+        if (square >= squaredTolerance or not representable) {
+          residual.exceeds = residual.exceeds or square > 0.0;
+        } else {
+          residual.add(PicardResidual{0, static_cast<std::uint64_t>(square * scale), false});
+        }
         stateNode[unknown] = newValue;
       }
     }
   }
-
-  return squaredResidual.round();
+  return residual;
 }
 
 /**
@@ -769,11 +1067,12 @@ template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::averageStateOverTime(
   ComputePrecision* NOALIAS const       spaceTimeState,
-  const ComputePrecision* NOALIAS const quadratureWeights
+  const ComputePrecision* NOALIAS const quadratureWeights,
+  const TeamWorkers&                    workers
 ) {
   constexpr int StateStride = CellLayout::PaddedNumberOfData;
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     ComputePrecision stateAverage[StateStride];
 
     SIMD()

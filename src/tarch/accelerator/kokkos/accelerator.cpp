@@ -89,4 +89,12 @@ tarch::accelerator::copyFromPinnedMemory(
   std::memcpy(target, source, sizeInBytes);
 }
 
+/**
+ * Blocks until every Kokkos execution space has completed its work.
+ */
+void
+tarch::accelerator::waitForDevice() {
+  Kokkos::fence();
+}
+
 #endif // defined(PEANO_WITH_GPU_BACKEND_KOKKOS)

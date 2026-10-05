@@ -7,6 +7,8 @@
 #include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
+#include "tarch/accelerator/ChunkedMemoryPool.h"
+#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
@@ -17,6 +19,7 @@ namespace {
   constexpr int NodesPerAxis  = 3;
   constexpr int ValuesPerNode = 2;
   constexpr int NodesPerFace  = peano4::power(NodesPerAxis, DIMENSIONS - 1);
+  constexpr int ValuesPerFace = 2 * NodesPerFace * ValuesPerNode;
   constexpr int CellsPerFace  = peano4::power(NodesPerAxis - 1, DIMENSIONS - 1);
   constexpr int CellsPerAxis  = peano4::SubdivisionFactor;
 
@@ -30,7 +33,7 @@ namespace {
   }
 
   /**
-   * Deletes the output directory on the global master once every rank has read its piece back.
+   * Deletes the output directory on the global master once every rank has read its file back.
    */
   void deleteOutputDirectory(const std::string& outputDirectory) {
     tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
@@ -55,11 +58,12 @@ exahype2::plotter::tests::FacePlotterTest::testEverySelectedFaceBecomesItsNodesA
   peano4::tests::buildRegularGrid(Depth);
   const auto& partition = peano4::Spacetree::getInstance().getPartition();
 
-  const int           valuesPerFace = 2 * NodesPerFace * ValuesPerNode;
-  std::vector<double> values(static_cast<std::size_t>(partition.getNumberOfFaces()) * valuesPerFace, 0.0);
+  tarch::accelerator::ChunkedMemoryPool<double> values(ValuesPerFace, tarch::MemoryLocation::Heap);
+  values.reserve(partition.getNumberOfFaces());
   for (int face = 0; face < partition.getNumberOfFaces(); face++) {
-    for (int value = 0; value < valuesPerFace; value++) {
-      values[static_cast<std::size_t>(face * valuesPerFace + value)] = 100.0 * face + value;
+    double* const halves = values.getChunk(face);
+    for (int value = 0; value < ValuesPerFace; value++) {
+      halves[value] = 100.0 * face + value;
     }
   }
 
@@ -82,8 +86,7 @@ exahype2::plotter::tests::FacePlotterTest::testEverySelectedFaceBecomesItsNodesA
   exahype2::plotter::FacePlotter plotter("FacePlotterTest", {{"q", 1}, {"r", 1}});
   plotter.plot<NodesPerAxis, ValuesPerNode, double>(
     partition,
-    values.data(),
-    valuesPerFace,
+    values,
     QuadratureNodes,
     0.25,
     tarch::plotter::Format::VTU,
@@ -92,17 +95,17 @@ exahype2::plotter::tests::FacePlotterTest::testEverySelectedFaceBecomesItsNodesA
   );
 
   validateEquals(peano4::tests::getGlobalSumOf(plottedFaces), peano4::power(CellsPerAxis, DIMENSIONS - 1));
-  const std::filesystem::path piece = std::filesystem::path(outputDirectory) / "face"
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "face"
     / ("FacePlotterTest-0_250000-rank-" + std::to_string(rank) + ".vtu");
-  validateWithParams1(std::filesystem::exists(piece), piece.string());
-  const std::string content = getFileContent(piece);
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  const std::string content = getFileContent(vtuPath);
   validateWithParams1(
     content.find("NumberOfCells=\"" + std::to_string(plottedFaces * CellsPerFace) + "\"") != std::string::npos,
-    piece.string()
+    vtuPath.string()
   );
   validateWithParams1(
     content.find("NumberOfPoints=\"" + std::to_string(plottedFaces * NodesPerFace) + "\"") != std::string::npos,
-    piece.string()
+    vtuPath.string()
   );
   validate(content.find("Name=\"qL\"") != std::string::npos);
   validate(content.find("Name=\"qR\"") != std::string::npos);
@@ -128,14 +131,17 @@ exahype2::plotter::tests::FacePlotterTest::testEveryFaceOfAnAdaptiveGridIsWritte
   }
   const int exchangedFaces = partition.getFaces(peano4::Adjacency::Remote, peano4::FaceKind::Interior).size;
 
-  const int                 valuesPerFace = 2 * NodesPerFace * ValuesPerNode;
-  const std::vector<double> values(static_cast<std::size_t>(partition.getNumberOfFaces()) * valuesPerFace, 0.0);
-  int                       plottedFaces = 0;
-  const auto                countFace    = [&plottedFaces](
-                                             [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-                                             [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellWidth,
-                                             [[maybe_unused]] const int                                    normal
-                                           ) {
+  tarch::accelerator::ChunkedMemoryPool<double> values(ValuesPerFace, tarch::MemoryLocation::Heap);
+  values.reserve(partition.getNumberOfFaces());
+  for (int face = 0; face < values.getCapacity(); face++) {
+    std::fill_n(values.getChunk(face), ValuesPerFace, 0.0);
+  }
+  int        plottedFaces = 0;
+  const auto countFace    = [&plottedFaces](
+                              [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+                              [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellWidth,
+                              [[maybe_unused]] const int                                    normal
+                            ) {
     plottedFaces++;
     return true;
   };
@@ -146,8 +152,7 @@ exahype2::plotter::tests::FacePlotterTest::testEveryFaceOfAnAdaptiveGridIsWritte
   exahype2::plotter::FacePlotter plotter("FacePlotterTestAdaptive", {{"q", 1}, {"r", 1}});
   plotter.plot<NodesPerAxis, ValuesPerNode, double>(
     partition,
-    values.data(),
-    valuesPerFace,
+    values,
     QuadratureNodes,
     0.5,
     tarch::plotter::Format::VTU,

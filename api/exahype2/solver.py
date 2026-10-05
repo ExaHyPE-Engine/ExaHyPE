@@ -50,7 +50,6 @@ class Solver:
         self.precision = Precision.of(precision)
 
         self._includes = []
-        self._initialise_on_host = False
         self._solver_base_user_declarations = ""
         self._solver_base_user_definitions = ""
         self._solver_user_declarations = ""
@@ -116,7 +115,7 @@ class Solver:
         """
         if self._error_measurement is not None:
             raise ValueError(
-                "[{}] records one error measurement only.".format(self._name)
+                "The solver {} records one error measurement only.".format(self._name)
             )
         if (
             isinstance(every, bool)
@@ -125,7 +124,7 @@ class Solver:
             or every < 0
         ):
             raise ValueError(
-                "[{}] every is a finite non-negative time, got {!r}.".format(
+                "The solver {} expects a finite non-negative time for every (got {!r}).".format(
                     self._name, every
                 )
             )
@@ -143,7 +142,7 @@ class Solver:
         tracers.attach(self, forces, initialisation, time_steps)
         if len(tracers.forces.interpolated_fields) > self.state.number_of_values:
             raise ValueError(
-                "[{}] interpolates one solver value per listed field and has {} values.".format(
+                "The tracers of the solver {} interpolate at most {} fields.".format(
                     self._name, self.state.number_of_values
                 )
             )
@@ -156,7 +155,9 @@ class Solver:
         ``particle_analytical_solution`` PDE term."""
         if tracers.solver is not self:
             raise ValueError(
-                "[{}] measures the error of tracers it traces.".format(self._name)
+                "The solver {} measures the error of its own tracers only.".format(
+                    self._name
+                )
             )
         tracers.measure_error(file, every)
         return self
@@ -194,14 +195,6 @@ class Solver:
 
     def on_finish_simulation(self, code):
         self._finish_simulation_implementation += code
-        return self
-
-    def initialise_on_host(self):
-        """Runs the initial condition on a host copy of the cells, which the solver then copies
-        to the device. An initial condition that reads files or host objects needs this.
-        """
-        self._initialise_on_host = True
-        self.pde_terms.run_on_host("initial_condition")
         return self
 
     def add_includes(self, *headers):
@@ -263,7 +256,7 @@ class Solver:
         """Returns the template entries of the solver, which ``build`` creates."""
         if self._dictionary is None:
             raise RuntimeError(
-                "[{}] the project has not built the solver.".format(self._name)
+                "The project must build the solver {} first.".format(self._name)
             )
         return self._dictionary
 
@@ -297,7 +290,7 @@ class Solver:
 
     def _render_tracer_update(self, tracer, d):
         """Returns the C++ call that moves one tracer set through the solution."""
-        raise NotImplementedError("A solver family names its tracer update.")
+        raise NotImplementedError("A solver family must provide its tracer update.")
 
     def _generate_solver_family_files(self, output, dictionary):
         """Adds the generated files that the kernels of a solver family read."""
@@ -308,13 +301,11 @@ class Solver:
         arguments = "".join(
             ", " + d[entry] for entry in self.SOLVER_FAMILY_CONCEPT_PRECISIONS
         )
-        return 'static_assert(\n  {}<{}{}>,\n  "{} does not satisfy {}; see {}"\n);'.format(
+        return 'static_assert(\n  {}<{}{}>,\n  "The solver {} must define every PDE term and constant of its solver family."\n);'.format(
             self.SOLVER_FAMILY_CONCEPT,
             d["FULL_QUALIFIED_SOLVER_NAME"],
             arguments,
             d["SOLVER_NAME"],
-            self.SOLVER_FAMILY_CONCEPT,
-            self.SOLVER_FAMILY_INCLUDE,
         )
 
     def _fill_dictionary(self, d):
@@ -346,7 +337,10 @@ class Solver:
         d.update(self.pde_terms.flags())
         d["USER_TERMS_INLINE"] = self._user_terms_inline()
         d["SOLVER_PDE_TERM_DECLARATIONS"] = self.pde_terms.render_declarations(
-            d, d["USER_TERMS_INLINE"]
+            d, d["USER_TERMS_INLINE"], True
+        )
+        d["SOLVER_HOST_PDE_TERM_DECLARATIONS"] = self.pde_terms.render_declarations(
+            d, d["USER_TERMS_INLINE"], False
         )
         d["HOST_DEFINED_DEVICE_TERMS"] = self.pde_terms.get_host_defined_device_terms(
             d["USER_TERMS_INLINE"]
@@ -362,6 +356,9 @@ class Solver:
         d["NUMBER_OF_UNKNOWNS_PARTICLE"] = measured[0].number_of_data if measured else 0
         for tracer in d["TRACERS"]:
             tracer["UPDATE_CALL"] = self._render_tracer_update(tracer, d)
+        d["TRACERS_RECORD"] = any(
+            tracer["DATABASE"] or tracer["ERROR"] for tracer in d["TRACERS"]
+        )
 
         d["ERROR_MEASUREMENT"] = self._error_measurement is not None
         d["MEASURED_UNKNOWNS"] = (
@@ -376,7 +373,6 @@ class Solver:
             )
 
         d["PERIODIC_BOUNDARIES"] = self._project.periodic_boundaries_mask
-        d["INITIALISE_ON_HOST"] = self._initialise_on_host
         includes = self._solver_includes(self.state.has_names)
         d["SOLVER_INCLUDES_WITHOUT_PATH"] = [
             header for header in includes if "/" not in header
@@ -427,7 +423,7 @@ class Solver:
             for term, body in hooks
         )
         d["SOLVER_INLINE_DEFINITIONS"] = "\n\n".join(
-            [self.pde_terms.render_definitions(d)]
+            [self.pde_terms.render_definitions(d, True)]
             + [
                 render_definition(
                     term, precision, d, get_inline_attributes(term.gpu), body
@@ -436,6 +432,9 @@ class Solver:
                 if body is not True
             ]
         ).strip()
+        d["SOLVER_HOST_INLINE_DEFINITIONS"] = self.pde_terms.render_definitions(
+            d, False
+        )
         d["SOLVER_STUB_DEFINITIONS"] = (
             ""
             if d["USER_TERMS_INLINE"] or self._user_terms_in_cpp()
@@ -448,9 +447,11 @@ class Solver:
                 ]
             )
         )
-        if d["USER_TERMS_INLINE"] and d["SOLVER_INLINE_DEFINITIONS"]:
+        if d["USER_TERMS_INLINE"] and (
+            d["SOLVER_INLINE_DEFINITIONS"] or d["SOLVER_HOST_INLINE_DEFINITIONS"]
+        ):
             raise ValueError(
-                "[{}] {}.cpph of the application defines the terms of the solver, so set {} to True and define them there.".format(
+                "The solver {} defines its terms in {}.cpph. Set {} to True and define them there.".format(
                     self._name,
                     self._name,
                     ", ".join(
@@ -463,12 +464,12 @@ class Solver:
     def _solver_family_class(self):
         """Returns the instantiation of the solver family's C++ solver class template."""
         raise NotImplementedError(
-            "A solver family names its C++ solver class template."
+            "A solver family must provide its C++ solver class template."
         )
 
     def _solver_family_constants(self):
-        """Returns the C++ constants and type aliases of the generated class, which the kernels
-        read through ``Derived``."""
+        """Returns the C++ constants and type aliases of the generated class. The kernels read them
+        through ``Derived``."""
         return []
 
     def _provides_max_eigenvalue(self):
@@ -479,7 +480,7 @@ class Solver:
         """Checks the configuration of the solver when the project generates its code."""
         if self.time_stepping.adaptive and not self._provides_max_eigenvalue():
             raise ValueError(
-                "[{}] adaptive time stepping needs the max_eigenvalue PDE term.".format(
+                "The solver {} needs the max_eigenvalue PDE term for adaptive time stepping.".format(
                     self._name
                 )
             )
@@ -489,7 +490,7 @@ class Solver:
             "boundary_conditions"
         ):
             raise ValueError(
-                "[{}] a domain that is not periodic along every axis needs the boundary_conditions PDE term.".format(
+                "The solver {} needs the boundary_conditions PDE term on a domain that is not periodic along every axis.".format(
                     self._name
                 )
             )
@@ -497,7 +498,7 @@ class Solver:
             "analytical_solution"
         ):
             raise ValueError(
-                "[{}] the error measurement needs the analytical_solution PDE term.".format(
+                "The solver {} needs the analytical_solution PDE term for the error measurement.".format(
                     self._name
                 )
             )
@@ -505,7 +506,7 @@ class Solver:
             tracers.error_measurement for tracers in self._tracers
         ) and not self.pde_terms.is_set("particle_analytical_solution"):
             raise ValueError(
-                "[{}] the particle error measurement needs the particle_analytical_solution PDE term.".format(
+                "The solver {} needs the particle_analytical_solution PDE term for the particle error measurement.".format(
                     self._name
                 )
             )
@@ -513,12 +514,14 @@ class Solver:
             tracers.samples_face_traces for tracers in self._tracers
         ) and self.SOLVER_FAMILY not in ("ader", "rk"):
             raise ValueError(
-                "[{}] samples face traces with a DG solver family only.".format(
+                "The solver {} needs a DG solver family to sample face traces.".format(
                     self._name
                 )
             )
         if len({tracers.name for tracers in self._tracers}) != len(self._tracers):
-            raise ValueError("[{}] traces every tracer set once.".format(self._name))
+            raise ValueError(
+                "The solver {} traces each tracer set once only.".format(self._name)
+            )
 
     def build(self, project):
         """Fills the dictionary of the solver and adds its C++ files to the output."""
@@ -553,7 +556,10 @@ class Solver:
             )
         )
         solver_templates = ["Solver.h.jinja2"]
-        if dictionary["SOLVER_INLINE_DEFINITIONS"]:
+        if (
+            dictionary["SOLVER_INLINE_DEFINITIONS"]
+            or dictionary["SOLVER_HOST_INLINE_DEFINITIONS"]
+        ):
             solver_templates.append("Solver.cpph.jinja2")
             output.makefile.add_h_file(self._name + ".cpph", generated=True)
         if dictionary["SOLVER_STUB_DEFINITIONS"]:

@@ -16,7 +16,7 @@ exahype2::particles::FileReader::readDatFile(const std::string& filename, const 
   assertion(std::isfinite(scale), scale);
   std::fstream input(filename, std::ios::in);
   if (not input) {
-    tarch::terminateWithError("The particle coordinate file cannot be opened: " + filename);
+    tarch::terminateWithError("The particle reader cannot open the file '" + filename + "'.");
   }
 
   std::string line;
@@ -30,14 +30,20 @@ exahype2::particles::FileReader::readDatFile(const std::string& filename, const 
     tarch::la::Vector<DIMENSIONS, double> newEntry{};
     for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
       if (not(currentLine >> newEntry(dimension))) {
-        tarch::terminateWithError("Particle coordinate line " + std::to_string(lineNumber) + " has too few values.");
+        tarch::terminateWithError(
+          "Line " + std::to_string(lineNumber) + " of the particle file expects " + std::to_string(DIMENSIONS)
+          + " coordinates."
+        );
       }
       newEntry(dimension) *= scale;
       assertion(std::isfinite(newEntry(dimension)), lineNumber, dimension, newEntry(dimension));
     }
     std::string trailingValue;
     if (currentLine >> trailingValue) {
-      tarch::terminateWithError("Particle coordinate line " + std::to_string(lineNumber) + " has too many values.");
+      tarch::terminateWithError(
+        "Line " + std::to_string(lineNumber) + " of the particle file expects " + std::to_string(DIMENSIONS)
+        + " coordinates."
+      );
     }
     _data.push_back(newEntry);
   }

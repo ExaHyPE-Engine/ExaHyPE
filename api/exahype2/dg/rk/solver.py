@@ -59,10 +59,14 @@ class Solver(exahype2.solver.Solver):
         super().__init__(name, unknowns, auxiliary_variables, time_stepping, precision)
         if basis not in (GaussLegendreBasis, GaussLobattoBasis):
             raise ValueError(
-                "basis is exahype2.dg.GaussLegendre or exahype2.dg.GaussLobatto."
+                "The Runge-Kutta DG solver supports the bases exahype2.dg.GaussLegendre and "
+                "exahype2.dg.GaussLobatto only."
             )
         if isinstance(dg_order, bool) or not isinstance(dg_order, int) or dg_order < 0:
-            raise ValueError("dg_order is a non-negative integer.")
+            raise ValueError(
+                "The Runge-Kutta DG solver expects a non-negative integer dg_order "
+                "(got {!r}).".format(dg_order)
+            )
         if (
             isinstance(rk_order, bool)
             or not isinstance(rk_order, int)
@@ -70,8 +74,9 @@ class Solver(exahype2.solver.Solver):
             or rk_order > MAX_RUNGE_KUTTA_ORDER
         ):
             raise ValueError(
-                "rk_order is an integer between {} and {}.".format(
-                    MIN_RUNGE_KUTTA_ORDER, MAX_RUNGE_KUTTA_ORDER
+                "The Runge-Kutta DG solver expects an integer rk_order from {} to {} "
+                "(got {!r}).".format(
+                    MIN_RUNGE_KUTTA_ORDER, MAX_RUNGE_KUTTA_ORDER, rk_order
                 )
             )
         self._rk_order = rk_order
@@ -103,18 +108,23 @@ class Solver(exahype2.solver.Solver):
     def _validate(self):
         super()._validate()
         if self._is_linear and self.pde_terms.is_set("diffusive_flux"):
-            raise ValueError("A linear system carries no diffusive flux.")
+            raise ValueError(
+                "The linear Runge-Kutta DG solver cannot add a diffusive flux."
+            )
         if not self._is_linear and self.pde_terms.is_set("material_parameters"):
             raise ValueError(
-                "Material parameters are only available for linear kernels."
+                "The Runge-Kutta DG solver supports material parameters with linear kernels "
+                "only."
             )
         if self.pde_terms.is_set("flux") and self.pde_terms.is_set("diffusive_flux"):
-            raise ValueError("A solver sets flux or diffusive_flux, not both.")
+            raise ValueError(
+                "A solver takes either the flux or the diffusive_flux PDE term."
+            )
         if not self.pde_terms.is_set("riemann_solver") and not self.pde_terms.is_set(
             "max_eigenvalue"
         ):
             raise ValueError(
-                "[{}] the max_eigenvalue PDE term is required when no Riemann solver is set.".format(
+                "The solver {} without a Riemann solver needs the max_eigenvalue PDE term.".format(
                     self._name
                 )
             )

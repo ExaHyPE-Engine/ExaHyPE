@@ -17,7 +17,7 @@ namespace tarch::accelerator {
  */
 template <typename T>
 class tarch::accelerator::Buffer final {
-  static_assert(std::is_trivially_copyable_v<T>, "A buffer element travels between memory locations as bytes.");
+  static_assert(std::is_trivially_copyable_v<T>, "A buffer stores trivially copyable values only.");
 
 public:
   Buffer()                                           = default;

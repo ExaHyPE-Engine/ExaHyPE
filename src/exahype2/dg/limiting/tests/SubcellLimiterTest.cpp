@@ -22,6 +22,9 @@
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/plotter/Format.h"
 
 namespace {
   TARGET_DECLARE
@@ -367,7 +370,7 @@ namespace {
     using SubcellProjection = ::SubcellProjection<Precision>;
 
     RejectingSolver() :
-      Solver(TimeStepFactor, "RejectingSolver", {{"q", 1}}, 0.0, 0.0) {}
+      SolverOf<RejectingSolver>(TimeStepFactor, "RejectingSolver", {{"q", 1}}, 0.0, 0.0) {}
 
     static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissible(
       [[maybe_unused]] const double* const                          Q,
@@ -506,6 +509,7 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::run() {
   testMethod(testARejectedFreeStreamRecomputesEveryCellAndKeepsTheConstant);
   testMethod(testOneTroubledCellSpreadsTwoRingsOfNeighbours);
   testMethod(testTheSubgridBoundaryConditionsSkipTheCellsOffTheScheme);
+  testMethod(testAPlotAllocatesHostCopiesOnlyWithAGPUBackend);
   testMethod(testReleaseFreesEveryPool);
 }
 
@@ -607,7 +611,7 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testARejectedFreeStreamRecomp
  */
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testOneTroubledCellSpreadsTwoRingsOfNeighbours() {
-  static_assert(CellsPerAxis >= 3, "The rings of the corner cell need three cells per axis.");
+  static_assert(CellsPerAxis >= 3, "The test needs at least three cells per axis.");
   CornerSolver solver;
   const auto&  partition = advance(solver, 1);
   validateEquals(getNumberOfMismatches(solver, partition, Tolerance), 0);
@@ -619,6 +623,42 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testOneTroubledCellSpreadsTwo
   validateEquals(recomputed - troubled, DIMENSIONS);
   validateEquals(subcell - recomputed, DIMENSIONS * (DIMENSIONS + 1) / 2);
   solver.release();
+}
+
+/**
+ * A plot of cells on the subcell scheme writes the .vtu file of every rank and allocates host copies
+ * only in a build with a GPU backend.
+ */
+void
+exahype2::dg::limiting::tests::SubcellLimiterTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend() {
+  RejectingSolver solver;
+  const auto&     partition = advance(solver, 1);
+  const auto&     rank      = tarch::mpi::Rank::getInstance();
+  validateEquals(solver.getLimiter().getNumberOfCellsOnSubcellScheme(), partition.getCells().size);
+
+  const std::string outputDirectory =
+    (tarch::tests::getWritableTestDirectory() / "SubcellLimiterPlotTest").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "patch/");
+  const tarch::AllocatedBytes bytesBeforePlot = solver.getAllocatedBytes();
+  solver.plot(partition, tarch::plotter::Format::VTU, outputDirectory);
+  const tarch::AllocatedBytes bytesAfterPlot = solver.getAllocatedBytes();
+
+  const auto& solution = solver.getSolution();
+  if (solution.isHostAccessible()) {
+    validateEquals(bytesAfterPlot.host, bytesBeforePlot.host);
+  } else {
+    validate(bytesAfterPlot.host > bytesBeforePlot.host + solution.getAllocatedBytes().device);
+  }
+  validateEquals(bytesAfterPlot.device, bytesBeforePlot.device);
+  const std::string           vtuName = "RejectingSolver-0_000000-rank-" + std::to_string(rank.getRank()) + ".vtu";
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch" / vtuName;
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  solver.release();
+
+  tarch::mpi::barrier(rank.getCommunicator());
+  if (rank.isGlobalMaster()) {
+    std::filesystem::remove_all(outputDirectory);
+  }
 }
 
 void

@@ -30,4 +30,5 @@ private:
   void testAFixedRuleReportsNoWaveSpeeds();
   void testAGalerkinCellProjectsItsPreviousSolutionOntoTheSubgridAndTheFaces();
   void testEveryCellOfADeviceRangeRecomputesLikeTheHost();
+  void testEveryNodeProjectsLikeTheWholeCell();
 };

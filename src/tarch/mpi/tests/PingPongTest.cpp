@@ -92,8 +92,8 @@ namespace {
       logDebug("Received value " << incomingValue << ".");
       if (incomingValue != 23 + _expectedPayloadOffset) {
         logError(
-          "Received " << incomingValue << ", expected " << (23 + _expectedPayloadOffset)
-                      << " (blocking mode=" << _useBlockingCall << ", tag=" << _tag << ")."
+          "The ping-pong test expects " << (23 + _expectedPayloadOffset) << " and receives " << incomingValue
+                                        << " (blocking mode " << _useBlockingCall << ", tag " << _tag << ")."
         );
         _errorCount.fetch_add(1, std::memory_order_relaxed);
       }
