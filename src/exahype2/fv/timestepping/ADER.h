@@ -82,9 +82,8 @@ struct exahype2::fv::timestepping::ADER final {
       (NumberOfVolumesPerAxis + 1) * peano4::power(NumberOfVolumesPerAxis, DIMENSIONS - 1);
 
     static constexpr int InterfaceDataOffset   = 0;
-    static constexpr int TimeAveragedOffset    = InterfaceDataOffset + DIMENSIONS * InterfacesPerAxis * EntriesPerInterface;
-    static constexpr int PicardOffset          = TimeAveragedOffset + Predictor::TimeAveragedSize;
-    static constexpr int NodalStateOffset      = PicardOffset + Predictor::PicardSize;
+    static constexpr int PredictorOffset       = InterfaceDataOffset + DIMENSIONS * InterfacesPerAxis * EntriesPerInterface;
+    static constexpr int NodalStateOffset      = PredictorOffset + Predictor::Size;
     static constexpr int DiscardedStatesOffset = NodalStateOffset + CellLayout::NodesPerCell * NumberOfData;
     static constexpr int DiscardedFluxesOffset = DiscardedStatesOffset + peano4::FacesPerCell * StateEntriesPerSide;
     static constexpr int ReconstructionOffset  = DiscardedFluxesOffset + peano4::FacesPerCell * FluxEntriesPerSide;

@@ -660,7 +660,6 @@ class Solver(SubcellLimiting, exahype2.solver.Solver):
 
         d["PREDICTOR_COMPUTATION_PRECISIONS"] = [self.precision.compute]
         d["CORRECTOR_COMPUTATION_PRECISION"] = self.precision.compute
-        d["PICARD_COMPUTATION_PRECISION"] = self.precision.compute
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = 1
         d["NUMBER_OF_PRECISIONS"] = len(self.precision.types)
         d["TABLE_PRECISIONS"] = self._table_precisions()
@@ -677,4 +676,3 @@ class Solver(SubcellLimiting, exahype2.solver.Solver):
             )
         ).strip()
         d["PREDICTOR_TABLES"] = _basis_tables(self._name, self.precision.compute)
-        d["PICARD_TABLES"] = _basis_tables(self._name, self.precision.compute)

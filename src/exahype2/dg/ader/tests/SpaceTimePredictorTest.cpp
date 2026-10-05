@@ -19,6 +19,7 @@ namespace {
   constexpr double SourceStrength          = 1.5;
   constexpr double DiffusiveSourceStrength = 0.5;
   constexpr double DivergingSpeed          = 1.0e30;
+  constexpr double StiffSourceRate         = 200.0;
   constexpr double LinearFluxSpeed         = 0.5;
   constexpr double LinearProductSpeed      = 0.25;
   constexpr double LinearSourceRate        = 0.75;
@@ -43,6 +44,16 @@ namespace {
     true,
     true,
     true>;
+  using SourceScratch = exahype2::dg::ader::NonlinearPredictorScratch<
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    false,
+    false,
+    true,
+    false,
+    false>;
+
   using FluxScratch = exahype2::dg::ader::NonlinearPredictorScratch<
     NumberOfDofsPerAxis,
     NumberOfUnknowns,
@@ -53,11 +64,11 @@ namespace {
     false,
     false>;
   using InertLinearScratch = exahype2::dg::ader::
-    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, false, false, false>;
+    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, false, false>;
   using TransportLinearScratch = exahype2::dg::ader::
-    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, false, false>;
+    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, false>;
   using SourceLinearScratch = exahype2::dg::ader::
-    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, true, false>;
+    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, false>;
 
   constexpr int AveragedAxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
 
@@ -369,6 +380,21 @@ namespace {
     }
   };
 
+  struct StiffSourceSolver final {
+    static void sourceTerm(
+      const double* NOALIAS const                                   state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      double* NOALIAS const                                         values
+    ) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        values[unknown] += StiffSourceRate * state[unknown];
+      }
+    }
+  };
+
   struct LinearSystemSolver final {
     static void flux(
       const double* NOALIAS const                                   state,
@@ -458,6 +484,7 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::run() {
   testMethod(testAnInertNonlinearSystemLeavesTheCellAtRest);
   testMethod(testTheNonlinearPredictorMovesALinearProfileByTheExactAmount);
   testMethod(testADivergingNonlinearPredictorReportsMinusOne);
+  testMethod(testAStiffNonlinearPredictorStopsAtTheSweepLimit);
   testMethod(testAnInertLinearSystemLeavesTheCellAtRest);
   testMethod(testTheLinearPredictorTranslatesALinearProfileByTheExactAmount);
   testMethod(testTheLinearPredictorFollowsTheTaylorSeriesOfTheSystem);
@@ -477,8 +504,7 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testAnInertNonlinearSyst
   double*     faceFlux[peano4::FacesPerCell];
   collectFacePointers(buffers, faceState, faceFlux);
 
-  double timeAveragedScratch[InertScratch::TimeAveragedSize] = {};
-  double picardScratch[InertScratch::PicardSize]             = {};
+  double scratch[InertScratch::Size] = {};
 
   const int numberOfSweeps = exahype2::dg::ader::spaceTimePredictor<
     TermSolver,
@@ -492,14 +518,11 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testAnInertNonlinearSyst
     false,
     double,
     double,
-    double,
     double>(
     faceState,
     faceFlux,
     cellState,
-    timeAveragedScratch,
-    picardScratch,
-    basisTables,
+    scratch,
     basisTables,
     cellCentre,
     cellSize,
@@ -519,7 +542,7 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testAnInertNonlinearSyst
         value
       );
       validateNumericalEqualsWithParams2(
-        timeAveragedScratch[InertScratch::TimeAveragedStateOffset + cellNode * CellLayout::PaddedNumberOfData + value],
+        scratch[InertScratch::SpaceTimeStateOffset + cellNode * CellLayout::PaddedNumberOfData + value],
         varyingCellStateEntry(cellNode, value),
         cellNode,
         value
@@ -565,8 +588,7 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testTheNonlinearPredicto
   double*     faceFlux[peano4::FacesPerCell];
   collectFacePointers(buffers, faceState, faceFlux);
 
-  double timeAveragedScratch[TermScratch::TimeAveragedSize] = {};
-  double picardScratch[TermScratch::PicardSize]             = {};
+  double scratch[TermScratch::Size] = {};
 
   const int numberOfSweeps = exahype2::dg::ader::spaceTimePredictor<
     TermSolver,
@@ -580,14 +602,11 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testTheNonlinearPredicto
     true,
     double,
     double,
-    double,
     double>(
     faceState,
     faceFlux,
     cellState,
-    timeAveragedScratch,
-    picardScratch,
-    basisTables,
+    scratch,
     basisTables,
     cellCentre,
     cellSize,
@@ -625,7 +644,7 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testTheNonlinearPredicto
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int value = 0; value < CellLayout::NumberOfData; value++) {
       validateNumericalEqualsWithParams2(
-        timeAveragedScratch[TermScratch::TimeAveragedStateOffset + cellNode * CellLayout::PaddedNumberOfData + value],
+        scratch[TermScratch::SpaceTimeStateOffset + cellNode * CellLayout::PaddedNumberOfData + value],
         averagedState[cellNode * CellLayout::NumberOfData + value],
         cellNode,
         value
@@ -633,15 +652,14 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testTheNonlinearPredicto
     }
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       validateNumericalEqualsWithParams2(
-        timeAveragedScratch
-          [TermScratch::TimeAveragedSourceOffset + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
+        scratch[TermScratch::TimeAveragedSourceOffset + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
         sourceAverage,
         cellNode,
         unknown
       );
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         validateNumericalEqualsWithParams3(
-          timeAveragedScratch
+          scratch
             [TermScratch::TimeAveragedFluxOffset + axis * AveragedAxisStride
              + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
           averagedFlux[axis][cellNode * NumberOfUnknowns + unknown],
@@ -740,8 +758,7 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testADivergingNonlinearP
   double*     faceFlux[peano4::FacesPerCell];
   collectFacePointers(buffers, faceState, faceFlux);
 
-  double timeAveragedScratch[FluxScratch::TimeAveragedSize] = {};
-  double picardScratch[FluxScratch::PicardSize]             = {};
+  double scratch[FluxScratch::Size] = {};
 
   const int numberOfSweeps = exahype2::dg::ader::spaceTimePredictor<
     DivergingSolver,
@@ -755,14 +772,11 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testADivergingNonlinearP
     false,
     double,
     double,
-    double,
     double>(
     faceState,
     faceFlux,
     cellState,
-    timeAveragedScratch,
-    picardScratch,
-    basisTables,
+    scratch,
     basisTables,
     cellCentre,
     cellSize,
@@ -771,7 +785,54 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testADivergingNonlinearP
     PicardTolerance
   );
 
-  validateEquals(numberOfSweeps, -1);
+  validateEquals(numberOfSweeps, exahype2::dg::ader::DivergedPicardIteration);
+}
+
+void exahype2::dg::ader::tests::SpaceTimePredictorTest::testAStiffNonlinearPredictorStopsAtTheSweepLimit() {
+  const Tables                                tables      = makeTables();
+  const auto                                  basisTables = collect(tables);
+  const auto                                  cellSize    = makeCellSize();
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
+
+  double cellState[CellLayout::NodesPerCell * CellLayout::NumberOfData];
+  fillVaryingCellState(cellState);
+
+  FaceBuffers buffers;
+  double*     faceState[peano4::FacesPerCell];
+  double*     faceFlux[peano4::FacesPerCell];
+  collectFacePointers(buffers, faceState, faceFlux);
+
+  double scratch[SourceScratch::Size] = {};
+
+  const int numberOfSweeps = exahype2::dg::ader::spaceTimePredictor<
+    StiffSourceSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    false,
+    false,
+    true,
+    false,
+    false,
+    double,
+    double,
+    double>(
+    faceState,
+    faceFlux,
+    cellState,
+    scratch,
+    basisTables,
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize,
+    PicardTolerance
+  );
+
+  validateEquals(numberOfSweeps, exahype2::dg::ader::UnconvergedPicardIteration);
+  for (int entry = 0; entry < CellLayout::NodesPerCell * CellLayout::NumberOfData; entry++) {
+    validateWithParams2(std::isfinite(cellState[entry]), entry, cellState[entry]);
+  }
 }
 
 void exahype2::dg::ader::tests::SpaceTimePredictorTest::testAnInertLinearSystemLeavesTheCellAtRest() {
@@ -925,7 +986,7 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::
         const double expected = (axis == 0) ? transportSpeed * Slope : 0.0;
         validateNumericalEqualsWithParams3(
           scratch
-            [TransportLinearScratch::TimeAveragedFluxOffset + axis * AveragedAxisStride
+            [TransportLinearScratch::FluxOffset + axis * AveragedAxisStride
              + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
           expected,
           axis,
@@ -1011,19 +1072,12 @@ void exahype2::dg::ader::tests::SpaceTimePredictorTest::testTheLinearPredictorFo
         cellNode,
         unknown
       );
-      validateNumericalEqualsWithParams2(
-        scratch
-          [SourceLinearScratch::TimeAveragedSourceOffset + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
-        LinearSourceRate * average,
-        cellNode,
-        unknown
-      );
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         const double expectedFlux = (axis == 0) ? averagedFlux[unknown] : 0.0;
         validateNumericalEqualsWithParams3(
           scratch
-            [SourceLinearScratch::TimeAveragedFluxOffset + axis * AveragedAxisStride
-             + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
+            [SourceLinearScratch::FluxOffset + axis * AveragedAxisStride + cellNode * CellLayout::PaddedNumberOfUnknowns
+             + unknown],
           expectedFlux,
           axis,
           cellNode,

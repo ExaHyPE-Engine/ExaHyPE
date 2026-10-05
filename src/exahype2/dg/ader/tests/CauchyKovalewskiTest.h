@@ -34,9 +34,9 @@ private:
   void testTheTimeAverageStartsFromTheState();
 
   /**
-   * A Taylor step starts from a zeroed flux, and a system without a source keeps that buffer.
+   * A Taylor step starts from a zeroed flux.
    */
-  void testTheTermsAreClearedBeforeATaylorStep();
+  void testTheFluxesAreClearedBeforeATaylorStep();
 
   /**
    * A flux that is linear along its own axis differentiates to its constant physical slope.
@@ -47,12 +47,6 @@ private:
    * A unit operator leaves the flux of every node in place, scaled by the extent of its axis.
    */
   void testTheUnitOperatorScalesEachAxisByItsCellExtent();
-
-  /**
-   * Every Taylor term enters the time average scaled by its factor, and a system without a source
-   * leaves that buffer alone.
-   */
-  void testTheTimeAveragedTermsGrowByTheGivenFactor();
 
   /**
    * The unknowns of a Taylor coefficient enter the time-averaged state and its auxiliary variables

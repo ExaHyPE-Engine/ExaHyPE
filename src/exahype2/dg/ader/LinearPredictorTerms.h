@@ -57,21 +57,6 @@ namespace exahype2::dg::ader {
     double                                       timeStamp,
     double                                       timeStepSize
   );
-
-  template <
-    typename SolverType,
-    int NumberOfDofsPerAxis,
-    int NumberOfUnknowns,
-    int NumberOfAuxiliaryVariables,
-    typename ComputePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void evaluateLinearSource(
-    ComputePrecision* NOALIAS                    source,
-    const ComputePrecision* NOALIAS              state,
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize
-  );
 } // namespace exahype2::dg::ader
 TARGET_DECLARE_END
 

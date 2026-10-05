@@ -32,7 +32,6 @@ class Prediction(exahype2.actionsets.SolverActionSet):
       fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
       fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(),
       {{PREDICTOR_TABLES}},
-      {{PICARD_TABLES}},
       timeStepSize
     );
   }

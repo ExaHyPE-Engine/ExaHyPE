@@ -49,9 +49,9 @@ namespace {
     false>;
 
   using FullLinearScratch = exahype2::dg::ader::
-    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, true, true>;
+    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, true>;
   using BareLinearScratch = exahype2::dg::ader::
-    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, false, false, false>;
+    LinearPredictorScratch<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, false, false>;
 
   constexpr int NumberOfBasisTables = 11;
 
@@ -110,18 +110,20 @@ void exahype2::dg::ader::tests::PredictorScratchTest::testNonlinearBlocksFollowE
     CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes
   );
   validateEquals(
-    FullNonlinearScratch::SpaceTimeFluxSize,
-    DIMENSIONS * CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes
-  );
-  validateEquals(
-    FullNonlinearScratch::SpaceTimeSourceSize,
-    CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes
-  );
-  validateEquals(
     FullNonlinearScratch::StateGradientSize,
     DIMENSIONS * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell
   );
   validateEquals(FullNonlinearScratch::UpdatedTimeSliceSize, NumberOfDofsPerAxis * CellLayout::PaddedNumberOfUnknowns);
+  validateEquals(
+    FullNonlinearScratch::FluxSize,
+    DIMENSIONS * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell
+  );
+  validateEquals(FullNonlinearScratch::TimeAveragedFluxSize, FullNonlinearScratch::FluxSize);
+  validateEquals(
+    FullNonlinearScratch::TimeAveragedSourceSize,
+    CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell
+  );
+  validateEquals(FullNonlinearScratch::VolumeCoefficientsSize, NumberOfDofsPerAxis * NumberOfDofsPerAxis);
 
   validateEquals(FullNonlinearScratch::SpaceTimeStateOffset, 0);
   validateEquals(
@@ -129,44 +131,20 @@ void exahype2::dg::ader::tests::PredictorScratchTest::testNonlinearBlocksFollowE
     FullNonlinearScratch::SpaceTimeStateOffset + FullNonlinearScratch::SpaceTimeStateSize
   );
   validateEquals(
-    FullNonlinearScratch::SpaceTimeFluxOffset,
-    FullNonlinearScratch::RightHandSideOffset + FullNonlinearScratch::RightHandSideSize
-  );
-  validateEquals(
-    FullNonlinearScratch::SpaceTimeSourceOffset,
-    FullNonlinearScratch::SpaceTimeFluxOffset + FullNonlinearScratch::SpaceTimeFluxSize
-  );
-  validateEquals(
     FullNonlinearScratch::StateGradientOffset,
-    FullNonlinearScratch::SpaceTimeSourceOffset + FullNonlinearScratch::SpaceTimeSourceSize
+    FullNonlinearScratch::RightHandSideOffset + FullNonlinearScratch::RightHandSideSize
   );
   validateEquals(
     FullNonlinearScratch::UpdatedTimeSliceOffset,
     FullNonlinearScratch::StateGradientOffset + FullNonlinearScratch::StateGradientSize
   );
   validateEquals(
-    FullNonlinearScratch::PicardSize,
+    FullNonlinearScratch::FluxOffset,
     FullNonlinearScratch::UpdatedTimeSliceOffset + FullNonlinearScratch::UpdatedTimeSliceSize
   );
-
-  validateEquals(
-    FullNonlinearScratch::TimeAveragedStateSize,
-    CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell
-  );
-  validateEquals(
-    FullNonlinearScratch::TimeAveragedFluxSize,
-    DIMENSIONS * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell
-  );
-  validateEquals(
-    FullNonlinearScratch::TimeAveragedSourceSize,
-    CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell
-  );
-  validateEquals(FullNonlinearScratch::VolumeCoefficientsSize, NumberOfDofsPerAxis * NumberOfDofsPerAxis);
-
-  validateEquals(FullNonlinearScratch::TimeAveragedStateOffset, 0);
   validateEquals(
     FullNonlinearScratch::TimeAveragedFluxOffset,
-    FullNonlinearScratch::TimeAveragedStateOffset + FullNonlinearScratch::TimeAveragedStateSize
+    FullNonlinearScratch::FluxOffset + FullNonlinearScratch::FluxSize
   );
   validateEquals(
     FullNonlinearScratch::TimeAveragedSourceOffset,
@@ -177,7 +155,7 @@ void exahype2::dg::ader::tests::PredictorScratchTest::testNonlinearBlocksFollowE
     FullNonlinearScratch::TimeAveragedSourceOffset + FullNonlinearScratch::TimeAveragedSourceSize
   );
   validateEquals(
-    FullNonlinearScratch::TimeAveragedSize,
+    FullNonlinearScratch::Size,
     FullNonlinearScratch::VolumeCoefficientsOffset + FullNonlinearScratch::VolumeCoefficientsSize
   );
 }
@@ -188,15 +166,6 @@ void exahype2::dg::ader::tests::PredictorScratchTest::testLinearBlocksFollowEach
   validateEquals(
     FullLinearScratch::FluxSize,
     DIMENSIONS * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell
-  );
-  validateEquals(
-    FullLinearScratch::TimeAveragedFluxSize,
-    DIMENSIONS * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell
-  );
-  validateEquals(FullLinearScratch::SourceSize, CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell);
-  validateEquals(
-    FullLinearScratch::TimeAveragedSourceSize,
-    CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell
   );
   validateEquals(FullLinearScratch::StateGradientSize, CellLayout::PaddedNumberOfUnknowns * NumberOfDofsPerAxis);
   validateEquals(
@@ -213,22 +182,7 @@ void exahype2::dg::ader::tests::PredictorScratchTest::testLinearBlocksFollowEach
     FullLinearScratch::FluxOffset,
     FullLinearScratch::TimeAveragedStateOffset + FullLinearScratch::TimeAveragedStateSize
   );
-  validateEquals(
-    FullLinearScratch::TimeAveragedFluxOffset,
-    FullLinearScratch::FluxOffset + FullLinearScratch::FluxSize
-  );
-  validateEquals(
-    FullLinearScratch::SourceOffset,
-    FullLinearScratch::TimeAveragedFluxOffset + FullLinearScratch::TimeAveragedFluxSize
-  );
-  validateEquals(
-    FullLinearScratch::TimeAveragedSourceOffset,
-    FullLinearScratch::SourceOffset + FullLinearScratch::SourceSize
-  );
-  validateEquals(
-    FullLinearScratch::StateGradientOffset,
-    FullLinearScratch::TimeAveragedSourceOffset + FullLinearScratch::TimeAveragedSourceSize
-  );
+  validateEquals(FullLinearScratch::StateGradientOffset, FullLinearScratch::FluxOffset + FullLinearScratch::FluxSize);
   validateEquals(
     FullLinearScratch::PointSourceOffset,
     FullLinearScratch::StateGradientOffset + FullLinearScratch::StateGradientSize
@@ -237,31 +191,26 @@ void exahype2::dg::ader::tests::PredictorScratchTest::testLinearBlocksFollowEach
 }
 
 void exahype2::dg::ader::tests::PredictorScratchTest::testSwitchedOffTermsHaveZeroExtent() {
-  validateEquals(BareNonlinearScratch::SpaceTimeFluxSize, 0);
-  validateEquals(BareNonlinearScratch::SpaceTimeSourceSize, 0);
   validateEquals(BareNonlinearScratch::StateGradientSize, 0);
+  validateEquals(BareNonlinearScratch::FluxSize, 0);
   validateEquals(BareNonlinearScratch::TimeAveragedFluxSize, 0);
   validateEquals(BareNonlinearScratch::TimeAveragedSourceSize, 0);
   validate(not BareNonlinearScratch::AccumulatesSource);
   validate(not BareNonlinearScratch::NeedsStateGradient);
-  validate(BareNonlinearScratch::PicardSize < FullNonlinearScratch::PicardSize);
-  validate(BareNonlinearScratch::TimeAveragedSize < FullNonlinearScratch::TimeAveragedSize);
+  validate(BareNonlinearScratch::Size < FullNonlinearScratch::Size);
 
-  // A nonconservative product enters the source buffer, so it claims that buffer without a source term.
   validate(ProductOnlyScratch::AccumulatesSource);
   validate(ProductOnlyScratch::NeedsStateGradient);
-  validate(ProductOnlyScratch::SpaceTimeSourceSize > 0);
   validate(ProductOnlyScratch::StateGradientSize > 0);
-  validateEquals(ProductOnlyScratch::SpaceTimeFluxSize, 0);
+  validate(ProductOnlyScratch::TimeAveragedSourceSize > 0);
+  validateEquals(ProductOnlyScratch::FluxSize, 0);
 
   validate(DiffusiveFluxOnlyScratch::NeedsStateGradient);
   validate(not DiffusiveFluxOnlyScratch::AccumulatesSource);
   validate(DiffusiveFluxOnlyScratch::StateGradientSize > 0);
-  validateEquals(DiffusiveFluxOnlyScratch::SpaceTimeSourceSize, 0);
-  validate(DiffusiveFluxOnlyScratch::SpaceTimeFluxSize > 0);
+  validate(DiffusiveFluxOnlyScratch::FluxSize > 0);
+  validateEquals(DiffusiveFluxOnlyScratch::TimeAveragedSourceSize, 0);
 
-  validateEquals(BareLinearScratch::SourceSize, 0);
-  validateEquals(BareLinearScratch::TimeAveragedSourceSize, 0);
   validateEquals(BareLinearScratch::StateGradientSize, 0);
   validateEquals(BareLinearScratch::PointSourceSize, 0);
   validate(BareLinearScratch::Size < FullLinearScratch::Size);

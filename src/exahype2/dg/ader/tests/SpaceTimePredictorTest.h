@@ -41,6 +41,11 @@ private:
   void testADivergingNonlinearPredictorReportsMinusOne();
 
   /**
+   * A stiff source stops the predictor at the sweep limit with a finite cell state.
+   */
+  void testAStiffNonlinearPredictorStopsAtTheSweepLimit();
+
+  /**
    * A linear system without terms keeps the cell state, projects it onto every face and leaves the
    * flux of every face at zero.
    */

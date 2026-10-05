@@ -26,7 +26,6 @@ namespace exahype2::dg::ader {
     bool EvaluateMaterialParameters,
     bool EvaluatePointSources,
     typename ComputePrecision,
-    typename PicardPrecision,
     typename StoragePrecision,
     typename CellLabel,
     typename FaceLabelEnumerator,
@@ -42,7 +41,6 @@ namespace exahype2::dg::ader {
     StoragePrecision* NOALIAS            cellState,
     StoragePrecision* NOALIAS            previousCellState,
     const BasisTables<ComputePrecision>& tables,
-    const BasisTables<PicardPrecision>&  picardTables,
     double                               timeStepSize
   );
 } // namespace exahype2::dg::ader

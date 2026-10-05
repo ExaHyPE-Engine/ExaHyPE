@@ -29,7 +29,6 @@ namespace exahype2::dg::ader {
     int  NumberOfUnknowns,
     int  NumberOfAuxiliaryVariables,
     bool EvaluateNonconservativeProduct,
-    bool EvaluateSource,
     bool EvaluatePointSources>
   struct LinearPredictorScratch;
 } // namespace exahype2::dg::ader
@@ -80,9 +79,8 @@ struct exahype2::dg::ader::BasisTables final {
 };
 
 /**
- * Extents and offsets of the two scratch blocks of the nonlinear predictor. The Picard block holds
- * every space-time quantity, the time-averaged block holds the time integrals. A term the solver
- * switches off has extent zero.
+ * Extents and offsets of the scratch block of the nonlinear predictor. A term the solver switches
+ * off has extent zero.
  */
 template <
   int  NumberOfDofsPerAxis,
@@ -102,47 +100,36 @@ struct exahype2::dg::ader::NonlinearPredictorScratch final {
 
   static constexpr int SpaceTimeStateSize = CellLayout::PaddedNumberOfData * CellLayout::SpaceTimeNodes;
   static constexpr int RightHandSideSize  = CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes;
-  static constexpr int SpaceTimeFluxSize =
-    EvaluateFlux ? CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes * DIMENSIONS : 0;
-  static constexpr int SpaceTimeSourceSize =
-    AccumulatesSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes : 0;
   static constexpr int StateGradientSize =
     NeedsStateGradient ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
   static constexpr int UpdatedTimeSliceSize = NumberOfDofsPerAxis * CellLayout::PaddedNumberOfUnknowns;
-
-  static constexpr int SpaceTimeStateOffset   = 0;
-  static constexpr int RightHandSideOffset    = SpaceTimeStateOffset + SpaceTimeStateSize;
-  static constexpr int SpaceTimeFluxOffset    = RightHandSideOffset + RightHandSideSize;
-  static constexpr int SpaceTimeSourceOffset  = SpaceTimeFluxOffset + SpaceTimeFluxSize;
-  static constexpr int StateGradientOffset    = SpaceTimeSourceOffset + SpaceTimeSourceSize;
-  static constexpr int UpdatedTimeSliceOffset = StateGradientOffset + StateGradientSize;
-  static constexpr int PicardSize             = UpdatedTimeSliceOffset + UpdatedTimeSliceSize;
-
-  static constexpr int TimeAveragedStateSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
-  static constexpr int TimeAveragedFluxSize =
+  static constexpr int FluxSize =
     EvaluateFlux ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
+  static constexpr int TimeAveragedFluxSize = FluxSize;
   static constexpr int TimeAveragedSourceSize =
     AccumulatesSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell : 0;
   static constexpr int VolumeCoefficientsSize = NumberOfDofsPerAxis * NumberOfDofsPerAxis;
 
-  static constexpr int TimeAveragedStateOffset  = 0;
-  static constexpr int TimeAveragedFluxOffset   = TimeAveragedStateOffset + TimeAveragedStateSize;
+  static constexpr int SpaceTimeStateOffset     = 0;
+  static constexpr int RightHandSideOffset      = SpaceTimeStateOffset + SpaceTimeStateSize;
+  static constexpr int StateGradientOffset      = RightHandSideOffset + RightHandSideSize;
+  static constexpr int UpdatedTimeSliceOffset   = StateGradientOffset + StateGradientSize;
+  static constexpr int FluxOffset               = UpdatedTimeSliceOffset + UpdatedTimeSliceSize;
+  static constexpr int TimeAveragedFluxOffset   = FluxOffset + FluxSize;
   static constexpr int TimeAveragedSourceOffset = TimeAveragedFluxOffset + TimeAveragedFluxSize;
   static constexpr int VolumeCoefficientsOffset = TimeAveragedSourceOffset + TimeAveragedSourceSize;
-  static constexpr int TimeAveragedSize         = VolumeCoefficientsOffset + VolumeCoefficientsSize;
+  static constexpr int Size                     = VolumeCoefficientsOffset + VolumeCoefficientsSize;
 };
 
 /**
- * Extents and offsets of the one scratch block of the linear predictor. The block holds the
- * current Taylor coefficient of the state, its flux and its source, and the time averages of the
- * three. A term the solver switches off has extent zero.
+ * Extents and offsets of the scratch block of the linear predictor. A term the solver switches off
+ * has extent zero.
  */
 template <
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
   bool EvaluateNonconservativeProduct,
-  bool EvaluateSource,
   bool EvaluatePointSources>
 struct exahype2::dg::ader::LinearPredictorScratch final {
   using CellLayout = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
@@ -150,11 +137,6 @@ struct exahype2::dg::ader::LinearPredictorScratch final {
   static constexpr int StateSize             = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
   static constexpr int TimeAveragedStateSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
   static constexpr int FluxSize = DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
-  static constexpr int TimeAveragedFluxSize =
-    DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
-  static constexpr int SourceSize = EvaluateSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell : 0;
-  static constexpr int TimeAveragedSourceSize =
-    EvaluateSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell : 0;
   /**
    * The nonconservative product differentiates one line of nodes at a time.
    */
@@ -164,14 +146,11 @@ struct exahype2::dg::ader::LinearPredictorScratch final {
     ? (NumberOfDofsPerAxis + 1) * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns
     : 0;
 
-  static constexpr int StateOffset              = 0;
-  static constexpr int TimeAveragedStateOffset  = StateOffset + StateSize;
-  static constexpr int FluxOffset               = TimeAveragedStateOffset + TimeAveragedStateSize;
-  static constexpr int TimeAveragedFluxOffset   = FluxOffset + FluxSize;
-  static constexpr int SourceOffset             = TimeAveragedFluxOffset + TimeAveragedFluxSize;
-  static constexpr int TimeAveragedSourceOffset = SourceOffset + SourceSize;
-  static constexpr int StateGradientOffset      = TimeAveragedSourceOffset + TimeAveragedSourceSize;
-  static constexpr int PointSourceOffset        = StateGradientOffset + StateGradientSize;
-  static constexpr int Size                     = PointSourceOffset + PointSourceSize;
+  static constexpr int StateOffset             = 0;
+  static constexpr int TimeAveragedStateOffset = StateOffset + StateSize;
+  static constexpr int FluxOffset              = TimeAveragedStateOffset + TimeAveragedStateSize;
+  static constexpr int StateGradientOffset     = FluxOffset + FluxSize;
+  static constexpr int PointSourceOffset       = StateGradientOffset + StateGradientSize;
+  static constexpr int Size                    = PointSourceOffset + PointSourceSize;
 };
 TARGET_DECLARE_END

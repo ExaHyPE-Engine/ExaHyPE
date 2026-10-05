@@ -72,6 +72,19 @@ namespace {
     [[nodiscard]] double maxAdmissibleMeshWidth() const override { return 1.0; }
   };
 
+  class Unconverged final : public exahype2::dg::ader::
+                              Solver<Unconverged, Order, NumberOfUnknowns, 0, exahype2::FixedTimeStepping, false, 0> {
+  public:
+    Unconverged() :
+      Solver(FixedTimeStepFactor) {}
+
+    void startSimulation() override {}
+    void finishSimulation() override {}
+
+  protected:
+    [[nodiscard]] double maxAdmissibleMeshWidth() const override { return 1.0; }
+  };
+
   template <typename SolverType>
   std::string state(const SolverType& solver) {
     return SolverType::toString(solver.getSolverState());
@@ -118,6 +131,7 @@ void exahype2::dg::ader::tests::SolverTest::run() {
   testMethod(testALimitedSolverWalksThroughATroubledTimeStep);
   testMethod(testSolversOfEqualParametersKeepSeparateStatistics);
   testMethod(testSweepPredicatesFollowTheMarkerAndTheSweep);
+  testMethod(testUnconvergedPredictionsAreReportedWhenTheTimeStepCloses);
 }
 
 /** Checks that the grid initialisation leads into an initial prediction sweep before the first time-step sweep. */
@@ -142,8 +156,7 @@ void exahype2::dg::ader::tests::SolverTest::testPredictionPrecedesTheTimeStep() 
   validateNumericalEquals(Adaptive::PNPM, exahype2::dg::ader::cflFactor(Order));
 }
 
-/** Checks that the initial prediction sweep proposes no time step size, so the next sweep's eigenvalue sets the first
- * one. */
+/** Checks that the initial prediction sweep proposes no time step size and the next sweep's eigenvalue does. */
 void exahype2::dg::ader::tests::SolverTest::testInitialPredictionSweepKeepsTheTimeStep() {
   Adaptive solver;
   solver.startGridInitialisationStep();
@@ -239,8 +252,7 @@ void exahype2::dg::ader::tests::SolverTest::testAdaptiveTimeStepFollowsTheScaled
   validateNumericalEquals(solver.getTimeStepSize(), 0.5 * Adaptive::PNPM / 2.0);
 }
 
-/** Checks that a fixed-step solver reduces its statistics in both sweeps of a step and steps with a fraction of the
- * smallest mesh width. */
+/** Checks that a fixed-step solver reduces in both sweeps and steps with a fraction of the smallest mesh width. */
 void exahype2::dg::ader::tests::SolverTest::testAFixedSolverStepsWithAFractionOfTheSmallestMeshWidth() {
   Fixed solver;
   solver.startGridInitialisationStep();
@@ -258,8 +270,7 @@ void exahype2::dg::ader::tests::SolverTest::testAFixedSolverStepsWithAFractionOf
   validateNumericalEquals(solver.getTimeStepSize(), FixedTimeStepFactor * SmallestMeshWidth);
 }
 
-/** Checks that a troubled time step runs the corrector, every spreading ring and the recompute, and closes with the
- * stamps of the corrector. */
+/** Checks that a troubled time step runs every limiting sweep and closes with the time stamps of the corrector. */
 void exahype2::dg::ader::tests::SolverTest::testALimitedSolverWalksThroughATroubledTimeStep() {
   Limited solver;
   solver.startGridInitialisationStep();
@@ -380,4 +391,26 @@ void exahype2::dg::ader::tests::SolverTest::testSolversOfEqualParametersKeepSepa
   validateNumericalEquals(first.getMinCellSize(), LargestMeshWidth);
   validateNumericalEquals(second.getMinTimeStamp(), SecondSolverTimeStamp);
   validateNumericalEquals(second.getMinCellSize(), SmallestMeshWidth);
+}
+
+/** Checks that unconverged predictions add up over the sweeps of a time step and restart from zero when it closes. */
+void exahype2::dg::ader::tests::SolverTest::testUnconvergedPredictionsAreReportedWhenTheTimeStepCloses() {
+  Unconverged solver;
+  solver.startGridInitialisationStep();
+  solver.finishGridInitialisationStep();
+  validateEquals(Unconverged::getNumberOfUnconvergedPredictions(), 0L);
+
+  solver.startTimeStep();
+  validateEquals(state(solver), std::string("InitialPrediction"));
+  Unconverged::markPredictionAsUnconverged();
+  Unconverged::markPredictionAsUnconverged();
+  sweepWithOneCell(solver, 0.0, false);
+  validateEquals(Unconverged::getNumberOfUnconvergedPredictions(), 2L);
+
+  solver.startTimeStep();
+  validateEquals(state(solver), std::string("TimeStep"));
+  Unconverged::markPredictionAsUnconverged();
+  validateEquals(Unconverged::getNumberOfUnconvergedPredictions(), 3L);
+  sweepWithOneCell(solver, 0.0, false);
+  validateEquals(Unconverged::getNumberOfUnconvergedPredictions(), 0L);
 }

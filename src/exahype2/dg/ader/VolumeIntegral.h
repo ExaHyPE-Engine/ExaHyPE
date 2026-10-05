@@ -44,6 +44,7 @@ namespace exahype2::dg::ader {
   );
 
   template <
+    typename SolverType,
     int  NumberOfDofsPerAxis,
     int  NumberOfUnknowns,
     int  NumberOfAuxiliaryVariables,
@@ -52,10 +53,13 @@ namespace exahype2::dg::ader {
     typename StoragePrecision,
     typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void subtractTimeAveragedVolumeIntegral(
-    StoragePrecision* NOALIAS       cellState,
-    const ComputePrecision* NOALIAS timeAveragedFlux,
-    const ComputePrecision* NOALIAS timeAveragedSource,
-    double                          timeStepSize
+    StoragePrecision* NOALIAS                    cellState,
+    const ComputePrecision* NOALIAS              timeAveragedFlux,
+    const ComputePrecision* NOALIAS              timeAveragedState,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize
   );
 } // namespace exahype2::dg::ader
 TARGET_DECLARE_END

@@ -39,7 +39,7 @@ private:
   void testALinearStateHasTheExactGradient();
 
   /**
-   * The flux fills one block per axis of one time slice, and the solver sees the node position and the node time.
+   * The flux of one time slice fills one block per axis and enters the time-averaged flux with its weight.
    */
   void testTheFluxIsAskedForOncePerNodeAndAxis();
 
@@ -49,16 +49,21 @@ private:
   void testTheDiffusiveFluxSeesTheNodalGradients();
 
   /**
-   * The source, the diffusive source and the negated nonconservative product enter one buffer in every combination.
+   * Every combination of source terms sums into the right-hand side and the time-averaged source.
    */
   void testEveryTermCombinationAccumulatesIntoOneBuffer();
 
   /**
-   * Compares one source buffer and its right-hand side against the terms the combination switches on.
+   * The first time node overwrites the time averages of the flux and the source with its weighted values.
+   */
+  void testTheFirstTimeNodeRestartsTheTimeAverages();
+
+  /**
+   * Compares the right-hand side and the time-averaged source against the terms the combination switches on.
    */
   void validateSourceCombination(
-    const double* spaceTimeSource,
     const double* rightHandSide,
+    const double* timeAveragedSource,
     bool          evaluateNonconservativeProduct,
     bool          evaluateSource,
     bool          evaluateDiffusiveSource

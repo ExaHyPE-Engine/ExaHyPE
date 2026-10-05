@@ -28,5 +28,6 @@ private:
   void testThePredictionStampsTheCellsOwnFaceHalves();
   void testTheCellReportsItselfToTheSolver();
   void testADivergedPredictorFlagsTheCell();
+  void testAnUnconvergedPredictionReportsItselfToTheSolver();
   void testThePredictorEvaluatesOnlyThePointSourcesInsideTheCell();
 };

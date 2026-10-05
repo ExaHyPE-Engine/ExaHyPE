@@ -38,7 +38,7 @@ namespace exahype2::dg::ader {
   template <int NumberOfDofsPerAxis, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void subtractFluxDivergence(
     ComputePrecision* NOALIAS                              rightHandSide,
-    const ComputePrecision* NOALIAS                        spaceTimeFlux,
+    const ComputePrecision* NOALIAS                        flux,
     const ComputePrecision* NOALIAS                        stiffnessOperatorTransposed,
     const ComputePrecision* NOALIAS                        cellQuadratureWeights,
     const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,

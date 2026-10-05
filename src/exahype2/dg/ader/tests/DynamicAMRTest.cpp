@@ -93,6 +93,8 @@ namespace {
     static constexpr double PicardResidualTolerance    = 1.0e-10;
 
     inline static std::bitset<DIMENSIONS> PeriodicBoundaries{};
+
+    static void markPredictionAsUnconverged() {}
   };
 
   template <int Values>
@@ -401,7 +403,6 @@ void exahype2::dg::ader::tests::DynamicAMRTest::testRederivePredictionWaitsForAF
     faceFluxEnumerator,
     cellState.data(),
     previousCellState.data(),
-    testTables(),
     testTables()
   );
   validateNumericalEquals(cellState[0], 0.0);
@@ -419,7 +420,6 @@ void exahype2::dg::ader::tests::DynamicAMRTest::testRederivePredictionWaitsForAF
     faceFluxEnumerator,
     cellState.data(),
     previousCellState.data(),
-    testTables(),
     testTables()
   );
   validateNumericalEquals(cellState[0], ConstantState);
@@ -486,7 +486,6 @@ void exahype2::dg::ader::tests::DynamicAMRTest::testHangingFacesTakeARederivedTr
         faceStateEnumerator,
         faceFluxEnumerator,
         previousCellState.data(),
-        testTables(),
         testTables(),
         PassedTimeStepSize,
         solveRiemannProblem
@@ -561,7 +560,6 @@ void exahype2::dg::ader::tests::DynamicAMRTest::testRederivePredictionWaitsForAS
       faceFluxEnumerator,
       cellState.data(),
       previousCellState.data(),
-      testTables(),
       testTables()
     );
   };

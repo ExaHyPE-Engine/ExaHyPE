@@ -31,10 +31,12 @@ namespace exahype2::dg::ader {
     bool EvaluateDiffusiveFlux,
     typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeFlux(
-    ComputePrecision* NOALIAS                    spaceTimeFlux,
+    ComputePrecision* NOALIAS                    flux,
+    ComputePrecision* NOALIAS                    timeAveragedFlux,
     const ComputePrecision* NOALIAS              spaceTimeState,
     const ComputePrecision* NOALIAS              stateGradient,
     const ComputePrecision* NOALIAS              quadraturePoints,
+    const ComputePrecision* NOALIAS              quadratureWeights,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -52,8 +54,8 @@ namespace exahype2::dg::ader {
     bool EvaluateDiffusiveSource,
     typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeSource(
-    ComputePrecision* NOALIAS                    spaceTimeSource,
     ComputePrecision* NOALIAS                    rightHandSide,
+    ComputePrecision* NOALIAS                    timeAveragedSource,
     const ComputePrecision* NOALIAS              spaceTimeState,
     const ComputePrecision* NOALIAS              stateGradient,
     const ComputePrecision* NOALIAS              quadraturePoints,

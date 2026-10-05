@@ -6,8 +6,8 @@
  *
  * The predictor overwrites cellState and writes the estimates of this cell into the halves of
  * stateEstimates and fluxEstimates the caller points at, from scratch memory that lives per
- * thread and outlives the call. Returns the number of Picard iterations of a nonlinear solver,
- * which is negative when the iteration did not converge, and zero for a linear solver.
+ * thread and outlives the call. Returns the result of spaceTimePredictor() for a nonlinear solver
+ * and zero for a linear solver.
  */
 template <
   typename SolverType,
@@ -23,7 +23,6 @@ template <
   bool EvaluateMaterialParameters,
   bool EvaluatePointSources,
   typename ComputePrecision,
-  typename PicardPrecision,
   typename StoragePrecision,
   typename FacePrecision>
 INLINE_METHOD int exahype2::dg::ader::runSpaceTimePredictor(
@@ -32,7 +31,6 @@ INLINE_METHOD int exahype2::dg::ader::runSpaceTimePredictor(
   FacePrecision* const*                fluxEstimates,
   StoragePrecision* NOALIAS            cellState,
   const BasisTables<ComputePrecision>& tables,
-  const BasisTables<PicardPrecision>&  picardTables,
   const double                         timeStamp,
   const double                         timeStepSize
 ) {
@@ -50,7 +48,6 @@ INLINE_METHOD int exahype2::dg::ader::runSpaceTimePredictor(
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables,
       EvaluateNonconservativeProduct,
-      EvaluateSource,
       EvaluatePointSources>;
     static thread_local const std::unique_ptr<ComputePrecision[], ScratchDeleter> predictorScratch(
       static_cast<ComputePrecision*>(
@@ -159,14 +156,9 @@ INLINE_METHOD int exahype2::dg::ader::runSpaceTimePredictor(
       EvaluateSource,
       EvaluateDiffusiveFlux,
       EvaluateDiffusiveSource>;
-    static thread_local const std::unique_ptr<ComputePrecision[], ScratchDeleter> timeAveragedScratch(
+    static thread_local const std::unique_ptr<ComputePrecision[], ScratchDeleter> scratch(
       static_cast<ComputePrecision*>(
-        tarch::accelerator::allocateHeapMemory(PredictorScratch::TimeAveragedSize * sizeof(ComputePrecision))
-      )
-    );
-    static thread_local const std::unique_ptr<PicardPrecision[], ScratchDeleter> picardScratch(
-      static_cast<PicardPrecision*>(
-        tarch::accelerator::allocateHeapMemory(PredictorScratch::PicardSize * sizeof(PicardPrecision))
+        tarch::accelerator::allocateHeapMemory(PredictorScratch::Size * sizeof(ComputePrecision))
       )
     );
 
@@ -183,10 +175,8 @@ INLINE_METHOD int exahype2::dg::ader::runSpaceTimePredictor(
       stateEstimates,
       fluxEstimates,
       cellState,
-      timeAveragedScratch.get(),
-      picardScratch.get(),
+      scratch.get(),
       tables,
-      picardTables,
       marker.getX(),
       marker.getH(),
       timeStamp,

@@ -70,8 +70,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::ADER::apply
 
   assertion(scratch != nullptr);
   ComputePrecision* NOALIAS const interfaceData         = scratch + Layout::InterfaceDataOffset;
-  ComputePrecision* NOALIAS const timeAveragedScratch   = scratch + Layout::TimeAveragedOffset;
-  ComputePrecision* NOALIAS const picardScratch         = scratch + Layout::PicardOffset;
+  ComputePrecision* NOALIAS const predictorScratch      = scratch + Layout::PredictorOffset;
   ComputePrecision* NOALIAS const nodalState            = scratch + Layout::NodalStateOffset;
   ComputePrecision* NOALIAS const reconstructionScratch = scratch + Layout::ReconstructionOffset;
 
@@ -186,9 +185,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::ADER::apply
         faceStates,
         faceFluxes,
         nodalState,
-        timeAveragedScratch,
-        picardScratch,
-        predictorView,
+        predictorScratch,
         predictorView,
         volumeCentre,
         volumeSize,
@@ -196,7 +193,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::ADER::apply
         timeStepSize,
         PicardResidualTolerance
       );
-      if (numberOfPicardIterations < 0) {
+      if (numberOfPicardIterations == exahype2::dg::ader::DivergedPicardIteration) {
         return std::numeric_limits<double>::quiet_NaN();
       }
 

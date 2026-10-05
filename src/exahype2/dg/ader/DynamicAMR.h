@@ -58,7 +58,6 @@ namespace exahype2::dg::ader {
     bool EvaluateMaterialParameters,
     bool EvaluatePointSources,
     typename ComputePrecision,
-    typename PicardPrecision,
     typename StoragePrecision,
     typename CellLabel,
     typename FaceLabelEnumerator,
@@ -73,7 +72,6 @@ namespace exahype2::dg::ader {
     const FaceFluxEnumerator&            faceFluxes,
     const StoragePrecision* NOALIAS      previousCellState,
     const BasisTables<ComputePrecision>& tables,
-    const BasisTables<PicardPrecision>&  picardTables,
     double                               timeStepSize,
     RiemannSolve&&                       solveRiemannProblem
   );
@@ -119,7 +117,6 @@ namespace exahype2::dg::ader {
     bool EvaluateMaterialParameters,
     bool EvaluatePointSources,
     typename ComputePrecision,
-    typename PicardPrecision,
     typename StoragePrecision,
     typename CellLabel,
     typename FaceLabelEnumerator,
@@ -133,8 +130,7 @@ namespace exahype2::dg::ader {
     const FaceFluxEnumerator&            faceFluxes,
     StoragePrecision* NOALIAS            cellState,
     const StoragePrecision* NOALIAS      previousCellState,
-    const BasisTables<ComputePrecision>& tables,
-    const BasisTables<PicardPrecision>&  picardTables
+    const BasisTables<ComputePrecision>& tables
   );
 } // namespace exahype2::dg::ader
 

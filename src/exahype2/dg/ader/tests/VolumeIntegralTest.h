@@ -40,7 +40,8 @@ private:
   void testTheSourceScalesWithTheTimeStep();
 
   /**
-   * The integral of a linear system subtracts the sum over the axes and adds the source.
+   * The integral of a linear system subtracts the sum over the axes and adds the source of the
+   * time-averaged state.
    */
   void testTheLinearIntegralSubtractsTheSumOverTheAxes();
 };
