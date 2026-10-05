@@ -7,35 +7,38 @@
 
 namespace exahype2::fv::weno {
   /**
-   * A weighting maps the ideal weights and the smoothness indicators of the
-   * candidate stencils of one volume onto the normalised nonlinear weights
-   * that combine the candidate reconstructions. It is stateless with static
-   * members only, so the kernel dispatches to it without moving an object
-   * onto a GPU device. A weighting sees only these two arrays, so a scheme
-   * that selects stencils differently, such as TENO, plugs in without a change
-   * to the reconstruction.
+   * A weighting maps the linear weights and the oscillation indicators of the
+   * admissible candidate stencils of one volume onto the normalised nonlinear
+   * weights that combine the candidate reconstructions. It is stateless with
+   * static members only. A weighting sees only these arrays, so a scheme that
+   * selects stencils differently, such as TENO, plugs in without a change to
+   * the reconstruction.
    */
   template <typename Weighting>
   concept NonlinearWeighting = std::is_empty_v<Weighting>;
 
-  constexpr int NumberOfCandidateStencils = 3;
-
+  template <int Exponent>
   struct JiangShu;
 } // namespace exahype2::fv::weno
 
 TARGET_DECLARE
 /**
- * The weights of Jiang and Shu (1996): every ideal weight is divided by the
- * square of its regularised smoothness indicator, and the results are
- * normalised. A candidate stencil that crosses a discontinuity therefore
- * contributes next to nothing, while equal indicators reproduce the ideal
- * weights and with them the full-order reconstruction.
+ * The weights of Jiang and Shu (1996): every linear weight is divided by the
+ * @p Exponent-th power of its regularised oscillation indicator, and the
+ * results are normalised. Jiang and Shu use the exponent 2, the ADER-WENO
+ * schemes of Dumbser et al. the exponent 8. The powers are taken relative to
+ * the smallest regularised indicator, which leaves the weights unchanged but
+ * keeps them finite in single precision.
  */
+template <int Exponent>
 struct exahype2::fv::weno::JiangShu final {
+  static_assert(Exponent >= 1, "The Jiang-Shu weights need a positive exponent.");
+
   template <typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static void weights(
-    const ComputePrecision* NOALIAS idealWeights,
-    const ComputePrecision* NOALIAS smoothnessIndicators,
+    int                             numberOfStencils,
+    const ComputePrecision* NOALIAS linearWeights,
+    const ComputePrecision* NOALIAS oscillationIndicators,
     ComputePrecision* NOALIAS       nonlinearWeights
   );
 };

@@ -96,9 +96,12 @@ basic data structures and action sets.
 
 On the Python API side, the class `exahype2.fv.Solver` describes a Finite
 Volume solver.
-The scheme of a solver, `exahype2.fv.Godunov` or `exahype2.fv.MusclHancock`,
-picks the reconstruction and the time stepping of the compute kernel. Every
-Finite Volume solver advances its patches in one grid sweep.
+The scheme of a solver, `exahype2.fv.Godunov`, `exahype2.fv.MusclHancock` or
+`exahype2.fv.Weno`, picks the reconstruction and the time stepping of the
+compute kernel. `exahype2.fv.Weno` is the ADER-WENO scheme of Dumbser et al.:
+a polynomial WENO reconstruction evolved by the space-time predictor of the
+ADER-DG solvers. Every Finite Volume solver advances its patches in one grid
+sweep.
 
 ## Implementation
 

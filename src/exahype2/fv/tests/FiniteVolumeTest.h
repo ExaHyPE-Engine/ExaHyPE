@@ -34,10 +34,11 @@ private:
   void testSodShockTubeReachesStarStates();
   void testReconstructionHookReproducingDefaultChangesNothing();
   void testLimiterHookReproducingMinmodChangesNothing();
-  void testWENOPreservesUniformState();
-  void testWENOReconstructsSmoothProfileAtFifthOrder();
-  void testWENOAdvectionConvergesAtSecondOrder();
-  void testWENOPeriodicAdvectionConservesMass();
+  void testWENOReconstructsPolynomialsExactly();
+  void testADERWENOPreservesUniformState();
+  void testADERWENOAdvectionConvergesAtHighOrder();
+  void testADERWENONcpAdvectionConvergesAtHighOrder();
+  void testADERWENOPeriodicAdvectionConservesMass();
   void testParticleUpdateAdvancesWithExplicitEuler();
   void testParticleAccessorsMatchAttributeOffsets();
 };

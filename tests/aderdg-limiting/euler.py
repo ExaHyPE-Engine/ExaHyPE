@@ -200,11 +200,11 @@ def dmp_observables(gamma):
 """
 
 
-def subcell_scheme(limiter_solver_name):
+def subcell_scheme(limiter_solver_name, order):
     if limiter_solver_name == "muscl-hancock":
         return exahype2.fv.MusclHancock()
     if limiter_solver_name == "weno":
-        return exahype2.fv.Weno()
+        return exahype2.fv.Weno(order=order)
     return exahype2.fv.Godunov()
 
 
@@ -217,7 +217,7 @@ def add_limiter(
     observable_mapping,
     differences_scaling,
 ):
-    scheme = subcell_scheme(limiter_solver_name)
+    scheme = subcell_scheme(limiter_solver_name, solver.order)
     if limiter_mode == "all-accepted":
         solver.set_pde_terms(physical_admissibility="return true;")
         solver.add_subcell_limiter(scheme)

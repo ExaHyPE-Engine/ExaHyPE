@@ -142,7 +142,7 @@ static_geometry_admissibility = euler.physical_admissibility(
     gamma,
     "numberOfStates == 1 or values[Shortcuts::volumeFraction] >= 1.0 - 1.0e-12",
 )
-limiter_scheme = euler.subcell_scheme(arguments.limiter_solver)
+limiter_scheme = euler.subcell_scheme(arguments.limiter_solver, order)
 
 if arguments.limiter_mode == "fv":
     limiter_solver = exahype2.fv.Solver(

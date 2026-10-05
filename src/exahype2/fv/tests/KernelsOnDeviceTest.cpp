@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "KernelsOnDeviceTest.h"
 
+#include <algorithm>
+
 #include "exahype2/fv/FiniteVolume.h"
 #include "exahype2/fv/ApplyBoundaryConditionsOnFace.h"
 #include "exahype2/fv/limiter/SlopeLimiter.h"
@@ -9,6 +11,7 @@
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
 #include "exahype2/fv/reconstruction/WENO.h"
 #include "exahype2/fv/tests/DeviceKernelFixtures.h"
+#include "exahype2/fv/timestepping/ADER.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
 #include "exahype2/fv/weno/NonlinearWeights.h"
 #include "tarch/accelerator/ParallelFor.h"
@@ -26,7 +29,7 @@ exahype2::fv::tests::KernelsOnDeviceTest::KernelsOnDeviceTest() :
 void exahype2::fv::tests::KernelsOnDeviceTest::run() {
   testMethod(testApplyFiniteVolumeWithConstantReconstruction);
   testMethod(testApplyFiniteVolumeWithLimitedLinearReconstruction);
-  testMethod(testApplyFiniteVolumeWithWENOReconstruction);
+  testMethod(testApplyFiniteVolumeWithADERWENO);
   testMethod(testApplyFiniteVolumeWithCustomRiemannSolver);
   testMethod(testApplyBoundaryConditionsOnFaceWithOneHaloLayer);
   testMethod(testApplyBoundaryConditionsOnFaceWithTwoHaloLayers);
@@ -58,14 +61,15 @@ void exahype2::fv::tests::KernelsOnDeviceTest::testApplyFiniteVolumeWithLimitedL
     false>();
 }
 
-void exahype2::fv::tests::KernelsOnDeviceTest::testApplyFiniteVolumeWithWENOReconstruction() {
+void exahype2::fv::tests::KernelsOnDeviceTest::testApplyFiniteVolumeWithADERWENO() {
   runApplyFiniteVolume<
-    exahype2::fv::reconstruction::WENO<exahype2::fv::weno::JiangShu>,
+    exahype2::fv::reconstruction::WENO<2, exahype2::fv::weno::JiangShu<8>>,
     true,
     true,
     true,
     false,
-    false>();
+    false,
+    exahype2::fv::timestepping::ADER>();
 }
 
 void exahype2::fv::tests::KernelsOnDeviceTest::testApplyFiniteVolumeWithCustomRiemannSolver() {
@@ -84,9 +88,18 @@ template <
   bool EvaluateNonconservativeProduct,
   bool EvaluateSource,
   bool EvaluateDiffusiveSource,
-  bool EvaluateCustomRiemann>
+  bool EvaluateCustomRiemann,
+  typename TimeStepping>
 void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
   constexpr int FaceCardinality = Setup::faceOverlapCardinality(Reconstruction::HaloSize);
+  constexpr int ScratchSize     = TimeStepping::template ScratchSize<
+    Reconstruction,
+    Setup::VolumesPerAxis,
+    Setup::Unknowns,
+    Setup::AuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource>;
 
   const exahype2::fv::tests::PatchChain geometry;
   const std::vector<double> inputPatches = exahype2::fv::tests::makeRamp(Setup::AllPatchesCardinality, 0.4, 0.013);
@@ -94,6 +107,7 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
   const std::vector<double> faceInputs =
     exahype2::fv::tests::makeRamp(geometry.faceOverlapEntries(Reconstruction::HaloSize), 0.7, 0.009);
   const std::vector<double> faceOutputs(geometry.faceOverlapEntries(Reconstruction::HaloSize), 0.0);
+  const std::vector<double> scratch(std::max(Setup::NumberOfPatches * ScratchSize, 1), 0.0);
 
   const exahype2::fv::tests::DeviceBuffer<double>        deviceInputPatches(inputPatches);
   const exahype2::fv::tests::DeviceBuffer<double>        deviceOutputPatches(outputPatches);
@@ -102,6 +116,7 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
   const exahype2::fv::tests::DeviceBuffer<std::uint64_t> deviceFaceIndices(geometry.faceIndices);
   const exahype2::fv::tests::DeviceBuffer<double>        devicePatchCentres(geometry.patchCentres);
   const exahype2::fv::tests::DeviceBuffer<double>        devicePatchSizes(geometry.patchSizes);
+  const exahype2::fv::tests::DeviceBuffer<double>        deviceScratch(scratch);
 
   const double* const        onDeviceInputPatches  = deviceInputPatches.data();
   double* const              onDeviceOutputPatches = deviceOutputPatches.data();
@@ -110,6 +125,7 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
   const std::uint64_t* const onDeviceFaceIndices   = deviceFaceIndices.data();
   const double* const        onDevicePatchCentres  = devicePatchCentres.data();
   const double* const        onDevicePatchSizes    = devicePatchSizes.data();
+  double* const              onDeviceScratch       = deviceScratch.data();
 
   // A patch writes the half of each of its faces that lies on its own side, so
   // the two patches at a face never touch the same entries.
@@ -128,7 +144,7 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
       const int    coordinateOffset = patch * DIMENSIONS;
       const double maxEigenvalue    = exahype2::fv::applyFiniteVolume<
         Reconstruction,
-        exahype2::fv::timestepping::SingleStep,
+        TimeStepping,
         exahype2::fv::tests::StubSolver,
         Setup::VolumesPerAxis,
         Setup::Unknowns,
@@ -149,7 +165,8 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
         tarch::la::Vector<DIMENSIONS, double>(onDevicePatchCentres + coordinateOffset),
         tarch::la::Vector<DIMENSIONS, double>(onDevicePatchSizes + coordinateOffset),
         Setup::TimeStamp,
-        Setup::TimeStepSize
+        Setup::TimeStepSize,
+        onDeviceScratch + patch * ScratchSize
       );
       maximum = (maxEigenvalue > maximum) ? maxEigenvalue : maximum;
     },
@@ -161,6 +178,7 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
   std::vector<double> deviceFaceOutputsResult(faceOutputs.size());
   deviceFaceOutputs.copyBack(deviceFaceOutputsResult);
 
+  std::vector<double> hostScratch       = scratch;
   std::vector<double> hostOutputPatches = outputPatches;
   std::vector<double> hostFaceOutputs   = faceOutputs;
   double              hostMaxEigenvalue = 0.0;
@@ -176,7 +194,7 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
     const int    coordinateOffset = patch * DIMENSIONS;
     const double maxEigenvalue    = exahype2::fv::applyFiniteVolume<
       Reconstruction,
-      exahype2::fv::timestepping::SingleStep,
+      TimeStepping,
       exahype2::fv::tests::StubSolver,
       Setup::VolumesPerAxis,
       Setup::Unknowns,
@@ -197,7 +215,8 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
       tarch::la::Vector<DIMENSIONS, double>(geometry.patchCentres.data() + coordinateOffset),
       tarch::la::Vector<DIMENSIONS, double>(geometry.patchSizes.data() + coordinateOffset),
       Setup::TimeStamp,
-      Setup::TimeStepSize
+      Setup::TimeStepSize,
+      hostScratch.data() + patch * ScratchSize
     );
     hostMaxEigenvalue = std::max(hostMaxEigenvalue, maxEigenvalue);
   }

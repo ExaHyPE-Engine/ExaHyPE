@@ -9,6 +9,7 @@
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
 #include "exahype2/fv/reconstruction/WENO.h"
+#include "exahype2/fv/timestepping/ADER.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
 #include "exahype2/fv/weno/NonlinearWeights.h"
 #include "peano4/Constants.h"
@@ -338,7 +339,8 @@ namespace {
     bool EvaluateNonconservativeProduct,
     typename Profile,
     typename SolverType        = TestSolver<NumberOfUnknowns>,
-    bool EvaluateCustomRiemann = false>
+    bool EvaluateCustomRiemann = false,
+    typename TimeStepping      = exahype2::fv::timestepping::SingleStep>
   std::vector<double> advectProfile(const Profile profile, const int numberOfTimeSteps, const double timeStepSize) {
     constexpr int HaloWidth        = Reconstruction::HaloSize;
     const int     patchStorageSize = numberOfVolumesInPatch<VolumesPerAxis>() * NumberOfData;
@@ -370,7 +372,7 @@ namespace {
       fillHaloFromProfile<VolumesPerAxis, HaloWidth>(faceInStorage, profile, timeStamp);
       exahype2::fv::applyFiniteVolume<
         Reconstruction,
-        exahype2::fv::timestepping::SingleStep,
+        TimeStepping,
         SolverType,
         VolumesPerAxis,
         NumberOfUnknowns,
@@ -391,7 +393,10 @@ namespace {
         patchCentre,
         patchExtent,
         timeStamp,
-        timeStepSize
+        timeStepSize,
+        exahype2::fv::hostScratch<
+          double,
+          TimeStepping::template ScratchSize<Reconstruction, VolumesPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, EvaluateNonconservativeProduct, false>>()
       );
       q.swap(qNext);
     }
@@ -400,14 +405,22 @@ namespace {
 
   // Returns the L1 error of the advected profile against the exact solution at
   // the final time, sampled at the volume centres.
-  template <typename Reconstruction, int VolumesPerAxis, bool EvaluateNonconservativeProduct, typename Profile>
+  template <
+    typename Reconstruction,
+    int  VolumesPerAxis,
+    bool EvaluateNonconservativeProduct,
+    typename TimeStepping = exahype2::fv::timestepping::SingleStep,
+    typename Profile>
   double advectionError(const Profile profile, const int numberOfTimeSteps, const double endTime) {
     const double              timeStepSize = endTime / numberOfTimeSteps;
-    const std::vector<double> q = advectProfile<Reconstruction, VolumesPerAxis, EvaluateNonconservativeProduct>(
-      profile,
-      numberOfTimeSteps,
-      timeStepSize
-    );
+    const std::vector<double> q            = advectProfile<
+      Reconstruction,
+      VolumesPerAxis,
+      EvaluateNonconservativeProduct,
+      Profile,
+      TestSolver<NumberOfUnknowns>,
+      false,
+      TimeStepping>(profile, numberOfTimeSteps, timeStepSize);
     double errorSum = 0.0;
     for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
       const double exact = profile(volumeCentreOf<VolumesPerAxis>(volumeIndexOf<VolumesPerAxis>(volume)), endTime);
@@ -514,7 +527,8 @@ namespace {
       patchCentre,
       patchExtent,
       0.0,
-      timeStepSize
+      timeStepSize,
+      nullptr
     );
 
     const double eigenvalueLimited = exahype2::fv::applyFiniteVolume<
@@ -540,7 +554,8 @@ namespace {
       patchCentre,
       patchExtent,
       0.0,
-      timeStepSize
+      timeStepSize,
+      nullptr
     );
 
     double maxDifference = std::abs(eigenvalueConstant - eigenvalueLimited);
@@ -655,7 +670,8 @@ namespace {
         patchCentre,
         patchExtent,
         step * timeStepSize,
-        timeStepSize
+        timeStepSize,
+        nullptr
       );
       q.swap(qNext);
     }
@@ -800,63 +816,140 @@ namespace {
         patchCentre,
         patchExtent,
         step * timeStepSize,
-        timeStepSize
+        timeStepSize,
+        nullptr
       );
       q.swap(qNext);
     }
     return q;
   }
 
-  using WENOReconstruction = exahype2::fv::reconstruction::WENO<exahype2::fv::weno::JiangShu>;
+  template <int Order>
+  using ADERWENO = exahype2::fv::reconstruction::WENO<Order, exahype2::fv::weno::JiangShu<8>>;
 
-  // Reconstructs both faces of one volume from the exact cell averages of a
-  // sine of every unknown and returns the largest error against the point
-  // values at the faces. The window sits away from the extrema of every sine,
-  // where the nonlinear weights are known to lose accuracy.
-  template <int VolumesPerUnitLength>
-  double wenoFaceReconstructionError() {
-    constexpr int    NumberOfStates = 2 * WENOReconstruction::HaloSize + 1;
-    constexpr int    Centre         = WENOReconstruction::HaloSize;
-    constexpr double WindowCentre   = 0.3;
-    const double     h              = 1.0 / VolumesPerUnitLength;
+  // The polynomial sums x^k / (k + 1) up to the given order along every axis.
+  template <int Order>
+  double polynomialValue(const double x) {
+    double value = 0.0;
+    for (int power = 0; power <= Order; power++) {
+      value += std::pow(x, power) / (power + 1);
+    }
+    return value;
+  }
 
-    std::vector<double> averages(NumberOfStates * NumberOfData);
-    const double*       states[NumberOfStates];
-    for (int volume = 0; volume < NumberOfStates; volume++) {
-      const double lower = WindowCentre + (volume - Centre - 0.5) * h;
-      for (int unknown = 0; unknown < NumberOfData; unknown++) {
-        const double phase = 0.7 * (unknown + 1);
-        averages[volume * NumberOfData + unknown] =
-          (std::cos(2.0 * std::numbers::pi_v<double> * lower + phase)
-           - std::cos(2.0 * std::numbers::pi_v<double> * (lower + h) + phase))
-          / (2.0 * std::numbers::pi_v<double> * h);
+  template <int Order>
+  double polynomialAverage(const double lower, const double upper) {
+    double integral = 0.0;
+    for (int power = 0; power <= Order; power++) {
+      integral += (std::pow(upper, power + 1) - std::pow(lower, power + 1)) / ((power + 1) * (power + 1));
+    }
+    return integral / (upper - lower);
+  }
+
+  // Reconstructs every volume of the patch, and every volume next to or across a face of the
+  // patch restricted to that face, from the exact averages of a tensor-product polynomial of the
+  // reconstruction's order and returns the largest error against its values at the nodes. The
+  // volumes near edges, corners and shared faces reconstruct with fewer stencils.
+  template <int Order, int VolumesPerAxis>
+  double wenoPolynomialReconstructionError() {
+    using Reconstruction    = ADERWENO<Order>;
+    using Basis             = typename Reconstruction::Basis;
+    constexpr int HaloWidth = Reconstruction::HaloSize;
+    const double  h         = 1.0 / VolumesPerAxis;
+
+    const auto average = [h](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int unknown) {
+      double value = unknown + 1.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        value *= polynomialAverage<Order>(volumeIndex(axis) * h, (volumeIndex(axis) + 1) * h);
       }
-      states[volume] = &averages[volume * NumberOfData];
+      return value;
+    };
+
+    std::vector<double> q(numberOfVolumesInPatch<VolumesPerAxis>() * NumberOfData);
+    for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        q[volume * NumberOfData + unknown] = average(volumeIndexOf<VolumesPerAxis>(volume), unknown);
+      }
+    }
+    std::vector<std::vector<double>> faceInStorage(
+      peano4::FacesPerCell,
+      std::vector<double>(faceOverlapStorageSize<VolumesPerAxis, HaloWidth>(), 0.0)
+    );
+    forEachOverlapVoxel<VolumesPerAxis, HaloWidth>(
+      [&](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int face, const int overlapIndex) {
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          faceInStorage[face][overlapIndex * NumberOfData + unknown] = average(volumeIndex, unknown);
+        }
+      }
+    );
+    const double* faceInputPatches[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      faceInputPatches[face] = faceInStorage[face].data();
     }
 
-    double lowerFace[NumberOfData];
-    double upperFace[NumberOfData];
-    WENOReconstruction::reconstructFaceState<NumberOfData>(states, Centre, -1, lowerFace);
-    WENOReconstruction::reconstructFaceState<NumberOfData>(states, Centre, +1, upperFace);
+    constexpr int PredictedPerAxis = VolumesPerAxis + 2;
+    double        error            = 0.0;
+    for (int predicted = 0; predicted < peano4::power(PredictedPerAxis, DIMENSIONS); predicted++) {
+      tarch::la::Vector<DIMENSIONS, int> volumeIndex;
+      int                                remainder          = predicted;
+      int                                axesOutsideOfPatch = 0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        volumeIndex(axis) = remainder % PredictedPerAxis - 1;
+        remainder /= PredictedPerAxis;
+        axesOutsideOfPatch += (volumeIndex(axis) < 0 or volumeIndex(axis) >= VolumesPerAxis) ? 1 : 0;
+      }
+      if (axesOutsideOfPatch > 1) {
+        continue;
+      }
 
-    double error = 0.0;
-    for (int unknown = 0; unknown < NumberOfData; unknown++) {
-      const double phase = 0.7 * (unknown + 1);
-      error              = std::max(
-        error,
-        std::abs(lowerFace[unknown] - std::sin(2.0 * std::numbers::pi_v<double> * (WindowCentre - 0.5 * h) + phase))
-      );
-      error = std::max(
-        error,
-        std::abs(upperFace[unknown] - std::sin(2.0 * std::numbers::pi_v<double> * (WindowCentre + 0.5 * h) + phase))
-      );
+      for (int sharedFace = -1; sharedFace < peano4::FacesPerCell; sharedFace++) {
+        if (sharedFace >= 0) {
+          const int axis         = sharedFace % DIMENSIONS;
+          const int nextToFace   = sharedFace < DIMENSIONS ? 0 : VolumesPerAxis - 1;
+          const int acrossFace   = sharedFace < DIMENSIONS ? -1 : VolumesPerAxis;
+          bool      touchesFace  = volumeIndex(axis) == nextToFace or volumeIndex(axis) == acrossFace;
+          for (int tangential = 0; tangential < DIMENSIONS; tangential++) {
+            touchesFace = touchesFace and (tangential == axis or (volumeIndex(tangential) >= 0 and volumeIndex(tangential) < VolumesPerAxis));
+          }
+          if (not touchesFace) {
+            continue;
+          }
+        } else if (axesOutsideOfPatch > 0) {
+          continue;
+        }
+
+        std::vector<double> nodalState(Basis::NodesPerCell * NumberOfData);
+        std::vector<double> scratch(Reconstruction::template ScratchSize<NumberOfData>);
+        Reconstruction::template reconstructPolynomial<VolumesPerAxis, NumberOfData>(
+          q.data(),
+          faceInputPatches,
+          volumeIndex,
+          sharedFace,
+          nodalState.data(),
+          scratch.data()
+        );
+        for (int cellNode = 0; cellNode < Basis::NodesPerCell; cellNode++) {
+          double exact         = 1.0;
+          int    nodeRemainder = cellNode;
+          for (int axis = 0; axis < DIMENSIONS; axis++) {
+            exact *= polynomialValue<Order>((volumeIndex(axis) + Basis::nodes()[nodeRemainder % Basis::NumberOfNodes]) * h);
+            nodeRemainder /= Basis::NumberOfNodes;
+          }
+          for (int unknown = 0; unknown < NumberOfData; unknown++) {
+            error = std::max(error, std::abs(nodalState[cellNode * NumberOfData + unknown] - (unknown + 1.0) * exact));
+          }
+        }
+      }
     }
     return error;
   }
 
   // Advances the smooth profile over a torus for a few steps and returns the
   // total mass of the first unknown before and after.
-  template <typename Reconstruction, int VolumesPerAxis>
+  template <
+    typename Reconstruction,
+    int VolumesPerAxis,
+    typename TimeStepping = exahype2::fv::timestepping::SingleStep>
   std::pair<double, double> periodicAdvectionMass() {
     constexpr int HaloWidth = Reconstruction::HaloSize;
 
@@ -894,7 +987,7 @@ namespace {
       fillHaloPeriodically<VolumesPerAxis, HaloWidth>(faceInStorage, q);
       exahype2::fv::applyFiniteVolume<
         Reconstruction,
-        exahype2::fv::timestepping::SingleStep,
+        TimeStepping,
         TestSolver<NumberOfUnknowns>,
         VolumesPerAxis,
         NumberOfUnknowns,
@@ -915,7 +1008,10 @@ namespace {
         patchCentre,
         patchExtent,
         step * timeStepSize,
-        timeStepSize
+        timeStepSize,
+        exahype2::fv::hostScratch<
+          double,
+          TimeStepping::template ScratchSize<Reconstruction, VolumesPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, false, false>>()
       );
       q.swap(qNext);
     }
@@ -946,10 +1042,11 @@ void exahype2::fv::tests::FiniteVolumeTest::run() {
   testMethod(testSodShockTubeReachesStarStates);
   testMethod(testReconstructionHookReproducingDefaultChangesNothing);
   testMethod(testLimiterHookReproducingMinmodChangesNothing);
-  testMethod(testWENOPreservesUniformState);
-  testMethod(testWENOReconstructsSmoothProfileAtFifthOrder);
-  testMethod(testWENOAdvectionConvergesAtSecondOrder);
-  testMethod(testWENOPeriodicAdvectionConservesMass);
+  testMethod(testWENOReconstructsPolynomialsExactly);
+  testMethod(testADERWENOPreservesUniformState);
+  testMethod(testADERWENOAdvectionConvergesAtHighOrder);
+  testMethod(testADERWENONcpAdvectionConvergesAtHighOrder);
+  testMethod(testADERWENOPeriodicAdvectionConservesMass);
   testMethod(testParticleUpdateAdvancesWithExplicitEuler);
   testMethod(testParticleAccessorsMatchAttributeOffsets);
 }
@@ -996,7 +1093,7 @@ void exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
     false,
     true,
     double,
-    double>(qIn.data(), qOut.data(), faceInputPatches, faceOutputPatches, patchCentre, patchExtent, 0.0, 0.0);
+    double>(qIn.data(), qOut.data(), faceInputPatches, faceOutputPatches, patchCentre, patchExtent, 0.0, 0.0, nullptr);
 
   for (int entry = 0; entry < patchStorageSize; entry++) {
     validateNumericalEquals(qOut[entry], qIn[entry]);
@@ -1043,7 +1140,7 @@ void exahype2::fv::tests::FiniteVolumeTest::testUniformStateIsPreserved() {
     false,
     true,
     double,
-    double>(qIn.data(), qOut.data(), faceInputPatches, faceOutputPatches, patchCentre, patchExtent, 0.0, 0.01);
+    double>(qIn.data(), qOut.data(), faceInputPatches, faceOutputPatches, patchCentre, patchExtent, 0.0, 0.01, nullptr);
 
   for (int entry = 0; entry < patchStorageSize; entry++) {
     validateNumericalEquals(qOut[entry], uniformValue);
@@ -1094,7 +1191,7 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearPreservesUniformSta
     false,
     true,
     double,
-    double>(qIn.data(), qOut.data(), faceInputPatches, faceOutputPatches, patchCentre, patchExtent, 0.0, 0.01);
+    double>(qIn.data(), qOut.data(), faceInputPatches, faceOutputPatches, patchCentre, patchExtent, 0.0, 0.01, nullptr);
 
   for (int entry = 0; entry < patchStorageSize; entry++) {
     validateNumericalEquals(qOut[entry], uniformValue);
@@ -1328,11 +1425,29 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimiterHookReproducingMinmodChan
   validateNumericalEquals(maxDifference, 0.0);
 }
 
-void exahype2::fv::tests::FiniteVolumeTest::testWENOPreservesUniformState() {
+/**
+ * Every candidate stencil reproduces a polynomial of the reconstruction's order, so the
+ * combination does too, also where the stencils beyond the patch's edges and corners drop out.
+ */
+void exahype2::fv::tests::FiniteVolumeTest::testWENOReconstructsPolynomialsExactly() {
+  const double secondOrderError = wenoPolynomialReconstructionError<2, 4>();
+  const double thirdOrderError  = wenoPolynomialReconstructionError<3, 6>();
+
+  validateWithParams1(secondOrderError < 1e-10, secondOrderError);
+  validateWithParams1(thirdOrderError < 1e-10, thirdOrderError);
+}
+
+/**
+ * Only the source term acts on a uniform state, and the space-time predictor integrates it to the
+ * exponential growth rather than the forward Euler step.
+ */
+void exahype2::fv::tests::FiniteVolumeTest::testADERWENOPreservesUniformState() {
+  using Reconstruction       = ADERWENO<2>;
   const int patchStorageSize = numberOfVolumesInPatch<NumberOfVolumesPerAxis>() * NumberOfData;
-  const int faceStorageSize  = faceOverlapStorageSize<NumberOfVolumesPerAxis, WENOReconstruction::HaloSize>();
+  const int faceStorageSize  = faceOverlapStorageSize<NumberOfVolumesPerAxis, Reconstruction::HaloSize>();
 
   const double        uniformValue = 1.23;
+  const double        timeStepSize = 0.01;
   std::vector<double> qIn(patchStorageSize, uniformValue);
   std::vector<double> qOut(patchStorageSize, 0.0);
 
@@ -1349,8 +1464,8 @@ void exahype2::fv::tests::FiniteVolumeTest::testWENOPreservesUniformState() {
   const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
 
   const double returnedEigenvalue = exahype2::fv::applyFiniteVolume<
-    WENOReconstruction,
-    exahype2::fv::timestepping::SingleStep,
+    Reconstruction,
+    exahype2::fv::timestepping::ADER,
     TestSolver<NumberOfUnknowns>,
     NumberOfVolumesPerAxis,
     NumberOfUnknowns,
@@ -1363,12 +1478,24 @@ void exahype2::fv::tests::FiniteVolumeTest::testWENOPreservesUniformState() {
     false,
     true,
     double,
-    double>(qIn.data(), qOut.data(), faceInputPatches, faceOutputPatches, patchCentre, patchExtent, 0.0, 0.01);
+    double>(
+    qIn.data(),
+    qOut.data(),
+    faceInputPatches,
+    faceOutputPatches,
+    patchCentre,
+    patchExtent,
+    0.0,
+    timeStepSize,
+    exahype2::fv::hostScratch<
+      double,
+      exahype2::fv::timestepping::ADER::
+        ScratchSize<Reconstruction, NumberOfVolumesPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, true, true, true>>()
+  );
 
-  // The source term is the only term that acts on a uniform state.
-  const double sourceUpdate = 0.01 * 0.05 * uniformValue;
+  const double grownValue = uniformValue * std::exp(0.05 * timeStepSize);
   for (int entry = 0; entry < patchStorageSize; entry++) {
-    validateNumericalEqualsWithParams1(qOut[entry], uniformValue + sourceUpdate, entry);
+    validateNumericalEqualsWithParams1(qOut[entry], grownValue, entry);
   }
   validateNumericalEquals(
     returnedEigenvalue,
@@ -1376,36 +1503,37 @@ void exahype2::fv::tests::FiniteVolumeTest::testWENOPreservesUniformState() {
   );
 }
 
-/** Measures the order of the face reconstruction alone against exact point values. */
-void exahype2::fv::tests::FiniteVolumeTest::testWENOReconstructsSmoothProfileAtFifthOrder() {
-  const double coarseError = wenoFaceReconstructionError<9>();
-  const double fineError   = wenoFaceReconstructionError<27>();
-  const double order       = std::log(coarseError / fineError) / std::log(3.0);
+/** The predictor lifts the order in time to the order of the reconstruction. */
+void exahype2::fv::tests::FiniteVolumeTest::testADERWENOAdvectionConvergesAtHighOrder() {
+  using ADER                = exahype2::fv::timestepping::ADER;
+  constexpr double EndTime  = 0.12;
 
-  validateWithParams3(order > 4.5, coarseError, fineError, order);
+  const double secondOrderCoarseError = advectionError<ADERWENO<2>, 8, false, ADER>(smoothProfile, 6, EndTime);
+  const double secondOrderFineError   = advectionError<ADERWENO<2>, 16, false, ADER>(smoothProfile, 12, EndTime);
+  const double secondOrder            = std::log(secondOrderCoarseError / secondOrderFineError) / std::log(2.0);
+  validateWithParams3(secondOrder > 2.7, secondOrderCoarseError, secondOrderFineError, secondOrder);
+
+  const double thirdOrderCoarseError = advectionError<ADERWENO<3>, 8, false, ADER>(smoothProfile, 6, EndTime);
+  const double thirdOrderFineError   = advectionError<ADERWENO<3>, 16, false, ADER>(smoothProfile, 12, EndTime);
+  const double thirdOrder            = std::log(thirdOrderCoarseError / thirdOrderFineError) / std::log(2.0);
+  validateWithParams3(thirdOrder > 3.7, thirdOrderCoarseError, thirdOrderFineError, thirdOrder);
 }
 
-/**
- * The Hancock predictor limits the scheme to second order in time, so the
- * order under a fixed CFL number matches MUSCL-Hancock while the error itself
- * stays below that of the unlimited linear reconstruction.
- */
-void exahype2::fv::tests::FiniteVolumeTest::testWENOAdvectionConvergesAtSecondOrder() {
-  using SecondOrderReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Average>;
-  constexpr double EndTime        = 0.12;
+/** The fluctuations across the faces and the predictor's volume part advect at high order. */
+void exahype2::fv::tests::FiniteVolumeTest::testADERWENONcpAdvectionConvergesAtHighOrder() {
+  using ADER               = exahype2::fv::timestepping::ADER;
+  constexpr double EndTime = 0.12;
 
-  const double coarseError = advectionError<WENOReconstruction, 9, false>(smoothProfile, 6, EndTime);
-  const double fineError   = advectionError<WENOReconstruction, 27, false>(smoothProfile, 18, EndTime);
-  const double order       = std::log(coarseError / fineError) / std::log(3.0);
-  const double linearError = advectionError<SecondOrderReconstruction, 27, false>(smoothProfile, 18, EndTime);
+  const double coarseError = advectionError<ADERWENO<2>, 8, true, ADER>(ncpAdvectedProfile, 8, EndTime);
+  const double fineError   = advectionError<ADERWENO<2>, 16, true, ADER>(ncpAdvectedProfile, 16, EndTime);
+  const double order       = std::log(coarseError / fineError) / std::log(2.0);
 
-  validateWithParams3(order > 1.7, coarseError, fineError, order);
-  validateWithParams2(fineError < linearError, fineError, linearError);
+  validateWithParams3(order > 2.7, coarseError, fineError, order);
 }
 
-/** Confirms periodic face fluxes conserve the patch's total mass under WENO. */
-void exahype2::fv::tests::FiniteVolumeTest::testWENOPeriodicAdvectionConservesMass() {
-  const auto [massBefore, massAfter] = periodicAdvectionMass<WENOReconstruction, 27>();
+/** Confirms periodic face fluxes conserve the patch's total mass under ADER-WENO. */
+void exahype2::fv::tests::FiniteVolumeTest::testADERWENOPeriodicAdvectionConservesMass() {
+  const auto [massBefore, massAfter] = periodicAdvectionMass<ADERWENO<2>, 16, exahype2::fv::timestepping::ADER>();
 
   validateWithParams2(std::abs(massAfter - massBefore) <= 1e-11 * std::abs(massBefore), massBefore, massAfter);
 }

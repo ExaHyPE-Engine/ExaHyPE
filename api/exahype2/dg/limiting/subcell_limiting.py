@@ -74,6 +74,11 @@ class SubcellLimiting:
                 "subcells per axis. Increase the order or choose a scheme with a narrower "
                 "stencil.".format(scheme.halo_width, subcells_per_axis)
             )
+        if isinstance(scheme, Weno) and scheme.order != self._order:
+            raise ValueError(
+                "The WENO subcell limiter must have the order of the DG solver ({}), but has "
+                "order {}.".format(self._order, scheme.order)
+            )
         if number_of_dmp_observables < 0:
             raise ValueError(
                 "The number of discrete-maximum-principle observables cannot be negative."
@@ -129,6 +134,10 @@ class SubcellLimiting:
             raise ValueError(
                 "A discrete maximum principle needs the dmp_observables PDE term."
             )
+        if isinstance(self._subcell_limiter_scheme, Weno) and self.pde_terms.is_set(
+            "diffusive_source"
+        ):
+            raise ValueError("The WENO subcell limiter does not support diffusive source terms.")
 
     def _solution_plotter(self):
         """Returns the solution plotter; with the limiter it also writes the per-cell limiter

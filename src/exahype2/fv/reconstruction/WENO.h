@@ -3,10 +3,8 @@
 #pragma once
 
 #include "exahype2/Enumeration.h"
-#include "exahype2/fv/EigenvalueStatistics.h"
-#include "exahype2/fv/PatchUtils.h"
-#include "exahype2/fv/reconstruction/InterfaceFluxes.h"
 #include "exahype2/fv/weno/NonlinearWeights.h"
+#include "exahype2/fv/weno/Tables.h"
 #include "peano4/Constants.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -14,84 +12,69 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::fv::reconstruction {
-  template <exahype2::fv::weno::NonlinearWeighting Weighting>
+  template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
   struct WENO;
 } // namespace exahype2::fv::reconstruction
 
 TARGET_DECLARE
 /**
- * Fifth-order weighted essentially non-oscillatory reconstruction. The state
- * at each face of a volume is a convex combination of the three quadratic
- * candidate reconstructions over the five volumes centred on it; the
- * @c Weighting policy turns the smoothness of each candidate into its share,
- * so the combination reaches fifth order where the solution is smooth and
- * falls back on the smooth candidates across a discontinuity. Both faces of a
- * volume are then evolved by half a time step through the same Hancock
- * predictor that MUSCL-Hancock uses, which keeps the single-step scheme
- * stable where a plain forward-Euler update of a fifth-order reconstruction
- * would not be. The two evolved states that meet at an interface feed the
- * Riemann solver. Each face state of the neighbours is reconstructed from the
- * neighbour's own five-volume window, so the stencil reaches three volumes
- * to either side and costs three halo layers.
+ * Polynomial weighted essentially non-oscillatory reconstruction of order @p Order after Dumbser,
+ * Zanotti, Hidalgo and Balsara (2013). It turns the volume averages around a volume into a nodal
+ * polynomial on that volume, which the ADER time stepping evolves with the space-time predictor.
+ *
+ * The reconstruction sweeps the axes one after the other: The first sweep reconstructs along the
+ * first axis for every volume of the window around the volume, every further sweep reconstructs
+ * the nodal coefficients of the previous one along the next axis. On every line, each candidate
+ * stencil determines a polynomial of full order, and the @c Weighting combines them by their
+ * oscillation indicators.
+ *
+ * The halo of a patch holds no volume beyond an edge or a corner of the patch, and a stencil that
+ * would read such a volume drops out of the combination. The two patches that share a face must
+ * agree on its flux, so the polynomials that feed it read only the volumes both patches hold,
+ * selected through the shared face. Dropping stencils leaves the order intact because every
+ * stencil is of full order, so a patch needs at least 2 * Order volumes per axis. The
+ * reconstruction serves the volumes of the patch and the first halo layer, whose stencils reach
+ * Order volumes further.
+ *
+ * The polynomial is nodal in @c Basis, from which a time stepping derives its operators, and the
+ * caller provides @c ScratchSize entries for the sweeps.
  */
-template <exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
 struct exahype2::fv::reconstruction::WENO final {
-  static constexpr int HaloSize = 3;
+  using Tables = exahype2::fv::weno::ReconstructionTables<Order>;
+  using Basis  = typename Tables::Basis;
 
-  template <
-    typename SolverType,
-    int  NumberOfVolumesPerAxis,
-    int  NumberOfUnknowns,
-    int  NumberOfAuxiliaryVariables,
-    bool EvaluateFlux,
-    bool EvaluateNonconservativeProduct,
-    bool EvaluateSource,
-    bool EvaluateDiffusiveSource,
-    bool EvaluateCustomRiemann,
-    bool EvaluateMaxEigenvalue,
-    typename StoragePrecision,
-    typename ComputePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD static void accumulateFluxDivergence(
-    const StoragePrecision* NOALIAS const        inputPatch,
-    const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
-    const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-    const int                                    centreOffset,
-    const StoragePrecision* NOALIAS const        centreState,
-    const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    const double                                 timeStamp,
-    const double                                 timeStepSize,
-    StoragePrecision* NOALIAS const              outputState,
-    double&                                      maxEigenvalueAfterTimeStep
+  static constexpr int HaloSize = Order + 1;
+
+  template <int NumberOfData>
+  static constexpr int ScratchSize = 2 * peano4::power(2 * Order + 1, DIMENSIONS) * NumberOfData;
+
+  template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD static void reconstructPolynomial(
+    const StoragePrecision* NOALIAS const     inputPatch,
+    const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
+    int                                       sharedFace,
+    ComputePrecision* NOALIAS const           nodalState,
+    ComputePrecision* NOALIAS const           scratch
   );
 
-  template <int NumberOfData, typename StoragePrecision, typename ComputePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD static void reconstructFaceState(
-    const StoragePrecision* NOALIAS const states[2 * HaloSize + 1],
-    const int                             volume,
-    const int                             direction,
-    ComputePrecision* NOALIAS const       faceState
+  template <int NumberOfVolumesPerAxis>
+  INLINE_METHOD GPU_CALLABLE_METHOD static bool volumeIsAvailable(const tarch::la::Vector<DIMENSIONS, int>& volumeIndex);
+
+  template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD static const StoragePrecision* volumeState(
+    const StoragePrecision* NOALIAS const     inputPatch,
+    const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
   );
 
-  template <
-    typename SolverType,
-    int  NumberOfUnknowns,
-    int  NumberOfData,
-    bool EvaluateFlux,
-    bool EvaluateNonconservativeProduct,
-    bool EvaluateSource,
-    typename ComputePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD static void evolveFaceStates(
-    const ComputePrecision* NOALIAS const        centreState,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    const int                                    normal,
-    const double                                 timeStamp,
-    const double                                 timeStepSize,
-    ComputePrecision* NOALIAS const              minusState,
-    ComputePrecision* NOALIAS const              plusState
+  template <int NumberOfData, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD static void reconstructAlongLine(
+    const Tables&                         tables,
+    const ComputePrecision* NOALIAS const lineValues,
+    const bool* NOALIAS const             lineIsAvailable,
+    ComputePrecision* NOALIAS const       coefficients
   );
 };
 TARGET_DECLARE_END

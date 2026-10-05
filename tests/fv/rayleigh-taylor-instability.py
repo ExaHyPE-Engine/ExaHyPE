@@ -26,12 +26,23 @@ def parse_arguments():
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
     parser.add_argument("-l", "--grid-levels", type=int, default=3)
     parser.add_argument(
+        "--cfl", type=float, default=0.5,
+        help="Relaxation factor of the adaptive time step (default: 0.5).",
+    )
+    parser.add_argument(
         "-s",
         "--solver",
-        choices=["godunov", "musclhancock", "weno"],
-        default="weno",
+        "--scheme",
+        choices=["godunov", "musclhancock", "ader-weno"],
+        default="ader-weno",
+    )
+    parser.add_argument(
+        "--weno-order", type=int, choices=[2, 3, 4, 5], default=3,
+        help="Polynomial degree for ADER-WENO (nominal accuracy is degree + 1).",
     )
     args, _ = parser.parse_known_args()
+    if not 0.0 < args.cfl <= 1.0:
+        parser.error("--cfl must be greater than zero and at most one")
     if args.help:
         parser.print_help()
         print()
@@ -90,7 +101,7 @@ project = exahype2.Project(
 scheme = {
     "godunov": exahype2.fv.Godunov(),
     "musclhancock": exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.vanalbada),
-    "weno": exahype2.fv.Weno(),
+    "ader-weno": exahype2.fv.Weno(order=args.weno_order),
 }[args.solver]
 
 fv_solver = exahype2.fv.Solver(
@@ -98,7 +109,7 @@ fv_solver = exahype2.fv.Solver(
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    time_stepping=exahype2.TimeStepping.Adaptive(args.cfl),
     scheme=scheme,
 )
 

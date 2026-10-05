@@ -194,7 +194,7 @@ INLINE_METHOD void exahype2::dg::limiting::recomputeSubcells(
   }
 
   const auto advanceSubcells = [&]<typename ReconstructionPolicy>() -> double {
-    return exahype2::fv::applyFiniteVolume<
+    const double subcellMaxEigenvalue = exahype2::fv::applyFiniteVolume<
       ReconstructionPolicy,
       TimeStepping,
       SolverType,
@@ -217,8 +217,22 @@ INLINE_METHOD void exahype2::dg::limiting::recomputeSubcells(
       marker.getX(),
       marker.getH(),
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      exahype2::fv::hostScratch<
+        Value,
+        TimeStepping::template ScratchSize<
+          ReconstructionPolicy,
+          Layout::NumberOfSubcellsPerAxis,
+          SolverType::NumberOfUnknowns,
+          SolverType::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource>>()
     );
+    if (std::isnan(subcellMaxEigenvalue)) {
+      tarch::terminateWithError("The finite-volume time step of the subcells diverged in " + marker.toString());
+    }
+    return subcellMaxEigenvalue;
   };
   [[maybe_unused]] auto maxEigenvalue = advanceSubcells.template operator()<Reconstruction>();
 

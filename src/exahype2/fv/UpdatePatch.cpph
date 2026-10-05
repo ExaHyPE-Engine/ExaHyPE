@@ -87,7 +87,7 @@ INLINE_METHOD void exahype2::fv::updatePatch(
       );
     }
 
-    [[maybe_unused]] auto maxEigenvalue = exahype2::fv::applyFiniteVolume<
+    auto maxEigenvalue = exahype2::fv::applyFiniteVolume<
       Reconstruction,
       TimeStepping,
       SolverType,
@@ -110,8 +110,21 @@ INLINE_METHOD void exahype2::fv::updatePatch(
       marker.getX(),
       marker.getH(),
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      exahype2::fv::hostScratch<
+        ComputePrecision,
+        TimeStepping::template ScratchSize<
+          Reconstruction,
+          SolverType::NumberOfFiniteVolumesPerAxisPerPatch,
+          SolverType::NumberOfUnknowns,
+          SolverType::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource>>()
     );
+    if (std::isnan(maxEigenvalue)) {
+      tarch::terminateWithError("The finite-volume time step diverged in " + marker.toString());
+    }
 
     postprocess(outputPatch, timeStamp, timeStepSize);
 

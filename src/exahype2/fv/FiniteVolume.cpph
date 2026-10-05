@@ -6,7 +6,8 @@ TARGET_DECLARE
  * Advances one patch through @c TimeStepping with states formed by
  * @c Reconstruction and returns the maximum eigenvalue encountered. It reads
  * boundary halos from @p faceInputPatches and writes updated values to
- * @p outputPatch and @p faceOutputPatches.
+ * @p outputPatch and @p faceOutputPatches. @p scratch holds the
+ * @c TimeStepping::ScratchSize entries the step works in.
  */
 template <
   exahype2::fv::ReconstructionScheme Reconstruction,
@@ -32,7 +33,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::applyFiniteVolume(
   const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>& patchSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  ComputePrecision* NOALIAS const              scratch
 ) {
   return TimeStepping::template apply<
     Reconstruction,
@@ -56,7 +58,21 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::applyFiniteVolume(
     patchCentre,
     patchSize,
     timeStamp,
-    timeStepSize
+    timeStepSize,
+    scratch
   );
 }
 TARGET_DECLARE_END
+
+template <typename ComputePrecision, int Size>
+ComputePrecision* exahype2::fv::hostScratch() {
+  if constexpr (Size == 0) {
+    return nullptr;
+  } else {
+    using Deleter = decltype([](ComputePrecision* const memory) { tarch::accelerator::freeHeapMemory(memory); });
+    static thread_local const std::unique_ptr<ComputePrecision[], Deleter> scratch(
+      static_cast<ComputePrecision*>(tarch::accelerator::allocateHeapMemory(Size * sizeof(ComputePrecision)))
+    );
+    return scratch.get();
+  }
+}

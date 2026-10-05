@@ -14,9 +14,11 @@ class Limiter:
 
 
 class Weighting:
-    """The nonlinear-weighting policy types of the WENO scheme."""
+    """The nonlinear-weighting policy types of the WENO scheme: The Jiang-Shu weights with the
+    exponent 2 of Jiang and Shu, or with the exponent 8 of the ADER-WENO schemes of Dumbser et al."""
 
-    jiangshu = "::exahype2::fv::weno::JiangShu"
+    jiangshu = "::exahype2::fv::weno::JiangShu<2>"
+    jiangshu_r8 = "::exahype2::fv::weno::JiangShu<8>"
 
 
 class SubcellScheme:
@@ -128,34 +130,49 @@ class MusclHancock:
 
 
 class Weno:
-    """Fifth-order WENO reconstruction with a Hancock predictor and three halo volumes.
+    """ADER-WENO after Dumbser et al.: A polynomial WENO reconstruction of order ``order``
+    evolved by the space-time predictor of the ADER-DG solvers.
 
-    ``weighting`` is a policy type of :class:`Weighting`.
+    ``weighting`` is a policy type of :class:`Weighting`. The scheme reads ``order + 1`` halo
+    volumes and needs at least ``2 * order`` volumes per patch axis.
     """
 
-    halo_width = 3
+    SUPPORTED_ORDERS = (2, 3, 4, 5)
 
-    def __init__(self, weighting=Weighting.jiangshu):
+    def __init__(self, order=2, weighting=Weighting.jiangshu_r8):
+        if isinstance(order, bool) or order not in self.SUPPORTED_ORDERS:
+            raise ValueError(
+                "The WENO order is one of {}.".format(self.SUPPORTED_ORDERS)
+            )
         if not isinstance(weighting, str) or not weighting.startswith("::"):
             raise ValueError(
                 "The weighting is a policy type name of exahype2.fv.Weighting."
             )
+        self.order = order
         self.weighting = weighting
+
+    @property
+    def halo_width(self):
+        return self.order + 1
+
+    @property
+    def minimum_volumes_per_axis(self):
+        return 2 * self.order
 
     def subcell_scheme(self):
         return SubcellScheme(
-            reconstruction="::exahype2::fv::reconstruction::WENO<"
-            + self.weighting
-            + ">",
-            time_stepping="::exahype2::fv::timestepping::SingleStep",
+            reconstruction="::exahype2::fv::reconstruction::WENO<{}, {}>".format(
+                self.order, self.weighting
+            ),
+            time_stepping="::exahype2::fv::timestepping::ADER",
             halo_width=self.halo_width,
             includes=[
                 "exahype2/fv/FiniteVolume.h",
                 "exahype2/fv/reconstruction/WENO.h",
-                "exahype2/fv/timestepping/SingleStep.h",
+                "exahype2/fv/timestepping/ADER.h",
                 "exahype2/fv/weno/NonlinearWeights.h",
             ],
         )
 
     def __repr__(self):
-        return "Weno(weighting={})".format(self.weighting)
+        return "Weno(order={}, weighting={})".format(self.order, self.weighting)

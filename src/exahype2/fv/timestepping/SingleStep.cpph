@@ -30,7 +30,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep:
   const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>& patchSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  [[maybe_unused]] ComputePrecision* NOALIAS   scratch
 ) {
   constexpr int HaloSize               = Reconstruction::HaloSize;
   constexpr int NumberOfData           = NumberOfUnknowns + NumberOfAuxiliaryVariables;

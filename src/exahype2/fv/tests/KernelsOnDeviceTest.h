@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "exahype2/fv/timestepping/SingleStep.h"
 #include "tarch/tests/TestCase.h"
 
 namespace exahype2::fv::tests {
@@ -28,7 +29,7 @@ public:
   // inside private or protected member functions.
   void testApplyFiniteVolumeWithConstantReconstruction();
   void testApplyFiniteVolumeWithLimitedLinearReconstruction();
-  void testApplyFiniteVolumeWithWENOReconstruction();
+  void testApplyFiniteVolumeWithADERWENO();
   void testApplyFiniteVolumeWithCustomRiemannSolver();
   void testApplyBoundaryConditionsOnFaceWithOneHaloLayer();
   void testApplyBoundaryConditionsOnFaceWithTwoHaloLayers();
@@ -40,7 +41,8 @@ public:
     bool EvaluateNonconservativeProduct,
     bool EvaluateSource,
     bool EvaluateDiffusiveSource,
-    bool EvaluateCustomRiemann>
+    bool EvaluateCustomRiemann,
+    typename TimeStepping = exahype2::fv::timestepping::SingleStep>
   void runApplyFiniteVolume();
 
   template <int HaloSize>

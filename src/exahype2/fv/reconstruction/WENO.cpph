@@ -3,342 +3,265 @@
 
 TARGET_DECLARE
 /**
- * Reconstructs every entry of the state at one face of @p volume, which
- * indexes into @p states, the consecutive volumes along the normal. A
- * @p direction of +1 selects the upper face, -1 the lower face; the
- * candidate stencils are mirrored accordingly, so the same formulas serve
- * both. The three candidates are the quadratic reconstructions over the
- * windows shifted by one volume each; their ideal weights combine them into
- * the fifth-order reconstruction over all five volumes, and the smoothness
- * indicators of Jiang and Shu measure how far each candidate is from being
- * smooth. The states are converted to the compute precision first, so the
- * weights and the combination run in that precision even when the patch is
- * stored in a lower one.
+ * A volume is available if it lies in the patch or in the halo of one face, which excludes the
+ * volumes beyond the edges and corners of the patch.
  */
-template <exahype2::fv::weno::NonlinearWeighting Weighting>
-template <int NumberOfData, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weighting>::reconstructFaceState(
-  const StoragePrecision* NOALIAS const states[2 * HaloSize + 1],
-  const int                             volume,
-  const int                             direction,
-  ComputePrecision* NOALIAS const       faceState
+template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int NumberOfVolumesPerAxis>
+INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeIsAvailable(
+  const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
 ) {
-  constexpr int              Stencils               = exahype2::fv::weno::NumberOfCandidateStencils;
-  constexpr ComputePrecision IdealWeights[Stencils] = {
-    static_cast<ComputePrecision>(0.1),
-    static_cast<ComputePrecision>(0.6),
-    static_cast<ComputePrecision>(0.3)
+  int axesOutsideOfPatch = 0;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    if (volumeIndex(axis) < -HaloSize or volumeIndex(axis) >= NumberOfVolumesPerAxis + HaloSize) {
+      return false;
+    }
+    if (volumeIndex(axis) < 0 or volumeIndex(axis) >= NumberOfVolumesPerAxis) {
+      axesOutsideOfPatch++;
+    }
+  }
+  return axesOutsideOfPatch <= 1;
+}
+
+template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeState(
+  const StoragePrecision* NOALIAS const     inputPatch,
+  const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
+) {
+  assertion(volumeIsAvailable<NumberOfVolumesPerAxis>(volumeIndex));
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+    if (volumeIndex(axis) < 0) {
+      overlapCell(axis) = volumeIndex(axis) + HaloSize;
+      const int overlapIndex =
+        exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, axis);
+      return &faceInputPatches[axis][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
+    }
+    if (volumeIndex(axis) >= NumberOfVolumesPerAxis) {
+      overlapCell(axis) = volumeIndex(axis) - NumberOfVolumesPerAxis + HaloSize;
+      const int overlapIndex =
+        exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, axis);
+      return &faceInputPatches[axis + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
+    }
+  }
+  int offset = 0;
+  int stride = NumberOfData;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    offset += volumeIndex(axis) * stride;
+    stride *= NumberOfVolumesPerAxis;
+  }
+  return &inputPatch[offset];
+}
+
+/**
+ * Reconstructs the nodal coefficients of every entry along one line of 2 * Order + 1 values that
+ * centres on the reconstructed volume. The values of one line position are consecutive, and
+ * only stencils whose positions are all available enter the combination.
+ */
+template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int NumberOfData, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructAlongLine(
+  const Tables&                         tables,
+  const ComputePrecision* NOALIAS const lineValues,
+  const bool* NOALIAS const             lineIsAvailable,
+  ComputePrecision* NOALIAS const       coefficients
+) {
+  constexpr int Nodes    = Tables::NumberOfNodes;
+  constexpr int Stencils = Tables::NumberOfStencils;
+
+  bool stencilIsAdmissible[Stencils];
+  for (int stencil = 0; stencil < Stencils; stencil++) {
+    stencilIsAdmissible[stencil] = true;
+    for (int volume = 0; volume < Nodes; volume++) {
+      stencilIsAdmissible[stencil] = stencilIsAdmissible[stencil]
+                                 and lineIsAvailable[Tables::firstVolumeOfStencil(stencil) + Order + volume];
+    }
+  }
+
+  for (int entry = 0; entry < NumberOfData; entry++) {
+    ComputePrecision candidates[Stencils][Nodes];
+    ComputePrecision linearWeights[Stencils];
+    ComputePrecision oscillationIndicators[Stencils];
+    int              numberOfStencils = 0;
+
+    for (int stencil = 0; stencil < Stencils; stencil++) {
+      if (not stencilIsAdmissible[stencil]) {
+        continue;
+      }
+      const int firstPosition = Tables::firstVolumeOfStencil(stencil) + Order;
+      for (int node = 0; node < Nodes; node++) {
+        ComputePrecision coefficient = ComputePrecision(0);
+        for (int volume = 0; volume < Nodes; volume++) {
+          coefficient += static_cast<ComputePrecision>(
+                           tables.reconstructionMatrices[(stencil * Nodes + node) * Nodes + volume]
+                         )
+                       * lineValues[(firstPosition + volume) * NumberOfData + entry];
+        }
+        candidates[numberOfStencils][node] = coefficient;
+      }
+      ComputePrecision indicator = ComputePrecision(0);
+      for (int row = 0; row < Nodes; row++) {
+        for (int column = 0; column < Nodes; column++) {
+          indicator += static_cast<ComputePrecision>(tables.oscillationIndicatorMatrix[row * Nodes + column])
+                     * candidates[numberOfStencils][row] * candidates[numberOfStencils][column];
+        }
+      }
+      linearWeights[numberOfStencils]         = static_cast<ComputePrecision>(Tables::linearWeight(stencil));
+      oscillationIndicators[numberOfStencils] = indicator;
+      numberOfStencils++;
+    }
+    assertion(numberOfStencils > 0);
+
+    ComputePrecision nonlinearWeights[Stencils];
+    Weighting::weights(numberOfStencils, linearWeights, oscillationIndicators, nonlinearWeights);
+
+    for (int node = 0; node < Nodes; node++) {
+      ComputePrecision coefficient = ComputePrecision(0);
+      for (int stencil = 0; stencil < numberOfStencils; stencil++) {
+        coefficient += nonlinearWeights[stencil] * candidates[stencil][node];
+      }
+      coefficients[node * NumberOfData + entry] = coefficient;
+    }
+  }
+}
+
+/**
+ * Writes the nodal polynomial of @p volumeIndex into @p nodalState, the first axis running
+ * fastest. A @p sharedFace of -1 reads every available volume, a face number of the patch only
+ * the volumes that the patch across that face holds, too. The sweep along one axis reads a buffer whose already swept axes hold nodes and whose
+ * remaining axes hold the positions of the window, and writes the same with one more axis swept.
+ * The two buffers take the @c ScratchSize entries of @p scratch.
+ */
+template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructPolynomial(
+  const StoragePrecision* NOALIAS const     inputPatch,
+  const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
+  const int                                 sharedFace,
+  ComputePrecision* NOALIAS const           nodalState,
+  ComputePrecision* NOALIAS const           scratch
+) {
+  static_assert(
+    NumberOfVolumesPerAxis >= 2 * Order,
+    "Every volume needs a stencil that stays inside the patch along the tangential axes."
+  );
+
+  constexpr int    Nodes      = Tables::NumberOfNodes;
+  constexpr int    Window     = 2 * Order + 1;
+  constexpr int    BufferSize = peano4::power(Window, DIMENSIONS) * NumberOfData;
+  constexpr Tables ReconstructionTables{};
+
+  // A polynomial for the flux through a face of the patch reads only the volumes that the patch
+  // across that face holds as well: the layers of halo depth on either side of the face within
+  // the tangential extent of the patch.
+  int lowerBound[DIMENSIONS];
+  int upperBound[DIMENSIONS];
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    lowerBound[axis] = -HaloSize;
+    upperBound[axis] = NumberOfVolumesPerAxis + HaloSize;
+    if (sharedFace >= 0 and axis == sharedFace % DIMENSIONS) {
+      const int facePosition = sharedFace < DIMENSIONS ? 0 : NumberOfVolumesPerAxis;
+      lowerBound[axis]       = facePosition - HaloSize;
+      upperBound[axis]       = facePosition + HaloSize;
+    } else if (sharedFace >= 0) {
+      lowerBound[axis] = 0;
+      upperBound[axis] = NumberOfVolumesPerAxis;
+    }
+  }
+  const auto isUsable = [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      if (index(axis) < lowerBound[axis] or index(axis) >= upperBound[axis]) {
+        return false;
+      }
+    }
+    return volumeIsAvailable<NumberOfVolumesPerAxis>(index);
   };
-  constexpr auto ThirteenTwelfths = static_cast<ComputePrecision>(13.0 / 12.0);
-  constexpr auto OneQuarter       = static_cast<ComputePrecision>(0.25);
-  constexpr auto OneSixth         = static_cast<ComputePrecision>(1.0 / 6.0);
 
-  for (int unknown = 0; unknown < NumberOfData; unknown++) {
-    const auto u0 = static_cast<ComputePrecision>(states[volume - 2 * direction][unknown]);
-    const auto u1 = static_cast<ComputePrecision>(states[volume - direction][unknown]);
-    const auto u2 = static_cast<ComputePrecision>(states[volume][unknown]);
-    const auto u3 = static_cast<ComputePrecision>(states[volume + direction][unknown]);
-    const auto u4 = static_cast<ComputePrecision>(states[volume + 2 * direction][unknown]);
+  ComputePrecision* NOALIAS const buffers[2] = {scratch, scratch + BufferSize};
 
-    const ComputePrecision candidates[Stencils] = {
-      OneSixth * (ComputePrecision(2) * u0 - ComputePrecision(7) * u1 + ComputePrecision(11) * u2),
-      OneSixth * (-u1 + ComputePrecision(5) * u2 + ComputePrecision(2) * u3),
-      OneSixth * (ComputePrecision(2) * u2 + ComputePrecision(5) * u3 - u4)
-    };
-    const ComputePrecision smoothnessIndicators[Stencils] = {
-      ThirteenTwelfths * (u0 - ComputePrecision(2) * u1 + u2) * (u0 - ComputePrecision(2) * u1 + u2)
-        + OneQuarter * (u0 - ComputePrecision(4) * u1 + ComputePrecision(3) * u2)
-          * (u0 - ComputePrecision(4) * u1 + ComputePrecision(3) * u2),
-      ThirteenTwelfths * (u1 - ComputePrecision(2) * u2 + u3) * (u1 - ComputePrecision(2) * u2 + u3)
-        + OneQuarter * (u1 - u3) * (u1 - u3),
-      ThirteenTwelfths * (u2 - ComputePrecision(2) * u3 + u4) * (u2 - ComputePrecision(2) * u3 + u4)
-        + OneQuarter * (ComputePrecision(3) * u2 - ComputePrecision(4) * u3 + u4)
-          * (ComputePrecision(3) * u2 - ComputePrecision(4) * u3 + u4)
-    };
-
-    ComputePrecision weights[Stencils];
-    Weighting::weights(IdealWeights, smoothnessIndicators, weights);
-
-    faceState[unknown] = weights[0] * candidates[0] + weights[1] * candidates[1] + weights[2] * candidates[2];
-  }
-}
-
-/**
- * Evolves the two reconstructed face states of one volume by half a time step
- * with the flux balance across this volume in direction @p normal alone,
- * minus the own-direction non-conservative product of the volume state with
- * the jump between the two face states, plus the source term of the volume
- * state. Both faces receive the same increment, and the stencil stays on the
- * axis-aligned line, so the scheme never needs a diagonal neighbour that the
- * face exchange cannot supply. The auxiliary variables are not evolved.
- */
-template <exahype2::fv::weno::NonlinearWeighting Weighting>
-template <
-  typename SolverType,
-  int  NumberOfUnknowns,
-  int  NumberOfData,
-  bool EvaluateFlux,
-  bool EvaluateNonconservativeProduct,
-  bool EvaluateSource,
-  typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weighting>::evolveFaceStates(
-  [[maybe_unused]] const ComputePrecision* NOALIAS const        centreState,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-  [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] const double                                 timeStamp,
-  [[maybe_unused]] const double                                 timeStepSize,
-  [[maybe_unused]] ComputePrecision* NOALIAS const              minusState,
-  [[maybe_unused]] ComputePrecision* NOALIAS const              plusState
-) {
-  if constexpr (EvaluateFlux or EvaluateNonconservativeProduct or EvaluateSource) {
-    using GeometryPrecision = decltype(ComputePrecision{} * double{});
-
-    ComputePrecision predictorUpdate[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    SIMD()
-    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      predictorUpdate[unknown] = ComputePrecision(0);
+  for (int position = 0; position < peano4::power(Window, DIMENSIONS); position++) {
+    tarch::la::Vector<DIMENSIONS, int> index     = volumeIndex;
+    int                                remainder = position;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      index(axis) += remainder % Window - Order;
+      remainder /= Window;
     }
-
-    if constexpr (EvaluateFlux) {
-      ComputePrecision minusFlux[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      ComputePrecision plusFlux[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      SolverType::flux(minusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, minusFlux);
-      SolverType::flux(plusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, plusFlux);
-      SIMD()
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        predictorUpdate[unknown] += minusFlux[unknown] - plusFlux[unknown];
-      }
-    }
-
-    if constexpr (EvaluateNonconservativeProduct) {
-      ComputePrecision stateJump[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      SIMD()
-      for (int unknown = 0; unknown < NumberOfData; unknown++) {
-        stateJump[unknown] = plusState[unknown] - minusState[unknown];
-      }
-      ComputePrecision predictorNonconservativeProduct[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      SolverType::nonconservativeProduct(
-        centreState,
-        stateJump,
-        volumeCentre,
-        volumeSize,
-        timeStamp,
-        timeStepSize,
-        normal,
-        predictorNonconservativeProduct
-      );
-      SIMD()
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        predictorUpdate[unknown] -= predictorNonconservativeProduct[unknown];
-      }
-    }
-
-    const ComputePrecision inverseSize = static_cast<ComputePrecision>(
-      static_cast<GeometryPrecision>(1.0) / static_cast<GeometryPrecision>(volumeSize(normal))
-    );
-    SIMD()
-    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      const ComputePrecision halfStep = static_cast<ComputePrecision>(
-        static_cast<GeometryPrecision>(0.5) * static_cast<GeometryPrecision>(timeStepSize)
-        * static_cast<GeometryPrecision>(inverseSize) * static_cast<GeometryPrecision>(predictorUpdate[unknown])
-      );
-      minusState[unknown] += halfStep;
-      plusState[unknown] += halfStep;
-    }
-
-    if constexpr (EvaluateSource) {
-      ComputePrecision sources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      SolverType::sourceTerm(centreState, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
-      SIMD()
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        const ComputePrecision sourceHalfStep = static_cast<ComputePrecision>(
-          static_cast<GeometryPrecision>(0.5) * static_cast<GeometryPrecision>(timeStepSize)
-          * static_cast<GeometryPrecision>(sources[unknown])
-        );
-        minusState[unknown] += sourceHalfStep;
-        plusState[unknown] += sourceHalfStep;
+    if (isUsable(index)) {
+      const StoragePrecision* const state =
+        volumeState<NumberOfVolumesPerAxis, NumberOfData>(inputPatch, faceInputPatches, index);
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        buffers[0][position * NumberOfData + entry] = static_cast<ComputePrecision>(state[entry]);
       }
     }
   }
-}
 
-/**
- * Advances one volume with the WENO reconstruction and the Hancock
- * predictor. For every direction we reconstruct and evolve both face states
- * of the two neighbours and of this volume, then feed the states that meet at
- * each interface to the Riemann solver through the shared interface update.
- * The reconstruction does not support a diffusive source term.
- */
-template <exahype2::fv::weno::NonlinearWeighting Weighting>
-template <
-  typename SolverType,
-  int  NumberOfVolumesPerAxis,
-  int  NumberOfUnknowns,
-  int  NumberOfAuxiliaryVariables,
-  bool EvaluateFlux,
-  bool EvaluateNonconservativeProduct,
-  bool EvaluateSource,
-  bool EvaluateDiffusiveSource,
-  bool EvaluateCustomRiemann,
-  bool EvaluateMaxEigenvalue,
-  typename StoragePrecision,
-  typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weighting>::accumulateFluxDivergence(
-  const StoragePrecision* NOALIAS const        inputPatch,
-  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-  const int                                    centreOffset,
-  const StoragePrecision* NOALIAS const        centreState,
-  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  StoragePrecision* NOALIAS const              outputState,
-  double&                                      maxEigenvalueAfterTimeStep
-) {
-  static_assert(not EvaluateDiffusiveSource, "The WENO reconstruction does not support a diffusive source term.");
+  for (int sweptAxis = 0; sweptAxis < DIMENSIONS; sweptAxis++) {
+    const ComputePrecision* NOALIAS const input  = buffers[sweptAxis % 2];
+    ComputePrecision* NOALIAS const       output = sweptAxis == DIMENSIONS - 1 ? nodalState : buffers[(sweptAxis + 1) % 2];
 
-  constexpr int NumberOfData   = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  constexpr int NumberOfStates = 2 * HaloSize + 1;
-  constexpr int Left           = HaloSize - 1;
-  constexpr int Centre         = HaloSize;
-  constexpr int Right          = HaloSize + 1;
-
-  for (int normal = 0; normal < DIMENSIONS; normal++) {
-    int strideAlongNormal = NumberOfData;
-    for (int dimension = 0; dimension < normal; dimension++) {
-      strideAlongNormal *= NumberOfVolumesPerAxis;
+    int inputStrides[DIMENSIONS];
+    int outputStrides[DIMENSIONS];
+    int numberOfLines = 1;
+    int inputStride   = 1;
+    int outputStride  = 1;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      inputStrides[axis]  = inputStride;
+      outputStrides[axis] = outputStride;
+      inputStride *= axis < sweptAxis ? Nodes : Window;
+      outputStride *= axis <= sweptAxis ? Nodes : Window;
+      if (axis != sweptAxis) {
+        numberOfLines *= axis < sweptAxis ? Nodes : Window;
+      }
     }
 
-    auto leftVolumeIndex  = volumeIndex;
-    auto rightVolumeIndex = volumeIndex;
-    leftVolumeIndex(normal) -= 1;
-    rightVolumeIndex(normal) += 1;
-    [[maybe_unused]] const auto [leftVolumeSize, leftVolumeCentre] =
-      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
-        patchCentre,
-        patchSize,
-        leftVolumeIndex
-      );
-    [[maybe_unused]] const auto [rightVolumeSize, rightVolumeCentre] =
-      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
-        patchCentre,
-        patchSize,
-        rightVolumeIndex
-      );
+    for (int line = 0; line < numberOfLines; line++) {
+      int                                inputBase  = 0;
+      int                                outputBase = 0;
+      tarch::la::Vector<DIMENSIONS, int> lineIndex  = volumeIndex;
+      int                                remainder  = line;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        if (axis == sweptAxis) {
+          continue;
+        }
+        const int radix      = axis < sweptAxis ? Nodes : Window;
+        const int coordinate = remainder % radix;
+        remainder /= radix;
+        inputBase += coordinate * inputStrides[axis];
+        outputBase += coordinate * outputStrides[axis];
+        if (axis > sweptAxis) {
+          lineIndex(axis) += coordinate - Order;
+        }
+      }
 
-    // The states of the volumes from HaloSize below to HaloSize above this one.
-    const StoragePrecision* NOALIAS states[NumberOfStates];
-    for (int offset = -HaloSize; offset <= HaloSize; offset++) {
-      states[offset + HaloSize] = offset == 0
-        ? centreState
-        : exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
-            inputPatch,
-            faceInputPatches,
-            volumeIndex,
-            centreOffset,
-            strideAlongNormal,
-            normal,
-            offset
-          );
+      if (not isUsable(lineIndex)) {
+        continue;
+      }
+
+      ComputePrecision lineValues[Window * NumberOfData];
+      bool             lineIsAvailable[Window];
+      for (int position = 0; position < Window; position++) {
+        tarch::la::Vector<DIMENSIONS, int> positionIndex = lineIndex;
+        positionIndex(sweptAxis) += position - Order;
+        lineIsAvailable[position] = isUsable(positionIndex);
+        for (int entry = 0; entry < NumberOfData; entry++) {
+          lineValues[position * NumberOfData + entry] =
+            lineIsAvailable[position] ? input[(inputBase + position * inputStrides[sweptAxis]) * NumberOfData + entry]
+                                      : ComputePrecision(0);
+        }
+      }
+
+      ComputePrecision coefficients[Nodes * NumberOfData];
+      reconstructAlongLine<NumberOfData>(ReconstructionTables, lineValues, lineIsAvailable, coefficients);
+      for (int node = 0; node < Nodes; node++) {
+        for (int entry = 0; entry < NumberOfData; entry++) {
+          output[(outputBase + node * outputStrides[sweptAxis]) * NumberOfData + entry] =
+            coefficients[node * NumberOfData + entry];
+        }
+      }
     }
-
-    ComputePrecision leftStateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision centreStateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision rightStateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    for (int unknown = 0; unknown < NumberOfData; unknown++) {
-      leftStateForCompute[unknown]   = static_cast<ComputePrecision>(states[Left][unknown]);
-      centreStateForCompute[unknown] = static_cast<ComputePrecision>(states[Centre][unknown]);
-      rightStateForCompute[unknown]  = static_cast<ComputePrecision>(states[Right][unknown]);
-    }
-
-    ComputePrecision leftNeighbourMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision leftNeighbourPlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision centreMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision centrePlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision rightNeighbourMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    ComputePrecision rightNeighbourPlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    reconstructFaceState<NumberOfData>(states, Left, -1, leftNeighbourMinus);
-    reconstructFaceState<NumberOfData>(states, Left, +1, leftNeighbourPlus);
-    reconstructFaceState<NumberOfData>(states, Centre, -1, centreMinus);
-    reconstructFaceState<NumberOfData>(states, Centre, +1, centrePlus);
-    reconstructFaceState<NumberOfData>(states, Right, -1, rightNeighbourMinus);
-    reconstructFaceState<NumberOfData>(states, Right, +1, rightNeighbourPlus);
-
-    evolveFaceStates<
-      SolverType,
-      NumberOfUnknowns,
-      NumberOfData,
-      EvaluateFlux,
-      EvaluateNonconservativeProduct,
-      EvaluateSource>(
-      leftStateForCompute,
-      leftVolumeCentre,
-      volumeSize,
-      normal,
-      timeStamp,
-      timeStepSize,
-      leftNeighbourMinus,
-      leftNeighbourPlus
-    );
-    evolveFaceStates<
-      SolverType,
-      NumberOfUnknowns,
-      NumberOfData,
-      EvaluateFlux,
-      EvaluateNonconservativeProduct,
-      EvaluateSource>(
-      centreStateForCompute,
-      volumeCentre,
-      volumeSize,
-      normal,
-      timeStamp,
-      timeStepSize,
-      centreMinus,
-      centrePlus
-    );
-    evolveFaceStates<
-      SolverType,
-      NumberOfUnknowns,
-      NumberOfData,
-      EvaluateFlux,
-      EvaluateNonconservativeProduct,
-      EvaluateSource>(
-      rightStateForCompute,
-      rightVolumeCentre,
-      volumeSize,
-      normal,
-      timeStamp,
-      timeStepSize,
-      rightNeighbourMinus,
-      rightNeighbourPlus
-    );
-
-    exahype2::fv::reconstruction::accumulateFluxDivergenceFromFaceStates<
-      SolverType,
-      NumberOfVolumesPerAxis,
-      NumberOfUnknowns,
-      NumberOfData,
-      EvaluateFlux,
-      EvaluateNonconservativeProduct,
-      EvaluateCustomRiemann,
-      EvaluateMaxEigenvalue>(
-      leftNeighbourPlus,
-      centreMinus,
-      centrePlus,
-      rightNeighbourMinus,
-      patchSize,
-      volumeCentre,
-      volumeSize,
-      normal,
-      timeStamp,
-      timeStepSize,
-      outputState,
-      maxEigenvalueAfterTimeStep
-    );
   }
 }
 TARGET_DECLARE_END

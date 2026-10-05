@@ -16,7 +16,9 @@ public:
 
 private:
   void testJiangShuWeightsSumToOne();
-  void testJiangShuEqualIndicatorsReproduceIdealWeights();
+  void testJiangShuEqualIndicatorsReproduceLinearWeights();
   void testJiangShuRoughStencilLosesItsWeight();
+  void testJiangShuSmoothDataSelectsCentralStencil();
+  void testJiangShuExponentSetsSensitivity();
   void testSinglePrecision();
 };

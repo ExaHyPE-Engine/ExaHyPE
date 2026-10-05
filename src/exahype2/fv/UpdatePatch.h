@@ -10,6 +10,7 @@
 #include "peano4/dataview/CellMarker.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/Termination.h"
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/la/VectorOperations.h"
 

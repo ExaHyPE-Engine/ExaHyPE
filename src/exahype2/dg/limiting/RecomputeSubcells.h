@@ -13,6 +13,7 @@
 #include "peano4/dataview/CellMarker.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/Termination.h"
 #include "tarch/accelerator/accelerator.h"
 
 TARGET_DECLARE

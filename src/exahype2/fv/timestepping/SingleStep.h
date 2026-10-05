@@ -24,6 +24,16 @@ struct exahype2::fv::timestepping::SingleStep final {
 
   template <
     typename Reconstruction,
+    int  NumberOfVolumesPerAxis,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource>
+  static constexpr int ScratchSize = 0;
+
+  template <
+    typename Reconstruction,
     typename SolverType,
     int  NumberOfVolumesPerAxis,
     int  NumberOfUnknowns,
@@ -45,7 +55,8 @@ struct exahype2::fv::timestepping::SingleStep final {
     const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
     const tarch::la::Vector<DIMENSIONS, double>& patchSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    ComputePrecision* NOALIAS                    scratch
   );
 };
 TARGET_DECLARE_END

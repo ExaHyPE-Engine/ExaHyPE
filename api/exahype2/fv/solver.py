@@ -355,6 +355,15 @@ class Solver(exahype2.solver.Solver):
             raise ValueError("MUSCL-Hancock does not support diffusive source terms.")
         if isinstance(self.scheme, Weno) and self.pde_terms.is_set("diffusive_source"):
             raise ValueError("WENO does not support diffusive source terms.")
+        if (
+            isinstance(self.scheme, Weno)
+            and self._patch_size < self.scheme.minimum_volumes_per_axis
+        ):
+            raise ValueError(
+                "[{}] WENO of order {} needs a patch size of at least {}.".format(
+                    self._name, self.scheme.order, self.scheme.minimum_volumes_per_axis
+                )
+            )
         if isinstance(self.scheme, Weno) and self.pde_terms.is_set(
             "limited_difference"
         ):

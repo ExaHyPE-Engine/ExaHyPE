@@ -2,20 +2,36 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 TARGET_DECLARE
+template <int Exponent>
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::weno::JiangShu::weights(
-  const ComputePrecision* NOALIAS const idealWeights,
-  const ComputePrecision* NOALIAS const smoothnessIndicators,
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::weno::JiangShu<Exponent>::weights(
+  const int                             numberOfStencils,
+  const ComputePrecision* NOALIAS const linearWeights,
+  const ComputePrecision* NOALIAS const oscillationIndicators,
   ComputePrecision* NOALIAS const       nonlinearWeights
 ) {
-  constexpr auto   Epsilon = static_cast<ComputePrecision>(1e-6);
-  ComputePrecision sum     = ComputePrecision(0);
-  for (int stencil = 0; stencil < NumberOfCandidateStencils; stencil++) {
-    const ComputePrecision regularised = Epsilon + smoothnessIndicators[stencil];
-    nonlinearWeights[stencil]          = idealWeights[stencil] / (regularised * regularised);
+  constexpr auto Epsilon = static_cast<ComputePrecision>(1e-14);
+
+  ComputePrecision smallestIndicator = Epsilon + oscillationIndicators[0];
+  for (int stencil = 1; stencil < numberOfStencils; stencil++) {
+    const ComputePrecision regularised = Epsilon + oscillationIndicators[stencil];
+    smallestIndicator                  = regularised < smallestIndicator ? regularised : smallestIndicator;
+  }
+
+  ComputePrecision sum = ComputePrecision(0);
+  for (int stencil = 0; stencil < numberOfStencils; stencil++) {
+    ComputePrecision ratio = smallestIndicator / (Epsilon + oscillationIndicators[stencil]);
+    ComputePrecision power = ComputePrecision(1);
+    for (int remaining = Exponent; remaining > 0; remaining /= 2) {
+      if (remaining % 2 == 1) {
+        power *= ratio;
+      }
+      ratio *= ratio;
+    }
+    nonlinearWeights[stencil] = linearWeights[stencil] * power;
     sum += nonlinearWeights[stencil];
   }
-  for (int stencil = 0; stencil < NumberOfCandidateStencils; stencil++) {
+  for (int stencil = 0; stencil < numberOfStencils; stencil++) {
     nonlinearWeights[stencil] /= sum;
   }
 }
