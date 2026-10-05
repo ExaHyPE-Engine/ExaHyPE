@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include <cmath>
 #include <limits>
 
 TARGET_DECLARE
@@ -44,8 +45,6 @@ exahype2::fv::timestepping::ADER::applyToVolume(
   constexpr int                                          StateEntries = Layout::NodesPerFace * Data;
   constexpr int                                          FluxEntries  = Layout::NodesPerFace * NumberOfUnknowns;
   constexpr ADERPredictorTables<Basis, ComputePrecision> Tables{};
-  constexpr auto                                         Nodes   = Basis::nodes();
-  constexpr auto                                         Weights = Basis::weights();
 
   alignas(PEANO_WITH_ALIGNMENT) ComputePrecision scratch[Scratch::Size];
   alignas(PEANO_WITH_ALIGNMENT) ComputePrecision nodalState[Layout::NodesPerCell * Data];
@@ -138,87 +137,436 @@ exahype2::fv::timestepping::ADER::applyToVolume(
     if (diverged(predict(neighbour, sharedFace, otherStates, otherFluxes))) {
       return std::numeric_limits<double>::quiet_NaN();
     }
-    for (int node = 0; node < Layout::NodesPerFace; node++) {
-      const ComputePrecision* left  = side == 0 ? otherStates[opposite] + node * Data : localState + node * Data;
-      const ComputePrecision* right = side == 0 ? localState + node * Data : otherStates[opposite] + node * Data;
-      const ComputePrecision* leftFlux =
-        side == 0 ? otherFluxes[opposite] + node * NumberOfUnknowns : localFlux + node * NumberOfUnknowns;
-      const ComputePrecision* rightFlux =
-        side == 0 ? localFlux + node * NumberOfUnknowns : otherFluxes[opposite] + node * NumberOfUnknowns;
-      auto position = exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, index);
-      position(axis) += (side == 0 ? -0.5 : 0.5) * volumeSize(axis);
-      double weight    = 1.0;
-      int    remainder = node;
-      for (int tangent = 0; tangent < DIMENSIONS; tangent++) {
-        if (tangent != axis) {
-          const int n = remainder % Basis::NumberOfNodes;
-          remainder /= Basis::NumberOfNodes;
-          position(tangent) += (Nodes[n] - 0.5) * volumeSize(tangent);
-          weight *= Weights[n];
-        }
+    integrateFace<
+      Basis,
+      SolverType,
+      NumberOfVolumesPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      Layout::NodesPerFace,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateCustomRiemann,
+      EvaluateMaxEigenvalue,
+      ComputePrecision>(
+      index,
+      face,
+      localState,
+      localFlux,
+      otherStates[opposite],
+      otherFluxes[opposite],
+      patchCentre,
+      patchSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces,
+      update,
+      maximum
+    );
+  }
+  for (int entry = 0; entry < Data; entry++) {
+    updatedState[entry] = static_cast<StoragePrecision>(
+      static_cast<UpdatePrecision>(inputPatch[volume * Data + entry])
+      + (entry < NumberOfUnknowns ? update[entry] : UpdatePrecision(0))
+    );
+  }
+  return maximum;
+}
+
+/**
+ * Adds the flux through face of volumeIndex to update and raises maximum to the wave speeds on the
+ * face. The states and fluxes hold the face nodes of the volume and of its neighbour across face.
+ */
+template <
+  typename Basis,
+  typename SolverType,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  int  NodesPerFace,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateCustomRiemann,
+  bool EvaluateMaxEigenvalue,
+  typename ComputePrecision,
+  typename UpdatePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::timestepping::ADER::integrateFace(
+  const tarch::la::Vector<DIMENSIONS, int>&    index,
+  const int                                    face,
+  const ComputePrecision* const                localState,
+  const ComputePrecision* const                localFlux,
+  const ComputePrecision* const                neighbourState,
+  const ComputePrecision* const                neighbourFlux,
+  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  [[maybe_unused]] const int                   boundaryFaces,
+  UpdatePrecision* const                       update,
+  [[maybe_unused]] double&                     maximum
+) {
+  constexpr int  Data       = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr auto Nodes      = Basis::nodes();
+  constexpr auto Weights    = Basis::weights();
+  const int      axis       = face % DIMENSIONS;
+  const int      side       = face / DIMENSIONS;
+  const auto     volumeSize = exahype2::fv::getVolumeSize(patchSize, NumberOfVolumesPerAxis);
+  for (int node = 0; node < NodesPerFace; node++) {
+    const ComputePrecision* left  = side == 0 ? neighbourState + node * Data : localState + node * Data;
+    const ComputePrecision* right = side == 0 ? localState + node * Data : neighbourState + node * Data;
+    const ComputePrecision* leftFlux =
+      side == 0 ? neighbourFlux + node * NumberOfUnknowns : localFlux + node * NumberOfUnknowns;
+    const ComputePrecision* rightFlux =
+      side == 0 ? localFlux + node * NumberOfUnknowns : neighbourFlux + node * NumberOfUnknowns;
+    auto position = exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, index);
+    position(axis) += (side == 0 ? -0.5 : 0.5) * volumeSize(axis);
+    double weight    = 1.0;
+    int    remainder = node;
+    for (int tangent = 0; tangent < DIMENSIONS; tangent++) {
+      if (tangent != axis) {
+        const int n = remainder % Basis::NumberOfNodes;
+        remainder /= Basis::NumberOfNodes;
+        position(tangent) += (Nodes[n] - 0.5) * volumeSize(tangent);
+        weight *= Weights[n];
       }
-      alignas(PEANO_WITH_ALIGNMENT) ComputePrecision fluxLeft[NumberOfUnknowns];
-      alignas(PEANO_WITH_ALIGNMENT) ComputePrecision fluxRight[NumberOfUnknowns];
-      double                                         eigenvalue;
-      if constexpr (EvaluateCustomRiemann) {
-        eigenvalue = exahype2::fv::solveRiemannProblemOnVolumeFace<SolverType, NumberOfVolumesPerAxis>(
-          left,
-          right,
+    }
+    alignas(PEANO_WITH_ALIGNMENT) ComputePrecision fluxLeft[NumberOfUnknowns];
+    alignas(PEANO_WITH_ALIGNMENT) ComputePrecision fluxRight[NumberOfUnknowns];
+    double                                         eigenvalue;
+    if constexpr (EvaluateCustomRiemann) {
+      eigenvalue = exahype2::fv::solveRiemannProblemOnVolumeFace<SolverType, NumberOfVolumesPerAxis>(
+        left,
+        right,
+        position,
+        volumeSize,
+        timeStamp + 0.5 * timeStepSize,
+        timeStepSize,
+        axis,
+        index,
+        side,
+        boundaryFaces,
+        fluxLeft,
+        fluxRight
+      );
+    } else {
+      eigenvalue = exahype2::MaxEigenvalueReduction::combine(
+        SolverType::maxEigenvalue(left, position, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, axis),
+        SolverType::maxEigenvalue(right, position, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, axis)
+      );
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        ComputePrecision flux =
+          -ComputePrecision(0.5) * static_cast<ComputePrecision>(eigenvalue) * (right[unknown] - left[unknown]);
+        if constexpr (EvaluateFlux) {
+          flux += ComputePrecision(0.5) * (leftFlux[unknown] + rightFlux[unknown]);
+        }
+        fluxLeft[unknown]  = flux;
+        fluxRight[unknown] = flux;
+      }
+      if constexpr (EvaluateNonconservativeProduct) {
+        alignas(PEANO_WITH_ALIGNMENT) ComputePrecision average[Data], jump[Data], fluctuation[NumberOfUnknowns];
+        for (int entry = 0; entry < Data; entry++) {
+          average[entry] = ComputePrecision(0.5) * (left[entry] + right[entry]);
+          jump[entry]    = right[entry] - left[entry];
+        }
+        SolverType::nonconservativeProduct(
+          average,
+          jump,
           position,
           volumeSize,
           timeStamp + 0.5 * timeStepSize,
           timeStepSize,
           axis,
-          index,
-          side,
-          boundaryFaces,
-          fluxLeft,
-          fluxRight
-        );
-      } else {
-        eigenvalue = exahype2::MaxEigenvalueReduction::combine(
-          SolverType::maxEigenvalue(left, position, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, axis),
-          SolverType::maxEigenvalue(right, position, volumeSize, timeStamp + 0.5 * timeStepSize, timeStepSize, axis)
+          fluctuation
         );
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-          ComputePrecision flux =
-            -ComputePrecision(0.5) * static_cast<ComputePrecision>(eigenvalue) * (right[unknown] - left[unknown]);
-          if constexpr (EvaluateFlux) {
-            flux += ComputePrecision(0.5) * (leftFlux[unknown] + rightFlux[unknown]);
-          }
-          fluxLeft[unknown]  = flux;
-          fluxRight[unknown] = flux;
+          fluxLeft[unknown] += ComputePrecision(0.5) * fluctuation[unknown];
+          fluxRight[unknown] -= ComputePrecision(0.5) * fluctuation[unknown];
         }
-        if constexpr (EvaluateNonconservativeProduct) {
-          alignas(PEANO_WITH_ALIGNMENT) ComputePrecision average[Data], jump[Data], fluctuation[NumberOfUnknowns];
-          for (int entry = 0; entry < Data; entry++) {
-            average[entry] = ComputePrecision(0.5) * (left[entry] + right[entry]);
-            jump[entry]    = right[entry] - left[entry];
-          }
-          SolverType::nonconservativeProduct(
-            average,
-            jump,
-            position,
-            volumeSize,
-            timeStamp + 0.5 * timeStepSize,
-            timeStepSize,
-            axis,
-            fluctuation
-          );
-          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-            fluxLeft[unknown] += ComputePrecision(0.5) * fluctuation[unknown];
-            fluxRight[unknown] -= ComputePrecision(0.5) * fluctuation[unknown];
-          }
-        }
-      }
-      if constexpr (EvaluateMaxEigenvalue) {
-        maximum = exahype2::MaxEigenvalueReduction::combine(maximum, eigenvalue);
-      }
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        update[unknown] +=
-          timeStepSize * weight / volumeSize(axis) * (side == 0 ? fluxRight[unknown] : -fluxLeft[unknown]);
       }
     }
+    if constexpr (EvaluateMaxEigenvalue) {
+      maximum = exahype2::MaxEigenvalueReduction::combine(maximum, eigenvalue);
+    }
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      update[unknown] +=
+        timeStepSize * weight / volumeSize(axis) * (side == 0 ? fluxRight[unknown] : -fluxLeft[unknown]);
+    }
+  }
+}
+
+/**
+ * Returns the offset in the predictions of the states and fluxes that volumeIndex contributes to
+ * the interface at its face. The neighbour across the face contributes the other side.
+ */
+template <
+  typename Reconstruction,
+  typename SolverType,
+  int NumberOfVolumesPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::fv::timestepping::ADER::PatchPredictions<
+  Reconstruction,
+  SolverType,
+  NumberOfVolumesPerAxis,
+  NumberOfUnknowns,
+  NumberOfAuxiliaryVariables,
+  ComputePrecision>::getSideOffset(const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int face) {
+  const int  axis      = face % DIMENSIONS;
+  const bool upperFace = face >= DIMENSIONS;
+  int        interface = 0;
+  int        stride    = NumberOfVolumesPerAxis + 1;
+  for (int tangent = 0; tangent < DIMENSIONS; tangent++) {
+    if (tangent != axis) {
+      interface += volumeIndex(tangent) * stride;
+      stride *= NumberOfVolumesPerAxis;
+    }
+  }
+  interface += volumeIndex(axis) + (upperFace ? 1 : 0);
+  return ((axis * InterfacesPerAxis + interface) * 2 + (upperFace ? 0 : 1)) * EntriesPerSide;
+}
+
+/**
+ * Runs prediction job of PatchPredictions. The first VolumesPerPatch jobs predict the volumes of
+ * the patch and store the states and fluxes of their faces inside the patch and their source
+ * update. The other jobs run per face of the patch over the layer of volumes inside it and then
+ * the layer in its halo, predict restricted to that face and store the states and fluxes of the
+ * face. A diverged prediction stores NaN instead.
+ */
+template <
+  typename Reconstruction,
+  typename SolverType,
+  int NumberOfVolumesPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::timestepping::ADER::predictForPatch(
+  const int                                    job,
+  const StoragePrecision* NOALIAS const        inputPatch,
+  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  ComputePrecision* NOALIAS const              predictions
+) {
+  using Predictions = PatchPredictions<
+    Reconstruction,
+    SolverType,
+    NumberOfVolumesPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    ComputePrecision>;
+  using Predictor       = typename Predictions::Predictor;
+  using Layout          = typename Predictions::Layout;
+  using Scratch         = typename Predictor::Scratch;
+  using Basis           = typename Reconstruction::Basis;
+  using UpdatePrecision = std::common_type_t<StoragePrecision, ComputePrecision, double>;
+  constexpr int                                          Data         = Predictions::Data;
+  constexpr int                                          StateEntries = Predictions::StateEntries;
+  constexpr int                                          FluxEntries  = Predictions::FluxEntries;
+  constexpr ADERPredictorTables<Basis, ComputePrecision> Tables{};
+  assertion(job >= 0 and job < Predictions::NumberOfJobs, job);
+
+  tarch::la::Vector<DIMENSIONS, int> index;
+  int                                sharedFace = -1;
+  int                                keptFace   = -1;
+  if (job < Predictions::VolumesPerPatch) {
+    index = peano4::dDelinearised(job, NumberOfVolumesPerAxis);
+  } else {
+    const int restricted = job - Predictions::VolumesPerPatch;
+    sharedFace           = restricted / (2 * Predictions::VolumesPerLayer);
+    const bool inHalo    = (restricted / Predictions::VolumesPerLayer) % 2 == 1;
+    const bool lowerFace = sharedFace < DIMENSIONS;
+    int        tangent   = restricted % Predictions::VolumesPerLayer;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      if (axis == sharedFace % DIMENSIONS) {
+        index(axis) = lowerFace ? (inHalo ? -1 : 0) : (inHalo ? NumberOfVolumesPerAxis : NumberOfVolumesPerAxis - 1);
+      } else {
+        index(axis) = tangent % NumberOfVolumesPerAxis;
+        tangent /= NumberOfVolumesPerAxis;
+      }
+    }
+    keptFace = inHalo ? (lowerFace ? sharedFace + DIMENSIONS : sharedFace - DIMENSIONS) : sharedFace;
+  }
+
+  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision scratch[Scratch::Size];
+  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision nodalState[Layout::NodesPerCell * Data];
+  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision reconstructionScratch[Reconstruction::template ScratchSize<Data>];
+  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision states[peano4::FacesPerCell][StateEntries];
+  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision fluxes[peano4::FacesPerCell][FluxEntries];
+  ComputePrecision*                              statePointers[peano4::FacesPerCell];
+  ComputePrecision*                              fluxPointers[peano4::FacesPerCell];
+  bool                                           keeps[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    const int axis = face % DIMENSIONS;
+    keeps[face]    = sharedFace < 0 ? index(axis) != (face < DIMENSIONS ? 0 : NumberOfVolumesPerAxis - 1)
+                                    : face == keptFace;
+    statePointers[face] = states[face];
+    fluxPointers[face]  = fluxes[face];
+  }
+
+  Reconstruction::template reconstructPolynomial<NumberOfVolumesPerAxis, Data>(
+    inputPatch,
+    faceInputPatches,
+    index,
+    sharedFace,
+    nodalState,
+    reconstructionScratch
+  );
+  const int outcome = Predictor::predict(
+    statePointers,
+    fluxPointers,
+    nodalState,
+    scratch,
+    Tables.view(),
+    exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, index),
+    exahype2::fv::getVolumeSize(patchSize, NumberOfVolumesPerAxis),
+    timeStamp,
+    timeStepSize,
+    PicardResidualTolerance
+  );
+
+  ComputePrecision* const source =
+    sharedFace < 0 ? predictions + Predictions::SourceOffset + job * NumberOfUnknowns : nullptr;
+  const bool isDiverged = outcome == exahype2::dg::ader::DivergedPicardIteration;
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    if (keeps[face]) {
+      ComputePrecision* const side = predictions + Predictions::getSideOffset(index, face);
+      for (int entry = 0; entry < StateEntries; entry++) {
+        side[entry] = isDiverged ? std::numeric_limits<ComputePrecision>::quiet_NaN() : states[face][entry];
+      }
+      for (int entry = 0; entry < FluxEntries; entry++) {
+        side[StateEntries + entry] =
+          isDiverged ? std::numeric_limits<ComputePrecision>::quiet_NaN() : fluxes[face][entry];
+      }
+    }
+  }
+  if (isDiverged) {
+    for (int unknown = 0; source != nullptr and unknown < NumberOfUnknowns; unknown++) {
+      source[unknown] = std::numeric_limits<ComputePrecision>::quiet_NaN();
+    }
+    return;
+  }
+  if (source != nullptr) {
+    UpdatePrecision update[NumberOfUnknowns]{};
+    if constexpr (Predictor::AccumulatesSource) {
+      for (int node = 0; node < Layout::NodesPerCell; node++) {
+        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          update[unknown] += timeStepSize * Tables.cellQuadratureWeights[node]
+            * scratch[Scratch::TimeAveragedSourceOffset + node * Layout::PaddedNumberOfUnknowns + unknown];
+        }
+      }
+    }
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      source[unknown] = static_cast<ComputePrecision>(update[unknown]);
+    }
+  }
+}
+
+/**
+ * Advances volume of inputPatch into updatedState from the predictions of predictForPatch() and
+ * returns the largest wave speed of its faces, as applyToVolume() does. updatedState may be the
+ * state of volume in inputPatch.
+ */
+template <
+  typename Reconstruction,
+  typename SolverType,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateDiffusiveSource,
+  bool EvaluateCustomRiemann,
+  bool EvaluateMaxEigenvalue,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::timestepping::ADER::applyPredictionsToVolume(
+  const int                                    volume,
+  const StoragePrecision* const                inputPatch,
+  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  const ComputePrecision* NOALIAS const        predictions,
+  StoragePrecision* const                      updatedState
+) {
+  static_assert(not EvaluateDiffusiveSource, "ADER-WENO does not support diffusive source terms.");
+  using Predictions = PatchPredictions<
+    Reconstruction,
+    SolverType,
+    NumberOfVolumesPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    ComputePrecision>;
+  using UpdatePrecision = std::common_type_t<StoragePrecision, ComputePrecision, double>;
+  constexpr int Data    = Predictions::Data;
+  const auto    index   = peano4::dDelinearised(volume, NumberOfVolumesPerAxis);
+
+  const ComputePrecision* const source   = predictions + Predictions::SourceOffset + volume * NumberOfUnknowns;
+  bool                          diverged = std::isnan(source[0]);
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    const int axis      = face % DIMENSIONS;
+    auto      neighbour = index;
+    neighbour(axis) += face < DIMENSIONS ? -1 : 1;
+    const int opposite = face < DIMENSIONS ? face + DIMENSIONS : face - DIMENSIONS;
+    diverged           = diverged or std::isnan(predictions[Predictions::getSideOffset(index, face)])
+             or std::isnan(predictions[Predictions::getSideOffset(neighbour, opposite)]);
+  }
+  if (diverged) {
+    for (int entry = 0; entry < Data; entry++) {
+      updatedState[entry] = entry < NumberOfUnknowns ? std::numeric_limits<StoragePrecision>::quiet_NaN()
+                                                     : inputPatch[volume * Data + entry];
+    }
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
+  UpdatePrecision update[NumberOfUnknowns];
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    update[unknown] = source[unknown];
+  }
+  double maximum = 0.0;
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    const int axis      = face % DIMENSIONS;
+    auto      neighbour = index;
+    neighbour(axis) += face < DIMENSIONS ? -1 : 1;
+    const int                     opposite = face < DIMENSIONS ? face + DIMENSIONS : face - DIMENSIONS;
+    const ComputePrecision* const local    = predictions + Predictions::getSideOffset(index, face);
+    const ComputePrecision* const other    = predictions + Predictions::getSideOffset(neighbour, opposite);
+    integrateFace<
+      typename Reconstruction::Basis,
+      SolverType,
+      NumberOfVolumesPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      Predictions::Layout::NodesPerFace,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateCustomRiemann,
+      EvaluateMaxEigenvalue,
+      ComputePrecision>(
+      index,
+      face,
+      local,
+      local + Predictions::StateEntries,
+      other,
+      other + Predictions::StateEntries,
+      patchCentre,
+      patchSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces,
+      update,
+      maximum
+    );
   }
   for (int entry = 0; entry < Data; entry++) {
     updatedState[entry] = static_cast<StoragePrecision>(

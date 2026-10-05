@@ -7,6 +7,7 @@
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/Scratch.h"
 
 TARGET_DECLARE
 /**
@@ -132,8 +133,24 @@ exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::operat
   )
   COMPILE_IF_ON_DEVICE(
     const tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction> reducer{accumulator};
-    const double                                                       partial =
-      updatePatchOnDevice(team, patch, faces, cellCentre, cellSize, stepStart, stepSize, boundaryFaces);
+    double                                                             partial;
+    if constexpr (Kernel::PredictsPatchwise) {
+      ComputePrecision* const predictionsOfTeam =
+        predictions + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::getPredictionsSize();
+      partial = updatePatchFromPredictionsOnDevice(
+        team,
+        patch,
+        faces,
+        cellCentre,
+        cellSize,
+        stepStart,
+        stepSize,
+        boundaryFaces,
+        predictionsOfTeam
+      );
+    } else {
+      partial = updatePatchOnDevice(team, patch, faces, cellCentre, cellSize, stepStart, stepSize, boundaryFaces);
+    }
     tarch::accelerator::reduceOverTeam(team, partial, reducer);
     if constexpr (PostprocessesPatch) {
       tarch::accelerator::teamBarrier(team);
@@ -289,6 +306,62 @@ exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::update
         }(std::make_integer_sequence<int, Slots>{});
       }
     } return partial;
+  )
+}
+
+/**
+ * Advances the patch in place with the team from its predictions and returns the largest wave
+ * speed of the update that the calling thread saw, as updatePatchOnDevice() does. The threads run
+ * the prediction jobs of the patch, and after a barrier every thread updates its volumes. A volume
+ * then reads only its own state of the patch, so the update runs in place.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::updatePatchFromPredictionsOnDevice(
+  [[maybe_unused]] const tarch::accelerator::TeamHandle         team,
+  [[maybe_unused]] StoragePrecision* const                      patch,
+  [[maybe_unused]] const StoragePrecision* const                faces[peano4::FacesPerCell],
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  [[maybe_unused]] const int                                    boundaryFaces,
+  [[maybe_unused]] ComputePrecision* const                      predictions
+) {
+  [[maybe_unused]] constexpr bool PostprocessesPatch =
+    exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>;
+  COMPILE_IF_ON_HOST(return 0.0;)
+  COMPILE_IF_ON_DEVICE(
+    const int thread  = tarch::accelerator::getThreadOfTeam(team);
+    const int threads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+    for (int job = thread; job < Kernel::getNumberOfPredictionJobs(); job += threads) {
+      Kernel::predictForPatch(job, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, predictions);
+    }
+    tarch::accelerator::teamBarrier(team);
+    double partial = 0.0;
+    for (int volume = thread; volume < Kernel::VolumesPerPatch; volume += threads) {
+      partial = exahype2::MaxEigenvalueReduction::combine(
+        partial,
+        Kernel::computeVolumeUpdateFromPredictions(
+          volume,
+          patch,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          boundaryFaces,
+          predictions,
+          patch + static_cast<std::ptrdiff_t>(volume) * Kernel::NumberOfData
+        )
+      );
+      if constexpr (not PostprocessesPatch) {
+        partial = exahype2::MaxEigenvalueReduction::combine(
+          partial,
+          Kernel::getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+        );
+      }
+    }
+    return partial;
   )
 }
 

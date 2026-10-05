@@ -592,6 +592,9 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::sweep(
   const double                                 timeStepSize,
   const int                                    boundaryFaces
 ) {
+  if constexpr (PredictsPatchwise) {
+    return sweepWithPredictions(patch, updated, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces);
+  }
   using Terms             = typename SweepStorage<StoragePrecision>::Terms;
   constexpr int Lookahead = peano4::power(PatchSize, DIMENSIONS - 1);
   constexpr int Values    = VolumesPerPatch * NumberOfData;
@@ -870,6 +873,194 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::computeVolumeUpdate
     StoragePrecision,
     ComputePrecision
   >(volume, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces, terms, updatedState);
+}
+
+/**
+ * Returns the number of values of the predictions of one patch, or zero for a time stepping that
+ * does not predict patch by patch.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr int
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getPredictionsSize() {
+  if constexpr (PredictsPatchwise) {
+    return Predictions<>::Size;
+  } else {
+    return 0;
+  }
+}
+
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr int
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getNumberOfPredictionJobs() {
+  if constexpr (PredictsPatchwise) {
+    return Predictions<>::NumberOfJobs;
+  } else {
+    return 0;
+  }
+}
+
+/**
+ * Runs prediction job of the patch into predictions. Every job of a patch runs before a volume of
+ * the patch updates from predictions, and the jobs of a patch write disjoint predictions.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::predictForPatch(
+  const int                                    job,
+  const StoragePrecision* NOALIAS const        patch,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  ComputePrecision* NOALIAS const              predictions
+) {
+  Derived::TimeIntegration::template predictForPatch<
+    typename Derived::Reconstruction,
+    Derived,
+    PatchSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(job, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, predictions);
+}
+
+/**
+ * Advances one volume of patch into the NumberOfData values of updatedState from the predictions
+ * of the patch and returns the largest wave speed of the update. updatedState may be the state of
+ * the volume in patch.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::computeVolumeUpdateFromPredictions(
+  const int                                    volume,
+  const StoragePrecision* const                patch,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  const ComputePrecision* NOALIAS const        predictions,
+  StoragePrecision* const                      updatedState
+) {
+  assertion(volume >= 0 and volume < VolumesPerPatch, volume, VolumesPerPatch);
+  return Derived::TimeIntegration::template applyPredictionsToVolume<
+    typename Derived::Reconstruction,
+    Derived,
+    PatchSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    exahype2::terms::HasFlux<Derived, ComputePrecision>,
+    exahype2::terms::HasNonconservativeProduct<Derived, ComputePrecision>,
+    exahype2::terms::HasSourceTerm<Derived, ComputePrecision>,
+    exahype2::terms::HasDiffusiveSourceTerm<Derived, ComputePrecision>,
+    exahype2::terms::HasRiemannSolver<Derived, ComputePrecision>,
+    ReportEigenvalues
+  >(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces, predictions, updatedState);
+}
+
+/**
+ * Advances patch by one time step into updated on one host thread from the predictions of the
+ * patch, where updated may be patch. The predictions live on the stack while they fit
+ * SweepStackBytes and on the heap otherwise. Returns what update() returns.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::sweepWithPredictions(
+  const StoragePrecision* const                patch,
+  StoragePrecision* const                      updated,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces
+) {
+  constexpr int Size = getPredictionsSize();
+  if constexpr (sizeof(ComputePrecision) * Size <= exahype2::fv::SweepStackBytes) {
+    alignas(PEANO_WITH_ALIGNMENT) ComputePrecision predictions[Size];
+    return sweepWithPredictionsInStorage(
+      predictions,
+      patch,
+      updated,
+      faces,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces
+    );
+  } else {
+    struct FreesHeapMemory final {
+      void operator()(ComputePrecision* const memory) const { tarch::freeMemory(memory, tarch::MemoryLocation::Heap); }
+    };
+    const std::unique_ptr<ComputePrecision[], FreesHeapMemory> predictions{
+      tarch::allocateMemory<ComputePrecision>(Size, tarch::MemoryLocation::Heap)
+    };
+    return sweepWithPredictionsInStorage(
+      predictions.get(),
+      patch,
+      updated,
+      faces,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces
+    );
+  }
+}
+
+/**
+ * Runs sweepWithPredictions() with the given predictions of getPredictionsSize() values. A volume
+ * reads only its own state of patch once every prediction is done, so updated may be patch.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD double
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::sweepWithPredictionsInStorage(
+  ComputePrecision* NOALIAS const              predictions,
+  const StoragePrecision* const                patch,
+  StoragePrecision* const                      updated,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces
+) {
+  assertion(patch != nullptr);
+  assertion(updated != nullptr);
+  for (int job = 0; job < getNumberOfPredictionJobs(); job++) {
+    predictForPatch(job, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, predictions);
+  }
+  double maxEigenvalue = 0.0;
+  for (int volume = 0; volume < VolumesPerPatch; volume++) {
+    maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+      maxEigenvalue,
+      computeVolumeUpdateFromPredictions(
+        volume,
+        patch,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize,
+        boundaryFaces,
+        predictions,
+        updated + static_cast<std::ptrdiff_t>(volume) * NumberOfData
+      )
+    );
+  }
+  postprocessUpdatedPatch(updated, cellCentre, cellSize, timeStamp, timeStepSize);
+  for (int volume = 0; volume < VolumesPerPatch; volume++) {
+    maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+      maxEigenvalue,
+      getMaxEigenvalueOfVolume(volume, updated, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+    );
+  }
+  return maxEigenvalue;
 }
 
 /**

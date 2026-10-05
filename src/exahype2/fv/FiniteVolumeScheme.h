@@ -46,6 +46,15 @@ namespace exahype2::fv {
     { TimeSteppingPolicy::NumberOfStages } -> std::convertible_to<int>;
   };
 
+  /**
+   * A time stepping that predicts patch by patch fills a buffer of predictions with one call per
+   * prediction job before it updates any volume of the patch from it.
+   */
+  template <typename TimeSteppingPolicy>
+  concept PatchwiseTimeSteppingScheme = TimeSteppingScheme<TimeSteppingPolicy> and requires {
+    requires TimeSteppingPolicy::PredictsPatchwise;
+  };
+
   TARGET_DECLARE
   template <int Dimensions>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Dimensions, double> getVolumeSize(
@@ -157,6 +166,8 @@ public:
   static constexpr int  ValuesPerFace              = 2 * HaloSize * VolumesPerLayer * NumberOfData;
   static constexpr int  LayerVolumesPerPatch       = peano4::FacesPerCell * HaloSize * VolumesPerLayer;
   static constexpr bool ReportEigenvalues = Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive;
+  static constexpr bool PredictsPatchwise =
+    exahype2::fv::PatchwiseTimeSteppingScheme<typename Derived::TimeIntegration>;
 
   template <typename StoragePrecision>
   static INLINE_METHOD void initialise(
@@ -289,6 +300,34 @@ public:
     StoragePrecision* NOALIAS                    updatedState
   );
 
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD constexpr int getPredictionsSize();
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD constexpr int getNumberOfPredictionJobs();
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void predictForPatch(
+    int                                          job,
+    const StoragePrecision* NOALIAS              patch,
+    const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    ComputePrecision* NOALIAS                    predictions
+  );
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double computeVolumeUpdateFromPredictions(
+    int                                          volume,
+    const StoragePrecision*                      patch,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          boundaryFaces,
+    const ComputePrecision* NOALIAS              predictions,
+    StoragePrecision*                            updatedState
+  );
+
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void postprocessUpdatedPatch(
     StoragePrecision* NOALIAS                    updated,
@@ -333,6 +372,15 @@ private:
    * Names the ring of terms a host sweep with the storage precision keeps. A solver without a
    * reconstruction leaves it uninstantiated.
    */
+  template <typename Scheme = Derived>
+  using Predictions = typename Scheme::TimeIntegration::template PatchPredictions<
+    typename Scheme::Reconstruction,
+    Scheme,
+    PatchSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    ComputePrecision>;
+
   template <typename StoragePrecision>
   struct SweepStorage final {
     using Terms = typename Derived::Reconstruction::template SweepTerms<
@@ -358,6 +406,31 @@ private:
   [[nodiscard]] static INLINE_METHOD double sweepWithStorage(
     Terms&                                       terms,
     StoragePrecision* NOALIAS                    scratch,
+    const StoragePrecision*                      patch,
+    StoragePrecision*                            updated,
+    const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          boundaryFaces
+  );
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD double sweepWithPredictions(
+    const StoragePrecision*                      patch,
+    StoragePrecision*                            updated,
+    const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          boundaryFaces
+  );
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD double sweepWithPredictionsInStorage(
+    ComputePrecision* NOALIAS                    predictions,
     const StoragePrecision*                      patch,
     StoragePrecision*                            updated,
     const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],

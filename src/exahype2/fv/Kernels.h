@@ -123,7 +123,9 @@ struct exahype2::fv::ProjectPatchesOntoFaces final {
 
 /**
  * Advances the patch of every listed cell in place and reduces the largest wave speed. One team
- * advances one cell with one thread per volume on a device and with one thread on the host.
+ * advances one cell with one thread per volume on a device and with one thread on the host. A
+ * scheme that predicts patch by patch takes the predictions of a team on a device from the scratch
+ * chunk of its entry in predictions.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::UpdatePatches final {
@@ -137,6 +139,7 @@ struct exahype2::fv::UpdatePatches final {
   typename FacePool::ConstView halo{};
   double                       timeStamp{0.0};
   double                       timeStepSize{0.0};
+  ComputePrecision*            predictions{nullptr};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,
@@ -154,6 +157,18 @@ private:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          boundaryFaces
+  );
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double updatePatchFromPredictionsOnDevice(
+    tarch::accelerator::TeamHandle               team,
+    StoragePrecision*                            patch,
+    const StoragePrecision* const                faces[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          boundaryFaces,
+    ComputePrecision*                            predictions
   );
 };
 

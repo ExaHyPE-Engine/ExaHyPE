@@ -17,6 +17,7 @@
 #include "peano4/Partition.h"
 #include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/plotter/Format.h"
@@ -105,6 +106,12 @@ private:
 
   Patches _solution{FiniteVolumeScheme::ValuesPerPatch};
   Faces   _halo{FiniteVolumeScheme::ValuesPerFace};
+
+  /**
+   * One block of predictions per team of a patch update on a device, for a scheme that predicts
+   * patch by patch. A host thread keeps the predictions of its patch itself.
+   */
+  tarch::accelerator::Buffer<ComputePrecision> _predictions{tarch::MemoryLocation::Device};
 
   peano4::HaloExchange<StoragePrecision>      _haloExchange{_halo};
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
