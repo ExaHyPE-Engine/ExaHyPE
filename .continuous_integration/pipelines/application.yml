@@ -5,6 +5,7 @@ ExaSkred Tsunami:
     - scenario: [artificial, chile, oscillating-lake, solitary-wave, three-mounds-channel, tohoku]
       build_type: [Release, Asserts, Debug]
   script:
+    - git lfs pull --include="applications/exaskred/tsunami/$scenario/**"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/tsunami/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/tsunami/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Tsunami -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
   allow_failure: false
@@ -23,6 +24,7 @@ ExaSkred Meteotsunami:
     - scenario: [gulf-of-mexico, r1]
       build_type: [Release, Asserts, Debug]
   script:
+    - git lfs pull --include="applications/exaskred/meteotsunami/$scenario/**"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/meteotsunami/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/meteotsunami/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Meteotsunami -ns 0 -lmin 3 -lmax 3"
   allow_failure: false
@@ -41,6 +43,7 @@ ExaSkred Landslide:
     - scenario: [tafjord]
       build_type: [Release, Asserts, Debug]
   script:
+    - git lfs pull --include="applications/exaskred/landslide/$scenario/**"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/landslide/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/landslide/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Landslide -et 0.5 -ns 0 -l ${MIN_GRID_LEVELS}"
   allow_failure: false
@@ -59,6 +62,7 @@ ExaSkred Coupled:
     - scenario: [impulse-wave, tafjord]
       build_type: [Release, Asserts, Debug]
   script:
+    - git lfs pull --include="applications/exaskred/*/$scenario/**"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/coupled/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/coupled/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Coupled -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
   allow_failure: false
