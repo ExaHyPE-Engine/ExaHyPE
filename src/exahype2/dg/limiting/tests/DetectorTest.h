@@ -31,6 +31,7 @@ private:
   void testACandidateOutsideTheReferenceExtremaIsRejected();
   void testTheRelaxationWidensTheAcceptedRange();
   void testTheAdmissibilityCombinesNodesAndSubcells();
+  void testTheAdmissibilityCoversTheLobattoSamples();
   void testWidenExtremaMergesTheMinimaAndTheMaxima();
   void testOpenInitialStatusMarksAnOscillatingInterpolant();
   void testOpenStepCopiesTheSolutionAndOpensTheStatus();

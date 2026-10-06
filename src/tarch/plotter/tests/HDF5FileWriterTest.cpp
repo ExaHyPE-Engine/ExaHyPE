@@ -276,7 +276,7 @@ tarch::plotter::tests::HDF5FileWriterTest::testEmptyMesh() {
 }
 
 /**
- * The .xmf file of the series embeds the grids of every snapshot that one writer writes.
+ * The .xmf file of the series embeds the grid of every snapshot file that one writer writes once.
  */
 void
 tarch::plotter::tests::HDF5FileWriterTest::testSeries() {
@@ -287,12 +287,20 @@ tarch::plotter::tests::HDF5FileWriterTest::testSeries() {
   tarch::plotter::HDF5FileWriter writer;
   writer.write(mesh, tarch::tests::getWritableTestDirectory().string(), filename, 0.0);
   writer.write(mesh, tarch::tests::getWritableTestDirectory().string(), filename, 0.5);
+  writer.write(mesh, tarch::tests::getWritableTestDirectory().string(), filename, 0.5);
 
   barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     validateXMFContent(getPath(filename + ".xmf"), "<Time Value=\"0\"/>");
     validateXMFContent(getPath(filename + ".xmf"), "<Time Value=\"0.5\"/>");
     validateXMFContent(getPath(filename + ".xmf"), filename + "-0_500000.h5:/topology");
+    const std::ifstream stream(getPath(filename + ".xmf"));
+    std::stringstream   buffer;
+    buffer << stream.rdbuf();
+    const std::string content = buffer.str();
+    if (content.find("<Time Value=\"0.5\"/>") != content.rfind("<Time Value=\"0.5\"/>")) {
+      throw std::runtime_error("The test expects the snapshot at the time 0.5 once in the file HDF5TestSeries.xmf.");
+    }
     for (const std::string& name :
          {filename + "-0_000000.xmf",
           filename + "-0_000000.h5",

@@ -17,7 +17,9 @@ def _pde_terms():
     return {
         "initial_condition": exahype2.pde_terms.initial_condition(),
         "boundary_conditions": exahype2.pde_terms.boundary_conditions("compute"),
-        "refinement_criterion": exahype2.pde_terms.refinement_criterion("[{N} + {A}]"),
+        "refinement_criterion": exahype2.pde_terms.refinement_criterion(
+            "[PointsPerCell * ({N} + {A})]"
+        ),
         "max_eigenvalue": exahype2.pde_terms.max_eigenvalue(),
         "flux": exahype2.pde_terms.flux(),
         "diffusive_flux": exahype2.pde_terms.diffusive_flux(),
@@ -31,11 +33,12 @@ def _pde_terms():
 
 
 class Solver(exahype2.solver.Solver):
-    """A Runge-Kutta DG solver of polynomial order ``dg_order``. A time step runs ``rk_order``
-    Runge-Kutta stages.
+    """Generates a Runge-Kutta DG solver of polynomial order ``dg_order``. A time step of the
+    solver runs ``rk_order`` Runge-Kutta stages.
 
-    ``basis`` is :class:`exahype2.dg.GaussLegendre` or :class:`exahype2.dg.GaussLobatto`.
-    ``linear`` selects the linear Riemann solver, which supports material parameters.
+    ``basis`` selects :class:`exahype2.dg.GaussLegendre` or :class:`exahype2.dg.GaussLobatto`.
+    ``linear`` selects the linear Riemann solver. Only a linear solver supports material
+    parameters.
     """
 
     SOLVER_FAMILY = "rk"

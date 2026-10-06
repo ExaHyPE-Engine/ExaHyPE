@@ -76,14 +76,14 @@ tarch::plotter::NetCDFFileWriter::write(
   });
   if (unsupportedType.load() >= 0) {
     tarch::terminateWithError(
-      "The plotter writes only quadrangles and hexahedra to a NetCDF file. The plot contains a cell of the VTK type "
-      + std::to_string(unsupportedType.load()) + "."
+      "The NetCDF plotter writes quadrangles and hexahedra only (got the VTK cell type "
+      + std::to_string(unsupportedType.load()) + ")."
     );
   }
 
-  const auto& rank          = tarch::mpi::Rank::getInstance();
-  MPI_Comm    comm          = rank.getCommunicator();
-  const bool  useParallelIO = rank.getNumberOfRanks() > 1;
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const MPI_Comm comm          = rank.getCommunicator();
+  const bool     useParallelIO = rank.getNumberOfRanks() > 1;
 
   // The allreduce sends the mesh kind to the ranks without cells.
   int found[3] = {facesFound.load() ? 1 : 0, volumesFound.load() ? 1 : 0, zCoordinateFound.load() ? 1 : 0};
@@ -474,7 +474,14 @@ tarch::plotter::NetCDFFileWriter::write(
   check(nc_close(ncid));
 
   if (rank.isGlobalMaster()) {
-    _snapshots.push_back({time, snapshotName + ".nc"});
+    const Snapshot snapshot{time, snapshotName + ".nc"};
+    // getSnapshotName() returns one name for time stamps that agree to six decimals. The series
+    // lists that file once.
+    if (not _snapshots.empty() and _snapshots.back().file == snapshot.file) {
+      _snapshots.back() = snapshot;
+    } else {
+      _snapshots.push_back(snapshot);
+    }
     writeSeries(directory / (filename + ".nc.series"));
   }
 }

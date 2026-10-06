@@ -43,8 +43,8 @@ namespace tarch::accelerator {
 
   template <typename Functor, typename ValueType>
   struct LeagueReduce final {
-    Functor functor;
-    int     scratchBytes;
+    Functor functor{};
+    int     scratchBytes{0};
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
       const tarch::accelerator::KokkosTeam::MemberType& team,
       ValueType&                                        accumulator
@@ -59,7 +59,7 @@ namespace tarch::accelerator {
 
   template <typename Functor, typename ValueType>
   struct TeamReduce1D final {
-    Functor functor;
+    Functor functor{};
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int i, ValueType& accumulator) const {
       functor(i, accumulator);
     }
@@ -67,8 +67,8 @@ namespace tarch::accelerator {
 
   template <typename Functor, typename ValueType>
   struct TeamReduce2D final {
-    Functor functor;
-    int     extentY;
+    Functor functor{};
+    int     extentY{0};
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index, ValueType& accumulator) const {
       functor(index / extentY, index % extentY, accumulator);
     }
@@ -76,9 +76,9 @@ namespace tarch::accelerator {
 
   template <typename Functor, typename ValueType>
   struct TeamReduce3D final {
-    Functor functor;
-    int     extentY;
-    int     extentZ;
+    Functor functor{};
+    int     extentY{0};
+    int     extentZ{0};
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index, ValueType& accumulator) const {
       functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ, accumulator);
     }
@@ -160,8 +160,11 @@ namespace tarch::accelerator {
   }
 
   // Kokkos overwrites the reduction output.
+  //
+  // INLINE_METHOD on a redeclared function template fails under nvcc. The reductions that
+  // ParallelReduce.h declares use plain inline.
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
+  inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -178,7 +181,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
+  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
@@ -196,7 +199,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
+  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -218,7 +221,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
+  inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;

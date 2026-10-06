@@ -379,7 +379,7 @@ tarch::plotter::tests::NetCDFFileWriterTest::testEmptyMesh() {
 }
 
 /**
- * The .nc.series file lists every snapshot that one writer writes.
+ * The .nc.series file lists every snapshot file that one writer writes once.
  */
 void
 tarch::plotter::tests::NetCDFFileWriterTest::testSeries() {
@@ -390,6 +390,7 @@ tarch::plotter::tests::NetCDFFileWriterTest::testSeries() {
   tarch::plotter::NetCDFFileWriter writer;
   writer.write(mesh, tarch::tests::getWritableTestDirectory().string(), filename, 0.0);
   writer.write(mesh, tarch::tests::getWritableTestDirectory().string(), filename, 0.5);
+  writer.write(mesh, tarch::tests::getWritableTestDirectory().string(), filename, 0.5);
 
   barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -397,11 +398,12 @@ tarch::plotter::tests::NetCDFFileWriterTest::testSeries() {
     std::stringstream   buffer;
     buffer << stream.rdbuf();
     const std::string content = buffer.str();
+    const std::string lastEntry = R"({ "name" : "NetCDFTestSeries-0_500000.nc", "time" : 0.5 })";
     if (
       content.find(R"({ "name" : "NetCDFTestSeries-0_000000.nc", "time" : 0 },)") == std::string::npos
-      or content.find(R"({ "name" : "NetCDFTestSeries-0_500000.nc", "time" : 0.5 })") == std::string::npos
+      or content.find(lastEntry) == std::string::npos or content.find(lastEntry) != content.rfind(lastEntry)
     ) {
-      throw std::runtime_error("The test expects both snapshots in the file NetCDFTestSeries.nc.series.");
+      throw std::runtime_error("The test expects both snapshots once in the file NetCDFTestSeries.nc.series.");
     }
     std::filesystem::remove(getPath(filename + "-0_000000.nc"));
     std::filesystem::remove(getPath(filename + "-0_500000.nc"));

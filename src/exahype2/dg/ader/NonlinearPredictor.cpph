@@ -17,10 +17,10 @@ exahype2::dg::ader::PicardResidual::add(const PicardResidual& other) {
 }
 
 /**
- * Solves the local Cauchy problem of one cell with a Picard iteration on the threads of workers
- * and extrapolates the time-averaged state and flux to the faces. On return, the time-averaged
- * flux in scratch stores its derivative along its own axis. Returns the number of sweeps,
- * UnconvergedPicardIteration or DivergedPicardIteration, and zero on a thread without a cell.
+ * Solves the local Cauchy problem of one cell with a Picard iteration on the threads of workers.
+ * Extrapolates the time-averaged state and flux to the faces. On return, the time-averaged flux in
+ * scratch stores its derivative along its own axis. Returns the number of sweeps,
+ * UnconvergedPicardIteration or DivergedPicardIteration. Returns zero on a thread without a cell.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -251,10 +251,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
 
 /**
  * Returns the calling device thread as a worker of a team that runs cells on threadsPerCell
- * threads each: The threads of the team split into groups of threadsPerCell consecutive threads,
- * and the threads behind the last full group receive no cell. A team smaller than threadsPerCell
- * runs one cell on all of its threads. On the host the call runs one cell on one thread without a
- * team.
+ * threads each. The threads of the team split into groups of threadsPerCell consecutive threads.
+ * The threads behind the last full group receive no cell. A team smaller than threadsPerCell runs
+ * one cell on all of its threads. On the host the call runs one cell on one thread without a team.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::TeamWorkers
@@ -290,8 +289,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::synchronise(c
 
 /**
  * Returns the bytes at the start of the aligned team scratch that combineOverGroup() and
- * isAnyActive() use: Two limbs and two flags per thread of the team, rounded up to
- * PEANO_WITH_ALIGNMENT.
+ * isAnyActive() use. These bytes hold two limbs and two flags per thread of the team. The count
+ * rounds up to PEANO_WITH_ALIGNMENT.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD int
@@ -302,8 +301,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getReservedTe
 }
 
 /**
- * Returns the team scratch bytes a launch of teams of teamThreads threads asks for: The reserved
- * bytes and the alignment slack. A team of one thread needs none.
+ * Returns the team scratch bytes that a launch of teams of teamThreads threads asks for. The count
+ * adds the alignment slack to the reserved bytes. A team of one thread needs none.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD int
@@ -330,10 +329,10 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getAlignedTea
 }
 
 /**
- * Returns the sum of the residuals of the threads of the group of workers, the same value on every
- * thread of the group: Every thread of the team writes its limbs and flag into the reserved start
- * of the aligned team scratch, and every thread adds the entries of its group in thread order. A
- * team of one thread returns residual. A thread without a group returns an empty residual.
+ * Returns the sum of the residuals of the threads of the group of workers. Every thread of the
+ * group returns the same value. Every thread of the team writes its limbs and flag into the
+ * reserved start of the aligned team scratch. Every thread adds the entries of its group in thread
+ * order. A team of one thread returns residual. A thread without a group returns an empty residual.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::PicardResidual
@@ -367,8 +366,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::combineOverGr
 }
 
 /**
- * Returns whether any thread of the team passes active, the same value on every thread. A team of
- * one thread returns active.
+ * Returns whether any thread of the team passes active. Every thread returns the same value. A team
+ * of one thread returns active.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -392,10 +391,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::isAnyActive(
 }
 
 /**
- * Returns the squared tolerance of the Picard iteration of one cell. The tolerance is
- * picardTolerance, or the distance that the rounding of ComputePrecision leaves between two
- * iterates of the cell when that distance is larger. The largest unknown of the first node of
- * cellState scales that distance.
+ * Returns the squared tolerance of the Picard iteration of one cell. The tolerance is the larger of
+ * picardTolerance and the distance that the rounding of ComputePrecision leaves between two
+ * iterates of the cell. The largest unknown of the first node of cellState scales that distance.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -404,12 +402,15 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getSquaredTol
   const StoragePrecision* NOALIAS const cellState,
   const double                          picardTolerance
 ) {
-  // Two converged iterates of the cell differ by up to RoundingUnits units in the last place of
-  // the largest unknown. The first node stands for the cell. Every thread of the cell reads it.
+  // Each value of two converged iterates differs by up to RoundingUnits units in the last place of
+  // the largest unknown of the first node. solvePicardSystem() sums the squares of the differences
+  // of ValuesPerIterate values. Every thread of the cell reads the first node.
   constexpr double RoundingUnits = 2.0;
-  constexpr double RoundingOfCell =
+  constexpr double RoundingOfValue =
     RoundingUnits * static_cast<double>(std::numeric_limits<ComputePrecision>::epsilon());
-  constexpr double SquaredRounding = RoundingOfCell * RoundingOfCell;
+  constexpr double ValuesPerIterate =
+    static_cast<double>(CellLayout::NumberOfUnknowns * CellLayout::NodesPerCell * CellLayout::NodesPerAxis);
+  constexpr double SquaredRounding = ValuesPerIterate * RoundingOfValue * RoundingOfValue;
   assertion(cellState != nullptr);
   assertion(picardTolerance > 0.0, picardTolerance);
 
@@ -480,8 +481,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::initialiseSta
 }
 
 /**
- * Overwrites stateGradient with the physical gradient of the unknowns of one time slice, one block
- * per axis.
+ * Overwrites stateGradient with the physical gradient of the unknowns of one time slice.
+ * stateGradient holds one block per axis.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -574,8 +575,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::computeSpaceT
 }
 
 /**
- * Overwrites flux with the flux of every node of one time slice, one block per axis. An unknown
- * that Derived does not write stays zero.
+ * Overwrites flux with the flux of every node of one time slice. flux holds one block per axis. An
+ * unknown that Derived does not write stays zero.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -820,9 +821,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::subtractFluxD
 }
 
 /**
- * Adds the space-time quadrature of the source of one time slice to the right-hand side and
- * averages the source over time like averageFluxOverTime(). The source of a node is the algebraic
- * source plus the diffusive source minus the nonconservative product.
+ * Adds the space-time quadrature of the source of one time slice to the right-hand side. Averages
+ * the source over time like averageFluxOverTime(). The source of a node is the algebraic source
+ * plus the diffusive source minus the nonconservative product.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -985,10 +986,10 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
 }
 
 /**
- * Solves the time system of one Picard sweep and returns the squared distance between the new and
- * the previous iterate as an exact fixed-point sum. A zero right-hand side leaves the cell state
- * bitwise in every time node. A value that is not finite or lies outside the divergence bound
- * returns a diverged residual.
+ * Solves the time system of one Picard sweep. Returns the squared distance between the new and the
+ * previous iterate as an exact fixed-point sum. A zero right-hand side leaves the cell state bitwise
+ * in every time node. A value that is not finite or lies outside the divergence bound returns a
+ * diverged residual.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>

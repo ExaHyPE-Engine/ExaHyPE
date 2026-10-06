@@ -17,8 +17,8 @@ def parse_arguments():
     parser.add_argument("-et", "--end-time", type=float, default=80.0)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=8)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
-    parser.add_argument("-lmin", "--min-grid-levels", type=int, default=3)
-    parser.add_argument("-lmax", "--max-grid-levels", type=int, default=3)
+    parser.add_argument("-lmin", "--min-grid-levels", type=int, default=None)
+    parser.add_argument("-lmax", "--max-grid-levels", type=int, default=None)
     parser.add_argument(
         "--friction",
         type=float,
@@ -37,10 +37,21 @@ def parse_arguments():
         default=0.0,
         help="Kim et al. (2019) pressure drag coefficient.",
     )
+    parser.add_argument(
+        "--fjord-system",
+        action="store_true",
+        help="Simulate the fjord system on the 5 m elevation model in UTM zone 33N.",
+    )
     args, _ = parser.parse_known_args()
     if args.grid_levels is not None:
         args.min_grid_levels = args.grid_levels
         args.max_grid_levels = args.grid_levels
+    # The refinement criterion refines the slide region of the fjord system to the maximum level.
+    default_levels = (3, 6) if args.fjord_system else (3, 3)
+    if args.min_grid_levels is None:
+        args.min_grid_levels = default_levels[0]
+    if args.max_grid_levels is None:
+        args.max_grid_levels = default_levels[1]
     if args.help:
         parser.print_help()
         print()
@@ -50,12 +61,38 @@ def parse_arguments():
 args = parse_arguments()
 dg_order = max(1, args.degrees_of_freedom - 1)
 
+# Every sampler maps the interval from its offset to its offset plus size onto the coordinate range
+# of its file. The offsets and sizes below equal these ranges. The samplers read every file in the
+# coordinates of the domain.
+if args.fjord_system:
+    domain_offset = [73987.5, 6905517.5]
+    domain_size = [37295.0, 39275.0]
+    bathymetry = ("bathymetry/TafjordBathymetryUTM33N.nc", domain_size, domain_offset)
+    displacement = (
+        "bathymetry/TafjordDisplacementUTM33N.nc",
+        [2085.0, 2130.0],
+        [103997.5, 6926652.5],
+    )
+else:
+    domain_offset = [414910.5, 6904510.5]
+    domain_size = [1875.0, 1925.0]
+    bathymetry = (
+        "bathymetry/TafjordBathymetry.nc",
+        [1900.0, 1950.0],
+        [414895.5, 6904495.5],
+    )
+    displacement = (
+        "bathymetry/TafjordDisplacement.nc",
+        [1900.0, 1950.0],
+        [414895.5, 6904495.5],
+    )
+
 project = exahype2.Project(
     namespace=["applications", "exahype2", "exaskred"],
     project_name="TafjordLandslide",
     dimensions=2,
-    offset=[414910.5, 6904510.5],
-    size=[1875.0, 1925.0],
+    offset=domain_offset,
+    size=domain_size,
     periodic_bc=[False, False],
     executable="ExaSkred-Landslide",
     min_end_time=args.end_time,
@@ -101,12 +138,12 @@ aderdg_solver.add_subcell_limiter(
 project.add_solver(aderdg_solver)
 
 for name, kind, value in (
-    ("bathymetryFile", "string", "bathymetry/TafjordBathymetry.nc"),
-    ("displacementFile", "string", "bathymetry/TafjordDisplacement.nc"),
-    ("bathymetrySize", ("double", 2), [1900.0, 1950.0]),
-    ("bathymetryOffset", ("double", 2), [414895.5, 6904495.5]),
-    ("displacementSize", ("double", 2), [1900.0, 1950.0]),
-    ("displacementOffset", ("double", 2), [414895.5, 6904495.5]),
+    ("bathymetryFile", "string", bathymetry[0]),
+    ("displacementFile", "string", displacement[0]),
+    ("bathymetrySize", ("double", 2), bathymetry[1]),
+    ("bathymetryOffset", ("double", 2), bathymetry[2]),
+    ("displacementSize", ("double", 2), displacement[1]),
+    ("displacementOffset", ("double", 2), displacement[2]),
     ("displacementPosition", ("double", 2), [0.0, 0.0]),
 ):
     project.add_runtime_parameter(name, kind, value)

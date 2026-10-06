@@ -4,11 +4,14 @@
 #include "applications/exaskred/Landslide.h"
 #include "applications/exaskred/LandslideLimiting.h"
 #include "applications/exaskred/WellBalancedRusanov.h"
+#include "tarch/Assertions.h"
+#include "tarch/Termination.h"
 #include "tarch/reader/NetCDFFieldSampler.h"
 
 TARGET_DECLARE
 namespace applications::exahype2::exaskred {
-  INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getLandslidePhysics();
+  INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
+  getLandslidePhysics();
 } // namespace applications::exahype2::exaskred
 
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
@@ -38,7 +41,7 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
 
   const auto bathymetrySize   = applications::exahype2::exaskred::RuntimeParameters::bathymetrySize();
   const auto bathymetryOffset = applications::exahype2::exaskred::RuntimeParameters::bathymetryOffset();
-  static tarch::reader::NetCDFFieldSampler<2> bathymetrySampler(
+  static const tarch::reader::NetCDFFieldSampler<2> bathymetrySampler(
     {{"bathymetry", applications::exahype2::exaskred::RuntimeParameters::bathymetryFile(), "Band1", {"x", "y"}}},
     {bathymetrySize(0), bathymetrySize(1)},
     {bathymetryOffset(0), bathymetryOffset(1)}
@@ -47,7 +50,7 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   const auto displacementSize     = applications::exahype2::exaskred::RuntimeParameters::displacementSize();
   const auto displacementOffset   = applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
   const auto displacementPosition = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
-  static tarch::reader::NetCDFFieldSampler<2> displacementSampler(
+  static const tarch::reader::NetCDFFieldSampler<2> displacementSampler(
     {{"displacement", applications::exahype2::exaskred::RuntimeParameters::displacementFile(), "Band1", {"x", "y"}}},
     {displacementSize(0), displacementSize(1)},
     {displacementOffset(0), displacementOffset(1)}
@@ -57,6 +60,13 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
     "displacement",
     {x(0) - displacementPosition(0), x(1) - displacementPosition(1)}
   );
+
+  if (not bathymetrySampler.covers("bathymetry", {x(0), x(1)})) {
+    tarch::terminateWithError(
+      "The bathymetry file '" + applications::exahype2::exaskred::RuntimeParameters::bathymetryFile()
+      + "' has to cover the point (" + std::to_string(x(0)) + ", " + std::to_string(x(1)) + ") of the domain."
+    );
+  }
 
   Q[Shortcuts::h] = displacement > 0.0 ? displacement : 0.0;
   Q[Shortcuts::z] = bathymetrySampler.sampleBilinear("bathymetry", {x(0), x(1)});
@@ -76,14 +86,29 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   }
 }
 
+/**
+ * Refines a cell that overlaps the region of the displacement file. Every other cell keeps its
+ * level. No cell receives interpolated bathymetry or slide material after the initialisation.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
-  [[maybe_unused]] const double* const NOALIAS                  Q,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t
+  [[maybe_unused]] const double* const NOALIAS Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                t
 ) {
-  return ::exahype2::RefinementCommand::Keep;
+  assertion(h(0) > 0.0 and h(1) > 0.0, h);
+  const auto displacementSize     = applications::exahype2::exaskred::RuntimeParameters::displacementSize();
+  const auto displacementOffset   = applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
+  const auto displacementPosition = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
+  bool       overlapsDisplacement = true;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(displacementSize(axis) >= 0.0, axis, displacementSize(axis));
+    const double lower   = displacementOffset(axis) + displacementPosition(axis);
+    const double upper   = lower + displacementSize(axis);
+    overlapsDisplacement = overlapsDisplacement and x(axis) + 0.5 * h(axis) > lower and x(axis) - 0.5 * h(axis) < upper;
+  }
+  return overlapsDisplacement ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -96,7 +121,7 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const int                                    normal,
   double* const NOALIAS                        F
 ) {
-  ::applications::exahype2::exaskred::landslide::flux<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::landslide::flux<Shortcuts, NumberOfUnknowns>(
     Q,
     x,
     h,
@@ -117,7 +142,7 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const double                                 dt,
   const int                                    normal
 ) {
-  return ::applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue<Shortcuts>(
+  return applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue<Shortcuts>(
     Q,
     x,
     h,
@@ -140,7 +165,7 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const int                                    normal,
   double* const NOALIAS                        BTimesDeltaQ
 ) {
-  ::applications::exahype2::exaskred::landslide::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::landslide::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
     deltaQ,
     x,
@@ -163,7 +188,7 @@ applications::exahype2::exaskred::ADERDGSolver::diffusiveSourceTerm(
   const double                                 dt,
   double* const NOALIAS                        S
 ) {
-  ::applications::exahype2::exaskred::landslide::diffusiveSourceTerm<
+  applications::exahype2::exaskred::landslide::diffusiveSourceTerm<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
@@ -193,12 +218,12 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
   double        sanitisedQL[NumberOfFaceNodes * NumberOfData];
   double        sanitisedQR[NumberOfFaceNodes * NumberOfData];
   for (int node = 0; node < NumberOfFaceNodes; node++) {
-    ::applications::exahype2::exaskred::landslide::sanitiseDryState<
+    applications::exahype2::exaskred::landslide::sanitiseDryState<
       Shortcuts,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables
     >(QL + node * NumberOfData, sanitisedQL + node * NumberOfData, getLandslidePhysics());
-    ::applications::exahype2::exaskred::landslide::sanitiseDryState<
+    applications::exahype2::exaskred::landslide::sanitiseDryState<
       Shortcuts,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables
@@ -212,7 +237,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
                                const double                                 timeStepSize,
                                const int                                    normal
                              ) {
-    return ::applications::exahype2::exaskred::landslide::getFluxEigenvalue<Shortcuts>(
+    return applications::exahype2::exaskred::landslide::getFluxEigenvalue<Shortcuts>(
       Q,
       facePosition,
       faceSize,
@@ -223,13 +248,13 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
     );
   };
   const auto interfaceGravity = [](const double* const NOALIAS QLeft, const double* const NOALIAS QRight) {
-    return ::applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity<Shortcuts>(
+    return applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity<Shortcuts>(
       QLeft,
       QRight,
       getLandslidePhysics()
     );
   };
-  return ::applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+  return applications::exahype2::exaskred::riemann::wellBalancedRusanov<
     Shortcuts,
     Shortcuts::z,
     NumberOfUnknowns,
@@ -258,17 +283,17 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   double        sanitisedQL[NumberOfData];
   double        sanitisedQR[NumberOfData];
-  ::applications::exahype2::exaskred::landslide::sanitiseDryState<
+  applications::exahype2::exaskred::landslide::sanitiseDryState<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
   >(QL, sanitisedQL, getLandslidePhysics());
-  ::applications::exahype2::exaskred::landslide::sanitiseDryState<
+  applications::exahype2::exaskred::landslide::sanitiseDryState<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
   >(QR, sanitisedQR, getLandslidePhysics());
-  return ::applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::z, true>(
+  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::z, true>(
     sanitisedQL,
     sanitisedQR,
     x,
@@ -276,7 +301,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
     t,
     dt,
     normal,
-    ::applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity<Shortcuts>(
+    applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity<Shortcuts>(
       sanitisedQL,
       sanitisedQR,
       getLandslidePhysics()
@@ -298,7 +323,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>&                  h
 ) {
-  if (not ::applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
+  if (not applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
         Shortcuts,
         NumberOfUnknowns,
         NumberOfAuxiliaryVariables
@@ -307,7 +332,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   }
   const int nodesPerAxis = static_cast<int>(std::lround(std::sqrt(static_cast<double>(numberOfStates))));
   if (numberOfStates > 1 and nodesPerAxis * nodesPerAxis == numberOfStates) {
-    return ::applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<
+    return applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<
       Shortcuts,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables
@@ -321,7 +346,7 @@ applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
 ) {
-  ::applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables<Shortcuts>(observables, Q);
+  applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables<Shortcuts>(observables, Q);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -329,7 +354,7 @@ applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
   const int    observable,
   const double specifiedRelaxationParameter
 ) {
-  return ::applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(
+  return applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(
     observable,
     specifiedRelaxationParameter,
     getLandslidePhysics()

@@ -9,7 +9,7 @@
 
 namespace {
   /**
-   * Throws if the file does not exist or does not contain the substring.
+   * Throws when the file does not exist or does not contain the substring.
    */
   void validateFileContent(const std::string& filepath, const std::string& expectedSubstring) {
     if (not std::filesystem::exists(filepath)) {
@@ -150,7 +150,7 @@ tarch::plotter::tests::VTUFileWriterTest::testEmptyMesh() {
 }
 
 /**
- * The .pvd file lists every snapshot that one writer writes with its exact time.
+ * The .pvd file lists every snapshot file that one writer writes once with its exact time.
  */
 void
 tarch::plotter::tests::VTUFileWriterTest::testSeries() {
@@ -161,6 +161,7 @@ tarch::plotter::tests::VTUFileWriterTest::testSeries() {
   appendUnitSquares(mesh, 0.0, 1);
   tarch::plotter::VTUFileWriter writer;
   writer.write(mesh, tarch::tests::getWritableTestDirectory().string(), filename, 0.0);
+  writer.write(mesh, tarch::tests::getWritableTestDirectory().string(), filename, 1.0 / 3.0);
   writer.write(mesh, tarch::tests::getWritableTestDirectory().string(), filename, 1.0 / 3.0);
 
   tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
@@ -173,6 +174,13 @@ tarch::plotter::tests::VTUFileWriterTest::testSeries() {
       getPath(filename + ".pvd"),
       R"(timestep="0.3333333333333333" group="" part="0" file="VTUTestSeries-0_333333.pvtu")"
     );
+    const std::ifstream stream(getPath(filename + ".pvd"));
+    std::stringstream   buffer;
+    buffer << stream.rdbuf();
+    const std::string content = buffer.str();
+    if (content.find("VTUTestSeries-0_333333.pvtu") != content.rfind("VTUTestSeries-0_333333.pvtu")) {
+      throw std::runtime_error("The test expects the snapshot VTUTestSeries-0_333333.pvtu once in the file VTUTestSeries.pvd.");
+    }
     std::filesystem::remove(getPath(filename + "-0_000000.pvtu"));
     std::filesystem::remove(getPath(filename + "-0_333333.pvtu"));
     std::filesystem::remove(getPath(filename + ".pvd"));

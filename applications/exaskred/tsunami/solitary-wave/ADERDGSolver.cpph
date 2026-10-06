@@ -6,7 +6,7 @@
 #include "applications/exaskred/WellBalancedRusanov.h"
 
 TARGET_DECLARE
-INLINE_METHOD GPU_CALLABLE_METHOD void
+INLINE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   double* const NOALIAS                                         Q,
   const tarch::la::Vector<DIMENSIONS, double>&                  x,
@@ -81,7 +81,7 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const int                                    normal,
   double* const NOALIAS                        F
 ) {
-  ::applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
     Q,
     x,
     h,
@@ -102,7 +102,7 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const double                                 dt,
   const int                                    normal
 ) {
-  return ::applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+  return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
     Q,
     x,
     h,
@@ -125,7 +125,7 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const int                                    normal,
   double* const NOALIAS                        BTimesDeltaQ
 ) {
-  ::applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
     deltaQ,
     x,
@@ -153,7 +153,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  return ::applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
+  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
     QL,
     QR,
     x,
@@ -176,13 +176,13 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
   if (numberOfStates == 1) {
-    return ::applications::exahype2::exaskred::limiting::isAdmissibleState<
+    return applications::exahype2::exaskred::limiting::isAdmissibleState<
       Shortcuts,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables
     >(Q, 0.0);
   }
-  return ::applications::exahype2::exaskred::limiting::isWetCell<
+  return applications::exahype2::exaskred::limiting::isWetCell<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
@@ -211,7 +211,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
                                const double                                 timeStepSize,
                                const int                                    normal
                              ) {
-    return ::applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+    return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
       Q,
       facePosition,
       faceSize,
@@ -226,7 +226,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
     []([[maybe_unused]] const double* const NOALIAS QLeft, [[maybe_unused]] const double* const NOALIAS QRight) {
       return g;
     };
-  return ::applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+  return applications::exahype2::exaskred::riemann::wellBalancedRusanov<
     Shortcuts,
     Shortcuts::b,
     NumberOfUnknowns,

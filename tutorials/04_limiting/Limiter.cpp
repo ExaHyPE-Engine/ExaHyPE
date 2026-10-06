@@ -4,12 +4,11 @@
 
 namespace {
   constexpr double Gamma = 1.4;
-  // An admissible state has a positive density and pressure. The subcell scheme recomputes every
-  // candidate with either value at or below its floor.
+  // isPhysicallyAdmissible() rejects a state with a density or a pressure at or below its floor.
+  // SubcellScheme then recomputes the candidate.
   constexpr double DensityFloor  = 1.0e-12;
   constexpr double PressureFloor = 1.0e-12;
 
-  // Indices of the observables that the discrete maximum principle bounds.
   constexpr int Density  = 0;
   constexpr int Velocity = 1;
   constexpr int Pressure = 1 + DIMENSIONS;
@@ -63,8 +62,8 @@ tutorials::exahype2::limiting::ADERDGSolver::mapDmpObservables(
   const double* const NOALIAS Q
 ) {
   static_assert(
-    NumberOfDMPObservables == Pressure + 1,
-    "The mapping fills the density, one velocity component per axis and the pressure."
+    NumberOfObservables == Pressure + 1,
+    "The limiting tutorial expects number_of_dmp_observables = 4 in 2D and 5 in 3D."
   );
 
   const double inverseDensity = 1.0 / std::max(Q[Shortcuts::rho], DensityFloor);

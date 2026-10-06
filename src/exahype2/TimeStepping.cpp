@@ -22,6 +22,12 @@ namespace {
     return exahype2::MaxEigenvalueReduction::isPhysicalValue(eigenvalue) and eigenvalue > 0.0;
   }
 
+  [[nodiscard]] std::string describeValue(const char* const name, const double value) {
+    std::ostringstream description;
+    description << name << " " << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
+    return description.str();
+  }
+
   void raiseMaximum(
     double&           target,
     const double      eigenvalue,
@@ -29,12 +35,7 @@ namespace {
     const char* const parameterName
   ) {
     if (not exahype2::MaxEigenvalueReduction::isPhysicalValue(eigenvalue)) {
-      tarch::triggerNonCriticalAssertion(
-        __FILE__,
-        __LINE__,
-        expression,
-        std::string(parameterName) + " bits=" + std::to_string(std::bit_cast<std::uint64_t>(eigenvalue))
-      );
+      tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, expression, describeValue(parameterName, eigenvalue));
     }
     target = exahype2::MaxEigenvalueReduction::combine(target, eigenvalue);
   }
@@ -45,12 +46,7 @@ namespace {
     const char* const parameterName
   ) {
     if (not isPositiveEigenvalue(eigenvalue)) {
-      tarch::triggerNonCriticalAssertion(
-        __FILE__,
-        __LINE__,
-        expression,
-        std::string(parameterName) + " bits=" + std::to_string(std::bit_cast<std::uint64_t>(eigenvalue))
-      );
+      tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, expression, describeValue(parameterName, eigenvalue));
     }
   }
 } // namespace
@@ -103,7 +99,7 @@ exahype2::TimeStepping::raiseMaxScaledEigenvalue(const double eigenvalue) {
 
 /**
  * Replaces both maxima of this step by their maxima over all ranks. A negative or non-finite
- * maximum of one rank overwrites the maximum on every rank, so every rank reads the same fault.
+ * maximum of one rank overwrites the maximum on every rank. Every rank then reads the same fault.
  */
 void
 exahype2::TimeStepping::reduceMaxEigenvaluesAcrossRanks() {
@@ -118,8 +114,8 @@ exahype2::TimeStepping::reduceMaxEigenvaluesAcrossRanks() {
     scaledEigenvalueIsPhysical ? 1U : 0U,
     scaledEigenvalueIsPhysical ? NoFaultBits : std::bit_cast<std::uint64_t>(_maxScaledEigenvalueOfThisStep)
   };
-  std::uint64_t globalFaults[4]{};
-  MPI_Comm      communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  std::uint64_t  globalFaults[4]{};
+  const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
   tarch::mpi::allreduce(localMaxEigenvalues, globalMaxEigenvalues, 2, MPI_DOUBLE, MPI_MAX, communicator);
   tarch::mpi::allreduce(localFaults, globalFaults, 4, MPI_UINT64_T, MPI_MIN, communicator);
   _maxEigenvalueOfThisStep       = globalMaxEigenvalues[0];
@@ -132,14 +128,14 @@ exahype2::TimeStepping::reduceMaxEigenvaluesAcrossRanks() {
   }
   reportNonPositiveEigenvalue(
     _maxEigenvalueOfThisStep,
-    "The reduced maximum eigenvalue is finite and positive.",
+    "The maximum eigenvalue is finite in every cell and positive in at least one cell.",
     "Maximum eigenvalue"
   );
   _maxEigenvalue = _maxEigenvalueOfThisStep;
   if (_stability == Stability::ScaledEigenvalue) {
     reportNonPositiveEigenvalue(
       _maxScaledEigenvalueOfThisStep,
-      "The reduced scaled maximum eigenvalue is finite and positive.",
+      "The scaled maximum eigenvalue is finite in every cell and positive in at least one cell.",
       "Scaled maximum eigenvalue"
     );
   }
@@ -163,9 +159,9 @@ void
 exahype2::TimeStepping::reduceMeshWidthsAcrossRanks(const double localMinimum, const double localMaximum) {
   assertion(localMinimum > 0.0, localMinimum);
   assertion(localMaximum >= 0.0, localMaximum);
-  const double localExtrema[2]  = {localMinimum, -localMaximum};
-  double       globalExtrema[2] = {0.0, 0.0};
-  MPI_Comm     communicator     = tarch::mpi::Rank::getInstance().getCommunicator();
+  const double   localExtrema[2]  = {localMinimum, -localMaximum};
+  double         globalExtrema[2] = {0.0, 0.0};
+  const MPI_Comm communicator     = tarch::mpi::Rank::getInstance().getCommunicator();
   tarch::mpi::allreduce(localExtrema, globalExtrema, 2, MPI_DOUBLE, MPI_MIN, communicator);
   _minMeshWidth = globalExtrema[0];
   _maxMeshWidth = -globalExtrema[1];
@@ -174,8 +170,8 @@ exahype2::TimeStepping::reduceMeshWidthsAcrossRanks(const double localMinimum, c
 }
 
 /**
- * Stores timeStepSizeFromCFL as the size of the next step, clipped at the terminal time. A
- * negative or non-finite size is stored unchanged.
+ * Stores timeStepSizeFromCFL as the size of the next step. The terminal time clips this size. A
+ * negative or non-finite size enters the next step unchanged.
  */
 void
 exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromCFL) {
@@ -187,14 +183,14 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
       __FILE__,
       __LINE__,
       "The proposed time step size is finite and non-negative.",
-      "Time step size bits=" + std::to_string(std::bit_cast<std::uint64_t>(timeStepSizeFromCFL))
+      describeValue("Time step size", timeStepSizeFromCFL)
     );
     _admissibleTimeStepSizeOfNextStep = timeStepSizeFromCFL;
     return;
   }
   _admissibleTimeStepSizeOfNextStep = std::min(timeStepSizeFromCFL, timeStepSizeToTerminalTime);
-  // A step size within rounding of the remaining time grows to the remaining time, so no step of a
-  // few machine epsilons follows.
+  // A step size within rounding of the remaining time grows to the remaining time. No step of a few
+  // machine epsilons follows.
   const double terminalTimeTolerance = NumericalZero * std::max(1.0, std::abs(_limits.terminalTime));
   if (timeStepSizeToTerminalTime - _admissibleTimeStepSizeOfNextStep <= terminalTimeTolerance) {
     _admissibleTimeStepSizeOfNextStep = timeStepSizeToTerminalTime;
@@ -204,7 +200,7 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
       __FILE__,
       __LINE__,
       "The CFL time step size exceeds the numerical zero tolerance.",
-      "CFL time step size=" + std::to_string(timeStepSizeFromCFL)
+      describeValue("CFL time step size", timeStepSizeFromCFL)
     );
   }
 }
@@ -218,7 +214,7 @@ exahype2::TimeStepping::setFixedTimeStepSize(const double timeStepSize) {
       __FILE__,
       __LINE__,
       "The fixed time step size is finite and positive.",
-      "Time step size=" + std::to_string(timeStepSize)
+      describeValue("Time step size", timeStepSize)
     );
   }
 }

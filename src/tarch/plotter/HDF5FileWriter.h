@@ -29,10 +29,12 @@ public:
 
 private:
   /**
-   * Holds the XDMF text of the grid of one snapshot without its enclosing Grid tags.
+   * Holds the HDF5 file of one snapshot and the XDMF text of its grid without the enclosing Grid
+   * tags.
    */
   struct Snapshot final {
     double      time{0.0};
+    std::string file{};
     std::string grid{};
   };
 

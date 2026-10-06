@@ -29,8 +29,8 @@ def _substitute(text, precision, dictionary):
 
 
 def _declared_parameter(declarator):
-    """Returns the declarator without the ``const`` of a by-value parameter, which a declaration
-    omits."""
+    """Returns the declarator without the ``const`` of a by-value parameter. A declaration omits
+    that ``const``."""
     if "&" in declarator or "[" in declarator:
         return declarator
     if "*" in declarator:
@@ -99,10 +99,11 @@ def render_stub_definition(term, precision, dictionary):
 
 @dataclass(frozen=True)
 class PDETerm:
-    """One row of a solver family's PDE term table.
+    """Stores one row of the PDE term table of a solver family.
 
-    ``parameters`` lists the C++ parameters. ``{P}`` stands for the precision of the term,
-    ``{N}`` and ``{A}`` in the comments for the numbers of unknowns and auxiliary variables.
+    ``parameters`` lists the C++ parameters. ``_substitute()`` replaces ``{P}`` with the
+    precision of the term, ``{S}`` with the solver name and ``{N}`` and ``{A}`` with the
+    numbers of unknowns and auxiliary variables.
     """
 
     cpp: str
@@ -389,7 +390,7 @@ def dmp_observables():
         cpp="mapDmpObservables",
         concept="HasDmpObservables",
         parameters=(
-            "{P}* const NOALIAS observables // [NumberOfDMPObservables]",
+            "{P}* const NOALIAS observables // [NumberOfObservables]",
             "const {P}* const NOALIAS Q // [{N} + {A}]",
         ),
         precision="storage",
@@ -485,7 +486,8 @@ def postprocess_updated_patch():
 
 
 class PDETerms:
-    """The PDE terms a script set on one solver, checked against the solver family's table."""
+    """Stores the PDE terms that a script sets on one solver. ``set()`` checks every term
+    against the table of the solver family."""
 
     def __init__(self, table):
         self._table = dict(table)
@@ -521,15 +523,16 @@ class PDETerms:
         return self._values.get(name) is True
 
     def body(self, name):
-        """Returns the inline body of a term, or the table's default when nothing is set."""
+        """Returns the inline body that the script sets for a term. Without one, it returns the
+        default of the table."""
         value = self._values.get(name)
         if isinstance(value, str):
             return value
         return self._table[name].default
 
     def is_declared(self, name):
-        """Returns whether the generated solver declares the term, because the script set it or
-        the table has a default."""
+        """Returns whether the generated solver declares the term. The solver declares a term if
+        the script sets it or if the table defines a default for it."""
         return name in self._values or self._table[name].default is not None
 
     def get_host_defined_device_terms(self, user_terms_inline):
@@ -542,7 +545,8 @@ class PDETerms:
         ]
 
     def flags(self):
-        """Returns the kernel flags of the table, true for every set term."""
+        """Returns the kernel flags of the table. A flag is true if the script sets one of its
+        terms."""
         result = {}
         for name, term in self._table.items():
             if term.flag is None:

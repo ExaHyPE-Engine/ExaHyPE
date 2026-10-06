@@ -47,7 +47,8 @@ namespace exahype2::dg::limiting::tests {
 
 TARGET_DECLARE
 /**
- * The finite-volume scheme on the subgrid of one cell of Derived with PatchSize subcells per axis.
+ * SubcellScheme runs the finite-volume scheme on the subgrid of one cell of Derived with PatchSize
+ * subcells per axis.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::limiting::SubcellScheme final {
@@ -147,6 +148,9 @@ private:
   template <typename Reconstruct>
   struct SubgridSolver;
 
+  template <typename Reconstruct>
+  using SubgridScheme = exahype2::fv::FiniteVolumeScheme<SubgridSolver<Reconstruct>, ComputePrecision>;
+
   template <typename StoragePrecision, typename Functor>
   static INLINE_METHOD constexpr void forEachSubcell(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
@@ -184,9 +188,9 @@ private:
 };
 
 /**
- * Derived in the form the finite-volume scheme of the subgrid reads. With the fixed time step rule,
- * the update computes no wave speeds. solveRiemannProblem() calls the subcell Riemann solver of
- * Derived, and every other term calls the term of Derived with the same name.
+ * SubgridSolver wraps Derived for the finite-volume scheme of the subgrid. The fixed time step rule
+ * skips the wave speeds in the update of the subgrid. solveRiemannProblem() calls the subcell
+ * Riemann solver of Derived. Every other term calls the term of Derived with the same name.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename Reconstruct>
@@ -300,7 +304,7 @@ struct exahype2::dg::limiting::ProjectSubgridsOntoFaces final {
 
 /**
  * Fills the outer halo half of every listed boundary face beside a cell that is not Regular. Only
- * these cells wrote their subgrid onto their faces in this step.
+ * these cells write their subgrid onto their faces in this step.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::ApplySubgridBoundaryConditions final {
@@ -313,9 +317,9 @@ struct exahype2::dg::limiting::ApplySubgridBoundaryConditions final {
 };
 
 /**
- * Advances every listed cell by one finite-volume step on its subgrid, projects the result onto
- * its nodes and reduces the wave speeds of the subgrids. The evolved subgrid is stored in the
- * scratch chunk of the work item.
+ * Advances every listed cell by one finite-volume step on its subgrid. Projects the result onto the
+ * nodes of the cell. Reduces the wave speeds of the subgrids. The scratch chunk of the work item
+ * holds the evolved subgrid.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::RecomputeSubcells final {
@@ -340,8 +344,8 @@ struct exahype2::dg::limiting::RecomputeSubcells final {
 };
 
 /**
- * Fills the subgrid of a new cell of a regrid. A child interpolates the subgrid of its parent, and
- * a parent averages the subgrids of its children. A cell on the Galerkin scheme contributes the
+ * Fills the subgrid of a new cell of a regrid. A child interpolates the subgrid of its parent. A
+ * parent averages the subgrids of its children. A cell on the Galerkin scheme contributes the
  * projection of its nodes.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>

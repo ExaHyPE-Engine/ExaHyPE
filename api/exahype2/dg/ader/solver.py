@@ -15,7 +15,9 @@ def _pde_terms():
     return {
         "initial_condition": exahype2.pde_terms.initial_condition(),
         "boundary_conditions": exahype2.pde_terms.boundary_conditions("compute"),
-        "refinement_criterion": exahype2.pde_terms.refinement_criterion("[{N} + {A}]"),
+        "refinement_criterion": exahype2.pde_terms.refinement_criterion(
+            "[PointsPerCell * ({N} + {A})]"
+        ),
         "max_eigenvalue": exahype2.pde_terms.max_eigenvalue(),
         "flux": exahype2.pde_terms.flux(),
         "diffusive_flux": exahype2.pde_terms.diffusive_flux(),
@@ -36,13 +38,13 @@ def _pde_terms():
 
 
 class Solver(exahype2.solver.Solver, SubcellLimiting):
-    """An ADER-DG solver of polynomial order ``order`` with one predictor and one corrector per
-    time step.
+    """Generates an ADER-DG solver of polynomial order ``order``. Every time step of the solver
+    runs one predictor and one corrector.
 
-    ``basis`` is :class:`exahype2.dg.GaussLegendre` or :class:`exahype2.dg.GaussLobatto`.
-    ``linear`` selects the linear predictor, which supports material parameters and point
-    sources. ``point_sources`` is the number of point sources. ``initialise_patches`` passes
-    every node of a cell to the initial condition in one call.
+    ``basis`` selects :class:`exahype2.dg.GaussLegendre` or :class:`exahype2.dg.GaussLobatto`.
+    ``linear`` selects the linear predictor. Only the linear predictor supports material
+    parameters and point sources. ``point_sources`` counts the point sources.
+    ``initialise_patches`` passes every node of a cell to the initial condition in one call.
     """
 
     SOLVER_FAMILY = "ader"
@@ -267,11 +269,6 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         d["INITIALISE_PATCHES"] = self._initialise_patches
         d["TABLE_PRECISIONS"] = self._table_precisions()
         d["LIMITER_ARGUMENTS"] = self._subcell_limiter_arguments()
-        d["NUMBER_OF_DMP_OBSERVABLES"] = (
-            self._subcell_limiter_number_of_dmp_observables
-            if self.subcell_limiter_is_enabled
-            else 0
-        )
         d["MAX_ADMISSIBLE_MESH_WIDTH"] = (
             "parameters.getMaxAdmissiblePatchSize(DomainSize)"
         )

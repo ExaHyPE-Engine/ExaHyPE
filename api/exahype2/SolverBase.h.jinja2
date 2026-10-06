@@ -20,7 +20,7 @@ namespace {{NAMESPACE | join("::")}} {
 
 TARGET_DECLARE
 /**
- * The constants of the solver family. The kernels read them on the host and on the device.
+ * The kernels read these constants of the solver family on the host and on the device.
  */
 struct {{NAMESPACE | join("::")}}::{{CLASSNAME}}Constants {
 {%- for line in SOLVER_FAMILY_CONSTANTS %}
@@ -53,13 +53,10 @@ public:
 {%- if INITIALISE_PATCHES is defined %}
 
   /**
-   * Whether the initial condition fills every node of a cell in one call.
+   * initialiseNodes() passes every node of a cell to initialCondition() in one call if
+   * InitialisesPatches is true.
    */
   static constexpr bool InitialisesPatches = {{ "true" if INITIALISE_PATCHES else "false" }};
-{%- endif %}
-{%- if NUMBER_OF_DMP_OBSERVABLES is defined and NUMBER_OF_DMP_OBSERVABLES > 0 %}
-
-  static constexpr int NumberOfDMPObservables = {{NUMBER_OF_DMP_OBSERVABLES}};
 {%- endif %}
 {%- if ERROR_MEASUREMENT %}
 

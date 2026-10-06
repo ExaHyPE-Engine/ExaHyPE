@@ -6,6 +6,10 @@
 
 #include "tarch/accelerator/CompileTarget.h"
 
+// Every declare-target constant that the host pass instantiates needs an instance in the device
+// pass. A static constexpr member of a class template that only host code reads leaves its
+// offloading entry without a device address. Such an entry stops the compilation of the translation
+// unit or the loading of the device image.
 namespace tarch::accelerator {
   TARGET_DECLARE
   // A team launch provides at most TeamScratchBytes of team scratch and asks for at most

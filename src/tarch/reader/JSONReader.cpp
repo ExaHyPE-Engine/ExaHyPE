@@ -10,8 +10,8 @@ namespace {
   using JSONObject = std::unordered_map<std::string, JSONValue>;
   using JSONArray  = std::vector<JSONValue>;
 
-  struct JSONValue {
-    std::variant<std::nullptr_t, bool, int, double, std::string, JSONArray, JSONObject> data;
+  struct JSONValue final {
+    std::variant<std::nullptr_t, bool, int, double, std::string, JSONArray, JSONObject> data{};
   };
 
   class Parser final {
@@ -20,9 +20,16 @@ namespace {
       _input(std::move(input)),
       _filepath(std::move(filepath)) {}
 
-    JSONValue parse() {
+    /**
+     * Returns the object at the top level of the input. parseDocument() stops the run with an error
+     * for any other top-level value.
+     */
+    JSONObject parseDocument() {
       skipWhitespace();
-      JSONValue result = parseValue();
+      if (current() != '{') {
+        tarch::terminateWithError("The JSON reader expects an object at the top level of the file '" + _filepath + "'.");
+      }
+      JSONObject result = parseObject();
       skipWhitespace();
       if (not isAtEnd()) {
         error("The file must end after its top-level value");
@@ -337,8 +344,8 @@ namespace {
   }
 
   /**
-   * Returns the value at the dot-separated key, or nullptr when a component is missing or a
-   * component before the last one is no object.
+   * Returns the value at the dot-separated key. Returns nullptr when a component is missing or when
+   * a component before the last one is not an object.
    */
   const JSONValue* findValue(const JSONObject& root, const std::string& key) {
     const std::vector<std::string> path          = splitKey(key);
@@ -376,10 +383,10 @@ namespace {
   bool hasValue(const JSONObject& root, const std::string& key) { return findValue(root, key) != nullptr; }
 } // namespace
 
-struct tarch::reader::JSONReader::Impl {
-  JSONObject root;
-  // Top-level keys whose value was read.
-  std::unordered_set<std::string> used;
+struct tarch::reader::JSONReader::Impl final {
+  JSONObject root{};
+  // Every getter records the top-level key of the value it reads.
+  std::unordered_set<std::string> used{};
 };
 
 tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
@@ -393,14 +400,7 @@ tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
 
   std::stringstream buffer;
   buffer << input.rdbuf();
-
-  JSONValue document = Parser(buffer.str(), filepath).parse();
-  if (not std::holds_alternative<JSONObject>(document.data)) {
-    std::stringstream message;
-    message << "The JSON reader expects an object at the top level of the file '" << filepath << "'.";
-    tarch::terminateWithError(message.str());
-  }
-  _impl->root = std::get<JSONObject>(std::move(document.data));
+  _impl->root = Parser(buffer.str(), filepath).parseDocument();
 }
 
 tarch::reader::JSONReader::~JSONReader() = default;
@@ -415,7 +415,7 @@ tarch::reader::JSONReader::hasKey(const std::string& key) const {
 
 void
 tarch::reader::JSONReader::markRead(const std::string& key) const {
-  // getUnusedKeys() lists top-level keys, so the insert records the top-level component only.
+  // getUnusedKeys() lists top-level keys. The insert records the top-level component only.
   _impl->used.insert(key.substr(0, key.find('.')));
 }
 

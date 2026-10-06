@@ -33,14 +33,16 @@
 #endif
 
 namespace tarch::accelerator {
+  // A backend may define these templates in its device translation units only. A host translation
+  // unit that uses them without their definition requires declarations that are not inline.
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const Range& range, Functor functor, Reducer reducer);
+  void parallelReduce(const Range& range, Functor functor, Reducer reducer);
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, Functor functor, Reducer reducer);
+  void parallelReduce(const RangeMD<2>& range, Functor functor, Reducer reducer);
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, Functor functor, Reducer reducer);
+  void parallelReduce(const RangeMD<3>& range, Functor functor, Reducer reducer);
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const TeamRange& range, Functor functor, Reducer reducer);
+  void parallelReduce(const TeamRange& range, Functor functor, Reducer reducer);
 
 #if (not defined(PEANO_WITH_GPU_BACKEND_CUDA) and not defined(PEANO_WITH_GPU_BACKEND_HIP)) or defined(__CUDACC__) \
   or defined(__HIPCC__)

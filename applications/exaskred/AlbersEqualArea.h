@@ -9,6 +9,7 @@ namespace applications::exahype2::exaskred::projection {
   struct AlbersEqualArea;
 } // namespace applications::exahype2::exaskred::projection
 
+TARGET_DECLARE
 /**
  * Maps geographic coordinates on an ellipsoid to the metric coordinates of the mesh and back with
  * the Albers equal-area conic projection.
@@ -54,5 +55,6 @@ private:
     double eccentricity
   );
 };
+TARGET_DECLARE_END
 
-#include "AlbersEqualArea.cpph"
+#include "applications/exaskred/AlbersEqualArea.cpph"

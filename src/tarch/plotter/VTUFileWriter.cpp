@@ -104,7 +104,14 @@ tarch::plotter::VTUFileWriter::write(
   writeVTU(mesh, directory / (snapshotName + "-rank-" + std::to_string(rank) + ".vtu"));
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    _snapshots.push_back({time, snapshotName + ".pvtu"});
+    const Snapshot snapshot{time, snapshotName + ".pvtu"};
+    // getSnapshotName() returns one name for time stamps that agree to six decimals. The series
+    // lists that file once.
+    if (not _snapshots.empty() and _snapshots.back().file == snapshot.file) {
+      _snapshots.back() = snapshot;
+    } else {
+      _snapshots.push_back(snapshot);
+    }
     writePVTU(mesh, directory / (snapshotName + ".pvtu"), snapshotName);
     writePVD(directory / (filename + ".pvd"));
   }

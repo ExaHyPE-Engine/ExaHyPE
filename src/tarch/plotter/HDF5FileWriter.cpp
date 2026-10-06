@@ -95,9 +95,9 @@ tarch::plotter::HDF5FileWriter::write(
   unsigned long long totalCells     = localNumberOfCells;
   unsigned long long totalTopology  = localTopologySize;
 
-  const auto& rank          = tarch::mpi::Rank::getInstance();
-  MPI_Comm    comm          = rank.getCommunicator();
-  const bool  useParallelIO = rank.getNumberOfRanks() > 1;
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const MPI_Comm comm          = rank.getCommunicator();
+  const bool     useParallelIO = rank.getNumberOfRanks() > 1;
   if (useParallelIO) {
     const unsigned long long local[3]  = {localNumberOfPoints, localNumberOfCells, localTopologySize};
     unsigned long long       prefix[3] = {0ULL, 0ULL, 0ULL};
@@ -412,7 +412,14 @@ tarch::plotter::HDF5FileWriter::write(
     tarch::terminateWithError("The plotter cannot write the file '" + xmfFilePath.string() + "'.");
   }
 
-  _snapshots.push_back({time, grid.str()});
+  const Snapshot snapshot{time, snapshotName + ".h5", grid.str()};
+  // getSnapshotName() returns one name for time stamps that agree to six decimals. The series lists
+  // that file once.
+  if (not _snapshots.empty() and _snapshots.back().file == snapshot.file) {
+    _snapshots.back() = snapshot;
+  } else {
+    _snapshots.push_back(snapshot);
+  }
   writeSeries(directory / (filename + ".xmf"));
 }
 

@@ -11,19 +11,19 @@
 #define LITTLE_ENDIAN
 #endif
 
-#ifndef PEANO_WITH_ALIGNMENT
-#error "PEANO_WITH_ALIGNMENT must be provided by the build system (CMake)"
+#if not defined(PEANO_WITH_ALIGNMENT)
+#error "Peano compiles inside its CMake build only."
 #endif
 
-#ifndef PEANO_WITH_SIMDLEN
-#error "PEANO_WITH_SIMDLEN must be provided by the build system (CMake)"
+#if not defined(PEANO_WITH_SIMDLEN)
+#error "Peano compiles inside its CMake build only."
 #endif
 
-#ifndef PEANO_ASSERTIONS
+#if not defined(PEANO_ASSERTIONS)
 #define PEANO_ASSERTIONS 0
 #endif
 
-#ifndef PEANO_DEBUG
+#if not defined(PEANO_DEBUG)
 #define PEANO_DEBUG 0
 #endif
 
@@ -40,7 +40,13 @@
 #define STR(...) STR1(__VA_ARGS__)
 #define _PRAGMA(...) _Pragma(STR(__VA_ARGS__))
 
+// Clang compiles the floating-point operations of a build with PEANO_WITH_FPE as constrained
+// intrinsics. LLVM cannot vectorise a constrained intrinsic.
+#if defined(PEANO_WITH_FPE)
+#define SIMD(...)
+#else
 #define SIMD(...) _PRAGMA(omp simd __VA_ARGS__ simdlen(PEANO_WITH_SIMDLEN))
+#endif
 
 #if defined(__CUDA_ARCH__) or defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER) \
   or defined(__NVCOMPILER) or defined(__PGI)

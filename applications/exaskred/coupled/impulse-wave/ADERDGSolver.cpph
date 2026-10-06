@@ -5,8 +5,9 @@
 
 TARGET_DECLARE
 namespace applications::exahype2::exaskred {
-  INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getSlidePhysics();
-  INLINE_METHOD GPU_CALLABLE_METHOD constexpr landslide::Physics getWaterAdmissibilityPhysics();
+  INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics getSlidePhysics();
+  INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
+  getWaterAdmissibilityPhysics();
 } // namespace applications::exahype2::exaskred
 
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
@@ -26,14 +27,14 @@ applications::exahype2::exaskred::getSlidePhysics() {
 
 /**
  * Returns the physical parameters under which the admissibility check of the granular layer tests
- * the water layer: The dry threshold of the water and no friction.
+ * the water layer. These parameters combine the dry threshold of the water with zero friction.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr applications::exahype2::exaskred::landslide::Physics
 applications::exahype2::exaskred::getWaterAdmissibilityPhysics() {
   return {g, hThresholdWater, 0.0, 0.0, rhoWater, rhoWater, 0.0, 0.0, 0.0};
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD void
+INLINE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   double* const NOALIAS                                         Q,
   const tarch::la::Vector<DIMENSIONS, double>&                  x,
@@ -93,7 +94,7 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const int                                    normal,
   double* const NOALIAS                        F
 ) {
-  ::applications::exahype2::exaskred::coupled::flux<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::coupled::flux<Shortcuts, NumberOfUnknowns>(
     Q,
     x,
     h,
@@ -115,7 +116,7 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const double                                 dt,
   const int                                    normal
 ) {
-  return ::applications::exahype2::exaskred::coupled::maxEigenvalue<Shortcuts>(
+  return applications::exahype2::exaskred::coupled::maxEigenvalue<Shortcuts>(
     Q,
     x,
     h,
@@ -139,7 +140,7 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const int                                    normal,
   double* const NOALIAS                        BTimesDeltaQ
 ) {
-  ::applications::exahype2::exaskred::coupled::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::coupled::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
     deltaQ,
     x,
@@ -163,7 +164,7 @@ applications::exahype2::exaskred::ADERDGSolver::diffusiveSourceTerm(
   const double                                 dt,
   double* const NOALIAS                        S
 ) {
-  ::applications::exahype2::exaskred::coupled::diffusiveSourceTerm<
+  applications::exahype2::exaskred::coupled::diffusiveSourceTerm<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
@@ -184,7 +185,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  return ::applications::exahype2::exaskred::coupled::solveRiemannProblem<
+  return applications::exahype2::exaskred::coupled::solveRiemannProblem<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables,
@@ -206,7 +207,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  return ::applications::exahype2::exaskred::coupled::solveSubcellRiemannProblem<
+  return applications::exahype2::exaskred::coupled::solveSubcellRiemannProblem<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
@@ -224,15 +225,15 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>&                  h
 ) {
-  using SlideLayer = ::applications::exahype2::exaskred::coupled::SlideLayer<Shortcuts>;
-  if (not ::applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
+  using SlideLayer = applications::exahype2::exaskred::coupled::SlideLayer<Shortcuts>;
+  if (not applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
         Shortcuts,
         NumberOfUnknowns,
         NumberOfAuxiliaryVariables
       >(Q, numberOfStates, h, getWaterAdmissibilityPhysics(), 0.0)) {
     return false;
   }
-  if (not ::applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
+  if (not applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
         SlideLayer,
         NumberOfUnknowns,
         NumberOfAuxiliaryVariables
@@ -241,7 +242,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   }
   const int nodesPerAxis = static_cast<int>(std::lround(std::sqrt(static_cast<double>(numberOfStates))));
   if (numberOfStates > 1 and nodesPerAxis * nodesPerAxis == numberOfStates) {
-    return ::applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<
+    return applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<
       SlideLayer,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables
@@ -255,14 +256,17 @@ applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
 ) {
-  for (int observable = 0; observable < NumberOfDMPObservables; observable++) {
+  static_assert(
+    NumberOfObservables <= NumberOfUnknowns,
+    "ExaSkred supports a number_of_dmp_observables up to the number of unknowns only."
+  );
+  for (int observable = 0; observable < NumberOfObservables; observable++) {
     observables[observable] = Q[observable];
   }
 }
 
 /**
- * Returns at least waterDmpRelaxation for the water observables. A relaxation as small as the dry
- * threshold would flag every wave in the deep basin.
+ * Returns at least waterDmpRelaxation for the water observables.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
@@ -272,7 +276,7 @@ applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
   if (observable < 3) {
     return std::max(specifiedRelaxationParameter, waterDmpRelaxation);
   }
-  return ::applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(
+  return applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(
     observable - 3,
     specifiedRelaxationParameter,
     getSlidePhysics()

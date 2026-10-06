@@ -55,8 +55,8 @@ function(peano_apply_flags)
     -Werror
   )
 
-  # The -Xcompiler warnings reach only the host compiler, which has to be GCC or Clang. The nvcc
-  # warnings below cover the device code.
+  # The -Xcompiler warnings reach only the host compiler. That compiler has to be GCC or Clang. The
+  # nvcc warnings below cover the device code.
   set(PEANO_CUDA_WARNINGS "")
   foreach(_peano_warning ${PEANO_CXX_WARNINGS})
     list(APPEND PEANO_CUDA_WARNINGS "-Xcompiler=${_peano_warning}")
@@ -64,7 +64,7 @@ function(peano_apply_flags)
 
   list(APPEND PEANO_CUDA_WARNINGS
     -Werror=all-warnings
-    -Wreorder # Diagnose device member initialisation order.
+    -Wreorder # nvcc checks the member initialisation order of device code.
     -Wdefault-stream-launch
     -Wext-lambda-captures-this
     #-Xptxas=--warn-on-spills # Diagnose device register spills.
@@ -95,8 +95,8 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-contract=on>
-    # GCC, and Clang in the CUDA mode of AdaptiveCpp and Kokkos, fuse operations across statements
-    # by default, so two code paths of one kernel round differently.
+    # By default, GCC and the CUDA mode of Clang in AdaptiveCpp and Kokkos fuse operations across
+    # statements. Two code paths of one kernel then round differently.
     $<$<COMPILE_LANG_AND_ID:C,GNU>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-ffp-contract=on>
@@ -126,7 +126,7 @@ function(peano_apply_flags)
     elseif(PEANO_WITH_SANITIZER STREQUAL "thread")
       set(_peano_sanitize_flag -fsanitize=thread)
     else()
-      message(FATAL_ERROR "Invalid PEANO_WITH_SANITIZER='${PEANO_WITH_SANITIZER}'. Expected none, address, undefined, address+undefined or thread.")
+      message(FATAL_ERROR "PEANO_WITH_SANITIZER accepts none, address, undefined, address+undefined or thread only (got '${PEANO_WITH_SANITIZER}').")
     endif()
     # Frame pointers and line tables retain source locations in optimised sanitizer reports.
     set(PEANO_SANITIZER_FLAGS ${_peano_sanitize_flag} -g -fno-omit-frame-pointer)
@@ -142,7 +142,8 @@ function(peano_apply_flags)
   if(PEANO_WITH_FPE)
     target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_FPE)
     # Frame pointers and debug information keep fault locations in fatal reports. Strict exception
-    # semantics forbid speculative operations, whose exceptions a trap would report.
+    # semantics forbid speculative operations. A trap would report the exceptions of such an
+    # operation.
     target_compile_options(PeanoOptions INTERFACE
       $<$<COMPILE_LANG_AND_ID:C,GNU>:-ftrapping-math>
       $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ftrapping-math>
@@ -180,7 +181,7 @@ function(peano_apply_flags)
     )
   endif()
 
-  if(NOT PEANO_WITH_SANITIZER STREQUAL "none" OR PEANO_WITH_FPE)
+  if(NOT PEANO_WITH_SANITIZER STREQUAL "none")
     target_compile_options(PeanoOptions INTERFACE
       $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang,IntelLLVM>:-Wno-pass-failed>
       $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang,IntelLLVM>:-Wno-pass-failed>
