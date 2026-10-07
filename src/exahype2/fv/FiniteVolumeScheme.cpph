@@ -873,6 +873,50 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::computeVolumeUpdate
 }
 
 /**
+ * Writes into flux the flux along the positive normal that computeVolumeUpdate() applies to the
+ * volume through its face on patch face patchFace. The volume lies on that patch face.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::computePatchFaceFlux(
+  const int                                    volume,
+  const StoragePrecision* NOALIAS const        patch,
+  const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  const int                                    patchFace,
+  ComputePrecision* NOALIAS const              flux
+) {
+  assertion(volume >= 0 and volume < VolumesPerPatch, volume, VolumesPerPatch);
+  assertion(patchFace >= 0 and patchFace < peano4::FacesPerCell, patchFace);
+  Derived::Reconstruction::template patchFaceFlux<
+    Derived,
+    PatchSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    exahype2::terms::HasFlux<Derived, ComputePrecision>,
+    exahype2::terms::HasNonconservativeProduct<Derived, ComputePrecision>,
+    exahype2::terms::HasSourceTerm<Derived, ComputePrecision>,
+    exahype2::terms::HasRiemannSolver<Derived, ComputePrecision>,
+    StoragePrecision,
+    ComputePrecision
+  >(patch,
+    faces,
+    peano4::dDelinearised(volume, PatchSize),
+    patchFace,
+    cellCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize,
+    boundaryFaces,
+    flux);
+}
+
+/**
  * Calls postprocessUpdatedPatch of Derived on updated when Derived defines it.
  */
 template <typename Derived, typename ComputePrecision>

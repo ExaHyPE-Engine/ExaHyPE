@@ -8,6 +8,7 @@
 #include "exahype2/dg/limiting/tests/LimiterTestData.h"
 #include "exahype2/dg/tests/KernelTestData.h"
 #include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/singlestep/SubcellStep.h"
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/MaxEigenvalue.h"
 #include "exahype2/terms/RiemannSolver.h"
@@ -30,6 +31,47 @@ namespace {
   TARGET_DECLARE
   constexpr int HaloValuesPerFace = Scheme::HaloValuesPerFace;
   constexpr int HaloValuesPerCell = peano4::FacesPerCell * HaloValuesPerFace;
+
+  /**
+   * Advances the subgrid of one cell with the single-step subcell family and projects it onto the
+   * nodes, as the limiter recomputes a cell.
+   */
+  template <typename Solver>
+  INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics recomputeSubgrid(
+    double* const                                nodes,
+    double* const                                subcells,
+    double* const                                evolvedSubcells,
+    const double* const                          haloHalves[peano4::FacesPerCell],
+    const double* const                          subcellsToNodes,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    const int                                    boundaryFaces,
+    const double                                 timeStamp,
+    const double                                 timeStepSize
+  ) {
+    const double* const noAppliedFluxes[peano4::FacesPerCell]{};
+    exahype2::fv::singlestep::SubcellStep<Solver, double, double>::advanceSubgrid(
+      subcells,
+      evolvedSubcells,
+      haloHalves,
+      cellCentre,
+      cellSize,
+      boundaryFaces,
+      timeStamp,
+      timeStepSize,
+      noAppliedFluxes,
+      nullptr
+    );
+    return exahype2::dg::limiting::SubcellScheme<Solver, double>::projectRecomputedSubgrid(
+      nodes,
+      subcells,
+      subcellsToNodes,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize
+    );
+  }
   TARGET_DECLARE_END
 
   constexpr double Tolerance = 1.0e-12;
@@ -106,7 +148,7 @@ namespace {
       const tarch::la::Vector<DIMENSIONS, double> cellSize(cellSizes + coordinateOffset);
       accumulator = exahype2::dg::MaxEigenvalueStatistics::combine(
         accumulator,
-        Scheme::recompute(
+        recomputeSubgrid<exahype2::dg::limiting::tests::StubSolver>(
           nodes + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
           subcells + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
           scratch + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
@@ -377,7 +419,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testAConstantSubgridRecomputes
     haloHalves[faceNumber] = halo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloValuesPerFace;
   }
 
-  const auto statistics = Scheme::recompute(
+  const auto statistics = recomputeSubgrid<exahype2::dg::limiting::tests::StubSolver>(
     nodes.data(),
     subcells.data(),
     evolved.data(),
@@ -414,7 +456,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testAFixedRuleReportsNoWaveSpe
     haloHalves[faceNumber] = halo.data() + static_cast<std::ptrdiff_t>(faceNumber) * HaloValuesPerFace;
   }
 
-  const auto statistics = FixedScheme::recompute(
+  const auto statistics = recomputeSubgrid<exahype2::dg::limiting::tests::FixedStepStubSolver>(
     nodes.data(),
     subcells.data(),
     evolved.data(),
@@ -534,7 +576,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryCellOfADeviceRangeRec
     const tarch::la::Vector<DIMENSIONS, double> cellSize(geometry.cellSizes.data() + coordinateOffset);
     hostStatistics = exahype2::dg::MaxEigenvalueStatistics::combine(
       hostStatistics,
-      Scheme::recompute(
+      recomputeSubgrid<exahype2::dg::limiting::tests::StubSolver>(
         hostNodes.data() + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
         hostSubcells.data() + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
         evolved.data(),

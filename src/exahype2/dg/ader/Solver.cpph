@@ -257,11 +257,11 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   this->_stateExchange.post();
   this->_fluxExchange.post();
   exahype2::interpolateCoarseFaces(partition, Local, interpolateHalves);
-  this->solveRiemannProblems(partition, Local, timeStamp, timeStepSize);
+  this->solveRiemannProblems(partition, Local, timeStamp, timeStepSize, getAppliedFluxes());
   this->_stateExchange.wait();
   this->_fluxExchange.wait();
   exahype2::interpolateCoarseFaces(partition, Remote, interpolateHalves);
-  this->solveRiemannProblems(partition, Remote, timeStamp, timeStepSize);
+  this->solveRiemannProblems(partition, Remote, timeStamp, timeStepSize, getAppliedFluxes());
 
   exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
   this->_fluxExchange.post();
@@ -359,8 +359,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     exahype2::interpolateCoarseFaces(partition, Local, interpolatePartnerHalves);
     copyFaceHalvesFromPartner(partition, partner, Local);
     partner.copyFaceHalvesFromPartner(partition, *this, Local);
-    this->solveRiemannProblems(partition, Local, timeStamp, timeStepSize);
-    partner.solveRiemannProblems(partition, Local, partnerTimeStamp, timeStepSize);
+    this->solveRiemannProblems(partition, Local, timeStamp, timeStepSize, getAppliedFluxes());
+    partner.solveRiemannProblems(partition, Local, partnerTimeStamp, timeStepSize, partner.getAppliedFluxes());
     this->_stateExchange.wait();
     this->_fluxExchange.wait();
     partner._stateExchange.wait();
@@ -369,8 +369,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     exahype2::interpolateCoarseFaces(partition, Remote, interpolatePartnerHalves);
     copyFaceHalvesFromPartner(partition, partner, Remote);
     partner.copyFaceHalvesFromPartner(partition, *this, Remote);
-    this->solveRiemannProblems(partition, Remote, timeStamp, timeStepSize);
-    partner.solveRiemannProblems(partition, Remote, partnerTimeStamp, timeStepSize);
+    this->solveRiemannProblems(partition, Remote, timeStamp, timeStepSize, getAppliedFluxes());
+    partner.solveRiemannProblems(partition, Remote, partnerTimeStamp, timeStepSize, partner.getAppliedFluxes());
 
     exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
     exahype2::restrictFineFaces(partition, Remote, restrictPartnerFluxes);
@@ -661,6 +661,20 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   }
   assertion(counts.unconvergedCells >= 0, counts.unconvergedCells);
   _unconvergedPredictions += counts.unconvergedCells;
+}
+
+/**
+ * Returns the pool in which the Riemann problems store the numerical flux of every side for the
+ * limiter, or an empty view without a limiter.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+INLINE_METHOD typename exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::Base::FluxPool::View
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getAppliedFluxes() {
+  if constexpr (HasLimiter) {
+    return _limiter->getAppliedFluxes();
+  } else {
+    return {};
+  }
 }
 
 /**

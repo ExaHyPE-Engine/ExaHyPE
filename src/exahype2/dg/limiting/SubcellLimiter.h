@@ -16,7 +16,11 @@
 #include "tarch/accelerator/MemoryLocation.h"
 
 namespace exahype2::dg::limiting {
-  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  template <
+    typename Derived,
+    typename StoragePrecision,
+    typename ComputePrecision,
+    template <typename, typename, typename> class SubcellFamily>
   class SubcellLimiter;
 } // namespace exahype2::dg::limiting
 
@@ -25,8 +29,17 @@ namespace exahype2::dg::limiting {
  * physical admissibility test or the discrete maximum principle recomputes its step with its
  * first ring of neighbours on the subcell scheme. The second ring supplies its subgrid. The scheme
  * follows Dumbser, Zanotti, Loubère and Diot, J. Comput. Phys. 278 (2014) 47-75.
+ *
+ * SubcellFamily<Derived, StoragePrecision, ComputePrecision> advances the subgrids of the
+ * recomputing cells, such as exahype2::fv::singlestep::SubcellStep or
+ * exahype2::fv::ader::SubcellStep. On a face with one recomputing side, the step takes the other
+ * side from the subgrid of that side.
  */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <
+  typename Derived,
+  typename StoragePrecision,
+  typename ComputePrecision,
+  template <typename, typename, typename> class SubcellFamily>
 class exahype2::dg::limiting::SubcellLimiter final {
 public:
   // The defaulted parameter defers the lookup in Derived to the use, where Derived is complete.
@@ -37,6 +50,8 @@ public:
   using SubcellScheme = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
   using CellPool      = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool    = tarch::accelerator::ChunkedMemoryPool<int>;
+  using FluxPool      = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using Family        = SubcellFamily<Derived, StoragePrecision, ComputePrecision>;
 
   SubcellLimiter()                                 = delete;
   SubcellLimiter(const SubcellLimiter&)            = delete;
@@ -62,6 +77,7 @@ public:
   INLINE_METHOD void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid, const CellPool& solution);
 
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<int>::View getStatuses();
+  [[nodiscard]] INLINE_METHOD typename FluxPool::View getAppliedFluxes();
   [[nodiscard]] INLINE_METHOD const StatusPool& downloadStatuses();
   [[nodiscard]] INLINE_METHOD const CellPool& downloadSubcells();
   [[nodiscard]] INLINE_METHOD int getNumberOfTroubledCells() const;
@@ -106,6 +122,11 @@ private:
   CellPool   _previousSolution{SubcellScheme::ValuesPerCell};
   CellPool   _subcells{SubcellScheme::SubcellValuesPerCell};
   CellPool   _subcellHalo{SubcellScheme::HaloValuesPerFace};
+  /**
+   * The numerical flux that each side of a face applies in the Galerkin step. The Riemann problems
+   * of every step fill it, since the cells that recompute are known only after the step.
+   */
+  FluxPool   _appliedFluxes{SubcellScheme::AppliedFluxValuesPerFace};
   StatusPool _statuses{exahype2::dg::limiting::NumberOfStatusEntries};
   StatusPool _faceStatuses{Detector::StatusValuesPerFace};
   CellPool   _referenceExtrema{Detector::ExtremaPerCell};
@@ -138,10 +159,7 @@ private:
    */
   bool _holdsExtremaOfSolution{false};
 
-  /**
-   * One evolved subgrid per scratch chunk of the recompute dispatch.
-   */
-  tarch::accelerator::Buffer<StoragePrecision> _recomputeScratch{tarch::MemoryLocation::Device};
+  Family _family{};
 };
 
 #include "exahype2/dg/limiting/SubcellLimiter.cpph"

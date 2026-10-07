@@ -9,10 +9,10 @@
 
 #include <array>
 
-namespace exahype2::fv::timestepping {
+namespace exahype2::fv::ader {
   template <typename Basis, typename Precision>
-  struct ADERPredictorTables;
-} // namespace exahype2::fv::timestepping
+  struct PredictorTables;
+} // namespace exahype2::fv::ader
 
 TARGET_DECLARE
 /**
@@ -25,7 +25,7 @@ TARGET_DECLARE
  * local constexpr instance can hand view() to the predictor in device code, too.
  */
 template <typename Basis, typename Precision>
-struct exahype2::fv::timestepping::ADERPredictorTables final {
+struct exahype2::fv::ader::PredictorTables final {
 private:
   static constexpr int NumberOfNodes = Basis::NumberOfNodes;
   static constexpr int NodesPerCell  = Basis::NodesPerCell;

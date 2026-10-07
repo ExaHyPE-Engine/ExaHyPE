@@ -846,10 +846,19 @@ exahype2::dg::solveRiemannProblemOnFace(
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::SolveRiemannProblems<Derived, ComputePrecision>::operator()(const int entry) const {
-  const int face = faces[entry];
+  constexpr int FluxElementsPerFace =
+    exahype2::dg::getNodesPerFace(Derived::DGOrder + 1) * Derived::NumberOfUnknowns;
+  const int               face    = faces[entry];
+  ComputePrecision* const fluxes  = faceFluxes.getChunk(face);
+  ComputePrecision* const applied = appliedFluxes.segments == nullptr ? nullptr : appliedFluxes.getChunk(face);
+  if (applied != nullptr) {
+    for (int value = 0; value < 2 * FluxElementsPerFace; value++) {
+      applied[value] = fluxes[value];
+    }
+  }
   exahype2::dg::solveRiemannProblemOnFace<Derived>(
     faceStates.getChunk(face),
-    faceFluxes.getChunk(face),
+    fluxes,
     quadraturePoints,
     faceQuadratureWeights,
     partition.getFaceCentre(face),
@@ -859,6 +868,14 @@ exahype2::dg::SolveRiemannProblems<Derived, ComputePrecision>::operator()(const 
     partition.getFaceNormal(face),
     exahype2::dg::getBoundaryFaceNumber(partition, face)
   );
+  // The halves now hold the numerical flux minus the predicted flux of their side, times the sign of
+  // the outward normal of that side.
+  if (applied != nullptr) {
+    for (int value = 0; value < FluxElementsPerFace; value++) {
+      applied[value]                       = fluxes[value] + applied[value];
+      applied[FluxElementsPerFace + value] = applied[FluxElementsPerFace + value] - fluxes[FluxElementsPerFace + value];
+    }
+  }
 }
 
 template <typename Derived, typename ComputePrecision>

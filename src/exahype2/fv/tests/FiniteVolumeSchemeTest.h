@@ -48,6 +48,7 @@ private:
   void testLimitedLinearAverageConvergesAtSecondOrder();
   void testConstantConvergesAtFirstOrder();
   void testLimitedLinearMinmodKeepsStepInBounds();
+  void testPatchFaceFluxesBalanceTheUpdate();
   void testLimitedLinearZeroSlopesMatchConstant();
   void testLimitedLinearNcpAdvectionConvergesAtSecondOrder();
   void testLimitedLinearCustomRiemannIncludesVolumeNonconservativeProduct();

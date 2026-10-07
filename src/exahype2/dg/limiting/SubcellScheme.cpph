@@ -76,65 +76,21 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubgrid
 }
 
 /**
- * Advances the subgrid by one step, projects it onto the nodes and returns its wave speeds, or
- * empty maxima with a fixed time step rule. A solver with a fallback reconstruction repeats the
- * step with it when an evolved subcell fails the physical admissibility test. Bit f of
- * boundaryFaces is set when face f lies on the domain boundary.
+ * Projects the advanced subgrid onto the nodes and returns its wave speeds, or empty maxima with a
+ * fixed time step rule.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
-exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectRecomputedSubgrid(
   StoragePrecision* NOALIAS const              nodes,
-  StoragePrecision* NOALIAS const              subcells,
-  StoragePrecision* NOALIAS const              evolvedSubcells,
-  const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* NOALIAS const        subcells,
   const StoragePrecision* NOALIAS const        subcellsToNodes,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const int                                    boundaryFaces,
   const double                                 timeStamp,
   const double                                 timeStepSize
 ) {
-  using FallbackReconstruction = typename Derived::FallbackReconstruction;
-  advanceSubcells<typename Derived::Reconstruction>(
-    subcells,
-    evolvedSubcells,
-    haloHalves,
-    cellCentre,
-    cellSize,
-    boundaryFaces,
-    timeStamp,
-    timeStepSize
-  );
-  if constexpr (
-    exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision> and not std::is_void_v<FallbackReconstruction>
-  ) {
-    bool needsFallback = false;
-    for (int subcell = 0; subcell < SubcellsPerCell and not needsFallback; subcell++) {
-      needsFallback = not Derived::isPhysicallyAdmissible(
-        evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData,
-        1,
-        cellCentre,
-        cellSize
-      );
-    }
-    if (needsFallback) {
-      advanceSubcells<FallbackReconstruction>(
-        subcells,
-        evolvedSubcells,
-        haloHalves,
-        cellCentre,
-        cellSize,
-        boundaryFaces,
-        timeStamp,
-        timeStepSize
-      );
-    }
-  }
-  for (int value = 0; value < SubcellValuesPerCell; value++) {
-    subcells[value] = evolvedSubcells[value];
-  }
   projectSubcellsOntoNodes(subcells, nodes, subcellsToNodes);
   if constexpr (ReportEigenvalues) {
     return reduceMaxEigenvalues(subcells, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize);
@@ -144,102 +100,31 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
 }
 
 /**
- * Runs recompute() on a host thread. On a device the threads of the team divide the subcells and
- * the nodes of the cell among themselves in every phase of recompute(), and every thread returns
- * the wave speeds of its subcells.
+ * Runs projectRecomputedSubgrid() on a host thread. On a device the threads of the team divide the
+ * nodes and the subcells of the cell among themselves, and every thread returns the wave speeds of
+ * its subcells.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
-exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeInTeam(
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectRecomputedSubgridInTeam(
   [[maybe_unused]] const tarch::accelerator::TeamHandle team,
   StoragePrecision* NOALIAS const                       nodes,
-  StoragePrecision* NOALIAS const                       subcells,
-  StoragePrecision* NOALIAS const                       evolvedSubcells,
-  const StoragePrecision* const                         haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* NOALIAS const                 subcells,
   const StoragePrecision* NOALIAS const                 subcellsToNodes,
   const tarch::la::Vector<DIMENSIONS, double>&          cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&          cellSize,
-  const int                                             boundaryFaces,
   const double                                          timeStamp,
   const double                                          timeStepSize
 ) {
   exahype2::dg::MaxEigenvalueStatistics statistics;
   COMPILE_IF_ON_HOST(
-    statistics = recompute(
-      nodes,
-      subcells,
-      evolvedSubcells,
-      haloHalves,
-      subcellsToNodes,
-      cellCentre,
-      cellSize,
-      boundaryFaces,
-      timeStamp,
-      timeStepSize
-    );
+    statistics =
+      projectRecomputedSubgrid(nodes, subcells, subcellsToNodes, cellCentre, cellSize, timeStamp, timeStepSize);
   )
   COMPILE_IF_ON_DEVICE(
-    using Reconstruction         = typename Derived::Reconstruction;
-    using FallbackReconstruction = typename Derived::FallbackReconstruction;
-    const int thread             = tarch::accelerator::getThreadOfTeam(team);
-    const int threads            = tarch::accelerator::getNumberOfThreadsPerTeam(team);
-    for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
-      static_cast<void>(
-        exahype2::fv::FiniteVolumeScheme<SubgridSolver<Reconstruction>, ComputePrecision>::computeVolumeUpdate(
-          subcell,
-          subcells,
-          haloHalves,
-          cellCentre,
-          cellSize,
-          timeStamp,
-          timeStepSize,
-          boundaryFaces,
-          evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData
-        )
-      );
-    } if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision> and not std::is_void_v<FallbackReconstruction>) {
-      // Every thread marks in the team scratch whether one of its evolved subcells fails.
-      unsigned char* const failures = tarch::accelerator::getTeamScratch(team);
-      bool                 fails    = false;
-      for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
-        fails = fails
-          or not Derived::isPhysicallyAdmissible(
-                  evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData,
-                  1,
-                  cellCentre,
-                  cellSize
-          );
-      }
-      failures[thread] = fails ? 1 : 0;
-      tarch::accelerator::teamBarrier(team);
-      bool needsFallback = false;
-      for (int other = 0; other < threads; other++) {
-        needsFallback = needsFallback or failures[other] != 0;
-      }
-      tarch::accelerator::teamBarrier(team);
-      if (needsFallback) {
-        for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
-          static_cast<void>(exahype2::fv::FiniteVolumeScheme<SubgridSolver<FallbackReconstruction>, ComputePrecision>::
-                              computeVolumeUpdate(
-                                subcell,
-                                subcells,
-                                haloHalves,
-                                cellCentre,
-                                cellSize,
-                                timeStamp,
-                                timeStepSize,
-                                boundaryFaces,
-                                evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData
-                              ));
-        }
-      }
-    } tarch::accelerator::teamBarrier(team);
-    for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
-      for (int value = subcell * NumberOfData; value < (subcell + 1) * NumberOfData; value++) {
-        subcells[value] = evolvedSubcells[value];
-      }
-    } tarch::accelerator::teamBarrier(team);
+    const int thread  = tarch::accelerator::getThreadOfTeam(team);
+    const int threads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
     for (int node = thread; node < exahype2::dg::getNodesPerCell(NodesPerAxis); node += threads) {
       projectSubcellsOntoNode(subcells, nodes, subcellsToNodes, node);
     } if constexpr (ReportEigenvalues) {
@@ -343,38 +228,6 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::forEachSubcell
     const auto subcellCentre = exahype2::fv::getVolumeCentre(cellCentre, cellSize, SubcellsPerAxis, subcell);
     functor(values + static_cast<std::ptrdiff_t>(index) * NumberOfData, subcellCentre, subcellSize);
   });
-}
-
-/**
- * Runs the finite-volume scheme with the reconstruction Reconstruct on one subgrid.
- */
-template <typename Derived, typename ComputePrecision>
-template <typename Reconstruct, typename StoragePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::advanceSubcells(
-  const StoragePrecision* NOALIAS const        subcells,
-  StoragePrecision* NOALIAS const              evolvedSubcells,
-  const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const int                                    boundaryFaces,
-  const double                                 timeStamp,
-  const double                                 timeStepSize
-) {
-  static_assert(
-    Reconstruct::HaloSize == HaloSize,
-    "The fallback reconstruction of the limiter needs the halo width of the primary reconstruction."
-  );
-  static_cast<void>(exahype2::fv::FiniteVolumeScheme<SubgridSolver<Reconstruct>, ComputePrecision>::update(
-    subcells,
-    evolvedSubcells,
-    haloHalves,
-    cellCentre,
-    cellSize,
-    timeStamp,
-    timeStepSize,
-    boundaryFaces
-  ));
 }
 
 /**
@@ -552,6 +405,23 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
   return Derived::solveSubcellRiemannProblem(QL, QR, x, h, t, dt, normal, isBoundaryFace, faceIndex, FL, FR);
 }
 
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::boundaryConditions(
+  const Precision* const                       inside,
+  Precision* const                             outside,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const int                                    normal
+)
+  requires exahype2::terms::HasBoundaryConditions<Derived, Precision>
+{
+  Derived::boundaryConditions(inside, outside, x, h, t, normal);
+}
+
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::ProjectSubgridsOntoFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
@@ -590,30 +460,21 @@ exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrecision>::operator()(
+exahype2::dg::limiting::ProjectRecomputedSubgrids<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int                                             entry,
   [[maybe_unused]] const tarch::accelerator::TeamHandle team,
   exahype2::dg::MaxEigenvalueStatistics&                accumulator
 ) const {
-  const int               slot = cells[entry];
-  const StoragePrecision* haloHalves[peano4::FacesPerCell];
-  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    haloHalves[faceNumber] = halo.getChunk(partition.getCellFace(slot, faceNumber));
-  }
-  StoragePrecision* const evolvedSubcells =
-    scratch + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::SubcellValuesPerCell;
+  const int                                   slot       = cells[entry];
   const tarch::la::Vector<DIMENSIONS, double> centre     = partition.getCellCentre(slot);
   const tarch::la::Vector<DIMENSIONS, double> width      = partition.getCellWidth(slot);
-  const exahype2::dg::MaxEigenvalueStatistics statistics = Kernel::recomputeInTeam(
+  const exahype2::dg::MaxEigenvalueStatistics statistics = Kernel::projectRecomputedSubgridInTeam(
     team,
     nodes.getChunk(slot),
     subcells.getChunk(slot),
-    evolvedSubcells,
-    haloHalves,
     subcellsToNodes,
     centre,
     width,
-    exahype2::fv::getBoundaryFaceMask(partition, slot),
     timeStamp,
     timeStepSize
   );
@@ -683,3 +544,12 @@ exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecis
   return projection;
 }
 TARGET_DECLARE_END
+
+template <typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD tarch::Span<const int>
+exahype2::dg::limiting::SubcellRegion<StoragePrecision, ComputePrecision>::getCells(
+  const peano4::Adjacency adjacency
+) const {
+  return adjacency == peano4::Adjacency::Local ? tarch::Span<const int>{cells.data, localCells}
+                                                : tarch::Span<const int>{cells.data + localCells, cells.size - localCells};
+}

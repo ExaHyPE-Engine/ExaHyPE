@@ -8,7 +8,7 @@
 #include "exahype2/dg/ader/NonlinearPredictor.h"
 #include "exahype2/fv/FiniteVolumeScheme.h"
 #include "exahype2/fv/ader/PredictorTerms.h"
-#include "exahype2/fv/timestepping/ADERPredictorTables.h"
+#include "exahype2/fv/ader/PredictorTables.h"
 #include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"

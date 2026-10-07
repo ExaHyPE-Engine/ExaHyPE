@@ -1,0 +1,275 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/LevelJumps.h"
+#include "exahype2/dg/Kernels.h"
+#include "exahype2/dg/limiting/LimiterStatus.h"
+#include "exahype2/fv/ader/Kernels.h"
+#include "exahype2/terms/Flux.h"
+#include "peano4/Loop.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/Scratch.h"
+
+/**
+ * Reserves the predicted face halves of every face and builds their exchanges. Every rank calls
+ * this at the same time. The exchanges of every solver then take the same tags.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::rebuild(
+  const peano4::Partition& partition
+) {
+  _faceStates.reserve(partition.getNumberOfFaces());
+  _faceFluxes.reserve(partition.getNumberOfFaces());
+  _stateExchange.rebuild(partition);
+  _fluxExchange.rebuild(partition);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::release() {
+  _faceStates.release();
+  _faceFluxes.release();
+  _stateExchange.release();
+  _fluxExchange.release();
+  _predictorScratch.release();
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD tarch::AllocatedBytes
+exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
+  return _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes() + _stateExchange.getAllocatedBytes()
+       + _fluxExchange.getAllocatedBytes() + _predictorScratch.getAllocatedBytes();
+}
+
+/**
+ * Advances every cell of the region by one step on its subgrid. exchangeHalo(work) completes the
+ * halo of the subgrids and calls work for the local and then for the remote cells. The local faces
+ * solve their Riemann problems while the predicted halves travel, and the local cells correct while
+ * the fluxes restricted onto the coarse faces of a rank boundary travel.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename ExchangeHalo>
+INLINE_METHOD void
+exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::advance(
+  const peano4::Partition& partition,
+  const Region&            region,
+  const ExchangeHalo&      exchangeHalo,
+  const double             timeStamp,
+  const double             timeStepSize
+) {
+  static_assert(
+    Kernel::SubcellsPerAxis >= 2 * (Scheme<>::NodesPerAxis - 1),
+    "ADER-WENO needs at least 2 * order subcells per axis."
+  );
+  constexpr auto Local  = peano4::Adjacency::Local;
+  constexpr auto Remote = peano4::Adjacency::Remote;
+
+  exchangeHalo([this, &partition, &region, timeStamp, timeStepSize](const peano4::Adjacency adjacency) {
+    predict(partition, region, region.getCells(adjacency), timeStamp, timeStepSize);
+  });
+
+  const exahype2::fv::ader::InterpolateFaceHalves<Subgrid<>, ComputePrecision> interpolateHalves{
+    _faceStates.getView(),
+    _faceFluxes.getView()
+  };
+  const exahype2::fv::ader::RestrictFluxHalves<Subgrid<>, ComputePrecision> restrictFluxes{
+    partition.onDevice(),
+    _faceFluxes.getView()
+  };
+  _stateExchange.post();
+  _fluxExchange.post();
+  exahype2::interpolateCoarseFaces(partition, Local, interpolateHalves);
+  solveRiemannProblems(partition, region, Local, timeStamp, timeStepSize);
+  _stateExchange.wait();
+  _fluxExchange.wait();
+  exahype2::interpolateCoarseFaces(partition, Remote, interpolateHalves);
+  solveRiemannProblems(partition, region, Remote, timeStamp, timeStepSize);
+
+  exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
+  _fluxExchange.post();
+  exahype2::restrictFineFaces(partition, Local, restrictFluxes);
+  correct(partition, region, region.getCells(Local), timeStamp, timeStepSize);
+  _fluxExchange.wait();
+  correct(partition, region, region.getCells(Remote), timeStamp, timeStepSize);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::predict(
+  const peano4::Partition&     partition,
+  const Region&                region,
+  const tarch::Span<const int> cells,
+  const double                 timeStamp,
+  const double                 timeStepSize
+) {
+#if defined(PEANO_WITH_GPU_BACKEND)
+  const std::size_t size =
+    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(cells.size)) * Scheme<>::ScratchSize;
+  if (_predictorScratch.getSize() < size) {
+    _predictorScratch.allocate(size);
+  }
+#endif
+  double maxEigenvalue = 0.0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(cells.size),
+    exahype2::fv::ader::PredictPatches<Subgrid<>, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      cells,
+      region.subcells,
+      region.halo,
+      _faceStates.getView(),
+      _faceFluxes.getView(),
+      timeStamp,
+      timeStepSize,
+      _predictorScratch.getData()
+    },
+    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+  );
+}
+
+/**
+ * Solves the Riemann problems on the local or the remote interior, boundary and hanging faces with a
+ * recomputing side.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::solveRiemannProblems(
+  const peano4::Partition& partition,
+  const Region&            region,
+  const peano4::Adjacency  adjacency,
+  const double             timeStamp,
+  const double             timeStepSize
+) {
+  const auto faces = partition.onDevice().getFaces(adjacency, peano4::FaceKind::Interior, peano4::FaceKind::Hanging);
+  double     maxEigenvalue = 0.0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(faces.size),
+    exahype2::fv::ader::SolveSubcellRiemannProblems<Derived, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      faces,
+      _faceStates.getView(),
+      _faceFluxes.getView(),
+      region.faceStatuses,
+      region.appliedFluxes,
+      Derived::template SubcellProjection<double>::NodesToSubcells1D,
+      timeStamp,
+      timeStepSize
+    },
+    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+  );
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::correct(
+  const peano4::Partition&     partition,
+  const Region&                region,
+  const tarch::Span<const int> cells,
+  const double                 timeStamp,
+  const double                 timeStepSize
+) {
+  double maxEigenvalue = 0.0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(cells.size),
+    exahype2::fv::ader::CorrectPatches<Subgrid<>, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      cells,
+      region.subcells,
+      std::as_const(_faceFluxes).getView(),
+      timeStamp,
+      timeStepSize
+    },
+    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+  );
+}
+
+TARGET_DECLARE
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::ader::SolveSubcellRiemannProblems<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int entry,
+  double&   accumulator
+) const {
+  const int        face               = faces[entry];
+  const int* const statusHalves       = faceStatuses.getChunk(face);
+  const bool       lowerRecomputes    = exahype2::dg::limiting::runsSubcellScheme(
+    static_cast<exahype2::dg::limiting::LimiterStatus>(statusHalves[0])
+  );
+  const bool       upperRecomputes    = exahype2::dg::limiting::runsSubcellScheme(
+    static_cast<exahype2::dg::limiting::LimiterStatus>(statusHalves[1])
+  );
+  const int        boundaryFaceNumber = exahype2::dg::getBoundaryFaceNumber(partition, face);
+  if (not lowerRecomputes and not upperRecomputes) {
+    return;
+  }
+  const tarch::la::Vector<DIMENSIONS, double> faceCentre = partition.getFaceCentre(face);
+  const tarch::la::Vector<DIMENSIONS, double> faceWidth  = partition.getFaceWidth(face);
+  const int                                   normal     = partition.getFaceNormal(face);
+  ComputePrecision* const                     states     = faceStates.getChunk(face);
+  ComputePrecision* const                     fluxes     = faceFluxes.getChunk(face);
+  if (lowerRecomputes != upperRecomputes and boundaryFaceNumber < 0) {
+    const int recomputingSide = lowerRecomputes ? 0 : 1;
+    imposeAppliedFlux(
+      appliedFluxes.getChunk(face) + recomputingSide * AppliedFluxValuesPerHalf,
+      fluxes + recomputingSide * Scheme::FluxValuesPerHalf,
+      normal
+    );
+    return;
+  }
+  accumulator = exahype2::MaxEigenvalueReduction::combine(
+    accumulator,
+    Scheme::template solveRiemannProblemsOnFace<StoragePrecision>(
+      states,
+      fluxes,
+      faceCentre,
+      faceWidth,
+      timeStamp,
+      timeStepSize,
+      normal,
+      boundaryFaceNumber
+    )
+  );
+}
+
+/**
+ * Writes the average of the Galerkin flux appliedHalf over every volume face of the subgrid into
+ * all nodes of that volume face. The subgrid then takes the flux integral over every volume face
+ * that the Galerkin cell on the other side takes. Entry [galerkinNode][subcell] of nodesToSubcells
+ * averages the Galerkin basis function galerkinNode over a subcell along one tangential axis.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::ader::SolveSubcellRiemannProblems<Derived, StoragePrecision, ComputePrecision>::imposeAppliedFlux(
+  const ComputePrecision* NOALIAS const appliedHalf,
+  ComputePrecision* NOALIAS const       fluxHalf,
+  const int                             normal
+) const {
+  constexpr int GalerkinNodesPerAxis = Kernel::NodesPerAxis;
+  constexpr int GalerkinNodesPerFace = exahype2::dg::getNodesPerFace(GalerkinNodesPerAxis);
+  for (int volumeFace = 0; volumeFace < Scheme::VolumesPerLayer; volumeFace++) {
+    const auto volume = peano4::dDelinearisedExclusive(volumeFace, Kernel::SubcellsPerAxis, normal);
+    double     average[Kernel::NumberOfUnknowns]{};
+    for (int galerkinNode = 0; galerkinNode < GalerkinNodesPerFace; galerkinNode++) {
+      const auto node   = peano4::dDelinearisedExclusive(galerkinNode, GalerkinNodesPerAxis, normal);
+      double     weight = 1.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        if (axis != normal) {
+          weight *= nodesToSubcells[node(axis) * Kernel::SubcellsPerAxis + volume(axis)];
+        }
+      }
+      for (int unknown = 0; unknown < Kernel::NumberOfUnknowns; unknown++) {
+        average[unknown] += weight * static_cast<double>(appliedHalf[galerkinNode * Kernel::NumberOfUnknowns + unknown]);
+      }
+    }
+    ComputePrecision* const flux = fluxHalf + static_cast<std::ptrdiff_t>(volumeFace) * Scheme::FluxEntries;
+    for (int node = 0; node < Scheme::NodesPerFace; node++) {
+      for (int unknown = 0; unknown < Kernel::NumberOfUnknowns; unknown++) {
+        flux[node * Kernel::NumberOfUnknowns + unknown] = static_cast<ComputePrecision>(average[unknown]);
+      }
+    }
+  }
+}
+TARGET_DECLARE_END

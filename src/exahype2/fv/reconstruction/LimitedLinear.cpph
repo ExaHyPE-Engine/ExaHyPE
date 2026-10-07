@@ -779,4 +779,128 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
     assertion(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }
 }
+/**
+ * Writes the flux along the positive normal that the update of the volume with volumeIndex applies
+ * through its face on patch face patchFace: The flux of the Riemann solver of the solver class, or
+ * the Rusanov flux with half of the non-conservative product over the face jump, between the two
+ * states evolved by half a time step that meet at the face.
+ */
+template <exahype2::fv::limiter::SlopeLimiter Limiter>
+template <
+  typename SolverType,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateCustomRiemann,
+  typename StoragePrecision,
+  typename ComputePrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::LimitedLinear<Limiter>::patchFaceFlux(
+  const StoragePrecision* NOALIAS const        inputPatch,
+  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
+  const int                                    patchFace,
+  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  ComputePrecision* NOALIAS const              flux
+) {
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  using Face = FaceTerms<NumberOfUnknowns, EvaluateNonconservativeProduct, EvaluateCustomRiemann, ComputePrecision>;
+  const int  normal          = patchFace % DIMENSIONS;
+  const int  side            = patchFace / DIMENSIONS;
+  const auto volumeSize      = exahype2::fv::getVolumeSize(patchSize, NumberOfVolumesPerAxis);
+  int        strideInVolumes = 1;
+  for (int axis = 0; axis < normal; axis++) {
+    strideInVolumes *= NumberOfVolumesPerAxis;
+  }
+  const int strideAlongNormal = strideInVolumes * NumberOfData;
+  const int centreOffset      = peano4::dLinearised(volumeIndex, NumberOfVolumesPerAxis) * NumberOfData;
+  const auto neighbour        = [&](const int offset) {
+    return getNeighbourAlongNormal<NumberOfVolumesPerAxis, NumberOfData>(
+      inputPatch,
+      faceInputPatches,
+      volumeIndex,
+      centreOffset,
+      strideAlongNormal,
+      normal,
+      offset
+    );
+  };
+  const auto volumeCentreAt = [&](const int offset) {
+    auto index = volumeIndex;
+    index(normal) += offset;
+    return exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, index);
+  };
+
+  // The lower volume of the face sits at offset lowerOffset from the volume.
+  const int        lowerOffset = side == 0 ? -1 : 0;
+  ComputePrecision lowerMinus[NumberOfData];
+  ComputePrecision lowerPlus[NumberOfData];
+  ComputePrecision upperMinus[NumberOfData];
+  ComputePrecision upperPlus[NumberOfData];
+  evolveFaceStates<SolverType, NumberOfUnknowns, NumberOfData, EvaluateFlux, EvaluateNonconservativeProduct, EvaluateSource>(
+    neighbour(lowerOffset - 1),
+    neighbour(lowerOffset),
+    neighbour(lowerOffset + 1),
+    volumeCentreAt(lowerOffset),
+    volumeSize,
+    normal,
+    timeStamp,
+    timeStepSize,
+    lowerMinus,
+    lowerPlus
+  );
+  evolveFaceStates<SolverType, NumberOfUnknowns, NumberOfData, EvaluateFlux, EvaluateNonconservativeProduct, EvaluateSource>(
+    neighbour(lowerOffset),
+    neighbour(lowerOffset + 1),
+    neighbour(lowerOffset + 2),
+    volumeCentreAt(lowerOffset + 1),
+    volumeSize,
+    normal,
+    timeStamp,
+    timeStepSize,
+    upperMinus,
+    upperPlus
+  );
+
+  auto faceCentre = volumeCentreAt(lowerOffset);
+  faceCentre(normal) += 0.5 * volumeSize(normal);
+  Face face;
+  evaluateFaceTerms<
+    SolverType,
+    NumberOfVolumesPerAxis,
+    NumberOfUnknowns,
+    NumberOfData,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateCustomRiemann
+  >(lowerPlus,
+    upperMinus,
+    faceCentre,
+    volumeSize,
+    timeStamp + 0.5 * timeStepSize,
+    timeStepSize,
+    normal,
+    volumeIndex,
+    side,
+    boundaryFaces,
+    face);
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    if constexpr (EvaluateCustomRiemann) {
+      flux[unknown] = side == 0 ? face.rightGoingFlux[unknown] : face.leftGoingFlux[unknown];
+    } else if constexpr (EvaluateNonconservativeProduct) {
+      const auto half = static_cast<ComputePrecision>(0.5) * face.nonconservativeProduct[unknown];
+      flux[unknown]   = side == 0 ? face.flux[unknown] - half : face.flux[unknown] + half;
+    } else {
+      flux[unknown] = face.flux[unknown];
+    }
+  }
+}
 TARGET_DECLARE_END

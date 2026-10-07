@@ -521,7 +521,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::projectSoluti
 }
 
 /**
- * Solves the Riemann problems on the local or the remote faces of getRiemannFaces().
+ * Solves the Riemann problems on the local or the remote faces of getRiemannFaces(). A non-empty
+ * appliedFluxes takes the numerical flux that each side of every face applies.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -529,7 +530,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::solveRiemannP
   const peano4::Partition& partition,
   const peano4::Adjacency  adjacency,
   const double             timeStamp,
-  const double             timeStepSize
+  const double             timeStepSize,
+  typename FluxPool::View  appliedFluxes
 ) {
   const auto faces = getRiemannFaces(partition, adjacency);
   tarch::accelerator::parallelFor(
@@ -542,7 +544,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::solveRiemannP
       Quadrature<ComputePrecision>::QuadraturePoints1D,
       Quadrature<ComputePrecision>::QuadratureWeightsOnFace,
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      appliedFluxes
     }
   );
 }

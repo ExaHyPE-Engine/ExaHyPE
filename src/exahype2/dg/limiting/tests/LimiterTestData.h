@@ -4,7 +4,6 @@
 
 #include "exahype2/TimeStepping.h"
 #include "exahype2/fv/reconstruction/Constant.h"
-#include "exahype2/fv/timestepping/SingleStep.h"
 #include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
@@ -58,7 +57,6 @@ struct exahype2::dg::limiting::tests::StubSolverOf {
 
   using Reconstruction         = exahype2::fv::reconstruction::Constant;
   using FallbackReconstruction = void;
-  using TimeIntegration        = exahype2::fv::timestepping::SingleStep;
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
     double*                                      Q,

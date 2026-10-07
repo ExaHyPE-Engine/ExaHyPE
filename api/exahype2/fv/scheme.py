@@ -22,20 +22,27 @@ class Weighting:
 
 
 class SubcellScheme:
-    """The C++ description of one finite-volume scheme on a patch or a subgrid."""
+    """The C++ description of one finite-volume scheme on a patch or a subgrid.
+
+    ``time_stepping`` is the policy type that advances one volume, or ``None`` for a scheme that
+    advances whole patches. ``subcell_family`` is the class template that advances the subgrids of
+    the DG subcell limiter, declared in ``subcell_family_include``.
+    """
 
     def __init__(
         self,
         reconstruction,
-        time_stepping,
         halo_width,
+        subcell_family,
+        subcell_family_include,
+        time_stepping=None,
         fallback_reconstruction=None,
         includes=None,
     ):
         if not reconstruction:
             raise ValueError("A subcell scheme needs a reconstruction policy type.")
-        if not time_stepping:
-            raise ValueError("A subcell scheme needs a time-stepping policy type.")
+        if not subcell_family or not subcell_family_include:
+            raise ValueError("A subcell scheme needs a subcell family and its header.")
         if (
             isinstance(halo_width, bool)
             or not isinstance(halo_width, int)
@@ -44,6 +51,8 @@ class SubcellScheme:
             raise ValueError("A subcell scheme needs a positive integer halo width.")
         self._reconstruction = reconstruction
         self._time_stepping = time_stepping
+        self._subcell_family = subcell_family
+        self._subcell_family_include = subcell_family_include
         self._halo_width = halo_width
         self._fallback_reconstruction = fallback_reconstruction
         self._includes = includes or ["exahype2/fv/FiniteVolumeScheme.h"]
@@ -59,6 +68,14 @@ class SubcellScheme:
     @property
     def halo_width(self):
         return self._halo_width
+
+    @property
+    def subcell_family(self):
+        return self._subcell_family
+
+    @property
+    def subcell_family_include(self):
+        return self._subcell_family_include
 
     @property
     def fallback_reconstruction(self):
@@ -79,6 +96,8 @@ class Godunov:
             reconstruction="::exahype2::fv::reconstruction::Constant",
             time_stepping="::exahype2::fv::timestepping::SingleStep",
             halo_width=self.halo_width,
+            subcell_family="::exahype2::fv::singlestep::SubcellStep",
+            subcell_family_include="exahype2/fv/singlestep/SubcellStep.h",
             includes=[
                 "exahype2/fv/FiniteVolumeScheme.h",
                 "exahype2/fv/reconstruction/Constant.h",
@@ -114,6 +133,8 @@ class MusclHancock:
             + ">",
             time_stepping="::exahype2::fv::timestepping::SingleStep",
             halo_width=self.halo_width,
+            subcell_family="::exahype2::fv::singlestep::SubcellStep",
+            subcell_family_include="exahype2/fv/singlestep/SubcellStep.h",
             fallback_reconstruction=(
                 "::exahype2::fv::reconstruction::LimitedLinear<::exahype2::fv::limiter::Zero>"
             ),
@@ -132,7 +153,7 @@ class MusclHancock:
 class Weno:
     """ADER-WENO after Dumbser et al. as the subcell scheme of the DG subcell limiter: A
     polynomial WENO reconstruction of order ``order`` evolved by the space-time predictor of the
-    ADER-DG solvers, volume by volume. A finite-volume solver with ADER-WENO is
+    ADER-DG solvers, patch by patch. A finite-volume solver with ADER-WENO is
     :class:`exahype2.fv.ader.Solver`.
 
     ``weighting`` is a policy type of :class:`Weighting`. The scheme reads ``order + 1`` halo
@@ -166,12 +187,12 @@ class Weno:
             reconstruction="::exahype2::fv::reconstruction::WENO<{}, {}>".format(
                 self.order, self.weighting
             ),
-            time_stepping="::exahype2::fv::timestepping::ADER",
             halo_width=self.halo_width,
+            subcell_family="::exahype2::fv::ader::SubcellStep",
+            subcell_family_include="exahype2/fv/ader/SubcellStep.h",
             includes=[
                 "exahype2/fv/FiniteVolumeScheme.h",
                 "exahype2/fv/reconstruction/WENO.h",
-                "exahype2/fv/timestepping/ADER.h",
                 "exahype2/fv/weno/NonlinearWeights.h",
             ],
         )

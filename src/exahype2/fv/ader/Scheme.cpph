@@ -100,7 +100,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictVolume(
   using Layout          = typename Predictor::CellLayout;
   using PredictorBlock  = typename Predictor::Scratch;
   using UpdatePrecision = std::common_type_t<StoragePrecision, ComputePrecision, double>;
-  constexpr exahype2::fv::timestepping::ADERPredictorTables<Basis, ComputePrecision> Tables{};
+  constexpr exahype2::fv::ader::PredictorTables<Basis, ComputePrecision> Tables{};
   constexpr ComputePrecision NaN = std::numeric_limits<ComputePrecision>::quiet_NaN();
   assertion(volume >= 0 and volume < VolumesPerPatch, volume);
 

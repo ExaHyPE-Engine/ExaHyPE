@@ -290,6 +290,20 @@ public:
   );
 
   template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void computePatchFaceFlux(
+    int                                          volume,
+    const StoragePrecision* NOALIAS              patch,
+    const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          boundaryFaces,
+    int                                          patchFace,
+    ComputePrecision* NOALIAS                    flux
+  );
+
+  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void postprocessUpdatedPatch(
     StoragePrecision* NOALIAS                    updated,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,

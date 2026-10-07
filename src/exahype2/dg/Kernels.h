@@ -357,7 +357,8 @@ struct exahype2::dg::ApplyBoundaryConditions final {
 
 /**
  * Solves the Riemann problem of every listed face. On a boundary face, the boundary conditions
- * first overwrite the outer state half.
+ * first overwrite the outer state half. With appliedFluxes, every half of a face there also takes
+ * the numerical flux that the cell on its side applies, along the positive normal.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::SolveRiemannProblems final {
@@ -372,6 +373,7 @@ struct exahype2::dg::SolveRiemannProblems final {
   const ComputePrecision*  faceQuadratureWeights{nullptr};
   double                   timeStamp{0.0};
   double                   timeStepSize{0.0};
+  typename FluxPool::View  appliedFluxes{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };

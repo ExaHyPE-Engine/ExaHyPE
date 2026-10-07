@@ -3,17 +3,12 @@
 #pragma once
 #include "tarch/tests/TestCase.h"
 namespace exahype2::fv::tests {
-  class ADERWENOTest final : public tarch::tests::TestCase {
+  class WENOTest final : public tarch::tests::TestCase {
   public:
-    ADERWENOTest();
+    WENOTest();
     void run() override;
 
   private:
     void testWENOReconstructsPolynomialsExactly();
-    void testADERWENOPreservesUniformState();
-    void testADERWENOAdvectionConvergesAtHighOrder();
-    void testADERWENONcpAdvectionConvergesAtHighOrder();
-    void testADERWENOPeriodicAdvectionConservesMass();
-    void testDeviceUpdatesMatchHost();
   };
 } // namespace exahype2::fv::tests

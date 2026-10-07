@@ -100,6 +100,7 @@ exahype2::dg::Solver::solveRiemannProblems():
    - With exahype2::terms::HasRiemannSolver, exahype2::dg::solveRiemannProblemOnHalves() calls `Derived::solveRiemannProblem()`.
    - With `Derived::IsLinear`, exahype2::dg::solveLinearRiemannProblem() calls `Derived::maxEigenvalue()`, `Derived::nonconservativeProduct()`, `Derived::multiplyMaterialParameterMatrix()` and `Derived::flux()`.
    - Otherwise, exahype2::dg::solveRiemannProblem() calls `Derived::maxEigenvalue()` and `Derived::nonconservativeProduct()`.
+5. With a subcell limiter, exahype2::dg::SolveRiemannProblems also stores the numerical flux that each side applies in the pool of exahype2::dg::limiting::SubcellLimiter::getAppliedFluxes().
 
 # ADER-DG
 
@@ -180,15 +181,22 @@ exahype2::dg::limiting::SubcellLimiter::recompute():
 
 1. exahype2::dg::limiting::ProjectSubgridsOntoFaces calls exahype2::dg::limiting::SubcellScheme::projectSubgridOntoFaces() on every cell on the subcell scheme.
 2. exahype2::dg::limiting::ApplySubgridBoundaryConditions calls `Derived::boundaryConditions()` on the boundary faces of those cells.
-3. exahype2::dg::limiting::SubcellLimiter::exchangeFaces() sends the subgrid halo halves to the neighbour ranks.
-4. exahype2::dg::limiting::RecomputeSubcells runs on the local cells while the halves travel, then on the remote cells.
-5. exahype2::dg::limiting::SubcellScheme::recompute() runs on every recomputed cell:
-   1. exahype2::dg::limiting::SubcellScheme::advanceSubcells() runs exahype2::fv::FiniteVolumeScheme::update() on the subgrid.
-   2. exahype2::dg::limiting::SubcellScheme::SubgridSolver calls the PDE terms of `Derived` for that update.
-   3. exahype2::dg::limiting::SubcellScheme::SubgridSolver calls `Derived::solveSubcellRiemannProblem()` for the Riemann problem.
-   4. exahype2::dg::limiting::SubcellScheme::advanceSubcells() repeats the step with `Derived::FallbackReconstruction` when `Derived::isPhysicallyAdmissible()` rejects a subcell.
-   5. exahype2::dg::limiting::SubcellScheme::projectSubcellsOntoNodes() writes the subgrid onto the nodes.
-   6. exahype2::dg::limiting::SubcellScheme::reduceMaxEigenvalues() calls `Derived::maxEigenvalue()` under an adaptive rule.
+3. exahype2::dg::RestrictFluxHalves restricts the Galerkin fluxes of the fine faces of every level jump onto the coarse face.
+4. The subcell family of the limiter, `SubcellFamily::advance()`, advances the recomputed cells on their subgrids while exahype2::dg::limiting::SubcellLimiter::exchangeFaces() sends the subgrid halo halves to the neighbour ranks:
+   - exahype2::fv::singlestep::SubcellStep for Godunov and MUSCL-Hancock:
+     1. exahype2::fv::singlestep::AdvanceSubgrids runs on the local cells while the halves travel, then on the remote cells.
+     2. exahype2::fv::singlestep::SubcellStep::advanceSubgrid() runs exahype2::fv::FiniteVolumeScheme::update() on the subgrid.
+     3. exahype2::dg::limiting::SubcellScheme::SubgridSolver calls the PDE terms of `Derived` and `Derived::solveSubcellRiemannProblem()` for that update.
+     4. exahype2::fv::singlestep::SubcellStep::advanceSubgrid() repeats the step with `Derived::FallbackReconstruction` when `Derived::isPhysicallyAdmissible()` rejects a subcell.
+     5. exahype2::fv::singlestep::SubcellStep::imposeAppliedFluxes() replaces, on a face with one recomputing side, the flux exahype2::fv::FiniteVolumeScheme::computePatchFaceFlux() reports by the Galerkin flux of that side.
+   - exahype2::fv::ader::SubcellStep for ADER-WENO, patch by patch:
+     1. exahype2::fv::ader::PredictPatches predicts the local cells while the halves travel, then the remote cells.
+     2. exahype2::fv::ader::SolveSubcellRiemannProblems solves the Riemann problems on the faces with two recomputing sides. On a face with one recomputing side, that side takes its Galerkin flux.
+     3. exahype2::fv::ader::RestrictFluxHalves restricts the fluxes onto the coarse faces of the level jumps.
+     4. exahype2::fv::ader::CorrectPatches corrects the recomputed cells.
+5. exahype2::dg::limiting::ProjectRecomputedSubgrids runs on every recomputed cell:
+   1. exahype2::dg::limiting::SubcellScheme::projectSubcellsOntoNodes() writes the subgrid onto the nodes.
+   2. exahype2::dg::limiting::SubcellScheme::reduceMaxEigenvalues() calls `Derived::maxEigenvalue()` under an adaptive rule.
 
 # Runge-Kutta DG
 

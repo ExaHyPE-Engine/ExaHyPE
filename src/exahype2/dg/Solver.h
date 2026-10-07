@@ -136,7 +136,8 @@ protected:
     const peano4::Partition& partition,
     peano4::Adjacency        adjacency,
     double                   timeStamp,
-    double                   timeStepSize
+    double                   timeStepSize,
+    typename FluxPool::View  appliedFluxes = {}
   );
   INLINE_METHOD void closeTimeStep(
     const peano4::Partition&                     partition,

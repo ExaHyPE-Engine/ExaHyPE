@@ -112,17 +112,22 @@ class SubcellLimiting:
         """Returns the headers of the limiter and its finite-volume scheme."""
         if not self.subcell_limiter_is_enabled:
             return []
+        scheme = self._subcell_limiter_scheme.subcell_scheme()
         return [
             self._name + "SubcellProjection.h",
             "exahype2/dg/limiting/SubcellLimiter.h",
-        ] + list(self._subcell_limiter_scheme.subcell_scheme().includes)
+            scheme.subcell_family_include,
+        ] + list(scheme.includes)
 
     def _subcell_limiter_cpp_type(self):
         """Returns the C++ limiter type of this solver, or ``void`` without a limiter."""
         if not self.subcell_limiter_is_enabled:
             return "void"
-        return "::exahype2::dg::limiting::SubcellLimiter<{}, {}, {}>".format(
-            self._solver_type(), self.precision.storage, self.precision.compute
+        return "::exahype2::dg::limiting::SubcellLimiter<{}, {}, {}, {}>".format(
+            self._solver_type(),
+            self.precision.storage,
+            self.precision.compute,
+            self._subcell_limiter_scheme.subcell_scheme().subcell_family,
         )
 
     def _subcell_limiter_constants(self):
@@ -142,7 +147,6 @@ class SubcellLimiting:
             "using FallbackReconstruction = {};".format(
                 scheme.fallback_reconstruction or "void"
             ),
-            "using TimeIntegration        = {};".format(scheme.time_stepping),
         ]
 
     def _subcell_limiter_arguments(self):

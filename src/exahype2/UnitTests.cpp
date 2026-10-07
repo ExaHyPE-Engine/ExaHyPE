@@ -20,7 +20,7 @@
 #include "exahype2/fv/weno/tests/NonlinearWeightsTest.h"
 #include "exahype2/fv/ader/tests/SolverTest.h"
 #include "exahype2/fv/tests/FiniteVolumeSchemeTest.h"
-#include "exahype2/fv/tests/ADERWENOTest.h"
+#include "exahype2/fv/tests/WENOTest.h"
 #include "exahype2/fv/tests/KernelsTest.h"
 #include "exahype2/fv/tests/SolverTest.h"
 #include "exahype2/fv/tests/TracingTest.h"
@@ -62,7 +62,7 @@ exahype2::getUnitTests() {
 
   result->addTestCase(new exahype2::fv::tests::FiniteVolumeSchemeTest());
   result->addTestCase(new exahype2::fv::ader::tests::SolverTest());
-  result->addTestCase(new exahype2::fv::tests::ADERWENOTest());
+  result->addTestCase(new exahype2::fv::tests::WENOTest());
   result->addTestCase(new exahype2::fv::tests::KernelsTest());
   result->addTestCase(new exahype2::fv::tests::SolverTest());
   result->addTestCase(new exahype2::fv::tests::TracingTest());

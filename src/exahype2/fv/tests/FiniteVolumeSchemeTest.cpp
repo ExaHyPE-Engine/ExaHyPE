@@ -22,6 +22,7 @@
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/la/Vector.h"
 
+#include <cmath>
 #include <limits>
 
 namespace {
@@ -1172,6 +1173,70 @@ namespace {
   /**
    * Returns a patch with a distinct value in every entry.
    */
+  /**
+   * Returns the difference between the change of the integral of the first unknown in one update
+   * of a patch and the fluxes through the patch faces that computePatchFaceFlux() reports.
+   */
+  template <typename Solver>
+  double getPatchFaceFluxImbalance() {
+    using Kernel                = exahype2::fv::FiniteVolumeScheme<Solver, double>;
+    constexpr int VolumesPerAxis = Solver::PatchSize;
+    constexpr int HaloSize       = Solver::Reconstruction::HaloSize;
+    constexpr int Volumes        = peano4::power(VolumesPerAxis, DIMENSIONS);
+    constexpr int FaceValues     = 2 * HaloSize * peano4::power(VolumesPerAxis, DIMENSIONS - 1) * NumberOfData;
+    constexpr double TimeStepSize = 0.01;
+
+    std::vector<double> patch(static_cast<std::size_t>(Volumes) * NumberOfData);
+    for (std::size_t entry = 0; entry < patch.size(); entry++) {
+      patch[entry] = 1.0 + 0.4 * std::sin(0.9 * static_cast<double>(entry)) + 0.1 * static_cast<double>(entry % 3);
+    }
+    std::vector<std::vector<double>> faceStorage(peano4::FacesPerCell, std::vector<double>(FaceValues));
+    const double*                    faces[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      for (std::size_t entry = 0; entry < faceStorage[static_cast<std::size_t>(face)].size(); entry++) {
+        faceStorage[static_cast<std::size_t>(face)][entry] =
+          1.2 + 0.5 * std::cos(0.7 * static_cast<double>(entry) + static_cast<double>(face));
+      }
+      faces[face] = faceStorage[static_cast<std::size_t>(face)].data();
+    }
+    const tarch::la::Vector<DIMENSIONS, double> centre(0.5);
+    const tarch::la::Vector<DIMENSIONS, double> size(1.0);
+    const double                                volumeWidth = 1.0 / VolumesPerAxis;
+
+    std::vector<double> updated(patch.size());
+    static_cast<void>(Kernel::update(patch.data(), updated.data(), faces, centre, size, 0.0, TimeStepSize, 0));
+    double change = 0.0;
+    for (int volume = 0; volume < Volumes; volume++) {
+      change += (updated[static_cast<std::size_t>(volume) * NumberOfData] - patch[static_cast<std::size_t>(volume) * NumberOfData])
+              * std::pow(volumeWidth, DIMENSIONS);
+    }
+
+    double boundary = 0.0;
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      const int normal = face % DIMENSIONS;
+      const int side   = face / DIMENSIONS;
+      for (int volumeFace = 0; volumeFace < peano4::power(VolumesPerAxis, DIMENSIONS - 1); volumeFace++) {
+        auto index    = peano4::dDelinearisedExclusive(volumeFace, VolumesPerAxis, normal);
+        index(normal) = side == 0 ? 0 : VolumesPerAxis - 1;
+        double flux[NumberOfUnknowns];
+        Kernel::computePatchFaceFlux(
+          peano4::dLinearised(index, VolumesPerAxis),
+          patch.data(),
+          faces,
+          centre,
+          size,
+          0.0,
+          TimeStepSize,
+          0,
+          face,
+          flux
+        );
+        boundary += (side == 0 ? 1.0 : -1.0) * TimeStepSize * flux[0] * std::pow(volumeWidth, DIMENSIONS - 1);
+      }
+    }
+    return std::abs(change - boundary);
+  }
+
   std::vector<double> getRampPatch() {
     std::vector<double> patch(Setup::ValuesPerCell);
     for (int value = 0; value < Setup::ValuesPerCell; value++) {
@@ -1245,6 +1310,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::run() {
   testMethod(testLimitedLinearAverageConvergesAtSecondOrder);
   testMethod(testConstantConvergesAtFirstOrder);
   testMethod(testLimitedLinearMinmodKeepsStepInBounds);
+  testMethod(testPatchFaceFluxesBalanceTheUpdate);
   testMethod(testLimitedLinearZeroSlopesMatchConstant);
   testMethod(testLimitedLinearNcpAdvectionConvergesAtSecondOrder);
   testMethod(testLimitedLinearCustomRiemannIncludesVolumeNonconservativeProduct);
@@ -2407,4 +2473,19 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryCellOfADeviceRangeUpdatesL
 
   validateNumericalBuffersEquals(deviceUpdated, hostUpdated);
   validateNumericalBuffersEquals(deviceEigenvalues, hostEigenvalues);
+}
+
+/**
+ * The fluxes that computePatchFaceFlux() reports for the patch faces are the fluxes the update applies
+ * there: The change of the integral over the patch is the sum of the fluxes over its faces.
+ */
+void
+exahype2::fv::tests::FiniteVolumeSchemeTest::testPatchFaceFluxesBalanceTheUpdate() {
+  const double constant = getPatchFaceFluxImbalance<AdvectionSolver<7, Constant>>();
+  const double minmod   = getPatchFaceFluxImbalance<AdvectionSolver<7, LimitedLinear<exahype2::fv::limiter::Minmod>>>();
+  const double superbee =
+    getPatchFaceFluxImbalance<AdvectionSolver<7, LimitedLinear<exahype2::fv::limiter::Superbee>>>();
+  validateWithParams1(constant < 1e-14, constant);
+  validateWithParams1(minmod < 1e-14, minmod);
+  validateWithParams1(superbee < 1e-14, superbee);
 }

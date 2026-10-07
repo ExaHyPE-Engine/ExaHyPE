@@ -144,6 +144,7 @@ private:
     const DivergenceMarks&   divergenceMarks
   );
   INLINE_METHOD void reportUnconvergedPredictions();
+  [[nodiscard]] INLINE_METHOD typename Base::FluxPool::View getAppliedFluxes();
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics correct(
     const peano4::Partition& partition,
     peano4::Adjacency        adjacency,

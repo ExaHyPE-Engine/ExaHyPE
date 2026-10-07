@@ -510,4 +510,125 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
     assertion(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }
 }
+/**
+ * Writes the flux along the positive normal that the update of the volume with volumeIndex applies
+ * through its face on patch face patchFace: The flux of the Riemann solver of the solver class, or
+ * the Rusanov flux with half of the non-conservative product over the face jump. The flux of the
+ * volume itself cancels between its faces in the update but belongs to each of its faces.
+ */
+template <
+  typename SolverType,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateCustomRiemann,
+  typename StoragePrecision,
+  typename ComputePrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::Constant::patchFaceFlux(
+  const StoragePrecision* NOALIAS const        inputPatch,
+  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
+  const int                                    patchFace,
+  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  [[maybe_unused]] const int                   boundaryFaces,
+  ComputePrecision* NOALIAS const              flux
+) {
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  const int     normal       = patchFace % DIMENSIONS;
+  const int     side         = patchFace / DIMENSIONS;
+  const auto    volumeSize   = exahype2::fv::getVolumeSize(patchSize, NumberOfVolumesPerAxis);
+  const auto    volumeCentre = exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, volumeIndex);
+  auto          outsideIndex = volumeIndex;
+  outsideIndex(normal) += side == 0 ? -1 : 1;
+  const auto outsideCentre =
+    exahype2::fv::getVolumeCentre(patchCentre, patchSize, NumberOfVolumesPerAxis, outsideIndex);
+  auto overlapCell    = volumeIndex;
+  overlapCell(normal) = side == 0 ? volumeIndex(normal) : volumeIndex(normal) + 2 * HaloSize - NumberOfVolumesPerAxis;
+  const int overlapIndex = exahype2::fv::getFaceVolumeIndex(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+
+  ComputePrecision centre[NumberOfData];
+  ComputePrecision outside[NumberOfData];
+  for (int value = 0; value < NumberOfData; value++) {
+    centre[value] = static_cast<ComputePrecision>(
+      inputPatch[static_cast<std::ptrdiff_t>(peano4::dLinearised(volumeIndex, NumberOfVolumesPerAxis)) * NumberOfData + value]
+    );
+    outside[value] = static_cast<ComputePrecision>(
+      faceInputPatches[patchFace][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData + value]
+    );
+  }
+  const ComputePrecision* const lower = side == 0 ? outside : centre;
+  const ComputePrecision* const upper = side == 0 ? centre : outside;
+
+  if constexpr (EvaluateCustomRiemann) {
+    auto faceCentre = volumeCentre;
+    faceCentre(normal) += (side == 0 ? -0.5 : 0.5) * volumeSize(normal);
+    ComputePrecision leftGoingFlux[NumberOfUnknowns];
+    ComputePrecision rightGoingFlux[NumberOfUnknowns];
+    static_cast<void>(exahype2::fv::solveRiemannProblemOnVolumeFace<SolverType, NumberOfVolumesPerAxis>(
+      lower,
+      upper,
+      faceCentre,
+      volumeSize,
+      timeStamp,
+      timeStepSize,
+      normal,
+      volumeIndex,
+      side,
+      boundaryFaces,
+      leftGoingFlux,
+      rightGoingFlux
+    ));
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      flux[unknown] = side == 0 ? rightGoingFlux[unknown] : leftGoingFlux[unknown];
+    }
+  } else {
+    ComputePrecision centreFlux[NumberOfUnknowns]{};
+    ComputePrecision outsideFlux[NumberOfUnknowns]{};
+    if constexpr (EvaluateFlux) {
+      SolverType::flux(centre, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, centreFlux);
+      SolverType::flux(outside, outsideCentre, volumeSize, timeStamp, timeStepSize, normal, outsideFlux);
+    }
+    const ComputePrecision centreMaxEigenvalue =
+      SolverType::maxEigenvalue(centre, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+    const ComputePrecision outsideMaxEigenvalue =
+      SolverType::maxEigenvalue(outside, outsideCentre, volumeSize, timeStamp, timeStepSize, normal);
+    const ComputePrecision maxEigenvalue =
+      centreMaxEigenvalue > outsideMaxEigenvalue ? centreMaxEigenvalue : outsideMaxEigenvalue;
+    const auto half = static_cast<ComputePrecision>(0.5);
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      flux[unknown] =
+        half * (outsideFlux[unknown] + centreFlux[unknown]) - half * maxEigenvalue * (upper[unknown] - lower[unknown]);
+    }
+    if constexpr (EvaluateNonconservativeProduct) {
+      ComputePrecision averageState[NumberOfData];
+      ComputePrecision stateJump[NumberOfData];
+      for (int value = 0; value < NumberOfData; value++) {
+        averageState[value] = half * (lower[value] + upper[value]);
+        stateJump[value]    = upper[value] - lower[value];
+      }
+      ComputePrecision product[NumberOfUnknowns];
+      SolverType::nonconservativeProduct(
+        averageState,
+        stateJump,
+        side == 0 ? outsideCentre : volumeCentre,
+        volumeSize,
+        timeStamp,
+        timeStepSize,
+        normal,
+        product
+      );
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        flux[unknown] += side == 0 ? -half * product[unknown] : half * product[unknown];
+      }
+    }
+  }
+}
 TARGET_DECLARE_END

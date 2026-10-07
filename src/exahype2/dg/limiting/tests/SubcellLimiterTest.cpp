@@ -8,8 +8,8 @@
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/Solver.h"
 #include "exahype2/dg/limiting/SubcellLimiter.h"
+#include "exahype2/fv/singlestep/SubcellStep.h"
 #include "exahype2/fv/reconstruction/Constant.h"
-#include "exahype2/fv/timestepping/SingleStep.h"
 #include "peano4/Constants.h"
 #include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
@@ -254,7 +254,7 @@ namespace {
 
   template <typename Solver>
   using SolverOf =
-    exahype2::dg::ader::Solver<Solver, double, double, exahype2::dg::limiting::SubcellLimiter<Solver, double, double>>;
+    exahype2::dg::ader::Solver<Solver, double, double, exahype2::dg::limiting::SubcellLimiter<Solver, double, double, exahype2::fv::singlestep::SubcellStep>>;
 
   /**
    * The PDE terms of every test solver, under which a constant state stays constant.
@@ -325,7 +325,6 @@ namespace {
 
     using Reconstruction         = exahype2::fv::reconstruction::Constant;
     using FallbackReconstruction = void;
-    using TimeIntegration        = exahype2::fv::timestepping::SingleStep;
 
     template <typename Precision>
     using Quadrature = ::Quadrature<Precision>;
@@ -360,7 +359,6 @@ namespace {
 
     using Reconstruction         = exahype2::fv::reconstruction::Constant;
     using FallbackReconstruction = void;
-    using TimeIntegration        = exahype2::fv::timestepping::SingleStep;
 
     template <typename Precision>
     using Quadrature = ::Quadrature<Precision>;
@@ -398,7 +396,6 @@ namespace {
 
     using Reconstruction         = exahype2::fv::reconstruction::Constant;
     using FallbackReconstruction = void;
-    using TimeIntegration        = exahype2::fv::timestepping::SingleStep;
 
     template <typename Precision>
     using Quadrature = ::Quadrature<Precision>;
