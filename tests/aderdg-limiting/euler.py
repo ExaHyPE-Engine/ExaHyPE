@@ -23,6 +23,11 @@ def standard_arguments(
         default="godunov",
     )
     parser.add_argument(
+        "--limiter-order",
+        type=int,
+        help="Order of the WENO subcell scheme (default: the DG order).",
+    )
+    parser.add_argument(
         "--limiter-mode",
         choices=limiter_modes,
         default="active",
@@ -216,8 +221,9 @@ def add_limiter(
     physical_admissibility_criterion,
     observable_mapping,
     differences_scaling,
+    limiter_order=None,
 ):
-    scheme = subcell_scheme(limiter_solver_name, solver.order)
+    scheme = subcell_scheme(limiter_solver_name, limiter_order or solver.order)
     if limiter_mode == "all-accepted":
         solver.set_pde_terms(physical_admissibility="return true;")
         solver.add_subcell_limiter(scheme)

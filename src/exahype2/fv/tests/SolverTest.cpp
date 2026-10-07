@@ -7,7 +7,7 @@
 #include "exahype2/RefinementRequests.h"
 #include "exahype2/TimeStepping.h"
 #include "exahype2/fv/FiniteVolumeScheme.h"
-#include "exahype2/fv/Solver.h"
+#include "exahype2/fv/singlestep/Solver.h"
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
 #include "peano4/Constants.h"
@@ -46,8 +46,8 @@ namespace {
    * flux. Under the fixed rule it reports no wave speed.
    */
   template <exahype2::TimeStepping::Rule Rule>
-  struct LinearSolverFor final : exahype2::fv::Solver<LinearSolverFor<Rule>, double, double> {
-    using Base = exahype2::fv::Solver<LinearSolverFor<Rule>, double, double>;
+  struct LinearSolverFor final : exahype2::fv::singlestep::Solver<LinearSolverFor<Rule>, double, double> {
+    using Base = exahype2::fv::singlestep::Solver<LinearSolverFor<Rule>, double, double>;
 
     static constexpr int PatchSize                  = ::PatchSize;
     static constexpr int NumberOfUnknowns           = 1;
@@ -132,8 +132,8 @@ namespace {
    * PostprocessingSolver works like LinearSolverFor and writes PostprocessedValue into every updated
    * volume in its patch postprocessing. Its wave speed on such a volume is PostprocessedWaveSpeed.
    */
-  struct PostprocessingSolver final : exahype2::fv::Solver<PostprocessingSolver, double, double> {
-    using Base = exahype2::fv::Solver<PostprocessingSolver, double, double>;
+  struct PostprocessingSolver final : exahype2::fv::singlestep::Solver<PostprocessingSolver, double, double> {
+    using Base = exahype2::fv::singlestep::Solver<PostprocessingSolver, double, double>;
 
     static constexpr int PatchSize                  = ::PatchSize;
     static constexpr int NumberOfUnknowns           = 1;

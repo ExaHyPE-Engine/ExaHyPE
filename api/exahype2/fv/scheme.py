@@ -130,8 +130,10 @@ class MusclHancock:
 
 
 class Weno:
-    """ADER-WENO after Dumbser et al.: A polynomial WENO reconstruction of order ``order``
-    evolved by the space-time predictor of the ADER-DG solvers.
+    """ADER-WENO after Dumbser et al. as the subcell scheme of the DG subcell limiter: A
+    polynomial WENO reconstruction of order ``order`` evolved by the space-time predictor of the
+    ADER-DG solvers, volume by volume. A finite-volume solver with ADER-WENO is
+    :class:`exahype2.fv.ader.Solver`.
 
     ``weighting`` is a policy type of :class:`Weighting`. The scheme reads ``order + 1`` halo
     volumes and needs at least ``2 * order`` volumes per patch axis.

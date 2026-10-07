@@ -58,7 +58,7 @@ boundary_conditions = """
   }
 """
 
-fv_solver = exahype2.fv.Solver(
+fv_solver = exahype2.fv.singlestep.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"v": project.dimensions},

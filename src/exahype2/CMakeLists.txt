@@ -19,6 +19,7 @@ set(SOURCES
   tests/TimeSteppingTest.cpp
 
   fv/tests/FiniteVolumeSchemeTest.cpp
+  fv/ader/tests/SolverTest.cpp
   fv/tests/ADERWENOTest.cpp
   fv/tests/HaloProfileTestData.cpp
   fv/tests/KernelsTest.cpp
@@ -72,6 +73,7 @@ set(SOURCES
 
 set(GPU_SOURCES
   ErrorMeasurement.cpp
+  fv/ader/tests/SolverTest.cpp
   fv/tests/ADERWENOTest.cpp
   dg/ader/tests/LinearPredictorTest.cpp
   dg/ader/tests/NonlinearPredictorTest.cpp

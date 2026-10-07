@@ -20,7 +20,7 @@ keep = "return ::exahype2::RefinementCommand::Keep;"
 one = "return 1.0;"
 zero = "return 0.0;"
 
-fv_solver = exahype2.fv.Solver(
+fv_solver = exahype2.fv.singlestep.Solver(
     name="AllPDETermsFV",
     patch_size=4,
     unknowns=2,
@@ -44,7 +44,30 @@ fv_solver.set_pde_terms(
 fv_solver.measure_error()
 project.add_solver(fv_solver)
 
-godunov_solver = exahype2.fv.Solver(
+ader_weno_solver = exahype2.fv.ader.Solver(
+    name="AllPDETermsADERWENO",
+    patch_size=4,
+    order=2,
+    unknowns=2,
+    auxiliary_variables=1,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    precision=exahype2.Precision(storage="float", compute="double"),
+)
+ader_weno_solver.set_pde_terms(
+    initial_condition=nothing,
+    boundary_conditions=nothing,
+    refinement_criterion=keep,
+    max_eigenvalue=one,
+    flux=nothing,
+    ncp=nothing,
+    source=nothing,
+    riemann_solver=zero,
+    analytical_solution=nothing,
+)
+ader_weno_solver.measure_error()
+project.add_solver(ader_weno_solver)
+
+godunov_solver = exahype2.fv.singlestep.Solver(
     name="AllPDETermsGodunovFV",
     patch_size=4,
     unknowns={"rho": 1, "v": 2},

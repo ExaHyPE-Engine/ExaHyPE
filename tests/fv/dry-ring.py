@@ -38,12 +38,6 @@ def parse_arguments():
 
 args = parse_arguments()
 
-if args.solver == "godunov":
-    scheme = exahype2.fv.Godunov()
-elif args.solver == "musclhancock":
-    scheme = exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.minmod)
-else:
-    scheme = exahype2.fv.Weno(order=args.weno_order)
 
 initial_conditions = """
   const double radius = std::sqrt(x(0) * x(0) + x(1) * x(1));
@@ -123,14 +117,21 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.fv.Solver(
+solver_arguments = dict(
     name="SWESolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"h": 1, "v": 2, "b": 1},
     auxiliary_variables=0,
     time_stepping=exahype2.TimeStepping.Adaptive(0.4),
-    scheme=scheme,
 )
+if args.solver == "godunov":
+    fv_solver = exahype2.fv.singlestep.Solver(scheme=exahype2.fv.Godunov(), **solver_arguments)
+elif args.solver == "musclhancock":
+    fv_solver = exahype2.fv.singlestep.Solver(
+        scheme=exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.minmod), **solver_arguments
+    )
+else:
+    fv_solver = exahype2.fv.ader.Solver(order=args.weno_order, **solver_arguments)
 
 fv_solver.set_pde_terms(
     initial_condition=initial_conditions,

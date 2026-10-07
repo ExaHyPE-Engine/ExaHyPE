@@ -122,6 +122,7 @@ euler.add_limiter(
     ),
     euler.dmp_observables(gamma),
     differences_scaling=1.0e-3,
+    limiter_order=arguments.limiter_order,
 )
 
 project.add_solver(solver)

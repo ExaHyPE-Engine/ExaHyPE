@@ -3,12 +3,9 @@
 import exahype2.pde_terms
 import exahype2.solver
 
-from .scheme import Godunov
-from .scheme import MusclHancock
-from .scheme import Weno
 
-
-def _pde_terms():
+def pde_terms():
+    """Returns the PDE terms that every finite-volume solver family accepts."""
     return {
         "initial_condition": exahype2.pde_terms.initial_condition(),
         "boundary_conditions": exahype2.pde_terms.boundary_conditions("storage"),
@@ -19,43 +16,21 @@ def _pde_terms():
         "flux": exahype2.pde_terms.flux(),
         "ncp": exahype2.pde_terms.ncp(),
         "source": exahype2.pde_terms.source(),
-        "diffusive_source": exahype2.pde_terms.diffusive_source(),
         "riemann_solver": exahype2.pde_terms.riemann_solver(),
-        "limited_difference": exahype2.pde_terms.limited_difference(),
-        "reconstruction": exahype2.pde_terms.PDETerm(
-            cpp="reconstruct",
-            concept="HasReconstruction",
-            parameters=(
-                "const {P}* const NOALIAS QL // [{N} + {A}]",
-                "const {P}* const NOALIAS Q // [{N} + {A}]",
-                "const {P}* const NOALIAS QR // [{N} + {A}]",
-                "const {P}* const NOALIAS limitedDifferences // [{N}]",
-                "const tarch::la::Vector<DIMENSIONS, double>& x",
-                "const tarch::la::Vector<DIMENSIONS, double>& h",
-                "const int normal",
-                "const int unknown",
-                "{P}& reconstructedMinus",
-                "{P}& reconstructedPlus",
-            ),
-            flag="USE_RECONSTRUCTION",
-        ),
         "analytical_solution": exahype2.pde_terms.analytical_solution(),
         "particle_analytical_solution": exahype2.pde_terms.particle_analytical_solution(),
     }
 
 
 class Solver(exahype2.solver.Solver):
-    """A finite-volume solver on patches of ``patch_size``^d volumes per cell.
-
-    ``scheme`` is :class:`exahype2.fv.Godunov`, :class:`exahype2.fv.MusclHancock` or
-    :class:`exahype2.fv.Weno`.
+    """The part of a finite-volume solver on patches of ``patch_size``^d volumes per cell that
+    every family shares. :class:`exahype2.fv.singlestep.Solver` and
+    :class:`exahype2.fv.ader.Solver` are the families an application instantiates.
     """
 
     SOLVER_FAMILY = "fv"
-    SOLVER_FAMILY_INCLUDE = "exahype2/fv/Solver.h"
     SOLVER_FAMILY_CONCEPT = "::exahype2::fv::SolverConcept"
     SOLVER_FAMILY_CONCEPT_PRECISIONS = ("STORAGE_PRECISION",)
-    PDE_TERMS = _pde_terms()
 
     def __init__(
         self,
@@ -64,16 +39,9 @@ class Solver(exahype2.solver.Solver):
         unknowns,
         auxiliary_variables,
         time_stepping,
-        scheme=None,
         precision="double",
     ):
         super().__init__(name, unknowns, auxiliary_variables, time_stepping, precision)
-        self.scheme = Godunov() if scheme is None else scheme
-        if not isinstance(self.scheme, (Godunov, MusclHancock, Weno)):
-            raise TypeError(
-                "scheme is exahype2.fv.Godunov(), exahype2.fv.MusclHancock(...) or "
-                "exahype2.fv.Weno(...)."
-            )
         if (
             isinstance(patch_size, bool)
             or not isinstance(patch_size, int)
@@ -105,30 +73,17 @@ class Solver(exahype2.solver.Solver):
                     self._name
                 )
             )
-        if isinstance(self.scheme, MusclHancock) and self.pde_terms.is_set(
-            "diffusive_source"
-        ):
-            raise ValueError("MUSCL-Hancock does not support diffusive source terms.")
-        if isinstance(self.scheme, Weno) and self.pde_terms.is_set("diffusive_source"):
-            raise ValueError("WENO does not support diffusive source terms.")
-        if (
-            isinstance(self.scheme, Weno)
-            and self._patch_size < self.scheme.minimum_volumes_per_axis
-        ):
-            raise ValueError(
-                "[{}] WENO of order {} needs a patch size of at least {}.".format(
-                    self._name, self.scheme.order, self.scheme.minimum_volumes_per_axis
-                )
-            )
-        if isinstance(self.scheme, Weno) and self.pde_terms.is_set(
-            "limited_difference"
-        ):
-            raise ValueError(
-                "WENO selects its stencils through the nonlinear weighting and takes no slope limiter."
-            )
+
+    def _scheme_includes(self):
+        """Returns the headers of the reconstruction and the time integration of the family."""
+        raise NotImplementedError
+
+    def _scheme_constants(self):
+        """Returns the C++ type aliases of the reconstruction and the time integration."""
+        raise NotImplementedError
 
     def _solver_family_includes(self):
-        includes = list(self.scheme.subcell_scheme().includes)
+        includes = list(self._scheme_includes())
         if self._tracers:
             includes.append("exahype2/fv/Tracing.h")
         return includes
@@ -153,12 +108,14 @@ class Solver(exahype2.solver.Solver):
         )
 
     def _solver_family_class(self):
-        return "::exahype2::fv::Solver<{}, {}, {}>".format(
-            self._solver_type(), self.precision.storage, self.precision.compute
+        return "{}<{}, {}, {}>".format(
+            self.SOLVER_FAMILY_CLASS,
+            self._solver_type(),
+            self.precision.storage,
+            self.precision.compute,
         )
 
     def _solver_family_constants(self):
-        scheme = self.scheme.subcell_scheme()
         return [
             "static constexpr int PatchSize                  = {};".format(
                 self._patch_size
@@ -170,8 +127,7 @@ class Solver(exahype2.solver.Solver):
                 self.state.auxiliary_variables
             ),
             "static constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;",
-            "using Reconstruction  = {};".format(scheme.reconstruction),
-            "using TimeIntegration = {};".format(scheme.time_stepping),
+        ] + list(self._scheme_constants()) + [
             "static constexpr ::exahype2::TimeStepping::Rule TimeSteppingRule = "
             "::exahype2::TimeStepping::Rule::{};".format(self.time_stepping.rule),
         ]

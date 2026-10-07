@@ -145,7 +145,7 @@ static_geometry_admissibility = euler.physical_admissibility(
 limiter_scheme = euler.subcell_scheme(arguments.limiter_solver, order)
 
 if arguments.limiter_mode == "fv":
-    limiter_solver = exahype2.fv.Solver(
+    limiter_solver = exahype2.fv.singlestep.Solver(
         name="FVSolver",
         patch_size=limiter_patch_size,
         unknowns=unknowns,

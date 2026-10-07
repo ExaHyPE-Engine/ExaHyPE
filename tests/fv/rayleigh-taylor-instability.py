@@ -98,20 +98,23 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-scheme = {
-    "godunov": exahype2.fv.Godunov(),
-    "musclhancock": exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.vanalbada),
-    "ader-weno": exahype2.fv.Weno(order=args.weno_order),
-}[args.solver]
-
-fv_solver = exahype2.fv.Solver(
+solver_arguments = dict(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
     time_stepping=exahype2.TimeStepping.Adaptive(args.cfl),
-    scheme=scheme,
 )
+if args.solver == "ader-weno":
+    fv_solver = exahype2.fv.ader.Solver(order=args.weno_order, **solver_arguments)
+else:
+    fv_solver = exahype2.fv.singlestep.Solver(
+        scheme={
+            "godunov": exahype2.fv.Godunov(),
+            "musclhancock": exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.vanalbada),
+        }[args.solver],
+        **solver_arguments,
+    )
 
 fv_solver.set_pde_terms(
     initial_condition=initial_conditions,

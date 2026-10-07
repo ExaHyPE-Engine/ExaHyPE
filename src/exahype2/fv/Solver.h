@@ -17,7 +17,6 @@
 #include "peano4/Partition.h"
 #include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/plotter/Format.h"
@@ -38,10 +37,11 @@ namespace exahype2::fv {
 } // namespace exahype2::fv
 
 /**
- * Finite-volume solver on the partition, with the patch layout, the schemes and the PDE terms as
- * static members of Derived. StoragePrecision is the type of the patches and faces, and
- * ComputePrecision the type the kernels compute in. Patches exchange data only through the face
- * pool, where every patch writes its own half of each face.
+ * The data and the phases that every finite-volume solver family shares, with the patch layout, the
+ * reconstruction and the PDE terms as static members of Derived. StoragePrecision is the type of the
+ * patches and faces, and ComputePrecision the type the kernels compute in. Patches exchange their
+ * solution only through the halo pool, where every patch writes its own half of each face. A family
+ * such as exahype2::fv::singlestep::Solver or exahype2::fv::ader::Solver adds performTimeStep().
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::fv::Solver {
@@ -71,7 +71,6 @@ public:
   );
   INLINE_METHOD void allocate(const peano4::Partition& partition);
   INLINE_METHOD void initialise(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
-  INLINE_METHOD void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
   INLINE_METHOD void regrid(
     const peano4::Partition&      partition,
     const peano4::Regrid&         regrid,
@@ -91,32 +90,32 @@ public:
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
   [[nodiscard]] INLINE_METHOD int getNumberOfDoFs() const;
 
-private:
+protected:
   INLINE_METHOD void applyBoundaryConditions(const peano4::Partition& partition);
-  INLINE_METHOD void projectOntoFaces(const peano4::Partition& partition);
-  [[nodiscard]] INLINE_METHOD double updatePatches(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize
+  INLINE_METHOD void interpolateCoarseHalos(const peano4::Partition& partition, peano4::Adjacency adjacency);
+  INLINE_METHOD void closeTimeStep(
+    const peano4::Partition&      partition,
+    double                        timeStepSize,
+    double                        maxEigenvalue,
+    exahype2::RefinementRequests& requests
   );
+
+  Patches _solution{FiniteVolumeScheme::ValuesPerPatch};
+  Faces   _halo{FiniteVolumeScheme::ValuesPerFace};
+
+  peano4::HaloExchange<StoragePrecision> _haloExchange{_halo};
+
+  exahype2::TimeStepping _timeStepping;
+
+private:
+  INLINE_METHOD void projectOntoFaces(const peano4::Partition& partition);
   [[nodiscard]] INLINE_METHOD double measureMaxEigenvalue(const peano4::Partition& partition);
   INLINE_METHOD void measureError(const peano4::Partition& partition);
   INLINE_METHOD void reduceMeshWidths(const peano4::Partition& partition);
   INLINE_METHOD void proposeTimeStepSize(double maxEigenvalue);
 
-  Patches _solution{FiniteVolumeScheme::ValuesPerPatch};
-  Faces   _halo{FiniteVolumeScheme::ValuesPerFace};
-
-  /**
-   * One block of predictions per team of a patch update on a device, for a scheme that predicts
-   * patch by patch. A host thread keeps the predictions of its patch itself.
-   */
-  tarch::accelerator::Buffer<ComputePrecision> _predictions{tarch::MemoryLocation::Device};
-
-  peano4::HaloExchange<StoragePrecision>      _haloExchange{_halo};
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
 
-  exahype2::TimeStepping    _timeStepping;
   exahype2::RefinementVotes _votes{};
   bool                      _meshChangedSinceLastTimeStep{false};
 

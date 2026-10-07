@@ -1,0 +1,222 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/LevelJumps.h"
+#include "exahype2/fv/ader/Kernels.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/Scratch.h"
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::Solver(
+  const double                              timeStepFactor,
+  std::string                               name,
+  std::vector<exahype2::plotter::DataField> plottedFields
+) :
+  Base(timeStepFactor, std::move(name), std::move(plottedFields)) {
+  static_assert(
+    Derived::PatchSize >= 2 * (Scheme::NodesPerAxis - 1),
+    "ADER-WENO needs at least 2 * order volumes per patch axis."
+  );
+}
+
+/**
+ * Reserves the pools of the base and of the predicted face halves and builds their exchanges. Every
+ * rank calls this at the same time. The exchanges of every solver then take the same tags.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(const peano4::Partition& partition) {
+  Base::allocate(partition);
+  reserveFaces(partition);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::reserveFaces(
+  const peano4::Partition& partition
+) {
+  _faceStates.reserve(partition.getNumberOfFaces());
+  _faceFluxes.reserve(partition.getNumberOfFaces());
+  _stateExchange.rebuild(partition);
+  _fluxExchange.rebuild(partition);
+}
+
+/**
+ * Advances every patch by the time step size the previous step admitted. The local patches predict
+ * while the solution halves of the exchanged faces travel, and the local faces solve their Riemann
+ * problems while the predicted halves travel. The fluxes restricted onto the coarse faces of a
+ * rank boundary travel while the local patches correct.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeStep(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
+) {
+  constexpr auto Local        = peano4::Adjacency::Local;
+  constexpr auto Remote       = peano4::Adjacency::Remote;
+  const double   timeStepSize = this->_timeStepping.startTimeStep();
+
+  this->_haloExchange.post();
+  this->applyBoundaryConditions(partition);
+  this->interpolateCoarseHalos(partition, Local);
+  double maxEigenvalue = predictPatches(partition, Local, timeStepSize);
+  this->_haloExchange.wait();
+  this->interpolateCoarseHalos(partition, Remote);
+  maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, predictPatches(partition, Remote, timeStepSize));
+
+  const exahype2::fv::ader::InterpolateFaceHalves<Derived, ComputePrecision> interpolateHalves{
+    _faceStates.getView(),
+    _faceFluxes.getView()
+  };
+  const exahype2::fv::ader::RestrictFluxHalves<Derived, ComputePrecision> restrictFluxes{
+    partition.onDevice(),
+    _faceFluxes.getView()
+  };
+  _stateExchange.post();
+  _fluxExchange.post();
+  exahype2::interpolateCoarseFaces(partition, Local, interpolateHalves);
+  maxEigenvalue =
+    exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, solveRiemannProblems(partition, Local, timeStepSize));
+  _stateExchange.wait();
+  _fluxExchange.wait();
+  exahype2::interpolateCoarseFaces(partition, Remote, interpolateHalves);
+  maxEigenvalue =
+    exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, solveRiemannProblems(partition, Remote, timeStepSize));
+
+  exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
+  _fluxExchange.post();
+  exahype2::restrictFineFaces(partition, Local, restrictFluxes);
+  maxEigenvalue =
+    exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, correctPatches(partition, Local, timeStepSize));
+  _fluxExchange.wait();
+  maxEigenvalue =
+    exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, correctPatches(partition, Remote, timeStepSize));
+
+  this->closeTimeStep(partition, timeStepSize, maxEigenvalue, requests);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
+  const peano4::Partition&      partition,
+  const peano4::Regrid&         regrid,
+  exahype2::RefinementRequests& requests
+) {
+  Base::regrid(partition, regrid, requests);
+  reserveFaces(partition);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
+  Base::release();
+  _faceStates.release();
+  _faceFluxes.release();
+  _stateExchange.release();
+  _fluxExchange.release();
+  _predictorScratch.release();
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD tarch::AllocatedBytes
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
+  return Base::getAllocatedBytes() + _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes()
+    + _stateExchange.getAllocatedBytes() + _fluxExchange.getAllocatedBytes() + _predictorScratch.getAllocatedBytes();
+}
+
+/**
+ * Predicts the local or the remote cells and returns the largest wave speed of the faces inside
+ * their patches.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD double
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::predictPatches(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency,
+  const double             timeStepSize
+) {
+  const auto cells         = partition.onDevice().getCells(adjacency);
+  double     maxEigenvalue = 0.0;
+#if defined(PEANO_WITH_GPU_BACKEND)
+  const std::size_t size =
+    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(cells.size)) * Scheme::ScratchSize;
+  if (_predictorScratch.getSize() < size) {
+    _predictorScratch.allocate(size);
+  }
+#endif
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(cells.size),
+    exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      cells,
+      this->_solution.getView(),
+      std::as_const(this->_halo).getView(),
+      _faceStates.getView(),
+      _faceFluxes.getView(),
+      this->_timeStepping.getTimeStamp(),
+      timeStepSize,
+      _predictorScratch.getData()
+    },
+    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+  );
+  return maxEigenvalue;
+}
+
+/**
+ * Solves the Riemann problems on the local or the remote faces with a cell on both sides or on the
+ * domain boundary and returns the largest wave speed on them.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD double
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::solveRiemannProblems(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency,
+  const double             timeStepSize
+) {
+  const auto faces = partition.onDevice().getFaces(adjacency, peano4::FaceKind::Interior, peano4::FaceKind::Hanging);
+  double     maxEigenvalue = 0.0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(faces.size),
+    exahype2::fv::ader::SolveRiemannProblems<Derived, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      faces,
+      _faceStates.getView(),
+      _faceFluxes.getView(),
+      this->_timeStepping.getTimeStamp(),
+      timeStepSize
+    },
+    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+  );
+  return maxEigenvalue;
+}
+
+/**
+ * Adds the numerical fluxes on the faces of the local or the remote patches and returns the largest
+ * wave speed of their updated volumes.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD double
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::correctPatches(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency,
+  const double             timeStepSize
+) {
+  const auto cells         = partition.onDevice().getCells(adjacency);
+  double     maxEigenvalue = 0.0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(cells.size),
+    exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      cells,
+      this->_solution.getView(),
+      std::as_const(_faceFluxes).getView(),
+      this->_timeStepping.getTimeStamp(),
+      timeStepSize
+    },
+    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+  );
+  return maxEigenvalue;
+}

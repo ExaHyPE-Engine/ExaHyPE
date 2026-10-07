@@ -211,7 +211,7 @@ source_term = """
   S[3] = -GRAVITY * Q[2];
 """
 
-fv_solver = exahype2.fv.Solver(
+fv_solver = exahype2.fv.singlestep.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1},

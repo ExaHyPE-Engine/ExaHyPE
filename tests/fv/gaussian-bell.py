@@ -80,7 +80,7 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.fv.Solver(
+fv_solver = exahype2.fv.singlestep.Solver(
     name="MUSCLHancockSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},

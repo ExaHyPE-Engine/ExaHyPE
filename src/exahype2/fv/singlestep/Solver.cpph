@@ -1,0 +1,73 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/fv/Kernels.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::Solver(
+  const double                              timeStepFactor,
+  std::string                               name,
+  std::vector<exahype2::plotter::DataField> plottedFields
+) :
+  Base(timeStepFactor, std::move(name), std::move(plottedFields)) {
+  static_assert(exahype2::fv::TimeSteppingScheme<typename Derived::TimeIntegration>);
+}
+
+/**
+ * Advances every patch in place by the time step size the previous step admitted. The local
+ * patches update while the own halves of the exchanged faces travel. The patches beside a rank
+ * boundary update once the halves of the neighbour ranks arrive.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeStep(
+  const peano4::Partition&      partition,
+  exahype2::RefinementRequests& requests
+) {
+  const double timeStepSize = this->_timeStepping.startTimeStep();
+
+  this->_haloExchange.post();
+  this->applyBoundaryConditions(partition);
+  this->interpolateCoarseHalos(partition, peano4::Adjacency::Local);
+  double maxEigenvalue = updatePatches(partition, peano4::Adjacency::Local, timeStepSize);
+  this->_haloExchange.wait();
+  this->interpolateCoarseHalos(partition, peano4::Adjacency::Remote);
+  maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+    maxEigenvalue,
+    updatePatches(partition, peano4::Adjacency::Remote, timeStepSize)
+  );
+
+  this->closeTimeStep(partition, timeStepSize, maxEigenvalue, requests);
+}
+
+/**
+ * Advances the local or the remote cells in place and returns the largest wave speed over them.
+ * Every patch reads its neighbours through the halo alone. The result does not depend on the
+ * order of the cells.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD double
+exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::updatePatches(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency,
+  const double             timeStepSize
+) {
+  const auto cells         = partition.onDevice().getCells(adjacency);
+  double     maxEigenvalue = 0.0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(cells.size),
+    exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      cells,
+      this->_solution.getView(),
+      std::as_const(this->_halo).getView(),
+      this->_timeStepping.getTimeStamp(),
+      timeStepSize
+    },
+    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+  );
+  return maxEigenvalue;
+}

@@ -137,7 +137,7 @@ analytical_solution = """
   solution[9] = 0.0;
 """
 
-fv_solver = exahype2.fv.Solver(
+fv_solver = exahype2.fv.singlestep.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 2, "rhoE": 1},

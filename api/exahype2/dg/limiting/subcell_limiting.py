@@ -53,10 +53,12 @@ class SubcellLimiting:
                 "subcells per axis. Increase the order or choose a scheme with a narrower "
                 "stencil.".format(scheme.halo_width, subcells_per_axis)
             )
-        if isinstance(scheme, Weno) and scheme.order != self._order:
+        if isinstance(scheme, Weno) and scheme.minimum_volumes_per_axis > subcells_per_axis:
             raise ValueError(
-                "The WENO subcell limiter must have the order of the DG solver ({}), but has "
-                "order {}.".format(self._order, scheme.order)
+                "The WENO subcell limiter of order {} needs {} subcells per axis, but the DG "
+                "solver of order {} has {}.".format(
+                    scheme.order, scheme.minimum_volumes_per_axis, self._order, subcells_per_axis
+                )
             )
         if number_of_dmp_observables < 0:
             raise ValueError(

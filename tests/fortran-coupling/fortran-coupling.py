@@ -53,7 +53,7 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.fv.Solver(
+fv_solver = exahype2.fv.singlestep.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"h": 1, "hu": 2, "b": 1},

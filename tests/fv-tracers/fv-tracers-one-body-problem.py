@@ -121,7 +121,7 @@ analytical_solution = """
   solution[9] = mass; // m
 """
 
-fv_solver = exahype2.fv.Solver(
+fv_solver = exahype2.fv.singlestep.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns=2,

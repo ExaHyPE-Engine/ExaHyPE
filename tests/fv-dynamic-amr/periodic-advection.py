@@ -64,7 +64,7 @@ flux = """
   F[Shortcuts::q] = Q[Shortcuts::q];
 """
 
-solver = exahype2.fv.Solver(
+solver = exahype2.fv.singlestep.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"q": 1},

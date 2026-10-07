@@ -11,7 +11,6 @@
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/Scratch.h"
 
 /**
  * The factor timeStepFactor is the CFL relaxation of an adaptive rule or the normalised time step
@@ -26,7 +25,6 @@ INLINE_METHOD exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>:
   _timeStepping{Derived::TimeSteppingRule, timeStepFactor, exahype2::TimeStepping::Stability::PhysicalEigenvalue},
   _plotter(std::move(name), std::move(plottedFields)) {
   static_assert(exahype2::fv::ReconstructionScheme<typename Derived::Reconstruction>);
-  static_assert(exahype2::fv::TimeSteppingScheme<typename Derived::TimeIntegration>);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -84,57 +82,6 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
     _timeStepping.getTimeStamp(),
     requests
   );
-}
-
-/**
- * Advances every patch in place by the time step size the previous step admitted. The local
- * patches update while the own halves of the exchanged faces travel. The patches beside a rank
- * boundary update once the halves of the neighbour ranks arrive.
- */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD void
-exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeStep(
-  const peano4::Partition&      partition,
-  exahype2::RefinementRequests& requests
-) {
-  const double timeStepSize = _timeStepping.startTimeStep();
-  const exahype2::fv::InterpolateHaloHalves<Derived, StoragePrecision, ComputePrecision> interpolateHalo{
-    partition.onDevice(),
-    _halo.getView()
-  };
-
-  _haloExchange.post();
-  applyBoundaryConditions(partition);
-  exahype2::interpolateCoarseFaces(partition, peano4::Adjacency::Local, interpolateHalo);
-  double maxEigenvalue = updatePatches(partition, peano4::Adjacency::Local, timeStepSize);
-  _haloExchange.wait();
-  exahype2::interpolateCoarseFaces(partition, peano4::Adjacency::Remote, interpolateHalo);
-  maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
-    maxEigenvalue,
-    updatePatches(partition, peano4::Adjacency::Remote, timeStepSize)
-  );
-
-  projectOntoFaces(partition);
-  exahype2::restrictFineFaces(
-    partition,
-    exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>{partition.onDevice(), _halo.getView()}
-  );
-
-  _timeStepping.advanceTimeStamp(timeStepSize);
-  reduceMeshWidths(partition);
-  proposeTimeStepSize(maxEigenvalue);
-  measureError(partition);
-  if (_meshChangedSinceLastTimeStep) {
-    _meshChangedSinceLastTimeStep = false;
-  } else {
-    _votes.voteOnEveryCell<Derived>(
-      partition,
-      std::as_const(_solution).getView(),
-      _timeStepping.getLimits(),
-      _timeStepping.getTimeStamp(),
-      requests
-    );
-  }
 }
 
 /**
@@ -214,7 +161,6 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
   _votes.release();
   _errorMeasurement.release();
   _solutionOnHost.release();
-  _predictions.release();
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -257,7 +203,7 @@ INLINE_METHOD tarch::AllocatedBytes
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return _solution.getAllocatedBytes() + _halo.getAllocatedBytes() + _haloExchange.getAllocatedBytes()
     + _migration.getAllocatedBytes() + _votes.getAllocatedBytes() + _errorMeasurement.getAllocatedBytes()
-    + _solutionOnHost.getAllocatedBytes() + _predictions.getAllocatedBytes();
+    + _solutionOnHost.getAllocatedBytes();
 }
 
 /**
@@ -302,42 +248,59 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::projectOntoFa
 }
 
 /**
- * Advances the local or the remote cells in place and returns the largest wave speed over them.
- * Every patch reads its neighbours through the halo alone. The result does not depend on the
- * order of the cells.
+ * Fills the coarse-side halves of the fine faces of the level jumps of the local or the remote
+ * cells from their coarse faces.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD double
-exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::updatePatches(
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::interpolateCoarseHalos(
   const peano4::Partition& partition,
-  const peano4::Adjacency  adjacency,
-  const double             timeStepSize
+  const peano4::Adjacency  adjacency
 ) {
-  const auto cells         = partition.onDevice().getCells(adjacency);
-  double     maxEigenvalue = 0.0;
-#if defined(PEANO_WITH_GPU_BACKEND)
-  if constexpr (FiniteVolumeScheme::PredictsPatchwise) {
-    const std::size_t size = static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(cells.size))
-                           * FiniteVolumeScheme::getPredictionsSize();
-    if (_predictions.getSize() < size) {
-      _predictions.allocate(size);
-    }
-  }
-#endif
-  tarch::accelerator::parallelReduce(
-    tarch::accelerator::TeamRange(cells.size),
-    exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>{
+  exahype2::interpolateCoarseFaces(
+    partition,
+    adjacency,
+    exahype2::fv::InterpolateHaloHalves<Derived, StoragePrecision, ComputePrecision>{
       partition.onDevice(),
-      cells,
-      _solution.getView(),
-      std::as_const(_halo).getView(),
-      _timeStepping.getTimeStamp(),
-      timeStepSize,
-      _predictions.getData()
-    },
-    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+      _halo.getView()
+    }
   );
-  return maxEigenvalue;
+}
+
+/**
+ * Finishes a time step of timeStepSize after every patch holds its new solution: Fills the halo
+ * for the next step, advances the time stamp, derives the next time step size from
+ * maxEigenvalue, the largest wave speed of the step, and votes on the refinement.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::closeTimeStep(
+  const peano4::Partition&      partition,
+  const double                  timeStepSize,
+  const double                  maxEigenvalue,
+  exahype2::RefinementRequests& requests
+) {
+  projectOntoFaces(partition);
+  exahype2::restrictFineFaces(
+    partition,
+    exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>{partition.onDevice(), _halo.getView()}
+  );
+
+  _timeStepping.advanceTimeStamp(timeStepSize);
+  reduceMeshWidths(partition);
+  proposeTimeStepSize(maxEigenvalue);
+  measureError(partition);
+  if (_meshChangedSinceLastTimeStep) {
+    _meshChangedSinceLastTimeStep = false;
+  } else {
+    _votes.voteOnEveryCell<Derived>(
+      partition,
+      std::as_const(_solution).getView(),
+      _timeStepping.getLimits(),
+      _timeStepping.getTimeStamp(),
+      requests
+    );
+  }
 }
 
 /**
