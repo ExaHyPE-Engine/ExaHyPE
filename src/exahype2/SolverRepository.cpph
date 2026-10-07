@@ -3,6 +3,7 @@
 
 #include "peano4/Partition.h"
 #include "tarch/Assertions.h"
+#include "tarch/mpi/ReductionRecord.h"
 
 template <typename... Solvers>
 INLINE_METHOD exahype2::SolverRepository<Solvers...>::SolverRepository(Solvers&... solvers) :
@@ -105,6 +106,10 @@ exahype2::SolverRepository<Solvers...>::getAllocatedBytes() const {
   return result;
 }
 
+/**
+ * Gathers the requests of all ranks at once. The grid construction applies them in the same step.
+ * Every rank calls this function collectively.
+ */
 template <typename... Solvers>
 INLINE_METHOD void
 exahype2::SolverRepository<Solvers...>::requestRefinementForGridConstruction(const peano4::Partition& partition) {
@@ -112,7 +117,8 @@ exahype2::SolverRepository<Solvers...>::requestRefinementForGridConstruction(con
   forEachSolver([this, &partition](auto& solver) {
     solver.requestRefinementForGridConstruction(partition, _refinementRequests);
   });
-  commitRefinementRequests(partition);
+  _requestsOfTheRun     = _refinementRequests.getRefinementRequests(partition);
+  _localRequestsPending = false;
 }
 
 template <typename... Solvers>
@@ -158,10 +164,52 @@ exahype2::SolverRepository<Solvers...>::getRefinementRequests() const {
 }
 
 /**
- * Gathers the refinement requests of all ranks. Every rank calls this function collectively.
+ * Collects the refinement requests of this rank. adoptFrom() gathers them over all ranks.
  */
 template <typename... Solvers>
 INLINE_METHOD void
 exahype2::SolverRepository<Solvers...>::commitRefinementRequests(const peano4::Partition& partition) {
-  _requestsOfTheRun = _refinementRequests.getRefinementRequests(partition);
+  _localRequests        = _refinementRequests.getLocalRefinementRequests(partition);
+  _localRequestsPending = true;
+}
+
+/**
+ * Adds the values of every solver and the number of committed refinement requests of this rank to
+ * record. The repository keeps these requests until adoptFrom() reads record.
+ */
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::contributeTo(tarch::mpi::ReductionRecord& record) {
+  forEachSolver([&record](auto& solver) { solver.contributeTo(record); });
+  _numberOfRequestsSlot = record.addSum(_localRequestsPending ? _localRequests.size() : 0U);
+  if (_localRequestsPending) {
+    _localRequestsOfRecords.emplace_back(std::move(_localRequests));
+  } else {
+    _localRequestsOfRecords.emplace_back(std::nullopt);
+  }
+  _localRequests.clear();
+  _localRequestsPending = false;
+}
+
+/**
+ * Passes the reduced values to every solver. The records arrive in the order of contributeTo().
+ * The committed requests of record replace the requests of the run. Only a step in which some rank
+ * requests a change gathers the requests over all ranks. Every rank calls this function
+ * collectively.
+ */
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::adoptFrom(const tarch::mpi::ReductionRecord& record) {
+  assertion(not _localRequestsOfRecords.empty());
+  forEachSolver([&record](auto& solver) { solver.adoptFrom(record); });
+  auto localRequests = std::move(_localRequestsOfRecords.front());
+  _localRequestsOfRecords.pop_front();
+  if (not localRequests.has_value()) {
+    return;
+  }
+  if (record.getSum(_numberOfRequestsSlot) > 0) {
+    _requestsOfTheRun = exahype2::RefinementRequests::gatherRefinementRequests(std::move(*localRequests));
+  } else {
+    _requestsOfTheRun.clear();
+  }
 }

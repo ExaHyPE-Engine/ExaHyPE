@@ -11,10 +11,7 @@
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/accelerator/Scratch.h"
-#include "tarch/mpi/Collectives.h"
-#include "tarch/mpi/Rank.h"
-
-#include <mpi.h>
+#include "tarch/mpi/ReductionRecord.h"
 
 /**
  * The parameter relaxationParameter is the absolute widening of the discrete maximum principle.
@@ -79,6 +76,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   _statusesOnHost.release();
   _subcellsOnHost.release();
   _cellCounts             = exahype2::dg::limiting::SubcellSchemeCounts{};
+  _localTroubledCells     = 0;
   _globalTroubledCells    = 0;
   _holdsExtremaOfSolution = false;
   SubcellProjection<double>::deallocate();
@@ -192,9 +190,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 }
 
 /**
- * Checks every candidate and sums the cells that recompute and the troubled cells over the ranks.
- * With a recompute on any rank, the rejected cells and their neighbours recompute on the subcell
- * scheme. Returns the wave speeds of the accepted candidates and of the recomputed subgrids.
+ * Checks every candidate. The rejected cells and their neighbours recompute on the subcell scheme.
+ * Every rank spreads the statuses and exchanges the subgrid halo in every step. Returns the wave
+ * speeds of the accepted candidates and of the recomputed subgrids.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
@@ -206,34 +204,22 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 ) {
   const auto judged     = judgeCandidates(partition, solution, timeStamp, timeStepSize);
   auto       statistics = judged.statistics;
-  const int  localCounts[2]{judged.recomputedCells, judged.troubledCells};
-  int        globalCounts[2]{0, 0};
-  tarch::mpi::allreduce(
-    localCounts,
-    globalCounts,
-    2,
-    MPI_INT,
-    MPI_SUM,
-    tarch::mpi::Rank::getInstance().getCommunicator()
+  _localTroubledCells   = judged.troubledCells;
+  spreadStatuses(partition);
+  listCellsOnSubcellScheme(partition);
+  statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+    statistics,
+    recompute(partition, solution, timeStamp, timeStepSize)
   );
-  _globalTroubledCells = globalCounts[1];
-  _cellCounts          = exahype2::dg::limiting::SubcellSchemeCounts{};
-  if (globalCounts[0] > 0) {
-    spreadStatuses(partition);
-    listCellsOnSubcellScheme(partition);
-    statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
-      statistics,
-      recompute(partition, solution, timeStamp, timeStepSize)
-    );
-    if constexpr (Detector::UsesMaximumPrinciple) {
-      reduceExtrema(tarch::Span<const int>{_recomputedCells.getData(), _cellCounts.recomputedCells}, solution);
-    }
+  if constexpr (Detector::UsesMaximumPrinciple) {
+    reduceExtrema(tarch::Span<const int>{_recomputedCells.getData(), _cellCounts.recomputedCells}, solution);
   }
   assertion(
-    _globalTroubledCells >= _cellCounts.troubledCells and _globalTroubledCells <= globalCounts[0],
-    _globalTroubledCells,
+    _cellCounts.troubledCells == judged.troubledCells and _cellCounts.recomputedCells >= judged.recomputedCells,
     _cellCounts.troubledCells,
-    globalCounts[0]
+    judged.troubledCells,
+    _cellCounts.recomputedCells,
+    judged.recomputedCells
   );
   return statistics;
 }
@@ -327,7 +313,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 }
 
 /**
- * Returns the number of troubled cells on all ranks at the end of the last closeTimeStep().
+ * Returns the number of troubled cells on all ranks in the time step of the last adoptFrom().
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD int
@@ -337,6 +323,34 @@ exahype2::dg::limiting::SubcellLimiter<
   ComputePrecision
 >::getGlobalNumberOfTroubledCells() const {
   return _globalTroubledCells;
+}
+
+/**
+ * Adds the troubled cells of this rank in the last closeTimeStep() to record.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::contributeTo(
+  tarch::mpi::ReductionRecord& record
+) {
+  assertion(_localTroubledCells >= 0, _localTroubledCells);
+  _troubledCellsSlot = record.addSum(static_cast<std::uint64_t>(_localTroubledCells));
+}
+
+/**
+ * Reads the number of troubled cells on all ranks from record.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::adoptFrom(
+  const tarch::mpi::ReductionRecord& record
+) {
+  const auto globalTroubledCells = record.getSum(_troubledCellsSlot);
+  assertion(
+    globalTroubledCells <= static_cast<std::uint64_t>(std::numeric_limits<int>::max()),
+    globalTroubledCells
+  );
+  _globalTroubledCells = static_cast<int>(globalTroubledCells);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>

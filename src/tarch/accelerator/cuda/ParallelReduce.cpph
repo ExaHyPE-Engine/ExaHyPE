@@ -7,9 +7,12 @@ namespace tarch::accelerator {
   // entry while another thread still reads it.
   template <typename Reducer, typename T>
   INLINE_METHOD __device__ T blockReduce(const T threadValue) {
-    __shared__ T blockValues[CudaBlockSize];
-    const int    threadIndex = threadIdx.x;
-    const auto   threads     = static_cast<int>(blockDim.x);
+    // A __shared__ declaration takes no initialiser. Raw bytes hold a type with default member
+    // initialisers.
+    alignas(T) __shared__ unsigned char blockStorage[CudaBlockSize * sizeof(T)];
+    T* const                            blockValues = reinterpret_cast<T*>(blockStorage);
+    const int                           threadIndex = threadIdx.x;
+    const auto                          threads     = static_cast<int>(blockDim.x);
     blockValues[threadIndex] = threadValue;
     __syncthreads();
     int span = 1;
@@ -54,8 +57,10 @@ namespace tarch::accelerator {
     [[maybe_unused]] const Reducer     reducer,
     typename Reducer::ValueType* const blockResults
   ) {
-    __shared__ typename Reducer::ValueType teamAccumulator;
-    extern __shared__ unsigned char        teamScratch[];
+    using ValueType = typename Reducer::ValueType;
+    alignas(ValueType) __shared__ unsigned char teamAccumulatorStorage[sizeof(ValueType)];
+    extern __shared__ unsigned char             teamScratch[];
+    ValueType&                                  teamAccumulator = *reinterpret_cast<ValueType*>(teamAccumulatorStorage);
     if (threadIdx.x == 0) {
       teamAccumulator = Reducer::identity();
     }

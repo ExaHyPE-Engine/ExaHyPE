@@ -2,9 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ParallelConstructsTest.h"
 
+#include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/tasking/Runtime.h"
 #include "tarch/tests/TestMacros.h"
 
 namespace {
@@ -427,7 +432,73 @@ tarch::accelerator::tests::ParallelConstructsTest::run() {
   testMethod(testATeamLaunchRunsTheRequestedThreads);
   testMethod(testTeamScratchMirrorsWithinTheTeam);
   testMethod(testTheDeviceRunsADefaultTeamAtOnce);
+  testMethod(testTheNumberOfHostTasksFollowsTheTimePerItem);
+#if not defined(PEANO_WITH_GPU_BACKEND)
+  testMethod(testAHostReductionMergesItsBlocksInOrder);
+#endif
 }
+
+/**
+ * A host loop gets tasks of MinimumSecondsPerHostTask seconds between one task per thread and
+ * MaximumHostTasksPerThread tasks per thread.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testTheNumberOfHostTasksFollowsTheTimePerItem() {
+  constexpr int    Threads            = 4;
+  constexpr int    Items              = 1000;
+  constexpr int    TasksOfMinimumWork = 30;
+  constexpr double SecondsPerItem     = TasksOfMinimumWork * tarch::accelerator::MinimumSecondsPerHostTask / Items;
+  constexpr int    MostTasks          = tarch::accelerator::MaximumHostTasksPerThread * Threads;
+  static_assert(Threads < TasksOfMinimumWork and TasksOfMinimumWork < MostTasks and MostTasks < Items);
+
+  validateEquals(tarch::accelerator::getNumberOfHostTasks(Items, Threads, 0.0), Threads);
+  validateEquals(tarch::accelerator::getNumberOfHostTasks(Items, Threads, SecondsPerItem), TasksOfMinimumWork);
+  validateEquals(tarch::accelerator::getNumberOfHostTasks(Items, Threads, 1.0), MostTasks);
+  validateEquals(tarch::accelerator::getNumberOfHostTasks(MostTasks / 2, Threads, 1.0), MostTasks / 2);
+  validateEquals(tarch::accelerator::getNumberOfHostTasks(Threads / 2, Threads, 0.0), Threads / 2);
+  validateEquals(tarch::accelerator::getNumberOfHostTasks(0, Threads, 0.0), 1);
+}
+
+#if not defined(PEANO_WITH_GPU_BACKEND)
+/**
+ * Every call of a host reduction merges the sums of its blocks in block order, whatever number of
+ * tasks the time of the previous call sets.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testAHostReductionMergesItsBlocksInOrder() {
+  constexpr int Entries         = 10000;
+  constexpr int TermsPerEntry   = 50;
+  const auto    addTermsOfEntry = [](const int entry, double& sum) {
+    for (int term = 1; term <= TermsPerEntry; ++term) {
+      sum += 1.0 / static_cast<double>(entry * TermsPerEntry + term);
+    }
+  };
+
+  const int threads     = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
+  const int blocks      = std::min(Entries, tarch::accelerator::MaximumHostTasksPerThread * threads);
+  double    sumOfBlocks = 0.0;
+  for (int block = 0; block < blocks; ++block) {
+    double sumOfBlock = 0.0;
+    for (int entry = Entries * block / blocks; entry < Entries * (block + 1) / blocks; ++entry) {
+      addTermsOfEntry(entry, sumOfBlock);
+    }
+    sumOfBlocks += sumOfBlock;
+  }
+
+  constexpr int Calls             = 3;
+  int           callsWithBlockSum = 0;
+  for (int call = 0; call < Calls; ++call) {
+    double result = 0.0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(Entries),
+      addTermsOfEntry,
+      tarch::accelerator::Sum<double>{result}
+    );
+    callsWithBlockSum += (result == sumOfBlocks) ? 1 : 0;
+  }
+  validateEqualsWithParams1(callsWithBlockSum, Calls, sumOfBlocks);
+}
+#endif
 
 /**
  * The device runs at least the threads of one default team at once.

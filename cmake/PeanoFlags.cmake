@@ -88,18 +88,15 @@ function(peano_apply_flags)
     # precision through the compute precision.
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Mnoautoinline>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Mnoautoinline>
-    # IntelLLVM keeps the grid arithmetic exact and interpolation and restriction symmetric only
-    # with -ffp-model=precise. The flag -ffp-contract=on fuses multiply-adds within single
-    # expressions only and permits FENV_ACCESS.
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-contract=on>
-    # By default, GCC and the CUDA mode of Clang in AdaptiveCpp and Kokkos fuse operations across
-    # statements. Two code paths of one kernel then round differently.
     $<$<COMPILE_LANG_AND_ID:C,GNU>:-ffp-contract=on>
+    $<$<COMPILE_LANG_AND_ID:C,Clang>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-ffp-contract=on>
+    "$<$<COMPILE_LANG_AND_ID:HIP,Clang>:SHELL:-Xarch_host -ffp-contract=on>"
   )
 
   target_compile_options(PeanoOptions INTERFACE

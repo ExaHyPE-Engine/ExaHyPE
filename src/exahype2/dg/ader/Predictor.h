@@ -5,6 +5,7 @@
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/LinearPredictor.h"
 #include "exahype2/dg/ader/NonlinearPredictor.h"
+#include "exahype2/dg/ader/TeamWorkers.h"
 #include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"

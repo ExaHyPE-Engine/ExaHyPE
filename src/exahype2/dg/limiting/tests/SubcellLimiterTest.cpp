@@ -24,6 +24,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
 #include "tarch/plotter/Format.h"
 
 namespace {
@@ -481,6 +482,17 @@ namespace {
   }
 
   /**
+   * Reduces the values of solver over all ranks in the one allreduce that ends a step of a run.
+   */
+  template <typename Solver>
+  void finishStep(Solver& solver) {
+    tarch::mpi::ReductionRecord record;
+    solver.contributeTo(record);
+    record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
+    solver.adoptFrom(record);
+  }
+
+  /**
    * Initialises solver on the regular grid, runs steps time steps and returns the partition of this
    * rank.
    */
@@ -492,9 +504,11 @@ namespace {
     exahype2::RefinementRequests requests;
     requests.clear(partition.getNumberOfSlots());
     solver.initialise(partition, requests);
+    finishStep(solver);
     for (int step = 0; step < steps; step++) {
       requests.clear(partition.getNumberOfSlots());
       solver.performTimeStep(partition, requests);
+      finishStep(solver);
     }
     return partition;
   }

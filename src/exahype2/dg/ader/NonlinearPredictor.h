@@ -4,6 +4,7 @@
 
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/PicardOutcome.h"
+#include "exahype2/dg/ader/TeamWorkers.h"
 #include "exahype2/terms/DiffusiveFlux.h"
 #include "exahype2/terms/DiffusiveSourceTerm.h"
 #include "exahype2/terms/Flux.h"
@@ -16,7 +17,6 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::ader {
-  struct TeamWorkers;
   struct PicardResidual;
 
   template <typename Derived, typename ComputePrecision>
@@ -28,26 +28,6 @@ namespace exahype2::dg::ader::tests {
 } // namespace exahype2::dg::ader::tests
 
 TARGET_DECLARE
-/**
- * The threads that run the predictor of one cell. A team of teamThreads threads runs groups
- * cells at once, threads threads per cell. thread is the index of the calling thread within the
- * threads of its cell, teamThread its index within the team, group the cell of the team it works
- * on, team the handle of the team and scratch the team scratch of the launch. hasCell is false on
- * a thread whose group received no cell. Such a thread takes part in every barrier and computes
- * nothing. A TeamWorkers without a team runs one cell on one thread.
- */
-struct exahype2::dg::ader::TeamWorkers final {
-  int                                   thread{0};
-  int                                   threads{1};
-  int                                   teamThread{0};
-  int                                   teamThreads{1};
-  int                                   group{0};
-  int                                   groups{1};
-  bool                                  hasCell{true};
-  const tarch::accelerator::TeamHandle* team{nullptr};
-  unsigned char*                        scratch{nullptr};
-};
-
 /**
  * The squared Picard residual of the nodes one thread solved, in fixed point: highLimb and
  * lowLimb hold the sum of the scaled squares, exceeds records a square at or above the
@@ -137,11 +117,6 @@ public:
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD TeamWorkers getWorkers(
-    const tarch::accelerator::TeamHandle& team,
-    int                                   threadsPerCell
-  );
-  static INLINE_METHOD GPU_CALLABLE_METHOD void synchronise(const TeamWorkers& workers);
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getTeamScratchBytes(int teamThreads);
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double getSquaredResidual(
     const PicardResidual& residual,

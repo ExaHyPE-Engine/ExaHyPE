@@ -6,8 +6,8 @@ include_guard(GLOBAL)
 set(PEANO_WITH_CPU_ARCH "native" CACHE STRING "Instruction set architecture (e.g. native, skylake, zen3, armv8-a)")
 set(PEANO_WITH_CPU_TUNE "native" CACHE STRING "Tuning architecture (e.g. native, skylake, znver3)")
 
-# Helper: does the compiler predefine <macro> under <flags>? Result -> <out_var>
-# (cached by check_cxx_source_compiles()).
+# Sets out_var to whether the compiler predefines macro under flags. check_cxx_source_compiles()
+# caches the result.
 function(_peano_check_macro_defined macro flags out_var)
   set(code
     "#ifndef ${macro}
@@ -64,6 +64,15 @@ function(peano_detect_cpu_architecture)
   _peano_check_macro_defined("__SSE2__"          "${_DETECTED_FLAGS}" HAS_SSE2)
   _peano_check_macro_defined("__ARM_NEON"        "${_DETECTED_FLAGS}" HAS_NEON)
   _peano_check_macro_defined("__ARM_FEATURE_SVE" "${_DETECTED_FLAGS}" HAS_SVE)
+
+  # GCC, Clang and icpx emit 256-bit vectors on AVX-512 CPUs by default. The padded loops need all
+  # eight double lanes of PEANO_WITH_SIMDLEN.
+  if(HAS_AVX512F AND (IS_GCC OR IS_CLANG OR IS_INTEL))
+    check_cxx_compiler_flag("-mprefer-vector-width=512" HAS_PREFER_VECTOR_WIDTH_512)
+    if(HAS_PREFER_VECTOR_WIDTH_512)
+      list(APPEND _DETECTED_FLAGS "-mprefer-vector-width=512")
+    endif()
+  endif()
 
   set(_simdlen 2)    # double lanes for 128-bit SIMD
   set(_alignment 16)

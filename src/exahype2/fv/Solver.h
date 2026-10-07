@@ -21,6 +21,10 @@
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/plotter/Format.h"
 
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
+
 namespace exahype2::fv {
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   class Solver;
@@ -82,6 +86,8 @@ public:
     const std::string&       outputDirectory
   );
   INLINE_METHOD void release();
+  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
 
   INLINE_METHOD void setLimits(const exahype2::Limits& limits);
   INLINE_METHOD void openErrorMeasurement(const std::string& fileName, double timeDeltaBetweenSnapshots);
@@ -100,8 +106,10 @@ private:
   );
   [[nodiscard]] INLINE_METHOD double measureMaxEigenvalue(const peano4::Partition& partition);
   INLINE_METHOD void measureError(const peano4::Partition& partition);
-  INLINE_METHOD void reduceMeshWidths(const peano4::Partition& partition);
+  INLINE_METHOD void measureMeshWidths(const peano4::Partition& partition);
   INLINE_METHOD void proposeTimeStepSize(double maxEigenvalue);
+  [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
+  [[nodiscard]] INLINE_METHOD double getFixedTimeStepSize() const;
 
   Patches _solution{FiniteVolumeScheme::ValuesPerPatch};
   Faces   _halo{FiniteVolumeScheme::ValuesPerFace};

@@ -401,8 +401,7 @@ namespace {
       const int                            team,
       const tarch::accelerator::TeamHandle handle
     ) const {
-      exahype2::dg::ader::TeamWorkers workers =
-        Predictor<exahype2::dg::ader::tests::StubSolver>::getWorkers(handle, threadsPerCell);
+      exahype2::dg::ader::TeamWorkers workers = exahype2::dg::ader::getWorkers(handle, threadsPerCell);
       const int cell    = team * workers.groups + workers.group;
       workers.hasCell   = workers.hasCell and cell < Setup::NumberOfCells;
       const int pointed = workers.hasCell ? cell : 0;

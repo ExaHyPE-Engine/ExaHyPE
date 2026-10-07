@@ -36,8 +36,10 @@ namespace tarch::accelerator {
   template <typename Functor>
   INLINE_METHOD void parallelForOnHost(const Range& range, Functor functor);
 
-  // A backend may define these templates in its device translation units only. A host translation
-  // unit that uses them without their definition requires declarations that are not inline.
+#if (defined(PEANO_WITH_GPU_BACKEND_CUDA) and not defined(__CUDACC__)) \
+  or (defined(PEANO_WITH_GPU_BACKEND_HIP) and not defined(__HIPCC__))
+  // The CUDA and HIP backends define these templates in their device translation units only. A
+  // host translation unit calls them through declarations that are not inline.
   template <typename Functor>
   void parallelFor(const Range& range, Functor functor);
   template <typename Functor>
@@ -46,6 +48,7 @@ namespace tarch::accelerator {
   void parallelFor(const RangeMD<3>& range, Functor functor);
   template <typename Functor>
   void parallelFor(const TeamRange& range, Functor functor);
+#endif
 
   INLINE_METHOD int getTeamThreads(int requested);
   INLINE_METHOD int getTeamScratchBytes(int requested);

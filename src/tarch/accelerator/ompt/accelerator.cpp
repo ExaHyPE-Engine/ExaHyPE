@@ -74,7 +74,7 @@ tarch::accelerator::copyFromPinnedMemory(
 }
 
 /**
- * A target region of this backend returns after its completion, so there is nothing to wait for.
+ * Returns at once. A target region of this backend returns after its completion.
  */
 void
 tarch::accelerator::waitForDevice() {}

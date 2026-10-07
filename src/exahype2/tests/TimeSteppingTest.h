@@ -26,10 +26,14 @@ private:
   void testTheLimitsReadBackAsSet();
   void testAdvancingTheTimeStampRecordsTheStepSize();
   void testTheMeshWidthsReduceOverEveryRank();
+  void testTheAdoptionReportsOnlyTheValuesSetSinceTheLastReduction();
   void testMaxEigenvaluesKeepTheLargestPositiveValue();
   void testStartTimeStepCommitsTheProposalAndClearsTheMaxima();
   void testRankReductionTakesTheMaximaOfAllRanks();
   void testStabilityEigenvalueIsThePhysicalOrTheScaledMaximum();
   void testProposalStopsAtTheTerminalTime();
+  void testAReusedProposalStopsAtTheTerminalTime();
   void testAFixedRuleKeepsItsSizeAcrossSteps();
+  void testAStepBeyondTheCFLLimitOfItsWaveSpeedsExceedsTheLimit();
+  void testTheLastStepMayGrowBeyondTheCFLLimitToTheTerminalTime();
 };

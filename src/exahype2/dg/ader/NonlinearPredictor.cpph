@@ -72,7 +72,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
     for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
       // The other threads read the state slice and the gradient of the previous time node until
       // here.
-      synchronise(workers);
+      exahype2::dg::ader::synchronise(workers);
       if (active) {
         if constexpr (NeedsStateGradient) {
           computeSpaceTimeGradient(
@@ -86,7 +86,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
         }
         clearRightHandSide(rightHandSide, timeNode, workers);
       }
-      synchronise(workers);
+      exahype2::dg::ader::synchronise(workers);
 
       // The later time nodes read the flux of the first time node for the time average.
       ComputePrecision* const fluxOfTimeNode = timeNode == 0 ? firstFlux : flux;
@@ -105,7 +105,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
             workers
           );
         }
-        synchronise(workers);
+        exahype2::dg::ader::synchronise(workers);
         if (active) {
           averageFluxOverTime(
             timeAveragedFlux,
@@ -131,7 +131,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
               workers
             );
           }
-          synchronise(workers);
+          exahype2::dg::ader::synchronise(workers);
         }
       }
 
@@ -156,7 +156,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
         }
       }
     }
-    synchronise(workers);
+    exahype2::dg::ader::synchronise(workers);
 
     PicardResidual ownResidual;
     if (active) {
@@ -183,12 +183,12 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
     }
     anyActive = isAnyActive(workers, active);
   }
-  synchronise(workers);
+  exahype2::dg::ader::synchronise(workers);
 
   if (workers.hasCell) {
     averageStateOverTime(spaceTimeState, tables.quadratureWeights, workers);
   }
-  synchronise(workers);
+  exahype2::dg::ader::synchronise(workers);
   const ComputePrecision* const timeAveragedState = spaceTimeState;
 
   if (workers.hasCell) {
@@ -228,13 +228,19 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
       }
     }
   }
-  synchronise(workers);
+  exahype2::dg::ader::synchronise(workers);
 
   if constexpr (EvaluateFlux) {
-    if (workers.hasCell and workers.thread == 0) {
-      exahype2::dg::differentiateFluxInPlace<Derived>(timeAveragedFlux, tables.derivativeOperator, inverseCellSize);
+    if (workers.hasCell) {
+      exahype2::dg::differentiateFluxInPlace<Derived>(
+        timeAveragedFlux,
+        tables.derivativeOperator,
+        inverseCellSize,
+        workers.thread,
+        workers.threads
+      );
     }
-    synchronise(workers);
+    exahype2::dg::ader::synchronise(workers);
   }
 
   if (not workers.hasCell) {
@@ -247,44 +253,6 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
     return exahype2::dg::ader::UnconvergedPicardIteration;
   }
   return numberOfSweeps;
-}
-
-/**
- * Returns the calling device thread as a worker of a team that runs cells on threadsPerCell
- * threads each. The threads of the team split into groups of threadsPerCell consecutive threads.
- * The threads behind the last full group receive no cell. A team smaller than threadsPerCell runs
- * one cell on all of its threads. On the host the call runs one cell on one thread without a team.
- */
-template <typename Derived, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::TeamWorkers
-exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getWorkers(
-  [[maybe_unused]] const tarch::accelerator::TeamHandle& team,
-  [[maybe_unused]] const int                             threadsPerCell
-) {
-  assertion(threadsPerCell > 0, threadsPerCell);
-  TeamWorkers workers;
-  COMPILE_IF_ON_DEVICE(workers.teamThread  = tarch::accelerator::getThreadOfTeam(team);
-                       workers.teamThreads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
-                       workers.threads = threadsPerCell < workers.teamThreads ? threadsPerCell : workers.teamThreads;
-                       workers.groups  = workers.teamThreads / workers.threads;
-                       workers.group   = workers.teamThread / workers.threads;
-                       workers.thread  = workers.teamThread - workers.group * workers.threads;
-                       workers.hasCell = workers.group < workers.groups;
-                       workers.team    = &team;
-                       workers.scratch = tarch::accelerator::getTeamScratch(team);)
-  return workers;
-}
-
-/**
- * Waits until every thread of the team reaches this point. A team of one thread returns at once.
- */
-template <typename Derived, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::synchronise(const TeamWorkers& workers) {
-  if (workers.teamThreads > 1) {
-    assertion(workers.team != nullptr, workers.teamThread, workers.teamThreads);
-    COMPILE_IF_ON_DEVICE(tarch::accelerator::teamBarrier(*workers.team);)
-  }
 }
 
 /**
@@ -349,7 +317,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::combineOverGr
   limbs[2 * workers.teamThread]     = residual.highLimb;
   limbs[2 * workers.teamThread + 1] = residual.lowLimb;
   flags[workers.teamThread] = static_cast<unsigned char>((residual.exceeds ? 1 : 0) + (residual.diverged ? 2 : 0));
-  synchronise(workers);
+  exahype2::dg::ader::synchronise(workers);
   if (workers.group < workers.groups) {
     const int first = workers.group * workers.threads;
     for (int other = first; other < first + workers.threads; other++) {
@@ -361,7 +329,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::combineOverGr
       sum.add(part);
     }
   }
-  synchronise(workers);
+  exahype2::dg::ader::synchronise(workers);
   return sum;
 }
 
@@ -381,12 +349,12 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::isAnyActive(
   unsigned char* const flags =
     getAlignedTeamScratch(workers) + workers.teamThreads * (2 * static_cast<int>(sizeof(std::uint64_t)) + 1);
   flags[workers.teamThread] = active ? 1 : 0;
-  synchronise(workers);
+  exahype2::dg::ader::synchronise(workers);
   bool any = false;
   for (int other = 0; other < workers.teamThreads; other++) {
     any = any or flags[other] != 0;
   }
-  synchronise(workers);
+  exahype2::dg::ader::synchronise(workers);
   return any;
 }
 

@@ -12,20 +12,21 @@ The constants of `Derived` select the branches below.
 Every functor below, such as exahype2::fv::UpdatePatches, runs through tarch::accelerator::parallelFor() or tarch::accelerator::parallelReduce() with one work item per cell, face, level jump or particle.
 The host backend runs the work items on the OpenMP threads of the rank.
 A GPU backend runs the work items on the device.
-A cell, face or level jump of peano4::Adjacency::Local reads no data of another rank, so it runs while the MPI messages of peano4::HaloExchange travel.
+A cell, face or level jump of peano4::Adjacency::Local reads only data of its own rank.
+It runs while the MPI messages of peano4::HaloExchange travel.
 
 # From the runner to the solver family
 
-exahype2::runner::Runner::runTimeLoop() runs on the global master.
-exahype2::runner::Runner::runWorker() runs every step the global master broadcasts on every other rank.
+Every rank runs exahype2::runner::Runner::runTimeLoop().
+The loop decides every step from reduced values only.
+Every rank then runs the same steps.
 
 1. exahype2::runner::Runner::runTimeLoop(), once per step:
    1. exahype2::runner::Runner::applyMeshUpdates() runs the regrid when exahype2::runner::Runner::hasPendingMeshUpdates() returns true.
    2. exahype2::runner::Runner::runStep() runs a plot or a time step.
 2. exahype2::runner::Runner::runStep():
-   1. exahype2::runner::Runner::exchangeStep() copies the step of the global master to every rank with an MPI allreduce.
-   2. exahype2::runner::Runner::executeStep() calls the `performTimeStep` entry of exahype2::runner::SolverRepositoryCallbacks.
-   3. exahype2::runner::Runner::finishStep() reduces the statistics across the ranks through exahype2::runner::GlobalStatistics::synchronise().
+   1. exahype2::runner::Runner::executeStep() calls the `performTimeStep` entry of exahype2::runner::SolverRepositoryCallbacks.
+   2. exahype2::runner::Runner::finishStep() reduces the statistics and the values of the solvers across the ranks in one tarch::mpi::ReductionRecord.
 3. The generated `createRepositoryCallbacks()` of `Main.cpp.jinja2` binds this entry to the generated `performTimeStep()` of `SolverRepository.cpp.jinja2`.
 4. The generated `performTimeStep()` calls exahype2::SolverRepository::performTimeStep() with peano4::Spacetree::getPartition().
 5. exahype2::SolverRepository::performTimeStep():
@@ -55,15 +56,16 @@ exahype2::fv::Solver::performTimeStep():
 10. exahype2::fv::Solver::projectOntoFaces() copies the outer layers of every patch into its own face halves.
 11. exahype2::restrictFineFaces() runs exahype2::fv::RestrictHaloHalves.
 12. exahype2::TimeStepping::advanceTimeStamp() adds the time step size to the time stamp.
-13. exahype2::fv::Solver::reduceMeshWidths() reduces the mesh widths across the ranks.
-14. exahype2::fv::Solver::proposeTimeStepSize() sets the size of the next step.
-15. exahype2::fv::Solver::measureError() records the error norms when a snapshot is due.
-16. exahype2::RefinementVotes::voteOnEveryCell() calls `Derived::refinementCriterion()`, except in the first time step after a regrid.
+13. exahype2::fv::Solver::proposeTimeStepSize() raises the wave speed maximum of this rank or sets a fixed time step size.
+14. exahype2::fv::Solver::measureError() records the error norms when a snapshot is due.
+15. exahype2::RefinementVotes::voteOnEveryCell() calls `Derived::refinementCriterion()` in every time step but the first after a regrid.
 
 exahype2::fv::Solver::updatePatches():
 
-1. exahype2::fv::UpdatePatches calls exahype2::fv::FiniteVolumeScheme::computeVolumeUpdate() on every volume of every cell of the list, through exahype2::fv::FiniteVolumeScheme::update() on the host and with one thread per volume on a device.
-2. exahype2::fv::timestepping::SingleStep::applyToVolume(), the `Derived::TimeIntegration`, advances one volume:
+1. exahype2::fv::UpdatePatches calls exahype2::fv::FiniteVolumeScheme::computeVolumeUpdate() on every volume of every listed cell.
+   The host runs it through exahype2::fv::FiniteVolumeScheme::update().
+   A device runs it with one thread per volume.
+2. exahype2::fv::timestepping::SingleStep::applyToVolume() advances one volume as `Derived::TimeIntegration`:
    1. `Derived::sourceTerm()` adds the source.
    2. `Derived::Reconstruction::accumulateFluxDivergence()` adds the flux divergence.
    3. exahype2::fv::reconstruction::Constant::accumulateFluxDivergence() calls `Derived::diffusiveSourceTerm()`.
@@ -76,20 +78,22 @@ exahype2::fv::Solver::updatePatches():
 
 # Discontinuous Galerkin faces
 
-exahype2::dg::ader::Solver and exahype2::dg::rk::Solver run the same face phase around their cell update:
+exahype2::dg::ader::Solver and exahype2::dg::rk::Solver run the same face phase between their cell projection and their cell update:
 
-1. peano4::HaloExchange::post() sends the own halves of the face states and of the face fluxes to the neighbour ranks with MPI.
-2. exahype2::interpolateCoarseFaces() runs exahype2::dg::InterpolateFaceHalves on the local level jumps.
-3. exahype2::dg::Solver::solveRiemannProblems() runs on the local faces.
-4. peano4::HaloExchange::wait() writes the halves of the neighbour ranks into both face pools.
-5. exahype2::interpolateCoarseFaces() runs on the remote level jumps.
-6. exahype2::dg::Solver::solveRiemannProblems() runs on the remote faces.
-7. exahype2::restrictFineFaces() runs exahype2::dg::RestrictFluxHalves on the remote level jumps.
-8. peano4::HaloExchange::post() sends the restricted face fluxes to the neighbour ranks.
-9. exahype2::restrictFineFaces() runs on the local level jumps.
-10. The cell update of the solver family runs on the local cells.
-11. peano4::HaloExchange::wait() writes the face fluxes of the neighbour ranks.
-12. The cell update of the solver family runs on the remote cells.
+1. The cell projection of the solver family runs on the remote cells.
+2. peano4::HaloExchange::post() sends the own halves of the face states and of the face fluxes to the neighbour ranks with MPI.
+3. The cell projection of the solver family runs on the local cells.
+4. exahype2::interpolateCoarseFaces() runs exahype2::dg::InterpolateFaceHalves on the local level jumps.
+5. exahype2::dg::Solver::solveRiemannProblems() runs on the local faces.
+6. peano4::HaloExchange::wait() writes the halves of the neighbour ranks into both face pools.
+7. exahype2::interpolateCoarseFaces() runs on the remote level jumps.
+8. exahype2::dg::Solver::solveRiemannProblems() runs on the remote faces.
+9. exahype2::restrictFineFaces() runs exahype2::dg::RestrictFluxHalves on the remote level jumps.
+10. peano4::HaloExchange::post() sends the restricted face fluxes to the neighbour ranks.
+11. exahype2::restrictFineFaces() runs on the local level jumps.
+12. The cell update of the solver family runs on the local cells.
+13. peano4::HaloExchange::wait() writes the face fluxes of the neighbour ranks.
+14. The cell update of the solver family runs on the remote cells.
 
 exahype2::dg::Solver::solveRiemannProblems():
 
@@ -107,12 +111,13 @@ exahype2::dg::ader::Solver::performTimeStep():
 
 1. exahype2::TimeStepping::startTimeStep() returns the time step size.
 2. exahype2::dg::limiting::SubcellLimiter::openTimeStep() runs for a solver with a limiter.
-3. exahype2::dg::ader::Solver::predict() runs the predictor on every cell.
-4. The face phase runs with exahype2::dg::ader::Solver::correct() as the cell update.
-5. exahype2::dg::limiting::SubcellLimiter::closeTimeStep() returns the wave speeds of the step for a solver with a limiter.
-6. exahype2::dg::Solver::closeTimeStep() sets the size of the next step.
-7. exahype2::dg::Solver::measureError() records the error norms when a snapshot is due.
-8. exahype2::dg::Solver::voteOnRefinement() calls exahype2::RefinementVotes::voteOnEveryCell(), or exahype2::RefinementVotes::voteOnCells() for a solver with a cell predicate, except in the first time step after a regrid.
+3. The face phase runs with exahype2::dg::ader::Solver::predict() as the cell projection and exahype2::dg::ader::Solver::correct() as the cell update.
+4. exahype2::dg::limiting::SubcellLimiter::closeTimeStep() returns the wave speeds of the step for a solver with a limiter.
+5. exahype2::dg::Solver::closeTimeStep() advances the time stamp and raises the wave speed maxima of this rank or sets a fixed time step size.
+6. exahype2::dg::Solver::measureError() records the error norms when a snapshot is due.
+7. exahype2::dg::Solver::voteOnRefinement() votes in every time step but the first after a regrid:
+   - A solver with a cell predicate calls exahype2::RefinementVotes::voteOnCells().
+   - Every other solver calls exahype2::RefinementVotes::voteOnEveryCell().
 
 exahype2::dg::ader::Solver::performTimeStep() branches for two solvers that exahype2::dg::ader::Solver::coupleWith() couples:
 
@@ -122,7 +127,7 @@ exahype2::dg::ader::Solver::performTimeStep() branches for two solvers that exah
 
 exahype2::dg::ader::Solver::predict():
 
-1. exahype2::dg::ader::Solver::predictCells() runs exahype2::dg::ader::PredictCells on every cell.
+1. exahype2::dg::ader::Solver::predictCells() runs exahype2::dg::ader::PredictCells on every listed cell.
 2. exahype2::dg::ader::Predictor::predict() branches on `Derived::IsLinear`.
 3. For a linear `Derived`, exahype2::dg::ader::LinearPredictor::predict() builds the Taylor series of the solution in time:
    1. exahype2::dg::ader::LinearPredictor::evaluatePointSources() calls `Derived::pointSource()` before the first Taylor term.
@@ -152,37 +157,38 @@ exahype2::dg::ader::Solver::correct():
 
 exahype2::dg::limiting::SubcellLimiter::openTimeStep():
 
-1. exahype2::dg::limiting::SubcellLimiter::openStep() runs exahype2::dg::limiting::OpenStep on every cell.
-2. exahype2::dg::limiting::OpenStep copies the solution of every cell into its previous solution.
-3. exahype2::dg::limiting::SubcellLimiter::reduceReferenceExtrema() runs for a solver with observables of the discrete maximum principle:
-   1. exahype2::dg::limiting::ReduceReferenceExtrema calls exahype2::dg::limiting::Detector::reduceExtrema() on the previous solution of every cell.
+1. For a solver with observables of the discrete maximum principle, exahype2::dg::limiting::SubcellLimiter::reduceExtrema() runs in the first time step after the initialisation or a regrid:
+   1. exahype2::dg::limiting::ReduceReferenceExtrema calls exahype2::dg::limiting::Detector::reduceExtrema() on the solution of every cell.
    2. exahype2::dg::limiting::Detector::reduceObservableExtrema() calls `Derived::mapDmpObservables()`.
-   3. exahype2::dg::limiting::SubcellLimiter::exchangeFaces() sends the extrema halves to the neighbour ranks once per axis.
-   4. exahype2::dg::limiting::MergeNeighbourExtrema merges the extrema of the face neighbours once per axis.
+2. exahype2::dg::limiting::SubcellLimiter::openStep() runs exahype2::dg::limiting::OpenStep on every cell.
+3. exahype2::dg::limiting::OpenStep copies the solution of every cell into its previous solution and the reference extrema of the cell into its own face halves.
+4. For a solver with observables of the discrete maximum principle, exahype2::dg::limiting::SubcellLimiter::mergeNeighbourExtrema() runs one round per axis:
+   1. exahype2::dg::limiting::SubcellLimiter::exchangeFaces() sends the extrema halves to the neighbour ranks.
+   2. exahype2::dg::limiting::MergeNeighbourExtrema merges the extrema of the face neighbours in every round but the last.
 
 exahype2::dg::limiting::SubcellLimiter::closeTimeStep():
 
-1. exahype2::dg::limiting::SubcellLimiter::judgeCandidates() runs exahype2::dg::limiting::Detector::judgeCandidate() on every cell:
-   1. A cell whose predictor diverged fails the test.
-   2. exahype2::dg::limiting::Detector::isPhysicallyAdmissible() calls `Derived::isPhysicallyAdmissible()`.
-   3. exahype2::dg::limiting::Detector::satisfiesMaximumPrinciple() compares the extrema of the candidate with the reference extrema.
-   4. exahype2::dg::limiting::Detector::getRelaxationParameterOfObservable() calls `Derived::dmpRelaxationParameter()`.
-2. exahype2::dg::limiting::SubcellLimiter::listCellsOnSubcellScheme() counts the cells to recompute.
-3. tarch::mpi::allreduce() sums the cells to recompute over the ranks.
-4. exahype2::dg::limiting::SubcellLimiter::closeTimeStep() runs the following calls when a rank recomputes a cell:
-   1. exahype2::dg::limiting::SubcellLimiter::spreadStatuses() sends the status halves to the neighbour ranks.
-   2. exahype2::dg::limiting::SpreadStatuses marks the neighbours of a troubled cell.
-   3. exahype2::dg::limiting::SubcellLimiter::listCellsOnSubcellScheme() lists the marked cells.
-   4. exahype2::dg::limiting::SubcellLimiter::recompute() advances the marked cells on their subgrids.
-   5. tarch::mpi::allreduce() sums the troubled cells over the ranks.
+1. exahype2::dg::limiting::SubcellLimiter::judgeCandidates() runs exahype2::dg::limiting::JudgeCandidates on every cell:
+   1. exahype2::dg::limiting::JudgeCandidates runs the last merge round on the reference extrema.
+   2. A cell whose predictor diverged fails the test.
+   3. exahype2::dg::limiting::Detector::isPhysicallyAdmissible() calls `Derived::isPhysicallyAdmissible()`.
+   4. exahype2::dg::limiting::Detector::satisfiesMaximumPrinciple() compares the extrema of the candidate with the reference extrema.
+   5. exahype2::dg::limiting::Detector::getRelaxationParameterOfObservable() calls `Derived::dmpRelaxationParameter()`.
+2. exahype2::dg::limiting::SubcellLimiter::spreadStatuses() sends the status halves to the neighbour ranks.
+3. exahype2::dg::limiting::SpreadStatuses marks the neighbours of a troubled cell.
+4. exahype2::dg::limiting::SubcellLimiter::listCellsOnSubcellScheme() lists the marked cells.
+5. exahype2::dg::limiting::SubcellLimiter::recompute() advances the marked cells on their subgrids.
+6. For a solver with observables of the discrete maximum principle, exahype2::dg::limiting::SubcellLimiter::reduceExtrema() writes the reference extrema of the recomputed cells.
+7. exahype2::dg::limiting::SubcellLimiter::contributeTo() adds the troubled cells of this rank to the reduction of the step.
 
 exahype2::dg::limiting::SubcellLimiter::recompute():
 
 1. exahype2::dg::limiting::ProjectSubgridsOntoFaces calls exahype2::dg::limiting::SubcellScheme::projectSubgridOntoFaces() on every cell on the subcell scheme.
 2. exahype2::dg::limiting::ApplySubgridBoundaryConditions calls `Derived::boundaryConditions()` on the boundary faces of those cells.
 3. exahype2::dg::limiting::SubcellLimiter::exchangeFaces() sends the subgrid halo halves to the neighbour ranks.
-4. exahype2::dg::limiting::RecomputeSubcells runs on the local cells while the halves travel, then on the remote cells.
-5. exahype2::dg::limiting::SubcellScheme::recompute() runs on every recomputed cell:
+4. exahype2::dg::limiting::RecomputeSubcells runs on the local cells while the halves travel.
+5. exahype2::dg::limiting::RecomputeSubcells runs on the remote cells after the halves arrive.
+6. exahype2::dg::limiting::SubcellScheme::recompute() runs on every recomputed cell:
    1. exahype2::dg::limiting::SubcellScheme::advanceSubcells() runs exahype2::fv::FiniteVolumeScheme::update() on the subgrid.
    2. exahype2::dg::limiting::SubcellScheme::SubgridSolver calls the PDE terms of `Derived` for that update.
    3. exahype2::dg::limiting::SubcellScheme::SubgridSolver calls `Derived::solveSubcellRiemannProblem()` for the Riemann problem.
@@ -195,19 +201,18 @@ exahype2::dg::limiting::SubcellLimiter::recompute():
 exahype2::dg::rk::Solver::performTimeStep():
 
 1. exahype2::TimeStepping::startTimeStep() returns the time step size.
-2. Every stage of the exahype2::dg::rk::ButcherTableau of `Derived::RungeKuttaOrder` runs:
-   1. exahype2::dg::rk::Solver::openStage() runs exahype2::dg::rk::OpenStage on every cell.
+2. Every stage of the exahype2::dg::rk::ButcherTableau of `Derived::RungeKuttaOrder` runs the face phase with exahype2::dg::rk::Solver::openStage() as the cell projection and exahype2::dg::rk::Solver::addFaceIntegrals() as the cell update:
+   1. exahype2::dg::rk::Solver::openStage() runs exahype2::dg::rk::OpenStage on the listed cells.
    2. exahype2::dg::rk::OpenStage calls exahype2::dg::rk::Stage::open().
    3. exahype2::dg::rk::Stage::combineEstimates() writes the stage state.
    4. exahype2::dg::rk::Stage::volumeIntegral() calls `Derived::flux()`, `Derived::nonconservativeProduct()` and `Derived::sourceTerm()`.
    5. exahype2::dg::rk::Stage::projectOntoFaces() writes the stage state and its flux into the own face halves.
-   6. The face phase runs with exahype2::dg::rk::Solver::addFaceIntegrals() as the cell update.
 3. exahype2::dg::rk::Solver::combineFinalState() runs exahype2::dg::rk::CombineStages on every cell.
 4. exahype2::dg::rk::CombineStages calls exahype2::dg::rk::Stage::close().
 5. exahype2::dg::rk::Stage::close() calls exahype2::dg::rk::Stage::combineEstimates() and exahype2::dg::finishCell().
 6. exahype2::dg::finishCell() calls `Derived::postprocessUpdatedPatch()`.
 7. exahype2::dg::reduceMaxEigenvalues() calls `Derived::maxEigenvalue()` under an adaptive rule.
-8. exahype2::dg::Solver::closeTimeStep() sets the size of the next step.
+8. exahype2::dg::Solver::closeTimeStep() advances the time stamp and raises the wave speed maxima of this rank or sets a fixed time step size.
 9. exahype2::dg::Solver::measureError() records the error norms when a snapshot is due.
 10. exahype2::dg::Solver::voteOnRefinement() votes as for ADER-DG.
 
@@ -215,25 +220,26 @@ exahype2::dg::rk::Solver::performTimeStep():
 
 Every solver holds its own exahype2::TimeStepping.
 Every solver advances by its own time step size.
-exahype2::TimeStepping starts with a time step size of zero, so the first time step of a run sets the size of the second one.
+exahype2::TimeStepping starts with a time step size of zero.
+The first time step of a run sets the size of the later ones.
 
 1. exahype2::TimeStepping::startTimeStep() starts the step:
-   - Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::startTimeStep() takes the size the previous step admitted.
+   - Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::startTimeStep() takes the size of the last adopted reduction and clips it to the time left to the terminal time.
    - Under exahype2::TimeStepping::Rule::Fixed, exahype2::TimeStepping::startTimeStep() keeps the size.
 2. exahype2::fv::Solver::performTimeStep() and exahype2::dg::Solver::closeTimeStep() end the step:
    1. exahype2::TimeStepping::advanceTimeStamp() adds the time step size to the time stamp.
-   2. exahype2::TimeStepping::reduceMeshWidthsAcrossRanks() reduces the smallest and the largest mesh width with an MPI allreduce.
-   3. exahype2::fv::Solver::proposeTimeStepSize() and exahype2::dg::Solver::closeTimeStep() branch on `Derived::TimeSteppingRule`.
-3. Under exahype2::TimeStepping::Rule::Adaptive:
-   1. exahype2::TimeStepping::raiseMaxEigenvalue() stores the wave speed maximum of this rank.
-   2. exahype2::TimeStepping::raiseMaxScaledEigenvalue() stores the scaled wave speed maximum of a DG solver.
-   3. exahype2::TimeStepping::reduceMaxEigenvaluesAcrossRanks() reduces the maxima with an MPI allreduce.
-   4. exahype2::TimeStepping::setAdmissibleTimeStepSize() runs when the reduced maximum is positive and the time stamp lies before the terminal time.
-   5. exahype2::fv::Solver::proposeTimeStepSize(), exahype2::dg::ader::Solver::getTimeStepSizeFromCFL() and exahype2::dg::rk::Solver::getTimeStepSizeFromCFL() compute the CFL size for this call.
-   6. exahype2::TimeStepping::setAdmissibleTimeStepSize() stores the smaller of the CFL size and the time left to the terminal time.
-4. Under exahype2::TimeStepping::Rule::Fixed:
-   1. exahype2::fv::Solver::proposeTimeStepSize(), exahype2::dg::ader::Solver::getFixedTimeStepSize() and exahype2::dg::rk::Solver::getFixedTimeStepSize() compute the size from the reduced smallest mesh width.
-   2. exahype2::TimeStepping::setFixedTimeStepSize() stores the size of every following step.
+   2. Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::raiseMaxEigenvalue() stores the wave speed maximum of this rank.
+   3. Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::raiseMaxScaledEigenvalue() stores the scaled wave speed maximum of a DG solver.
+   4. Under exahype2::TimeStepping::Rule::Fixed, exahype2::TimeStepping::setFixedTimeStepSize() stores the size from the reduced smallest mesh width.
+3. exahype2::runner::Runner::finishStep() posts the reduction of the time step and adopts the reduction of the previous time step:
+   1. exahype2::TimeStepping::contributeTo() adds the time step size, the time stamp, the mesh widths and the wave speed maxima of this rank to the tarch::mpi::ReductionRecord.
+   2. exahype2::TimeStepping::adoptFrom() reads the reduced values of all ranks.
+   3. Under exahype2::TimeStepping::Rule::Adaptive, exahype2::fv::Solver::adoptFrom() and exahype2::dg::Solver::adoptFrom() compute the CFL size from the reduced wave speed maximum.
+   4. exahype2::TimeStepping::validateTimeStepSizeOfReducedStep() compares the time step of the reduction with this CFL size.
+   5. exahype2::TimeStepping::setAdmissibleTimeStepSize() stores the smaller of the CFL size and the time left to the terminal time while the time stamp lies before the terminal time.
+   6. Under exahype2::TimeStepping::Rule::Fixed, new mesh widths reset the size through exahype2::TimeStepping::setFixedTimeStepSize().
+
+A time step takes its size from the reduction two time steps before.
 
 # Regrid between two time steps
 
@@ -257,18 +263,20 @@ exahype2::fv::Solver::regrid():
 1. peano4::MigrationExchange::migrate() fills the new slots from the parent, the children or another rank.
 2. peano4::HaloExchange::rebuild() lists the exchanged faces of the new partition.
 3. exahype2::fv::Solver::projectOntoFaces() and exahype2::restrictFineFaces() fill the new faces.
-4. exahype2::fv::Solver::reduceMeshWidths() reduces the mesh widths of the new grid across the ranks.
-5. exahype2::fv::Solver::proposeTimeStepSize() reads exahype2::fv::Solver::measureMaxEigenvalue() when the next time step size is positive.
+4. exahype2::fv::Solver::measureMeshWidths() passes the mesh widths of the new grid to the time stepping.
+5. Under an adaptive rule, exahype2::TimeStepping::raiseMaxEigenvalue() stores exahype2::fv::Solver::measureMaxEigenvalue() when the next time step size is positive.
 6. exahype2::RefinementVotes::voteOnCells() votes on the created cells.
 
 exahype2::dg::Solver::regrid():
 
 1. peano4::MigrationExchange::migrate() runs exahype2::dg::RegridCells.
 2. peano4::HaloExchange::rebuild() lists the exchanged faces of the face states and of the face fluxes.
-3. exahype2::dg::Solver::reduceMeshWidths() reduces the mesh widths of the new grid across the ranks.
-4. exahype2::dg::MeasureNodeEigenvalues measures the wave speeds for the next time step size under an adaptive rule when the next time step size is positive.
-5. exahype2::TimeStepping::setFixedTimeStepSize() stores the size for the new smallest mesh width under a fixed rule when the time step size is positive.
-6. exahype2::RefinementVotes::voteOnCells() votes on the created cells.
+3. exahype2::dg::Solver::measureMeshWidths() passes the mesh widths of the new grid to the time stepping.
+4. Under an adaptive rule, exahype2::dg::MeasureNodeEigenvalues measures the wave speeds of the new grid when the next time step size is positive and the time stamp lies before the terminal time.
+5. exahype2::RefinementVotes::voteOnCells() votes on the created cells.
+
+The reduction of the next step reduces the mesh widths and the wave speeds of the new grid across the ranks.
+Under a fixed rule, exahype2::fv::Solver::adoptFrom() and exahype2::dg::Solver::adoptFrom() then reset the time step size to the new smallest mesh width.
 
 exahype2::dg::ader::Solver::regrid() calls exahype2::dg::limiting::SubcellLimiter::regrid() before exahype2::dg::Solver::regrid().
 exahype2::dg::rk::Solver::regrid() reserves the stage estimates after exahype2::dg::Solver::regrid().

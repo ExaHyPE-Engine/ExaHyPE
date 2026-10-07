@@ -25,8 +25,7 @@ tarch::mpi::AbstractCommunicationManager::getInstance() {
 
 /**
  * Sets whether this process dedicates a thread to communication. A single-rank run never dedicates
- * a thread. The task runtime sizes its thread team by this setting, so it stays fixed for the whole
- * run.
+ * a thread. The setting holds for the whole run.
  */
 void
 tarch::mpi::AbstractCommunicationManager::configure(const bool communicationThreadEnabled) {
@@ -39,8 +38,8 @@ tarch::mpi::AbstractCommunicationManager::usesDedicatedThread() {
 }
 
 /**
- * Registers one poller. A caller registers every poller before start(), so the polling thread reads
- * the list without a lock.
+ * Registers one poller. A caller registers every poller before start(). The polling thread then
+ * reads the list without a lock.
  */
 void
 tarch::mpi::AbstractCommunicationManager::registerPoller(Poller poller) {

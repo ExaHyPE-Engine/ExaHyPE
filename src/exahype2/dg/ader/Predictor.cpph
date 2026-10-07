@@ -43,49 +43,49 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
   if constexpr (Derived::IsLinear) {
     using Scratch = typename Linear::Scratch;
 
-    if (workers.hasCell and workers.thread == 0) {
-      if constexpr (Linear::EvaluatePointSources) {
-        static_assert(
-          Derived::NumberOfPointSources > 0,
-          "A solver that evaluates point sources needs at least one point source."
-        );
-        assertion(pointSourceLocations != nullptr);
-        int       pointSourceIndices[Derived::NumberOfPointSources];
-        const int numberOfPointSources =
-          Linear::selectPointSources(pointSourceIndices, pointSourceLocations, cellCentre, cellSize);
-        Linear::predict(
-          faceStates,
-          faceFluxes,
-          cellState,
-          scratch,
-          pointSourceIndices,
-          numberOfPointSources,
-          pointSourceLocations,
-          tables,
-          cellCentre,
-          cellSize,
-          timeStamp,
-          timeStepSize
-        );
-      } else {
-        const int* const pointSourceIndices = nullptr;
-        Linear::predict(
-          faceStates,
-          faceFluxes,
-          cellState,
-          scratch,
-          pointSourceIndices,
-          0,
-          pointSourceLocations,
-          tables,
-          cellCentre,
-          cellSize,
-          timeStamp,
-          timeStepSize
-        );
-      }
+    if constexpr (Linear::EvaluatePointSources) {
+      static_assert(
+        Derived::NumberOfPointSources > 0,
+        "A solver that evaluates point sources needs at least one point source."
+      );
+      assertion(pointSourceLocations != nullptr);
+      int       pointSourceIndices[Derived::NumberOfPointSources];
+      const int numberOfPointSources =
+        Linear::selectPointSources(pointSourceIndices, pointSourceLocations, cellCentre, cellSize);
+      Linear::predict(
+        faceStates,
+        faceFluxes,
+        cellState,
+        scratch,
+        pointSourceIndices,
+        numberOfPointSources,
+        pointSourceLocations,
+        tables,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize,
+        workers
+      );
+    } else {
+      const int* const pointSourceIndices = nullptr;
+      Linear::predict(
+        faceStates,
+        faceFluxes,
+        cellState,
+        scratch,
+        pointSourceIndices,
+        0,
+        pointSourceLocations,
+        tables,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize,
+        workers
+      );
     }
-    Nonlinear::synchronise(workers);
+    exahype2::dg::ader::synchronise(workers);
     if (not workers.hasCell) {
       return 0;
     }
@@ -214,12 +214,11 @@ exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, Di
 ) const {
   constexpr int StateValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
   constexpr int FluxValuesPerFace  = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
-  using Nonlinear                  = exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>;
 
   assertion(numberOfTeams > 0, numberOfTeams);
   assertion(threadsPerCell > 0, threadsPerCell);
   assertion(cells.size > 0, cells.size);
-  TeamWorkers workers = Nonlinear::getWorkers(team, threadsPerCell);
+  TeamWorkers workers = exahype2::dg::ader::getWorkers(team, threadsPerCell);
   const bool  inGroup = workers.hasCell;
   const int   chunk   = tarch::accelerator::getScratchChunk(entry) * workers.groups + (inGroup ? workers.group : 0);
   assertion(chunk >= 0 and chunk < predictorScratchChunks, chunk, predictorScratchChunks, entry, workers.group);
@@ -266,7 +265,7 @@ exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, Di
       }
     }
     // The next cell reuses the scratch block once every thread is done with this one.
-    Nonlinear::synchronise(workers);
+    exahype2::dg::ader::synchronise(workers);
   }
   COMPILE_IF_ON_HOST(accumulator = PredictionCounts::combine(accumulator, counts);)
   COMPILE_IF_ON_DEVICE(

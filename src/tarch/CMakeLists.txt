@@ -78,6 +78,7 @@ set(SOURCES
   mpi/Handles.cpp
   mpi/HelperThread.cpp
   mpi/Rank.cpp
+  mpi/ReductionRecord.cpp
   mpi/Request.cpp
   mpi/SerialCommunicationManager.cpp
   mpi/ThreadedCommunicationManager.cpp
@@ -88,6 +89,7 @@ set(SOURCES
   mpi/tests/PingPongTest.cpp
   mpi/tests/PollPacingTest.cpp
   mpi/tests/RankTest.cpp
+  mpi/tests/ReductionRecordTest.cpp
 
   tasking/Runtime.cpp
   tasking/FunctorTask.cpp

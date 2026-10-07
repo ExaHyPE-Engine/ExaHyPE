@@ -28,16 +28,20 @@
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/plotter/Format.h"
 
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
+
 namespace exahype2::dg {
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   class Solver;
 } // namespace exahype2::dg
 
 /**
- * The base of the discontinuous Galerkin solver families, which define getTimeStepSizeFromCFL()
- * and getFixedTimeStepSize(). StoragePrecision is the type of the nodal values, and
- * ComputePrecision is the type of the face data and the kernels. A cell writes only its own halves
- * of its faces, and the Riemann solver reads both halves.
+ * The base of the discontinuous Galerkin solver families. A solver family defines
+ * getTimeStepSizeFromCFL() and getFixedTimeStepSize(). StoragePrecision is the type of the nodal
+ * values. ComputePrecision is the type of the face data and the kernels. A cell writes only its own
+ * halves of its faces. The Riemann solver reads both halves.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::dg::Solver {
@@ -93,6 +97,8 @@ public:
     const std::string&       outputDirectory
   );
   INLINE_METHOD void release();
+  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
 
   INLINE_METHOD void setLimits(const exahype2::Limits& limits);
   INLINE_METHOD void openErrorMeasurement(const std::string& fileName, double timeDeltaBetweenSnapshots);
@@ -138,11 +144,7 @@ protected:
     double                   timeStamp,
     double                   timeStepSize
   );
-  INLINE_METHOD void closeTimeStep(
-    const peano4::Partition&                     partition,
-    double                                       timeStepSize,
-    const exahype2::dg::MaxEigenvalueStatistics& statistics
-  );
+  INLINE_METHOD void closeTimeStep(double timeStepSize, const exahype2::dg::MaxEigenvalueStatistics& statistics);
   INLINE_METHOD void measureError(const peano4::Partition& partition);
   INLINE_METHOD void voteOnRefinement(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
   INLINE_METHOD void plotFaces(
@@ -158,10 +160,12 @@ protected:
   FluxPool  _faceFluxes{FluxValuesPerFace};
 
   /**
-   * The MPI exchanges of the own face halves with the neighbour ranks.
+   * The MPI exchanges of the own face halves with the neighbour ranks. The restricted fluxes change
+   * only on coarse faces.
    */
   peano4::HaloExchange<ComputePrecision> _stateExchange{_faceStates};
   peano4::HaloExchange<ComputePrecision> _fluxExchange{_faceFluxes};
+  peano4::HaloExchange<ComputePrecision> _restrictedFluxExchange{_faceFluxes, peano4::FaceKind::Coarse};
 
   exahype2::plotter::PatchPlotter _plotter;
 
@@ -174,7 +178,7 @@ protected:
 
 private:
   INLINE_METHOD void rebuildOwnedLists(const peano4::Partition& partition);
-  INLINE_METHOD void reduceMeshWidths(const peano4::Partition& partition);
+  INLINE_METHOD void measureMeshWidths(const peano4::Partition& partition);
 
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
 

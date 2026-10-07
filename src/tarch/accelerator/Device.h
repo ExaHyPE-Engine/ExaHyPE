@@ -8,7 +8,7 @@ namespace tarch::accelerator {
   class Device;
 
 #if not defined(PEANO_WITH_GPU_BACKEND)
-  // One host thread runs a whole team; the scratch is a buffer of TeamScratchBytes of that thread.
+  // One host thread runs a whole team. The scratch is a buffer of TeamScratchBytes of that thread.
   struct CpuTeam {
     unsigned char* scratch{nullptr};
   };
@@ -33,23 +33,28 @@ public:
   static constexpr int DefaultDevice = 0;
   TARGET_DECLARE_END
 
+  Device(const Device& other)            = delete;
+  Device(Device&& other)                 = delete;
+  Device& operator=(const Device& other) = delete;
+  Device& operator=(Device&& other)      = delete;
+
   static Device& getInstance();
 
   bool init();
 
   void shutdown();
 
-  bool isInitialised() const;
+  [[nodiscard]] bool isInitialised() const;
 
-  int getNumberOfDevices() const;
+  [[nodiscard]] int getNumberOfDevices() const;
 
-  int getNumberOfConcurrentThreads() const;
+  [[nodiscard]] int getNumberOfConcurrentThreads() const;
+
+  [[nodiscard]] std::optional<bool> isMPIGPUAware() const;
+
+  [[nodiscard]] std::string getIdOfCurrentDevice() const;
 
 private:
-  Device()                               = default;
-  Device(const Device& other)            = delete;
-  Device(Device&& other)                 = delete;
-  Device& operator=(const Device& other) = delete;
-  Device& operator=(Device&& other)      = delete;
-  ~Device()                              = default;
+  Device()  = default;
+  ~Device() = default;
 };

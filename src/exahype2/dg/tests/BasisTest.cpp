@@ -179,7 +179,7 @@ namespace {
   constexpr int NumberOfTargetNodes = 4;
   constexpr int NumberOfSourceNodes = 2;
 
-  // Distinct, non-symmetric entries, so an index mix-up cannot cancel out.
+  // The entries are distinct and non-symmetric. An index mix-up then changes the result.
   void fillOperands(
     double (&values)[NumberOfSourceNodes * NumberOfEntries],
     double (&operatorMatrix)[NumberOfTargetNodes * NumberOfSourceNodes]
@@ -285,6 +285,7 @@ exahype2::dg::tests::BasisTest::run() {
   testMethod(testTheGradientOfAConstantStateIsExactlyZero);
   testMethod(testALinearFluxDifferentiatesToItsPhysicalSlope);
   testMethod(testAConstantFluxDifferentiatesToExactZeros);
+  testMethod(testTwoCallsOverAlternateLinesDifferentiateLikeOneCall);
   testMethod(testAPaddedNodeStrideProjectsOnlyTheEntries);
   testMethod(testTheLowerAndUpperFaceUseTheirOwnCoefficients);
   testMethod(testTheFaceNodesRunWithTheLowestTangentialAxisFastest);
@@ -742,7 +743,7 @@ void
 exahype2::dg::tests::BasisTest::testTheDerivativeOfAConstantLineIsExactlyZero() {
   const DerivativeOperator derivativeOperator;
 
-  // The constants have no exact binary representation, so rounding errors would show.
+  // A rounding error shows for constants without an exact binary representation.
   double values[NodesPerAxis * NumberOfEntries];
   for (int node = 0; node < NodesPerAxis; node++) {
     for (int entry = 0; entry < NumberOfEntries; entry++) {
@@ -775,7 +776,7 @@ void
 exahype2::dg::tests::BasisTest::testTheDerivativeActsOnTheDifferencesFromTheSmallestValue() {
   const DerivativeOperator derivativeOperator;
 
-  // The line falls along the axis, so the smallest value is at the last node.
+  // The line falls along the axis. The last node stores the smallest value.
   double values[NodesPerAxis * NumberOfEntries];
   for (int node = 0; node < NodesPerAxis; node++) {
     for (int entry = 0; entry < NumberOfEntries; entry++) {
@@ -941,8 +942,8 @@ exahype2::dg::tests::BasisTest::testNarrowStorageIsDifferentiatedInTheComputePre
     cellSize
   );
 
-  // The stored values have single-precision rounding errors, so the slope matches to that accuracy
-  // only. The state varies along the first axis alone, so the blocks of the other axes are zero.
+  // The stored values round to single precision. The slope matches to that accuracy only. The state
+  // varies along the first axis alone. The blocks of the other axes stay zero.
   constexpr double Tolerance = 1.0e-5;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     const double expected = (axis == 0) ? 2.0 / cellSize(0) : 0.0;
@@ -960,7 +961,7 @@ exahype2::dg::tests::BasisTest::testTheGradientOfAConstantStateIsExactlyZero() {
   const DerivativeOperator derivativeOperator;
   const auto               cellSize = getCellSize();
 
-  // The constants have no exact binary representation, so rounding errors would show.
+  // A rounding error shows for constants without an exact binary representation.
   double cellState[CellNodes * NumberOfData];
   for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int value = 0; value < NumberOfData; value++) {
@@ -1039,7 +1040,7 @@ exahype2::dg::tests::BasisTest::testAConstantFluxDifferentiatesToExactZeros() {
     inverseCellSize(axis) = 1.0 / cellSize(axis);
   }
 
-  // The constants have no exact binary representation, so rounding errors would show.
+  // A rounding error shows for constants without an exact binary representation.
   double flux[DIMENSIONS * FluxAxisStride] = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
@@ -1054,6 +1055,48 @@ exahype2::dg::tests::BasisTest::testAConstantFluxDifferentiatesToExactZeros() {
 
   for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
     validateEqualsWithParams1(flux[entry], 0.0, entry);
+  }
+}
+
+/**
+ * Two calls with the first lines zero and one and the line stride two differentiate the flux
+ * bitwise like one call over all lines.
+ */
+void
+exahype2::dg::tests::BasisTest::testTwoCallsOverAlternateLinesDifferentiateLikeOneCall() {
+  const DerivativeOperator derivativeOperator;
+  const auto               cellSize = getCellSize();
+
+  tarch::la::Vector<DIMENSIONS, double> inverseCellSize;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    inverseCellSize(axis) = 1.0 / cellSize(axis);
+  }
+
+  double wholeFlux[DIMENSIONS * FluxAxisStride] = {};
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        wholeFlux[axis * FluxAxisStride + cellNode * PaddedCell::PaddedNumberOfUnknowns + unknown] =
+          1.0 / 7.0 * (1 + axis) + 0.3 * cellNode * cellNode - 0.1 * unknown;
+      }
+    }
+  }
+  double alternateFlux[DIMENSIONS * FluxAxisStride];
+  std::copy(std::begin(wholeFlux), std::end(wholeFlux), std::begin(alternateFlux));
+
+  exahype2::dg::differentiateFluxInPlace<Order2Layout>(wholeFlux, derivativeOperator.entries, inverseCellSize);
+  for (int firstLine = 0; firstLine < 2; firstLine++) {
+    exahype2::dg::differentiateFluxInPlace<Order2Layout>(
+      alternateFlux,
+      derivativeOperator.entries,
+      inverseCellSize,
+      firstLine,
+      2
+    );
+  }
+
+  for (int entry = 0; entry < DIMENSIONS * FluxAxisStride; entry++) {
+    validateEqualsWithParams1(alternateFlux[entry], wholeFlux[entry], entry);
   }
 }
 
@@ -1225,7 +1268,7 @@ exahype2::dg::tests::BasisTest::testTheFaceNodesRunWithTheLowestTangentialAxisFa
 void
 exahype2::dg::tests::BasisTest::testAFieldOfFloatAccumulatesTheFacesInDouble() {
   // Half the small value is half the distance between half the large value and its float
-  // neighbour, so a sum taken in float drops it and a sum taken in double keeps it.
+  // neighbour. A sum in float drops it. A sum in double keeps it.
   constexpr double LargeValue = 1024.0;
   constexpr double SmallValue = 0.00006103515625;
 
@@ -1318,7 +1361,7 @@ exahype2::dg::tests::BasisTest::testProjectionPreservesAConstantField() {
   constexpr int    Dofs          = 2;
   constexpr double Constant      = 7.0;
   constexpr auto   MatrixEntries = static_cast<std::size_t>(Dofs) * Dofs;
-  // Each column sums to one, so the projection reproduces a constant field exactly.
+  // Each column sums to one. The projection then reproduces a constant field exactly.
   const std::array<double, MatrixEntries> columnStochasticMatrix{0.25, 0.75, 0.75, 0.25};
   const std::array<double, MatrixEntries> input{Constant, Constant, Constant, Constant};
   std::array<double, MatrixEntries>       output{};

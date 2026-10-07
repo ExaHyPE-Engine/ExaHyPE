@@ -18,7 +18,8 @@ public:
   INLINE_METHOD GPU_CALLABLE_METHOD void add(double value);
   INLINE_METHOD GPU_CALLABLE_METHOD void merge(const tarch::la::ExactAccumulator& other);
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double round() const;
-  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double roundQuotient(int divisor) const;
+  template <int Divisor>
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double roundQuotient() const;
   INLINE_METHOD GPU_CALLABLE_METHOD void clear();
 
 private:

@@ -87,6 +87,22 @@ tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
 }
 
 /**
+ * Returns std::nullopt. A SYCL build tells no device vendor that an MPI query names.
+ */
+std::optional<bool>
+tarch::accelerator::Device::isMPIGPUAware() const {
+  return std::nullopt;
+}
+
+/**
+ * Returns an empty string. SYCL has no physical address of a device.
+ */
+std::string
+tarch::accelerator::Device::getIdOfCurrentDevice() const {
+  return {};
+}
+
+/**
  * Returns the queue of a logical device number. The logical number counts the GPUs only and
  * differs from the physical device number.
  */

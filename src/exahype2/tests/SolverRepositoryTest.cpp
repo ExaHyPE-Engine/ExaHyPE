@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SolverRepositoryTest.h"
 
+#include "exahype2/RefinementCommand.h"
 #include "exahype2/RefinementRequests.h"
 #include "exahype2/SolverRepository.h"
 #include "exahype2/TimeStepping.h"
@@ -10,13 +11,16 @@
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
 #include "tarch/plotter/Format.h"
 
 namespace {
   constexpr int Depth = 2;
 
   /**
-   * With OwnsCells, the solver reports its own number of cells, and without it the solver has data on every cell.
+   * With OwnsCells, the solver reports its own number of cells. Without it, the solver stores data on every
+   * cell.
    */
   template <bool OwnsCells>
   struct RecordingSolver final {
@@ -29,7 +33,10 @@ namespace {
     int                   numberOfCells{0};
     tarch::AllocatedBytes allocatedBytes{};
 
-    int phaseCalls{0};
+    int                         phaseCalls{0};
+    int                         slot{-1};
+    std::uint64_t               reducedValue{0};
+    exahype2::RefinementCommand timeStepCommand{exahype2::RefinementCommand::Keep};
 
     [[nodiscard]] const exahype2::TimeStepping& getTimeStepping() const { return timeStepping; }
     [[nodiscard]] int getNumberOfDoFs() const { return numberOfDoFs; }
@@ -56,11 +63,9 @@ namespace {
     ) {
       phaseCalls++;
     }
-    void performTimeStep(
-      [[maybe_unused]] const peano4::Partition&      partition,
-      [[maybe_unused]] exahype2::RefinementRequests& requests
-    ) {
+    void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests) {
       phaseCalls++;
+      requests.merge(timeStepCommand, partition.getCells());
     }
     void regrid(
       [[maybe_unused]] const peano4::Partition&      partition,
@@ -76,6 +81,14 @@ namespace {
     ) {
       phaseCalls++;
     }
+    void contributeTo(tarch::mpi::ReductionRecord& record) {
+      phaseCalls++;
+      slot = record.addSum(1);
+    }
+    void adoptFrom(const tarch::mpi::ReductionRecord& record) {
+      phaseCalls++;
+      reducedValue = record.getSum(slot);
+    }
   };
 } // namespace
 
@@ -86,6 +99,7 @@ void
 exahype2::tests::SolverRepositoryTest::run() {
   testMethod(testTheRepositoryReducesTheValuesOfEverySolver);
   testMethod(testEveryPhaseCallReachesEverySolver);
+  testMethod(testEveryReductionGathersTheRequestsOfItsOwnStep);
 }
 
 /**
@@ -137,9 +151,47 @@ exahype2::tests::SolverRepositoryTest::testEveryPhaseCallReachesEverySolver() {
   repository.performTimeStep(partition);
   repository.regrid(partition, regrid);
   repository.plot(partition, tarch::plotter::Format::VTU, "");
+  tarch::mpi::ReductionRecord record;
+  repository.contributeTo(record);
+  record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
+  repository.adoptFrom(record);
   repository.finishSimulation();
 
-  validateEquals(first.phaseCalls, 9);
-  validateEquals(second.phaseCalls, 9);
+  const auto numberOfRanks = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getNumberOfRanks());
+  validateEquals(first.phaseCalls, 11);
+  validateEquals(second.phaseCalls, 11);
+  validateEquals(first.reducedValue, numberOfRanks);
+  validateEquals(second.reducedValue, numberOfRanks);
+  validate(repository.getRefinementRequests().empty());
+}
+
+/**
+ * Two posted reductions gather the refinement requests of the steps that filled them.
+ */
+void
+exahype2::tests::SolverRepositoryTest::testEveryReductionGathersTheRequestsOfItsOwnStep() {
+  peano4::tests::buildRegularGrid(Depth);
+  const auto&                partition = peano4::Spacetree::getInstance().getPartition();
+  RecordingSolver<false>     solver;
+  exahype2::SolverRepository repository{solver};
+  MPI_Comm                   communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+
+  solver.timeStepCommand = exahype2::RefinementCommand::Refine;
+  repository.performTimeStep(partition);
+  tarch::mpi::ReductionRecord refiningStep;
+  repository.contributeTo(refiningStep);
+  refiningStep.post(communicator);
+
+  solver.timeStepCommand = exahype2::RefinementCommand::Keep;
+  repository.performTimeStep(partition);
+  tarch::mpi::ReductionRecord keepingStep;
+  repository.contributeTo(keepingStep);
+  keepingStep.post(communicator);
+
+  refiningStep.wait();
+  repository.adoptFrom(refiningStep);
+  validate(not repository.getRefinementRequests().empty());
+  keepingStep.wait();
+  repository.adoptFrom(keepingStep);
   validate(repository.getRefinementRequests().empty());
 }

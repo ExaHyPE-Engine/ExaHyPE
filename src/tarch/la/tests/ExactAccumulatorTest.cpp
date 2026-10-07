@@ -12,6 +12,7 @@
 namespace {
   /**
    * Returns a rounded quotient whose sum spans many limbs and whose top digit differs per entry.
+   * The entry selects one of the divisors 1, 2, 3, 4, 8, 9 and 27.
    */
   GPU_CALLABLE_METHOD double getRoundedQuotientOf(const int entry) {
     tarch::la::ExactAccumulator accumulator;
@@ -20,7 +21,41 @@ namespace {
     tarch::la::ExactAccumulator negative;
     negative.add(-3.0e10 * entry);
     accumulator.merge(negative);
-    return accumulator.roundQuotient(entry + 1);
+    switch (entry % 7) {
+    case 0:
+      return accumulator.roundQuotient<1>();
+    case 1:
+      return accumulator.roundQuotient<2>();
+    case 2:
+      return accumulator.roundQuotient<3>();
+    case 3:
+      return accumulator.roundQuotient<4>();
+    case 4:
+      return accumulator.roundQuotient<8>();
+    case 5:
+      return accumulator.roundQuotient<9>();
+    default:
+      return accumulator.roundQuotient<27>();
+    }
+  }
+
+  /**
+   * Returns whether Divisor copies of a third divide back to the third bitwise and whether a sum
+   * that cancels down to seven divides like the double division of seven.
+   */
+  template <int Divisor>
+  bool dividesLikeTheDoubleDivision() {
+    constexpr double            Third = 1.0 / 3.0;
+    tarch::la::ExactAccumulator copies;
+    for (int copy = 0; copy < Divisor; copy++) {
+      copies.add(Third);
+    }
+    tarch::la::ExactAccumulator seven;
+    seven.add(1.0e16);
+    seven.add(-1.0e16);
+    seven.add(7.0);
+    return std::bit_cast<std::uint64_t>(copies.roundQuotient<Divisor>()) == std::bit_cast<std::uint64_t>(Third)
+       and std::bit_cast<std::uint64_t>(seven.roundQuotient<Divisor>()) == std::bit_cast<std::uint64_t>(7.0 / Divisor);
   }
 
   struct CountMismatch final {
@@ -116,15 +151,15 @@ tarch::la::tests::ExactAccumulatorTest::testCorrectRounding() {
   validateNumericalEquals(accumulator.round(), TwoPower53 + 2.0);
 
   // Values six hundred orders of magnitude apart add up without absorption. A numerical comparison
-  // accepts any tiny value, so the bits decide.
+  // accepts any tiny value. The test compares the bits.
   accumulator.clear();
   accumulator.add(1.0e300);
   accumulator.add(1.0e-300);
   accumulator.add(-1.0e300);
   validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(1.0e-300));
 
-  // A sum just below a power of two rounds up to it, so the significand carries
-  // out of the mantissa and raises the exponent.
+  // A sum just below a power of two rounds up to it. The rounding overflows the mantissa and raises
+  // the exponent.
   accumulator.clear();
   accumulator.add(TwoPower53 - 1.0);
   accumulator.add(0.75);
@@ -133,40 +168,34 @@ tarch::la::tests::ExactAccumulatorTest::testCorrectRounding() {
 
 void
 tarch::la::tests::ExactAccumulatorTest::testCorrectlyRoundedQuotient() {
-  constexpr double Third      = 1.0 / 3.0;
   constexpr double TwoPower53 = 9007199254740992.0;
 
-  // Nine copies of a value whose ninefold is not representable return the value bitwise.
-  tarch::la::ExactAccumulator accumulator;
-  for (int copy = 0; copy < 9; copy++) {
-    accumulator.add(Third);
-  }
-  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(9)), std::bit_cast<std::uint64_t>(Third));
-
-  // A sum that cancels down to seven divides like the exact rational.
-  accumulator.clear();
-  accumulator.add(1.0e16);
-  accumulator.add(-1.0e16);
-  for (int one = 0; one < 7; one++) {
-    accumulator.add(1.0);
-  }
-  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(9)), std::bit_cast<std::uint64_t>(7.0 / 9.0));
+  validate(dividesLikeTheDoubleDivision<1>());
+  validate(dividesLikeTheDoubleDivision<2>());
+  validate(dividesLikeTheDoubleDivision<3>());
+  validate(dividesLikeTheDoubleDivision<4>());
+  validate(dividesLikeTheDoubleDivision<8>());
+  validate(dividesLikeTheDoubleDivision<9>());
+  validate(dividesLikeTheDoubleDivision<27>());
 
   // A quotient on the tie between two doubles rounds to the even one, and a remainder of the
   // division breaks the tie upwards.
-  accumulator.clear();
+  tarch::la::ExactAccumulator accumulator;
   accumulator.add(3.0 * TwoPower53);
   accumulator.add(3.0);
-  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(3)), std::bit_cast<std::uint64_t>(TwoPower53));
+  validateEquals(
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient<3>()),
+    std::bit_cast<std::uint64_t>(TwoPower53)
+  );
   accumulator.add(1.0);
   validateEquals(
-    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(3)),
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient<3>()),
     std::bit_cast<std::uint64_t>(TwoPower53 + 2.0)
   );
 
   accumulator.clear();
   accumulator.add(-7.0);
-  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)), std::bit_cast<std::uint64_t>(-3.5));
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient<2>()), std::bit_cast<std::uint64_t>(-3.5));
 
   // A quotient of subnormals rounds to the nearest subnormal with ties to even, and so does a
   // quotient whose integer digits end at the smallest subnormal.
@@ -174,45 +203,45 @@ tarch::la::tests::ExactAccumulatorTest::testCorrectlyRoundedQuotient() {
   accumulator.clear();
   accumulator.add(3.0 * MinimumSubnormal);
   validateEquals(
-    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)),
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient<2>()),
     std::bit_cast<std::uint64_t>(2.0 * MinimumSubnormal)
   );
   accumulator.clear();
   accumulator.add(5.0 * MinimumSubnormal);
   validateEquals(
-    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)),
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient<2>()),
     std::bit_cast<std::uint64_t>(2.0 * MinimumSubnormal)
   );
   accumulator.clear();
   accumulator.add(-7.0 * MinimumSubnormal);
   validateEquals(
-    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)),
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient<2>()),
     std::bit_cast<std::uint64_t>(-4.0 * MinimumSubnormal)
   );
   accumulator.clear();
   accumulator.add(7.0 * MinimumSubnormal);
   validateEquals(
-    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(3)),
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient<3>()),
     std::bit_cast<std::uint64_t>(2.0 * MinimumSubnormal)
   );
   accumulator.clear();
   accumulator.add(std::ldexp(1.0, -1021));
   accumulator.add(3.0 * MinimumSubnormal);
   validateEquals(
-    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(2)),
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient<2>()),
     std::bit_cast<std::uint64_t>(std::ldexp(1.0, -1022) + 2.0 * MinimumSubnormal)
   );
 
   // A quotient below the smallest subnormal rounds to zero with the sign of the sum.
   accumulator.clear();
   accumulator.add(-std::numeric_limits<double>::denorm_min());
-  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient(4)), std::bit_cast<std::uint64_t>(-0.0));
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient<4>()), std::bit_cast<std::uint64_t>(-0.0));
 
   accumulator.clear();
   accumulator.add(0.1);
   accumulator.add(0.2);
   validateEquals(
-    std::bit_cast<std::uint64_t>(accumulator.roundQuotient(1)),
+    std::bit_cast<std::uint64_t>(accumulator.roundQuotient<1>()),
     std::bit_cast<std::uint64_t>(accumulator.round())
   );
 }
@@ -263,8 +292,8 @@ tarch::la::tests::ExactAccumulatorTest::testSubnormalsAndZero() {
   constexpr double LargestSubnormal       = 2.225073858507201e-308;
   constexpr double SmallestNormal         = 2.2250738585072014e-308;
 
-  // Every subnormal lies within the tolerance of a numerical comparison, so
-  // these results are compared bit by bit.
+  // Every subnormal lies within the tolerance of a numerical comparison. The test compares these
+  // results bit by bit.
   tarch::la::ExactAccumulator accumulator;
   accumulator.add(MinimumSubnormal);
   accumulator.add(MinimumSubnormal);
@@ -315,8 +344,8 @@ tarch::la::tests::ExactAccumulatorTest::testOverflow() {
   accumulator.add(std::ldexp(1.0, 969));
   validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(MaximumFinite));
 
-  // A second half-ulp reaches the overflow tie, which rounds away from the
-  // maximum finite value because its significand is odd.
+  // A second half-ulp reaches the overflow tie. The tie rounds away from the maximum finite value.
+  // The significand of that value is odd.
   accumulator.add(std::ldexp(1.0, 969));
   validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(Infinity));
 

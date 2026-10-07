@@ -114,8 +114,8 @@ exahype2::dg::evaluatePolynomial(
 }
 
 /**
- * Multiplies the three factors in ascending order, so every permutation of the arguments returns
- * the same bits.
+ * Multiplies the three factors in ascending order. Every permutation of the arguments returns the
+ * same bits.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::dg::orderInvariantProduct(const double firstFactor, const double secondFactor, const double thirdFactor) {
@@ -215,9 +215,10 @@ exahype2::dg::applyOperatorAlongAxis(
 }
 
 /**
- * Applies derivativeOperator, whose rows sum to zero, along one axis of a tensor slice. It acts
- * on the differences from the smallest value along the axis, so a constant slice returns exact
- * zeros. The scaling factors multiply every difference in argument order.
+ * Applies derivativeOperator along one axis of a tensor slice. The rows of derivativeOperator sum
+ * to zero. The function differentiates the differences from the smallest value along the axis. A
+ * constant slice returns exact zeros. The scaling factors multiply every difference in argument
+ * order.
  */
 template <
   int  NumberOfEntries,
@@ -527,14 +528,18 @@ exahype2::dg::projectTensorProduct(const Value* const input, Value* const output
 
 /**
  * Overwrites the flux of every axis with its derivative along that axis. flux stores one block
- * per axis with PaddedNumberOfUnknowns values per node. A constant flux returns exact zeros.
+ * per axis with PaddedNumberOfUnknowns values per node. A constant flux returns exact zeros. The
+ * call differentiates the lines firstLine, firstLine + lineStride and so on along every axis. Two
+ * calls with distinct first lines below a common stride write disjoint lines.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::differentiateFluxInPlace(
   ComputePrecision* NOALIAS const                        flux,
   const ComputePrecision* NOALIAS const                  derivativeOperator,
-  const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize
+  const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
+  const int                                              firstLine,
+  const int                                              lineStride
 ) {
   using CellLayout           = exahype2::dg::PaddedLayout<Derived>;
   constexpr int NodesPerAxis = CellLayout::NodesPerAxis;
@@ -542,13 +547,14 @@ exahype2::dg::differentiateFluxInPlace(
   constexpr int AxisStride   = CellLayout::NodesPerCell * FluxStride;
   constexpr int LineSize     = NodesPerAxis * FluxStride;
 
+  assertion(firstLine >= 0 and lineStride > 0 and firstLine < lineStride, firstLine, lineStride);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
   }
 
   ComputePrecision derivative[LineSize] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-  for (int line = 0; line < CellLayout::NodesPerFace; line++) {
+  for (int line = firstLine; line < CellLayout::NodesPerFace; line += lineStride) {
     ComputePrecision* NOALIAS const fluxLine = flux + line * LineSize;
     exahype2::dg::differentiateAlongAxis<
       FluxStride,
@@ -565,30 +571,30 @@ exahype2::dg::differentiateFluxInPlace(
     }
   }
 
-  for (int z = 0; z < CellLayout::NodesPerAxisIn3D; z++) {
-    for (int x = 0; x < NodesPerAxis; x++) {
-      ComputePrecision* NOALIAS const fluxLine = flux + AxisStride + (z * NodesPerAxis * NodesPerAxis + x) * FluxStride;
-      exahype2::dg::differentiateAlongAxis<
-        FluxStride,
-        NodesPerAxis,
-        FluxStride * NodesPerAxis,
-        NodesPerAxis,
-        FluxStride,
-        true,
-        ComputePrecision,
-        ComputePrecision
-      >(derivative, fluxLine, derivativeOperator, inverseCellSize(1));
-      for (int y = 0; y < NodesPerAxis; y++) {
-        SIMD()
-        for (int unknown = 0; unknown < FluxStride; unknown++) {
-          fluxLine[y * NodesPerAxis * FluxStride + unknown] = derivative[y * FluxStride + unknown];
-        }
+  for (int line = firstLine; line < CellLayout::NodesPerFace; line += lineStride) {
+    const int                       z        = line / NodesPerAxis;
+    const int                       x        = line - z * NodesPerAxis;
+    ComputePrecision* NOALIAS const fluxLine = flux + AxisStride + (z * NodesPerAxis * NodesPerAxis + x) * FluxStride;
+    exahype2::dg::differentiateAlongAxis<
+      FluxStride,
+      NodesPerAxis,
+      FluxStride * NodesPerAxis,
+      NodesPerAxis,
+      FluxStride,
+      true,
+      ComputePrecision,
+      ComputePrecision
+    >(derivative, fluxLine, derivativeOperator, inverseCellSize(1));
+    for (int y = 0; y < NodesPerAxis; y++) {
+      SIMD()
+      for (int unknown = 0; unknown < FluxStride; unknown++) {
+        fluxLine[y * NodesPerAxis * FluxStride + unknown] = derivative[y * FluxStride + unknown];
       }
     }
   }
 
   if constexpr (DIMENSIONS == 3) {
-    for (int line = 0; line < NodesPerAxis * NodesPerAxis; line++) {
+    for (int line = firstLine; line < NodesPerAxis * NodesPerAxis; line += lineStride) {
       ComputePrecision* NOALIAS const fluxLine = flux + 2 * AxisStride + line * FluxStride;
       exahype2::dg::differentiateAlongAxis<
         FluxStride,
@@ -700,9 +706,9 @@ exahype2::dg::getWeightedRestrictionMatrix1D(const double* const nodes, const do
 }
 
 /**
- * Overwrites every entry and its mirror image with their average, so mirrored data transfers to
- * bitwise mirrored results. The exact matrices are mirror symmetric, so the average changes
- * rounding errors only.
+ * Overwrites every entry and its mirror image with their average. Mirrored data then transfers to
+ * bitwise mirrored results. The exact matrices are mirror symmetric. The average changes rounding
+ * errors only.
  */
 template <int NodesPerAxis>
 INLINE_METHOD constexpr void

@@ -57,6 +57,10 @@ namespace tarch::accelerator {
   void unlockReductionScratch();
   void releaseReductionScratch();
 
+  inline constexpr int    MaximumHostTasksPerThread = 64;
+  inline constexpr double MinimumSecondsPerHostTask = 50e-6;
+
+  int getNumberOfHostTasks(int numberOfItems, int numberOfThreads, double secondsPerItem);
   void reportMissingTaskloopSupportOnce();
 } // namespace tarch::accelerator
 

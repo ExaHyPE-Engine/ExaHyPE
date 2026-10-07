@@ -7,6 +7,12 @@
 #include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Diagnostics.h"
 
+namespace {
+  std::atomic<int> errorCodeOfAbort{0};
+
+  void endRankWithErrorCodeOfAbort() { std::_Exit(errorCodeOfAbort.load()); }
+} // namespace
+
 int tarch::mpi::Rank::_maximumTagValue = -1;
 int tarch::mpi::Rank::_nextFreeTag     = 0;
 
@@ -33,8 +39,8 @@ tarch::mpi::Rank::isInitialised() const {
 }
 
 /**
- * Finalises MPI. A caller calls it before main() returns, because Scalasca reports an error for an
- * MPI shutdown from a static destructor.
+ * Finalises MPI. A caller calls it before main() returns. Scalasca reports an error for an MPI
+ * shutdown from a static destructor.
  */
 void
 tarch::mpi::Rank::shutdown() {
@@ -61,9 +67,8 @@ tarch::mpi::Rank::isGlobalMaster() const {
 }
 
 /**
- * Returns whether the highest reserved tag fits the upper bound MPI reports, and
- * writes a warning when it does not. init() reads that bound, so the check passes
- * before init() runs.
+ * Returns whether the highest reserved tag fits the upper bound MPI reports. Writes a warning when
+ * it does not. init() reads that bound. The check passes before init() runs.
  */
 bool
 tarch::mpi::Rank::validateReservedTagsAreSupported() {
@@ -187,13 +192,20 @@ tarch::mpi::Rank::getCommunicator() const {
 }
 
 /**
- * Stops every rank of the job from any rank. MPI_Abort reaches every rank, and
- * std::_Exit() stops this rank while MPI is not initialised.
+ * Stops every rank of the job from any rank. MPI_Abort reaches every rank, and std::_Exit() stops
+ * this rank while MPI is not initialised. The MPI library may end this rank through exit(). An exit
+ * handler then ends the rank before the destructors of static objects run. A destructor that frees
+ * GPU memory after a failed GPU call fails again. Its call of tarch::terminateWithError() waits for
+ * this call forever.
  */
 void
 tarch::mpi::abort(const int errorCode) {
   std::cout.flush();
   std::cerr.flush();
+  errorCodeOfAbort.store(errorCode);
+  if (std::atexit(endRankWithErrorCodeOfAbort) != 0) {
+    std::_Exit(errorCode);
+  }
   int mpiInitialised{0};
   MPI_Initialized(&mpiInitialised);
   if (mpiInitialised != 0) {

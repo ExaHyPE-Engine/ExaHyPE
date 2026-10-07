@@ -20,10 +20,12 @@ public:
   void run() override;
 
 private:
-  void testTheMasterStepReachesEveryRank();
-  void testTheTerminationStepReachesEveryRank();
   void testDescribeMeshUpdatesReportsTheStepCountAndWallClock();
   void testDescribeRepetitionsCountsEveryPhaseInItsUnit();
   void testFinishStepSumsTheSolverBytesAndCellUpdates();
+  void testFinishStepReducesTheValuesOfTheSolvers();
+  void testTheNextTimeStepCountsTheWaitBeforeAnotherStep();
+  void testTheSummaryCountsTheWaitAfterTheLastTimeStep();
+  void testTheFinalAssertionReductionReportsNoneWithoutAnAssertion();
   void testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition();
 };

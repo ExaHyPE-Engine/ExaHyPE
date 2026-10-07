@@ -51,22 +51,35 @@ namespace {
   }
 
   /**
-   * Returns for every face the side this rank owns, or -1 for a face that no neighbour rank holds.
+   * Returns for every exchanged face the side this rank owns and -1 for every other face. A face
+   * kind restricts the exchanged faces to that kind.
    */
-  std::vector<int> getLocalSidesOfFaces(const peano4::Partition& partition) {
+  std::vector<int> getLocalSidesOfFaces(
+    const peano4::Partition&               partition,
+    const std::optional<peano4::FaceKind>& kind = std::nullopt
+  ) {
     std::vector<int> sides(static_cast<std::size_t>(partition.getNumberOfFaces()), -1);
     for (const auto& neighbour : partition.getNeighbours()) {
       for (const auto& entry : partition.getExchangedFaces(neighbour)) {
-        sides[static_cast<std::size_t>(entry.face)] = entry.side;
+        if (not kind or partition.getFaceKind(entry.face) == *kind) {
+          sides[static_cast<std::size_t>(entry.face)] = entry.side;
+        }
       }
     }
     return sides;
   }
 
-  int getNumberOfExchangedFaces(const peano4::Partition& partition) {
+  int getNumberOfExchangedFaces(
+    const peano4::Partition&               partition,
+    const std::optional<peano4::FaceKind>& kind = std::nullopt
+  ) {
     int faces = 0;
     for (const auto& neighbour : partition.getNeighbours()) {
-      faces += partition.getExchangedFaces(neighbour).size;
+      for (const auto& entry : partition.getExchangedFaces(neighbour)) {
+        if (not kind or partition.getFaceKind(entry.face) == *kind) {
+          faces++;
+        }
+      }
     }
     return faces;
   }
@@ -168,6 +181,7 @@ peano4::tests::HaloExchangeTest::HaloExchangeTest() :
 void
 peano4::tests::HaloExchangeTest::run() {
   testMethod(testExchangeFillsTheRemoteHalves);
+  testMethod(testCoarseExchangeFillsTheRemoteHalvesOfCoarseFacesOnly);
   testMethod(testExchangesHoldDistinctTags);
   testMethod(testReleaseFreesTheBuffersAndKeepsTheTag);
 }
@@ -223,6 +237,35 @@ peano4::tests::HaloExchangeTest::testExchangeFillsTheRemoteHalves() {
       validateEqualsWithParams3(getNumberOfMismatches(pool, partition, sides, round), 0, grid, round, rank);
     }
   }
+}
+
+/**
+ * An exchange of coarse faces on a grid with level jumps between ranks fills the remote half of
+ * every exchanged coarse face and leaves every other face unchanged.
+ */
+void
+peano4::tests::HaloExchangeTest::testCoarseExchangeFillsTheRemoteHalvesOfCoarseFacesOnly() {
+  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const int rank          = tarch::mpi::Rank::getInstance().getRank();
+  peano4::tests::buildRegularGrid(Depth);
+  peano4::tests::refineGrid({peano4::tests::getRefinementOfFirstChildOfRoot(Depth)});
+  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+
+  Pool pool(ElementsPerFace, tarch::MemoryLocation::Device);
+  pool.reserve(partition.getNumberOfFaces());
+  Exchange exchange(pool, peano4::FaceKind::Coarse);
+  exchange.rebuild(partition);
+  const int numberOfCoarseFaces       = getNumberOfExchangedFaces(partition, peano4::FaceKind::Coarse);
+  const int globalNumberOfCoarseFaces = peano4::tests::getGlobalSumOf(numberOfCoarseFaces);
+  validateEqualsWithParams1(exchange.getNumberOfEntries(), numberOfCoarseFaces, rank);
+  validateEqualsWithParams1(globalNumberOfCoarseFaces > 0, numberOfRanks > 1, globalNumberOfCoarseFaces);
+
+  tarch::accelerator::Buffer<int> sides(tarch::MemoryLocation::Device);
+  sides.setValues(getLocalSidesOfFaces(partition, peano4::FaceKind::Coarse));
+  writeLocalHalves(pool, partition, sides, 0);
+  exchange.post();
+  exchange.wait();
+  validateEqualsWithParams1(getNumberOfMismatches(pool, partition, sides, 0), 0, rank);
 }
 
 /**

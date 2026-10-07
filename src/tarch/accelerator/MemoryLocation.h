@@ -26,12 +26,14 @@ namespace tarch {
 
   std::string toString(MemoryLocation value);
 
+  [[nodiscard]] INLINE_METHOD bool isGPUMemory(MemoryLocation location);
+
   INLINE_METHOD AllocatedBytes operator+(const AllocatedBytes& left, const AllocatedBytes& right);
 } // namespace tarch
 
 /**
  * The bytes an object occupies in host memory and in GPU memory. A build without a GPU backend
- * places device data in host memory, so all its bytes count as host bytes.
+ * places device data in host memory. All its bytes then count as host bytes.
  */
 struct tarch::AllocatedBytes final {
   std::size_t host{0};

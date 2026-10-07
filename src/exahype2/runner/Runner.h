@@ -13,6 +13,10 @@ namespace peano4 {
   struct Regrid;
 } // namespace peano4
 
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
+
 namespace tarch::reader {
   class JSONReader;
 } // namespace tarch::reader
@@ -31,7 +35,7 @@ namespace exahype2::runner::tests {
 
 /**
  * Entry points of the generated solver repository. Every rank calls every phase callback
- * collectively, and each callback reads the partition of the spacetree.
+ * collectively. Each callback reads the partition of the spacetree.
  */
 struct exahype2::runner::SolverRepositoryCallbacks {
   std::function<std::string()> getCopyrightBanner{};
@@ -51,6 +55,9 @@ struct exahype2::runner::SolverRepositoryCallbacks {
   std::function<void(const peano4::Regrid& regrid)> regrid{};
   std::function<void()>                             plot{};
 
+  std::function<void(tarch::mpi::ReductionRecord& record)>       contributeTo{};
+  std::function<void(const tarch::mpi::ReductionRecord& record)> adoptFrom{};
+
   std::function<const std::vector<peano4::RefinementRequest>&()> getRefinementRequests{};
 
   std::function<double()>           getMinTimeStamp{};
@@ -63,8 +70,9 @@ struct exahype2::runner::SolverRepositoryCallbacks {
 };
 
 /**
- * Drives one simulation on every rank. The global master broadcasts every step it runs, and every
- * other rank runs the received steps until the termination step. The grid construction runs
+ * Drives one simulation on every rank. Every rank runs the same steps. One allreduce at the end of
+ * each step reduces the statistics, the values of the solvers and the rank of a non-critical
+ * assertion. Every rank then takes the same decision on the next step. The grid construction runs
  * CreateGrid steps and a regrid runs DynamicAMR steps until the refinement requests of the solvers
  * leave the refinement plan unchanged. Every round of the grid initialisation runs one InitGrid
  * step.
@@ -72,18 +80,9 @@ struct exahype2::runner::SolverRepositoryCallbacks {
 class exahype2::runner::Runner final {
 public:
   /**
-   * Program steps that the global master broadcasts.
+   * Program steps of a run.
    */
   enum class Step : int { CreateGrid = 0, AllocateMemory, InitGrid, PlotSolution, TimeStep, DynamicAMR };
-
-  /**
-   * Step that ends the run on every rank.
-   */
-  static constexpr int TerminationStep = -2;
-  /**
-   * Step of a rank that leaves the choice to the global master.
-   */
-  static constexpr int NoStep = -1;
 
   static int launch(
     const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
@@ -93,7 +92,6 @@ public:
     int&                                         argc,
     char**                                       argv
   );
-  static int exchangeStep(int stepOfThisRank);
 
   Runner(
     tarch::la::Vector<DIMENSIONS, double> domainOffset,
@@ -105,7 +103,7 @@ public:
   Runner(Runner&&)                 = delete;
   Runner& operator=(const Runner&) = delete;
   Runner& operator=(Runner&&)      = delete;
-  ~Runner()                        = default;
+  ~Runner();
 
   int run();
 
@@ -153,7 +151,7 @@ private:
   Report                                _report{};
   Section                               _openSection{Section::None};
   /**
-   * Column of the values behind the labels of the time loop. It only grows, so the values stay
+   * Column of the values behind the labels of the time loop. It only grows. The values then stay
    * aligned.
    */
   std::size_t _valueColumn{0};
@@ -180,8 +178,8 @@ private:
   double _cellUpdates{0.0};
   double _dofUpdates{0.0};
   /**
-   * Wall clock in seconds of the mesh updates of the grid initialisation, which the estimate of the
-   * time loop excludes.
+   * Wall clock in seconds of the mesh updates of the grid initialisation. The estimate of the time
+   * loop excludes it.
    */
   double _meshUpdateSecondsBeforeTimeLoop{0.0};
   bool   _stoppedAfterNonCriticalAssertion{false};
@@ -199,11 +197,36 @@ private:
   double _dofUpdatesSinceReport{0.0};
   double _measuredSecondsSinceReport{0.0};
 
+  /**
+   * Reduction of the previous time step and its slot of the non-critical assertion. The next time
+   * step or completeReductionOfLastTimeStep() completes and adopts it.
+   */
+  std::unique_ptr<tarch::mpi::ReductionRecord> _pendingReduction{};
+  int                                          _pendingAssertionSlot{0};
+  /**
+   * Rank of a non-critical assertion in the last adopted reduction, or -1 without one.
+   */
+  int _reducedNonCriticalAssertionRank{-1};
+  /**
+   * Whether the runner adopted the reduction of a time step. A time step completes its own
+   * reduction at once while this flag is false.
+   */
+  bool _hasAdoptedReductionOfTimeStep{false};
+  /**
+   * Wall clock in seconds of the wait for the reduction of a time step before a step of another
+   * kind. runStep() adds it to the next time step.
+   */
+  double _reductionWaitOfNextTimeStep{0.0};
+
   double runStep(Step step);
   void executeStep(Step step);
   void finishStep(Step step);
+  void adoptReduction(const tarch::mpi::ReductionRecord& record, int assertionSlot);
+  void completePendingReduction();
+  void completeReductionOfLastTimeStep();
+  [[nodiscard]] bool hasReducedNonCriticalAssertion() const;
+  [[nodiscard]] bool reduceNonCriticalAssertionRank();
   void regrid(bool dataLive);
-  void runWorker();
 
   void reportConfiguration();
   void constructGrid();

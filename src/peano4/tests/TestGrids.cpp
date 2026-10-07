@@ -7,6 +7,7 @@
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
 #include "peano4/topology/Tree.h"
+#include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Collectives.h"
@@ -35,7 +36,7 @@ peano4::tests::buildRegularGrid(const int depth, const std::bitset<DIMENSIONS>& 
 }
 
 /**
- * Applies the requests to the current grid without live data, so the partition gets new slot numbers.
+ * Applies the requests to the current grid without live data. The partition gets new slot numbers.
  */
 void
 peano4::tests::refineGrid(const std::vector<peano4::RefinementRequest>& requests) {
@@ -59,7 +60,24 @@ peano4::tests::getRefinementOfCentreCell(const int depth) {
 }
 
 /**
- * Returns one erase request per cell of the base grid of the depth, so every refined block coarsens.
+ * Returns the request that refines exactly the cells of the base grid of depth inside the first
+ * child of the root. Every face between this child and its neighbours becomes a level jump.
+ */
+peano4::RefinementRequest
+peano4::tests::getRefinementOfFirstChildOfRoot(const int depth) {
+  const int cellsPerAxisOfChild          = peano4::topology::getCellsPerAxis(depth) / peano4::SubdivisionFactor;
+  const int refinedCellsBesideTheRequest = (getNumberOfCellsPerAxisRefinedAroundTheCentre() - 1) / 2;
+  assertion(cellsPerAxisOfChild > refinedCellsBesideTheRequest, depth, cellsPerAxisOfChild);
+  assertion(cellsPerAxisOfChild <= 2 * refinedCellsBesideTheRequest + 1, depth, cellsPerAxisOfChild);
+  peano4::RefinementRequest request;
+  request.setRefinementControl(peano4::RefinementRequest::RefinementControl::Refine);
+  request.level        = depth;
+  request.latticeIndex = tarch::la::Vector<DIMENSIONS, int>(cellsPerAxisOfChild - 1 - refinedCellsBesideTheRequest);
+  return request;
+}
+
+/**
+ * Returns one erase request per cell of the base grid of the depth. Every refined block coarsens.
  */
 std::vector<peano4::RefinementRequest>
 peano4::tests::getErasureOfEveryCell(const int depth) {

@@ -79,8 +79,9 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(cons
   _faceFluxes.reserve(partition.getNumberOfFaces());
   _stateExchange.rebuild(partition);
   _fluxExchange.rebuild(partition);
+  _restrictedFluxExchange.rebuild(partition);
   rebuildOwnedLists(partition);
-  reduceMeshWidths(partition);
+  measureMeshWidths(partition);
 }
 
 /**
@@ -107,15 +108,15 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
   });
   _solution.upload(solution);
 
-  reduceMeshWidths(partition);
+  measureMeshWidths(partition);
   measureError(partition);
   _meshChangedSinceLastTimeStep = false;
   voteOnRefinement(partition, requests);
 }
 
 /**
- * Moves the solution into the slots of the new partition and recomputes the time step size. The
- * next time step fills the face pools.
+ * Moves the solution into the slots of the new partition and measures the wave speeds of the new
+ * grid. adoptFrom() recomputes the time step size. The next time step fills the face pools.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -140,10 +141,10 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   _faceFluxes.reserve(partition.getNumberOfFaces());
   _stateExchange.rebuild(partition);
   _fluxExchange.rebuild(partition);
+  _restrictedFluxExchange.rebuild(partition);
   rebuildOwnedLists(partition);
-  reduceMeshWidths(partition);
+  measureMeshWidths(partition);
   _meshChangedSinceLastTimeStep = true;
-  const auto& solverFamily      = static_cast<const Derived&>(*this);
   if constexpr (UsesAdaptiveTimeStepping) {
     if (
       _timeStepping.getTimeStepSizeOfNextStep() > 0.0
@@ -164,13 +165,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
       );
       _timeStepping.raiseMaxEigenvalue(statistics.maxPhysicalEigenvalue);
       _timeStepping.raiseMaxScaledEigenvalue(statistics.maxScaledEigenvalue);
-      _timeStepping.reduceMaxEigenvaluesAcrossRanks();
-      if (_timeStepping.hasPositiveStabilityEigenvalue()) {
-        _timeStepping.setAdmissibleTimeStepSize(solverFamily.getTimeStepSizeFromCFL());
-      }
     }
-  } else if (_timeStepping.getTimeStepSize() > 0.0) {
-    _timeStepping.setFixedTimeStepSize(solverFamily.getFixedTimeStepSize());
   }
 
   std::vector<int> createdCells;
@@ -227,6 +222,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
   _faceFluxes.release();
   _stateExchange.release();
   _fluxExchange.release();
+  _restrictedFluxExchange.release();
   _migration.release();
   _votes.release();
   _ownedCells.release();
@@ -301,7 +297,8 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD tarch::AllocatedBytes
 exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return _solution.getAllocatedBytes() + _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes()
-    + _stateExchange.getAllocatedBytes() + _fluxExchange.getAllocatedBytes() + _migration.getAllocatedBytes()
+    + _stateExchange.getAllocatedBytes() + _fluxExchange.getAllocatedBytes()
+    + _restrictedFluxExchange.getAllocatedBytes() + _migration.getAllocatedBytes()
     + _votes.getAllocatedBytes() + _ownedCells.getAllocatedBytes() + _ownedRiemannFaces.getAllocatedBytes()
     + _errorMeasurement.getAllocatedBytes() + _solutionOnHost.getAllocatedBytes()
     + _faceStatesOnHost.getAllocatedBytes()
@@ -548,30 +545,54 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::solveRiemannP
 }
 
 /**
- * Advances the time stamp and sets the time step size of the next time step from the CFL
- * condition or the fixed rule of the solver family.
+ * Advances the time stamp. An adaptive rule raises the wave speeds of this rank. adoptFrom() then
+ * sets the time step size of the next step. A fixed rule sets this size at once.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::closeTimeStep(
-  const peano4::Partition&                     partition,
   const double                                 timeStepSize,
   const exahype2::dg::MaxEigenvalueStatistics& statistics
 ) {
   _timeStepping.advanceTimeStamp(timeStepSize);
-  reduceMeshWidths(partition);
-  const auto& solverFamily = static_cast<const Derived&>(*this);
   if constexpr (UsesAdaptiveTimeStepping) {
     _timeStepping.raiseMaxEigenvalue(statistics.maxPhysicalEigenvalue);
     _timeStepping.raiseMaxScaledEigenvalue(statistics.maxScaledEigenvalue);
-    _timeStepping.reduceMaxEigenvaluesAcrossRanks();
-    if (
-      _timeStepping.hasPositiveStabilityEigenvalue()
-      and _timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime
-    ) {
-      _timeStepping.setAdmissibleTimeStepSize(solverFamily.getTimeStepSizeFromCFL());
-    }
   } else {
+    _timeStepping.setFixedTimeStepSize(static_cast<const Derived&>(*this).getFixedTimeStepSize());
+  }
+}
+
+/**
+ * Adds the mesh widths and the wave speeds of this rank to the reduction of the step.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::contributeTo(tarch::mpi::ReductionRecord& record) {
+  _timeStepping.contributeTo(record);
+}
+
+/**
+ * Reads the reduced mesh widths and wave speeds. New wave speeds validate the time step of record
+ * against the CFL condition. Before the terminal time, they also set the size of the next step. New
+ * mesh widths reset a fixed time step size once the time stepping has started.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::adoptFrom(
+  const tarch::mpi::ReductionRecord& record
+) {
+  _timeStepping.adoptFrom(record);
+  const auto& solverFamily = static_cast<const Derived&>(*this);
+  if constexpr (UsesAdaptiveTimeStepping) {
+    if (_timeStepping.hasNewMaxEigenvalues() and _timeStepping.hasPositiveStabilityEigenvalue()) {
+      const double timeStepSizeFromCFL = solverFamily.getTimeStepSizeFromCFL();
+      _timeStepping.validateTimeStepSizeOfReducedStep(timeStepSizeFromCFL);
+      if (_timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime) {
+        _timeStepping.setAdmissibleTimeStepSize(timeStepSizeFromCFL);
+      }
+    }
+  } else if (_timeStepping.hasNewMeshWidths() and _timeStepping.getTimeStepSizeOfNextStep() > 0.0) {
     _timeStepping.setFixedTimeStepSize(solverFamily.getFixedTimeStepSize());
   }
 }
@@ -715,11 +736,12 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwnedL
 }
 
 /**
- * Reduces the smallest and the largest cell width over all ranks.
+ * Passes the smallest and the largest cell width of this rank to the time stepping. The reduction
+ * of the step reduces them over all ranks.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::reduceMeshWidths(
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::measureMeshWidths(
   const peano4::Partition& partition
 ) {
   double minimum = std::numeric_limits<double>::infinity();
@@ -730,5 +752,5 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::reduceMeshWid
       maximum = std::max(maximum, partition.getWidthOfLevel(partition.getMinimumLevel(), axis));
     }
   }
-  _timeStepping.reduceMeshWidthsAcrossRanks(minimum, maximum);
+  _timeStepping.setLocalMeshWidths(minimum, maximum);
 }

@@ -4,7 +4,6 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/instrumentation/Debug.h"
-#include "tarch/mpi/AbstractCommunicationManager.h"
 #include "tarch/mpi/Rank.h"
 
 #include <omp.h>
@@ -18,7 +17,7 @@
 #endif
 
 /**
- * Returns the affinity mask of the calling process with an x for every available logical processor
+ * Returns the affinity mask of the calling thread with an x for every available logical processor
  * and an o for every masked one.
  */
 std::string
@@ -48,7 +47,7 @@ tarch::tasking::printUnmaskedThreads() {
 }
 
 /**
- * Returns the number of logical processors in the affinity mask of the process.
+ * Returns the number of logical processors in the affinity mask of the calling thread.
  */
 int
 tarch::tasking::getNumberOfUnmaskedThreads() {
@@ -73,8 +72,8 @@ tarch::tasking::getNumberOfUnmaskedThreads() {
 
 /**
  * Returns whether the ranks on this node start more threads than the node or the affinity mask of
- * this rank has logical processors. The thread count comes from OMP_NUM_THREADS, because the OpenMP
- * runtime fixes its wait policy when it starts.
+ * this rank has logical processors. The thread count comes from OMP_NUM_THREADS. The OpenMP runtime
+ * fixes its wait policy when it starts.
  */
 bool
 tarch::tasking::oversubscribesNode() {
@@ -103,30 +102,26 @@ bool
 tarch::tasking::Runtime::init() {
 #ifdef __GLIBC__
   // The kernel serialises the mprotect calls with which glibc grows the arena of every thread in the
-  // first parallel sweep, so a large top padding moves the growth out of that sweep. A sanitizer or
-  // a replaced allocator rejects every mallopt() option.
+  // first parallel sweep. A large top padding moves the growth out of that sweep. A sanitizer or a
+  // replaced allocator rejects every mallopt() option.
   if (mallopt(M_TOP_PAD, 128 * 1024 * 1024) == 0) {
     logDebug("The allocator rejected the requested top padding.");
   }
 #endif
   // A team thread that spins at a barrier takes the core that the master thread of another rank on
-  // an oversubscribed node needs, so the teams of such a node sleep while they wait. The OpenMP
-  // runtime reads the variable when it starts, so this call precedes the first OpenMP call and
+  // an oversubscribed node needs. The teams of such a node therefore sleep while they wait. The
+  // OpenMP runtime reads the variable when it starts. This call precedes the first OpenMP call and
   // keeps a value the user set.
   if (oversubscribesNode() and std::getenv("OMP_WAIT_POLICY") == nullptr) {
     setenv("OMP_WAIT_POLICY", "passive", 0);
 #ifdef KMP_VERSION_MAJOR
-    // The LLVM runtime also takes the policy after it has started, so these
-    // two calls set it for a runtime that a log line started before this call.
+    // The LLVM runtime also takes the policy after it has started. These two calls set it for a
+    // runtime that a log line started before this call.
     kmp_set_library_throughput();
     kmp_set_blocktime(0);
 #endif
   }
-  int maximumNumberOfThreads = std::min(omp_get_num_procs(), omp_get_max_threads());
-  // The dedicated communication thread polls without pause, so the team leaves one core to it.
-  if (tarch::mpi::AbstractCommunicationManager::usesDedicatedThread() and maximumNumberOfThreads > 1) {
-    maximumNumberOfThreads--;
-  }
+  const int maximumNumberOfThreads = std::min(omp_get_num_procs(), omp_get_max_threads());
   omp_set_num_threads(maximumNumberOfThreads);
   _numberOfThreads = omp_get_max_threads();
 

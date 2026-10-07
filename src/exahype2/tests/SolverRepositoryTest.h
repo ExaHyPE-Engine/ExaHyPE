@@ -22,4 +22,5 @@ public:
 private:
   void testTheRepositoryReducesTheValuesOfEverySolver();
   void testEveryPhaseCallReachesEverySolver();
+  void testEveryReductionGathersTheRequestsOfItsOwnStep();
 };

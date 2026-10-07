@@ -87,3 +87,21 @@ INLINE_METHOD double
 exahype2::TimeStepping::getMaxScaledEigenvalueOfThisStep() const {
   return _maxScaledEigenvalueOfThisStep;
 }
+
+/**
+ * Returns whether the last adoptFrom() read eigenvalue maxima that some rank raised since its
+ * previous contribution.
+ */
+INLINE_METHOD bool
+exahype2::TimeStepping::hasNewMaxEigenvalues() const {
+  return _hasNewMaxEigenvalues;
+}
+
+/**
+ * Returns whether the last adoptFrom() read mesh widths that some rank set since its previous
+ * contribution.
+ */
+INLINE_METHOD bool
+exahype2::TimeStepping::hasNewMeshWidths() const {
+  return _hasNewMeshWidths;
+}
