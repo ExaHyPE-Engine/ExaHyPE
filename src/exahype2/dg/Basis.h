@@ -138,7 +138,9 @@ namespace exahype2::dg {
   INLINE_METHOD GPU_CALLABLE_METHOD void differentiateFluxInPlace(
     ComputePrecision* NOALIAS                              flux,
     const ComputePrecision* NOALIAS                        derivativeOperator,
-    const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize
+    const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
+    int                                                    firstLine  = 0,
+    int                                                    lineStride = 1
   );
 } // namespace exahype2::dg
 

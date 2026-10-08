@@ -147,6 +147,14 @@ exahype2::RefinementRequests::merge(const exahype2::RefinementCommand command, c
  */
 std::vector<peano4::RefinementRequest>
 exahype2::RefinementRequests::getRefinementRequests(const peano4::Partition& partition) const {
+  return gatherRefinementRequests(getLocalRefinementRequests(partition));
+}
+
+/**
+ * Returns the refinement requests of the cells of this rank in vote order.
+ */
+std::vector<peano4::RefinementRequest>
+exahype2::RefinementRequests::getLocalRefinementRequests(const peano4::Partition& partition) const {
   using Control = peano4::RefinementRequest::RefinementControl;
 
   std::vector<peano4::RefinementRequest> requests;
@@ -168,7 +176,15 @@ exahype2::RefinementRequests::getRefinementRequests(const peano4::Partition& par
     request.latticeIndex = eraseVotes[firstVote].lattice;
     requests.push_back(request);
   });
+  return requests;
+}
 
+/**
+ * Returns the sorted union of the requests of all ranks. Every rank calls this function collectively
+ * with its own requests and returns the same list.
+ */
+std::vector<peano4::RefinementRequest>
+exahype2::RefinementRequests::gatherRefinementRequests(std::vector<peano4::RefinementRequest> requests) {
   const auto& rank          = tarch::mpi::Rank::getInstance();
   const int   numberOfRanks = rank.getNumberOfRanks();
   MPI_Comm    communicator  = rank.getCommunicator();

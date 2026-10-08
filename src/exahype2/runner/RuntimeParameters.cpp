@@ -176,7 +176,7 @@ exahype2::runner::ParameterTable::load(const tarch::reader::JSONReader* const re
 }
 
 /**
- * Arguments that match no entry stay in argv in their order, so the parser of the caller reads them
+ * Arguments that match no entry stay in argv in their order. The parser of the caller reads them
  * afterwards.
  */
 void
@@ -387,8 +387,9 @@ exahype2::runner::RuntimeParameters::printUsage(const std::string& executableNam
   );
   addOption(
     "-ct, --communicationThread",
-    "Drive the outstanding MPI communication on a thread of its own. The thread reserves a core and "
-    "only runs where a job has more than one rank (default: Off)."
+    "Drive the outstanding MPI communication on a thread of its own. The thread needs a CPU that no "
+    "OpenMP thread uses. Set OMP_NUM_THREADS below the number of CPUs of a rank. The thread only "
+    "runs where a job has more than one rank (default: Off)."
   );
   addOption(
     "-dlb, --disableLoadBalancing",

@@ -34,6 +34,7 @@
 #include "tarch/mpi/tests/PingPongTest.h"
 #include "tarch/mpi/tests/PollPacingTest.h"
 #include "tarch/mpi/tests/RankTest.h"
+#include "tarch/mpi/tests/ReductionRecordTest.h"
 #include "tarch/plotter/tests/FileWriterTest.h"
 #include "tarch/plotter/tests/FormatTest.h"
 #include "tarch/plotter/tests/HDF5FileWriterTest.h"
@@ -85,6 +86,7 @@ tarch::getUnitTests() {
   result->addTestCase(new tarch::mpi::tests::PingPongTest());
   result->addTestCase(new tarch::mpi::tests::PollPacingTest());
   result->addTestCase(new tarch::mpi::tests::RankTest());
+  result->addTestCase(new tarch::mpi::tests::ReductionRecordTest());
 
   result->addTestCase(new tarch::accelerator::tests::BufferTest());
   result->addTestCase(new tarch::accelerator::tests::ChunkedMemoryPoolTest());

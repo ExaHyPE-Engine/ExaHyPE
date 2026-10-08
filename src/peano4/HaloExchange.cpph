@@ -23,6 +23,17 @@ INLINE_METHOD peano4::HaloExchange<T>::HaloExchange(Pool& pool) :
 }
 
 template <typename T>
+INLINE_METHOD peano4::HaloExchange<T>::HaloExchange(Pool& pool, const peano4::FaceKind exchangedFaceKind) :
+  _pool(pool),
+  _halfSize(pool.getChunkSize() / 2),
+  _exchangedFaceKind(exchangedFaceKind),
+  _entries(pool.getLocation()),
+  _sendBuffer(pool.getLocation()),
+  _receiveBuffer(pool.getLocation()) {
+  assertion(pool.getChunkSize() % 2 == 0, "A face must store an even number of values.", pool.getChunkSize());
+}
+
+template <typename T>
 INLINE_METHOD peano4::HaloExchange<T>::HaloExchange::~HaloExchange() noexcept {
   assertion(not _inFlight, "A halo exchange ends only after its last messages arrive.");
 }
@@ -30,7 +41,8 @@ INLINE_METHOD peano4::HaloExchange<T>::HaloExchange::~HaloExchange() noexcept {
 /**
  * Copies the exchanged faces of the partition into one entry table and sizes the buffers. A caller
  * rebuilds after every build of the partition while no post is in flight. The first call reserves
- * the tag, so every rank calls the first rebuild of its exchanges in the same order.
+ * the tag. Every rank calls the first rebuild of its exchanges in the same order. Both ranks of a
+ * face see the same face kind. A neighbour without a face of the exchanged kind gets no message.
  */
 template <typename T>
 INLINE_METHOD void
@@ -45,7 +57,7 @@ peano4::HaloExchange<T>::rebuild(const peano4::Partition& partition) {
   for (const auto& neighbour : partition.getNeighbours()) {
     const auto faces = partition.getExchangedFaces(neighbour);
     assertion(neighbour.rank >= 0 and not faces.isEmpty(), neighbour.rank);
-#if PEANO_ASSERTIONS
+    const int firstEntry = static_cast<int>(entries.size());
     for (const auto& entry : faces) {
       assertion(
         entry.face >= 0 and entry.face < partition.getNumberOfFaces(),
@@ -53,16 +65,22 @@ peano4::HaloExchange<T>::rebuild(const peano4::Partition& partition) {
         partition.getNumberOfFaces()
       );
       assertion(entry.side == 0 or entry.side == 1, entry.side);
+      if (not _exchangedFaceKind or partition.getFaceKind(entry.face) == *_exchangedFaceKind) {
+        entries.push_back(entry);
+      }
     }
-#endif
-    const std::size_t bytes = static_cast<std::size_t>(faces.size) * static_cast<std::size_t>(_halfSize) * sizeof(T);
+    const int numberOfEntries = static_cast<int>(entries.size()) - firstEntry;
+    if (numberOfEntries == 0) {
+      continue;
+    }
+    const std::size_t bytes =
+      static_cast<std::size_t>(numberOfEntries) * static_cast<std::size_t>(_halfSize) * sizeof(T);
     if (bytes > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
       tarch::terminateWithError(
         "The halo message to rank " + std::to_string(neighbour.rank) + " must fit into one MPI message."
       );
     }
-    _messages.push_back({neighbour.rank, static_cast<int>(entries.size()), faces.size});
-    entries.insert(entries.end(), faces.begin(), faces.end());
+    _messages.push_back({neighbour.rank, firstEntry, numberOfEntries});
   }
 
   _numberOfEntries = static_cast<int>(entries.size());
@@ -88,8 +106,11 @@ peano4::HaloExchange<T>::release() {
 }
 
 /**
- * Gathers the local halves into the send buffer and posts the receives and sends of every
- * neighbour rank. A caller leaves the exchanged faces of the pool unchanged until wait() returns.
+ * Gathers the local halves into the send buffer and registers the messages of every neighbour rank
+ * with the progress engine. A communication thread posts host buffers with its first poll while the
+ * OpenMP threads compute. This function posts GPU buffers and every buffer without a communication
+ * thread at once. The GPU IPC of HPE Cray MPI hangs on GPU buffers that the communication thread
+ * posts. A caller leaves the exchanged faces of the pool unchanged until wait() returns.
  */
 template <typename T>
 INLINE_METHOD void
@@ -113,12 +134,35 @@ peano4::HaloExchange<T>::post() {
         _halfSize
       }
     );
-    // The sends below read the send buffer without a copy, so the gather has to be complete.
+    // The sends read the send buffer without a copy. The gather has to be complete first.
     tarch::accelerator::waitForDevice();
   }
 
-  auto&    manager      = peano4::communication::CommunicationManager::getInstance();
-  MPI_Comm communicator = manager.getCommunicator();
+  _inFlight = true;
+  if (_messages.empty()) {
+    return;
+  }
+  _messagesPosted = false;
+  if (
+    tarch::isGPUMemory(_sendBuffer.getLocation())
+    or not tarch::mpi::AbstractCommunicationManager::usesDedicatedThread()
+  ) {
+    postMessages();
+  }
+  _messagesCompleted.store(false, std::memory_order_release);
+  peano4::communication::CommunicationManager::getInstance().registerInFlightTransfer([this]() {
+    return pollMessages();
+  });
+}
+
+/**
+ * Posts the receives and sends of every neighbour rank.
+ */
+template <typename T>
+INLINE_METHOD void
+peano4::HaloExchange<T>::postMessages() {
+  assertion(not _messagesPosted);
+  MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
   for (std::size_t messageNumber = 0; messageNumber < _messages.size(); messageNumber++) {
     const Message& message   = _messages[messageNumber];
     const int      byteCount = message.numberOfEntries * _halfSize * static_cast<int>(sizeof(T));
@@ -142,12 +186,7 @@ peano4::HaloExchange<T>::post() {
       &_requests[2 * messageNumber + 1]
     );
   }
-
-  _inFlight = true;
-  if (not _messages.empty()) {
-    _messagesCompleted.store(false, std::memory_order_release);
-    manager.registerInFlightTransfer([this]() { return pollMessages(); });
-  }
+  _messagesPosted = true;
 }
 
 /**
@@ -180,12 +219,16 @@ peano4::HaloExchange<T>::wait() {
 }
 
 /**
- * Tests every request of the post once. Only the poller calls this, so no other thread touches
- * the requests while a post is in flight.
+ * Posts the messages of the post on the first call unless post() posted them, and tests every
+ * request once. Only the poller calls this. No other thread touches the requests while a post is in
+ * flight.
  */
 template <typename T>
 INLINE_METHOD bool
 peano4::HaloExchange<T>::pollMessages() {
+  if (not _messagesPosted) {
+    postMessages();
+  }
   bool allCompleted = true;
   for (auto& request : _requests) {
     int flag = 0;

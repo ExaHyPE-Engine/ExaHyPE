@@ -44,6 +44,7 @@ private:
   void testTheGradientOfAConstantStateIsExactlyZero();
   void testALinearFluxDifferentiatesToItsPhysicalSlope();
   void testAConstantFluxDifferentiatesToExactZeros();
+  void testTwoCallsOverAlternateLinesDifferentiateLikeOneCall();
   void testAPaddedNodeStrideProjectsOnlyTheEntries();
   void testTheLowerAndUpperFaceUseTheirOwnCoefficients();
   void testTheFaceNodesRunWithTheLowestTangentialAxisFastest();

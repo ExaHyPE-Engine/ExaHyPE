@@ -62,17 +62,21 @@ tarch::la::ExactAccumulator::merge(const tarch::la::ExactAccumulator& other) {
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 tarch::la::ExactAccumulator::round() const {
-  return roundQuotient(1);
+  return roundQuotient<1>();
 }
 
 /**
- * Returns the running sum divided by the positive divisor, correctly rounded to the nearest double
- * with ties to even. A sum of divisor copies of one value returns that value bitwise.
+ * Returns the running sum divided by Divisor, correctly rounded to the nearest double with ties to
+ * even. A sum of Divisor copies of one value returns that value bitwise. A GPU emulates a 64-bit
+ * division in software. A constant Divisor lets the compiler replace the divisions by
+ * multiplications.
  */
+template <int Divisor>
 INLINE_METHOD GPU_CALLABLE_METHOD double
-tarch::la::ExactAccumulator::roundQuotient(const int divisor) const {
-  assertion(divisor > 0, divisor);
-  std::int64_t digits[NumberOfLimbs];
+tarch::la::ExactAccumulator::roundQuotient() const {
+  static_assert(Divisor > 0, "The divisor of a rounded quotient must be positive.");
+  constexpr std::int64_t WideDivisor = Divisor;
+  std::int64_t           digits[NumberOfLimbs];
   std::int64_t carry = 0;
   for (int limb = 0; limb < NumberOfLimbs; limb++) {
     const std::int64_t total = _limbs[limb] + carry;
@@ -92,10 +96,12 @@ tarch::la::ExactAccumulator::roundQuotient(const int divisor) const {
   }
 
   std::int64_t remainder = 0;
-  for (int limb = NumberOfLimbs - 1; limb >= 0; limb--) {
-    const std::int64_t total = (remainder << BitsPerLimb) | digits[limb];
-    digits[limb]             = total / divisor;
-    remainder                = total % divisor;
+  if constexpr (Divisor > 1) {
+    for (int limb = NumberOfLimbs - 1; limb >= 0; limb--) {
+      const std::int64_t total = (remainder << BitsPerLimb) | digits[limb];
+      digits[limb]             = total / WideDivisor;
+      remainder                = total % WideDivisor;
+    }
   }
 
   int topLimb = NumberOfLimbs - 1;
@@ -104,14 +110,14 @@ tarch::la::ExactAccumulator::roundQuotient(const int divisor) const {
   }
   if (topLimb < 0) {
     // A quotient below one unit of the fixed point is the smallest subnormal or zero.
-    const auto magnitudeBits = 2 * remainder > divisor ? std::uint64_t{1} : std::uint64_t{0};
+    const auto magnitudeBits = 2 * remainder > WideDivisor ? std::uint64_t{1} : std::uint64_t{0};
     const auto signField     = isNegative and remainder != 0 ? std::uint64_t{1} << 63 : std::uint64_t{0};
     return std::bit_cast<double>(signField | magnitudeBits);
   }
 
   // A quotient below 2^64 units takes its guard bit from the first digit below the unit.
-  const auto fractionDigit     = static_cast<std::uint64_t>((remainder << BitsPerLimb) / divisor);
-  const auto fractionRemainder = (remainder << BitsPerLimb) % divisor;
+  const auto fractionDigit     = static_cast<std::uint64_t>((remainder << BitsPerLimb) / WideDivisor);
+  const auto fractionRemainder = (remainder << BitsPerLimb) % WideDivisor;
 
   const auto topDigit      = static_cast<std::uint64_t>(digits[topLimb]);
   const auto digitBelow    = topLimb >= 1 ? static_cast<std::uint64_t>(digits[topLimb - 1]) : fractionDigit;

@@ -11,7 +11,7 @@
 namespace {
   /**
    * Returns a new fixture path in the test directory. The file name contains an identifier that
-   * each process computes once, so two ranks never create the same file.
+   * each process computes once. Two ranks never create the same file.
    */
   std::filesystem::path fixturePath(const std::string& stem) {
     static const std::string testRunIdentifier =
@@ -34,7 +34,7 @@ namespace {
   ) {
     const std::filesystem::path path = fixturePath(stem);
 
-    auto check = [&](const int status, const std::string& operation) {
+    const auto check = [&](const int status, const std::string& operation) {
       if (status != NC_NOERR) {
         throw std::runtime_error("The test fixture cannot " + operation + ": " + nc_strerror(status));
       }
@@ -82,7 +82,7 @@ namespace {
   ) {
     const std::filesystem::path path = fixturePath(stem);
 
-    auto check = [&](const int status, const std::string& operation) {
+    const auto check = [&](const int status, const std::string& operation) {
       if (status != NC_NOERR) {
         throw std::runtime_error("The test fixture cannot " + operation + ": " + nc_strerror(status));
       }
@@ -130,6 +130,7 @@ void
 tarch::reader::tests::NetCDFFieldSamplerTest::run() {
   testMethod(testPiecewiseConstantSampleSingleField);
   testMethod(testOutOfDomainReturnsZero);
+  testMethod(testCoversTheStoredExtentOnly);
   testMethod(testMultipleNamedFields);
   testMethod(testDisplacementUsesItsOwnCoordinateRange);
   testMethod(testSamplingWithSimulationOffset);
@@ -149,7 +150,7 @@ tarch::reader::tests::NetCDFFieldSamplerTest::testPiecewiseConstantSampleSingleF
   );
 
   try {
-    tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {{10.0, 10.0}}, {{0.0, 0.0}});
+    const tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {{10.0, 10.0}}, {{0.0, 0.0}});
 
     validateNumericalEquals(sampler.samplePiecewiseConstant("bathymetry", {0.0, 0.0}), 10.0);
     validateNumericalEquals(sampler.samplePiecewiseConstant("bathymetry", {5.0, 0.0}), 11.0);
@@ -168,10 +169,37 @@ tarch::reader::tests::NetCDFFieldSamplerTest::testOutOfDomainReturnsZero() {
     writeTempNetCDFFile("peano-netcdf-sampler-range", {0.0, 10.0}, {0.0, 10.0}, {1.0, 2.0, 3.0, 4.0});
 
   try {
-    tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {{10.0, 10.0}}, {{0.0, 0.0}});
+    const tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {{10.0, 10.0}}, {{0.0, 0.0}});
 
     validateNumericalEquals(sampler.samplePiecewiseConstant("bathymetry", {-0.1, 5.0}), 0.0);
     validateNumericalEquals(sampler.samplePiecewiseConstant("bathymetry", {5.0, 10.1}), 0.0);
+  } catch (...) {
+    std::filesystem::remove(path);
+    throw;
+  }
+
+  std::filesystem::remove(path);
+}
+
+/**
+ * covers() accepts the positions that map into the stored extent of a field and rejects the others.
+ */
+void
+tarch::reader::tests::NetCDFFieldSamplerTest::testCoversTheStoredExtentOnly() {
+  const std::string path =
+    writeTempNetCDFFile("peano-netcdf-sampler-covers", {100.0, 110.0}, {200.0, 220.0}, {1.0, 2.0, 3.0, 4.0});
+
+  try {
+    const std::vector<tarch::reader::NetCDFFieldSampler<2>::FieldDescription> fields{{"bathymetry", path}};
+    const tarch::reader::NetCDFFieldSampler<2>                                fileCoordinates(fields);
+    validate(fileCoordinates.covers("bathymetry", {100.0, 200.0}));
+    validate(fileCoordinates.covers("bathymetry", {110.0, 220.0}));
+    validate(not fileCoordinates.covers("bathymetry", {99.9, 210.0}));
+    validate(not fileCoordinates.covers("bathymetry", {105.0, 220.1}));
+
+    const tarch::reader::NetCDFFieldSampler<2> mappedCoordinates(fields, {1.0, 2.0}, {0.0, 0.0});
+    validate(mappedCoordinates.covers("bathymetry", {0.5, 2.0}));
+    validate(not mappedCoordinates.covers("bathymetry", {1.1, 1.0}));
   } catch (...) {
     std::filesystem::remove(path);
     throw;
@@ -188,7 +216,7 @@ tarch::reader::tests::NetCDFFieldSamplerTest::testMultipleNamedFields() {
     writeTempNetCDFFile("peano-netcdf-sampler-displacement", {0.0, 1.0}, {0.0, 1.0}, {5.0, 6.0, 7.0, 8.0});
 
   try {
-    tarch::reader::NetCDFFieldSampler<2> sampler(
+    const tarch::reader::NetCDFFieldSampler<2> sampler(
       {{"bathymetry", bathymetryPath}, {"displacement", displacementPath}},
       {{1.0, 1.0}},
       {{0.0, 0.0}}
@@ -222,7 +250,7 @@ tarch::reader::tests::NetCDFFieldSamplerTest::testDisplacementUsesItsOwnCoordina
   );
 
   try {
-    tarch::reader::NetCDFFieldSampler<2> sampler(
+    const tarch::reader::NetCDFFieldSampler<2> sampler(
       {{"bathymetry", bathymetryPath}, {"displacement", displacementPath}},
       {{2.0, 1.0}},
       {{0.0, 0.0}}
@@ -249,7 +277,7 @@ tarch::reader::tests::NetCDFFieldSamplerTest::testSamplingWithSimulationOffset()
   );
 
   try {
-    tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {{10.0, 20.0}}, {{50.0, 60.0}});
+    const tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {{10.0, 20.0}}, {{50.0, 60.0}});
 
     validateNumericalEquals(sampler.samplePiecewiseConstant("bathymetry", {55.0, 70.0}), 21.0);
   } catch (...) {
@@ -290,7 +318,7 @@ tarch::reader::tests::NetCDFFieldSamplerTest::testBilinearSampling() {
     writeTempNetCDFFile("peano-netcdf-sampler-bilinear", {0.0, 10.0}, {0.0, 10.0}, {0.0, 10.0, 20.0, 30.0});
 
   try {
-    tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {{10.0, 10.0}}, {{0.0, 0.0}});
+    const tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {{10.0, 10.0}}, {{0.0, 0.0}});
 
     validateNumericalEquals(sampler.samplePiecewiseConstant("bathymetry", {5.0, 5.0}), 0.0);
     validateNumericalEquals(sampler.sampleBilinear("bathymetry", {5.0, 5.0}), 15.0);
@@ -306,7 +334,7 @@ tarch::reader::tests::NetCDFFieldSamplerTest::testBilinearSampling() {
 
 void
 tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalSampling() {
-  // value(z, y, x) over a 2x2x2 grid, so the first coordinate varies fastest.
+  // The file stores value(z, y, x) over a 2x2x2 grid. The first coordinate varies fastest.
   const std::string path = writeTempNetCDF3DFile(
     "peano-netcdf-sampler-3d",
     {0.0, 10.0},
@@ -345,7 +373,7 @@ tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalBilinearSampli
   try {
     const tarch::reader::NetCDFFieldSampler<3> sampler({{"material", path, "value", {"x", "y", "z"}}});
 
-    // The centre averages all eight corners, and a face centre averages the four on it.
+    // The centre averages all eight corners. An edge centre averages the two corners of its edge.
     validateNumericalEquals(sampler.sampleBilinear("material", {5.0, 5.0, 5.0}), 3.5);
     validateNumericalEquals(sampler.sampleBilinear("material", {5.0, 0.0, 0.0}), 0.5);
     validateNumericalEquals(sampler.sampleBilinear("material", {0.0, 5.0, 0.0}), 1.0);

@@ -8,6 +8,7 @@
 #include "peano4/Spacetree.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
 
 #include <mpi.h>
 
@@ -52,15 +53,36 @@ namespace {
   }
 
   void appendNothing([[maybe_unused]] const std::vector<exahype2::runner::SolverStatistic>& statistics) {}
+
+  /**
+   * Reduces the values of timeStepping over all ranks in one reduction record.
+   */
+  void reduceOverTheRanks(exahype2::TimeStepping& timeStepping) {
+    tarch::mpi::ReductionRecord record;
+    timeStepping.contributeTo(record);
+    record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
+    timeStepping.adoptFrom(record);
+  }
+
+  /**
+   * Reduces the local statistics over all ranks in one reduction record with fresh memory figures.
+   */
+  void reduceOverTheRanks(exahype2::runner::GlobalStatistics& statistics) {
+    tarch::mpi::ReductionRecord record;
+    statistics.contributeTo(record, true);
+    record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
+    statistics.adoptFrom(record);
+  }
 } // namespace
 
 /**
- * A solver with a fixed rule, which reports no wave speed.
+ * A solver with a fixed rule. It reports no wave speed.
  */
 struct exahype2::runner::tests::StatisticsTest::PlainSolver final {
   PlainSolver() {
     timeStepping.advanceTimeStamp(0.25);
-    timeStepping.reduceMeshWidthsAcrossRanks(0.5, 1.5);
+    timeStepping.setLocalMeshWidths(0.5, 1.5);
+    reduceOverTheRanks(timeStepping);
   }
   [[nodiscard]] const exahype2::TimeStepping& getTimeStepping() const { return timeStepping; }
   exahype2::TimeStepping timeStepping{
@@ -74,9 +96,9 @@ struct exahype2::runner::tests::StatisticsTest::LimitedSolver final {
   static constexpr bool HasLimiter = true;
   LimitedSolver() {
     timeStepping.advanceTimeStamp(0.125);
-    timeStepping.reduceMeshWidthsAcrossRanks(1.0, 3.0);
+    timeStepping.setLocalMeshWidths(1.0, 3.0);
     timeStepping.raiseMaxEigenvalue(7.0);
-    timeStepping.reduceMaxEigenvaluesAcrossRanks();
+    reduceOverTheRanks(timeStepping);
   }
   [[nodiscard]] const exahype2::TimeStepping& getTimeStepping() const { return timeStepping; }
   [[nodiscard]] long getNumberOfTroubledCells() const { return troubledCells; }
@@ -89,15 +111,16 @@ struct exahype2::runner::tests::StatisticsTest::LimitedSolver final {
 };
 
 /**
- * A solver with an adaptive rule and no limiter, which offers a troubled cell count all the same.
+ * A solver with an adaptive rule and without a limiter. It returns a troubled cell count all the
+ * same.
  */
 struct exahype2::runner::tests::StatisticsTest::UnlimitedSolver final {
   static constexpr bool HasLimiter = false;
   UnlimitedSolver() {
     timeStepping.advanceTimeStamp(0.125);
-    timeStepping.reduceMeshWidthsAcrossRanks(1.0, 3.0);
+    timeStepping.setLocalMeshWidths(1.0, 3.0);
     timeStepping.raiseMaxEigenvalue(7.0);
-    timeStepping.reduceMaxEigenvaluesAcrossRanks();
+    reduceOverTheRanks(timeStepping);
   }
   [[nodiscard]] const exahype2::TimeStepping& getTimeStepping() const { return timeStepping; }
   [[nodiscard]] long getNumberOfTroubledCells() const { return 0; }
@@ -135,7 +158,7 @@ exahype2::runner::tests::StatisticsTest::testTheGlobalViewSumsAndBoundsTheRankSt
   auto&       statistics = exahype2::runner::getGlobalStatistics();
   statistics.setLocalSolverBytes(100 + rank, 7 + rank);
   statistics.setLocalCellUpdates(8 * (rank + 1), 64 * (rank + 1));
-  statistics.synchronise(true);
+  reduceOverTheRanks(statistics);
 
   const auto cells             = static_cast<std::uint64_t>(local.numberOfCells);
   const auto faces             = static_cast<std::uint64_t>(local.numberOfFaces);
@@ -185,7 +208,7 @@ exahype2::runner::tests::StatisticsTest::testSnapshotFillsTheMemoryRowsOfTheBuil
   using GridSnapshot = exahype2::runner::GridSnapshot;
   auto& statistics   = exahype2::runner::getGlobalStatistics();
   statistics.setLocalSolverBytes(2048, 1024);
-  statistics.synchronise(true);
+  reduceOverTheRanks(statistics);
   const auto snapshot = exahype2::runner::collectGridSnapshot();
 
   validateEquals(

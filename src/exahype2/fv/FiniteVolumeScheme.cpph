@@ -454,7 +454,7 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::restrictHalo(
             }
           }
           coarseFace[coarseIndex + unknown] =
-            static_cast<StoragePrecision>(accumulator.roundQuotient(peano4::SubfacesPerFace));
+            static_cast<StoragePrecision>(accumulator.roundQuotient<peano4::SubfacesPerFace>());
         }
       }
     }
@@ -528,7 +528,7 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::restrictPatch(
           static_cast<double>(child[peano4::dLinearised(fineVolume, PatchSize) * NumberOfData + unknown])
         );
       });
-      parent[coarseIndex + unknown] = static_cast<StoragePrecision>(accumulator.roundQuotient(ChildrenPerCell));
+      parent[coarseIndex + unknown] = static_cast<StoragePrecision>(accumulator.roundQuotient<ChildrenPerCell>());
     }
   });
 }

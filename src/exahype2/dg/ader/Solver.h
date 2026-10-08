@@ -19,6 +19,10 @@
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/plotter/Format.h"
 
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
+
 namespace exahype2::dg::ader {
   template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
   class Solver;
@@ -107,6 +111,8 @@ public:
     const std::string&       outputDirectory
   );
   INLINE_METHOD void release();
+  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
   [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
@@ -136,14 +142,14 @@ private:
 
   [[nodiscard]] static INLINE_METHOD exahype2::dg::BasisTables<ComputePrecision> getBasisTables();
 
-  INLINE_METHOD void predict(const peano4::Partition& partition, double timeStepSize);
+  INLINE_METHOD void predict(const peano4::Partition& partition, peano4::Adjacency adjacency, double timeStepSize);
   template <typename DivergenceMarks>
   [[nodiscard]] INLINE_METHOD exahype2::dg::ader::PredictionCounts predictCells(
     const peano4::Partition& partition,
+    peano4::Adjacency        adjacency,
     double                   timeStepSize,
     const DivergenceMarks&   divergenceMarks
   );
-  INLINE_METHOD void reportUnconvergedPredictions();
   [[nodiscard]] INLINE_METHOD typename Base::FluxPool::View getAppliedFluxes();
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics correct(
     const peano4::Partition& partition,
@@ -174,10 +180,11 @@ private:
   tarch::accelerator::Buffer<ComputePrecision> _predictorScratch{tarch::MemoryLocation::Device};
 
   /**
-   * The number of cells of this rank whose Picard iteration stopped at its sweep limit in this
-   * time step.
+   * The number of cells of this rank whose Picard iteration stopped at its sweep limit since the
+   * last reduction.
    */
   int _unconvergedPredictions{0};
+  int _unconvergedPredictionsSlot{0};
 
   LimiterSlot _limiter{};
 

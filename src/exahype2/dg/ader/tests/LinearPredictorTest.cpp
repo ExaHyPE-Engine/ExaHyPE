@@ -33,7 +33,6 @@ namespace {
   constexpr int UnknownStride             = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride                = CellLayout::NodesPerCell * UnknownStride;
   constexpr int StateSize                 = CellLayout::NodesPerCell * StateStride;
-  constexpr int GradientSize              = NodesPerAxis * UnknownStride;
   constexpr int SampleSize                = (NodesPerAxis + 1) * CellLayout::NodesPerCell * UnknownStride;
   constexpr int CellStateSize             = CellLayout::NodesPerCell * NumberOfData;
 
@@ -399,6 +398,10 @@ namespace {
     }
   };
 
+  /**
+   * Runs the predictor of the cells of one team. A thread behind the last cell still calls
+   * predict() to reach the barriers of the team.
+   */
   struct PredictorOfCell final {
     exahype2::dg::BasisTables<double> tables{};
     const double*                     locations{nullptr};
@@ -408,16 +411,24 @@ namespace {
     double*                           scratch{nullptr};
     const double*                     cellCentres{nullptr};
     const double*                     cellSizes{nullptr};
+    int                               threadsPerCell{1};
 
-    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int cell) const {
-      double* faceState[peano4::FacesPerCell];
-      double* faceFlux[peano4::FacesPerCell];
-      collectFacePointers(cell, faceStates, faceFluxes, faceState, faceFlux);
-      const int                                   coordinateOffset = cell * DIMENSIONS;
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      const int                            team,
+      const tarch::accelerator::TeamHandle handle
+    ) const {
+      exahype2::dg::ader::TeamWorkers workers = exahype2::dg::ader::getWorkers(handle, threadsPerCell);
+      const int                       cell    = team * workers.groups + workers.group;
+      workers.hasCell                         = workers.hasCell and cell < Setup::NumberOfCells;
+      const int pointed                       = workers.hasCell ? cell : 0;
+      double*   faceState[peano4::FacesPerCell];
+      double*   faceFlux[peano4::FacesPerCell];
+      collectFacePointers(pointed, faceStates, faceFluxes, faceState, faceFlux);
+      const int                                   coordinateOffset = pointed * DIMENSIONS;
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
       const tarch::la::Vector<DIMENSIONS, double> cellSize(cellSizes + coordinateOffset);
-      const int                                   stateOffset   = cell * Setup::CellStateCardinality;
-      const int                                   scratchOffset = cell * StubScratch::Size;
+      const int                                   stateOffset   = pointed * Setup::CellStateCardinality;
+      const int                                   scratchOffset = pointed * StubScratch::Size;
       int                                         pointSourceIndices[Setup::NumberOfPointSources];
       const int numberOfPointSources = Predictor<exahype2::dg::ader::tests::StubSolver>::selectPointSources(
         pointSourceIndices,
@@ -437,7 +448,8 @@ namespace {
         cellCentre,
         cellSize,
         Setup::TimeStamp,
-        Setup::TimeStepSize
+        Setup::TimeStepSize,
+        workers
       );
     }
   };
@@ -489,8 +501,11 @@ namespace {
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
 
+    const int threadsPerTeam = tarch::accelerator::getTeamThreads(CellLayout::NodesPerCell);
+    const int threadsPerCell = std::min(CellLayout::NodesPerCell, threadsPerTeam);
+    const int cellsPerTeam   = threadsPerTeam / threadsPerCell;
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(Setup::NumberOfCells),
+      tarch::accelerator::TeamRange((Setup::NumberOfCells + cellsPerTeam - 1) / cellsPerTeam, threadsPerTeam, 0),
       PredictorOfCell{
         deviceTables.getView(),
         deviceLocations.getData(),
@@ -499,7 +514,8 @@ namespace {
         deviceFaceFluxes.getData(),
         deviceScratch.getData(),
         deviceCellCentres.getData(),
-        deviceCellSizes.getData()
+        deviceCellSizes.getData(),
+        threadsPerCell
       }
     );
 
@@ -650,13 +666,11 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheLastPassEvaluatesTheTerms
 
   const double* const timeAveragedState = scratch + MarkerScratch::TimeAveragedStateOffset;
 
-  double stateGradient[GradientSize]   = {};
   double flux[DIMENSIONS * AxisStride] = {};
   Predictor<MarkerSolver>::evaluateFlux(flux, timeAveragedState, cellCentre, cellSize, TimeStamp, TimeStepSize);
   exahype2::dg::differentiateFluxInPlace<MarkerSolver>(flux, tables.derivativeOperator.data(), inverseCellSize);
   Predictor<MarkerSolver>::addNonconservativeProduct(
     flux,
-    stateGradient,
     timeAveragedState,
     tables.derivativeOperator.data(),
     inverseCellSize,
@@ -801,13 +815,12 @@ void
 exahype2::dg::ader::tests::LinearPredictorTest::testAConstantStateLeavesTheNonconservativeProductAtZero() {
   const Tables tables;
 
-  // The constant has no exact binary representation, so rounding errors would show.
+  // A rounding error shows for a constant without an exact binary representation.
   double state[StateSize];
   for (int entry = 0; entry < StateSize; entry++) {
     state[entry] = 4.0 / 3.0;
   }
 
-  double stateGradient[GradientSize]   = {};
   double flux[DIMENSIONS * AxisStride] = {};
 
   const auto                                  inverseCellSize = getInverseCellSize();
@@ -816,7 +829,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::testAConstantStateLeavesTheNonco
 
   Predictor<MarkerSolver>::addNonconservativeProduct(
     flux,
-    stateGradient,
     state,
     tables.derivativeOperator.data(),
     inverseCellSize,
@@ -846,12 +858,10 @@ exahype2::dg::ader::tests::LinearPredictorTest::testALinearStateGivesTheExactNon
     double state[StateSize];
     fillStateLinearAlongAxis(tables, state, markedAxis);
 
-    double stateGradient[GradientSize]   = {};
     double flux[DIMENSIONS * AxisStride] = {};
 
     Predictor<MarkerSolver>::addNonconservativeProduct(
       flux,
-      stateGradient,
       state,
       tables.derivativeOperator.data(),
       inverseCellSize,
@@ -1253,8 +1263,8 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheDerivativeCoefficientsWei
     coefficientSum += derivativeCoefficients[timeNode];
   }
 
-  // Every time sample of a node has the same value, so the expected sum is coefficientSum times
-  // that value.
+  // Every time sample of a node stores the same value. The expected sum is coefficientSum times that
+  // value.
   double pointSourceValues[SampleSize];
   for (int timeSample = 0; timeSample < NodesPerAxis + 1; timeSample++) {
     for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
@@ -1347,19 +1357,17 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheScratchBlocksFollowEachOt
   validateEquals(Scratch::StateSize, StateStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::TimeAveragedStateSize, StateStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::FluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-  validateEquals(Scratch::StateGradientSize, UnknownStride * NodesPerAxis);
   validateEquals(Scratch::PointSourceSize, (NodesPerAxis + 1) * CellLayout::NodesPerCell * UnknownStride);
 
   validateEquals(Scratch::StateOffset, 0);
   validateEquals(Scratch::TimeAveragedStateOffset, Scratch::StateOffset + Scratch::StateSize);
   validateEquals(Scratch::FluxOffset, Scratch::TimeAveragedStateOffset + Scratch::TimeAveragedStateSize);
-  validateEquals(Scratch::StateGradientOffset, Scratch::FluxOffset + Scratch::FluxSize);
-  validateEquals(Scratch::PointSourceOffset, Scratch::StateGradientOffset + Scratch::StateGradientSize);
+  validateEquals(Scratch::PointSourceOffset, Scratch::FluxOffset + Scratch::FluxSize);
   validateEquals(Scratch::Size, Scratch::PointSourceOffset + Scratch::PointSourceSize);
 }
 
 /**
- * A term the solver lacks has no scratch entries.
+ * The scratch block of a solver reserves zero entries for a term that the solver does not declare.
  */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testATermTheSolverLacksHasZeroExtent() {
@@ -1377,10 +1385,9 @@ exahype2::dg::ader::tests::LinearPredictorTest::testATermTheSolverLacksHasZeroEx
   validate(not Bare::EvaluateFlux);
   validate(not Bare::AccumulatesFlux);
   validate(not Bare::AccumulatesSource);
-  validateEquals(Bare::Scratch::StateGradientSize, 0);
   validateEquals(Bare::Scratch::PointSourceSize, 0);
   validate(Bare::Scratch::Size < Full::Scratch::Size);
-  validateEquals(Bare::Scratch::Size, Bare::Scratch::StateGradientOffset);
+  validateEquals(Bare::Scratch::Size, Bare::Scratch::PointSourceOffset);
 }
 
 /**

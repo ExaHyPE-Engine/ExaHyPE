@@ -47,4 +47,8 @@ private:
   void testATeamLaunchRunsTheRequestedThreads();
   void testTeamScratchMirrorsWithinTheTeam();
   void testTheDeviceRunsADefaultTeamAtOnce();
+  void testTheNumberOfHostTasksFollowsTheTimePerItem();
+#if not defined(PEANO_WITH_GPU_BACKEND)
+  void testAHostReductionMergesItsBlocksInOrder();
+#endif
 };

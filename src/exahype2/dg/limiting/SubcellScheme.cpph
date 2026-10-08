@@ -30,7 +30,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::sampleInitialC
 }
 
 /**
- * Averages the nodal polynomial of a cell onto its subcells, every axis through the same matrix.
+ * Averages the nodal polynomial of a cell onto its subcells. The projection applies nodesToSubcells
+ * along every axis.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -206,8 +207,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::reduceMaxEigen
 }
 
 /**
- * Calls functor(values, x, h) for every subcell in linearised order, with x the centre of the
- * subcell and h its size.
+ * Calls functor(values, x, h) for every subcell in linearised order. x is the centre of the
+ * subcell. h is its size.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename Value, typename Functor>
@@ -231,7 +232,8 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::forEachSubcell
 }
 
 /**
- * Projects the subcell averages of a cell back onto its nodes, every axis through the same matrix.
+ * Projects the subcell averages of a cell back onto its nodes. The projection applies
+ * subcellsToNodes along every axis.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -525,8 +527,8 @@ exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecis
 }
 
 /**
- * Returns the subgrid of a cell on the subcell scheme. Every other cell writes the projection of
- * its nodes into projection and returns projection.
+ * Returns the subgrid of a cell on the subcell scheme. For every other cell it writes the
+ * projection of the nodes into projection and returns projection.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*

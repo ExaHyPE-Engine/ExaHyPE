@@ -26,21 +26,20 @@
 #include "tarch/mpi/AbstractCommunicationManager.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
 #include "tarch/plotter/FileWriter.h"
 #include "tarch/plotter/Format.h"
 #include "tarch/reader/JSONReader.h"
 #include "tarch/tasking/Runtime.h"
 
 #include <mpi.h>
-#if defined(OPEN_MPI)
-#include <mpi-ext.h>
-#endif
 
 namespace {
   /**
-   * The names of the program steps and the time loop in the reports and the Score-P regions.
+   * PhaseName holds the names of the program steps and the time loop in the reports and the Score-P
+   * regions.
    */
-  struct PhaseName {
+  struct PhaseName final {
     static constexpr const char* GridConstruction   = "Grid Construction";
     static constexpr const char* AllocateMemory     = "Allocate Memory";
     static constexpr const char* GridInitialisation = "Grid Initialisation";
@@ -61,8 +60,8 @@ namespace {
   }
 
   /**
-   * Returns the point-to-point layer and the byte transports that the environment selects, or the
-   * library default.
+   * Returns the point-to-point layer and the byte transports that the environment selects. Returns
+   * the library default for a layer that the environment leaves unset.
    */
   std::string getMPITransport() {
     // The report runs once at start-up before the tasking runtime creates any thread.
@@ -79,8 +78,8 @@ namespace {
   }
 
   /**
-   * Returns the total and the free space of /dev/shm, where the OpenMP runtime and the byte
-   * transports of one node map their segments.
+   * Returns the total and the free space of /dev/shm. The OpenMP runtime and the byte transports of
+   * one node map their segments into /dev/shm.
    */
   std::string getMemoryFilesystemHeadroom() {
     std::error_code error;
@@ -92,8 +91,45 @@ namespace {
       + exahype2::runner::Format::getMemory(space.capacity);
   }
 
+#if defined(PEANO_WITH_GPU_BACKEND)
   /**
-   * Returns the GPU backend of the build and, with a GPU backend, the number of its devices.
+   * Returns the smallest and the largest number of GPUs that the ranks of one node use, or nothing
+   * if the backend of some rank names no physical device. Every rank calls this function.
+   */
+  std::optional<std::pair<int, int>> countDevicesPerNode() {
+    constexpr int              IdLength = 64;
+    std::array<char, IdLength> idOfRank{};
+    const auto                 id = tarch::accelerator::Device::getInstance().getIdOfCurrentDevice();
+    assertion(id.size() < IdLength, id);
+    id.copy(idOfRank.data(), IdLength - 1);
+
+    const auto& rank             = tarch::mpi::Rank::getInstance();
+    MPI_Comm    nodeCommunicator = MPI_COMM_NULL;
+    MPI_Comm_split_type(rank.getCommunicator(), MPI_COMM_TYPE_SHARED, rank.getRank(), MPI_INFO_NULL, &nodeCommunicator);
+    int ranksOfNode = 0;
+    MPI_Comm_size(nodeCommunicator, &ranksOfNode);
+    std::vector<char> idsOfNode(static_cast<std::size_t>(ranksOfNode) * IdLength);
+    tarch::mpi::allgather(idOfRank.data(), IdLength, MPI_CHAR, idsOfNode.data(), IdLength, MPI_CHAR, nodeCommunicator);
+    MPI_Comm_free(&nodeCommunicator);
+
+    std::set<std::string> devicesOfNode;
+    for (std::size_t offset = 0; offset < idsOfNode.size(); offset += IdLength) {
+      devicesOfNode.emplace(idsOfNode.data() + offset);
+    }
+    const int          numberOfDevices = static_cast<int>(devicesOfNode.size());
+    std::array<int, 3> maxima{-numberOfDevices, numberOfDevices, devicesOfNode.contains("") ? 1 : 0};
+    tarch::mpi::allreduce(MPI_IN_PLACE, maxima.data(), 3, MPI_INT, MPI_MAX, rank.getCommunicator());
+    assertion(numberOfDevices >= 1 and numberOfDevices <= ranksOfNode, numberOfDevices, ranksOfNode);
+    if (maxima[2] != 0) {
+      return std::nullopt;
+    }
+    return std::pair{-maxima[0], maxima[1]};
+  }
+#endif
+
+  /**
+   * Returns the GPU backend of the build and the number of GPUs that the ranks of one node use.
+   * Every rank calls this function.
    */
   std::string getGPUBackendLabel() {
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
@@ -110,30 +146,30 @@ namespace {
     const std::string backend = "None";
 #endif
 #if defined(PEANO_WITH_GPU_BACKEND)
-    const auto numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
-    return backend + ", " + exahype2::runner::Format::getNumber(numberOfDevices)
-      + (numberOfDevices == 1 ? " Device" : " Devices");
+    const auto devicesPerNode = countDevicesPerNode();
+    if (not devicesPerNode) {
+      return backend;
+    }
+    const auto [fewestDevices, mostDevices] = *devicesPerNode;
+    std::string devices                     = exahype2::runner::Format::getNumber(mostDevices);
+    if (fewestDevices != mostDevices) {
+      devices = exahype2::runner::Format::getNumber(fewestDevices) + " .. " + devices;
+    }
+    return backend + ", " + devices + (mostDevices == 1 ? " Device per Node" : " Devices per Node");
 #else
     return backend;
 #endif
   }
 
+  std::string getOnOff(const bool value) { return value ? "On" : "Off"; }
+
   /**
-   * Returns whether the MPI library accepts pointers into CUDA device memory.
+   * Returns whether the MPI library sends and receives the device buffers of the GPU backend.
    */
   std::string getGPUAwareMPILabel() {
-#if defined(OPEN_MPI) and defined(MPIX_CUDA_AWARE_SUPPORT)
-    return MPIX_Query_cuda_support() == 1 ? "CUDA-Aware" : "Not CUDA-Aware";
-#elif defined(MPIX_GPU_SUPPORT_CUDA)
-    int supported = 0;
-    MPIX_GPU_query_support(MPIX_GPU_SUPPORT_CUDA, &supported);
-    return supported == 1 ? "CUDA-Aware" : "Not CUDA-Aware";
-#else
-    return "Unknown";
-#endif
+    const auto isGPUAware = tarch::accelerator::Device::getInstance().isMPIGPUAware();
+    return isGPUAware.has_value() ? getOnOff(*isGPUAware) : "Unknown";
   }
-
-  std::string getOnOff(const bool value) { return value ? "On" : "Off"; }
 
   std::string renderStatistics(const std::vector<exahype2::runner::SolverStatistic>& statistics) {
     std::ostringstream out;
@@ -161,14 +197,15 @@ namespace {
   }
 
   /**
-   * Renders the rate of the cell updates, and of the degree-of-freedom updates when the solvers count any.
+   * Renders the rate of the cell updates. Adds the rate of the degree-of-freedom updates when the
+   * solvers count any.
    */
   std::string getPerformanceOf(const double cellUpdates, const double dofUpdates, const double seconds) {
     assertion(seconds > 0.0 and cellUpdates >= 0.0 and dofUpdates >= 0.0, seconds, cellUpdates, dofUpdates);
     std::ostringstream performance;
-    performance << exahype2::runner::Format::getRate(cellUpdates / seconds, "cell");
+    performance << exahype2::runner::Format::getRate(cellUpdates / seconds, "Cell");
     if (dofUpdates > 0.0) {
-      performance << " · " << exahype2::runner::Format::getRate(dofUpdates / seconds, "dof");
+      performance << " · " << exahype2::runner::Format::getRate(dofUpdates / seconds, "DoF");
     }
     return performance.str();
   }
@@ -194,8 +231,8 @@ exahype2::runner::Runner::getStepName(const Step step) {
 }
 
 /**
- * Parses the merged runtime configuration, initialises tarch and Peano, runs the program on
- * every rank and shuts them down.
+ * Parses the merged runtime configuration and initialises tarch and Peano. Runs the program on
+ * every rank. Shuts Peano and tarch down.
  */
 int
 exahype2::runner::Runner::launch(
@@ -218,7 +255,7 @@ exahype2::runner::Runner::launch(
   // A configuration error stops the process before MPI starts.
   parameters.configure(argc, argv);
 
-  // The runtime and the application parser read one file, so the keys that neither reads are unrecognised.
+  // The runtime and the application parser read one file. A key that neither reads is unrecognised.
   auto* const configReader         = parameters.getConfigReader();
   const auto  applicationParserRan = static_cast<bool>(callbacks.loadApplicationParameters);
   if (applicationParserRan) {
@@ -238,7 +275,7 @@ exahype2::runner::Runner::launch(
       );
     }
   }
-  // Every parser keeps the arguments it does not consume, so the ones left are unknown.
+  // Every parser keeps the arguments it does not consume. The arguments left are unknown.
   if (argc > 1) {
     std::string unrecognised;
     for (int index = 1; index < argc; ++index) {
@@ -302,8 +339,8 @@ exahype2::runner::Runner::launch(
   tarch::instrumentation::Log::setOutputFile(outputDirectory + parameters.getExecutableName() + ".log");
 
   peano4::init(domainOffset, domainSize, periodicBoundaries);
-  // Every rank schedules the same plan, so the first grid step builds the base grid with one
-  // contiguous curve segment per rank.
+  // Every rank schedules the same plan. The first grid step builds the base grid with one contiguous
+  // curve segment per rank.
   peano4::Spacetree::getInstance().scheduleRegularGridConstruction(parameters.getGridLevels());
 
   if (callbacks.startSimulation) {
@@ -314,8 +351,8 @@ exahype2::runner::Runner::launch(
   int    returnCode = EXIT_SUCCESS;
 #pragma omp parallel default(none) shared(runner, returnCode)
   {
-    // Every worker arms its own trap: The dispatches run on all threads, and the floating-point
-    // environment is a per-thread state.
+    // Every thread enables its own floating-point trap. The dispatches run on all threads. The
+    // floating-point environment is a per-thread state.
     const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
 #pragma omp barrier
 #pragma omp master
@@ -328,30 +365,10 @@ exahype2::runner::Runner::launch(
   if (callbacks.finishSimulation) {
     callbacks.finishSimulation();
   }
-  exahype2::runner::shutdownGlobalStatistics();
   peano4::shutdown();
   launchTrap.reset();
   tarch::shutdown();
   return returnCode;
-}
-
-/**
- * Returns the step of the global master, which every rank continues with. The same maximum
- * reduction sends the highest rank with a non-critical assertion to every rank.
- */
-int
-exahype2::runner::Runner::exchangeStep(const int stepOfThisRank) {
-  assertion(stepOfThisRank >= TerminationStep, stepOfThisRank);
-  constexpr int            NoDecision = TerminationStep - 1;
-  const auto&              rank       = tarch::mpi::Rank::getInstance();
-  const std::array<int, 2> localControl{
-    rank.isGlobalMaster() ? stepOfThisRank : NoDecision,
-    tarch::getNonCriticalAssertionRank()
-  };
-  std::array<int, 2> globalControl{};
-  tarch::mpi::allreduce(localControl.data(), globalControl.data(), 2, MPI_INT, MPI_MAX, rank.getCommunicator());
-  tarch::adoptNonCriticalAssertionRank(globalControl[1]);
-  return globalControl[0];
 }
 
 exahype2::runner::Runner::Runner(
@@ -372,6 +389,11 @@ exahype2::runner::Runner::Runner(
   assertion(static_cast<bool>(_callbacks.plot));
   assertion(static_cast<bool>(_callbacks.getRefinementRequests));
 }
+
+/**
+ * The time loop completes the pending reduction before it returns.
+ */
+exahype2::runner::Runner::~Runner() { assertion(_pendingReduction == nullptr); }
 
 /**
  * Applies the refinement requests of the solvers to the grid. With dataLive, the solvers move their
@@ -418,11 +440,20 @@ exahype2::runner::Runner::executeStep(const Step step) {
 }
 
 /**
- * Reduces the global statistics of the step. Every rank calls this function collectively after
- * every step, and every step except a time step refreshes the memory figures.
+ * Reduces the global statistics, the values of the solvers and the rank of a non-critical assertion
+ * of the step in one allreduce. Every rank calls this function collectively after every step. Every
+ * step except a time step refreshes the memory figures.
+ *
+ * A time step posts its reduction and adopts the reduction of the previous time step. A rank that
+ * computes slower in one step then delays the other ranks by its excess over the next step only.
+ * A time step therefore takes its size from the reduction two time steps before. The first time
+ * step adopts its own reduction at once. Every other step starts without a pending reduction and
+ * reduces its own values at once. Consecutive time steps contribute records of the same layout. A
+ * record of a time step then assigns the slots that its predecessor assigned.
  */
 void
 exahype2::runner::Runner::finishStep(const Step step) {
+  assertion(step == Step::TimeStep or _pendingReduction == nullptr);
   auto&      statistics = exahype2::runner::getGlobalStatistics();
   const auto bytes      = _callbacks.getAllocatedBytes ? _callbacks.getAllocatedBytes() : tarch::AllocatedBytes{};
   statistics.setLocalSolverBytes(bytes.host, bytes.device);
@@ -430,24 +461,132 @@ exahype2::runner::Runner::finishStep(const Step step) {
     _callbacks.getNumberOfSolverCells ? _callbacks.getNumberOfSolverCells() : 0,
     _callbacks.getNumberOfCellDoFs ? _callbacks.getNumberOfCellDoFs() : 0
   );
-  statistics.synchronise(step != Step::TimeStep);
+
+  // A rank without a non-critical assertion holds -1. The shifted rank keeps the order of the
+  // unsigned maximum.
+  const int assertionRank = tarch::getNonCriticalAssertionRank();
+  assertion(assertionRank >= -1, assertionRank);
+  const int shiftedAssertionRank = assertionRank + 1;
+  auto      record               = std::make_unique<tarch::mpi::ReductionRecord>();
+  statistics.contributeTo(*record, step != Step::TimeStep);
+  const int assertionSlot = record->addMaximum(static_cast<std::uint64_t>(shiftedAssertionRank));
+  if (_callbacks.contributeTo) {
+    _callbacks.contributeTo(*record);
+  }
+
+  MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  if (step != Step::TimeStep) {
+    record->allreduce(communicator);
+    adoptReduction(*record, assertionSlot);
+    return;
+  }
+  record->post(communicator);
+  assertion(_pendingReduction == nullptr or _pendingReduction->hasLayoutOf(*record));
+  assertion(
+    _pendingReduction == nullptr or _pendingAssertionSlot == assertionSlot,
+    _pendingAssertionSlot,
+    assertionSlot
+  );
+  completePendingReduction();
+  _pendingReduction     = std::move(record);
+  _pendingAssertionSlot = assertionSlot;
+  if (not _hasAdoptedReductionOfTimeStep) {
+    completePendingReduction();
+  }
 }
 
 /**
- * Broadcasts, executes and reduces one step and returns its wall time in seconds. Only the global
- * master calls this function.
+ * Passes the reduced values of record to the global statistics, to the non-critical assertion and
+ * to the solvers.
+ */
+void
+exahype2::runner::Runner::adoptReduction(const tarch::mpi::ReductionRecord& record, const int assertionSlot) {
+  exahype2::runner::getGlobalStatistics().adoptFrom(record);
+  _reducedNonCriticalAssertionRank = static_cast<int>(record.getMaximum(assertionSlot)) - 1;
+  tarch::adoptNonCriticalAssertionRank(_reducedNonCriticalAssertionRank);
+  if (_callbacks.adoptFrom) {
+    _callbacks.adoptFrom(record);
+  }
+}
+
+/**
+ * Returns whether the last adopted reduction reports a non-critical assertion of some rank.
+ */
+bool
+exahype2::runner::Runner::hasReducedNonCriticalAssertion() const {
+  return _reducedNonCriticalAssertionRank >= 0;
+}
+
+/**
+ * Reduces the rank of a non-critical assertion over all ranks and adopts it. Returns whether some
+ * rank raised one. An adoption raises a non-critical assertion after the reduction that it adopts.
+ * Every rank calls this function collectively.
+ */
+bool
+exahype2::runner::Runner::reduceNonCriticalAssertionRank() {
+  const int localAssertionRank  = tarch::getNonCriticalAssertionRank();
+  int       globalAssertionRank = -1;
+  assertion(localAssertionRank >= -1, localAssertionRank);
+  tarch::mpi::allreduce(
+    &localAssertionRank,
+    &globalAssertionRank,
+    1,
+    MPI_INT,
+    MPI_MAX,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  _reducedNonCriticalAssertionRank = globalAssertionRank;
+  tarch::adoptNonCriticalAssertionRank(globalAssertionRank);
+  return hasReducedNonCriticalAssertion();
+}
+
+/**
+ * Completes and adopts the reduction of the previous time step if one is pending. Every rank calls
+ * this function collectively.
+ */
+void
+exahype2::runner::Runner::completePendingReduction() {
+  if (_pendingReduction == nullptr) {
+    return;
+  }
+  _pendingReduction->wait();
+  adoptReduction(*_pendingReduction, _pendingAssertionSlot);
+  _pendingReduction.reset();
+  _hasAdoptedReductionOfTimeStep = true;
+}
+
+/**
+ * Completes the pending reduction of the last time step before a step of another kind. runStep()
+ * adds the wait to the wall clock of the next time step. Every rank calls this function
+ * collectively.
+ */
+void
+exahype2::runner::Runner::completeReductionOfLastTimeStep() {
+  const auto startTime = std::chrono::steady_clock::now();
+  completePendingReduction();
+  const std::chrono::duration<double> wait = std::chrono::steady_clock::now() - startTime;
+  assertion(wait.count() >= 0.0, wait.count());
+  _reductionWaitOfNextTimeStep += wait.count();
+}
+
+/**
+ * Executes and reduces one step. Returns its wall time in seconds. The wall time of a time step
+ * includes the wait of completeReductionOfLastTimeStep() since the previous time step. Every rank
+ * calls this function collectively.
  */
 double
 exahype2::runner::Runner::runStep(const Step step) {
   tarch::instrumentation::Watch watch("exahype2::runner::Runner", "runStep", false, false);
   watch.start();
-  exchangeStep(static_cast<int>(step));
   executeStep(step);
   finishStep(step);
   watch.stop();
 
-  const auto elapsed = watch.getCalendarTime();
-  const auto name    = std::string(getStepName(step));
+  auto elapsed = watch.getCalendarTime();
+  if (step == Step::TimeStep) {
+    elapsed += std::exchange(_reductionWaitOfNextTimeStep, 0.0);
+  }
+  const auto name = std::string(getStepName(step));
   const auto record  = std::find_if(_stepTimes.begin(), _stepTimes.end(), [&name](const StepTime& stepTime) {
     return stepTime.name == name;
   });
@@ -460,23 +599,12 @@ exahype2::runner::Runner::runStep(const Step step) {
   return elapsed;
 }
 
-void
-exahype2::runner::Runner::runWorker() {
-  for (int step = exchangeStep(NoStep); step != TerminationStep; step = exchangeStep(NoStep)) {
-    executeStep(static_cast<Step>(step));
-    finishStep(static_cast<Step>(step));
-  }
-}
-
 /**
- * Returns the exit code of the run: A run that ended on a non-critical assertion fails.
+ * Returns the exit code of the run. A run that ended on a non-critical assertion fails. Every rank
+ * runs the same steps. Only the global master writes the report.
  */
 int
 exahype2::runner::Runner::run() {
-  if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    runWorker();
-    return EXIT_SUCCESS;
-  }
   reportConfiguration();
   constructGrid();
   {
@@ -495,8 +623,6 @@ exahype2::runner::Runner::run() {
   );
   _report.line("Goodbye");
   _report.close();
-  // The workers wait inside exchangeStep(), so the master broadcasts the termination step last.
-  exchangeStep(TerminationStep);
   return _stoppedAfterNonCriticalAssertion ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
@@ -640,8 +766,8 @@ exahype2::runner::Runner::constructGrid() {
       currentMinimumPatchSize     = statistics.getGlobalMinimumCellWidth();
       finishConditionSeenLastStep = false;
     }
-    // The construction settles when the finest cell reaches the coarsest admissible size and the
-    // last regrid changed nothing, on two consecutive steps.
+    // The construction settles when on two consecutive steps the finest cell reaches the coarsest
+    // admissible size and the last regrid changes nothing.
     const bool converged = tarch::la::smallerEquals(currentMinimumPatchSize, coarsestAdmissiblePatchSize)
       and statistics.getGlobalNumberOfStationaryRegrids() >= 1;
     settled                     = converged and finishConditionSeenLastStep;
@@ -654,10 +780,9 @@ exahype2::runner::Runner::constructGrid() {
     );
   }
   constructionWatch.stop();
-  _report.line(
-    std::string(BlockIndent, ' ') + "Grid Constructed " + Format::getWallClock(constructionWatch.getCalendarTime())
-    + " · " + describeRepetitions(PhaseName::GridConstruction, steps, 0)
-  );
+  const std::string summary = "Grid Constructed " + Format::getWallClock(constructionWatch.getCalendarTime()) + " · "
+                            + describeRepetitions(PhaseName::GridConstruction, steps, 0);
+  _report.line(std::string(BlockIndent, ' ') + summary);
 }
 
 /**
@@ -681,18 +806,15 @@ exahype2::runner::Runner::initialiseGrid() {
     rounds++;
   }
   if (hasPendingMeshUpdates()) {
-    const auto message = "The refinement criterion still requests mesh changes after "
-      + std::to_string(MaximumInitialisationRounds)
-      + " initialisation rounds, so the time loop would start from interpolated data. Check that the "
-        "criterion does not alternate between refining and erasing the same cells and that the "
-        "resolution it asks for lies within the levels the run allows; raising -lmax helps only in "
-        "the second case.";
-    tarch::terminateWithError(message);
+    tarch::terminateWithError(
+      "The refinement criterion must stop changing the grid within " + std::to_string(MaximumInitialisationRounds)
+      + " initialisation rounds. It must not refine and erase the same cells in turn. It must ask for levels "
+        "between -lmin and -lmax only."
+    );
   }
-  _report.line(
-    std::string(BlockIndent, ' ') + "Grid Initialised " + Format::getWallClock(elapsedSeconds) + " · "
-    + describeRepetitions(PhaseName::GridInitialisation, rounds, 0)
-  );
+  const std::string summary = "Grid Initialised " + Format::getWallClock(elapsedSeconds) + " · "
+                            + describeRepetitions(PhaseName::GridInitialisation, rounds, 0);
+  _report.line(std::string(BlockIndent, ' ') + summary);
   if (_meshUpdates.steps > 0) {
     _report.line(std::string(BlockIndent, ' ') + PhaseName::DynamicAMR + " " + describeMeshUpdates(_meshUpdates));
   }
@@ -721,7 +843,8 @@ exahype2::runner::Runner::describeMeshUpdates(const MeshUpdates& updates) {
 }
 
 /**
- * Renders how often a phase ran, in plots, regrids and steps, rounds or steps.
+ * Renders how often a phase ran in the unit of the phase. The unit is the plot, the regrid with its
+ * steps, the round or the step.
  */
 std::string
 exahype2::runner::Runner::describeRepetitions(const std::string& phaseName, const int count, const int regrids) {
@@ -783,7 +906,7 @@ exahype2::runner::Runner::applyMeshUpdates() {
   int    stepsOfThisRegrid{0};
   double secondsSinceLastReport{0.0};
   while (hasPendingMeshUpdates() and stepsOfThisRegrid < MaximumMeshUpdateSteps) {
-    // A report inside the regrid resets the collection, so the regrid counts itself on its first step.
+    // A report inside the regrid resets the collection. The regrid counts itself on its first step.
     secondsSinceLastReport += runMeshUpdateStep(stepsOfThisRegrid == 0);
     stepsOfThisRegrid++;
     if (secondsSinceLastReport >= SecondsBetweenMeshUpdateReports) {
@@ -801,7 +924,7 @@ exahype2::runner::Runner::applyMeshUpdates() {
 }
 
 /**
- * Runs one regrid step, adds it to the collected mesh updates and returns its wall clock in
+ * Runs one regrid step and adds it to the collected mesh updates. Returns its wall clock in
  * seconds. With startsRegrid, the step also counts a regrid.
  */
 double
@@ -833,7 +956,7 @@ exahype2::runner::Runner::formatETA(const double fraction) const {
 }
 
 /**
- * Moves the value column right of the label, so no label of the time loop reaches its values.
+ * Moves the value column right of the label. No label of the time loop reaches its values.
  */
 void
 exahype2::runner::Runner::widenValueColumn(const std::size_t indentation, const std::string& label) {
@@ -841,7 +964,8 @@ exahype2::runner::Runner::widenValueColumn(const std::size_t indentation, const 
 }
 
 /**
- * Writes the label at the indentation and the value at the value column, where a broken value continues.
+ * Writes the label at the indentation and the value at the value column. A broken value continues
+ * at the value column.
  */
 void
 exahype2::runner::Runner::writeLabelled(
@@ -898,7 +1022,7 @@ exahype2::runner::Runner::logTimeStep(
   std::ostringstream timeStep;
   timeStep << Format::getWallClock(_stepSecondsSinceReport / static_cast<double>(_stepsSinceReport))
            << " · t = " << Format::getScientific(minimumTimeStamp);
-  // Local time stepping spans a range of stamps, global time stepping gives every cell one stamp.
+  // Local time stepping spans a range of stamps. Global time stepping gives every cell one stamp.
   if (maximumTimeStamp > minimumTimeStamp) {
     timeStep << " .. " << Format::getScientific(maximumTimeStamp);
   }
@@ -943,7 +1067,7 @@ exahype2::runner::Runner::openSection(const Section section) {
 }
 
 /**
- * Writes the report line of one plot. The plot of the initial condition has no snapshot number.
+ * Writes the report line of one plot. The line of the initial condition omits the snapshot number.
  */
 void
 exahype2::runner::Runner::logPlot(
@@ -979,7 +1103,8 @@ exahype2::runner::Runner::logPlot(
 void
 exahype2::runner::Runner::runTimeLoop() {
   SCOREP_USER_REGION(PhaseName::TimeLoop, SCOREP_USER_REGION_TYPE_PHASE)
-  const auto& parameters = exahype2::runner::RuntimeParameters::getInstance();
+  const auto& parameters     = exahype2::runner::RuntimeParameters::getInstance();
+  const bool  isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster();
 
   _meshUpdateSecondsBeforeTimeLoop = _meshUpdateMeasurement.getAccumulatedValue();
 
@@ -989,7 +1114,7 @@ exahype2::runner::Runner::runTimeLoop() {
   double        nextPlotAtStep     = 0.0;
   unsigned long completedTimeSteps = 0;
   int           completedPlots     = 0;
-  // The last reported step, so the shutdown does not report it twice.
+  // lastLoggedStep holds the last reported step. The shutdown reports it once.
   unsigned long lastLoggedStep    = 0;
   bool          justWroteSnapshot = false;
   auto          lastReport        = std::chrono::steady_clock::now();
@@ -997,7 +1122,7 @@ exahype2::runner::Runner::runTimeLoop() {
   const int  maxTimeSteps = parameters.getNumberOfTimeSteps();
   const bool stepLimited  = maxTimeSteps > 0;
 
-  // The value column leaves room for step labels up to ReservedSteps, so it moves only in longer runs.
+  // The value column leaves room for step labels up to ReservedSteps. It moves in longer runs only.
   constexpr unsigned long ReservedSteps = 999999;
   widenValueColumn(
     BlockIndent,
@@ -1014,7 +1139,14 @@ exahype2::runner::Runner::runTimeLoop() {
 
   enum class Action { TimeStep, Plot, Stop };
   while (true) {
-    if (hasPendingMeshUpdates() and not tarch::hasNonCriticalAssertionBeenViolated()) {
+    // Every decision of the loop reads reduced values only. Every rank then takes the same action,
+    // although a rank sees its own non-critical assertion one step before the others.
+    if (hasPendingMeshUpdates() and not hasReducedNonCriticalAssertion()) {
+      // The requests of the last time step decide whether the regrid runs.
+      if (_pendingReduction != nullptr) {
+        completeReductionOfLastTimeStep();
+        continue;
+      }
       applyMeshUpdates();
     }
     const double minTerminal      = parameters.getMinTerminalTime();
@@ -1036,10 +1168,12 @@ exahype2::runner::Runner::runTimeLoop() {
                                               : (minStamp < minTerminal and maxStamp < maxTerminal);
 
     Action action;
-    if (tarch::hasNonCriticalAssertionBeenViolated()) {
+    if (hasReducedNonCriticalAssertion()) {
       if (not _stoppedAfterNonCriticalAssertion) {
         _stoppedAfterNonCriticalAssertion = true;
-        logError("A non-critical assertion fails. The runner writes the final snapshot and stops.");
+        if (isGlobalMaster) {
+          logError("A non-critical assertion fails. The runner writes the final snapshot and stops.");
+        }
         action = Action::Plot;
       } else {
         action = Action::Stop;
@@ -1050,7 +1184,9 @@ exahype2::runner::Runner::runTimeLoop() {
     ) {
       nextPlotAtStep += stepPlotInterval;
       if (nextPlotAtStep <= static_cast<double>(completedTimeSteps)) {
-        logWarning("The runner writes at most one snapshot per time step.");
+        if (isGlobalMaster) {
+          logWarning("The runner writes at most one snapshot per time step.");
+        }
         nextPlotAtStep = static_cast<double>(completedTimeSteps) + 1.0;
       }
       justWroteSnapshot = true;
@@ -1059,16 +1195,20 @@ exahype2::runner::Runner::runTimeLoop() {
       not stepLimited and snapshotInterval > 0.0 and keepTimeStepping and completedPlots < snapshots - 1
       and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot)
     ) {
-      // The final plot at termination completes the numbered snapshots, so the interval trigger
-      // stops one short. minStamp belongs to the slowest solver and maxStamp to the fastest, so the
-      // fastest solver sets the snapshot spacing.
+      // The final plot at termination completes the numbered snapshots. The interval trigger stops
+      // one short. minStamp belongs to the slowest solver and maxStamp to the fastest. The fastest
+      // solver sets the snapshot spacing.
       nextMinPlot += snapshotInterval;
       nextMaxPlot += snapshotInterval;
       if (nextMinPlot < minStamp) {
-        logWarning("The runner writes at most one snapshot per time step.");
+        if (isGlobalMaster) {
+          logWarning("The runner writes at most one snapshot per time step.");
+        }
         nextMinPlot = minStamp + snapshotInterval;
       } else if (nextMaxPlot < maxStamp) {
-        logWarning("The runner writes at most one snapshot per time step.");
+        if (isGlobalMaster) {
+          logWarning("The runner writes at most one snapshot per time step.");
+        }
         nextMaxPlot = maxStamp + snapshotInterval;
       }
       nextMaxPlot       = std::max(nextMaxPlot, nextMinPlot);
@@ -1088,6 +1228,14 @@ exahype2::runner::Runner::runTimeLoop() {
     }
 
     if (action == Action::Stop) {
+      // The reduction of the last time step can request a regrid or report a non-critical assertion.
+      if (_pendingReduction != nullptr) {
+        completeReductionOfLastTimeStep();
+        continue;
+      }
+      if (not _stoppedAfterNonCriticalAssertion and reduceNonCriticalAssertionRank()) {
+        continue;
+      }
       // After a non-critical assertion, the report ends with the final plot and no time step summary.
       if (not _stoppedAfterNonCriticalAssertion and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
         logTimeStep(
@@ -1104,13 +1252,14 @@ exahype2::runner::Runner::runTimeLoop() {
     }
 
     if (action == Action::Plot) {
+      completeReductionOfLastTimeStep();
       double elapsedSeconds = 0.0;
       {
         SCOREP_USER_REGION(PhaseName::Plot, SCOREP_USER_REGION_TYPE_COMMON)
         elapsedSeconds = runStep(Step::PlotSolution);
       }
       _plotMeasurement.setValue(elapsedSeconds);
-      // The initial condition, plotted before any step ran, is not one of the numbered snapshots.
+      // The plot of the initial condition precedes every step. It is not one of the numbered snapshots.
       if (completedTimeSteps == 0) {
         logPlot(0, 0, _callbacks.getMinTimeStamp(), elapsedSeconds);
       } else {
@@ -1128,7 +1277,7 @@ exahype2::runner::Runner::runTimeLoop() {
     _timeSteppingSeconds += elapsedSeconds;
     _stepsSinceReport++;
     _stepSecondsSinceReport += elapsedSeconds;
-    // The first step warms the caches and the runtime, so the throughput excludes it.
+    // The first step warms the caches and the runtime. The throughput excludes it.
     if (completedTimeSteps > 0) {
       const auto& statistics = exahype2::runner::getGlobalStatistics();
       const auto  cells      = static_cast<double>(statistics.getGlobalNumberOfSolverCells());
@@ -1142,11 +1291,11 @@ exahype2::runner::Runner::runTimeLoop() {
     }
     ++completedTimeSteps;
 
-    // A step with a non-critical assertion has invalid data, so it gets no report and the next
-    // iteration plots the final state.
+    // A step with a non-critical assertion leaves invalid data. The next iteration plots the final
+    // state without a report of the step.
     const auto now = std::chrono::steady_clock::now();
     if (
-      not tarch::hasNonCriticalAssertionBeenViolated()
+      not hasReducedNonCriticalAssertion()
       and (lastLoggedStep == 0 or std::chrono::duration<double>(now - lastReport).count() >= parameters.getTimeStepLogInterval())
     ) {
       logTimeStep(
@@ -1163,8 +1312,8 @@ exahype2::runner::Runner::runTimeLoop() {
 }
 
 /**
- * Writes the grid snapshot behind a rule, then the wall clock of every step kind with the
- * throughput of the time steps.
+ * Writes the grid snapshot behind a rule. Writes the wall clock of every step kind and the
+ * throughput of the time steps below it.
  */
 void
 exahype2::runner::Runner::reportSummary() {
@@ -1188,27 +1337,31 @@ exahype2::runner::Runner::reportSummary() {
     return stepPosition(left.name) < stepPosition(right.name);
   });
 
-  constexpr const char* TimeSpent = "Time Spent";
+  // No time step follows the last wait for a reduction. The time steps count this wait here.
+  const double          waitAfterLastTimeStep = _reductionWaitOfNextTimeStep;
+  constexpr const char* TimeSpent             = "Time Spent";
   Table                 timeSpent;
   for (const auto& [name, measurement] : stepTimes) {
+    const double       wait = name == PhaseName::TimeStep ? waitAfterLastTimeStep : 0.0;
     std::ostringstream value;
-    value << getSeconds(measurement.getAccumulatedValue());
+    value << getSeconds(measurement.getAccumulatedValue() + wait);
     if (name != PhaseName::AllocateMemory) {
       value << "  (" << describeRepetitions(name, measurement.getNumberOfMeasurements(), _numberOfRegrids) << ")";
     }
     timeSpent.add(TimeSpent, name, value.str());
   }
-  if (_timeStepMeasurement.getNumberOfMeasurements() > 0) {
-    // The averages leave out the first time step, which warms the caches and the runtime.
+  const int numberOfMeasuredSteps = _timeStepMeasurement.getNumberOfMeasurements();
+  if (numberOfMeasuredSteps > 0) {
+    // The averages leave out the first time step. The first step warms the caches and the runtime.
+    // The grid grows and shrinks. The rates divide the cells and the degrees of freedom of every
+    // measured step by their time.
+    const double measuredSeconds = _timeStepMeasurement.getAccumulatedValue() + waitAfterLastTimeStep;
     timeSpent.add(
       TimeSpent,
       "Average Time Step",
-      getSeconds(_timeStepMeasurement.getAverageValue()) + "  ("
-        + describeRepetitions(PhaseName::TimeStep, _timeStepMeasurement.getNumberOfMeasurements(), 0) + ")"
+      getSeconds(measuredSeconds / numberOfMeasuredSteps) + "  ("
+        + describeRepetitions(PhaseName::TimeStep, numberOfMeasuredSteps, 0) + ")"
     );
-    // The grid grows and shrinks, so the rates divide the cells and the degrees of freedom of
-    // every measured step by their time.
-    const auto measuredSeconds = _timeStepMeasurement.getAccumulatedValue();
     if (measuredSeconds > 0.0) {
       timeSpent.add(TimeSpent, "Average Performance", getPerformanceOf(_cellUpdates, _dofUpdates, measuredSeconds));
     }

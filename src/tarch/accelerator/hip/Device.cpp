@@ -11,6 +11,11 @@
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Info.h"
 
+#include <mpi.h>
+#if defined(OPEN_MPI)
+#include <mpi-ext.h>
+#endif
+
 namespace {
   int                                               numberOfDevices = 0;
   thread_local std::unordered_map<int, hipStream_t> activeStreams;
@@ -79,6 +84,38 @@ int
 tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
   const hipDeviceProp_t& properties = tarch::accelerator::hip::DevicePropertiesCache::getProperties();
   return std::max(1, properties.multiProcessorCount * properties.maxThreadsPerMultiProcessor);
+}
+
+/**
+ * Returns whether the MPI library sends and receives HIP device buffers, or std::nullopt for an
+ * MPI library that answers no such query.
+ */
+std::optional<bool>
+tarch::accelerator::Device::isMPIGPUAware() const {
+#if defined(OPEN_MPI) and defined(MPIX_ROCM_AWARE_SUPPORT)
+  return MPIX_Query_rocm_support() == 1;
+#elif defined(MPIX_GPU_SUPPORT_HIP)
+  int supported = 0;
+  MPIX_GPU_query_support(MPIX_GPU_SUPPORT_HIP, &supported);
+  return supported == 1;
+#else
+  return std::nullopt;
+#endif
+}
+
+/**
+ * Returns the PCI bus address of the current device. The ranks of one node that use the same GPU
+ * return the same address.
+ */
+std::string
+tarch::accelerator::Device::getIdOfCurrentDevice() const {
+  std::array<char, 32> busAddress{};
+  CHECK_HIP_ERROR(hipDeviceGetPCIBusId(
+    busAddress.data(),
+    static_cast<int>(busAddress.size()),
+    tarch::accelerator::getCurrentDevice()
+  ));
+  return busAddress.data();
 }
 
 void

@@ -38,4 +38,20 @@ tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
   return std::max(1, omp_get_max_threads());
 }
 
+/**
+ * Returns std::nullopt. A build without a GPU backend sends no device buffers.
+ */
+std::optional<bool>
+tarch::accelerator::Device::isMPIGPUAware() const {
+  return std::nullopt;
+}
+
+/**
+ * Returns an empty string. A build without a GPU backend runs on the host only.
+ */
+std::string
+tarch::accelerator::Device::getIdOfCurrentDevice() const {
+  return {};
+}
+
 #endif // PEANO_WITH_GPU_BACKEND

@@ -3,6 +3,7 @@
 #include "MemoryAllocationTest.h"
 
 #include "tarch/accelerator/MemoryBlocks.h"
+#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/tests/TestMacros.h"
 
@@ -26,6 +27,7 @@ tarch::accelerator::tests::MemoryAllocationTest::run() {
   testMethod(testLocationSpecificAllocators);
   testMethod(testLocationSpecificCopyFunctions);
   testMethod(testTheCurrentDeviceHoldsForEveryHostThread);
+  testMethod(testOnlyTheDeviceLocationOfAGPUBuildIsGPUMemory);
 }
 
 void
@@ -42,7 +44,7 @@ tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
     tarch::accelerator::copyFrom(rawData, target.data(), ByteCount, location, device);
 
 #if PEANO_DEBUG
-    const std::size_t trackedSize = MemoryBlocks::getInstance().getSizeOfMemoryBlock(rawData);
+    const std::size_t trackedSize = tarch::accelerator::MemoryBlocks::getInstance().getSizeOfMemoryBlock(rawData);
 #endif
     const bool copiedCorrectly  = target == source;
     const bool allocationWorked = rawData != nullptr;
@@ -50,10 +52,10 @@ tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
     tarch::accelerator::freeRawData(rawData, location, device);
     tarch::accelerator::freeRawData(nullptr, location, device);
 
-    validateWithParams1(allocationWorked, toString(location));
-    validateWithParams1(copiedCorrectly, toString(location));
+    validateWithParams1(allocationWorked, tarch::toString(location));
+    validateWithParams1(copiedCorrectly, tarch::toString(location));
 #if PEANO_DEBUG
-    validateWithParams2(trackedSize == ByteCount, toString(location), trackedSize);
+    validateWithParams2(trackedSize == ByteCount, tarch::toString(location), trackedSize);
 #endif
   }
 }
@@ -70,7 +72,7 @@ tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
     tarch::copyFrom(data, target.data(), ElementCount, location);
 
 #if PEANO_DEBUG
-    const std::size_t trackedSize = MemoryBlocks::getInstance().getSizeOfMemoryBlock(data);
+    const std::size_t trackedSize = tarch::accelerator::MemoryBlocks::getInstance().getSizeOfMemoryBlock(data);
 #endif
     const bool allocationWorked = data != nullptr;
     const bool copiedCorrectly  = target == source;
@@ -78,10 +80,10 @@ tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
     tarch::freeMemory(data, location);
     tarch::freeMemory(nullptr, location);
 
-    validateWithParams1(allocationWorked, toString(location));
-    validateWithParams1(copiedCorrectly, toString(location));
+    validateWithParams1(allocationWorked, tarch::toString(location));
+    validateWithParams1(copiedCorrectly, tarch::toString(location));
 #if PEANO_DEBUG
-    validateWithParams2(trackedSize == ByteCount, toString(location), trackedSize);
+    validateWithParams2(trackedSize == ByteCount, tarch::toString(location), trackedSize);
 #endif
   }
 }
@@ -121,7 +123,7 @@ tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificAllocators(
       }
     }
 
-    validateWithParams1(allocationWorked, toString(location));
+    validateWithParams1(allocationWorked, tarch::toString(location));
   }
 }
 
@@ -169,8 +171,8 @@ tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFunctio
       }
     }
 
-    validateWithParams1(allocationWorked, toString(location));
-    validateWithParams1(copiedCorrectly, toString(location));
+    validateWithParams1(allocationWorked, tarch::toString(location));
+    validateWithParams1(copiedCorrectly, tarch::toString(location));
   }
 }
 
@@ -189,4 +191,18 @@ tarch::accelerator::tests::MemoryAllocationTest::testTheCurrentDeviceHoldsForEve
 
   validateEquals(deviceOfAnotherThread, selectedDevice);
   validateEquals(tarch::accelerator::getCurrentDevice(), deviceOfTheRank);
+}
+
+/**
+ * The heap and pinned memory are never GPU memory. The device location is GPU memory exactly where
+ * its bytes count as device bytes.
+ */
+void
+tarch::accelerator::tests::MemoryAllocationTest::testOnlyTheDeviceLocationOfAGPUBuildIsGPUMemory() {
+  validate(not tarch::isGPUMemory(tarch::MemoryLocation::Heap));
+  validate(not tarch::isGPUMemory(tarch::MemoryLocation::Pinned));
+  validateEquals(
+    tarch::isGPUMemory(tarch::MemoryLocation::Device),
+    tarch::AllocatedBytes::in(tarch::MemoryLocation::Device, 1).device == 1
+  );
 }

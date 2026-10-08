@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RuntimeTest.h"
 
-#include "tarch/mpi/Rank.h"
 #include "tarch/tasking/Runtime.h"
 
 tarch::tasking::tests::RuntimeTest::RuntimeTest() :
@@ -11,21 +10,6 @@ tarch::tasking::tests::RuntimeTest::RuntimeTest() :
 void
 tarch::tasking::tests::RuntimeTest::run() {
   testMethod(testRuntimeProperties);
-  testMethod(testWaitPolicyOfOversubscribedNode);
-}
-
-/**
- * An oversubscribed node runs its teams with a set wait policy, and a rank counts itself among the ranks of
- * its node.
- */
-void
-tarch::tasking::tests::RuntimeTest::testWaitPolicyOfOversubscribedNode() {
-  const auto& rank = tarch::mpi::Rank::getInstance();
-  validate(rank.getNumberOfRanksOnNode() >= 1);
-  validate(rank.getNumberOfRanksOnNode() <= rank.getNumberOfRanks());
-  if (tarch::tasking::oversubscribesNode()) {
-    validate(std::getenv("OMP_WAIT_POLICY") != nullptr);
-  }
 }
 
 void

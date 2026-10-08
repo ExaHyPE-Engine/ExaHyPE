@@ -74,8 +74,8 @@ namespace exahype2::dg::limiting::tests {
 
 TARGET_DECLARE
 /**
- * The troubled-cell detector of one cell of Derived. The extrema of a cell are the minima of its
- * NumberOfObservables observables followed by their maxima.
+ * Detector judges whether the candidate of one cell of Derived is troubled. The extrema of a cell
+ * are the minima of its NumberOfObservables observables followed by their maxima.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::limiting::Detector final {
@@ -86,8 +86,9 @@ public:
   static constexpr bool UsesMaximumPrinciple = NumberOfObservables > 0;
   static constexpr int  ExtremaPerCell       = UsesMaximumPrinciple ? 2 * NumberOfObservables : 2;
   /**
-   * A face half holds one set of extrema per merge round and per axis the round leaves out: The
-   * extrema of the cell, then its extrema widened along one other axis, then along both other axes.
+   * The first set of a face half holds the extrema of the cell. Each next set holds the extrema
+   * widened along one other axis. In 3D the last set holds the extrema widened along both other
+   * axes.
    */
   static constexpr int ExtremaSetsPerHalf   = DIMENSIONS == 2 ? 2 : 4;
   static constexpr int ExtremaValuesPerFace = 2 * ExtremaSetsPerHalf * ExtremaPerCell;
@@ -185,6 +186,13 @@ private:
     const StoragePrecision* NOALIAS samplingMatrix
   );
 
+  template <int SamplesPerAxis, typename StoragePrecision, typename Visitor>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void forEachProjectedState(
+    const StoragePrecision* NOALIAS nodes,
+    const StoragePrecision* NOALIAS samplingMatrix,
+    const Visitor&                  visitor
+  );
+
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision mergeMinimum(
     StoragePrecision left,
@@ -201,6 +209,7 @@ private:
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissible(
     const StoragePrecision* NOALIAS              nodes,
     const StoragePrecision* NOALIAS              subcells,
+    const StoragePrecision* NOALIAS              nodesToLobatto,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
   );
@@ -328,8 +337,8 @@ struct exahype2::dg::limiting::WriteExtremaOntoFaces final {
 };
 
 /**
- * Copies the solution of every cell into its previous solution, opens its status for the step and
- * copies its reference extrema onto its faces.
+ * Copies the solution of every cell into its previous solution. Opens the status of the cell for
+ * the step. Copies the reference extrema of the cell onto its faces.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::OpenStep final {
@@ -366,9 +375,9 @@ struct exahype2::dg::limiting::ReduceReferenceExtrema final {
 
 /**
  * Runs one of the DIMENSIONS merge rounds on every listed cell. Round r widens the sets that round
- * r - 1 wrote onto the faces by the face neighbours along every axis at once and writes the sets of
- * the next round. Every axis order gives the same result, also at a level jump. After the last
- * round the reference extrema of a cell cover every cell it touches at a vertex.
+ * r - 1 wrote onto the faces by the face neighbours along every axis at once. It writes the sets of
+ * the next round. Every axis order gives the same result at a level jump too. After the last round
+ * the reference extrema of a cell cover every cell it touches at a vertex.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::MergeNeighbourExtrema final {
@@ -399,8 +408,8 @@ struct exahype2::dg::limiting::MergeNeighbourExtrema final {
 };
 
 /**
- * The wave speeds of the accepted candidates, the number of cells that recompute and the number of
- * troubled cells.
+ * JudgedCells holds the wave speeds of the accepted candidates, the number of cells that recompute
+ * and the number of troubled cells.
  */
 struct exahype2::dg::limiting::JudgedCells final {
   using ValueType = exahype2::dg::limiting::JudgedCells;
@@ -414,9 +423,9 @@ struct exahype2::dg::limiting::JudgedCells final {
 };
 
 /**
- * Runs the last merge round on the reference extrema of every cell and judges its candidate
- * against them. Writes the verdict into the status and onto the faces and the extrema of the
- * candidate into the reference extrema of the cell.
+ * Runs the last merge round on the reference extrema of every cell. Judges the candidate of the
+ * cell against these extrema. Writes the verdict into the status and onto the faces. Writes the
+ * extrema of the candidate into the reference extrema of the cell.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::JudgeCandidates final {
@@ -442,8 +451,8 @@ struct exahype2::dg::limiting::JudgeCandidates final {
 };
 
 /**
- * Raises the status of every listed cell by the statuses of its face neighbours and writes the
- * result onto its faces.
+ * Raises the status of every listed cell by the statuses of its face neighbours. Writes the raised
+ * status onto the faces of the cell.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::limiting::SpreadStatuses final {
@@ -459,8 +468,8 @@ struct exahype2::dg::limiting::SpreadStatuses final {
 };
 
 /**
- * The numbers of cells whose status is not Regular, of recomputed cells, of recomputed local cells
- * and of troubled cells.
+ * SubcellSchemeCounts holds the numbers of cells whose status is not Regular, of recomputed cells,
+ * of recomputed local cells and of troubled cells.
  */
 struct exahype2::dg::limiting::SubcellSchemeCounts final {
   int cellsOnScheme{0};
@@ -480,8 +489,8 @@ struct exahype2::dg::limiting::SubcellSchemeCountsReduction final {
 };
 
 /**
- * Writes the counts of one block of consecutive cells into countsOfBlocks and adds them to counts.
- * The first numberOfLocalCells cells of the partition are the local ones.
+ * Writes the counts of one block of consecutive cells into countsOfBlocks. Adds these counts to
+ * counts. The first numberOfLocalCells cells of the partition are the local ones.
  */
 struct exahype2::dg::limiting::CountCellsOnSubcellScheme final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
@@ -499,9 +508,10 @@ struct exahype2::dg::limiting::CountCellsOnSubcellScheme final {
 };
 
 /**
- * Writes the slots of the cells of one block that are not Regular into cellsOnScheme and of those
- * that recompute into recomputedCells, behind the entries of the earlier blocks. Both lists keep
- * the order of the partition, the local cells first.
+ * Writes the slots of the cells of one block that are not Regular into cellsOnScheme. Writes the
+ * slots of the cells of the block that recompute into recomputedCells. Both lists append these
+ * slots behind the entries of the earlier blocks. Both lists keep the order of the partition with
+ * the local cells first.
  */
 struct exahype2::dg::limiting::ListCellsOnSubcellScheme final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
@@ -565,7 +575,7 @@ struct exahype2::dg::limiting::RestrictExtremaHalves final {
 };
 
 /**
- * Fills the status of a new cell of a regrid. A child copies the status of its parent, and a parent
+ * Fills the status of a new cell of a regrid. A child copies the status of its parent. A parent
  * takes the entry-wise maximum of its children.
  */
 struct exahype2::dg::limiting::StatusTransfer final {

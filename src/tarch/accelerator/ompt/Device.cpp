@@ -56,4 +56,21 @@ tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
   return std::max(1, teams * threads);
 }
 
+/**
+ * Returns std::nullopt. The host pass of an OpenMP target build tells no device vendor that an MPI
+ * query names.
+ */
+std::optional<bool>
+tarch::accelerator::Device::isMPIGPUAware() const {
+  return std::nullopt;
+}
+
+/**
+ * Returns an empty string. OpenMP has no physical address of a device.
+ */
+std::string
+tarch::accelerator::Device::getIdOfCurrentDevice() const {
+  return {};
+}
+
 #endif // defined(PEANO_WITH_GPU_BACKEND_OMPT)

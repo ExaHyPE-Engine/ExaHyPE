@@ -4,6 +4,10 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
+
 namespace exahype2::runner {
   struct SolverStatistic;
   class GlobalStatistics;
@@ -24,7 +28,6 @@ namespace exahype2::runner {
   );
 
   GlobalStatistics& getGlobalStatistics();
-  void shutdownGlobalStatistics();
 
   GridSnapshot collectGridSnapshot();
   std::vector<std::string> describeGridSnapshot(const GridSnapshot& snapshot);
@@ -54,7 +57,8 @@ public:
 
   void setLocalSolverBytes(std::size_t hostBytes, std::size_t deviceBytes);
   void setLocalCellUpdates(std::uint64_t solverCells, std::uint64_t cellDoFs);
-  void synchronise(bool refreshMemory);
+  void contributeTo(tarch::mpi::ReductionRecord& record, bool refreshMemory);
+  void adoptFrom(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] std::uint64_t getGlobalNumberOfInnerUnrefinedCells() const;
   [[nodiscard]] std::uint64_t getGlobalNumberOfInnerRefinedCells() const;
@@ -95,6 +99,9 @@ private:
   std::uint64_t                         _localSolverDeviceBytes{0};
   std::uint64_t                         _localSolverCells{0};
   std::uint64_t                         _localCellDoFs{0};
+  int                                   _firstSumSlot{0};
+  int                                   _firstMinimumSlot{0};
+  int                                   _firstMaximumSlot{0};
 
   std::uint64_t _globalNumberOfInnerUnrefinedCells{0};
   std::uint64_t _globalNumberOfInnerRefinedCells{0};

@@ -7,9 +7,12 @@ namespace tarch::accelerator {
   // entry while another thread still reads it.
   template <typename Reducer, typename T>
   INLINE_METHOD __device__ T blockReduce(const T threadValue) {
-    __shared__ T blockValues[CudaBlockSize];
-    const int    threadIndex = threadIdx.x;
-    const auto   threads     = static_cast<int>(blockDim.x);
+    // A __shared__ declaration takes no initialiser. Raw bytes hold a type with default member
+    // initialisers.
+    alignas(T) __shared__ unsigned char blockStorage[CudaBlockSize * sizeof(T)];
+    T* const                            blockValues = reinterpret_cast<T*>(blockStorage);
+    const int                           threadIndex = threadIdx.x;
+    const auto                          threads     = static_cast<int>(blockDim.x);
     blockValues[threadIndex] = threadValue;
     __syncthreads();
     int span = 1;
@@ -29,7 +32,7 @@ namespace tarch::accelerator {
 
   /**
    * Combines the partial value of every thread of the team into the target of the reducer. One
-   * host thread runs a whole team, so its partial value is already the team's result.
+   * host thread runs a whole team. Its partial value is the result of the team.
    */
   template <typename Reducer>
   INLINE_METHOD GPU_CALLABLE_METHOD void reduceOverTeam(
@@ -39,7 +42,9 @@ namespace tarch::accelerator {
   ) {
     COMPILE_IF_ON_DEVICE(
       const typename Reducer::ValueType blockResult = tarch::accelerator::blockReduce<Reducer>(threadValue);
-      if (threadIdx.x == 0) { reducer.target = Reducer::combine(reducer.target, blockResult); }
+      if (threadIdx.x == 0) {
+        reducer.target = Reducer::combine(reducer.target, blockResult);
+      }
     )
     COMPILE_IF_ON_HOST(reducer.target = Reducer::combine(reducer.target, threadValue);)
   }
@@ -52,8 +57,10 @@ namespace tarch::accelerator {
     [[maybe_unused]] const Reducer     reducer,
     typename Reducer::ValueType* const blockResults
   ) {
-    __shared__ typename Reducer::ValueType teamAccumulator;
-    extern __shared__ unsigned char        teamScratch[];
+    using ValueType = typename Reducer::ValueType;
+    alignas(ValueType) __shared__ unsigned char teamAccumulatorStorage[sizeof(ValueType)];
+    extern __shared__ unsigned char             teamScratch[];
+    ValueType&                                  teamAccumulator = *reinterpret_cast<ValueType*>(teamAccumulatorStorage);
     if (threadIdx.x == 0) {
       teamAccumulator = Reducer::identity();
     }
@@ -195,8 +202,10 @@ namespace tarch::accelerator {
     tarch::accelerator::reduceOverTeam<Reducer>(team, threadAccumulator, reducer);
   }
 
+  // INLINE_METHOD on a redeclared function template fails under nvcc. The reductions that
+  // ParallelReduce.h declares use plain inline.
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
+  inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -224,7 +233,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
+  inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
@@ -248,7 +257,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
+  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     const int extentY = range.n[1];
@@ -261,7 +270,7 @@ namespace tarch::accelerator {
     );
   }
   template <typename Reducer, typename Functor>
-  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
+  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);

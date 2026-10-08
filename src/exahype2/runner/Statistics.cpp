@@ -7,11 +7,8 @@
 #include "tarch/Assertions.h"
 #include "tarch/MemoryUsage.h"
 #include "tarch/la/VectorOperations.h"
-#include "tarch/mpi/Collectives.h"
-#include "tarch/mpi/Handles.h"
 #include "tarch/mpi/Rank.h"
-
-#include <mpi.h>
+#include "tarch/mpi/ReductionRecord.h"
 
 namespace {
   constexpr std::uint64_t SignBias = std::uint64_t(1) << 63;
@@ -77,53 +74,6 @@ namespace {
   constexpr int NumberOfSums   = SumSlotCount;
   constexpr int NumberOfMinima = MinimumSlotCount;
   constexpr int NumberOfMaxima = MaximumSlotCount;
-  constexpr int NumberOfValues = NumberOfSums + NumberOfMinima + NumberOfMaxima;
-
-  MPI_Datatype StatisticsRecordType         = MPI_DATATYPE_NULL;
-  MPI_Op       StatisticsReductionOperation = MPI_OP_NULL;
-
-  /**
-   * Sums, minimises and maximises the three segments of each record. The parameter types follow
-   * MPI_User_function, which tarch::mpi::createOperation() takes.
-   */
-  void reduceStatisticsRecords(
-    void*                          incoming,
-    void*                          accumulating,
-    int*                           numberOfRecords, // NOLINT(readability-non-const-parameter)
-    [[maybe_unused]] MPI_Datatype* datatype
-  ) {
-    const auto* const incomingValues = static_cast<const std::uint64_t*>(incoming);
-    auto* const       accumulator    = static_cast<std::uint64_t*>(accumulating);
-    for (int record = 0; record < *numberOfRecords; record++) {
-      const auto        offset = static_cast<std::ptrdiff_t>(record) * NumberOfValues;
-      const auto* const source = incomingValues + offset;
-      auto* const       target = accumulator + offset;
-      for (int entry = 0; entry < NumberOfSums; entry++) {
-        target[entry] += source[entry];
-      }
-      for (int entry = NumberOfSums; entry < NumberOfSums + NumberOfMinima; entry++) {
-        target[entry] = std::min(target[entry], source[entry]);
-      }
-      for (int entry = NumberOfSums + NumberOfMinima; entry < NumberOfValues; entry++) {
-        target[entry] = std::max(target[entry], source[entry]);
-      }
-    }
-  }
-
-  /**
-   * Returns the reduction over whole statistics records and writes its datatype into recordType.
-   * Both are created on first use and freed by shutdownGlobalStatistics(). A record datatype keeps
-   * the segment offsets valid, since a pipelined reduction never splits an element.
-   */
-  MPI_Op getStatisticsReduction(MPI_Datatype& recordType) {
-    if (StatisticsReductionOperation == MPI_OP_NULL) {
-      tarch::mpi::createContiguousType(NumberOfValues, MPI_UINT64_T, &StatisticsRecordType);
-      tarch::mpi::commitType(&StatisticsRecordType);
-      tarch::mpi::createOperation(reduceStatisticsRecords, true, &StatisticsReductionOperation);
-    }
-    recordType = StatisticsRecordType;
-    return StatisticsReductionOperation;
-  }
 
   struct RowLabel {
     const char* section{nullptr};
@@ -187,19 +137,9 @@ exahype2::runner::getGlobalStatistics() {
   return instance;
 }
 
-void
-exahype2::runner::shutdownGlobalStatistics() {
-  if (StatisticsReductionOperation != MPI_OP_NULL) {
-    tarch::mpi::freeOperation(&StatisticsReductionOperation);
-  }
-  if (StatisticsRecordType != MPI_DATATYPE_NULL) {
-    tarch::mpi::freeType(&StatisticsRecordType);
-  }
-}
-
 /**
- * Records the host and device bytes of the solvers of this rank. synchronise() sums them over the
- * ranks.
+ * Records the host and device bytes of the solvers of this rank. contributeTo() adds them to the
+ * sums over the ranks.
  */
 void
 exahype2::runner::GlobalStatistics::setLocalSolverBytes(const std::size_t hostBytes, const std::size_t deviceBytes) {
@@ -209,7 +149,7 @@ exahype2::runner::GlobalStatistics::setLocalSolverBytes(const std::size_t hostBy
 
 /**
  * Records the solver cells and degrees of freedom of this rank, summed over the solvers.
- * synchronise() sums them over the ranks.
+ * contributeTo() adds them to the sums over the ranks.
  */
 void
 exahype2::runner::GlobalStatistics::setLocalCellUpdates(const std::uint64_t solverCells, const std::uint64_t cellDoFs) {
@@ -218,12 +158,12 @@ exahype2::runner::GlobalStatistics::setLocalCellUpdates(const std::uint64_t solv
 }
 
 /**
- * Reduces the local statistics of all ranks with one blocking allreduce. Only the node master adds
- * the node memory, so every node counts once. The cell width is reduced as its bit pattern and the
- * stationary counter with a sign bias, which keeps both ordered under an unsigned minimum.
+ * Adds the local statistics of this rank to record. Only the node master adds the node memory.
+ * Every node then counts once. A non-negative cell width and a stationary counter with a sign bias
+ * keep their order under an unsigned minimum.
  */
 void
-exahype2::runner::GlobalStatistics::synchronise(const bool refreshMemory) {
+exahype2::runner::GlobalStatistics::contributeTo(tarch::mpi::ReductionRecord& record, const bool refreshMemory) {
   const auto& statistics = peano4::Spacetree::getInstance().getStatistics();
   assertion(statistics.numberOfCells >= 0, statistics.numberOfCells);
   assertion(statistics.numberOfRefinedCells >= 0, statistics.numberOfRefinedCells);
@@ -252,10 +192,9 @@ exahype2::runner::GlobalStatistics::synchronise(const bool refreshMemory) {
   const auto localStationaryRegrids = static_cast<std::int64_t>(statistics.numberOfStationaryRegrids);
   const auto biasedStationary       = toOrderedBits(localStationaryRegrids);
 
-  std::array<std::uint64_t, NumberOfValues> values{};
-  auto* const                               sums   = values.data();
-  auto* const                               minima = values.data() + NumberOfSums;
-  auto* const                               maxima = values.data() + NumberOfSums + NumberOfMinima;
+  std::array<std::uint64_t, NumberOfSums>   sums{};
+  std::array<std::uint64_t, NumberOfMinima> minima{};
+  std::array<std::uint64_t, NumberOfMaxima> maxima{};
 
   sums[SumOfCells]                = localCells;
   sums[SumOfRefinedCells]         = static_cast<std::uint64_t>(statistics.numberOfRefinedCells);
@@ -283,45 +222,55 @@ exahype2::runner::GlobalStatistics::synchronise(const bool refreshMemory) {
   maxima[MaximumLevel]             = static_cast<std::uint64_t>(statistics.maximumLevel);
   maxima[MaximumRankBoundaryFaces] = localRankBoundaryFaces;
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
-    MPI_Datatype recordType = MPI_DATATYPE_NULL;
-    const MPI_Op reduction  = getStatisticsReduction(recordType);
-    tarch::mpi::allreduce(
-      MPI_IN_PLACE,
-      values.data(),
-      1,
-      recordType,
-      reduction,
-      tarch::mpi::Rank::getInstance().getCommunicator()
-    );
-  }
+  _firstSumSlot     = record.addSums(sums);
+  _firstMinimumSlot = record.addMinima(minima);
+  _firstMaximumSlot = record.addMaxima(maxima);
+}
 
-  _globalNumberOfInnerUnrefinedCells = sums[SumOfCells];
-  _globalNumberOfInnerRefinedCells   = sums[SumOfRefinedCells];
-  // The ranks on both sides of a rank boundary face count it, so the grid has half of their sum.
-  assertion(sums[SumOfRankBoundaryFaces] % 2 == 0, sums[SumOfRankBoundaryFaces]);
-  assertion(sums[SumOfRankBoundaryFaces] / 2 <= sums[SumOfFaces], sums[SumOfRankBoundaryFaces], sums[SumOfFaces]);
-  _globalNumberOfRankBoundaryFaces = sums[SumOfRankBoundaryFaces] / 2;
-  _globalNumberOfFaces             = sums[SumOfFaces] - _globalNumberOfRankBoundaryFaces;
-  _globalNumberOfHangingFaces      = sums[SumOfHangingFaces];
-  _globalPartitionHostBytes        = sums[SumOfPartitionHostBytes];
-  _globalPartitionDeviceBytes      = sums[SumOfPartitionDeviceBytes];
-  _globalTreeBytes                 = sums[SumOfTreeBytes];
-  _globalSolverHostBytes           = sums[SumOfSolverHostBytes];
-  _globalSolverDeviceBytes         = sums[SumOfSolverDeviceBytes];
-  _globalNumberOfSolverCells       = sums[SumOfSolverCells];
-  _globalNumberOfCellDoFs          = sums[SumOfCellDoFs];
-  _globalProcessMemoryUsageInBytes = sums[SumOfProcessMemory];
-  _globalTotalMemoryInBytes        = sums[SumOfTotalMemory];
-  _globalAvailableMemoryInBytes    = sums[SumOfAvailableMemory];
-  _globalMinRankLoad               = minima[MinimumRankLoad];
-  _globalMinimumLevel              = static_cast<int>(minima[MinimumLevel]);
-  _globalMinimumCellWidth          = fromBits(minima[MinimumCellWidth]);
-  _globalNumberOfStationaryRegrids = static_cast<int>(fromOrderedBits(minima[MinimumStationaryRegrids]));
-  _globalMinRankBoundaryFaces      = minima[MinimumRankBoundaryFaces];
-  _globalMaxRankLoad               = maxima[MaximumRankLoad];
-  _globalMaximumLevel              = static_cast<int>(maxima[MaximumLevel]);
-  _globalMaxRankBoundaryFaces      = maxima[MaximumRankBoundaryFaces];
+/**
+ * Reads the global statistics from record after its allreduce. contributeTo() added the local
+ * statistics to this record.
+ */
+void
+exahype2::runner::GlobalStatistics::adoptFrom(const tarch::mpi::ReductionRecord& record) {
+  const auto getSum     = [this, &record](const SumSlot slot) { return record.getSum(_firstSumSlot + slot); };
+  const auto getMinimum = [this, &record](const MinimumSlot slot) {
+    return record.getMinimum(_firstMinimumSlot + slot);
+  };
+  const auto getMaximum = [this, &record](const MaximumSlot slot) {
+    return record.getMaximum(_firstMaximumSlot + slot);
+  };
+
+  _globalNumberOfInnerUnrefinedCells = getSum(SumOfCells);
+  _globalNumberOfInnerRefinedCells   = getSum(SumOfRefinedCells);
+  // The ranks on both sides of a rank boundary face count it. The grid holds half of their sum.
+  assertion(getSum(SumOfRankBoundaryFaces) % 2 == 0, getSum(SumOfRankBoundaryFaces));
+  assertion(
+    getSum(SumOfRankBoundaryFaces) / 2 <= getSum(SumOfFaces),
+    getSum(SumOfRankBoundaryFaces),
+    getSum(SumOfFaces)
+  );
+  _globalNumberOfRankBoundaryFaces = getSum(SumOfRankBoundaryFaces) / 2;
+  _globalNumberOfFaces             = getSum(SumOfFaces) - _globalNumberOfRankBoundaryFaces;
+  _globalNumberOfHangingFaces      = getSum(SumOfHangingFaces);
+  _globalPartitionHostBytes        = getSum(SumOfPartitionHostBytes);
+  _globalPartitionDeviceBytes      = getSum(SumOfPartitionDeviceBytes);
+  _globalTreeBytes                 = getSum(SumOfTreeBytes);
+  _globalSolverHostBytes           = getSum(SumOfSolverHostBytes);
+  _globalSolverDeviceBytes         = getSum(SumOfSolverDeviceBytes);
+  _globalNumberOfSolverCells       = getSum(SumOfSolverCells);
+  _globalNumberOfCellDoFs          = getSum(SumOfCellDoFs);
+  _globalProcessMemoryUsageInBytes = getSum(SumOfProcessMemory);
+  _globalTotalMemoryInBytes        = getSum(SumOfTotalMemory);
+  _globalAvailableMemoryInBytes    = getSum(SumOfAvailableMemory);
+  _globalMinRankLoad               = getMinimum(MinimumRankLoad);
+  _globalMinimumLevel              = static_cast<int>(getMinimum(MinimumLevel));
+  _globalMinimumCellWidth          = fromBits(getMinimum(MinimumCellWidth));
+  _globalNumberOfStationaryRegrids = static_cast<int>(fromOrderedBits(getMinimum(MinimumStationaryRegrids)));
+  _globalMinRankBoundaryFaces      = getMinimum(MinimumRankBoundaryFaces);
+  _globalMaxRankLoad               = getMaximum(MaximumRankLoad);
+  _globalMaximumLevel              = static_cast<int>(getMaximum(MaximumLevel));
+  _globalMaxRankBoundaryFaces      = getMaximum(MaximumRankBoundaryFaces);
 }
 
 std::uint64_t

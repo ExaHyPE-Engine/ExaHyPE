@@ -95,6 +95,26 @@ tarch::accelerator::releaseReductionScratch() {
   release(reductionStaging);
 }
 
+/**
+ * Returns the number of tasks that split a host loop over numberOfItems items of secondsPerItem
+ * seconds each into tasks of MinimumSecondsPerHostTask seconds. The number lies between one task
+ * per thread and MaximumHostTasksPerThread tasks per thread. It exceeds numberOfItems only for an
+ * empty loop.
+ */
+int
+tarch::accelerator::getNumberOfHostTasks(const int numberOfItems, const int numberOfThreads, const double secondsPerItem) {
+  assertion(numberOfItems >= 0, numberOfItems);
+  assertion(numberOfThreads > 0, numberOfThreads);
+  assertion(std::isfinite(secondsPerItem) and secondsPerItem >= 0.0, secondsPerItem);
+  const int    fewestTasks        = std::max(1, std::min(numberOfItems, numberOfThreads));
+  const int    mostTasks          = std::max(1, std::min(numberOfItems, MaximumHostTasksPerThread * numberOfThreads));
+  const double tasksOfMinimumWork = std::min(
+    numberOfItems * secondsPerItem / MinimumSecondsPerHostTask,
+    static_cast<double>(mostTasks)
+  );
+  return std::clamp(static_cast<int>(std::lround(tasksOfMinimumWork)), fewestTasks, mostTasks);
+}
+
 void
 tarch::accelerator::reportMissingTaskloopSupportOnce() {
   if (not loggedMissingTaskloopSupport.exchange(true, std::memory_order_relaxed)) {

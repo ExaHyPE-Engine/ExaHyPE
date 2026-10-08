@@ -53,8 +53,9 @@
 #define COMPILE_IF_ON_DEVICE(CODE) __acpp_if_target_device(CODE)
 #define COMPILE_IF_ON_HOST(CODE) __acpp_if_target_host(CODE)
 #else
+// The clang of ROCm defines __AMDGCN__ in the host pass of HIP code too.
 #if defined(__CUDA_ARCH__) or defined(__HIP_DEVICE_COMPILE__) or defined(__SPIR__) or defined(__SPIRV__) \
-  or defined(__SYCL_DEVICE_ONLY__) or defined(__NVPTX__) or defined(__AMDGCN__)
+  or defined(__SYCL_DEVICE_ONLY__) or defined(__NVPTX__) or (defined(__AMDGCN__) and not defined(__HIP__))
 #define COMPILE_IF_ON_DEVICE(CODE) {CODE}
 #define COMPILE_IF_ON_HOST(CODE)
 #else

@@ -11,8 +11,8 @@ macro(peano_find_gpu_backend)
   elseif(_peano_fgb_backend STREQUAL "hip")
     find_package(HIP REQUIRED)
   elseif(_peano_fgb_backend STREQUAL "sycl")
-    # In an application, PEANO_WITH_GPU_BACKEND is sycl for AdaptiveCpp and Intel oneAPI alike, so
-    # a non-empty PEANO_ACPP_TARGETS marks AdaptiveCpp.
+    # In an application, PEANO_WITH_GPU_BACKEND is sycl for AdaptiveCpp and Intel oneAPI alike. A
+    # non-empty PEANO_ACPP_TARGETS marks AdaptiveCpp.
     if((DEFINED PEANO_WITH_GPU_BACKEND AND PEANO_WITH_GPU_BACKEND STREQUAL "acpp")
        OR (DEFINED PEANO_ACPP_TARGETS AND NOT PEANO_ACPP_TARGETS STREQUAL ""))
       find_package(AdaptiveCpp REQUIRED)
@@ -99,6 +99,7 @@ function(peano_add_target)
     target_precompile_headers(${target} PRIVATE "<tarch/StdAfx.h>")
     target_compile_options(${target} PRIVATE
       "$<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:SHELL:-include tarch/StdAfx.h>"
+      "$<$<COMPILE_LANGUAGE:HIP>:SHELL:-include tarch/StdAfx.h>"
     )
   else()
     target_compile_options(${target} PRIVATE
@@ -116,7 +117,7 @@ function(peano_add_target)
 
   target_link_libraries(${target} PRIVATE
     ${ARG_LINK_LIBRARIES}
-    # PeanoOptions follows the linked libraries, so its diagnostic flags override the build-mode
+    # PeanoOptions follows the linked libraries. Its diagnostic flags then override the build-mode
     # defaults.
     ${peano_options_target}
   )
@@ -157,7 +158,7 @@ function(peano_add_target)
     ${PEANO_${mode_upper}_DEFINITIONS}
   )
 
-  # Fortran front-ends reject some C++ switches, so Fortran gets its own build-mode flags. The CUDA
+  # Fortran front-ends reject some C++ switches. Fortran gets its own build-mode flags. The CUDA
   # compiler passes -Xcompiler flags to the host compiler and -Xptxas flags to the device assembler.
   set(_peano_cuda_mode_flags "")
   foreach(_peano_flag ${PEANO_CXX_FLAGS_${mode_upper}})

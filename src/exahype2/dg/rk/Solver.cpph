@@ -80,9 +80,10 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTi
   };
   for (int stage = 0; stage < NumberOfRungeKuttaStages; stage++) {
     const double stageTimeStamp = this->_timeStepping.getTimeStamp() + Tableau::Nodes[stage] * timeStepSize;
-    openStage(partition, stage, timeStepSize);
+    openStage(partition, Remote, stage, timeStepSize);
     this->_stateExchange.post();
     this->_fluxExchange.post();
+    openStage(partition, Local, stage, timeStepSize);
     exahype2::interpolateCoarseFaces(partition, Local, interpolateHalves);
     this->solveRiemannProblems(partition, Local, stageTimeStamp, timeStepSize);
     this->_stateExchange.wait();
@@ -90,15 +91,15 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTi
     exahype2::interpolateCoarseFaces(partition, Remote, interpolateHalves);
     this->solveRiemannProblems(partition, Remote, stageTimeStamp, timeStepSize);
     exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
-    this->_fluxExchange.post();
+    this->_restrictedFluxExchange.post();
     exahype2::restrictFineFaces(partition, Local, restrictFluxes);
     addFaceIntegrals(partition, Local, stage, timeStepSize);
-    this->_fluxExchange.wait();
+    this->_restrictedFluxExchange.wait();
     addFaceIntegrals(partition, Remote, stage, timeStepSize);
   }
 
   const auto statistics = combineFinalState(partition, timeStepSize);
-  this->closeTimeStep(partition, timeStepSize, statistics);
+  this->closeTimeStep(timeStepSize, statistics);
   this->measureError(partition);
   this->voteOnRefinement(partition, requests);
 }
@@ -155,18 +156,19 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getEstima
 }
 
 /**
- * Writes the volume terms of the stage state of every cell into its estimate and the face states
- * and fluxes of that state into its own face halves.
+ * Writes the volume terms of the stage state of every local or remote cell into its estimate and
+ * the face states and fluxes of that state into its own face halves.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage(
   const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency,
   const int                stage,
   const double             timeStepSize
 ) {
   using Tableau    = typename Stage::Tableau;
-  const auto cells = this->getCells(partition);
+  const auto cells = this->getCells(partition, adjacency);
   assertion(
     _stageScratch.getSize()
     >= static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(cells.size)) * Stage::StateValuesPerCell

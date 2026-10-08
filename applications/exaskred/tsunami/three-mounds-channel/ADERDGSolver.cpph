@@ -6,10 +6,25 @@
 #include "applications/exaskred/WellBalancedRusanov.h"
 
 TARGET_DECLARE
+namespace applications::exahype2::exaskred {
+  INLINE_METHOD GPU_CALLABLE_METHOD double getBathymetryOfChannel(const tarch::la::Vector<DIMENSIONS, double>& x);
+} // namespace applications::exahype2::exaskred
+
 /**
- * Fills the dam at the left end of a flat channel with three conical mounds.
+ * Returns the bed height at x. Three conical mounds rise from the flat channel bed at height zero.
  */
-INLINE_METHOD GPU_CALLABLE_METHOD void
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::getBathymetryOfChannel(const tarch::la::Vector<DIMENSIONS, double>& x) {
+  const double moundOne   = 1.0 - 0.10 * std::sqrt((x[0] - 15.0) * (x[0] - 15.0) + (x[1] - 22.5) * (x[1] - 22.5));
+  const double moundTwo   = 1.0 - 0.10 * std::sqrt((x[0] - 15.0) * (x[0] - 15.0) + (x[1] - 7.5) * (x[1] - 7.5));
+  const double moundThree = 1.0 - 0.28 * std::sqrt((x[0] - 28.0) * (x[0] - 28.0) + (x[1] - 15.0) * (x[1] - 15.0));
+  return std::max(std::max(0.0, moundOne), std::max(moundTwo, moundThree));
+}
+
+/**
+ * Fills the dam at the left end of the channel with water.
+ */
+INLINE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   double* const NOALIAS                                         Q,
   const tarch::la::Vector<DIMENSIONS, double>&                  x,
@@ -19,13 +34,9 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
     Q[variable] = 0.0;
   }
 
-  const auto moundOne   = 1.0 - 0.10 * std::sqrt((x[0] - 15.0) * (x[0] - 15.0) + (x[1] - 22.5) * (x[1] - 22.5));
-  const auto moundTwo   = 1.0 - 0.10 * std::sqrt((x[0] - 15.0) * (x[0] - 15.0) + (x[1] - 7.5) * (x[1] - 7.5));
-  const auto moundThree = 1.0 - 0.28 * std::sqrt((x[0] - 28.0) * (x[0] - 28.0) + (x[1] - 15.0) * (x[1] - 15.0));
-
-  constexpr double InitialWaterHeightDam = 0.9;
-  Q[Shortcuts::h]                        = x[0] <= 5.0 ? InitialWaterHeightDam : 0.0;
-  Q[Shortcuts::b]                        = std::max(std::max(0.0, moundOne), std::max(moundTwo, moundThree));
+  constexpr double WaterHeightOfDam = 0.9;
+  Q[Shortcuts::h]                   = x[0] <= 5.0 ? WaterHeightOfDam : 0.0;
+  Q[Shortcuts::b]                   = applications::exahype2::exaskred::getBathymetryOfChannel(x);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -45,14 +56,13 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
 
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
-  [[maybe_unused]] const double* const NOALIAS Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                t
+  [[maybe_unused]] const double* const NOALIAS                  Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t
 ) {
-  double initialState[NumberOfUnknowns + NumberOfAuxiliaryVariables];
-  initialCondition(initialState, x, h);
-  return initialState[Shortcuts::b] > 0.0 ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep;
+  return applications::exahype2::exaskred::getBathymetryOfChannel(x) > 0.0 ? ::exahype2::RefinementCommand::Refine
+                                                                            : ::exahype2::RefinementCommand::Keep;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -65,7 +75,7 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const int                                    normal,
   double* const NOALIAS                        F
 ) {
-  ::applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
     Q,
     x,
     h,
@@ -86,7 +96,7 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const double                                 dt,
   const int                                    normal
 ) {
-  return ::applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+  return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
     Q,
     x,
     h,
@@ -109,7 +119,7 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const int                                    normal,
   double* const NOALIAS                        BTimesDeltaQ
 ) {
-  ::applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
     deltaQ,
     x,
@@ -137,7 +147,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  return ::applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
+  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
     QL,
     QR,
     x,
@@ -160,13 +170,13 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
   if (numberOfStates == 1) {
-    return ::applications::exahype2::exaskred::limiting::isAdmissibleState<
+    return applications::exahype2::exaskred::limiting::isAdmissibleState<
       Shortcuts,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables
     >(Q, 0.0);
   }
-  return ::applications::exahype2::exaskred::limiting::hasBoundedDepthVariation<
+  return applications::exahype2::exaskred::limiting::hasBoundedDepthVariation<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
@@ -195,7 +205,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
                                const double                                 timeStepSize,
                                const int                                    normal
                              ) {
-    return ::applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+    return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
       Q,
       facePosition,
       faceSize,
@@ -210,7 +220,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
     []([[maybe_unused]] const double* const NOALIAS QLeft, [[maybe_unused]] const double* const NOALIAS QRight) {
       return g;
     };
-  return ::applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+  return applications::exahype2::exaskred::riemann::wellBalancedRusanov<
     Shortcuts,
     Shortcuts::b,
     NumberOfUnknowns,

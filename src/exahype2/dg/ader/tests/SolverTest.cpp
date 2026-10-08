@@ -29,6 +29,7 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
 
 namespace {
   TARGET_DECLARE
@@ -243,7 +244,7 @@ namespace {
   struct HalfSolver;
 
   /**
-   * The PDE terms of a linear profile without flux and wave speed, so a time step changes nothing.
+   * The PDE terms of a linear profile without flux and wave speed. A time step changes nothing.
    */
   struct LinearTerms {
     static INLINE_METHOD GPU_CALLABLE_METHOD double getProfile(const tarch::la::Vector<DIMENSIONS, double>& x) {
@@ -407,6 +408,18 @@ namespace {
     return peano4::Spacetree::getInstance().getPartition();
   }
 
+  /**
+   * Reduces the values of every solver over all ranks in the one allreduce that ends a step of a
+   * run.
+   */
+  template <typename... Solvers>
+  void finishStep(Solvers&... solvers) {
+    tarch::mpi::ReductionRecord record;
+    (solvers.contributeTo(record), ...);
+    record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
+    (solvers.adoptFrom(record), ...);
+  }
+
   template <typename Solver>
   void regridWithLiveData(
     Solver&                                       solver,
@@ -422,6 +435,7 @@ namespace {
     requests.clear(partition.getNumberOfSlots());
     solver.regrid(partition, regrid, requests);
     spacetree.finishRegrid();
+    finishStep(solver);
   }
 
   int getNumberOfCellsOfLevel(const peano4::Partition& partition, const int level) {
@@ -824,6 +838,7 @@ exahype2::dg::ader::tests::SolverTest::
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   solver.projectSolutionOntoFaces(partition);
 
   const auto [interiorFaces, mismatches] = getTraceMismatchesAgainstTheProfile(solver, partition, false);
@@ -843,6 +858,7 @@ exahype2::dg::ader::tests::SolverTest::testTheCellAndFaceGroupsSplitAtTheRankBou
   FixedRuleADERDGSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
   solver.allocate(partition);
+  finishStep(solver);
   const std::vector<bool> remote = getRemoteFaceMarks(partition);
 
   const std::vector<int> localCells  = readList(solver.getCells(partition, peano4::Adjacency::Local));
@@ -885,6 +901,7 @@ exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesTheTrace
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   solver.projectSolutionOntoPlane(partition, 0, Interface);
 
   const auto [interfaceFaces, mismatches] = getTraceMismatchesAgainstTheProfile(solver, partition, true);
@@ -907,6 +924,7 @@ exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesBothHalv
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   peano4::Spacetree::getInstance().markPersistentDataLive();
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
 
@@ -932,14 +950,18 @@ exahype2::dg::ader::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeS
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   requests.clear(partition.getNumberOfSlots());
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
   requests.clear(partition.getNumberOfSlots());
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSizeOfLastStep(), coarseTimeStepSize / SubdivisionFactor);
   solver.release();
 }
@@ -967,6 +989,7 @@ exahype2::dg::ader::tests::SolverTest::testTwoCoupledSolversExchangeTheirTracesA
   requests.clear(partition.getNumberOfSlots());
   left.initialise(partition, requests);
   right.initialise(partition, requests);
+  finishStep(left, right);
   validateEquals(left.getNumberOfCells(partition) + right.getNumberOfCells(partition), partition.getCells().size);
   validateEquals(peano4::tests::getGlobalSumOf(left.getNumberOfCells(partition)), RegularCells / CellsPerAxis);
 
@@ -974,6 +997,7 @@ exahype2::dg::ader::tests::SolverTest::testTwoCoupledSolversExchangeTheirTracesA
     requests.clear(partition.getNumberOfSlots());
     left.performTimeStep(partition, requests);
     right.performTimeStep(partition, requests);
+    finishStep(left, right);
     validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(left, partition), 0, step);
     validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(right, partition), 0, step);
     validateNumericalEqualsWithParams1(left.getTimeStepping().getTimeStamp(), step * TimeStepFactor, step);
@@ -1008,6 +1032,7 @@ exahype2::dg::ader::tests::SolverTest::testInitialisationWritesTheInitialConditi
   requests.clear(partition.getNumberOfSlots());
   requests.merge(exahype2::RefinementCommand::Erase, partition.getCells());
   solver.initialise(partition, requests);
+  finishStep(solver);
 
   validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
   validateEquals(solver.getNumberOfDoFs(), NodesInCell);
@@ -1033,11 +1058,13 @@ exahype2::dg::ader::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionA
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), 0.0);
 
   for (int step = 0; step < 3; step++) {
     requests.clear(partition.getNumberOfSlots());
     solver.performTimeStep(partition, requests);
+    finishStep(solver);
     const double expectedStepSize = step == 0 ? 0.0 : TimeStepFactor;
     validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStamp(), step * TimeStepFactor, step);
@@ -1062,7 +1089,9 @@ exahype2::dg::ader::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolu
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
 
@@ -1075,6 +1104,7 @@ exahype2::dg::ader::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolu
 
   requests.clear(partition.getNumberOfSlots());
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSizeOfLastStep(), coarseTimeStepSize / SubdivisionFactor);
   validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
 

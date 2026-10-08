@@ -6,6 +6,10 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
 
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
+
 TARGET_DECLARE
 namespace exahype2 {
   struct MaxEigenvalueReduction;
@@ -13,7 +17,7 @@ namespace exahype2 {
 
 /**
  * Maximum reduction of the wave speeds of a time step. combine() returns a negative or non-finite
- * operand unchanged, so the reduction propagates a fault of a PDE term.
+ * operand unchanged. The reduction then passes a fault of a PDE term on to its result.
  */
 struct exahype2::MaxEigenvalueReduction final {
   using ValueType = double;
@@ -28,10 +32,15 @@ namespace exahype2 {
   class TimeStepping;
 } // namespace exahype2
 
+namespace exahype2::tests {
+  class TimeSteppingTest;
+} // namespace exahype2::tests
+
 /**
  * Time stamp, time step size and bounds of one solver. An adaptive rule takes the time step size
  * that the CFL condition admits for the wave speeds and mesh widths of the last step. A fixed rule
- * takes the size that the solver family computes from the mesh widths.
+ * takes the size that the solver family computes from the mesh widths. contributeTo() and
+ * adoptFrom() reduce the mesh widths and wave speeds over the ranks in the reduction of a step.
  */
 class exahype2::TimeStepping final {
 public:
@@ -65,18 +74,27 @@ public:
   [[nodiscard]] INLINE_METHOD double getMaxEigenvalue() const;
   [[nodiscard]] INLINE_METHOD double getMaxEigenvalueOfThisStep() const;
   [[nodiscard]] INLINE_METHOD double getMaxScaledEigenvalueOfThisStep() const;
+  [[nodiscard]] INLINE_METHOD bool hasNewMaxEigenvalues() const;
+  [[nodiscard]] INLINE_METHOD bool hasNewMeshWidths() const;
 
   double startTimeStep();
   void raiseMaxEigenvalue(double eigenvalue);
   void raiseMaxScaledEigenvalue(double eigenvalue);
-  void reduceMaxEigenvaluesAcrossRanks();
+  void setLocalMeshWidths(double localMinimum, double localMaximum);
+  void contributeTo(tarch::mpi::ReductionRecord& record);
+  void adoptFrom(const tarch::mpi::ReductionRecord& record);
   [[nodiscard]] bool hasPositiveStabilityEigenvalue() const;
   void advanceTimeStamp(double timeStepSize);
-  void reduceMeshWidthsAcrossRanks(double localMinimum, double localMaximum);
   void setAdmissibleTimeStepSize(double timeStepSizeFromCFL);
+  void validateTimeStepSizeOfReducedStep(double timeStepSizeFromCFL) const;
   void setFixedTimeStepSize(double timeStepSize);
 
 private:
+  friend class exahype2::tests::TimeSteppingTest;
+
+  [[nodiscard]] bool   exceedsCFLLimit(double timeStepSizeFromCFL) const;
+  [[nodiscard]] double clipToTerminalTime(double timeStepSize) const;
+
   Rule             _rule{Rule::Adaptive};
   double           _factor{0.0};
   Stability        _stability{Stability::PhysicalEigenvalue};
@@ -86,6 +104,12 @@ private:
   double _timeStepSize{0.0};
   double _timeStepSizeOfLastStep{0.0};
   double _admissibleTimeStepSizeOfNextStep{0.0};
+  /**
+   * Size of the time step that filled the record of the last adoptFrom(), or zero for a record of
+   * another step.
+   */
+  double _timeStepSizeOfReducedStep{0.0};
+  double _timeStampOfReducedStep{0.0};
 
   double _minMeshWidth{std::numeric_limits<double>::infinity()};
   double _maxMeshWidth{0.0};
@@ -93,6 +117,23 @@ private:
   double _maxEigenvalue{0.0};
   double _maxEigenvalueOfThisStep{0.0};
   double _maxScaledEigenvalueOfThisStep{0.0};
+
+  double _localMinMeshWidth{std::numeric_limits<double>::infinity()};
+  double _localMaxMeshWidth{0.0};
+  bool   _maxEigenvaluesRaised{false};
+  bool   _localMeshWidthsSet{false};
+  bool   _timeStampAdvanced{false};
+  bool   _hasNewMaxEigenvalues{false};
+  bool   _hasNewMeshWidths{false};
+
+  int _timeStepSizeSlot{0};
+  int _timeStampSlot{0};
+  int _firstFlagSlot{0};
+  int _minMeshWidthSlot{0};
+  int _maxMeshWidthSlot{0};
+  int _maxEigenvalueSlot{0};
+  int _maxScaledEigenvalueSlot{0};
+  int _firstFaultSlot{0};
 };
 
 #include "exahype2/TimeStepping.cpph"

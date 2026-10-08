@@ -25,6 +25,9 @@
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
 
 namespace {
   TARGET_DECLARE
@@ -181,7 +184,16 @@ namespace {
       },
       tarch::accelerator::Sum<double>{result}
     );
-    return result;
+    double globalResult = 0.0;
+    tarch::mpi::allreduce(
+      &result,
+      &globalResult,
+      1,
+      MPI_DOUBLE,
+      MPI_SUM,
+      tarch::mpi::Rank::getInstance().getCommunicator()
+    );
+    return globalResult;
   }
 
   exahype2::Limits getLimits(const double terminalTime) {
@@ -197,6 +209,17 @@ namespace {
     return peano4::Spacetree::getInstance().getPartition();
   }
 
+  /**
+   * Reduces the values of solver over all ranks in the one allreduce that ends a step of a run.
+   */
+  template <typename Solver>
+  void finishStep(Solver& solver) {
+    tarch::mpi::ReductionRecord record;
+    solver.contributeTo(record);
+    record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
+    solver.adoptFrom(record);
+  }
+
   template <typename Solver>
   void startOn(Solver& solver, const peano4::Partition& partition, const double terminalTime) {
     solver.setLimits(getLimits(terminalTime));
@@ -204,6 +227,7 @@ namespace {
     exahype2::RefinementRequests requests;
     requests.clear(partition.getNumberOfSlots());
     solver.initialise(partition, requests);
+    finishStep(solver);
   }
 
   template <typename Solver>
@@ -212,6 +236,7 @@ namespace {
     for (int step = 0; step < steps; step++) {
       requests.clear(partition.getNumberOfSlots());
       solver.performTimeStep(partition, requests);
+      finishStep(solver);
     }
   }
 
@@ -229,6 +254,7 @@ namespace {
     for (int step = 0; step < 100000 and solver.getTimeStepping().getTimeStamp() < endTime; step++) {
       requests.clear(partition.getNumberOfSlots());
       solver.performTimeStep(partition, requests);
+      finishStep(solver);
     }
     const double error = integrate<Solver, true, true>(solver, partition);
     solver.release();
@@ -298,6 +324,7 @@ exahype2::fv::ader::tests::SolverTest::testALevelJumpConservesMass() {
   requests.clear(partition.getNumberOfSlots());
   solver.regrid(partition, regrid, requests);
   spacetree.finishRegrid();
+  finishStep(solver);
   validate(partition.getMaximumLevel() > partition.getMinimumLevel());
 
   const double massBefore = integrate<Solver, true, false>(solver, partition);

@@ -46,7 +46,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(cons
   _solution.reserve(partition.getNumberOfSlots());
   _halo.reserve(partition.getNumberOfFaces());
   _haloExchange.rebuild(partition);
-  reduceMeshWidths(partition);
+  measureMeshWidths(partition);
 }
 
 /**
@@ -73,7 +73,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
     partition,
     exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>{partition.onDevice(), _halo.getView()}
   );
-  reduceMeshWidths(partition);
+  measureMeshWidths(partition);
   measureError(partition);
   _votes.voteOnEveryCell<Derived>(
     partition,
@@ -87,7 +87,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
 /**
  * Moves the patches of the solution through the slot moves of a regrid. A new child takes its
  * patch from its parent and a new parent from its children. The patches that change rank travel
- * in _migration.
+ * in _migration. adoptFrom() derives the time step size of the new grid.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -112,9 +112,11 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
     exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>{partition.onDevice(), _halo.getView()}
   );
 
-  reduceMeshWidths(partition);
-  if (_timeStepping.getTimeStepSizeOfNextStep() > 0.0) {
-    proposeTimeStepSize(measureMaxEigenvalue(partition));
+  measureMeshWidths(partition);
+  if constexpr (Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive) {
+    if (_timeStepping.getTimeStepSizeOfNextStep() > 0.0) {
+      _timeStepping.raiseMaxEigenvalue(measureMaxEigenvalue(partition));
+    }
   }
   _meshChangedSinceLastTimeStep = true;
   _votes.voteOnCells<Derived>(
@@ -287,7 +289,6 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::closeTimeStep
   );
 
   _timeStepping.advanceTimeStamp(timeStepSize);
-  reduceMeshWidths(partition);
   proposeTimeStepSize(maxEigenvalue);
   measureError(partition);
   if (_meshChangedSinceLastTimeStep) {
@@ -355,9 +356,13 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureError(
   }
 }
 
+/**
+ * Passes the smallest and the largest volume width of this rank to the time stepping. The reduction
+ * of the step reduces them over all ranks.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::reduceMeshWidths(
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureMeshWidths(
   const peano4::Partition& partition
 ) {
   double minimum = std::numeric_limits<double>::infinity();
@@ -368,35 +373,75 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::reduceMeshWid
       maximum = std::max(maximum, partition.getWidthOfLevel(partition.getMinimumLevel(), axis) / Derived::PatchSize);
     }
   }
-  _timeStepping.reduceMeshWidthsAcrossRanks(minimum, maximum);
+  _timeStepping.setLocalMeshWidths(minimum, maximum);
 }
 
 /**
- * Derives the size of the next time step. An adaptive rule reduces maxEigenvalue over all ranks
- * and takes the CFL condition on the smallest volume. A fixed rule takes the normalised fraction
- * of the largest admissible mesh width.
+ * An adaptive rule raises maxEigenvalue of this rank. adoptFrom() then derives the size of the next
+ * time step. A fixed rule sets this size at once.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::proposeTimeStepSize(const double maxEigenvalue) {
   if constexpr (Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive) {
     _timeStepping.raiseMaxEigenvalue(maxEigenvalue);
-    _timeStepping.reduceMaxEigenvaluesAcrossRanks();
-    if (
-      _timeStepping.hasPositiveStabilityEigenvalue()
-      and _timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime
-    ) {
-      _timeStepping.setAdmissibleTimeStepSize(
-        _timeStepping.getFactor() * _timeStepping.getMinMeshWidth()
-        / (DIMENSIONS * _timeStepping.getMaxEigenvalueOfThisStep())
-      );
-    }
   } else {
-    const double                maxAdmissibleMeshWidth = _timeStepping.getLimits().maxAdmissibleMeshWidth;
-    [[maybe_unused]] const bool meshWidthIsFinite      = std::isfinite(maxAdmissibleMeshWidth);
-    assertion(meshWidthIsFinite and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
-    _timeStepping.setFixedTimeStepSize(
-      _timeStepping.getFactor() * _timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth
-    );
+    _timeStepping.setFixedTimeStepSize(getFixedTimeStepSize());
+  }
+}
+
+/**
+ * Returns the time step size of the CFL condition on the smallest volume for the reduced wave
+ * speed.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD double
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getTimeStepSizeFromCFL() const {
+  return _timeStepping.getFactor() * _timeStepping.getMinMeshWidth()
+       / (DIMENSIONS * _timeStepping.getMaxEigenvalueOfThisStep());
+}
+
+/**
+ * Returns the normalised fraction of the largest admissible mesh width.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD double
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getFixedTimeStepSize() const {
+  const double                maxAdmissibleMeshWidth = _timeStepping.getLimits().maxAdmissibleMeshWidth;
+  [[maybe_unused]] const bool meshWidthIsFinite      = std::isfinite(maxAdmissibleMeshWidth);
+  assertion(meshWidthIsFinite and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
+  return _timeStepping.getFactor() * _timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth;
+}
+
+/**
+ * Adds the mesh widths and the wave speed of this rank to the reduction of the step.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::contributeTo(tarch::mpi::ReductionRecord& record) {
+  _timeStepping.contributeTo(record);
+}
+
+/**
+ * Reads the reduced mesh widths and wave speed. A new wave speed validates the time step of record
+ * against the CFL condition. Before the terminal time, it also sets the size of the next step. New
+ * mesh widths reset a fixed time step size once the time stepping has started.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::adoptFrom(
+  const tarch::mpi::ReductionRecord& record
+) {
+  _timeStepping.adoptFrom(record);
+  if constexpr (Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive) {
+    if (_timeStepping.hasNewMaxEigenvalues() and _timeStepping.hasPositiveStabilityEigenvalue()) {
+      const double timeStepSizeFromCFL = getTimeStepSizeFromCFL();
+      _timeStepping.validateTimeStepSizeOfReducedStep(timeStepSizeFromCFL);
+      if (_timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime) {
+        _timeStepping.setAdmissibleTimeStepSize(timeStepSizeFromCFL);
+      }
+    }
+  } else if (_timeStepping.hasNewMeshWidths() and _timeStepping.getTimeStepSizeOfNextStep() > 0.0) {
+    _timeStepping.setFixedTimeStepSize(getFixedTimeStepSize());
   }
 }

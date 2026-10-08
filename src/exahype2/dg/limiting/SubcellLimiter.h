@@ -15,6 +15,10 @@
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/MemoryLocation.h"
 
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
+
 namespace exahype2::dg::limiting {
   template <
     typename Derived,
@@ -75,6 +79,8 @@ public:
     double                   timeStepSize
   );
   INLINE_METHOD void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid, const CellPool& solution);
+  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<int>::View getStatuses();
   [[nodiscard]] INLINE_METHOD typename FluxPool::View getAppliedFluxes();
@@ -151,9 +157,14 @@ private:
   };
   exahype2::dg::limiting::SubcellSchemeCounts _cellCounts{};
   /**
-   * The number of troubled cells on all ranks at the end of the last closeTimeStep().
+   * The number of troubled cells on this rank in the last closeTimeStep().
+   */
+  int _localTroubledCells{0};
+  /**
+   * The number of troubled cells on all ranks in the time step of the last adoptFrom().
    */
   int _globalTroubledCells{0};
+  int _troubledCellsSlot{0};
   /**
    * True while the reference extrema of every cell are the extrema of its solution.
    */

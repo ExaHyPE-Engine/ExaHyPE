@@ -320,18 +320,27 @@ namespace {
     }
   }
 
-  struct FaceBuffers final {
-    double  state[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfData]{};
-    double  flux[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfUnknowns]{};
-    double* statePointers[peano4::FacesPerCell]{};
-    double* fluxPointers[peano4::FacesPerCell]{};
-
-    FaceBuffers() {
-      for (int face = 0; face < peano4::FacesPerCell; face++) {
-        statePointers[face] = state[face];
-        fluxPointers[face]  = flux[face];
-      }
+  template <int ValuesPerFace>
+  std::array<double*, peano4::FacesPerCell> getRowsOf(double (&rows)[peano4::FacesPerCell][ValuesPerFace]) {
+    std::array<double*, peano4::FacesPerCell> addresses{};
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      addresses[static_cast<std::size_t>(face)] = rows[face];
     }
+    return addresses;
+  }
+
+  struct FaceBuffers final {
+    FaceBuffers()                              = default;
+    FaceBuffers(const FaceBuffers&)            = delete;
+    FaceBuffers(FaceBuffers&&)                 = delete;
+    FaceBuffers& operator=(const FaceBuffers&) = delete;
+    FaceBuffers& operator=(FaceBuffers&&)      = delete;
+    ~FaceBuffers()                             = default;
+
+    double state[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfData]{};
+    double flux[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfUnknowns]{};
+    std::array<double*, peano4::FacesPerCell> statePointers{getRowsOf(state)};
+    std::array<double*, peano4::FacesPerCell> fluxPointers{getRowsOf(flux)};
   };
 
   /**
@@ -392,8 +401,7 @@ namespace {
       const int                            team,
       const tarch::accelerator::TeamHandle handle
     ) const {
-      exahype2::dg::ader::TeamWorkers workers =
-        Predictor<exahype2::dg::ader::tests::StubSolver>::getWorkers(handle, threadsPerCell);
+      exahype2::dg::ader::TeamWorkers workers = exahype2::dg::ader::getWorkers(handle, threadsPerCell);
       const int cell    = team * workers.groups + workers.group;
       workers.hasCell   = workers.hasCell and cell < Setup::NumberOfCells;
       const int pointed = workers.hasCell ? cell : 0;
@@ -742,7 +750,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAPicardSystemWithoutTerms
 
 /**
  * The solve returns the squared distance between the new and the previous iterate and stores the
- * new one, and the distance is bitwise the same when the nodes arrive in reversed order.
+ * new one. The distance stays bitwise equal when the nodes arrive in reversed order.
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheResidualIsTheSquaredDistanceOfTheIterates() {
@@ -1503,7 +1511,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheStateAverageLeavesTheL
 }
 
 /**
- * The scratch buffers follow each other without a gap, and the time-averaged state overlays the
+ * The scratch buffers follow each other without a gap. The time-averaged state overlays the
  * space-time state.
  */
 void
@@ -1532,7 +1540,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testTheScratchBlocksFollowEac
 }
 
 /**
- * A term the solver lacks has no scratch entries.
+ * The scratch block reserves zero entries for a term that the solver lacks.
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testATermTheSolverLacksHasZeroExtent() {
@@ -1586,8 +1594,8 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
   double      scratch[ProfileScratch::Size] = {};
 
   const int numberOfSweeps = Predictor<ProfileSolver>::predict(
-    faces.statePointers,
-    faces.fluxPointers,
+    faces.statePointers.data(),
+    faces.fluxPointers.data(),
     cellState,
     scratch,
     tables.getView(),
@@ -1706,7 +1714,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testAZeroSquaredToleranceReportsUnconvergedPicardIteration() {
-  // No squared residual falls below zero, and a zero state has the rounding distance zero.
+  // No squared residual falls below zero. A zero state has the rounding distance zero.
   constexpr double UnreachableTolerance = 1.0e-200;
 
   const Tables                                tables;
@@ -1718,8 +1726,8 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAZeroSquaredToleranceRepo
   double       scratch[ProfileScratch::Size] = {};
 
   const int outcome = Predictor<ProfileSolver>::predict(
-    faces.statePointers,
-    faces.fluxPointers,
+    faces.statePointers.data(),
+    faces.fluxPointers.data(),
     cellState,
     scratch,
     tables.getView(),
@@ -1733,18 +1741,22 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAZeroSquaredToleranceRepo
 }
 
 /**
- * The squared tolerance is the square of the Picard tolerance or of two units in the last place
- * of the largest unknown of the first node, whichever is larger.
+ * The squared tolerance is the larger of the squared Picard tolerance and the squares of two units
+ * in the last place of the largest unknown of the first node summed over the values of an iterate.
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheToleranceGrowsToTheRoundingDistanceOfTheCell() {
-  double cellState[CellStateSize] = {};
-  cellState[0]                    = -8.0;
-  cellState[NumberOfUnknowns - 1] = 3.0;
-  const double rounding           = 2.0 * std::numeric_limits<double>::epsilon() * 8.0;
+  constexpr double ValuesPerIterate = NumberOfUnknowns * CellLayout::NodesPerCell * NodesPerAxis;
+  double           cellState[CellStateSize] = {};
+  cellState[0]                              = -8.0;
+  cellState[NumberOfUnknowns - 1]           = 3.0;
+  const double rounding                     = 2.0 * std::numeric_limits<double>::epsilon() * 8.0;
 
   validateEquals(Predictor<ProfileSolver>::getSquaredTolerance(cellState, 1.0e-7), 1.0e-7 * 1.0e-7);
-  validateEquals(Predictor<ProfileSolver>::getSquaredTolerance(cellState, 1.0e-200), rounding * rounding);
+  validateEquals(
+    Predictor<ProfileSolver>::getSquaredTolerance(cellState, 1.0e-200),
+    ValuesPerIterate * rounding * rounding
+  );
 
   const double zeroState[CellStateSize] = {};
   validateEquals(Predictor<ProfileSolver>::getSquaredTolerance(zeroState, 1.0e-7), 1.0e-7 * 1.0e-7);
@@ -1771,8 +1783,8 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAToleranceBelowTheRoundin
   double      unconvergedScratch[ProfileScratch::Size] = {};
 
   const int convergedOutcome = Predictor<ProfileSolver>::predict(
-    convergedFaces.statePointers,
-    convergedFaces.fluxPointers,
+    convergedFaces.statePointers.data(),
+    convergedFaces.fluxPointers.data(),
     cellState,
     convergedScratch,
     tables.getView(),
@@ -1783,8 +1795,8 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAToleranceBelowTheRoundin
     PicardTolerance
   );
   const int unconvergedOutcome = Predictor<ProfileSolver>::predict(
-    unconvergedFaces.statePointers,
-    unconvergedFaces.fluxPointers,
+    unconvergedFaces.statePointers.data(),
+    unconvergedFaces.fluxPointers.data(),
     cellState,
     unconvergedScratch,
     tables.getView(),

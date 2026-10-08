@@ -38,8 +38,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::selectPointSourc
 
 /**
  * Extrapolates the time averages of the state and of the flux over the time step to the faces of
- * the cell. scratch has the extent of Scratch and stores the time-averaged state and spatial terms
- * for the volume integral. pointSourceIndices lists the point sources inside the cell.
+ * the cell on the threads of workers. scratch has the extent of Scratch and stores the time-averaged
+ * state and spatial terms for the volume integral. pointSourceIndices lists the point sources inside
+ * the cell. A thread without a cell takes part in every barrier of the team and writes nothing.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -56,128 +57,172 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const TeamWorkers&                           workers
 ) {
   constexpr int NodesPerAxis     = CellLayout::NodesPerAxis;
   constexpr int NumberOfUnknowns = CellLayout::NumberOfUnknowns;
 
   assertion(timeStepSize >= 0.0, timeStepSize);
   assertion(numberOfPointSources >= 0, numberOfPointSources);
+  assertion(workers.thread >= 0 and workers.thread < workers.threads, workers.thread, workers.threads);
 
   ComputePrecision* NOALIAS const state             = scratch + Scratch::StateOffset;
   ComputePrecision* NOALIAS const timeAveragedState = scratch + Scratch::TimeAveragedStateOffset;
   ComputePrecision* NOALIAS const flux              = scratch + Scratch::FluxOffset;
-  ComputePrecision* NOALIAS const stateGradient     = scratch + Scratch::StateGradientOffset;
   ComputePrecision* NOALIAS const pointSourceValues = scratch + Scratch::PointSourceOffset;
 
   const auto inverseCellSize = tarch::la::convertScalar<ComputePrecision>(tarch::la::invertEntries(cellSize));
 
-  initialiseState(state, cellState);
-
-  if constexpr (EvaluatePointSources) {
-    if (numberOfPointSources > 0) {
-      evaluatePointSources(
-        pointSourceValues,
-        cellState,
-        pointSourceIndices,
-        numberOfPointSources,
-        pointSourceLocations,
-        tables.quadraturePoints,
-        tables.inverseCellQuadratureWeights,
-        inverseCellSize,
-        cellCentre,
-        cellSize,
-        timeStamp,
-        timeStepSize
-      );
-      addPointSourcesToState(state, pointSourceValues, tables.quadratureWeights, timeStepSize);
+  if (workers.hasCell) {
+    initialiseState(state, cellState, workers);
+    if constexpr (EvaluatePointSources) {
+      if (numberOfPointSources > 0) {
+        evaluatePointSources(
+          pointSourceValues,
+          cellState,
+          pointSourceIndices,
+          numberOfPointSources,
+          pointSourceLocations,
+          tables.quadraturePoints,
+          tables.inverseCellQuadratureWeights,
+          inverseCellSize,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          workers
+        );
+        addPointSourcesToState(state, pointSourceValues, tables.quadratureWeights, timeStepSize, workers);
+      }
     }
+    seedTimeAveragedState(timeAveragedState, state, workers);
   }
-
-  seedTimeAveragedState(timeAveragedState, state);
 
   // The coefficient of the ith Taylor term enters the time average with dt^i / (i + 1)!.
   auto timeAverageFactor = static_cast<ComputePrecision>(1.0);
 
-  // The terms of Derived are linear in the state, so the last pass evaluates the time-averaged
-  // flux from the time-averaged state.
+  // The terms of Derived are linear in the state. The last pass evaluates the time-averaged flux
+  // from the time-averaged state. Every stage over nodes gives a thread the same nodes. A barrier
+  // precedes every stage that reads the nodes of other threads.
   for (int derivative = 0; derivative < NodesPerAxis; derivative++) {
     const bool                    isLastPass = derivative == NodesPerAxis - 1;
     const ComputePrecision* const values     = isLastPass ? timeAveragedState : state;
 
-    clearFluxes(flux);
+    if (workers.hasCell) {
+      clearFluxes(flux, workers);
+    }
 
     if constexpr (EvaluateFlux) {
-      evaluateFlux(flux, values, cellCentre, cellSize, timeStamp, timeStepSize);
-      if (isLastPass) {
-        UNROLL(DIMENSIONS)
-        for (int direction = 0; direction < DIMENSIONS; direction++) {
-          exahype2::dg::extrapolateNodalFieldToFacePair<
-            NodesPerAxis,
-            NumberOfUnknowns,
-            CellLayout::PaddedNumberOfUnknowns,
-            ComputePrecision,
-            ComputePrecision,
-            ComputePrecision
-          >(faceFluxes[direction],
-            faceFluxes[direction + DIMENSIONS],
-            flux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
-            tables.leftFaceCoefficients,
-            tables.rightFaceCoefficients,
-            direction);
-        }
+      if (workers.hasCell) {
+        evaluateFlux(flux, values, cellCentre, cellSize, timeStamp, timeStepSize, workers);
       }
-      exahype2::dg::differentiateFluxInPlace<Derived>(flux, tables.derivativeOperator, inverseCellSize);
+      exahype2::dg::ader::synchronise(workers);
+      if (isLastPass) {
+        if (workers.hasCell) {
+          for (int direction = workers.thread; direction < DIMENSIONS; direction += workers.threads) {
+            exahype2::dg::extrapolateNodalFieldToFacePair<
+              NodesPerAxis,
+              NumberOfUnknowns,
+              CellLayout::PaddedNumberOfUnknowns,
+              ComputePrecision,
+              ComputePrecision,
+              ComputePrecision
+            >(faceFluxes[direction],
+              faceFluxes[direction + DIMENSIONS],
+              flux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
+              tables.leftFaceCoefficients,
+              tables.rightFaceCoefficients,
+              direction);
+          }
+        }
+        // The derivative overwrites the flux that the extrapolation reads.
+        exahype2::dg::ader::synchronise(workers);
+      }
+      if (workers.hasCell) {
+        exahype2::dg::differentiateFluxInPlace<Derived>(
+          flux,
+          tables.derivativeOperator,
+          inverseCellSize,
+          workers.thread,
+          workers.threads
+        );
+      }
     }
 
     if constexpr (EvaluateNonconservativeProduct) {
-      addNonconservativeProduct(
-        flux,
-        stateGradient,
-        values,
-        tables.derivativeOperator,
-        inverseCellSize,
-        cellCentre,
-        cellSize,
-        timeStamp,
-        timeStepSize
-      );
+      exahype2::dg::ader::synchronise(workers);
+      if (workers.hasCell) {
+        addNonconservativeProduct(
+          flux,
+          values,
+          tables.derivativeOperator,
+          inverseCellSize,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          workers
+        );
+      }
     }
+    exahype2::dg::ader::synchronise(workers);
 
     if constexpr (EvaluateMaterialParameters) {
-      applyMaterialParameterMatrix(flux, values, cellCentre, cellSize, timeStamp, timeStepSize);
+      if (workers.hasCell) {
+        applyMaterialParameterMatrix(flux, values, cellCentre, cellSize, timeStamp, timeStepSize, workers);
+      }
     }
 
     if (isLastPass) {
       break;
     }
 
-    if constexpr (EvaluateSource) {
-      overwriteStateWithLinearSource(state, cellCentre, cellSize, timeStamp, timeStepSize);
-    }
-    addFluxesToTimeDerivative(state, flux);
-
-    if constexpr (EvaluatePointSources) {
-      if (numberOfPointSources > 0) {
-        addPointSourceDerivativeToState(state, pointSourceValues, tables.leftFaceCoefficients);
+    if (workers.hasCell) {
+      if constexpr (EvaluateSource) {
+        overwriteStateWithLinearSource(state, cellCentre, cellSize, timeStamp, timeStepSize, workers);
+      }
+      addFluxesToTimeDerivative(state, flux, workers);
+      if constexpr (EvaluatePointSources) {
+        if (numberOfPointSources > 0) {
+          addPointSourceDerivativeToState(state, pointSourceValues, tables.leftFaceCoefficients, workers);
+        }
       }
     }
 
     timeAverageFactor *= static_cast<ComputePrecision>(timeStepSize / (derivative + 2));
 
-    accumulateTimeAveragedState(timeAveragedState, state, timeAverageFactor);
-  }
-
-  if constexpr (EvaluatePointSources) {
-    if (numberOfPointSources > 0) {
-      addPointSourcesToTimeAveragedFlux(flux, pointSourceValues, tables.quadratureWeights);
+    if (workers.hasCell) {
+      accumulateTimeAveragedState(timeAveragedState, state, timeAverageFactor, workers);
     }
   }
 
-  UNROLL(DIMENSIONS)
-  for (int direction = 0; direction < DIMENSIONS; direction++) {
+  if (workers.hasCell) {
+    if constexpr (EvaluatePointSources) {
+      if (numberOfPointSources > 0) {
+        addPointSourcesToTimeAveragedFlux(flux, pointSourceValues, tables.quadratureWeights, workers);
+      }
+    }
+    extrapolateToFaces(faceStates, faceFluxes, timeAveragedState, tables, workers);
+  }
+}
+
+/**
+ * Extrapolates the time-averaged state to the faces of the cell, one axis per thread. Without a
+ * flux, the face fluxes become zero.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::extrapolateToFaces(
+  ComputePrecision* const NOALIAS       faceStates[peano4::FacesPerCell],
+  ComputePrecision* const NOALIAS       faceFluxes[peano4::FacesPerCell],
+  const ComputePrecision* NOALIAS const timeAveragedState,
+  const Tables&                         tables,
+  const TeamWorkers&                    workers
+) {
+  for (int direction = workers.thread; direction < DIMENSIONS; direction += workers.threads) {
     exahype2::dg::extrapolateNodalFieldToFacePair<
-      NodesPerAxis,
+      CellLayout::NodesPerAxis,
       CellLayout::NumberOfData,
       CellLayout::PaddedNumberOfData,
       ComputePrecision,
@@ -190,7 +235,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
       tables.rightFaceCoefficients,
       direction);
     if constexpr (not EvaluateFlux) {
-      for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
+      for (int entry = 0; entry < CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns; entry++) {
         faceFluxes[direction][entry]              = static_cast<ComputePrecision>(0);
         faceFluxes[direction + DIMENSIONS][entry] = static_cast<ComputePrecision>(0);
       }
@@ -206,9 +251,10 @@ template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::initialiseState(
   ComputePrecision* NOALIAS const       state,
-  const StoragePrecision* NOALIAS const cellState
+  const StoragePrecision* NOALIAS const cellState,
+  const TeamWorkers&                    workers
 ) {
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     ComputePrecision* NOALIAS const localState = state + cellNode * CellLayout::PaddedNumberOfData;
     for (int value = CellLayout::NumberOfData; value < CellLayout::PaddedNumberOfData; value++) {
       localState[value] = static_cast<ComputePrecision>(0);
@@ -260,7 +306,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
   const tarch::la::Vector<DIMENSIONS, double>&           cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
   const double                                           timeStamp,
-  const double                                           timeStepSize
+  const double                                           timeStepSize,
+  const TeamWorkers&                                     workers
 ) {
   constexpr int NodesPerAxis = CellLayout::NodesPerAxis;
   constexpr int ForceStride  = CellLayout::PaddedNumberOfUnknowns;
@@ -269,8 +316,13 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
 
   assertion(numberOfPointSources >= 0, numberOfPointSources);
 
-  for (int entry = 0; entry < (NodesPerAxis + 1) * CellLayout::NodesPerCell * ForceStride; entry++) {
-    pointSourceValues[entry] = static_cast<ComputePrecision>(0);
+  for (int timeSample = 0; timeSample < NodesPerAxis + 1; timeSample++) {
+    for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
+      for (int unknown = 0; unknown < ForceStride; unknown++) {
+        pointSourceValues[(timeSample * CellLayout::NodesPerCell + cellNode) * ForceStride + unknown] =
+          static_cast<ComputePrecision>(0);
+      }
+    }
   }
 
   double cellVolume = 1.0;
@@ -293,7 +345,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
           + static_cast<TimePrecision>(timeStamp)
     );
 
-    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
       const auto index = peano4::dDelinearised(cellNode, NodesPerAxis);
 
       double nodePosition[DIMENSIONS];
@@ -350,13 +402,14 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addPointSourcesT
   ComputePrecision* NOALIAS const       state,
   const ComputePrecision* NOALIAS const pointSourceValues,
   const ComputePrecision* NOALIAS const quadratureWeights,
-  const double                          timeStepSize
+  const double                          timeStepSize,
+  const TeamWorkers&                    workers
 ) {
   constexpr int ForceStride = CellLayout::PaddedNumberOfUnknowns;
 
   using TimePrecision = std::common_type_t<ComputePrecision, double>;
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     for (int timeNode = 0; timeNode < CellLayout::NodesPerAxis; timeNode++) {
       const int sample = ((timeNode + 1) * CellLayout::NodesPerCell + cellNode) * ForceStride;
       SIMD()
@@ -373,26 +426,39 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addPointSourcesT
 }
 
 /**
- * Copies the zeroth Taylor coefficient into the time average, which enters with a factor of one.
+ * Copies the zeroth Taylor coefficient into the time average. The zeroth coefficient enters the
+ * time average with a factor of one.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::seedTimeAveragedState(
   ComputePrecision* NOALIAS const       timeAveragedState,
-  const ComputePrecision* NOALIAS const state
+  const ComputePrecision* NOALIAS const state,
+  const TeamWorkers&                    workers
 ) {
-  for (int entry = 0; entry < CellLayout::NodesPerCell * CellLayout::PaddedNumberOfData; entry++) {
-    timeAveragedState[entry] = state[entry];
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
+    for (int value = 0; value < CellLayout::PaddedNumberOfData; value++) {
+      const int entry          = cellNode * CellLayout::PaddedNumberOfData + value;
+      timeAveragedState[entry] = state[entry];
+    }
   }
 }
 
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::clearFluxes(ComputePrecision* NOALIAS const flux) {
+exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::clearFluxes(
+  ComputePrecision* NOALIAS const flux,
+  const TeamWorkers&              workers
+) {
   constexpr int AxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
 
-  for (int entry = 0; entry < DIMENSIONS * AxisStride; entry++) {
-    flux[entry] = static_cast<ComputePrecision>(0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
+      for (int unknown = 0; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
+        flux[axis * AxisStride + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown] =
+          static_cast<ComputePrecision>(0);
+      }
+    }
   }
 }
 
@@ -408,11 +474,12 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateFlux(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const TeamWorkers&                           workers
 ) {
   constexpr int AxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     UNROLL(DIMENSIONS)
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       Derived::flux(
@@ -429,21 +496,21 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateFlux(
 }
 
 /**
- * Adds the nonconservative product of Derived to the flux of every axis. stateGradient stores the
- * gradient of one line of nodes.
+ * Adds the nonconservative product of Derived to the flux of every axis. Every thread differentiates
+ * whole lines of nodes into the gradient buffer of its own line.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservativeProduct(
   ComputePrecision* NOALIAS const                        flux,
-  ComputePrecision* NOALIAS const                        stateGradient,
   const ComputePrecision* NOALIAS const                  state,
   const ComputePrecision* NOALIAS const                  derivativeOperator,
   const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
   const tarch::la::Vector<DIMENSIONS, double>&           cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
   const double                                           timeStamp,
-  const double                                           timeStepSize
+  const double                                           timeStepSize,
+  const TeamWorkers&                                     workers
 ) {
   constexpr int NodesPerAxis = CellLayout::NodesPerAxis;
   constexpr int StateStride  = CellLayout::PaddedNumberOfData;
@@ -454,6 +521,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
     assertion(cellSize(axis) > 0.0, cellSize, axis);
   }
 
+  ComputePrecision lineGradient[NodesPerAxis * FluxStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   ComputePrecision productValues[FluxStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
   const auto addProductOfLine = [&](const int firstNode, const int nodeStrideAlongAxis, const int axis) {
@@ -464,7 +532,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
       }
       Derived::nonconservativeProduct(
         state + cellNode * StateStride,
-        stateGradient + lineNode * FluxStride,
+        lineGradient + lineNode * FluxStride,
         cellCentre,
         cellSize,
         timeStamp,
@@ -479,7 +547,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
     }
   };
 
-  for (int line = 0; line < CellLayout::NodesPerFace; line++) {
+  for (int line = workers.thread; line < CellLayout::NodesPerFace; line += workers.threads) {
     const int firstNode = line * NodesPerAxis;
     exahype2::dg::differentiateAlongAxis<
       FluxStride,
@@ -490,29 +558,29 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
       true,
       ComputePrecision,
       ComputePrecision
-    >(stateGradient, state + firstNode * StateStride, derivativeOperator, inverseCellSize(0));
+    >(lineGradient, state + firstNode * StateStride, derivativeOperator, inverseCellSize(0));
     addProductOfLine(firstNode, 1, 0);
   }
 
-  for (int z = 0; z < CellLayout::NodesPerAxisIn3D; z++) {
-    for (int x = 0; x < NodesPerAxis; x++) {
-      const int firstNode = z * NodesPerAxis * NodesPerAxis + x;
-      exahype2::dg::differentiateAlongAxis<
-        FluxStride,
-        NodesPerAxis,
-        StateStride * NodesPerAxis,
-        NodesPerAxis,
-        FluxStride,
-        true,
-        ComputePrecision,
-        ComputePrecision
-      >(stateGradient, state + firstNode * StateStride, derivativeOperator, inverseCellSize(1));
-      addProductOfLine(firstNode, NodesPerAxis, 1);
-    }
+  for (int line = workers.thread; line < CellLayout::NodesPerFace; line += workers.threads) {
+    const int z         = line / NodesPerAxis;
+    const int x         = line - z * NodesPerAxis;
+    const int firstNode = z * NodesPerAxis * NodesPerAxis + x;
+    exahype2::dg::differentiateAlongAxis<
+      FluxStride,
+      NodesPerAxis,
+      StateStride * NodesPerAxis,
+      NodesPerAxis,
+      FluxStride,
+      true,
+      ComputePrecision,
+      ComputePrecision
+    >(lineGradient, state + firstNode * StateStride, derivativeOperator, inverseCellSize(1));
+    addProductOfLine(firstNode, NodesPerAxis, 1);
   }
 
   if constexpr (DIMENSIONS == 3) {
-    for (int line = 0; line < NodesPerAxis * NodesPerAxis; line++) {
+    for (int line = workers.thread; line < NodesPerAxis * NodesPerAxis; line += workers.threads) {
       exahype2::dg::differentiateAlongAxis<
         FluxStride,
         NodesPerAxis,
@@ -522,7 +590,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
         true,
         ComputePrecision,
         ComputePrecision
-      >(stateGradient, state + line * StateStride, derivativeOperator, inverseCellSize(DIMENSIONS - 1));
+      >(lineGradient, state + line * StateStride, derivativeOperator, inverseCellSize(DIMENSIONS - 1));
       addProductOfLine(line, NodesPerAxis * NodesPerAxis, DIMENSIONS - 1);
     }
   }
@@ -539,11 +607,12 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::applyMaterialPar
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const TeamWorkers&                           workers
 ) {
   constexpr int AxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     UNROLL(DIMENSIONS)
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       Derived::multiplyMaterialParameterMatrix(
@@ -570,11 +639,12 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::overwriteStateWi
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const TeamWorkers&                           workers
 ) {
   ComputePrecision sourceValues[CellLayout::PaddedNumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     for (int unknown = 0; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
       sourceValues[unknown] = static_cast<ComputePrecision>(0);
     }
@@ -600,12 +670,13 @@ template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addFluxesToTimeDerivative(
   ComputePrecision* NOALIAS const       state,
-  const ComputePrecision* NOALIAS const flux
+  const ComputePrecision* NOALIAS const flux,
+  const TeamWorkers&                    workers
 ) {
   constexpr int FluxStride = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride = CellLayout::NodesPerCell * FluxStride;
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     SIMD()
     for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
       const int        entry      = cellNode * FluxStride + unknown;
@@ -631,12 +702,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addPointSourceDerivativeToState(
   ComputePrecision* NOALIAS const       state,
   const ComputePrecision* NOALIAS const pointSourceValues,
-  const ComputePrecision* NOALIAS const derivativeCoefficients
+  const ComputePrecision* NOALIAS const derivativeCoefficients,
+  const TeamWorkers&                    workers
 ) {
   constexpr int ForceStride = CellLayout::PaddedNumberOfUnknowns;
 
   for (int timeNode = 0; timeNode < CellLayout::NodesPerAxis; timeNode++) {
-    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
       const int sample = (timeNode * CellLayout::NodesPerCell + cellNode) * ForceStride;
       SIMD()
       for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
@@ -656,9 +728,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::accumulateTimeAveragedState(
   ComputePrecision* NOALIAS const       timeAveragedState,
   const ComputePrecision* NOALIAS const state,
-  const ComputePrecision                timeAverageFactor
+  const ComputePrecision                timeAverageFactor,
+  const TeamWorkers&                    workers
 ) {
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     SIMD()
     for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
       const int entry = cellNode * CellLayout::PaddedNumberOfData + unknown;
@@ -676,14 +749,15 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addPointSourcesToTimeAveragedFlux(
   ComputePrecision* NOALIAS const       timeAveragedFlux,
   const ComputePrecision* NOALIAS const pointSourceValues,
-  const ComputePrecision* NOALIAS const quadratureWeights
+  const ComputePrecision* NOALIAS const quadratureWeights,
+  const TeamWorkers&                    workers
 ) {
   constexpr int ForceStride = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride  = CellLayout::NodesPerCell * ForceStride;
 
   ComputePrecision timeAverage[ForceStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+  for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     for (int unknown = 0; unknown < ForceStride; unknown++) {
       timeAverage[unknown] = static_cast<ComputePrecision>(0);
     }

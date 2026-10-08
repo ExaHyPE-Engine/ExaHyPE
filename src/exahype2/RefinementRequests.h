@@ -26,6 +26,13 @@ public:
   void merge(exahype2::RefinementCommand command, tarch::Span<const int> cells);
 
   [[nodiscard]] std::vector<peano4::RefinementRequest> getRefinementRequests(const peano4::Partition& partition) const;
+  [[nodiscard]] std::vector<peano4::RefinementRequest> getLocalRefinementRequests(
+    const peano4::Partition& partition
+  ) const;
+
+  [[nodiscard]] static std::vector<peano4::RefinementRequest> gatherRefinementRequests(
+    std::vector<peano4::RefinementRequest> requests
+  );
 
 private:
   static constexpr std::uint8_t NoVote = 255;

@@ -80,13 +80,18 @@ public:
   [[nodiscard]] INLINE_METHOD const EstimatePool& getEstimates() const;
 
 private:
-  // Stage reads the PDE terms of Derived, which is complete only inside function bodies and member
-  // initialisers.
+  // Stage reads the PDE terms of Derived. Derived is complete only inside function bodies and
+  // member initialisers.
   using Stage = exahype2::dg::rk::Stage<Derived, ComputePrecision>;
 
   static constexpr int NumberOfRungeKuttaStages = Stage::Tableau::Stages;
 
-  INLINE_METHOD void openStage(const peano4::Partition& partition, int stage, double timeStepSize);
+  INLINE_METHOD void openStage(
+    const peano4::Partition& partition,
+    peano4::Adjacency        adjacency,
+    int                      stage,
+    double                   timeStepSize
+  );
   INLINE_METHOD void addFaceIntegrals(
     const peano4::Partition& partition,
     peano4::Adjacency        adjacency,

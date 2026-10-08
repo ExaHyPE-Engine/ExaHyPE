@@ -99,7 +99,7 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const int                                    normal,
   double* const NOALIAS                        F
 ) {
-  ::applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
     Q,
     x,
     h,
@@ -120,7 +120,7 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const double                                 dt,
   const int                                    normal
 ) {
-  return ::applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+  return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
     Q,
     x,
     h,
@@ -143,7 +143,7 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const int                                    normal,
   double* const NOALIAS                        BTimesDeltaQ
 ) {
-  ::applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
     deltaQ,
     x,
@@ -171,7 +171,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  return ::applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
+  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
     QL,
     QR,
     x,
@@ -188,8 +188,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
 
 /**
  * Returns false for a cell at the physical boundary, in dry or coastal water, or with a free
- * surface that varies more than the scale-aware thresholds allow. Inside the displacement region
- * the absolute surface amplitude is bounded as well, so the earthquake source starts on the
+ * surface that varies more than the scale-aware thresholds allow. Inside the displacement region a
+ * bound on the absolute surface amplitude applies as well. The earthquake source thus starts on the
  * subcell scheme.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -200,7 +200,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
   if (numberOfStates == 1) {
-    return ::applications::exahype2::exaskred::limiting::isAdmissibleState<
+    return applications::exahype2::exaskred::limiting::isAdmissibleState<
       Shortcuts,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables
@@ -212,7 +212,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   if (touchesPhysicalBoundary) {
     return false;
   }
-  const auto statistics = ::applications::exahype2::exaskred::limiting::collectCellStatistics<
+  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
@@ -233,9 +233,9 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   if (statistics.minFreeSurface < -limiterRelativeNegativeFreeSurfaceVariation * localDepthScale) {
     return false;
   }
-  const auto displacementSize     = ::applications::exahype2::exaskred::RuntimeParameters::displacementSize();
-  const auto displacementOffset   = ::applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
-  const auto displacementPosition = ::applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
+  const auto displacementSize     = applications::exahype2::exaskred::RuntimeParameters::displacementSize();
+  const auto displacementOffset   = applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
+  const auto displacementPosition = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
   const bool overlapsDisplacement = x(0) + 0.5 * h(0) >= displacementPosition(0) + displacementOffset(0)
     and x(0) - 0.5 * h(0) <= displacementPosition(0) + displacementOffset(0) + displacementSize(0)
     and x(1) + 0.5 * h(1) >= displacementPosition(1) + displacementOffset(1)
@@ -255,7 +255,11 @@ applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
 ) {
-  for (int observable = 0; observable < NumberOfDMPObservables; observable++) {
+  static_assert(
+    NumberOfObservables <= NumberOfUnknowns,
+    "ExaSkred supports a number_of_dmp_observables up to the number of unknowns only."
+  );
+  for (int observable = 0; observable < NumberOfObservables; observable++) {
     observables[observable] = Q[observable];
   }
 }
@@ -282,7 +286,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
                                const double                                 timeStepSize,
                                const int                                    normal
                              ) {
-    return ::applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+    return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
       Q,
       facePosition,
       faceSize,
@@ -297,7 +301,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
     []([[maybe_unused]] const double* const NOALIAS QLeft, [[maybe_unused]] const double* const NOALIAS QRight) {
       return g;
     };
-  return ::applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+  return applications::exahype2::exaskred::riemann::wellBalancedRusanov<
     Shortcuts,
     Shortcuts::b,
     NumberOfUnknowns,

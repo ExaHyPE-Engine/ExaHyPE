@@ -19,6 +19,7 @@ namespace peano4::tests {
   void refineGrid(const std::vector<peano4::RefinementRequest>& requests);
 
   peano4::RefinementRequest getRefinementOfCentreCell(int depth);
+  peano4::RefinementRequest getRefinementOfFirstChildOfRoot(int depth);
   std::vector<peano4::RefinementRequest> getErasureOfEveryCell(int depth);
 
   int getNumberOfCellsPerAxisRefinedAroundTheCentre();

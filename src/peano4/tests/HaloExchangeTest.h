@@ -25,6 +25,7 @@ public:
 
 private:
   void testExchangeFillsTheRemoteHalves();
+  void testCoarseExchangeFillsTheRemoteHalvesOfCoarseFacesOnly();
   void testExchangesHoldDistinctTags();
   void testReleaseFreesTheBuffersAndKeepsTheTag();
 };

@@ -54,7 +54,7 @@ tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::si
   assertion(device >= 0, device);
   activateDevice(device);
   CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToDevice, getDeviceStream()));
-  // A copy from pinned host memory returns before the transfer ends, so the caller could overwrite its source.
+  // A copy from pinned host memory returns before the transfer ends. The caller could then overwrite its source.
   CHECK_CUDA_ERROR(cudaStreamSynchronize(getDeviceStream()));
 }
 
@@ -73,7 +73,7 @@ tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::
   assertion(device >= 0, device);
   activateDevice(device);
   CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyDeviceToHost, getDeviceStream()));
-  // A copy into pinned host memory returns before the transfer ends, so the caller could read stale values.
+  // A copy into pinned host memory returns before the transfer ends. The caller could then read stale values.
   CHECK_CUDA_ERROR(cudaStreamSynchronize(getDeviceStream()));
 }
 
@@ -89,9 +89,9 @@ tarch::accelerator::copyFromPinnedMemory(
 
 /**
  * Blocks until every launch and copy on the stream of the current device has completed. A
- * parallelFor() on this backend returns before its launch completes; copyFrom() and every
- * reduction wait for the stream themselves, so a caller waits here only before it reads device
- * memory in another way, such as through MPI.
+ * parallelFor() on this backend returns before its launch completes. copyFrom() and every reduction
+ * wait for the stream themselves. A caller waits here only before it reads device memory in another
+ * way, such as through MPI.
  */
 void
 tarch::accelerator::waitForDevice() {

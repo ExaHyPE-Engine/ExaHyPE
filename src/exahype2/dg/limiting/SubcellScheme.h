@@ -52,7 +52,8 @@ namespace exahype2::dg::limiting::tests {
 
 TARGET_DECLARE
 /**
- * The finite-volume scheme on the subgrid of one cell of Derived with PatchSize subcells per axis.
+ * SubcellScheme runs the finite-volume scheme on the subgrid of one cell of Derived with PatchSize
+ * subcells per axis.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::limiting::SubcellScheme final {
@@ -299,7 +300,7 @@ struct exahype2::dg::limiting::ProjectSubgridsOntoFaces final {
 
 /**
  * Fills the outer halo half of every listed boundary face beside a cell that is not Regular. Only
- * these cells wrote their subgrid onto their faces in this step.
+ * these cells write their subgrid onto their faces in this step.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::ApplySubgridBoundaryConditions final {
@@ -353,8 +354,8 @@ struct exahype2::dg::limiting::SubcellRegion final {
 };
 
 /**
- * Fills the subgrid of a new cell of a regrid. A child interpolates the subgrid of its parent, and
- * a parent averages the subgrids of its children. A cell on the Galerkin scheme contributes the
+ * Fills the subgrid of a new cell of a regrid. A child interpolates the subgrid of its parent. A
+ * parent averages the subgrids of its children. A cell on the Galerkin scheme contributes the
  * projection of its nodes.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>

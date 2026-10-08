@@ -7,7 +7,7 @@
 
 /**
  * Every blocking collective posts its non-blocking counterpart and completes it with
- * tarch::mpi::wait(), so a collective that never completes warns and aborts like a point-to-point
+ * tarch::mpi::wait(). A collective that never completes then warns and aborts like a point-to-point
  * message.
  */
 namespace {
@@ -19,22 +19,6 @@ namespace {
     const int result = MPI_Ibarrier(communicator, request);
     tarch::mpi::checkReturnValue(result, "MPI_Ibarrier", location);
     tarch::mpi::Diagnostics::getInstance().registerRequest(request, "MPI_Ibarrier", -1, -1, location);
-    return result;
-  }
-
-  int iallreduce(
-    const void*          sendBuffer,
-    void*                receiveBuffer,
-    const int            count,
-    MPI_Datatype         datatype,
-    MPI_Op               operation,
-    MPI_Comm             communicator,
-    MPI_Request*         request,
-    std::source_location location = std::source_location::current()
-  ) {
-    const int result = MPI_Iallreduce(sendBuffer, receiveBuffer, count, datatype, operation, communicator, request);
-    tarch::mpi::checkReturnValue(result, "MPI_Iallreduce", location);
-    tarch::mpi::Diagnostics::getInstance().registerRequest(request, "MPI_Iallreduce", -1, -1, location);
     return result;
   }
 
@@ -111,9 +95,30 @@ tarch::mpi::allreduce(
   std::source_location location
 ) {
   MPI_Request request = MPI_REQUEST_NULL;
-  iallreduce(sendBuffer, receiveBuffer, count, datatype, operation, communicator, &request, location);
+  tarch::mpi::iallreduce(sendBuffer, receiveBuffer, count, datatype, operation, communicator, &request, location);
   // tarch::mpi::wait() completes the request in its MPI_Test loop.
   return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location); // NOLINT(clang-analyzer-optin.mpi.MPI-Checker)
+}
+
+/**
+ * Starts the reduction and registers its request with the diagnostics. tarch::mpi::wait()
+ * completes it.
+ */
+int
+tarch::mpi::iallreduce(
+  const void*          sendBuffer,
+  void*                receiveBuffer,
+  const int            count,
+  MPI_Datatype         datatype,
+  MPI_Op               operation,
+  MPI_Comm             communicator,
+  MPI_Request*         request,
+  std::source_location location
+) {
+  const int result = MPI_Iallreduce(sendBuffer, receiveBuffer, count, datatype, operation, communicator, request);
+  tarch::mpi::checkReturnValue(result, "MPI_Iallreduce", location);
+  tarch::mpi::Diagnostics::getInstance().registerRequest(request, "MPI_Iallreduce", -1, -1, location);
+  return result;
 }
 
 int

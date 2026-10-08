@@ -4,6 +4,7 @@
 
 #ifdef PEANO_WITH_NETCDF
 
+#include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/la/ScalarOperations.h"
@@ -79,8 +80,9 @@ template <int FieldDimensions>
 void
 tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDescription& fieldDescription) {
   logDebug(
-    "Parse field " << fieldDescription.name << " from " << fieldDescription.filePath << " with keys ("
-                   << fieldDescription.valueKey << ", " << coordinateKeysToString(fieldDescription) << ")"
+    "The NetCDF reader parses the field " << fieldDescription.name << " from " << fieldDescription.filePath
+                                          << " with the keys (" << fieldDescription.valueKey << ", "
+                                          << coordinateKeysToString(fieldDescription) << ")."
   );
 
   if (fieldDescription.name.empty()) {
@@ -152,24 +154,20 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDe
 }
 
 /**
- * Returns the value at the lower grid point along every axis, or zero outside the stored extent.
- * An unknown field name terminates.
+ * Returns the value at the lower grid point along every axis. Returns zero outside the stored
+ * extent. getField() stops the run for an unknown field name.
  */
 template <int FieldDimensions>
 double
 tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConstant(
-  const std::string&                         fieldName,
-  tarch::la::Vector<FieldDimensions, double> position
+  const std::string&                               fieldName,
+  const tarch::la::Vector<FieldDimensions, double> position
 ) const {
-  const auto fieldIterator = _fields.find(fieldName);
-  if (fieldIterator == _fields.end()) {
-    tarch::terminateWithError("The NetCDF reader cannot find the field \"" + fieldName + "\".");
-  }
-
-  const Field& field = fieldIterator->second;
+  const Field& field = getField(fieldName);
 
   tarch::la::Vector<FieldDimensions, double> positionInCDFRange;
   for (int i = 0; i < FieldDimensions; i++) {
+    assertion(std::isfinite(position[i]), fieldName, i, position[i]);
     positionInCDFRange[i] = transformSimulationCoordinateToCDFRange(
       position[i],
       field.lengthOfSimulationDomain[i],
@@ -187,28 +185,24 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConstant(
 }
 
 /**
- * Interpolates linearly between the surrounding grid points along every axis, which have to be
- * equidistant. A position outside the stored extent returns zero, and an unknown field name
- * terminates.
+ * Interpolates linearly between the surrounding grid points along every axis. The grid points of
+ * every axis have to be equidistant. A position outside the stored extent returns zero. getField()
+ * stops the run for an unknown field name.
  */
 template <int FieldDimensions>
 double
 tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
-  const std::string&                         fieldName,
-  tarch::la::Vector<FieldDimensions, double> position
+  const std::string&                               fieldName,
+  const tarch::la::Vector<FieldDimensions, double> position
 ) const {
-  const auto fieldIterator = _fields.find(fieldName);
-  if (fieldIterator == _fields.end()) {
-    tarch::terminateWithError("The NetCDF reader cannot find the field \"" + fieldName + "\".");
-  }
-
-  const Field& field = fieldIterator->second;
+  const Field& field = getField(fieldName);
 
   tarch::la::Vector<FieldDimensions, std::size_t> lowerIndex(std::size_t(0));
   tarch::la::Vector<FieldDimensions, std::size_t> upperIndex(std::size_t(0));
   tarch::la::Vector<FieldDimensions, double> fraction(0.0);
 
   for (int i = 0; i < FieldDimensions; i++) {
+    assertion(std::isfinite(position[i]), fieldName, i, position[i]);
     const double coordinate = transformSimulationCoordinateToCDFRange(
       position[i],
       field.lengthOfSimulationDomain[i],
@@ -220,8 +214,8 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
       return 0.0;
     }
 
-    // The axes are equidistant between their first and last stored coordinate, so the
-    // continuous index follows from the coordinate alone.
+    // The axes are equidistant between their first and last stored coordinate. The continuous
+    // index follows from the coordinate alone.
     double continuousIndex = 0.0;
     if (field.length[i] > 1 and not tarch::la::equals(field.firstElement[i], field.lastElement[i])) {
       continuousIndex = ((coordinate - field.firstElement[i]) / (field.lastElement[i] - field.firstElement[i]))
@@ -235,7 +229,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
   }
 
   // The interpolation blends the 2^d surrounding grid points. The first coordinate varies fastest in
-  // the stored array, so the flat index accumulates from the last dimension downwards.
+  // the stored array. The flat index accumulates from the last dimension downwards.
   double result = 0.0;
   for (int corner = 0; corner < (1 << FieldDimensions); corner++) {
     double      weight    = 1.0;
@@ -252,41 +246,85 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
 }
 
 /**
- * Maps a simulation coordinate linearly onto the netCDF coordinate range from
- * minIndexOfCDFspaceInZDirection to maxIndexOfCDFspaceInZDirection.
+ * Returns whether the stored extent of the field covers position. getField() stops the run for an
+ * unknown field name.
+ */
+template <int FieldDimensions>
+bool
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::covers(
+  const std::string&                               fieldName,
+  const tarch::la::Vector<FieldDimensions, double> position
+) const {
+  const Field& field = getField(fieldName);
+  for (int i = 0; i < FieldDimensions; i++) {
+    assertion(std::isfinite(position[i]), fieldName, i, position[i]);
+    const double coordinate = transformSimulationCoordinateToCDFRange(
+      position[i],
+      field.lengthOfSimulationDomain[i],
+      field.firstElement[i],
+      field.lastElement[i],
+      field.offsetOfSimulationDomain[i]
+    );
+    if (not isCoordinateInRange(coordinate, field.firstElement[i], field.lastElement[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Returns the field of fieldName. Stops the run for an unknown field name.
+ */
+template <int FieldDimensions>
+const typename tarch::reader::NetCDFFieldSampler<FieldDimensions>::Field&
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::getField(const std::string& fieldName) const {
+  const auto fieldIterator = _fields.find(fieldName);
+  if (fieldIterator == _fields.end()) {
+    tarch::terminateWithError("The NetCDF reader cannot find the field \"" + fieldName + "\".");
+  }
+  return fieldIterator->second;
+}
+
+/**
+ * Maps the simulation domain along one axis linearly onto the netCDF coordinate range from
+ * firstElement to lastElement and returns the image of coordinate.
  */
 template <int FieldDimensions>
 double
 tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCoordinateToCDFRange(
-  double coordinateOfDimensionZInSimulationSpace,
-  double sizeOfSimulationSpaceInZDirection,
-  double minIndexOfCDFspaceInZDirection,
-  double maxIndexOfCDFspaceInZDirection,
-  double offsetOfSimulationSpaceInZDirection
+  const double coordinate,
+  const double lengthOfSimulationDomain,
+  const double firstElement,
+  const double lastElement,
+  const double offsetOfSimulationDomain
 ) {
-  const double minZ = offsetOfSimulationSpaceInZDirection;
-  const double maxZ = sizeOfSimulationSpaceInZDirection + minZ;
+  const double endOfSimulationDomain = lengthOfSimulationDomain + offsetOfSimulationDomain;
+  assertion(endOfSimulationDomain != offsetOfSimulationDomain, lengthOfSimulationDomain, offsetOfSimulationDomain);
 
-  const double slope     = ((maxIndexOfCDFspaceInZDirection - minIndexOfCDFspaceInZDirection) / (maxZ - minZ));
-  const double intercept = minIndexOfCDFspaceInZDirection - slope * minZ;
+  const double slope    = ((lastElement - firstElement) / (endOfSimulationDomain - offsetOfSimulationDomain));
+  const double intercept = firstElement - slope * offsetOfSimulationDomain;
 
-  return slope * coordinateOfDimensionZInSimulationSpace + intercept;
+  return slope * coordinate + intercept;
 }
 
 /**
- * Returns the flat array index of the grid point at or below a netCDF coordinate tuple, with the
- * first coordinate varying fastest.
+ * Returns the flat array index of the grid point at or below a netCDF coordinate tuple. The first
+ * coordinate varies fastest in the flat array.
  */
 template <int FieldDimensions>
 std::size_t
 tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCDFRangeToArray(
-  tarch::la::Vector<FieldDimensions, double>      coordinatesInCDFMesh,
-  tarch::la::Vector<FieldDimensions, double>      firstCoordinatesInCDFMesh,
-  tarch::la::Vector<FieldDimensions, double>      lastCoordinatesInCDFMesh,
-  tarch::la::Vector<FieldDimensions, std::size_t> lengthOfDimensionsInCDFMesh
+  const tarch::la::Vector<FieldDimensions, double>      coordinatesInCDFMesh,
+  const tarch::la::Vector<FieldDimensions, double>      firstCoordinatesInCDFMesh,
+  const tarch::la::Vector<FieldDimensions, double>      lastCoordinatesInCDFMesh,
+  const tarch::la::Vector<FieldDimensions, std::size_t> lengthOfDimensionsInCDFMesh
 ) {
-  const auto computeIndex =
-    [](double coordinate, double firstCoordinate, double lastCoordinate, std::size_t length) -> std::size_t {
+  const auto computeIndex = [](
+                              const double      coordinate,
+                              const double      firstCoordinate,
+                              const double      lastCoordinate,
+                              const std::size_t length
+                            ) -> std::size_t {
     if (length <= 1 or tarch::la::equals(firstCoordinate, lastCoordinate)) {
       return 0;
     }
@@ -297,7 +335,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCDFRangeToArra
     );
   };
 
-  // A 3D field can exceed 2^31 entries, so the flat index is a std::size_t.
+  // A 3D field can exceed 2^31 entries. The flat index is a std::size_t.
   std::size_t index  = 0;
   std::size_t length = 1;
   for (int i = 0; i < FieldDimensions; i++) {
@@ -317,9 +355,9 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCDFRangeToArra
 template <int FieldDimensions>
 bool
 tarch::reader::NetCDFFieldSampler<FieldDimensions>::isCoordinateInRange(
-  double coordinate,
-  double firstCoordinate,
-  double lastCoordinate
+  const double coordinate,
+  const double firstCoordinate,
+  const double lastCoordinate
 ) {
   const auto [lower, upper] = std::minmax(firstCoordinate, lastCoordinate);
   return not tarch::la::smaller(coordinate, lower) and not tarch::la::greater(coordinate, upper);

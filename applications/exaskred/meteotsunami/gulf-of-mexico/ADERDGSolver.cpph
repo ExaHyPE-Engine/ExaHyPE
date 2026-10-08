@@ -75,7 +75,7 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const int                                    normal,
   double* const NOALIAS                        F
 ) {
-  ::applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
     Q,
     x,
     h,
@@ -96,7 +96,7 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const double                                 dt,
   const int                                    normal
 ) {
-  return ::applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+  return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
     Q,
     x,
     h,
@@ -119,7 +119,7 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const int                                    normal,
   double* const NOALIAS                        BTimesDeltaQ
 ) {
-  ::applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
     deltaQ,
     x,
@@ -134,8 +134,7 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
 }
 
 /**
- * Writes the rotation, the bed drag and the atmospheric pressure gradient into S. The basin spans a
- * wide range of latitudes, so the Coriolis parameter follows the latitude of each point.
+ * Writes the rotation, the bed drag and the atmospheric pressure gradient into S.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
@@ -154,8 +153,8 @@ applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
     return;
   }
 
-  // The raster was sampled on this projection, so its inverse maps the mesh coordinates to
-  // geographic ones.
+  // The raster uses this projection. Its inverse maps the mesh coordinates to geographic
+  // coordinates.
   const applications::exahype2::exaskred::projection::AlbersEqualArea projection{
     .referenceLongitude     = RuntimeParameters::projectionCentralMeridian(),
     .referenceLatitude      = RuntimeParameters::projectionOriginLatitude(),
@@ -166,11 +165,11 @@ applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
   };
 
   const auto   here     = projection.inverse(x(0), x(1));
-  const double coriolis = ::applications::exahype2::exaskred::forcing::getCoriolisParameterOnSphere(
+  const double coriolis = applications::exahype2::exaskred::forcing::getCoriolisParameterOnSphere(
     here.second,
     RuntimeParameters::earthAngularVelocity()
   );
-  const double friction = ::applications::exahype2::exaskred::forcing::getManningFriction(
+  const double friction = applications::exahype2::exaskred::forcing::getManningFriction(
     Q[Shortcuts::h],
     Q[Shortcuts::hu],
     Q[Shortcuts::hu + 1],
@@ -180,7 +179,7 @@ applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
   );
 
   // The storm centre moves at a fixed speed along the straight line between the two projected
-  // track points, and the disturbance moves rigidly with it.
+  // track points. The disturbance moves rigidly with it.
   const auto trackStart =
     projection.forward(RuntimeParameters::trackStartLongitude(), RuntimeParameters::trackStartLatitude());
   const auto trackEnd =
@@ -193,8 +192,8 @@ applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
   const double bearing = std::atan2(runY, runX);
 
   // The anomaly is a Gaussian times the along-track offset in a frame that travels with the storm
-  // and is rotated onto its track. Both maps are linear in the geographic offsets, so only the
-  // inverse Jacobian of the projection needs the shape of the earth.
+  // and turns with its track. Both maps are linear in the geographic offsets. Only the inverse
+  // Jacobian of the projection reads the shape of the earth.
   const double bearingSine     = std::sin(bearing);
   const double bearingCosine   = std::cos(bearing);
   const double convergence     = std::cos(centre.second * std::numbers::pi_v<double> / 180.0);
@@ -248,7 +247,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  return ::applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
+  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
     QL,
     QR,
     x,
@@ -264,9 +263,9 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
 }
 
 /**
- * Returns false at the boundaries and over the shelf and the coast, where the Galerkin face solver
- * has no wet-dry treatment. The augmented Riemann solver of the subcell scheme treats inundation, so
- * a cell switches to that scheme before its water column thins.
+ * Returns false at the boundaries and over the shelf and the coast. A cell there switches to the
+ * subcell scheme before its water column thins. The augmented Riemann solver of that scheme
+ * supports wetting and drying.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
@@ -277,15 +276,15 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
 ) {
   const double minimumWaterHeight = RuntimeParameters::minimumWaterHeight();
   if (numberOfStates == 1) {
-    return ::applications::exahype2::exaskred::limiting::isAdmissibleState<
+    return applications::exahype2::exaskred::limiting::isAdmissibleState<
       Shortcuts,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables
     >(Q, minimumWaterHeight);
   }
 
-  // A boundary condition is not a solution of the equations, and beyond the survey the bed
-  // continues its rim at a constant depth.
+  // A boundary condition is not a solution of the equations. Beyond the survey, the bed continues
+  // its rim at a constant depth.
   const auto rasterOffset = RuntimeParameters::bathymetryOffset();
   const auto rasterSize   = RuntimeParameters::bathymetrySize();
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
@@ -299,7 +298,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
     }
   }
 
-  const auto statistics = ::applications::exahype2::exaskred::limiting::collectCellStatistics<
+  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
@@ -313,7 +312,11 @@ applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
 ) {
-  for (int observable = 0; observable < NumberOfDMPObservables; observable++) {
+  static_assert(
+    NumberOfObservables <= NumberOfUnknowns,
+    "ExaSkred supports a number_of_dmp_observables up to the number of unknowns only."
+  );
+  for (int observable = 0; observable < NumberOfObservables; observable++) {
     observables[observable] = Q[observable];
   }
 }
@@ -340,7 +343,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
                                       const double                                 timeStepSize,
                                       const int                                    normal
                                     ) {
-    return ::applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+    return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
       state,
       facePosition,
       faceSize,
@@ -356,7 +359,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
       return g;
     };
 
-  return ::applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+  return applications::exahype2::exaskred::riemann::wellBalancedRusanov<
     Shortcuts,
     Shortcuts::b,
     NumberOfUnknowns,

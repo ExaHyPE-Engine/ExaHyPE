@@ -5,13 +5,14 @@
 #include "exahype2/Limits.h"
 #include "exahype2/TimeStepping.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
 
 namespace {
   using Rule      = exahype2::TimeStepping::Rule;
   using Stability = exahype2::TimeStepping::Stability;
 
-  // Every ordered comparison against a NaN raises the invalid-operation exception, which the
-  // test runner traps, so the faults below are a negative and an infinite wave speed.
+  // Every ordered comparison against a NaN raises the invalid-operation exception. The test runner
+  // traps this exception. The faults below are a negative and an infinite wave speed.
   constexpr double NegativeWaveSpeed = -1.25;
   constexpr double InfiniteWaveSpeed = std::numeric_limits<double>::infinity();
 
@@ -29,6 +30,16 @@ namespace {
     timeStepping.setLimits(limits);
     timeStepping.advanceTimeStamp(1.0);
   }
+
+  /**
+   * Reduces the values of timeStepping over all ranks in one reduction record.
+   */
+  void reduceOverTheRanks(exahype2::TimeStepping& timeStepping) {
+    tarch::mpi::ReductionRecord record;
+    timeStepping.contributeTo(record);
+    record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
+    timeStepping.adoptFrom(record);
+  }
 } // namespace
 
 exahype2::tests::TimeSteppingTest::TimeSteppingTest() :
@@ -42,16 +53,20 @@ exahype2::tests::TimeSteppingTest::run() {
   testMethod(testTheLimitsReadBackAsSet);
   testMethod(testAdvancingTheTimeStampRecordsTheStepSize);
   testMethod(testTheMeshWidthsReduceOverEveryRank);
+  testMethod(testTheAdoptionReportsOnlyTheValuesSetSinceTheLastReduction);
   testMethod(testMaxEigenvaluesKeepTheLargestPositiveValue);
   testMethod(testStartTimeStepCommitsTheProposalAndClearsTheMaxima);
   testMethod(testRankReductionTakesTheMaximaOfAllRanks);
   testMethod(testStabilityEigenvalueIsThePhysicalOrTheScaledMaximum);
   testMethod(testProposalStopsAtTheTerminalTime);
+  testMethod(testAReusedProposalStopsAtTheTerminalTime);
   testMethod(testAFixedRuleKeepsItsSizeAcrossSteps);
+  testMethod(testAStepBeyondTheCFLLimitOfItsWaveSpeedsExceedsTheLimit);
+  testMethod(testTheLastStepMayGrowBeyondTheCFLLimitToTheTerminalTime);
 }
 
 /**
- * The signed zeroes have to agree as well, so the comparison is bitwise.
+ * The reduction of two physical wave speeds returns their maximum bitwise, signed zeroes included.
  */
 void
 exahype2::tests::TimeSteppingTest::testTheReductionTakesTheLargerPhysicalWaveSpeedBitwise() {
@@ -134,9 +149,34 @@ exahype2::tests::TimeSteppingTest::testTheMeshWidthsReduceOverEveryRank() {
   const auto             rank          = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
   const auto             numberOfRanks = static_cast<double>(tarch::mpi::Rank::getInstance().getNumberOfRanks());
   exahype2::TimeStepping timeStepping  = makeAdaptive(Stability::PhysicalEigenvalue);
-  timeStepping.reduceMeshWidthsAcrossRanks(1.0 + rank, 10.0 + rank);
+  timeStepping.setLocalMeshWidths(1.0 + rank, 10.0 + rank);
+  reduceOverTheRanks(timeStepping);
   validateNumericalEquals(timeStepping.getMinMeshWidth(), 1.0);
   validateNumericalEquals(timeStepping.getMaxMeshWidth(), 9.0 + numberOfRanks);
+}
+
+/**
+ * An adoption reports new mesh widths and new wave speeds only if some rank set them since its
+ * previous contribution.
+ */
+void
+exahype2::tests::TimeSteppingTest::testTheAdoptionReportsOnlyTheValuesSetSinceTheLastReduction() {
+  exahype2::TimeStepping timeStepping = makeAdaptive(Stability::PhysicalEigenvalue);
+  reduceOverTheRanks(timeStepping);
+  validate(not timeStepping.hasNewMeshWidths());
+  validate(not timeStepping.hasNewMaxEigenvalues());
+
+  timeStepping.setLocalMeshWidths(1.0, 2.0);
+  reduceOverTheRanks(timeStepping);
+  validate(timeStepping.hasNewMeshWidths());
+  validate(not timeStepping.hasNewMaxEigenvalues());
+
+  timeStepping.raiseMaxEigenvalue(3.0);
+  reduceOverTheRanks(timeStepping);
+  validate(not timeStepping.hasNewMeshWidths());
+  validate(timeStepping.hasNewMaxEigenvalues());
+  validateNumericalEquals(timeStepping.getMinMeshWidth(), 1.0);
+  validateNumericalEquals(timeStepping.getMaxEigenvalue(), 3.0);
 }
 
 void
@@ -182,7 +222,7 @@ exahype2::tests::TimeSteppingTest::testRankReductionTakesTheMaximaOfAllRanks() {
   exahype2::TimeStepping timeStepping  = makeAdaptive(Stability::ScaledEigenvalue);
   timeStepping.raiseMaxEigenvalue(1.0 + rank);
   timeStepping.raiseMaxScaledEigenvalue(10.0 + rank);
-  timeStepping.reduceMaxEigenvaluesAcrossRanks();
+  reduceOverTheRanks(timeStepping);
   validateNumericalEquals(timeStepping.getMaxEigenvalue(), numberOfRanks);
   validateNumericalEquals(timeStepping.getMaxEigenvalueOfThisStep(), numberOfRanks);
   validateNumericalEquals(timeStepping.getMaxScaledEigenvalueOfThisStep(), 9.0 + numberOfRanks);
@@ -216,6 +256,23 @@ exahype2::tests::TimeSteppingTest::testProposalStopsAtTheTerminalTime() {
   validateNumericalEquals(farFromTheEnd.startTimeStep(), 0.5);
 }
 
+/**
+ * A step that reuses the proposal of an earlier time stamp stops at the terminal time.
+ */
+void
+exahype2::tests::TimeSteppingTest::testAReusedProposalStopsAtTheTerminalTime() {
+  exahype2::TimeStepping timeStepping = makeAdaptive(Stability::PhysicalEigenvalue);
+  exahype2::Limits       limits;
+  limits.terminalTime = 1.0;
+  timeStepping.setLimits(limits);
+  timeStepping.setAdmissibleTimeStepSize(0.75);
+  validateNumericalEquals(timeStepping.startTimeStep(), 0.75);
+  timeStepping.advanceTimeStamp(0.75);
+  validateNumericalEquals(timeStepping.startTimeStep(), 0.25);
+  timeStepping.advanceTimeStamp(0.25);
+  validateEquals(timeStepping.getTimeStamp(), 1.0);
+}
+
 void
 exahype2::tests::TimeSteppingTest::testAFixedRuleKeepsItsSizeAcrossSteps() {
   exahype2::TimeStepping fixed{Rule::Fixed, 0.5, Stability::PhysicalEigenvalue};
@@ -225,4 +282,55 @@ exahype2::tests::TimeSteppingTest::testAFixedRuleKeepsItsSizeAcrossSteps() {
   validateNumericalEquals(fixed.getTimeStepSizeOfNextStep(), 0.25);
   validateNumericalEquals(fixed.startTimeStep(), 0.25);
   validateNumericalEquals(fixed.startTimeStep(), 0.25);
+}
+
+/**
+ * A reduced time step exceeds the CFL limit of its own wave speeds without the CFL factor, however
+ * far the terminal time lies. A record of another step exceeds none.
+ */
+void
+exahype2::tests::TimeSteppingTest::testAStepBeyondTheCFLLimitOfItsWaveSpeedsExceedsTheLimit() {
+  exahype2::TimeStepping relaxed{Rule::Adaptive, 0.5, Stability::PhysicalEigenvalue};
+  placeBeforeTheTerminalTime(relaxed, 10.0);
+  reduceOverTheRanks(relaxed);
+  validate(not relaxed.exceedsCFLLimit(0.5));
+  validate(relaxed.exceedsCFLLimit(0.25));
+  reduceOverTheRanks(relaxed);
+  validate(not relaxed.exceedsCFLLimit(0.25));
+
+  exahype2::TimeStepping unrelaxed = makeAdaptive(Stability::PhysicalEigenvalue);
+  placeBeforeTheTerminalTime(unrelaxed, 10.0);
+  reduceOverTheRanks(unrelaxed);
+  validate(not unrelaxed.exceedsCFLLimit(1.0));
+  validate(unrelaxed.exceedsCFLLimit(0.75));
+
+  exahype2::TimeStepping farFromTheEnd = makeAdaptive(Stability::PhysicalEigenvalue);
+  placeBeforeTheTerminalTime(farFromTheEnd, 1.0e12);
+  reduceOverTheRanks(farFromTheEnd);
+  validate(farFromTheEnd.exceedsCFLLimit(0.25));
+}
+
+/**
+ * A reduced time step that ends at the terminal time may exceed the CFL limit by the growth to the
+ * terminal time.
+ */
+void
+exahype2::tests::TimeSteppingTest::testTheLastStepMayGrowBeyondTheCFLLimitToTheTerminalTime() {
+  constexpr double LimitBelowTheStep = 1.0 - 5.0e-8;
+  const auto       reduceAStepOfOneToTimeOneThousand = [](exahype2::TimeStepping& timeStepping, const double terminalTime) {
+    exahype2::Limits limits;
+    limits.terminalTime = terminalTime;
+    timeStepping.setLimits(limits);
+    timeStepping.advanceTimeStamp(999.0);
+    timeStepping.advanceTimeStamp(1.0);
+    reduceOverTheRanks(timeStepping);
+  };
+
+  exahype2::TimeStepping atTheEnd = makeAdaptive(Stability::PhysicalEigenvalue);
+  reduceAStepOfOneToTimeOneThousand(atTheEnd, 1.0e3);
+  validate(not atTheEnd.exceedsCFLLimit(LimitBelowTheStep));
+
+  exahype2::TimeStepping beforeTheEnd = makeAdaptive(Stability::PhysicalEigenvalue);
+  reduceAStepOfOneToTimeOneThousand(beforeTheEnd, 2.0e3);
+  validate(beforeTheEnd.exceedsCFLLimit(LimitBelowTheStep));
 }

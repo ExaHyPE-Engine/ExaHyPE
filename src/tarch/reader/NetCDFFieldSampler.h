@@ -14,31 +14,27 @@ namespace tarch::reader {
 
 /**
  * Samples fields from netCDF files at a point of the simulation domain. A field with the coordinate
- * keys {"x", "y", "z"} has to store its values as value(z, y, x), and nothing checks this order.
+ * keys {"x", "y", "z"} stores its values as value(z, y, x). The sampler reads this order without a
+ * check.
  */
 template <int FieldDimensions = 2>
-class tarch::reader::NetCDFFieldSampler {
+class tarch::reader::NetCDFFieldSampler final {
   static_assert(FieldDimensions == 2 or FieldDimensions == 3, "The NetCDF reader reads 2D and 3D fields only.");
 
 public:
-  struct FieldDescription {
-    std::string name;
-    std::string filePath;
+  struct FieldDescription final {
+    std::string name{};
+    std::string filePath{};
     /**
-     * The netCDF variable of the values, which has to differ from every coordinate key.
+     * valueKey names the netCDF variable of the values. It has to differ from every coordinate key.
      */
-    std::string valueKey = "z";
+    std::string valueKey{"z"};
     /**
-     * The netCDF variables of the coordinates, in the order of the position argument of the
-     * samplers.
+     * The entries of key name the netCDF variables of the coordinates in the order of the position
+     * argument of the samplers.
      */
-    std::array<std::string, FieldDimensions> key = getDefaultCoordinateKeys();
+    std::array<std::string, FieldDimensions> key{getDefaultCoordinateKeys()};
   };
-
-  NetCDFFieldSampler(const NetCDFFieldSampler&)            = delete;
-  NetCDFFieldSampler(NetCDFFieldSampler&&)                 = delete;
-  NetCDFFieldSampler& operator=(const NetCDFFieldSampler&) = delete;
-  NetCDFFieldSampler& operator=(NetCDFFieldSampler&&)      = delete;
 
   explicit NetCDFFieldSampler(std::initializer_list<FieldDescription> fields);
 
@@ -56,7 +52,11 @@ public:
     const tarch::la::Vector<FieldDimensions, double>& offsetOfSimulationDomain
   );
 
-  ~NetCDFFieldSampler() = default;
+  NetCDFFieldSampler(const NetCDFFieldSampler&)            = delete;
+  NetCDFFieldSampler(NetCDFFieldSampler&&)                 = delete;
+  NetCDFFieldSampler& operator=(const NetCDFFieldSampler&) = delete;
+  NetCDFFieldSampler& operator=(NetCDFFieldSampler&&)      = delete;
+  ~NetCDFFieldSampler()                                    = default;
 
   double samplePiecewiseConstant(
     const std::string&                         fieldName,
@@ -65,37 +65,38 @@ public:
 
   double sampleBilinear(const std::string& fieldName, tarch::la::Vector<FieldDimensions, double> position) const;
 
+  [[nodiscard]] bool covers(const std::string& fieldName, tarch::la::Vector<FieldDimensions, double> position) const;
+
 private:
-  struct Field {
-    std::vector<double> values;
+  struct Field final {
+    std::vector<double> values{};
     // A plain 0 would select the pointer constructor of Vector.
-    tarch::la::Vector<FieldDimensions, std::size_t> length =
-      tarch::la::Vector<FieldDimensions, std::size_t>(std::size_t(0));
-    tarch::la::Vector<FieldDimensions, double> firstElement = tarch::la::Vector<FieldDimensions, double>(0.0);
-    tarch::la::Vector<FieldDimensions, double> lastElement  = tarch::la::Vector<FieldDimensions, double>(0.0);
+    tarch::la::Vector<FieldDimensions, std::size_t> length{tarch::la::Vector<FieldDimensions, std::size_t>(std::size_t(0))};
+    tarch::la::Vector<FieldDimensions, double>      firstElement{tarch::la::Vector<FieldDimensions, double>(0.0)};
+    tarch::la::Vector<FieldDimensions, double>      lastElement{tarch::la::Vector<FieldDimensions, double>(0.0)};
     // A sampler without an extent maps every field onto the coordinate range of its own file.
-    tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain =
-      tarch::la::Vector<FieldDimensions, double>(0.0);
-    tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain =
-      tarch::la::Vector<FieldDimensions, double>(0.0);
+    tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain{tarch::la::Vector<FieldDimensions, double>(0.0)};
+    tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain{tarch::la::Vector<FieldDimensions, double>(0.0)};
   };
 
-  NetCDFFileReader                       _netCDFFileReader;
-  std::unordered_map<std::string, Field> _fields;
+  NetCDFFileReader                       _netCDFFileReader{};
+  std::unordered_map<std::string, Field> _fields{};
 
-  std::optional<tarch::la::Vector<FieldDimensions, double>> _lengthOfSimulationDomain;
-  std::optional<tarch::la::Vector<FieldDimensions, double>> _offsetOfSimulationDomain;
+  std::optional<tarch::la::Vector<FieldDimensions, double>> _lengthOfSimulationDomain{};
+  std::optional<tarch::la::Vector<FieldDimensions, double>> _offsetOfSimulationDomain{};
 
   static std::array<std::string, FieldDimensions> getDefaultCoordinateKeys();
 
   void parseFieldFile(const FieldDescription& fieldDescription);
 
+  [[nodiscard]] const Field& getField(const std::string& fieldName) const;
+
   static double transformSimulationCoordinateToCDFRange(
-    double coordinateOfDimensionZInSimulationSpace,
-    double sizeOfSimulationSpaceInZDirection,
-    double minIndexOfCDFspaceInZDirection,
-    double maxIndexOfCDFspaceInZDirection,
-    double offsetOfSimulationSpaceInZDirection
+    double coordinate,
+    double lengthOfSimulationDomain,
+    double firstElement,
+    double lastElement,
+    double offsetOfSimulationDomain
   );
 
   static std::size_t transformIndexCDFRangeToArray(

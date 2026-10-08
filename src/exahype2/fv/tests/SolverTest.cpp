@@ -27,6 +27,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
 #include "tarch/plotter/Format.h"
 
 namespace {
@@ -217,8 +218,19 @@ namespace {
   }
 
   /**
+   * Reduces the values of solver over all ranks in the one allreduce that ends a step of a run.
+   */
+  template <typename Solver>
+  void finishStep(Solver& solver) {
+    tarch::mpi::ReductionRecord record;
+    solver.contributeTo(record);
+    record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
+    solver.adoptFrom(record);
+  }
+
+  /**
    * Applies the refinement requests to the standing grid and moves the solver data through the
-   * regrid. Every slot the regrid keeps then holds its data.
+   * regrid. Every slot the regrid keeps then holds its data. The reduction of the step follows.
    */
   template <typename Solver>
   void regridWithLiveData(
@@ -235,6 +247,7 @@ namespace {
     requests.clear(partition.getNumberOfSlots());
     solver.regrid(partition, regrid, requests);
     spacetree.finishRegrid();
+    finishStep(solver);
   }
 
   int getNumberOfCellsOfLevel(const peano4::Partition& partition, const int level) {
@@ -376,8 +389,10 @@ exahype2::fv::tests::SolverTest::testThePostprocessingOfTheUpdatedPatchFeedsTheN
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   validate(getNumberOfValuesWithoutPostprocessing(solver, partition) > 0);
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   validateEquals(getNumberOfValuesWithoutPostprocessing(solver, partition), 0);
   validateNumericalEquals(
     solver.getTimeStepping().getTimeStepSizeOfNextStep(),
@@ -398,11 +413,14 @@ exahype2::fv::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() 
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   peano4::Spacetree::getInstance().markPersistentDataLive();
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
   requests.clear(partition.getNumberOfSlots());
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   validateNumericalEquals(
     solver.getTimeStepping().getTimeStepSizeOfLastStep(),
     TimeStepFactor * CoarseWidth / (PatchSize * peano4::SubdivisionFactor * DIMENSIONS)
@@ -421,6 +439,7 @@ exahype2::fv::tests::SolverTest::testInitialisationWritesTheInitialConditionInto
   requests.clear(partition.getNumberOfSlots());
   requests.merge(exahype2::RefinementCommand::Erase, partition.getCells());
   solver.initialise(partition, requests);
+  finishStep(solver);
 
   validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0);
   validateEquals(solver.getNumberOfDoFs(), ValuesPerPatch);
@@ -446,11 +465,13 @@ exahype2::fv::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdva
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), 0.0);
 
   for (int step = 0; step < 3; step++) {
     requests.clear(partition.getNumberOfSlots());
     solver.performTimeStep(partition, requests);
+    finishStep(solver);
     const double expectedStepSize = step == 0 ? 0.0 : TimeStepFactor;
     validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStamp(), step * TimeStepFactor, step);
@@ -474,7 +495,9 @@ exahype2::fv::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution()
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
 
@@ -490,6 +513,7 @@ exahype2::fv::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution()
 
   requests.clear(partition.getNumberOfSlots());
   solver.performTimeStep(partition, requests);
+  finishStep(solver);
   validateNumericalEquals(
     solver.getTimeStepping().getTimeStepSizeOfLastStep(),
     coarseTimeStepSize / peano4::SubdivisionFactor
@@ -519,6 +543,7 @@ exahype2::fv::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend
   exahype2::RefinementRequests requests;
   requests.clear(partition.getNumberOfSlots());
   solver.initialise(partition, requests);
+  finishStep(solver);
 
   const std::string outputDirectory =
     (tarch::tests::getWritableTestDirectory() / "FiniteVolumeSolverPlotTest").string() + "/";

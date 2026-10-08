@@ -78,24 +78,33 @@ namespace {
     return nodes;
   }
 
+  template <typename Value>
+  std::array<Value*, peano4::FacesPerCell> getAddressesOf(Value* const halves) {
+    std::array<Value*, peano4::FacesPerCell> addresses{};
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      addresses[static_cast<std::size_t>(faceNumber)] = halves + faceNumber;
+    }
+    return addresses;
+  }
+
   /**
-   * The status of one cell with the face halves that judgeCandidate() and spreadStatus() read and
-   * write.
+   * CellStatus holds the status of one cell and the face halves that judgeCandidate() and
+   * spreadStatus() read and write.
    */
   struct CellStatus final {
-    int        status[exahype2::dg::limiting::NumberOfStatusEntries]{Regular, Regular, 0, 0};
-    double     candidateExtrema[Layout::ExtremaPerCell]{};
-    int        faceHalves[peano4::FacesPerCell]{};
-    int        neighbourHalves[peano4::FacesPerCell]{};
-    int*       ownStatusHalves[peano4::FacesPerCell]{};
-    const int* neighbourStatusHalves[peano4::FacesPerCell]{};
+    CellStatus()                             = default;
+    CellStatus(const CellStatus&)            = delete;
+    CellStatus(CellStatus&&)                 = delete;
+    CellStatus& operator=(const CellStatus&) = delete;
+    CellStatus& operator=(CellStatus&&)      = delete;
+    ~CellStatus()                            = default;
 
-    CellStatus() {
-      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-        ownStatusHalves[faceNumber]       = faceHalves + faceNumber;
-        neighbourStatusHalves[faceNumber] = neighbourHalves + faceNumber;
-      }
-    }
+    int    status[exahype2::dg::limiting::NumberOfStatusEntries]{Regular, Regular, 0, 0};
+    double candidateExtrema[Layout::ExtremaPerCell]{};
+    int    faceHalves[peano4::FacesPerCell]{};
+    int    neighbourHalves[peano4::FacesPerCell]{};
+    std::array<int*, peano4::FacesPerCell>       ownStatusHalves{getAddressesOf(faceHalves)};
+    std::array<const int*, peano4::FacesPerCell> neighbourStatusHalves{getAddressesOf<const int>(neighbourHalves)};
   };
 
   TARGET_DECLARE
@@ -203,6 +212,7 @@ exahype2::dg::limiting::tests::DetectorTest::run() {
   testMethod(testACandidateOutsideTheReferenceExtremaIsRejected);
   testMethod(testTheRelaxationWidensTheAcceptedRange);
   testMethod(testTheAdmissibilityCombinesNodesAndSubcells);
+  testMethod(testTheAdmissibilityCoversTheLobattoSamples);
   testMethod(testWidenExtremaMergesTheMinimaAndTheMaxima);
   testMethod(testOpenInitialStatusMarksAnOscillatingInterpolant);
   testMethod(testOpenStepCopiesTheSolutionAndOpensTheStatus);
@@ -313,8 +323,8 @@ exahype2::dg::limiting::tests::DetectorTest::testTheObservableExtremaCoverEveryS
 }
 
 /**
- * An identity sampling matrix reproduces the nodal extrema, and a column-stochastic matrix maps a
- * constant field onto the constant at every sample.
+ * The projected extrema equal the nodal extrema for an identity sampling matrix and the constant of
+ * a constant field for a column-stochastic matrix.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testTheProjectedObservableExtremaCoverTheSamples() {
@@ -339,7 +349,7 @@ exahype2::dg::limiting::tests::DetectorTest::testTheProjectedObservableExtremaCo
 }
 
 /**
- * A profile linear along the first axis reaches its extrema at the Lobatto samples, outside the nodes.
+ * A profile linear along the first axis reaches its extrema at the Lobatto samples outside the nodes.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testTheCellExtremaCoverTheNodesAndTheSamples() {
@@ -389,16 +399,45 @@ exahype2::dg::limiting::tests::DetectorTest::testTheRelaxationWidensTheAcceptedR
 
 void
 exahype2::dg::limiting::tests::DetectorTest::testTheAdmissibilityCombinesNodesAndSubcells() {
-  const tarch::la::Vector<DIMENSIONS, double> centre(0.0);
-  const tarch::la::Vector<DIMENSIONS, double> width(1.0);
-  std::vector<double>                         nodes    = getConstantNodes(1.0, 1.0);
-  std::vector<double>                         subcells = getConstantSubgrid(1.0, 1.0);
-  validate(Judge::isPhysicallyAdmissible(nodes.data(), subcells.data(), centre, width));
+  const exahype2::dg::limiting::tests::SubcellProjections tables;
+  const tarch::la::Vector<DIMENSIONS, double>             centre(0.0);
+  const tarch::la::Vector<DIMENSIONS, double>             width(1.0);
+  std::vector<double>                                     nodes    = getConstantNodes(1.0, 1.0);
+  std::vector<double>                                     subcells = getConstantSubgrid(1.0, 1.0);
+  const double* const                                     lobatto  = tables.nodesToLobatto.data();
+  validate(Judge::isPhysicallyAdmissible(nodes.data(), subcells.data(), lobatto, centre, width));
   subcells[static_cast<std::size_t>(Layout::SubcellsPerCell - 1) * Layout::NumberOfData] = -1.0;
-  validate(not Judge::isPhysicallyAdmissible(nodes.data(), subcells.data(), centre, width));
+  validate(not Judge::isPhysicallyAdmissible(nodes.data(), subcells.data(), lobatto, centre, width));
   subcells[static_cast<std::size_t>(Layout::SubcellsPerCell - 1) * Layout::NumberOfData] = 1.0;
   nodes[0]                                                                               = 0.0;
-  validate(not Judge::isPhysicallyAdmissible(nodes.data(), subcells.data(), centre, width));
+  validate(not Judge::isPhysicallyAdmissible(nodes.data(), subcells.data(), lobatto, centre, width));
+}
+
+/**
+ * A candidate with admissible nodes and subcells that extrapolates to an inadmissible state at a
+ * face fails the admissibility check.
+ */
+void
+exahype2::dg::limiting::tests::DetectorTest::testTheAdmissibilityCoversTheLobattoSamples() {
+  const exahype2::dg::limiting::tests::SubcellProjections tables;
+  const tarch::la::Vector<DIMENSIONS, double>             centre(0.0);
+  const tarch::la::Vector<DIMENSIONS, double>             width(1.0);
+  const std::vector<double>                               subcells = getConstantSubgrid(1.0, 1.0);
+  const double* const                                     lobatto  = tables.nodesToLobatto.data();
+
+  // steeperNodes stays positive at the nodes. Its interpolant reaches -0.5 at the left face.
+  const std::vector<double> steepNodes = getSteepNodes(tables.quadraturePoints);
+  std::vector<double>       steeperNodes(steepNodes);
+  for (int node = 0; node < Layout::NodesPerCell; node++) {
+    const auto index        = static_cast<std::size_t>(node) * Layout::NumberOfData;
+    steeperNodes[index]     = 2.0 * steepNodes[index] - 2.5;
+    steeperNodes[index + 1] = 1.0;
+  }
+  validate(Judge::isPhysicallyAdmissible(steepNodes.data(), subcells.data(), lobatto, centre, width));
+  for (int node = 0; node < Layout::NodesPerCell; node++) {
+    validateWithParams1(steeperNodes[static_cast<std::size_t>(node) * Layout::NumberOfData] > 0.0, node);
+  }
+  validate(not Judge::isPhysicallyAdmissible(steeperNodes.data(), subcells.data(), lobatto, centre, width));
 }
 
 void
@@ -425,7 +464,7 @@ exahype2::dg::limiting::tests::DetectorTest::testWidenExtremaMergesTheMinimaAndT
 }
 
 /**
- * A steep interpolant over a constant subgrid leaves the sampled range, and a constant interpolant stays inside.
+ * Of two interpolants over a constant subgrid only the steep one leaves the sampled range.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testOpenInitialStatusMarksAnOscillatingInterpolant() {
@@ -492,7 +531,7 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateMarksAnInadmissib
 
   const auto statistics = Judge::judgeCandidate(
     cell.status,
-    cell.ownStatusHalves,
+    cell.ownStatusHalves.data(),
     candidate.data(),
     referenceExtrema,
     tables.nodesToLobatto.data(),
@@ -518,7 +557,7 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateMarksAnInadmissib
 }
 
 /**
- * A cell that was troubled in the previous step stays on the subcell scheme and reports no wave speeds.
+ * A cell that was troubled in the previous step stays on the subcell scheme without wave speeds.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateKeepsATroubledCellLimited() {
@@ -534,7 +573,7 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateKeepsATroubledCel
 
   const auto statistics = Judge::judgeCandidate(
     cell.status,
-    cell.ownStatusHalves,
+    cell.ownStatusHalves.data(),
     candidate.data(),
     referenceExtrema,
     tables.nodesToLobatto.data(),
@@ -571,7 +610,7 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateReportsTheWaveSpe
 
   const auto statistics = Judge::judgeCandidate(
     cell.status,
-    cell.ownStatusHalves,
+    cell.ownStatusHalves.data(),
     candidate.data(),
     referenceExtrema,
     tables.nodesToLobatto.data(),
@@ -611,7 +650,7 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateFailsADivergedPre
 
   static_cast<void>(Judge::judgeCandidate(
     cell.status,
-    cell.ownStatusHalves,
+    cell.ownStatusHalves.data(),
     candidate.data(),
     referenceExtrema,
     tables.nodesToLobatto.data(),
@@ -642,7 +681,7 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateRejectsACandidate
 
   static_cast<void>(Judge::judgeCandidate(
     cell.status,
-    cell.ownStatusHalves,
+    cell.ownStatusHalves.data(),
     candidate.data(),
     referenceExtrema,
     tables.nodesToLobatto.data(),
@@ -662,14 +701,14 @@ exahype2::dg::limiting::tests::DetectorTest::testJudgeCandidateRejectsACandidate
 }
 
 /**
- * A cell takes the status its most limited neighbour gives, keeps a more limited status of its own and records a
- * troubled neighbour.
+ * A cell ends with the more limited of its own status and the status that its most limited
+ * neighbour spreads.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testSpreadStatusLiftsByTheNeighbours() {
   CellStatus cell;
   cell.neighbourHalves[0] = Troubled;
-  Judge::spreadStatus(cell.status, cell.neighbourStatusHalves, cell.ownStatusHalves);
+  Judge::spreadStatus(cell.status, cell.neighbourStatusHalves.data(), cell.ownStatusHalves.data());
   validateEquals(cell.status[StatusIndex], Limited);
   validateEquals(cell.status[WasTroubledIndex], 1);
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
@@ -678,14 +717,18 @@ exahype2::dg::limiting::tests::DetectorTest::testSpreadStatusLiftsByTheNeighbour
 
   CellStatus haloCell;
   haloCell.neighbourHalves[1] = Limited;
-  Judge::spreadStatus(haloCell.status, haloCell.neighbourStatusHalves, haloCell.ownStatusHalves);
+  Judge::spreadStatus(haloCell.status, haloCell.neighbourStatusHalves.data(), haloCell.ownStatusHalves.data());
   validateEquals(haloCell.status[StatusIndex], Halo);
   validateEquals(haloCell.status[WasTroubledIndex], 0);
   validateEquals(haloCell.faceHalves[0], Halo);
 
   CellStatus troubledCell;
   troubledCell.status[StatusIndex] = Troubled;
-  Judge::spreadStatus(troubledCell.status, troubledCell.neighbourStatusHalves, troubledCell.ownStatusHalves);
+  Judge::spreadStatus(
+    troubledCell.status,
+    troubledCell.neighbourStatusHalves.data(),
+    troubledCell.ownStatusHalves.data()
+  );
   validateEquals(troubledCell.status[StatusIndex], Troubled);
   validateEquals(troubledCell.faceHalves[0], Troubled);
 }
@@ -740,7 +783,7 @@ exahype2::dg::limiting::tests::DetectorTest::testAFixedRuleReportsNoWaveSpeeds()
 
   const auto statistics = FixedJudge::judgeCandidate(
     cell.status,
-    cell.ownStatusHalves,
+    cell.ownStatusHalves.data(),
     candidate.data(),
     referenceExtrema,
     tables.nodesToLobatto.data(),
@@ -837,8 +880,8 @@ exahype2::dg::limiting::tests::DetectorTest::testEveryCellOfADeviceRangeJudgesLi
 }
 
 /**
- * The block kernels count and list the cells on the subcell scheme in the order of the partition,
- * the local cells first.
+ * The block kernels count and list the cells on the subcell scheme in the order of the partition
+ * with the local cells first.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFirst() {

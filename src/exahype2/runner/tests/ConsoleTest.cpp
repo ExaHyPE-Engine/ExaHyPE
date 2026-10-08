@@ -6,7 +6,7 @@
 
 namespace {
   /**
-   * Columns of a framed report line: The text and two frame columns on either side.
+   * A framed report line spans the text and two frame columns on either side.
    */
   constexpr std::size_t FrameWidth = 97;
 } // namespace
@@ -63,7 +63,8 @@ exahype2::runner::tests::ConsoleTest::testPercentageScientificRateAndNumber() {
   validateEquals(exahype2::runner::Format::getPercentage(50.0), std::string("50.00 %"));
   validateEquals(exahype2::runner::Format::getPercentage(100.0), std::string("100.00 %"));
   validateEquals(exahype2::runner::Format::getScientific(1234.5), std::string("1.2345e+03"));
-  validateEquals(exahype2::runner::Format::getRate(1000.0, "cell"), std::string("1.0000e+03 cell/s"));
+  validateEquals(exahype2::runner::Format::getRate(1000.0, "Cell"), std::string("1.0000e+03 Cell/s"));
+  validateEquals(exahype2::runner::Format::getRate(2.5e6, "DoF"), std::string("2.5000e+06 DoF/s"));
   validateEquals(exahype2::runner::Format::getNumber(42), std::string("42"));
   validateEquals(exahype2::runner::Format::getNumber(2.5), std::string("2.5"));
 }
@@ -106,7 +107,7 @@ exahype2::runner::tests::ConsoleTest::testPadToWidthReachesTargetWidth() {
 }
 
 /**
- * A broken line keeps its separator, and every continuation starts at the continuation column.
+ * A broken line keeps its separator. Every continuation starts at the continuation column.
  */
 void
 exahype2::runner::tests::ConsoleTest::testWrapBreaksAfterTheSeparator() {
@@ -162,8 +163,8 @@ exahype2::runner::tests::ConsoleTest::testEmptyTableRendersNothing() {
 }
 
 /**
- * The first line opens a frame, a rule never follows a rule, an empty line writes nothing, and
- * close() writes one bottom border.
+ * Report frames every line, writes one rule for repeated rules, skips empty lines and closes each
+ * frame with one bottom border.
  */
 void
 exahype2::runner::tests::ConsoleTest::testReportFramesLinesAndRules() {

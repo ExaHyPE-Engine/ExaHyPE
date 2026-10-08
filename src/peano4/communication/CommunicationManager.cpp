@@ -80,7 +80,7 @@ peano4::communication::CommunicationManager::getCommunicator() const {
 
 /**
  * Returns the next unused tag of the exchange communicator. Every rank reserves its tags in the
- * same order, so both partners of an exchange get the same tag without communication.
+ * same order. Both partners of an exchange get the same tag without communication.
  */
 int
 peano4::communication::CommunicationManager::reserveTag() {

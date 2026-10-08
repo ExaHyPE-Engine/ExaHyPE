@@ -53,8 +53,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceSampledExtrem
 }
 
 /**
- * Saves the solution and the status of the closed step. A cell that was troubled opens as Limited,
- * every other cell as Regular.
+ * Copies solution into previousSolution and the status into the previous status. A cell that was
+ * troubled opens as Limited. Every other cell opens as Regular.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -101,7 +101,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceExtrema(
 }
 
 /**
- * Writes the identity of the extrema reduction: Every minimum is plus infinity, every maximum minus infinity.
+ * Writes the identity of the extrema reduction. Every minimum becomes plus infinity. Every maximum
+ * becomes minus infinity.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -114,7 +115,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::clearExtrema(Storag
 }
 
 /**
- * Lowers every minimum of extrema to the minimum of other and raises every maximum to the maximum of other.
+ * Lowers every minimum of extrema to the minimum of other. Raises every maximum of extrema to the
+ * maximum of other.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -131,11 +133,11 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::widenExtrema(
 }
 
 /**
- * Checks candidate and writes the resulting status into status and the own half of every face. A
+ * Writes the verdict on candidate into status and into the own half of every face. A
  * PredictorDiverged mark or a rejected candidate turns the cell Troubled. An accepted cell that was
  * troubled stays Limited. candidateExtrema receives the extrema of a candidate that passes the
  * physical admissibility term. Returns the wave speeds of an accepted candidate whose cell was not
- * troubled, or empty maxima.
+ * troubled. Returns empty maxima for every other candidate.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -167,7 +169,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidate(
   bool admissible                = status[PredictorDivergedIndex] == 0;
   status[PredictorDivergedIndex] = 0;
   if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>) {
-    admissible = admissible and isPhysicallyAdmissible(candidate, candidateSubcells, cellCentre, cellSize);
+    admissible =
+      admissible and isPhysicallyAdmissible(candidate, candidateSubcells, nodesToLobatto, cellCentre, cellSize);
   }
   admissible = admissible
     and satisfiesMaximumPrinciple(
@@ -196,9 +199,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidate(
 }
 
 /**
- * Raises status by the statuses of the face neighbours and writes it into the own half of every
- * face. A neighbour of a troubled cell turns Limited and stays on the subcell scheme in the next
- * step. A neighbour of a limited cell turns Halo and supplies its subgrid.
+ * Raises status by the statuses of the face neighbours. Writes the raised status into the own half
+ * of every face. A neighbour of a troubled cell turns Limited. It stays on the subcell scheme in the
+ * next step. A neighbour of a limited cell turns Halo. A Halo cell writes its subgrid onto its faces.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -255,8 +258,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::interpolantOscillat
 }
 
 /**
- * Widens extrema by the observables of states that lie NumberOfData values apart. A NaN survives
- * the merges and makes the maximum principle reject the state.
+ * Widens extrema by the observables of states that lie NumberOfData values apart. A NaN observable
+ * turns its extrema into NaN. The maximum principle rejects NaN extrema.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -279,8 +282,7 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceObservableExt
 }
 
 /**
- * Projects the nodes onto SamplesPerAxis samples per axis and widens extrema by the observables of
- * every sample. samplingMatrix has the layout of exahype2::dg::projectTensorProduct().
+ * Widens extrema by the observables of every state that forEachProjectedState() samples.
  */
 template <typename Derived, typename ComputePrecision>
 template <int SamplesPerAxis, typename StoragePrecision>
@@ -290,8 +292,29 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceProjectedObse
   const StoragePrecision* NOALIAS const nodes,
   const StoragePrecision* NOALIAS const samplingMatrix
 ) {
+  assertion(extrema != nullptr);
+  forEachProjectedState<SamplesPerAxis>(nodes, samplingMatrix, [extrema](const StoragePrecision* const sample) {
+    reduceObservableExtrema(extrema, sample, 1);
+  });
+}
+
+/**
+ * Calls visitor with the state of every sample of the projection of nodes onto SamplesPerAxis
+ * samples per axis. samplingMatrix stores the projection in the layout of
+ * exahype2::dg::projectTensorProduct().
+ */
+template <typename Derived, typename ComputePrecision>
+template <int SamplesPerAxis, typename StoragePrecision, typename Visitor>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::Detector<Derived, ComputePrecision>::forEachProjectedState(
+  const StoragePrecision* NOALIAS const nodes,
+  const StoragePrecision* NOALIAS const samplingMatrix,
+  const Visitor&                        visitor
+) {
   static_assert(DIMENSIONS == 2 or DIMENSIONS == 3, "The limiter supports 2D and 3D only.");
   static_assert(SamplesPerAxis > 0, "The limiter needs at least one sample per axis.");
+  assertion(nodes != nullptr);
+  assertion(samplingMatrix != nullptr);
   constexpr int InputDofs    = Scheme::NodesPerAxis;
   constexpr int NumberOfData = Scheme::NumberOfData;
 
@@ -320,7 +343,7 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceProjectedObse
           }
           sampledState[data] = projected;
         }
-        reduceObservableExtrema(extrema, sampledState, 1);
+        visitor(sampledState);
       }
     }
   } else {
@@ -369,7 +392,7 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceProjectedObse
             }
             sampledState[data] = projected;
           }
-          reduceObservableExtrema(extrema, sampledState, 1);
+          visitor(sampledState);
         }
       }
     }
@@ -419,7 +442,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::mergeMaximum(
 }
 
 /**
- * Returns whether the nodes and the subcells of a cell pass the physical admissibility term of Derived.
+ * Returns whether the nodes, the subcells and every Lobatto sample of a cell pass the physical
+ * admissibility term of Derived. The Lobatto samples include the face points. The Riemann solvers
+ * read the states at these points.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -427,13 +452,19 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::isPhysicallyAdmissible(
   const StoragePrecision* NOALIAS const        nodes,
   const StoragePrecision* NOALIAS const        subcells,
+  const StoragePrecision* NOALIAS const        nodesToLobatto,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize
 ) {
   assertion(nodes != nullptr);
   assertion(subcells != nullptr);
-  return Derived::isPhysicallyAdmissible(nodes, Scheme::NodesPerCell, cellCentre, cellSize)
+  assertion(nodesToLobatto != nullptr);
+  bool admissible = Derived::isPhysicallyAdmissible(nodes, Scheme::NodesPerCell, cellCentre, cellSize)
     and Derived::isPhysicallyAdmissible(subcells, Scheme::SubcellsPerCell, cellCentre, cellSize);
+  forEachProjectedState<Scheme::NodesPerAxis>(nodes, nodesToLobatto, [&](const StoragePrecision* const sample) {
+    admissible = admissible and Derived::isPhysicallyAdmissible(sample, 1, cellCentre, cellSize);
+  });
+  return admissible;
 }
 
 /**
@@ -506,8 +537,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesRelaxedMax
 }
 
 /**
- * Returns the relaxation parameter of one observable, which Derived::dmpRelaxationParameter() can
- * replace.
+ * Returns the relaxation parameter of one observable. Derived::dmpRelaxationParameter() can replace
+ * it.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -562,8 +593,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesDiscreteMa
 
 /**
  * Rounds an observable extremum to DiscardedMantissaBits fewer mantissa bits. The tensor-product
- * sums of two mirror-image cells add in different orders and differ in their last bits. The
- * rounding keeps a check at the margin from failing in one of the two cells only.
+ * sums of two mirror-image cells add in different orders. Their results differ in the last bits.
+ * The rounding keeps a check at the margin from failing in one of the two cells only.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -621,7 +652,7 @@ exahype2::dg::limiting::OpenInitialStatuses<Derived, StoragePrecision, ComputePr
   const int entry
 ) const {
   const int slot = partition.getCells()[entry];
-  // The extrema pool is reserved only with a discrete maximum principle.
+  // SubcellLimiter reserves the extrema pool only with a discrete maximum principle.
   const StoragePrecision* const sampled = Kernel::UsesMaximumPrinciple ? sampledExtrema.getChunk(slot) : nullptr;
   Kernel::openInitialStatus(
     statuses.getChunk(slot),
@@ -709,12 +740,12 @@ exahype2::dg::limiting::WriteExtremaOntoFaces<Derived, StoragePrecision, Compute
 }
 
 /**
- * In 2D the single writing round widens the extrema of the cell along each axis and writes the
+ * In 2D the single writing round widens the extrema of the cell along each axis. It writes each
  * result onto the faces along the other axis. In 3D the first round writes the extrema widened
- * along one axis onto the faces along the two other axes, and the second round writes the extrema
- * widened along two axes onto the faces along the third. A round reads the sets of the round
- * before and writes other sets. The last round widens the reference extrema by the last set of
- * every face.
+ * along one axis onto the faces along the two other axes. The second round writes the extrema
+ * widened along two axes onto the faces along the third axis. Every round reads the sets of the
+ * previous round. It writes into other sets. The last round widens the reference extrema by the
+ * last set of every face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -773,7 +804,7 @@ exahype2::dg::limiting::MergeNeighbourExtrema<Derived, StoragePrecision, Compute
 }
 
 /**
- * Returns one set of extrema on a face of the cell, in the half of the cell or of its neighbour.
+ * Returns one set of extrema in the own or the neighbour half of a face of the cell.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision*
@@ -846,7 +877,7 @@ exahype2::dg::limiting::JudgeCandidates<Derived, StoragePrecision, ComputePrecis
     ownStatusHalves[faceNumber] =
       faceStatuses.getChunk(partition.getCellFace(slot, faceNumber)) + exahype2::dg::getOwnHalf(faceNumber);
   }
-  // The extrema pool is reserved only with a discrete maximum principle.
+  // SubcellLimiter reserves the extrema pool only with a discrete maximum principle.
   StoragePrecision        reference[Kernel::ExtremaPerCell];
   StoragePrecision* const extrema = Kernel::UsesMaximumPrinciple ? referenceExtrema.getChunk(slot) : nullptr;
   if constexpr (Kernel::UsesMaximumPrinciple) {
