@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/Patch.h"
+#include "exahype2/fv/reconstruction/ReconstructionScheme.h"
 #include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"

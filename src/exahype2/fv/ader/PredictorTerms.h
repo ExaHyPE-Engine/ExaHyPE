@@ -18,12 +18,16 @@ TARGET_DECLARE
 /**
  * Presents the PDE terms of the finite-volume solver SolverType to the space-time predictor of
  * ADER-DG, which evolves the polynomial of degree DGOrder that Reconstruction yields per volume.
+ * The finite-volume update reads only the faces and the source of a prediction, so the predictor
+ * skips the derivative of the time-averaged flux.
  */
 template <typename SolverType, typename Reconstruction, int Unknowns, int Auxiliary>
 struct exahype2::fv::ader::PredictorTerms {
   static constexpr int DGOrder                    = Reconstruction::Basis::NumberOfNodes - 1;
   static constexpr int NumberOfUnknowns           = Unknowns;
   static constexpr int NumberOfAuxiliaryVariables = Auxiliary;
+
+  static constexpr bool DifferentiatesTimeAveragedFlux = false;
 
   template <typename P>
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(

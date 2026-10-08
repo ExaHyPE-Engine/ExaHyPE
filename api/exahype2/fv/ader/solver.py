@@ -52,7 +52,7 @@ class Solver(FiniteVolumeSolver):
     def _scheme_includes(self):
         return [
             "exahype2/fv/reconstruction/WENO.h",
-            "exahype2/fv/weno/NonlinearWeights.h",
+            "exahype2/fv/reconstruction/weno/NonlinearWeights.h",
         ]
 
     def _scheme_constants(self):

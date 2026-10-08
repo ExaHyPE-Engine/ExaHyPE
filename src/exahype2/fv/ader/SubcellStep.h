@@ -3,14 +3,13 @@
 #pragma once
 
 #include "exahype2/dg/limiting/SubcellScheme.h"
+#include "exahype2/fv/ader/PatchPredictor.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "peano4/HaloExchange.h"
 #include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
-#include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
-#include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::fv::ader {
@@ -86,11 +85,9 @@ private:
 
   peano4::HaloExchange<ComputePrecision> _stateExchange{_faceStates};
   peano4::HaloExchange<ComputePrecision> _fluxExchange{_faceFluxes};
+  peano4::HaloExchange<ComputePrecision> _restrictedFluxExchange{_faceFluxes, peano4::FaceKind::Coarse};
 
-  /**
-   * One block of Scheme<>::ScratchSize values per team of a prediction on a device.
-   */
-  tarch::accelerator::Buffer<ComputePrecision> _predictorScratch{tarch::MemoryLocation::Device};
+  exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision> _predictor{};
 };
 
 TARGET_DECLARE

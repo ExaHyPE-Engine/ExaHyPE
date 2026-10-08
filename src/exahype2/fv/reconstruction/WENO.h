@@ -2,9 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/fv/FiniteVolumeScheme.h"
-#include "exahype2/fv/weno/NonlinearWeights.h"
-#include "exahype2/fv/weno/Tables.h"
+#include "exahype2/dg/ader/TeamWorkers.h"
+#include "exahype2/fv/Patch.h"
+#include "exahype2/fv/reconstruction/weno/NonlinearWeights.h"
+#include "exahype2/fv/reconstruction/weno/Tables.h"
 #include "peano4/Constants.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -12,7 +13,7 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::fv::reconstruction {
-  template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+  template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
   struct WENO;
 } // namespace exahype2::fv::reconstruction
 
@@ -38,31 +39,38 @@ TARGET_DECLARE
  *
  * The polynomial is nodal in @c Basis, from which a time stepping derives its operators, and the
  * caller provides @c ScratchSize entries for the sweeps.
+ *
+ * reconstructPatch() yields the polynomials of all volumes of a patch at once with the results of
+ * reconstructPolynomial(). Every line of a sweep then serves every volume of the patch that reads
+ * it, and the caller provides @c PatchScratchSize entries.
  */
-template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
 struct exahype2::fv::reconstruction::WENO final {
-  using Tables = exahype2::fv::weno::ReconstructionTables<Order>;
+  using Tables = exahype2::fv::reconstruction::weno::ReconstructionTables<Order>;
   using Basis  = typename Tables::Basis;
 
   static constexpr int HaloSize = Order + 1;
 
-  template <
-    typename SolverType,
-    int  Volumes,
-    int  Unknowns,
-    int  Auxiliary,
-    bool Flux,
-    bool NCP,
-    bool Source,
-    bool Diffusion,
-    bool Riemann,
-    bool Eigenvalues,
-    typename StoragePrecision,
-    typename ComputePrecision>
-  using SweepTerms = exahype2::fv::NoTermRing;
-
   template <int NumberOfData>
   static constexpr int ScratchSize = 2 * peano4::power(2 * Order + 1, DIMENSIONS) * NumberOfData;
+
+  template <int NumberOfVolumesPerAxis, int NumberOfData>
+  static constexpr int getPatchBufferSize(const int sweptAxes) {
+    int size = NumberOfData;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      size *= axis < sweptAxes ? NumberOfVolumesPerAxis * Tables::NumberOfNodes : NumberOfVolumesPerAxis + 2 * Order;
+    }
+    return size;
+  }
+
+  template <int NumberOfVolumesPerAxis, int NumberOfData>
+  static constexpr int PatchScratchSize = [] {
+    int size = 0;
+    for (int sweptAxes = 0; sweptAxes < DIMENSIONS; sweptAxes++) {
+      size += getPatchBufferSize<NumberOfVolumesPerAxis, NumberOfData>(sweptAxes);
+    }
+    return size;
+  }();
 
   template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static void reconstructPolynomial(
@@ -72,6 +80,15 @@ struct exahype2::fv::reconstruction::WENO final {
     int                                       sharedFace,
     ComputePrecision* NOALIAS const           nodalState,
     ComputePrecision* NOALIAS const           scratch
+  );
+
+  template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD static void reconstructPatch(
+    const StoragePrecision* NOALIAS const  inputPatch,
+    const StoragePrecision* NOALIAS const  faceInputPatches[peano4::FacesPerCell],
+    ComputePrecision* NOALIAS const        nodalStates,
+    ComputePrecision* NOALIAS const        scratch,
+    const exahype2::dg::ader::TeamWorkers& workers = exahype2::dg::ader::TeamWorkers{}
   );
 
   template <int NumberOfVolumesPerAxis>
@@ -84,6 +101,14 @@ struct exahype2::fv::reconstruction::WENO final {
     const StoragePrecision* NOALIAS const     inputPatch,
     const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
+  );
+
+  template <int NumberOfVolumesPerAxis, int NumberOfData, int EntriesPerItem, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD static void sweepPatch(
+    int                                    sweptAxis,
+    const ComputePrecision* NOALIAS const  input,
+    ComputePrecision* NOALIAS const        output,
+    const exahype2::dg::ader::TeamWorkers& workers
   );
 
   template <int NumberOfData, typename ComputePrecision>

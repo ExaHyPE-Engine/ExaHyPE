@@ -6,10 +6,10 @@
 
 #include "exahype2/fv/GaussLegendreBasis.h"
 
-namespace exahype2::fv::weno {
+namespace exahype2::fv::reconstruction::weno {
   template <int Order>
   struct ReconstructionTables;
-} // namespace exahype2::fv::weno
+} // namespace exahype2::fv::reconstruction::weno
 
 /**
  * Compile-time tables of the polynomial WENO reconstruction of Dumbser et al. of polynomial order
@@ -25,7 +25,7 @@ namespace exahype2::fv::weno {
  * local constexpr instance can read them in device code, too.
  */
 template <int Order>
-struct exahype2::fv::weno::ReconstructionTables final {
+struct exahype2::fv::reconstruction::weno::ReconstructionTables final {
   static_assert(Order >= 2 and Order <= 5, "The WENO tables cover the polynomial orders two to five.");
 
   using Basis = exahype2::fv::GaussLegendreBasis<Order + 1>;

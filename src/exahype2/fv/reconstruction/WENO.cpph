@@ -6,7 +6,7 @@ TARGET_DECLARE
  * A volume is available if it lies in the patch or in the halo of one face, which excludes the
  * volumes beyond the edges and corners of the patch.
  */
-template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
 template <int NumberOfVolumesPerAxis>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeIsAvailable(
@@ -24,7 +24,7 @@ exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeIsAvailable(
   return axesOutsideOfPatch <= 1;
 }
 
-template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
 template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*
 exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeState(
@@ -60,7 +60,7 @@ exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeState(
  * centres on the reconstructed volume. The values of one line position are consecutive, and
  * only stencils whose positions are all available enter the combination.
  */
-template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
 template <int NumberOfData, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructAlongLine(
@@ -139,7 +139,7 @@ exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructAlongLine(
  * axes hold nodes and whose remaining axes hold the positions of the window, and writes the same with one more axis
  * swept. The two buffers take the @c ScratchSize entries of @p scratch.
  */
-template <int Order, exahype2::fv::weno::NonlinearWeighting Weighting>
+template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
 template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructPolynomial(
@@ -268,6 +268,185 @@ exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructPolynomial(
         }
       }
     }
+  }
+}
+
+/**
+ * Reconstructs along sweptAxis every line of input that a volume of the patch reads and writes
+ * the coefficients into output. The axes before sweptAxis hold a volume and a node of it, and the
+ * later axes the positions from Order volumes below to Order volumes above the patch. After the
+ * last sweep, output holds the nodal polynomial of every volume, one volume after the other. A
+ * work item is the target volume of a line and EntriesPerItem consecutive entries, and the
+ * threads of the team of workers divide the work items among themselves.
+ */
+template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+template <int NumberOfVolumesPerAxis, int NumberOfData, int EntriesPerItem, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::WENO<Order, Weighting>::sweepPatch(
+  const int                              sweptAxis,
+  const ComputePrecision* NOALIAS const  input,
+  ComputePrecision* NOALIAS const        output,
+  const exahype2::dg::ader::TeamWorkers& workers
+) {
+  static_assert(NumberOfData % EntriesPerItem == 0);
+  constexpr int    Volumes      = NumberOfVolumesPerAxis;
+  constexpr int    Nodes        = Tables::NumberOfNodes;
+  constexpr int    Window       = 2 * Order + 1;
+  constexpr int    Extent       = Volumes + 2 * Order;
+  constexpr int    ItemsPerLine = NumberOfData / EntriesPerItem;
+  constexpr int    NodesPerCell = peano4::power(Nodes, DIMENSIONS);
+  constexpr Tables ReconstructionTables{};
+  const bool       isLastSweep = sweptAxis == DIMENSIONS - 1;
+
+  int inputStrides[DIMENSIONS];
+  int outputStrides[DIMENSIONS];
+  int outputExtents[DIMENSIONS];
+  int inputStride  = 1;
+  int outputStride = 1;
+  int items        = Volumes * ItemsPerLine;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    inputStrides[axis]  = inputStride;
+    outputStrides[axis] = outputStride;
+    outputExtents[axis] = axis <= sweptAxis ? Volumes * Nodes : Extent;
+    inputStride *= axis < sweptAxis ? Volumes * Nodes : Extent;
+    outputStride *= outputExtents[axis];
+    if (axis != sweptAxis) {
+      items *= outputExtents[axis];
+    }
+  }
+
+  for (int item = workers.teamThread; item < items; item += workers.teamThreads) {
+    const int firstEntry = (item % ItemsPerLine) * EntriesPerItem;
+    int       remainder  = item / ItemsPerLine;
+    const int target     = remainder % Volumes;
+    remainder /= Volumes;
+
+    int coordinates[DIMENSIONS];
+    int inputBase         = 0;
+    int axesOutsideOfLine = 0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      if (axis == sweptAxis) {
+        coordinates[axis] = 0;
+        continue;
+      }
+      coordinates[axis] = remainder % outputExtents[axis];
+      remainder /= outputExtents[axis];
+      inputBase += coordinates[axis] * inputStrides[axis];
+      if (axis > sweptAxis) {
+        const int volume = coordinates[axis] - Order;
+        axesOutsideOfLine += (volume < 0 or volume >= Volumes) ? 1 : 0;
+      }
+    }
+    if (axesOutsideOfLine > 1) {
+      continue;
+    }
+
+    ComputePrecision lineValues[Window * EntriesPerItem];
+    bool             lineIsAvailable[Window];
+    for (int position = 0; position < Window; position++) {
+      const int volume          = target - Order + position;
+      lineIsAvailable[position] = axesOutsideOfLine + ((volume < 0 or volume >= Volumes) ? 1 : 0) <= 1;
+      const int offset          = (inputBase + (target + position) * inputStrides[sweptAxis]) * NumberOfData + firstEntry;
+      for (int entry = 0; entry < EntriesPerItem; entry++) {
+        lineValues[position * EntriesPerItem + entry] = lineIsAvailable[position] ? input[offset + entry]
+                                                                                  : ComputePrecision(0);
+      }
+    }
+
+    ComputePrecision coefficients[Nodes * EntriesPerItem];
+    reconstructAlongLine<EntriesPerItem>(ReconstructionTables, lineValues, lineIsAvailable, coefficients);
+
+    for (int node = 0; node < Nodes; node++) {
+      coordinates[sweptAxis] = target * Nodes + node;
+      int outputIndex        = 0;
+      if (isLastSweep) {
+        int volume       = 0;
+        int cellNode     = 0;
+        int volumeStride = 1;
+        int nodeStride   = 1;
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          volume += (coordinates[axis] / Nodes) * volumeStride;
+          cellNode += (coordinates[axis] % Nodes) * nodeStride;
+          volumeStride *= Volumes;
+          nodeStride *= Nodes;
+        }
+        outputIndex = volume * NodesPerCell + cellNode;
+      } else {
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          outputIndex += coordinates[axis] * outputStrides[axis];
+        }
+      }
+      for (int entry = 0; entry < EntriesPerItem; entry++) {
+        output[outputIndex * NumberOfData + firstEntry + entry] = coefficients[node * EntriesPerItem + entry];
+      }
+    }
+  }
+}
+
+/**
+ * Writes the nodal polynomial of every volume of the patch into nodalStates, one volume after the
+ * other in the order of the patch, each as reconstructPolynomial() writes it with no shared face.
+ * The sweeps first copy the volumes from Order volumes below to Order volumes above the patch into
+ * the scratch. A volume beyond an edge or a corner of the patch holds zero there and drops out of
+ * every stencil. Then every sweep reconstructs the lines that the volumes of the patch read. The
+ * threads of the team of workers divide every phase among themselves, and a barrier of the team
+ * separates the phases. Every thread of the team calls this.
+ */
+template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructPatch(
+  const StoragePrecision* NOALIAS const  inputPatch,
+  const StoragePrecision* NOALIAS const  faceInputPatches[peano4::FacesPerCell],
+  ComputePrecision* NOALIAS const        nodalStates,
+  ComputePrecision* NOALIAS const        scratch,
+  const exahype2::dg::ader::TeamWorkers& workers
+) {
+  static_assert(
+    NumberOfVolumesPerAxis >= 2 * Order,
+    "Every volume needs a stencil that stays inside the patch along the tangential axes."
+  );
+  constexpr int Extent = NumberOfVolumesPerAxis + 2 * Order;
+
+  ComputePrecision* NOALIAS buffers[DIMENSIONS];
+  ComputePrecision* NOALIAS next = scratch;
+  for (int sweptAxes = 0; sweptAxes < DIMENSIONS; sweptAxes++) {
+    buffers[sweptAxes] = next;
+    next += getPatchBufferSize<NumberOfVolumesPerAxis, NumberOfData>(sweptAxes);
+  }
+
+  for (int position = workers.teamThread; position < peano4::power(Extent, DIMENSIONS);
+       position += workers.teamThreads) {
+    tarch::la::Vector<DIMENSIONS, int> index;
+    int                                remainder = position;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      index(axis) = remainder % Extent - Order;
+      remainder /= Extent;
+    }
+    ComputePrecision* const box = buffers[0] + position * NumberOfData;
+    if (volumeIsAvailable<NumberOfVolumesPerAxis>(index)) {
+      const StoragePrecision* const state =
+        volumeState<NumberOfVolumesPerAxis, NumberOfData>(inputPatch, faceInputPatches, index);
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        box[entry] = static_cast<ComputePrecision>(state[entry]);
+      }
+    } else {
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        box[entry] = ComputePrecision(0);
+      }
+    }
+  }
+  exahype2::dg::ader::synchronise(workers);
+
+  for (int sweptAxis = 0; sweptAxis < DIMENSIONS; sweptAxis++) {
+    const ComputePrecision* const input  = buffers[sweptAxis];
+    ComputePrecision* const       output = sweptAxis == DIMENSIONS - 1 ? nodalStates : buffers[sweptAxis + 1];
+    if (workers.teamThreads > 1) {
+      sweepPatch<NumberOfVolumesPerAxis, NumberOfData, 1>(sweptAxis, input, output, workers);
+    } else {
+      sweepPatch<NumberOfVolumesPerAxis, NumberOfData, NumberOfData>(sweptAxis, input, output, workers);
+    }
+    exahype2::dg::ader::synchronise(workers);
   }
 }
 TARGET_DECLARE_END

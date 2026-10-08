@@ -2,9 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "WENOTest.h"
 
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/Patch.h"
 #include "exahype2/fv/reconstruction/WENO.h"
-#include "exahype2/fv/weno/NonlinearWeights.h"
+#include "exahype2/fv/reconstruction/weno/NonlinearWeights.h"
 #include "peano4/Constants.h"
 
 #include <cmath>
@@ -74,7 +74,7 @@ namespace {
 
 
   template <int Order>
-  using WENO = exahype2::fv::reconstruction::WENO<Order, exahype2::fv::weno::JiangShu<8>>;
+  using WENO = exahype2::fv::reconstruction::WENO<Order, exahype2::fv::reconstruction::weno::JiangShu<8>>;
 
   // The polynomial sums x^k / (k + 1) up to the given order along every axis.
   template <int Order>
@@ -194,13 +194,85 @@ namespace {
     }
     return error;
   }
+
+  // Returns the largest difference between the nodal polynomials that reconstructPatch() and
+  // reconstructPolynomial() yield for every volume of a patch. The averages oscillate and jump
+  // inside the patch and in the halo, so the stencils enter with different nonlinear weights.
+  template <int Order, int VolumesPerAxis>
+  double patchReconstructionDifference() {
+    using Reconstruction    = WENO<Order>;
+    using Basis             = typename Reconstruction::Basis;
+    constexpr int HaloWidth = Reconstruction::HaloSize;
+    constexpr int Volumes   = numberOfVolumesInPatch<VolumesPerAxis>();
+    constexpr int NodalSize = Basis::NodesPerCell * NumberOfData;
+
+    const auto average = [](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int unknown) {
+      double phase = 0.3 * unknown;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        phase += (1.7 + 0.4 * axis) * volumeIndex(axis);
+      }
+      return std::sin(phase) + (volumeIndex(0) >= VolumesPerAxis / 2 ? 2.0 : 0.0) + unknown;
+    };
+
+    std::vector<double> q(Volumes * NumberOfData);
+    for (int volume = 0; volume < Volumes; volume++) {
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        q[volume * NumberOfData + unknown] = average(volumeIndexOf<VolumesPerAxis>(volume), unknown);
+      }
+    }
+    std::vector<std::vector<double>> faceInStorage(
+      peano4::FacesPerCell,
+      std::vector<double>(faceOverlapStorageSize<VolumesPerAxis, HaloWidth>(), 0.0)
+    );
+    forEachOverlapVoxel<VolumesPerAxis, HaloWidth>(
+      [&](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int face, const int overlapIndex) {
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          faceInStorage[face][overlapIndex * NumberOfData + unknown] = average(volumeIndex, unknown);
+        }
+      }
+    );
+    const double* faceInputPatches[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      faceInputPatches[face] = faceInStorage[face].data();
+    }
+
+    std::vector<double> nodalStates(Volumes * NodalSize);
+    std::vector<double> patchScratch(Reconstruction::template PatchScratchSize<VolumesPerAxis, NumberOfData>);
+    Reconstruction::template reconstructPatch<VolumesPerAxis, NumberOfData>(
+      q.data(),
+      faceInputPatches,
+      nodalStates.data(),
+      patchScratch.data()
+    );
+
+    double difference = 0.0;
+    for (int volume = 0; volume < Volumes; volume++) {
+      std::vector<double> nodalState(NodalSize);
+      std::vector<double> scratch(Reconstruction::template ScratchSize<NumberOfData>);
+      Reconstruction::template reconstructPolynomial<VolumesPerAxis, NumberOfData>(
+        q.data(),
+        faceInputPatches,
+        volumeIndexOf<VolumesPerAxis>(volume),
+        -1,
+        nodalState.data(),
+        scratch.data()
+      );
+      for (int entry = 0; entry < NodalSize; entry++) {
+        difference = std::max(difference, std::abs(nodalStates[volume * NodalSize + entry] - nodalState[entry]));
+      }
+    }
+    return difference;
+  }
 } // namespace
 
 exahype2::fv::tests::WENOTest::WENOTest() :
   tarch::tests::TestCase("exahype2::fv::tests::WENOTest") {}
 
 void
-exahype2::fv::tests::WENOTest::run() { testMethod(testWENOReconstructsPolynomialsExactly); }
+exahype2::fv::tests::WENOTest::run() {
+  testMethod(testWENOReconstructsPolynomialsExactly);
+  testMethod(testPatchReconstructionMatchesVolumeReconstruction);
+}
 
 void
 exahype2::fv::tests::WENOTest::testWENOReconstructsPolynomialsExactly() {
@@ -209,4 +281,17 @@ exahype2::fv::tests::WENOTest::testWENOReconstructsPolynomialsExactly() {
 
   validateWithParams1(secondOrderError < 1e-10, secondOrderError);
   validateWithParams1(thirdOrderError < 1e-10, thirdOrderError);
+}
+
+/**
+ * Both reconstructions run the same arithmetic per line, so they agree up to the rounding of a
+ * contracted multiply-add.
+ */
+void
+exahype2::fv::tests::WENOTest::testPatchReconstructionMatchesVolumeReconstruction() {
+  const double secondOrderDifference = patchReconstructionDifference<2, 4>();
+  const double thirdOrderDifference  = patchReconstructionDifference<3, 6>();
+
+  validateWithParams1(secondOrderDifference < 1e-12, secondOrderDifference);
+  validateWithParams1(thirdOrderDifference < 1e-12, thirdOrderDifference);
 }

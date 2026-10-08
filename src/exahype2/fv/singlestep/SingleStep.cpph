@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/Patch.h"
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
 
@@ -30,7 +30,7 @@ template <
   typename Terms
 >
 INLINE_METHOD GPU_CALLABLE_METHOD double
-exahype2::fv::timestepping::SingleStep::applyToVolume(
+exahype2::fv::singlestep::SingleStep::applyToVolume(
   const int                                    volume,
   const StoragePrecision* NOALIAS const        inputPatch,
   const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],

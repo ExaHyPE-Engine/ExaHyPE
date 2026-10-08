@@ -3,7 +3,6 @@
 
 #include <cmath>
 #include <limits>
-#include <memory>
 
 #include "exahype2/terms/BoundaryConditions.h"
 #include "exahype2/terms/Flux.h"
@@ -77,103 +76,115 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::getNodeWeight(const int n
 }
 
 /**
- * Reconstructs the polynomial of volume from patch and its halo, evolves it with the space-time
- * predictor and stores its face states and fluxes: Those on a face inside the patch into scratch,
- * those on a face of the patch into the halves of that face, and its source update into scratch. A
- * diverged prediction stores NaN instead.
+ * Writes the nodal polynomial of every volume of patch into patchScratch. Every thread of the team
+ * of workers calls this.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::ader::Scheme<Derived, ComputePrecision>::reconstructPatch(
+  const StoragePrecision* NOALIAS const  patch,
+  const StoragePrecision* NOALIAS const  halo[peano4::FacesPerCell],
+  ComputePrecision* NOALIAS const        patchScratch,
+  const exahype2::dg::ader::TeamWorkers& workers
+) {
+  Reconstruction::template reconstructPatch<PatchSize, NumberOfData>(
+    patch,
+    halo,
+    patchScratch + NodalStatesOffset,
+    patchScratch + ReconstructionOffset,
+    workers
+  );
+}
+
+/**
+ * Evolves the nodal polynomial of volume in patchScratch with the space-time predictor and stores
+ * its face states and fluxes: Those on a face inside the patch into patchScratch, those on a face
+ * of the patch into the halves of that face, and its source update into patchScratch. A diverged
+ * prediction stores NaN instead. The threads of workers predict the volume together in
+ * volumeScratch. Every thread of the team calls this. Returns the outcome of the Picard iteration,
+ * or zero on a thread without a cell.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictVolume(
-  const int                                    volume,
-  const StoragePrecision* NOALIAS const        patch,
-  const StoragePrecision* NOALIAS const        halo[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  ComputePrecision* NOALIAS const              scratch,
-  ComputePrecision* const                      stateHalves[peano4::FacesPerCell],
-  ComputePrecision* const                      fluxHalves[peano4::FacesPerCell]
+  const int                                          volume,
+  const tarch::la::Vector<DIMENSIONS, double>&       cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&       cellSize,
+  const double                                       timeStamp,
+  const double                                       timeStepSize,
+  const exahype2::dg::BasisTables<ComputePrecision>& tables,
+  ComputePrecision* NOALIAS const                    patchScratch,
+  ComputePrecision* NOALIAS const                    volumeScratch,
+  ComputePrecision* const                            stateHalves[peano4::FacesPerCell],
+  ComputePrecision* const                            fluxHalves[peano4::FacesPerCell],
+  const exahype2::dg::ader::TeamWorkers&             workers
 ) {
   using Layout          = typename Predictor::CellLayout;
   using PredictorBlock  = typename Predictor::Scratch;
-  using UpdatePrecision = std::common_type_t<StoragePrecision, ComputePrecision, double>;
-  constexpr exahype2::fv::ader::PredictorTables<Basis, ComputePrecision> Tables{};
+  using UpdatePrecision = std::common_type_t<ComputePrecision, double>;
   constexpr ComputePrecision NaN = std::numeric_limits<ComputePrecision>::quiet_NaN();
   assertion(volume >= 0 and volume < VolumesPerPatch, volume);
 
-  const auto index = peano4::dDelinearised(volume, PatchSize);
-
-  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision predictorScratch[PredictorBlock::Size];
-  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision nodalState[Layout::NodesPerCell * NumberOfData];
-  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision reconstructionScratch[Reconstruction::template ScratchSize<NumberOfData>];
-  // The predictor writes into local arrays. Pointing it at global memory directly loses its stores
-  // on CUDA 13 for polynomial degree 2.
-  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision states[peano4::FacesPerCell][StateEntries];
-  alignas(PEANO_WITH_ALIGNMENT) ComputePrecision fluxes[peano4::FacesPerCell][FluxEntries];
-  ComputePrecision*                              statePointers[peano4::FacesPerCell];
-  ComputePrecision*                              fluxPointers[peano4::FacesPerCell];
+  const auto                    index            = peano4::dDelinearised(volume, PatchSize);
+  ComputePrecision* const       predictorScratch = volumeScratch;
+  const ComputePrecision* const nodalState       = patchScratch + NodalStatesOffset + volume * NodalStateSize;
+  ComputePrecision*       states[peano4::FacesPerCell];
+  ComputePrecision*       fluxes[peano4::FacesPerCell];
   for (int face = 0; face < peano4::FacesPerCell; face++) {
-    statePointers[face] = states[face];
-    fluxPointers[face]  = fluxes[face];
+    states[face] = volumeScratch + FaceStatesOffset + face * StateEntries;
+    fluxes[face] = volumeScratch + FaceFluxesOffset + face * FluxEntries;
   }
 
-  Reconstruction::template reconstructPolynomial<PatchSize, NumberOfData>(
-    patch,
-    halo,
-    index,
-    -1,
-    nodalState,
-    reconstructionScratch
-  );
   const int outcome = Predictor::predict(
-    statePointers,
-    fluxPointers,
+    states,
+    fluxes,
     nodalState,
     predictorScratch,
-    Tables.view(),
+    tables,
     exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, index),
     exahype2::fv::getVolumeSize(cellSize, PatchSize),
     timeStamp,
     timeStepSize,
-    PicardResidualTolerance
+    PicardResidualTolerance,
+    workers
   );
   const bool diverged = outcome == exahype2::dg::ader::DivergedPicardIteration;
 
-  for (int face = 0; face < peano4::FacesPerCell; face++) {
-    ComputePrecision* state;
-    ComputePrecision* flux;
-    if (isOnPatchFace(index, face)) {
-      const int tangential = getTangentialIndex(index, face % DIMENSIONS);
-      state                = stateHalves[face] + static_cast<std::ptrdiff_t>(tangential) * StateEntries;
-      flux                 = fluxHalves[face] + static_cast<std::ptrdiff_t>(tangential) * FluxEntries;
-    } else {
-      state = scratch + getInteriorSideOffset(index, face);
-      flux  = state + StateEntries;
-    }
-    for (int entry = 0; entry < StateEntries; entry++) {
-      state[entry] = diverged ? NaN : states[face][entry];
-    }
-    for (int entry = 0; entry < FluxEntries; entry++) {
-      flux[entry] = diverged ? NaN : fluxes[face][entry];
-    }
-  }
-
-  UpdatePrecision update[NumberOfUnknowns]{};
-  if constexpr (Predictor::AccumulatesSource) {
-    for (int node = 0; node < Layout::NodesPerCell; node++) {
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        update[unknown] += timeStepSize * Tables.cellQuadratureWeights[node]
-          * predictorScratch[PredictorBlock::TimeAveragedSourceOffset + node * Layout::PaddedNumberOfUnknowns + unknown];
+  if (workers.hasCell) {
+    for (int item = workers.thread; item < peano4::FacesPerCell * EntriesPerSide; item += workers.threads) {
+      const int  face    = item / EntriesPerSide;
+      const int  entry   = item % EntriesPerSide;
+      const bool isState = entry < StateEntries;
+      ComputePrecision* target;
+      if (isOnPatchFace(index, face)) {
+        const int tangential = getTangentialIndex(index, face % DIMENSIONS);
+        target               = isState
+                               ? stateHalves[face] + static_cast<std::ptrdiff_t>(tangential) * StateEntries + entry
+                               : fluxHalves[face] + static_cast<std::ptrdiff_t>(tangential) * FluxEntries
+                                   + (entry - StateEntries);
+      } else {
+        target = patchScratch + getInteriorSideOffset(index, face) + entry;
       }
+      *target = diverged ? NaN : (isState ? states[face][entry] : fluxes[face][entry - StateEntries]);
+    }
+
+    for (int unknown = workers.thread; unknown < NumberOfUnknowns; unknown += workers.threads) {
+      UpdatePrecision update = 0.0;
+      if constexpr (Predictor::AccumulatesSource) {
+        for (int node = 0; node < Layout::NodesPerCell; node++) {
+          update += timeStepSize * tables.cellQuadratureWeights[node]
+                  * predictorScratch
+                    [PredictorBlock::TimeAveragedSourceOffset + node * Layout::PaddedNumberOfUnknowns + unknown];
+        }
+      }
+      patchScratch[SourceOffset + volume * NumberOfUnknowns + unknown] =
+        diverged ? NaN : static_cast<ComputePrecision>(update);
     }
   }
-  ComputePrecision* const source = scratch + SourceOffset + volume * NumberOfUnknowns;
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    source[unknown] = diverged ? NaN : static_cast<ComputePrecision>(update[unknown]);
-  }
+  // The next volume of the group overwrites volumeScratch.
+  exahype2::dg::ader::synchronise(workers);
+  return outcome;
 }
 
 /**
@@ -657,82 +668,3 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::restrictFaceHalf(
   }
 }
 TARGET_DECLARE_END
-
-/**
- * Predicts every volume of patch on one host thread, adds the updates inside the patch to patch and
- * returns the largest wave speed of the faces inside the patch. The scratch lives on the stack while
- * it fits SweepStackBytes and on the heap otherwise.
- */
-template <typename Derived, typename ComputePrecision>
-template <typename StoragePrecision>
-INLINE_METHOD double
-exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictPatch(
-  StoragePrecision* const                      patch,
-  const StoragePrecision* NOALIAS const        halo[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  ComputePrecision* const                      stateHalves[peano4::FacesPerCell],
-  ComputePrecision* const                      fluxHalves[peano4::FacesPerCell]
-) {
-  if constexpr (sizeof(ComputePrecision) * ScratchSize <= exahype2::fv::SweepStackBytes) {
-    alignas(PEANO_WITH_ALIGNMENT) ComputePrecision scratch[ScratchSize];
-    return predictPatchInScratch(
-      scratch,
-      patch,
-      halo,
-      cellCentre,
-      cellSize,
-      timeStamp,
-      timeStepSize,
-      stateHalves,
-      fluxHalves
-    );
-  } else {
-    struct FreesHeapMemory final {
-      void operator()(ComputePrecision* const memory) const { tarch::freeMemory(memory, tarch::MemoryLocation::Heap); }
-    };
-    const std::unique_ptr<ComputePrecision[], FreesHeapMemory> scratch{
-      tarch::allocateMemory<ComputePrecision>(ScratchSize, tarch::MemoryLocation::Heap)
-    };
-    return predictPatchInScratch(
-      scratch.get(),
-      patch,
-      halo,
-      cellCentre,
-      cellSize,
-      timeStamp,
-      timeStepSize,
-      stateHalves,
-      fluxHalves
-    );
-  }
-}
-
-template <typename Derived, typename ComputePrecision>
-template <typename StoragePrecision>
-INLINE_METHOD double
-exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictPatchInScratch(
-  ComputePrecision* NOALIAS const              scratch,
-  StoragePrecision* const                      patch,
-  const StoragePrecision* NOALIAS const        halo[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  ComputePrecision* const                      stateHalves[peano4::FacesPerCell],
-  ComputePrecision* const                      fluxHalves[peano4::FacesPerCell]
-) {
-  for (int volume = 0; volume < VolumesPerPatch; volume++) {
-    predictVolume(volume, patch, halo, cellCentre, cellSize, timeStamp, timeStepSize, scratch, stateHalves, fluxHalves);
-  }
-  double maximum = 0.0;
-  for (int volume = 0; volume < VolumesPerPatch; volume++) {
-    maximum = exahype2::MaxEigenvalueReduction::combine(
-      maximum,
-      updateVolumeInsidePatch(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize, scratch)
-    );
-  }
-  return maximum;
-}

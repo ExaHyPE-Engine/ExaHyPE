@@ -1,0 +1,69 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/TimeStepping.h"
+#include "exahype2/terms/RiemannSolver.h"
+#include "tarch/Assertions.h"
+
+template <typename Entry, int LookaheadOfRing>
+INLINE_METHOD Entry&
+exahype2::fv::TermRing<Entry, LookaheadOfRing>::at(const int state) {
+  assertion(state >= 0, state);
+  return _entries[state & (RingSize - 1)];
+}
+
+template <typename Entry, int LookaheadOfRing>
+INLINE_METHOD const Entry&
+exahype2::fv::TermRing<Entry, LookaheadOfRing>::at(const int state) const {
+  assertion(state >= 0, state);
+  return _entries[state & (RingSize - 1)];
+}
+
+TARGET_DECLARE
+/**
+ * Solves the Riemann problem on the lower (side 0) or upper (side 1) face of volume along normal
+ * and returns the largest wave speed. Bit f of boundaryFaces marks patch face f as a domain
+ * boundary face.
+ */
+template <typename SolverType, int VolumesPerAxis, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::solveRiemannProblemOnVolumeFace(
+  const ComputePrecision* const                QL,
+  const ComputePrecision* const                QR,
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    normal,
+  const tarch::la::Vector<DIMENSIONS, int>&    volume,
+  const int                                    side,
+  const int                                    boundaryFaces,
+  ComputePrecision* const                      FL,
+  ComputePrecision* const                      FR
+) {
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  assertion(side == 0 or side == 1, side);
+  assertion(volume(normal) >= 0 and volume(normal) < VolumesPerAxis, volume, normal);
+  const int  patchFace        = side == 0 ? normal : normal + DIMENSIONS;
+  const int  volumeOnThatFace = side == 0 ? 0 : VolumesPerAxis - 1;
+  const bool isBoundaryFace   = volume(normal) == volumeOnThatFace and (boundaryFaces & (1 << patchFace)) != 0;
+  const int  faceIndex        = isBoundaryFace ? patchFace : normal;
+  static_assert(
+    exahype2::terms::HasRiemannSolver<SolverType, ComputePrecision>,
+    "The finite-volume solver expects a Riemann solver."
+  );
+  return SolverType::solveRiemannProblem(
+    QL,
+    QR,
+    faceCentre,
+    volumeSize,
+    timeStamp,
+    timeStepSize,
+    normal,
+    isBoundaryFace,
+    faceIndex,
+    FL,
+    FR
+  );
+}
+TARGET_DECLARE_END

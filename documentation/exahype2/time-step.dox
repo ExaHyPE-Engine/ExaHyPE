@@ -9,7 +9,7 @@ The solver families call the static methods of `Derived` as the PDE terms.
 A solver family calls a PDE term only when `Derived` defines it.
 The concepts of exahype2::terms, such as exahype2::terms::HasFlux, test which PDE terms `Derived` defines.
 The constants of `Derived` select the branches below.
-Every functor below, such as exahype2::fv::UpdatePatches, runs through tarch::accelerator::parallelFor() or tarch::accelerator::parallelReduce() with one work item per cell, face, level jump or particle.
+Every functor below, such as exahype2::fv::singlestep::UpdatePatches, runs through tarch::accelerator::parallelFor() or tarch::accelerator::parallelReduce() with one work item per cell, face, level jump or particle.
 The host backend runs the work items on the OpenMP threads of the rank.
 A GPU backend runs the work items on the device.
 A cell, face or level jump of peano4::Adjacency::Local reads only data of its own rank.
@@ -47,7 +47,7 @@ exahype2::fv::Solver::performTimeStep():
 1. exahype2::TimeStepping::startTimeStep() returns the time step size.
 2. peano4::HaloExchange::post() sends the own halves of the exchanged faces to the neighbour ranks with MPI.
 3. exahype2::fv::Solver::applyBoundaryConditions() runs exahype2::fv::ApplyBoundaryConditions on the boundary faces.
-4. exahype2::fv::FiniteVolumeScheme::applyBoundaryConditions() calls `Derived::boundaryConditions()`.
+4. exahype2::fv::Patch::applyBoundaryConditions() calls `Derived::boundaryConditions()`.
 5. exahype2::interpolateCoarseFaces() runs exahype2::fv::InterpolateHaloHalves on the local level jumps.
 6. exahype2::fv::Solver::updatePatches() updates the patches of the local cells in place.
 7. peano4::HaloExchange::wait() writes the halves of the neighbour ranks.
@@ -62,10 +62,10 @@ exahype2::fv::Solver::performTimeStep():
 
 exahype2::fv::Solver::updatePatches():
 
-1. exahype2::fv::UpdatePatches calls exahype2::fv::FiniteVolumeScheme::computeVolumeUpdate() on every volume of every listed cell.
-   The host runs it through exahype2::fv::FiniteVolumeScheme::update().
+1. exahype2::fv::singlestep::UpdatePatches calls exahype2::fv::singlestep::PatchUpdate::computeVolumeUpdate() on every volume of every listed cell.
+   The host runs it through exahype2::fv::singlestep::PatchUpdate::update().
    A device runs it with one thread per volume.
-2. exahype2::fv::timestepping::SingleStep::applyToVolume() advances one volume as `Derived::TimeIntegration`:
+2. exahype2::fv::singlestep::SingleStep::applyToVolume() advances one volume as `Derived::TimeIntegration`:
    1. `Derived::sourceTerm()` adds the source.
    2. `Derived::Reconstruction::accumulateFluxDivergence()` adds the flux divergence.
    3. exahype2::fv::reconstruction::Constant::accumulateFluxDivergence() calls `Derived::diffusiveSourceTerm()`.
@@ -73,7 +73,7 @@ exahype2::fv::Solver::updatePatches():
    5. With exahype2::terms::HasRiemannSolver, exahype2::fv::solveRiemannProblemOnVolumeFace() calls `Derived::solveRiemannProblem()`.
    6. Without exahype2::terms::HasRiemannSolver, a Rusanov flux calls `Derived::flux()`, `Derived::nonconservativeProduct()` and `Derived::maxEigenvalue()`.
 3. `Derived::postprocessUpdatedPatch()` runs on the updated patch.
-4. exahype2::fv::FiniteVolumeScheme::getMaxEigenvalueOfVolume() calls `Derived::maxEigenvalue()` on every updated volume under an adaptive rule.
+4. exahype2::fv::Patch::getMaxEigenvalueOfVolume() calls `Derived::maxEigenvalue()` on every updated volume under an adaptive rule.
 5. tarch::accelerator::parallelReduce() reduces the wave speeds over the cells with exahype2::MaxEigenvalueReduction.
 
 # Discontinuous Galerkin faces
@@ -190,10 +190,10 @@ exahype2::dg::limiting::SubcellLimiter::recompute():
 4. The subcell family of the limiter, `SubcellFamily::advance()`, advances the recomputed cells on their subgrids while exahype2::dg::limiting::SubcellLimiter::exchangeFaces() sends the subgrid halo halves to the neighbour ranks:
    - exahype2::fv::singlestep::SubcellStep for Godunov and MUSCL-Hancock:
      1. exahype2::fv::singlestep::AdvanceSubgrids runs on the local cells while the halves travel, then on the remote cells.
-     2. exahype2::fv::singlestep::SubcellStep::advanceSubgrid() runs exahype2::fv::FiniteVolumeScheme::update() on the subgrid.
+     2. exahype2::fv::singlestep::SubcellStep::advanceSubgrid() runs exahype2::fv::singlestep::PatchUpdate::update() on the subgrid.
      3. exahype2::dg::limiting::SubcellScheme::SubgridSolver calls the PDE terms of `Derived` and `Derived::solveSubcellRiemannProblem()` for that update.
      4. exahype2::fv::singlestep::SubcellStep::advanceSubgrid() repeats the step with `Derived::FallbackReconstruction` when `Derived::isPhysicallyAdmissible()` rejects a subcell.
-     5. exahype2::fv::singlestep::SubcellStep::imposeAppliedFluxes() replaces, on a face with one recomputing side, the flux exahype2::fv::FiniteVolumeScheme::computePatchFaceFlux() reports by the Galerkin flux of that side.
+     5. exahype2::fv::singlestep::SubcellStep::imposeAppliedFluxes() replaces, on a face with one recomputing side, the flux exahype2::fv::singlestep::PatchUpdate::computePatchFaceFlux() reports by the Galerkin flux of that side.
    - exahype2::fv::ader::SubcellStep for ADER-WENO, patch by patch:
      1. exahype2::fv::ader::PredictPatches predicts the local cells while the halves travel, then the remote cells.
      2. exahype2::fv::ader::SolveSubcellRiemannProblems solves the Riemann problems on the faces with two recomputing sides. On a face with one recomputing side, that side takes its Galerkin flux.

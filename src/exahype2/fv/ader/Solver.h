@@ -3,11 +3,14 @@
 #pragma once
 
 #include "exahype2/fv/Solver.h"
+#include "exahype2/fv/ader/PatchPredictor.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "peano4/HaloExchange.h"
-#include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
-#include "tarch/accelerator/MemoryLocation.h"
+
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
 
 namespace exahype2::fv::ader {
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -20,7 +23,8 @@ namespace exahype2::fv::ader {
  * states and fluxes of the faces of the patch into the face pools. The ranks exchange these halves,
  * the Riemann problem of every face runs once, and every patch adds the numerical fluxes on its
  * faces. Level jumps interpolate the predicted halves of the coarse faces and restrict the fluxes of
- * the fine faces, as ADER-DG does per volume face.
+ * the fine faces, as ADER-DG does per volume face. A diverged prediction terminates the run, and the
+ * global master warns about the volumes whose Picard iteration stopped at its sweep limit.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::fv::ader::Solver : public exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision> {
@@ -44,6 +48,8 @@ public:
     exahype2::RefinementRequests& requests
   );
   INLINE_METHOD void release();
+  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
 private:
@@ -69,12 +75,16 @@ private:
 
   peano4::HaloExchange<ComputePrecision> _stateExchange{_faceStates};
   peano4::HaloExchange<ComputePrecision> _fluxExchange{_faceFluxes};
+  peano4::HaloExchange<ComputePrecision> _restrictedFluxExchange{_faceFluxes, peano4::FaceKind::Coarse};
+
+  exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision> _predictor{};
 
   /**
-   * One block of Scheme::ScratchSize values per team of a prediction on a device. A host thread
-   * keeps the predictions inside its patch itself.
+   * The number of volumes of this rank whose Picard iteration stopped at its sweep limit since the
+   * last reduction.
    */
-  tarch::accelerator::Buffer<ComputePrecision> _predictorScratch{tarch::MemoryLocation::Device};
+  int _unconvergedPredictions{0};
+  int _unconvergedPredictionsSlot{0};
 };
 
 #include "exahype2/fv/ader/Solver.cpph"

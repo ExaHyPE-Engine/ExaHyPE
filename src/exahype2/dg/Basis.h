@@ -128,7 +128,9 @@ namespace exahype2::dg {
     const FieldPrecision* NOALIAS       field,
     const CoefficientPrecision* NOALIAS leftFaceCoefficients,
     const CoefficientPrecision* NOALIAS rightFaceCoefficients,
-    int                                 direction
+    int                                 direction,
+    int                                 firstFaceNode  = 0,
+    int                                 faceNodeStride = 1
   );
 
   template <int Dimensions, int InputDofs, int OutputDofs, int ValuesPerDof, typename Value>

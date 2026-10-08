@@ -11,101 +11,100 @@
 #include "tarch/accelerator/Scratch.h"
 
 TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::fv::ader::PredictionStatistics
+exahype2::fv::ader::PredictionStatistics::identity() {
+  return ValueType{exahype2::MaxEigenvalueReduction::identity(), exahype2::dg::ader::PredictionCounts::identity()};
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::fv::ader::PredictionStatistics
+exahype2::fv::ader::PredictionStatistics::combine(const ValueType left, const ValueType right) {
+  return ValueType{
+    exahype2::MaxEigenvalueReduction::combine(left.maxEigenvalue, right.maxEigenvalue),
+    exahype2::dg::ader::PredictionCounts::combine(left.counts, right.counts)
+  };
+}
+
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>::operator()(
-  const int                                             entry,
-  [[maybe_unused]] const tarch::accelerator::TeamHandle team,
-  double&                                               accumulator
+  const int                            entry,
+  const tarch::accelerator::TeamHandle team,
+  PredictionStatistics&                accumulator
 ) const {
-  const int               slot = cells[entry];
-  const StoragePrecision* haloOfCell[peano4::FacesPerCell];
-  ComputePrecision*       stateHalves[peano4::FacesPerCell];
-  ComputePrecision*       fluxHalves[peano4::FacesPerCell];
-  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    const int face          = partition.getCellFace(slot, faceNumber);
-    const int half          = exahype2::dg::getOwnHalf(faceNumber);
-    haloOfCell[faceNumber]  = halo.getChunk(face);
-    stateHalves[faceNumber] = faceStates.getChunk(face) + half * Scheme::StateValuesPerHalf;
-    fluxHalves[faceNumber]  = faceFluxes.getChunk(face) + half * Scheme::FluxValuesPerHalf;
-  }
-  StoragePrecision* const                     patch      = solution.getChunk(slot);
-  const tarch::la::Vector<DIMENSIONS, double> cellCentre = partition.getCellCentre(slot);
-  const tarch::la::Vector<DIMENSIONS, double> cellSize   = partition.getCellWidth(slot);
-  const double                                stepStart  = timeStamp;
-  const double                                stepSize   = timeStepSize;
+  assertion(numberOfTeams > 0, numberOfTeams);
+  assertion(threadsPerVolume > 0, threadsPerVolume);
+  exahype2::dg::ader::TeamWorkers workers = exahype2::dg::ader::getWorkers(team, threadsPerVolume);
+  const bool                      inGroup = workers.hasCell;
+  const int                       chunk   = tarch::accelerator::getScratchChunk(entry);
+  assertion(chunk >= 0 and chunk < scratchChunks, chunk, scratchChunks, entry);
+  ComputePrecision* const patchScratch  = scratch + static_cast<std::ptrdiff_t>(chunk) * scratchSizePerTeam;
+  ComputePrecision* const volumeScratch = patchScratch + Scheme::PatchScratchSize
+                                        + static_cast<std::ptrdiff_t>(inGroup ? workers.group : 0)
+                                            * Scheme::VolumeScratchSize;
+  assertion(
+    Scheme::PatchScratchSize + workers.groups * Scheme::VolumeScratchSize <= scratchSizePerTeam,
+    workers.groups,
+    scratchSizePerTeam
+  );
 
-  COMPILE_IF_ON_HOST(
-    accumulator = exahype2::MaxEigenvalueReduction::combine(
-      accumulator,
-      Scheme::predictPatch(patch, haloOfCell, cellCentre, cellSize, stepStart, stepSize, stateHalves, fluxHalves)
-    );
-  )
-  COMPILE_IF_ON_DEVICE(
-    const tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction> reducer{accumulator};
-    ComputePrecision* const                                            scratchOfTeam =
-      scratch + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Scheme::ScratchSize;
-    const double partial = predictPatchOnDevice(
-      team,
-      patch,
-      haloOfCell,
-      cellCentre,
-      cellSize,
-      stepStart,
-      stepSize,
-      scratchOfTeam,
-      stateHalves,
-      fluxHalves
-    );
-    tarch::accelerator::reduceOverTeam(team, partial, reducer);
-  )
-}
+  PredictionStatistics statistics;
+  for (int cell = entry; cell < cells.size; cell += numberOfTeams) {
+    const int               slot = cells[cell];
+    const StoragePrecision* haloOfCell[peano4::FacesPerCell];
+    ComputePrecision*       stateHalves[peano4::FacesPerCell];
+    ComputePrecision*       fluxHalves[peano4::FacesPerCell];
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      const int face          = partition.getCellFace(slot, faceNumber);
+      const int half          = exahype2::dg::getOwnHalf(faceNumber);
+      haloOfCell[faceNumber]  = halo.getChunk(face);
+      stateHalves[faceNumber] = faceStates.getChunk(face) + half * Scheme::StateValuesPerHalf;
+      fluxHalves[faceNumber]  = faceFluxes.getChunk(face) + half * Scheme::FluxValuesPerHalf;
+    }
+    StoragePrecision* const                     patch      = solution.getChunk(slot);
+    const tarch::la::Vector<DIMENSIONS, double> cellCentre = partition.getCellCentre(slot);
+    const tarch::la::Vector<DIMENSIONS, double> cellSize   = partition.getCellWidth(slot);
 
-/**
- * Predicts the volumes of the patch with one thread per volume and, after a barrier, adds the
- * updates inside the patch. Returns the largest wave speed that the calling thread saw.
- */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD double
-exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>::predictPatchOnDevice(
-  [[maybe_unused]] const tarch::accelerator::TeamHandle         team,
-  [[maybe_unused]] StoragePrecision* const                      patch,
-  [[maybe_unused]] const StoragePrecision* const                haloOfCell[peano4::FacesPerCell],
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  [[maybe_unused]] const double                                 timeStamp,
-  [[maybe_unused]] const double                                 timeStepSize,
-  [[maybe_unused]] ComputePrecision* const                      scratchOfTeam,
-  [[maybe_unused]] ComputePrecision* const                      stateHalves[peano4::FacesPerCell],
-  [[maybe_unused]] ComputePrecision* const                      fluxHalves[peano4::FacesPerCell]
-) {
-  COMPILE_IF_ON_HOST(return 0.0;)
-  COMPILE_IF_ON_DEVICE(
-    const int thread  = tarch::accelerator::getThreadOfTeam(team);
-    const int threads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
-    for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
-      Scheme::predictVolume(
+    Scheme::reconstructPatch(patch, haloOfCell, patchScratch, workers);
+    for (int first = 0; first < Scheme::VolumesPerPatch; first += workers.groups) {
+      workers.hasCell = inGroup and first + workers.group < Scheme::VolumesPerPatch;
+      // A thread without a volume keeps the barriers of the team on the first volume.
+      const int volume  = workers.hasCell ? first + workers.group : 0;
+      const int outcome = Scheme::predictVolume(
         volume,
-        patch,
-        haloOfCell,
         cellCentre,
         cellSize,
         timeStamp,
         timeStepSize,
-        scratchOfTeam,
+        tables,
+        patchScratch,
+        volumeScratch,
         stateHalves,
-        fluxHalves
+        fluxHalves,
+        workers
+      );
+      // The threads of a volume see the same outcome. The first thread of the volume records it once.
+      if (workers.hasCell and workers.thread == 0) {
+        if (outcome == exahype2::dg::ader::DivergedPicardIteration) {
+          statistics.counts.divergedCells++;
+        } else if (outcome == exahype2::dg::ader::UnconvergedPicardIteration) {
+          statistics.counts.unconvergedCells++;
+        }
+      }
+    }
+
+    for (int volume = workers.teamThread; volume < Scheme::VolumesPerPatch; volume += workers.teamThreads) {
+      statistics.maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+        statistics.maxEigenvalue,
+        Scheme::updateVolumeInsidePatch(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize, patchScratch)
       );
     }
-    tarch::accelerator::teamBarrier(team);
-    double partial = 0.0;
-    for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
-      partial = exahype2::MaxEigenvalueReduction::combine(
-        partial,
-        Scheme::updateVolumeInsidePatch(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize, scratchOfTeam)
-      );
-    }
-    return partial;
+    // The next cell reuses the scratch chunk once every thread is done with this one.
+    exahype2::dg::ader::synchronise(workers);
+  }
+  COMPILE_IF_ON_HOST(accumulator = PredictionStatistics::combine(accumulator, statistics);)
+  COMPILE_IF_ON_DEVICE(
+    const tarch::accelerator::Custom<exahype2::fv::ader::PredictionStatistics> reducer{accumulator};
+    tarch::accelerator::reduceOverTeam(team, statistics, reducer);
   )
 }
 

@@ -10,5 +10,6 @@ namespace exahype2::fv::tests {
 
   private:
     void testWENOReconstructsPolynomialsExactly();
+    void testPatchReconstructionMatchesVolumeReconstruction();
   };
 } // namespace exahype2::fv::tests

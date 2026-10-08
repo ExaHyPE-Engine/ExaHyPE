@@ -7,7 +7,7 @@
 #include "exahype2/RefinementRequests.h"
 #include "exahype2/RefinementVotes.h"
 #include "exahype2/TimeStepping.h"
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/Patch.h"
 #include "exahype2/plotter/PatchPlotter.h"
 #include "exahype2/terms/BoundaryConditions.h"
 #include "exahype2/terms/InitialCondition.h"
@@ -50,11 +50,11 @@ namespace exahype2::fv {
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::fv::Solver {
 public:
-  using FiniteVolumeScheme = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using Patch = exahype2::fv::Patch<Derived, ComputePrecision>;
   using Patches            = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using Faces              = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  static constexpr int PointsPerCell = FiniteVolumeScheme::VolumesPerPatch;
+  static constexpr int PointsPerCell = Patch::VolumesPerPatch;
 
   Solver()                         = delete;
   Solver(const Solver&)            = delete;
@@ -106,8 +106,8 @@ protected:
     exahype2::RefinementRequests& requests
   );
 
-  Patches _solution{FiniteVolumeScheme::ValuesPerPatch};
-  Faces   _halo{FiniteVolumeScheme::ValuesPerFace};
+  Patches _solution{Patch::ValuesPerPatch};
+  Faces   _halo{Patch::ValuesPerFace};
 
   peano4::HaloExchange<StoragePrecision> _haloExchange{_halo};
 
@@ -129,7 +129,7 @@ private:
 
   exahype2::ErrorMeasurement      _errorMeasurement{};
   exahype2::plotter::PatchPlotter _plotter;
-  Patches                         _solutionOnHost{FiniteVolumeScheme::ValuesPerPatch, tarch::MemoryLocation::Heap};
+  Patches                         _solutionOnHost{Patch::ValuesPerPatch, tarch::MemoryLocation::Heap};
 };
 
 #include "exahype2/fv/Solver.cpph"

@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include "exahype2/fv/Kernels.h"
+#include "exahype2/fv/singlestep/Kernels.h"
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
@@ -13,7 +13,7 @@ INLINE_METHOD exahype2::fv::singlestep::Solver<Derived, StoragePrecision, Comput
   std::vector<exahype2::plotter::DataField> plottedFields
 ) :
   Base(timeStepFactor, std::move(name), std::move(plottedFields)) {
-  static_assert(exahype2::fv::TimeSteppingScheme<typename Derived::TimeIntegration>);
+  static_assert(exahype2::fv::singlestep::TimeSteppingScheme<typename Derived::TimeIntegration>);
 }
 
 /**
@@ -59,7 +59,7 @@ exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::u
   double     maxEigenvalue = 0.0;
   tarch::accelerator::parallelReduce(
     tarch::accelerator::TeamRange(cells.size),
-    exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>{
+    exahype2::fv::singlestep::UpdatePatches<Derived, StoragePrecision, ComputePrecision>{
       partition.onDevice(),
       cells,
       this->_solution.getView(),

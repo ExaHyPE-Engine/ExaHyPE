@@ -1,0 +1,168 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include <algorithm>
+
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/Scratch.h"
+
+/**
+ * Reserves the scratch of the largest launch and copies the predictor tables into device memory. A
+ * second call keeps both.
+ */
+template <typename StoragePrecision, typename ComputePrecision>
+template <typename Derived>
+INLINE_METHOD void
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::allocate() {
+  using Tables = typename Scheme<Derived>::Tables;
+  static_assert(sizeof(Tables) % sizeof(ComputePrecision) == 0 and alignof(Tables) == alignof(ComputePrecision));
+  constexpr std::size_t TableValues = sizeof(Tables) / sizeof(ComputePrecision);
+
+  const auto chunks =
+    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(getMaximumNumberOfTeams<Derived>()));
+  const std::size_t size = chunks * static_cast<std::size_t>(getScratchSizePerTeam<Derived>());
+  if (_scratch.getSize() < size) {
+    _scratch.allocate(size);
+  }
+  if (_tables.isEmpty()) {
+    constexpr Tables tables{};
+    _tables.allocate(TableValues);
+    _tables.copyFromHost(reinterpret_cast<const ComputePrecision*>(&tables), TableValues);
+  }
+}
+
+template <typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::release() {
+  _scratch.release();
+  _tables.release();
+}
+
+template <typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD tarch::AllocatedBytes
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
+  return _scratch.getAllocatedBytes() + _tables.getAllocatedBytes();
+}
+
+/**
+ * Predicts the listed cells and returns the largest wave speed of the faces inside their patches
+ * and the numbers of the diverged and the unconverged volumes. A diverged volume writes NaN.
+ */
+template <typename StoragePrecision, typename ComputePrecision>
+template <typename Derived>
+INLINE_METHOD exahype2::fv::ader::PredictionStatistics
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
+  const peano4::Partition&           partition,
+  const tarch::Span<const int>       cells,
+  const typename CellPool::View      solution,
+  const typename FacePool::ConstView halo,
+  const typename StatePool::View     faceStates,
+  const typename StatePool::View     faceFluxes,
+  const double                       timeStamp,
+  const double                       timeStepSize
+) {
+  exahype2::fv::ader::PredictionStatistics statistics;
+  if (cells.size == 0) {
+    return statistics;
+  }
+  assertion(not _scratch.isEmpty() and not _tables.isEmpty());
+  const int numberOfTeams      = getNumberOfTeams<Derived>(cells.size);
+  const int threadsPerTeam     = getTeamThreads<Derived>();
+  const int scratchSizePerTeam = getScratchSizePerTeam<Derived>();
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(
+      numberOfTeams,
+      threadsPerTeam,
+      Scheme<Derived>::Predictor::getTeamScratchBytes(threadsPerTeam)
+    ),
+    exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>{
+      partition.onDevice(),
+      cells,
+      numberOfTeams,
+      getThreadsPerVolume<Derived>(),
+      solution,
+      halo,
+      faceStates,
+      faceFluxes,
+      getTables<Derived>(),
+      _scratch.getData(),
+      scratchSizePerTeam,
+      static_cast<int>(_scratch.getSize() / static_cast<std::size_t>(scratchSizePerTeam)),
+      timeStamp,
+      timeStepSize
+    },
+    tarch::accelerator::Custom<exahype2::fv::ader::PredictionStatistics>{statistics}
+  );
+  return statistics;
+}
+
+/**
+ * Returns the threads of a team, enough for the volumes of a patch with as many threads per volume
+ * as a cell of the predictor has nodes.
+ */
+template <typename StoragePrecision, typename ComputePrecision>
+template <typename Derived>
+INLINE_METHOD int
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getTeamThreads() {
+  return tarch::accelerator::getTeamThreads(
+    Scheme<Derived>::VolumesPerPatch * Scheme<Derived>::Predictor::CellLayout::NodesPerCell
+  );
+}
+
+template <typename StoragePrecision, typename ComputePrecision>
+template <typename Derived>
+INLINE_METHOD int
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getThreadsPerVolume() {
+  return std::min(Scheme<Derived>::Predictor::CellLayout::NodesPerCell, getTeamThreads<Derived>());
+}
+
+template <typename StoragePrecision, typename ComputePrecision>
+template <typename Derived>
+INLINE_METHOD int
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getMaximumNumberOfTeams() {
+  return std::max(
+    1,
+    tarch::accelerator::Device::getInstance().getNumberOfConcurrentThreads() / getTeamThreads<Derived>()
+  );
+}
+
+/**
+ * Returns the teams of a launch over cells. A host thread runs one cell after the other in its
+ * chunk of scratch, so every cell takes a team of its own there.
+ */
+template <typename StoragePrecision, typename ComputePrecision>
+template <typename Derived>
+INLINE_METHOD int
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getNumberOfTeams(const int cells) {
+  if (tarch::accelerator::getNumberOfScratchChunks(cells) < cells) {
+    return cells;
+  }
+  return std::max(1, std::min(cells, getMaximumNumberOfTeams<Derived>()));
+}
+
+/**
+ * Returns the values of the scratch chunk of a team: the predictions inside a patch and the work of
+ * every group of threads that predicts a volume.
+ */
+template <typename StoragePrecision, typename ComputePrecision>
+template <typename Derived>
+INLINE_METHOD int
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getScratchSizePerTeam() {
+  const int groups = getTeamThreads<Derived>() / getThreadsPerVolume<Derived>();
+  return Scheme<Derived>::PatchScratchSize + groups * Scheme<Derived>::VolumeScratchSize;
+}
+
+/**
+ * Returns the tables in the device copy. view() only computes the addresses of the members.
+ */
+template <typename StoragePrecision, typename ComputePrecision>
+template <typename Derived>
+INLINE_METHOD exahype2::dg::BasisTables<ComputePrecision>
+exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getTables() const {
+  return reinterpret_cast<const typename Scheme<Derived>::Tables*>(_tables.getData())->view();
+}

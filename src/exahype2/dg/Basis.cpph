@@ -348,7 +348,8 @@ exahype2::dg::computeNodalGradients(
 /**
  * Extrapolates the nodal field to the lower and the upper face along direction. The nodes of
  * field start NodeStride values apart, and the lowest tangential axis runs fastest in a face. A
- * constant line of nodes returns its value bitwise at both faces.
+ * constant line of nodes returns its value bitwise at both faces. Only the face nodes
+ * firstFaceNode, firstFaceNode + faceNodeStride and so on are written.
  */
 template <
   int NodesPerAxis,
@@ -365,7 +366,9 @@ exahype2::dg::extrapolateNodalFieldToFacePair(
   const FieldPrecision* NOALIAS const       field,
   const CoefficientPrecision* NOALIAS const leftFaceCoefficients,
   const CoefficientPrecision* NOALIAS const rightFaceCoefficients,
-  const int                                 direction
+  const int                                 direction,
+  const int                                 firstFaceNode,
+  const int                                 faceNodeStride
 ) {
   static_assert(NodeStride >= NumberOfEntries);
 
@@ -374,13 +377,14 @@ exahype2::dg::extrapolateNodalFieldToFacePair(
   using AccumulatePrecision = std::common_type_t<FieldPrecision, FacePrecision, CoefficientPrecision>;
 
   assertion(direction >= 0 and direction < DIMENSIONS, direction);
+  assertion(firstFaceNode >= 0 and faceNodeStride > 0, firstFaceNode, faceNodeStride);
 
   int lowerAxesStride = 1;
   for (int axis = 0; axis < direction; axis++) {
     lowerAxesStride *= NodesPerAxis;
   }
 
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  for (int faceNode = firstFaceNode; faceNode < NodesPerFace; faceNode += faceNodeStride) {
     const int lowerAxesIndex  = faceNode % lowerAxesStride;
     const int higherAxesIndex = faceNode / lowerAxesStride;
 

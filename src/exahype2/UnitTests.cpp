@@ -17,9 +17,9 @@
 #include "exahype2/dg/tests/KernelsTest.h"
 #include "exahype2/dg/tests/TracingTest.h"
 #include "exahype2/fv/limiter/tests/SlopeLimiterTest.h"
-#include "exahype2/fv/weno/tests/NonlinearWeightsTest.h"
+#include "exahype2/fv/reconstruction/weno/tests/NonlinearWeightsTest.h"
 #include "exahype2/fv/ader/tests/SolverTest.h"
-#include "exahype2/fv/tests/FiniteVolumeSchemeTest.h"
+#include "exahype2/fv/tests/PatchSchemeTest.h"
 #include "exahype2/fv/tests/WENOTest.h"
 #include "exahype2/fv/tests/KernelsTest.h"
 #include "exahype2/fv/tests/SolverTest.h"
@@ -60,14 +60,14 @@ exahype2::getUnitTests() {
   result->addTestCase(new exahype2::tests::SolverRepositoryTest());
   result->addTestCase(new exahype2::tests::TimeSteppingTest());
 
-  result->addTestCase(new exahype2::fv::tests::FiniteVolumeSchemeTest());
+  result->addTestCase(new exahype2::fv::tests::PatchSchemeTest());
   result->addTestCase(new exahype2::fv::ader::tests::SolverTest());
   result->addTestCase(new exahype2::fv::tests::WENOTest());
   result->addTestCase(new exahype2::fv::tests::KernelsTest());
   result->addTestCase(new exahype2::fv::tests::SolverTest());
   result->addTestCase(new exahype2::fv::tests::TracingTest());
   result->addTestCase(new exahype2::fv::limiter::tests::SlopeLimiterTest());
-  result->addTestCase(new exahype2::fv::weno::tests::NonlinearWeightsTest());
+  result->addTestCase(new exahype2::fv::reconstruction::weno::tests::NonlinearWeightsTest());
 
   result->addTestCase(new exahype2::dg::tests::BasisTest());
   result->addTestCase(new exahype2::dg::tests::KernelsTest());

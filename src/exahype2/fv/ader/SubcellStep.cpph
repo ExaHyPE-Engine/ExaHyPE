@@ -10,7 +10,6 @@
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/Scratch.h"
 
 /**
  * Reserves the predicted face halves of every face and builds their exchanges. Every rank calls
@@ -25,6 +24,8 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::re
   _faceFluxes.reserve(partition.getNumberOfFaces());
   _stateExchange.rebuild(partition);
   _fluxExchange.rebuild(partition);
+  _restrictedFluxExchange.rebuild(partition);
+  _predictor.template allocate<Subgrid<>>();
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -34,14 +35,16 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::re
   _faceFluxes.release();
   _stateExchange.release();
   _fluxExchange.release();
-  _predictorScratch.release();
+  _restrictedFluxExchange.release();
+  _predictor.release();
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD tarch::AllocatedBytes
 exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes() + _stateExchange.getAllocatedBytes()
-       + _fluxExchange.getAllocatedBytes() + _predictorScratch.getAllocatedBytes();
+       + _fluxExchange.getAllocatedBytes() + _restrictedFluxExchange.getAllocatedBytes()
+       + _predictor.getAllocatedBytes();
 }
 
 /**
@@ -89,10 +92,10 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::ad
   solveRiemannProblems(partition, region, Remote, timeStamp, timeStepSize);
 
   exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
-  _fluxExchange.post();
+  _restrictedFluxExchange.post();
   exahype2::restrictFineFaces(partition, Local, restrictFluxes);
   correct(partition, region, region.getCells(Local), timeStamp, timeStepSize);
-  _fluxExchange.wait();
+  _restrictedFluxExchange.wait();
   correct(partition, region, region.getCells(Remote), timeStamp, timeStepSize);
 }
 
@@ -105,29 +108,16 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::pr
   const double                 timeStamp,
   const double                 timeStepSize
 ) {
-#if defined(PEANO_WITH_GPU_BACKEND)
-  const std::size_t size =
-    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(cells.size)) * Scheme<>::ScratchSize;
-  if (_predictorScratch.getSize() < size) {
-    _predictorScratch.allocate(size);
-  }
-#endif
-  double maxEigenvalue = 0.0;
-  tarch::accelerator::parallelReduce(
-    tarch::accelerator::TeamRange(cells.size),
-    exahype2::fv::ader::PredictPatches<Subgrid<>, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
-      cells,
-      region.subcells,
-      region.halo,
-      _faceStates.getView(),
-      _faceFluxes.getView(),
-      timeStamp,
-      timeStepSize,
-      _predictorScratch.getData()
-    },
-    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
-  );
+  static_cast<void>(_predictor.template predict<Subgrid<>>(
+    partition,
+    cells,
+    region.subcells,
+    region.halo,
+    _faceStates.getView(),
+    _faceFluxes.getView(),
+    timeStamp,
+    timeStepSize
+  ));
 }
 
 /**

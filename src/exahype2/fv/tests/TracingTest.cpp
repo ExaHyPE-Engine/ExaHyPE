@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "TracingTest.h"
 
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/Patch.h"
 #include "exahype2/fv/Tracing.h"
 #include "exahype2/particles/Forces.h"
 #include "exahype2/particles/ParticleSet.h"

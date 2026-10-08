@@ -6,10 +6,10 @@
 #include "exahype2/RefinementCommand.h"
 #include "exahype2/RefinementRequests.h"
 #include "exahype2/TimeStepping.h"
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/Patch.h"
 #include "exahype2/fv/singlestep/Solver.h"
 #include "exahype2/fv/reconstruction/Constant.h"
-#include "exahype2/fv/timestepping/SingleStep.h"
+#include "exahype2/fv/singlestep/SingleStep.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
 #include "peano4/Partition.h"
@@ -55,7 +55,7 @@ namespace {
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
     using Reconstruction  = exahype2::fv::reconstruction::Constant;
-    using TimeIntegration = exahype2::fv::timestepping::SingleStep;
+    using TimeIntegration = exahype2::fv::singlestep::SingleStep;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = Rule;
 
@@ -141,7 +141,7 @@ namespace {
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
     using Reconstruction  = exahype2::fv::reconstruction::Constant;
-    using TimeIntegration = exahype2::fv::timestepping::SingleStep;
+    using TimeIntegration = exahype2::fv::singlestep::SingleStep;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Adaptive;
 

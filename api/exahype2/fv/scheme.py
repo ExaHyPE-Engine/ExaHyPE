@@ -17,8 +17,8 @@ class Weighting:
     """The nonlinear-weighting policy types of the WENO scheme: The Jiang-Shu weights with the
     exponent 2 of Jiang and Shu, or with the exponent 8 of the ADER-WENO schemes of Dumbser et al."""
 
-    jiangshu = "::exahype2::fv::weno::JiangShu<2>"
-    jiangshu_r8 = "::exahype2::fv::weno::JiangShu<8>"
+    jiangshu = "::exahype2::fv::reconstruction::weno::JiangShu<2>"
+    jiangshu_r8 = "::exahype2::fv::reconstruction::weno::JiangShu<8>"
 
 
 class SubcellScheme:
@@ -55,7 +55,7 @@ class SubcellScheme:
         self._subcell_family_include = subcell_family_include
         self._halo_width = halo_width
         self._fallback_reconstruction = fallback_reconstruction
-        self._includes = includes or ["exahype2/fv/FiniteVolumeScheme.h"]
+        self._includes = includes or ["exahype2/fv/Patch.h"]
 
     @property
     def reconstruction(self):
@@ -94,14 +94,14 @@ class Godunov:
     def subcell_scheme(self):
         return SubcellScheme(
             reconstruction="::exahype2::fv::reconstruction::Constant",
-            time_stepping="::exahype2::fv::timestepping::SingleStep",
+            time_stepping="::exahype2::fv::singlestep::SingleStep",
             halo_width=self.halo_width,
             subcell_family="::exahype2::fv::singlestep::SubcellStep",
             subcell_family_include="exahype2/fv/singlestep/SubcellStep.h",
             includes=[
-                "exahype2/fv/FiniteVolumeScheme.h",
+                "exahype2/fv/singlestep/PatchUpdate.h",
                 "exahype2/fv/reconstruction/Constant.h",
-                "exahype2/fv/timestepping/SingleStep.h",
+                "exahype2/fv/singlestep/SingleStep.h",
             ],
         )
 
@@ -131,7 +131,7 @@ class MusclHancock:
             reconstruction="::exahype2::fv::reconstruction::LimitedLinear<"
             + self.limiter
             + ">",
-            time_stepping="::exahype2::fv::timestepping::SingleStep",
+            time_stepping="::exahype2::fv::singlestep::SingleStep",
             halo_width=self.halo_width,
             subcell_family="::exahype2::fv::singlestep::SubcellStep",
             subcell_family_include="exahype2/fv/singlestep/SubcellStep.h",
@@ -139,10 +139,10 @@ class MusclHancock:
                 "::exahype2::fv::reconstruction::LimitedLinear<::exahype2::fv::limiter::Zero>"
             ),
             includes=[
-                "exahype2/fv/FiniteVolumeScheme.h",
+                "exahype2/fv/singlestep/PatchUpdate.h",
                 "exahype2/fv/limiter/SlopeLimiter.h",
                 "exahype2/fv/reconstruction/LimitedLinear.h",
-                "exahype2/fv/timestepping/SingleStep.h",
+                "exahype2/fv/singlestep/SingleStep.h",
             ],
         )
 
@@ -191,9 +191,9 @@ class Weno:
             subcell_family="::exahype2::fv::ader::SubcellStep",
             subcell_family_include="exahype2/fv/ader/SubcellStep.h",
             includes=[
-                "exahype2/fv/FiniteVolumeScheme.h",
+                "exahype2/fv/Patch.h",
                 "exahype2/fv/reconstruction/WENO.h",
-                "exahype2/fv/weno/NonlinearWeights.h",
+                "exahype2/fv/reconstruction/weno/NonlinearWeights.h",
             ],
         )
 

@@ -19,8 +19,9 @@ exahype2::dg::ader::PicardResidual::add(const PicardResidual& other) {
 /**
  * Solves the local Cauchy problem of one cell with a Picard iteration on the threads of workers.
  * Extrapolates the time-averaged state and flux to the faces. On return, the time-averaged flux in
- * scratch stores its derivative along its own axis. Returns the number of sweeps,
- * UnconvergedPicardIteration or DivergedPicardIteration. Returns zero on a thread without a cell.
+ * scratch stores its derivative along its own axis, unless DifferentiatesTimeAveragedFlux is false.
+ * Returns the number of sweeps, UnconvergedPicardIteration or DivergedPicardIteration. Returns zero
+ * on a thread without a cell.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -192,7 +193,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   const ComputePrecision* const timeAveragedState = spaceTimeState;
 
   if (workers.hasCell) {
-    for (int direction = workers.thread; direction < DIMENSIONS; direction += workers.threads) {
+    for (int item = workers.thread; item < DIMENSIONS * CellLayout::NodesPerFace; item += workers.threads) {
+      const int direction = item / CellLayout::NodesPerFace;
+      const int faceNode  = item % CellLayout::NodesPerFace;
       exahype2::dg::extrapolateNodalFieldToFacePair<
         NodesPerAxis,
         CellLayout::NumberOfData,
@@ -205,7 +208,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
         timeAveragedState,
         tables.leftFaceCoefficients,
         tables.rightFaceCoefficients,
-        direction);
+        direction,
+        faceNode,
+        CellLayout::NodesPerFace);
       if constexpr (EvaluateFlux) {
         exahype2::dg::extrapolateNodalFieldToFacePair<
           NodesPerAxis,
@@ -219,9 +224,11 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
           timeAveragedFlux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
           tables.leftFaceCoefficients,
           tables.rightFaceCoefficients,
-          direction);
+          direction,
+          faceNode,
+          CellLayout::NodesPerFace);
       } else {
-        for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
+        for (int entry = faceNode * NumberOfUnknowns; entry < (faceNode + 1) * NumberOfUnknowns; entry++) {
           faceFluxes[direction][entry]              = static_cast<ComputePrecision>(0);
           faceFluxes[direction + DIMENSIONS][entry] = static_cast<ComputePrecision>(0);
         }
@@ -230,7 +237,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   }
   exahype2::dg::ader::synchronise(workers);
 
-  if constexpr (EvaluateFlux) {
+  if constexpr (DifferentiatesTimeAveragedFlux) {
     if (workers.hasCell) {
       exahype2::dg::differentiateFluxInPlace<Derived>(
         timeAveragedFlux,

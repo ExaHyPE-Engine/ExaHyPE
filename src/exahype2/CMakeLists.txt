@@ -18,7 +18,7 @@ set(SOURCES
   tests/SolverRepositoryTest.cpp
   tests/TimeSteppingTest.cpp
 
-  fv/tests/FiniteVolumeSchemeTest.cpp
+  fv/tests/PatchSchemeTest.cpp
   fv/ader/tests/SolverTest.cpp
   fv/tests/WENOTest.cpp
   fv/tests/HaloProfileTestData.cpp
@@ -26,7 +26,7 @@ set(SOURCES
   fv/tests/SolverTest.cpp
   fv/tests/TracingTest.cpp
   fv/limiter/tests/SlopeLimiterTest.cpp
-  fv/weno/tests/NonlinearWeightsTest.cpp
+  fv/reconstruction/weno/tests/NonlinearWeightsTest.cpp
 
   dg/tests/BasisTest.cpp
   dg/tests/KernelTestData.cpp
@@ -85,7 +85,7 @@ set(GPU_SOURCES
   dg/rk/tests/StagesTest.cpp
   dg/tests/KernelsTest.cpp
   dg/tests/TracingTest.cpp
-  fv/tests/FiniteVolumeSchemeTest.cpp
+  fv/tests/PatchSchemeTest.cpp
   fv/tests/SolverTest.cpp
   fv/tests/TracingTest.cpp
   particles/tests/ParticleErrorMeasurementTest.cpp

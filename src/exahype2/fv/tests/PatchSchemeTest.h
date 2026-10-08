@@ -5,17 +5,17 @@
 #include "tarch/tests/TestCase.h"
 
 namespace exahype2::fv::tests {
-  class FiniteVolumeSchemeTest;
+  class PatchSchemeTest;
 } // namespace exahype2::fv::tests
 
-class exahype2::fv::tests::FiniteVolumeSchemeTest final : public tarch::tests::TestCase {
+class exahype2::fv::tests::PatchSchemeTest final : public tarch::tests::TestCase {
 public:
-  FiniteVolumeSchemeTest();
-  FiniteVolumeSchemeTest(const FiniteVolumeSchemeTest& other)            = delete;
-  FiniteVolumeSchemeTest(FiniteVolumeSchemeTest&& other)                 = delete;
-  FiniteVolumeSchemeTest& operator=(const FiniteVolumeSchemeTest& other) = delete;
-  FiniteVolumeSchemeTest& operator=(FiniteVolumeSchemeTest&& other)      = delete;
-  ~FiniteVolumeSchemeTest() override                                     = default;
+  PatchSchemeTest();
+  PatchSchemeTest(const PatchSchemeTest& other)            = delete;
+  PatchSchemeTest(PatchSchemeTest&& other)                 = delete;
+  PatchSchemeTest& operator=(const PatchSchemeTest& other) = delete;
+  PatchSchemeTest& operator=(PatchSchemeTest&& other)      = delete;
+  ~PatchSchemeTest() override                              = default;
 
   void run() override;
 

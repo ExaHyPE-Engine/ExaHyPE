@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "exahype2/fv/reconstruction/ReconstructionScheme.h"
 #include "exahype2/LevelJumps.h"
 #include "exahype2/fv/Kernels.h"
 #include "exahype2/terms/MaxEigenvalue.h"
@@ -59,12 +60,12 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
   const peano4::Partition&      partition,
   exahype2::RefinementRequests& requests
 ) {
-  Patches    copyOnHost{FiniteVolumeScheme::ValuesPerPatch, tarch::MemoryLocation::Heap};
+  Patches    copyOnHost{Patch::ValuesPerPatch, tarch::MemoryLocation::Heap};
   Patches&   patches = _solution.download(copyOnHost);
   const auto cells   = partition.getCells();
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int entry) {
     const int slot = cells[entry];
-    FiniteVolumeScheme::initialise(patches.getChunk(slot), partition.getCellCentre(slot), partition.getCellWidth(slot));
+    Patch::initialise(patches.getChunk(slot), partition.getCellCentre(slot), partition.getCellWidth(slot));
   });
   _solution.upload(patches);
 

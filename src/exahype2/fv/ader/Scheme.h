@@ -6,7 +6,8 @@
 
 #include "exahype2/TimeStepping.h"
 #include "exahype2/dg/ader/NonlinearPredictor.h"
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/dg/ader/TeamWorkers.h"
+#include "exahype2/fv/Patch.h"
 #include "exahype2/fv/ader/PredictorTerms.h"
 #include "exahype2/fv/ader/PredictorTables.h"
 #include "peano4/Constants.h"
@@ -82,9 +83,12 @@ struct exahype2::fv::ader::FaceTransferTables final {
  * fastest. The state halves hold the predicted time-averaged states, the flux halves first the
  * predicted fluxes and after the Riemann solve the numerical flux that the cell on that side adds.
  *
- * The predictions inside a patch live in ScratchSize values: For every interface of two volumes of
- * the patch, the state and flux of the lower and then of the upper volume, the interfaces of the
- * first axis first, followed by the source update of every volume.
+ * The predictions inside a patch live in PatchScratchSize values: For every interface of two
+ * volumes of the patch, the state and flux of the lower and then of the upper volume, the
+ * interfaces of the first axis first, followed by the source update of every volume, the nodal
+ * polynomial of every volume and the scratch of the reconstruction. The prediction of one volume
+ * works in VolumeScratchSize values: the predictor block and the predicted states and fluxes of
+ * its faces.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::fv::ader::Scheme final {
@@ -98,6 +102,7 @@ public:
            Derived::NumberOfUnknowns,
            Derived::NumberOfAuxiliaryVariables>,
          ComputePrecision>;
+  using Tables         = exahype2::fv::ader::PredictorTables<Basis, ComputePrecision>;
 
   static constexpr int    PatchSize                  = Derived::PatchSize;
   static constexpr int    NumberOfUnknowns           = Derived::NumberOfUnknowns;
@@ -116,24 +121,39 @@ public:
   static constexpr int    InteriorInterfacesPerAxis  = (PatchSize - 1) * VolumesPerLayer;
   static constexpr int    EntriesPerSide             = StateEntries + FluxEntries;
   static constexpr int    SourceOffset               = DIMENSIONS * InteriorInterfacesPerAxis * 2 * EntriesPerSide;
-  static constexpr int    ScratchSize                = SourceOffset + VolumesPerPatch * NumberOfUnknowns;
+  static constexpr int    NodalStateSize             = Predictor::CellLayout::NodesPerCell * NumberOfData;
+  static constexpr int    NodalStatesOffset          = SourceOffset + VolumesPerPatch * NumberOfUnknowns;
+  static constexpr int    ReconstructionOffset       = NodalStatesOffset + VolumesPerPatch * NodalStateSize;
+  static constexpr int    PatchScratchSize =
+    ReconstructionOffset + Reconstruction::template PatchScratchSize<PatchSize, NumberOfData>;
+  static constexpr int    FaceStatesOffset           = Predictor::Scratch::Size;
+  static constexpr int    FaceFluxesOffset           = FaceStatesOffset + peano4::FacesPerCell * StateEntries;
+  static constexpr int    VolumeScratchSize          = FaceFluxesOffset + peano4::FacesPerCell * FluxEntries;
   static constexpr double PicardResidualTolerance    = 1e-7;
   static constexpr bool ReportEigenvalues = Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive;
 
   static_assert(Predictor::CellLayout::NodesPerFace == NodesPerFace);
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void predictVolume(
-    int                                          volume,
-    const StoragePrecision* NOALIAS              patch,
-    const StoragePrecision* NOALIAS const        halo[peano4::FacesPerCell],
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    ComputePrecision* NOALIAS                    scratch,
-    ComputePrecision* const                      stateHalves[peano4::FacesPerCell],
-    ComputePrecision* const                      fluxHalves[peano4::FacesPerCell]
+  static INLINE_METHOD GPU_CALLABLE_METHOD void reconstructPatch(
+    const StoragePrecision* NOALIAS        patch,
+    const StoragePrecision* NOALIAS const  halo[peano4::FacesPerCell],
+    ComputePrecision* NOALIAS              patchScratch,
+    const exahype2::dg::ader::TeamWorkers& workers
+  );
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int predictVolume(
+    int                                                volume,
+    const tarch::la::Vector<DIMENSIONS, double>&       cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&       cellSize,
+    double                                             timeStamp,
+    double                                             timeStepSize,
+    const exahype2::dg::BasisTables<ComputePrecision>& tables,
+    ComputePrecision* NOALIAS                          patchScratch,
+    ComputePrecision* NOALIAS                          volumeScratch,
+    ComputePrecision* const                            stateHalves[peano4::FacesPerCell],
+    ComputePrecision* const                            fluxHalves[peano4::FacesPerCell],
+    const exahype2::dg::ader::TeamWorkers&             workers
   );
 
   template <typename StoragePrecision>
@@ -145,18 +165,6 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     const ComputePrecision* NOALIAS              scratch
-  );
-
-  template <typename StoragePrecision>
-  [[nodiscard]] static INLINE_METHOD double predictPatch(
-    StoragePrecision*                            patch,
-    const StoragePrecision* NOALIAS const        halo[peano4::FacesPerCell],
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    ComputePrecision* const                      stateHalves[peano4::FacesPerCell],
-    ComputePrecision* const                      fluxHalves[peano4::FacesPerCell]
   );
 
   template <typename StoragePrecision>
@@ -194,19 +202,6 @@ public:
   );
 
 private:
-  template <typename StoragePrecision>
-  [[nodiscard]] static INLINE_METHOD double predictPatchInScratch(
-    ComputePrecision* NOALIAS                    scratch,
-    StoragePrecision*                            patch,
-    const StoragePrecision* NOALIAS const        halo[peano4::FacesPerCell],
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    ComputePrecision* const                      stateHalves[peano4::FacesPerCell],
-    ComputePrecision* const                      fluxHalves[peano4::FacesPerCell]
-  );
-
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getTangentialIndex(
     const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
     int                                       normal

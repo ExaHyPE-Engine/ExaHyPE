@@ -69,6 +69,17 @@ public:
   static constexpr bool EvaluateSource          = exahype2::terms::HasSourceTerm<Derived, ComputePrecision>;
   static constexpr bool EvaluateDiffusiveSource = exahype2::terms::HasDiffusiveSourceTerm<Derived, ComputePrecision>;
   static constexpr bool AccumulatesFlux         = EvaluateFlux;
+  /**
+   * False when Derived sets DifferentiatesTimeAveragedFlux to false because its caller reads only
+   * the faces and the source of the prediction.
+   */
+  static constexpr bool DifferentiatesTimeAveragedFlux = EvaluateFlux and [] {
+    if constexpr (requires { Derived::DifferentiatesTimeAveragedFlux; }) {
+      return Derived::DifferentiatesTimeAveragedFlux;
+    } else {
+      return true;
+    }
+  }();
   static constexpr bool AccumulatesSource = EvaluateSource or EvaluateDiffusiveSource or EvaluateNonconservativeProduct;
   static constexpr bool NeedsStateGradient =
     EvaluateNonconservativeProduct or EvaluateDiffusiveFlux or EvaluateDiffusiveSource;

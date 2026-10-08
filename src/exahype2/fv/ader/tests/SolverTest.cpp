@@ -11,7 +11,7 @@
 #include "exahype2/TimeStepping.h"
 #include "exahype2/fv/ader/Solver.h"
 #include "exahype2/fv/reconstruction/WENO.h"
-#include "exahype2/fv/weno/NonlinearWeights.h"
+#include "exahype2/fv/reconstruction/weno/NonlinearWeights.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
 #include "peano4/Partition.h"
@@ -75,7 +75,7 @@ namespace {
     static constexpr int NumberOfUnknowns           = 1;
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
-    using Reconstruction = exahype2::fv::reconstruction::WENO<Order, exahype2::fv::weno::JiangShu<8>>;
+    using Reconstruction = exahype2::fv::reconstruction::WENO<Order, exahype2::fv::reconstruction::weno::JiangShu<8>>;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Adaptive;
 

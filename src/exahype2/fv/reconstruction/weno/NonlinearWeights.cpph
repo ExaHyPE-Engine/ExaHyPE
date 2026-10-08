@@ -4,7 +4,7 @@
 TARGET_DECLARE
 template <int Exponent>
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::weno::JiangShu<Exponent>::weights(
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::weno::JiangShu<Exponent>::weights(
   const int                             numberOfStencils,
   const ComputePrecision* NOALIAS const linearWeights,
   const ComputePrecision* NOALIAS const oscillationIndicators,

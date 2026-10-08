@@ -12,12 +12,13 @@ Runge-Kutta DG and the ADER-DG solvers assemble their kernels from them.
 
 ## Functionality
 
-\li `exahype2/fv/FiniteVolumeScheme.h` Declares the finite-volume scheme on one
-  patch. The class exahype2::fv::FiniteVolumeScheme writes the initial
-  condition, fills the outer half of a boundary face, copies the boundary layers
-  of a patch onto its faces, interpolates and restricts the halo halves across a
-  level jump, interpolates and restricts a patch across a regrid and advances a
-  patch by one time step. The free functions exahype2::fv::getFaceVolumeIndex()
+\li `exahype2/fv/Patch.h` Declares the operations on one patch that every
+  finite-volume solver family shares. The class exahype2::fv::Patch writes the
+  initial condition, fills the outer half of a boundary face, copies the boundary
+  layers of a patch onto its faces, interpolates and restricts the halo halves
+  across a level jump and interpolates and restricts a patch across a regrid.
+  exahype2::fv::singlestep::PatchUpdate in `exahype2/fv/singlestep/PatchUpdate.h`
+  advances a patch by one time step. The free functions exahype2::fv::getFaceVolumeIndex()
   name the volumes of a face. The function exahype2::fv::getVolumeCentre()
   returns the centre of a volume. The header `exahype2/dg/Basis.h` derives the
   operators of the DG solver families from the quadrature nodes.

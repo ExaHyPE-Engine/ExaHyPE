@@ -7,15 +7,15 @@
 #include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
-namespace exahype2::fv::timestepping {
+namespace exahype2::fv::singlestep {
   struct SingleStep;
-} // namespace exahype2::fv::timestepping
+} // namespace exahype2::fv::singlestep
 
 TARGET_DECLARE
 /**
  * One-stage explicit time-stepping scheme.
  */
-struct exahype2::fv::timestepping::SingleStep final {
+struct exahype2::fv::singlestep::SingleStep final {
   static constexpr int NumberOfStages = 1;
 
   template <
@@ -49,4 +49,4 @@ struct exahype2::fv::timestepping::SingleStep final {
 };
 TARGET_DECLARE_END
 
-#include "exahype2/fv/timestepping/SingleStep.cpph"
+#include "exahype2/fv/singlestep/SingleStep.cpph"

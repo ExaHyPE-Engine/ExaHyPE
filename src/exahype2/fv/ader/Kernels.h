@@ -2,7 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/dg/Basis.h"
+#include "exahype2/dg/ader/Predictor.h"
+#include "exahype2/fv/Patch.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -18,6 +20,8 @@
  */
 TARGET_DECLARE
 namespace exahype2::fv::ader {
+  struct PredictionStatistics;
+
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct PredictPatches;
 
@@ -35,11 +39,28 @@ namespace exahype2::fv::ader {
 } // namespace exahype2::fv::ader
 
 /**
+ * The largest wave speed of the faces inside the patches of a prediction and the numbers of its
+ * volumes whose Picard iteration diverged or stopped at its sweep limit.
+ */
+struct exahype2::fv::ader::PredictionStatistics final {
+  using ValueType = exahype2::fv::ader::PredictionStatistics;
+
+  double                               maxEigenvalue{0.0};
+  exahype2::dg::ader::PredictionCounts counts{};
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType identity();
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType combine(ValueType left, ValueType right);
+};
+
+/**
  * Predicts every volume of every listed cell, adds the updates inside the patch to the patch and
  * writes the predicted states and fluxes of the faces of the patch into their own halves. Reduces
- * the largest wave speed of the faces inside the patches. One team advances one cell, with one
- * thread per volume on a device, which keeps the predictions inside the patch in the scratch chunk
- * of its entry in scratch.
+ * the largest wave speed of the faces inside the patches and counts the volumes whose Picard
+ * iteration diverged or stopped at its sweep limit. Team entry advances the cells entry,
+ * entry + numberOfTeams and so on. All its threads reconstruct the patch together and then predict
+ * groups of volumes at once, threadsPerVolume threads per volume. The team keeps the
+ * reconstruction and the predictions inside the patch and the
+ * work of its volumes in its chunk of scratchSizePerTeam values in scratch.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ader::PredictPatches final {
@@ -48,35 +69,26 @@ struct exahype2::fv::ader::PredictPatches final {
   using FacePool  = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition            partition{};
-  tarch::Span<const int>       cells{};
-  typename CellPool::View      solution{};
-  typename FacePool::ConstView halo{};
-  typename StatePool::View     faceStates{};
-  typename StatePool::View     faceFluxes{};
-  double                       timeStamp{0.0};
-  double                       timeStepSize{0.0};
-  ComputePrecision*            scratch{nullptr};
+  peano4::Partition                           partition{};
+  tarch::Span<const int>                      cells{};
+  int                                         numberOfTeams{0};
+  int                                         threadsPerVolume{1};
+  typename CellPool::View                     solution{};
+  typename FacePool::ConstView                halo{};
+  typename StatePool::View                    faceStates{};
+  typename StatePool::View                    faceFluxes{};
+  exahype2::dg::BasisTables<ComputePrecision> tables{};
+  ComputePrecision*                           scratch{nullptr};
+  int                                         scratchSizePerTeam{0};
+  int                                         scratchChunks{0};
+  double                                      timeStamp{0.0};
+  double                                      timeStepSize{0.0};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,
     tarch::accelerator::TeamHandle team,
-    double&                        accumulator
+    PredictionStatistics&          accumulator
   ) const;
-
-private:
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double predictPatchOnDevice(
-    tarch::accelerator::TeamHandle               team,
-    StoragePrecision*                            patch,
-    const StoragePrecision* const                haloOfCell[peano4::FacesPerCell],
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    ComputePrecision*                            scratchOfTeam,
-    ComputePrecision* const                      stateHalves[peano4::FacesPerCell],
-    ComputePrecision* const                      fluxHalves[peano4::FacesPerCell]
-  );
 };
 
 /**
@@ -105,7 +117,7 @@ struct exahype2::fv::ader::SolveRiemannProblems final {
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ader::CorrectPatches final {
   using Scheme    = exahype2::fv::ader::Scheme<Derived, ComputePrecision>;
-  using Patch     = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using Patch     = exahype2::fv::Patch<Derived, ComputePrecision>;
   using CellPool  = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 

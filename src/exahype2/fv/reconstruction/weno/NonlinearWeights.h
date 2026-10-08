@@ -5,7 +5,7 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 
-namespace exahype2::fv::weno {
+namespace exahype2::fv::reconstruction::weno {
   /**
    * A weighting maps the linear weights and the oscillation indicators of the
    * admissible candidate stencils of one volume onto the normalised nonlinear
@@ -19,7 +19,7 @@ namespace exahype2::fv::weno {
 
   template <int Exponent>
   struct JiangShu;
-} // namespace exahype2::fv::weno
+} // namespace exahype2::fv::reconstruction::weno
 
 TARGET_DECLARE
 /**
@@ -31,7 +31,7 @@ TARGET_DECLARE
  * keeps them finite in single precision.
  */
 template <int Exponent>
-struct exahype2::fv::weno::JiangShu final {
+struct exahype2::fv::reconstruction::weno::JiangShu final {
   static_assert(Exponent >= 1, "The Jiang-Shu weights need a positive exponent.");
 
   template <typename ComputePrecision>
@@ -44,4 +44,4 @@ struct exahype2::fv::weno::JiangShu final {
 };
 TARGET_DECLARE_END
 
-#include "exahype2/fv/weno/NonlinearWeights.cpph"
+#include "exahype2/fv/reconstruction/weno/NonlinearWeights.cpph"

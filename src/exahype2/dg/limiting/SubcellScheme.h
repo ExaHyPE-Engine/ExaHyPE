@@ -5,9 +5,9 @@
 #include "exahype2/TimeStepping.h"
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/Kernels.h"
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/Patch.h"
 #include "exahype2/fv/Kernels.h"
-#include "exahype2/fv/timestepping/SingleStep.h"
+#include "exahype2/fv/singlestep/SingleStep.h"
 #include "exahype2/terms/BoundaryConditions.h"
 #include "exahype2/terms/DiffusiveSourceTerm.h"
 #include "exahype2/terms/Flux.h"
@@ -58,7 +58,7 @@ TARGET_DECLARE
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::limiting::SubcellScheme final {
 public:
-  using Subgrid = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using Subgrid = exahype2::fv::Patch<Derived, ComputePrecision>;
 
   static constexpr int  NodesPerAxis               = Derived::DGOrder + 1;
   static constexpr int  SubcellsPerAxis            = Derived::PatchSize;
@@ -187,7 +187,7 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
   static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
 
   using Reconstruction  = Reconstruct;
-  using TimeIntegration = exahype2::fv::timestepping::SingleStep;
+  using TimeIntegration = exahype2::fv::singlestep::SingleStep;
 
   template <typename Precision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void boundaryConditions(

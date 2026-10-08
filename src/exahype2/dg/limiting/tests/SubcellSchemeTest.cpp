@@ -7,7 +7,7 @@
 #include "exahype2/dg/limiting/SubcellScheme.h"
 #include "exahype2/dg/limiting/tests/LimiterTestData.h"
 #include "exahype2/dg/tests/KernelTestData.h"
-#include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/Patch.h"
 #include "exahype2/fv/singlestep/SubcellStep.h"
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/MaxEigenvalue.h"

@@ -1,12 +1,18 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include <string>
+
 #include "exahype2/LevelJumps.h"
 #include "exahype2/fv/ader/Kernels.h"
+#include "tarch/Assertions.h"
+#include "tarch/Termination.h"
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/Scratch.h"
+#include "tarch/instrumentation/Warning.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::Solver(
@@ -22,14 +28,16 @@ INLINE_METHOD exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePreci
 }
 
 /**
- * Reserves the pools of the base and of the predicted face halves and builds their exchanges. Every
- * rank calls this at the same time. The exchanges of every solver then take the same tags.
+ * Reserves the pools of the base and of the predicted face halves, builds their exchanges and
+ * reserves the predictor. Every rank calls this at the same time. The exchanges of every solver
+ * then take the same tags.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(const peano4::Partition& partition) {
   Base::allocate(partition);
   reserveFaces(partition);
+  _predictor.template allocate<Derived>();
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -41,6 +49,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::reserve
   _faceFluxes.reserve(partition.getNumberOfFaces());
   _stateExchange.rebuild(partition);
   _fluxExchange.rebuild(partition);
+  _restrictedFluxExchange.rebuild(partition);
 }
 
 /**
@@ -87,11 +96,11 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::perform
     exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, solveRiemannProblems(partition, Remote, timeStepSize));
 
   exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
-  _fluxExchange.post();
+  _restrictedFluxExchange.post();
   exahype2::restrictFineFaces(partition, Local, restrictFluxes);
   maxEigenvalue =
     exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, correctPatches(partition, Local, timeStepSize));
-  _fluxExchange.wait();
+  _restrictedFluxExchange.wait();
   maxEigenvalue =
     exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, correctPatches(partition, Remote, timeStepSize));
 
@@ -117,19 +126,58 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::release
   _faceFluxes.release();
   _stateExchange.release();
   _fluxExchange.release();
-  _predictorScratch.release();
+  _restrictedFluxExchange.release();
+  _predictor.release();
+  _unconvergedPredictions = 0;
+}
+
+/**
+ * Adds the values of the base solver and the unconverged predictions of this rank since the last
+ * reduction to record.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::contributeTo(
+  tarch::mpi::ReductionRecord& record
+) {
+  Base::contributeTo(record);
+  assertion(_unconvergedPredictions >= 0, _unconvergedPredictions);
+  _unconvergedPredictionsSlot = record.addSum(static_cast<std::uint64_t>(_unconvergedPredictions));
+  _unconvergedPredictions     = 0;
+}
+
+/**
+ * Reads the reduced values of the base solver. The global master warns when the Picard iteration of
+ * any volume stopped at its sweep limit since the last reduction.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::adoptFrom(
+  const tarch::mpi::ReductionRecord& record
+) {
+  Base::adoptFrom(record);
+  const auto globalPredictions = record.getSum(_unconvergedPredictionsSlot);
+  if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logWarning(
+      "The Picard iteration of " << globalPredictions
+                                 << " volumes reaches its sweep limit at t = " << this->_timeStepping.getTimeStamp()
+                                 << " before it converges. The volumes continue with the last iterate."
+    );
+  }
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD tarch::AllocatedBytes
 exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return Base::getAllocatedBytes() + _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes()
-    + _stateExchange.getAllocatedBytes() + _fluxExchange.getAllocatedBytes() + _predictorScratch.getAllocatedBytes();
+    + _stateExchange.getAllocatedBytes() + _fluxExchange.getAllocatedBytes()
+    + _restrictedFluxExchange.getAllocatedBytes() + _predictor.getAllocatedBytes();
 }
 
 /**
  * Predicts the local or the remote cells and returns the largest wave speed of the faces inside
- * their patches.
+ * their patches. Terminates the run on a diverged volume and continues an unconverged volume with
+ * the last iterate.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD double
@@ -138,31 +186,24 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::predict
   const peano4::Adjacency  adjacency,
   const double             timeStepSize
 ) {
-  const auto cells         = partition.onDevice().getCells(adjacency);
-  double     maxEigenvalue = 0.0;
-#if defined(PEANO_WITH_GPU_BACKEND)
-  const std::size_t size =
-    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(cells.size)) * Scheme::ScratchSize;
-  if (_predictorScratch.getSize() < size) {
-    _predictorScratch.allocate(size);
-  }
-#endif
-  tarch::accelerator::parallelReduce(
-    tarch::accelerator::TeamRange(cells.size),
-    exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
-      cells,
-      this->_solution.getView(),
-      std::as_const(this->_halo).getView(),
-      _faceStates.getView(),
-      _faceFluxes.getView(),
-      this->_timeStepping.getTimeStamp(),
-      timeStepSize,
-      _predictorScratch.getData()
-    },
-    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+  const auto statistics = _predictor.template predict<Derived>(
+    partition,
+    partition.onDevice().getCells(adjacency),
+    this->_solution.getView(),
+    std::as_const(this->_halo).getView(),
+    _faceStates.getView(),
+    _faceFluxes.getView(),
+    this->_timeStepping.getTimeStamp(),
+    timeStepSize
   );
-  return maxEigenvalue;
+  if (statistics.counts.divergedCells > 0) {
+    tarch::terminateWithError(
+      "The space-time predictor diverges in " + std::to_string(statistics.counts.divergedCells) + " volumes."
+    );
+  }
+  assertion(statistics.counts.unconvergedCells >= 0, statistics.counts.unconvergedCells);
+  _unconvergedPredictions += statistics.counts.unconvergedCells;
+  return statistics.maxEigenvalue;
 }
 
 /**
