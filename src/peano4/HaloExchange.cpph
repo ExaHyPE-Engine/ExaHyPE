@@ -162,7 +162,7 @@ template <typename T>
 INLINE_METHOD void
 peano4::HaloExchange<T>::postMessages() {
   assertion(not _messagesPosted);
-  MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
+  const MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
   for (std::size_t messageNumber = 0; messageNumber < _messages.size(); messageNumber++) {
     const Message& message   = _messages[messageNumber];
     const int      byteCount = message.numberOfEntries * _halfSize * static_cast<int>(sizeof(T));

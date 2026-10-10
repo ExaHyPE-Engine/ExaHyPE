@@ -55,12 +55,11 @@ function(peano_apply_flags)
     -Werror
   )
 
-  # The -Xcompiler warnings reach only the host compiler. That compiler has to be GCC or Clang. The
-  # nvcc warnings below cover the device code.
-  set(PEANO_CUDA_WARNINGS "")
-  foreach(_peano_warning ${PEANO_CXX_WARNINGS})
-    list(APPEND PEANO_CUDA_WARNINGS "-Xcompiler=${_peano_warning}")
-  endforeach()
+  set(PEANO_CUDA_HOST_WARNINGS ${PEANO_CXX_WARNINGS})
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    list(REMOVE_ITEM PEANO_CUDA_HOST_WARNINGS -Wpedantic)
+  endif()
+  list(TRANSFORM PEANO_CUDA_HOST_WARNINGS PREPEND "-Xcompiler=" OUTPUT_VARIABLE PEANO_CUDA_WARNINGS)
 
   list(APPEND PEANO_CUDA_WARNINGS
     -Werror=all-warnings
@@ -96,6 +95,7 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,Clang>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-ffp-contract=on>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-ffp-contract=on>
     "$<$<COMPILE_LANG_AND_ID:HIP,Clang>:SHELL:-Xarch_host -ffp-contract=on>"
   )
 
@@ -154,12 +154,6 @@ function(peano_apply_flags)
       $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang,IntelLLVM>:-g>
     )
   endif()
-
-  target_compile_options(PeanoOptions INTERFACE
-    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-free-nonheap-object>
-    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-array-bounds>
-    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-null-dereference>
-  )
 
   if(PEANO_WITH_GPU_ARCH MATCHES "^sm_")
     target_compile_options(PeanoOptions INTERFACE

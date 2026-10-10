@@ -386,7 +386,7 @@ namespace {
    * Runs the predictor of the cells of one team. A thread behind the last cell still calls
    * predict() to reach the barriers of the team.
    */
-  struct PredictorOfCell final {
+  struct NonlinearPredictorOfCell final {
     exahype2::dg::BasisTables<double> tables{};
     double*                           cellStates{nullptr};
     double*                           faceStates{nullptr};
@@ -461,7 +461,7 @@ namespace {
         threadsPerTeam,
         Predictor<exahype2::dg::ader::tests::StubSolver>::getTeamScratchBytes(threadsPerTeam)
       ),
-      PredictorOfCell{
+      NonlinearPredictorOfCell{
         deviceTables.getView(),
         deviceCellStates.getData(),
         deviceFaceStates.getData(),

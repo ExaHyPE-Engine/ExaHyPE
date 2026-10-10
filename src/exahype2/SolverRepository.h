@@ -24,8 +24,8 @@ namespace exahype2 {
 
 /**
  * Runs every phase on every solver. Every solver outlives the repository. A phase that votes
- * merges the votes of all solvers into one list of refinement requests. adoptFrom() gathers the
- * requests of all ranks after the reduction of the step.
+ * merges the votes of all solvers into one list of refinement requests.
+ * readValuesFromGlobalReduction() gathers the requests of all ranks after the reduction of the step.
  */
 template <typename... Solvers>
 class exahype2::SolverRepository final {
@@ -56,8 +56,8 @@ public:
     tarch::plotter::Format   format,
     const std::string&       outputDirectory
   );
-  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
-  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] INLINE_METHOD const std::vector<peano4::RefinementRequest>& getRefinementRequests() const;
 
@@ -80,16 +80,11 @@ private:
   std::vector<peano4::RefinementRequest> _requestsOfTheRun{};
 
   /**
-   * The requests of this rank that the next contributeTo() counts.
+   * The requests of this rank that the next addLocalValuesToGlobalReduction() counts.
    */
   std::vector<peano4::RefinementRequest> _localRequests{};
   bool                                   _localRequestsPending{false};
-  /**
-   * The local requests of every record that contributeTo() filled and adoptFrom() has not read, in
-   * the order of the records. A step without committed requests adds std::nullopt.
-   */
-  std::deque<std::optional<std::vector<peano4::RefinementRequest>>> _localRequestsOfRecords{};
-  int                                                               _numberOfRequestsSlot{0};
+  int                                    _numberOfRequestsSlot{0};
 };
 
 #include "exahype2/SolverRepository.cpph"

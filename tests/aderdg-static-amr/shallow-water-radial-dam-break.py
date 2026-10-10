@@ -71,7 +71,13 @@ solver.set_pde_terms(
   Q[3] = r < 0.1 ? 0.0 : 0.05;
 """,
     boundary_conditions="""
-  initialCondition(Qoutside, x, h);
+  const double firstSquare  = (x[0] - 0.5) * (x[0] - 0.5);
+  const double secondSquare = (x[1] - 0.5) * (x[1] - 0.5);
+  const double r            = std::sqrt(firstSquare + secondSquare);
+  Qoutside[0] = 1.;
+  Qoutside[1] = 0.;
+  Qoutside[2] = 0.;
+  Qoutside[3] = r < 0.1 ? 0.0 : 0.05;
 """,
     refinement_criterion="""
   auto result = ::exahype2::RefinementCommand::Keep;

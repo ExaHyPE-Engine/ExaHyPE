@@ -89,8 +89,8 @@ exahype2::TimeStepping::getMaxScaledEigenvalueOfThisStep() const {
 }
 
 /**
- * Returns whether the last adoptFrom() read eigenvalue maxima that some rank raised since its
- * previous contribution.
+ * Returns whether the last readValuesFromGlobalReduction() read eigenvalue maxima that some rank
+ * raised since its previous addLocalValuesToGlobalReduction().
  */
 INLINE_METHOD bool
 exahype2::TimeStepping::hasNewMaxEigenvalues() const {
@@ -98,8 +98,8 @@ exahype2::TimeStepping::hasNewMaxEigenvalues() const {
 }
 
 /**
- * Returns whether the last adoptFrom() read mesh widths that some rank set since its previous
- * contribution.
+ * Returns whether the last readValuesFromGlobalReduction() read mesh widths that some rank set
+ * since its previous addLocalValuesToGlobalReduction().
  */
 INLINE_METHOD bool
 exahype2::TimeStepping::hasNewMeshWidths() const {

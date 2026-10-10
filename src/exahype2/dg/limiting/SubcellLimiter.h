@@ -64,8 +64,8 @@ public:
     double                   timeStepSize
   );
   INLINE_METHOD void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid, const CellPool& solution);
-  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
-  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<int>::View getStatuses();
   [[nodiscard]] INLINE_METHOD const StatusPool& downloadStatuses();
@@ -140,7 +140,8 @@ private:
    */
   int _localTroubledCells{0};
   /**
-   * The number of troubled cells on all ranks in the time step of the last adoptFrom().
+   * The number of troubled cells on all ranks in the time step of the last
+   * readValuesFromGlobalReduction().
    */
   int _globalTroubledCells{0};
   int _troubledCellsSlot{0};

@@ -9,17 +9,16 @@
 #include "tarch/accelerator/accelerator.h"
 
 namespace tarch {
-  void triggerAssertion(const std::string& assertionMessage);
+  [[noreturn]] void triggerAssertion(const std::string& assertionMessage);
 } // namespace tarch
 
 #define TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x) #x
 #define TARCH_ASSERTION_STRINGIFY(x) TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x)
 
 /**
- * Terminates the program when expr is false and prints the file, the line, expr and every value
- * after expr. The device branch prints the parameter names without values, because operator<< runs
- * on the host only. The host branch builds the message in a lambda, so a constexpr function may
- * contain an assertion.
+ * Terminates the program when `expr` is false and prints the file, the line, `expr` and the
+ * parameters after `expr`. The device branch prints the names of these parameters only. The host
+ * branch builds its message in a lambda to permit `assertion` in a constexpr function.
  */
 // clang-format off
 #define assertion(expr, ...) \

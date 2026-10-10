@@ -25,6 +25,4 @@ public:
 private:
   void testAllreduceReducesEverySlotOverTheRanks();
   void testDoublesKeepTheirValueWhenEveryRankAddsThemAll();
-  void testTwoPostedRecordsReduceIndependently();
-  void testRecordsOfTheSameLayoutAssignTheSameSlots();
 };

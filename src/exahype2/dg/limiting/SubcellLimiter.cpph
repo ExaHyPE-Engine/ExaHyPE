@@ -313,7 +313,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 }
 
 /**
- * Returns the number of troubled cells on all ranks in the time step of the last adoptFrom().
+ * Returns the number of troubled cells on all ranks in the time step of the last
+ * readValuesFromGlobalReduction().
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD int
@@ -330,7 +331,7 @@ exahype2::dg::limiting::SubcellLimiter<
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::contributeTo(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::addLocalValuesToGlobalReduction(
   tarch::mpi::ReductionRecord& record
 ) {
   assertion(_localTroubledCells >= 0, _localTroubledCells);
@@ -342,7 +343,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::adoptFrom(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::readValuesFromGlobalReduction(
   const tarch::mpi::ReductionRecord& record
 ) {
   const auto globalTroubledCells = record.getSum(_troubledCellsSlot);

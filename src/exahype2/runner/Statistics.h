@@ -57,8 +57,8 @@ public:
 
   void setLocalSolverBytes(std::size_t hostBytes, std::size_t deviceBytes);
   void setLocalCellUpdates(std::uint64_t solverCells, std::uint64_t cellDoFs);
-  void contributeTo(tarch::mpi::ReductionRecord& record, bool refreshMemory);
-  void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record, bool refreshMemory);
+  void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] std::uint64_t getGlobalNumberOfInnerUnrefinedCells() const;
   [[nodiscard]] std::uint64_t getGlobalNumberOfInnerRefinedCells() const;

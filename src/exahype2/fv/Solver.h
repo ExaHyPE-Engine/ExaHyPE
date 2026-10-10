@@ -86,8 +86,8 @@ public:
     const std::string&       outputDirectory
   );
   INLINE_METHOD void release();
-  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
-  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
   INLINE_METHOD void setLimits(const exahype2::Limits& limits);
   INLINE_METHOD void openErrorMeasurement(const std::string& fileName, double timeDeltaBetweenSnapshots);

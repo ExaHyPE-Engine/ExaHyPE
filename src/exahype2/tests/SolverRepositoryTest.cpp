@@ -81,11 +81,11 @@ namespace {
     ) {
       phaseCalls++;
     }
-    void contributeTo(tarch::mpi::ReductionRecord& record) {
+    void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record) {
       phaseCalls++;
       slot = record.addSum(1);
     }
-    void adoptFrom(const tarch::mpi::ReductionRecord& record) {
+    void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record) {
       phaseCalls++;
       reducedValue = record.getSum(slot);
     }
@@ -152,9 +152,9 @@ exahype2::tests::SolverRepositoryTest::testEveryPhaseCallReachesEverySolver() {
   repository.regrid(partition, regrid);
   repository.plot(partition, tarch::plotter::Format::VTU, "");
   tarch::mpi::ReductionRecord record;
-  repository.contributeTo(record);
+  repository.addLocalValuesToGlobalReduction(record);
   record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-  repository.adoptFrom(record);
+  repository.readValuesFromGlobalReduction(record);
   repository.finishSimulation();
 
   const auto numberOfRanks = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getNumberOfRanks());
@@ -166,7 +166,7 @@ exahype2::tests::SolverRepositoryTest::testEveryPhaseCallReachesEverySolver() {
 }
 
 /**
- * Two posted reductions gather the refinement requests of the steps that filled them.
+ * Every reduction gathers the refinement requests of the step that filled it.
  */
 void
 exahype2::tests::SolverRepositoryTest::testEveryReductionGathersTheRequestsOfItsOwnStep() {
@@ -174,24 +174,21 @@ exahype2::tests::SolverRepositoryTest::testEveryReductionGathersTheRequestsOfIts
   const auto&                partition = peano4::Spacetree::getInstance().getPartition();
   RecordingSolver<false>     solver;
   exahype2::SolverRepository repository{solver};
-  MPI_Comm                   communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  const MPI_Comm             communicator = tarch::mpi::Rank::getInstance().getCommunicator();
 
   solver.timeStepCommand = exahype2::RefinementCommand::Refine;
   repository.performTimeStep(partition);
   tarch::mpi::ReductionRecord refiningStep;
-  repository.contributeTo(refiningStep);
-  refiningStep.post(communicator);
+  repository.addLocalValuesToGlobalReduction(refiningStep);
+  refiningStep.allreduce(communicator);
+  repository.readValuesFromGlobalReduction(refiningStep);
+  validate(not repository.getRefinementRequests().empty());
 
   solver.timeStepCommand = exahype2::RefinementCommand::Keep;
   repository.performTimeStep(partition);
   tarch::mpi::ReductionRecord keepingStep;
-  repository.contributeTo(keepingStep);
-  keepingStep.post(communicator);
-
-  refiningStep.wait();
-  repository.adoptFrom(refiningStep);
-  validate(not repository.getRefinementRequests().empty());
-  keepingStep.wait();
-  repository.adoptFrom(keepingStep);
+  repository.addLocalValuesToGlobalReduction(keepingStep);
+  keepingStep.allreduce(communicator);
+  repository.readValuesFromGlobalReduction(keepingStep);
   validate(repository.getRefinementRequests().empty());
 }

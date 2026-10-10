@@ -138,8 +138,8 @@ exahype2::runner::getGlobalStatistics() {
 }
 
 /**
- * Records the host and device bytes of the solvers of this rank. contributeTo() adds them to the
- * sums over the ranks.
+ * Records the host and device bytes of the solvers of this rank. addLocalValuesToGlobalReduction()
+ * adds them to the sums over the ranks.
  */
 void
 exahype2::runner::GlobalStatistics::setLocalSolverBytes(const std::size_t hostBytes, const std::size_t deviceBytes) {
@@ -149,7 +149,7 @@ exahype2::runner::GlobalStatistics::setLocalSolverBytes(const std::size_t hostBy
 
 /**
  * Records the solver cells and degrees of freedom of this rank, summed over the solvers.
- * contributeTo() adds them to the sums over the ranks.
+ * addLocalValuesToGlobalReduction() adds them to the sums over the ranks.
  */
 void
 exahype2::runner::GlobalStatistics::setLocalCellUpdates(const std::uint64_t solverCells, const std::uint64_t cellDoFs) {
@@ -163,7 +163,10 @@ exahype2::runner::GlobalStatistics::setLocalCellUpdates(const std::uint64_t solv
  * keep their order under an unsigned minimum.
  */
 void
-exahype2::runner::GlobalStatistics::contributeTo(tarch::mpi::ReductionRecord& record, const bool refreshMemory) {
+exahype2::runner::GlobalStatistics::addLocalValuesToGlobalReduction(
+  tarch::mpi::ReductionRecord& record,
+  const bool                   refreshMemory
+) {
   const auto& statistics = peano4::Spacetree::getInstance().getStatistics();
   assertion(statistics.numberOfCells >= 0, statistics.numberOfCells);
   assertion(statistics.numberOfRefinedCells >= 0, statistics.numberOfRefinedCells);
@@ -228,11 +231,11 @@ exahype2::runner::GlobalStatistics::contributeTo(tarch::mpi::ReductionRecord& re
 }
 
 /**
- * Reads the global statistics from record after its allreduce. contributeTo() added the local
- * statistics to this record.
+ * Reads the global statistics from record after its allreduce. addLocalValuesToGlobalReduction()
+ * added the local statistics to this record.
  */
 void
-exahype2::runner::GlobalStatistics::adoptFrom(const tarch::mpi::ReductionRecord& record) {
+exahype2::runner::GlobalStatistics::readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record) {
   const auto getSum     = [this, &record](const SumSlot slot) { return record.getSum(_firstSumSlot + slot); };
   const auto getMinimum = [this, &record](const MinimumSlot slot) {
     return record.getMinimum(_firstMinimumSlot + slot);

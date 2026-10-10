@@ -286,10 +286,10 @@ peano4::tests::HaloExchangeTest::testExchangesHoldDistinctTags() {
   validate(first.getTag() != second.getTag());
   validate(second.getTag() > first.getTag());
 
-  const int tags[2]{first.getTag(), second.getTag()};
-  int       minimumTags[2]{0, 0};
-  int       maximumTags[2]{0, 0};
-  MPI_Comm  communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  const int      tags[2]{first.getTag(), second.getTag()};
+  int            minimumTags[2]{0, 0};
+  int            maximumTags[2]{0, 0};
+  const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
   tarch::mpi::allreduce(tags, minimumTags, 2, MPI_INT, MPI_MIN, communicator);
   tarch::mpi::allreduce(tags, maximumTags, 2, MPI_INT, MPI_MAX, communicator);
   validateEquals(minimumTags[0], maximumTags[0]);

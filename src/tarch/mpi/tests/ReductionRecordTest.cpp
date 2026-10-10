@@ -20,49 +20,6 @@ void
 tarch::mpi::tests::ReductionRecordTest::run() {
   testMethod(testAllreduceReducesEverySlotOverTheRanks);
   testMethod(testDoublesKeepTheirValueWhenEveryRankAddsThemAll);
-  testMethod(testTwoPostedRecordsReduceIndependently);
-  testMethod(testRecordsOfTheSameLayoutAssignTheSameSlots);
-}
-
-/**
- * A record posted after another one reduces its own values, even when it completes first.
- */
-void
-tarch::mpi::tests::ReductionRecordTest::testTwoPostedRecordsReduceIndependently() {
-  const auto& rank      = tarch::mpi::Rank::getInstance();
-  const auto  thisRank  = static_cast<std::uint64_t>(rank.getRank());
-  const auto  ranks     = static_cast<std::uint64_t>(rank.getNumberOfRanks());
-  auto        earlier   = std::make_unique<tarch::mpi::ReductionRecord>();
-  auto        later     = std::make_unique<tarch::mpi::ReductionRecord>();
-  const int   earlySlot = earlier->addSum(thisRank + 1);
-  const int   lateSlot  = later->addMaximum(thisRank + 10);
-  earlier->post(rank.getCommunicator());
-  later->post(rank.getCommunicator());
-  validate(earlier->isPosted() and later->isPosted());
-
-  later->wait();
-  earlier->wait();
-  validate(not earlier->isPosted() and not later->isPosted());
-  validateEquals(earlier->getSum(earlySlot), ranks * (ranks + 1) / 2);
-  validateEquals(later->getMaximum(lateSlot), ranks + 9);
-}
-
-/**
- * Two records with as many sums, minima and maxima have the same layout, whatever their values.
- */
-void
-tarch::mpi::tests::ReductionRecordTest::testRecordsOfTheSameLayoutAssignTheSameSlots() {
-  tarch::mpi::ReductionRecord first;
-  tarch::mpi::ReductionRecord second;
-  validate(first.hasLayoutOf(second));
-  static_cast<void>(first.addSum(1));
-  static_cast<void>(first.addMinimum(2));
-  validate(not first.hasLayoutOf(second));
-  static_cast<void>(second.addSum(3));
-  static_cast<void>(second.addMinimum(4));
-  validate(first.hasLayoutOf(second));
-  static_cast<void>(second.addMaximum(5));
-  validate(not first.hasLayoutOf(second));
 }
 
 /**

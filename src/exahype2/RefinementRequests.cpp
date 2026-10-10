@@ -185,9 +185,9 @@ exahype2::RefinementRequests::getLocalRefinementRequests(const peano4::Partition
  */
 std::vector<peano4::RefinementRequest>
 exahype2::RefinementRequests::gatherRefinementRequests(std::vector<peano4::RefinementRequest> requests) {
-  const auto& rank          = tarch::mpi::Rank::getInstance();
-  const int   numberOfRanks = rank.getNumberOfRanks();
-  MPI_Comm    communicator  = rank.getCommunicator();
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const int      numberOfRanks = rank.getNumberOfRanks();
+  const MPI_Comm communicator  = rank.getCommunicator();
   if (numberOfRanks > 1) {
     constexpr auto RequestSize = static_cast<int>(sizeof(peano4::RefinementRequest));
     const auto     localBytes  = static_cast<std::size_t>(requests.size()) * RequestSize;

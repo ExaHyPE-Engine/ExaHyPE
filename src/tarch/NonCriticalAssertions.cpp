@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "NonCriticalAssertions.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Error.h"
 #include "tarch/mpi/Rank.h"
@@ -12,25 +13,21 @@ namespace {
 
 /**
  * Records the rank of the first violated non-critical assertion. The first violation writes the
- * error, and every later one writes a debug message.
+ * requirement and the values as an error. Every later violation writes a debug message.
  */
 void
-tarch::triggerNonCriticalAssertion(
-  const std::string& file,
-  const int          line,
-  const std::string& expression,
-  const std::string& parameterValuePairs
-) {
+tarch::triggerNonCriticalAssertion(const std::string& requirement, const std::string& values) {
+  assertion(not requirement.empty());
   int expected = -1;
   if (not rankWhichHasSetNonCriticalAssertion
             .compare_exchange_strong(expected, tarch::mpi::Rank::getInstance().getRank())) {
-    logDebug("A non-critical assertion fails in (" << file << ":" << line << "): " << expression);
-    logDebug("A non-critical assertion has already put this rank into shutdown mode.");
+    logDebug(requirement);
+    logDebug("The rank stops after an earlier non-critical assertion.");
     return;
   }
 
-  logError("A non-critical assertion fails in (" << file << ":" << line << "): " << expression);
-  logError(parameterValuePairs);
+  logError(requirement);
+  logError(values);
   logError("The rank writes its output and shuts down.");
 }
 
@@ -40,7 +37,8 @@ tarch::hasNonCriticalAssertionBeenViolated() {
 }
 
 /**
- * Returns the rank that raised a non-critical assertion, or -1 if no rank raised one.
+ * Returns the rank that raised a non-critical assertion. Without a non-critical assertion, the
+ * result is -1.
  */
 int
 tarch::getNonCriticalAssertionRank() {
@@ -49,7 +47,7 @@ tarch::getNonCriticalAssertionRank() {
 
 /**
  * Adopts a non-critical assertion that another rank raised. A rank that has raised one of its own
- * keeps its own value, and passing -1 leaves the value untouched.
+ * keeps its own value. The rank -1 leaves the value untouched.
  */
 void
 tarch::adoptNonCriticalAssertionRank(const int rank) {

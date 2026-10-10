@@ -111,8 +111,8 @@ public:
     const std::string&       outputDirectory
   );
   INLINE_METHOD void release();
-  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
-  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
   [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;

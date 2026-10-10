@@ -391,11 +391,6 @@ exahype2::runner::Runner::Runner(
 }
 
 /**
- * The time loop completes the pending reduction before it returns.
- */
-exahype2::runner::Runner::~Runner() { assertion(_pendingReduction == nullptr); }
-
-/**
  * Applies the refinement requests of the solvers to the grid. With dataLive, the solvers move their
  * data to a changed grid before the regrid finishes.
  */
@@ -443,17 +438,9 @@ exahype2::runner::Runner::executeStep(const Step step) {
  * Reduces the global statistics, the values of the solvers and the rank of a non-critical assertion
  * of the step in one allreduce. Every rank calls this function collectively after every step. Every
  * step except a time step refreshes the memory figures.
- *
- * A time step posts its reduction and adopts the reduction of the previous time step. A rank that
- * computes slower in one step then delays the other ranks by its excess over the next step only.
- * A time step therefore takes its size from the reduction two time steps before. The first time
- * step adopts its own reduction at once. Every other step starts without a pending reduction and
- * reduces its own values at once. Consecutive time steps contribute records of the same layout. A
- * record of a time step then assigns the slots that its predecessor assigned.
  */
 void
 exahype2::runner::Runner::finishStep(const Step step) {
-  assertion(step == Step::TimeStep or _pendingReduction == nullptr);
   auto&      statistics = exahype2::runner::getGlobalStatistics();
   const auto bytes      = _callbacks.getAllocatedBytes ? _callbacks.getAllocatedBytes() : tarch::AllocatedBytes{};
   statistics.setLocalSolverBytes(bytes.host, bytes.device);
@@ -466,113 +453,25 @@ exahype2::runner::Runner::finishStep(const Step step) {
   // unsigned maximum.
   const int assertionRank = tarch::getNonCriticalAssertionRank();
   assertion(assertionRank >= -1, assertionRank);
-  const int shiftedAssertionRank = assertionRank + 1;
-  auto      record               = std::make_unique<tarch::mpi::ReductionRecord>();
-  statistics.contributeTo(*record, step != Step::TimeStep);
-  const int assertionSlot = record->addMaximum(static_cast<std::uint64_t>(shiftedAssertionRank));
-  if (_callbacks.contributeTo) {
-    _callbacks.contributeTo(*record);
+  const int                   shiftedAssertionRank = assertionRank + 1;
+  tarch::mpi::ReductionRecord record;
+  statistics.addLocalValuesToGlobalReduction(record, step != Step::TimeStep);
+  const int assertionSlot = record.addMaximum(static_cast<std::uint64_t>(shiftedAssertionRank));
+  if (_callbacks.addLocalValuesToGlobalReduction) {
+    _callbacks.addLocalValuesToGlobalReduction(record);
   }
+  record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
 
-  MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-  if (step != Step::TimeStep) {
-    record->allreduce(communicator);
-    adoptReduction(*record, assertionSlot);
-    return;
-  }
-  record->post(communicator);
-  assertion(_pendingReduction == nullptr or _pendingReduction->hasLayoutOf(*record));
-  assertion(
-    _pendingReduction == nullptr or _pendingAssertionSlot == assertionSlot,
-    _pendingAssertionSlot,
-    assertionSlot
-  );
-  completePendingReduction();
-  _pendingReduction     = std::move(record);
-  _pendingAssertionSlot = assertionSlot;
-  if (not _hasAdoptedReductionOfTimeStep) {
-    completePendingReduction();
+  statistics.readValuesFromGlobalReduction(record);
+  tarch::adoptNonCriticalAssertionRank(static_cast<int>(record.getMaximum(assertionSlot)) - 1);
+  if (_callbacks.readValuesFromGlobalReduction) {
+    _callbacks.readValuesFromGlobalReduction(record);
   }
 }
 
 /**
- * Passes the reduced values of record to the global statistics, to the non-critical assertion and
- * to the solvers.
- */
-void
-exahype2::runner::Runner::adoptReduction(const tarch::mpi::ReductionRecord& record, const int assertionSlot) {
-  exahype2::runner::getGlobalStatistics().adoptFrom(record);
-  _reducedNonCriticalAssertionRank = static_cast<int>(record.getMaximum(assertionSlot)) - 1;
-  tarch::adoptNonCriticalAssertionRank(_reducedNonCriticalAssertionRank);
-  if (_callbacks.adoptFrom) {
-    _callbacks.adoptFrom(record);
-  }
-}
-
-/**
- * Returns whether the last adopted reduction reports a non-critical assertion of some rank.
- */
-bool
-exahype2::runner::Runner::hasReducedNonCriticalAssertion() const {
-  return _reducedNonCriticalAssertionRank >= 0;
-}
-
-/**
- * Reduces the rank of a non-critical assertion over all ranks and adopts it. Returns whether some
- * rank raised one. An adoption raises a non-critical assertion after the reduction that it adopts.
- * Every rank calls this function collectively.
- */
-bool
-exahype2::runner::Runner::reduceNonCriticalAssertionRank() {
-  const int localAssertionRank  = tarch::getNonCriticalAssertionRank();
-  int       globalAssertionRank = -1;
-  assertion(localAssertionRank >= -1, localAssertionRank);
-  tarch::mpi::allreduce(
-    &localAssertionRank,
-    &globalAssertionRank,
-    1,
-    MPI_INT,
-    MPI_MAX,
-    tarch::mpi::Rank::getInstance().getCommunicator()
-  );
-  _reducedNonCriticalAssertionRank = globalAssertionRank;
-  tarch::adoptNonCriticalAssertionRank(globalAssertionRank);
-  return hasReducedNonCriticalAssertion();
-}
-
-/**
- * Completes and adopts the reduction of the previous time step if one is pending. Every rank calls
- * this function collectively.
- */
-void
-exahype2::runner::Runner::completePendingReduction() {
-  if (_pendingReduction == nullptr) {
-    return;
-  }
-  _pendingReduction->wait();
-  adoptReduction(*_pendingReduction, _pendingAssertionSlot);
-  _pendingReduction.reset();
-  _hasAdoptedReductionOfTimeStep = true;
-}
-
-/**
- * Completes the pending reduction of the last time step before a step of another kind. runStep()
- * adds the wait to the wall clock of the next time step. Every rank calls this function
+ * Executes and reduces one step. Returns its wall time in seconds. Every rank calls this function
  * collectively.
- */
-void
-exahype2::runner::Runner::completeReductionOfLastTimeStep() {
-  const auto startTime = std::chrono::steady_clock::now();
-  completePendingReduction();
-  const std::chrono::duration<double> wait = std::chrono::steady_clock::now() - startTime;
-  assertion(wait.count() >= 0.0, wait.count());
-  _reductionWaitOfNextTimeStep += wait.count();
-}
-
-/**
- * Executes and reduces one step. Returns its wall time in seconds. The wall time of a time step
- * includes the wait of completeReductionOfLastTimeStep() since the previous time step. Every rank
- * calls this function collectively.
  */
 double
 exahype2::runner::Runner::runStep(const Step step) {
@@ -582,11 +481,8 @@ exahype2::runner::Runner::runStep(const Step step) {
   finishStep(step);
   watch.stop();
 
-  auto elapsed = watch.getCalendarTime();
-  if (step == Step::TimeStep) {
-    elapsed += std::exchange(_reductionWaitOfNextTimeStep, 0.0);
-  }
-  const auto name = std::string(getStepName(step));
+  const auto elapsed = watch.getCalendarTime();
+  const auto name    = std::string(getStepName(step));
   const auto record  = std::find_if(_stepTimes.begin(), _stepTimes.end(), [&name](const StepTime& stepTime) {
     return stepTime.name == name;
   });
@@ -618,8 +514,7 @@ exahype2::runner::Runner::run() {
   }
   _report.rule();
   _report.line(
-    _stoppedAfterNonCriticalAssertion ? "Run terminated gracefully after a non-critical assertion"
-                                      : "Run terminated successfully"
+    _stoppedAfterNonCriticalAssertion ? "Run terminated after an error" : "Run terminated successfully"
   );
   _report.line("Goodbye");
   _report.close();
@@ -1139,14 +1034,9 @@ exahype2::runner::Runner::runTimeLoop() {
 
   enum class Action { TimeStep, Plot, Stop };
   while (true) {
-    // Every decision of the loop reads reduced values only. Every rank then takes the same action,
-    // although a rank sees its own non-critical assertion one step before the others.
-    if (hasPendingMeshUpdates() and not hasReducedNonCriticalAssertion()) {
-      // The requests of the last time step decide whether the regrid runs.
-      if (_pendingReduction != nullptr) {
-        completeReductionOfLastTimeStep();
-        continue;
-      }
+    // Every decision of the loop reads values that the last step reduced. Every rank then takes the
+    // same action.
+    if (hasPendingMeshUpdates() and not tarch::hasNonCriticalAssertionBeenViolated()) {
       applyMeshUpdates();
     }
     const double minTerminal      = parameters.getMinTerminalTime();
@@ -1168,11 +1058,11 @@ exahype2::runner::Runner::runTimeLoop() {
                                               : (minStamp < minTerminal and maxStamp < maxTerminal);
 
     Action action;
-    if (hasReducedNonCriticalAssertion()) {
+    if (tarch::hasNonCriticalAssertionBeenViolated()) {
       if (not _stoppedAfterNonCriticalAssertion) {
         _stoppedAfterNonCriticalAssertion = true;
         if (isGlobalMaster) {
-          logError("A non-critical assertion fails. The runner writes the final snapshot and stops.");
+          logError("Every rank writes the final snapshot and stops.");
         }
         action = Action::Plot;
       } else {
@@ -1228,14 +1118,6 @@ exahype2::runner::Runner::runTimeLoop() {
     }
 
     if (action == Action::Stop) {
-      // The reduction of the last time step can request a regrid or report a non-critical assertion.
-      if (_pendingReduction != nullptr) {
-        completeReductionOfLastTimeStep();
-        continue;
-      }
-      if (not _stoppedAfterNonCriticalAssertion and reduceNonCriticalAssertionRank()) {
-        continue;
-      }
       // After a non-critical assertion, the report ends with the final plot and no time step summary.
       if (not _stoppedAfterNonCriticalAssertion and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
         logTimeStep(
@@ -1252,7 +1134,6 @@ exahype2::runner::Runner::runTimeLoop() {
     }
 
     if (action == Action::Plot) {
-      completeReductionOfLastTimeStep();
       double elapsedSeconds = 0.0;
       {
         SCOREP_USER_REGION(PhaseName::Plot, SCOREP_USER_REGION_TYPE_COMMON)
@@ -1295,7 +1176,7 @@ exahype2::runner::Runner::runTimeLoop() {
     // state without a report of the step.
     const auto now = std::chrono::steady_clock::now();
     if (
-      not hasReducedNonCriticalAssertion()
+      not tarch::hasNonCriticalAssertionBeenViolated()
       and (lastLoggedStep == 0 or std::chrono::duration<double>(now - lastReport).count() >= parameters.getTimeStepLogInterval())
     ) {
       logTimeStep(
@@ -1337,31 +1218,27 @@ exahype2::runner::Runner::reportSummary() {
     return stepPosition(left.name) < stepPosition(right.name);
   });
 
-  // No time step follows the last wait for a reduction. The time steps count this wait here.
-  const double          waitAfterLastTimeStep = _reductionWaitOfNextTimeStep;
-  constexpr const char* TimeSpent             = "Time Spent";
+  constexpr const char* TimeSpent = "Time Spent";
   Table                 timeSpent;
   for (const auto& [name, measurement] : stepTimes) {
-    const double       wait = name == PhaseName::TimeStep ? waitAfterLastTimeStep : 0.0;
     std::ostringstream value;
-    value << getSeconds(measurement.getAccumulatedValue() + wait);
+    value << getSeconds(measurement.getAccumulatedValue());
     if (name != PhaseName::AllocateMemory) {
       value << "  (" << describeRepetitions(name, measurement.getNumberOfMeasurements(), _numberOfRegrids) << ")";
     }
     timeSpent.add(TimeSpent, name, value.str());
   }
-  const int numberOfMeasuredSteps = _timeStepMeasurement.getNumberOfMeasurements();
-  if (numberOfMeasuredSteps > 0) {
+  if (_timeStepMeasurement.getNumberOfMeasurements() > 0) {
     // The averages leave out the first time step. The first step warms the caches and the runtime.
-    // The grid grows and shrinks. The rates divide the cells and the degrees of freedom of every
-    // measured step by their time.
-    const double measuredSeconds = _timeStepMeasurement.getAccumulatedValue() + waitAfterLastTimeStep;
     timeSpent.add(
       TimeSpent,
       "Average Time Step",
-      getSeconds(measuredSeconds / numberOfMeasuredSteps) + "  ("
-        + describeRepetitions(PhaseName::TimeStep, numberOfMeasuredSteps, 0) + ")"
+      getSeconds(_timeStepMeasurement.getAverageValue()) + "  ("
+        + describeRepetitions(PhaseName::TimeStep, _timeStepMeasurement.getNumberOfMeasurements(), 0) + ")"
     );
+    // The grid grows and shrinks. The rates divide the cells and the degrees of freedom of every
+    // measured step by their time.
+    const auto measuredSeconds = _timeStepMeasurement.getAccumulatedValue();
     if (measuredSeconds > 0.0) {
       timeSpent.add(TimeSpent, "Average Performance", getPerformanceOf(_cellUpdates, _dofUpdates, measuredSeconds));
     }

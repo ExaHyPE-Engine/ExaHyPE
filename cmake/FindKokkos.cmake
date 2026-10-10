@@ -39,12 +39,11 @@ function(_kokkos_build_user_args out_var)
       list(GET _CUDA_MAP ${_val_idx} _kokkos_arch)
       list(APPEND _args "-DKokkos_ARCH_${_kokkos_arch}=ON")
     else()
-      message(WARNING "PEANO_WITH_GPU_ARCH='${PEANO_WITH_GPU_ARCH}' has no Kokkos NVIDIA arch option in Kokkos ${KOKKOS_VERSION}; enabling CUDA without a specific Kokkos_ARCH_* flag")
+      message(WARNING "Kokkos ${KOKKOS_VERSION} builds for PEANO_WITH_GPU_ARCH='${PEANO_WITH_GPU_ARCH}' without a Kokkos_ARCH_* option.")
     endif()
 
   elseif(_w MATCHES "^gfx[0-9a-z]+$")
     list(APPEND _args "-DKokkos_ENABLE_HIP=ON")
-    # A Kokkos release that does not know the gfx target fails its own configuration.
     string(TOUPPER "${_w}" _gfx_upper)
     list(APPEND _args "-DKokkos_ARCH_AMD_${_gfx_upper}=ON")
 
@@ -72,12 +71,10 @@ function(_kokkos_build_parallel_args out_var)
   endif()
 endfunction()
 
-# An application uses the Kokkos package of the core build.
 if(DEFINED PEANO_KOKKOS_DIR AND NOT PEANO_KOKKOS_DIR STREQUAL "")
   set(Kokkos_DIR "${PEANO_KOKKOS_DIR}" CACHE PATH "Kokkos package config dir (from Peano core build)" FORCE)
 endif()
 
-# The CONFIG mode bypasses this module, so the call does not recurse.
 find_package(Kokkos CONFIG QUIET)
 
 if(NOT Kokkos_FOUND)

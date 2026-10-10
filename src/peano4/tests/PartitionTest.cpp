@@ -504,9 +504,9 @@ peano4::tests::PartitionTest::testARegridKeepsTheSlotsOfSurvivingCellsAndReusesF
  */
 void
 peano4::tests::PartitionTest::testTheExchangedFacesMatchAcrossRanks() {
-  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  const int rank          = tarch::mpi::Rank::getInstance().getRank();
-  MPI_Comm  communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
+  const int      numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const int      rank          = tarch::mpi::Rank::getInstance().getRank();
+  const MPI_Comm communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
 
   for (const bool refined : {false, true}) {
     peano4::tests::buildRegularGrid(Depth);
@@ -590,10 +590,10 @@ peano4::tests::PartitionTest::testTheExchangedFacesMatchAcrossRanks() {
  */
 void
 peano4::tests::PartitionTest::testTheCurveIndicesNumberTheCellsAlongTheCurve() {
-  const int   numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  MPI_Comm    communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
-  auto&       spacetree     = peano4::Spacetree::getInstance();
-  const auto& partition     = spacetree.getPartition();
+  const int      numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const MPI_Comm communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
+  auto&          spacetree     = peano4::Spacetree::getInstance();
+  const auto&    partition     = spacetree.getPartition();
 
   const auto checkTheCurveIndices = [this, numberOfRanks, communicator, &partition](const int scenario) {
     std::vector<std::pair<int, int>> cellsAlongCurve;

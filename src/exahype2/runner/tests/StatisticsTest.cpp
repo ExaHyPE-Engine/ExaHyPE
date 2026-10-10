@@ -59,9 +59,9 @@ namespace {
    */
   void reduceOverTheRanks(exahype2::TimeStepping& timeStepping) {
     tarch::mpi::ReductionRecord record;
-    timeStepping.contributeTo(record);
+    timeStepping.addLocalValuesToGlobalReduction(record);
     record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-    timeStepping.adoptFrom(record);
+    timeStepping.readValuesFromGlobalReduction(record);
   }
 
   /**
@@ -69,9 +69,9 @@ namespace {
    */
   void reduceOverTheRanks(exahype2::runner::GlobalStatistics& statistics) {
     tarch::mpi::ReductionRecord record;
-    statistics.contributeTo(record, true);
+    statistics.addLocalValuesToGlobalReduction(record, true);
     record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-    statistics.adoptFrom(record);
+    statistics.readValuesFromGlobalReduction(record);
   }
 } // namespace
 

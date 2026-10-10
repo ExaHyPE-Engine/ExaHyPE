@@ -69,7 +69,7 @@ peano4::communication::tests::CommunicationManagerTest::testTagsAreDistinctAndEv
  */
 void
 peano4::communication::tests::CommunicationManagerTest::testTheExchangeCommunicatorIsSeparate() {
-  MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
+  const MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
   validate(communicator != MPI_COMM_NULL);
   validate(communicator != tarch::mpi::Rank::getInstance().getCommunicator());
 

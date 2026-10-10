@@ -485,9 +485,9 @@ exahype2::particles::ParticleSet<NumberOfData>::placeParticles(
   const std::vector<double>& values,
   const std::vector<int>&    numbers
 ) {
-  const auto& rank          = tarch::mpi::Rank::getInstance();
-  const int   numberOfRanks = rank.getNumberOfRanks();
-  MPI_Comm    communicator  = rank.getCommunicator();
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const int      numberOfRanks = rank.getNumberOfRanks();
+  const MPI_Comm communicator  = rank.getCommunicator();
 
   std::vector<double> arrivalValues;
   std::vector<int>    arrivalNumbers;

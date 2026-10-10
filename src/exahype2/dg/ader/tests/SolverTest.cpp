@@ -415,9 +415,9 @@ namespace {
   template <typename... Solvers>
   void finishStep(Solvers&... solvers) {
     tarch::mpi::ReductionRecord record;
-    (solvers.contributeTo(record), ...);
+    (solvers.addLocalValuesToGlobalReduction(record), ...);
     record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-    (solvers.adoptFrom(record), ...);
+    (solvers.readValuesFromGlobalReduction(record), ...);
   }
 
   template <typename Solver>

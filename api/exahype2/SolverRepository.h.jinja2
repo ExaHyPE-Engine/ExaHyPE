@@ -34,8 +34,8 @@ namespace {{ NAMESPACE | join("::") }} {
   void performTimeStep();
   void regrid(const peano4::Regrid& regrid);
   void plot();
-  void contributeTo(::tarch::mpi::ReductionRecord& record);
-  void adoptFrom(const ::tarch::mpi::ReductionRecord& record);
+  void addLocalValuesToGlobalReduction(::tarch::mpi::ReductionRecord& record);
+  void readValuesFromGlobalReduction(const ::tarch::mpi::ReductionRecord& record);
 
   const std::vector<peano4::RefinementRequest>& getRefinementRequests();
 

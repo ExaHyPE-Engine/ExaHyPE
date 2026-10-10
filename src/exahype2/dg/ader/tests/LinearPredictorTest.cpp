@@ -402,7 +402,7 @@ namespace {
    * Runs the predictor of the cells of one team. A thread behind the last cell still calls
    * predict() to reach the barriers of the team.
    */
-  struct PredictorOfCell final {
+  struct LinearPredictorOfCell final {
     exahype2::dg::BasisTables<double> tables{};
     const double*                     locations{nullptr};
     double*                           cellStates{nullptr};
@@ -506,7 +506,7 @@ namespace {
     const int cellsPerTeam   = threadsPerTeam / threadsPerCell;
     tarch::accelerator::parallelFor(
       tarch::accelerator::TeamRange((Setup::NumberOfCells + cellsPerTeam - 1) / cellsPerTeam, threadsPerTeam, 0),
-      PredictorOfCell{
+      LinearPredictorOfCell{
         deviceTables.getView(),
         deviceLocations.getData(),
         deviceCellStates.getData(),

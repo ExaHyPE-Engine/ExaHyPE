@@ -92,7 +92,7 @@ peano4::MigrationExchange<T>::postTransfers(
     tarch::accelerator::waitForDevice();
   }
 
-  MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
+  const MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
   _requests.reserve(2 * transfers.size());
   _numberOfReceivedChunks   = static_cast<int>(receivedSlots.size());
   std::size_t sendOffset    = 0;

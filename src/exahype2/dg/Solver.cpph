@@ -116,7 +116,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
 
 /**
  * Moves the solution into the slots of the new partition and measures the wave speeds of the new
- * grid. adoptFrom() recomputes the time step size. The next time step fills the face pools.
+ * grid. readValuesFromGlobalReduction() recomputes the time step size. The next time step fills
+ * the face pools.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -545,8 +546,9 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::solveRiemannP
 }
 
 /**
- * Advances the time stamp. An adaptive rule raises the wave speeds of this rank. adoptFrom() then
- * sets the time step size of the next step. A fixed rule sets this size at once.
+ * Advances the time stamp. An adaptive rule raises the wave speeds of this rank.
+ * readValuesFromGlobalReduction() then sets the time step size of the next step. A fixed rule sets
+ * this size at once.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -568,29 +570,30 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::closeTimeStep
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::contributeTo(tarch::mpi::ReductionRecord& record) {
-  _timeStepping.contributeTo(record);
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::addLocalValuesToGlobalReduction(
+  tarch::mpi::ReductionRecord& record
+) {
+  _timeStepping.addLocalValuesToGlobalReduction(record);
 }
 
 /**
- * Reads the reduced mesh widths and wave speeds. New wave speeds validate the time step of record
- * against the CFL condition. Before the terminal time, they also set the size of the next step. New
- * mesh widths reset a fixed time step size once the time stepping has started.
+ * Reads the reduced mesh widths and wave speeds. Before the terminal time, new wave speeds set the
+ * size of the next step. New mesh widths reset a fixed time step size once the time stepping has
+ * started.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::adoptFrom(
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::readValuesFromGlobalReduction(
   const tarch::mpi::ReductionRecord& record
 ) {
-  _timeStepping.adoptFrom(record);
+  _timeStepping.readValuesFromGlobalReduction(record);
   const auto& solverFamily = static_cast<const Derived&>(*this);
   if constexpr (UsesAdaptiveTimeStepping) {
-    if (_timeStepping.hasNewMaxEigenvalues() and _timeStepping.hasPositiveStabilityEigenvalue()) {
-      const double timeStepSizeFromCFL = solverFamily.getTimeStepSizeFromCFL();
-      _timeStepping.validateTimeStepSizeOfReducedStep(timeStepSizeFromCFL);
-      if (_timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime) {
-        _timeStepping.setAdmissibleTimeStepSize(timeStepSizeFromCFL);
-      }
+    if (
+      _timeStepping.hasNewMaxEigenvalues() and _timeStepping.hasPositiveStabilityEigenvalue()
+      and _timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime
+    ) {
+      _timeStepping.setAdmissibleTimeStepSize(solverFamily.getTimeStepSizeFromCFL());
     }
   } else if (_timeStepping.hasNewMeshWidths() and _timeStepping.getTimeStepSizeOfNextStep() > 0.0) {
     _timeStepping.setFixedTimeStepSize(solverFamily.getFixedTimeStepSize());

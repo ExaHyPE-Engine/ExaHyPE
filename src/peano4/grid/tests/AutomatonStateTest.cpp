@@ -72,10 +72,10 @@ void
 peano4::grid::tests::AutomatonStateTest::testSendAndReceiveInARing() {
   constexpr int Tag = 4321;
 
-  const auto& rank          = tarch::mpi::Rank::getInstance();
-  MPI_Comm    communicator  = rank.getCommunicator();
-  const int   localRank     = rank.getRank();
-  const int   numberOfRanks = rank.getNumberOfRanks();
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const MPI_Comm communicator  = rank.getCommunicator();
+  const int      localRank     = rank.getRank();
+  const int      numberOfRanks = rank.getNumberOfRanks();
 
   peano4::grid::AutomatonState sentState;
   sentState.level = 4 + localRank;

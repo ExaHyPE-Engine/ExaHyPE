@@ -179,7 +179,7 @@ exahype2::dg::limiting::SubcellLimiter::closeTimeStep():
 4. exahype2::dg::limiting::SubcellLimiter::listCellsOnSubcellScheme() lists the marked cells.
 5. exahype2::dg::limiting::SubcellLimiter::recompute() advances the marked cells on their subgrids.
 6. For a solver with observables of the discrete maximum principle, exahype2::dg::limiting::SubcellLimiter::reduceExtrema() writes the reference extrema of the recomputed cells.
-7. exahype2::dg::limiting::SubcellLimiter::contributeTo() adds the troubled cells of this rank to the reduction of the step.
+7. exahype2::dg::limiting::SubcellLimiter::addLocalValuesToGlobalReduction() adds the troubled cells of this rank to the reduction of the step.
 
 exahype2::dg::limiting::SubcellLimiter::recompute():
 
@@ -224,22 +224,19 @@ exahype2::TimeStepping starts with a time step size of zero.
 The first time step of a run sets the size of the later ones.
 
 1. exahype2::TimeStepping::startTimeStep() starts the step:
-   - Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::startTimeStep() takes the size of the last adopted reduction and clips it to the time left to the terminal time.
+   - Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::startTimeStep() takes the size that the reduction of the previous step admitted.
    - Under exahype2::TimeStepping::Rule::Fixed, exahype2::TimeStepping::startTimeStep() keeps the size.
 2. exahype2::fv::Solver::performTimeStep() and exahype2::dg::Solver::closeTimeStep() end the step:
    1. exahype2::TimeStepping::advanceTimeStamp() adds the time step size to the time stamp.
    2. Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::raiseMaxEigenvalue() stores the wave speed maximum of this rank.
    3. Under exahype2::TimeStepping::Rule::Adaptive, exahype2::TimeStepping::raiseMaxScaledEigenvalue() stores the scaled wave speed maximum of a DG solver.
    4. Under exahype2::TimeStepping::Rule::Fixed, exahype2::TimeStepping::setFixedTimeStepSize() stores the size from the reduced smallest mesh width.
-3. exahype2::runner::Runner::finishStep() posts the reduction of the time step and adopts the reduction of the previous time step:
-   1. exahype2::TimeStepping::contributeTo() adds the time step size, the time stamp, the mesh widths and the wave speed maxima of this rank to the tarch::mpi::ReductionRecord.
-   2. exahype2::TimeStepping::adoptFrom() reads the reduced values of all ranks.
-   3. Under exahype2::TimeStepping::Rule::Adaptive, exahype2::fv::Solver::adoptFrom() and exahype2::dg::Solver::adoptFrom() compute the CFL size from the reduced wave speed maximum.
-   4. exahype2::TimeStepping::validateTimeStepSizeOfReducedStep() compares the time step of the reduction with this CFL size.
-   5. exahype2::TimeStepping::setAdmissibleTimeStepSize() stores the smaller of the CFL size and the time left to the terminal time while the time stamp lies before the terminal time.
-   6. Under exahype2::TimeStepping::Rule::Fixed, new mesh widths reset the size through exahype2::TimeStepping::setFixedTimeStepSize().
-
-A time step takes its size from the reduction two time steps before.
+3. exahype2::runner::Runner::finishStep() reduces the values of the step over the ranks:
+   1. exahype2::TimeStepping::addLocalValuesToGlobalReduction() adds the mesh widths and the wave speed maxima of this rank to the tarch::mpi::ReductionRecord.
+   2. exahype2::TimeStepping::readValuesFromGlobalReduction() reads the reduced values of all ranks.
+   3. Under exahype2::TimeStepping::Rule::Adaptive, exahype2::fv::Solver::readValuesFromGlobalReduction() and exahype2::dg::Solver::readValuesFromGlobalReduction() compute the CFL size from the reduced wave speed maximum.
+   4. exahype2::TimeStepping::setAdmissibleTimeStepSize() stores the smaller of the CFL size and the time left to the terminal time while the time stamp lies before the terminal time.
+   5. Under exahype2::TimeStepping::Rule::Fixed, new mesh widths reset the size through exahype2::TimeStepping::setFixedTimeStepSize().
 
 # Regrid between two time steps
 
@@ -275,8 +272,8 @@ exahype2::dg::Solver::regrid():
 4. Under an adaptive rule, exahype2::dg::MeasureNodeEigenvalues measures the wave speeds of the new grid when the next time step size is positive and the time stamp lies before the terminal time.
 5. exahype2::RefinementVotes::voteOnCells() votes on the created cells.
 
-The reduction of the next step reduces the mesh widths and the wave speeds of the new grid across the ranks.
-Under a fixed rule, exahype2::fv::Solver::adoptFrom() and exahype2::dg::Solver::adoptFrom() then reset the time step size to the new smallest mesh width.
+exahype2::runner::Runner::finishStep() of the regrid step reduces the mesh widths and the wave speeds of the new grid across the ranks.
+Under a fixed rule, exahype2::fv::Solver::readValuesFromGlobalReduction() and exahype2::dg::Solver::readValuesFromGlobalReduction() then reset the time step size to the new smallest mesh width.
 
 exahype2::dg::ader::Solver::regrid() calls exahype2::dg::limiting::SubcellLimiter::regrid() before exahype2::dg::Solver::regrid().
 exahype2::dg::rk::Solver::regrid() reserves the stage estimates after exahype2::dg::Solver::regrid().

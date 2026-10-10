@@ -138,7 +138,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeSt
 /**
  * Moves the patches of the solution through the slot moves of a regrid. A new child takes its
  * patch from its parent and a new parent from its children. The patches that change rank travel
- * in _migration. adoptFrom() derives the time step size of the new grid.
+ * in _migration. readValuesFromGlobalReduction() derives the time step size of the new grid.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -402,8 +402,8 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureMeshWi
 }
 
 /**
- * An adaptive rule raises maxEigenvalue of this rank. adoptFrom() then derives the size of the next
- * time step. A fixed rule sets this size at once.
+ * An adaptive rule raises maxEigenvalue of this rank. readValuesFromGlobalReduction() then derives
+ * the size of the next time step. A fixed rule sets this size at once.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -443,28 +443,29 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getFixedTimeS
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::contributeTo(tarch::mpi::ReductionRecord& record) {
-  _timeStepping.contributeTo(record);
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::addLocalValuesToGlobalReduction(
+  tarch::mpi::ReductionRecord& record
+) {
+  _timeStepping.addLocalValuesToGlobalReduction(record);
 }
 
 /**
- * Reads the reduced mesh widths and wave speed. A new wave speed validates the time step of record
- * against the CFL condition. Before the terminal time, it also sets the size of the next step. New
- * mesh widths reset a fixed time step size once the time stepping has started.
+ * Reads the reduced mesh widths and wave speed. Before the terminal time, a new wave speed sets the
+ * size of the next step. New mesh widths reset a fixed time step size once the time stepping has
+ * started.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::adoptFrom(
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::readValuesFromGlobalReduction(
   const tarch::mpi::ReductionRecord& record
 ) {
-  _timeStepping.adoptFrom(record);
+  _timeStepping.readValuesFromGlobalReduction(record);
   if constexpr (Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive) {
-    if (_timeStepping.hasNewMaxEigenvalues() and _timeStepping.hasPositiveStabilityEigenvalue()) {
-      const double timeStepSizeFromCFL = getTimeStepSizeFromCFL();
-      _timeStepping.validateTimeStepSizeOfReducedStep(timeStepSizeFromCFL);
-      if (_timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime) {
-        _timeStepping.setAdmissibleTimeStepSize(timeStepSizeFromCFL);
-      }
+    if (
+      _timeStepping.hasNewMaxEigenvalues() and _timeStepping.hasPositiveStabilityEigenvalue()
+      and _timeStepping.getTimeStamp() < _timeStepping.getLimits().terminalTime
+    ) {
+      _timeStepping.setAdmissibleTimeStepSize(getTimeStepSizeFromCFL());
     }
   } else if (_timeStepping.hasNewMeshWidths() and _timeStepping.getTimeStepSizeOfNextStep() > 0.0) {
     _timeStepping.setFixedTimeStepSize(getFixedTimeStepSize());

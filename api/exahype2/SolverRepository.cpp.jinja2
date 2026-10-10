@@ -57,9 +57,13 @@ void {{ NAMESPACE | join("::") }}::plot() {
   );
 }
 
-void {{ NAMESPACE | join("::") }}::contributeTo(::tarch::mpi::ReductionRecord& record) { solverRepository.contributeTo(record); }
+void {{ NAMESPACE | join("::") }}::addLocalValuesToGlobalReduction(::tarch::mpi::ReductionRecord& record) {
+  solverRepository.addLocalValuesToGlobalReduction(record);
+}
 
-void {{ NAMESPACE | join("::") }}::adoptFrom(const ::tarch::mpi::ReductionRecord& record) { solverRepository.adoptFrom(record); }
+void {{ NAMESPACE | join("::") }}::readValuesFromGlobalReduction(const ::tarch::mpi::ReductionRecord& record) {
+  solverRepository.readValuesFromGlobalReduction(record);
+}
 
 const std::vector<peano4::RefinementRequest>& {{ NAMESPACE | join("::") }}::getRefinementRequests() {
   return solverRepository.getRefinementRequests();
