@@ -9,7 +9,7 @@
 
 With a GPU backend, every solver holds its cell and face data in pools in
 device memory, and every phase of a time step runs as kernels over the cell,
-face and level-jump spans of the partition. The host reads data back for file
+face and level-jump spans of the cell connectivity. The host reads data back for file
 output, for initial conditions that read host objects, for the refinement votes
 of a step that asks for a regrid, and for the reduced error norms.
 
@@ -39,9 +39,9 @@ device memory, and MPI sends from and receives into device memory. A run with
 more than one rank therefore needs a GPU-aware MPI library; the configuration
 summary reports whether the library is GPU-aware.
 
-A GPU pays off when the partition of a rank holds enough cells to fill the
-device. Every dispatch costs a kernel launch and a synchronisation, so a small
-partition leaves the GPU idle for most of a time step. The MPI decomposition
+A GPU pays off when a rank owns enough cells to fill the device. Every dispatch
+costs a kernel launch and a synchronisation, so a rank with few cells leaves
+the GPU idle for most of a time step. The MPI decomposition
 rows of the grid report give the cells per rank.
 
 

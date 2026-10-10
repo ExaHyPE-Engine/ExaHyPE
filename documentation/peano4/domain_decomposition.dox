@@ -5,7 +5,7 @@
 \tableofcontents
 
 Peano uses one tree per MPI rank, a deterministic rank ownership map, and
-dispatches over the partition of each rank. MPI is optional.
+dispatches over the cell connectivity of each rank. MPI is optional.
 
 # Structural model
 
@@ -14,7 +14,7 @@ The spacetree holds the refinement plan, and its ownership table assigns each
 cell to one rank.
 
 A rank materialises the levels above the spawn level in full, because that
-spine carries the ownership decisions every rank needs. Below the spawn level
+spine stores the ownership decisions every rank needs. Below the spawn level
 it materialises only its own blocks plus one ring of neighbours; a query about
 any other region is answered from the refinement plan by lattice arithmetic.
 The memory a rank holds therefore grows with its own block count, not with the
@@ -37,16 +37,17 @@ resolution-transition faces and coarsening families. Every rank derives the
 same packed ownership table without communication.
 
 Cells have one owning rank. A face that cells of two ranks touch exists in the
-partition of both ranks with the local cell on one side; peano4::Partition
-lists these faces per neighbour rank in canonical order (level, normal,
+cell connectivity of both ranks with the local cell on one side;
+peano4::CellConnectivity lists these faces per neighbour rank in canonical order (level, normal,
 lattice), so neither the tree indices nor the slots have to match.
 
 # Intra-rank parallelism
 
 A phase runs tarch::accelerator::parallelFor and
 tarch::accelerator::parallelReduce over the cell and face spans of the
-partition; with the host backend these are OpenMP loops, with a GPU backend
-device kernels. The partition build after a regrid runs one task per local
+cell connectivity; with the host backend these are OpenMP loops, with a GPU
+backend device kernels. The cell connectivity build after a regrid runs one
+task per local
 block through tarch::tasking.
 
 # Boundary exchange
@@ -55,9 +56,9 @@ peano4::HaloExchange exchanges the halves of the faces two ranks hold of one
 pool: `post()` gathers the half of the local side of every such face into one
 send buffer per neighbour rank in the pool's memory location and starts the
 non-blocking messages, `wait()` scatters the received halves into the other
-side. The local cells of the partition run between the two calls, so the
-messages travel while the rank computes. Cell data has no exchange because
-each cell has one owner.
+side. The local cells of the cell connectivity run between the two calls, so
+the messages travel while the rank computes. No rank exchanges cell data,
+because each cell has one owner.
 
 @image html domain-decomposition/replicated-boundary-data.png
 

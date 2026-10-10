@@ -71,12 +71,18 @@ private:
   struct Field final {
     std::vector<double> values{};
     // A plain 0 would select the pointer constructor of Vector.
-    tarch::la::Vector<FieldDimensions, std::size_t> length{tarch::la::Vector<FieldDimensions, std::size_t>(std::size_t(0))};
-    tarch::la::Vector<FieldDimensions, double>      firstElement{tarch::la::Vector<FieldDimensions, double>(0.0)};
-    tarch::la::Vector<FieldDimensions, double>      lastElement{tarch::la::Vector<FieldDimensions, double>(0.0)};
+    tarch::la::Vector<FieldDimensions, std::size_t> length{
+      tarch::la::Vector<FieldDimensions, std::size_t>(std::size_t(0))
+    };
+    tarch::la::Vector<FieldDimensions, double> firstElement{tarch::la::Vector<FieldDimensions, double>(0.0)};
+    tarch::la::Vector<FieldDimensions, double> lastElement{tarch::la::Vector<FieldDimensions, double>(0.0)};
     // A sampler without an extent maps every field onto the coordinate range of its own file.
-    tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain{tarch::la::Vector<FieldDimensions, double>(0.0)};
-    tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain{tarch::la::Vector<FieldDimensions, double>(0.0)};
+    tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain{
+      tarch::la::Vector<FieldDimensions, double>(0.0)
+    };
+    tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain{
+      tarch::la::Vector<FieldDimensions, double>(0.0)
+    };
   };
 
   NetCDFFileReader                       _netCDFFileReader{};

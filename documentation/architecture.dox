@@ -20,7 +20,7 @@ the ExaHyPE library.
   plotting and small linear-algebra utilities. It hides backend-specific APIs
   from the upper layers.
 - **Peano core (`peano4`)** owns the spacetree (`peano4::Spacetree`), the
-  partition of a rank (`peano4::Partition`) with the slot moves of a regrid
+  cell connectivity of a rank (`peano4::CellConnectivity`) with the slot moves of a regrid
   (`peano4::Regrid`), the halo exchange and the migration exchange
   (`peano4::HaloExchange`, `peano4::MigrationExchange`) and the space-filling
   curves.
@@ -44,21 +44,21 @@ rank runs the same phase; the global master decides the next step and
 A phase calls one method of every solver through the generated
 `SolverRepository`: `allocate()`, `initialise()`, `performTimeStep()`,
 `regrid()`, `plot()`, `startSimulation()` and `finishSimulation()`. A solver
-family implements a phase as a sequence of dispatches over the partition, so
-there is no grid sweep and no per-cell callback.
+family implements a phase as a sequence of dispatches over the cell
+connectivity, so there is no grid sweep and no per-cell callback.
 
 ## Grid representation and data pools
 
 Every MPI rank owns one peano4::Spacetree. It holds the refinement plan of the
 whole domain, the rank ownership table and the materialised structure of the
 local blocks. After grid construction and after every regrid the spacetree
-builds the peano4::Partition of the rank: the cells with their level and
+builds the peano4::CellConnectivity of the rank: the cells with their level and
 lattice position, the faces with their kind (interior, boundary, hanging,
 coarse or intermediate face of a level jump) and their two adjacent cells, the
 level jumps with their coarse face and fine faces, and the faces a neighbour
-rank holds too in canonical order. A kernel copies the partition by value and
-derives the centre and the width of every cell from its level and lattice
-position. @ref peano_partition describes the interface.
+rank holds too in canonical order. A kernel copies the cell connectivity by
+value and derives the centre and the width of every cell from its level and
+lattice position. @ref peano_cell_connectivity describes the interface.
 
 Solver data lives in pools: one tarch::accelerator::ChunkedMemoryPool per data
 type, indexed by the cell or face slot, allocated in device memory with a GPU
@@ -68,7 +68,7 @@ are renumbered and their data rebuilt.
 ## Dispatches and exchanges
 
 A solver family advances its solution with `parallelFor` and `parallelReduce`
-over the cell and face spans of the partition. Ranks exchange the halves of
+over the cell and face spans of the cell connectivity. Ranks exchange the halves of
 the faces both hold through peano4::HaloExchange: `post()` gathers the local
 halves into one buffer per neighbour rank and starts the messages, `wait()`
 scatters the received halves. Both ranks derive the message layout from the
@@ -79,7 +79,7 @@ canonical face order, so no rank tells the other what it sends.
 Every solver votes on refinement per cell; the votes become
 peano4::RefinementRequest records, and exahype2::RefinementRequests gives
 every rank the same request set. The spacetree adopts the plan, rebuilds the
-partition and returns the peano4::Regrid that names the prolongations, the
+cell connectivity and returns the peano4::Regrid that names the prolongations, the
 restrictions and the slots that change rank. Every solver's `regrid()` moves
 its cell pools through that record with the interpolation and restriction
 operators of its family and with peano4::MigrationExchange for the slots that
@@ -98,7 +98,7 @@ runtime parameters, the main routine and the build files.
 # Build variants
 
 Peano libraries are available in release, asserts, and debug modes.
-Dimension-dependent libraries carry a `2D` or `3D` suffix; tarch is
+The names of dimension-dependent libraries end in `2D` or `3D`; tarch is
 dimension-independent.
 
 - **Release** removes assertions and debug logging.

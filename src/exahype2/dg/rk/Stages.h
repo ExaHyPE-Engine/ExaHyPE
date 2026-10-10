@@ -9,8 +9,8 @@
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/NonconservativeProduct.h"
 #include "exahype2/terms/SourceTerm.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -194,7 +194,7 @@ struct exahype2::dg::rk::OpenStage final {
   using StatePool    = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using FluxPool     = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::ConstView solution{};
   typename EstimatePool::View  estimates{};
@@ -224,7 +224,7 @@ struct exahype2::dg::rk::AddStageFaceIntegrals final {
   using EstimatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using FluxPool     = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename EstimatePool::View  estimates{};
   typename FluxPool::ConstView faceFluxes{};
@@ -251,7 +251,7 @@ struct exahype2::dg::rk::CombineStages final {
   using CellPool     = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using EstimatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition                partition{};
+  peano4::CellConnectivity         cellConnectivity{};
   tarch::Span<const int>           cells{};
   typename CellPool::View          solution{};
   typename EstimatePool::ConstView estimates{};

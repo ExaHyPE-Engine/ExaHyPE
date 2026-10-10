@@ -4,7 +4,7 @@
 
 #include "exahype2/runner/Runner.h"
 #include "exahype2/runner/Statistics.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/RefinementRequest.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
@@ -96,13 +96,13 @@ exahype2::runner::tests::RunnerTest::testFinishStepSumsTheSolverBytesAndCellUpda
 void
 exahype2::runner::tests::RunnerTest::testFinishStepReducesTheValuesOfTheSolvers() {
   static const std::vector<peano4::RefinementRequest> noRequests;
-  const auto rank          = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getRank());
-  const auto numberOfRanks = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getNumberOfRanks());
-  const auto sumOfRanks    = numberOfRanks * (numberOfRanks + 1) / 2;
-  int        slot          = -1;
-  std::uint64_t                               additions    = 0;
-  std::uint64_t                               reads        = 0;
-  std::uint64_t                               sumOverRanks = 0;
+  const auto    rank          = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getRank());
+  const auto    numberOfRanks = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getNumberOfRanks());
+  const auto    sumOfRanks    = numberOfRanks * (numberOfRanks + 1) / 2;
+  int           slot          = -1;
+  std::uint64_t additions     = 0;
+  std::uint64_t reads         = 0;
+  std::uint64_t sumOverRanks  = 0;
   exahype2::runner::SolverRepositoryCallbacks callbacks;
   callbacks.requestRefinementForGridConstruction = [] {};
   callbacks.allocate                             = [] {};

@@ -182,11 +182,11 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
       NumberOfAuxiliaryVariables
     >(Q, 0.0);
   }
-  return applications::exahype2::exaskred::limiting::isWetCell<
-    Shortcuts,
-    NumberOfUnknowns,
-    NumberOfAuxiliaryVariables
-  >(Q, numberOfStates, hThreshold);
+  return applications::exahype2::exaskred::limiting::isWetCell<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
+    Q,
+    numberOfStates,
+    hThreshold
+  );
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double

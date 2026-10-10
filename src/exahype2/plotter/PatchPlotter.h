@@ -9,7 +9,7 @@
 #include "tarch/plotter/Format.h"
 
 namespace peano4 {
-  class Partition;
+  class CellConnectivity;
 } // namespace peano4
 
 namespace tarch::accelerator {
@@ -50,7 +50,7 @@ public:
 
   template <int VolumesPerAxis, int ValuesPerVolume, typename Precision>
   INLINE_METHOD void plotVolumes(
-    const peano4::Partition&                                partition,
+    const peano4::CellConnectivity&                         cellConnectivity,
     tarch::Span<const int>                                  cells,
     const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
     double                                                  timeStamp,
@@ -60,7 +60,7 @@ public:
 
   template <int NodesPerAxis, int ValuesPerNode, typename Precision>
   INLINE_METHOD void plotNodes(
-    const peano4::Partition&                                partition,
+    const peano4::CellConnectivity&                         cellConnectivity,
     tarch::Span<const int>                                  cells,
     const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
     const double*                                           nodePositions,
@@ -71,7 +71,7 @@ public:
 
   template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
   INLINE_METHOD void plotNodes(
-    const peano4::Partition&                                                      partition,
+    const peano4::CellConnectivity&                                               cellConnectivity,
     tarch::Span<const int>                                                        cells,
     const tarch::accelerator::ChunkedMemoryPool<Precision>&                       values,
     const double*                                                                 nodePositions,
@@ -119,7 +119,7 @@ private:
 
   template <int VolumesPerAxis>
   [[nodiscard]] static INLINE_METHOD FaceCornerPoints numberFaceCorners(
-    const peano4::Partition&        partition,
+    const peano4::CellConnectivity& cellConnectivity,
     tarch::Span<const int>          cells,
     const std::vector<PatchCorner>& corners
   );

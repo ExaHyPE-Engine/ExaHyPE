@@ -13,8 +13,8 @@
 #include "exahype2/terms/NonconservativeProduct.h"
 #include "exahype2/terms/SourceTerm.h"
 #include "exahype2/terms/SubcellRiemannSolver.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -290,7 +290,7 @@ struct exahype2::dg::limiting::ProjectSubgridsOntoFaces final {
   using CellPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition              partition{};
+  peano4::CellConnectivity       cellConnectivity{};
   tarch::Span<const int>         cells{};
   typename CellPool::ConstView   previousSolution{};
   typename CellPool::View        subcells{};
@@ -326,7 +326,7 @@ struct exahype2::dg::limiting::RecomputeSubcells final {
   using Kernel   = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::View      nodes{};
   typename CellPool::View      subcells{};

@@ -6,7 +6,7 @@
 #include "exahype2/RefinementCommand.h"
 #include "exahype2/RefinementRequests.h"
 #include "exahype2/RefinementVotes.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -43,32 +43,32 @@ namespace {
 
   using Pool = tarch::accelerator::ChunkedMemoryPool<double>;
 
-  const peano4::Partition& buildGrid() {
+  const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   TARGET_DECLARE
   struct WriteCommandIntoEveryCell final {
-    peano4::Partition partition{};
-    Pool::View        solution{};
-    double            code{0.0};
+    peano4::CellConnectivity cellConnectivity{};
+    Pool::View               solution{};
+    double                   code{0.0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry) const {
-      solution.getChunk(partition.getCells()[entry])[0] = code;
+      solution.getChunk(cellConnectivity.getCells()[entry])[0] = code;
     }
   };
   TARGET_DECLARE_END
 
   void writeCommandIntoEveryCell(
     Pool&                             pool,
-    const peano4::Partition&          partition,
+    const peano4::CellConnectivity&   cellConnectivity,
     const exahype2::RefinementCommand command
   ) {
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(partition.getCells().size),
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
       WriteCommandIntoEveryCell{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         pool.getView(),
         static_cast<double>(static_cast<std::uint8_t>(command))
       }
@@ -162,35 +162,35 @@ exahype2::tests::RefinementVotesTest::testAnEraseVoteThatWouldPassTheLargestSize
 
 void
 exahype2::tests::RefinementVotesTest::testTheVotesOnEveryCellReachTheRequests() {
-  const auto& partition     = buildGrid();
-  const int   numberOfSlots = partition.getNumberOfSlots();
+  const auto& cellConnectivity = buildGrid();
+  const int   numberOfSlots    = cellConnectivity.getNumberOfSlots();
   Pool        pool(1, tarch::MemoryLocation::Device);
   pool.reserve(numberOfSlots);
   exahype2::RefinementVotes    votes;
   exahype2::RefinementRequests requests;
 
-  writeCommandIntoEveryCell(pool, partition, exahype2::RefinementCommand::Refine);
+  writeCommandIntoEveryCell(pool, cellConnectivity, exahype2::RefinementCommand::Refine);
   requests.clear(numberOfSlots);
   votes.voteOnEveryCell<StubSolver>(
-    partition,
+    cellConnectivity,
     std::as_const(pool).getView(),
     getLimitsAroundTheGrid(),
     TimeStamp,
     requests
   );
-  validate(not requests.getRefinementRequests(partition).empty());
+  validate(not requests.getRefinementRequests(cellConnectivity).empty());
   validate(votes.getAllocatedBytes().getTotal() >= static_cast<std::size_t>(numberOfSlots));
 
-  writeCommandIntoEveryCell(pool, partition, exahype2::RefinementCommand::Keep);
+  writeCommandIntoEveryCell(pool, cellConnectivity, exahype2::RefinementCommand::Keep);
   requests.clear(numberOfSlots);
   votes.voteOnEveryCell<StubSolver>(
-    partition,
+    cellConnectivity,
     std::as_const(pool).getView(),
     getLimitsAroundTheGrid(),
     TimeStamp,
     requests
   );
-  validate(requests.getRefinementRequests(partition).empty());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
 
   votes.release();
   validateEquals(votes.getAllocatedBytes().getTotal(), std::size_t{0});
@@ -198,77 +198,77 @@ exahype2::tests::RefinementVotesTest::testTheVotesOnEveryCellReachTheRequests() 
 
 void
 exahype2::tests::RefinementVotesTest::testGridConstructionRefinesEveryCellAboveTheLargestSize() {
-  const auto&                  partition = buildGrid();
+  const auto&                  cellConnectivity = buildGrid();
   exahype2::RefinementVotes    votes;
   exahype2::RefinementRequests requests;
   exahype2::Limits             limits = getLimitsAroundTheGrid();
 
   limits.maxAdmissiblePatchSize = 0.5 / peano4::SubdivisionFactor;
-  requests.clear(partition.getNumberOfSlots());
-  votes.voteOnGridConstruction<StubSolver, double>(partition, limits, requests);
-  validate(not requests.getRefinementRequests(partition).empty());
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  votes.voteOnGridConstruction<StubSolver, double>(cellConnectivity, limits, requests);
+  validate(not requests.getRefinementRequests(cellConnectivity).empty());
 
   limits.maxAdmissiblePatchSize = 1.0;
-  requests.clear(partition.getNumberOfSlots());
-  votes.voteOnGridConstruction<StubSolver, double>(partition, limits, requests);
-  validate(requests.getRefinementRequests(partition).empty());
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  votes.voteOnGridConstruction<StubSolver, double>(cellConnectivity, limits, requests);
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
 }
 
 void
 exahype2::tests::RefinementVotesTest::testOnlyTheListedCellsVote() {
-  const auto& partition     = buildGrid();
-  const int   numberOfSlots = partition.getNumberOfSlots();
+  const auto& cellConnectivity = buildGrid();
+  const int   numberOfSlots    = cellConnectivity.getNumberOfSlots();
   Pool        pool(1, tarch::MemoryLocation::Device);
   pool.reserve(numberOfSlots);
-  writeCommandIntoEveryCell(pool, partition, exahype2::RefinementCommand::Refine);
+  writeCommandIntoEveryCell(pool, cellConnectivity, exahype2::RefinementCommand::Refine);
   exahype2::RefinementVotes    votes;
   exahype2::RefinementRequests requests;
   std::vector<int>             listed;
 
   requests.clear(numberOfSlots);
   votes.voteOnCells<StubSolver>(
-    partition,
+    cellConnectivity,
     listed,
     std::as_const(pool).getView(),
     getLimitsAroundTheGrid(),
     TimeStamp,
     requests
   );
-  validate(requests.getRefinementRequests(partition).empty());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
 
-  if (not partition.getCells().isEmpty()) {
-    listed.push_back(partition.getCells()[0]);
+  if (not cellConnectivity.getCells().isEmpty()) {
+    listed.push_back(cellConnectivity.getCells()[0]);
   }
   requests.clear(numberOfSlots);
   votes.voteOnCells<StubSolver>(
-    partition,
+    cellConnectivity,
     listed,
     std::as_const(pool).getView(),
     getLimitsAroundTheGrid(),
     TimeStamp,
     requests
   );
-  validate(not requests.getRefinementRequests(partition).empty());
+  validate(not requests.getRefinementRequests(cellConnectivity).empty());
 }
 
 void
 exahype2::tests::RefinementVotesTest::testLimitsThatFixTheMeshSkipTheVotes() {
-  const auto&      partition     = buildGrid();
-  const int        numberOfSlots = partition.getNumberOfSlots();
-  const double     width         = partition.getWidthOfLevel(partition.getMaximumLevel(), 0);
+  const auto&      cellConnectivity = buildGrid();
+  const int        numberOfSlots    = cellConnectivity.getNumberOfSlots();
+  const double     width            = cellConnectivity.getWidthOfLevel(cellConnectivity.getMaximumLevel(), 0);
   exahype2::Limits fixingLimits;
   fixingLimits.minAdmissiblePatchSize = width;
   fixingLimits.maxAdmissiblePatchSize = width;
-  validate(not exahype2::RefinementVotes::canRefineOrErase(partition, fixingLimits));
-  validate(exahype2::RefinementVotes::canRefineOrErase(partition, getLimitsAroundTheGrid()));
+  validate(not exahype2::RefinementVotes::canRefineOrErase(cellConnectivity, fixingLimits));
+  validate(exahype2::RefinementVotes::canRefineOrErase(cellConnectivity, getLimitsAroundTheGrid()));
 
   Pool pool(1, tarch::MemoryLocation::Device);
   pool.reserve(numberOfSlots);
-  writeCommandIntoEveryCell(pool, partition, exahype2::RefinementCommand::Refine);
+  writeCommandIntoEveryCell(pool, cellConnectivity, exahype2::RefinementCommand::Refine);
   exahype2::RefinementVotes    votes;
   exahype2::RefinementRequests requests;
   requests.clear(numberOfSlots);
-  votes.voteOnEveryCell<StubSolver>(partition, std::as_const(pool).getView(), fixingLimits, TimeStamp, requests);
-  validate(requests.getRefinementRequests(partition).empty());
+  votes.voteOnEveryCell<StubSolver>(cellConnectivity, std::as_const(pool).getView(), fixingLimits, TimeStamp, requests);
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
   votes.release();
 }

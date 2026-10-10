@@ -47,8 +47,8 @@ namespace {
     SumOfFaces,
     SumOfHangingFaces,
     SumOfRankBoundaryFaces,
-    SumOfPartitionHostBytes,
-    SumOfPartitionDeviceBytes,
+    SumOfCellConnectivityHostBytes,
+    SumOfCellConnectivityDeviceBytes,
     SumOfTreeBytes,
     SumOfSolverHostBytes,
     SumOfSolverDeviceBytes,
@@ -199,21 +199,21 @@ exahype2::runner::GlobalStatistics::addLocalValuesToGlobalReduction(
   std::array<std::uint64_t, NumberOfMinima> minima{};
   std::array<std::uint64_t, NumberOfMaxima> maxima{};
 
-  sums[SumOfCells]                = localCells;
-  sums[SumOfRefinedCells]         = static_cast<std::uint64_t>(statistics.numberOfRefinedCells);
-  sums[SumOfFaces]                = static_cast<std::uint64_t>(statistics.numberOfFaces);
-  sums[SumOfHangingFaces]         = static_cast<std::uint64_t>(statistics.numberOfHangingFaces);
-  sums[SumOfRankBoundaryFaces]    = localRankBoundaryFaces;
-  sums[SumOfPartitionHostBytes]   = static_cast<std::uint64_t>(statistics.partitionBytes.host);
-  sums[SumOfPartitionDeviceBytes] = static_cast<std::uint64_t>(statistics.partitionBytes.device);
-  sums[SumOfTreeBytes]            = static_cast<std::uint64_t>(statistics.treeBytes);
-  sums[SumOfSolverHostBytes]      = _localSolverHostBytes;
-  sums[SumOfSolverDeviceBytes]    = _localSolverDeviceBytes;
-  sums[SumOfSolverCells]          = _localSolverCells;
-  sums[SumOfCellDoFs]             = _localCellDoFs;
-  sums[SumOfProcessMemory]        = _localProcessMemoryUsageInBytes;
-  sums[SumOfTotalMemory]          = isNodeMaster ? _localTotalMemoryInBytes : 0;
-  sums[SumOfAvailableMemory]      = isNodeMaster ? _localAvailableMemoryInBytes : 0;
+  sums[SumOfCells]                       = localCells;
+  sums[SumOfRefinedCells]                = static_cast<std::uint64_t>(statistics.numberOfRefinedCells);
+  sums[SumOfFaces]                       = static_cast<std::uint64_t>(statistics.numberOfFaces);
+  sums[SumOfHangingFaces]                = static_cast<std::uint64_t>(statistics.numberOfHangingFaces);
+  sums[SumOfRankBoundaryFaces]           = localRankBoundaryFaces;
+  sums[SumOfCellConnectivityHostBytes]   = static_cast<std::uint64_t>(statistics.cellConnectivityBytes.host);
+  sums[SumOfCellConnectivityDeviceBytes] = static_cast<std::uint64_t>(statistics.cellConnectivityBytes.device);
+  sums[SumOfTreeBytes]                   = static_cast<std::uint64_t>(statistics.treeBytes);
+  sums[SumOfSolverHostBytes]             = _localSolverHostBytes;
+  sums[SumOfSolverDeviceBytes]           = _localSolverDeviceBytes;
+  sums[SumOfSolverCells]                 = _localSolverCells;
+  sums[SumOfCellDoFs]                    = _localCellDoFs;
+  sums[SumOfProcessMemory]               = _localProcessMemoryUsageInBytes;
+  sums[SumOfTotalMemory]                 = isNodeMaster ? _localTotalMemoryInBytes : 0;
+  sums[SumOfAvailableMemory]             = isNodeMaster ? _localAvailableMemoryInBytes : 0;
 
   minima[MinimumRankLoad]          = localCells;
   minima[MinimumLevel]             = static_cast<std::uint64_t>(statistics.minimumLevel);
@@ -253,27 +253,27 @@ exahype2::runner::GlobalStatistics::readValuesFromGlobalReduction(const tarch::m
     getSum(SumOfRankBoundaryFaces),
     getSum(SumOfFaces)
   );
-  _globalNumberOfRankBoundaryFaces = getSum(SumOfRankBoundaryFaces) / 2;
-  _globalNumberOfFaces             = getSum(SumOfFaces) - _globalNumberOfRankBoundaryFaces;
-  _globalNumberOfHangingFaces      = getSum(SumOfHangingFaces);
-  _globalPartitionHostBytes        = getSum(SumOfPartitionHostBytes);
-  _globalPartitionDeviceBytes      = getSum(SumOfPartitionDeviceBytes);
-  _globalTreeBytes                 = getSum(SumOfTreeBytes);
-  _globalSolverHostBytes           = getSum(SumOfSolverHostBytes);
-  _globalSolverDeviceBytes         = getSum(SumOfSolverDeviceBytes);
-  _globalNumberOfSolverCells       = getSum(SumOfSolverCells);
-  _globalNumberOfCellDoFs          = getSum(SumOfCellDoFs);
-  _globalProcessMemoryUsageInBytes = getSum(SumOfProcessMemory);
-  _globalTotalMemoryInBytes        = getSum(SumOfTotalMemory);
-  _globalAvailableMemoryInBytes    = getSum(SumOfAvailableMemory);
-  _globalMinRankLoad               = getMinimum(MinimumRankLoad);
-  _globalMinimumLevel              = static_cast<int>(getMinimum(MinimumLevel));
-  _globalMinimumCellWidth          = fromBits(getMinimum(MinimumCellWidth));
-  _globalNumberOfStationaryRegrids = static_cast<int>(fromOrderedBits(getMinimum(MinimumStationaryRegrids)));
-  _globalMinRankBoundaryFaces      = getMinimum(MinimumRankBoundaryFaces);
-  _globalMaxRankLoad               = getMaximum(MaximumRankLoad);
-  _globalMaximumLevel              = static_cast<int>(getMaximum(MaximumLevel));
-  _globalMaxRankBoundaryFaces      = getMaximum(MaximumRankBoundaryFaces);
+  _globalNumberOfRankBoundaryFaces   = getSum(SumOfRankBoundaryFaces) / 2;
+  _globalNumberOfFaces               = getSum(SumOfFaces) - _globalNumberOfRankBoundaryFaces;
+  _globalNumberOfHangingFaces        = getSum(SumOfHangingFaces);
+  _globalCellConnectivityHostBytes   = getSum(SumOfCellConnectivityHostBytes);
+  _globalCellConnectivityDeviceBytes = getSum(SumOfCellConnectivityDeviceBytes);
+  _globalTreeBytes                   = getSum(SumOfTreeBytes);
+  _globalSolverHostBytes             = getSum(SumOfSolverHostBytes);
+  _globalSolverDeviceBytes           = getSum(SumOfSolverDeviceBytes);
+  _globalNumberOfSolverCells         = getSum(SumOfSolverCells);
+  _globalNumberOfCellDoFs            = getSum(SumOfCellDoFs);
+  _globalProcessMemoryUsageInBytes   = getSum(SumOfProcessMemory);
+  _globalTotalMemoryInBytes          = getSum(SumOfTotalMemory);
+  _globalAvailableMemoryInBytes      = getSum(SumOfAvailableMemory);
+  _globalMinRankLoad                 = getMinimum(MinimumRankLoad);
+  _globalMinimumLevel                = static_cast<int>(getMinimum(MinimumLevel));
+  _globalMinimumCellWidth            = fromBits(getMinimum(MinimumCellWidth));
+  _globalNumberOfStationaryRegrids   = static_cast<int>(fromOrderedBits(getMinimum(MinimumStationaryRegrids)));
+  _globalMinRankBoundaryFaces        = getMinimum(MinimumRankBoundaryFaces);
+  _globalMaxRankLoad                 = getMaximum(MaximumRankLoad);
+  _globalMaximumLevel                = static_cast<int>(getMaximum(MaximumLevel));
+  _globalMaxRankBoundaryFaces        = getMaximum(MaximumRankBoundaryFaces);
 }
 
 std::uint64_t
@@ -327,13 +327,13 @@ exahype2::runner::GlobalStatistics::getGlobalMaxRankLoad() const {
 }
 
 std::uint64_t
-exahype2::runner::GlobalStatistics::getGlobalPartitionHostBytes() const {
-  return _globalPartitionHostBytes;
+exahype2::runner::GlobalStatistics::getGlobalCellConnectivityHostBytes() const {
+  return _globalCellConnectivityHostBytes;
 }
 
 std::uint64_t
-exahype2::runner::GlobalStatistics::getGlobalPartitionDeviceBytes() const {
-  return _globalPartitionDeviceBytes;
+exahype2::runner::GlobalStatistics::getGlobalCellConnectivityDeviceBytes() const {
+  return _globalCellConnectivityDeviceBytes;
 }
 
 std::uint64_t
@@ -377,8 +377,8 @@ exahype2::runner::GlobalStatistics::getGlobalAvailableMemoryInBytes() const {
 }
 
 /**
- * Returns the percentage of the ideal speed-up that the partition allows. The mean rank load is the
- * even load, and the heaviest rank sets the makespan.
+ * Returns the percentage of the ideal speed-up that the domain decomposition allows. The mean rank
+ * load is the even load, and the heaviest rank sets the makespan.
  */
 double
 exahype2::runner::GlobalStatistics::getGlobalInterRankBalance() const {
@@ -456,7 +456,9 @@ exahype2::runner::collectGridSnapshot() {
     ""
   };
   entries[GridSnapshot::MemoryCPUGrid] = {
-    exahype2::runner::Format::getMemory(statistics.getGlobalPartitionHostBytes() + statistics.getGlobalTreeBytes()),
+    exahype2::runner::Format::getMemory(
+      statistics.getGlobalCellConnectivityHostBytes() + statistics.getGlobalTreeBytes()
+    ),
     "",
     ""
   };
@@ -467,7 +469,7 @@ exahype2::runner::collectGridSnapshot() {
   };
 #if defined(PEANO_WITH_GPU_BACKEND)
   entries[GridSnapshot::MemoryGPUGrid] = {
-    exahype2::runner::Format::getMemory(statistics.getGlobalPartitionDeviceBytes()),
+    exahype2::runner::Format::getMemory(statistics.getGlobalCellConnectivityDeviceBytes()),
     "",
     ""
   };

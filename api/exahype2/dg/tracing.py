@@ -13,9 +13,9 @@ def render_tracer_update(tracer, quadrature):
             ", {}".format(field) for field in tracer["FACE_TRACES"]["DIFFERENCE_FIELDS"]
         )
         sampling = (
-            "projectSolutionOntoPlane(partition, {normal}, {position});\n"
+            "projectSolutionOntoPlane(cellConnectivity, {normal}, {position});\n"
             "::exahype2::dg::traceFaceValues<NodesPerAxis, NumberOfData, {number_of_data}{fields}>(\n"
-            "  partition,\n"
+            "  cellConnectivity,\n"
             "  getFaceStates(),\n"
             "  {quadrature}<double>::QuadraturePoints1D,\n"
             "  _{name},\n"
@@ -53,7 +53,7 @@ def render_tracer_update(tracer, quadrature):
     fields = "".join(", {}".format(field) for field in tracer["FIELDS"])
     return (
         "::exahype2::dg::traceParticles<NodesPerAxis, NumberOfData, {number_of_data}{fields}>(\n"
-        "  partition,\n"
+        "  cellConnectivity,\n"
         "  getSolution(),\n"
         "  {quadrature}<double>::QuadraturePoints1D,\n"
         "  timeStepSize,\n"

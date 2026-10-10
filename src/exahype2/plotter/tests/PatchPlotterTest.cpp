@@ -3,9 +3,9 @@
 #include "PatchPlotterTest.h"
 
 #include "exahype2/plotter/PatchPlotter.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -38,17 +38,17 @@ namespace {
   }
 
   /**
-   * Returns a pool in host memory with one chunk of chunkSize entries per slot of the partition and
-   * value in every entry.
+   * Returns a pool in host memory with one chunk of chunkSize entries per slot of cellConnectivity
+   * and value in every entry.
    */
   template <typename T>
   tarch::accelerator::ChunkedMemoryPool<T> getFilledPool(
-    const peano4::Partition& partition,
-    const int                chunkSize,
-    const T                  value
+    const peano4::CellConnectivity& cellConnectivity,
+    const int                       chunkSize,
+    const T                         value
   ) {
     tarch::accelerator::ChunkedMemoryPool<T> pool(chunkSize, tarch::MemoryLocation::Heap);
-    pool.reserve(partition.getNumberOfSlots());
+    pool.reserve(cellConnectivity.getNumberOfSlots());
     for (int slot = 0; slot < pool.getCapacity(); slot++) {
       std::fill_n(pool.getChunk(slot), chunkSize, value);
     }
@@ -97,23 +97,23 @@ void
 exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOnePoint() {
   const int rank = tarch::mpi::Rank::getInstance().getRank();
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
-  const auto  cells     = partition.getCells();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto  cells            = cellConnectivity.getCells();
 
   constexpr int                   SubcellsPerAxis = 3;
   constexpr int                   StatusEntries   = 4;
   constexpr int                   SubcellStatus   = 2;
   constexpr std::array<double, 2> Nodes{0.25, 0.75};
   constexpr int                   SubcellValuesPerCell = peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerVolume;
-  const auto                      values        = getFilledPool(partition, VolumesPerPatch * ValuesPerVolume, 1.0);
-  const auto                      subcellValues = getFilledPool(partition, SubcellValuesPerCell, 2.0);
-  const auto                      statuses      = getFilledPool(partition, StatusEntries, SubcellStatus);
+  const auto                      values = getFilledPool(cellConnectivity, VolumesPerPatch * ValuesPerVolume, 1.0);
+  const auto                      subcellValues = getFilledPool(cellConnectivity, SubcellValuesPerCell, 2.0);
+  const auto                      statuses      = getFilledPool(cellConnectivity, StatusEntries, SubcellStatus);
   const std::string               outputDirectory =
     (tarch::tests::getWritableTestDirectory() / "PatchPlotterNodalTest").string() + "/";
   std::filesystem::create_directories(outputDirectory + "patch/");
   exahype2::plotter::PatchPlotter plotter("PatchPlotterNodalTest", {{"scalar", 1}, {"pair", 2}});
   plotter.plotNodes<VolumesPerAxis, ValuesPerVolume, SubcellsPerAxis, double>(
-    partition,
+    cellConnectivity,
     cells,
     values,
     Nodes.data(),
@@ -151,10 +151,10 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryVolumeOfEveryPatchBecomesOn
   const int rank          = tarch::mpi::Rank::getInstance().getRank();
   const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
-  const auto  cells     = partition.getCells();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto  cells            = cellConnectivity.getCells();
 
-  auto values = getFilledPool(partition, VolumesPerPatch * ValuesPerVolume, 0.0);
+  auto values = getFilledPool(cellConnectivity, VolumesPerPatch * ValuesPerVolume, 0.0);
   for (const int cell : cells) {
     double* const volumes = values.getChunk(cell);
     for (int volume = 0; volume < VolumesPerPatch; volume++) {
@@ -168,7 +168,7 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryVolumeOfEveryPatchBecomesOn
   std::filesystem::create_directories(outputDirectory + "patch/");
   exahype2::plotter::PatchPlotter plotter("PatchPlotterTest", {{"scalar", 1}, {"pair", 2}});
   plotter.plotVolumes<VolumesPerAxis, ValuesPerVolume, double>(
-    partition,
+    cellConnectivity,
     cells,
     values,
     0.25,

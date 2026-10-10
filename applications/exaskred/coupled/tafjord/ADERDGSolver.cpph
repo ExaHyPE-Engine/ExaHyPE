@@ -110,9 +110,9 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   const double outgoingInvariant = outwardSign * Qinside[Shortcuts::hu + normal] / waterDepth + 2.0 * insideWaveSpeed;
   const double incomingInvariant = -2.0 * std::sqrt(g * restingWaterDepth);
   const double outerWaveSpeed    = std::max(0.25 * (outgoingInvariant - incomingInvariant), 0.0);
-  const double outerDepth    = waterDepth * (outerWaveSpeed / insideWaveSpeed) * (outerWaveSpeed / insideWaveSpeed);
-  const double outerVelocity = 0.5 * (outgoingInvariant + incomingInvariant);
-  Qoutside[Shortcuts::h]     = outerDepth;
+  const double outerDepth        = waterDepth * (outerWaveSpeed / insideWaveSpeed) * (outerWaveSpeed / insideWaveSpeed);
+  const double outerVelocity     = 0.5 * (outgoingInvariant + incomingInvariant);
+  Qoutside[Shortcuts::h]         = outerDepth;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     Qoutside[Shortcuts::hu + axis] = axis == normal ? outwardSign * outerVelocity * outerDepth
                                                     : outerDepth * Qinside[Shortcuts::hu + axis] / waterDepth;

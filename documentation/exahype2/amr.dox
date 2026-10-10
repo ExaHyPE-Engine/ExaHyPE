@@ -65,7 +65,7 @@ consensus required for coarsening.
 # Regrids
 
 The time loop runs the dynamic-AMR phase after a step commits requests. The
-spacetree adopts the plan, rebuilds the partition, and every solver's
+spacetree adopts the plan, rebuilds the cell connectivity, and every solver's
 `regrid()` moves its data through the peano4::Regrid. The phase repeats
 until no request arrives.
 

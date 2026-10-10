@@ -31,13 +31,13 @@ tarch::mpi::tests::ReductionRecordTest::testAllreduceReducesEverySlotOverTheRank
   const int   numberOfRanks = rank.getNumberOfRanks();
   const auto  thisRank      = static_cast<std::uint64_t>(rank.getRank());
 
-  tarch::mpi::ReductionRecord record;
-  const int                   sumSlot           = record.addSum(thisRank + 1);
-  const int                   minimumSlot       = record.addMinimum(thisRank + 5);
-  const int                   maximumSlot       = record.addMaximum(thisRank + 5);
-  const int                   secondSumSlot     = record.addSum(2);
-  const int                   minimumDoubleSlot = record.addMinimumOfDouble(getDoubleOfRank(rank.getRank()));
-  const int                   maximumDoubleSlot = record.addMaximumOfDouble(getDoubleOfRank(rank.getRank()));
+  tarch::mpi::ReductionRecord        record;
+  const int                          sumSlot           = record.addSum(thisRank + 1);
+  const int                          minimumSlot       = record.addMinimum(thisRank + 5);
+  const int                          maximumSlot       = record.addMaximum(thisRank + 5);
+  const int                          secondSumSlot     = record.addSum(2);
+  const int                          minimumDoubleSlot = record.addMinimumOfDouble(getDoubleOfRank(rank.getRank()));
+  const int                          maximumDoubleSlot = record.addMaximumOfDouble(getDoubleOfRank(rank.getRank()));
   const std::array<std::uint64_t, 2> pair{thisRank, 7};
   const int                          firstSumOfPair     = record.addSums(pair);
   const int                          firstMinimumOfPair = record.addMinima(pair);
@@ -84,7 +84,7 @@ tarch::mpi::tests::ReductionRecordTest::testDoublesKeepTheirValueWhenEveryRankAd
     std::numeric_limits<double>::max(),
     std::numeric_limits<double>::infinity()
   };
-  tarch::mpi::ReductionRecord record;
+  tarch::mpi::ReductionRecord    record;
   std::array<int, Values.size()> minimumSlots{};
   std::array<int, Values.size()> maximumSlots{};
   for (std::size_t value = 0; value < Values.size(); value++) {

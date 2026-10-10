@@ -143,7 +143,9 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDe
   }
   field.values.resize(numberOfValues, 0.0);
   if (_netCDFFileReader.readVariable(ncid, fieldDescription.valueKey.c_str(), field.values.data()) == -1) {
-    tarch::terminateWithError("The NetCDF reader cannot read the values of the field \"" + fieldDescription.name + "\".");
+    tarch::terminateWithError(
+      "The NetCDF reader cannot read the values of the field \"" + fieldDescription.name + "\"."
+    );
   }
 
   if (_netCDFFileReader.close(ncid) == -1) {
@@ -301,7 +303,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCoordinat
   const double endOfSimulationDomain = lengthOfSimulationDomain + offsetOfSimulationDomain;
   assertion(endOfSimulationDomain != offsetOfSimulationDomain, lengthOfSimulationDomain, offsetOfSimulationDomain);
 
-  const double slope    = ((lastElement - firstElement) / (endOfSimulationDomain - offsetOfSimulationDomain));
+  const double slope     = ((lastElement - firstElement) / (endOfSimulationDomain - offsetOfSimulationDomain));
   const double intercept = firstElement - slope * offsetOfSimulationDomain;
 
   return slope * coordinate + intercept;
@@ -319,12 +321,9 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCDFRangeToArra
   const tarch::la::Vector<FieldDimensions, double>      lastCoordinatesInCDFMesh,
   const tarch::la::Vector<FieldDimensions, std::size_t> lengthOfDimensionsInCDFMesh
 ) {
-  const auto computeIndex = [](
-                              const double      coordinate,
-                              const double      firstCoordinate,
-                              const double      lastCoordinate,
-                              const std::size_t length
-                            ) -> std::size_t {
+  const auto computeIndex =
+    [](const double coordinate, const double firstCoordinate, const double lastCoordinate, const std::size_t length)
+    -> std::size_t {
     if (length <= 1 or tarch::la::equals(firstCoordinate, lastCoordinate)) {
       return 0;
     }

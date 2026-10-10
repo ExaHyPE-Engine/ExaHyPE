@@ -4,8 +4,8 @@
 
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/Kernels.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -57,7 +57,7 @@ struct exahype2::dg::ader::CorrectCells final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using FluxPool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::View      solution{};
   typename FluxPool::ConstView faceFluxes{};

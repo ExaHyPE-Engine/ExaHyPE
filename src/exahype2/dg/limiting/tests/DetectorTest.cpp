@@ -7,9 +7,9 @@
 #include "exahype2/dg/limiting/LimiterStatus.h"
 #include "exahype2/dg/limiting/tests/LimiterTestData.h"
 #include "exahype2/dg/tests/KernelTestData.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -880,8 +880,8 @@ exahype2::dg::limiting::tests::DetectorTest::testEveryCellOfADeviceRangeJudgesLi
 }
 
 /**
- * The block kernels count and list the cells on the subcell scheme in the order of the partition
- * with the local cells first.
+ * The block kernels count and list the cells on the subcell scheme in the order of the cell
+ * connectivity with the local cells first.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFirst() {
@@ -889,10 +889,10 @@ exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFi
   constexpr int                NumberOfBlocks = 2;
   constexpr std::array<int, 4> StatusPattern{Regular, Halo, Troubled, Limited};
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition          = peano4::Spacetree::getInstance().getPartition();
-  const auto  cells              = partition.getCells();
-  const int   numberOfSlots      = partition.getNumberOfSlots();
-  const int   numberOfLocalCells = partition.getCells(peano4::Adjacency::Local).size;
+  const auto& cellConnectivity   = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto  cells              = cellConnectivity.getCells();
+  const int   numberOfSlots      = cellConnectivity.getNumberOfSlots();
+  const int   numberOfLocalCells = cellConnectivity.getCells(peano4::Adjacency::Local).size;
 
   tarch::accelerator::ChunkedMemoryPool<int> statuses(exahype2::dg::limiting::NumberOfStatusEntries);
   statuses.reserve(numberOfSlots);
@@ -927,7 +927,7 @@ exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFi
   tarch::accelerator::parallelReduce(
     tarch::accelerator::Range(NumberOfBlocks),
     exahype2::dg::limiting::CountCellsOnSubcellScheme{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       std::as_const(statuses).getView(),
       NumberOfBlocks,
       numberOfLocalCells,
@@ -945,7 +945,7 @@ exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFi
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(NumberOfBlocks),
     exahype2::dg::limiting::ListCellsOnSubcellScheme{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       std::as_const(statuses).getView(),
       NumberOfBlocks,
       std::as_const(countsOfBlocks).getData(),

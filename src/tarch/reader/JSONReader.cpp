@@ -27,7 +27,9 @@ namespace {
     JSONObject parseDocument() {
       skipWhitespace();
       if (current() != '{') {
-        tarch::terminateWithError("The JSON reader expects an object at the top level of the file '" + _filepath + "'.");
+        tarch::terminateWithError(
+          "The JSON reader expects an object at the top level of the file '" + _filepath + "'."
+        );
       }
       JSONObject result = parseObject();
       skipWhitespace();

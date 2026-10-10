@@ -8,9 +8,9 @@
 #include "exahype2/TimeStepping.h"
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/Solver.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/RefinementRequest.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
@@ -403,9 +403,9 @@ namespace {
     }
   };
 
-  const peano4::Partition& buildGrid() {
+  const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   /**
@@ -431,16 +431,16 @@ namespace {
     if (not spacetree.regrid(refinementRequests, regrid)) {
       tarch::terminateWithError("The regrid of the test grid must change the grid.");
     }
-    const auto& partition = spacetree.getPartition();
-    requests.clear(partition.getNumberOfSlots());
-    solver.regrid(partition, regrid, requests);
+    const auto& cellConnectivity = spacetree.getCellConnectivity();
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.regrid(cellConnectivity, regrid, requests);
     spacetree.finishRegrid();
     finishStep(solver);
   }
 
-  int getNumberOfCellsOfLevel(const peano4::Partition& partition, const int level) {
-    return partition.getCells(peano4::Adjacency::Local, level).size
-      + partition.getCells(peano4::Adjacency::Remote, level).size;
+  int getNumberOfCellsOfLevel(const peano4::CellConnectivity& cellConnectivity, const int level) {
+    return cellConnectivity.getCells(peano4::Adjacency::Local, level).size
+      + cellConnectivity.getCells(peano4::Adjacency::Remote, level).size;
   }
 
   TARGET_DECLARE
@@ -467,32 +467,36 @@ namespace {
   /**
    * Returns for every face whether it is a remote face.
    */
-  std::vector<bool> getRemoteFaceMarks(const peano4::Partition& partition) {
-    std::vector<bool> remote(static_cast<std::size_t>(partition.getNumberOfFaces()), false);
+  std::vector<bool> getRemoteFaceMarks(const peano4::CellConnectivity& cellConnectivity) {
+    std::vector<bool> remote(static_cast<std::size_t>(cellConnectivity.getNumberOfFaces()), false);
     for (int kind = 0; kind < peano4::NumberOfFaceKinds; kind++) {
-      for (const int face : partition.getFaces(peano4::Adjacency::Remote, static_cast<peano4::FaceKind>(kind))) {
+      for (const int face : cellConnectivity.getFaces(peano4::Adjacency::Remote, static_cast<peano4::FaceKind>(kind))) {
         remote[static_cast<std::size_t>(face)] = true;
       }
     }
     return remote;
   }
 
-  bool cellHasRemoteFace(const peano4::Partition& partition, const std::vector<bool>& remote, const int cell) {
+  bool cellHasRemoteFace(
+    const peano4::CellConnectivity& cellConnectivity,
+    const std::vector<bool>&        remote,
+    const int                       cell
+  ) {
     bool hasRemoteFace = false;
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-      hasRemoteFace = hasRemoteFace or remote[static_cast<std::size_t>(partition.getCellFace(cell, faceNumber))];
+      hasRemoteFace = hasRemoteFace or remote[static_cast<std::size_t>(cellConnectivity.getCellFace(cell, faceNumber))];
     }
     return hasRemoteFace;
   }
 
   /**
-   * Returns the number of interior, boundary and hanging faces of the partition.
+   * Returns the number of interior, boundary and hanging faces of cellConnectivity.
    */
-  int getNumberOfRiemannFacesOf(const peano4::Partition& partition) {
+  int getNumberOfRiemannFacesOf(const peano4::CellConnectivity& cellConnectivity) {
     int riemannFaces = 0;
     for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
       for (const auto kind : {peano4::FaceKind::Interior, peano4::FaceKind::Boundary, peano4::FaceKind::Hanging}) {
-        riemannFaces += partition.getFaces(adjacency, kind).size;
+        riemannFaces += cellConnectivity.getFaces(adjacency, kind).size;
       }
     }
     return riemannFaces;
@@ -513,17 +517,17 @@ namespace {
    */
   template <typename Pool>
   struct CountMismatchesAgainstTheProfile final {
-    peano4::Partition        partition{};
+    peano4::CellConnectivity cellConnectivity{};
     typename Pool::ConstView solution{};
     const double*            quadraturePoints{nullptr};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, int& accumulator) const {
-      const int                             cell = partition.getCells()[entry];
+      const int                             cell = cellConnectivity.getCells()[entry];
       tarch::la::Vector<DIMENSIONS, double> centre;
       tarch::la::Vector<DIMENSIONS, double> width;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        centre(axis) = partition.getCellCentre(cell, axis);
-        width(axis)  = partition.getCellWidth(cell, axis);
+        centre(axis) = cellConnectivity.getCellCentre(cell, axis);
+        width(axis)  = cellConnectivity.getCellWidth(cell, axis);
       }
       const double* const values = solution.getChunk(cell);
       peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
@@ -537,12 +541,12 @@ namespace {
   TARGET_DECLARE_END
 
   template <typename Solver>
-  int getNumberOfMismatchesAgainstTheProfile(const Solver& solver, const peano4::Partition& partition) {
+  int getNumberOfMismatchesAgainstTheProfile(const Solver& solver, const peano4::CellConnectivity& cellConnectivity) {
     int mismatches = 0;
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getCells().size),
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
       CountMismatchesAgainstTheProfile<typename Solver::CellPool>{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         solver.getSolution().getView(),
         Quadrature<double>::QuadraturePoints1D
       },
@@ -554,9 +558,10 @@ namespace {
   /**
    * Returns whether the face is an interior face with normal 0 on the interface plane.
    */
-  GPU_CALLABLE_METHOD bool isInterfaceFace(const peano4::Partition& partition, const int face) {
-    return partition.getFaceNormal(face) == 0 and std::abs(partition.getFaceCentre(face, 0) - Interface) < Tolerance
-      and partition.getFaceKind(face) == peano4::FaceKind::Interior;
+  GPU_CALLABLE_METHOD bool isInterfaceFace(const peano4::CellConnectivity& cellConnectivity, const int face) {
+    return cellConnectivity.getFaceNormal(face) == 0
+      and std::abs(cellConnectivity.getFaceCentre(face, 0) - Interface) < Tolerance
+      and cellConnectivity.getFaceKind(face) == peano4::FaceKind::Interior;
   }
 
   TARGET_DECLARE
@@ -564,10 +569,10 @@ namespace {
    * Increments the accumulator for an interface face with a cell on its lower side.
    */
   struct CountCouplingFace final {
-    peano4::Partition partition{};
+    peano4::CellConnectivity cellConnectivity{};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
-      if (isInterfaceFace(partition, face) and partition.getFaceCell(face, 0) >= 0) {
+      if (isInterfaceFace(cellConnectivity, face) and cellConnectivity.getFaceCell(face, 0) >= 0) {
         accumulator++;
       }
     }
@@ -580,20 +585,20 @@ namespace {
   struct CountTraceMismatchesOfFace final {
     static constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
 
-    peano4::Partition                   partition{};
+    peano4::CellConnectivity            cellConnectivity{};
     HalfSolver<0>::StatePool::ConstView leftStates{};
     HalfSolver<1>::StatePool::ConstView rightStates{};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
-      if (not isInterfaceFace(partition, face)) {
+      if (not isInterfaceFace(cellConnectivity, face)) {
         return;
       }
       tarch::la::Vector<DIMENSIONS, double> centre;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        centre(axis) = partition.getFaceCentre(face, axis);
+        centre(axis) = cellConnectivity.getFaceCentre(face, axis);
       }
       for (int side = 0; side < 2; side++) {
-        if (partition.getFaceCell(face, side) >= 0) {
+        if (cellConnectivity.getFaceCell(face, side) >= 0) {
           const int           partnerHalf   = 1 - side;
           const auto          partnerOffset = static_cast<std::ptrdiff_t>(partnerHalf) * NodesPerFace;
           const double* const copied =
@@ -618,24 +623,24 @@ namespace {
    * Returns the number of nodes of both halves of the face whose face state differs from the profile.
    */
   GPU_CALLABLE_METHOD int getProfileMismatchesOfFace(
-    const peano4::Partition& partition,
-    const double* const      halves,
-    const double* const      quadraturePoints,
-    const int                face
+    const peano4::CellConnectivity& cellConnectivity,
+    const double* const             halves,
+    const double* const             quadraturePoints,
+    const int                       face
   ) {
     constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
     assertion(halves != nullptr);
     assertion(quadraturePoints != nullptr);
-    assertion(face >= 0 and face < partition.getNumberOfFaces(), face, partition.getNumberOfFaces());
-    const int normal     = partition.getFaceNormal(face);
+    assertion(face >= 0 and face < cellConnectivity.getNumberOfFaces(), face, cellConnectivity.getNumberOfFaces());
+    const int normal     = cellConnectivity.getFaceNormal(face);
     int       mismatches = 0;
     for (int node = 0; node < NodesPerFace; node++) {
       const auto                            nodeIndex = peano4::dDelinearisedExclusive(node, NodesPerAxis, normal);
       tarch::la::Vector<DIMENSIONS, double> position;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        position(axis) = partition.getFaceCentre(face, axis);
+        position(axis) = cellConnectivity.getFaceCentre(face, axis);
         if (axis != normal) {
-          position(axis) += (quadraturePoints[nodeIndex(axis)] - 0.5) * partition.getFaceWidth(face, axis);
+          position(axis) += (quadraturePoints[nodeIndex(axis)] - 0.5) * cellConnectivity.getFaceWidth(face, axis);
         }
       }
       for (int half = 0; half < 2; half++) {
@@ -651,12 +656,12 @@ namespace {
    * Returns whether the face is a coarse face of a level jump with normal 0 on the plane at position.
    */
   GPU_CALLABLE_METHOD bool isCoarseFaceOnPlane(
-    const peano4::Partition& partition,
-    const int                face,
-    const double             position
+    const peano4::CellConnectivity& cellConnectivity,
+    const int                       face,
+    const double                    position
   ) {
-    return partition.getFaceKind(face) == peano4::FaceKind::Coarse and partition.getFaceNormal(face) == 0
-      and std::abs(partition.getFaceCentre(face, 0) - position) < Tolerance;
+    return cellConnectivity.getFaceKind(face) == peano4::FaceKind::Coarse and cellConnectivity.getFaceNormal(face) == 0
+      and std::abs(cellConnectivity.getFaceCentre(face, 0) - position) < Tolerance;
   }
 
   /**
@@ -664,17 +669,17 @@ namespace {
    * interface faces count.
    */
   struct CountTraceMismatchesAgainstTheProfile final {
-    peano4::Partition                           partition{};
+    peano4::CellConnectivity                    cellConnectivity{};
     FixedRuleADERDGSolver::StatePool::ConstView faceStates{};
     const double*                               quadraturePoints{nullptr};
     bool                                        interfaceOnly{false};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
       if (
-        partition.getFaceKind(face) == peano4::FaceKind::Interior
-        and (not interfaceOnly or isInterfaceFace(partition, face))
+        cellConnectivity.getFaceKind(face) == peano4::FaceKind::Interior
+        and (not interfaceOnly or isInterfaceFace(cellConnectivity, face))
       ) {
-        accumulator += getProfileMismatchesOfFace(partition, faceStates.getChunk(face), quadraturePoints, face);
+        accumulator += getProfileMismatchesOfFace(cellConnectivity, faceStates.getChunk(face), quadraturePoints, face);
       }
     }
   };
@@ -683,24 +688,24 @@ namespace {
    * Adds the profile mismatches of a coarse face on the plane at position to the accumulator.
    */
   struct CountCoarseFaceMismatchesOnPlane final {
-    peano4::Partition                           partition{};
+    peano4::CellConnectivity                    cellConnectivity{};
     FixedRuleADERDGSolver::StatePool::ConstView faceStates{};
     const double*                               quadraturePoints{nullptr};
     double                                      position{0.0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
-      if (isCoarseFaceOnPlane(partition, face, position)) {
-        accumulator += getProfileMismatchesOfFace(partition, faceStates.getChunk(face), quadraturePoints, face);
+      if (isCoarseFaceOnPlane(cellConnectivity, face, position)) {
+        accumulator += getProfileMismatchesOfFace(cellConnectivity, faceStates.getChunk(face), quadraturePoints, face);
       }
     }
   };
 
   struct CountCoarseFacesOnPlane final {
-    peano4::Partition partition{};
-    double            position{0.0};
+    peano4::CellConnectivity cellConnectivity{};
+    double                   position{0.0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
-      if (isCoarseFaceOnPlane(partition, face, position)) {
+      if (isCoarseFaceOnPlane(cellConnectivity, face, position)) {
         accumulator++;
       }
     }
@@ -710,13 +715,13 @@ namespace {
    * Counts every interior face, or only the interface faces with interfaceOnly.
    */
   struct CountInteriorFace final {
-    peano4::Partition partition{};
-    bool              interfaceOnly{false};
+    peano4::CellConnectivity cellConnectivity{};
+    bool                     interfaceOnly{false};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
       if (
-        partition.getFaceKind(face) == peano4::FaceKind::Interior
-        and (not interfaceOnly or isInterfaceFace(partition, face))
+        cellConnectivity.getFaceKind(face) == peano4::FaceKind::Interior
+        and (not interfaceOnly or isInterfaceFace(cellConnectivity, face))
       ) {
         accumulator++;
       }
@@ -728,20 +733,24 @@ namespace {
    * Returns the number of coupling faces and the number of their mismatching halves.
    */
   std::pair<int, int> getCouplingFaceMismatches(
-    const HalfSolver<0>&     left,
-    const HalfSolver<1>&     right,
-    const peano4::Partition& partition
+    const HalfSolver<0>&            left,
+    const HalfSolver<1>&            right,
+    const peano4::CellConnectivity& cellConnectivity
   ) {
     int couplingFaces = 0;
     int mismatches    = 0;
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getNumberOfFaces()),
-      CountCouplingFace{partition.onDevice()},
+      tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
+      CountCouplingFace{cellConnectivity.onDevice()},
       tarch::accelerator::Sum<int>{couplingFaces}
     );
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getNumberOfFaces()),
-      CountTraceMismatchesOfFace{partition.onDevice(), left.getFaceStates().getView(), right.getFaceStates().getView()},
+      tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
+      CountTraceMismatchesOfFace{
+        cellConnectivity.onDevice(),
+        left.getFaceStates().getView(),
+        right.getFaceStates().getView()
+      },
       tarch::accelerator::Sum<int>{mismatches}
     );
     return {couplingFaces, mismatches};
@@ -752,21 +761,21 @@ namespace {
    * profile.
    */
   std::pair<int, int> getTraceMismatchesAgainstTheProfile(
-    const FixedRuleADERDGSolver& solver,
-    const peano4::Partition&     partition,
-    const bool                   interfaceOnly
+    const FixedRuleADERDGSolver&    solver,
+    const peano4::CellConnectivity& cellConnectivity,
+    const bool                      interfaceOnly
   ) {
     int faces      = 0;
     int mismatches = 0;
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getNumberOfFaces()),
-      CountInteriorFace{partition.onDevice(), interfaceOnly},
+      tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
+      CountInteriorFace{cellConnectivity.onDevice(), interfaceOnly},
       tarch::accelerator::Sum<int>{faces}
     );
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getNumberOfFaces()),
+      tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
       CountTraceMismatchesAgainstTheProfile{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         solver.getFaceStates().getView(),
         Quadrature<double>::QuadraturePoints1D,
         interfaceOnly
@@ -781,21 +790,21 @@ namespace {
    * that differ from the profile.
    */
   std::pair<int, int> getCoarseFaceMismatchesOnPlane(
-    const FixedRuleADERDGSolver& solver,
-    const peano4::Partition&     partition,
-    const double                 position
+    const FixedRuleADERDGSolver&    solver,
+    const peano4::CellConnectivity& cellConnectivity,
+    const double                    position
   ) {
     int faces      = 0;
     int mismatches = 0;
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getNumberOfFaces()),
-      CountCoarseFacesOnPlane{partition.onDevice(), position},
+      tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
+      CountCoarseFacesOnPlane{cellConnectivity.onDevice(), position},
       tarch::accelerator::Sum<int>{faces}
     );
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getNumberOfFaces()),
+      tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
       CountCoarseFaceMismatchesOnPlane{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         solver.getFaceStates().getView(),
         Quadrature<double>::QuadraturePoints1D,
         position
@@ -830,18 +839,18 @@ exahype2::dg::ader::tests::SolverTest::run() {
 void
 exahype2::dg::ader::tests::SolverTest::
   testTheProjectionWritesTheTracesOfTheSolutionIntoBothHalvesOfEveryInteriorFace() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleADERDGSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
-  solver.projectSolutionOntoFaces(partition);
+  solver.projectSolutionOntoFaces(cellConnectivity);
 
-  const auto [interiorFaces, mismatches] = getTraceMismatchesAgainstTheProfile(solver, partition, false);
+  const auto [interiorFaces, mismatches] = getTraceMismatchesAgainstTheProfile(solver, cellConnectivity, false);
   validateEquals(peano4::tests::getGlobalSumOf(mismatches), 0);
   validate(peano4::tests::getGlobalSumOf(interiorFaces) > 0);
   solver.release();
@@ -853,27 +862,27 @@ exahype2::dg::ader::tests::SolverTest::
  */
 void
 exahype2::dg::ader::tests::SolverTest::testTheCellAndFaceGroupsSplitAtTheRankBoundary() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleADERDGSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   finishStep(solver);
-  const std::vector<bool> remote = getRemoteFaceMarks(partition);
+  const std::vector<bool> remote = getRemoteFaceMarks(cellConnectivity);
 
-  const std::vector<int> localCells  = readList(solver.getCells(partition, peano4::Adjacency::Local));
-  const std::vector<int> remoteCells = readList(solver.getCells(partition, peano4::Adjacency::Remote));
-  validateEquals(static_cast<int>(localCells.size() + remoteCells.size()), partition.getCells().size);
+  const std::vector<int> localCells  = readList(solver.getCells(cellConnectivity, peano4::Adjacency::Local));
+  const std::vector<int> remoteCells = readList(solver.getCells(cellConnectivity, peano4::Adjacency::Remote));
+  validateEquals(static_cast<int>(localCells.size() + remoteCells.size()), cellConnectivity.getCells().size);
   for (const int cell : localCells) {
-    validateWithParams1(not cellHasRemoteFace(partition, remote, cell), cell);
+    validateWithParams1(not cellHasRemoteFace(cellConnectivity, remote, cell), cell);
   }
   for (const int cell : remoteCells) {
-    validateWithParams1(cellHasRemoteFace(partition, remote, cell), cell);
+    validateWithParams1(cellHasRemoteFace(cellConnectivity, remote, cell), cell);
   }
 
-  const std::vector<int> localFaces  = readList(solver.getRiemannFaces(partition, peano4::Adjacency::Local));
-  const std::vector<int> remoteFaces = readList(solver.getRiemannFaces(partition, peano4::Adjacency::Remote));
-  validateEquals(static_cast<int>(localFaces.size() + remoteFaces.size()), getNumberOfRiemannFacesOf(partition));
+  const std::vector<int> localFaces  = readList(solver.getRiemannFaces(cellConnectivity, peano4::Adjacency::Local));
+  const std::vector<int> remoteFaces = readList(solver.getRiemannFaces(cellConnectivity, peano4::Adjacency::Remote));
+  validateEquals(static_cast<int>(localFaces.size() + remoteFaces.size()), getNumberOfRiemannFacesOf(cellConnectivity));
   for (const int face : localFaces) {
     validateWithParams1(not remote[static_cast<std::size_t>(face)], face);
   }
@@ -893,18 +902,18 @@ exahype2::dg::ader::tests::SolverTest::testTheCellAndFaceGroupsSplitAtTheRankBou
  */
 void
 exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesTheTracesOfTheSolutionIntoItsFaces() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleADERDGSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
-  solver.projectSolutionOntoPlane(partition, 0, Interface);
+  solver.projectSolutionOntoPlane(cellConnectivity, 0, Interface);
 
-  const auto [interfaceFaces, mismatches] = getTraceMismatchesAgainstTheProfile(solver, partition, true);
+  const auto [interfaceFaces, mismatches] = getTraceMismatchesAgainstTheProfile(solver, cellConnectivity, true);
   validateEquals(peano4::tests::getGlobalSumOf(mismatches), 0);
   validate(peano4::tests::getGlobalSumOf(interfaceFaces) > 0);
   solver.release();
@@ -916,23 +925,23 @@ exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesTheTrace
  */
 void
 exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesBothHalvesOfTheCoarseFacesOfTheLevelJumps() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleADERDGSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
   peano4::Spacetree::getInstance().markPersistentDataLive();
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
 
   const int    firstRefinedCell = CellsPerAxis / 2 - peano4::tests::getNumberOfCellsPerAxisRefinedAroundTheCentre() / 2;
   const double blockBoundary    = firstRefinedCell * CoarseWidth;
-  solver.projectSolutionOntoPlane(partition, 0, blockBoundary);
+  solver.projectSolutionOntoPlane(cellConnectivity, 0, blockBoundary);
 
-  const auto [coarseFaces, mismatches] = getCoarseFaceMismatchesOnPlane(solver, partition, blockBoundary);
+  const auto [coarseFaces, mismatches] = getCoarseFaceMismatchesOnPlane(solver, cellConnectivity, blockBoundary);
   validateEquals(peano4::tests::getGlobalSumOf(mismatches), 0);
   validate(peano4::tests::getGlobalSumOf(coarseFaces) > 0);
   solver.release();
@@ -943,24 +952,24 @@ exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesBothHalv
  */
 void
 exahype2::dg::ader::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
-  const auto&          partition = buildGrid();
+  const auto&          cellConnectivity = buildGrid();
   AdaptiveADERDGSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
-  solver.performTimeStep(partition, requests);
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
-  requests.clear(partition.getNumberOfSlots());
-  solver.performTimeStep(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
-  requests.clear(partition.getNumberOfSlots());
-  solver.performTimeStep(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSizeOfLastStep(), coarseTimeStepSize / SubdivisionFactor);
   solver.release();
@@ -972,7 +981,7 @@ exahype2::dg::ader::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeS
  */
 void
 exahype2::dg::ader::tests::SolverTest::testTwoCoupledSolversExchangeTheirTracesAndAdvanceTogether() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   std::vector<double> identity(EntriesPerOperator, 0.0);
   for (int node = 0; node < NodesPerAxis; node++) {
@@ -984,25 +993,28 @@ exahype2::dg::ader::tests::SolverTest::testTwoCoupledSolversExchangeTheirTracesA
   exahype2::RefinementRequests requests;
   left.setLimits(getLimitsOfTheDomain());
   right.setLimits(getLimitsOfTheDomain());
-  left.allocate(partition);
-  right.allocate(partition);
-  requests.clear(partition.getNumberOfSlots());
-  left.initialise(partition, requests);
-  right.initialise(partition, requests);
+  left.allocate(cellConnectivity);
+  right.allocate(cellConnectivity);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  left.initialise(cellConnectivity, requests);
+  right.initialise(cellConnectivity, requests);
   finishStep(left, right);
-  validateEquals(left.getNumberOfCells(partition) + right.getNumberOfCells(partition), partition.getCells().size);
-  validateEquals(peano4::tests::getGlobalSumOf(left.getNumberOfCells(partition)), RegularCells / CellsPerAxis);
+  validateEquals(
+    left.getNumberOfCells(cellConnectivity) + right.getNumberOfCells(cellConnectivity),
+    cellConnectivity.getCells().size
+  );
+  validateEquals(peano4::tests::getGlobalSumOf(left.getNumberOfCells(cellConnectivity)), RegularCells / CellsPerAxis);
 
   for (int step = 0; step < 3; step++) {
-    requests.clear(partition.getNumberOfSlots());
-    left.performTimeStep(partition, requests);
-    right.performTimeStep(partition, requests);
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    left.performTimeStep(cellConnectivity, requests);
+    right.performTimeStep(cellConnectivity, requests);
     finishStep(left, right);
-    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(left, partition), 0, step);
-    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(right, partition), 0, step);
+    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(left, cellConnectivity), 0, step);
+    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(right, cellConnectivity), 0, step);
     validateNumericalEqualsWithParams1(left.getTimeStepping().getTimeStamp(), step * TimeStepFactor, step);
     validateNumericalEqualsWithParams1(right.getTimeStepping().getTimeStamp(), step * TimeStepFactor, step);
-    const auto [couplingFaces, mismatches] = getCouplingFaceMismatches(left, right, partition);
+    const auto [couplingFaces, mismatches] = getCouplingFaceMismatches(left, right, cellConnectivity);
     validateEqualsWithParams1(mismatches, 0, step);
     validateEqualsWithParams1(
       peano4::tests::getGlobalSumOf(couplingFaces),
@@ -1010,37 +1022,37 @@ exahype2::dg::ader::tests::SolverTest::testTwoCoupledSolversExchangeTheirTracesA
       step
     );
   }
-  validate(requests.getRefinementRequests(partition).empty());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
   left.release();
   right.release();
 }
 
 void
 exahype2::dg::ader::tests::SolverTest::testInitialisationWritesTheInitialConditionIntoEveryNode() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleADERDGSolver solver;
   auto                  constructionLimits  = getLimitsOfTheDomain();
   constructionLimits.maxAdmissiblePatchSize = CoarseWidth / SubdivisionFactor;
   solver.setLimits(constructionLimits);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.requestRefinementForGridConstruction(partition, requests);
-  validateEquals(static_cast<int>(requests.getRefinementRequests(partition).size()), RegularCells);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.requestRefinementForGridConstruction(cellConnectivity, requests);
+  validateEquals(static_cast<int>(requests.getRefinementRequests(cellConnectivity).size()), RegularCells);
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
-  requests.clear(partition.getNumberOfSlots());
-  requests.merge(exahype2::RefinementCommand::Erase, partition.getCells());
-  solver.initialise(partition, requests);
+  solver.allocate(cellConnectivity);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  requests.merge(exahype2::RefinementCommand::Erase, cellConnectivity.getCells());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
 
-  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
   validateEquals(solver.getNumberOfDoFs(), NodesInCell);
-  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
   validateNumericalEquals(solver.getTimeStepping().getMinMeshWidth(), CoarseWidth);
   validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth);
   validate(solver.getAllocatedBytes().getTotal() > 0);
-  validate(requests.getRefinementRequests(partition).empty());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
   solver.release();
 }
 
@@ -1050,28 +1062,28 @@ exahype2::dg::ader::tests::SolverTest::testInitialisationWritesTheInitialConditi
  */
 void
 exahype2::dg::ader::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleADERDGSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), 0.0);
 
   for (int step = 0; step < 3; step++) {
-    requests.clear(partition.getNumberOfSlots());
-    solver.performTimeStep(partition, requests);
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.performTimeStep(cellConnectivity, requests);
     finishStep(solver);
     const double expectedStepSize = step == 0 ? 0.0 : TimeStepFactor;
-    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0, step);
+    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStamp(), step * TimeStepFactor, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSizeOfLastStep(), expectedStepSize, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSize(), TimeStepFactor, step);
   }
-  validate(requests.getRefinementRequests(partition).empty());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
   solver.release();
 }
 
@@ -1081,49 +1093,49 @@ exahype2::dg::ader::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionA
  */
 void
 exahype2::dg::ader::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleADERDGSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
-  solver.performTimeStep(partition, requests);
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
 
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize / SubdivisionFactor);
-  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(partition, Depth + 1)) > 0);
-  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
+  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(cellConnectivity, Depth + 1)) > 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
   validateNumericalEquals(solver.getTimeStepping().getMinMeshWidth(), CoarseWidth / SubdivisionFactor);
   validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth);
 
-  requests.clear(partition.getNumberOfSlots());
-  solver.performTimeStep(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSizeOfLastStep(), coarseTimeStepSize / SubdivisionFactor);
-  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
 
   regridWithLiveData(solver, peano4::tests::getErasureOfEveryCell(Depth), requests);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize);
-  validateEquals(partition.getMaximumLevel(), Depth);
-  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
-  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
+  validateEquals(cellConnectivity.getMaximumLevel(), Depth);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
   solver.release();
 }
 
 void
 exahype2::dg::ader::tests::SolverTest::testReleaseFreesEveryPool() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleADERDGSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
   validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   validate(solver.getAllocatedBytes().getTotal() > 0);
   solver.release();
   validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});

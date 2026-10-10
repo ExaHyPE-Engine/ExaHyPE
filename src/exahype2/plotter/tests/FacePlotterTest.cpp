@@ -3,8 +3,8 @@
 #include "FacePlotterTest.h"
 
 #include "exahype2/plotter/FacePlotter.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -56,11 +56,11 @@ void
 exahype2::plotter::tests::FacePlotterTest::testEverySelectedFaceBecomesItsNodesAndBothTraces() {
   const int rank = tarch::mpi::Rank::getInstance().getRank();
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
   tarch::accelerator::ChunkedMemoryPool<double> values(ValuesPerFace, tarch::MemoryLocation::Heap);
-  values.reserve(partition.getNumberOfFaces());
-  for (int face = 0; face < partition.getNumberOfFaces(); face++) {
+  values.reserve(cellConnectivity.getNumberOfFaces());
+  for (int face = 0; face < cellConnectivity.getNumberOfFaces(); face++) {
     double* const halves = values.getChunk(face);
     for (int value = 0; value < ValuesPerFace; value++) {
       halves[value] = 100.0 * face + value;
@@ -85,7 +85,7 @@ exahype2::plotter::tests::FacePlotterTest::testEverySelectedFaceBecomesItsNodesA
   std::filesystem::create_directories(outputDirectory + "face/");
   exahype2::plotter::FacePlotter plotter("FacePlotterTest", {{"q", 1}, {"r", 1}});
   plotter.plot<NodesPerAxis, ValuesPerNode, double>(
-    partition,
+    cellConnectivity,
     values,
     QuadratureNodes,
     0.25,
@@ -121,18 +121,18 @@ exahype2::plotter::tests::FacePlotterTest::testEveryFaceOfAnAdaptiveGridIsWritte
   constexpr int AdaptiveDepth = peano4::tests::DepthWithCoarseCellsBesideTheCentreBlock;
   peano4::tests::buildRegularGrid(AdaptiveDepth);
   peano4::tests::refineGrid({peano4::tests::getRefinementOfCentreCell(AdaptiveDepth)});
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
   int heldFaces = 0;
   for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
     for (const auto kind : {peano4::FaceKind::Interior, peano4::FaceKind::Boundary, peano4::FaceKind::Hanging}) {
-      heldFaces += partition.getFaces(adjacency, kind).size;
+      heldFaces += cellConnectivity.getFaces(adjacency, kind).size;
     }
   }
-  const int exchangedFaces = partition.getFaces(peano4::Adjacency::Remote, peano4::FaceKind::Interior).size;
+  const int exchangedFaces = cellConnectivity.getFaces(peano4::Adjacency::Remote, peano4::FaceKind::Interior).size;
 
   tarch::accelerator::ChunkedMemoryPool<double> values(ValuesPerFace, tarch::MemoryLocation::Heap);
-  values.reserve(partition.getNumberOfFaces());
+  values.reserve(cellConnectivity.getNumberOfFaces());
   for (int face = 0; face < values.getCapacity(); face++) {
     std::fill_n(values.getChunk(face), ValuesPerFace, 0.0);
   }
@@ -151,7 +151,7 @@ exahype2::plotter::tests::FacePlotterTest::testEveryFaceOfAnAdaptiveGridIsWritte
   std::filesystem::create_directories(outputDirectory + "face/");
   exahype2::plotter::FacePlotter plotter("FacePlotterTestAdaptive", {{"q", 1}, {"r", 1}});
   plotter.plot<NodesPerAxis, ValuesPerNode, double>(
-    partition,
+    cellConnectivity,
     values,
     QuadratureNodes,
     0.5,

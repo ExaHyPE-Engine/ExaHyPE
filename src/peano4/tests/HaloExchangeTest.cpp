@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "HaloExchangeTest.h"
 
+#include "peano4/CellConnectivity.h"
 #include "peano4/HaloExchange.h"
-#include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -37,15 +37,15 @@ namespace {
    * level, normal and lattice position of the face.
    */
   GPU_CALLABLE_METHOD double getExpectedValue(
-    const peano4::Partition& partition,
-    const int                face,
-    const int                side,
-    const int                element,
-    const int                round
+    const peano4::CellConnectivity& cellConnectivity,
+    const int                       face,
+    const int                       side,
+    const int                       element,
+    const int                       round
   ) {
-    std::int64_t key = partition.getFaceLevel(face) * DIMENSIONS + partition.getFaceNormal(face);
+    std::int64_t key = cellConnectivity.getFaceLevel(face) * DIMENSIONS + cellConnectivity.getFaceNormal(face);
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      key = key * LatticeRange + partition.getFaceLattice(face)(axis);
+      key = key * LatticeRange + cellConnectivity.getFaceLattice(face)(axis);
     }
     return static_cast<double>((key * 2 + side) * ElementsPerFace + element + round);
   }
@@ -55,13 +55,13 @@ namespace {
    * kind restricts the exchanged faces to that kind.
    */
   std::vector<int> getLocalSidesOfFaces(
-    const peano4::Partition&               partition,
+    const peano4::CellConnectivity&        cellConnectivity,
     const std::optional<peano4::FaceKind>& kind = std::nullopt
   ) {
-    std::vector<int> sides(static_cast<std::size_t>(partition.getNumberOfFaces()), -1);
-    for (const auto& neighbour : partition.getNeighbours()) {
-      for (const auto& entry : partition.getExchangedFaces(neighbour)) {
-        if (not kind or partition.getFaceKind(entry.face) == *kind) {
+    std::vector<int> sides(static_cast<std::size_t>(cellConnectivity.getNumberOfFaces()), -1);
+    for (const auto& neighbour : cellConnectivity.getNeighbours()) {
+      for (const auto& entry : cellConnectivity.getExchangedFaces(neighbour)) {
+        if (not kind or cellConnectivity.getFaceKind(entry.face) == *kind) {
           sides[static_cast<std::size_t>(entry.face)] = entry.side;
         }
       }
@@ -70,13 +70,13 @@ namespace {
   }
 
   int getNumberOfExchangedFaces(
-    const peano4::Partition&               partition,
+    const peano4::CellConnectivity&        cellConnectivity,
     const std::optional<peano4::FaceKind>& kind = std::nullopt
   ) {
     int faces = 0;
-    for (const auto& neighbour : partition.getNeighbours()) {
-      for (const auto& entry : partition.getExchangedFaces(neighbour)) {
-        if (not kind or partition.getFaceKind(entry.face) == *kind) {
+    for (const auto& neighbour : cellConnectivity.getNeighbours()) {
+      for (const auto& entry : cellConnectivity.getExchangedFaces(neighbour)) {
+        if (not kind or cellConnectivity.getFaceKind(entry.face) == *kind) {
           faces++;
         }
       }
@@ -89,10 +89,10 @@ namespace {
    * Writes the marker into one face and the expected value into the half of it that this rank owns.
    */
   struct WriteLocalHalf final {
-    peano4::Partition partition{};
-    Pool::View        faces{};
-    const int*        sideOfFace{nullptr};
-    int               round{0};
+    peano4::CellConnectivity cellConnectivity{};
+    Pool::View               faces{};
+    const int*               sideOfFace{nullptr};
+    int                      round{0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face) const {
       double* const chunk = faces.getChunk(face);
@@ -102,7 +102,7 @@ namespace {
       const int side = sideOfFace[face];
       if (side >= 0) {
         for (int element = 0; element < ElementsPerHalf; element++) {
-          chunk[side * ElementsPerHalf + element] = getExpectedValue(partition, face, side, element, round);
+          chunk[side * ElementsPerHalf + element] = getExpectedValue(cellConnectivity, face, side, element, round);
         }
       }
     }
@@ -113,11 +113,11 @@ namespace {
    * on an exchanged face and from the marker on every other face.
    */
   struct CountMismatchesOfFace final {
-    peano4::Partition partition{};
-    Pool::ConstView   faces{};
-    const int*        sideOfFace{nullptr};
-    int               round{0};
-    int*              mismatchesOfFace{nullptr};
+    peano4::CellConnectivity cellConnectivity{};
+    Pool::ConstView          faces{};
+    const int*               sideOfFace{nullptr};
+    int                      round{0};
+    int*                     mismatchesOfFace{nullptr};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face) const {
       const double* const chunk      = faces.getChunk(face);
@@ -127,7 +127,8 @@ namespace {
         double expected = Untouched;
         if (side >= 0) {
           const int elementSide = element / ElementsPerHalf;
-          expected = getExpectedValue(partition, face, elementSide, element - elementSide * ElementsPerHalf, round);
+          expected =
+            getExpectedValue(cellConnectivity, face, elementSide, element - elementSide * ElementsPerHalf, round);
         }
         if (chunk[element] != expected) {
           mismatches++;
@@ -144,13 +145,13 @@ namespace {
    */
   void writeLocalHalves(
     Pool&                                  pool,
-    const peano4::Partition&               partition,
+    const peano4::CellConnectivity&        cellConnectivity,
     const tarch::accelerator::Buffer<int>& sides,
     const int                              round
   ) {
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(partition.getNumberOfFaces()),
-      WriteLocalHalf{partition.onDevice(), pool.getView(), sides.getData(), round}
+      tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
+      WriteLocalHalf{cellConnectivity.onDevice(), pool.getView(), sides.getData(), round}
     );
   }
 
@@ -160,15 +161,21 @@ namespace {
    */
   int getNumberOfMismatches(
     const Pool&                            pool,
-    const peano4::Partition&               partition,
+    const peano4::CellConnectivity&        cellConnectivity,
     const tarch::accelerator::Buffer<int>& sides,
     const int                              round
   ) {
-    const int                       numberOfFaces = partition.getNumberOfFaces();
+    const int                       numberOfFaces = cellConnectivity.getNumberOfFaces();
     tarch::accelerator::Buffer<int> mismatchesOfFace(static_cast<std::size_t>(numberOfFaces), pool.getLocation());
     tarch::accelerator::parallelFor(
       tarch::accelerator::Range(numberOfFaces),
-      CountMismatchesOfFace{partition.onDevice(), pool.getView(), sides.getData(), round, mismatchesOfFace.getData()}
+      CountMismatchesOfFace{
+        cellConnectivity.onDevice(),
+        pool.getView(),
+        sides.getData(),
+        round,
+        mismatchesOfFace.getData()
+      }
     );
     const std::vector<int> mismatches = mismatchesOfFace.getValues();
     return std::accumulate(mismatches.begin(), mismatches.end(), 0);
@@ -209,12 +216,12 @@ peano4::tests::HaloExchangeTest::testExchangeFillsTheRemoteHalves() {
     if (refined) {
       peano4::tests::refineGrid({peano4::tests::getRefinementOfCentreCell(Depth)});
     }
-    const auto& partition = peano4::Spacetree::getInstance().getPartition();
+    const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
-    pool.reserve(partition.getNumberOfFaces());
-    exchange.rebuild(partition);
+    pool.reserve(cellConnectivity.getNumberOfFaces());
+    exchange.rebuild(cellConnectivity);
 
-    const int  numberOfExchangedFaces = getNumberOfExchangedFaces(partition);
+    const int  numberOfExchangedFaces = getNumberOfExchangedFaces(cellConnectivity);
     const bool hasNoEntries           = numberOfExchangedFaces == 0;
     const bool runsAlone              = numberOfRanks == 1;
     validateEqualsWithParams1(exchange.getNumberOfEntries(), numberOfExchangedFaces, grid);
@@ -226,15 +233,15 @@ peano4::tests::HaloExchangeTest::testExchangeFillsTheRemoteHalves() {
     );
 
     tarch::accelerator::Buffer<int> sides(tarch::MemoryLocation::Device);
-    sides.setValues(getLocalSidesOfFaces(partition));
+    sides.setValues(getLocalSidesOfFaces(cellConnectivity));
 
     for (const int round : {0, 1}) {
-      writeLocalHalves(pool, partition, sides, round);
+      writeLocalHalves(pool, cellConnectivity, sides, round);
 
       exchange.post();
       exchange.wait();
 
-      validateEqualsWithParams3(getNumberOfMismatches(pool, partition, sides, round), 0, grid, round, rank);
+      validateEqualsWithParams3(getNumberOfMismatches(pool, cellConnectivity, sides, round), 0, grid, round, rank);
     }
   }
 }
@@ -249,23 +256,23 @@ peano4::tests::HaloExchangeTest::testCoarseExchangeFillsTheRemoteHalvesOfCoarseF
   const int rank          = tarch::mpi::Rank::getInstance().getRank();
   peano4::tests::buildRegularGrid(Depth);
   peano4::tests::refineGrid({peano4::tests::getRefinementOfFirstChildOfRoot(Depth)});
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
   Pool pool(ElementsPerFace, tarch::MemoryLocation::Device);
-  pool.reserve(partition.getNumberOfFaces());
+  pool.reserve(cellConnectivity.getNumberOfFaces());
   Exchange exchange(pool, peano4::FaceKind::Coarse);
-  exchange.rebuild(partition);
-  const int numberOfCoarseFaces       = getNumberOfExchangedFaces(partition, peano4::FaceKind::Coarse);
+  exchange.rebuild(cellConnectivity);
+  const int numberOfCoarseFaces       = getNumberOfExchangedFaces(cellConnectivity, peano4::FaceKind::Coarse);
   const int globalNumberOfCoarseFaces = peano4::tests::getGlobalSumOf(numberOfCoarseFaces);
   validateEqualsWithParams1(exchange.getNumberOfEntries(), numberOfCoarseFaces, rank);
   validateEqualsWithParams1(globalNumberOfCoarseFaces > 0, numberOfRanks > 1, globalNumberOfCoarseFaces);
 
   tarch::accelerator::Buffer<int> sides(tarch::MemoryLocation::Device);
-  sides.setValues(getLocalSidesOfFaces(partition, peano4::FaceKind::Coarse));
-  writeLocalHalves(pool, partition, sides, 0);
+  sides.setValues(getLocalSidesOfFaces(cellConnectivity, peano4::FaceKind::Coarse));
+  writeLocalHalves(pool, cellConnectivity, sides, 0);
   exchange.post();
   exchange.wait();
-  validateEqualsWithParams1(getNumberOfMismatches(pool, partition, sides, 0), 0, rank);
+  validateEqualsWithParams1(getNumberOfMismatches(pool, cellConnectivity, sides, 0), 0, rank);
 }
 
 /**
@@ -275,14 +282,14 @@ peano4::tests::HaloExchangeTest::testCoarseExchangeFillsTheRemoteHalvesOfCoarseF
 void
 peano4::tests::HaloExchangeTest::testExchangesHoldDistinctTags() {
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
   Pool        pool(ElementsPerFace, tarch::MemoryLocation::Device);
   Exchange    first(pool);
   Exchange    second(pool);
   validateEquals(first.getAllocatedBytes().getTotal(), std::size_t{0});
-  pool.reserve(partition.getNumberOfFaces());
-  first.rebuild(partition);
-  second.rebuild(partition);
+  pool.reserve(cellConnectivity.getNumberOfFaces());
+  first.rebuild(cellConnectivity);
+  second.rebuild(cellConnectivity);
   validate(first.getTag() != second.getTag());
   validate(second.getTag() > first.getTag());
 
@@ -302,11 +309,11 @@ peano4::tests::HaloExchangeTest::testExchangesHoldDistinctTags() {
 void
 peano4::tests::HaloExchangeTest::testReleaseFreesTheBuffersAndKeepsTheTag() {
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
   Pool        pool(ElementsPerFace, tarch::MemoryLocation::Device);
-  pool.reserve(partition.getNumberOfFaces());
+  pool.reserve(cellConnectivity.getNumberOfFaces());
   Exchange exchange(pool);
-  exchange.rebuild(partition);
+  exchange.rebuild(cellConnectivity);
   const int tag             = exchange.getTag();
   const int numberOfEntries = exchange.getNumberOfEntries();
 
@@ -315,12 +322,12 @@ peano4::tests::HaloExchangeTest::testReleaseFreesTheBuffersAndKeepsTheTag() {
   validateEquals(exchange.getNumberOfEntries(), 0);
   validateEquals(exchange.getTag(), tag);
 
-  exchange.rebuild(partition);
+  exchange.rebuild(cellConnectivity);
   validateEquals(exchange.getNumberOfEntries(), numberOfEntries);
   tarch::accelerator::Buffer<int> sides(tarch::MemoryLocation::Device);
-  sides.setValues(getLocalSidesOfFaces(partition));
-  writeLocalHalves(pool, partition, sides, 0);
+  sides.setValues(getLocalSidesOfFaces(cellConnectivity));
+  writeLocalHalves(pool, cellConnectivity, sides, 0);
   exchange.post();
   exchange.wait();
-  validateEquals(getNumberOfMismatches(pool, partition, sides, 0), 0);
+  validateEquals(getNumberOfMismatches(pool, cellConnectivity, sides, 0), 0);
 }

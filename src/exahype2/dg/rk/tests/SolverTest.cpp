@@ -7,9 +7,9 @@
 #include "exahype2/RefinementRequests.h"
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/rk/Solver.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/RefinementRequest.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
@@ -388,9 +388,9 @@ namespace {
     }
   };
 
-  const peano4::Partition& buildGrid() {
+  const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   /**
@@ -415,16 +415,16 @@ namespace {
     if (not spacetree.regrid(refinementRequests, regrid)) {
       tarch::terminateWithError("The regrid of the test grid must change the grid.");
     }
-    const auto& partition = spacetree.getPartition();
-    requests.clear(partition.getNumberOfSlots());
-    solver.regrid(partition, regrid, requests);
+    const auto& cellConnectivity = spacetree.getCellConnectivity();
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.regrid(cellConnectivity, regrid, requests);
     spacetree.finishRegrid();
     finishStep(solver);
   }
 
-  int getNumberOfCellsOfLevel(const peano4::Partition& partition, const int level) {
-    return partition.getCells(peano4::Adjacency::Local, level).size
-      + partition.getCells(peano4::Adjacency::Remote, level).size;
+  int getNumberOfCellsOfLevel(const peano4::CellConnectivity& cellConnectivity, const int level) {
+    return cellConnectivity.getCells(peano4::Adjacency::Local, level).size
+      + cellConnectivity.getCells(peano4::Adjacency::Remote, level).size;
   }
 
   exahype2::Limits getLimitsOfTheDomain() {
@@ -443,18 +443,18 @@ namespace {
    */
   template <typename Pool, typename Expected>
   struct CountMismatchesAgainstExpected final {
-    peano4::Partition        partition{};
+    peano4::CellConnectivity cellConnectivity{};
     typename Pool::ConstView solution{};
     const double*            quadraturePoints{nullptr};
     Expected                 expected{};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, int& accumulator) const {
-      const int                             cell = partition.getCells()[entry];
+      const int                             cell = cellConnectivity.getCells()[entry];
       tarch::la::Vector<DIMENSIONS, double> centre;
       tarch::la::Vector<DIMENSIONS, double> width;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        centre(axis) = partition.getCellCentre(cell, axis);
-        width(axis)  = partition.getCellWidth(cell, axis);
+        centre(axis) = cellConnectivity.getCellCentre(cell, axis);
+        width(axis)  = cellConnectivity.getCellWidth(cell, axis);
       }
       const double* const values = solution.getChunk(cell);
       peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
@@ -468,12 +468,12 @@ namespace {
   TARGET_DECLARE_END
 
   template <typename Solver, typename Expected>
-  int getNumberOfMismatches(const Solver& solver, const peano4::Partition& partition, Expected expected) {
+  int getNumberOfMismatches(const Solver& solver, const peano4::CellConnectivity& cellConnectivity, Expected expected) {
     int result = 0;
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getCells().size),
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
       CountMismatchesAgainstExpected<typename Solver::CellPool, Expected>{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         solver.getSolution().getView(),
         Quadrature<double>::QuadraturePoints1D,
         expected
@@ -497,8 +497,11 @@ namespace {
     }
   };
 
-  int getNumberOfMismatchesAgainstTheProfile(const FixedRuleSolver& solver, const peano4::Partition& partition) {
-    return getNumberOfMismatches(solver, partition, LinearProfile{});
+  int getNumberOfMismatchesAgainstTheProfile(
+    const FixedRuleSolver&          solver,
+    const peano4::CellConnectivity& cellConnectivity
+  ) {
+    return getNumberOfMismatches(solver, cellConnectivity, LinearProfile{});
   }
 } // namespace
 
@@ -521,24 +524,24 @@ exahype2::dg::rk::tests::SolverTest::run() {
  */
 void
 exahype2::dg::rk::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
-  const auto&    partition = buildGrid();
+  const auto&    cellConnectivity = buildGrid();
   AdaptiveSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
-  solver.performTimeStep(partition, requests);
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
-  requests.clear(partition.getNumberOfSlots());
-  solver.performTimeStep(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
-  requests.clear(partition.getNumberOfSlots());
-  solver.performTimeStep(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSizeOfLastStep(), coarseTimeStepSize / SubdivisionFactor);
   solver.release();
@@ -546,31 +549,31 @@ exahype2::dg::rk::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeSte
 
 void
 exahype2::dg::rk::tests::SolverTest::testInitialisationWritesTheInitialConditionIntoEveryNode() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleSolver solver;
   auto            constructionLimits        = getLimitsOfTheDomain();
   constructionLimits.maxAdmissiblePatchSize = CoarseWidth / SubdivisionFactor;
   solver.setLimits(constructionLimits);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.requestRefinementForGridConstruction(partition, requests);
-  validateEquals(static_cast<int>(requests.getRefinementRequests(partition).size()), RegularCells);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.requestRefinementForGridConstruction(cellConnectivity, requests);
+  validateEquals(static_cast<int>(requests.getRefinementRequests(cellConnectivity).size()), RegularCells);
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
-  requests.clear(partition.getNumberOfSlots());
-  requests.merge(exahype2::RefinementCommand::Erase, partition.getCells());
-  solver.initialise(partition, requests);
+  solver.allocate(cellConnectivity);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  requests.merge(exahype2::RefinementCommand::Erase, cellConnectivity.getCells());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
 
-  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
   validateEquals(solver.getNumberOfDoFs(), NodesInCell);
-  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
   validateNumericalEquals(solver.getTimeStepping().getMinMeshWidth(), CoarseWidth);
   validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth);
-  validate(solver.getEstimates().getCapacity() >= partition.getNumberOfSlots());
+  validate(solver.getEstimates().getCapacity() >= cellConnectivity.getNumberOfSlots());
   validate(solver.getAllocatedBytes().getTotal() > 0);
-  validate(requests.getRefinementRequests(partition).empty());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
   solver.release();
 }
 
@@ -580,28 +583,28 @@ exahype2::dg::rk::tests::SolverTest::testInitialisationWritesTheInitialCondition
  */
 void
 exahype2::dg::rk::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), 0.0);
 
   for (int step = 0; step < 3; step++) {
-    requests.clear(partition.getNumberOfSlots());
-    solver.performTimeStep(partition, requests);
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.performTimeStep(cellConnectivity, requests);
     finishStep(solver);
     const double expectedStepSize = step == 0 ? 0.0 : FixedTimeStepSize;
-    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0, step);
+    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStamp(), step * FixedTimeStepSize, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSizeOfLastStep(), expectedStepSize, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSize(), FixedTimeStepSize, step);
   }
-  validate(requests.getRefinementRequests(partition).empty());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
   solver.release();
 }
 
@@ -610,22 +613,22 @@ exahype2::dg::rk::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAnd
  */
 void
 exahype2::dg::rk::tests::SolverTest::testASourceTermAdvancesEveryNodeByTheTimeStep() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   SourceSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
 
   for (int step = 0; step < 3; step++) {
-    requests.clear(partition.getNumberOfSlots());
-    solver.performTimeStep(partition, requests);
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.performTimeStep(cellConnectivity, requests);
     finishStep(solver);
     const double expectedValue = SourceSolver::InitialValue + solver.getTimeStepping().getTimeStamp();
-    validateEqualsWithParams1(getNumberOfMismatches(solver, partition, ConstantProfile{expectedValue}), 0, step);
+    validateEqualsWithParams1(getNumberOfMismatches(solver, cellConnectivity, ConstantProfile{expectedValue}), 0, step);
   }
   validateNumericalEquals(solver.getTimeStepping().getTimeStamp(), 2 * FixedTimeStepSize);
   solver.release();
@@ -637,39 +640,39 @@ exahype2::dg::rk::tests::SolverTest::testASourceTermAdvancesEveryNodeByTheTimeSt
  */
 void
 exahype2::dg::rk::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
-  solver.performTimeStep(partition, requests);
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
 
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize / SubdivisionFactor);
-  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(partition, Depth + 1)) > 0);
-  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
-  validate(solver.getEstimates().getCapacity() >= partition.getNumberOfSlots());
+  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(cellConnectivity, Depth + 1)) > 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
+  validate(solver.getEstimates().getCapacity() >= cellConnectivity.getNumberOfSlots());
   validateNumericalEquals(solver.getTimeStepping().getMinMeshWidth(), CoarseWidth / SubdivisionFactor);
   validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth);
 
-  requests.clear(partition.getNumberOfSlots());
-  solver.performTimeStep(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSizeOfLastStep(), coarseTimeStepSize / SubdivisionFactor);
-  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
 
   regridWithLiveData(solver, peano4::tests::getErasureOfEveryCell(Depth), requests);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize);
-  validateEquals(partition.getMaximumLevel(), Depth);
-  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, partition), 0);
-  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
+  validateEquals(cellConnectivity.getMaximumLevel(), Depth);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
   solver.release();
 }
 
@@ -679,15 +682,15 @@ exahype2::dg::rk::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSoluti
  */
 void
 exahype2::dg::rk::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend() {
-  const auto& partition = buildGrid();
-  const auto& rank      = tarch::mpi::Rank::getInstance();
+  const auto& cellConnectivity = buildGrid();
+  const auto& rank             = tarch::mpi::Rank::getInstance();
 
   FacePlottingFixedRuleSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
 
   const std::string outputDirectory =
@@ -695,11 +698,11 @@ exahype2::dg::rk::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBac
   std::filesystem::create_directories(outputDirectory + "patch/");
   std::filesystem::create_directories(outputDirectory + "face/");
   const tarch::AllocatedBytes bytesBeforePlot = solver.getAllocatedBytes();
-  solver.plot(partition, tarch::plotter::Format::VTU, outputDirectory);
+  solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory);
   const tarch::AllocatedBytes bytesAfterPlot = solver.getAllocatedBytes();
 
-  const auto&                         solution   = solver.getSolution();
-  const auto&                         faceStates = solver.getFaceStates();
+  const auto&                            solution   = solver.getSolution();
+  const auto&                            faceStates = solver.getFaceStates();
   FacePlottingFixedRuleSolver::CellPool  solutionCopy(solution.getChunkSize(), tarch::MemoryLocation::Heap);
   FacePlottingFixedRuleSolver::StatePool faceStatesCopy(faceStates.getChunkSize(), tarch::MemoryLocation::Heap);
   static_cast<void>(solution.download(solutionCopy));
@@ -718,7 +721,7 @@ exahype2::dg::rk::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBac
   validateWithParams1(std::filesystem::exists(faceVtuPath), faceVtuPath.string());
 
   constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
-  for (const int face : partition.getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary)) {
+  for (const int face : cellConnectivity.getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary)) {
     const double* const halves = faceStatesOnHost.getChunk(face);
     for (int node = 0; node < NodesPerFace; node++) {
       validateEqualsWithParams2(halves[node], halves[NodesPerFace + node], face, node);
@@ -734,12 +737,12 @@ exahype2::dg::rk::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBac
 
 void
 exahype2::dg::rk::tests::SolverTest::testReleaseFreesEveryPool() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   FixedRuleSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
   validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   validate(solver.getAllocatedBytes().getTotal() > 0);
   solver.release();
   validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});

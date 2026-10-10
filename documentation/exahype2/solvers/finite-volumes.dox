@@ -20,7 +20,7 @@ given that we construct the host mesh from spacetree cells.
 
 @image html documentation/exahype2/solvers/block-structured.png
 
-The solver family dispatches over the cells of the partition, one patch per cell.
+The solver family dispatches over the cells of the cell connectivity, one patch per cell.
 Per patch, it calls an ExaHyPE update kernel, which takes the patch and moves it forwards in time by a given @f$ \Delta t @f$.
 ExaHyPE is shipped with several update schemes. You can also write your own
 numerical scheme manually.
@@ -77,7 +77,7 @@ information from the neighbour patch.
 Projecting the patches onto the face halos and back is a mechanical task the
 solver family exahype2::fv::Solver runs as dispatches: every cell writes the
 boundary layers of its updated patch into its own half of its @f$2d@f$ faces,
-the halo exchange carries the halves of the exchanged faces, and every level
+the halo exchange sends the halves of the exchanged faces, and every level
 jump interpolates the coarse half onto its fine faces and averages the fine
 halves onto its coarse face.
 

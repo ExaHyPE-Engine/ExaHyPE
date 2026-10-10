@@ -4,7 +4,7 @@
 
 #include "exahype2/particles/Forces.h"
 #include "exahype2/particles/ParticleSet.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
@@ -65,7 +65,7 @@ namespace exahype2::fv {
 
   template <int PatchSize, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
   INLINE_METHOD void traceParticles(
-    const peano4::Partition&                                partition,
+    const peano4::CellConnectivity&                         cellConnectivity,
     const Pool&                                             solution,
     double                                                  timeStepSize,
     exahype2::particles::ParticleSet<NumberOfParticleData>& particles,
@@ -85,7 +85,7 @@ TARGET_DECLARE
  */
 template <int PatchSize, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
 struct exahype2::fv::TraceParticles final {
-  peano4::Partition                                          partition{};
+  peano4::CellConnectivity                                   cellConnectivity{};
   typename Pool::ConstView                                   solution{};
   double                                                     timeStepSize{0.0};
   exahype2::particles::ParticleSetView<NumberOfParticleData> particles{};

@@ -560,7 +560,7 @@ exahype2::dg::limiting::ProjectSubgridsOntoFaces<Derived, StoragePrecision, Comp
   const int         slot = cells[entry];
   StoragePrecision* haloHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    haloHalves[faceNumber] = halo.getChunk(partition.getCellFace(slot, faceNumber));
+    haloHalves[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
   Kernel::projectSubgridOntoFaces(
     statuses.getChunk(slot),
@@ -578,8 +578,8 @@ exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision
   const int entry
 ) const {
   const int  face      = boundaryConditions.boundaryFaces[entry];
-  const int  lowerCell = boundaryConditions.partition.getFaceCell(face, 0);
-  const int  slot      = lowerCell >= 0 ? lowerCell : boundaryConditions.partition.getFaceCell(face, 1);
+  const int  lowerCell = boundaryConditions.cellConnectivity.getFaceCell(face, 0);
+  const int  slot      = lowerCell >= 0 ? lowerCell : boundaryConditions.cellConnectivity.getFaceCell(face, 1);
   const auto status    = static_cast<exahype2::dg::limiting::LimiterStatus>(
     statuses.getChunk(slot)[static_cast<int>(exahype2::dg::limiting::StatusEntry::Status)]
   );
@@ -598,12 +598,12 @@ exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrec
   const int               slot = cells[entry];
   const StoragePrecision* haloHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    haloHalves[faceNumber] = halo.getChunk(partition.getCellFace(slot, faceNumber));
+    haloHalves[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
   StoragePrecision* const evolvedSubcells =
     scratch + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::SubcellValuesPerCell;
-  const tarch::la::Vector<DIMENSIONS, double> centre     = partition.getCellCentre(slot);
-  const tarch::la::Vector<DIMENSIONS, double> width      = partition.getCellWidth(slot);
+  const tarch::la::Vector<DIMENSIONS, double> centre     = cellConnectivity.getCellCentre(slot);
+  const tarch::la::Vector<DIMENSIONS, double> width      = cellConnectivity.getCellWidth(slot);
   const exahype2::dg::MaxEigenvalueStatistics statistics = Kernel::recomputeInTeam(
     team,
     nodes.getChunk(slot),
@@ -613,7 +613,7 @@ exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrec
     subcellsToNodes,
     centre,
     width,
-    exahype2::fv::getBoundaryFaceMask(partition, slot),
+    exahype2::fv::getBoundaryFaceMask(cellConnectivity, slot),
     timeStamp,
     timeStepSize
   );

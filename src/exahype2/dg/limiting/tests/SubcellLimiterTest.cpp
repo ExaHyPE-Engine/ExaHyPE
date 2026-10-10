@@ -10,8 +10,8 @@
 #include "exahype2/dg/limiting/SubcellLimiter.h"
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -426,9 +426,9 @@ namespace {
     }
   };
 
-  const peano4::Partition& buildGrid() {
+  const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   exahype2::Limits getLimitsOfTheDomain() {
@@ -448,12 +448,12 @@ namespace {
   struct CountMismatchesAgainstTheConstantState final {
     static constexpr int NodesInCell = exahype2::dg::getNodesPerCell(NodesPerAxis);
 
-    peano4::Partition        partition{};
+    peano4::CellConnectivity cellConnectivity{};
     typename Pool::ConstView solution{};
     double                   tolerance{0.0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, int& accumulator) const {
-      const double* const values = solution.getChunk(partition.getCells()[entry]);
+      const double* const values = solution.getChunk(cellConnectivity.getCells()[entry]);
       for (int node = 0; node < NodesInCell; node++) {
         if (std::abs(values[node] - ConstantState) > tolerance) {
           accumulator++;
@@ -467,12 +467,16 @@ namespace {
    * Counts the nodes of every cell whose value differs from the constant by more than tolerance.
    */
   template <typename Solver>
-  int getNumberOfMismatches(const Solver& solver, const peano4::Partition& partition, const double tolerance) {
+  int getNumberOfMismatches(
+    const Solver&                   solver,
+    const peano4::CellConnectivity& cellConnectivity,
+    const double                    tolerance
+  ) {
     int result = 0;
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getCells().size),
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
       CountMismatchesAgainstTheConstantState<typename Solver::CellPool>{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         solver.getSolution().getView(),
         tolerance
       },
@@ -493,24 +497,24 @@ namespace {
   }
 
   /**
-   * Initialises solver on the regular grid, runs steps time steps and returns the partition of this
-   * rank.
+   * Initialises solver on the regular grid, runs steps time steps and returns the cell
+   * connectivity of this rank.
    */
   template <typename Solver>
-  const peano4::Partition& advance(Solver& solver, const int steps) {
-    const auto& partition = buildGrid();
+  const peano4::CellConnectivity& advance(Solver& solver, const int steps) {
+    const auto& cellConnectivity = buildGrid();
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(partition);
+    solver.allocate(cellConnectivity);
     exahype2::RefinementRequests requests;
-    requests.clear(partition.getNumberOfSlots());
-    solver.initialise(partition, requests);
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.initialise(cellConnectivity, requests);
     finishStep(solver);
     for (int step = 0; step < steps; step++) {
-      requests.clear(partition.getNumberOfSlots());
-      solver.performTimeStep(partition, requests);
+      requests.clear(cellConnectivity.getNumberOfSlots());
+      solver.performTimeStep(cellConnectivity, requests);
       finishStep(solver);
     }
-    return partition;
+    return cellConnectivity;
   }
 } // namespace
 
@@ -538,14 +542,14 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditi
   constexpr double LowerHalfValue   = 1.0;
   constexpr double UpperHalfValue   = 2.0;
   constexpr int    StatusEntryIndex = static_cast<int>(exahype2::dg::limiting::StatusEntry::Status);
-  const auto&      partition        = buildGrid();
+  const auto&      cellConnectivity = buildGrid();
 
   tarch::accelerator::ChunkedMemoryPool<double> halo(Scheme::HaloValuesPerFace, tarch::MemoryLocation::Device);
-  halo.reserve(partition.getNumberOfFaces());
+  halo.reserve(cellConnectivity.getNumberOfFaces());
   std::vector<double> haloOnHost;
   halo.copyToHost(haloOnHost);
   const auto paddedFace = static_cast<std::size_t>(halo.getPaddedChunkSize());
-  for (int face = 0; face < partition.getNumberOfFaces(); face++) {
+  for (int face = 0; face < cellConnectivity.getNumberOfFaces(); face++) {
     for (int value = 0; value < Scheme::HaloValuesPerFace; value++) {
       haloOnHost[static_cast<std::size_t>(face) * paddedFace + static_cast<std::size_t>(value)] =
         value < ValuesPerHalf ? LowerHalfValue : UpperHalfValue;
@@ -554,11 +558,11 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditi
   halo.copyFromHost(haloOnHost);
 
   tarch::accelerator::ChunkedMemoryPool<int> statuses(exahype2::dg::limiting::NumberOfStatusEntries);
-  statuses.reserve(partition.getNumberOfSlots());
+  statuses.reserve(cellConnectivity.getNumberOfSlots());
   std::vector<int> statusesOnHost;
   statuses.copyToHost(statusesOnHost);
   const auto paddedStatus = static_cast<std::size_t>(statuses.getPaddedChunkSize());
-  const auto cells        = partition.getCells();
+  const auto cells        = cellConnectivity.getCells();
   for (int entry = 0; entry < cells.size; entry++) {
     statusesOnHost[static_cast<std::size_t>(cells[entry]) * paddedStatus + StatusEntryIndex] = static_cast<int>(
       entry % 2 == 0 ? exahype2::dg::limiting::LimiterStatus::Limited : exahype2::dg::limiting::LimiterStatus::Regular
@@ -566,19 +570,19 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditi
   }
   statuses.copyFromHost(statusesOnHost);
 
-  const auto boundaryFaces = partition.onDevice().getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary);
+  const auto boundaryFaces = cellConnectivity.onDevice().getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary);
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(boundaryFaces.size),
     exahype2::dg::limiting::ApplySubgridBoundaryConditions<CornerSolver, double, double>{
-      {partition.onDevice(), boundaryFaces, halo.getView(), 0.0},
+      {cellConnectivity.onDevice(), boundaryFaces, halo.getView(), 0.0},
       std::as_const(statuses).getView()
     }
   );
   halo.copyToHost(haloOnHost);
 
-  for (const int face : partition.getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary)) {
-    const int  lowerCell = partition.getFaceCell(face, 0);
-    const int  slot      = lowerCell >= 0 ? lowerCell : partition.getFaceCell(face, 1);
+  for (const int face : cellConnectivity.getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary)) {
+    const int  lowerCell = cellConnectivity.getFaceCell(face, 0);
+    const int  slot      = lowerCell >= 0 ? lowerCell : cellConnectivity.getFaceCell(face, 1);
     const bool onScheme  = statusesOnHost[static_cast<std::size_t>(slot) * paddedStatus + StatusEntryIndex]
       != static_cast<int>(exahype2::dg::limiting::LimiterStatus::Regular);
     const int  outerHalf = lowerCell >= 0 ? 1 : 0;
@@ -593,9 +597,9 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditi
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testAnAcceptedFreeStreamStaysOnTheGalerkinSchemeBitwise() {
   AcceptingSolver solver;
-  const auto&     partition = advance(solver, 2);
-  validateEquals(getNumberOfMismatches(solver, partition, 0.0), 0);
-  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
+  const auto&     cellConnectivity = advance(solver, 2);
+  validateEquals(getNumberOfMismatches(solver, cellConnectivity, 0.0), 0);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
   validateEquals(solver.getLimiter().getNumberOfTroubledCells(), 0);
   validateEquals(solver.getLimiter().getGlobalNumberOfTroubledCells(), 0);
   validateEquals(solver.getLimiter().getNumberOfRecomputedCells(), 0);
@@ -610,9 +614,9 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testAnAcceptedFreeStreamStays
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testARejectedFreeStreamRecomputesEveryCellAndKeepsTheConstant() {
   RejectingSolver solver;
-  const auto&     partition     = advance(solver, 2);
-  const int       numberOfCells = partition.getCells().size;
-  validateEquals(getNumberOfMismatches(solver, partition, Tolerance), 0);
+  const auto&     cellConnectivity = advance(solver, 2);
+  const int       numberOfCells    = cellConnectivity.getCells().size;
+  validateEquals(getNumberOfMismatches(solver, cellConnectivity, Tolerance), 0);
   validateEquals(solver.getLimiter().getNumberOfTroubledCells(), numberOfCells);
   validateEquals(solver.getLimiter().getGlobalNumberOfTroubledCells(), peano4::tests::getGlobalSumOf(numberOfCells));
   validateEquals(solver.getLimiter().getNumberOfRecomputedCells(), numberOfCells);
@@ -627,8 +631,8 @@ void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testOneTroubledCellSpreadsTwoRingsOfNeighbours() {
   static_assert(CellsPerAxis >= 3, "The test needs at least three cells per axis.");
   CornerSolver solver;
-  const auto&  partition = advance(solver, 1);
-  validateEquals(getNumberOfMismatches(solver, partition, Tolerance), 0);
+  const auto&  cellConnectivity = advance(solver, 1);
+  validateEquals(getNumberOfMismatches(solver, cellConnectivity, Tolerance), 0);
   const int troubled   = peano4::tests::getGlobalSumOf(solver.getLimiter().getNumberOfTroubledCells());
   const int recomputed = peano4::tests::getGlobalSumOf(solver.getLimiter().getNumberOfRecomputedCells());
   const int subcell    = peano4::tests::getGlobalSumOf(solver.getLimiter().getNumberOfCellsOnSubcellScheme());
@@ -646,15 +650,15 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testOneTroubledCellSpreadsTwo
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend() {
   RejectingSolver solver;
-  const auto&     partition = advance(solver, 1);
-  const auto&     rank      = tarch::mpi::Rank::getInstance();
-  validateEquals(solver.getLimiter().getNumberOfCellsOnSubcellScheme(), partition.getCells().size);
+  const auto&     cellConnectivity = advance(solver, 1);
+  const auto&     rank             = tarch::mpi::Rank::getInstance();
+  validateEquals(solver.getLimiter().getNumberOfCellsOnSubcellScheme(), cellConnectivity.getCells().size);
 
   const std::string outputDirectory =
     (tarch::tests::getWritableTestDirectory() / "SubcellLimiterPlotTest").string() + "/";
   std::filesystem::create_directories(outputDirectory + "patch/");
   const tarch::AllocatedBytes bytesBeforePlot = solver.getAllocatedBytes();
-  solver.plot(partition, tarch::plotter::Format::VTU, outputDirectory);
+  solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory);
   const tarch::AllocatedBytes bytesAfterPlot = solver.getAllocatedBytes();
 
   const auto& solution = solver.getSolution();
@@ -677,12 +681,12 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testAPlotAllocatesHostCopiesO
 
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testReleaseFreesEveryPool() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   AcceptingSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
   validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   validate(solver.getAllocatedBytes().getTotal() > 0);
   validate(solver.getLimiter().getAllocatedBytes().getTotal() > 0);
   solver.release();

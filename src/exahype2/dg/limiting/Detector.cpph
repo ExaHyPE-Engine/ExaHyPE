@@ -651,7 +651,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::OpenInitialStatuses<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int entry
 ) const {
-  const int slot = partition.getCells()[entry];
+  const int slot = cellConnectivity.getCells()[entry];
   // SubcellLimiter reserves the extrema pool only with a discrete maximum principle.
   const StoragePrecision* const sampled = Kernel::UsesMaximumPrinciple ? sampledExtrema.getChunk(slot) : nullptr;
   Kernel::openInitialStatus(
@@ -670,7 +670,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::ReduceSampledExtrema<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int entry
 ) const {
-  const int slot = partition.getCells()[entry];
+  const int slot = cellConnectivity.getCells()[entry];
   Kernel::reduceSampledExtrema(referenceExtrema.getChunk(slot), subcells.getChunk(slot));
 }
 
@@ -695,11 +695,11 @@ exahype2::dg::limiting::ClearFaces<Derived, StoragePrecision, ComputePrecision>:
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::OpenStep<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
-  const int slot = partition.getCells()[entry];
+  const int slot = cellConnectivity.getCells()[entry];
   Kernel::openStep(statuses.getChunk(slot), solution.getChunk(slot), previousSolution.getChunk(slot));
   if constexpr (Kernel::UsesMaximumPrinciple) {
     exahype2::dg::limiting::WriteExtremaOntoFaces<Derived, StoragePrecision, ComputePrecision>{
-      partition,
+      cellConnectivity,
       referenceExtrema,
       extremaFaces
     }
@@ -721,7 +721,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::WriteExtremaOntoFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int entry
 ) const {
-  writeCell(partition.getCells()[entry]);
+  writeCell(cellConnectivity.getCells()[entry]);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -731,7 +731,7 @@ exahype2::dg::limiting::WriteExtremaOntoFaces<Derived, StoragePrecision, Compute
 ) const {
   const StoragePrecision* const extrema = referenceExtrema.getChunk(slot);
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    StoragePrecision* const half = extremaFaces.getChunk(partition.getCellFace(slot, faceNumber))
+    StoragePrecision* const half = extremaFaces.getChunk(cellConnectivity.getCellFace(slot, faceNumber))
       + exahype2::dg::getOwnHalf(faceNumber) * Kernel::ExtremaSetsPerHalf * Kernel::ExtremaPerCell;
     for (int entry = 0; entry < Kernel::ExtremaPerCell; entry++) {
       half[entry] = extrema[entry];
@@ -816,7 +816,7 @@ exahype2::dg::limiting::MergeNeighbourExtrema<Derived, StoragePrecision, Compute
 ) const {
   assertion(set >= 0 and set < Kernel::ExtremaSetsPerHalf, set);
   const int half = ownHalf ? exahype2::dg::getOwnHalf(faceNumber) : 1 - exahype2::dg::getOwnHalf(faceNumber);
-  return extremaFaces.getChunk(partition.getCellFace(slot, faceNumber))
+  return extremaFaces.getChunk(cellConnectivity.getCellFace(slot, faceNumber))
     + (half * Kernel::ExtremaSetsPerHalf + set) * Kernel::ExtremaPerCell;
 }
 
@@ -871,11 +871,11 @@ exahype2::dg::limiting::JudgeCandidates<Derived, StoragePrecision, ComputePrecis
 ) const {
   constexpr int LastSet     = Kernel::ExtremaSetsPerHalf - 1;
   constexpr int StatusIndex = static_cast<int>(exahype2::dg::limiting::StatusEntry::Status);
-  const int     slot        = partition.getCells()[entry];
+  const int     slot        = cellConnectivity.getCells()[entry];
   int*          ownStatusHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     ownStatusHalves[faceNumber] =
-      faceStatuses.getChunk(partition.getCellFace(slot, faceNumber)) + exahype2::dg::getOwnHalf(faceNumber);
+      faceStatuses.getChunk(cellConnectivity.getCellFace(slot, faceNumber)) + exahype2::dg::getOwnHalf(faceNumber);
   }
   // SubcellLimiter reserves the extrema pool only with a discrete maximum principle.
   StoragePrecision        reference[Kernel::ExtremaPerCell];
@@ -887,7 +887,7 @@ exahype2::dg::limiting::JudgeCandidates<Derived, StoragePrecision, ComputePrecis
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       Kernel::widenExtrema(
         reference,
-        extremaFaces.getChunk(partition.getCellFace(slot, faceNumber))
+        extremaFaces.getChunk(cellConnectivity.getCellFace(slot, faceNumber))
           + ((1 - exahype2::dg::getOwnHalf(faceNumber)) * Kernel::ExtremaSetsPerHalf + LastSet) * Kernel::ExtremaPerCell
       );
     }
@@ -904,8 +904,8 @@ exahype2::dg::limiting::JudgeCandidates<Derived, StoragePrecision, ComputePrecis
     quadraturePoints,
     relaxationParameter,
     differencesScaling,
-    partition.getCellCentre(slot),
-    partition.getCellWidth(slot),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
     timeStamp,
     timeStepSize,
     extrema
@@ -923,7 +923,7 @@ exahype2::dg::limiting::SpreadStatuses<Derived, ComputePrecision>::operator()(co
   const int* neighbourStatusHalves[peano4::FacesPerCell];
   int*       ownStatusHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    int* const face                   = faceStatuses.getChunk(partition.getCellFace(slot, faceNumber));
+    int* const face                   = faceStatuses.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
     const int  ownHalf                = exahype2::dg::getOwnHalf(faceNumber);
     neighbourStatusHalves[faceNumber] = face + (1 - ownHalf);
     ownStatusHalves[faceNumber]       = face + ownHalf;
@@ -963,7 +963,7 @@ exahype2::dg::limiting::CountCellsOnSubcellScheme::operator()(
 ) const {
   assertion(block >= 0 and block < numberOfBlocks, block, numberOfBlocks);
   exahype2::dg::limiting::SubcellSchemeCounts countsOfBlock{};
-  const auto                                  cells = partition.getCells();
+  const auto                                  cells = cellConnectivity.getCells();
   const int lastCell = exahype2::dg::limiting::getFirstCellOfBlock(block + 1, numberOfBlocks, cells.size);
   for (int cell = exahype2::dg::limiting::getFirstCellOfBlock(block, numberOfBlocks, cells.size); cell < lastCell;
        cell++) {
@@ -990,7 +990,7 @@ exahype2::dg::limiting::ListCellsOnSubcellScheme::operator()(const int block) co
     cellOnScheme += countsOfBlocks[earlierBlock].cellsOnScheme;
     recomputedCell += countsOfBlocks[earlierBlock].recomputedCells;
   }
-  const auto cells    = partition.getCells();
+  const auto cells    = cellConnectivity.getCells();
   const int  lastCell = exahype2::dg::limiting::getFirstCellOfBlock(block + 1, numberOfBlocks, cells.size);
   for (int cell = exahype2::dg::limiting::getFirstCellOfBlock(block, numberOfBlocks, cells.size); cell < lastCell;
        cell++) {

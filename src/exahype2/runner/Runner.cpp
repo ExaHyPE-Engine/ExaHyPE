@@ -3,8 +3,8 @@
 #include "Runner.h"
 
 #include "exahype2/runner/RuntimeParameters.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Init.h"
-#include "peano4/Partition.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
 #include "peano4/Version.h"
@@ -513,9 +513,7 @@ exahype2::runner::Runner::run() {
     reportSummary();
   }
   _report.rule();
-  _report.line(
-    _stoppedAfterNonCriticalAssertion ? "Run terminated after an error" : "Run terminated successfully"
-  );
+  _report.line(_stoppedAfterNonCriticalAssertion ? "Run terminated after an error" : "Run terminated successfully");
   _report.line("Goodbye");
   _report.close();
   return _stoppedAfterNonCriticalAssertion ? EXIT_FAILURE : EXIT_SUCCESS;
@@ -676,7 +674,7 @@ exahype2::runner::Runner::constructGrid() {
   }
   constructionWatch.stop();
   const std::string summary = "Grid Constructed " + Format::getWallClock(constructionWatch.getCalendarTime()) + " · "
-                            + describeRepetitions(PhaseName::GridConstruction, steps, 0);
+    + describeRepetitions(PhaseName::GridConstruction, steps, 0);
   _report.line(std::string(BlockIndent, ' ') + summary);
 }
 
@@ -708,7 +706,7 @@ exahype2::runner::Runner::initialiseGrid() {
     );
   }
   const std::string summary = "Grid Initialised " + Format::getWallClock(elapsedSeconds) + " · "
-                            + describeRepetitions(PhaseName::GridInitialisation, rounds, 0);
+    + describeRepetitions(PhaseName::GridInitialisation, rounds, 0);
   _report.line(std::string(BlockIndent, ' ') + summary);
   if (_meshUpdates.steps > 0) {
     _report.line(std::string(BlockIndent, ' ') + PhaseName::DynamicAMR + " " + describeMeshUpdates(_meshUpdates));

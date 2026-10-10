@@ -18,7 +18,7 @@ either use Peano's Python API or they use an extension built on top of Peano
 
 - Peano's C++ core
   - \subpage peano_main
-  - \subpage peano_partition
+  - \subpage peano_cell_connectivity
   - \subpage page_peano_space_filling_curves
 - HPC aspects
   - \subpage page_peano_domain_decomposition

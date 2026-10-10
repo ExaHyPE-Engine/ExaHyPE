@@ -10,7 +10,7 @@
 #include "exahype2/terms/BoundaryConditions.h"
 #include "exahype2/terms/InitialCondition.h"
 #include "exahype2/terms/RefinementCriterion.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/Buffer.h"
@@ -65,12 +65,15 @@ public:
     const std::vector<exahype2::plotter::DataField>& plottedFields
   );
 
-  INLINE_METHOD void allocate(const peano4::Partition& partition);
-  INLINE_METHOD void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void performTimeStep(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
+  );
   INLINE_METHOD void regrid(
-    const peano4::Partition&      partition,
-    const peano4::Regrid&         regrid,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    exahype2::RefinementRequests&   requests
   );
   INLINE_METHOD void release();
 
@@ -87,22 +90,22 @@ private:
   static constexpr int NumberOfRungeKuttaStages = Stage::Tableau::Stages;
 
   INLINE_METHOD void openStage(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    int                      stage,
-    double                   timeStepSize
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    int                             stage,
+    double                          timeStepSize
   );
   INLINE_METHOD void addFaceIntegrals(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    int                      stage,
-    double                   timeStepSize
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    int                             stage,
+    double                          timeStepSize
   );
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics combineFinalState(
-    const peano4::Partition& partition,
-    double                   timeStepSize
+    const peano4::CellConnectivity& cellConnectivity,
+    double                          timeStepSize
   );
-  INLINE_METHOD void reserveStageScratch(const peano4::Partition& partition);
+  INLINE_METHOD void reserveStageScratch(const peano4::CellConnectivity& cellConnectivity);
 
   EstimatePool _estimates{Stage::EstimateValuesPerCell};
 

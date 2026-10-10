@@ -13,7 +13,7 @@ namespace tarch::accelerator {
     T* const                            blockValues = reinterpret_cast<T*>(blockStorage);
     const int                           threadIndex = threadIdx.x;
     const auto                          threads     = static_cast<int>(blockDim.x);
-    blockValues[threadIndex] = threadValue;
+    blockValues[threadIndex]                        = threadValue;
     __syncthreads();
     int span = 1;
     while (span < threads) {
@@ -42,9 +42,7 @@ namespace tarch::accelerator {
   ) {
     COMPILE_IF_ON_DEVICE(
       const typename Reducer::ValueType blockResult = tarch::accelerator::blockReduce<Reducer>(threadValue);
-      if (threadIdx.x == 0) {
-        reducer.target = Reducer::combine(reducer.target, blockResult);
-      }
+      if (threadIdx.x == 0) { reducer.target = Reducer::combine(reducer.target, blockResult); }
     )
     COMPILE_IF_ON_HOST(reducer.target = Reducer::combine(reducer.target, threadValue);)
   }

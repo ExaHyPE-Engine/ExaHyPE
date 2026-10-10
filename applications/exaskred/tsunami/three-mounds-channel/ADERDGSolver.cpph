@@ -62,7 +62,7 @@ applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   [[maybe_unused]] const double                                 t
 ) {
   return applications::exahype2::exaskred::getBathymetryOfChannel(x) > 0.0 ? ::exahype2::RefinementCommand::Refine
-                                                                            : ::exahype2::RefinementCommand::Keep;
+                                                                           : ::exahype2::RefinementCommand::Keep;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void

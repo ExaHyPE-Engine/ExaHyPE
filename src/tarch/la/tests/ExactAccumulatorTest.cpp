@@ -55,7 +55,7 @@ namespace {
     seven.add(-1.0e16);
     seven.add(7.0);
     return std::bit_cast<std::uint64_t>(copies.roundQuotient<Divisor>()) == std::bit_cast<std::uint64_t>(Third)
-       and std::bit_cast<std::uint64_t>(seven.roundQuotient<Divisor>()) == std::bit_cast<std::uint64_t>(7.0 / Divisor);
+      and std::bit_cast<std::uint64_t>(seven.roundQuotient<Divisor>()) == std::bit_cast<std::uint64_t>(7.0 / Divisor);
   }
 
   struct CountMismatch final {

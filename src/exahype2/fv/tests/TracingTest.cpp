@@ -6,9 +6,9 @@
 #include "exahype2/fv/Tracing.h"
 #include "exahype2/particles/Forces.h"
 #include "exahype2/particles/ParticleSet.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -59,12 +59,12 @@ namespace {
 
   TARGET_DECLARE
   struct FillVelocity final {
-    peano4::Partition partition{};
-    CellPool::View    solution{};
-    double            velocity{0.0};
+    peano4::CellConnectivity cellConnectivity{};
+    CellPool::View           solution{};
+    double                   velocity{0.0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry) const {
-      double* const Q = solution.getChunk(partition.getCells()[entry]);
+      double* const Q = solution.getChunk(cellConnectivity.getCells()[entry]);
       for (int volume = 0; volume < VolumesPerPatch; volume++) {
         for (int unknown = 0; unknown < NumberOfData; unknown++) {
           Q[volume * NumberOfData + unknown] = unknown == 0 ? velocity : 0.0;
@@ -74,24 +74,24 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  const peano4::Partition& buildGrid() {
+  const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   /**
    * Regular grid with a constant velocity along the first axis.
    */
   struct Grid final {
-    const peano4::Partition& partition;
-    CellPool                 solution{ValuesPerPatch};
+    const peano4::CellConnectivity& cellConnectivity;
+    CellPool                        solution{ValuesPerPatch};
 
     explicit Grid(const double velocity) :
-      partition(buildGrid()) {
-      solution.reserve(partition.getNumberOfSlots());
+      cellConnectivity(buildGrid()) {
+      solution.reserve(cellConnectivity.getNumberOfSlots());
       tarch::accelerator::parallelFor(
-        tarch::accelerator::Range(partition.getCells().size),
-        FillVelocity{partition.onDevice(), solution.getView(), velocity}
+        tarch::accelerator::Range(cellConnectivity.getCells().size),
+        FillVelocity{cellConnectivity.onDevice(), solution.getView(), velocity}
       );
     }
   };
@@ -177,11 +177,11 @@ exahype2::fv::tests::TracingTest::testStaticSamplingPreservesParticleData() {
     constexpr int       Attributes = SampleSet::ValuesPerParticle - DIMENSIONS;
     std::vector<double> values(SampleSet::ValuesPerParticle, 42.0);
     std::fill_n(values.begin(), DIMENSIONS, 0.1);
-    particles.insert(grid.partition, values);
+    particles.insert(grid.cellConnectivity, values);
     exahype2::particles::Forces forces;
     forces.interpolationScheme = exahype2::particles::InterpolationScheme::PiecewiseLinear;
     exahype2::fv::traceParticles<PatchSize, NumberOfData, Attributes, 0>(
-      grid.partition,
+      grid.cellConnectivity,
       grid.solution,
       0.25,
       particles,
@@ -307,7 +307,7 @@ exahype2::fv::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
   const Grid       grid(Velocity);
 
   Set particles;
-  particles.insert(grid.partition, getTracerAt(0.1));
+  particles.insert(grid.cellConnectivity, getTracerAt(0.1));
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 1);
   exahype2::fv::traceParticles<
     PatchSize,
@@ -315,25 +315,25 @@ exahype2::fv::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
     NumberOfParticleData,
     exahype2::particles::ParticleVelocityAttribute,
     exahype2::particles::ParticleVelocityAttribute + DIMENSIONS - 1
-  >(grid.partition, grid.solution, TimeStepSize, particles, getFluidTracer(), DomainOffset, DomainWidth, 0);
+  >(grid.cellConnectivity, grid.solution, TimeStepSize, particles, getFluidTracer(), DomainOffset, DomainWidth, 0);
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 1);
   particles.download();
   for (int index = 0; index < particles.getSize(); index++) {
     validateNumericalEquals(particles.getPosition(index)(0), 0.1 + Velocity * TimeStepSize);
     validateNumericalEquals(particles.getPosition(index)(DIMENSIONS - 1), 0.5);
     validateNumericalEquals(particles.getData(index)[exahype2::particles::ParticleVelocityAttribute], Velocity);
-    validateEquals(particles.getSlot(index), Set::getSlotAt(grid.partition, particles.getPosition(index)));
+    validateEquals(particles.getSlot(index), Set::getSlotAt(grid.cellConnectivity, particles.getPosition(index)));
   }
 
   Set wrapped;
-  wrapped.insert(grid.partition, getTracerAt(0.9));
+  wrapped.insert(grid.cellConnectivity, getTracerAt(0.9));
   exahype2::fv::traceParticles<
     PatchSize,
     NumberOfData,
     NumberOfParticleData,
     exahype2::particles::ParticleVelocityAttribute,
     exahype2::particles::ParticleVelocityAttribute + DIMENSIONS - 1
-  >(grid.partition,
+  >(grid.cellConnectivity,
     grid.solution,
     TimeStepSize,
     wrapped,
@@ -348,14 +348,14 @@ exahype2::fv::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
   }
 
   Set reflected;
-  reflected.insert(grid.partition, getTracerAt(0.9));
+  reflected.insert(grid.cellConnectivity, getTracerAt(0.9));
   exahype2::fv::traceParticles<
     PatchSize,
     NumberOfData,
     NumberOfParticleData,
     exahype2::particles::ParticleVelocityAttribute,
     exahype2::particles::ParticleVelocityAttribute + DIMENSIONS - 1
-  >(grid.partition, grid.solution, TimeStepSize, reflected, getFluidTracer(), DomainOffset, DomainWidth, 0);
+  >(grid.cellConnectivity, grid.solution, TimeStepSize, reflected, getFluidTracer(), DomainOffset, DomainWidth, 0);
   validateEquals(peano4::tests::getGlobalSumOf(reflected.getSize()), 1);
   reflected.download();
   for (int index = 0; index < reflected.getSize(); index++) {

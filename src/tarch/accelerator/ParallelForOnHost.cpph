@@ -14,11 +14,8 @@ namespace tarch::accelerator {
       static std::atomic<double> secondsPerItem{0.0};
       const auto                 startTime       = std::chrono::steady_clock::now();
       const int                  numberOfThreads = omp_get_num_threads();
-      const int                  numberOfTasks   = getNumberOfHostTasks(
-        range.n,
-        numberOfThreads,
-        secondsPerItem.load(std::memory_order_relaxed)
-      );
+      const int                  numberOfTasks =
+        getNumberOfHostTasks(range.n, numberOfThreads, secondsPerItem.load(std::memory_order_relaxed));
       // OpenMP moves a task body into a function of its own. That function inherits always_inline
       // from the enclosing function. GCC and icpx then fail to compile it. The tasks start in a lambda.
       [](const Range& range, const Functor& functor, const int numberOfTasks) {

@@ -69,8 +69,8 @@ public:
   [[nodiscard]] double getGlobalRankBoundaryFacePercentage() const;
   [[nodiscard]] std::uint64_t getGlobalMinRankLoad() const;
   [[nodiscard]] std::uint64_t getGlobalMaxRankLoad() const;
-  [[nodiscard]] std::uint64_t getGlobalPartitionHostBytes() const;
-  [[nodiscard]] std::uint64_t getGlobalPartitionDeviceBytes() const;
+  [[nodiscard]] std::uint64_t getGlobalCellConnectivityHostBytes() const;
+  [[nodiscard]] std::uint64_t getGlobalCellConnectivityDeviceBytes() const;
   [[nodiscard]] std::uint64_t getGlobalTreeBytes() const;
   [[nodiscard]] std::uint64_t getGlobalSolverHostBytes() const;
   [[nodiscard]] std::uint64_t getGlobalSolverDeviceBytes() const;
@@ -112,8 +112,8 @@ private:
   std::uint64_t _globalMaxRankBoundaryFaces{0};
   std::uint64_t _globalMinRankLoad{0};
   std::uint64_t _globalMaxRankLoad{0};
-  std::uint64_t _globalPartitionHostBytes{0};
-  std::uint64_t _globalPartitionDeviceBytes{0};
+  std::uint64_t _globalCellConnectivityHostBytes{0};
+  std::uint64_t _globalCellConnectivityDeviceBytes{0};
   std::uint64_t _globalTreeBytes{0};
   std::uint64_t _globalSolverHostBytes{0};
   std::uint64_t _globalSolverDeviceBytes{0};

@@ -17,9 +17,9 @@
 #include "exahype2/terms/MaterialParameters.h"
 #include "exahype2/terms/NonconservativeProduct.h"
 #include "exahype2/terms/SourceTerm.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/HaloExchange.h"
 #include "peano4/MigrationExchange.h"
-#include "peano4/Partition.h"
 #include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
@@ -81,20 +81,23 @@ public:
   );
 
   INLINE_METHOD void requestRefinementForGridConstruction(
-    const peano4::Partition&      partition,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
   );
-  INLINE_METHOD void allocate(const peano4::Partition& partition);
-  INLINE_METHOD void initialise(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void initialise(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
+  );
   INLINE_METHOD void regrid(
-    const peano4::Partition&      partition,
-    const peano4::Regrid&         regrid,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    exahype2::RefinementRequests&   requests
   );
   INLINE_METHOD void plot(
-    const peano4::Partition& partition,
-    tarch::plotter::Format   format,
-    const std::string&       outputDirectory
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
   );
   INLINE_METHOD void release();
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
@@ -108,7 +111,7 @@ public:
   [[nodiscard]] INLINE_METHOD const FluxPool& getFaceFluxes() const;
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
   [[nodiscard]] INLINE_METHOD int getNumberOfDoFs() const;
-  [[nodiscard]] INLINE_METHOD int getNumberOfCells(const peano4::Partition& partition) const;
+  [[nodiscard]] INLINE_METHOD int getNumberOfCells(const peano4::CellConnectivity& cellConnectivity) const;
 
 protected:
   static constexpr bool EvaluateDiffusiveFlux = exahype2::terms::HasDiffusiveFlux<Derived, ComputePrecision>;
@@ -124,33 +127,42 @@ protected:
   using RestrictFluxes         = exahype2::dg::RestrictFluxHalves<Derived, ComputePrecision>;
   using RestrictStates         = exahype2::dg::RestrictStateHalves<Derived, ComputePrecision>;
 
-  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(const peano4::Partition& partition) const;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(const peano4::CellConnectivity& cellConnectivity) const;
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency
   ) const;
-  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCellsOnHost(const peano4::Partition& partition) const;
+  [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCellsOnHost(
+    const peano4::CellConnectivity& cellConnectivity
+  ) const;
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getRiemannFaces(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency
   ) const;
   [[nodiscard]] INLINE_METHOD const CellPool& downloadSolution();
   [[nodiscard]] INLINE_METHOD const StatePool& downloadFaceStates();
-  INLINE_METHOD void projectSolutionOntoFaces(const peano4::Partition& partition);
-  INLINE_METHOD void projectSolutionOntoPlane(const peano4::Partition& partition, int normal, double position);
+  INLINE_METHOD void projectSolutionOntoFaces(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void projectSolutionOntoPlane(
+    const peano4::CellConnectivity& cellConnectivity,
+    int                             normal,
+    double                          position
+  );
   INLINE_METHOD void solveRiemannProblems(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    double                   timeStamp,
-    double                   timeStepSize
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    double                          timeStamp,
+    double                          timeStepSize
   );
   INLINE_METHOD void closeTimeStep(double timeStepSize, const exahype2::dg::MaxEigenvalueStatistics& statistics);
-  INLINE_METHOD void measureError(const peano4::Partition& partition);
-  INLINE_METHOD void voteOnRefinement(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void measureError(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void voteOnRefinement(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
+  );
   INLINE_METHOD void plotFaces(
-    const peano4::Partition& partition,
-    tarch::plotter::Format   format,
-    const std::string&       outputDirectory
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
   );
 
   exahype2::TimeStepping _timeStepping;
@@ -177,8 +189,8 @@ protected:
   std::vector<double> _nodeWeightsOnHost{};
 
 private:
-  INLINE_METHOD void rebuildOwnedLists(const peano4::Partition& partition);
-  INLINE_METHOD void measureMeshWidths(const peano4::Partition& partition);
+  INLINE_METHOD void rebuildOwnedLists(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void measureMeshWidths(const peano4::CellConnectivity& cellConnectivity);
 
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
 

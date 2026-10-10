@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RefinementRequests.h"
 
+#include "peano4/CellConnectivity.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/la/Vector.h"
@@ -65,17 +65,17 @@ namespace {
    */
   std::vector<EraseVote> getSortedEraseVotes(
     const std::vector<std::uint8_t>& votes,
-    const peano4::Partition&         partition
+    const peano4::CellConnectivity&  cellConnectivity
   ) {
     constexpr auto         Erase = static_cast<std::uint8_t>(exahype2::RefinementCommand::Erase);
     std::vector<EraseVote> eraseVotes;
-    for (const int slot : partition.getCells()) {
-      if (votes[static_cast<std::size_t>(slot)] != Erase or partition.getCellLevel(slot) == 0) {
+    for (const int slot : cellConnectivity.getCells()) {
+      if (votes[static_cast<std::size_t>(slot)] != Erase or cellConnectivity.getCellLevel(slot) == 0) {
         continue;
       }
       EraseVote  eraseVote;
-      const auto lattice = partition.getCellLattice(slot);
-      eraseVote.level    = partition.getCellLevel(slot) - 1;
+      const auto lattice = cellConnectivity.getCellLattice(slot);
+      eraseVote.level    = cellConnectivity.getCellLevel(slot) - 1;
       eraseVote.slot     = slot;
       tarch::la::Vector<DIMENSIONS, int> childPosition;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -146,29 +146,29 @@ exahype2::RefinementRequests::merge(const exahype2::RefinementCommand command, c
  * and returns the same list.
  */
 std::vector<peano4::RefinementRequest>
-exahype2::RefinementRequests::getRefinementRequests(const peano4::Partition& partition) const {
-  return gatherRefinementRequests(getLocalRefinementRequests(partition));
+exahype2::RefinementRequests::getRefinementRequests(const peano4::CellConnectivity& cellConnectivity) const {
+  return gatherRefinementRequests(getLocalRefinementRequests(cellConnectivity));
 }
 
 /**
  * Returns the refinement requests of the cells of this rank in vote order.
  */
 std::vector<peano4::RefinementRequest>
-exahype2::RefinementRequests::getLocalRefinementRequests(const peano4::Partition& partition) const {
+exahype2::RefinementRequests::getLocalRefinementRequests(const peano4::CellConnectivity& cellConnectivity) const {
   using Control = peano4::RefinementRequest::RefinementControl;
 
   std::vector<peano4::RefinementRequest> requests;
-  for (const int slot : partition.getCells()) {
+  for (const int slot : cellConnectivity.getCells()) {
     if (_votes[static_cast<std::size_t>(slot)] == static_cast<std::uint8_t>(RefinementCommand::Refine)) {
       peano4::RefinementRequest request{};
       request.setRefinementControl(Control::Refine);
-      request.level        = partition.getCellLevel(slot);
-      request.latticeIndex = partition.getCellLattice(slot);
+      request.level        = cellConnectivity.getCellLevel(slot);
+      request.latticeIndex = cellConnectivity.getCellLattice(slot);
       requests.push_back(request);
     }
   }
 
-  const auto eraseVotes = getSortedEraseVotes(_votes, partition);
+  const auto eraseVotes = getSortedEraseVotes(_votes, cellConnectivity);
   forEachCompleteSiblingSet(eraseVotes, [&requests, &eraseVotes](const std::size_t firstVote) {
     peano4::RefinementRequest request{};
     request.setRefinementControl(Control::Erase);

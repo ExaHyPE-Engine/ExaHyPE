@@ -20,10 +20,10 @@ set(SOURCES
   RefinementRequest.cpp
   Spacetree.cpp
   UnitTests.cpp
+  tests/CellConnectivityTest.cpp
   tests/HaloExchangeTest.cpp
   tests/LoopTest.cpp
   tests/MigrationExchangeTest.cpp
-  tests/PartitionTest.cpp
   tests/RefinementRequestTest.cpp
   tests/SpacetreeTest.cpp
   tests/TestGrids.cpp
@@ -52,7 +52,7 @@ set(SOURCES
 set(GPU_SOURCES
   tests/HaloExchangeTest.cpp
   tests/MigrationExchangeTest.cpp
-  tests/PartitionTest.cpp
+  tests/CellConnectivityTest.cpp
   communication/tests/MigrationExchangeKernelsTest.cpp
   communication/tests/HaloExchangeKernelsTest.cpp
 )

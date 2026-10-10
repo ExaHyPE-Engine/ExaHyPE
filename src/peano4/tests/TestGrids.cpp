@@ -36,7 +36,8 @@ peano4::tests::buildRegularGrid(const int depth, const std::bitset<DIMENSIONS>& 
 }
 
 /**
- * Applies the requests to the current grid without live data. The partition gets new slot numbers.
+ * Applies the requests to the current grid without live data. The cell connectivity gets new slot
+ * numbers.
  */
 void
 peano4::tests::refineGrid(const std::vector<peano4::RefinementRequest>& requests) {

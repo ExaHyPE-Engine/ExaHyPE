@@ -6,8 +6,8 @@
 #include "exahype2/dg/Tracing.h"
 #include "exahype2/particles/Forces.h"
 #include "exahype2/particles/ParticleSet.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -65,12 +65,12 @@ namespace {
 
   TARGET_DECLARE
   struct FillNodeVelocity final {
-    peano4::Partition partition{};
-    CellPool::View    solution{};
-    double            velocity{0.0};
+    peano4::CellConnectivity cellConnectivity{};
+    CellPool::View           solution{};
+    double                   velocity{0.0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry) const {
-      double* const Q = solution.getChunk(partition.getCells()[entry]);
+      double* const Q = solution.getChunk(cellConnectivity.getCells()[entry]);
       for (int node = 0; node < NodesPerCell; node++) {
         for (int unknown = 0; unknown < NumberOfData; unknown++) {
           Q[node * NumberOfData + unknown] = unknown == 0 ? velocity : 0.0;
@@ -80,26 +80,26 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  const peano4::Partition& buildGrid() {
+  const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   /**
    * A regular grid with a solution of constant velocity along the first axis.
    */
   struct Grid final {
-    const peano4::Partition&           partition;
+    const peano4::CellConnectivity&    cellConnectivity;
     CellPool                           solution{ValuesPerCell};
     tarch::accelerator::Buffer<double> quadratureNodes{tarch::MemoryLocation::Device};
 
     explicit Grid(const double velocity) :
-      partition(buildGrid()) {
-      solution.reserve(partition.getNumberOfSlots());
+      cellConnectivity(buildGrid()) {
+      solution.reserve(cellConnectivity.getNumberOfSlots());
       quadratureNodes.setValues(std::vector<double>(QuadratureNodes1D, QuadratureNodes1D + NodesPerAxis));
       tarch::accelerator::parallelFor(
-        tarch::accelerator::Range(partition.getCells().size),
-        FillNodeVelocity{partition.onDevice(), solution.getView(), velocity}
+        tarch::accelerator::Range(cellConnectivity.getCells().size),
+        FillNodeVelocity{cellConnectivity.onDevice(), solution.getView(), velocity}
       );
     }
   };
@@ -117,22 +117,22 @@ namespace {
    * upperShift into its upper half.
    */
   struct FillFaceStates final {
-    peano4::Partition partition{};
-    FacePool::View    faceStates{};
-    const double*     quadratureNodes{nullptr};
-    double            upperShift{0.0};
+    peano4::CellConnectivity cellConnectivity{};
+    FacePool::View           faceStates{};
+    const double*            quadratureNodes{nullptr};
+    double                   upperShift{0.0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face) const {
-      const int     normal = partition.getFaceNormal(face);
+      const int     normal = cellConnectivity.getFaceNormal(face);
       double* const lower  = faceStates.getChunk(face);
       double* const upper  = lower + static_cast<std::ptrdiff_t>(NodesPerFace) * NumberOfData;
       for (int node = 0; node < NodesPerFace; node++) {
         const auto                            nodeIndex = peano4::dDelinearisedExclusive(node, NodesPerAxis, normal);
         tarch::la::Vector<DIMENSIONS, double> position;
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          position(axis) = partition.getFaceCentre(face, axis);
+          position(axis) = cellConnectivity.getFaceCentre(face, axis);
           if (axis != normal) {
-            position(axis) += (quadratureNodes[nodeIndex(axis)] - 0.5) * partition.getFaceWidth(face, axis);
+            position(axis) += (quadratureNodes[nodeIndex(axis)] - 0.5) * cellConnectivity.getFaceWidth(face, axis);
           }
         }
         for (int unknown = 0; unknown < NumberOfData; unknown++) {
@@ -146,8 +146,8 @@ namespace {
 
   void fillFaceStates(const Grid& grid, FacePool& faceStates, const double upperShift) {
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(grid.partition.getNumberOfFaces()),
-      FillFaceStates{grid.partition.onDevice(), faceStates.getView(), grid.quadratureNodes.getData(), upperShift}
+      tarch::accelerator::Range(grid.cellConnectivity.getNumberOfFaces()),
+      FillFaceStates{grid.cellConnectivity.onDevice(), faceStates.getView(), grid.quadratureNodes.getData(), upperShift}
     );
   }
 
@@ -194,11 +194,11 @@ exahype2::dg::tests::TracingTest::testStaticSamplingPreservesParticleData() {
     constexpr int       Attributes = SampleSet::ValuesPerParticle - DIMENSIONS;
     std::vector<double> values(SampleSet::ValuesPerParticle, 42.0);
     std::fill_n(values.begin(), DIMENSIONS, 0.1);
-    particles.insert(grid.partition, values);
+    particles.insert(grid.cellConnectivity, values);
     exahype2::particles::Forces forces;
     forces.interpolationScheme = exahype2::particles::InterpolationScheme::PiecewiseLinear;
     exahype2::dg::traceParticles<NodesPerAxis, NumberOfData, Attributes, 0>(
-      grid.partition,
+      grid.cellConnectivity,
       grid.solution,
       grid.quadratureNodes.getData(),
       0.25,
@@ -235,15 +235,15 @@ exahype2::dg::tests::TracingTest::testFaceTracingWritesTheMeanAndTheJumpOfTheTra
   constexpr double UpperShift = 10.0;
   const Grid       grid(0.0);
   FacePool         faceStates{ValuesPerFace};
-  faceStates.reserve(grid.partition.getNumberOfFaces());
+  faceStates.reserve(grid.cellConnectivity.getNumberOfFaces());
   fillFaceStates(grid, faceStates, UpperShift);
 
   constexpr double Plane = 1.0 / peano4::SubdivisionFactor;
   Set              particles;
-  particles.insert(grid.partition, getTracerAt(Plane));
+  particles.insert(grid.cellConnectivity, getTracerAt(Plane));
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 1);
   exahype2::dg::traceFaceValues<NodesPerAxis, NumberOfData, NumberOfParticleData, 1>(
-    grid.partition,
+    grid.cellConnectivity,
     faceStates,
     grid.quadratureNodes.getData(),
     particles,
@@ -258,9 +258,9 @@ exahype2::dg::tests::TracingTest::testFaceTracingWritesTheMeanAndTheJumpOfTheTra
   }
 
   Set away;
-  away.insert(grid.partition, getTracerAt(0.5 * Plane));
+  away.insert(grid.cellConnectivity, getTracerAt(0.5 * Plane));
   exahype2::dg::traceFaceValues<NodesPerAxis, NumberOfData, NumberOfParticleData, 1>(
-    grid.partition,
+    grid.cellConnectivity,
     faceStates,
     grid.quadratureNodes.getData(),
     away,
@@ -331,7 +331,7 @@ exahype2::dg::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
   const Grid       grid(Velocity);
 
   Set particles;
-  particles.insert(grid.partition, getTracerAt(0.1));
+  particles.insert(grid.cellConnectivity, getTracerAt(0.1));
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 1);
   exahype2::dg::traceParticles<
     NodesPerAxis,
@@ -339,7 +339,7 @@ exahype2::dg::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
     NumberOfParticleData,
     exahype2::particles::ParticleVelocityAttribute,
     exahype2::particles::ParticleVelocityAttribute + DIMENSIONS - 1
-  >(grid.partition,
+  >(grid.cellConnectivity,
     grid.solution,
     grid.quadratureNodes.getData(),
     TimeStepSize,
@@ -354,18 +354,18 @@ exahype2::dg::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
     validateNumericalEquals(particles.getPosition(index)(0), 0.1 + Velocity * TimeStepSize);
     validateNumericalEquals(particles.getPosition(index)(DIMENSIONS - 1), 0.5);
     validateNumericalEquals(particles.getData(index)[exahype2::particles::ParticleVelocityAttribute], Velocity);
-    validateEquals(particles.getSlot(index), Set::getSlotAt(grid.partition, particles.getPosition(index)));
+    validateEquals(particles.getSlot(index), Set::getSlotAt(grid.cellConnectivity, particles.getPosition(index)));
   }
 
   Set wrapped;
-  wrapped.insert(grid.partition, getTracerAt(0.9));
+  wrapped.insert(grid.cellConnectivity, getTracerAt(0.9));
   exahype2::dg::traceParticles<
     NodesPerAxis,
     NumberOfData,
     NumberOfParticleData,
     exahype2::particles::ParticleVelocityAttribute,
     exahype2::particles::ParticleVelocityAttribute + DIMENSIONS - 1
-  >(grid.partition,
+  >(grid.cellConnectivity,
     grid.solution,
     grid.quadratureNodes.getData(),
     TimeStepSize,
@@ -381,14 +381,14 @@ exahype2::dg::tests::TracingTest::testTracingCarriesAParticleWithTheFluid() {
   }
 
   Set reflected;
-  reflected.insert(grid.partition, getTracerAt(0.9));
+  reflected.insert(grid.cellConnectivity, getTracerAt(0.9));
   exahype2::dg::traceParticles<
     NodesPerAxis,
     NumberOfData,
     NumberOfParticleData,
     exahype2::particles::ParticleVelocityAttribute,
     exahype2::particles::ParticleVelocityAttribute + DIMENSIONS - 1
-  >(grid.partition,
+  >(grid.cellConnectivity,
     grid.solution,
     grid.quadratureNodes.getData(),
     TimeStepSize,

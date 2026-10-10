@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/RefinementRequest.h"
 #include "peano4/grid/LatticeIndexMap.h"
 #include "peano4/topology/Tree.h"
@@ -16,10 +16,11 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * The adaptive Cartesian grid of the whole domain and the partition this rank owns. Every rank
- * applies the refinement requests of all ranks to one refinement plan, balances the ranks along the
- * space-filling curve and rebuilds the tree and the partition from the plan. A regrid with live data
- * returns the slot moves, which a caller applies to its pools before finishRegrid().
+ * The adaptive Cartesian grid of the whole domain and the cell connectivity of the cells this rank
+ * owns. Every rank applies the refinement requests of all ranks to one refinement plan, balances the
+ * ranks along the space-filling curve and rebuilds the tree and the cell connectivity from the plan.
+ * A regrid with live data returns the slot moves. A caller applies them to its pools before
+ * finishRegrid().
  */
 class peano4::Spacetree final {
 public:
@@ -36,7 +37,7 @@ public:
     int numberOfExchangedFaces{0};
     int numberOfStationaryRegrids{0};
 
-    tarch::AllocatedBytes partitionBytes{};
+    tarch::AllocatedBytes cellConnectivityBytes{};
     std::size_t           treeBytes{0};
 
     tarch::la::Vector<DIMENSIONS, double> minimumCellWidth{
@@ -44,11 +45,11 @@ public:
     };
   };
 
-  Spacetree(const Spacetree&)            = delete;
-  Spacetree(Spacetree&&)                 = delete;
-  Spacetree& operator=(const Spacetree&) = delete;
-  Spacetree& operator=(Spacetree&&)      = delete;
-  ~Spacetree()                           = default;
+  Spacetree(const Spacetree& other)            = delete;
+  Spacetree(Spacetree&& other)                 = delete;
+  Spacetree& operator=(const Spacetree& other) = delete;
+  Spacetree& operator=(Spacetree&& other)      = delete;
+  ~Spacetree()                                 = default;
 
   static peano4::Spacetree& getInstance();
 
@@ -67,7 +68,7 @@ public:
   void finishRegrid();
   bool requestsChangePlan(const std::vector<RefinementRequest>& requests);
 
-  [[nodiscard]] const Partition& getPartition() const noexcept;
+  [[nodiscard]] const CellConnectivity& getCellConnectivity() const noexcept;
   [[nodiscard]] int getCellAt(int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const;
   [[nodiscard]] const Statistics& getStatistics() const noexcept;
   [[nodiscard]] const std::bitset<DIMENSIONS>& getPeriodicBoundaries() const noexcept;
@@ -79,7 +80,7 @@ public:
 private:
   /**
    * One local cell that the walk along the curve finds: Its index in the tree and its slot in the
-   * partition.
+   * cell connectivity.
    */
   struct CellRecord final {
     int treeCell{-1};
@@ -95,9 +96,9 @@ private:
   };
 
   /**
-   * The arrays of the partition and the tables that build them, in host memory.
+   * The arrays of the cell connectivity and the tables that build them, in host memory.
    */
-  struct PartitionArrays final {
+  struct CellConnectivityArrays final {
     int numberOfSlots{0};
     int numberOfFaces{0};
     int minimumLevel{0};
@@ -111,7 +112,8 @@ private:
     std::vector<int> cellLattice{};
     std::vector<int> facesOfCell{};
     /**
-     * The index of every slot's cell along the space-filling curve over all ranks; -1 for a free slot.
+     * The index of every slot's cell along the space-filling curve over all ranks. The index of a
+     * free slot is -1.
      */
     std::vector<int> cellCurveIndex{};
 
@@ -132,7 +134,8 @@ private:
     std::vector<NeighbourFaces> neighbourFaces{};
 
     /**
-     * Maps the index of every tree face in the partition to its partition face during a build.
+     * Maps the index of every tree face of this rank to its face in the cell connectivity during a
+     * build.
      */
     std::vector<int> faceOfTreeFace{};
     /**
@@ -190,11 +193,11 @@ private:
   bool _dynamicLoadBalancing{true};
   bool _regridPending{false};
 
-  PartitionArrays _arrays{};
-  DeviceArrays    _deviceArrays{};
-  Partition       _partition{};
-  Partition       _partitionOnDevice{};
-  Statistics      _statistics{};
+  CellConnectivityArrays _arrays{};
+  DeviceArrays           _deviceArrays{};
+  CellConnectivity       _cellConnectivity{};
+  CellConnectivity       _cellConnectivityOnDevice{};
+  Statistics             _statistics{};
 
   [[nodiscard]] int deriveSpawnLevel() const;
   std::unique_ptr<peano4::topology::Tree> acquireTree();
@@ -207,8 +210,8 @@ private:
   void votePersistentDataLive();
   void deriveStatistics();
 
-  void buildPartition();
-  void rebuildPartition(const peano4::topology::Tree& previousTree, Regrid& regrid);
+  void buildCellConnectivity();
+  void rebuildCellConnectivity(const peano4::topology::Tree& previousTree, Regrid& regrid);
   void collectCells(std::vector<CellRecord>& records) const;
   void assignSlots(std::vector<CellRecord>& records, bool preserveSlots);
   void deriveFaces(const std::vector<CellRecord>& records);
@@ -217,8 +220,8 @@ private:
   void addExchangedFace(int rank, int face, int side);
   void orderLists(const std::vector<CellRecord>& records);
   void numberCellsAlongCurve(const std::vector<CellRecord>& records);
-  void assemblePartitions();
-  [[nodiscard]] tarch::AllocatedBytes getPartitionBytes() const noexcept;
+  void assembleCellConnectivities();
+  [[nodiscard]] tarch::AllocatedBytes getCellConnectivityBytes() const noexcept;
   [[nodiscard]] std::size_t getTreeBytes() const noexcept;
   [[nodiscard]] std::int64_t getLatticeKey(int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const;
 };

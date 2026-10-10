@@ -91,7 +91,7 @@ exahype2::particles::ParticleSetView<NumberOfData>::markAsMovedOutOfCell(const i
 template <int NumberOfData>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::particles::ParticleSetView<NumberOfData>::isInsideCell(
-  const peano4::Partition&                     partition,
+  const peano4::CellConnectivity&              cellConnectivity,
   const int                                    index,
   const tarch::la::Vector<DIMENSIONS, double>& position,
   const tarch::la::Vector<DIMENSIONS, double>& domainOffset
@@ -99,9 +99,9 @@ exahype2::particles::ParticleSetView<NumberOfData>::isInsideCell(
   const int slot = getSlot(index);
   assertion(slot >= 0, index, slot);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    const double width = partition.getCellWidth(slot, axis);
+    const double width = cellConnectivity.getCellWidth(slot, axis);
     const int    ownIndex =
-      static_cast<int>(std::floor((partition.getCellCentre(slot, axis) - domainOffset(axis)) / width));
+      static_cast<int>(std::floor((cellConnectivity.getCellCentre(slot, axis) - domainOffset(axis)) / width));
     int          cellIndex = static_cast<int>(std::floor((position(axis) - domainOffset(axis)) / width));
     const double lowerFace = domainOffset(axis) + cellIndex * width;
     if (cellIndex >= 1 and position(axis) - lowerFace <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
@@ -223,19 +223,19 @@ exahype2::particles::ParticleSet<NumberOfData>::getSlot(const int index) const {
 template <int NumberOfData>
 INLINE_METHOD int
 exahype2::particles::ParticleSet<NumberOfData>::getSlotAt(
-  const peano4::Partition&                     partition,
+  const peano4::CellConnectivity&              cellConnectivity,
   const tarch::la::Vector<DIMENSIONS, double>& position
 ) {
-  if (partition.getCells().isEmpty()) {
+  if (cellConnectivity.getCells().isEmpty()) {
     return -1;
   }
-  const auto domainOffset = partition.getDomainOffset();
-  for (int level = partition.getMaximumLevel(); level >= partition.getMinimumLevel(); level--) {
+  const auto domainOffset = cellConnectivity.getDomainOffset();
+  for (int level = cellConnectivity.getMaximumLevel(); level >= cellConnectivity.getMinimumLevel(); level--) {
     const int                          cellsPerAxis = peano4::power(peano4::SubdivisionFactor, level);
     tarch::la::Vector<DIMENSIONS, int> lattice;
     bool                               insideDomain = true;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      const double width     = partition.getWidthOfLevel(level, axis);
+      const double width     = cellConnectivity.getWidthOfLevel(level, axis);
       const double relative  = (position(axis) - domainOffset(axis)) / width;
       int          index     = static_cast<int>(std::floor(relative));
       const double lowerFace = domainOffset(axis) + index * width;
@@ -283,15 +283,15 @@ exahype2::particles::ParticleSet<NumberOfData>::append(
 template <int NumberOfData>
 INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::insert(
-  const peano4::Partition&   partition,
-  const std::vector<double>& candidates
+  const peano4::CellConnectivity& cellConnectivity,
+  const std::vector<double>&      candidates
 ) {
   assertion(candidates.size() % ValuesPerParticle == 0, candidates.size(), ValuesPerParticle);
   download();
   const auto& rank = tarch::mpi::Rank::getInstance();
   for (std::size_t offset = 0; offset < candidates.size(); offset += ValuesPerParticle) {
     const double* const values = candidates.data() + offset;
-    const int           slot   = getSlotAt(partition, tarch::la::Vector<DIMENSIONS, double>(values));
+    const int           slot   = getSlotAt(cellConnectivity, tarch::la::Vector<DIMENSIONS, double>(values));
     if (slot >= 0) {
       append(values, rank.getRank(), _nextNumber, slot);
       _nextNumber++;
@@ -320,14 +320,14 @@ exahype2::particles::ParticleSet<NumberOfData>::insert(
  */
 template <int NumberOfData>
 INLINE_METHOD void
-exahype2::particles::ParticleSet<NumberOfData>::relocate(const peano4::Partition& partition) {
+exahype2::particles::ParticleSet<NumberOfData>::relocate(const peano4::CellConnectivity& cellConnectivity) {
   download();
   std::vector<double> leavingValues;
   std::vector<int>    leavingNumbers;
   int                 kept = 0;
   for (int index = 0; index < getSize(); index++) {
     const auto offset = static_cast<std::size_t>(index) * ValuesPerParticle;
-    const int  slot   = getSlotAt(partition, getPosition(index));
+    const int  slot   = getSlotAt(cellConnectivity, getPosition(index));
     if (slot >= 0) {
       if (kept != index) {
         const auto target = static_cast<std::size_t>(kept) * ValuesPerParticle;
@@ -356,7 +356,7 @@ exahype2::particles::ParticleSet<NumberOfData>::relocate(const peano4::Partition
   _slots.resize(static_cast<std::size_t>(kept));
   _deviceValuesAreCurrent = false;
   _deviceSlotsAreCurrent  = false;
-  placeParticles(partition, leavingValues, leavingNumbers);
+  placeParticles(cellConnectivity, leavingValues, leavingNumbers);
 }
 
 /**
@@ -368,8 +368,8 @@ exahype2::particles::ParticleSet<NumberOfData>::relocate(const peano4::Partition
 template <int NumberOfData>
 INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::relocateParticlesMovedOutOfCells(
-  const peano4::Partition& partition,
-  const int                numberOfMovedParticles
+  const peano4::CellConnectivity& cellConnectivity,
+  const int                       numberOfMovedParticles
 ) {
   assertion(numberOfMovedParticles >= 0 and numberOfMovedParticles <= getSize(), numberOfMovedParticles, getSize());
   std::vector<double> leavingValues;
@@ -377,7 +377,7 @@ exahype2::particles::ParticleSet<NumberOfData>::relocateParticlesMovedOutOfCells
   if (numberOfMovedParticles > 0) {
     takeMovedParticlesFromTheDevice(numberOfMovedParticles, leavingValues, leavingNumbers);
   }
-  placeParticles(partition, leavingValues, leavingNumbers);
+  placeParticles(cellConnectivity, leavingValues, leavingNumbers);
 }
 
 /**
@@ -481,9 +481,9 @@ exahype2::particles::ParticleSet<NumberOfData>::takeMovedParticlesFromTheDevice(
 template <int NumberOfData>
 INLINE_METHOD void
 exahype2::particles::ParticleSet<NumberOfData>::placeParticles(
-  const peano4::Partition&   partition,
-  const std::vector<double>& values,
-  const std::vector<int>&    numbers
+  const peano4::CellConnectivity& cellConnectivity,
+  const std::vector<double>&      values,
+  const std::vector<int>&         numbers
 ) {
   const auto&    rank          = tarch::mpi::Rank::getInstance();
   const int      numberOfRanks = rank.getNumberOfRanks();
@@ -497,7 +497,7 @@ exahype2::particles::ParticleSet<NumberOfData>::placeParticles(
   const int           numberOfCandidates = static_cast<int>(numbers.size() / 2);
   for (int candidate = 0; candidate < numberOfCandidates; candidate++) {
     const double* const candidateValues = values.data() + static_cast<std::size_t>(candidate) * ValuesPerParticle;
-    const int           slot            = getSlotAt(partition, tarch::la::Vector<DIMENSIONS, double>(candidateValues));
+    const int           slot = getSlotAt(cellConnectivity, tarch::la::Vector<DIMENSIONS, double>(candidateValues));
     if (slot >= 0) {
       arrivalValues.insert(arrivalValues.end(), candidateValues, candidateValues + ValuesPerParticle);
       arrivalNumbers.push_back(numbers[static_cast<std::size_t>(candidate) * 2]);
@@ -565,7 +565,7 @@ exahype2::particles::ParticleSet<NumberOfData>::placeParticles(
     int placed = 0;
     for (int candidate = 0; candidate < totalLeaving; candidate++) {
       const double* const candidateValues = allValues.data() + static_cast<std::size_t>(candidate) * ValuesPerParticle;
-      const int           slot = getSlotAt(partition, tarch::la::Vector<DIMENSIONS, double>(candidateValues));
+      const int           slot = getSlotAt(cellConnectivity, tarch::la::Vector<DIMENSIONS, double>(candidateValues));
       if (slot >= 0) {
         arrivalValues.insert(arrivalValues.end(), candidateValues, candidateValues + ValuesPerParticle);
         arrivalNumbers.push_back(allNumbers[static_cast<std::size_t>(candidate) * 2]);

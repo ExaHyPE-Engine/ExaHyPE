@@ -9,7 +9,7 @@
 #include "tarch/plotter/Format.h"
 
 namespace peano4 {
-  class Partition;
+  class CellConnectivity;
   struct Regrid;
 } // namespace peano4
 
@@ -40,21 +40,23 @@ public:
 
   [[nodiscard]] INLINE_METHOD double getMinTimeStamp() const;
   [[nodiscard]] INLINE_METHOD double getMaxTimeStamp() const;
-  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfSolverCells(const peano4::Partition& partition) const;
-  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfCellDoFs(const peano4::Partition& partition) const;
+  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfSolverCells(
+    const peano4::CellConnectivity& cellConnectivity
+  ) const;
+  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfCellDoFs(const peano4::CellConnectivity& cellConnectivity) const;
 
   INLINE_METHOD void startSimulation();
   INLINE_METHOD void finishSimulation();
-  INLINE_METHOD void allocate(const peano4::Partition& partition);
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
-  INLINE_METHOD void requestRefinementForGridConstruction(const peano4::Partition& partition);
-  INLINE_METHOD void initialise(const peano4::Partition& partition);
-  INLINE_METHOD void performTimeStep(const peano4::Partition& partition);
-  INLINE_METHOD void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid);
+  INLINE_METHOD void requestRefinementForGridConstruction(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void initialise(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void performTimeStep(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void regrid(const peano4::CellConnectivity& cellConnectivity, const peano4::Regrid& regrid);
   INLINE_METHOD void plot(
-    const peano4::Partition& partition,
-    tarch::plotter::Format   format,
-    const std::string&       outputDirectory
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
   );
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
@@ -68,10 +70,13 @@ private:
   template <typename Operation>
   INLINE_METHOD void forEachSolver(const Operation& operation) const;
 
-  INLINE_METHOD void commitRefinementRequests(const peano4::Partition& partition);
+  INLINE_METHOD void commitRefinementRequests(const peano4::CellConnectivity& cellConnectivity);
 
   template <typename Solver>
-  [[nodiscard]] static INLINE_METHOD int getNumberOfCellsOf(const Solver& solver, const peano4::Partition& partition);
+  [[nodiscard]] static INLINE_METHOD int getNumberOfCellsOf(
+    const Solver&                   solver,
+    const peano4::CellConnectivity& cellConnectivity
+  );
 
   std::tuple<Solvers&...> _solvers;
 

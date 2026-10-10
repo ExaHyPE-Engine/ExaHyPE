@@ -337,8 +337,8 @@ namespace {
     FaceBuffers& operator=(FaceBuffers&&)      = delete;
     ~FaceBuffers()                             = default;
 
-    double state[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfData]{};
-    double flux[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfUnknowns]{};
+    double                                    state[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfData]{};
+    double                                    flux[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfUnknowns]{};
     std::array<double*, peano4::FacesPerCell> statePointers{getRowsOf(state)};
     std::array<double*, peano4::FacesPerCell> fluxPointers{getRowsOf(flux)};
   };
@@ -402,9 +402,9 @@ namespace {
       const tarch::accelerator::TeamHandle handle
     ) const {
       exahype2::dg::ader::TeamWorkers workers = exahype2::dg::ader::getWorkers(handle, threadsPerCell);
-      const int cell    = team * workers.groups + workers.group;
-      workers.hasCell   = workers.hasCell and cell < Setup::NumberOfCells;
-      const int pointed = workers.hasCell ? cell : 0;
+      const int                       cell    = team * workers.groups + workers.group;
+      workers.hasCell                         = workers.hasCell and cell < Setup::NumberOfCells;
+      const int pointed                       = workers.hasCell ? cell : 0;
       double*   faceState[peano4::FacesPerCell];
       double*   faceFlux[peano4::FacesPerCell];
       collectFacePointers(pointed, faceStates, faceFluxes, faceState, faceFlux);
@@ -1746,7 +1746,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAZeroSquaredToleranceRepo
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheToleranceGrowsToTheRoundingDistanceOfTheCell() {
-  constexpr double ValuesPerIterate = NumberOfUnknowns * CellLayout::NodesPerCell * NodesPerAxis;
+  constexpr double ValuesPerIterate         = NumberOfUnknowns * CellLayout::NodesPerCell * NodesPerAxis;
   double           cellState[CellStateSize] = {};
   cellState[0]                              = -8.0;
   cellState[NumberOfUnknowns - 1]           = 3.0;

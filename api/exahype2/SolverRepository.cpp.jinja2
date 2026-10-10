@@ -5,7 +5,7 @@
 #include "exahype2/SolverRepository.h"
 #include "exahype2/runner/RuntimeParameters.h"
 #include "exahype2/runner/Statistics.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
 {% for solver in SOLVERS %}
@@ -19,7 +19,9 @@ namespace {
 {%- endfor %}
   };
 
-  const peano4::Partition& getPartition() { return ::peano4::Spacetree::getInstance().getPartition(); }
+  const peano4::CellConnectivity& getCellConnectivity() {
+    return ::peano4::Spacetree::getInstance().getCellConnectivity();
+  }
 } // namespace
 
 void {{ NAMESPACE | join("::") }}::startSimulation() {
@@ -35,23 +37,23 @@ void {{ NAMESPACE | join("::") }}::startSimulation() {
 
 void {{ NAMESPACE | join("::") }}::finishSimulation() { solverRepository.finishSimulation(); }
 
-void {{ NAMESPACE | join("::") }}::allocate() { solverRepository.allocate(getPartition()); }
+void {{ NAMESPACE | join("::") }}::allocate() { solverRepository.allocate(getCellConnectivity()); }
 
 ::tarch::AllocatedBytes {{ NAMESPACE | join("::") }}::getAllocatedBytes() { return solverRepository.getAllocatedBytes(); }
 
 void {{ NAMESPACE | join("::") }}::requestRefinementForGridConstruction() {
-  solverRepository.requestRefinementForGridConstruction(getPartition());
+  solverRepository.requestRefinementForGridConstruction(getCellConnectivity());
 }
 
-void {{ NAMESPACE | join("::") }}::initialise() { solverRepository.initialise(getPartition()); }
+void {{ NAMESPACE | join("::") }}::initialise() { solverRepository.initialise(getCellConnectivity()); }
 
-void {{ NAMESPACE | join("::") }}::performTimeStep() { solverRepository.performTimeStep(getPartition()); }
+void {{ NAMESPACE | join("::") }}::performTimeStep() { solverRepository.performTimeStep(getCellConnectivity()); }
 
-void {{ NAMESPACE | join("::") }}::regrid(const peano4::Regrid& regrid) { solverRepository.regrid(getPartition(), regrid); }
+void {{ NAMESPACE | join("::") }}::regrid(const peano4::Regrid& regrid) { solverRepository.regrid(getCellConnectivity(), regrid); }
 
 void {{ NAMESPACE | join("::") }}::plot() {
   solverRepository.plot(
-    getPartition(),
+    getCellConnectivity(),
     ::exahype2::runner::RuntimeParameters::getInstance().getPlotFormat(),
     ::exahype2::runner::RuntimeParameters::getInstance().getOutputPath()
   );
@@ -73,9 +75,9 @@ double {{ NAMESPACE | join("::") }}::getMinTimeStamp() { return solverRepository
 
 double {{ NAMESPACE | join("::") }}::getMaxTimeStamp() { return solverRepository.getMaxTimeStamp(); }
 
-std::uint64_t {{ NAMESPACE | join("::") }}::getNumberOfSolverCells() { return solverRepository.getNumberOfSolverCells(getPartition()); }
+std::uint64_t {{ NAMESPACE | join("::") }}::getNumberOfSolverCells() { return solverRepository.getNumberOfSolverCells(getCellConnectivity()); }
 
-std::uint64_t {{ NAMESPACE | join("::") }}::getNumberOfCellDoFs() { return solverRepository.getNumberOfCellDoFs(getPartition()); }
+std::uint64_t {{ NAMESPACE | join("::") }}::getNumberOfCellDoFs() { return solverRepository.getNumberOfCellDoFs(getCellConnectivity()); }
 
 ::exahype2::runner::SolverStatistics {{ NAMESPACE | join("::") }}::getSolverStatistics() {
   ::exahype2::runner::SolverStatistics result;

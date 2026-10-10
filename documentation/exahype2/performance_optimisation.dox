@@ -11,7 +11,7 @@ describes the grid metrics.
 # Data access
 
 Solver data resides in rank-local pools indexed by the cell and face slots of
-the partition, and every dispatch reads the pools directly. A time step is a fixed
+the cell connectivity, and every dispatch reads the pools directly. A time step is a fixed
 sequence of dispatches, so the traffic per step is the pools it reads and
 writes plus the halo buffers.
 
@@ -30,7 +30,7 @@ kernel itself.
 
 `Load Balance` describes the distribution of the cells. A geometrically
 balanced mesh can remain computationally imbalanced when only a few cells
-enter the limiter, carry many particles or execute an expensive material
+enter the limiter, contain many particles or execute an expensive material
 model. A solver-specific profile or work counter identifies this case.
 
 # Hybrid runs

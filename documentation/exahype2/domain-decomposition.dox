@@ -13,7 +13,7 @@ describes the reported balance metrics.
 
 Each MPI rank owns its solver repository and the rank-local cell and face
 pools of every solver. Cells belong to one rank. A face on a rank boundary
-exists in the partition of both ranks; a solver writes the half of its local
+exists in the cell connectivity of both ranks; a solver writes the half of its local
 cell and receives the other half through peano4::HaloExchange before the face
 dispatch reads it.
 

@@ -397,7 +397,7 @@ tarch::plotter::tests::NetCDFFileWriterTest::testSeries() {
     const std::ifstream stream(getPath(filename + ".nc.series"));
     std::stringstream   buffer;
     buffer << stream.rdbuf();
-    const std::string content = buffer.str();
+    const std::string content   = buffer.str();
     const std::string lastEntry = R"({ "name" : "NetCDFTestSeries-0_500000.nc", "time" : 0.5 })";
     if (
       content.find(R"({ "name" : "NetCDFTestSeries-0_000000.nc", "time" : 0 },)") == std::string::npos

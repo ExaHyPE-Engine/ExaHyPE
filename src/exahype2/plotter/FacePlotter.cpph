@@ -1,9 +1,9 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/ParallelFor.h"
@@ -21,7 +21,7 @@
 template <int NodesPerAxis, int ValuesPerNode, typename Precision, typename Predicate>
 INLINE_METHOD void
 exahype2::plotter::FacePlotter::plot(
-  const peano4::Partition&                                partition,
+  const peano4::CellConnectivity&                         cellConnectivity,
   const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
   const double* const                                     quadratureNodes,
   const double                                            timeStamp,
@@ -43,8 +43,14 @@ exahype2::plotter::FacePlotter::plot(
   }
 
   std::vector<int> faces;
-  for (const int face : getPlottedFaces(partition)) {
-    if (plotsFace(partition.getFaceCentre(face), partition.getFaceWidth(face), partition.getFaceNormal(face))) {
+  for (const int face : getPlottedFaces(cellConnectivity)) {
+    if (
+      plotsFace(
+        cellConnectivity.getFaceCentre(face),
+        cellConnectivity.getFaceWidth(face),
+        cellConnectivity.getFaceNormal(face)
+      )
+    ) {
       faces.push_back(face);
     }
   }
@@ -72,9 +78,9 @@ exahype2::plotter::FacePlotter::plot(
     tarch::accelerator::Range(static_cast<int>(numberOfFaces)),
     [&](const int entry) {
       const int              face       = faces[static_cast<std::size_t>(entry)];
-      const int              normal     = partition.getFaceNormal(face);
-      const auto             centre     = partition.getFaceCentre(face);
-      const auto             width      = partition.getFaceWidth(face);
+      const int              normal     = cellConnectivity.getFaceNormal(face);
+      const auto             centre     = cellConnectivity.getFaceCentre(face);
+      const auto             width      = cellConnectivity.getFaceWidth(face);
       const std::size_t      firstPoint = static_cast<std::size_t>(entry) * NodesPerFace;
       const std::size_t      firstCell  = static_cast<std::size_t>(entry) * CellsPerFace;
       const Precision* const lower      = values.getChunk(face);
@@ -116,7 +122,7 @@ exahype2::plotter::FacePlotter::plot(
             static_cast<std::int32_t>(firstPoint) + node;
         }
         mesh.offsets[firstCell + cell] = static_cast<std::int32_t>((firstCell + cell + 1) * CornersPerCell);
-        mesh.cellFields[0].values[firstCell + cell] = static_cast<double>(partition.getFaceLevel(face));
+        mesh.cellFields[0].values[firstCell + cell] = static_cast<double>(cellConnectivity.getFaceLevel(face));
       }
     }
   );

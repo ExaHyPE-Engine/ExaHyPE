@@ -41,7 +41,7 @@ rank.
 # Dispatch cost
 
 A phase is a fixed sequence of dispatches over the cells and the faces of the
-partition. A profile dominated by the kernels points to the application
+cell connectivity. A profile dominated by the kernels points to the application
 kernels; a profile dominated by the halo exchange points to the rank layout.
 The local cells run while the halo messages travel, so a rank with few local
 cells cannot hide its exchange.
@@ -50,7 +50,7 @@ cells cannot hide its exchange.
 
 Refinement-plan evaluation performs integer lattice work proportional to the
 request count. The substantial regrid costs are the rebuild of the tree and
-the partition of the rank and the transfer of the changed cells. Oscillating refine
+the cell connectivity of the rank and the transfer of the changed cells. Oscillating refine
 and erase decisions multiply this cost; stable thresholds and a suitable base
 depth reduce repeated changes.
 

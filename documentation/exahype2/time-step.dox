@@ -28,7 +28,7 @@ Every rank then runs the same steps.
    1. exahype2::runner::Runner::executeStep() calls the `performTimeStep` entry of exahype2::runner::SolverRepositoryCallbacks.
    2. exahype2::runner::Runner::finishStep() reduces the statistics and the values of the solvers across the ranks in one tarch::mpi::ReductionRecord.
 3. The generated `createRepositoryCallbacks()` of `Main.cpp.jinja2` binds this entry to the generated `performTimeStep()` of `SolverRepository.cpp.jinja2`.
-4. The generated `performTimeStep()` calls exahype2::SolverRepository::performTimeStep() with peano4::Spacetree::getPartition().
+4. The generated `performTimeStep()` calls exahype2::SolverRepository::performTimeStep() with peano4::Spacetree::getCellConnectivity().
 5. exahype2::SolverRepository::performTimeStep():
    1. exahype2::RefinementRequests::clear() resets the votes.
    2. `performTimeStep()` of every solver runs in the order of the repository's constructor arguments.
@@ -258,7 +258,7 @@ exahype2::runner::Runner::runTimeLoop() calls exahype2::runner::Runner::applyMes
 exahype2::fv::Solver::regrid():
 
 1. peano4::MigrationExchange::migrate() fills the new slots from the parent, the children or another rank.
-2. peano4::HaloExchange::rebuild() lists the exchanged faces of the new partition.
+2. peano4::HaloExchange::rebuild() lists the exchanged faces of the new cell connectivity.
 3. exahype2::fv::Solver::projectOntoFaces() and exahype2::restrictFineFaces() fill the new faces.
 4. exahype2::fv::Solver::measureMeshWidths() passes the mesh widths of the new grid to the time stepping.
 5. Under an adaptive rule, exahype2::TimeStepping::raiseMaxEigenvalue() stores exahype2::fv::Solver::measureMaxEigenvalue() when the next time step size is positive.
@@ -295,7 +295,7 @@ The generated `traceTracers()` runs after `SolverFamily::performTimeStep()` with
 
 1. exahype2::fv::traceParticles() moves the particles through the solution the step started from.
 2. exahype2::dg::traceParticles() moves the particles through the updated solution.
-3. exahype2::particles::ParticleSet::relocate() moves every particle to the rank whose partition holds its position.
+3. exahype2::particles::ParticleSet::relocate() moves every particle to the rank whose cells contain its position.
 4. exahype2::particles::recordSnapshots() records the trajectories of a tracer set with a trajectory database.
 5. exahype2::particles::measurePositionErrors() records the position errors when a snapshot is due.
 

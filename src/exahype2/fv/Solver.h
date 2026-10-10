@@ -12,9 +12,9 @@
 #include "exahype2/terms/BoundaryConditions.h"
 #include "exahype2/terms/InitialCondition.h"
 #include "exahype2/terms/RefinementCriterion.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/HaloExchange.h"
 #include "peano4/MigrationExchange.h"
-#include "peano4/Partition.h"
 #include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -41,7 +41,7 @@ namespace exahype2::fv {
 } // namespace exahype2::fv
 
 /**
- * Finite-volume solver on the partition, with the patch layout, the schemes and the PDE terms as
+ * Finite-volume solver on the cells of one rank, with the patch layout, the schemes and the PDE terms as
  * static members of Derived. StoragePrecision is the type of the patches and faces, and
  * ComputePrecision the type the kernels compute in. Patches exchange data only through the face
  * pool, where every patch writes its own half of each face.
@@ -69,21 +69,27 @@ public:
   );
 
   INLINE_METHOD void requestRefinementForGridConstruction(
-    const peano4::Partition&      partition,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
   );
-  INLINE_METHOD void allocate(const peano4::Partition& partition);
-  INLINE_METHOD void initialise(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
-  INLINE_METHOD void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void initialise(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
+  );
+  INLINE_METHOD void performTimeStep(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
+  );
   INLINE_METHOD void regrid(
-    const peano4::Partition&      partition,
-    const peano4::Regrid&         regrid,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    exahype2::RefinementRequests&   requests
   );
   INLINE_METHOD void plot(
-    const peano4::Partition& partition,
-    tarch::plotter::Format   format,
-    const std::string&       outputDirectory
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
   );
   INLINE_METHOD void release();
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
@@ -97,16 +103,16 @@ public:
   [[nodiscard]] INLINE_METHOD int getNumberOfDoFs() const;
 
 private:
-  INLINE_METHOD void applyBoundaryConditions(const peano4::Partition& partition);
-  INLINE_METHOD void projectOntoFaces(const peano4::Partition& partition);
+  INLINE_METHOD void applyBoundaryConditions(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void projectOntoFaces(const peano4::CellConnectivity& cellConnectivity);
   [[nodiscard]] INLINE_METHOD double updatePatches(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize
   );
-  [[nodiscard]] INLINE_METHOD double measureMaxEigenvalue(const peano4::Partition& partition);
-  INLINE_METHOD void measureError(const peano4::Partition& partition);
-  INLINE_METHOD void measureMeshWidths(const peano4::Partition& partition);
+  [[nodiscard]] INLINE_METHOD double measureMaxEigenvalue(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void measureError(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void measureMeshWidths(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void proposeTimeStepSize(double maxEigenvalue);
   [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
   [[nodiscard]] INLINE_METHOD double getFixedTimeStepSize() const;

@@ -173,8 +173,8 @@ exahype2::runner::tests::StatisticsTest::testTheGlobalViewSumsAndBoundsTheRankSt
   validateEquals(statistics.getGlobalMaxRankBoundaryFaces(), getGlobalMaximumOf(rankBoundaryFaces));
   validateEquals(statistics.getGlobalMinRankLoad(), getGlobalMinimumOf(cells));
   validateEquals(statistics.getGlobalMaxRankLoad(), getGlobalMaximumOf(cells));
-  validateEquals(statistics.getGlobalPartitionHostBytes(), getGlobalSumOf(local.partitionBytes.host));
-  validateEquals(statistics.getGlobalPartitionDeviceBytes(), getGlobalSumOf(local.partitionBytes.device));
+  validateEquals(statistics.getGlobalCellConnectivityHostBytes(), getGlobalSumOf(local.cellConnectivityBytes.host));
+  validateEquals(statistics.getGlobalCellConnectivityDeviceBytes(), getGlobalSumOf(local.cellConnectivityBytes.device));
   validateEquals(statistics.getGlobalTreeBytes(), getGlobalSumOf(local.treeBytes));
   validateEquals(statistics.getGlobalSolverHostBytes(), getGlobalSumOf(100 + rank));
   validateEquals(statistics.getGlobalSolverDeviceBytes(), getGlobalSumOf(7 + rank));

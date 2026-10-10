@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SpacetreeTest.h"
 
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/RefinementRequest.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
@@ -22,9 +22,9 @@ namespace {
     return ownershipUnits;
   }
 
-  int getNumberOfLocalCellsOfLevel(const peano4::Partition& partition, const int level) {
-    return partition.getCells(peano4::Adjacency::Local, level).size
-      + partition.getCells(peano4::Adjacency::Remote, level).size;
+  int getNumberOfLocalCellsOfLevel(const peano4::CellConnectivity& cellConnectivity, const int level) {
+    return cellConnectivity.getCells(peano4::Adjacency::Local, level).size
+      + cellConnectivity.getCells(peano4::Adjacency::Remote, level).size;
   }
 
   int getNumberOfReceivedSlots(const peano4::Regrid& regrid) {
@@ -51,7 +51,7 @@ peano4::tests::SpacetreeTest::run() {
   testMethod(testRejectedRequestsChangeNoPlan);
   testMethod(testARegridWithLiveDataReturnsTheSlotMoves);
   testMethod(testTheTreeBytesCountTheSpareTree);
-  testMethod(testThePartitionBytesCountTheFreedSlots);
+  testMethod(testTheCellConnectivityBytesCountTheFreedSlots);
   testMethod(testTheTreeBytesCountTheEvaluatedPlan);
   testMethod(testTheCellLookupFindsEveryCellAndNothingElse);
   testMethod(testThePeriodicBoundariesReturnTheInitialisedValue);
@@ -79,17 +79,17 @@ peano4::tests::SpacetreeTest::testRejectedRequestsChangeNoPlan() {
   spacetree.scheduleRegularGridConstruction(1);
   peano4::Regrid regrid;
   validateTrue(spacetree.regrid({}, regrid));
-  const auto& partition  = spacetree.getPartition();
-  const auto& statistics = spacetree.getStatistics();
+  const auto& cellConnectivity = spacetree.getCellConnectivity();
+  const auto& statistics       = spacetree.getStatistics();
   validateEquals(peano4::tests::getGlobalSumOf(statistics.numberOfCells), peano4::ChildrenPerCell);
-  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), peano4::ChildrenPerCell);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), peano4::ChildrenPerCell);
   validateEquals(peano4::tests::getGlobalSumOf(statistics.numberOfRefinedCells), 1);
-  validateEquals(statistics.numberOfFaces, partition.getNumberOfFaces());
+  validateEquals(statistics.numberOfFaces, cellConnectivity.getNumberOfFaces());
   validateEquals(statistics.numberOfHangingFaces, 0);
   validateEquals(statistics.maximumLevel, 1);
   validateEquals(statistics.minimumLevel, 1);
   validateEquals(statistics.numberOfStationaryRegrids, 0);
-  validate(statistics.partitionBytes.host > 0);
+  validate(statistics.cellConnectivityBytes.host > 0);
   validate(statistics.treeBytes > 0);
 
   validateFalse(spacetree.requestsChangePlan({}));
@@ -113,34 +113,39 @@ void
 peano4::tests::SpacetreeTest::testARegridWithLiveDataReturnsTheSlotMoves() {
   constexpr int Depth = 1;
   peano4::tests::buildRegularGrid(Depth);
-  auto&       spacetree   = peano4::Spacetree::getInstance();
-  const auto& partition   = spacetree.getPartition();
-  const auto& statistics  = spacetree.getStatistics();
-  const int   cellsBefore = peano4::tests::getGlobalSumOf(partition.getCells().size);
+  auto&       spacetree        = peano4::Spacetree::getInstance();
+  const auto& cellConnectivity = spacetree.getCellConnectivity();
+  const auto& statistics       = spacetree.getStatistics();
+  const int   cellsBefore      = peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size);
   validateEquals(cellsBefore, peano4::ChildrenPerCell);
 
   spacetree.markPersistentDataLive();
 
   peano4::Regrid regrid;
   validateTrue(spacetree.regrid({peano4::tests::getRefinementOfCentreCell(Depth)}, regrid));
-  const int fineCells = peano4::tests::getGlobalSumOf(getNumberOfLocalCellsOfLevel(partition, Depth + 1));
+  const int fineCells = peano4::tests::getGlobalSumOf(getNumberOfLocalCellsOfLevel(cellConnectivity, Depth + 1));
   validate(fineCells > 0);
   validateEquals(
     peano4::tests::getGlobalSumOf(static_cast<int>(regrid.prolongations.size()) + getNumberOfReceivedSlots(regrid)),
     fineCells
   );
   validate(regrid.restrictions.empty());
-  const int coarseCellsAfterRefinement = peano4::tests::getGlobalSumOf(getNumberOfLocalCellsOfLevel(partition, Depth));
+  const int coarseCellsAfterRefinement =
+    peano4::tests::getGlobalSumOf(getNumberOfLocalCellsOfLevel(cellConnectivity, Depth));
   validateEquals(
     peano4::tests::getGlobalSumOf(static_cast<int>(regrid.freedSlots.size())),
     cellsBefore - coarseCellsAfterRefinement
   );
-  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), coarseCellsAfterRefinement + fineCells);
+  validateEquals(
+    peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size),
+    coarseCellsAfterRefinement + fineCells
+  );
   validateEquals(statistics.maximumLevel, Depth + 1);
   spacetree.finishRegrid();
 
   validateTrue(spacetree.regrid(peano4::tests::getErasureOfEveryCell(Depth), regrid));
-  const int coarseCellsAfterErase = peano4::tests::getGlobalSumOf(getNumberOfLocalCellsOfLevel(partition, Depth));
+  const int coarseCellsAfterErase =
+    peano4::tests::getGlobalSumOf(getNumberOfLocalCellsOfLevel(cellConnectivity, Depth));
   validate(coarseCellsAfterErase > coarseCellsAfterRefinement);
   validate(regrid.prolongations.empty());
   validateEquals(
@@ -148,8 +153,8 @@ peano4::tests::SpacetreeTest::testARegridWithLiveDataReturnsTheSlotMoves() {
     coarseCellsAfterErase - coarseCellsAfterRefinement
   );
   validateEquals(
-    peano4::tests::getGlobalSumOf(partition.getCells().size),
-    coarseCellsAfterErase + peano4::tests::getGlobalSumOf(getNumberOfLocalCellsOfLevel(partition, Depth + 1))
+    peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size),
+    coarseCellsAfterErase + peano4::tests::getGlobalSumOf(getNumberOfLocalCellsOfLevel(cellConnectivity, Depth + 1))
   );
   spacetree.finishRegrid();
 }
@@ -180,10 +185,10 @@ peano4::tests::SpacetreeTest::testTheTreeBytesCountTheSpareTree() {
 }
 
 /**
- * finishRegrid() adds the growth of the free list after an erase to the partition bytes.
+ * finishRegrid() adds the growth of the free list after an erase to the cell connectivity bytes.
  */
 void
-peano4::tests::SpacetreeTest::testThePartitionBytesCountTheFreedSlots() {
+peano4::tests::SpacetreeTest::testTheCellConnectivityBytesCountTheFreedSlots() {
   constexpr int Depth = 1;
   peano4::tests::buildRegularGrid(Depth);
   auto&       spacetree  = peano4::Spacetree::getInstance();
@@ -194,14 +199,14 @@ peano4::tests::SpacetreeTest::testThePartitionBytesCountTheFreedSlots() {
   validateTrue(spacetree.regrid({peano4::tests::getRefinementOfCentreCell(Depth)}, regrid));
   spacetree.finishRegrid();
   validateTrue(spacetree.regrid(peano4::tests::getErasureOfEveryCell(Depth), regrid));
-  const std::size_t bytesBeforeFinish = statistics.partitionBytes.host;
+  const std::size_t bytesBeforeFinish = statistics.cellConnectivityBytes.host;
   spacetree.finishRegrid();
   validateWithParams2(
-    statistics.partitionBytes.host >= bytesBeforeFinish,
-    statistics.partitionBytes.host,
+    statistics.cellConnectivityBytes.host >= bytesBeforeFinish,
+    statistics.cellConnectivityBytes.host,
     bytesBeforeFinish
   );
-  const int grownBytes = static_cast<int>(statistics.partitionBytes.host - bytesBeforeFinish);
+  const int grownBytes = static_cast<int>(statistics.cellConnectivityBytes.host - bytesBeforeFinish);
   validateWithParams1(peano4::tests::getGlobalSumOf(grownBytes) > 0, grownBytes);
 }
 
@@ -330,7 +335,7 @@ void
 peano4::tests::SpacetreeTest::testARankWithoutCellsReportsNoLevel() {
   peano4::tests::buildRegularGrid(0);
   const auto& statistics = peano4::Spacetree::getInstance().getStatistics();
-  const bool  holdsCells = not peano4::Spacetree::getInstance().getPartition().getCells().isEmpty();
+  const bool  holdsCells = not peano4::Spacetree::getInstance().getCellConnectivity().getCells().isEmpty();
 
   validateEquals(peano4::tests::getGlobalSumOf(statistics.numberOfCells), 1);
   validateEquals(statistics.minimumLevel, holdsCells ? 0 : std::numeric_limits<int>::max());
@@ -338,7 +343,7 @@ peano4::tests::SpacetreeTest::testARankWithoutCellsReportsNoLevel() {
 }
 
 /**
- * The statistics and the partition read as empty before the first regrid.
+ * The statistics and the cell connectivity read as empty before the first regrid.
  */
 void
 peano4::tests::SpacetreeTest::testNoStatisticsStandBeforeTheFirstRegrid() {
@@ -348,29 +353,30 @@ peano4::tests::SpacetreeTest::testNoStatisticsStandBeforeTheFirstRegrid() {
 
   validateEquals(spacetree.getStatistics().numberOfCells, 0);
   validateEquals(spacetree.getStatistics().numberOfFaces, 0);
-  validateEquals(spacetree.getStatistics().partitionBytes.getTotal(), std::size_t{0});
-  validateEquals(spacetree.getPartition().getNumberOfSlots(), 0);
-  validateEquals(spacetree.getPartition().getNumberOfFaces(), 0);
-  validate(spacetree.getPartition().getCells().isEmpty());
-  validate(spacetree.getPartition().getCells(peano4::Adjacency::Local).isEmpty());
-  validate(spacetree.getPartition().getFaces(peano4::Adjacency::Remote, peano4::FaceKind::Interior).isEmpty());
-  validate(spacetree.getPartition().getLevelJumps(peano4::Adjacency::Local).isEmpty());
-  validate(spacetree.getPartition().getNeighbours().isEmpty());
+  validateEquals(spacetree.getStatistics().cellConnectivityBytes.getTotal(), std::size_t{0});
+  validateEquals(spacetree.getCellConnectivity().getNumberOfSlots(), 0);
+  validateEquals(spacetree.getCellConnectivity().getNumberOfFaces(), 0);
+  validate(spacetree.getCellConnectivity().getCells().isEmpty());
+  validate(spacetree.getCellConnectivity().getCells(peano4::Adjacency::Local).isEmpty());
+  validate(spacetree.getCellConnectivity().getFaces(peano4::Adjacency::Remote, peano4::FaceKind::Interior).isEmpty());
+  validate(spacetree.getCellConnectivity().getLevelJumps(peano4::Adjacency::Local).isEmpty());
+  validate(spacetree.getCellConnectivity().getNeighbours().isEmpty());
   validateEquals(spacetree.getCellAt(0, tarch::la::Vector<DIMENSIONS, int>(0)), -1);
 }
 
 /**
- * The lookup returns the slot of every cell of the partition and -1 for every other level and position.
+ * The lookup returns the slot of every cell of the cell connectivity and -1 for every other level and
+ * position.
  */
 void
 peano4::tests::SpacetreeTest::testTheCellLookupFindsEveryCellAndNothingElse() {
   constexpr int Depth = 2;
   peano4::tests::buildRegularGrid(Depth);
-  const auto& spacetree = peano4::Spacetree::getInstance();
-  const auto& partition = spacetree.getPartition();
-  for (const int cell : partition.getCells()) {
-    validateEqualsWithParams1(spacetree.getCellAt(Depth, partition.getCellLattice(cell)), cell, cell);
-    validateEqualsWithParams1(spacetree.getCellAt(Depth - 1, partition.getCellLattice(cell)), -1, cell);
+  const auto& spacetree        = peano4::Spacetree::getInstance();
+  const auto& cellConnectivity = spacetree.getCellConnectivity();
+  for (const int cell : cellConnectivity.getCells()) {
+    validateEqualsWithParams1(spacetree.getCellAt(Depth, cellConnectivity.getCellLattice(cell)), cell, cell);
+    validateEqualsWithParams1(spacetree.getCellAt(Depth - 1, cellConnectivity.getCellLattice(cell)), -1, cell);
   }
   validateEquals(spacetree.getCellAt(Depth + 1, tarch::la::Vector<DIMENSIONS, int>(0)), -1);
   validateEquals(spacetree.getCellAt(-1, tarch::la::Vector<DIMENSIONS, int>(0)), -1);

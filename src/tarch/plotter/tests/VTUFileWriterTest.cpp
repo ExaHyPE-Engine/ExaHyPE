@@ -179,7 +179,9 @@ tarch::plotter::tests::VTUFileWriterTest::testSeries() {
     buffer << stream.rdbuf();
     const std::string content = buffer.str();
     if (content.find("VTUTestSeries-0_333333.pvtu") != content.rfind("VTUTestSeries-0_333333.pvtu")) {
-      throw std::runtime_error("The test expects the snapshot VTUTestSeries-0_333333.pvtu once in the file VTUTestSeries.pvd.");
+      throw std::runtime_error(
+        "The test expects the snapshot VTUTestSeries-0_333333.pvtu once in the file VTUTestSeries.pvd."
+      );
     }
     std::filesystem::remove(getPath(filename + "-0_000000.pvtu"));
     std::filesystem::remove(getPath(filename + "-0_333333.pvtu"));

@@ -45,7 +45,7 @@ void
 exahype2::plotter::tests::ParticlePlotterTest::testEveryParticleBecomesOnePointWithItsNumberAndData() {
   const int rank = tarch::mpi::Rank::getInstance().getRank();
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
   std::vector<double> candidates;
   for (int particle = 0; particle < NumberOfParticles; particle++) {
@@ -57,7 +57,7 @@ exahype2::plotter::tests::ParticlePlotterTest::testEveryParticleBecomesOnePointW
     }
   }
   exahype2::particles::ParticleSet<NumberOfData> particles;
-  particles.insert(partition, candidates);
+  particles.insert(cellConnectivity, candidates);
 
   const std::string outputDirectory = (tarch::tests::getWritableTestDirectory() / "ParticlePlotterTest").string() + "/";
   std::filesystem::create_directories(outputDirectory + "particle/");

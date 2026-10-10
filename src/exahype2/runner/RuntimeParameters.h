@@ -143,7 +143,7 @@ private:
   std::string _plotFormat{tarch::plotter::toString(tarch::plotter::getDefaultFormat())};
   std::string _projectName{};
   std::string _executableName{};
-  double      _timeStepLogInterval{3.0};
+  double      _timeStepLogInterval{5.0};
   int         _gridLevels{3};
   int         _maxGridLevels{3};
   bool        _gridLevelsConfigured{false};

@@ -39,14 +39,14 @@ INLINE_METHOD peano4::HaloExchange<T>::HaloExchange::~HaloExchange() noexcept {
 }
 
 /**
- * Copies the exchanged faces of the partition into one entry table and sizes the buffers. A caller
- * rebuilds after every build of the partition while no post is in flight. The first call reserves
- * the tag. Every rank calls the first rebuild of its exchanges in the same order. Both ranks of a
+ * Copies the exchanged faces of the cell connectivity into one entry table and sizes the buffers. A
+ * caller rebuilds after every build of the cell connectivity while no post is in flight. The first
+ * call reserves the tag. Every rank calls the first rebuild of its exchanges in the same order. Both ranks of a
  * face see the same face kind. A neighbour without a face of the exchanged kind gets no message.
  */
 template <typename T>
 INLINE_METHOD void
-peano4::HaloExchange<T>::rebuild(const peano4::Partition& partition) {
+peano4::HaloExchange<T>::rebuild(const peano4::CellConnectivity& cellConnectivity) {
   assertion(not _inFlight);
   if (_tag == NoTag) {
     _tag = peano4::communication::CommunicationManager::getInstance().reserveTag();
@@ -54,18 +54,18 @@ peano4::HaloExchange<T>::rebuild(const peano4::Partition& partition) {
 
   std::vector<peano4::ExchangedFace> entries;
   _messages.clear();
-  for (const auto& neighbour : partition.getNeighbours()) {
-    const auto faces = partition.getExchangedFaces(neighbour);
+  for (const auto& neighbour : cellConnectivity.getNeighbours()) {
+    const auto faces = cellConnectivity.getExchangedFaces(neighbour);
     assertion(neighbour.rank >= 0 and not faces.isEmpty(), neighbour.rank);
     const int firstEntry = static_cast<int>(entries.size());
     for (const auto& entry : faces) {
       assertion(
-        entry.face >= 0 and entry.face < partition.getNumberOfFaces(),
+        entry.face >= 0 and entry.face < cellConnectivity.getNumberOfFaces(),
         entry.face,
-        partition.getNumberOfFaces()
+        cellConnectivity.getNumberOfFaces()
       );
       assertion(entry.side == 0 or entry.side == 1, entry.side);
-      if (not _exchangedFaceKind or partition.getFaceKind(entry.face) == *_exchangedFaceKind) {
+      if (not _exchangedFaceKind or cellConnectivity.getFaceKind(entry.face) == *_exchangedFaceKind) {
         entries.push_back(entry);
       }
     }
@@ -144,8 +144,7 @@ peano4::HaloExchange<T>::post() {
   }
   _messagesPosted = false;
   if (
-    tarch::isGPUMemory(_sendBuffer.getLocation())
-    or not tarch::mpi::AbstractCommunicationManager::usesDedicatedThread()
+    tarch::isGPUMemory(_sendBuffer.getLocation()) or not tarch::mpi::AbstractCommunicationManager::usesDedicatedThread()
   ) {
     postMessages();
   }

@@ -4,8 +4,8 @@
 
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/tests/TransferTestData.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "tarch/la/Vector.h"
 
 namespace {

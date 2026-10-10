@@ -125,7 +125,7 @@ TARGET_DECLARE_END
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, int... DifferenceFields, typename Pool>
 INLINE_METHOD void
 exahype2::dg::traceFaceValues(
-  const peano4::Partition&                                partition,
+  const peano4::CellConnectivity&                         cellConnectivity,
   const Pool&                                             faceStates,
   const double* NOALIAS const                             quadratureNodes,
   exahype2::particles::ParticleSet<NumberOfParticleData>& particles,
@@ -151,7 +151,7 @@ exahype2::dg::traceFaceValues(
       NumberOfParticleData,
       exahype2::particles::FieldList<DifferenceFields...>,
       Pool
-    >{partition.onDevice(), faceStates.getView(), quadratureNodes, set, normal, position}
+    >{cellConnectivity.onDevice(), faceStates.getView(), quadratureNodes, set, normal, position}
   );
 }
 
@@ -167,15 +167,15 @@ exahype2::dg::TraceFaceValues<NodesPerAxis, NumberOfData, NumberOfParticleData, 
   if (slot < 0) {
     return;
   }
-  auto       particle   = particles.getParticle(index);
-  const auto location   = particle.getX();
-  const int  faceNumber = location(normal) > partition.getCellCentre(slot, normal) ? normal + DIMENSIONS : normal;
-  const int  face       = partition.getCellFace(slot, faceNumber);
+  auto       particle  = particles.getParticle(index);
+  const auto location  = particle.getX();
+  const int faceNumber = location(normal) > cellConnectivity.getCellCentre(slot, normal) ? normal + DIMENSIONS : normal;
+  const int face       = cellConnectivity.getCellFace(slot, faceNumber);
   tarch::la::Vector<DIMENSIONS, double> faceCentre;
   tarch::la::Vector<DIMENSIONS, double> cellWidth;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    faceCentre(axis) = partition.getFaceCentre(face, axis);
-    cellWidth(axis)  = partition.getFaceWidth(face, axis);
+    faceCentre(axis) = cellConnectivity.getFaceCentre(face, axis);
+    cellWidth(axis)  = cellConnectivity.getFaceWidth(face, axis);
   }
   if (std::abs(faceCentre(normal) - position) > PlaneTolerance * cellWidth(normal)) {
     return;
@@ -217,7 +217,7 @@ exahype2::dg::TraceFaceValues<NodesPerAxis, NumberOfData, NumberOfParticleData, 
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
 INLINE_METHOD void
 exahype2::dg::traceParticles(
-  const peano4::Partition&                                partition,
+  const peano4::CellConnectivity&                         cellConnectivity,
   const Pool&                                             solution,
   const double* NOALIAS const                             quadratureNodes,
   const double                                            timeStepSize,
@@ -241,7 +241,7 @@ exahype2::dg::traceParticles(
         NumberOfParticleData,
         exahype2::particles::FieldList<FieldIndices...>,
         Pool
-      >{partition.onDevice(),
+      >{cellConnectivity.onDevice(),
         solution.getView(),
         quadratureNodes,
         timeStepSize,
@@ -256,7 +256,7 @@ exahype2::dg::traceParticles(
   if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
     return;
   }
-  particles.relocateParticlesMovedOutOfCells(partition, numberOfMovedParticles);
+  particles.relocateParticlesMovedOutOfCells(cellConnectivity, numberOfMovedParticles);
   // Every moved particle samples the fields of the cell that holds it now.
   if (timeStepSize > 0.0 and particles.getSize() > 0) {
     particles.upload();
@@ -270,7 +270,7 @@ exahype2::dg::traceParticles(
         NumberOfParticleData,
         exahype2::particles::FieldList<FieldIndices...>,
         Pool
-      >{partition.onDevice(),
+      >{cellConnectivity.onDevice(),
         solution.getView(),
         quadratureNodes,
         0.0,
@@ -302,8 +302,8 @@ exahype2::dg::TraceParticles<NodesPerAxis, NumberOfData, NumberOfParticleData, F
   tarch::la::Vector<DIMENSIONS, double> centre;
   tarch::la::Vector<DIMENSIONS, double> width;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    centre(axis) = partition.getCellCentre(slot, axis);
-    width(axis)  = partition.getCellWidth(slot, axis);
+    centre(axis) = cellConnectivity.getCellCentre(slot, axis);
+    width(axis)  = cellConnectivity.getCellWidth(slot, axis);
   }
   const auto* const Q = solution.getChunk(slot);
   const auto        interpolateAt =
@@ -329,7 +329,7 @@ exahype2::dg::TraceParticles<NodesPerAxis, NumberOfData, NumberOfParticleData, F
   exahype2::particles::reflectAtWalls(particle, newPosition, WallDamping, domainOffset, domainWidth, periodicAxes);
   exahype2::particles::wrapIntoDomain(newPosition, domainOffset, domainWidth, periodicAxes);
   particle.setX(newPosition);
-  if (not particles.isInsideCell(partition, index, newPosition, domainOffset)) {
+  if (not particles.isInsideCell(cellConnectivity, index, newPosition, domainOffset)) {
     particles.markAsMovedOutOfCell(index);
     numberOfMovedParticles++;
   }

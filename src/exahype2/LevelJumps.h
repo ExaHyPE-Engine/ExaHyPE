@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/CompileTarget.h"
@@ -12,27 +12,27 @@ namespace exahype2 {
   struct ForEachLevelJump;
 
   INLINE_METHOD bool holdsIntermediateFace(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    int                      level
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    int                             level
   );
 
   template <typename Operation>
   INLINE_METHOD void interpolateCoarseFaces(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    const Operation&         operation
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    const Operation&                operation
   );
 
   template <typename Operation>
   INLINE_METHOD void restrictFineFaces(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    const Operation&         operation
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    const Operation&                operation
   );
 
   template <typename Operation>
-  INLINE_METHOD void restrictFineFaces(const peano4::Partition& partition, const Operation& operation);
+  INLINE_METHOD void restrictFineFaces(const peano4::CellConnectivity& cellConnectivity, const Operation& operation);
 } // namespace exahype2
 
 TARGET_DECLARE

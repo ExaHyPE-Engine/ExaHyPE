@@ -122,7 +122,7 @@ class Solver(exahype2.solver.Solver):
         fields = "".join(", {}".format(field) for field in tracer["FIELDS"])
         return (
             "::exahype2::fv::traceParticles<PatchSize, NumberOfData, {number_of_data}{fields}>(\n"
-            "  partition,\n"
+            "  cellConnectivity,\n"
             "  getSolution(),\n"
             "  timeStepSize,\n"
             "  _{name},\n"

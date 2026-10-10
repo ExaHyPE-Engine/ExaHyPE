@@ -35,7 +35,7 @@ namespace exahype2::runner::tests {
 
 /**
  * Entry points of the generated solver repository. Every rank calls every phase callback
- * collectively. Each callback reads the partition of the spacetree.
+ * collectively. Each callback reads the cell connectivity of the spacetree.
  */
 struct exahype2::runner::SolverRepositoryCallbacks {
   std::function<std::string()> getCopyrightBanner{};

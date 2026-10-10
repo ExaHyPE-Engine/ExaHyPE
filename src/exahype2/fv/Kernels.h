@@ -4,7 +4,7 @@
 
 #include "exahype2/ErrorMeasurement.h"
 #include "exahype2/fv/FiniteVolumeScheme.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -14,12 +14,15 @@
 /**
  * @file
  * The loop functors a finite-volume solver runs over the cells, the faces and the level jumps of
- * the partition. Every loop body calls functions of exahype2::fv::FiniteVolumeScheme on the patch or
- * face of its work item.
+ * the cell connectivity. Every loop body calls functions of exahype2::fv::FiniteVolumeScheme on the
+ * patch or face of its work item.
  */
 TARGET_DECLARE
 namespace exahype2::fv {
-  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getBoundaryFaceMask(const peano4::Partition& partition, int cell);
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getBoundaryFaceMask(
+    const peano4::CellConnectivity& cellConnectivity,
+    int                             cell
+  );
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct ApplyBoundaryConditions;
@@ -54,10 +57,10 @@ struct exahype2::fv::ApplyBoundaryConditions final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition       partition{};
-  tarch::Span<const int>  boundaryFaces{};
-  typename FacePool::View halo{};
-  double                  timeStamp{0.0};
+  peano4::CellConnectivity cellConnectivity{};
+  tarch::Span<const int>   boundaryFaces{};
+  typename FacePool::View  halo{};
+  double                   timeStamp{0.0};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
@@ -70,8 +73,8 @@ struct exahype2::fv::InterpolateHaloHalves final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition       partition{};
-  typename FacePool::View halo{};
+  peano4::CellConnectivity cellConnectivity{};
+  typename FacePool::View  halo{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
@@ -84,8 +87,8 @@ struct exahype2::fv::InjectHaloHalves final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition       partition{};
-  typename FacePool::View halo{};
+  peano4::CellConnectivity cellConnectivity{};
+  typename FacePool::View  halo{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
@@ -98,8 +101,8 @@ struct exahype2::fv::RestrictHaloHalves final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition       partition{};
-  typename FacePool::View halo{};
+  peano4::CellConnectivity cellConnectivity{};
+  typename FacePool::View  halo{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
@@ -114,7 +117,7 @@ struct exahype2::fv::ProjectPatchesOntoFaces final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   typename CellPool::ConstView solution{};
   typename FacePool::View      halo{};
 
@@ -131,7 +134,7 @@ struct exahype2::fv::UpdatePatches final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::View      solution{};
   typename FacePool::ConstView halo{};
@@ -162,7 +165,7 @@ struct exahype2::fv::MeasurePatchEigenvalues final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   typename CellPool::ConstView solution{};
   double                       timeStamp{0.0};
 
@@ -176,7 +179,7 @@ struct exahype2::fv::MeasurePatchErrors final {
 
   static constexpr int NumberOfNorms = exahype2::ErrorMeasurement::NumberOfNorms;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   typename CellPool::ConstView solution{};
   double*                      errorsPerCell{nullptr};
   double                       timeStamp{0.0};

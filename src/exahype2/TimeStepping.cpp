@@ -30,8 +30,8 @@ namespace {
     if (not exahype2::MaxEigenvalueReduction::isPhysicalValue(eigenvalue)) {
       tarch::triggerNonCriticalAssertion(
         std::string("The ") + quantity + " has to be finite and non-negative in every cell.",
-        std::string("The ") + quantity + " is " + formatValue(eigenvalue) + " in a cell at t = "
-          + formatValue(timeStamp) + "."
+        std::string("The ") + quantity + " is " + formatValue(eigenvalue)
+          + " in a cell at t = " + formatValue(timeStamp) + "."
       );
     }
     target = exahype2::MaxEigenvalueReduction::combine(target, eigenvalue);
@@ -41,8 +41,8 @@ namespace {
     if (not isPositiveEigenvalue(eigenvalue)) {
       tarch::triggerNonCriticalAssertion(
         std::string("The ") + quantity + " has to be finite in every cell and positive in at least one cell.",
-        std::string("The ") + quantity + " over all cells is " + formatValue(eigenvalue) + " at t = "
-          + formatValue(timeStamp) + "."
+        std::string("The ") + quantity + " over all cells is " + formatValue(eigenvalue)
+          + " at t = " + formatValue(timeStamp) + "."
       );
     }
   }
@@ -185,8 +185,8 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
   if (not std::isfinite(timeStepSizeFromCFL) or timeStepSizeFromCFL <= NumericalZero) {
     tarch::triggerNonCriticalAssertion(
       "The CFL condition has to give a finite time step size above " + formatValue(NumericalZero) + ".",
-      "The CFL condition gives the time step size " + formatValue(timeStepSizeFromCFL) + " at t = "
-        + formatValue(_timeStamp) + "."
+      "The CFL condition gives the time step size " + formatValue(timeStepSizeFromCFL)
+        + " at t = " + formatValue(_timeStamp) + "."
     );
     return;
   }
