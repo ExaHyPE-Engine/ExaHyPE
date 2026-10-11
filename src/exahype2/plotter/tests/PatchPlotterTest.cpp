@@ -63,6 +63,7 @@ void
 exahype2::plotter::tests::PatchPlotterTest::run() {
   testMethod(testEveryVolumeOfEveryPatchBecomesOneCell);
   testMethod(testEveryNodeOfEveryPatchBecomesOnePoint);
+  testMethod(testOneNodePerPatchBecomesOneCell);
   testMethod(testEveryNodeReadsTheSubcellThatContainsIt);
 }
 
@@ -143,6 +144,48 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOneP
   validate(content.find("Name=\"pair\"") != std::string::npos);
   validate(content.find("Name=\"CurveIndex\"") != std::string::npos);
   validate(content.find("Name=\"LimiterStatus\"") != std::string::npos);
+  deleteOutputDirectory(outputDirectory);
+}
+
+void
+exahype2::plotter::tests::PatchPlotterTest::testOneNodePerPatchBecomesOneCell() {
+  const int rank = tarch::mpi::Rank::getInstance().getRank();
+  peano4::tests::buildRegularGrid(Depth);
+  const auto&                     cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto                      cells            = cellConnectivity.getCells();
+  const auto                      values           = getFilledPool(cellConnectivity, ValuesPerVolume, 1.0);
+  constexpr std::array<double, 1> Nodes{0.5};
+  const std::string               outputDirectory =
+    (tarch::tests::getWritableTestDirectory() / "PatchPlotterSingleNodeTest").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "patch/");
+  exahype2::plotter::PatchPlotter plotter("PatchPlotterSingleNodeTest", {{"scalar", 1}, {"pair", 2}});
+  plotter.plotNodes<1, ValuesPerVolume>(
+    cellConnectivity,
+    cells,
+    values,
+    Nodes.data(),
+    0.5,
+    tarch::plotter::Format::VTU,
+    outputDirectory
+  );
+
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch"
+    / ("PatchPlotterSingleNodeTest-0_500000-rank-" + std::to_string(rank) + ".vtu");
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  const std::string content = getFileContent(vtuPath);
+  validateWithParams1(
+    content.find("NumberOfCells=\"" + std::to_string(cells.size) + "\"") != std::string::npos,
+    vtuPath.string()
+  );
+  validateWithParams1(
+    content.find("NumberOfPoints=\"" + std::to_string(cells.size * peano4::VerticesPerCell) + "\"")
+      != std::string::npos,
+    vtuPath.string()
+  );
+  validate(content.find("<PointData") != std::string::npos);
+  validate(content.find("Name=\"pair\"") != std::string::npos);
+  validate(content.find("Name=\"RefinementLevel\"") != std::string::npos);
+  validate(content.find("Name=\"CurveIndex\"") != std::string::npos);
   deleteOutputDirectory(outputDirectory);
 }
 

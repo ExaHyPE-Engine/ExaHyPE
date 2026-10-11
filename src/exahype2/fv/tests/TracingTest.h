@@ -22,6 +22,7 @@ public:
 private:
   void testPiecewiseConstantReadsTheVolumeThatContainsThePosition();
   void testPiecewiseLinearReproducesALinearField();
+  void testInterpolationOnOneVolumePatches();
   void testInterpolationOnRectangularPatches();
   void testClampIntoPatchProjectsOntoTheVolumeCentres();
   void testTracingCarriesAParticleWithTheFluid();

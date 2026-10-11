@@ -124,10 +124,38 @@ void
 exahype2::fv::tests::TracingTest::run() {
   testMethod(testPiecewiseConstantReadsTheVolumeThatContainsThePosition);
   testMethod(testPiecewiseLinearReproducesALinearField);
+  testMethod(testInterpolationOnOneVolumePatches);
   testMethod(testInterpolationOnRectangularPatches);
   testMethod(testClampIntoPatchProjectsOntoTheVolumeCentres);
   testMethod(testTracingCarriesAParticleWithTheFluid);
   testMethod(testStaticSamplingPreservesParticleData);
+}
+
+void
+exahype2::fv::tests::TracingTest::testInterpolationOnOneVolumePatches() {
+  const tarch::la::Vector<DIMENSIONS, double> centre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> width(1.0);
+  const float                                 values[2]{3.0F, -2.0F};
+  for (const auto scheme :
+       {exahype2::particles::InterpolationScheme::None,
+        exahype2::particles::InterpolationScheme::PiecewiseConstant,
+        exahype2::particles::InterpolationScheme::PiecewiseLinear}) {
+    for (const double coordinate : {-0.5, 0.0, 0.5, 1.0, 1.5}) {
+      double                                      particleValues[DIMENSIONS + 2]{};
+      exahype2::particles::Particle               particle{particleValues, 2};
+      const tarch::la::Vector<DIMENSIONS, double> position(coordinate);
+      particle.setX(position);
+      particle.setData(0, 42.0);
+      particle.setData(1, 43.0);
+      exahype2::fv::interpolateFields<1, 2, float, 1, 0>(scheme, centre, width, values, position, particle);
+      const bool samples = scheme != exahype2::particles::InterpolationScheme::None;
+      validateEquals(particle.getData(0), samples ? -2.0 : 42.0);
+      validateEquals(particle.getData(1), samples ? 3.0 : 43.0);
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        validateEquals(particle.getX(axis), coordinate);
+      }
+    }
+  }
 }
 
 void

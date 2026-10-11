@@ -41,6 +41,7 @@ private:
   void testJudgeCandidateFailsADivergedPredictor();
   void testJudgeCandidateRejectsACandidateOutsideTheReferenceExtrema();
   void testSpreadStatusLiftsByTheNeighbours();
+  void testSpreadStatusesReadsThePreviousRing();
   void testClearFacesWritesRegularAndZerosTheSubcellHalo();
   void testAFixedRuleReportsNoWaveSpeeds();
   void testEveryCellOfADeviceRangeJudgesLikeTheHost();

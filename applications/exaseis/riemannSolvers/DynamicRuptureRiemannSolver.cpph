@@ -38,21 +38,22 @@ applications::exahype2::exaseis::getBoxcar(const double coordinate, const Value 
 }
 
 /**
- * Returns the frictional strength of the fault at x under normalStress after slip. The friction
- * coefficient drops linearly with the slip and with the time after the forced rupture. Outside the
- * cohesion box, a large cohesion locks the fault.
+ * Returns the frictional strength of the fault at x under normalStress after slip. Q is the state
+ * of the fault node at x. The friction coefficient drops linearly with the slip and with the time
+ * after the forced rupture. Outside the cohesion box, a large cohesion locks the fault.
  */
-template <typename Value>
+template <typename Shortcuts, typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD Value
 applications::exahype2::exaseis::getFrictionalStrength(
   const Value         normalStress,
   const Value         slip,
+  const Value* const  Q,
   const double* const x,
   const double        t
 ) {
-  Value       cohesion             = getCohesion<Value>(x);
-  const Value forcedRuptureTime    = getForcedRuptureTime<Value>(x);
-  const Value criticalSlipDistance = getCriticalSlipDistance<Value>(x);
+  Value       cohesion             = getCohesion<Shortcuts, Value>(Q, x);
+  const Value forcedRuptureTime    = getForcedRuptureTime<Shortcuts, Value>(Q, x);
+  const Value criticalSlipDistance = getCriticalSlipDistance<Shortcuts, Value>(Q, x);
   const Value boxcarY              = getBoxcar<Value>(x[1] - CohesionBoxCentreY, CohesionBoxHalfWidthY);
   const Value boxcarZ              = getBoxcar<Value>(x[2] - CohesionBoxCentreZ, CohesionBoxHalfWidthZ);
   cohesion += static_cast<Value>(1e10) * (1 - boxcarY * boxcarZ);
@@ -126,7 +127,8 @@ applications::exahype2::exaseis::solveFaultInterface(
     * (rightCharacteristic[0] / right.pressureImpedance - leftCharacteristic[0] / left.pressureImpedance);
 
   Value initialStress[6];
-  writeInitialStress<Value>(
+  writeInitialStress<Shortcuts, Value>(
+    leftData,
     x,
     initialStress[0],
     initialStress[1],
@@ -142,7 +144,7 @@ applications::exahype2::exaseis::solveFaultInterface(
   };
   Value initialTraction[3];
   rotateIntoLocalBasis(right, initialPhysicalTraction, initialTraction);
-  initialTraction[2] = initialTraction[2] + getAdditionalShearStress<Value>(x);
+  initialTraction[2] = initialTraction[2] + getAdditionalShearStress<Shortcuts, Value>(leftData, x);
 
   leftInterface.velocity[0]  = (rightCharacteristic[0] - tractionFromCharacteristics[0]) / right.pressureImpedance;
   leftInterface.traction[0]  = tractionFromCharacteristics[0];
@@ -154,7 +156,7 @@ applications::exahype2::exaseis::solveFaultInterface(
     + std::pow(initialTraction[1] + tractionFromCharacteristics[1], 2)
   );
   const Value normalStress       = std::max<Value>(0.0, -(initialTraction[0] + tractionFromCharacteristics[0]));
-  const Value frictionalStrength = getFrictionalStrength<Value>(normalStress, slip, x, t);
+  const Value frictionalStrength = getFrictionalStrength<Shortcuts, Value>(normalStress, slip, leftData, x, t);
 
   Value slipRate[3]{};
   if (lockingStress >= frictionalStrength) {

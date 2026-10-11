@@ -199,16 +199,14 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidate(
 }
 
 /**
- * Raises status by the statuses of the face neighbours. Writes the raised status into the own half
- * of every face. A neighbour of a troubled cell turns Limited. It stays on the subcell scheme in the
- * next step. A neighbour of a limited cell turns Halo. A Halo cell writes its subgrid onto its faces.
+ * A neighbour of a troubled cell turns Limited. It stays on the subcell scheme in the next step.
+ * A neighbour of a limited cell turns Halo.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::spreadStatus(
   int* NOALIAS const status,
-  const int* const   neighbourStatusHalves[peano4::FacesPerCell],
-  int* const         ownStatusHalves[peano4::FacesPerCell]
+  const int* const   neighbourStatusHalves[peano4::FacesPerCell]
 ) {
   constexpr int StatusIndex          = static_cast<int>(exahype2::dg::limiting::StatusEntry::Status);
   auto          merged               = static_cast<exahype2::dg::limiting::LimiterStatus>(status[StatusIndex]);
@@ -221,9 +219,6 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::spreadStatus(
   status[StatusIndex] = static_cast<int>(merged);
   if (hasTroubledNeighbour) {
     status[static_cast<int>(exahype2::dg::limiting::StatusEntry::WasTroubled)] = 1;
-  }
-  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    *ownStatusHalves[faceNumber] = static_cast<int>(merged);
   }
 }
 
@@ -919,16 +914,27 @@ exahype2::dg::limiting::JudgeCandidates<Derived, StoragePrecision, ComputePrecis
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::SpreadStatuses<Derived, ComputePrecision>::operator()(const int entry) const {
+  assertion(entry >= 0 and entry < cells.size, entry, cells.size);
   const int  slot = cells[entry];
   const int* neighbourStatusHalves[peano4::FacesPerCell];
-  int*       ownStatusHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    int* const face                   = faceStatuses.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
-    const int  ownHalf                = exahype2::dg::getOwnHalf(faceNumber);
+    const int* const face             = faceStatuses.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
+    const int        ownHalf          = exahype2::dg::getOwnHalf(faceNumber);
     neighbourStatusHalves[faceNumber] = face + (1 - ownHalf);
-    ownStatusHalves[faceNumber]       = face + ownHalf;
   }
-  Kernel::spreadStatus(statuses.getChunk(slot), neighbourStatusHalves, ownStatusHalves);
+  Kernel::spreadStatus(statuses.getChunk(slot), neighbourStatusHalves);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::WriteStatusesOntoFaces::operator()(const int entry) const {
+  const auto cells = cellConnectivity.getCells();
+  assertion(entry >= 0 and entry < cells.size, entry, cells.size);
+  const int slot   = cells[entry];
+  const int status = statuses.getChunk(slot)[static_cast<int>(exahype2::dg::limiting::StatusEntry::Status)];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    int* const face                            = faceStatuses.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
+    face[exahype2::dg::getOwnHalf(faceNumber)] = status;
+  }
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::limiting::SubcellSchemeCountsReduction::ValueType

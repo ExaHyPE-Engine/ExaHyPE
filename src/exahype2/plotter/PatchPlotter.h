@@ -37,7 +37,7 @@ struct exahype2::plotter::DataField final {
 /**
  * Writes the patches of the grid cells of a rank into the snapshots of one plot series. The function
  * plotVolumes() writes one plot cell per finite volume and every volume corner once. The function
- * plotNodes() writes one point per node of every patch.
+ * plotNodes() writes nodal values at the plot points of every patch.
  */
 class exahype2::plotter::PatchPlotter final {
 public:

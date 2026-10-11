@@ -102,14 +102,13 @@ theSolver.set_pde_terms(
 )
 
 theSolver.add_definitions(CurvilinearElastic.abstractUserDefinitions())
-theSolver.add_declarations(
-    CurvilinearElastic.abstractDeclarations() + PMLElastic.abstractDeclarations()
-)
+theSolver.add_declarations(CurvilinearElastic.abstractDeclarations())
 theSolver.on_start_grid_initialisation(
     CurvilinearElastic.init_grid_step_implementation(my_scenario.domain_perturbations())
 )
 theSolver.add_includes(*PMLElastic.userIncludes())
 project.add_constant("PmlTop", 1, "int")
+PMLElastic.add_constants(project)
 
 project.add_solver(theSolver)
 project.output.makefile.add_include_directory("../../..")

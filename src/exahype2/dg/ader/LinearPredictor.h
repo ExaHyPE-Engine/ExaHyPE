@@ -105,10 +105,9 @@ private:
     double                          position
   );
 
-  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluatePointSources(
     ComputePrecision* NOALIAS                              pointSourceValues,
-    const StoragePrecision* NOALIAS                        cellState,
+    const ComputePrecision* NOALIAS                        state,
     const int* NOALIAS                                     pointSourceIndices,
     int                                                    numberOfPointSources,
     const double* NOALIAS                                  pointSourceLocations,

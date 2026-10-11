@@ -5,8 +5,9 @@
 #include "tarch/accelerator/CompileTarget.h"
 
 namespace applications::exahype2::exaseis {
-  template <typename Value>
+  template <typename Shortcuts, typename Value>
   INLINE_METHOD GPU_CALLABLE_METHOD void writeInitialStress(
+    const Value*  Q,
     const double* x,
     Value&        sxx,
     Value&        syy,
@@ -16,17 +17,17 @@ namespace applications::exahype2::exaseis {
     Value&        syz
   );
 
-  template <typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value getAdditionalShearStress(const double* x);
+  template <typename Shortcuts, typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value getAdditionalShearStress(const Value* Q, const double* x);
 
-  template <typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value getCohesion(const double* x);
+  template <typename Shortcuts, typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value getCohesion(const Value* Q, const double* x);
 
-  template <typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value getForcedRuptureTime(const double* x);
+  template <typename Shortcuts, typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value getForcedRuptureTime(const Value* Q, const double* x);
 
-  template <typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value getCriticalSlipDistance(const double* x);
+  template <typename Shortcuts, typename Value>
+  INLINE_METHOD GPU_CALLABLE_METHOD Value getCriticalSlipDistance(const Value* Q, const double* x);
 
   TARGET_DECLARE
   constexpr double DynamicFrictionCoefficient = {{mu_d}};

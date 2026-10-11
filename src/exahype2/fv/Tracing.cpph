@@ -50,8 +50,11 @@ exahype2::fv::interpolatePiecewiseLinear(
   const tarch::la::Vector<DIMENSIONS, double>& position,
   const int                                    unknown
 ) {
-  static_assert(PatchSize >= 2);
+  static_assert(PatchSize > 0);
   assertion(unknown >= 0 and unknown < NumberOfData, unknown);
+  if constexpr (PatchSize == 1) {
+    return exahype2::fv::interpolatePiecewiseConstant<PatchSize, NumberOfData>(centre, width, Q, position, unknown);
+  }
   tarch::la::Vector<DIMENSIONS, double> offset;
   tarch::la::Vector<DIMENSIONS, double> volumeSize;
   tarch::la::Vector<DIMENSIONS, int>    lowerVolume;

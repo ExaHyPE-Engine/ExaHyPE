@@ -45,6 +45,8 @@ namespace exahype2::dg::limiting {
   template <typename Derived, typename ComputePrecision>
   struct SpreadStatuses;
 
+  struct WriteStatusesOntoFaces;
+
   struct SubcellSchemeCounts;
 
   struct SubcellSchemeCountsReduction;
@@ -155,8 +157,7 @@ public:
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void spreadStatus(
     int* NOALIAS     status,
-    const int* const neighbourStatusHalves[peano4::FacesPerCell],
-    int* const       ownStatusHalves[peano4::FacesPerCell]
+    const int* const neighbourStatusHalves[peano4::FacesPerCell]
   );
 
 private:
@@ -451,18 +452,31 @@ struct exahype2::dg::limiting::JudgeCandidates final {
 };
 
 /**
- * Raises the status of every listed cell by the statuses of its face neighbours. Writes the raised
- * status onto the faces of the cell.
+ * Raises the status of every listed cell by the statuses of its face neighbours. The faces hold
+ * the statuses of the previous ring.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::limiting::SpreadStatuses final {
   using Kernel     = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::CellConnectivity  cellConnectivity{};
-  tarch::Span<const int>    cells{};
-  typename StatusPool::View statuses{};
-  typename StatusPool::View faceStatuses{};
+  peano4::CellConnectivity       cellConnectivity{};
+  tarch::Span<const int>         cells{};
+  typename StatusPool::View      statuses{};
+  typename StatusPool::ConstView faceStatuses{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+};
+
+/**
+ * Copies cell statuses onto the faces after every cell completes the ring.
+ */
+struct exahype2::dg::limiting::WriteStatusesOntoFaces final {
+  using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
+
+  peano4::CellConnectivity       cellConnectivity{};
+  typename StatusPool::ConstView statuses{};
+  typename StatusPool::View      faceStatuses{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };

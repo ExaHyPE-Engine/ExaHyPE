@@ -90,6 +90,7 @@ theSolver = exahype2.dg.ader.Solver(
         "jacobian": 1,
         "metricDerivative": 9,
         "curveGrid": 3,
+        **my_scenario.auxiliary_variables,
     },
     time_stepping=exahype2.TimeStepping.Adaptive(0.9),
     basis=exahype2.dg.GaussLobatto,
@@ -111,9 +112,7 @@ theSolver.set_pde_terms(
     source=PMLElastic.algebraic_source() + PMLDynamicRuptureElastic.algebraic_source(),
 )
 
-theSolver.add_declarations(
-    CurvilinearElastic.abstractDeclarations() + PMLElastic.abstractDeclarations()
-)
+theSolver.add_declarations(CurvilinearElastic.abstractDeclarations())
 theSolver.add_definitions(CurvilinearElastic.abstractUserDefinitions())
 theSolver.on_start_grid_initialisation(
     DynamicRuptureElastic.init_grid_step_implementation(
@@ -122,6 +121,7 @@ theSolver.on_start_grid_initialisation(
 )
 theSolver.add_includes(*PMLDynamicRuptureElastic.userIncludes())
 project.add_constant("PmlTop", 1, "int")
+PMLElastic.add_constants(project)
 
 project.add_solver(theSolver)
 project.output.makefile.add_include_directory("../../..")

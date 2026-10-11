@@ -50,5 +50,6 @@ private:
   void testThePredictorWritesTheTimeAveragesAndTheFacesAndLeavesTheCellState();
   void testASolverWithoutFluxGetsZeroFaceFluxes();
   void testEveryCellOfADeviceRangeSelectsItsPointSources();
+  template <typename StoragePrecision>
   void testEveryCellOfADeviceRangeMatchesTheHostPredictor();
 };

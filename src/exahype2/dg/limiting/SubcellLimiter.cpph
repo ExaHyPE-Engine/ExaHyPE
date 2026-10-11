@@ -543,11 +543,21 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
             cellConnectivity.onDevice(),
             cells,
             _statuses.getView(),
-            _faceStatuses.getView()
+            std::as_const(_faceStatuses).getView()
           }
         );
       }
     );
+    if (ring + 1 < exahype2::dg::limiting::NumberOfSpreadRings) {
+      tarch::accelerator::parallelFor(
+        tarch::accelerator::Range(cellConnectivity.getCells().size),
+        exahype2::dg::limiting::WriteStatusesOntoFaces{
+          cellConnectivity.onDevice(),
+          std::as_const(_statuses).getView(),
+          _faceStatuses.getView()
+        }
+      );
+    }
   }
 }
 

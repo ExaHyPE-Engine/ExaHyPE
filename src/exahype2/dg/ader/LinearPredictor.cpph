@@ -80,7 +80,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
       if (numberOfPointSources > 0) {
         evaluatePointSources(
           pointSourceValues,
-          cellState,
+          state,
           pointSourceIndices,
           numberOfPointSources,
           pointSourceLocations,
@@ -292,11 +292,10 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateLagrange
  * sample zero lies at the start of the time step, the other samples at the quadrature points.
  */
 template <typename Derived, typename ComputePrecision>
-template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSources(
   ComputePrecision* NOALIAS const                        pointSourceValues,
-  const StoragePrecision* NOALIAS const                  cellState,
+  const ComputePrecision* NOALIAS const                  state,
   const int* NOALIAS const                               pointSourceIndices,
   const int                                              numberOfPointSources,
   const double* NOALIAS const                            pointSourceLocations,
@@ -346,7 +345,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
     );
 
     for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
-      const auto index = peano4::dDelinearised(cellNode, NodesPerAxis);
+      const auto                    index     = peano4::dDelinearised(cellNode, NodesPerAxis);
+      const ComputePrecision* const nodeState = state + cellNode * CellLayout::PaddedNumberOfData;
 
       double nodePosition[DIMENSIONS];
       for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -360,7 +360,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
       for (int entry = 0; entry < numberOfPointSources; entry++) {
         const int pointSource = pointSourceIndices[entry];
         Derived::pointSource(
-          cellState + cellNode * CellLayout::NumberOfData,
+          nodeState,
           nodePosition,
           static_cast<double>(timePosition),
           timeStepSize,
