@@ -9,7 +9,9 @@
 #include "tarch/accelerator/accelerator.h"
 
 namespace tarch {
-  [[noreturn]] void triggerAssertion(const std::string& assertionMessage);
+  // Cannot use [[noreturn]] because icpx then crashes at -O0 for OpenMP task bodies that inline an
+  // assertion, such as the taskloop of tarch::accelerator::parallelForOnHost.
+  /*[[noreturn]]*/ void triggerAssertion(const std::string& assertionMessage);
 } // namespace tarch
 
 #define TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x) #x
