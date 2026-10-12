@@ -724,6 +724,16 @@ class Atmosphere():
                 
         """)
 
+    def physical_admissibility_criterion_true(self):
+        return (""" 
+        
+        const double hlim =
+        DomainOffset[DIMENSIONS-1] + 0.75 * DomainSize[DIMENSIONS-1];
+        if (x[DIMENSIONS-1] > hlim) {
+            return false;   // inadmissible -> recomputed with FV
+        }
+        
+        return true;""" )
 
 
 
@@ -734,11 +744,97 @@ class Atmosphere():
         // Static limiting test: force the top half of the domain onto the FV
         // subgrid, regardless of the solution. x is the cell/volume centre.
         const double domainMidHeight =
-            DomainOffset[DIMENSIONS-1] + 0.7 * DomainSize[DIMENSIONS-1];
+        DomainOffset[DIMENSIONS-1] + 0.7 * DomainSize[DIMENSIONS-1];
         if (x[DIMENSIONS-1] > domainMidHeight) {
             return false;   // inadmissible -> recomputed with FV
         }
+        
+        
+        //return true;
+
+
+
+        [[maybe_unused]] const double z = x[DIMENSIONS-1];
+        const double t = limiterTime;
+        [[maybe_unused]] const double limiterheight = t*55; 
+
+         if (z > limiterheight) return false;
+
+
+
         return true;
+        """)
+
+
+    def modal_smoothness_admissibility(self, order, number_of_data, threshold=0.08,
+                                       amplitude_floor=1e-10, static_fv_from=0.7):
+        """Flags DG cells whose normalized vertical velocity carries grid-scale wiggles.
+
+        Persson-Peraire type indicator, 2D only: along every line of Gauss-Legendre
+        nodes, in x and in z, the coefficient of the highest Legendre mode P_N is
+        computed. share = sqrt(energy in P_N / total energy) of the worse direction.
+        A well-resolved wave has share ~1e-3, the wiggles ahead of the front 0.1-0.3,
+        FV data projected back to DG ~0.05, hence the threshold 0.08.
+
+        amplitude_floor (rms of the observable) keeps cells that hold nothing but a
+        tiny tail from being flagged. It scales with the forcing amplitude F_0. The top static_fv_from fraction of the domain
+        stays on the FV subgrid as before. Subcell and single-state checks only see
+        the static layer, the indicator needs the DG candidate.
+        """
+        import numpy as np
+
+        n = order + 1
+        xi, wq = np.polynomial.legendre.leggauss(n)
+        top_mode_weight = (2 * order + 1) / 2 * wq * np.polynomial.legendre.Legendre.basis(order)(xi)
+        top_mode_norm = 2 / (2 * order + 1)
+
+        def cpp_array(values):
+            return "{" + ", ".join(repr(float(v)) for v in values) + "}"
+
+        return ("""
+        if (x[DIMENSIONS-1] > DomainOffset[DIMENSIONS-1] + """ + str(static_fv_from) + """ * DomainSize[DIMENSIONS-1]) {
+            return false;
+        }
+
+        constexpr int n      = """ + str(n) + """;
+        constexpr int stride = """ + str(number_of_data) + """;
+        if (numberOfStates != n * n) {
+            return true;
+        }
+
+        // Gauss-Legendre weights on [-1,1], and the row that maps nodal values
+        // to the coefficient of P_N
+        constexpr double weight[n]        = """ + cpp_array(wq) + """;
+        constexpr double topModeWeight[n] = """ + cpp_array(top_mode_weight) + """;
+        constexpr double topModeNorm      = """ + repr(top_mode_norm) + """;
+
+        double u[n * n];
+        for (int k = 0; k < n * n; k++) {
+            const double* const q   = Q + k * stride;
+            const double rhoFull    = q[Shortcuts::rho] + q[Shortcuts::backgroundstate + 0];
+            u[k] = std::sqrt(rhoFull / 1.16) * q[Shortcuts::j + 1] / rhoFull;
+        }
+
+        double total = 0.0, topFast = 0.0, topSlow = 0.0;
+        for (int a = 0; a < n; a++) {
+            double coeffFast = 0.0, coeffSlow = 0.0;
+            for (int b = 0; b < n; b++) {
+                coeffFast += topModeWeight[b] * u[a * n + b];
+                coeffSlow += topModeWeight[b] * u[b * n + a];
+                total     += weight[a] * weight[b] * u[a * n + b] * u[a * n + b];
+            }
+            topFast += weight[a] * coeffFast * coeffFast;
+            topSlow += weight[a] * coeffSlow * coeffSlow;
+        }
+
+        // total / 4 is the mean square over the reference cell
+        constexpr double floor = """ + repr(float(amplitude_floor)) + """;
+        if (total / 4.0 < floor * floor) {
+            return true;
+        }
+
+        const double share = std::sqrt(std::fmax(topFast, topSlow) * topModeNorm / total);
+        return share < """ + repr(float(threshold)) + """;
         """)
 
 
