@@ -3,6 +3,7 @@
 
 #include "exahype2/TimeStepping.h"
 #include "exahype2/dg/Kernels.h"
+#include "exahype2/dg/limiting/LimiterStatus.h"
 #include "exahype2/fv/Kernels.h"
 #include "exahype2/terms/PostprocessUpdatedPatch.h"
 #include "tarch/accelerator/ParallelReduce.h"
@@ -21,6 +22,20 @@ exahype2::fv::ader::PredictionStatistics::combine(const ValueType left, const Va
   return ValueType{
     exahype2::MaxEigenvalueReduction::combine(left.maxEigenvalue, right.maxEigenvalue),
     exahype2::dg::ader::PredictionCounts::combine(left.counts, right.counts)
+  };
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::fv::ader::CorrectionStatistics
+exahype2::fv::ader::CorrectionStatistics::identity() {
+  return ValueType{exahype2::MaxEigenvalueReduction::identity(), 0, 0};
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::fv::ader::CorrectionStatistics
+exahype2::fv::ader::CorrectionStatistics::combine(const ValueType left, const ValueType right) {
+  return ValueType{
+    exahype2::MaxEigenvalueReduction::combine(left.maxEigenvalue, right.maxEigenvalue),
+    left.fallbackCells + right.fallbackCells,
+    left.troubledFallbackVolumes + right.troubledFallbackVolumes
   };
 }
 
@@ -64,7 +79,14 @@ exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>:
     const tarch::la::Vector<DIMENSIONS, double> cellCentre = partition.getCellCentre(slot);
     const tarch::la::Vector<DIMENSIONS, double> cellSize   = partition.getCellWidth(slot);
 
-    Scheme::reconstructPatch(patch, haloOfCell, patchScratch, workers);
+    if (previousSolution.segments != nullptr) {
+      StoragePrecision* const previous = previousSolution.getChunk(slot);
+      for (int value = workers.teamThread; value < Scheme::VolumesPerPatch * Scheme::NumberOfData;
+           value += workers.teamThreads) {
+        previous[value] = patch[value];
+      }
+    }
+    Scheme::reconstructPatch(patch, haloOfCell, cellCentre, cellSize, patchScratch, workers);
     for (int first = 0; first < Scheme::VolumesPerPatch; first += workers.groups) {
       workers.hasCell = inGroup and first + workers.group < Scheme::VolumesPerPatch;
       // A thread without a volume keeps the barriers of the team on the first volume.
@@ -132,15 +154,18 @@ exahype2::fv::ader::SolveRiemannProblems<Derived, StoragePrecision, ComputePreci
 
 /**
  * Corrects the patch of one cell in place and reduces the wave speeds of the updated volumes into
- * the accumulator, after the patch postprocessing of Derived where it defines one.
+ * the accumulator, after the patch postprocessing of Derived where it defines one. With a fallback,
+ * the patch judges its volumes after the postprocessing and repeats its step with the fallback
+ * scheme when one of them is troubled.
  */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision>::operator()(
+exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, FallbackDerived>::operator()(
   const int                                             entry,
   [[maybe_unused]] const tarch::accelerator::TeamHandle team,
-  double&                                               accumulator
+  CorrectionStatistics&                                 accumulator
 ) const {
+  using Fallback          = exahype2::fv::ader::Fallback<Derived, std::conditional_t<FallsBack, FallbackDerived, Derived>, ComputePrecision>;
   const int               slot = cells[entry];
   const ComputePrecision* fluxHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
@@ -148,18 +173,250 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision>:
     fluxHalves[faceNumber] = faceFluxes.getChunk(face)
                            + exahype2::dg::getCorrectionHalf(partition, face, faceNumber) * Scheme::FluxValuesPerHalf;
   }
-  StoragePrecision* const                     patch      = solution.getChunk(slot);
-  const tarch::la::Vector<DIMENSIONS, double> cellCentre = partition.getCellCentre(slot);
-  const tarch::la::Vector<DIMENSIONS, double> cellSize   = partition.getCellWidth(slot);
-  const double                                stepStart  = timeStamp;
-  const double                                stepEnd    = timeStamp + timeStepSize;
-  const double                                stepSize   = timeStepSize;
+  StoragePrecision* const                     patch         = solution.getChunk(slot);
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre    = partition.getCellCentre(slot);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize      = partition.getCellWidth(slot);
+  const double                                stepStart     = timeStamp;
+  const double                                stepEnd       = timeStamp + timeStepSize;
+  const double                                stepSize      = timeStepSize;
   [[maybe_unused]] constexpr bool             PostprocessesPatch =
     exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>;
+  [[maybe_unused]] const StoragePrecision*    haloOfCell[peano4::FacesPerCell]{};
+  [[maybe_unused]] const StoragePrecision*    previous      = nullptr;
+  [[maybe_unused]] int                        sharedFaces   = 0;
+  [[maybe_unused]] int                        boundaryFaces = 0;
+  if constexpr (FallsBack) {
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      haloOfCell[faceNumber] = halo.getChunk(partition.getCellFace(slot, faceNumber));
+    }
+    previous      = previousSolution.getChunk(slot);
+    sharedFaces   = getSharedFallbackFaces(slot);
+    boundaryFaces = exahype2::fv::getBoundaryFaceMask(partition, slot);
+  }
+  // Repeats the step of volume with the fallback scheme, with the ADER-WENO flux on the faces
+  // where the patch does not share the fallback flux.
+  [[maybe_unused]] const auto recomputeVolume = [&](const int volume) {
+    if constexpr (FallsBack) {
+      Fallback::recomputeVolume(volume, previous, haloOfCell, cellCentre, cellSize, stepStart, stepSize, boundaryFaces, patch);
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        const bool keepsFlux = (sharedFaces & (1 << faceNumber)) == 0 and (boundaryFaces & (1 << faceNumber)) == 0;
+        if (keepsFlux and Fallback::isOnPatchFace(volume, faceNumber)) {
+          Fallback::swapFaceFlux(
+            volume,
+            faceNumber,
+            false,
+            previous,
+            haloOfCell,
+            fluxHalves[faceNumber],
+            cellCentre,
+            cellSize,
+            stepStart,
+            stepSize,
+            boundaryFaces,
+            patch
+          );
+        }
+      }
+    }
+  };
+  [[maybe_unused]] const auto writeStatus = [&](const bool fallsBack) {
+    if constexpr (FallsBack) {
+      const int status = static_cast<int>(fallsBack ? FallbackStatus::FallsBack : FallbackStatus::Accepted);
+      *statuses.getChunk(slot) = status;
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        faceStatuses.getChunk(partition.getCellFace(slot, faceNumber))[exahype2::dg::getOwnHalf(faceNumber)] = status;
+      }
+    }
+  };
 
   COMPILE_IF_ON_HOST(
     for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
       Scheme::correctVolume(volume, patch, fluxHalves, cellSize, stepSize);
+    } Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
+    if constexpr (FallsBack) {
+      bool fallsBack = false;
+      for (int volume = 0; volume < Scheme::VolumesPerPatch and not fallsBack; volume++) {
+        fallsBack = not Fallback::isAdmissible(volume, patch, previous, haloOfCell, cellCentre, cellSize);
+      }
+      if (fallsBack) {
+        for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+          recomputeVolume(volume);
+        }
+        Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
+        accumulator.fallbackCells++;
+        for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+          if (not Fallback::isAdmissible(volume, patch, previous, haloOfCell, cellCentre, cellSize)) {
+            accumulator.troubledFallbackVolumes++;
+          }
+        }
+      }
+      writeStatus(fallsBack);
+    } for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+      accumulator.maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+        accumulator.maxEigenvalue,
+        Patch::getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, stepEnd, stepSize)
+      );
+    }
+  )
+  COMPILE_IF_ON_DEVICE(
+    const tarch::accelerator::Custom<exahype2::fv::ader::CorrectionStatistics> reducer{accumulator};
+    const int            thread  = tarch::accelerator::getThreadOfTeam(team);
+    const int            threads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+    CorrectionStatistics partial = CorrectionStatistics::identity();
+    for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+      Scheme::correctVolume(volume, patch, fluxHalves, cellSize, stepSize);
+    }
+    const auto postprocess = [&] {
+      if constexpr (PostprocessesPatch) {
+        tarch::accelerator::teamBarrier(team);
+        tarch::accelerator::parallelFor(team, tarch::accelerator::Range(1), [=]([[maybe_unused]] const int single) {
+          Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
+        });
+        tarch::accelerator::teamBarrier(team);
+      }
+    };
+    postprocess();
+    if constexpr (FallsBack) {
+      // Every thread marks in the team scratch whether one of its volumes is troubled.
+      unsigned char* const troubled = tarch::accelerator::getTeamScratch(team);
+      bool                 fails    = false;
+      for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+        fails = fails or not Fallback::isAdmissible(volume, patch, previous, haloOfCell, cellCentre, cellSize);
+      }
+      troubled[thread] = fails ? 1 : 0;
+      tarch::accelerator::teamBarrier(team);
+      bool fallsBack = false;
+      for (int other = 0; other < threads; other++) {
+        fallsBack = fallsBack or troubled[other] != 0;
+      }
+      tarch::accelerator::teamBarrier(team);
+      if (fallsBack) {
+        for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+          recomputeVolume(volume);
+        }
+        postprocess();
+        for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+          if (not Fallback::isAdmissible(volume, patch, previous, haloOfCell, cellCentre, cellSize)) {
+            partial.troubledFallbackVolumes++;
+          }
+        }
+      }
+      if (thread == 0) {
+        partial.fallbackCells = fallsBack ? 1 : 0;
+        writeStatus(fallsBack);
+      }
+    }
+    if constexpr (PostprocessesPatch or FallsBack) {
+      tarch::accelerator::teamBarrier(team);
+    }
+    for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+      partial.maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
+        partial.maxEigenvalue,
+        Patch::getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, stepEnd, stepSize)
+      );
+    }
+    tarch::accelerator::reduceOverTeam(team, partial, reducer);
+  )
+}
+
+/**
+ * Returns the faces of the cell in slot, one bit per face number, on which the cell shares the
+ * fallback flux with the cell on the other side: the faces between two cells of the same level that
+ * both run the scheme.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, FallbackDerived>::getSharedFallbackFaces(
+  const int slot
+) const {
+  int shared = 0;
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    const int face    = partition.getCellFace(slot, faceNumber);
+    bool      sharing = partition.getFaceKind(face) == peano4::FaceKind::Interior;
+    if (sharing and limiterFaceStatuses.segments != nullptr) {
+      const int* const halves = limiterFaceStatuses.getChunk(face);
+      sharing = exahype2::dg::limiting::runsSubcellScheme(static_cast<exahype2::dg::limiting::LimiterStatus>(halves[0]))
+            and exahype2::dg::limiting::runsSubcellScheme(static_cast<exahype2::dg::limiting::LimiterStatus>(halves[1]));
+    }
+    if (sharing) {
+      shared |= 1 << faceNumber;
+    }
+  }
+  return shared;
+}
+
+/**
+ * Fixes the patch of one cell that keeps its corrected step: Every volume on a shared face whose
+ * other side repeats its step takes the fallback flux on that face instead of the ADER-WENO flux.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::ader::FixUpPatches<Derived, StoragePrecision, ComputePrecision, FallbackDerived>::operator()(
+  const int                                             entry,
+  [[maybe_unused]] const tarch::accelerator::TeamHandle team,
+  double&                                               accumulator
+) const {
+  using Fallback = exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>;
+  using Scheme   = typename Correct::Scheme;
+  const auto& partition = correct.partition;
+  const int   slot      = correct.cells[entry];
+  if (*correct.statuses.getChunk(slot) != static_cast<int>(FallbackStatus::Accepted)) {
+    return;
+  }
+  const int sharedFaces = correct.getSharedFallbackFaces(slot);
+  int       fixedFaces  = 0;
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    const int face = partition.getCellFace(slot, faceNumber);
+    const int otherStatus =
+      correct.faceStatuses.getChunk(face)[1 - exahype2::dg::getOwnHalf(faceNumber)];
+    if ((sharedFaces & (1 << faceNumber)) != 0 and otherStatus == static_cast<int>(FallbackStatus::FallsBack)) {
+      fixedFaces |= 1 << faceNumber;
+    }
+  }
+  if (fixedFaces == 0) {
+    return;
+  }
+
+  const ComputePrecision*       fluxHalves[peano4::FacesPerCell];
+  const StoragePrecision*       haloOfCell[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    const int face         = partition.getCellFace(slot, faceNumber);
+    fluxHalves[faceNumber] = correct.faceFluxes.getChunk(face)
+                           + exahype2::dg::getCorrectionHalf(partition, face, faceNumber) * Scheme::FluxValuesPerHalf;
+    haloOfCell[faceNumber] = correct.halo.getChunk(face);
+  }
+  StoragePrecision* const                     patch         = correct.solution.getChunk(slot);
+  const StoragePrecision* const               previous      = correct.previousSolution.getChunk(slot);
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre    = partition.getCellCentre(slot);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize      = partition.getCellWidth(slot);
+  const int                                   boundaryFaces = exahype2::fv::getBoundaryFaceMask(partition, slot);
+  const double                                stepStart     = correct.timeStamp;
+  const double                                stepSize      = correct.timeStepSize;
+  const double                                stepEnd       = stepStart + stepSize;
+  const auto                                  fixVolume     = [&](const int volume) {
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      if ((fixedFaces & (1 << faceNumber)) != 0 and Fallback::isOnPatchFace(volume, faceNumber)) {
+        Fallback::swapFaceFlux(
+          volume,
+          faceNumber,
+          true,
+          previous,
+          haloOfCell,
+          fluxHalves[faceNumber],
+          cellCentre,
+          cellSize,
+          stepStart,
+          stepSize,
+          boundaryFaces,
+          patch
+        );
+      }
+    }
+  };
+
+  COMPILE_IF_ON_HOST(
+    for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+      fixVolume(volume);
     } Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
     for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
       accumulator = exahype2::MaxEigenvalueReduction::combine(
@@ -172,35 +429,24 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision>:
     const tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction> reducer{accumulator};
     const int thread  = tarch::accelerator::getThreadOfTeam(team);
     const int threads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
-    double    partial = 0.0;
     for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
-      Scheme::correctVolume(volume, patch, fluxHalves, cellSize, stepSize);
-      if constexpr (not PostprocessesPatch) {
-        partial = exahype2::MaxEigenvalueReduction::combine(
-          partial,
-          Patch::getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, stepEnd, stepSize)
-        );
-      }
+      fixVolume(volume);
     }
-    tarch::accelerator::reduceOverTeam(team, partial, reducer);
-    if constexpr (PostprocessesPatch) {
+    if constexpr (exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>) {
       tarch::accelerator::teamBarrier(team);
       tarch::accelerator::parallelFor(team, tarch::accelerator::Range(1), [=]([[maybe_unused]] const int single) {
         Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
       });
-      tarch::accelerator::teamBarrier(team);
-      tarch::accelerator::parallelReduce(
-        team,
-        tarch::accelerator::Range(Scheme::VolumesPerPatch),
-        [=](const int volume, double& eigenvalue) {
-          eigenvalue = exahype2::MaxEigenvalueReduction::combine(
-            eigenvalue,
-            Patch::getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, stepEnd, stepSize)
-          );
-        },
-        reducer
+    }
+    tarch::accelerator::teamBarrier(team);
+    double partial = 0.0;
+    for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+      partial = exahype2::MaxEigenvalueReduction::combine(
+        partial,
+        Patch::getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, stepEnd, stepSize)
       );
     }
+    tarch::accelerator::reduceOverTeam(team, partial, reducer);
   )
 }
 

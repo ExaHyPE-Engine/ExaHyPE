@@ -4,6 +4,7 @@
 
 #include "exahype2/dg/ader/TeamWorkers.h"
 #include "exahype2/fv/Patch.h"
+#include "exahype2/fv/limiter/PolynomialScaling.h"
 #include "exahype2/fv/reconstruction/weno/NonlinearWeights.h"
 #include "exahype2/fv/reconstruction/weno/Tables.h"
 #include "peano4/Constants.h"
@@ -13,7 +14,10 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::fv::reconstruction {
-  template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+  template <
+    int                                                    Order,
+    exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
+    template <typename> class Limiter = exahype2::fv::limiter::Unlimited>
   struct WENO;
 } // namespace exahype2::fv::reconstruction
 
@@ -43,11 +47,18 @@ TARGET_DECLARE
  * reconstructPatch() yields the polynomials of all volumes of a patch at once with the results of
  * reconstructPolynomial(). Every line of a sweep then serves every volume of the patch that reads
  * it, and the caller provides @c PatchScratchSize entries.
+ *
+ * @c Limiter is the policy of exahype2::fv::limiter that the time stepping applies to every
+ * polynomial before it evolves it.
  */
-template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+template <
+  int Order,
+  exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
+  template <typename> class Limiter>
 struct exahype2::fv::reconstruction::WENO final {
-  using Tables = exahype2::fv::reconstruction::weno::ReconstructionTables<Order>;
-  using Basis  = typename Tables::Basis;
+  using Tables            = exahype2::fv::reconstruction::weno::ReconstructionTables<Order>;
+  using Basis             = typename Tables::Basis;
+  using PolynomialLimiter = Limiter<Basis>;
 
   static constexpr int HaloSize = Order + 1;
 

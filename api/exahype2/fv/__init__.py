@@ -2,9 +2,11 @@
 # use, please see the copyright notice at www.peano-framework.org
 import importlib
 
+from .scheme import Fallback
 from .scheme import Godunov
 from .scheme import Limiter
 from .scheme import MusclHancock
+from .scheme import PolynomialLimiter
 from .scheme import Weighting
 from .scheme import Weno
 
@@ -14,9 +16,11 @@ _LAZY_MODULES = {
 }
 
 __all__ = list(_LAZY_MODULES.keys()) + [
+    "Fallback",
     "Godunov",
     "Limiter",
     "MusclHancock",
+    "PolynomialLimiter",
     "Weighting",
     "Weno",
 ]

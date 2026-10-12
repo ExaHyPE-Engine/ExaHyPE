@@ -106,7 +106,9 @@ solver_arguments = dict(
     time_stepping=exahype2.TimeStepping.Adaptive(args.cfl),
 )
 if args.solver == "ader-weno":
-    fv_solver = exahype2.fv.ader.Solver(order=args.weno_order, **solver_arguments)
+    fv_solver = exahype2.fv.ader.Solver(
+        scheme=exahype2.fv.Weno(order=args.weno_order), **solver_arguments
+    )
 else:
     fv_solver = exahype2.fv.singlestep.Solver(
         scheme={

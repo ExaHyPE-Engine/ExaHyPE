@@ -2,7 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include <chrono>
+#include <cstdint>
+#include <type_traits>
+
 #include "exahype2/fv/Solver.h"
+#include "exahype2/fv/ader/Fallback.h"
 #include "exahype2/fv/ader/PatchPredictor.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "peano4/HaloExchange.h"
@@ -25,14 +30,28 @@ namespace exahype2::fv::ader {
  * faces. Level jumps interpolate the predicted halves of the coarse faces and restrict the fluxes of
  * the fine faces, as ADER-DG does per volume face. A diverged prediction terminates the run, and the
  * global master warns about the volumes whose Picard iteration stopped at its sweep limit.
+ *
+ * With a fallback reconstruction in Derived, every patch keeps its previous solution, judges its
+ * corrected volumes with exahype2::fv::ader::Fallback and repeats a troubled step with the
+ * fallback scheme (see CorrectPatches). The ranks exchange the statuses on the faces while the
+ * local patches beside a repeating patch take its fallback flux (see FixUpPatches), and then the
+ * remote ones do. A diverged prediction then leaves NaN in its patch, which repeats its step.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::fv::ader::Solver : public exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision> {
 public:
   using Base      = exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>;
   using Scheme    = exahype2::fv::ader::Scheme<Derived, ComputePrecision>;
-  using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
-  using FluxPool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using StatePool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using FluxPool   = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
+
+  // The defaulted parameter defers the lookup in Derived to the use, where Derived is complete.
+  template <typename Generated = Derived>
+  using FallbackSolver = std::conditional_t<
+    exahype2::fv::ader::fallsBack<Generated>(),
+    exahype2::fv::ader::FallbackSolver<Generated, typename exahype2::fv::ader::FallbackReconstructionOf<Generated>::Type>,
+    void>;
 
   INLINE_METHOD Solver(
     double                                    timeStepFactor,
@@ -69,6 +88,16 @@ private:
     peano4::Adjacency        adjacency,
     double                   timeStepSize
   );
+  [[nodiscard]] INLINE_METHOD double fixUpPatches(
+    const peano4::Partition& partition,
+    peano4::Adjacency        adjacency,
+    double                   timeStepSize
+  );
+  [[nodiscard]] INLINE_METHOD auto getCorrection(
+    const peano4::Partition& partition,
+    peano4::Adjacency        adjacency,
+    double                   timeStepSize
+  );
 
   StatePool _faceStates{Scheme::StateValuesPerFace};
   FluxPool  _faceFluxes{Scheme::FluxValuesPerFace};
@@ -85,6 +114,30 @@ private:
    */
   int _unconvergedPredictions{0};
   int _unconvergedPredictionsSlot{0};
+
+  typename Base::Patches    _previousSolution{Base::Patch::ValuesPerPatch};
+  StatusPool                _statuses{1};
+  StatusPool                _faceStatuses{2};
+  peano4::HaloExchange<int> _statusExchange{_faceStatuses};
+
+  /**
+   * The patches of this rank that repeated their step with the fallback scheme since the last
+   * reduction, the volumes the fallback left troubled and the volumes whose prediction diverged.
+   */
+  int _fallbackCells{0};
+  int _troubledFallbackVolumes{0};
+  int _divergedPredictions{0};
+  int _fallbackCellsSlot{0};
+  int _troubledFallbackVolumesSlot{0};
+  int _divergedPredictionsSlot{0};
+
+  /**
+   * The global sums of the reductions since the last report of the global master.
+   */
+  std::uint64_t                         _reportedFallbackCells{0};
+  std::uint64_t                         _reportedTroubledFallbackVolumes{0};
+  std::uint64_t                         _reportedDivergedPredictions{0};
+  std::chrono::steady_clock::time_point _lastFallbackReport{};
 };
 
 #include "exahype2/fv/ader/Solver.cpph"

@@ -6,10 +6,13 @@ TARGET_DECLARE
  * A volume is available if it lies in the patch or in the halo of one face, which excludes the
  * volumes beyond the edges and corners of the patch.
  */
-template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+template <
+  int Order,
+  exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
+  template <typename> class Limiter>
 template <int NumberOfVolumesPerAxis>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
-exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeIsAvailable(
+exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::volumeIsAvailable(
   const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
 ) {
   int axesOutsideOfPatch = 0;
@@ -24,10 +27,13 @@ exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeIsAvailable(
   return axesOutsideOfPatch <= 1;
 }
 
-template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+template <
+  int Order,
+  exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
+  template <typename> class Limiter>
 template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*
-exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeState(
+exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::volumeState(
   const StoragePrecision* NOALIAS const     inputPatch,
   const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
@@ -60,10 +66,13 @@ exahype2::fv::reconstruction::WENO<Order, Weighting>::volumeState(
  * centres on the reconstructed volume. The values of one line position are consecutive, and
  * only stencils whose positions are all available enter the combination.
  */
-template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+template <
+  int Order,
+  exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
+  template <typename> class Limiter>
 template <int NumberOfData, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructAlongLine(
+exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructAlongLine(
   const Tables&                         tables,
   const ComputePrecision* NOALIAS const lineValues,
   const bool* NOALIAS const             lineIsAvailable,
@@ -139,10 +148,13 @@ exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructAlongLine(
  * axes hold nodes and whose remaining axes hold the positions of the window, and writes the same with one more axis
  * swept. The two buffers take the @c ScratchSize entries of @p scratch.
  */
-template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+template <
+  int Order,
+  exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
+  template <typename> class Limiter>
 template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructPolynomial(
+exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPolynomial(
   const StoragePrecision* NOALIAS const     inputPatch,
   const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
@@ -279,10 +291,13 @@ exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructPolynomial(
  * work item is the target volume of a line and EntriesPerItem consecutive entries, and the
  * threads of the team of workers divide the work items among themselves.
  */
-template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+template <
+  int Order,
+  exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
+  template <typename> class Limiter>
 template <int NumberOfVolumesPerAxis, int NumberOfData, int EntriesPerItem, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::fv::reconstruction::WENO<Order, Weighting>::sweepPatch(
+exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::sweepPatch(
   const int                              sweptAxis,
   const ComputePrecision* NOALIAS const  input,
   ComputePrecision* NOALIAS const        output,
@@ -392,10 +407,13 @@ exahype2::fv::reconstruction::WENO<Order, Weighting>::sweepPatch(
  * threads of the team of workers divide every phase among themselves, and a barrier of the team
  * separates the phases. Every thread of the team calls this.
  */
-template <int Order, exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting>
+template <
+  int Order,
+  exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
+  template <typename> class Limiter>
 template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::fv::reconstruction::WENO<Order, Weighting>::reconstructPatch(
+exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPatch(
   const StoragePrecision* NOALIAS const  inputPatch,
   const StoragePrecision* NOALIAS const  faceInputPatches[peano4::FacesPerCell],
   ComputePrecision* NOALIAS const        nodalStates,

@@ -101,6 +101,15 @@ class SubcellLimiting:
             "diffusive_source"
         ):
             raise ValueError("The WENO subcell limiter does not support diffusive source terms.")
+        if (
+            isinstance(self._subcell_limiter_scheme, Weno)
+            and self._subcell_limiter_scheme.scales_polynomials
+            and not self.pde_terms.is_set("physical_admissibility")
+        ):
+            raise ValueError(
+                "The admissibility scaling of the WENO subcell limiter needs the "
+                "physical_admissibility PDE term."
+            )
 
         if getattr(self, "_initialise_patches", False):
             raise ValueError(

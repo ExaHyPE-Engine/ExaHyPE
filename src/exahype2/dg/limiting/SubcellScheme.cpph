@@ -410,6 +410,21 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
 template <typename Derived, typename ComputePrecision>
 template <typename Reconstruct>
 template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::isPhysicallyAdmissible(
+  const Precision* const                       Q,
+  const int                                    numberOfStates,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h
+)
+  requires exahype2::terms::HasPhysicalAdmissibility<Derived, Precision>
+{
+  return Derived::isPhysicallyAdmissible(Q, numberOfStates, x, h);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::boundaryConditions(
   const Precision* const                       inside,

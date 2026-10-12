@@ -25,6 +25,7 @@ set(SOURCES
   fv/tests/KernelsTest.cpp
   fv/tests/SolverTest.cpp
   fv/tests/TracingTest.cpp
+  fv/limiter/tests/PolynomialScalingTest.cpp
   fv/limiter/tests/SlopeLimiterTest.cpp
   fv/reconstruction/weno/tests/NonlinearWeightsTest.cpp
 

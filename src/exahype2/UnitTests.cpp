@@ -16,6 +16,7 @@
 #include "exahype2/dg/tests/BasisTest.h"
 #include "exahype2/dg/tests/KernelsTest.h"
 #include "exahype2/dg/tests/TracingTest.h"
+#include "exahype2/fv/limiter/tests/PolynomialScalingTest.h"
 #include "exahype2/fv/limiter/tests/SlopeLimiterTest.h"
 #include "exahype2/fv/reconstruction/weno/tests/NonlinearWeightsTest.h"
 #include "exahype2/fv/ader/tests/SolverTest.h"
@@ -66,6 +67,7 @@ exahype2::getUnitTests() {
   result->addTestCase(new exahype2::fv::tests::KernelsTest());
   result->addTestCase(new exahype2::fv::tests::SolverTest());
   result->addTestCase(new exahype2::fv::tests::TracingTest());
+  result->addTestCase(new exahype2::fv::limiter::tests::PolynomialScalingTest());
   result->addTestCase(new exahype2::fv::limiter::tests::SlopeLimiterTest());
   result->addTestCase(new exahype2::fv::reconstruction::weno::tests::NonlinearWeightsTest());
 

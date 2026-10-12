@@ -13,6 +13,7 @@
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/MaxEigenvalue.h"
 #include "exahype2/terms/NonconservativeProduct.h"
+#include "exahype2/terms/PhysicalAdmissibility.h"
 #include "exahype2/terms/SourceTerm.h"
 #include "exahype2/terms/SubcellRiemannSolver.h"
 #include "peano4/Constants.h"
@@ -274,6 +275,15 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     Precision*                                   FR
   )
     requires exahype2::terms::HasSubcellRiemannSolver<Derived, Precision>;
+
+  template <typename Precision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissible(
+    const Precision*                             Q,
+    int                                          numberOfStates,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h
+  )
+    requires exahype2::terms::HasPhysicalAdmissibility<Derived, Precision>;
 };
 
 /**

@@ -136,10 +136,12 @@ public:
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void reconstructPatch(
-    const StoragePrecision* NOALIAS        patch,
-    const StoragePrecision* NOALIAS const  halo[peano4::FacesPerCell],
-    ComputePrecision* NOALIAS              patchScratch,
-    const exahype2::dg::ader::TeamWorkers& workers
+    const StoragePrecision* NOALIAS              patch,
+    const StoragePrecision* NOALIAS const        halo[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    ComputePrecision* NOALIAS                    patchScratch,
+    const exahype2::dg::ader::TeamWorkers&       workers
   );
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int predictVolume(
@@ -186,6 +188,13 @@ public:
     const ComputePrecision* const                fluxHalves[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStepSize
+  );
+
+  static INLINE_METHOD GPU_CALLABLE_METHOD void getAppliedFaceFlux(
+    int                           volume,
+    const ComputePrecision* const fluxHalf,
+    int                           face,
+    double* const                 flux
   );
 
   template <int Values>

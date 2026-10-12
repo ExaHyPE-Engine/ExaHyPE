@@ -2,7 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include <type_traits>
+
 #include "exahype2/dg/limiting/SubcellScheme.h"
+#include "exahype2/fv/ader/Fallback.h"
 #include "exahype2/fv/ader/PatchPredictor.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "peano4/HaloExchange.h"
@@ -29,13 +32,20 @@ namespace exahype2::fv::ader {
  * so the subgrid and the Galerkin cell beside it exchange the same flux.
  *
  * The predicted face halves cover every face of the partition.
+ *
+ * With a fallback reconstruction in Derived, every recomputing cell judges its corrected subgrid
+ * with exahype2::fv::ader::Fallback and repeats a troubled step with the fallback scheme. It shares
+ * the fallback flux on the faces to recomputing cells of the same level, which then take it, and
+ * keeps the applied or the ADER-WENO flux on every other face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::fv::ader::SubcellStep final {
 public:
   using Kernel    = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
   using Region    = exahype2::dg::limiting::SubcellRegion<StoragePrecision, ComputePrecision>;
-  using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using StatePool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using CellPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+  using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
   // The defaulted parameter defers the lookup in Derived to the use, where Derived is complete.
   template <typename Generated = Derived>
@@ -43,6 +53,12 @@ public:
     typename Generated::Reconstruction>;
   template <typename Generated = Derived>
   using Scheme = exahype2::fv::ader::Scheme<Subgrid<Generated>, ComputePrecision>;
+  template <typename Generated = Derived>
+  using FallbackSubgrid = std::conditional_t<
+    exahype2::fv::ader::fallsBack<Generated>(),
+    typename exahype2::dg::limiting::SubcellScheme<Generated, ComputePrecision>::template SubgridSolver<
+      typename exahype2::fv::ader::FallbackReconstructionOf<Generated>::Type>,
+    void>;
 
   INLINE_METHOD void rebuild(const peano4::Partition& partition);
   INLINE_METHOD void release();
@@ -79,6 +95,20 @@ private:
     double                   timeStamp,
     double                   timeStepSize
   );
+  INLINE_METHOD void fixUp(
+    const peano4::Partition& partition,
+    const Region&            region,
+    tarch::Span<const int>   cells,
+    double                   timeStamp,
+    double                   timeStepSize
+  );
+  [[nodiscard]] INLINE_METHOD auto getCorrection(
+    const peano4::Partition& partition,
+    const Region&            region,
+    tarch::Span<const int>   cells,
+    double                   timeStamp,
+    double                   timeStepSize
+  );
 
   StatePool _faceStates{Scheme<>::StateValuesPerFace};
   StatePool _faceFluxes{Scheme<>::FluxValuesPerFace};
@@ -88,6 +118,11 @@ private:
   peano4::HaloExchange<ComputePrecision> _restrictedFluxExchange{_faceFluxes, peano4::FaceKind::Coarse};
 
   exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision> _predictor{};
+
+  CellPool                  _previousSubcells{Kernel::SubcellValuesPerCell};
+  StatusPool                _statuses{1};
+  StatusPool                _faceStatuses{2};
+  peano4::HaloExchange<int> _statusExchange{_faceStatuses};
 };
 
 TARGET_DECLARE

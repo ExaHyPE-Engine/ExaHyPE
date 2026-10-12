@@ -150,19 +150,59 @@ class MusclHancock:
         return "MusclHancock(limiter={})".format(self.limiter)
 
 
-class Weno:
-    """ADER-WENO after Dumbser et al. as the subcell scheme of the DG subcell limiter: A
-    polynomial WENO reconstruction of order ``order`` evolved by the space-time predictor of the
-    ADER-DG solvers, patch by patch. A finite-volume solver with ADER-WENO is
-    :class:`exahype2.fv.ader.Solver`.
+class PolynomialLimiter:
+    """The policy types that limit the polynomial of every volume after the WENO reconstruction,
+    before the space-time predictor evolves it. ``admissibility_scaling`` scales the polynomial
+    towards the volume average until it passes the ``physical_admissibility`` PDE term at the nodes
+    and on the faces of the volume (Zhang and Shu)."""
 
-    ``weighting`` is a policy type of :class:`Weighting`. The scheme reads ``order + 1`` halo
-    volumes and needs at least ``2 * order`` volumes per patch axis.
+    none = "::exahype2::fv::limiter::Unlimited"
+    admissibility_scaling = "::exahype2::fv::limiter::PolynomialScaling"
+
+
+class Fallback:
+    """The a-posteriori fallback of a high-order finite-volume scheme after the MOOD paradigm: A
+    patch whose candidate solution fails the ``physical_admissibility`` PDE term or the discrete
+    maximum principle repeats its time step with ``scheme``. Only the Godunov scheme can be the
+    fallback scheme."""
+
+    def __init__(self, scheme=None):
+        self.scheme = Godunov() if scheme is None else scheme
+        if not isinstance(self.scheme, Godunov):
+            raise TypeError("The fallback scheme is exahype2.fv.Godunov().")
+
+    @property
+    def reconstruction(self):
+        return self.scheme.subcell_scheme().reconstruction
+
+    @property
+    def includes(self):
+        return self.scheme.subcell_scheme().includes
+
+    def __repr__(self):
+        return "Fallback(scheme={!r})".format(self.scheme)
+
+
+class Weno:
+    """ADER-WENO after Dumbser et al.: A polynomial WENO reconstruction of order ``order`` evolved
+    by the space-time predictor of the ADER-DG solvers, patch by patch. The scheme of
+    :class:`exahype2.fv.ader.Solver` and of the DG subcell limiter.
+
+    ``weighting`` is a policy type of :class:`Weighting` and ``reconstruction_limiter`` one of
+    :class:`PolynomialLimiter`. ``fallback`` is a :class:`Fallback`, or ``None`` for a scheme
+    without fallback. The scheme reads ``order + 1`` halo volumes and needs at least
+    ``2 * order`` volumes per patch axis.
     """
 
     SUPPORTED_ORDERS = (2, 3, 4, 5)
 
-    def __init__(self, order=2, weighting=Weighting.jiangshu_r8):
+    def __init__(
+        self,
+        order=2,
+        weighting=Weighting.jiangshu_r8,
+        reconstruction_limiter=PolynomialLimiter.none,
+        fallback=Fallback(),
+    ):
         if isinstance(order, bool) or order not in self.SUPPORTED_ORDERS:
             raise ValueError(
                 "The WENO order is one of {}.".format(self.SUPPORTED_ORDERS)
@@ -171,8 +211,19 @@ class Weno:
             raise ValueError(
                 "The weighting is a policy type name of exahype2.fv.Weighting."
             )
+        if reconstruction_limiter not in (
+            PolynomialLimiter.none,
+            PolynomialLimiter.admissibility_scaling,
+        ):
+            raise ValueError(
+                "The reconstruction limiter is a policy type name of exahype2.fv.PolynomialLimiter."
+            )
+        if fallback is not None and not isinstance(fallback, Fallback):
+            raise TypeError("The fallback is exahype2.fv.Fallback(...) or None.")
         self.order = order
         self.weighting = weighting
+        self.reconstruction_limiter = reconstruction_limiter
+        self.fallback = fallback
 
     @property
     def halo_width(self):
@@ -182,20 +233,33 @@ class Weno:
     def minimum_volumes_per_axis(self):
         return 2 * self.order
 
+    @property
+    def scales_polynomials(self):
+        return self.reconstruction_limiter == PolynomialLimiter.admissibility_scaling
+
     def subcell_scheme(self):
+        includes = [
+            "exahype2/fv/Patch.h",
+            "exahype2/fv/limiter/PolynomialScaling.h",
+            "exahype2/fv/reconstruction/WENO.h",
+            "exahype2/fv/reconstruction/weno/NonlinearWeights.h",
+        ]
+        if self.fallback is not None:
+            includes += self.fallback.includes
         return SubcellScheme(
-            reconstruction="::exahype2::fv::reconstruction::WENO<{}, {}>".format(
-                self.order, self.weighting
+            reconstruction="::exahype2::fv::reconstruction::WENO<{}, {}, {}>".format(
+                self.order, self.weighting, self.reconstruction_limiter
             ),
             halo_width=self.halo_width,
             subcell_family="::exahype2::fv::ader::SubcellStep",
             subcell_family_include="exahype2/fv/ader/SubcellStep.h",
-            includes=[
-                "exahype2/fv/Patch.h",
-                "exahype2/fv/reconstruction/WENO.h",
-                "exahype2/fv/reconstruction/weno/NonlinearWeights.h",
-            ],
+            fallback_reconstruction=(
+                None if self.fallback is None else self.fallback.reconstruction
+            ),
+            includes=includes,
         )
 
     def __repr__(self):
-        return "Weno(order={}, weighting={})".format(self.order, self.weighting)
+        return "Weno(order={}, weighting={}, reconstruction_limiter={}, fallback={!r})".format(
+            self.order, self.weighting, self.reconstruction_limiter, self.fallback
+        )

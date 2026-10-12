@@ -1,6 +1,8 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include <utility>
+
 #include "exahype2/LevelJumps.h"
 #include "exahype2/dg/Kernels.h"
 #include "exahype2/dg/limiting/LimiterStatus.h"
@@ -26,6 +28,12 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::re
   _fluxExchange.rebuild(partition);
   _restrictedFluxExchange.rebuild(partition);
   _predictor.template allocate<Subgrid<>>();
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    _previousSubcells.reserve(partition.getNumberOfSlots());
+    _statuses.reserve(partition.getNumberOfSlots());
+    _faceStatuses.reserve(partition.getNumberOfFaces());
+    _statusExchange.rebuild(partition);
+  }
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -37,6 +45,10 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::re
   _fluxExchange.release();
   _restrictedFluxExchange.release();
   _predictor.release();
+  _previousSubcells.release();
+  _statuses.release();
+  _faceStatuses.release();
+  _statusExchange.release();
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -44,7 +56,8 @@ INLINE_METHOD tarch::AllocatedBytes
 exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes() + _stateExchange.getAllocatedBytes()
        + _fluxExchange.getAllocatedBytes() + _restrictedFluxExchange.getAllocatedBytes()
-       + _predictor.getAllocatedBytes();
+       + _predictor.getAllocatedBytes() + _previousSubcells.getAllocatedBytes() + _statuses.getAllocatedBytes()
+       + _faceStatuses.getAllocatedBytes() + _statusExchange.getAllocatedBytes();
 }
 
 /**
@@ -97,6 +110,13 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::ad
   correct(partition, region, region.getCells(Local), timeStamp, timeStepSize);
   _restrictedFluxExchange.wait();
   correct(partition, region, region.getCells(Remote), timeStamp, timeStepSize);
+
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    _statusExchange.post();
+    fixUp(partition, region, region.getCells(Local), timeStamp, timeStepSize);
+    _statusExchange.wait();
+    fixUp(partition, region, region.getCells(Remote), timeStamp, timeStepSize);
+  }
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -116,7 +136,8 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::pr
     _faceStates.getView(),
     _faceFluxes.getView(),
     timeStamp,
-    timeStepSize
+    timeStepSize,
+    exahype2::fv::ader::fallsBack<Derived>() ? _previousSubcells.getView() : typename CellPool::View{}
   ));
 }
 
@@ -152,6 +173,35 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::so
   );
 }
 
+/**
+ * Returns the correction of the listed cells, with the fallback of Derived.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD auto exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::getCorrection(
+  const peano4::Partition&     partition,
+  const Region&                region,
+  const tarch::Span<const int> cells,
+  const double                 timeStamp,
+  const double                 timeStepSize
+) {
+  exahype2::fv::ader::CorrectPatches<Subgrid<>, StoragePrecision, ComputePrecision, FallbackSubgrid<>> correction{
+    partition.onDevice(),
+    cells,
+    region.subcells,
+    std::as_const(_faceFluxes).getView(),
+    timeStamp,
+    timeStepSize
+  };
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    correction.previousSolution    = std::as_const(_previousSubcells).getView();
+    correction.halo                = region.halo;
+    correction.statuses            = _statuses.getView();
+    correction.faceStatuses        = _faceStatuses.getView();
+    correction.limiterFaceStatuses = region.faceStatuses;
+  }
+  return correction;
+}
+
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::correct(
@@ -161,19 +211,37 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::co
   const double                 timeStamp,
   const double                 timeStepSize
 ) {
-  double maxEigenvalue = 0.0;
+  exahype2::fv::ader::CorrectionStatistics statistics;
   tarch::accelerator::parallelReduce(
     tarch::accelerator::TeamRange(cells.size),
-    exahype2::fv::ader::CorrectPatches<Subgrid<>, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
-      cells,
-      region.subcells,
-      std::as_const(_faceFluxes).getView(),
-      timeStamp,
-      timeStepSize
-    },
-    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+    getCorrection(partition, region, cells, timeStamp, timeStepSize),
+    tarch::accelerator::Custom<exahype2::fv::ader::CorrectionStatistics>{statistics}
   );
+}
+
+/**
+ * Lets every listed cell beside a cell that repeated its step with the fallback scheme take its
+ * fallback flux.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::fixUp(
+  const peano4::Partition&     partition,
+  const Region&                region,
+  const tarch::Span<const int> cells,
+  const double                 timeStamp,
+  const double                 timeStepSize
+) {
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    double maxEigenvalue = 0.0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::TeamRange(cells.size),
+      exahype2::fv::ader::FixUpPatches<Subgrid<>, StoragePrecision, ComputePrecision, FallbackSubgrid<>>{
+        getCorrection(partition, region, cells, timeStamp, timeStepSize)
+      },
+      tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+    );
+  }
 }
 
 TARGET_DECLARE

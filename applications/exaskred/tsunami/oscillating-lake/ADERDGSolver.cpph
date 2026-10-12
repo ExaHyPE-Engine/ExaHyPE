@@ -191,7 +191,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
   >(Q, numberOfStates);
-  const auto minimumDgWaterHeight = 100.0 * hThreshold;
+  const auto minimumDgWaterHeight = DGWetHeight;
   const auto fullyWet             = statistics.minHeight > minimumDgWaterHeight;
   const auto dryAtRest = statistics.minHeight >= 0.0 and statistics.maxHeight <= 0.0 and statistics.maxMomentum <= 0.0;
   return statistics.finite and (fullyWet or dryAtRest);

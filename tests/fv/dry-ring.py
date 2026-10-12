@@ -5,6 +5,7 @@
 ``--weno-order`` is the ADER polynomial degree.
 """
 import argparse
+from pathlib import Path
 
 import exahype2
 
@@ -28,6 +29,18 @@ def parse_arguments():
     parser.add_argument(
         "--weno-order", type=int, choices=[2, 3, 4, 5], default=3,
         help="Polynomial degree for ADER-WENO (nominal accuracy is degree + 1).",
+    )
+    parser.add_argument(
+        "--check-admissibility", action="store_true",
+        help="Assert finite updated states and h >= -1e-12 (use an Asserts build).",
+    )
+    parser.add_argument(
+        "--well-balanced", action="store_true",
+        help="Use the hydrostatic Rusanov interface with stationary bathymetry.",
+    )
+    parser.add_argument(
+        "--polynomial-limiter", action="store_true",
+        help="Scale every ADER-WENO polynomial towards its average until h >= 0.",
     )
     args, _ = parser.parse_known_args()
     if args.help:
@@ -58,19 +71,14 @@ boundary_conditions = """
 """
 
 flux = """
-  if (Q[Shortcuts::h] < DRY_TOLERANCE) {
-    F[Shortcuts::h]     = 0.0;
-    F[Shortcuts::v + 0] = 0.0;
-    F[Shortcuts::v + 1] = 0.0;
-  } else {
-    const double inverseHeight = 1.0 / Q[Shortcuts::h];
-    F[Shortcuts::h]     = Q[Shortcuts::v + normal];
-    F[Shortcuts::v + 0] =
-      Q[Shortcuts::v + normal] * Q[Shortcuts::v + 0] * inverseHeight;
-    F[Shortcuts::v + 1] =
-      Q[Shortcuts::v + normal] * Q[Shortcuts::v + 1] * inverseHeight;
-  }
-  F[Shortcuts::b] = 0.0;
+  const double u[2] = {
+    dry_ring::velocity(Q[Shortcuts::h], Q[Shortcuts::v + 0], DESINGULARISATION),
+    dry_ring::velocity(Q[Shortcuts::h], Q[Shortcuts::v + 1], DESINGULARISATION),
+  };
+  F[Shortcuts::h]     = Q[Shortcuts::h] * u[normal];
+  F[Shortcuts::v + 0] = Q[Shortcuts::h] * u[normal] * u[0];
+  F[Shortcuts::v + 1] = Q[Shortcuts::h] * u[normal] * u[1];
+  F[Shortcuts::b]     = 0.0;
 """
 
 ncp = """
@@ -93,15 +101,9 @@ ncp = """
 """
 
 max_eigenvalue = """
-  if (Q[Shortcuts::h] < DRY_TOLERANCE) {
-    return 0.0;
-  }
-  const double velocity = Q[Shortcuts::v + normal] / Q[Shortcuts::h];
-  const double soundSpeed = std::sqrt(GRAVITY * Q[Shortcuts::h]);
-  return std::fmax(
-    std::fabs(velocity + soundSpeed),
-    std::fabs(velocity - soundSpeed)
-  );
+  const double velocity =
+    dry_ring::velocity(Q[Shortcuts::h], Q[Shortcuts::v + normal], DESINGULARISATION);
+  return std::fabs(velocity) + std::sqrt(GRAVITY * std::fmax(0.0, Q[Shortcuts::h]));
 """
 
 project = exahype2.Project(
@@ -131,8 +133,19 @@ elif args.solver == "musclhancock":
         scheme=exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.minmod), **solver_arguments
     )
 else:
-    fv_solver = exahype2.fv.ader.Solver(order=args.weno_order, **solver_arguments)
+    fv_solver = exahype2.fv.ader.Solver(
+        scheme=exahype2.fv.Weno(
+            order=args.weno_order,
+            reconstruction_limiter=(
+                exahype2.fv.PolynomialLimiter.admissibility_scaling
+                if args.polynomial_limiter
+                else exahype2.fv.PolynomialLimiter.none
+            ),
+        ),
+        **solver_arguments,
+    )
 
+fv_solver.add_includes(str(Path(__file__).resolve().with_name("DryRing.h")))
 fv_solver.set_pde_terms(
     initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
@@ -141,8 +154,34 @@ fv_solver.set_pde_terms(
     max_eigenvalue=max_eigenvalue,
 )
 
+if args.well_balanced:
+    fv_solver.set_pde_terms(riemann_solver="""
+  return dry_ring::hydrostaticRusanov(QL, QR, normal, GRAVITY, DESINGULARISATION, FL, FR);
+""")
+
+if args.polynomial_limiter:
+    fv_solver.set_pde_terms(physical_admissibility="""
+  for (int state = 0; state < numberOfStates; state++) {
+    if (not(Q[state * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + Shortcuts::h] >= 0.0)) {
+      return false;
+    }
+  }
+  return true;
+""")
+
+if args.check_admissibility:
+    fv_solver.postprocess_updated_patch = """
+  for (int volume = 0; volume < PointsPerCell; volume++) {
+    const auto* state = Q + volume * NumberOfData;
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      assertion(std::isfinite(state[unknown]), t, dt, x, volume, unknown, state[unknown]);
+    }
+    assertion(state[Shortcuts::h] >= -1e-12, t, dt, x, volume, state[Shortcuts::h]);
+  }
+"""
+
 project.add_solver(fv_solver)
 
 project.output.makefile.add_compile_definition("GRAVITY=9.81")
-project.output.makefile.add_compile_definition("DRY_TOLERANCE=1e-6")
+project.output.makefile.add_compile_definition("DESINGULARISATION=1e-3")
 project.generate_and_build()

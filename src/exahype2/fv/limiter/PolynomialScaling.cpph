@@ -1,0 +1,113 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include <array>
+
+#include "tarch/Assertions.h"
+
+TARGET_DECLARE
+/**
+ * Writes the value of every entry of the nodal polynomial at point into values. The points are the
+ * nodes of the volume, followed by the nodes on every face of it, faces ordered as in Peano.
+ */
+template <typename Basis>
+template <int NumberOfData, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::limiter::PolynomialScaling<Basis>::evaluate(
+  const ComputePrecision* NOALIAS const nodalState,
+  const int                             point,
+  ComputePrecision* NOALIAS const       values
+) {
+  assertion(point >= 0 and point < Points, point);
+  if (point < NodesPerCell) {
+    for (int entry = 0; entry < NumberOfData; entry++) {
+      values[entry] = nodalState[point * NumberOfData + entry];
+    }
+    return;
+  }
+  constexpr auto extrapolation = [](const double x) {
+    std::array<double, NodesPerAxis> weights{};
+    for (int node = 0; node < NodesPerAxis; node++) {
+      weights[node] = Basis::value(node, x);
+    }
+    return weights;
+  };
+  constexpr std::array<double, NodesPerAxis> Lower = extrapolation(0.0);
+  constexpr std::array<double, NodesPerAxis> Upper = extrapolation(1.0);
+
+  const int  face       = (point - NodesPerCell) / NodesPerFace;
+  const int  axis       = face % DIMENSIONS;
+  const auto& weights   = face < DIMENSIONS ? Lower : Upper;
+  int        remainder  = (point - NodesPerCell) % NodesPerFace;
+  int        firstNode  = 0;
+  int        stride     = 1;
+  int        axisStride = 1;
+  for (int otherAxis = 0; otherAxis < DIMENSIONS; otherAxis++) {
+    if (otherAxis == axis) {
+      axisStride = stride;
+    } else {
+      firstNode += (remainder % NodesPerAxis) * stride;
+      remainder /= NodesPerAxis;
+    }
+    stride *= NodesPerAxis;
+  }
+  for (int entry = 0; entry < NumberOfData; entry++) {
+    values[entry] = ComputePrecision(0);
+  }
+  for (int node = 0; node < NodesPerAxis; node++) {
+    for (int entry = 0; entry < NumberOfData; entry++) {
+      values[entry] += static_cast<ComputePrecision>(weights[node])
+                     * nodalState[(firstNode + node * axisStride) * NumberOfData + entry];
+    }
+  }
+}
+
+/**
+ * Scales nodalState towards average and returns the scaling factor theta.
+ */
+template <typename Basis>
+template <typename Derived, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::PolynomialScaling<Basis>::limit(
+  const StoragePrecision* NOALIAS const        average,
+  ComputePrecision* NOALIAS const              nodalState,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeSize
+) {
+  StoragePrecision sample[NumberOfData];
+  ComputePrecision values[NumberOfData];
+  const auto       isAdmissible = [&](const ComputePrecision theta) {
+    for (int entry = 0; entry < NumberOfData; entry++) {
+      sample[entry] = static_cast<StoragePrecision>(average[entry] + theta * (values[entry] - average[entry]));
+    }
+    return Derived::isPhysicallyAdmissible(sample, 1, volumeCentre, volumeSize);
+  };
+
+  ComputePrecision theta = Derived::isPhysicallyAdmissible(average, 1, volumeCentre, volumeSize)
+                           ? ComputePrecision(1)
+                           : ComputePrecision(0);
+  for (int point = 0; point < Points and theta > ComputePrecision(0); point++) {
+    evaluate<NumberOfData>(nodalState, point, values);
+    if (not isAdmissible(theta)) {
+      ComputePrecision admissible = 0;
+      for (int step = 0; step < BisectionSteps; step++) {
+        const ComputePrecision middle = ComputePrecision(0.5) * (admissible + theta);
+        if (isAdmissible(middle)) {
+          admissible = middle;
+        } else {
+          theta = middle;
+        }
+      }
+      theta = admissible;
+    }
+  }
+
+  if (theta < ComputePrecision(1)) {
+    for (int node = 0; node < NodesPerCell; node++) {
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        ComputePrecision& value = nodalState[node * NumberOfData + entry];
+        value                   = average[entry] + theta * (value - average[entry]);
+      }
+    }
+  }
+  return theta;
+}
+TARGET_DECLARE_END

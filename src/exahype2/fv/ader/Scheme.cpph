@@ -3,10 +3,13 @@
 
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
+#include "exahype2/fv/limiter/PolynomialScaling.h"
 #include "exahype2/terms/BoundaryConditions.h"
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/NonconservativeProduct.h"
+#include "exahype2/terms/PhysicalAdmissibility.h"
 #include "exahype2/terms/RiemannSolver.h"
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
@@ -76,17 +79,20 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::getNodeWeight(const int n
 }
 
 /**
- * Writes the nodal polynomial of every volume of patch into patchScratch. Every thread of the team
- * of workers calls this.
+ * Writes the nodal polynomial of every volume of patch into patchScratch. The polynomial limiter of
+ * Reconstruction then limits every polynomial, unless it is exahype2::fv::limiter::Unlimited. Every
+ * thread of the team of workers calls this.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::ader::Scheme<Derived, ComputePrecision>::reconstructPatch(
-  const StoragePrecision* NOALIAS const  patch,
-  const StoragePrecision* NOALIAS const  halo[peano4::FacesPerCell],
-  ComputePrecision* NOALIAS const        patchScratch,
-  const exahype2::dg::ader::TeamWorkers& workers
+  const StoragePrecision* NOALIAS const        patch,
+  const StoragePrecision* NOALIAS const        halo[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  ComputePrecision* NOALIAS const              patchScratch,
+  const exahype2::dg::ader::TeamWorkers&       workers
 ) {
   Reconstruction::template reconstructPatch<PatchSize, NumberOfData>(
     patch,
@@ -95,6 +101,22 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::reconstructPatch(
     patchScratch + ReconstructionOffset,
     workers
   );
+  using PolynomialLimiter = typename Reconstruction::PolynomialLimiter;
+  if constexpr (not std::is_same_v<PolynomialLimiter, exahype2::fv::limiter::Unlimited<Basis>>) {
+    static_assert(
+      exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>,
+      "The admissibility scaling of the reconstruction needs the physical admissibility term."
+    );
+    for (int volume = workers.teamThread; volume < VolumesPerPatch; volume += workers.teamThreads) {
+      PolynomialLimiter::template limit<Derived, NumberOfData>(
+        patch + static_cast<std::ptrdiff_t>(volume) * NumberOfData,
+        patchScratch + NodalStatesOffset + static_cast<std::ptrdiff_t>(volume) * NodalStateSize,
+        exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, peano4::dDelinearised(volume, PatchSize)),
+        exahype2::fv::getVolumeSize(cellSize, PatchSize)
+      );
+    }
+    exahype2::dg::ader::synchronise(workers);
+  }
 }
 
 /**
@@ -542,6 +564,32 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::correctVolume(
   StoragePrecision* const state = patch + static_cast<std::ptrdiff_t>(volume) * NumberOfData;
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     state[unknown] = static_cast<StoragePrecision>(static_cast<UpdatePrecision>(state[unknown]) + update[unknown]);
+  }
+}
+
+/**
+ * Writes into flux the average over its face on the patch face face of the flux along the positive
+ * normal that correctVolume() applies to volume from fluxHalf.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::ader::Scheme<Derived, ComputePrecision>::getAppliedFaceFlux(
+  const int                     volume,
+  const ComputePrecision* const fluxHalf,
+  const int                     face,
+  double* const                 flux
+) {
+  const auto index = peano4::dDelinearised(volume, PatchSize);
+  assertion(isOnPatchFace(index, face), volume, face);
+  const ComputePrecision* const nodes =
+    fluxHalf + static_cast<std::ptrdiff_t>(getTangentialIndex(index, face % DIMENSIONS)) * FluxEntries;
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    flux[unknown] = 0.0;
+  }
+  for (int node = 0; node < NodesPerFace; node++) {
+    const double weight = getNodeWeight(node);
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      flux[unknown] += weight * static_cast<double>(nodes[node * NumberOfUnknowns + unknown]);
+    }
   }
 }
 

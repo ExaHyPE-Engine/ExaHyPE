@@ -51,7 +51,8 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getAlloc
 
 /**
  * Predicts the listed cells and returns the largest wave speed of the faces inside their patches
- * and the numbers of the diverged and the unconverged volumes. A diverged volume writes NaN.
+ * and the numbers of the diverged and the unconverged volumes. A diverged volume writes NaN. With a
+ * previousSolution, every cell first copies its patch there.
  */
 template <typename StoragePrecision, typename ComputePrecision>
 template <typename Derived>
@@ -64,7 +65,8 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
   const typename StatePool::View     faceStates,
   const typename StatePool::View     faceFluxes,
   const double                       timeStamp,
-  const double                       timeStepSize
+  const double                       timeStepSize,
+  const typename CellPool::View      previousSolution
 ) {
   exahype2::fv::ader::PredictionStatistics statistics;
   if (cells.size == 0) {
@@ -86,6 +88,7 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
       numberOfTeams,
       getThreadsPerVolume<Derived>(),
       solution,
+      previousSolution,
       halo,
       faceStates,
       faceFluxes,

@@ -44,7 +44,8 @@ public:
     typename StatePool::View     faceStates,
     typename StatePool::View     faceFluxes,
     double                       timeStamp,
-    double                       timeStepSize
+    double                       timeStepSize,
+    typename CellPool::View      previousSolution = {}
   );
 
 private:

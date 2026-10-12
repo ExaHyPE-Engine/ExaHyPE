@@ -1,7 +1,9 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include <chrono>
 #include <string>
+#include <utility>
 
 #include "exahype2/LevelJumps.h"
 #include "exahype2/fv/ader/Kernels.h"
@@ -10,6 +12,7 @@
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
+#include "tarch/instrumentation/Info.h"
 #include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/ReductionRecord.h"
@@ -36,6 +39,10 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD void
 exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(const peano4::Partition& partition) {
   Base::allocate(partition);
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    _previousSolution.reserve(partition.getNumberOfSlots());
+    _statuses.reserve(partition.getNumberOfSlots());
+  }
   reserveFaces(partition);
   _predictor.template allocate<Derived>();
 }
@@ -50,6 +57,10 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::reserve
   _stateExchange.rebuild(partition);
   _fluxExchange.rebuild(partition);
   _restrictedFluxExchange.rebuild(partition);
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    _faceStatuses.reserve(partition.getNumberOfFaces());
+    _statusExchange.rebuild(partition);
+  }
 }
 
 /**
@@ -104,6 +115,15 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::perform
   maxEigenvalue =
     exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, correctPatches(partition, Remote, timeStepSize));
 
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    _statusExchange.post();
+    maxEigenvalue =
+      exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, fixUpPatches(partition, Local, timeStepSize));
+    _statusExchange.wait();
+    maxEigenvalue =
+      exahype2::MaxEigenvalueReduction::combine(maxEigenvalue, fixUpPatches(partition, Remote, timeStepSize));
+  }
+
   this->closeTimeStep(partition, timeStepSize, maxEigenvalue, requests);
 }
 
@@ -115,6 +135,10 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   exahype2::RefinementRequests& requests
 ) {
   Base::regrid(partition, regrid, requests);
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    _previousSolution.reserve(regrid.newNumberOfSlots);
+    _statuses.reserve(regrid.newNumberOfSlots);
+  }
   reserveFaces(partition);
 }
 
@@ -128,7 +152,14 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::release
   _fluxExchange.release();
   _restrictedFluxExchange.release();
   _predictor.release();
-  _unconvergedPredictions = 0;
+  _previousSolution.release();
+  _statuses.release();
+  _faceStatuses.release();
+  _statusExchange.release();
+  _unconvergedPredictions  = 0;
+  _fallbackCells           = 0;
+  _troubledFallbackVolumes = 0;
+  _divergedPredictions     = 0;
 }
 
 /**
@@ -144,6 +175,14 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::contrib
   assertion(_unconvergedPredictions >= 0, _unconvergedPredictions);
   _unconvergedPredictionsSlot = record.addSum(static_cast<std::uint64_t>(_unconvergedPredictions));
   _unconvergedPredictions     = 0;
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    _fallbackCellsSlot           = record.addSum(static_cast<std::uint64_t>(_fallbackCells));
+    _troubledFallbackVolumesSlot = record.addSum(static_cast<std::uint64_t>(_troubledFallbackVolumes));
+    _divergedPredictionsSlot     = record.addSum(static_cast<std::uint64_t>(_divergedPredictions));
+    _fallbackCells               = 0;
+    _troubledFallbackVolumes     = 0;
+    _divergedPredictions         = 0;
+  }
 }
 
 /**
@@ -164,6 +203,28 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::adoptFr
                                  << " before it converges. The volumes continue with the last iterate."
     );
   }
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    _reportedFallbackCells += record.getSum(_fallbackCellsSlot);
+    _reportedTroubledFallbackVolumes += record.getSum(_troubledFallbackVolumesSlot);
+    _reportedDivergedPredictions += record.getSum(_divergedPredictionsSlot);
+    constexpr double ReportInterval = 10.0;
+    const auto       now            = std::chrono::steady_clock::now();
+    if (
+      _reportedFallbackCells > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()
+      and std::chrono::duration<double>(now - _lastFallbackReport).count() >= ReportInterval
+    ) {
+      logInfo(
+        "Since the last report, " << _reportedFallbackCells << " patches repeated their step with the fallback scheme"
+                                  << " up to t = " << this->_timeStepping.getTimeStamp() << ", "
+                                  << _reportedTroubledFallbackVolumes << " volumes stayed troubled and "
+                                  << _reportedDivergedPredictions << " predictions diverged."
+      );
+      _reportedFallbackCells           = 0;
+      _reportedTroubledFallbackVolumes = 0;
+      _reportedDivergedPredictions     = 0;
+      _lastFallbackReport              = now;
+    }
+  }
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -171,7 +232,9 @@ INLINE_METHOD tarch::AllocatedBytes
 exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return Base::getAllocatedBytes() + _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes()
     + _stateExchange.getAllocatedBytes() + _fluxExchange.getAllocatedBytes()
-    + _restrictedFluxExchange.getAllocatedBytes() + _predictor.getAllocatedBytes();
+    + _restrictedFluxExchange.getAllocatedBytes() + _predictor.getAllocatedBytes()
+    + _previousSolution.getAllocatedBytes() + _statuses.getAllocatedBytes() + _faceStatuses.getAllocatedBytes()
+    + _statusExchange.getAllocatedBytes();
 }
 
 /**
@@ -194,9 +257,12 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::predict
     _faceStates.getView(),
     _faceFluxes.getView(),
     this->_timeStepping.getTimeStamp(),
-    timeStepSize
+    timeStepSize,
+    exahype2::fv::ader::fallsBack<Derived>() ? _previousSolution.getView() : typename Base::Patches::View{}
   );
-  if (statistics.counts.divergedCells > 0) {
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    _divergedPredictions += statistics.counts.divergedCells;
+  } else if (statistics.counts.divergedCells > 0) {
     tarch::terminateWithError(
       "The space-time predictor diverges in " + std::to_string(statistics.counts.divergedCells) + " volumes."
     );
@@ -235,8 +301,35 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::solveRi
 }
 
 /**
+ * Returns the correction of the local or the remote cells, with the fallback of Derived.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD auto exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getCorrection(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency,
+  const double             timeStepSize
+) {
+  exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, FallbackSolver<>> correction{
+    partition.onDevice(),
+    partition.onDevice().getCells(adjacency),
+    this->_solution.getView(),
+    std::as_const(_faceFluxes).getView(),
+    this->_timeStepping.getTimeStamp(),
+    timeStepSize
+  };
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    correction.previousSolution = std::as_const(_previousSolution).getView();
+    correction.halo             = std::as_const(this->_halo).getView();
+    correction.statuses         = _statuses.getView();
+    correction.faceStatuses     = _faceStatuses.getView();
+  }
+  return correction;
+}
+
+/**
  * Adds the numerical fluxes on the faces of the local or the remote patches and returns the largest
- * wave speed of their updated volumes.
+ * wave speed of their updated volumes. A patch that repeats its step with the fallback scheme
+ * counts into the fallback statistics.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD double
@@ -245,19 +338,37 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::correct
   const peano4::Adjacency  adjacency,
   const double             timeStepSize
 ) {
-  const auto cells         = partition.onDevice().getCells(adjacency);
-  double     maxEigenvalue = 0.0;
+  const auto                               correction = getCorrection(partition, adjacency, timeStepSize);
+  exahype2::fv::ader::CorrectionStatistics statistics;
   tarch::accelerator::parallelReduce(
-    tarch::accelerator::TeamRange(cells.size),
-    exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
-      cells,
-      this->_solution.getView(),
-      std::as_const(_faceFluxes).getView(),
-      this->_timeStepping.getTimeStamp(),
-      timeStepSize
-    },
-    tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+    tarch::accelerator::TeamRange(correction.cells.size),
+    correction,
+    tarch::accelerator::Custom<exahype2::fv::ader::CorrectionStatistics>{statistics}
   );
+  _fallbackCells += statistics.fallbackCells;
+  _troubledFallbackVolumes += statistics.troubledFallbackVolumes;
+  return statistics.maxEigenvalue;
+}
+
+/**
+ * Lets the local or the remote patches beside a patch that repeated its step take its fallback
+ * flux and returns the largest wave speed of the patches that change.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD double
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::fixUpPatches(
+  const peano4::Partition& partition,
+  const peano4::Adjacency  adjacency,
+  const double             timeStepSize
+) {
+  double maxEigenvalue = 0.0;
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    const auto correction = getCorrection(partition, adjacency, timeStepSize);
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::TeamRange(correction.cells.size),
+      exahype2::fv::ader::FixUpPatches<Derived, StoragePrecision, ComputePrecision, FallbackSolver<>>{correction},
+      tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
+    );
+  }
   return maxEigenvalue;
 }

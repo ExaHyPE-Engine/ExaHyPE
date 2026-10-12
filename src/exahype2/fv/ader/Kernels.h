@@ -2,9 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include <type_traits>
+
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/Predictor.h"
 #include "exahype2/fv/Patch.h"
+#include "exahype2/fv/ader/Fallback.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -22,14 +25,19 @@ TARGET_DECLARE
 namespace exahype2::fv::ader {
   struct PredictionStatistics;
 
+  struct CorrectionStatistics;
+
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct PredictPatches;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct SolveRiemannProblems;
 
-  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived = void>
   struct CorrectPatches;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
+  struct FixUpPatches;
 
   template <typename Derived, typename ComputePrecision>
   struct InterpolateFaceHalves;
@@ -47,6 +55,21 @@ struct exahype2::fv::ader::PredictionStatistics final {
 
   double                               maxEigenvalue{0.0};
   exahype2::dg::ader::PredictionCounts counts{};
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType identity();
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType combine(ValueType left, ValueType right);
+};
+
+/**
+ * The largest wave speed of the corrected volumes, the number of patches that repeat their step
+ * with the fallback scheme, and the number of their volumes that the fallback leaves troubled.
+ */
+struct exahype2::fv::ader::CorrectionStatistics final {
+  using ValueType = exahype2::fv::ader::CorrectionStatistics;
+
+  double maxEigenvalue{0.0};
+  int    fallbackCells{0};
+  int    troubledFallbackVolumes{0};
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType identity();
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType combine(ValueType left, ValueType right);
@@ -74,6 +97,7 @@ struct exahype2::fv::ader::PredictPatches final {
   int                                         numberOfTeams{0};
   int                                         threadsPerVolume{1};
   typename CellPool::View                     solution{};
+  typename CellPool::View                     previousSolution{};
   typename FacePool::ConstView                halo{};
   typename StatePool::View                    faceStates{};
   typename StatePool::View                    faceFluxes{};
@@ -113,20 +137,61 @@ struct exahype2::fv::ader::SolveRiemannProblems final {
  * Adds the numerical fluxes on the faces of every listed patch to its volumes and reduces the
  * largest wave speed of the updated volumes. One team corrects one cell, with one thread per volume
  * on a device and with one thread on the host.
+ *
+ * With a FallbackDerived, every patch then judges its corrected volumes with
+ * exahype2::fv::ader::Fallback. A patch with a troubled volume repeats its step from
+ * previousSolution and the halo with FallbackDerived, keeping the ADER-WENO flux on the faces where
+ * it does not share the fallback flux with its neighbour: the faces of a level jump and, with
+ * limiterFaceStatuses, the faces to a cell off the subcell scheme. Every patch writes its status
+ * into statuses and into its own half of faceStatuses.
  */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
 struct exahype2::fv::ader::CorrectPatches final {
-  using Scheme    = exahype2::fv::ader::Scheme<Derived, ComputePrecision>;
-  using Patch     = exahype2::fv::Patch<Derived, ComputePrecision>;
-  using CellPool  = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
-  using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using Scheme     = exahype2::fv::ader::Scheme<Derived, ComputePrecision>;
+  using Patch      = exahype2::fv::Patch<Derived, ComputePrecision>;
+  using CellPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+  using FacePool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+  using StatePool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition             partition{};
-  tarch::Span<const int>        cells{};
-  typename CellPool::View       solution{};
-  typename StatePool::ConstView faceFluxes{};
-  double                        timeStamp{0.0};
-  double                        timeStepSize{0.0};
+  static constexpr bool FallsBack = not std::is_void_v<FallbackDerived>;
+
+  peano4::Partition              partition{};
+  tarch::Span<const int>         cells{};
+  typename CellPool::View        solution{};
+  typename StatePool::ConstView  faceFluxes{};
+  double                         timeStamp{0.0};
+  double                         timeStepSize{0.0};
+  typename CellPool::ConstView   previousSolution{};
+  typename FacePool::ConstView   halo{};
+  typename StatusPool::View      statuses{};
+  typename StatusPool::View      faceStatuses{};
+  typename StatusPool::ConstView limiterFaceStatuses{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+    int                            entry,
+    tarch::accelerator::TeamHandle team,
+    CorrectionStatistics&          accumulator
+  ) const;
+
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getSharedFallbackFaces(int slot) const;
+};
+
+/**
+ * Swaps, in every listed patch that keeps its corrected step, the ADER-WENO flux for the fallback
+ * flux on every face whose other side repeats its step with the fallback scheme and shares that
+ * flux, and reduces the largest wave speed of the patches it changes. One team fixes one cell.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
+struct exahype2::fv::ader::FixUpPatches final {
+  using Correct    = exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, FallbackDerived>;
+  using Patch      = typename Correct::Patch;
+  using CellPool   = typename Correct::CellPool;
+  using FacePool   = typename Correct::FacePool;
+  using StatePool  = typename Correct::StatePool;
+  using StatusPool = typename Correct::StatusPool;
+
+  Correct correct{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,

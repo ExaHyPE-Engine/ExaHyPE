@@ -47,7 +47,7 @@ project.add_solver(fv_solver)
 ader_weno_solver = exahype2.fv.ader.Solver(
     name="AllPDETermsADERWENO",
     patch_size=4,
-    order=2,
+    scheme=exahype2.fv.Weno(order=2),
     unknowns=2,
     auxiliary_variables=1,
     time_stepping=exahype2.TimeStepping.Adaptive(0.5),
