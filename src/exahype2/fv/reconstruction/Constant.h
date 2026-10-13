@@ -143,6 +143,29 @@ struct exahype2::fv::reconstruction::Constant final {
     ComputePrecision* NOALIAS                    flux
   );
 
+  template <
+    typename SolverType,
+    int  NumberOfVolumesPerAxis,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateCustomRiemann,
+    typename ComputePrecision
+  >
+  INLINE_METHOD GPU_CALLABLE_METHOD static void volumeFaceFlux(
+    const ComputePrecision* NOALIAS              centre,
+    const ComputePrecision* NOALIAS              outside,
+    const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
+    int                                          face,
+    const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& patchSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          boundaryFaces,
+    ComputePrecision* NOALIAS                    flux
+  );
+
   template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename Terms, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static const ComputePrecision* getFluxAndMaxEigenvalue(
     const Terms&                                 terms,

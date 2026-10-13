@@ -121,7 +121,16 @@ exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>:
     for (int volume = workers.teamThread; volume < Scheme::VolumesPerPatch; volume += workers.teamThreads) {
       statistics.maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
         statistics.maxEigenvalue,
-        Scheme::updateVolumeInsidePatch(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize, patchScratch)
+        Scheme::updateVolumeInsidePatch(
+          volume,
+          patch,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          patchScratch,
+          interiorUpdates.segments != nullptr ? interiorUpdates.getChunk(slot) : nullptr
+        )
       );
     }
     // The next cell reuses the scratch chunk once every thread is done with this one.
@@ -229,17 +238,135 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
     if constexpr (FallsBack) {
       const int status = static_cast<int>(fallsBack ? FallbackStatus::FallsBack : FallbackStatus::Accepted);
       *statuses.getChunk(slot) = status;
-      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-        faceStatuses.getChunk(cellConnectivity.getCellFace(slot, faceNumber))[exahype2::dg::getOwnHalf(faceNumber)] = status;
+      if constexpr (not Fallback::PerVolume) {
+        for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+          faceStatuses.getChunk(cellConnectivity.getCellFace(slot, faceNumber))[exahype2::dg::getOwnHalf(faceNumber)] = status;
+        }
       }
     }
   };
+  [[maybe_unused]] int* const volumeStatusesOfCell = FallsBack ? volumeStatuses.getChunk(slot) : nullptr;
+  [[maybe_unused]] const auto getVolumeStatus      = [&](const int volume) {
+    if constexpr (FallsBack) {
+      const StoragePrecision* const state = patch + static_cast<std::ptrdiff_t>(volume) * Scheme::NumberOfData;
+      for (int unknown = 0; unknown < Scheme::NumberOfUnknowns; unknown++) {
+        if (not std::isfinite(state[unknown])) {
+          return VolumeStatus::NotFinite;
+        }
+      }
+      if (not Fallback::isPhysicallyAdmissibleVolume(volume, patch, cellCentre, cellSize)) {
+        return VolumeStatus::Inadmissible;
+      }
+      if (not Fallback::isAdmissible(volume, patch, previous, haloOfCell)) {
+        return VolumeStatus::MaximumPrinciple;
+      }
+    }
+    return VolumeStatus::Accepted;
+  };
+  // Marks a kept volume beside a volume that is troubled itself as a neighbour.
+  [[maybe_unused]] const auto spreadToNeighbour = [&](const int volume) {
+    if constexpr (FallsBack) {
+      if (volumeStatusesOfCell[volume] != static_cast<int>(VolumeStatus::Accepted)) {
+        return;
+      }
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        if (not Fallback::isOnPatchFace(volume, faceNumber)) {
+          const int other = volumeStatusesOfCell[Fallback::getNeighbour(volume, faceNumber)];
+          if (other != static_cast<int>(VolumeStatus::Accepted) and other != static_cast<int>(VolumeStatus::Neighbour)) {
+            volumeStatusesOfCell[volume] = static_cast<int>(VolumeStatus::Neighbour);
+          }
+        }
+      }
+    }
+  };
+  // Repeats the step of a volume with a status, and lets a kept volume take the fallback flux on its
+  // faces to such volumes inside the patch. Returns whether the volume repeats its step.
+  [[maybe_unused]] const auto fallBackVolume = [&](const int volume) {
+    if constexpr (FallsBack) {
+      if (volumeStatusesOfCell[volume] != static_cast<int>(VolumeStatus::Accepted)) {
+        recomputeVolume(volume);
+        return true;
+      }
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        if (
+          not Fallback::isOnPatchFace(volume, faceNumber)
+          and volumeStatusesOfCell[Fallback::getNeighbour(volume, faceNumber)] != static_cast<int>(VolumeStatus::Accepted)
+        ) {
+          Fallback::swapInteriorFlux(
+            volume,
+            faceNumber,
+            previous,
+            interiorUpdates.getChunk(slot),
+            cellCentre,
+            cellSize,
+            stepStart,
+            stepSize,
+            boundaryFaces,
+            patch
+          );
+        }
+      }
+    }
+    return false;
+  };
+  // Writes the status of a volume on a patch face into the own half of that face.
+  [[maybe_unused]] const auto writeVolumeStatusOnFaces = [&](const int volume) {
+    if constexpr (FallsBack) {
+      const int status = static_cast<int>(
+        volumeStatusesOfCell[volume] != static_cast<int>(VolumeStatus::Accepted) ? FallbackStatus::FallsBack
+                                                                                 : FallbackStatus::Accepted
+      );
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        if (Fallback::isOnPatchFace(volume, faceNumber)) {
+          faceStatuses.getChunk(cellConnectivity.getCellFace(slot, faceNumber)
+          )[exahype2::dg::getOwnHalf(faceNumber) * Fallback::StatusesPerHalf + Fallback::getStatusOnFace(volume, faceNumber)] =
+            status;
+        }
+      }
+    }
+  };
+  [[maybe_unused]] constexpr bool SpreadsToNeighbours =
+    exahype2::fv::ader::getFallbackGranularity<Derived>() == FallbackGranularity::VolumesAndNeighbours;
 
   COMPILE_IF_ON_HOST(
     for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
       Scheme::correctVolume(volume, patch, fluxHalves, cellSize, stepSize);
     } Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
-    if constexpr (FallsBack) {
+    if constexpr (FallsBack and Fallback::PerVolume) {
+      bool anyFallsBack = false;
+      for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+        volumeStatusesOfCell[volume] = static_cast<int>(getVolumeStatus(volume));
+      }
+      if constexpr (SpreadsToNeighbours) {
+        for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+          spreadToNeighbour(volume);
+        }
+      }
+      for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+        if (fallBackVolume(volume)) {
+          anyFallsBack = true;
+          accumulator.fallbackCells++;
+        }
+      }
+      if (anyFallsBack) {
+        Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
+        for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+          if (
+            volumeStatusesOfCell[volume] != static_cast<int>(VolumeStatus::Accepted)
+            and getVolumeStatus(volume) != VolumeStatus::Accepted
+          ) {
+            accumulator.troubledFallbackCells++;
+          }
+        }
+      }
+      for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+        writeVolumeStatusOnFaces(volume);
+      }
+      writeStatus(anyFallsBack);
+    } else if constexpr (FallsBack) {
+      for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+        volumeStatusesOfCell[volume] = static_cast<int>(getVolumeStatus(volume));
+      }
       const auto isTroubled = [&] {
         bool troubled = not Fallback::isPhysicallyAdmissible(patch, cellCentre, cellSize);
         for (int volume = 0; volume < Scheme::VolumesPerPatch and not troubled; volume++) {
@@ -256,6 +383,11 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
         accumulator.fallbackCells++;
         if (isTroubled()) {
           accumulator.troubledFallbackCells++;
+        }
+        for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+          if (volumeStatusesOfCell[volume] == static_cast<int>(VolumeStatus::Accepted)) {
+            volumeStatusesOfCell[volume] = static_cast<int>(VolumeStatus::Patch);
+          }
         }
       }
       writeStatus(fallsBack);
@@ -284,10 +416,60 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
       }
     };
     postprocess();
-    if constexpr (FallsBack) {
-      // Every thread marks in the team scratch whether one of its volumes is troubled. The first
-      // thread also judges the states of the patch together.
-      unsigned char* const troubled   = tarch::accelerator::getTeamScratch(team);
+    // Every thread marks in the team scratch whether one of its volumes is troubled or falls back.
+    [[maybe_unused]] unsigned char* const troubled = tarch::accelerator::getTeamScratch(team);
+    [[maybe_unused]] const auto           isAnyMarked = [&](const bool marked) {
+      troubled[thread] = marked ? 1 : 0;
+      tarch::accelerator::teamBarrier(team);
+      bool any = false;
+      for (int other = 0; other < threads; other++) {
+        any = any or troubled[other] != 0;
+      }
+      tarch::accelerator::teamBarrier(team);
+      return any;
+    };
+    if constexpr (FallsBack and Fallback::PerVolume) {
+      tarch::accelerator::teamBarrier(team);
+      for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+        volumeStatusesOfCell[volume] = static_cast<int>(getVolumeStatus(volume));
+      }
+      tarch::accelerator::teamBarrier(team);
+      if constexpr (SpreadsToNeighbours) {
+        for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+          spreadToNeighbour(volume);
+        }
+        tarch::accelerator::teamBarrier(team);
+      }
+      bool fallsBackHere = false;
+      for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+        if (fallBackVolume(volume)) {
+          fallsBackHere = true;
+          partial.fallbackCells++;
+        }
+      }
+      const bool anyFallsBack = isAnyMarked(fallsBackHere);
+      if (anyFallsBack) {
+        postprocess();
+        for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+          if (
+            volumeStatusesOfCell[volume] != static_cast<int>(VolumeStatus::Accepted)
+            and getVolumeStatus(volume) != VolumeStatus::Accepted
+          ) {
+            partial.troubledFallbackCells++;
+          }
+        }
+      }
+      for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+        writeVolumeStatusOnFaces(volume);
+      }
+      if (thread == 0) {
+        writeStatus(anyFallsBack);
+      }
+    } else if constexpr (FallsBack) {
+      tarch::accelerator::teamBarrier(team);
+      for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+        volumeStatusesOfCell[volume] = static_cast<int>(getVolumeStatus(volume));
+      }
       const auto           isTroubled = [&] {
         tarch::accelerator::teamBarrier(team);
         bool fails = thread == 0 and not Fallback::isPhysicallyAdmissible(patch, cellCentre, cellSize);
@@ -312,6 +494,11 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
         const bool staysTroubled = isTroubled();
         if (thread == 0 and staysTroubled) {
           partial.troubledFallbackCells = 1;
+        }
+        for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
+          if (volumeStatusesOfCell[volume] == static_cast<int>(VolumeStatus::Accepted)) {
+            volumeStatusesOfCell[volume] = static_cast<int>(VolumeStatus::Patch);
+          }
         }
       }
       if (thread == 0) {
@@ -373,17 +560,25 @@ exahype2::fv::ader::FixUpPatches<Derived, StoragePrecision, ComputePrecision, Fa
   using Scheme   = typename Correct::Scheme;
   const auto& cellConnectivity = correct.cellConnectivity;
   const int   slot      = correct.cells[entry];
-  if (*correct.statuses.getChunk(slot) != static_cast<int>(FallbackStatus::Accepted)) {
+  if (not Fallback::PerVolume and *correct.statuses.getChunk(slot) != static_cast<int>(FallbackStatus::Accepted)) {
     return;
   }
+  // Returns whether the volume on the face takes the fallback flux of the volume behind it.
+  const auto takesFallbackFlux = [&](const int faceNumber, const int position) {
+    const int* const halves  = correct.faceStatuses.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
+    const int        ownHalf = exahype2::dg::getOwnHalf(faceNumber);
+    return halves[ownHalf * Fallback::StatusesPerHalf + position] == static_cast<int>(FallbackStatus::Accepted)
+       and halves[(1 - ownHalf) * Fallback::StatusesPerHalf + position] == static_cast<int>(FallbackStatus::FallsBack);
+  };
   const int sharedFaces = correct.getSharedFallbackFaces(slot);
   int       fixedFaces  = 0;
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    const int face = cellConnectivity.getCellFace(slot, faceNumber);
-    const int otherStatus =
-      correct.faceStatuses.getChunk(face)[1 - exahype2::dg::getOwnHalf(faceNumber)];
-    if ((sharedFaces & (1 << faceNumber)) != 0 and otherStatus == static_cast<int>(FallbackStatus::FallsBack)) {
-      fixedFaces |= 1 << faceNumber;
+    if ((sharedFaces & (1 << faceNumber)) != 0) {
+      for (int position = 0; position < Fallback::StatusesPerHalf; position++) {
+        if (takesFallbackFlux(faceNumber, position)) {
+          fixedFaces |= 1 << faceNumber;
+        }
+      }
     }
   }
   if (fixedFaces == 0) {
@@ -408,7 +603,10 @@ exahype2::fv::ader::FixUpPatches<Derived, StoragePrecision, ComputePrecision, Fa
   const double                                stepEnd       = stepStart + stepSize;
   const auto                                  fixVolume     = [&](const int volume) {
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-      if ((fixedFaces & (1 << faceNumber)) != 0 and Fallback::isOnPatchFace(volume, faceNumber)) {
+      if (
+        (fixedFaces & (1 << faceNumber)) != 0 and Fallback::isOnPatchFace(volume, faceNumber)
+        and (not Fallback::PerVolume or takesFallbackFlux(faceNumber, Fallback::getStatusOnFace(volume, faceNumber)))
+      ) {
         Fallback::swapFaceFlux(
           volume,
           faceNumber,

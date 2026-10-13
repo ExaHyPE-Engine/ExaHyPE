@@ -84,9 +84,10 @@ public:
     exahype2::RefinementRequests&   requests
   );
   INLINE_METHOD void plot(
-    const peano4::CellConnectivity& cellConnectivity,
-    tarch::plotter::Format          format,
-    const std::string&              outputDirectory
+    const peano4::CellConnectivity&                   cellConnectivity,
+    tarch::plotter::Format                            format,
+    const std::string&                                outputDirectory,
+    const tarch::accelerator::ChunkedMemoryPool<int>* volumeStatuses = nullptr
   );
   INLINE_METHOD void release();
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);

@@ -33,6 +33,10 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::re
     _statuses.reserve(cellConnectivity.getNumberOfSlots());
     _faceStatuses.reserve(cellConnectivity.getNumberOfFaces());
     _statusExchange.rebuild(cellConnectivity);
+    _volumeStatuses.reserve(cellConnectivity.getNumberOfSlots());
+    if constexpr (exahype2::fv::ader::fallsBackPerVolume<Derived>()) {
+      _interiorUpdates.reserve(cellConnectivity.getNumberOfSlots());
+    }
   }
 }
 
@@ -49,6 +53,8 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::re
   _statuses.release();
   _faceStatuses.release();
   _statusExchange.release();
+  _volumeStatuses.release();
+  _interiorUpdates.release();
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -57,7 +63,8 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::ge
   return _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes() + _stateExchange.getAllocatedBytes()
        + _fluxExchange.getAllocatedBytes() + _restrictedFluxExchange.getAllocatedBytes()
        + _predictor.getAllocatedBytes() + _previousSubcells.getAllocatedBytes() + _statuses.getAllocatedBytes()
-       + _faceStatuses.getAllocatedBytes() + _statusExchange.getAllocatedBytes();
+       + _faceStatuses.getAllocatedBytes() + _statusExchange.getAllocatedBytes() + _volumeStatuses.getAllocatedBytes()
+       + _interiorUpdates.getAllocatedBytes();
 }
 
 /**
@@ -138,7 +145,8 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::pr
     timeStamp,
     timeStepSize,
     exahype2::fv::ader::fallsBack<Derived>() ? _previousSubcells.getView() : typename CellPool::View{},
-    exahype2::fv::ader::fallsBack<Derived>() ? _statuses.getView() : decltype(_statuses.getView()){}
+    exahype2::fv::ader::fallsBack<Derived>() ? _statuses.getView() : decltype(_statuses.getView()){},
+    exahype2::fv::ader::fallsBackPerVolume<Derived>() ? _interiorUpdates.getView() : decltype(_interiorUpdates.getView()){}
   ));
 }
 
@@ -200,6 +208,8 @@ INLINE_METHOD auto exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, Co
     correction.statuses            = _statuses.getView();
     correction.faceStatuses        = _faceStatuses.getView();
     correction.limiterFaceStatuses = region.faceStatuses;
+    correction.interiorUpdates     = std::as_const(_interiorUpdates).getView();
+    correction.volumeStatuses      = _volumeStatuses.getView();
   }
   return correction;
 }

@@ -55,7 +55,8 @@ public:
     const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
     double                                                  timeStamp,
     tarch::plotter::Format                                  format,
-    const std::string&                                      outputDirectory
+    const std::string&                                      outputDirectory,
+    const tarch::accelerator::ChunkedMemoryPool<int>*       volumeStatuses = nullptr
   );
 
   template <int NodesPerAxis, int ValuesPerNode, typename Precision>

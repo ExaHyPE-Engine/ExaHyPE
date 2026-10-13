@@ -85,7 +85,8 @@ struct exahype2::fv::ader::CorrectionStatistics final {
  * volume writes FallbackStatus::FailedPrediction into its status and the volume writes NaN, as a
  * diverged one does, so a neighbour that reads its face halves falls back as well. The team keeps the
  * reconstruction and the predictions inside the patch and the
- * work of its volumes in its chunk of scratchSizePerTeam values in scratch.
+ * work of its volumes in its chunk of scratchSizePerTeam values in scratch. With interiorUpdates,
+ * every cell keeps the updates of its volumes through the faces inside the patch there.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ader::PredictPatches final {
@@ -111,6 +112,7 @@ struct exahype2::fv::ader::PredictPatches final {
   double                                      timeStamp{0.0};
   double                                      timeStepSize{0.0};
   typename StatusPool::View                   statuses{};
+  typename StatePool::View                    interiorUpdates{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,
@@ -147,7 +149,10 @@ struct exahype2::fv::ader::SolveRiemannProblems final {
  * previousSolution and the halo with FallbackDerived, keeping the ADER-WENO flux on the faces where
  * it does not share the fallback flux with its neighbour: the faces of a level jump and, with
  * limiterFaceStatuses, the faces to a cell off the subcell scheme. Every patch writes its status
- * into statuses and into its own half of faceStatuses.
+ * into statuses and into its own half of faceStatuses, and the VolumeStatus of each volume into
+ * volumeStatuses. With a fallback per volume, only the troubled volumes repeat their step, a kept
+ * volume takes the fallback flux on its faces to them inside the patch from its update in
+ * interiorUpdates, and every volume on a patch face writes its own status into its half of the face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
 struct exahype2::fv::ader::CorrectPatches final {
@@ -171,6 +176,8 @@ struct exahype2::fv::ader::CorrectPatches final {
   typename StatusPool::View      statuses{};
   typename StatusPool::View      faceStatuses{};
   typename StatusPool::ConstView limiterFaceStatuses{};
+  typename StatePool::ConstView  interiorUpdates{};
+  typename StatusPool::View      volumeStatuses{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,
@@ -184,7 +191,8 @@ struct exahype2::fv::ader::CorrectPatches final {
 /**
  * Swaps, in every listed patch that keeps its corrected step, the ADER-WENO flux for the fallback
  * flux on every face whose other side repeats its step with the fallback scheme and shares that
- * flux, and reduces the largest wave speed of the patches it changes. One team fixes one cell.
+ * flux, and reduces the largest wave speed of the patches it changes. One team fixes one cell. With
+ * a fallback per volume, this holds for each kept volume on a face and the volume behind it.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
 struct exahype2::fv::ader::FixUpPatches final {

@@ -15,7 +15,8 @@
  * Writes one snapshot of the cells with one plot cell per finite volume and the interior
  * volume corners of the patches before the corners on the patch faces. Every rank calls this at
  * the same time. The chunk of a slot in values holds the volumes of its patch in linearised order
- * with ValuesPerVolume values each.
+ * with ValuesPerVolume values each. With volumeStatuses, the cell field LimiterStatus holds the
+ * status of each volume from its chunk.
  */
 template <int VolumesPerAxis, int ValuesPerVolume, typename Precision>
 INLINE_METHOD void
@@ -25,7 +26,8 @@ exahype2::plotter::PatchPlotter::plotVolumes(
   const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
   const double                                            timeStamp,
   const tarch::plotter::Format                            format,
-  const std::string&                                      outputDirectory
+  const std::string&                                      outputDirectory,
+  const tarch::accelerator::ChunkedMemoryPool<int>* const volumeStatuses
 ) {
   static_assert(VolumesPerAxis > 0 and ValuesPerVolume > 0);
   constexpr int CornersPerAxis          = VolumesPerAxis + 1;
@@ -45,7 +47,9 @@ exahype2::plotter::PatchPlotter::plotVolumes(
   const FaceCornerPoints faceCornerPoints = numberFaceCorners<VolumesPerAxis>(cellConnectivity, cells, corners);
   const std::size_t      interiorCorners  = static_cast<std::size_t>(cells.size) * InteriorCornersPerPatch;
   const auto             facePoints       = static_cast<std::size_t>(faceCornerPoints.firstPointOfPatch.back());
-  tarch::plotter::Mesh   mesh = createMesh(cells.size, CellsPerPatch, interiorCorners + facePoints, false, false);
+  tarch::plotter::Mesh   mesh =
+    createMesh(cells.size, CellsPerPatch, interiorCorners + facePoints, false, volumeStatuses != nullptr);
+  assertion(volumeStatuses == nullptr or volumeStatuses->isHostAccessible());
   const double           rank = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
 
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
@@ -100,6 +104,12 @@ exahype2::plotter::PatchPlotter::plotVolumes(
     const Precision* const volumes = values.getChunk(cell);
     for (int volume = 0; volume < CellsPerPatch; volume++) {
       copyState(volumes + volume * ValuesPerVolume, ValuesPerVolume, firstCell + volume, mesh.cellFields);
+    }
+    if (volumeStatuses != nullptr) {
+      const int* const statuses = volumeStatuses->getChunk(cell);
+      for (int volume = 0; volume < CellsPerPatch; volume++) {
+        mesh.cellFields[_fields.size() + CurveIndexField + 1].values[firstCell + volume] = static_cast<double>(statuses[volume]);
+      }
     }
   });
   write(mesh, timeStamp, format, outputDirectory);

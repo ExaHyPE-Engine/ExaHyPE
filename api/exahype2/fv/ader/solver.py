@@ -3,6 +3,7 @@
 import exahype2.pde_terms
 
 from exahype2.fv.scheme import Weno
+from exahype2.fv.scheme import scheme_fallback_constants
 from exahype2.fv.solver import Solver as FiniteVolumeSolver
 from exahype2.fv.solver import pde_terms
 
@@ -129,4 +130,4 @@ class Solver(FiniteVolumeSolver):
             "static constexpr double DmpDifferencesScaling  = {};".format(
                 repr(float(self._dmp_differences_scaling))
             ),
-        ]
+        ] + scheme_fallback_constants(scheme)

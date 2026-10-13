@@ -6,6 +6,8 @@
 
 #include "exahype2/TimeStepping.h"
 #include "exahype2/fv/Patch.h"
+#include "exahype2/fv/reconstruction/Constant.h"
+#include "exahype2/fv/ader/FallbackGranularity.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "exahype2/fv/singlestep/PatchUpdate.h"
 #include "exahype2/fv/singlestep/SingleStep.h"
@@ -30,6 +32,20 @@ namespace exahype2::fv::ader {
    */
   enum class FallbackStatus : int { Accepted = 0, FallsBack = 1, FailedPrediction = 2 };
 
+  /**
+   * Why a volume repeated its step with the fallback scheme in the last time step, or Accepted: Its
+   * candidate state is not finite, fails the physical admissibility term on its own or the discrete
+   * maximum principle, it lies beside such a volume, or its patch repeated the step as a whole.
+   */
+  enum class VolumeStatus : int {
+    Accepted         = 0,
+    NotFinite        = 1,
+    Inadmissible     = 2,
+    MaximumPrinciple = 3,
+    Neighbour        = 4,
+    Patch            = 5
+  };
+
   template <typename Derived, typename Reconstruct>
   struct FallbackSolver;
 
@@ -46,6 +62,24 @@ namespace exahype2::fv::ader {
     } else {
       return false;
     }
+  }
+
+  /**
+   * Returns whether Derived falls back volume by volume. Only a solver with a fallback names a
+   * granularity.
+   */
+  template <typename Derived>
+  constexpr bool fallsBackPerVolume() {
+    return getFallbackGranularity<Derived>() != FallbackGranularity::Patch;
+  }
+
+  /**
+   * Returns the statuses of one half of a face of Derived: one per volume on the face when it falls
+   * back volume by volume, otherwise one.
+   */
+  template <typename Derived>
+  constexpr int getFallbackStatusesPerHalf() {
+    return fallsBackPerVolume<Derived>() ? peano4::power(Derived::PatchSize, DIMENSIONS - 1) : 1;
   }
 
   /**
@@ -167,7 +201,10 @@ struct exahype2::fv::ader::FallbackSolver final {
  * one of its volumes leaves the finite states or the extrema of the observables of Derived over its
  * previous state and the previous states around it, widened by the larger of
  * Derived::DmpRelaxationParameter and Derived::DmpDifferencesScaling times their range. A troubled
- * patch repeats its step with FallbackDerived from its previous states.
+ * patch repeats its step with FallbackDerived from its previous states. With a fallback granularity
+ * other than FallbackGranularity::Patch, each volume passes the physical admissibility term on its
+ * own instead, and only the troubled volumes repeat their step, while a kept volume beside one takes
+ * the fallback flux on the face between them.
  *
  * Both sides of a face evaluate the fallback flux from the same previous states, the patch from its
  * previous patch and the halo, so they agree on it bit by bit.
@@ -186,6 +223,9 @@ struct exahype2::fv::ader::Fallback final {
   static constexpr int FallbackHaloSize = FallbackDerived::Reconstruction::HaloSize;
   static constexpr int HaloOffset       = (HaloSize - FallbackHaloSize) * Patch::VolumesPerLayer * NumberOfData;
 
+  static constexpr bool PerVolume       = fallsBackPerVolume<Derived>();
+  static constexpr int  StatusesPerHalf = getFallbackStatusesPerHalf<Derived>();
+
   static_assert(FallbackHaloSize <= HaloSize, "The fallback reads no more layers than the halo holds.");
 
   template <typename StoragePrecision>
@@ -196,6 +236,14 @@ struct exahype2::fv::ader::Fallback final {
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissible(
+    const StoragePrecision* NOALIAS              candidate,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  );
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissibleVolume(
+    int                                          volume,
     const StoragePrecision* NOALIAS              candidate,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
@@ -238,7 +286,25 @@ struct exahype2::fv::ader::Fallback final {
     StoragePrecision* NOALIAS                    patch
   );
 
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void swapInteriorFlux(
+    int                                          volume,
+    int                                          face,
+    const StoragePrecision* NOALIAS              previous,
+    const ComputePrecision* NOALIAS              interiorUpdates,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          boundaryFaces,
+    StoragePrecision* NOALIAS                    patch
+  );
+
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isOnPatchFace(int volume, int face);
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getNeighbour(int volume, int face);
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getStatusOnFace(int volume, int face);
 
 private:
   static constexpr int NumberOfObservables = [] {

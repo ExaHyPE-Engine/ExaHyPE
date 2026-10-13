@@ -46,7 +46,8 @@ public:
     double                       timeStamp,
     double                       timeStepSize,
     typename CellPool::View      previousSolution = {},
-    tarch::accelerator::ChunkedMemoryPool<int>::View statuses = {}
+    tarch::accelerator::ChunkedMemoryPool<int>::View statuses = {},
+    typename StatePool::View     interiorUpdates = {}
   );
 
 private:

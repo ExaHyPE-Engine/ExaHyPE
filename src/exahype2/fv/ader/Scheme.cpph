@@ -214,7 +214,9 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictVolume(
 /**
  * Adds the source update and the fluxes through the faces of volume inside the patch to its state
  * in patch and returns the largest wave speed of these faces. Every volume of the patch is predicted
- * before. A volume whose predictions hold NaN becomes NaN and returns NaN.
+ * before. A volume whose predictions hold NaN becomes NaN and returns NaN. With interiorUpdates, the
+ * update of volume through each of its faces inside the patch goes to its entries there, which
+ * InteriorUpdateValues counts per patch.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -226,7 +228,8 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::updateVolumeInsidePatch(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const ComputePrecision* NOALIAS const        scratch
+  const ComputePrecision* NOALIAS const        scratch,
+  ComputePrecision* NOALIAS const              interiorUpdates
 ) {
   using UpdatePrecision = std::common_type_t<StoragePrecision, ComputePrecision, double>;
   constexpr auto Nodes  = Basis::nodes();
@@ -270,6 +273,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::updateVolumeInsidePatch(
     const ComputePrecision* const other    = scratch + getInteriorSideOffset(neighbour, opposite);
     const ComputePrecision* const lower    = side == 0 ? other : local;
     const ComputePrecision* const upper    = side == 0 ? local : other;
+    UpdatePrecision               faceUpdate[NumberOfUnknowns]{};
 
     auto faceOrigin = exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, index) - 0.5 * volumeSize;
     faceOrigin(axis) += side == 0 ? 0.0 : volumeSize(axis);
@@ -304,8 +308,17 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::updateVolumeInsidePatch(
       }
       const double weight = getNodeWeight(node);
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        update[unknown] +=
+        faceUpdate[unknown] +=
           timeStepSize * weight / volumeSize(axis) * (side == 0 ? fluxRight[unknown] : -fluxLeft[unknown]);
+      }
+    }
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      update[unknown] += faceUpdate[unknown];
+    }
+    if (interiorUpdates != nullptr) {
+      ComputePrecision* const entries = interiorUpdates + (volume * peano4::FacesPerCell + face) * NumberOfUnknowns;
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        entries[unknown] = static_cast<ComputePrecision>(faceUpdate[unknown]);
       }
     }
   }

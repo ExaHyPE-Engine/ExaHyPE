@@ -5,6 +5,7 @@ from exahype2.dg.operator_tables import table
 from exahype2.fv.scheme import Godunov
 from exahype2.fv.scheme import MusclHancock
 from exahype2.fv.scheme import Weno
+from exahype2.fv.scheme import scheme_fallback_constants
 
 from .projection_matrices import create_dmp_sampling_matrices
 from .projection_matrices import create_subcell_projection_matrices
@@ -166,7 +167,7 @@ class SubcellLimiting:
             "static constexpr bool GalerkinFluxCoupling = {};".format(
                 "true" if self._subcell_limiter_galerkin_flux_coupling else "false"
             ),
-        ]
+        ] + scheme_fallback_constants(scheme)
 
     def _subcell_limiter_arguments(self):
         """Returns the constructor arguments of the limiter as C++ text, empty without one."""

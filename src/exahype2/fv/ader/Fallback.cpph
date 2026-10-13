@@ -41,6 +41,31 @@ exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>::isPhys
 }
 
 /**
+ * Returns whether the candidate state of volume passes the physical admissibility term of Derived
+ * on its own.
+ */
+template <typename Derived, typename FallbackDerived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>::isPhysicallyAdmissibleVolume(
+  const int                                    volume,
+  const StoragePrecision* NOALIAS const        candidate,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+) {
+  if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>) {
+    return Derived::isPhysicallyAdmissible(
+      candidate + static_cast<std::ptrdiff_t>(volume) * NumberOfData,
+      1,
+      exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, peano4::dDelinearised(volume, PatchSize)),
+      exahype2::fv::getVolumeSize(cellSize, PatchSize)
+    );
+  } else {
+    return true;
+  }
+}
+
+/**
  * Returns whether the candidate state of volume is finite and inside the relaxed extrema of the
  * previous states around it.
  */
@@ -148,6 +173,102 @@ exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>::swapFa
     state[unknown]          = static_cast<StoragePrecision>(
       static_cast<double>(state[unknown]) + scale * (toFallback ? difference : -difference)
     );
+  }
+}
+
+/**
+ * Replaces in the state of volume the ADER-WENO update through its face face inside the patch,
+ * stored in interiorUpdates, by the update with the flux of the fallback scheme from the previous
+ * states of the volume and of its neighbour behind that face.
+ */
+template <typename Derived, typename FallbackDerived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>::swapInteriorFlux(
+  const int                                    volume,
+  const int                                    face,
+  const StoragePrecision* NOALIAS const        previous,
+  const ComputePrecision* NOALIAS const        interiorUpdates,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces,
+  StoragePrecision* NOALIAS const              patch
+) {
+  using Reconstruction = typename FallbackDerived::Reconstruction;
+  static_assert(std::is_same_v<Reconstruction, exahype2::fv::reconstruction::Constant>, "The fallback is Godunov.");
+  assertion(not isOnPatchFace(volume, face), volume, face);
+  ComputePrecision              centre[NumberOfData];
+  ComputePrecision              outside[NumberOfData];
+  const StoragePrecision* const centreState  = previous + static_cast<std::ptrdiff_t>(volume) * NumberOfData;
+  const StoragePrecision* const outsideState = previous + static_cast<std::ptrdiff_t>(getNeighbour(volume, face)) * NumberOfData;
+  for (int value = 0; value < NumberOfData; value++) {
+    centre[value]  = static_cast<ComputePrecision>(centreState[value]);
+    outside[value] = static_cast<ComputePrecision>(outsideState[value]);
+  }
+  ComputePrecision fallbackFlux[NumberOfUnknowns];
+  Reconstruction::template volumeFaceFlux<
+    FallbackDerived,
+    PatchSize,
+    NumberOfUnknowns,
+    Patch::NumberOfAuxiliaryVariables,
+    exahype2::terms::HasFlux<FallbackDerived, ComputePrecision>,
+    exahype2::terms::HasNonconservativeProduct<FallbackDerived, ComputePrecision>,
+    exahype2::terms::HasRiemannSolver<FallbackDerived, ComputePrecision>,
+    ComputePrecision
+  >(centre,
+    outside,
+    peano4::dDelinearised(volume, PatchSize),
+    face,
+    cellCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize,
+    boundaryFaces,
+    fallbackFlux);
+
+  const int                     normal = face % DIMENSIONS;
+  const double                  scale  = (face < DIMENSIONS ? 1.0 : -1.0) * timeStepSize
+                                      / exahype2::fv::getVolumeSize(cellSize, PatchSize)(normal);
+  const ComputePrecision* const ader   = interiorUpdates + (volume * peano4::FacesPerCell + face) * NumberOfUnknowns;
+  StoragePrecision* const       state  = patch + static_cast<std::ptrdiff_t>(volume) * NumberOfData;
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    state[unknown] = static_cast<StoragePrecision>(
+      static_cast<double>(state[unknown]) + scale * static_cast<double>(fallbackFlux[unknown])
+      - static_cast<double>(ader[unknown])
+    );
+  }
+}
+
+template <typename Derived, typename FallbackDerived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>::getNeighbour(const int volume, const int face) {
+  auto index = peano4::dDelinearised(volume, PatchSize);
+  index(face % DIMENSIONS) += face < DIMENSIONS ? -1 : 1;
+  return peano4::dLinearised(index, PatchSize);
+}
+
+/**
+ * Returns the position of the status of volume, which lies on the patch face face, in a half of
+ * that face. Both cells beside the face number its volumes alike.
+ */
+template <typename Derived, typename FallbackDerived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>::getStatusOnFace(const int volume, const int face) {
+  if constexpr (not PerVolume) {
+    return 0;
+  } else {
+    const auto index  = peano4::dDelinearised(volume, PatchSize);
+    int        result = 0;
+    int        stride = 1;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      if (axis != face % DIMENSIONS) {
+        result += index(axis) * stride;
+        stride *= PatchSize;
+      }
+    }
+    return result;
   }
 }
 

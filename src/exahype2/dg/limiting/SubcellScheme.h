@@ -7,6 +7,7 @@
 #include "exahype2/dg/Kernels.h"
 #include "exahype2/fv/Patch.h"
 #include "exahype2/fv/Kernels.h"
+#include "exahype2/fv/ader/FallbackGranularity.h"
 #include "exahype2/fv/singlestep/SingleStep.h"
 #include "exahype2/terms/BoundaryConditions.h"
 #include "exahype2/terms/DiffusiveSourceTerm.h"
@@ -199,6 +200,9 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
   static constexpr int NumberOfAuxiliaryVariables = Derived::NumberOfAuxiliaryVariables;
 
   static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
+
+  static constexpr exahype2::fv::ader::FallbackGranularity FallbackGranularity =
+    exahype2::fv::ader::getFallbackGranularity<Derived>();
 
   using Reconstruction  = Reconstruct;
   using TimeIntegration = exahype2::fv::singlestep::SingleStep;

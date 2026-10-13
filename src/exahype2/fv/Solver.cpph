@@ -139,15 +139,17 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
 }
 
 /**
- * Writes one snapshot of the solution. Every rank calls this at the same time. In a build with a
- * GPU backend the plot reads a copy of the solution in _solutionOnHost.
+ * Writes one snapshot of the solution, with the status of every volume from volumeStatuses where
+ * given. Every rank calls this at the same time. In a build with a GPU backend the plot reads a copy
+ * of the solution in _solutionOnHost.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
-  const peano4::CellConnectivity& cellConnectivity,
-  const tarch::plotter::Format    format,
-  const std::string&              outputDirectory
+  const peano4::CellConnectivity&                         cellConnectivity,
+  const tarch::plotter::Format                            format,
+  const std::string&                                      outputDirectory,
+  const tarch::accelerator::ChunkedMemoryPool<int>* const volumeStatuses
 ) {
   _plotter.template plotVolumes<Derived::PatchSize, Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables>(
     cellConnectivity,
@@ -155,7 +157,8 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
     std::as_const(_solution).download(_solutionOnHost),
     _timeStepping.getTimeStamp(),
     format,
-    outputDirectory
+    outputDirectory,
+    volumeStatuses
   );
 }
 

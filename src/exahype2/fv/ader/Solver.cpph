@@ -42,9 +42,28 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::allocat
   if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
     _previousSolution.reserve(cellConnectivity.getNumberOfSlots());
     _statuses.reserve(cellConnectivity.getNumberOfSlots());
+    reserveVolumeStatuses(cellConnectivity.getNumberOfSlots());
   }
   reserveFaces(cellConnectivity);
   _predictor.template allocate<Derived>();
+}
+
+/**
+ * Reserves the statuses of the volumes, every one Accepted, and with a fallback per volume the
+ * updates through the faces inside the patches.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::reserveVolumeStatuses(const int numberOfSlots) {
+  _volumeStatuses.reserve(numberOfSlots);
+  _volumeStatuses.copyFromHost(std::vector<int>(
+    static_cast<std::size_t>(_volumeStatuses.getNumberOfSegments()) * _volumeStatuses.getSegmentSize()
+      * _volumeStatuses.getPaddedChunkSize(),
+    static_cast<int>(exahype2::fv::ader::VolumeStatus::Accepted)
+  ));
+  if constexpr (exahype2::fv::ader::fallsBackPerVolume<Derived>()) {
+    _interiorUpdates.reserve(numberOfSlots);
+  }
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -141,6 +160,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
     _previousSolution.reserve(regrid.newNumberOfSlots);
     _statuses.reserve(regrid.newNumberOfSlots);
+    reserveVolumeStatuses(regrid.newNumberOfSlots);
   }
   reserveFaces(cellConnectivity);
 }
@@ -159,6 +179,9 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::release
   _statuses.release();
   _faceStatuses.release();
   _statusExchange.release();
+  _volumeStatuses.release();
+  _interiorUpdates.release();
+  _volumeStatusesOnHost.release();
   _unconvergedPredictions  = 0;
   _fallbackCells           = 0;
   _troubledFallbackCells = 0;
@@ -219,7 +242,9 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::readVal
       and std::chrono::duration<double>(now - _lastFallbackReport).count() >= ReportInterval
     ) {
       logInfo(
-        "Since the last report, " << _reportedFallbackCells << " patches repeated their step with the fallback scheme"
+        "Since the last report, " << _reportedFallbackCells
+                                  << (exahype2::fv::ader::fallsBackPerVolume<Derived>() ? " volumes" : " patches")
+                                  << " repeated their step with the fallback scheme"
                                   << " up to t = " << this->_timeStepping.getTimeStamp() << ", "
                                   << _reportedTroubledFallbackCells << " of them stayed troubled and "
                                   << _reportedDivergedPredictions << " predictions diverged."
@@ -239,7 +264,26 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getAllo
     + _stateExchange.getAllocatedBytes() + _fluxExchange.getAllocatedBytes()
     + _restrictedFluxExchange.getAllocatedBytes() + _predictor.getAllocatedBytes()
     + _previousSolution.getAllocatedBytes() + _statuses.getAllocatedBytes() + _faceStatuses.getAllocatedBytes()
-    + _statusExchange.getAllocatedBytes();
+    + _statusExchange.getAllocatedBytes() + _volumeStatuses.getAllocatedBytes() + _interiorUpdates.getAllocatedBytes()
+    + _volumeStatusesOnHost.getAllocatedBytes();
+}
+
+/**
+ * Writes one snapshot of the solution, with a fallback the status of every volume after its last
+ * step as LimiterStatus.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory
+) {
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    Base::plot(cellConnectivity, format, outputDirectory, &std::as_const(_volumeStatuses).download(_volumeStatusesOnHost));
+  } else {
+    Base::plot(cellConnectivity, format, outputDirectory);
+  }
 }
 
 /**
@@ -265,7 +309,8 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::predict
     this->_timeStepping.getTimeStamp(),
     timeStepSize,
     exahype2::fv::ader::fallsBack<Derived>() ? _previousSolution.getView() : typename Base::Patches::View{},
-    exahype2::fv::ader::fallsBack<Derived>() ? _statuses.getView() : decltype(_statuses.getView()){}
+    exahype2::fv::ader::fallsBack<Derived>() ? _statuses.getView() : decltype(_statuses.getView()){},
+    exahype2::fv::ader::fallsBackPerVolume<Derived>() ? _interiorUpdates.getView() : decltype(_interiorUpdates.getView()){}
   );
   if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
     _divergedPredictions += statistics.counts.divergedCells;
@@ -329,6 +374,8 @@ INLINE_METHOD auto exahype2::fv::ader::Solver<Derived, StoragePrecision, Compute
     correction.halo             = std::as_const(this->_halo).getView();
     correction.statuses         = _statuses.getView();
     correction.faceStatuses     = _faceStatuses.getView();
+    correction.interiorUpdates  = std::as_const(_interiorUpdates).getView();
+    correction.volumeStatuses   = _volumeStatuses.getView();
   }
   return correction;
 }

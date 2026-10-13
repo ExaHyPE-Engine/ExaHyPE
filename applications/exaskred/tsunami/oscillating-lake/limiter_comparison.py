@@ -38,6 +38,20 @@ CASES = {
                           label="ADER-WENO, fallback"),
     "weno-scaling-fallback": dict(solver="ader-weno", scaling=True, fallback=True,
                                   label="ADER-WENO, scaling + fallback"),
+    "weno-fallback-volumes": dict(solver="ader-weno", scaling=False, fallback=True,
+                                  granularity="volumes", label="ADER-WENO, volume fallback"),
+    "weno-fallback-neighbours": dict(solver="ader-weno", scaling=False, fallback=True,
+                                     granularity="volumes_and_neighbours",
+                                     label="ADER-WENO, volume + neighbour fallback"),
+    "weno-scaling-fallback-volumes": dict(solver="ader-weno", scaling=True, fallback=True,
+                                          granularity="volumes",
+                                          label="ADER-WENO, scaling + volume fallback"),
+    "weno-scaling-fallback-neighbours": dict(solver="ader-weno", scaling=True, fallback=True,
+                                             granularity="volumes_and_neighbours",
+                                             label="ADER-WENO, scaling + volume + neighbour fallback"),
+    "dg-weno-scaling-fallback-volumes": dict(solver="aderdg", limiter="weno", scaling=True,
+                                             fallback=True, granularity="volumes",
+                                             label="ADER-DG + ADER-WENO, scaling + volume fallback"),
 }
 
 
@@ -80,6 +94,8 @@ def build_command(case, args):
         command.append("--polynomial-scaling")
     if case.get("fallback") is False:
         command.append("--no-fallback")
+    if case.get("granularity"):
+        command += ["--fallback-granularity", case["granularity"]]
     if case["solver"] == "aderdg" and args.galerkin_flux_coupling == "off":
         command.append("--no-galerkin-flux-coupling")
     command += ["--error-samples", str(args.error_samples)]
@@ -146,8 +162,22 @@ VARIANT_STYLE = {
     "weno-fallback": ("#e87ba4", (0, (5, 1, 1, 1))),
     "dg-weno-scaling-fallback": ("#008300", (0, (1, 1))),
     "weno-scaling-fallback": ("#008300", (0, (1, 1))),
+    "weno-fallback-volumes": ("#4a3aa6", "-"),
+    "weno-fallback-neighbours": ("#8a8a00", "--"),
+    "weno-scaling-fallback-volumes": ("#4a3aa6", (0, (1, 1.5))),
+    "weno-scaling-fallback-neighbours": ("#8a8a00", (0, (3, 1, 1, 1, 1, 1))),
+    "dg-weno-scaling-fallback-volumes": ("#4a3aa6", "-"),
 }
 NORM_STYLE = {"L1": ("#2a78d6", "-"), "L2": ("#eb6834", "--"), "L\u221e": ("#1baf7a", "-.")}
+# The VolumeStatus values of exahype2::fv::ader::Fallback after Accepted, in their order.
+FALLBACK_REASONS = [
+    ("not finite", "#2a78d6"),
+    ("inadmissible", "#eb6834"),
+    ("maximum principle", "#1baf7a"),
+    ("neighbour", "#eda100"),
+    ("rest of patch", "#e87ba4"),
+]
+ACCEPTED_FILL = "#f1f0ec"
 TEXT, MUTED, GRID = "#1f1f1e", "#6b6a65", "#e4e3df"
 
 
@@ -253,6 +283,9 @@ def plot(args):
     figure.savefig(figures / "error-overlay-l2.png")
     plt.close(figure)
 
+    for name in runs:
+        plot_fallback(name, args, figures, plt)
+
     with (figures / "summary.md").open("w") as table:
         table.write("| Case | Reached t | Completed | Wall s | L1 at end | L2 at end | Linf at end | max L2 |\n")
         table.write("|---|---|---|---|---|---|---|---|\n")
@@ -263,6 +296,81 @@ def plot(args):
                 f"| {errors['L\u221e'][-1]:.3e} | {max(errors['L2']):.3e} |\n"
             )
     print(f"figures in {figures}")
+
+
+def plot_fallback(name, args, figures, plt):
+    """Plots where and why the volumes of an ADER-WENO run repeated their step with the fallback
+    scheme: the status of every volume at three snapshots over the exact shoreline, and the number
+    of volumes per reason at every snapshot."""
+    import numpy as np
+    from matplotlib.colors import ListedColormap
+
+    path = args.output / name / "solutions" / "patch" / "FVSolver.vtkhdf"
+    if not path.exists():
+        return
+    sys.path.insert(0, str(ROOT / "postprocessing"))
+    from solution_io import SolutionSource
+
+    source = SolutionSource.open(path)
+    if "LimiterStatus" not in source.load(0).cell_data:
+        return
+    times, counts, maps = [], [], {}
+    shown = sorted({source.count // 4, source.count // 2, source.count - 1})
+    for index in range(source.count):
+        snapshot = source.load(index)
+        status = snapshot.cell_data["LimiterStatus"].astype(int)
+        times.append(source.times[index])
+        counts.append(np.bincount(status, minlength=len(FALLBACK_REASONS) + 1)[1:len(FALLBACK_REASONS) + 1])
+        if index in shown:
+            corners = snapshot.points[:, :2][snapshot.cells]
+            maps[index] = (corners.mean(axis=1), corners.max(axis=1) - corners.min(axis=1), status,
+                           snapshot.cell_data["b"])
+    counts = np.array(counts)
+
+    figure = plt.figure(figsize=(12.8, 7.6), dpi=150)
+    grid = figure.add_gridspec(2, len(shown), height_ratios=[1.35, 1])
+    colours = ListedColormap([ACCEPTED_FILL] + [colour for _, colour in FALLBACK_REASONS])
+    g, depth, radius, displacement = 9.81, 0.1, 1.0, 0.5
+    frequency = (2.0 * g * depth) ** 0.5 / radius
+    for column, index in enumerate(shown):
+        axes = figure.add_subplot(grid[0, column])
+        centres, widths, status, bathymetry = maps[index]
+        width = widths[:, 0].min()
+        lower = centres.min(axis=0)
+        cells = np.rint((centres - lower) / width).astype(int)
+        image = np.zeros(cells.max(axis=0) + 1, dtype=int)
+        image[cells[:, 0], cells[:, 1]] = status
+        extent = [lower[0] - width / 2, lower[0] + width * (image.shape[0] - 0.5),
+                  lower[1] - width / 2, lower[1] + width * (image.shape[1] - 0.5)]
+        axes.imshow(image.T, origin="lower", extent=extent, cmap=colours, vmin=-0.5,
+                    vmax=len(FALLBACK_REASONS) + 0.5, interpolation="nearest")
+        t = times[index]
+        x, y = np.meshgrid(np.linspace(-1.6, 1.6, 500), np.linspace(-1.6, 1.6, 500))
+        surface = displacement * depth / radius**2 * (
+            2 * x * np.cos(frequency * t) + 2 * y * np.sin(frequency * t) - displacement)
+        axes.contour(x, y, surface + depth * (1 - (x**2 + y**2) / radius**2), levels=[0.0],
+                     colors=TEXT, linewidths=0.8)
+        axes.set_xlim(-1.6, 1.6)
+        axes.set_ylim(-1.6, 1.6)
+        axes.set_aspect("equal")
+        axes.set_title(f"t = {t:.2f}", loc="left", fontsize=10, color=TEXT)
+        axes.tick_params(colors=MUTED, labelsize=7)
+        for spine in axes.spines.values():
+            spine.set_color(GRID)
+    axes = figure.add_subplot(grid[1, :])
+    for reason, (label, colour) in enumerate(FALLBACK_REASONS):
+        if counts[:, reason].any():
+            axes.plot(times, counts[:, reason], color=colour, linewidth=2, marker="o", markersize=3,
+                      label=label)
+    style_axes(axes, args.end_time)
+    axes.set_yscale("linear")
+    axes.set_ylabel("volumes falling back", color=MUTED)
+    axes.legend(frameon=False, fontsize=8, loc="upper right", labelcolor=TEXT, ncols=len(FALLBACK_REASONS))
+    figure.suptitle(f"{CASES[name]['label']}: fallback volumes (black: exact shoreline)", x=0.01,
+                    ha="left", fontsize=11, color=TEXT)
+    figure.tight_layout()
+    figure.savefig(figures / f"fallback-{name}.png")
+    plt.close(figure)
 
 
 def main():

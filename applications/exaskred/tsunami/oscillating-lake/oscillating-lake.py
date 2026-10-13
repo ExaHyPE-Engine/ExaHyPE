@@ -55,6 +55,10 @@ def parse_arguments():
         help="Scale every ADER-WENO polynomial towards its average until it is admissible.",
     )
     parser.add_argument(
+        "--fallback-granularity", choices=["patch", "volumes", "volumes_and_neighbours"], default="patch",
+        help="Whether a whole patch, only its troubled volumes, or these and their neighbours fall back.",
+    )
+    parser.add_argument(
         "--no-fallback", action="store_true",
         help="ADER-WENO without the a-posteriori fallback to the Godunov scheme.",
     )
@@ -103,7 +107,9 @@ weno = exahype2.fv.Weno(
         if args.polynomial_scaling
         else exahype2.fv.PolynomialLimiter.none
     ),
-    fallback=None if args.no_fallback else exahype2.fv.Fallback(),
+    fallback=None if args.no_fallback else exahype2.fv.Fallback(
+        granularity=getattr(exahype2.fv.Fallback.Granularity, args.fallback_granularity)
+    ),
 )
 
 if args.solver == "aderdg":

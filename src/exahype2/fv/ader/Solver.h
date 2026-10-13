@@ -67,12 +67,18 @@ public:
     exahype2::RefinementRequests& requests
   );
   INLINE_METHOD void release();
+  INLINE_METHOD void plot(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
+  );
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
 private:
   INLINE_METHOD void reserveFaces(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void reserveVolumeStatuses(int numberOfSlots);
   [[nodiscard]] INLINE_METHOD double predictPatches(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency        adjacency,
@@ -117,8 +123,11 @@ private:
 
   typename Base::Patches    _previousSolution{Base::Patch::ValuesPerPatch};
   StatusPool                _statuses{1};
-  StatusPool                _faceStatuses{2};
+  StatusPool                _faceStatuses{2 * exahype2::fv::ader::getFallbackStatusesPerHalf<Derived>()};
   peano4::HaloExchange<int> _statusExchange{_faceStatuses};
+  StatusPool                _volumeStatuses{Scheme::VolumesPerPatch};
+  StatePool                 _interiorUpdates{Scheme::InteriorUpdateValues};
+  StatusPool                _volumeStatusesOnHost{Scheme::VolumesPerPatch, tarch::MemoryLocation::Heap};
 
   /**
    * The patches of this rank that repeated their step with the fallback scheme since the last

@@ -37,6 +37,7 @@ class SubcellScheme:
         subcell_family_include,
         time_stepping=None,
         fallback_reconstruction=None,
+        fallback_granularity=None,
         includes=None,
     ):
         if not reconstruction:
@@ -55,6 +56,7 @@ class SubcellScheme:
         self._subcell_family_include = subcell_family_include
         self._halo_width = halo_width
         self._fallback_reconstruction = fallback_reconstruction
+        self._fallback_granularity = fallback_granularity
         self._includes = includes or ["exahype2/fv/Patch.h"]
 
     @property
@@ -82,8 +84,22 @@ class SubcellScheme:
         return self._fallback_reconstruction
 
     @property
+    def fallback_granularity(self):
+        return self._fallback_granularity
+
+    @property
     def includes(self):
         return self._includes
+
+
+def scheme_fallback_constants(scheme):
+    """Returns the C++ constants of the fallback of the subcell scheme ``scheme``, empty without
+    one."""
+    if scheme.fallback_granularity is None:
+        return []
+    return [
+        "static constexpr auto FallbackGranularity = {};".format(scheme.fallback_granularity)
+    ]
 
 
 class Godunov:
@@ -162,14 +178,27 @@ class PolynomialLimiter:
 
 class Fallback:
     """The a-posteriori fallback of a high-order finite-volume scheme after the MOOD paradigm: A
-    patch whose candidate solution fails the ``physical_admissibility`` PDE term or the discrete
-    maximum principle repeats its time step with ``scheme``. Only the Godunov scheme can be the
-    fallback scheme."""
+    candidate solution that fails the ``physical_admissibility`` PDE term or the discrete maximum
+    principle repeats its time step with ``scheme``. Only the Godunov scheme can be the fallback
+    scheme. ``granularity`` is one of :class:`Fallback.Granularity`: The whole patch repeats its step,
+    only its troubled volumes do, or its troubled volumes and the volumes beside them in the patch."""
 
-    def __init__(self, scheme=None):
+    class Granularity:
+        patch = "::exahype2::fv::ader::FallbackGranularity::Patch"
+        volumes = "::exahype2::fv::ader::FallbackGranularity::Volumes"
+        volumes_and_neighbours = "::exahype2::fv::ader::FallbackGranularity::VolumesAndNeighbours"
+
+    def __init__(self, scheme=None, granularity=Granularity.patch):
         self.scheme = Godunov() if scheme is None else scheme
         if not isinstance(self.scheme, Godunov):
             raise TypeError("The fallback scheme is exahype2.fv.Godunov().")
+        if granularity not in (
+            Fallback.Granularity.patch,
+            Fallback.Granularity.volumes,
+            Fallback.Granularity.volumes_and_neighbours,
+        ):
+            raise ValueError("The granularity is one of exahype2.fv.Fallback.Granularity.")
+        self.granularity = granularity
 
     @property
     def reconstruction(self):
@@ -180,7 +209,7 @@ class Fallback:
         return self.scheme.subcell_scheme().includes
 
     def __repr__(self):
-        return "Fallback(scheme={!r})".format(self.scheme)
+        return "Fallback(scheme={!r}, granularity={})".format(self.scheme, self.granularity)
 
 
 class Weno:
@@ -255,6 +284,9 @@ class Weno:
             subcell_family_include="exahype2/fv/ader/SubcellStep.h",
             fallback_reconstruction=(
                 None if self.fallback is None else self.fallback.reconstruction
+            ),
+            fallback_granularity=(
+                None if self.fallback is None else self.fallback.granularity
             ),
             includes=includes,
         )

@@ -121,8 +121,10 @@ private:
 
   CellPool                  _previousSubcells{Kernel::SubcellValuesPerCell};
   StatusPool                _statuses{1};
-  StatusPool                _faceStatuses{2};
+  StatusPool                _faceStatuses{2 * exahype2::fv::ader::getFallbackStatusesPerHalf<Derived>()};
   peano4::HaloExchange<int> _statusExchange{_faceStatuses};
+  StatusPool                _volumeStatuses{Scheme<>::VolumesPerPatch};
+  StatePool                 _interiorUpdates{Scheme<>::InteriorUpdateValues};
 };
 
 TARGET_DECLARE

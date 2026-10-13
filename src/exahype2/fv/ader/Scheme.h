@@ -118,6 +118,7 @@ public:
   static constexpr int    FluxValuesPerHalf          = VolumesPerLayer * FluxEntries;
   static constexpr int    StateValuesPerFace         = 2 * StateValuesPerHalf;
   static constexpr int    FluxValuesPerFace          = 2 * FluxValuesPerHalf;
+  static constexpr int    InteriorUpdateValues       = VolumesPerPatch * peano4::FacesPerCell * NumberOfUnknowns;
   static constexpr int    InteriorInterfacesPerAxis  = (PatchSize - 1) * VolumesPerLayer;
   static constexpr int    EntriesPerSide             = StateEntries + FluxEntries;
   static constexpr int    SourceOffset               = DIMENSIONS * InteriorInterfacesPerAxis * 2 * EntriesPerSide;
@@ -167,7 +168,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    const ComputePrecision* NOALIAS              scratch
+    const ComputePrecision* NOALIAS              scratch,
+    ComputePrecision* NOALIAS                    interiorUpdates = nullptr
   );
 
   template <typename StoragePrecision>
