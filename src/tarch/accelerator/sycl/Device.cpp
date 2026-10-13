@@ -75,8 +75,8 @@ tarch::accelerator::Device::getNumberOfDevices() const {
 }
 
 /**
- * Returns the work items the current device runs at once: Its compute units times the largest
- * work group one compute unit holds.
+ * Returns the work items the current device runs at once. These are its compute units times the
+ * largest work group one compute unit holds.
  */
 int
 tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
@@ -87,7 +87,8 @@ tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
 }
 
 /**
- * Returns std::nullopt. A SYCL build tells no device vendor that an MPI query names.
+ * Returns std::nullopt. The MPI query is vendor-specific and SYCL does not name the vendor of the
+ * device.
  */
 std::optional<bool>
 tarch::accelerator::Device::isMPIGPUAware() const {
@@ -95,7 +96,7 @@ tarch::accelerator::Device::isMPIGPUAware() const {
 }
 
 /**
- * Returns an empty string. SYCL has no physical address of a device.
+ * Returns an empty string. SYCL does not report the physical address of a device.
  */
 std::string
 tarch::accelerator::Device::getIdOfCurrentDevice() const {

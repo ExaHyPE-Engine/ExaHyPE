@@ -6,14 +6,12 @@ namespace tarch::tasking {
   class Runtime;
 
   int getNumberOfUnmaskedThreads();
-
   bool oversubscribesNode();
-
   std::string printUnmaskedThreads();
 } // namespace tarch::tasking
 
 /**
- * The thread count of the process, which init() fixes for every caller.
+ * Holds the thread count of the process. init() fixes it for every caller.
  */
 class tarch::tasking::Runtime final {
 public:

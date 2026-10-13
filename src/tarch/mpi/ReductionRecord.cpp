@@ -132,8 +132,8 @@ tarch::mpi::ReductionRecord::allreduce(MPI_Comm communicator) {
   packed.insert(packed.end(), _maxima.begin(), _maxima.end());
   assertion(packed.size() <= static_cast<std::size_t>(std::numeric_limits<int>::max()), packed.size());
 
-  // One element of the record type spans the whole record. A pipelined reduction never splits an
-  // element. The operation sees the header in every call.
+  // One element of the record type spans the whole record. The operation then sees the header in
+  // every call of a pipelined reduction.
   MPI_Datatype recordType = MPI_DATATYPE_NULL;
   MPI_Op       operation  = MPI_OP_NULL;
   tarch::mpi::createContiguousType(static_cast<int>(packed.size()), MPI_UINT64_T, &recordType);

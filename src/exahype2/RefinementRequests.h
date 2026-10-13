@@ -15,8 +15,8 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * Merged refinement votes of all solvers, one per cell slot. A refine vote refines its cell, and
- * the erase votes of all children of one parent erase the parent.
+ * Merged refinement votes of all solvers, one per cell slot. A refine vote refines its cell. The
+ * erase votes of all children of one parent erase the parent.
  */
 class exahype2::RefinementRequests final {
 public:

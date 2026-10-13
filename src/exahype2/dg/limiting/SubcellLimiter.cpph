@@ -190,8 +190,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 }
 
 /**
- * Checks every candidate. The rejected cells and their neighbours recompute on the subcell scheme.
- * Every rank spreads the statuses and exchanges the subgrid halo in every step. Returns the wave
+ * Checks every candidate and recomputes the rejected cells and their neighbours on the subcell
+ * scheme. Every rank spreads the statuses and exchanges the subgrid halo in every step. Returns the wave
  * speeds of the accepted candidates and of the recomputed subgrids.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -444,9 +444,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 }
 
 /**
- * Runs the DIMENSIONS merge rounds of exahype2::dg::limiting::MergeNeighbourExtrema. The faces
- * hold the extrema of their cells before the call. Without mergeLastRound, no cell runs the last
- * round. Minima and maxima are exact and do not depend on the rank layout.
+ * Runs the DIMENSIONS merge rounds of exahype2::dg::limiting::MergeNeighbourExtrema on faces that
+ * hold the extrema of their cells. Without mergeLastRound, no cell runs the last round. Minima and
+ * maxima are exact and do not depend on the rank layout.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -624,8 +624,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 /**
  * Advances every recomputing cell by one finite-volume step on its subgrid and projects the result
  * onto the nodes over the candidate. Every cell on the subcell scheme first writes its subgrid onto
- * its faces. The local cells recompute while the ranks exchange the halo. Returns the wave speeds
- * of the subgrids.
+ * its faces and the local cells recompute while the ranks exchange the halo. Returns the wave
+ * speeds of the subgrids.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics

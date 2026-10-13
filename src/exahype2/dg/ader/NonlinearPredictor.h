@@ -44,17 +44,10 @@ struct exahype2::dg::ader::PicardResidual final {
 };
 
 /**
- * The space-time predictor of one cell of a nonlinear ADER-DG solver Derived (the generated solver
- * class, whose PDE terms are its static methods and whose DGOrder, NumberOfUnknowns and
- * NumberOfAuxiliaryVariables fix the layout). predict() iterates the Picard system of the
- * space-time state, writes the time-averaged state and flux of the cell onto the halves of its
- * faces and returns the number of Picard sweeps, UnconvergedPicardIteration when the sweep limit
- * comes before the tolerance, or DivergedPicardIteration when an iterate is not finite or leaves
- * the divergence bound. Every quantity is stored with the padded strides of
- * exahype2::dg::PaddedLayout. The threads of a team run several cells together, one group of
- * threads per cell. Every phase of a sweep distributes the nodes or the node lines of a cell over
- * the threads of its group, and a barrier of the team separates two phases of which the second
- * reads what the first wrote.
+ * The space-time predictor of one cell of a nonlinear ADER-DG solver Derived. predict() iterates
+ * the Picard system of the space-time state, writes the time-averaged state and flux of the cell
+ * onto the halves of its faces and returns the number of Picard sweeps or an outcome of
+ * PicardOutcome.h. The threads of a team run several cells together, one group of threads per cell.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::ader::NonlinearPredictor final {
@@ -73,10 +66,6 @@ public:
   static constexpr bool NeedsStateGradient =
     EvaluateNonconservativeProduct or EvaluateDiffusiveFlux or EvaluateDiffusiveSource;
 
-  /**
-   * The extents and offsets of the scratch block of predict(). The time-averaged state overwrites
-   * the first time slice of the space-time state, and the flux block stores one time slice.
-   */
   struct Scratch final {
     static constexpr int SpaceTimeStateSize = CellLayout::PaddedNumberOfData * CellLayout::SpaceTimeNodes;
     static constexpr int RightHandSideSize  = CellLayout::PaddedNumberOfUnknowns * CellLayout::SpaceTimeNodes;

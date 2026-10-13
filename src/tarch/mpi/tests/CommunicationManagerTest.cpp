@@ -31,7 +31,7 @@ tarch::mpi::tests::CommunicationManagerTest::testDedicatedThreadNeedsAPeerAndACo
   tarch::mpi::AbstractCommunicationManager::configure(true);
   validateEquals(tarch::mpi::AbstractCommunicationManager::usesDedicatedThread(), hasPeers);
 
-  // The rank count is unchanged, so the value on entry restores the configuration.
+  // The rank count is unchanged. The value on entry restores the configuration.
   tarch::mpi::AbstractCommunicationManager::configure(usedOnEntry);
   validateEquals(tarch::mpi::AbstractCommunicationManager::usesDedicatedThread(), usedOnEntry);
 }

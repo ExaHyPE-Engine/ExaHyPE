@@ -500,9 +500,6 @@ exahype2::dg::rk::tests::StagesTest::testTheCombinationWritesInPlace() {
   }
 }
 
-/**
- * The combination adds every weighted estimate with one rounding.
- */
 void
 exahype2::dg::rk::tests::StagesTest::testTheCombinationRoundsEveryWeightedEstimateOnce() {
   double cellState[StateValuesPerCell];
@@ -593,8 +590,8 @@ exahype2::dg::rk::tests::StagesTest::testTheDivergenceOfALinearFluxIsItsSlope() 
     TimeStepSize
   );
 
-  // Only the flux along the first axis varies, and its physical slope is the reference slope
-  // over the cell extent.
+  // Only the flux along the first axis varies. Its physical slope is the reference slope over the
+  // cell extent.
   const double expected = -TimeStepSize * Slope / cellSize(0);
   for (int entry = 0; entry < UnknownsPerStage; entry++) {
     validateNumericalEqualsWithParams1(estimate[entry], expected, entry);
@@ -989,7 +986,7 @@ exahype2::dg::rk::tests::StagesTest::testTheCloseWritesTheWeightedSumInPlaceAndR
 }
 
 /**
- * Every tableau is explicit, its nodes are the row sums of its matrix and its weights sum to one.
+ * Every tableau is explicit with the row sums of its matrix as nodes and weights that sum to one.
  */
 void
 exahype2::dg::rk::tests::StagesTest::testTheButcherTableausAreConsistent() {
@@ -1016,17 +1013,11 @@ exahype2::dg::rk::tests::StagesTest::testTheButcherTableausAreConsistent() {
   check(exahype2::dg::rk::ButcherTableau<4>{});
 }
 
-/**
- * The opened stage of every cell of a device range reproduces the serial host loop.
- */
 void
 exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeOpensAStageLikeTheHost() {
   validateEveryCellOpensLikeTheHost<FullSolver>();
 }
 
-/**
- * The opened stage of a diffusive system of every cell of a device range reproduces the serial host loop.
- */
 void
 exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeOpensADiffusiveStageLikeTheHost() {
   validateEveryCellOpensLikeTheHost<DiffusiveFullSolver>();
@@ -1093,9 +1084,6 @@ exahype2::dg::rk::tests::StagesTest::validateEveryCellOpensLikeTheHost() {
   validateNumericalBuffersEquals(deviceFaceFluxes, hostFaceFluxes);
 }
 
-/**
- * The closed step of every cell of a device range reproduces the serial host loop.
- */
 void
 exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeClosesTheStepLikeTheHost() {
   const exahype2::dg::tests::CellChain geometry;

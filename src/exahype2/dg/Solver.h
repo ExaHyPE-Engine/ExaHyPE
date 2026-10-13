@@ -40,8 +40,7 @@ namespace exahype2::dg {
 /**
  * The base of the discontinuous Galerkin solver families. A solver family defines
  * getTimeStepSizeFromCFL() and getFixedTimeStepSize(). StoragePrecision is the type of the nodal
- * values. ComputePrecision is the type of the face data and the kernels. A cell writes only its own
- * halves of its faces. The Riemann solver reads both halves.
+ * values and ComputePrecision the type of the face data and the kernels.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::dg::Solver {
@@ -56,7 +55,6 @@ public:
   static constexpr int  FluxValuesPerFace        = 2 * NodesPerFace * Derived::NumberOfUnknowns;
   static constexpr bool UsesAdaptiveTimeStepping = Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive;
 
-  // The defaulted parameter defers the lookup in Derived to the use, where Derived is complete.
   template <typename Precision, typename Generated = Derived>
   using Quadrature = typename Generated::template Quadrature<Precision>;
   template <typename Precision, typename Generated = Derived>
@@ -99,6 +97,7 @@ public:
     tarch::plotter::Format          format,
     const std::string&              outputDirectory
   );
+  INLINE_METHOD void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void release();
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
@@ -171,20 +170,12 @@ protected:
   StatePool _faceStates{StateValuesPerFace};
   FluxPool  _faceFluxes{FluxValuesPerFace};
 
-  /**
-   * The MPI exchanges of the own face halves with the neighbour ranks. The restricted fluxes change
-   * only on coarse faces.
-   */
   peano4::HaloExchange<ComputePrecision> _stateExchange{_faceStates};
   peano4::HaloExchange<ComputePrecision> _fluxExchange{_faceFluxes};
   peano4::HaloExchange<ComputePrecision> _restrictedFluxExchange{_faceFluxes, peano4::FaceKind::Coarse};
 
   exahype2::plotter::PatchPlotter _plotter;
 
-  /**
-   * Host copies of the 1D node positions and quadrature weights for the plots and a host initial
-   * condition.
-   */
   std::vector<double> _nodePositionsOnHost{};
   std::vector<double> _nodeWeightsOnHost{};
 
@@ -195,23 +186,12 @@ private:
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
 
   exahype2::RefinementVotes _votes{};
-  /**
-   * regrid() sets it, and the next voteOnRefinement() clears it and casts no vote.
-   */
-  bool _meshChangedSinceLastTimeStep{false};
+  bool                      _meshChangedSinceLastTimeStep{false};
 
-  /**
-   * The cells the cell predicate of Derived owns, the local cells first. The list is empty without
-   * a cell predicate.
-   */
   tarch::accelerator::Buffer<int> _ownedCells{tarch::MemoryLocation::Device};
   std::vector<int>                _ownedCellsOnHost{};
   int                             _numberOfLocalOwnedCells{0};
 
-  /**
-   * The interior, boundary and hanging faces beside an owned cell, the local faces first. The list
-   * is empty without a cell predicate.
-   */
   tarch::accelerator::Buffer<int> _ownedRiemannFaces{tarch::MemoryLocation::Device};
   int                             _numberOfLocalOwnedRiemannFaces{0};
 

@@ -11,8 +11,8 @@ namespace exahype2::particles {
 
 /**
  * Series of position snapshots with optional data per particle, appended to a CSV file. A pair of
- * integers identifies a particle. The threads of a traversal add snapshots concurrently, so
- * addParticleSnapshot() locks _mutex.
+ * integers identifies a particle. addParticleSnapshot() locks _mutex while the threads of a
+ * traversal add snapshots concurrently.
  */
 class exahype2::particles::TrajectoryDatabase final : public tarch::database::SnapshotDatabase {
 public:

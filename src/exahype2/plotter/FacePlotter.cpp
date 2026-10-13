@@ -9,9 +9,8 @@ exahype2::plotter::FacePlotter::FacePlotter(std::string filename, std::vector<Da
 }
 
 /**
- * Returns the sorted faces this rank writes. The rank of the lower cell writes a face, and the rank
- * of the upper cell writes a face whose lower cell is on no other rank. Only a remote interior face
- * has its lower cell on another rank.
+ * Returns the sorted faces this rank writes. The rank of the lower cell writes a face. The rank of
+ * the upper cell writes a face only if no other rank owns the lower cell.
  */
 std::vector<int>
 exahype2::plotter::FacePlotter::getPlottedFaces(const peano4::CellConnectivity& cellConnectivity) {

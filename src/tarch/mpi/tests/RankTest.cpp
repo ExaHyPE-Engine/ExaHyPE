@@ -40,7 +40,7 @@ tarch::mpi::tests::RankTest::testRankOnNodeMatchesTheSharedMemorySplit() {
 }
 
 /**
- * The node master has node rank zero, and every node rank lies below the number of ranks on the node.
+ * The node master has node rank zero. Every node rank lies below the number of ranks on the node.
  */
 void
 tarch::mpi::tests::RankTest::testNodeMasterHoldsNodeRankZero() {

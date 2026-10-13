@@ -30,16 +30,17 @@ namespace tarch::accelerator {
   }
 
   /**
-   * Waits for every thread of the team on a device. One host thread runs a whole team, so the
-   * host has nothing to wait for.
+   * Waits for every thread of the team on a device. One host thread runs a whole team. The call
+   * returns at once on the host.
    */
   INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier([[maybe_unused]] const HipTeam& team) {
     COMPILE_IF_ON_DEVICE(__syncthreads();)
   }
 
   /**
-   * Returns the threads per team of a launch that asks for requested threads: Whole warps up to
-   * HipBlockSize, or HipBlockSize for TeamRange::BackendDefault.
+   * Returns the threads per team of a launch that asks for requested threads. The count rounds
+   * requested up to whole warps and stops at HipBlockSize. TeamRange::BackendDefault asks for
+   * HipBlockSize threads.
    */
   INLINE_METHOD int getTeamThreads(const int requested) {
     if (requested == tarch::accelerator::TeamRange::BackendDefault) {
@@ -51,8 +52,8 @@ namespace tarch::accelerator {
   }
 
   /**
-   * Returns the shared memory per team of a launch that asks for requested bytes, or
-   * TeamScratchBytes for TeamRange::BackendDefault.
+   * Returns the shared memory per team of a launch that asks for requested bytes.
+   * TeamRange::BackendDefault asks for TeamScratchBytes.
    */
   INLINE_METHOD int getTeamScratchBytes(const int requested) {
     if (requested == tarch::accelerator::TeamRange::BackendDefault) {
@@ -96,8 +97,8 @@ namespace tarch::accelerator {
 
   /**
    * Launches the loop on the stream of the current device and returns. The stream runs launches
-   * and copies in order, so a later launch reads what this one wrote; a caller that reads device
-   * memory on the host without copyFrom() or a reduction calls waitForDevice() first.
+   * and copies in order. A caller that reads device memory on the host without copyFrom() or a
+   * reduction calls waitForDevice() first.
    */
   template <typename Functor>
   INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
@@ -141,8 +142,8 @@ namespace tarch::accelerator {
   }
 
   /**
-   * Launches one block per team on the stream of the current device and returns, like the loop
-   * over a Range.
+   * Launches one block per team on the stream of the current device. Returns before the kernel
+   * completes like the loop over a Range.
    */
   template <typename Functor>
   INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {

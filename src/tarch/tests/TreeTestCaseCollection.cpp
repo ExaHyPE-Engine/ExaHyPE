@@ -5,8 +5,8 @@
 #include "tarch/Assertions.h"
 
 /**
- * The name has no ::, and an empty name makes a root collection that writes no progress line of its
- * own.
+ * The name must not contain ::. An empty name makes a root collection that writes no progress
+ * line of its own.
  */
 tarch::tests::TreeTestCaseCollection::TreeTestCaseCollection(
   const std::string& treeTestCaseCollectionName,

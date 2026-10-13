@@ -259,7 +259,7 @@ peano4::tests::MigrationExchangeTest::testEveryFilledSlotHoldsTheChunkOfItsCell(
 }
 
 /**
- * Two exchanges get distinct tags in their first migrate, and every rank reserves the same tags.
+ * Two exchanges get distinct tags in their first migrate. Every rank reserves the same tags.
  */
 void
 peano4::tests::MigrationExchangeTest::testExchangesHoldDistinctTags() {
@@ -283,7 +283,7 @@ peano4::tests::MigrationExchangeTest::testExchangesHoldDistinctTags() {
 }
 
 /**
- * The release frees every buffer and keeps the tag, and the next migrate moves the chunks of a later
+ * The release frees every buffer and keeps the tag. The next migrate moves the chunks of a later
  * regrid correctly.
  */
 void

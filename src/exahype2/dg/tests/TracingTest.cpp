@@ -227,7 +227,7 @@ exahype2::dg::tests::TracingTest::testStaticSamplingPreservesParticleData() {
 }
 
 /**
- * A particle on the plane receives the mean of the two face traces, and the named field receives
+ * A particle on the plane receives the mean of the two face traces and the named field receives
  * their difference.
  */
 void

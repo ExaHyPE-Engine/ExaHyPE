@@ -20,7 +20,7 @@ namespace exahype2::runner::tests {
 
 /**
  * Runtime parameters of an application, stored in variables the caller owns. load() reads the
- * configuration file first and the command line second, and removes the consumed arguments from
+ * configuration file first and the command line second. It removes the consumed arguments from
  * argv.
  */
 class exahype2::runner::ParameterTable final {
@@ -121,10 +121,6 @@ public:
 private:
   friend class exahype2::runner::tests::RuntimeParametersTest;
 
-  /**
-   * Seconds an MPI wait may take before the warning and before the abort, where zero disables the
-   * bound.
-   */
   double _MPITimeoutWarning{120.0};
   double _MPIDeadlockTimeout{600.0};
   bool   _MPITimeoutConfigured{false};

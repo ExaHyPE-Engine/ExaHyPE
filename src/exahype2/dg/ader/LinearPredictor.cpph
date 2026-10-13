@@ -39,8 +39,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::selectPointSourc
 /**
  * Extrapolates the time averages of the state and of the flux over the time step to the faces of
  * the cell on the threads of workers. scratch has the extent of Scratch and stores the time-averaged
- * state and spatial terms for the volume integral. pointSourceIndices lists the point sources inside
- * the cell. A thread without a cell takes part in every barrier of the team and writes nothing.
+ * state and spatial terms for the volume integral. A thread without a cell takes part in every
+ * barrier of the team and writes nothing.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -102,9 +102,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
   // The coefficient of the ith Taylor term enters the time average with dt^i / (i + 1)!.
   auto timeAverageFactor = static_cast<ComputePrecision>(1.0);
 
-  // The terms of Derived are linear in the state. The last pass evaluates the time-averaged flux
-  // from the time-averaged state. Every stage over nodes gives a thread the same nodes. A barrier
-  // precedes every stage that reads the nodes of other threads.
+  // The terms of Derived are linear in the state and the last pass evaluates the time-averaged flux
+  // from the time-averaged state. A barrier precedes every stage that reads the nodes of other
+  // threads.
   for (int derivative = 0; derivative < NodesPerAxis; derivative++) {
     const bool                    isLastPass = derivative == NodesPerAxis - 1;
     const ComputePrecision* const values     = isLastPass ? timeAveragedState : state;

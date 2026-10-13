@@ -10,7 +10,7 @@
 namespace tarch::accelerator {
   /**
    * References the Kokkos team member of the running kernel and the team scratch of the launch. The
-   * member exists for the whole kernel, so a nested call may copy this handle by value.
+   * member exists for the whole kernel. A nested call may copy this handle by value.
    */
   struct KokkosTeam final {
     using MemberType = Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>::member_type;

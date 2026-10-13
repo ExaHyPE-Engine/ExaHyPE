@@ -17,10 +17,10 @@ exahype2::dg::ader::PicardResidual::add(const PicardResidual& other) {
 }
 
 /**
- * Solves the local Cauchy problem of one cell with a Picard iteration on the threads of workers.
- * Extrapolates the time-averaged state and flux to the faces. On return, the time-averaged flux in
+ * Solves the local Cauchy problem of one cell with a Picard iteration on the threads of workers and
+ * extrapolates the time-averaged state and flux to the faces. On return, the time-averaged flux in
  * scratch stores its derivative along its own axis. Returns the number of sweeps,
- * UnconvergedPicardIteration or DivergedPicardIteration. Returns zero on a thread without a cell.
+ * UnconvergedPicardIteration or DivergedPicardIteration, and zero on a thread without a cell.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -297,10 +297,10 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getAlignedTea
 }
 
 /**
- * Returns the sum of the residuals of the threads of the group of workers. Every thread of the
- * group returns the same value. Every thread of the team writes its limbs and flag into the
- * reserved start of the aligned team scratch. Every thread adds the entries of its group in thread
- * order. A team of one thread returns residual. A thread without a group returns an empty residual.
+ * Returns the sum of the residuals of the threads of the group of workers, the same value on every
+ * thread of the group. Every thread writes its limbs and flag into the reserved start of the
+ * aligned team scratch and adds the entries of its group in thread order. A team of one thread
+ * returns residual and a thread without a group an empty residual.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::PicardResidual
@@ -372,7 +372,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getSquaredTol
 ) {
   // Each value of two converged iterates differs by up to RoundingUnits units in the last place of
   // the largest unknown of the first node. solvePicardSystem() sums the squares of the differences
-  // of ValuesPerIterate values. Every thread of the cell reads the first node.
+  // of ValuesPerIterate values.
   constexpr double RoundingUnits = 2.0;
   constexpr double RoundingOfValue =
     RoundingUnits * static_cast<double>(std::numeric_limits<ComputePrecision>::epsilon());
@@ -954,8 +954,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
 }
 
 /**
- * Solves the time system of one Picard sweep. Returns the squared distance between the new and the
- * previous iterate as an exact fixed-point sum. A zero right-hand side leaves the cell state bitwise
+ * Solves the time system of one Picard sweep and returns the squared distance between the new and
+ * the previous iterate as an exact fixed-point sum. A zero right-hand side leaves the cell state bitwise
  * in every time node. A value that is not finite or lies outside the divergence bound returns a
  * diverged residual.
  */

@@ -62,8 +62,8 @@ exahype2::fv::reconstruction::Constant::StateTerms<
 
 /**
  * Returns the flux of state along normal and writes its largest wave speed into maxEigenvalue.
- * Both come from the entry of volume in the ring terms. A volume of -1 names a halo state, and a
- * NoTermRing stores nothing. Then the call evaluates the flux into fluxBuffer and returns that.
+ * Both come from the entry of volume in the ring terms. For a halo state, named by a volume of -1,
+ * and with a NoTermRing the call evaluates the flux into fluxBuffer and returns that.
  */
 template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename Terms, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD const ComputePrecision*
@@ -478,9 +478,9 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
          * static_cast<GeometryPrecision>(0.5))
         / static_cast<GeometryPrecision>(patchSize(normal))
       );
-      // A fused multiply-add pairs the Rusanov diffusion of a face with its flux. Every compiler
-      // then rounds the face flux once. The term of the axis rounds through a zero addend before
-      // it joins the sum. Both axis orders then add the same rounded terms.
+      // A fused multiply-add pairs the Rusanov diffusion of a face with its flux and every compiler
+      // rounds the face flux once. The term of the axis rounds through a zero addend before it
+      // joins the sum and both axis orders add the same rounded terms.
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         const ComputePrecision leftJump  = centreStateForCompute[unknown] - leftState[unknown];
@@ -505,7 +505,7 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
     outputState[unknown] =
       static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + axisUpdates[unknown]);
   }
-  // The assertion stays out of the SIMD loop, whose body must not emit diagnostics.
+  // The assertion stays out of the SIMD loop. The body of that loop must not emit diagnostics.
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     assertion(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }

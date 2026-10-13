@@ -23,21 +23,13 @@ class tarch::reader::NetCDFFieldSampler final {
 
 public:
   struct FieldDescription final {
-    std::string name{};
-    std::string filePath{};
-    /**
-     * valueKey names the netCDF variable of the values. It has to differ from every coordinate key.
-     */
-    std::string valueKey{"z"};
-    /**
-     * The entries of key name the netCDF variables of the coordinates in the order of the position
-     * argument of the samplers.
-     */
+    std::string                              name{};
+    std::string                              filePath{};
+    std::string                              valueKey{"z"};
     std::array<std::string, FieldDimensions> key{getDefaultCoordinateKeys()};
   };
 
   explicit NetCDFFieldSampler(std::initializer_list<FieldDescription> fields);
-
   explicit NetCDFFieldSampler(const std::vector<FieldDescription>& fields);
 
   NetCDFFieldSampler(
@@ -64,19 +56,16 @@ public:
   ) const;
 
   double sampleBilinear(const std::string& fieldName, tarch::la::Vector<FieldDimensions, double> position) const;
-
   [[nodiscard]] bool covers(const std::string& fieldName, tarch::la::Vector<FieldDimensions, double> position) const;
 
 private:
   struct Field final {
-    std::vector<double> values{};
-    // A plain 0 would select the pointer constructor of Vector.
+    std::vector<double>                             values{};
     tarch::la::Vector<FieldDimensions, std::size_t> length{
       tarch::la::Vector<FieldDimensions, std::size_t>(std::size_t(0))
     };
     tarch::la::Vector<FieldDimensions, double> firstElement{tarch::la::Vector<FieldDimensions, double>(0.0)};
     tarch::la::Vector<FieldDimensions, double> lastElement{tarch::la::Vector<FieldDimensions, double>(0.0)};
-    // A sampler without an extent maps every field onto the coordinate range of its own file.
     tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain{
       tarch::la::Vector<FieldDimensions, double>(0.0)
     };
@@ -94,7 +83,6 @@ private:
   static std::array<std::string, FieldDimensions> getDefaultCoordinateKeys();
 
   void parseFieldFile(const FieldDescription& fieldDescription);
-
   [[nodiscard]] const Field& getField(const std::string& fieldName) const;
 
   static double transformSimulationCoordinateToCDFRange(

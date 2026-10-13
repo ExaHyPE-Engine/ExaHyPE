@@ -55,7 +55,6 @@ class exahype2::dg::ader::Solver : public exahype2::dg::Solver<Derived, StorageP
 public:
   using Base = exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>;
 
-  // The defaulted parameter defers the lookup in Derived to the use, where Derived is complete.
   template <typename Precision, typename Generated = Derived>
   using Quadrature = typename Generated::template Quadrature<Precision>;
   template <typename Precision, typename Generated = Derived>
@@ -70,11 +69,7 @@ public:
   static constexpr bool   HasLimiter = not std::is_void_v<Limiter>;
 
   using LimiterType = std::conditional_t<HasLimiter, Limiter, exahype2::dg::ader::NoLimiter>;
-  /**
-   * The Picard iteration of the predictor stops once the Euclidean distance between two
-   * iterates falls below this value. A cell stops at the rounding distance of its iterates in
-   * ComputePrecision when that distance is larger.
-   */
+
   static constexpr double PicardResidualTolerance = 1e-7;
 
   Solver()                         = delete;
@@ -134,16 +129,11 @@ public:
   );
 
 private:
-  /**
-   * The coupled time step calls the private phases of a partner of another order or precision.
-   */
   template <typename PartnerDerived, typename PartnerStorage, typename PartnerCompute, typename PartnerLimiter>
   friend class exahype2::dg::ader::Solver;
 
   using LimiterSlot = std::conditional_t<HasLimiter, std::optional<Limiter>, exahype2::dg::ader::NoLimiter>;
 
-  // Predictor::ScratchSize reads the PDE terms of Derived. Only function bodies name it. Derived is
-  // complete only once a function body is instantiated.
   using Predictor = exahype2::dg::ader::Predictor<Derived, ComputePrecision>;
 
   [[nodiscard]] static INLINE_METHOD exahype2::dg::BasisTables<ComputePrecision> getBasisTables();
@@ -183,38 +173,20 @@ private:
 
   tarch::accelerator::Buffer<double> _pointSourceLocations{tarch::MemoryLocation::Device};
 
-  /**
-   * One predictor scratch block per scratch chunk of the predictor dispatch.
-   */
   tarch::accelerator::Buffer<ComputePrecision> _predictorScratch{tarch::MemoryLocation::Device};
 
-  /**
-   * The number of cells of this rank whose Picard iteration stopped at its sweep limit since the
-   * last reduction.
-   */
   int _unconvergedPredictions{0};
   int _unconvergedPredictionsSlot{0};
 
   LimiterSlot _limiter{};
 
-  /**
-   * Runs the time steps of this solver and its coupling partner. It is empty without a partner.
-   */
   std::function<void(const peano4::CellConnectivity&, exahype2::RefinementRequests&)> _coupledTimeStep{};
   bool                                                                                _drivenByPartner{false};
 
-  /**
-   * Two entries per coupling face: The face and the side of this solver's cell. The local faces
-   * come first, then the remote ones.
-   */
   tarch::accelerator::Buffer<int> _couplingFaces{tarch::MemoryLocation::Device};
   int                             _numberOfCouplingFaces{0};
   int                             _numberOfLocalCouplingFaces{0};
 
-  /**
-   * The matrix that maps the face nodes of the partner onto those of this solver, with the partner
-   * node as the major index.
-   */
   tarch::accelerator::Buffer<ComputePrecision> _couplingMatrix{tarch::MemoryLocation::Device};
 };
 TARGET_DECLARE_END

@@ -7,9 +7,8 @@
 /**
  * Creates, queries and frees MPI communicators, info objects, datatypes and reduction operations.
  * Every call checks the return value of MPI and terminates with the operation and the source
- * location of its caller where MPI fails. duplicateCommunicator() completes like the collectives of
- * Collectives.h, so a rank that never joins it warns and aborts. MPI offers no non-blocking split,
- * so a split that a rank never joins blocks without a report.
+ * location of its caller where MPI fails. MPI offers no non-blocking split and a split that a rank
+ * never joins blocks without a report.
  */
 namespace tarch::mpi {
   int splitCommunicator(
@@ -36,7 +35,6 @@ namespace tarch::mpi {
   );
 
   int freeCommunicator(MPI_Comm* communicator, std::source_location location = std::source_location::current());
-
   int getRank(MPI_Comm communicator, int* rank, std::source_location location = std::source_location::current());
 
   int getNumberOfRanks(
@@ -72,7 +70,6 @@ namespace tarch::mpi {
   );
 
   int commitType(MPI_Datatype* type, std::source_location location = std::source_location::current());
-
   int freeType(MPI_Datatype* type, std::source_location location = std::source_location::current());
 
   int createOperation(

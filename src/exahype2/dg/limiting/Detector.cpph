@@ -134,10 +134,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::widenExtrema(
 
 /**
  * Writes the verdict on candidate into status and into the own half of every face. A
- * PredictorDiverged mark or a rejected candidate turns the cell Troubled. An accepted cell that was
- * troubled stays Limited. candidateExtrema receives the extrema of a candidate that passes the
- * physical admissibility term. Returns the wave speeds of an accepted candidate whose cell was not
- * troubled. Returns empty maxima for every other candidate.
+ * PredictorDiverged mark or a rejected candidate turns the cell Troubled and an accepted cell that
+ * was troubled stays Limited. Returns the wave speeds of an accepted candidate whose cell was not
+ * troubled and empty maxima for every other candidate.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -588,8 +587,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesDiscreteMa
 
 /**
  * Rounds an observable extremum to DiscardedMantissaBits fewer mantissa bits. The tensor-product
- * sums of two mirror-image cells add in different orders. Their results differ in the last bits.
- * The rounding keeps a check at the margin from failing in one of the two cells only.
+ * sums of two mirror-image cells add in different orders and differ in the last bits. The rounding
+ * keeps a check at the margin from failing in one of the two cells only.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -735,11 +734,10 @@ exahype2::dg::limiting::WriteExtremaOntoFaces<Derived, StoragePrecision, Compute
 }
 
 /**
- * In 2D the single writing round widens the extrema of the cell along each axis. It writes each
+ * In 2D the single writing round widens the extrema of the cell along each axis and writes each
  * result onto the faces along the other axis. In 3D the first round writes the extrema widened
- * along one axis onto the faces along the two other axes. The second round writes the extrema
- * widened along two axes onto the faces along the third axis. Every round reads the sets of the
- * previous round. It writes into other sets. The last round widens the reference extrema by the
+ * along one axis onto the faces along the two other axes and the second round those widened along
+ * two axes onto the faces along the third axis. The last round widens the reference extrema by the
  * last set of every face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>

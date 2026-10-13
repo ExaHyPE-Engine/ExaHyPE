@@ -137,7 +137,7 @@ exahype2::plotter::PatchPlotter::plotNodes(
 /**
  * Writes nodal values at their node positions or repeats a single node at the patch corners.
  * A patch with status at least subcellStatus reads each node from its containing subcell.
- * A null statuses omits the status field.
+ * The function writes the status field only if statuses is non-null.
  */
 template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
 INLINE_METHOD void

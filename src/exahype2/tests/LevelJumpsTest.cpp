@@ -71,8 +71,8 @@ namespace {
   TARGET_DECLARE
   /**
    * Counts the visits of every level jump. missedEarlierVisits counts per visit the launched level
-   * jumps that are still unvisited and write a face the visited level jump reads: Its coarse face
-   * with readsCoarseFace, its fine faces otherwise.
+   * jumps that are still unvisited and write a face the visited level jump reads. That face is its
+   * coarse face with readsCoarseFace and one of its fine faces otherwise.
    */
   struct RecordVisit final {
     tarch::Span<const peano4::LevelJump> levelJumps{};

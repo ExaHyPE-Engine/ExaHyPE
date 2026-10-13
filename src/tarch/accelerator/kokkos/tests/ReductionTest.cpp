@@ -30,7 +30,7 @@ tarch::accelerator::kokkos::tests::ReductionTest::testParallelReduction() {
   const std::vector<int> host(ElementCount, 1);
   const int              expectedSum = ElementCount;
 
-  // allocateMemory() places device memory in Kokkos::DefaultExecutionSpace::memory_space, so a device
+  // allocateMemory() places device memory in Kokkos::DefaultExecutionSpace::memory_space. A device
   // kernel reads the raw pointer.
   int* deviceInput = tarch::allocateMemory<int>(ElementCount, tarch::MemoryLocation::Device);
   tarch::copyTo(deviceInput, host.data(), ElementCount, tarch::MemoryLocation::Device);

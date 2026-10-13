@@ -79,6 +79,7 @@ public:
   void initialise(const peano4::CellConnectivity& cellConnectivity, ::exahype2::RefinementRequests& requests);
 {%- endif %}
 {%- if TRACERS %}
+  void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity);
   void regrid(
     const peano4::CellConnectivity& cellConnectivity,
     const peano4::Regrid&           regrid,

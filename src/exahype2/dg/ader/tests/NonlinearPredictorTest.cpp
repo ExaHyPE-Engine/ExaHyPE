@@ -343,9 +343,6 @@ namespace {
     std::array<double*, peano4::FacesPerCell> fluxPointers{getRowsOf(flux)};
   };
 
-  /**
-   * Returns the cell node of face node faceNode at position normalIndex along direction.
-   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     auto nodeIndex       = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
     nodeIndex(direction) = normalIndex;
@@ -892,7 +889,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAnUnboundedIterateReports
 }
 
 /**
- * Only a squared tolerance above 2^-961 sums a change below it into the residual.
+ * A squared tolerance of at most 2^-961 returns itself as the residual of every change.
  */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testAToleranceWithoutAFiniteScaleCountsEveryChange() {
@@ -1840,9 +1837,6 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAToleranceBelowTheRoundin
   }
 }
 
-/**
- * The predictor of every cell of a device range reproduces the serial host loop.
- */
 void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryCellOfADeviceRangeMatchesTheHostPredictor() {
   const Tables                         tables;

@@ -9,7 +9,6 @@
 TARGET_DECLARE
 namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD double abs(double value);
-
   INLINE_METHOD GPU_CALLABLE_METHOD int abs(int value);
 
   INLINE_METHOD GPU_CALLABLE_METHOD bool greater(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
@@ -21,7 +20,6 @@ namespace tarch::la {
   );
 
   INLINE_METHOD GPU_CALLABLE_METHOD bool equals(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
-
   INLINE_METHOD GPU_CALLABLE_METHOD bool smaller(double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
   INLINE_METHOD GPU_CALLABLE_METHOD bool smallerEquals(

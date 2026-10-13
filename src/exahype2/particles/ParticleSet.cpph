@@ -86,7 +86,7 @@ exahype2::particles::ParticleSetView<NumberOfData>::markAsMovedOutOfCell(const i
 
 /**
  * Returns whether the cell that holds the particle index also holds position, with the rule of
- * ParticleSet::getSlotAt(): A position on the lower face of a cell belongs to the cell below it.
+ * ParticleSet::getSlotAt(). A position on the lower face of a cell belongs to the cell below it.
  */
 template <int NumberOfData>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -217,8 +217,8 @@ exahype2::particles::ParticleSet<NumberOfData>::getSlot(const int index) const {
 
 /**
  * Returns the slot of the cell of this rank that contains position, or a negative value if no cell
- * of this rank contains it. A position on a face belongs to the lower cell along the face normal,
- * and a position on the lower domain wall to the cell at the wall.
+ * of this rank contains it. A position on a face belongs to the lower cell along the face normal.
+ * A position on the lower domain wall belongs to the cell at the wall.
  */
 template <int NumberOfData>
 INLINE_METHOD int
@@ -257,8 +257,8 @@ exahype2::particles::ParticleSet<NumberOfData>::getSlotAt(
 }
 
 /**
- * Appends one particle to the host arrays. The device copy is stale afterwards, and the caller
- * either uploads everything or copies the appended tail.
+ * Appends one particle to the host arrays. The device copy is stale afterwards. The caller uploads
+ * everything or copies the appended tail.
  */
 template <int NumberOfData>
 INLINE_METHOD void
@@ -474,9 +474,9 @@ exahype2::particles::ParticleSet<NumberOfData>::takeMovedParticlesFromTheDevice(
 }
 
 /**
- * Appends the particles of values and numbers to the cells that hold them: A particle with a
- * cell on this rank at once, every other one after an exchange with the other ranks. Every rank
- * calls it at the same time. A particle that no rank holds stops the run.
+ * Appends the particles of values and numbers to the cells that hold them, at once for a cell on
+ * this rank and after an exchange with the other ranks otherwise. Every rank calls it at the same
+ * time. A particle that no rank holds stops the run.
  */
 template <int NumberOfData>
 INLINE_METHOD void

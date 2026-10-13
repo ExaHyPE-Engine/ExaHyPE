@@ -44,7 +44,7 @@ namespace {
   constexpr int CellStateSize       = CellLayout::NodesPerCell * CellLayout::NumberOfData;
 
   /**
-   * The nodes lie at the two ends of the reference interval, so a face integral changes only the
+   * The nodes lie at the two ends of the reference interval. A face integral then changes only the
    * nodes on that face.
    */
   struct Tables final {
@@ -66,9 +66,6 @@ namespace {
     return tables;
   }
 
-  /**
-   * Returns the cell node of face node faceNode at position normalIndex along direction.
-   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     int lowerAxesStride = 1;
     for (int axis = 0; axis < direction; axis++) {
@@ -118,7 +115,7 @@ namespace {
   }
 
   /**
-   * Writes the expected cell state after the correction: Every face subtracts its flux difference
+   * Writes the expected cell state after the correction. Every face subtracts its flux difference
    * times the time step size over the cell extent from the nodes on that face.
    */
   void setExpectedCellState(double (&expected)[CellStateSize]) {
@@ -192,9 +189,6 @@ exahype2::dg::ader::tests::CorrectorTest::testTheFaceIntegralsReachTheCellState(
   }
 }
 
-/**
- * Zero flux differences leave the cell state unchanged bitwise.
- */
 void
 exahype2::dg::ader::tests::CorrectorTest::testZeroFluxDifferencesLeaveTheCellStateBitwise() {
   const Tables tables = getTables();

@@ -256,9 +256,6 @@ peano4::tests::SpacetreeTest::testTheSpawnLevelOffersEnoughOwnershipUnits() {
   }
 }
 
-/**
- * The spawn level stays strictly above the cells.
- */
 void
 peano4::tests::SpacetreeTest::testTheSpawnLevelStaysAboveTheCells() {
   for (int targetLevel = 0; targetLevel <= 10; targetLevel++) {
@@ -382,9 +379,6 @@ peano4::tests::SpacetreeTest::testTheCellLookupFindsEveryCellAndNothingElse() {
   validateEquals(spacetree.getCellAt(-1, tarch::la::Vector<DIMENSIONS, int>(0)), -1);
 }
 
-/**
- * The spacetree returns the periodic boundaries of its init().
- */
 void
 peano4::tests::SpacetreeTest::testThePeriodicBoundariesReturnTheInitialisedValue() {
   std::bitset<DIMENSIONS> periodic;

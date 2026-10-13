@@ -104,7 +104,7 @@ TARGET_DECLARE_END
 
 /**
  * Returns the error sums of numberOfCells cells in errorsPerCell. The partial sums merge pairwise
- * on the device, and only the total is copied to the host.
+ * on the device. Only the total reaches the host.
  */
 INLINE_METHOD exahype2::ErrorSums
 exahype2::ErrorMeasurement::sumErrorsOfCells(
@@ -135,8 +135,8 @@ exahype2::ErrorMeasurement::sumErrorsOfCells(
 }
 
 /**
- * Records the norms of the first numberOfCells cells in getErrorsPerCell(). The caller's
- * translation unit compiles the device loops, so a solver built for the device runs them there.
+ * Records the norms of the first numberOfCells cells in getErrorsPerCell(). The device loops
+ * compile in the translation unit of the caller.
  */
 INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
 exahype2::ErrorMeasurement::record(const int numberOfCells, const double timeStamp) {

@@ -14,7 +14,7 @@ namespace {
 
   /**
    * Sums the first value and keeps the maximum of the second value of every record. The parameter
-   * types follow MPI_User_function, which tarch::mpi::createOperation() takes.
+   * types follow MPI_User_function.
    */
   void reduceRecords(
     void*                          incoming,
@@ -45,8 +45,8 @@ tarch::mpi::tests::HandlesTest::run() {
 }
 
 /**
- * A split by parity numbers the ranks of each half by their global order, and a rank whose colour
- * is undefined receives no communicator, as the file writers rely on.
+ * A split by parity numbers the ranks of each half by their global order. A rank whose colour is
+ * undefined receives no communicator.
  */
 void
 tarch::mpi::tests::HandlesTest::testASplitByParityNumbersTheRanksOfEachHalf() {
@@ -81,8 +81,8 @@ tarch::mpi::tests::HandlesTest::testASplitByParityNumbersTheRanksOfEachHalf() {
 }
 
 /**
- * A duplicate is a communicator of its own with the ranks of the original, and a collective
- * completes over it.
+ * A duplicate is a communicator of its own with the ranks of the original. A collective completes
+ * over it.
  */
 void
 tarch::mpi::tests::HandlesTest::testADuplicateHoldsTheSameRanksAndCommunicates() {
@@ -108,7 +108,7 @@ tarch::mpi::tests::HandlesTest::testADuplicateHoldsTheSameRanksAndCommunicates()
 }
 
 /**
- * Every communicator carries the tag upper bound, which the MPI standard puts at 32767 or above.
+ * Every communicator reports a tag upper bound of 32767 or above, as the MPI standard demands.
  */
 void
 tarch::mpi::tests::HandlesTest::testTheTagUpperBoundIsAnAttribute() {

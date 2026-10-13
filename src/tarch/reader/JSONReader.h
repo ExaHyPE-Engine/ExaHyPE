@@ -13,7 +13,6 @@ public:
   JSONReader(JSONReader&&)                 = delete;
   JSONReader& operator=(const JSONReader&) = delete;
   JSONReader& operator=(JSONReader&&)      = delete;
-  // The destructor is defined in the .cpp, because Impl is incomplete here.
   ~JSONReader();
 
   [[nodiscard]] bool hasKey(const std::string& key) const;

@@ -5,10 +5,10 @@
 
 TARGET_DECLARE
 /**
- * Returns the calling device thread as a worker of a team that runs cells on threadsPerCell
- * threads each. The threads of the team split into groups of threadsPerCell consecutive threads.
- * The threads behind the last full group receive no cell. A team smaller than threadsPerCell runs
- * one cell on all of its threads. On the host the call runs one cell on one thread without a team.
+ * Returns the calling device thread as a worker of a team that runs cells on groups of
+ * threadsPerCell consecutive threads. The threads behind the last full group receive no cell. A
+ * team smaller than threadsPerCell runs one cell on all of its threads and the host runs one cell
+ * on one thread.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::TeamWorkers
 exahype2::dg::ader::getWorkers(

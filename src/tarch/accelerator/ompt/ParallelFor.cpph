@@ -55,8 +55,9 @@ namespace tarch::accelerator {
   TARGET_DECLARE_END
 
   /**
-   * Returns the threads per team a launch asks for when it requests requested threads: Whole
-   * warps up to OmptThreadsPerTeam, or OmptThreadsPerTeam for TeamRange::BackendDefault.
+   * Returns the threads per team of a launch that asks for requested threads. The count rounds
+   * requested up to whole warps and stops at OmptThreadsPerTeam. TeamRange::BackendDefault asks
+   * for OmptThreadsPerTeam threads.
    */
   INLINE_METHOD int getTeamThreads(const int requested) {
     if (requested == tarch::accelerator::TeamRange::BackendDefault) {
@@ -68,7 +69,7 @@ namespace tarch::accelerator {
   }
 
   /**
-   * Returns the team scratch bytes of a launch that asks for requested bytes: Every team provides
+   * Returns the team scratch bytes of a launch that asks for requested bytes. Every team provides
    * TeamScratchBytes.
    */
   INLINE_METHOD int getTeamScratchBytes(const int requested) {

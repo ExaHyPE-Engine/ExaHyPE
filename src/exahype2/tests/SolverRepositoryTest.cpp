@@ -81,6 +81,7 @@ namespace {
     ) {
       phaseCalls++;
     }
+    void recordLastTimeStamp([[maybe_unused]] const peano4::CellConnectivity& cellConnectivity) { phaseCalls++; }
     void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record) {
       phaseCalls++;
       slot = record.addSum(1);
@@ -151,6 +152,7 @@ exahype2::tests::SolverRepositoryTest::testEveryPhaseCallReachesEverySolver() {
   repository.performTimeStep(cellConnectivity);
   repository.regrid(cellConnectivity, regrid);
   repository.plot(cellConnectivity, tarch::plotter::Format::VTU, "");
+  repository.recordLastTimeStamp(cellConnectivity);
   tarch::mpi::ReductionRecord record;
   repository.addLocalValuesToGlobalReduction(record);
   record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
@@ -158,16 +160,13 @@ exahype2::tests::SolverRepositoryTest::testEveryPhaseCallReachesEverySolver() {
   repository.finishSimulation();
 
   const auto numberOfRanks = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getNumberOfRanks());
-  validateEquals(first.phaseCalls, 11);
-  validateEquals(second.phaseCalls, 11);
+  validateEquals(first.phaseCalls, 12);
+  validateEquals(second.phaseCalls, 12);
   validateEquals(first.reducedValue, numberOfRanks);
   validateEquals(second.reducedValue, numberOfRanks);
   validate(repository.getRefinementRequests().empty());
 }
 
-/**
- * Every reduction gathers the refinement requests of the step that filled it.
- */
 void
 exahype2::tests::SolverRepositoryTest::testEveryReductionGathersTheRequestsOfItsOwnStep() {
   peano4::tests::buildRegularGrid(Depth);

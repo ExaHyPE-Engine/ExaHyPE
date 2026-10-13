@@ -434,7 +434,7 @@ exahype2::runner::RuntimeParameters::normaliseGridLevels() {
 }
 
 /**
- * Lowers the maximum terminal time to PEANO_MAX_TERMINAL_TIME if it is set, and the minimum
+ * Lowers the maximum terminal time to PEANO_MAX_TERMINAL_TIME if it is set. Lowers the minimum
  * terminal time to the maximum one.
  */
 void
@@ -664,7 +664,7 @@ exahype2::runner::RuntimeParameters::configure(int& argc, char** argv) {
 }
 
 /**
- * Returns the reader of the JSON configuration file, or nullptr when no configuration file is read.
+ * Returns the reader of the JSON configuration file or nullptr without a configuration file.
  */
 tarch::reader::JSONReader*
 exahype2::runner::RuntimeParameters::getConfigReader() const {
@@ -784,7 +784,7 @@ double
 exahype2::runner::RuntimeParameters::getMaxAdmissiblePatchSize(
   const tarch::la::Vector<DIMENSIONS, double>& domainSize
 ) const {
-  // The tolerance absorbs round-off, and the longest edge avoids over-refining rectangular domains.
+  // The tolerance absorbs round-off. The longest edge avoids over-refining rectangular domains.
   return divideBySubdivisionFactorPower(1.1 * tarch::la::max(domainSize), _gridLevels);
 }
 

@@ -5,10 +5,9 @@
 #include <omp.h>
 
 /**
- * Returns the number of scratch chunks a dispatch over workItems needs, so that every running work
- * item gets its own chunk from getScratchChunk(). A GPU backend needs one chunk per work item, the
- * host one per thread of the team that runs the dispatch. A caller allocates the chunks at the
- * nesting level of the dispatch.
+ * Returns the number of scratch chunks a dispatch over workItems needs. A GPU backend needs one
+ * chunk per work item, the host one per thread of the team that runs the dispatch. A caller
+ * allocates the chunks at the nesting level of the dispatch.
  */
 int
 tarch::accelerator::getNumberOfScratchChunks(const int workItems) {

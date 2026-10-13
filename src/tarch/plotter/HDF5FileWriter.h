@@ -24,14 +24,9 @@ public:
   ~HDF5FileWriter() override                             = default;
 
   void write(const Mesh& mesh, const std::string& outputDirectory, const std::string& filename, double time) override;
-
   [[nodiscard]] Format getFormat() const override;
 
 private:
-  /**
-   * Holds the HDF5 file of one snapshot and the XDMF text of its grid without the enclosing Grid
-   * tags.
-   */
   struct Snapshot final {
     double      time{0.0};
     std::string file{};

@@ -54,8 +54,7 @@ namespace {
 
 /**
  * Returns device memory of at least sizeInBytes bytes for the partial values of a reduction and
- * locks it until unlockReductionScratch(). One reduction at a time holds the lock. A second host
- * thread that starts a reduction while the first one runs fails the assertion. The memory lives
+ * locks it until unlockReductionScratch(). One reduction at a time holds the lock. The memory lives
  * until releaseReductionScratch().
  */
 void*

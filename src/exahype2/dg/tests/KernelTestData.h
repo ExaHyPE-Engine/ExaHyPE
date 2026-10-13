@@ -65,7 +65,7 @@ TARGET_DECLARE_END
 
 TARGET_DECLARE
 /**
- * A solver whose terms depend on the state and the direction, so a wrong offset changes the
+ * A solver whose terms depend on the state and the direction. A wrong offset then changes the
  * result.
  */
 struct exahype2::dg::tests::StubSolver final {
@@ -145,7 +145,7 @@ struct exahype2::dg::tests::StubSolver final {
 TARGET_DECLARE_END
 
 /**
- * A deleter that frees device memory, so a unique pointer can own a device buffer.
+ * A deleter that frees device memory for a unique pointer that owns a device buffer.
  */
 struct exahype2::dg::tests::DeviceDeleter final {
   void operator()(void* data) const;
@@ -165,7 +165,6 @@ public:
   ~DeviceBuffer()                                    = default;
 
   [[nodiscard]] INLINE_METHOD T* getData() const;
-
   INLINE_METHOD void copyBack(std::vector<T>& target) const;
 
 private:
@@ -174,7 +173,7 @@ private:
 };
 
 /**
- * Operator tables with distinct, non-symmetric entries, so an index mix-up cannot cancel out.
+ * Operator tables with distinct, non-symmetric entries. An index mix-up then changes the result.
  */
 struct exahype2::dg::tests::KernelOperators final {
   std::vector<double> quadratureNodes              = std::vector<double>(KernelTestSetup::DofsPerAxis);
@@ -188,8 +187,8 @@ struct exahype2::dg::tests::KernelOperators final {
 };
 
 /**
- * Operator tables of a three-node Gauss-Legendre basis, so a kernel that acts on a polynomial
- * of that degree returns the exact result.
+ * Operator tables of a three-node Gauss-Legendre basis. A kernel that acts on a polynomial of that
+ * degree returns the exact result.
  */
 struct exahype2::dg::tests::BasisTableSet final {
   std::vector<double> quadraturePoints             = std::vector<double>(KernelTestSetup::DofsPerAxis);
@@ -238,9 +237,9 @@ private:
 };
 
 /**
- * A chain of cells along the first axis, in which two neighbouring cells hold the face between
- * them and every other face belongs to one cell. The work list stores every face once with one of
- * its cells and the number of the face in that cell.
+ * A chain of cells along the first axis. Two neighbouring cells hold the face between them and
+ * every other face belongs to one cell. The work list stores every face once with one of its cells
+ * and the number of the face in that cell.
  */
 struct exahype2::dg::tests::CellChain final {
   std::vector<double>        cellCentres = std::vector<double>(KernelTestSetup::CoordinateCardinality);

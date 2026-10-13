@@ -87,14 +87,9 @@ public:
   static constexpr int  NumberOfObservables  = Derived::NumberOfObservables;
   static constexpr bool UsesMaximumPrinciple = NumberOfObservables > 0;
   static constexpr int  ExtremaPerCell       = UsesMaximumPrinciple ? 2 * NumberOfObservables : 2;
-  /**
-   * The first set of a face half holds the extrema of the cell. Each next set holds the extrema
-   * widened along one other axis. In 3D the last set holds the extrema widened along both other
-   * axes.
-   */
-  static constexpr int ExtremaSetsPerHalf   = DIMENSIONS == 2 ? 2 : 4;
-  static constexpr int ExtremaValuesPerFace = 2 * ExtremaSetsPerHalf * ExtremaPerCell;
-  static constexpr int StatusValuesPerFace  = 2;
+  static constexpr int  ExtremaSetsPerHalf   = DIMENSIONS == 2 ? 2 : 4;
+  static constexpr int  ExtremaValuesPerFace = 2 * ExtremaSetsPerHalf * ExtremaPerCell;
+  static constexpr int  StatusValuesPerFace  = 2;
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatus(
@@ -376,9 +371,9 @@ struct exahype2::dg::limiting::ReduceReferenceExtrema final {
 
 /**
  * Runs one of the DIMENSIONS merge rounds on every listed cell. Round r widens the sets that round
- * r - 1 wrote onto the faces by the face neighbours along every axis at once. It writes the sets of
- * the next round. Every axis order gives the same result at a level jump too. After the last round
- * the reference extrema of a cell cover every cell it touches at a vertex.
+ * r - 1 wrote onto the faces by the face neighbours along every axis at once and writes the sets of
+ * the next round. After the last round the reference extrema of a cell cover every cell it touches
+ * at a vertex.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::MergeNeighbourExtrema final {
@@ -424,7 +419,7 @@ struct exahype2::dg::limiting::JudgedCells final {
 };
 
 /**
- * Runs the last merge round on the reference extrema of every cell. Judges the candidate of the
+ * Runs the last merge round on the reference extrema of every cell and judges the candidate of the
  * cell against these extrema. Writes the verdict into the status and onto the faces. Writes the
  * extrema of the candidate into the reference extrema of the cell.
  */
@@ -524,8 +519,8 @@ struct exahype2::dg::limiting::CountCellsOnSubcellScheme final {
 /**
  * Writes the slots of the cells of one block that are not Regular into cellsOnScheme. Writes the
  * slots of the cells of the block that recompute into recomputedCells. Both lists append these
- * slots behind the entries of the earlier blocks. Both lists keep the order of the cell
- * connectivity with the local cells first.
+ * slots behind the entries of the earlier blocks and keep the order of the cell connectivity with
+ * the local cells first.
  */
 struct exahype2::dg::limiting::ListCellsOnSubcellScheme final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;

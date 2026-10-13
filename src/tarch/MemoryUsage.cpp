@@ -99,7 +99,7 @@ tarch::getTotalMemoryInBytes() {
 }
 
 /**
- * Returns the bytes of the free and the inactive pages, which a new allocation obtains without swapping.
+ * Returns the bytes of the free and the inactive pages. A new allocation obtains them without swapping.
  */
 std::uint64_t
 tarch::getAvailableMemoryInBytes() {
@@ -128,8 +128,8 @@ tarch::getMemoryUsageInBytes() {
     logError("The memory measurement cannot read the file /proc/self/stat.");
     return 0;
   }
-  // Field 24 of /proc/self/stat is the resident set size in pages. Field 2 is parenthesised and
-  // may contain spaces, so the parsing starts after its closing bracket.
+  // Field 24 of /proc/self/stat is the resident set size in pages. Field 2 may contain spaces and
+  // ends at the last closing bracket.
   const auto commandEnd = line.rfind(')');
   if (commandEnd == std::string::npos) {
     logError("The memory measurement cannot parse the line '" << line << "' of the file /proc/self/stat.");

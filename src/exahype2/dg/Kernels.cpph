@@ -771,7 +771,7 @@ exahype2::dg::solveRiemannProblemOnHalves(
 /**
  * Solves the Riemann problem of one face and overwrites both halves of faceFlux.
  * boundaryFaceNumber is negative for an inner face. For a boundary face, it is the face number in
- * the cell inside the domain, and the outer halves follow from the boundary conditions.
+ * the cell inside the domain and the outer halves follow from the boundary conditions.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void

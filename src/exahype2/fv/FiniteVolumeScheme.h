@@ -16,12 +16,11 @@
 
 /**
  * @file
- * This file declares the finite-volume scheme on the patch of one cell and the pieces that the
+ * Declares the finite-volume scheme on the patch of one cell and the pieces that the
  * reconstruction schemes build on. A patch holds PatchSize^DIMENSIONS volumes with one value per
- * unknown and auxiliary variable. The first axis of a patch runs fastest. A face holds
- * 2 * HaloSize layers of PatchSize^(DIMENSIONS-1) volumes along its normal with the layers of the
- * lower side first. The first tangential axis of a face runs fastest. The cell on each side of a
- * face writes the layers on its side.
+ * unknown and auxiliary variable, the first axis fastest. A face holds 2 * HaloSize layers of
+ * PatchSize^(DIMENSIONS-1) volumes along its normal and the cell on each side writes the layers
+ * on its side.
  */
 namespace exahype2::fv {
   template <typename Derived, typename ComputePrecision>
@@ -104,8 +103,8 @@ namespace exahype2::fv::tests {
 /**
  * A sweep over a patch updates the volumes in linearised order and reads the terms of the states
  * at most Lookahead states before and behind the current volume. The ring holds one Entry for
- * each of these 2 * Lookahead + 1 states. The function at(state) masks the state with the power of
- * two RingSize above the window and returns its entry. The ring lives on the host only.
+ * each of these 2 * Lookahead + 1 states on the host only. The function at(state) masks the state
+ * with the power of two RingSize above the window and returns its entry.
  */
 template <typename Entry, int LookaheadOfRing>
 class exahype2::fv::TermRing final {
@@ -329,10 +328,6 @@ public:
 private:
   friend class exahype2::fv::tests::FiniteVolumeSchemeTest;
 
-  /**
-   * Names the ring of terms a host sweep with the storage precision keeps. A solver without a
-   * reconstruction leaves it uninstantiated.
-   */
   template <typename StoragePrecision>
   struct SweepStorage final {
     using Terms = typename Derived::Reconstruction::template SweepTerms<

@@ -10,7 +10,7 @@
 bool tarch::mpi::AbstractCommunicationManager::_dedicatedThreadIsUsed = false;
 
 /**
- * Returns the implementation the process runs with. Both implementations exist in every binary, and
+ * Returns the implementation the process runs with. Both implementations exist in every binary.
  * configure() selects one at run time.
  */
 tarch::mpi::AbstractCommunicationManager&

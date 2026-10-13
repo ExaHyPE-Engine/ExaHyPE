@@ -23,8 +23,7 @@ tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
     tarch::terminateWithError("The MPI library cannot start.");
   }
 
-  // The communication thread reserves one core, so this call runs before the task runtime sizes
-  // its team.
+  // The communication thread reserves one core before the task runtime sizes its team.
   tarch::mpi::AbstractCommunicationManager::configure(configuration.communicationThreadEnabled);
 
   if (not tarch::tasking::Runtime::getInstance().init()) {
@@ -34,8 +33,8 @@ tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
   if (not tarch::accelerator::Device::getInstance().init()) {
     tarch::terminateWithError("The accelerator runtime cannot start.");
   }
-  // The ranks of a node take the devices of the node in turn. The selection precedes the first
-  // allocation, because every buffer allocates on the current device.
+  // The ranks of a node take its devices in turn. Every later buffer allocates on the device that
+  // is current.
   const int numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
   if (numberOfDevices > 0) {
     tarch::accelerator::setCurrentDevice(tarch::mpi::Rank::getInstance().getRankOnNode() % numberOfDevices);

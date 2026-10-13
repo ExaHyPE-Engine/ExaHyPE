@@ -8,7 +8,7 @@
 namespace exahype2::dg::limiting {
   /**
    * The role of a cell in the subcell limiter. Limited and Troubled cells recompute their step on
-   * the subcell scheme, and the other cells keep their Galerkin solution. A Troubled cell failed
+   * the subcell scheme and the other cells keep their Galerkin solution. A Troubled cell failed
    * the admissibility test in the current step.
    */
   enum class LimiterStatus : int { Regular = 0, Halo = 1, Limited = 2, Troubled = 3 };
@@ -35,9 +35,7 @@ namespace exahype2::dg::limiting {
 TARGET_DECLARE
 namespace exahype2::dg::limiting {
   INLINE_METHOD GPU_CALLABLE_METHOD constexpr bool runsSubcellScheme(LimiterStatus status);
-
   INLINE_METHOD GPU_CALLABLE_METHOD constexpr LimiterStatus mergeLimiterStatus(LimiterStatus left, LimiterStatus right);
-
   INLINE_METHOD GPU_CALLABLE_METHOD constexpr LimiterStatus spreadLimiterStatus(LimiterStatus neighbourStatus);
 } // namespace exahype2::dg::limiting
 TARGET_DECLARE_END

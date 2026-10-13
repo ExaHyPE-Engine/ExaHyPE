@@ -68,9 +68,7 @@ public:
   static void setWarningOutputEnabled(bool value = true);
 
   static void setOutputFile(const std::string& outputLogFileName);
-
   static void close();
-
   static void flushBeforeAssertion();
 
 private:
@@ -102,17 +100,12 @@ private:
   };
 
   static long int getTimeStamp();
-
   static Context createContext();
 
   static bool isWhitespace(char value) noexcept;
-
   static std::string_view trimView(std::string_view value) noexcept;
-
   static std::string trim(std::string_view value);
-
   static std::string_view getFileNameStem(std::string_view fileName) noexcept;
-
   static std::string extractQualifiedFunctionName(std::string_view functionSignature);
 
   static void appendColumn(
@@ -146,7 +139,6 @@ private:
   static bool debugMessagesAreConfigured();
 
   static const Configuration& getConfiguration();
-
   static void updateConfiguration(const std::function<void(Configuration&)>& update);
 
   static void writeFormattedLine(

@@ -42,9 +42,9 @@ namespace exahype2::fv {
 
 /**
  * Finite-volume solver on the cells of one rank, with the patch layout, the schemes and the PDE terms as
- * static members of Derived. StoragePrecision is the type of the patches and faces, and
+ * static members of Derived. StoragePrecision is the type of the patches and faces and
  * ComputePrecision the type the kernels compute in. Patches exchange data only through the face
- * pool, where every patch writes its own half of each face.
+ * pool and every patch writes its own half of each face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::fv::Solver {
@@ -91,6 +91,7 @@ public:
     tarch::plotter::Format          format,
     const std::string&              outputDirectory
   );
+  INLINE_METHOD void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void release();
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);

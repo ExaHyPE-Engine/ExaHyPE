@@ -41,8 +41,7 @@ INLINE_METHOD peano4::HaloExchange<T>::HaloExchange::~HaloExchange() noexcept {
 /**
  * Copies the exchanged faces of the cell connectivity into one entry table and sizes the buffers. A
  * caller rebuilds after every build of the cell connectivity while no post is in flight. The first
- * call reserves the tag. Every rank calls the first rebuild of its exchanges in the same order. Both ranks of a
- * face see the same face kind. A neighbour without a face of the exchanged kind gets no message.
+ * call reserves the tag and every rank makes it in the same order for its exchanges.
  */
 template <typename T>
 INLINE_METHOD void
@@ -107,10 +106,9 @@ peano4::HaloExchange<T>::release() {
 
 /**
  * Gathers the local halves into the send buffer and registers the messages of every neighbour rank
- * with the progress engine. A communication thread posts host buffers with its first poll while the
- * OpenMP threads compute. This function posts GPU buffers and every buffer without a communication
- * thread at once. The GPU IPC of HPE Cray MPI hangs on GPU buffers that the communication thread
- * posts. A caller leaves the exchanged faces of the pool unchanged until wait() returns.
+ * with the progress engine. This function posts GPU buffers itself because the GPU IPC of HPE Cray
+ * MPI hangs on GPU buffers that the communication thread posts. A caller leaves the exchanged faces
+ * of the pool unchanged until wait() returns.
  */
 template <typename T>
 INLINE_METHOD void

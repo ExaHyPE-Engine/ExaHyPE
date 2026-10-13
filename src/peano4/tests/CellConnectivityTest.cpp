@@ -352,7 +352,7 @@ peano4::tests::CellConnectivityTest::testTheRefinedBlockBuildsOneLevelJumpPerCoa
 }
 
 /**
- * Every span contains only entries of its adjacency and its level or kind, and the spans together
+ * Every span contains only entries of its adjacency and its level or kind. The spans together
  * cover every list.
  */
 void
@@ -604,7 +604,7 @@ peano4::tests::CellConnectivityTest::testTheExchangedFacesMatchAcrossRanks() {
 
 /**
  * The curve indices number the cells of all ranks once each, those of a rank consecutively behind
- * those of the lower ranks, and two cells with consecutive indices touch along a face. This holds on
+ * those of the lower ranks. Two cells with consecutive indices touch along a face. This holds on
  * the regular grid, on the refined grid and after a regrid that keeps the slots of live data.
  */
 void

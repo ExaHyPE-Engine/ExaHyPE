@@ -7,6 +7,7 @@
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/database/GlobalTimeSeriesDatabase.h"
+#include "tarch/database/SnapshotDatabase.h"
 #include "tarch/la/ExactAccumulator.h"
 #include "tarch/la/Vector.h"
 
@@ -39,8 +40,8 @@ struct exahype2::ErrorSums final {
 
 /**
  * Time series of the L1, L2 and Linf errors of a solver against its analytical solution. A solver
- * kernel writes NumberOfNorms errors per cell into getErrorsPerCell(), and record() merges them
- * over all ranks. The sums are exact, so the norms do not depend on the rank and thread layout.
+ * kernel writes NumberOfNorms errors per cell into getErrorsPerCell() and record() merges them
+ * over all ranks. The sums are exact and the norms do not depend on the rank and thread layout.
  */
 class exahype2::ErrorMeasurement final {
 public:
@@ -56,7 +57,7 @@ public:
   ~ErrorMeasurement()                                        = default;
 
   void open(const std::string& fileName, double timeDeltaBetweenSnapshots);
-
+  void setSnapshotRule(tarch::database::SnapshotRule rule);
   [[nodiscard]] bool isSnapshotDue(double timeStamp);
 
   [[nodiscard]] double* getErrorsPerCell(int numberOfCells);

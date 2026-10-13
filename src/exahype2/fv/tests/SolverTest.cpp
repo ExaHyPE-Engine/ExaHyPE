@@ -58,6 +58,7 @@ namespace {
     using TimeIntegration = exahype2::fv::timestepping::SingleStep;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = Rule;
+    static constexpr std::array<int, 1>           MeasuredUnknowns{0};
 
     LinearSolverFor() :
       Base(TimeStepFactor, "LinearSolver", {{"q", 1}}) {}
@@ -76,6 +77,16 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
     ) {
       Q[0] = getProfile(x);
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void analyticalSolution(
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const double                t,
+      [[maybe_unused]] const double                dt,
+      [[maybe_unused]] const double* const         Q,
+      double* const                                solution
+    ) {
+      solution[0] = getProfile(x);
     }
 
     static INLINE_METHOD GPU_CALLABLE_METHOD void boundaryConditions(
@@ -264,6 +275,16 @@ namespace {
     return limits;
   }
 
+  std::vector<std::string> readLinesOf(const std::string& fileName) {
+    std::vector<std::string> lines;
+    std::ifstream            file(fileName);
+    std::string              line;
+    while (std::getline(file, line)) {
+      lines.push_back(line);
+    }
+    return lines;
+  }
+
   TARGET_DECLARE
   /**
    * Adds one to the accumulator for every volume of one cell whose value differs from the profile
@@ -372,6 +393,7 @@ void
 exahype2::fv::tests::SolverTest::run() {
   testMethod(testInitialisationWritesTheInitialConditionIntoEveryVolume);
   testMethod(testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp);
+  testMethod(testRecordLastTimeStampAppendsOneRowToTheErrorFile);
   testMethod(testARefinementAndTheEraseBackKeepTheSolution);
   testMethod(testRefinementReducesTheNextAdaptiveTimeStep);
   testMethod(testThePostprocessingOfTheUpdatedPatchFeedsTheNextTimeStep);
@@ -482,6 +504,45 @@ exahype2::fv::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdva
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSize(), TimeStepFactor, step);
   }
   validate(requests.getRefinementRequests(cellConnectivity).empty());
+  solver.release();
+}
+
+/**
+ * The error file holds the initial row until recordLastTimeStamp() appends the row of the last time stamp once.
+ */
+void
+exahype2::fv::tests::SolverTest::testRecordLastTimeStampAppendsOneRowToTheErrorFile() {
+  constexpr double  TimeBetweenTwoRecords = 100.0;
+  const auto&       cellConnectivity      = buildGrid();
+  const std::string fileName              = (tarch::tests::getWritableTestDirectory() / "FVSolverTestError").string();
+
+  LinearSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.openErrorMeasurement(fileName, TimeBetweenTwoRecords);
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
+  for (int step = 0; step < 3; step++) {
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.performTimeStep(cellConnectivity, requests);
+    finishStep(solver);
+  }
+  // Only the global master writes the error file.
+  const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster();
+  if (isGlobalMaster) {
+    validateEquals(static_cast<int>(readLinesOf(fileName + ".csv").size()), 2);
+  }
+
+  solver.recordLastTimeStamp(cellConnectivity);
+  solver.recordLastTimeStamp(cellConnectivity);
+  if (isGlobalMaster) {
+    const auto lines = readLinesOf(fileName + ".csv");
+    validateEquals(static_cast<int>(lines.size()), 3);
+    validateNumericalEquals(lines.empty() ? -1.0 : std::stod(lines.back()), solver.getTimeStepping().getTimeStamp());
+    std::filesystem::remove(fileName + ".csv");
+  }
   solver.release();
 }
 

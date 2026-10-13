@@ -16,9 +16,9 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * Fills the slots of the cells a regrid creates: From the parent or the children on this rank,
- * or from the chunks another rank sends. The buffers use the memory location of the pool, so with
- * a GPU backend MPI reads and writes device memory.
+ * Fills the slots of the cells a regrid creates from the parent or the children on this rank, or
+ * from the chunks another rank sends. The buffers use the memory location of the pool. With a GPU
+ * backend MPI reads and writes device memory.
  */
 template <typename T>
 class peano4::MigrationExchange final {

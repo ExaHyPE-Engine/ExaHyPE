@@ -241,6 +241,47 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
 {%- endif %}
 {%- endfor %}
 }
+
+/**
+ * Records the last time stamp of a run in the error file of the solver and in the trajectory and
+ * error files of every tracer set. A set of face traces samples its faces first.
+ */
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity) {
+  SolverFamily::recordLastTimeStamp(cellConnectivity);
+{%- if TRACERS_RECORD %}
+  const double timeStamp = getTimeStepping().getTimeStamp();
+{%- endif %}
+{%- for tracer in TRACERS %}
+{%- if tracer.DATABASE %}
+  _{{tracer.NAME}}Database.setSnapshotRule(::tarch::database::SnapshotRule::EveryLaterTimestamp);
+{%- endif %}
+{%- if tracer.ERROR %}
+  _{{tracer.NAME}}ErrorMeasurement.setSnapshotRule(::tarch::database::SnapshotRule::EveryLaterTimestamp);
+{%- endif %}
+{%- if tracer.FACE_TRACES and tracer.TIME_STEPS and (tracer.DATABASE or tracer.ERROR) %}
+  {{tracer.UPDATE_CALL | indent(2)}}
+{%- endif %}
+{%- if tracer.DATABASE %}
+  ::exahype2::particles::recordSnapshots(
+    _{{tracer.NAME}},
+    timeStamp,
+    {{tracer.DATABASE.INITIAL_RECORD_TIME}},
+    {{tracer.DATABASE.LAST_RECORD_TIME}},
+    _{{tracer.NAME}}Database
+  );
+{%- endif %}
+{%- if tracer.ERROR %}
+  if (_{{tracer.NAME}}ErrorMeasurement.isSnapshotDue(timeStamp)) {
+    ::exahype2::particles::measurePositionErrors<{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}>(
+      _{{tracer.NAME}},
+      timeStamp,
+      getTimeStepping().getTimeStepSizeOfLastStep(),
+      _{{tracer.NAME}}ErrorMeasurement
+    );
+  }
+{%- endif %}
+{%- endfor %}
+}
 {%- endif %}
 {%- if SOLVER_BASE_USER_DEFINITIONS.strip() %}
 

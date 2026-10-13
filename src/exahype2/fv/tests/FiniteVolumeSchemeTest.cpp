@@ -350,7 +350,7 @@ namespace {
   constexpr int AcousticUnknowns = 1 + DIMENSIONS;
 
   /**
-   * Acoustics, whose flux maps onto itself under a swap of two axes.
+   * Acoustics. A swap of two axes maps the flux onto itself.
    */
   struct AcousticSolver final : SchemeLayout<NumberOfVolumesPerAxis, AcousticUnknowns, Constant, Rule::Adaptive> {
     template <typename ComputePrecision>
@@ -853,7 +853,7 @@ namespace {
   }
 
   /**
-   * Advances a profile on the unit patch of Solver, with the halo refilled from the exact profile before every step.
+   * Advances a profile on the unit patch of Solver and refills the halo from the exact profile before every step.
    */
   template <typename Solver, typename Profile>
   std::vector<double> advectProfile(const Profile profile, const int numberOfTimeSteps, const double timeStepSize) {
@@ -1847,8 +1847,8 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testPatchRestrictionAveragesExactly
 }
 
 /**
- * A volume face on a boundary patch face reaches the Riemann solver with the patch face number, every other face
- * with the normal.
+ * A volume face on a boundary patch face reaches the Riemann solver with the patch face number and every other
+ * face with the normal.
  */
 void
 exahype2::fv::tests::FiniteVolumeSchemeTest::testAVolumeFaceOnTheDomainBoundaryReachesTheRiemannSolver() {

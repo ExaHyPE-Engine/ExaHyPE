@@ -10,7 +10,7 @@
 
 namespace {
   TARGET_DECLARE
-  //! A chunk size that is no multiple of the alignment makes the pool pad every chunk.
+  // A chunk size that is no multiple of the alignment makes the pool pad every chunk.
   constexpr int ChunkSize = 5;
   TARGET_DECLARE_END
 
@@ -340,9 +340,6 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testHostCopiesRoundTrip() {
   }
 }
 
-/**
- * Host code reads and writes every chunk of a growing device pool through download() and upload().
- */
 void
 tarch::accelerator::tests::ChunkedMemoryPoolTest::testHostCodeReadsAndWritesEveryChunkThroughDownloadAndUpload() {
   Pool pool(ChunkSize);

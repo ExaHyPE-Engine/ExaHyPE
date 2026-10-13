@@ -181,8 +181,8 @@ TARGET_DECLARE_END
  * Moves every particle of the set through the patch of its cell, sends every particle that left
  * its cell to the rank that holds it, and then samples the fields of every moved particle in the
  * patch that holds it. A stage position of the integration outside the patch reads the patch at
- * its clamped image. The kernel marks the particles that left their cell and counts them. Only
- * those leave the device.
+ * its clamped image. Only the particles that the kernel marks as having left their cell leave the
+ * device.
  */
 template <int PatchSize, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
 INLINE_METHOD void

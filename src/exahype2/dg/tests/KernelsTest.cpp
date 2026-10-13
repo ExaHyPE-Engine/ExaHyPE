@@ -35,7 +35,7 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * A flux that adds a multiple of the state. A flux buffer that is not cleared shows.
+   * A flux that adds a multiple of the state. A flux buffer the kernel does not clear shows.
    */
   struct FluxSolver final : Order2Layout {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
@@ -101,9 +101,6 @@ namespace {
   // The nodes of the three-point Gauss-Legendre rule on the unit interval.
   const double QuadratureNodes[NodesPerAxis] = {0.5 * (1.0 - std::sqrt(0.6)), 0.5, 0.5 * (1.0 + std::sqrt(0.6))};
 
-  /**
-   * Returns the value of the Lagrange basis function of node at x.
-   */
   double getBasisValue(const double x, const int node) {
     double result = 1.0;
     for (int other = 0; other < NodesPerAxis; other++) {
@@ -114,9 +111,6 @@ namespace {
     return result;
   }
 
-  /**
-   * Returns the derivative of the Lagrange basis function of node at x.
-   */
   double getBasisDerivative(const double x, const int node) {
     double result = 0.0;
     for (int omitted = 0; omitted < NodesPerAxis; omitted++) {
@@ -206,9 +200,6 @@ namespace {
     return faceCentre;
   }
 
-  /**
-   * Returns the position of face node faceNode on the face faceNumber.
-   */
   tarch::la::Vector<DIMENSIONS, double> getNodePositionOf(const int faceNumber, const int faceNode) {
     const int  direction  = faceNumber % DIMENSIONS;
     const auto cellSize   = getCellSize();
@@ -299,7 +290,7 @@ namespace {
   };
 
   /**
-   * A nonconservative product that reads the jump of the first auxiliary variable, as a bathymetry does.
+   * A nonconservative product that reads the jump of the first auxiliary variable.
    */
   struct AuxiliaryJumpProduct {
     static INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
@@ -1337,7 +1328,7 @@ exahype2::dg::tests::KernelsTest::testTheTwoEndsUseTheirOwnCoefficients() {
   const EndCoefficients coefficients;
   exahype2::dg::extrapolateStateToFaces<Order2Layout>(state, cellState, coefficients.left, coefficients.right);
 
-  // The lower face receives the value of the line at zero, the upper face the value at one.
+  // The lower face receives the value of the line at zero and the upper face the value at one.
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       const int firstCellNode = getCellNodeOf(direction, faceNode, 0);
@@ -1567,7 +1558,7 @@ exahype2::dg::tests::KernelsTest::testDiffusiveFluxIsExtrapolatedWithTheNodalGra
 void
 exahype2::dg::tests::KernelsTest::testTheOuterHalfIsFilledFromTheInnerHalf() {
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    // The cell behind a lower face wrote the upper half, and the other way round.
+    // The cell behind a lower face wrote the upper half and the cell behind an upper face the lower half.
     const int innerSide = faceNumber < DIMENSIONS ? 1 : 0;
     const int outerSide = 1 - innerSide;
     double    faceState[2 * FaceNodes * NumberOfData];
@@ -1617,8 +1608,8 @@ exahype2::dg::tests::KernelsTest::testEveryNodeSeesItsOwnPositionOnTheFace() {
       faceNumber
     );
 
-    // With a zero inner state, the outer state records the node position, and every node has the
-    // normal coordinate of the face centre.
+    // With a zero inner state, the outer state records the node position. Every node has the normal
+    // coordinate of the face centre.
     const int direction = faceNumber % DIMENSIONS;
     for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       const auto   position   = getNodePositionOf(faceNumber, faceNode);
@@ -1892,8 +1883,8 @@ exahype2::dg::tests::KernelsTest::testJumpTermScalesWithTheLargerWaveSpeed() {
     0
   );
 
-  // The right side averages to 5 and the left side to 3. The larger wave speed is 5. The own
-  // fluxes are zero. The left side stores the numerical flux and the right side its negative.
+  // The wave speed is the larger of the two side averages. With zero own fluxes the left side
+  // stores the numerical flux and the right side its negative.
   constexpr double ExpectedMaxEigenvalue = 5.0;
   for (int faceNode = 0; faceNode < RiemannFaceNodes; faceNode++) {
     const int firstEntry = faceNode * Unknowns;
@@ -1996,7 +1987,7 @@ exahype2::dg::tests::KernelsTest::testNonconservativeProductEntersBothSidesAlike
     0
   );
 
-  // The stub returns the state jump. The kernel adds it in halves to both differences. The two
+  // The stub returns the state jump and the kernel adds it in halves to both differences. The two
   // differences add up to that jump.
   for (int faceNode = 0; faceNode < RiemannFaceNodes; faceNode++) {
     for (int unknown = 0; unknown < Unknowns; unknown++) {
@@ -2101,7 +2092,7 @@ exahype2::dg::tests::KernelsTest::testLinearFormBuildsTheFluxFromTheStateJump() 
     0
   );
 
-  // The stub flux returns the half jump, and the wave speed is the larger side average of the first
+  // The stub flux returns the half jump. The wave speed is the larger side average of the first
   // entry.
   constexpr double ExpectedFlux          = 1.0;
   constexpr double ExpectedMaxEigenvalue = 3.0;
@@ -2245,7 +2236,7 @@ exahype2::dg::tests::KernelsTest::testABoundaryFaceTakesTheBoundaryState() {
 }
 
 /**
- * The Riemann solver of the solver receives the face arguments, and its fluxes become the
+ * The Riemann solver of the solver receives the face arguments and its fluxes become the
  * differences to the own fluxes.
  */
 void
@@ -2343,7 +2334,7 @@ exahype2::dg::tests::KernelsTest::testEachCellNodeReceivesItsOwnFaceNode() {
 }
 
 /**
- * Every unknown of every cell node receives its own face value, and the entries behind the last
+ * Every unknown of every cell node receives its own face value and the entries behind the last
  * cell node stay unchanged.
  */
 void
@@ -2496,9 +2487,9 @@ exahype2::dg::tests::KernelsTest::testANodeReceivesOnlyItsOwnUpdate() {
 
 void
 exahype2::dg::tests::KernelsTest::testAnisotropicAccumulation() {
-  // Both the eigenvalues and the cell extents differ per axis. A mix-up of the axes changes the
-  // scaled maximum. The largest entry of each table lies on one of the first two axes. The physical
-  // maxima therefore hold in 2D and in 3D.
+  // The eigenvalues and the cell extents differ per axis and a mix-up of the axes changes the
+  // scaled maximum. The largest entry of each table lies on one of the first two axes and the
+  // physical maxima hold in 2D and in 3D.
   constexpr double FirstTable[]  = {3.0, 5.0, 2.0};
   constexpr double SecondTable[] = {7.0, 1.0, 4.0};
 

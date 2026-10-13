@@ -90,8 +90,8 @@ exahype2::dg::tests::DeviceDeleter::operator()(void* const data) const {
 }
 
 /**
- * Returns count values that differ per entry, so an offset that is off by any
- * amount changes the result.
+ * Returns count values that differ per entry. An offset that is off by any amount then changes the
+ * result.
  */
 std::vector<double>
 exahype2::dg::tests::getRamp(const std::size_t count, const double offset, const double increment) {

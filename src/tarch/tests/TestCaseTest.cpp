@@ -47,7 +47,7 @@ tarch::tests::TestCaseTest::testAZeroBufferGetsTheSmallestTolerance() {
 }
 
 /**
- * Entries one unit short of the tolerance compare equal, and one unit beyond it do not.
+ * Entries one unit short of the tolerance compare equal. Entries one unit beyond it do not.
  */
 void
 tarch::tests::TestCaseTest::testBuffersWithinTheToleranceAreEqual() {

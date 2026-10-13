@@ -9,6 +9,7 @@
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/database/SnapshotDatabase.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
@@ -43,7 +44,7 @@ namespace {
   TARGET_DECLARE_END
 
   /**
-   * Deletes the time series file, which only the global master writes.
+   * Deletes the time series file. Only the global master writes this file.
    */
   void deleteTimeSeriesFile(const std::string& fileName) {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -63,6 +64,7 @@ exahype2::tests::ErrorMeasurementTest::run() {
   testMethod(testAccumulationWeightsTheMeasuredUnknownsOnly);
   testMethod(testSolutionErrorComparesAgainstTheAnalyticalSolutionAtTheDegreeOfFreedom);
   testMethod(testEveryRankFindsASnapshotDueForTheNewestTimeStampAndAfterTheTimeDelta);
+  testMethod(testEveryLaterTimeStampIsDueBeforeTheTimeDelta);
   testMethod(testTheOwnedBufferSumsTheErrorsOfEveryCell);
 }
 
@@ -79,6 +81,20 @@ exahype2::tests::ErrorMeasurementTest::testEveryRankFindsASnapshotDueForTheNewes
   validateEquals(measurement.isSnapshotDue(0.5), true);
   validateEquals(measurement.isSnapshotDue(0.9), false);
   validateEquals(measurement.isSnapshotDue(1.5), true);
+  deleteTimeSeriesFile(fileName);
+}
+
+void
+exahype2::tests::ErrorMeasurementTest::testEveryLaterTimeStampIsDueBeforeTheTimeDelta() {
+  exahype2::ErrorMeasurement measurement;
+  const std::string fileName = (tarch::tests::getWritableTestDirectory() / "ErrorMeasurementLaterTest").string();
+  measurement.open(fileName, 1.0);
+  [[maybe_unused]] const auto norms = measurement.record(exahype2::ErrorSums{}, 0.5);
+  validateEquals(measurement.isSnapshotDue(0.75), false);
+
+  measurement.setSnapshotRule(tarch::database::SnapshotRule::EveryLaterTimestamp);
+  validateEquals(measurement.isSnapshotDue(0.75), true);
+  validateEquals(measurement.isSnapshotDue(0.5), false);
   deleteTimeSeriesFile(fileName);
 }
 

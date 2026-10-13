@@ -109,7 +109,7 @@ struct exahype2::fv::RestrictHaloHalves final {
 
 /**
  * Copies the boundary layers of the patch of every cell into the halves of its faces that the
- * cell writes. One team per cell, one thread per volume of the layers.
+ * cell writes. The launch runs one team per cell and one thread per volume of the layers.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ProjectPatchesOntoFaces final {

@@ -500,9 +500,6 @@ tarch::accelerator::tests::ParallelConstructsTest::testAHostReductionMergesItsBl
 }
 #endif
 
-/**
- * The device runs at least the threads of one default team at once.
- */
 void
 tarch::accelerator::tests::ParallelConstructsTest::testTheDeviceRunsADefaultTeamAtOnce() {
   const int threads = tarch::accelerator::Device::getInstance().getNumberOfConcurrentThreads();

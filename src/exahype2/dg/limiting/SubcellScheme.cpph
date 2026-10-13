@@ -77,7 +77,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubgrid
 }
 
 /**
- * Advances the subgrid by one step and projects it onto the nodes. Returns the wave speeds of the
+ * Advances the subgrid by one step, projects it onto the nodes and returns the wave speeds of the
  * evolved subgrid under an adaptive time step rule. A solver with a fallback reconstruction repeats
  * the step with it when an evolved subcell fails the physical admissibility test. Bit f of
  * boundaryFaces marks face f on the domain boundary.

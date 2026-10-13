@@ -16,11 +16,9 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * Exchanges the faces this rank and a neighbour rank both hold. A face chunk of the pool stores one
- * half per side. post() sends the half this rank owns. wait() writes the half of the neighbour. An
- * exchange with a face kind exchanges the faces of that kind only. The buffers use the memory
- * location of the pool. With a GPU backend, MPI reads and writes device memory. A communication
- * thread posts the messages of host buffers with its first poll. Otherwise post() posts them.
+ * Exchanges the faces this rank and a neighbour rank both hold. post() sends the half of a face
+ * chunk that this rank owns and wait() writes the half of the neighbour. The buffers use the memory
+ * location of the pool.
  */
 template <typename T>
 class peano4::HaloExchange final {
@@ -75,10 +73,6 @@ private:
 
   bool _inFlight{false};
 
-  /**
-   * Whether the receives and sends of the current post are posted. While a post is in flight, only
-   * the poller reads and writes it.
-   */
   bool _messagesPosted{true};
 
   std::atomic<bool> _messagesCompleted{true};

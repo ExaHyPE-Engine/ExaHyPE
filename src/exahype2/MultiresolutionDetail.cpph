@@ -44,7 +44,7 @@ exahype2::computeMultiresolutionDetail(
   constexpr int NumberOfNodes   = static_cast<int>(NumberOfNodesPerAxis);
   constexpr int NumberOfVolumes = peano4::power(NumberOfNodes, DIMENSIONS);
 
-  // The upper half negates the lower half, so the coordinates are antisymmetric to the last bit.
+  // The upper half negates the lower half. The coordinates are antisymmetric to the last bit.
   double nodeCoordinate[NumberOfNodes];
   for (int i = 0; i < NumberOfNodes / 2; i++) {
     assertion(nodesInUnitInterval[i] >= 0.0 and nodesInUnitInterval[i] <= 1.0, i, nodesInUnitInterval[i]);
@@ -56,7 +56,7 @@ exahype2::computeMultiresolutionDetail(
   }
 
   // The slope denominator is the same for every axis. Mirrored coordinates square to the same
-  // bits, so its sum needs no sorting.
+  // bits and its sum needs no sorting.
   double nodeCoordinateSquareSum = 0.0;
   for (int i = 0; i < NumberOfNodes; i++) {
     nodeCoordinateSquareSum += nodeCoordinate[i] * nodeCoordinate[i];
@@ -77,8 +77,8 @@ exahype2::computeMultiresolutionDetail(
     return std::numeric_limits<double>::infinity();
   }
 
-  // The sorted summation fixes the addition order, so the values permuted by a reflection or an
-  // axis swap give the bitwise identical sum.
+  // The sorted summation fixes the addition order. The values permuted by a reflection or an axis
+  // swap give the bitwise identical sum.
   double scratch[NumberOfVolumes];
   for (int i = 0; i < NumberOfVolumes; i++) {
     scratch[i] = values[i];
@@ -118,8 +118,8 @@ exahype2::computeMultiresolutionDetail(
   double maxRelativeResidual = 0.0;
   peano4::dForEach(NumberOfNodes, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
     const int linearised = peano4::dLinearised(counter, NumberOfNodes);
-    // A reflection negates a slope and its coordinate together, so each term keeps its bits. An
-    // axis swap permutes the terms, and the sorted summation keeps their sum.
+    // A reflection negates a slope and its coordinate together and each term keeps its bits. An
+    // axis swap permutes the terms and the sorted summation keeps their sum.
     double correction[DIMENSIONS];
     for (int d = 0; d < DIMENSIONS; d++) {
       correction[d] = slope[d] * nodeCoordinate[counter(d)];

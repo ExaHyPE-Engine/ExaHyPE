@@ -91,25 +91,15 @@ public:
 private:
   static constexpr const char* OutputSubdirectory = "patch/";
 
-  /**
-   * The positions of the grid cell fields among the cell fields behind the cell data fields.
-   */
   static constexpr std::size_t RefinementLevelField = 0;
   static constexpr std::size_t SubdomainField       = 1;
   static constexpr std::size_t CurveIndexField      = 2;
 
-  /**
-   * Marks a volume corner of a patch as face or interior corner and numbers it among its kind.
-   */
   struct PatchCorner final {
     bool onFace{false};
     int  index{0};
   };
 
-  /**
-   * Lists in pointOfFaceCorner the face point of every face corner of every patch. The face corners
-   * of the patch p own the face points firstPointOfPatch[p] to firstPointOfPatch[p + 1] - 1.
-   */
   struct FaceCornerPoints final {
     std::vector<std::int32_t> pointOfFaceCorner{};
     std::vector<std::int32_t> firstPointOfPatch{};

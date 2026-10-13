@@ -151,7 +151,7 @@ tarch::la::tests::ExactAccumulatorTest::testCorrectRounding() {
   validateNumericalEquals(accumulator.round(), TwoPower53 + 2.0);
 
   // Values six hundred orders of magnitude apart add up without absorption. A numerical comparison
-  // accepts any tiny value. The test compares the bits.
+  // would accept any tiny value here.
   accumulator.clear();
   accumulator.add(1.0e300);
   accumulator.add(1.0e-300);
@@ -178,8 +178,8 @@ tarch::la::tests::ExactAccumulatorTest::testCorrectlyRoundedQuotient() {
   validate(dividesLikeTheDoubleDivision<9>());
   validate(dividesLikeTheDoubleDivision<27>());
 
-  // A quotient on the tie between two doubles rounds to the even one, and a remainder of the
-  // division breaks the tie upwards.
+  // A quotient on the tie between two doubles rounds to the even one. A remainder of the division
+  // breaks the tie upwards.
   tarch::la::ExactAccumulator accumulator;
   accumulator.add(3.0 * TwoPower53);
   accumulator.add(3.0);
@@ -197,8 +197,8 @@ tarch::la::tests::ExactAccumulatorTest::testCorrectlyRoundedQuotient() {
   accumulator.add(-7.0);
   validateEquals(std::bit_cast<std::uint64_t>(accumulator.roundQuotient<2>()), std::bit_cast<std::uint64_t>(-3.5));
 
-  // A quotient of subnormals rounds to the nearest subnormal with ties to even, and so does a
-  // quotient whose integer digits end at the smallest subnormal.
+  // A quotient of subnormals rounds to the nearest subnormal with ties to even. So does a quotient
+  // whose integer digits end at the smallest subnormal.
   constexpr double MinimumSubnormal = std::numeric_limits<double>::denorm_min();
   accumulator.clear();
   accumulator.add(3.0 * MinimumSubnormal);
@@ -344,8 +344,8 @@ tarch::la::tests::ExactAccumulatorTest::testOverflow() {
   accumulator.add(std::ldexp(1.0, 969));
   validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(MaximumFinite));
 
-  // A second half-ulp reaches the overflow tie. The tie rounds away from the maximum finite value.
-  // The significand of that value is odd.
+  // A second half-ulp reaches the overflow tie. The tie rounds away from the odd significand of the
+  // maximum finite value.
   accumulator.add(std::ldexp(1.0, 969));
   validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(Infinity));
 

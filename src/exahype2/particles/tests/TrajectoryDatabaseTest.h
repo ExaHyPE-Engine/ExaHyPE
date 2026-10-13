@@ -23,4 +23,5 @@ private:
   void testAppendsChronologicallyWithoutDuplication();
   void testClearRewritesFileFromScratch();
   void testASnapshotIsDueForANewParticleAfterTheDeltasAndOnAMove();
+  void testEveryLaterTimestampIsDueForAParticleAtRest();
 };

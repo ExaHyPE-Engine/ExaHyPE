@@ -70,7 +70,7 @@ exahype2::dg::forEachNode(
 
 /**
  * Returns the component unknown of the nodal polynomial of the cell at position. Every node
- * stores unknownsPerNode values, and quadratureNodes are the order+1 node coordinates on [0, 1].
+ * stores unknownsPerNode values. quadratureNodes are the order+1 node coordinates on [0, 1].
  */
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision
@@ -215,10 +215,9 @@ exahype2::dg::applyOperatorAlongAxis(
 }
 
 /**
- * Applies derivativeOperator along one axis of a tensor slice. The rows of derivativeOperator sum
- * to zero. The function differentiates the differences from the smallest value along the axis. A
- * constant slice returns exact zeros. The scaling factors multiply every difference in argument
- * order.
+ * Applies derivativeOperator along one axis of a tensor slice. The function differentiates the
+ * differences from the smallest value along the axis and a constant slice returns exact zeros. The
+ * scaling factors multiply every difference in argument order.
  */
 template <
   int  NumberOfEntries,
@@ -347,7 +346,7 @@ exahype2::dg::computeNodalGradients(
 
 /**
  * Extrapolates the nodal field to the lower and the upper face along direction. The nodes of
- * field start NodeStride values apart, and the lowest tangential axis runs fastest in a face. A
+ * field start NodeStride values apart and the lowest tangential axis runs fastest in a face. A
  * constant line of nodes returns its value bitwise at both faces.
  */
 template <
@@ -528,9 +527,8 @@ exahype2::dg::projectTensorProduct(const Value* const input, Value* const output
 
 /**
  * Overwrites the flux of every axis with its derivative along that axis. flux stores one block
- * per axis with PaddedNumberOfUnknowns values per node. A constant flux returns exact zeros. The
- * call differentiates the lines firstLine, firstLine + lineStride and so on along every axis. Two
- * calls with distinct first lines below a common stride write disjoint lines.
+ * per axis with PaddedNumberOfUnknowns values per node. Two calls with distinct first lines below
+ * a common lineStride write disjoint lines.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -640,7 +638,7 @@ exahype2::dg::getLagrangeBasisFunction1D(const double* const nodes, const int ba
 }
 
 /**
- * Returns the interpolation matrices: Entry [child][fine][coarse] is basis function coarse at
+ * Returns the interpolation matrices. Entry [child][fine][coarse] is basis function coarse at
  * node fine of the child interval. The nodes lie on the unit interval, symmetric about one half.
  */
 template <int NodesPerAxis>
@@ -707,8 +705,8 @@ exahype2::dg::getWeightedRestrictionMatrix1D(const double* const nodes, const do
 
 /**
  * Overwrites every entry and its mirror image with their average. Mirrored data then transfers to
- * bitwise mirrored results. The exact matrices are mirror symmetric. The average changes rounding
- * errors only.
+ * bitwise mirrored results. The exact matrices are mirror symmetric and the average changes
+ * rounding errors only.
  */
 template <int NodesPerAxis>
 INLINE_METHOD constexpr void
@@ -749,7 +747,7 @@ exahype2::dg::transposePerChild(const exahype2::dg::AMRMatrices1D<NodesPerAxis>&
 TARGET_DECLARE
 /**
  * Interpolates the coarse face into the fine face at subface. prolongationMatrix1D stores one
- * block [coarse][fine] per child interval, and the first tangential axis runs fastest in subface
+ * block [coarse][fine] per child interval and the first tangential axis runs fastest in subface
  * and in both faces. A constant coarse face returns its value bitwise.
  */
 template <int NodesPerAxis, int Values, typename T>

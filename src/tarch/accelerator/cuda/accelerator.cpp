@@ -88,10 +88,9 @@ tarch::accelerator::copyFromPinnedMemory(
 }
 
 /**
- * Blocks until every launch and copy on the stream of the current device has completed. A
- * parallelFor() on this backend returns before its launch completes. copyFrom() and every reduction
- * wait for the stream themselves. A caller waits here only before it reads device memory in another
- * way, such as through MPI.
+ * Blocks until every launch and copy on the stream of the current device has completed. copyFrom()
+ * and every reduction wait for the stream themselves. A caller waits here before it reads device
+ * memory in another way, such as through MPI.
  */
 void
 tarch::accelerator::waitForDevice() {

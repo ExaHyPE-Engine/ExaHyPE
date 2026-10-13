@@ -18,9 +18,7 @@ public:
   ~GlobalTimeSeriesDatabase() override;
 
   void setDataName(const std::string& dataName);
-
   [[nodiscard]] bool isSnapshotDue(double timestamp);
-
   void addGlobalSnapshot(double timestamp, int numberOfDataEntries, const double* data);
 
 protected:

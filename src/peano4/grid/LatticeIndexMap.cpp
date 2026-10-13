@@ -3,7 +3,8 @@
 #include "LatticeIndexMap.h"
 
 /**
- * Clears the map and sizes it for numberOfEntries entries, which then fit without a rehash.
+ * Clears the map and sizes it for numberOfEntries entries. That many entries then fit without a
+ * rehash.
  */
 void
 peano4::grid::LatticeIndexMap::reserve(const std::size_t numberOfEntries) {

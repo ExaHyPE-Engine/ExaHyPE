@@ -15,15 +15,15 @@ tarch::mpi::ThreadedCommunicationManager::stop() {
 }
 
 /**
- * The polling thread runs every poller, so this function does nothing.
+ * The polling thread runs every poller. This function does nothing.
  */
 void
 tarch::mpi::ThreadedCommunicationManager::progress() {}
 
 /**
- * Waits until every poller is idle, while a caller re-arms no poller. The first pass that completes
- * after entry may have begun before the call, so the wait trusts the second one. After stop(), the
- * pollers run on the calling thread.
+ * Waits until two passes over the pollers have completed idle, while a caller re-arms no poller.
+ * The first pass may have begun before the call. After stop(), the pollers run on the calling
+ * thread.
  */
 void
 tarch::mpi::ThreadedCommunicationManager::finishPendingWork() {

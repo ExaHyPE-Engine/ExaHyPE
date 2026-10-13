@@ -38,10 +38,9 @@ exahype2::RefinementVotes::voteOnGridConstruction(
 }
 
 /**
- * Returns true when the limits let at least one cell of cellConnectivity refine or erase: A cell
- * refines only when its width exceeds minAdmissiblePatchSize and erases only when the width of
- * its parent stays within maxAdmissiblePatchSize, with the comparisons of
- * voteWithinAdmissibleSizes().
+ * Returns true when the limits let at least one cell of cellConnectivity refine or erase. A cell
+ * refines only when its width exceeds minAdmissiblePatchSize. It erases only when the width of its
+ * parent stays within maxAdmissiblePatchSize.
  */
 INLINE_METHOD bool
 exahype2::RefinementVotes::canRefineOrErase(
@@ -200,8 +199,8 @@ exahype2::VoteOnGridConstruction<Derived, StoragePrecision>::operator()(const in
 }
 
 /**
- * Returns the vote of Derived on one cell. A cell wider than maxAdmissibleSize refines, and a vote
- * of the refinement criterion that leaves the admissible sizes becomes Keep.
+ * Returns the vote of Derived on one cell. A cell wider than maxAdmissibleSize refines. A vote of
+ * the refinement criterion that leaves the admissible sizes becomes Keep.
  */
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand

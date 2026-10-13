@@ -34,7 +34,7 @@ namespace exahype2::dg::rk {
 } // namespace exahype2::dg::rk
 
 /**
- * The Runge-Kutta DG solver family. Every stage writes one estimate per cell, and the new solution
+ * The Runge-Kutta DG solver family. Every stage writes one estimate per cell and the new solution
  * adds the weighted estimates. Derived also declares RungeKuttaOrder.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -42,7 +42,6 @@ class exahype2::dg::rk::Solver : public exahype2::dg::Solver<Derived, StoragePre
 public:
   using Base = exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>;
 
-  // The defaulted parameter defers the lookup in Derived to the use, where Derived is complete.
   template <typename Precision, typename Generated = Derived>
   using Quadrature = typename Generated::template Quadrature<Precision>;
   template <typename Precision, typename Generated = Derived>
@@ -83,8 +82,6 @@ public:
   [[nodiscard]] INLINE_METHOD const EstimatePool& getEstimates() const;
 
 private:
-  // Stage reads the PDE terms of Derived. Derived is complete only inside function bodies and
-  // member initialisers.
   using Stage = exahype2::dg::rk::Stage<Derived, ComputePrecision>;
 
   static constexpr int NumberOfRungeKuttaStages = Stage::Tableau::Stages;
@@ -109,9 +106,6 @@ private:
 
   EstimatePool _estimates{Stage::EstimateValuesPerCell};
 
-  /**
-   * One stage state per scratch chunk of the stage dispatch.
-   */
   tarch::accelerator::Buffer<ComputePrecision> _stageScratch{tarch::MemoryLocation::Device};
 };
 

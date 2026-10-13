@@ -25,26 +25,16 @@ public:
   ~TreeTestCaseCollection() override;
 
   void run() override;
-
   void run(const std::string& prefix);
 
   void addTestCase(const std::string& fullQualifiedPath, TestCase* testCase);
-
   void addTestCase(TestCase* testCase);
 
 private:
   std::list<TestCase*>                           _testCases;
   std::map<std::string, TreeTestCaseCollection*> _subTests;
 
-  /**
-   * The run() call writes a progress line if this flag is set.
-   */
   bool _writeToLog{true};
-
-  /**
-   * The destructor deletes the test cases and sub collections if this flag is
-   * set.
-   */
   bool _deleteTestCases{true};
 
   static bool isNameWithoutHierarchy(const std::string& testCaseName);

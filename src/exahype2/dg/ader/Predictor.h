@@ -41,9 +41,6 @@ public:
   using Linear     = exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>;
   using Nonlinear  = exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>;
 
-  /**
-   * The number of values in the scratch block of one cell.
-   */
   static constexpr int ScratchSize = Derived::IsLinear ? Linear::Scratch::Size : Nonlinear::Scratch::Size;
 
   template <typename StoragePrecision>
@@ -92,9 +89,9 @@ struct exahype2::dg::ader::PredictionCounts final {
 
 /**
  * Runs the predictor of every listed cell on teams with threadsPerCell threads per cell. With a
- * limiter, DivergenceMarks is its status view, where a cell whose Picard iteration diverged or
- * stopped at its sweep limit marks itself. Without a limiter, DivergenceMarks is an empty type and
- * the reduction counts those cells.
+ * limiter, DivergenceMarks is its status view and a cell whose Picard iteration diverged or
+ * stopped at its sweep limit marks itself there. Without a limiter, DivergenceMarks is an empty
+ * type and the reduction counts those cells.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename DivergenceMarks>
 struct exahype2::dg::ader::PredictCells final {

@@ -25,4 +25,16 @@ private:
   void testFinishStepSumsTheSolverBytesAndCellUpdates();
   void testFinishStepReducesTheValuesOfTheSolvers();
   void testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition();
+  void testTheTimeLoopWritesTheInitialConditionAndTheLastTimeStamp();
+  void testOneSnapshotWritesTheInitialConditionAndTheLastTimeStamp();
+
+  struct TimeLoopCalls {
+    int timeSteps{0};
+    int plots{0};
+    int records{0};
+    int timeStepsBeforeTheFirstPlot{0};
+    int timeStepsBeforeTheLastPlot{0};
+    int timeStepsBeforeTheRecord{0};
+  };
+  static TimeLoopCalls runTimeLoop();
 };

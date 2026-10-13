@@ -211,11 +211,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 }
 
 /**
- * Advances every cell by the time step size that the previous time step proposed. The remote cells
- * predict first. The ranks exchange the face halves while the local cells predict and the local
- * faces solve their Riemann problems. The ranks exchange the restricted fluxes while the local cells
- * correct. A solver with a coupling partner runs the time steps of both solvers. The partner then
- * returns at once.
+ * Advances every cell by the time step size that the previous time step proposed. The ranks
+ * exchange the face halves while the local cells predict and the restricted fluxes while the local
+ * cells correct. A solver with a coupling partner runs the time steps of both solvers.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void

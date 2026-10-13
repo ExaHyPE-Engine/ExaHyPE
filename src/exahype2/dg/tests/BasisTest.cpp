@@ -52,9 +52,6 @@ namespace {
   constexpr double QuadratureNodes1DP1[] = {0.21132486540518713, 0.7886751345948129};
   constexpr double QuadratureNodes1DP2[] = {0.1127016653792583, 0.5, 0.8872983346207417};
 
-  /**
-   * Returns the value of the Lagrange basis function of node at x.
-   */
   double getBasisValue(const double x, const int node) {
     double result = 1.0;
     for (int other = 0; other < NodesPerAxis; other++) {
@@ -65,9 +62,6 @@ namespace {
     return result;
   }
 
-  /**
-   * Returns the derivative of the Lagrange basis function of node at x.
-   */
   double getBasisDerivative(const double x, const int node) {
     double result = 0.0;
     for (int omitted = 0; omitted < NodesPerAxis; omitted++) {
@@ -311,8 +305,8 @@ exahype2::dg::tests::BasisTest::run() {
 }
 
 /**
- * A cell has one node per combination of axis nodes, and a face one per combination of tangential
- * nodes.
+ * A cell has one node per combination of axis nodes and a face has one per combination of
+ * tangential nodes.
  */
 void
 exahype2::dg::tests::BasisTest::testNodeCountsFollowTheNumberOfNodesPerAxis() {
@@ -354,7 +348,7 @@ exahype2::dg::tests::BasisTest::testEveryNodeIsPaddedToTheVectorWidth() {
 }
 
 /**
- * The node counts of PaddedLayout follow the dimension count, and a space-time block has one cell
+ * The node counts of PaddedLayout follow the dimension count and a space-time block has one cell
  * per time node.
  */
 void
@@ -368,7 +362,7 @@ exahype2::dg::tests::BasisTest::testTheNodeCountsFollowTheDimensionCount() {
 }
 
 /**
- * A default-constructed table bundle points nowhere, and every field keeps the table it is given.
+ * A default-constructed table bundle stores null pointers and every field keeps the table that the test assigns.
  */
 void
 exahype2::dg::tests::BasisTest::testTheBasisTablesPointNowhereUntilTheyAreSet() {
@@ -435,7 +429,7 @@ exahype2::dg::tests::BasisTest::testGetQuadraturePointMapsTheReferenceNode() {
     validateNumericalEqualsWithParams1(position(axis), expected, axis);
   }
 
-  // A table in another precision is widened to double before it scales the cell.
+  // getQuadraturePoint() widens a table in another precision to double before it scales the cell.
   const float narrowNodes[]  = {0.25F, 0.5F, 0.75F};
   const auto  narrowPosition = exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, narrowNodes);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -725,8 +719,8 @@ exahype2::dg::tests::BasisTest::testStridesAddressTheIntendedSlices() {
 
 void
 exahype2::dg::tests::BasisTest::testANarrowerResultIsRoundedOnce() {
-  // A product that a float cannot represent shows whether the accumulation runs
-  // in the wider type before it is stored.
+  // A product that a float cannot represent shows whether the accumulation runs in the wider type
+  // before the store.
   constexpr double Operand = 1.0 + 1.0 / 1048576.0;
 
   const double values[1]         = {Operand};
@@ -942,8 +936,8 @@ exahype2::dg::tests::BasisTest::testNarrowStorageIsDifferentiatedInTheComputePre
     cellSize
   );
 
-  // The stored values round to single precision. The slope matches to that accuracy only. The state
-  // varies along the first axis alone. The blocks of the other axes stay zero.
+  // The stored values round to single precision and the slope matches to that accuracy only. The
+  // state varies along the first axis alone and the blocks of the other axes stay zero.
   constexpr double Tolerance = 1.0e-5;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     const double expected = (axis == 0) ? 2.0 / cellSize(0) : 0.0;
@@ -1213,8 +1207,8 @@ exahype2::dg::tests::BasisTest::testTheLowerAndUpperFaceUseTheirOwnCoefficients(
 
 void
 exahype2::dg::tests::BasisTest::testTheFaceNodesRunWithTheLowestTangentialAxisFastest() {
-  // Every cell node has its own value, and a coefficient vector with a single one copies the value
-  // at that line position to the face node.
+  // Every cell node has its own value. A coefficient vector with a single one copies the value at
+  // that line position to the face node.
   double field[CellNodes * NumberOfData];
   for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int entry = 0; entry < NumberOfData; entry++) {
@@ -1268,7 +1262,7 @@ exahype2::dg::tests::BasisTest::testTheFaceNodesRunWithTheLowestTangentialAxisFa
 void
 exahype2::dg::tests::BasisTest::testAFieldOfFloatAccumulatesTheFacesInDouble() {
   // Half the small value is half the distance between half the large value and its float
-  // neighbour. A sum in float drops it. A sum in double keeps it.
+  // neighbour. A sum in float drops it and a sum in double keeps it.
   constexpr double LargeValue = 1024.0;
   constexpr double SmallValue = 0.00006103515625;
 

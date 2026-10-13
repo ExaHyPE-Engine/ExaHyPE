@@ -8,7 +8,7 @@
 #include <mpi.h>
 
 /**
- * Sets the output file name on the global master only, so only the global master writes the file.
+ * Sets the output file name on the global master only. Only the global master writes the file.
  */
 void
 exahype2::ErrorMeasurement::open(const std::string& fileName, const double timeDeltaBetweenSnapshots) {
@@ -19,6 +19,11 @@ exahype2::ErrorMeasurement::open(const std::string& fileName, const double timeD
   _database.setDataName("l1-error, l2-error, linf-error");
   _database.setTimeDeltaBetweenTwoSnapshots(timeDeltaBetweenSnapshots);
   _open = true;
+}
+
+void
+exahype2::ErrorMeasurement::setSnapshotRule(const tarch::database::SnapshotRule rule) {
+  _database.setSnapshotRule(rule);
 }
 
 /**

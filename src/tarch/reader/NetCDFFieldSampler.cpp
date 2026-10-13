@@ -188,8 +188,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConstant(
 
 /**
  * Interpolates linearly between the surrounding grid points along every axis. The grid points of
- * every axis have to be equidistant. A position outside the stored extent returns zero. getField()
- * stops the run for an unknown field name.
+ * every axis have to be equidistant. A position outside the stored extent returns zero.
  */
 template <int FieldDimensions>
 double
@@ -231,7 +230,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
   }
 
   // The interpolation blends the 2^d surrounding grid points. The first coordinate varies fastest in
-  // the stored array. The flat index accumulates from the last dimension downwards.
+  // the stored array.
   double result = 0.0;
   for (int corner = 0; corner < (1 << FieldDimensions); corner++) {
     double      weight    = 1.0;

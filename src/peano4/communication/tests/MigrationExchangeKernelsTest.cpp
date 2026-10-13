@@ -65,9 +65,6 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  /**
-   * Fills every chunk of a device pool with getValueOf() and returns the pool.
-   */
   Pool getFilledPool() {
     Pool pool(ChunkSize, tarch::MemoryLocation::Device);
     pool.reserve(NumberOfSlots);

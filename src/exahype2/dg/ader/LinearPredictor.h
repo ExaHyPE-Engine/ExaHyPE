@@ -26,8 +26,7 @@ namespace exahype2::dg::ader::tests {
 TARGET_DECLARE
 /**
  * The Cauchy-Kovalewski space-time predictor of a linear system. The threads of one cell split its
- * nodes and lines. The predictor evaluates and stores only the terms that Derived declares. Every
- * buffer uses the padded strides of exahype2::dg::PaddedLayout.
+ * nodes and lines. Every buffer uses the padded strides of exahype2::dg::PaddedLayout.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::ader::LinearPredictor final {
@@ -44,11 +43,6 @@ public:
   static constexpr bool AccumulatesFlux            = EvaluateFlux or EvaluateNonconservativeProduct;
   static constexpr bool AccumulatesSource          = EvaluateSource;
 
-  /**
-   * The extents and offsets of the scratch block of predict(). After predict(), the flux block
-   * stores the spatial terms of the time-averaged state along every axis: The flux derivative, the
-   * nonconservative product and the point sources.
-   */
   struct Scratch final {
     static constexpr int StateSize             = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
     static constexpr int TimeAveragedStateSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;

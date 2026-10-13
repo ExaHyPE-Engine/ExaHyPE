@@ -237,7 +237,7 @@ exahype2::tests::MultiresolutionDetailTest::testCustomNodesFitTheirOwnAffineFiel
 }
 
 /**
- * The indicator reads one unknown of an AoS patch, and the other unknowns leave the detail unchanged.
+ * The indicator reads one unknown of an AoS patch and the other unknowns leave the detail unchanged.
  */
 void
 exahype2::tests::MultiresolutionDetailTest::testStridedPatchWithIndicator() {
@@ -277,7 +277,7 @@ exahype2::tests::MultiresolutionDetailTest::testSingleNodePatchHasZeroDetail() {
 }
 
 /**
- * A detail above eps refines, one below eps divided by the safety factor erases, and the rest keeps.
+ * The command refines above eps, erases below eps over the safety factor and keeps in between.
  */
 void
 exahype2::tests::MultiresolutionDetailTest::testRefinementCommandFromDetail() {
@@ -303,7 +303,7 @@ exahype2::tests::MultiresolutionDetailTest::testRefinementCommandFromDetail() {
 }
 
 /**
- * A null patch keeps the cell, an affine patch erases it, and a jump in one indicator refines it.
+ * refineOnDetail() keeps the cell of a null patch, erases an affine patch and refines a jump in one indicator.
  */
 void
 exahype2::tests::MultiresolutionDetailTest::testRefineOnDetail() {

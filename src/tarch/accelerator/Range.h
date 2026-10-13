@@ -15,7 +15,7 @@ namespace tarch::accelerator {
   };
 
   /**
-   * Covers a D-dimensional index space, and the kernel receives D indices.
+   * Covers a D-dimensional index space. The kernel receives D indices.
    */
   template <int D>
   struct RangeMD {
@@ -33,12 +33,9 @@ namespace tarch::accelerator {
   };
 
   /**
-   * Covers n independent teams, which a GPU backend maps onto thread blocks or work groups. The
-   * kernel of one team calls parallelFor() or parallelReduce() with the team and an inner Range or
-   * RangeMD. threads is the number of threads per team the launch asks for, and scratchBytes the
-   * size of the team scratch the kernel reads through getTeamScratch(). getTeamThreads() of the
-   * backend returns the threads it runs for a request. BackendDefault asks for the most threads
-   * and for TeamScratchBytes of scratch.
+   * Covers n independent teams. A GPU backend maps a team onto a thread block or a work group. The
+   * kernel of a team calls parallelFor() or parallelReduce() with the team and an inner Range or
+   * RangeMD.
    */
   struct TeamRange {
     static constexpr int BackendDefault = -1;

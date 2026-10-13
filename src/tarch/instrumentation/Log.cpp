@@ -10,8 +10,8 @@
 
 std::chrono::steady_clock::time_point tarch::instrumentation::Log::_startupTime{std::chrono::steady_clock::now()};
 
-// The default configuration and the snapshot store are never freed, because destructors of other
-// globals still write log messages.
+// The default configuration and the snapshot store live until the process ends. Destructors of
+// other globals still write log messages.
 const tarch::instrumentation::Log::Configuration* const tarch::instrumentation::Log::_defaultConfiguration{
   new tarch::instrumentation::Log::Configuration{}
 };

@@ -100,8 +100,8 @@ exahype2::fv::ProjectPatchesOntoFaces<Derived, StoragePrecision, ComputePrecisio
 /**
  * Advances the patch of one cell in place and reduces the wave speeds of the update and of the
  * updated volumes into the accumulator. On the host one thread sweeps the patch. On a device the
- * team updates the volumes in rounds of one volume per thread, and then runs the patch
- * postprocessing of Derived before it reads the wave speeds of the updated volumes.
+ * team updates the volumes in rounds of one volume per thread and runs the patch postprocessing
+ * of Derived before it reads the wave speeds of the updated volumes.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -158,14 +158,9 @@ exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::operat
 
 /**
  * Advances the patch in place with the team and returns the largest wave speed of the update that
- * the calling thread saw. The maximum also covers the wave speeds of the volumes that the thread
- * wrote when Derived does not postprocess the patch. A patch that fits the team scratch moves into
- * the scratch first. Every thread then reads the neighbours of its volumes from the scratch and
- * writes its updates into the patch at the end. A larger patch advances in rounds of one volume
- * per thread. A round computes its updates into the registers of the threads and writes the
- * updates of the round Delay rounds before it. By then every round that reads one of those volumes
- * has computed. The update of a round lands in slot round % Slots. The update of the round Delay
- * rounds before it leaves from slot (round + 1) % Slots.
+ * the calling thread saw. Every thread reads the neighbours of its volumes from the team scratch
+ * when the patch fits into it. A larger patch advances in rounds of one volume per thread that
+ * write their updates Delay rounds late, after every round that reads those volumes.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD double

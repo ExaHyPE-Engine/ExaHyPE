@@ -19,21 +19,18 @@ namespace tarch::tests {
 
 /**
  * A subclass implements run() and checks its assumptions with the validate macros of TestMacros.h.
- * The test suite of a library registers the tests of the library, because the linker drops a test
- * that no translation unit calls.
+ * The test suite of a library registers the tests of the library. The linker drops a test that no
+ * translation unit calls.
  *
  * @author Tobias Weinzierl
  */
 class tarch::tests::TestCase {
 public:
   TestCase() = delete;
-
   TestCase(const std::string& testCaseName);
-
   virtual ~TestCase();
 
   int getNumberOfErrors() const;
-
   std::string getTestCaseName() const;
 
   virtual void run() = 0;
@@ -41,13 +38,6 @@ public:
 protected:
   const std::string _testCaseName;
 
-  /**
-   * The validate macros add one per failed check.
-   */
-  int _errors{0};
-
-  /**
-   * The validate macros set this flag when one check fails.
-   */
+  int  _errors{0};
   bool _error{false};
 };

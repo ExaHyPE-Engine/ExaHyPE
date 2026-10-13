@@ -15,9 +15,7 @@ namespace tarch {
   INLINE_METHOD std::size_t getAllocatedBytesOf(const std::vector<Element>& elements);
 
   std::string toString(MemoryUsageFormat format);
-
   INLINE_METHOD constexpr MemoryUsageFormat chooseMemoryUsageFormat(unsigned long long bytes) noexcept;
-
   double convertMemorySize(unsigned long long bytes, MemoryUsageFormat format);
 
   std::uint64_t getMemoryUsageInBytes();

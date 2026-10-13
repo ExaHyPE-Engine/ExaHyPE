@@ -20,11 +20,8 @@ public:
   ~Measurement()                             = default;
 
   double getAverageValue() const;
-
   double getAccumulatedValue() const;
-
   void setValue(const double& value);
-
   int getNumberOfMeasurements() const;
 
 private:

@@ -170,6 +170,12 @@ exahype2::SolverRepository<Solvers...>::plot(
 }
 
 template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity) {
+  forEachSolver([&cellConnectivity](auto& solver) { solver.recordLastTimeStamp(cellConnectivity); });
+}
+
+template <typename... Solvers>
 INLINE_METHOD const std::vector<peano4::RefinementRequest>&
 exahype2::SolverRepository<Solvers...>::getRefinementRequests() const {
   return _requestsOfTheRun;
@@ -198,9 +204,8 @@ exahype2::SolverRepository<Solvers...>::addLocalValuesToGlobalReduction(tarch::m
 }
 
 /**
- * Passes the reduced values to every solver. The committed requests replace the requests of the
- * run. Only a step in which some rank requests a change gathers the requests over all ranks. Every
- * rank calls this function collectively.
+ * Passes the reduced values to every solver and gathers the requests over all ranks in a step in
+ * which some rank requests a change. Every rank calls this function collectively.
  */
 template <typename... Solvers>
 INLINE_METHOD void

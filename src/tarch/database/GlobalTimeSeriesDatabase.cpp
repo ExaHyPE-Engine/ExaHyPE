@@ -41,7 +41,7 @@ void
 tarch::database::GlobalTimeSeriesDatabase::writeUnwrittenSnapshots(std::ostream& file) {
   const int totalSnapshotCount     = static_cast<int>(_data.size());
   const int unwrittenSnapshotCount = totalSnapshotCount - _numberOfEntriesWrittenToFile;
-  // The list stores the newest row first, so the unwritten rows are written in reverse.
+  // The list stores the newest row first. The flush writes the unwritten rows in reverse.
   std::vector<const Snapshot*> unwrittenSnapshots;
   unwrittenSnapshots.reserve(unwrittenSnapshotCount);
   auto snapshot = _data.begin();
@@ -73,12 +73,16 @@ tarch::database::GlobalTimeSeriesDatabase::setDataName(const std::string& dataNa
 
 /**
  * Returns whether a measurement at timestamp appends a row, replaces the newest row with the same
- * time stamp, or comes too early and is ignored.
+ * time stamp, or comes too early and is ignored. Under SnapshotRule::EveryLaterTimestamp only a
+ * later time stamp than the newest row appends a row.
  */
 tarch::database::SnapshotDatabase::AddSnapshotAction
 tarch::database::GlobalTimeSeriesDatabase::getAction(const double timestamp) const {
   if (_data.empty()) {
     return AddSnapshotAction::Append;
+  } else if (_snapshotRule == tarch::database::SnapshotRule::EveryLaterTimestamp) {
+    return tarch::la::greater(timestamp, _data.front().timestamp) ? AddSnapshotAction::Append
+                                                                  : AddSnapshotAction::Ignore;
   } else if (tarch::la::equals(_data.front().timestamp, timestamp)) {
     return AddSnapshotAction::Replace;
   } else if (timestamp - _data.front().timestamp >= _timeDelta and _timeDelta >= 0.0) {
@@ -98,9 +102,8 @@ tarch::database::GlobalTimeSeriesDatabase::isSnapshotDue(const double timestamp)
 }
 
 /**
- * Adds one measurement. A repeated time stamp replaces the newest row, and the next flush rewrites
- * the file when that row is on disk. A database without an output file name keeps its rows in
- * memory only.
+ * Adds one measurement. A repeated time stamp replaces the newest row. A database without an
+ * output file name keeps its rows in memory only.
  */
 void
 tarch::database::GlobalTimeSeriesDatabase::addGlobalSnapshot(

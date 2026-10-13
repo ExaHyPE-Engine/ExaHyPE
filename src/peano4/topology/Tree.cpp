@@ -47,7 +47,7 @@ namespace {
 
   /**
    * Returns the lattice position of the cell at one adjacency entry of a vertex. A periodic axis
-   * wraps the position into the domain, so only a non-periodic boundary yields a position outside.
+   * wraps the position into the domain. Only a non-periodic boundary yields a position outside.
    */
   AdjacentCell getAdjacentCellOfVertex(
     const tarch::la::Vector<DIMENSIONS, int>& vertexLattice,
@@ -109,8 +109,8 @@ namespace {
   }
 
   /**
-   * Returns whether a cell exists at every adjacency entry of the vertex inside the domain. Such a
-   * vertex does not hang, because no coarser cell lies beside it.
+   * Returns whether a cell exists at every adjacency entry of the vertex inside the domain. No
+   * coarser cell lies beside such a vertex and the vertex does not hang.
    */
   template <typename CellExists>
   bool everyAdjacentCellExists(
@@ -168,7 +168,7 @@ peano4::topology::Tree::validateAndGetMaximumLevel(const int depth, const Refine
 /**
  * Builds the regular grid of depth and refines it further where the plan flags vertices. On a dense
  * level, the digits of a cell index in base ChildrenPerCell are the child positions from the root
- * down, so the levels fill in parallel in closed form. The finer levels store the children of every
+ * down and the levels fill in parallel in closed form. The finer levels store the children of every
  * refined cell as one block and look up cells in their lattice maps.
  */
 void
@@ -560,7 +560,7 @@ peano4::topology::Tree::buildRegularGrid(
       const bool isFinestLevel         = level == depth;
       const auto numberOfCellsOnLevel  = static_cast<int>(numberOfBlocks * cellsPerBlock);
 
-      // Every cell follows in closed form from its block and its position in the block, so the cells
+      // Every cell follows in closed form from its block and its position in the block. The cells
       // fill in parallel.
       peano4::topology::runChunkedTasks(
         numberOfCellsOnLevel,
@@ -596,7 +596,7 @@ peano4::topology::Tree::buildRegularGrid(
             cell.ownerRank = getOwnerOfCellAt(level, cell.latticeIndex);
 
             // The vertices and faces of a cell inside its block follow from the block-local position. A
-            // cell on the block boundary reads them from the lookups, which pick the owning block.
+            // cell on the block boundary reads them from the lookups of the owning block.
             bool touchesBlockBoundary = false;
             for (int axis = 0; axis < DIMENSIONS; axis++) {
               touchesBlockBoundary = touchesBlockBoundary or blockLocalLattice(axis) == 0
@@ -677,7 +677,7 @@ peano4::topology::Tree::buildRegularGrid(
               vertex.setState(peano4::grid::GridVertex::State::Refined);
             }
 #if PEANO_DEBUG
-            // The slot of a periodic boundary vertex lies in the last block, so its coordinate wraps to
+            // The slot of a periodic boundary vertex lies in the last block. Its coordinate wraps to
             // the lower boundary.
             for (int axis = 0; axis < DIMENSIONS; axis++) {
               const int wrappedCoordinate =
@@ -692,7 +692,7 @@ peano4::topology::Tree::buildRegularGrid(
   }
 
   if (not refinementPlan.empty()) {
-    // A partitioned rank has no vertex for a flag outside its materialised blocks.
+    // A partitioned rank stores no vertex for a flag outside its materialised blocks.
     for (const auto& flaggedVertex : refinementPlan[0]) {
       const int vertexIndex = getVertexAt(depth, flaggedVertex);
       if (vertexIndex >= 0) {
@@ -736,8 +736,7 @@ peano4::topology::Tree::buildRegularGrid(
     auto& vertexIndexOfLattice = _sparseVertexIndexOfLattice[sparseLevelIndex];
     auto& faceIndexOfLattice   = _sparseFaceIndexOfLattice[sparseLevelIndex];
     // The children of one refined cell span (k+1)^d vertices and (k+1) k^(d-1) faces per normal, with
-    // the subdivision factor k. Adjacent parents count the vertices and faces between them twice, so
-    // these counts are upper bounds of the table sizes.
+    // the subdivision factor k. The counts bound the table sizes from above.
     int verticesPerRefinedCell       = 1;
     int facesPerNormalPerRefinedCell = SubdivisionFactor + 1;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -753,7 +752,7 @@ peano4::topology::Tree::buildRegularGrid(
     }
 
     _cells.resize(_cells.size() + refinedCells.size() * ChildrenPerCell);
-    // Every child follows in closed form from its parent, so the children fill in parallel.
+    // Every child follows in closed form from its parent. The children fill in parallel.
     peano4::topology::runChunkedTasks(
       static_cast<int>(refinedCells.size()),
       [=, this, &refinedCells](const int chunkNumber, const int begin, const int end) {
@@ -778,8 +777,8 @@ peano4::topology::Tree::buildRegularGrid(
         }
       }
     );
-    // The cell, vertex and face maps write disjoint data, so the three fills run as concurrent tasks.
-    // Each fill runs serially in cell order, so every rank derives the same numbering.
+    // The cell, vertex and face maps write disjoint data and fill as three concurrent tasks. Each
+    // fill runs serially in cell order and gives every rank the same numbering.
     const int                                       firstVertexOnLevel = static_cast<int>(_vertices.size());
     std::vector<tarch::la::Vector<DIMENSIONS, int>> latticeOfNewVertex;
     char                                            cellMapFilled{};
@@ -848,8 +847,8 @@ peano4::topology::Tree::buildRegularGrid(
       {&faceMapFilled}
     );
 
-    // A vertex is persistent when every cell around it exists, so a refinement
-    // transition leaves a hanging vertex beside every unrefined coarser cell.
+    // A vertex is persistent when every cell around it exists. A refinement transition leaves a
+    // hanging vertex beside every unrefined coarser cell.
     const auto isPersistentVertex = [&](const tarch::la::Vector<DIMENSIONS, int>& vertexLattice) {
       return everyAdjacentCellExists(
         vertexLattice,
@@ -863,7 +862,7 @@ peano4::topology::Tree::buildRegularGrid(
       std::array<void*, 2> classifyDependencies{&cellMapFilled, &vertexMapFilled};
       tarch::tasking::waitForDependencies(classifyDependencies);
     }
-    // The new vertices have disjoint slots, so their classification runs in parallel.
+    // The new vertices have disjoint slots. Their classification runs in parallel.
     _vertices.resize(_vertices.size() + latticeOfNewVertex.size());
     peano4::topology::runChunkedTasks(
       static_cast<int>(latticeOfNewVertex.size()),
@@ -899,7 +898,7 @@ peano4::topology::Tree::buildRegularGrid(
       if (level >= depth) {
         for (const auto& flaggedVertex : refinementPlan[level - depth]) {
           const auto flaggedVertexIndex = vertexIndexOfLattice.find(serialiseLatticeKey(flaggedVertex));
-          // A partitioned rank has no vertex for a flag outside its materialised blocks. A flagged
+          // A partitioned rank stores no vertex for a flag outside its materialised blocks. A flagged
           // vertex that exists is refined.
           assertion(flaggedVertexIndex >= 0 or not _materialisesWholeDomain, level);
           if (flaggedVertexIndex >= 0) {
@@ -940,7 +939,7 @@ peano4::topology::Tree::buildRegularGrid(
 
 /**
  * Returns the keys of the refined cells of a plan over the whole domain, one table per plan level. A
- * base-depth cell with a flagged corner is refined, and a finer cell is refined when its parent is
+ * base-depth cell with a flagged corner is refined. A finer cell is refined when its parent is
  * refined and one of its corners is flagged.
  */
 std::vector<peano4::grid::LatticeIndexMap>
@@ -1036,8 +1035,8 @@ peano4::topology::Tree::assignBuildFlagKeys(const RefinementPlan& refinementPlan
 }
 
 /**
- * Returns whether the cell exists in the grid of the build plan. Every cell of a dense level exists,
- * and a finer cell exists when its parent is refined.
+ * Returns whether the cell exists in the grid of the build plan. Every cell of a dense level exists.
+ * A finer cell exists when its parent is refined.
  */
 bool
 peano4::topology::Tree::cellExistsInPlan(const int level, const tarch::la::Vector<DIMENSIONS, int>& cellLattice) const {
@@ -1052,8 +1051,8 @@ peano4::topology::Tree::cellExistsInPlan(const int level, const tarch::la::Vecto
 }
 
 /**
- * Returns whether the cell exists and has a flagged corner, which are the cells buildRegularGrid()
- * refines.
+ * Returns whether the cell exists and has a flagged corner. buildRegularGrid() refines these
+ * cells.
  */
 bool
 peano4::topology::Tree::isCellRefinedInPlan(
@@ -1071,7 +1070,7 @@ peano4::topology::Tree::isCellRefinedInPlan(
 
 /**
  * Returns whether a cell of the level exists at every adjacency entry of the vertex inside the
- * domain, so that the vertex does not hang in the grid of the build plan.
+ * domain. Such a vertex does not hang in the grid of the build plan.
  */
 bool
 peano4::topology::Tree::isVertexPersistentInPlan(
@@ -1090,9 +1089,9 @@ peano4::topology::Tree::isVertexPersistentInPlan(
 }
 
 /**
- * Returns whether one of the coarse vertices around the vertex is refined, which marks the region of
- * the refinement plan. The persistence of a vertex alone does not tell the rim of this region from
- * its interior.
+ * Returns whether one of the coarse vertices around the vertex is refined. Such a vertex lies in the
+ * region of the refinement plan. The persistence of a vertex alone does not tell the rim of this
+ * region from its interior.
  */
 bool
 peano4::topology::Tree::hasRefinedGoverningVertex(
@@ -1138,7 +1137,7 @@ peano4::topology::Tree::deriveSurroundedVertices() const {
       }
     };
 
-    // Only a corner of a refined cell can be surrounded, because every other vertex has an unrefined
+    // Only a corner of a refined cell can be surrounded. Every other vertex has an unrefined
     // neighbour.
     const auto&               refinedCellKeys = _planRefinedCellKeys[planLevel];
     std::vector<std::int64_t> candidateVertexKeys;
@@ -1158,7 +1157,7 @@ peano4::topology::Tree::deriveSurroundedVertices() const {
       candidateVertexKeys.end()
     );
 
-    // The checks read constant tables only, so they run as chunked tasks.
+    // The checks read constant tables only and run as chunked tasks.
     std::vector<char> candidateIsSurrounded(candidateVertexKeys.size(), 0);
     peano4::topology::runChunkedTasks(
       static_cast<int>(candidateVertexKeys.size()),
@@ -1198,7 +1197,7 @@ peano4::topology::Tree::deriveSurroundedVertices() const {
 /**
  * Applies one round of the requests to the refinement plan and returns whether the plan changed. A
  * refine request flags the unrefined corners of its cell and of its neighbours on its own and every
- * coarser level, and every surrounded vertex gets a flag too. A flag disappears when erase requests
+ * coarser level. A flag disappears when erase requests
  * and no refine request cover every cell around the vertex, no finer flag lies in its restriction
  * neighbourhood and one of these cells loses its last flag.
  */
@@ -1222,7 +1221,7 @@ peano4::topology::Tree::updateRefinementPlan(
 
   const int maxLevel = _depth + static_cast<int>(refinementPlan.size());
 
-  // The build flag tables store the flags of the given plan, so the round records the added and the
+  // The build flag tables store the flags of the given plan. The round records the added and the
   // removed flags per level only, with one extra level for a level the plan has not reached.
   assertion(_buildFlagKeys.size() == refinementPlan.size(), _buildFlagKeys.size(), refinementPlan.size());
   for (std::size_t planLevel = 0; planLevel < refinementPlan.size(); planLevel++) {
@@ -1260,8 +1259,8 @@ peano4::topology::Tree::updateRefinementPlan(
 
   bool changed = false;
 
-  // The cells a refine request covers, at index level - depth. The erase pass skips them, because a
-  // cell that a request refines never coarsens.
+  // The cells a refine request covers, at index level - depth. A cell that a request refines never
+  // coarsens and the erase pass skips it.
   FlaggedKeysPerLevel refiningCells(numberOfFlagLevels);
 
   for (const auto& request : requests) {
@@ -1278,9 +1277,8 @@ peano4::topology::Tree::updateRefinementPlan(
       tarch::la::Vector<DIMENSIONS, int> numberOfCellsPerAxis(0);
       int                                numberOfCandidates = 1;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        // The band covers the cells i-1 to i+1 of the level of the request, and on a coarser level the
-        // cells that contain these. A periodic axis wraps the band, so a request next to the periodic
-        // boundary covers the same ring as one inside the domain.
+        // The band covers the cells i-1 to i+1 of the level of the request and the coarser cells that
+        // contain these. A periodic axis wraps the band.
         int lowestCandidate  = floorDivide(request.latticeIndex(axis) - 1, cellsPerBandCell);
         int highestCandidate = floorDivide(request.latticeIndex(axis) + 1, cellsPerBandCell);
         if (not _periodicBoundaries[axis]) {
@@ -1319,7 +1317,7 @@ peano4::topology::Tree::updateRefinementPlan(
     }
   }
 
-  // The surrounded vertices come from the built grid, so a vertex flagged in this round does not
+  // The surrounded vertices come from the built grid. A vertex flagged in this round does not
   // refine its neighbourhood before its own refinement exists.
   deriveSurroundedVertices();
   assertion(_surroundedVertices.size() < numberOfFlagLevels, _surroundedVertices.size(), numberOfFlagLevels);
@@ -1335,7 +1333,7 @@ peano4::topology::Tree::updateRefinementPlan(
   }
 
   if (hasEraseRequests) {
-    // A caller promotes an erase request to the parent cell it coarsens, so the request names the cell
+    // A caller promotes an erase request to the parent cell it coarsens. The request names the cell
     // whose corner flags go.
     FlaggedKeysPerLevel erasingCells(numberOfFlagLevels);
     for (const auto& request : requests) {
@@ -1354,8 +1352,8 @@ peano4::topology::Tree::updateRefinementPlan(
       return erasingCells[planLevel].contains(cellKey) and not refiningCells[planLevel].contains(cellKey);
     };
 
-    // Only a corner vertex of an erasing cell can lose its flag, because the
-    // removal needs every neighbour cell to erase.
+    // Only a corner vertex of an erasing cell can lose its flag. The removal needs every neighbour
+    // cell to erase.
     struct EraseCandidate {
       int          level{0};
       std::int64_t vertexKey{0};
@@ -1378,8 +1376,8 @@ peano4::topology::Tree::updateRefinementPlan(
       }
     }
 
-    // The removals read the flags of this round and apply together, so the outcome does not depend on
-    // the visit order. The candidates read constant tables only, so they run as chunked tasks.
+    // The removals read the flags of this round and apply together, independent of the visit order.
+    // The candidates read constant tables only and run as chunked tasks.
     std::vector<char> candidateIsRemoved(candidates.size(), 0);
     peano4::topology::runChunkedTasks(
       static_cast<int>(candidates.size()),
@@ -1450,9 +1448,8 @@ peano4::topology::Tree::updateRefinementPlan(
       }
     }
 
-    // A flag whose removal coarsens no cell stays, because the finer vertices along it would hang
-    // between two persistent cells. A kept flag keeps its adjacent cells refined, so the pass repeats
-    // until it keeps no further flag.
+    // A flag whose removal coarsens no cell stays and keeps the finer vertices along it from hanging
+    // between two persistent cells. The pass repeats while it still finds a flag to keep.
     for (int level = _depth; level <= maxLevel; level++) {
       const int  cellsPerAxisOnLevel = peano4::topology::getCellsPerAxis(level);
       auto&      removedKeys         = removedKeysPerLevel[level - _depth];
@@ -1497,9 +1494,8 @@ peano4::topology::Tree::updateRefinementPlan(
     return false;
   }
 
-  // Every plan level is sorted by lattice key, so a changed level is one sorted merge of the current
-  // and the added flags without the removed ones. Trailing empty levels drop, so the finest level
-  // follows the erase.
+  // A changed level is one sorted merge of the current and the added flags without the removed
+  // ones. Trailing empty levels drop.
   RefinementPlan updatedPlan;
   updatedPlan.reserve(numberOfFlagLevels);
   for (std::size_t planLevel = 0; planLevel < numberOfFlagLevels; planLevel++) {
@@ -1715,8 +1711,8 @@ peano4::topology::Tree::deriveRankLoads(
     if (firstOwner < 0 or firstOwner > lastOwner or lastOwner >= numberOfRanks) {
       tarch::terminateWithError("Each node of the rank ownership plan must name an ordered range of existing ranks.");
     }
-    // An ownership plan of a deeper refinement plan may split a leaf of this plan, and the first rank
-    // of the split owns the leaf.
+    // An ownership plan of a deeper refinement plan may split a leaf of this plan. The first rank of
+    // the split owns the leaf.
     const auto leafWeight = planLeafWeights.getLeafWeight(level, latticeIndex);
     if (firstOwner == lastOwner or leafWeight == 1) {
       loads[firstOwner] += leafWeight;
@@ -1741,7 +1737,7 @@ peano4::topology::Tree::deriveRankLoads(
 
 /**
  * Returns whether the ownership plan splits a cell below the spawn level with a leaf child. Such
- * sibling leaves coarsen together and restrict to one coarse face, so they stay on one rank.
+ * sibling leaves coarsen together and restrict to one coarse face. They stay on one rank.
  */
 bool
 peano4::topology::Tree::ownershipPlanSplitsCellWithLeafChild(
@@ -1828,9 +1824,8 @@ peano4::topology::Tree::deriveSpawnLevel(const int targetLevel, const int number
 
 /**
  * Returns the ownership plan that cuts the curve into intervals of balanced leaf counts. The cut
- * descends through cells whose children are all refined, and a cell below the spawn level with a
- * leaf child stays on one rank, so its sibling leaves coarsen together. The topology nodes store only
- * the paths that a rank boundary crosses.
+ * descends through cells whose children are all refined. A cell below the spawn level with a leaf
+ * child stays on one rank.
  */
 std::vector<int>
 peano4::topology::Tree::deriveBalancedBlockOwners(
@@ -1875,7 +1870,7 @@ peano4::topology::Tree::deriveBalancedBlockOwners(
         const auto distanceBefore        = std::abs(leafPrefix * numberOfActiveRanks - targetWeightNumerator);
         const auto distanceAfter = std::abs((leafPrefix + unitWeight) * numberOfActiveRanks - targetWeightNumerator);
         auto       boundary      = distanceBefore < distanceAfter ? leafPrefix : leafPrefix + unitWeight;
-        // A boundary at or before its predecessor would leave a rank without leaves, so it moves to the
+        // A boundary at or before its predecessor would leave a rank without leaves and moves to the
         // end of the unit. Only several boundaries inside one unit can still coincide there.
         if (boundary <= rankBoundaries[nextBoundary - 1]) {
           boundary = leafPrefix + unitWeight;
@@ -1885,7 +1880,7 @@ peano4::topology::Tree::deriveBalancedBlockOwners(
       }
       leafPrefix += unitWeight;
     };
-    // A cell below the spawn level with a leaf child is indivisible, because its sibling leaves coarsen
+    // A cell below the spawn level with a leaf child is indivisible. Its sibling leaves coarsen
     // together and restrict to one coarse face.
     const int  spawnLevel             = deriveSpawnLevel(depth, numberOfRanks);
     const auto hasOnlyRefinedChildren = [&](const int level, const tarch::la::Vector<DIMENSIONS, int>& latticeIndex) {

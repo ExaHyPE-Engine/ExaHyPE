@@ -27,7 +27,7 @@ tarch::tests::MemoryUsageTest::testAllocatedBytesCountTheCapacity() {
 }
 
 /**
- * Every size renders in the largest unit it reaches, and a size below one MiB renders in KiB.
+ * Every size renders in the largest unit it reaches. A size below one MiB renders in KiB.
  */
 void
 tarch::tests::MemoryUsageTest::testFormatPicksTheLargestReachedUnit() {
@@ -42,16 +42,16 @@ tarch::tests::MemoryUsageTest::testFormatPicksTheLargestReachedUnit() {
 }
 
 /**
- * The resident set of the process grows with fresh pages it writes, and the available memory of
- * the node never exceeds its total memory.
+ * The resident set of the process grows with fresh pages it writes. The available memory of the
+ * node never exceeds its total memory.
  */
 void
 tarch::tests::MemoryUsageTest::testProcessAndNodeMemoryAreConsistent() {
   const auto before = tarch::getMemoryUsageInBytes();
   validate(before > 0);
 
-  // The heap may serve a vector from freed pages that stay resident, so the pages come from a
-  // mapping of their own.
+  // The heap may serve a vector from freed pages that stay resident. The pages come from a mapping
+  // of their own.
   constexpr std::size_t WrittenBytes = 64 * tarch::MiB;
   void* const mapping = mmap(nullptr, WrittenBytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   validate(mapping != MAP_FAILED);

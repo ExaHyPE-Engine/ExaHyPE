@@ -14,15 +14,11 @@ namespace exahype2::fv::reconstruction {
 
 TARGET_DECLARE
 /**
- * Piecewise-constant reconstruction, which gives the first-order Godunov scheme.
+ * Piecewise-constant reconstruction. The scheme is the first-order Godunov scheme.
  */
 struct exahype2::fv::reconstruction::Constant final {
   static constexpr int HaloSize = 1;
 
-  /**
-   * The flux and the largest wave speed of one state along every axis. The update of a volume
-   * reads them for the volume and for its two neighbours along every axis.
-   */
   template <
     typename SolverType,
     int  NumberOfUnknowns,
@@ -49,11 +45,6 @@ struct exahype2::fv::reconstruction::Constant final {
     );
   };
 
-  /**
-   * The ring of StateTerms a sweep over a patch fills. A neighbour along the last axis lies one
-   * layer of volumes away, so the ring covers one layer before and behind the current volume. A
-   * solver with its own Riemann solver reads no StateTerms.
-   */
   template <
     typename SolverType,
     int  NumberOfVolumesPerAxis,

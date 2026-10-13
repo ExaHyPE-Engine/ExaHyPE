@@ -182,9 +182,6 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::run() {
   testMethod(testEveryNodeProjectsLikeTheWholeCell);
 }
 
-/**
- * Every node projected on its own equals the node of the projection of the whole cell.
- */
 void
 exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryNodeProjectsLikeTheWholeCell() {
   const exahype2::dg::limiting::tests::SubcellProjections tables;
@@ -333,7 +330,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testTheTermsForwardOnlyWhatThe
 }
 
 /**
- * SubgridSolver::solveRiemannProblem() returns the wave speed of the subcell Riemann solver, and
+ * SubgridSolver::solveRiemannProblem() returns the wave speed of the subcell Riemann solver and
  * the other terms call the terms of the solver.
  */
 void
@@ -433,7 +430,7 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testAFixedRuleReportsNoWaveSpe
 }
 
 /**
- * A cell projects its previous solution onto its subgrid only after a Galerkin step, and never in
+ * A cell projects its previous solution onto its subgrid only after a Galerkin step and never in
  * the first step.
  */
 void

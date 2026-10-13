@@ -351,8 +351,8 @@ exahype2::runner::Runner::launch(
   int    returnCode = EXIT_SUCCESS;
 #pragma omp parallel default(none) shared(runner, returnCode)
   {
-    // Every thread enables its own floating-point trap. The dispatches run on all threads. The
-    // floating-point environment is a per-thread state.
+    // The floating-point environment is a per-thread state. Every thread that runs a dispatch
+    // enables its own trap.
     const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
 #pragma omp barrier
 #pragma omp master
@@ -497,7 +497,7 @@ exahype2::runner::Runner::runStep(const Step step) {
 
 /**
  * Returns the exit code of the run. A run that ended on a non-critical assertion fails. Every rank
- * runs the same steps. Only the global master writes the report.
+ * runs the same steps and only the global master writes the report.
  */
 int
 exahype2::runner::Runner::run() {
@@ -848,9 +848,6 @@ exahype2::runner::Runner::formatETA(const double fraction) const {
   return Format::getDuration(remainingSeconds);
 }
 
-/**
- * Moves the value column right of the label. No label of the time loop reaches its values.
- */
 void
 exahype2::runner::Runner::widenValueColumn(const std::size_t indentation, const std::string& label) {
   _valueColumn = std::max(_valueColumn, indentation + getDisplayWidth(label) + 2);
@@ -1080,12 +1077,12 @@ exahype2::runner::Runner::runTimeLoop() {
       justWroteSnapshot = true;
       action            = Action::Plot;
     } else if (
-      not stepLimited and snapshotInterval > 0.0 and keepTimeStepping and completedPlots < snapshots - 1
+      not stepLimited and snapshotInterval > 0.0 and keepTimeStepping
+      and (completedTimeSteps == 0 or completedPlots < snapshots - 1)
       and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot)
     ) {
-      // The final plot at termination completes the numbered snapshots. The interval trigger stops
-      // one short. minStamp belongs to the slowest solver and maxStamp to the fastest. The fastest
-      // solver sets the snapshot spacing.
+      // The interval trigger stops one short of the numbered snapshots and the final plot at
+      // termination completes them. minStamp belongs to the slowest solver and maxStamp to the fastest.
       nextMinPlot += snapshotInterval;
       nextMaxPlot += snapshotInterval;
       if (nextMinPlot < minStamp) {
@@ -1116,6 +1113,9 @@ exahype2::runner::Runner::runTimeLoop() {
     }
 
     if (action == Action::Stop) {
+      if (_callbacks.recordLastTimeStamp) {
+        _callbacks.recordLastTimeStamp();
+      }
       // After a non-critical assertion, the report ends with the final plot and no time step summary.
       if (not _stoppedAfterNonCriticalAssertion and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
         logTimeStep(

@@ -5,7 +5,7 @@ namespace tarch::accelerator {
   /**
    * Runs functor over the range on the host threads in every accelerator backend. Inside a parallel
    * region the loop becomes tasks of the enclosing team. The time per item of the previous call
-   * with this functor type sets the number of tasks. A nested worksharing loop runs serially.
+   * with this functor type sets the number of tasks.
    */
   template <typename Functor>
   INLINE_METHOD void parallelForOnHost(const Range& range, const Functor functor) {
@@ -16,8 +16,8 @@ namespace tarch::accelerator {
       const int                  numberOfThreads = omp_get_num_threads();
       const int                  numberOfTasks =
         getNumberOfHostTasks(range.n, numberOfThreads, secondsPerItem.load(std::memory_order_relaxed));
-      // OpenMP moves a task body into a function of its own. That function inherits always_inline
-      // from the enclosing function. GCC and icpx then fail to compile it. The tasks start in a lambda.
+      // GCC and icpx fail to compile a task body that inherits always_inline from the enclosing
+      // function. The tasks start in a lambda.
       [](const Range& range, const Functor& functor, const int numberOfTasks) {
         const int rangeSize = range.n;
 #if defined(PEANO_OPENMP_TASKLOOP_SUPPORTED)

@@ -11,6 +11,7 @@
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
+#include "tarch/database/SnapshotDatabase.h"
 
 /**
  * The factor timeStepFactor is the CFL relaxation of an adaptive rule or the normalised time step
@@ -150,7 +151,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeSt
 /**
  * Moves the patches of the solution through the slot moves of a regrid. A new child takes its
  * patch from its parent and a new parent from its children. The patches that change rank travel
- * in _migration. readValuesFromGlobalReduction() derives the time step size of the new grid.
+ * in _migration.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -248,6 +249,19 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::openErrorMeas
     "The error measurement of the solver expects an analytical solution and the unknowns to measure."
   );
   _errorMeasurement.open(fileName, timeDeltaBetweenSnapshots);
+}
+
+/**
+ * Records the error norms at the last time stamp of a run. The time loop calls it once after its
+ * last time step.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::recordLastTimeStamp(
+  const peano4::CellConnectivity& cellConnectivity
+) {
+  _errorMeasurement.setSnapshotRule(tarch::database::SnapshotRule::EveryLaterTimestamp);
+  measureError(cellConnectivity);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>

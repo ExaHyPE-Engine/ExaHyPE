@@ -18,7 +18,7 @@ namespace {
     const std::string&         xKey     = "x",
     const std::string&         yKey     = "y"
   ) {
-    // The file name contains a per-run identifier, so two processes never write the same fixture.
+    // The file name contains a per-run identifier. Two processes never write the same fixture.
     static const std::string testRunIdentifier =
       std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
       + std::to_string(std::random_device{}());

@@ -49,9 +49,6 @@ namespace {
   const double QuadratureNodes[NodesPerAxis]   = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
   const double QuadratureWeights[NodesPerAxis] = {0.5, 0.5};
 
-  /**
-   * Returns the Lagrange basis function of node at x.
-   */
   double getBasisValue(const double x, const int node) {
     double result = 1.0;
     for (int other = 0; other < NodesPerAxis; other++) {
@@ -62,9 +59,6 @@ namespace {
     return result;
   }
 
-  /**
-   * Returns the derivative of the Lagrange basis function of node at x.
-   */
   double getBasisDerivative(const double x, const int node) {
     double result = 0.0;
     for (int omitted = 0; omitted < NodesPerAxis; omitted++) {
@@ -464,9 +458,6 @@ namespace {
     return target.getValues();
   }
 
-  /**
-   * Returns for every face whether it is a remote face.
-   */
   std::vector<bool> getRemoteFaceMarks(const peano4::CellConnectivity& cellConnectivity) {
     std::vector<bool> remote(static_cast<std::size_t>(cellConnectivity.getNumberOfFaces()), false);
     for (int kind = 0; kind < peano4::NumberOfFaceKinds; kind++) {
@@ -857,7 +848,7 @@ exahype2::dg::ader::tests::SolverTest::
 }
 
 /**
- * Every cell and Riemann face is in exactly one of the local and the remote lists, and only the
+ * Every cell and Riemann face is in exactly one of the local and the remote lists and only the
  * remote ones read data of a neighbour rank.
  */
 void
@@ -1057,7 +1048,7 @@ exahype2::dg::ader::tests::SolverTest::testInitialisationWritesTheInitialConditi
 }
 
 /**
- * A time step without flux keeps the solution, and the time stamp advances by the fixed step size
+ * A time step without flux keeps the solution and the time stamp advances by the fixed step size
  * after a first step of size zero.
  */
 void
@@ -1088,7 +1079,7 @@ exahype2::dg::ader::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionA
 }
 
 /**
- * The prolongation reproduces the linear profile on every child, and the restriction of the
+ * The prolongation reproduces the linear profile on every child and the restriction of the
  * children returns it on the coarse cell within rounding.
  */
 void

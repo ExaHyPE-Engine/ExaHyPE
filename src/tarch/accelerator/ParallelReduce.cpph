@@ -88,8 +88,8 @@ namespace tarch::accelerator {
       std::vector<ValueType> partials(static_cast<std::size_t>(numberOfBlocks), Reducer::identity());
       ValueType* const       partialValues = partials.data();
       assertion(numberOfTasks <= numberOfBlocks, numberOfTasks, numberOfBlocks);
-      // OpenMP moves a task body into a function of its own. That function inherits always_inline
-      // from the enclosing function. GCC and icpx then fail to compile it. The tasks start in a lambda.
+      // GCC and icpx fail to compile a task body that inherits always_inline from the enclosing
+      // function. The tasks start in a lambda.
       [](
         const int        numberOfTasks,
         const int        numberOfBlocks,

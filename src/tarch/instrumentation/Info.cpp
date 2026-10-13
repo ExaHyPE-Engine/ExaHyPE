@@ -5,7 +5,7 @@
 void
 tarch::instrumentation::Log::infoWithScopeName(std::string_view scopeName, std::string_view message) {
   const auto context = createContext();
-  // A redirected stdout buffers fully, so the last argument flushes every info line.
+  // A redirected stdout buffers fully. The last argument flushes every info line.
   writeMessage(
     "Info",
     context.timestampNanoseconds,

@@ -75,7 +75,7 @@ exahype2::fv::getFaceVolumeIndex(
 }
 
 /**
- * Returns the index of a volume in a face, where volume(normal) is the layer along the normal.
+ * Returns the index of a volume in a face. volume(normal) is the layer along the normal.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::fv::getFaceVolumeIndex(
@@ -404,10 +404,10 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::injectHalo(
 }
 
 /**
- * Fills one half of a coarse face from the same half of the fine faces below it. Every coarse
- * volume takes the mean of the fine volumes that cover it as the correctly rounded quotient of
- * their exact sum. The result does not depend on the order of the fine faces. Constant fine faces
- * return their value bitwise. Every layer of the half maps onto the same layer.
+ * Fills one half of a coarse face from the same half of the fine faces below it, layer by layer.
+ * Every coarse volume takes the mean of the fine volumes that cover it as the correctly rounded
+ * quotient of their exact sum. The result does not depend on the order of the fine faces and
+ * constant fine faces return their value bitwise.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -462,7 +462,7 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::restrictHalo(
 }
 
 /**
- * Fills one child patch from its parent: Every fine volume copies the covering coarse volume.
+ * Fills one child patch from its parent. Every fine volume copies the covering coarse volume.
  * childPosition is the linearised position of the child in the parent.
  */
 template <typename Derived, typename ComputePrecision>
@@ -536,10 +536,9 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::restrictPatch(
 /**
  * Advances patch by one time step into updated and calls the postprocessing of Derived on the
  * result. Returns the largest wave speed of the update and of the updated volumes, or zero for a
- * fixed time-stepping rule. Bit f of boundaryFaces marks face f of the patch on the domain
- * boundary. On the host one thread sweeps the patch with the ring of the reconstruction. The
- * argument updated may then be patch. On a device a thread updates the volumes one by one without
- * a ring. The argument updated then lies outside patch.
+ * fixed time-stepping rule. On the host one thread sweeps the patch with the ring of the
+ * reconstruction and updated may be patch, while a device thread updates the volumes one by one
+ * into an updated outside patch.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -573,11 +572,11 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::getSweepStorageByte
 }
 
 /**
- * Advances patch by one time step into updated on one host thread, where updated may be patch.
- * The volumes run in linearised order, and the ring of the reconstruction receives the terms of
- * a state one layer before the sweep reaches it. A sweep that updates patch in place writes the
- * updated volumes into a scratch patch and copies the scratch patch back once the last volume
- * has read its neighbours. Returns what update() returns.
+ * Advances patch by one time step into updated on one host thread and returns what update()
+ * returns. The volumes run in linearised order and the ring of the reconstruction receives the
+ * terms of a state one layer before the sweep reaches it. A sweep that updates patch in place
+ * writes the updated volumes into a scratch patch and copies it back once the last volume has read
+ * its neighbours.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -599,9 +598,8 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::sweep(
     Terms::Lookahead == 0 or Terms::Lookahead == Lookahead,
     "The finite-volume terms read ahead by one layer of volumes or not at all."
   );
-  // The ring and the scratch live on the stack while they fit SweepStackBytes. A larger solver
-  // takes them from the heap. Two objects keep the ring and the scratch apart. A store into one
-  // then never aliases a load from the other.
+  // The ring and the scratch live on the stack while they fit SweepStackBytes and on the heap
+  // otherwise. Two objects keep them apart and a store into one never aliases a load from the other.
   if constexpr (getSweepStorageBytes<StoragePrecision>() <= exahype2::fv::SweepStackBytes) {
     Terms                                          terms;
     alignas(PEANO_WITH_ALIGNMENT) StoragePrecision scratch[Values];
@@ -798,10 +796,10 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::updateEveryVolume(
 }
 
 /**
- * Advances one volume of patch into the NumberOfData values of updatedState and returns the
- * largest wave speed of the update. Every term is evaluated at the volume. volume is the
- * linearised index of the volume with the first axis fastest. Bit f of boundaryFaces is set when
- * face f of the patch lies on the domain boundary.
+ * Advances one volume of patch into the NumberOfData values of updatedState with every term
+ * evaluated at the volume and returns the largest wave speed of the update. volume is the
+ * linearised index of the volume with the first axis fastest. Bit f of boundaryFaces marks face f
+ * of the patch on the domain boundary.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -833,11 +831,11 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::computeVolumeUpdate
 }
 
 /**
- * Advances one volume of patch into the NumberOfData values of updatedState and returns the
- * largest wave speed of the update. updatedState lies outside patch. The reconstruction reads
- * the terms of the states of the patch from the ring terms and evaluates the terms of the halo
- * states. volume is the linearised index of the volume with the first axis fastest. Bit f of
- * boundaryFaces is set when face f of the patch lies on the domain boundary.
+ * Advances one volume of patch into the NumberOfData values of updatedState outside patch and
+ * returns the largest wave speed of the update. The reconstruction reads the terms of the states
+ * of the patch from the ring terms and evaluates the terms of the halo states. volume is the
+ * linearised index of the volume with the first axis fastest and bit f of boundaryFaces marks
+ * face f of the patch on the domain boundary.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision, typename Terms>

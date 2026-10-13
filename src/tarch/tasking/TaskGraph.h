@@ -24,7 +24,6 @@ namespace tarch::tasking {
   );
 
   void waitForDependency(void* dependency);
-
   void waitForDependencies(std::span<void* const> dependencies);
 } // namespace tarch::tasking
 

@@ -7,7 +7,7 @@
 template <typename Element>
 INLINE_METHOD std::size_t
 tarch::getAllocatedBytesOf(const std::vector<Element>& elements) {
-  // Open MPI defines an MPI handle as a pointer, so Element may be a pointer type.
+  // Element may be a pointer type. Open MPI defines an MPI handle as a pointer.
   return elements.capacity() * sizeof(Element); // NOLINT(bugprone-sizeof-expression)
 }
 

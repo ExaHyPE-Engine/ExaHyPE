@@ -65,9 +65,6 @@ namespace tarch::accelerator {
 } // namespace tarch::accelerator
 
 namespace tarch {
-  /**
-   * Allocates memory for count elements of T in location on device.
-   */
   template <class T>
   T* allocateMemory(std::size_t count, MemoryLocation location, int device = accelerator::getCurrentDevice()) {
     return reinterpret_cast<T*>(accelerator::allocateRawData(count * sizeof(T), location, device));

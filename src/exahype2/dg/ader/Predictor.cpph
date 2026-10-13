@@ -14,8 +14,7 @@ TARGET_DECLARE
  * Runs the space-time predictor of one cell on the threads of workers and subtracts the volume
  * integral of the time averages from cellState. scratch is a block of ScratchSize values that no
  * other call reads while this call runs. Returns the outcome of NonlinearPredictor::predict(), or
- * zero for a linear Derived. A thread without a cell takes part in the barriers of the team and
- * returns zero.
+ * zero for a linear Derived and for a thread without a cell.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -161,8 +160,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getTeamScratchBytes(co
 /**
  * Adds the time step times the time-averaged source minus the flux divergence to cellState.
  * timeAveragedFlux stores the derivative of the flux along its own axis, one block per axis.
- * sourceOfNode(cellNode, values) writes the time-averaged source of one node. The threads split
- * the nodes.
+ * sourceOfNode(cellNode, values) writes the time-averaged source of one node.
  */
 template <typename Derived, typename ComputePrecision>
 template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>

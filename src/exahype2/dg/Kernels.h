@@ -14,10 +14,9 @@
 
 /**
  * @file
- * The kernels of the discontinuous Galerkin solver families, where Derived is the generated
- * solver class. A face stores one state half and one flux half per side, the lower side first,
- * and the cell on each side writes its own half. The Riemann solver overwrites both flux halves
- * with the numerical flux minus the half's own flux, times the sign of the side's outward normal.
+ * The kernels of the discontinuous Galerkin solver families for the generated solver class
+ * Derived. A face stores one state half and one flux half per side, the lower side first. The cell
+ * on each side writes its own half.
  */
 TARGET_DECLARE
 namespace exahype2::dg {

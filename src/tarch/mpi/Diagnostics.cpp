@@ -151,7 +151,7 @@ tarch::mpi::Diagnostics::useTimeoutChecks() const {
 }
 
 /**
- * Logs whether a message waits in the incoming queue, so a timeout report shows a message that
+ * Logs whether a message waits in the incoming queue. A timeout report then shows a message that
  * arrived while the rank waits for a different one.
  */
 void
@@ -217,7 +217,7 @@ tarch::mpi::Diagnostics::registerRequest(
     }
     return;
   }
-  // A full table drops the entry, so a timeout report cannot identify the request.
+  // A full table drops the entry. A timeout report cannot identify that request.
 }
 
 void
@@ -253,8 +253,7 @@ tarch::mpi::Diagnostics::clearRequest(const MPI_Request* request) {
 /**
  * Reports the pending request of a wait, warns after the warning threshold and terminates after
  * the deadlock threshold. Returns whether the table tracks the request. Only the thread that waits
- * on a request updates its deadlines, so a sequence claim contends only with the completion that
- * removes the entry.
+ * on a request updates its deadlines.
  */
 bool
 tarch::mpi::Diagnostics::reportRequest(
@@ -281,7 +280,7 @@ tarch::mpi::Diagnostics::reportRequest(
       (sequence % 2U) != 0U
       or not slot.sequence.compare_exchange_strong(sequence, sequence + 1U, std::memory_order_acq_rel)
     ) {
-      // The completion is removing the entry, so there is nothing left to report.
+      // The completion removes the entry at this moment and leaves nothing to report.
       return true;
     }
     if (slot.key.load(std::memory_order_relaxed) != request) {

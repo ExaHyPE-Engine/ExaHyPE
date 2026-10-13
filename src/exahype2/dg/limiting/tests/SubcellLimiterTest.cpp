@@ -50,17 +50,11 @@ namespace {
   const double QuadratureNodes[NodesPerAxis]   = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
   const double QuadratureWeights[NodesPerAxis] = {0.5, 0.5};
 
-  /**
-   * Returns the Lagrange basis function of node at x.
-   */
   double getBasisValue(const double x, const int node) {
     const int other = 1 - node;
     return (x - QuadratureNodes[other]) / (QuadratureNodes[node] - QuadratureNodes[other]);
   }
 
-  /**
-   * Returns the constant derivative of the linear Lagrange basis function of node.
-   */
   double getBasisDerivative(const int node) {
     const int other = 1 - node;
     return 1.0 / (QuadratureNodes[node] - QuadratureNodes[other]);
@@ -258,7 +252,7 @@ namespace {
     exahype2::dg::ader::Solver<Solver, double, double, exahype2::dg::limiting::SubcellLimiter<Solver, double, double>>;
 
   /**
-   * The PDE terms of every test solver, under which a constant state stays constant.
+   * The PDE terms of every test solver. A constant state stays constant under them.
    */
   struct CommonTerms {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
@@ -609,7 +603,7 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testAnAcceptedFreeStreamStays
 }
 
 /**
- * The subgrid of a constant keeps the constant, and a rejected cell stays on the subcell scheme in the next step.
+ * The subgrid of a constant keeps the constant and a rejected cell stays on the subcell scheme in the next step.
  */
 void
 exahype2::dg::limiting::tests::SubcellLimiterTest::testARejectedFreeStreamRecomputesEveryCellAndKeepsTheConstant() {

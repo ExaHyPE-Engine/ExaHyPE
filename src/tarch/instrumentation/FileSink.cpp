@@ -6,7 +6,7 @@ tarch::instrumentation::FileSink::~FileSink() { close(); }
 
 tarch::instrumentation::FileSink&
 tarch::instrumentation::FileSink::getInstance() {
-  // The sink is never destroyed, so logging works during static destruction.
+  // The sink lives until the process ends. Logging works during static destruction.
   static FileSink& singleton = *new FileSink();
   return singleton;
 }
@@ -32,8 +32,8 @@ tarch::instrumentation::FileSink::setOutputFile(const std::string& outputLogFile
 }
 
 /**
- * Writes the message and flushes the stream at most once per FlushInterval, so
- * a process that dies loses at most one interval of lines.
+ * Writes the message and flushes the stream at most once per FlushInterval. A process that dies
+ * loses at most one interval of lines.
  */
 void
 tarch::instrumentation::FileSink::writeAndFlushPeriodically(const std::string_view message) {

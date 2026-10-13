@@ -255,8 +255,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::rusanovFaceFlux(
     SolverType::flux(rightState, faceCentre, volumeSize, timeStamp, timeStepSize, normal, rightFluxes);
   }
 
-  // A fused multiply-add pairs the Rusanov diffusion with the average flux. The two halves of
-  // that average are exact. Every compiler then rounds the face flux the same way.
+  // A fused multiply-add pairs the Rusanov diffusion with the average flux of two exact halves.
+  // Every compiler then rounds the face flux the same way.
   const ComputePrecision diffusionFactor = -static_cast<ComputePrecision>(0.5) * maxEigenvalue;
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     const ComputePrecision averageFlux = EvaluateFlux ? static_cast<ComputePrecision>(0.5) * leftFluxes[unknown]
@@ -432,8 +432,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::evaluateFaceTerms(
 /**
  * Advances one volume with the MUSCL-Hancock update. A custom Riemann solver adds the
  * non-conservative product over the face jump to its fluxes. The evolved states of the interior
- * neighbours and the terms of the lower face come from the ring terms when it holds them. The
- * terms of the upper face go into the ring for the neighbour above.
+ * neighbours and the terms of the lower face come from the ring when it holds them and the terms
+ * of the upper face go into the ring for the neighbour above.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
@@ -525,8 +525,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
       1
     );
 
-    // The evolved states come from the ring for the volume and its interior neighbours. A halo
-    // neighbour and, without a ring, every state is evolved here.
+    // The evolved states come from the ring for the volume and its interior neighbours. This call
+    // evolves a halo neighbour and, without a ring, every state.
     [[maybe_unused]] ComputePrecision leftNeighbourMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     [[maybe_unused]] ComputePrecision leftNeighbourPlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     [[maybe_unused]] ComputePrecision centreMinusBuffer[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -633,8 +633,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
     auto rightFaceCentre(volumeCentre);
     rightFaceCentre(normal) += 0.5 * volumeSize(normal);
 
-    // The lower face comes from the ring when the neighbour below is an interior volume. That
-    // volume evaluated it as its upper face. The upper face is evaluated here and goes into the ring.
+    // The lower face comes from the ring when the neighbour below is an interior volume that
+    // evaluated it as its upper face. This call evaluates the upper face and stores it in the ring.
     [[maybe_unused]] Face leftFaceBuffer;
     [[maybe_unused]] Face rightFaceBuffer;
     const Face*           leftFace         = &leftFaceBuffer;
@@ -774,7 +774,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
     outputState[unknown] =
       static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + axisUpdates[unknown]);
   }
-  // The assertion stays out of the SIMD loop, whose body must not emit diagnostics.
+  // The assertion stays out of the SIMD loop. The body of that loop must not emit diagnostics.
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     assertion(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }

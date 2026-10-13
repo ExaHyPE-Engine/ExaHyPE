@@ -3,7 +3,7 @@
 
 /**
  * Returns the index of the scratch chunk of the caller inside a dispatch. The index is the work item
- * on a device and the thread number on the host, where a thread runs its work items one after the
+ * on a device and the thread number on the host. A host thread runs its work items one after the
  * other.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int

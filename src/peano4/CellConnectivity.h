@@ -33,8 +33,8 @@ namespace peano4 {
 enum class peano4::FaceKind : std::uint8_t { Interior, Boundary, Hanging, Coarse, Intermediate };
 
 /**
- * Whether a cell, a face or a level jump reads data a neighbour rank sends: A local one
- * reads local data only, a remote one waits for the halo exchange.
+ * Tells whether a cell, a face or a level jump reads data that a neighbour rank sends. A remote
+ * one waits for the halo exchange.
  */
 enum class peano4::Adjacency : std::uint8_t { Local, Remote };
 
@@ -69,10 +69,10 @@ struct peano4::Neighbour final {
 };
 
 /**
- * The cells one rank owns, numbered by slots, with their faces, their level jumps and the faces the
- * rank exchanges with neighbour ranks. A cell keeps its slot through every regrid that keeps the
- * cell, and every regrid renumbers the faces. Every list is sorted by adjacency and then by level or
- * kind. Every group a caller loops over is therefore one span.
+ * Holds the cells one rank owns, numbered by slots, with their faces, their level jumps and the
+ * faces the rank exchanges with neighbour ranks. A regrid keeps the slot of every surviving cell and
+ * renumbers the faces. The lists are sorted by adjacency and then by level or kind and a caller
+ * loops over one span per group.
  */
 class peano4::CellConnectivity final {
 public:
@@ -153,24 +153,13 @@ private:
   int _minimumLevel{0};
   int _maximumLevel{0};
 
-  /**
-   * The range array stores one offset per adjacency and level plus the end offset. Every range array
-   * lies in host memory, also in the device twin.
-   */
   const int* _cells{nullptr};
   const int* _cellRanges{nullptr};
   const int* _cellLevel{nullptr};
   const int* _cellLattice{nullptr};
   const int* _facesOfCell{nullptr};
-  /**
-   * The index of every slot's cell along the space-filling curve over all ranks, in host memory in
-   * the device twin too.
-   */
   const int* _cellCurveIndex{nullptr};
 
-  /**
-   * The range array stores one offset per adjacency and kind plus the end offset.
-   */
   const int*      _faces{nullptr};
   const int*      _faceRanges{nullptr};
   const int*      _faceLevel{nullptr};
@@ -188,10 +177,6 @@ private:
   const double* _widthOfLevel{nullptr};
   double        _domainOffset[DIMENSIONS]{};
 
-  /**
-   * The cell connectivity with the same arrays in device memory, or null in that cell connectivity
-   * itself and in a build without a GPU backend.
-   */
   const CellConnectivity* _deviceTwin{nullptr};
 };
 

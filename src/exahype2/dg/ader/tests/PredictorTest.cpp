@@ -203,9 +203,6 @@ namespace {
     }
   };
 
-  /**
-   * Returns the cell node of face node faceNode at position normalIndex along direction.
-   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     auto nodeIndex       = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
     nodeIndex(direction) = normalIndex;
@@ -428,9 +425,6 @@ exahype2::dg::ader::tests::PredictorTest::testAnInertNonlinearSystemLeavesTheCel
   }
 }
 
-/**
- * The nonlinear predictor changes a linear profile by the exact amount of its terms.
- */
 void
 exahype2::dg::ader::tests::PredictorTest::testTheNonlinearPredictorMovesALinearProfileByTheExactAmount() {
   const Tables tables;
@@ -560,9 +554,6 @@ exahype2::dg::ader::tests::PredictorTest::testAnInertLinearSystemLeavesTheCellAt
   }
 }
 
-/**
- * The linear predictor transports a linear profile by the exact amount of its flux and product.
- */
 void
 exahype2::dg::ader::tests::PredictorTest::testTheLinearPredictorTranslatesALinearProfileByTheExactAmount() {
   const Tables tables;
@@ -764,7 +755,7 @@ exahype2::dg::ader::tests::PredictorTest::testTheVolumeIntegralSubtractsTheDiver
 }
 
 /**
- * The identity counts no cell, and combine() adds both counts.
+ * The identity counts zero cells and combine() adds both counts.
  */
 void
 exahype2::dg::ader::tests::PredictorTest::testThePredictionCountsAddUpOverCells() {

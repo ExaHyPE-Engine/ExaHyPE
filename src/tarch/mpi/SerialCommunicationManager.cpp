@@ -17,8 +17,7 @@ tarch::mpi::SerialCommunicationManager::progress() {
 }
 
 /**
- * Polls until every poller is idle. A caller re-arms no poller during the call, so an idle pass is
- * final.
+ * Polls until every poller is idle. A caller re-arms no poller during the call.
  */
 void
 tarch::mpi::SerialCommunicationManager::finishPendingWork() {

@@ -47,9 +47,6 @@ namespace {
   const double QuadratureNodes[NodesPerAxis]   = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
   const double QuadratureWeights[NodesPerAxis] = {0.5, 0.5};
 
-  /**
-   * Returns the Lagrange basis function of node at x.
-   */
   double getBasisValue(const double x, const int node) {
     double result = 1.0;
     for (int other = 0; other < NodesPerAxis; other++) {
@@ -60,9 +57,6 @@ namespace {
     return result;
   }
 
-  /**
-   * Returns the constant derivative of the linear Lagrange basis function of node.
-   */
   double getBasisDerivative(const int node) {
     const int other = 1 - node;
     return 1.0 / (QuadratureNodes[node] - QuadratureNodes[other]);
@@ -250,6 +244,7 @@ namespace {
     static constexpr bool IsLinear                   = false;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
+    static constexpr std::array<int, 1>           MeasuredUnknowns{0};
 
     static INLINE_METHOD GPU_CALLABLE_METHOD double getProfile(const tarch::la::Vector<DIMENSIONS, double>& x) {
       double value = 1.0;
@@ -265,6 +260,16 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
     ) {
       Q[0] = getProfile(x);
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void analyticalSolution(
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const double                t,
+      [[maybe_unused]] const double                dt,
+      [[maybe_unused]] const double* const         Q,
+      double* const                                solution
+    ) {
+      solution[0] = getProfile(x);
     }
   };
 
@@ -436,6 +441,16 @@ namespace {
     return limits;
   }
 
+  std::vector<std::string> readLinesOf(const std::string& fileName) {
+    std::vector<std::string> lines;
+    std::ifstream            file(fileName);
+    std::string              line;
+    while (std::getline(file, line)) {
+      lines.push_back(line);
+    }
+    return lines;
+  }
+
   TARGET_DECLARE
   /**
    * Increments the accumulator for every node of one cell whose value differs from the expected
@@ -512,6 +527,7 @@ void
 exahype2::dg::rk::tests::SolverTest::run() {
   testMethod(testInitialisationWritesTheInitialConditionIntoEveryNode);
   testMethod(testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp);
+  testMethod(testRecordLastTimeStampAppendsOneRowToTheErrorFile);
   testMethod(testASourceTermAdvancesEveryNodeByTheTimeStep);
   testMethod(testARefinementAndTheEraseBackKeepTheSolution);
   testMethod(testRefinementReducesTheNextAdaptiveTimeStep);
@@ -578,7 +594,7 @@ exahype2::dg::rk::tests::SolverTest::testInitialisationWritesTheInitialCondition
 }
 
 /**
- * A time step without flux keeps the solution, and the time stamp advances by the fixed step size
+ * A time step without flux keeps the solution and the time stamp advances by the fixed step size
  * after a first step of size zero.
  */
 void
@@ -609,8 +625,44 @@ exahype2::dg::rk::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAnd
 }
 
 /**
- * A unit source advances every node by the time step size.
+ * The error file holds the initial row until recordLastTimeStamp() appends the row of the last time stamp once.
  */
+void
+exahype2::dg::rk::tests::SolverTest::testRecordLastTimeStampAppendsOneRowToTheErrorFile() {
+  constexpr double  TimeBetweenTwoRecords = 100.0;
+  const auto&       cellConnectivity      = buildGrid();
+  const std::string fileName              = (tarch::tests::getWritableTestDirectory() / "RKDGSolverTestError").string();
+
+  FixedRuleSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.openErrorMeasurement(fileName, TimeBetweenTwoRecords);
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
+  for (int step = 0; step < 3; step++) {
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.performTimeStep(cellConnectivity, requests);
+    finishStep(solver);
+  }
+  // Only the global master writes the error file.
+  const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster();
+  if (isGlobalMaster) {
+    validateEquals(static_cast<int>(readLinesOf(fileName + ".csv").size()), 2);
+  }
+
+  solver.recordLastTimeStamp(cellConnectivity);
+  solver.recordLastTimeStamp(cellConnectivity);
+  if (isGlobalMaster) {
+    const auto lines = readLinesOf(fileName + ".csv");
+    validateEquals(static_cast<int>(lines.size()), 3);
+    validateNumericalEquals(lines.empty() ? -1.0 : std::stod(lines.back()), solver.getTimeStepping().getTimeStamp());
+    std::filesystem::remove(fileName + ".csv");
+  }
+  solver.release();
+}
+
 void
 exahype2::dg::rk::tests::SolverTest::testASourceTermAdvancesEveryNodeByTheTimeStep() {
   const auto& cellConnectivity = buildGrid();
@@ -635,7 +687,7 @@ exahype2::dg::rk::tests::SolverTest::testASourceTermAdvancesEveryNodeByTheTimeSt
 }
 
 /**
- * The prolongation reproduces the linear profile on every child, and the restriction of the
+ * The prolongation reproduces the linear profile on every child and the restriction of the
  * children returns it on the coarse cell within rounding.
  */
 void

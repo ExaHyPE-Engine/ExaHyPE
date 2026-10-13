@@ -25,5 +25,6 @@ private:
   void testARepeatedTimeStampOverwritesTheRowInTheFile();
   void testTimeDeltaThrottlesSnapshots();
   void testASnapshotIsDueForTheNewestTimeStampAndAfterTheTimeDelta();
+  void testEveryLaterTimestampIsDueBeforeTheTimeDelta();
   void testADatabaseWithoutFileNameWritesNoFile();
 };

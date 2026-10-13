@@ -12,6 +12,7 @@
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/database/SnapshotDatabase.h"
 #include "tarch/la/Vector.h"
 
 /**
@@ -270,6 +271,19 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::openErrorMeas
     "The error measurement of the solver expects an analytical solution and the unknowns to measure."
   );
   _errorMeasurement.open(fileName, timeDeltaBetweenSnapshots);
+}
+
+/**
+ * Records the error norms at the last time stamp of a run. The time loop calls it once after its
+ * last time step.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::recordLastTimeStamp(
+  const peano4::CellConnectivity& cellConnectivity
+) {
+  _errorMeasurement.setSnapshotRule(tarch::database::SnapshotRule::EveryLaterTimestamp);
+  measureError(cellConnectivity);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -549,9 +563,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::solveRiemannP
 }
 
 /**
- * Advances the time stamp. An adaptive rule raises the wave speeds of this rank.
- * readValuesFromGlobalReduction() then sets the time step size of the next step. A fixed rule sets
- * this size at once.
+ * Advances the time stamp. An adaptive rule raises the wave speeds of this rank and
+ * readValuesFromGlobalReduction() sets the next time step size. A fixed rule sets this size at once.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void

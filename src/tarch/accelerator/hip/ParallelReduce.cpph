@@ -114,9 +114,8 @@ namespace tarch::accelerator {
     }
   };
 
-  // The block results lie in the scratch, followed by room for the second-stage results. The copy
-  // into pinned host memory runs on the stream. The host waits for the stream once and combines the
-  // copied results in order.
+  // The block results lie in the scratch before the room for the second-stage results. The host
+  // waits once for the stream copy into pinned memory and combines the results in order.
   template <typename Reducer>
   INLINE_METHOD void finaliseReduction(
     const Reducer                      reducer,

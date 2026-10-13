@@ -31,8 +31,7 @@ tarch::instrumentation::Watch::~Watch() {
 }
 
 /**
- * Restarts the timer, so the getters report the time between this call and the
- * next stop().
+ * Restarts the timer. The getters report the time between this call and the next stop().
  */
 void
 tarch::instrumentation::Watch::start() {
@@ -42,9 +41,8 @@ tarch::instrumentation::Watch::start() {
 }
 
 /**
- * Stops the timer without resetting the start time, so a repeated call
- * measures from the same start. The getters return the elapsed time only after
- * this call.
+ * Stops the timer and keeps the start time. A repeated call measures from the same start. The
+ * getters return the elapsed time only after this call.
  */
 void
 tarch::instrumentation::Watch::stop() {

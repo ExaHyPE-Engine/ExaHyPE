@@ -213,7 +213,7 @@ tarch::accelerator::reduceTeamValue(
 }
 
 /**
- * Combines the values of all work items through the team scratch, since SYCL's group algorithms
+ * Combines the values of all work items through the team scratch. The group algorithms of SYCL
  * take arithmetic types only.
  */
 template <typename Op>

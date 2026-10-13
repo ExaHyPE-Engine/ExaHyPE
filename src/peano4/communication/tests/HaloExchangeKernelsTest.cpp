@@ -23,9 +23,6 @@ namespace {
    */
   double getValueOf(const int face, const int element) { return 10.0 * face + element; }
 
-  /**
-   * Fills every face chunk of a device pool with getValueOf() and returns the pool.
-   */
   Pool getFilledPool() {
     Pool pool(ChunkSize, tarch::MemoryLocation::Device);
     pool.reserve(NumberOfFaces);

@@ -292,9 +292,6 @@ namespace {
     }
   };
 
-  /**
-   * Returns the cell node of face node faceNode at position normalIndex along direction.
-   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     auto nodeIndex       = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
     nodeIndex(direction) = normalIndex;
@@ -617,9 +614,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAverageStartsFromTheS
   }
 }
 
-/**
- * A Taylor step starts from a zeroed flux.
- */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheFluxIsClearedBeforeATaylorStep() {
   double flux[DIMENSIONS * AxisStride];
@@ -697,8 +691,8 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheLastPassEvaluatesTheTerms
 }
 
 /**
- * The unknowns of a Taylor coefficient add to the time-averaged state, and the auxiliary variables
- * stay.
+ * A Taylor coefficient adds its unknowns to the time-averaged state and leaves the auxiliary
+ * variables unchanged.
  */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAveragedStateGrowsByTheGivenFactor() {
@@ -987,7 +981,7 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceInsideIsSelected() {
 }
 
 /**
- * A point source outside the cell along one axis is not selected.
+ * The selection skips a point source outside the cell along one axis.
  */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testASourceOutsideIsRejected() {
@@ -1007,9 +1001,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceOutsideIsRejected() {
   }
 }
 
-/**
- * A point source on a face of two cells appears in the list of both cells.
- */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testASourceOnAFaceBelongsToBothCells() {
   PointSourceTable table;
@@ -1048,9 +1039,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::testSelectionKeepsTheTableOrder(
   validateEquals(pointSourceIndices[2], -1);
 }
 
-/**
- * The basis function of a node returns one at that node and zero at every other node.
- */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheBasisFunctionIsOneAtItsOwnNodeAndZeroAtTheOthers() {
   const Tables tables;
@@ -1067,9 +1055,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheBasisFunctionIsOneAtItsOw
   }
 }
 
-/**
- * The basis functions reproduce a constant and a linear function.
- */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheBasisFunctionsReproduceALinearFunction() {
   const Tables tables;
@@ -1207,9 +1192,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceIsSpreadByTheBasisAnd
   }
 }
 
-/**
- * The time integral of the point sources skips the sample at the start of the step.
- */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeIntegralSkipsTheSampleAtTheStart() {
   const Tables tables;
@@ -1352,9 +1334,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::testEveryAxisReceivesTheSameTime
   }
 }
 
-/**
- * The scratch buffers follow each other without a gap or an overlap.
- */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheScratchBlocksFollowEachOtherWithoutOverlap() {
   using Scratch = Predictor<FullSolver>::Scratch;
@@ -1534,9 +1513,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::
   }
 }
 
-/**
- * A solver without a flux gets zero face fluxes.
- */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testASolverWithoutFluxGetsZeroFaceFluxes() {
   const Tables                                tables;

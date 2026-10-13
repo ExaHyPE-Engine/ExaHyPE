@@ -7,7 +7,7 @@
 
 namespace {
   std::string writeTempFile(const std::string& stem, const std::string& content) {
-    // The file name contains a per-run identifier, so two processes never write the same fixture.
+    // The file name contains a per-run identifier. Two processes never write the same fixture.
     static const std::string testRunIdentifier =
       std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
       + std::to_string(std::random_device{}());
@@ -44,9 +44,6 @@ tarch::reader::tests::CSVReaderTest::run() {
   testMethod(testAMissingFileThrows);
 }
 
-/**
- * The reader returns the lines after the skipped header lines as rows.
- */
 void
 tarch::reader::tests::CSVReaderTest::testTheReaderKeepsTheRowsAfterTheSkippedLines() {
   const std::string path = writeTempFile("peano-csv-reader-rows", "x;y\n1;2.5\n3;4.5;\n");
@@ -86,9 +83,6 @@ tarch::reader::tests::CSVReaderTest::testEveryEntryOfARowParses() {
   }));
 }
 
-/**
- * The reader throws for a file that does not exist.
- */
 void
 tarch::reader::tests::CSVReaderTest::testAMissingFileThrows() {
   const std::string path = (tarch::tests::getWritableTestDirectory() / "peano-csv-reader-missing.csv").string();

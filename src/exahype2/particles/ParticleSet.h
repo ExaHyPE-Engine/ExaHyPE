@@ -89,8 +89,7 @@ TARGET_DECLARE_END
 /**
  * Particles of one rank in a host array and a device copy. A kernel that writes the device copy
  * leaves the host values stale until download(). insert() and relocate() run on the host and move
- * every particle to the rank that owns its cell. relocateParticlesMovedOutOfCells() copies only the
- * particles that a kernel marked as moved out of their cell.
+ * every particle to the rank that owns its cell.
  */
 template <int NumberOfData>
 class exahype2::particles::ParticleSet final {

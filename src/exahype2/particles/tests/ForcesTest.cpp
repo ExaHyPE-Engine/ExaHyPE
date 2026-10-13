@@ -152,7 +152,7 @@ exahype2::particles::tests::ForcesTest::testEveryForceWritesItsAcceleration() {
 }
 
 /**
- * Explicit Euler moves with the old velocity, semi-implicit Euler with the new one.
+ * Explicit Euler moves with the old velocity and semi-implicit Euler with the new one.
  */
 void
 exahype2::particles::tests::ForcesTest::testTheEulerSchemesAdvanceOneStep() {

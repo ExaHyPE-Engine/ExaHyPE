@@ -270,7 +270,7 @@ tarch::la::norm1(const Vector<4, Scalar>& vector) {
 }
 
 /**
- * Rounds every square on its own before the sum, so swapping the first two components returns the
+ * Rounds every square on its own before the sum. Swapping the first two components returns the
  * same value bitwise.
  */
 template <int Size, typename Scalar>

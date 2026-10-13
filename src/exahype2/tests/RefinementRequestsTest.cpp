@@ -58,9 +58,6 @@ namespace {
     return peano4::tests::getGlobalSumOf(wholeParents);
   }
 
-  /**
-   * Returns whether one rank owns the origin cell and all its siblings.
-   */
   bool isOriginParentWhollyOwned() { return peano4::tests::getGlobalSumOf(ownsEveryChildOf(Origin) ? 1 : 0) == 1; }
 
   /**

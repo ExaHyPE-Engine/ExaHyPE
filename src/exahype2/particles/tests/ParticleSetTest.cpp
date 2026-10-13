@@ -221,7 +221,7 @@ exahype2::particles::tests::ParticleSetTest::testInsertKeepsTheParticlesOfTheRan
 }
 
 /**
- * A position on a face belongs to the lower cell, and a position on a domain wall to the cell at the wall.
+ * A position on a face belongs to the lower cell and a position on a domain wall to the cell at the wall.
  */
 void
 exahype2::particles::tests::ParticleSetTest::testAPositionOnAFaceBelongsToTheLowerCell() {

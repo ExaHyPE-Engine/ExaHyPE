@@ -59,7 +59,7 @@ TARGET_DECLARE_END
 TARGET_DECLARE
 /**
  * A solver with every term of both predictors. The terms depend on the state, the position and the
- * direction, so a wrong offset changes the result.
+ * direction. A wrong offset then changes the result.
  */
 struct exahype2::dg::ader::tests::StubSolver final : exahype2::dg::ader::tests::StubLayout {
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(

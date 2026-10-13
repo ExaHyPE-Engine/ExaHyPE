@@ -87,7 +87,8 @@ expressions the generated solver evaluates.
 
 `dump_into_database` appends a snapshot of every particle to a CSV file after
 every trace, once the particle moved further than the position delta or more
-time than the time delta passed, within the closed record window:
+time than the time delta passed, within the closed record window. The last time
+stamp of a run always gets a snapshot:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 tracers.dump_into_database(

@@ -67,9 +67,8 @@ tarch::la::ExactAccumulator::round() const {
 
 /**
  * Returns the running sum divided by Divisor, correctly rounded to the nearest double with ties to
- * even. A sum of Divisor copies of one value returns that value bitwise. A GPU emulates a 64-bit
- * division in software. A constant Divisor lets the compiler replace the divisions by
- * multiplications.
+ * even. A sum of Divisor copies of one value returns that value bitwise. A constant Divisor lets
+ * the compiler replace the 64-bit divisions by multiplications.
  */
 template <int Divisor>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -158,8 +157,8 @@ tarch::la::ExactAccumulator::roundQuotient() const {
     mantissa++;
   }
 
-  // Assembling the fields keeps a subnormal result exact, as scaling a
-  // significand into the subnormal range raises an underflow exception.
+  // The code assembles the fields of the double. Scaling a significand into the subnormal range
+  // would raise an underflow exception.
   constexpr std::uint64_t InfinityBits         = 0x7FF0000000000000ULL;
   const auto              exponentField        = static_cast<std::uint64_t>(exponentOfMsb - mantissaBits + 1075);
   const auto              magnitudeBits        = (exponentField << 52) + mantissa;

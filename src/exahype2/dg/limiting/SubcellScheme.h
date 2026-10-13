@@ -190,7 +190,7 @@ private:
 /**
  * SubgridSolver wraps Derived for the finite-volume scheme of the subgrid. The fixed time step rule
  * skips the wave speeds in the update of the subgrid. solveRiemannProblem() calls the subcell
- * Riemann solver of Derived. Every other term calls the term of Derived with the same name.
+ * Riemann solver of Derived and every other term the term of Derived with the same name.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename Reconstruct>
@@ -317,8 +317,8 @@ struct exahype2::dg::limiting::ApplySubgridBoundaryConditions final {
 };
 
 /**
- * Advances every listed cell by one finite-volume step on its subgrid. Projects the result onto the
- * nodes of the cell. Reduces the wave speeds of the subgrids. The scratch chunk of the work item
+ * Advances every listed cell by one finite-volume step on its subgrid and projects the result onto
+ * the nodes of the cell. Reduces the wave speeds of the subgrids. The scratch chunk of the work item
  * holds the evolved subgrid.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -344,7 +344,7 @@ struct exahype2::dg::limiting::RecomputeSubcells final {
 };
 
 /**
- * Fills the subgrid of a new cell of a regrid. A child interpolates the subgrid of its parent. A
+ * Fills the subgrid of a new cell of a regrid. A child interpolates the subgrid of its parent and a
  * parent averages the subgrids of its children. A cell on the Galerkin scheme contributes the
  * projection of its nodes.
  */

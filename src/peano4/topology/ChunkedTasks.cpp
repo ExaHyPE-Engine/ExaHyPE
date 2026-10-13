@@ -16,7 +16,7 @@ peano4::topology::getMaximumNumberOfChunks() {
 }
 
 /**
- * Returns the number of chunks for runChunkedTasks(): At most two per thread and at least
+ * Returns the number of chunks for runChunkedTasks(). There are at most two per thread and at least
  * minimumItemsPerChunk items per chunk, or one chunk for a shorter range.
  */
 int
@@ -32,8 +32,8 @@ peano4::topology::getNumberOfChunks(const int numberOfItems, const int minimumIt
 
 /**
  * Runs processRange(chunkNumber, begin, end) as one task per chunk, or in the calling thread for a
- * single chunk. The chunk number stays below getMaximumNumberOfChunks(), and the chunks cover the
- * range in order, so per-chunk buffers concatenate to the order of a serial loop.
+ * single chunk. The chunk number stays below getMaximumNumberOfChunks(). The chunks cover the range
+ * in order and per-chunk buffers concatenate to the order of a serial loop.
  */
 void
 peano4::topology::runChunkedTasks(

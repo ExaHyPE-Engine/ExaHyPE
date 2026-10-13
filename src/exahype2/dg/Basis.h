@@ -174,18 +174,9 @@ struct exahype2::dg::BasisTables final {
   const Precision* inverseQuadratureWeights{nullptr};
   const Precision* cellQuadratureWeights{nullptr};
   const Precision* inverseCellQuadratureWeights{nullptr};
-  /**
-   * Entry [i][j] is the weight of node j times the derivative of basis function i at node j.
-   */
   const Precision* stiffnessOperator{nullptr};
   const Precision* stiffnessOperatorTransposed{nullptr};
-  /**
-   * Entry [i][j] is the derivative of basis function j at node i.
-   */
   const Precision* derivativeOperator{nullptr};
-  /**
-   * The inverse of the time operator of the Picard iteration.
-   */
   const Precision* inversePicardOperator{nullptr};
   const Precision* leftFaceCoefficients{nullptr};
   const Precision* rightFaceCoefficients{nullptr};

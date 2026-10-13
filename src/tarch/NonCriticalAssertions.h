@@ -11,8 +11,6 @@
 namespace tarch {
   void triggerNonCriticalAssertion(const std::string& requirement, const std::string& values);
   bool hasNonCriticalAssertionBeenViolated();
-
   int getNonCriticalAssertionRank();
-
   void adoptNonCriticalAssertionRank(int rank);
 } // namespace tarch

@@ -41,17 +41,12 @@ public:
   static Device& getInstance();
 
   bool init();
-
   void shutdown();
-
   [[nodiscard]] bool isInitialised() const;
 
   [[nodiscard]] int getNumberOfDevices() const;
-
   [[nodiscard]] int getNumberOfConcurrentThreads() const;
-
   [[nodiscard]] std::optional<bool> isMPIGPUAware() const;
-
   [[nodiscard]] std::string getIdOfCurrentDevice() const;
 
 private:

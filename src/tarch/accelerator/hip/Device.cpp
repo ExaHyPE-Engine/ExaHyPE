@@ -77,8 +77,8 @@ tarch::accelerator::Device::getNumberOfDevices() const {
 }
 
 /**
- * Returns the threads the current device runs at once: Its multiprocessors times the threads
- * one multiprocessor holds.
+ * Returns the threads the current device runs at once. These are its multiprocessors times the
+ * threads one multiprocessor holds.
  */
 int
 tarch::accelerator::Device::getNumberOfConcurrentThreads() const {

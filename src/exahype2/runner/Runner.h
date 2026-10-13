@@ -54,6 +54,7 @@ struct exahype2::runner::SolverRepositoryCallbacks {
   std::function<void()>                             performTimeStep{};
   std::function<void(const peano4::Regrid& regrid)> regrid{};
   std::function<void()>                             plot{};
+  std::function<void()>                             recordLastTimeStamp{};
 
   std::function<void(tarch::mpi::ReductionRecord& record)>       addLocalValuesToGlobalReduction{};
   std::function<void(const tarch::mpi::ReductionRecord& record)> readValuesFromGlobalReduction{};
@@ -70,18 +71,12 @@ struct exahype2::runner::SolverRepositoryCallbacks {
 };
 
 /**
- * Drives one simulation on every rank. Every rank runs the same steps. One allreduce at the end of
- * each step reduces the statistics, the values of the solvers and the rank of a non-critical
- * assertion. Every rank then takes the same decision on the next step. The grid construction runs
- * CreateGrid steps and a regrid runs DynamicAMR steps until the refinement requests of the solvers
- * leave the refinement plan unchanged. Every round of the grid initialisation runs one InitGrid
- * step.
+ * Drives one simulation with the same steps on every rank. One allreduce at the end of each step
+ * reduces the statistics, the values of the solvers and the rank of a non-critical assertion.
+ * Every rank then takes the same decision on the next step.
  */
 class exahype2::runner::Runner final {
 public:
-  /**
-   * Program steps of a run.
-   */
   enum class Step : int { CreateGrid = 0, AllocateMemory, InitGrid, PlotSolution, TimeStep, DynamicAMR };
 
   static int launch(
@@ -110,20 +105,9 @@ public:
 private:
   friend class exahype2::runner::tests::RunnerTest;
 
-  /**
-   * Wall-clock seconds between two progress reports of one regrid.
-   */
   static constexpr double SecondsBetweenMeshUpdateReports = 5.0;
-  /**
-   * Upper bound on the steps of the grid construction and of one regrid. A phase that reaches it
-   * stops the run with an error.
-   */
-  static constexpr int MaximumMeshUpdateSteps = 1024;
-  /**
-   * Upper bound on the initialisation rounds. Refinement requests that still change the grid after
-   * the last round stop the run with an error.
-   */
-  static constexpr int MaximumInitialisationRounds = 16;
+  static constexpr int    MaximumMeshUpdateSteps          = 1024;
+  static constexpr int    MaximumInitialisationRounds     = 16;
 
   struct MeshUpdates {
     int          regrids{0};
@@ -150,11 +134,7 @@ private:
   SolverRepositoryCallbacks             _callbacks;
   Report                                _report{};
   Section                               _openSection{Section::None};
-  /**
-   * Column of the values behind the labels of the time loop. It only grows. The values then stay
-   * aligned.
-   */
-  std::size_t _valueColumn{0};
+  std::size_t                           _valueColumn{0};
 
   tarch::instrumentation::Measurement _timeStepMeasurement{};
   tarch::instrumentation::Measurement _plotMeasurement{};
@@ -163,39 +143,19 @@ private:
 
   MeshUpdates _meshUpdates{};
   bool        _meshUpdatesStarted{false};
-  /**
-   * Regrids of the whole run, the ones of the grid initialisation included.
-   */
-  int _numberOfRegrids{0};
+  int         _numberOfRegrids{0};
 
-  /**
-   * Wall clock in seconds of every completed time step, the first one included.
-   */
   double _timeSteppingSeconds{0.0};
-  /**
-   * Cell and degree-of-freedom updates of the measured time steps, summed over the solvers.
-   */
   double _cellUpdates{0.0};
   double _dofUpdates{0.0};
-  /**
-   * Wall clock in seconds of the mesh updates of the grid initialisation. The estimate of the time
-   * loop excludes it.
-   */
   double _meshUpdateSecondsBeforeTimeLoop{0.0};
   bool   _stoppedAfterNonCriticalAssertion{false};
 
-  /**
-   * Time steps and their wall clock in seconds since the previous time step report.
-   */
   unsigned long _stepsSinceReport{0};
   double        _stepSecondsSinceReport{0.0};
-  /**
-   * Cell and degree-of-freedom updates and wall clock in seconds of the measured time steps since
-   * the previous time step report.
-   */
-  double _cellUpdatesSinceReport{0.0};
-  double _dofUpdatesSinceReport{0.0};
-  double _measuredSecondsSinceReport{0.0};
+  double        _cellUpdatesSinceReport{0.0};
+  double        _dofUpdatesSinceReport{0.0};
+  double        _measuredSecondsSinceReport{0.0};
 
   double runStep(Step step);
   void executeStep(Step step);

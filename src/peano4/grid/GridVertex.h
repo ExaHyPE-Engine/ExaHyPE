@@ -10,10 +10,6 @@ namespace peano4::grid {
 } // namespace peano4::grid
 
 struct peano4::grid::GridVertex {
-  /**
-   * A vertex is refined where the tree continues below it, hanging where a cell of its level next to
-   * it does not exist, and unrefined otherwise.
-   */
   enum class State : std::uint8_t { HangingVertex = 0, Unrefined = 1, Refined = 2 };
 
   std::uint8_t state{static_cast<std::uint8_t>(State::Unrefined)};

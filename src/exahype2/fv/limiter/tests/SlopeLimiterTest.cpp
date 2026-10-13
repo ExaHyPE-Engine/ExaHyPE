@@ -52,8 +52,8 @@ exahype2::fv::limiter::tests::SlopeLimiterTest::testVanAlbada() {
   validateNumericalEquals(exahype2::fv::limiter::VanAlbada::limitedDifference(1.0, 0.0), 0.0);
   validateNumericalEquals(exahype2::fv::limiter::VanAlbada::limitedDifference(1.0, 1.0), 1.0);
   validateNumericalEquals(exahype2::fv::limiter::VanAlbada::limitedDifference(2.0, 1.0), 1.2);
-  // The smooth rational formula has no positivity clamp, so opposite-sign
-  // differences yield a small counter-slope.
+  // The smooth rational formula does not clamp at zero. Opposite-sign differences yield a small
+  // counter-slope.
   validateNumericalEquals(exahype2::fv::limiter::VanAlbada::limitedDifference(-1.0, 2.0), -0.4);
   validateNumericalEquals(
     exahype2::fv::limiter::VanAlbada::limitedDifference(1.0, 3.0),

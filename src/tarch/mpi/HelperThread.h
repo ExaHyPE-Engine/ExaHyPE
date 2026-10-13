@@ -7,8 +7,8 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 /**
- * Runs one polling function on a thread of its own. The MPI progress runs on this thread, because a
- * deferred task can wait in the queue while another thread blocks inside MPI.
+ * Runs one polling function on a thread of its own. A deferred task can wait in the queue while
+ * another thread blocks inside MPI. The MPI progress therefore runs on this thread.
  */
 class tarch::mpi::HelperThread final {
 public:

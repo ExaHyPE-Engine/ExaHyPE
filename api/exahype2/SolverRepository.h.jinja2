@@ -34,6 +34,7 @@ namespace {{ NAMESPACE | join("::") }} {
   void performTimeStep();
   void regrid(const peano4::Regrid& regrid);
   void plot();
+  void recordLastTimeStamp();
   void addLocalValuesToGlobalReduction(::tarch::mpi::ReductionRecord& record);
   void readValuesFromGlobalReduction(const ::tarch::mpi::ReductionRecord& record);
 

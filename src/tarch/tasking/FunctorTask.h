@@ -9,11 +9,8 @@ namespace tarch::tasking {
 } // namespace tarch::tasking
 
 /**
- * Task around a functor.
- *
- * The functor implements tarch::tasking::Task::run() and takes no arguments.
- * The class stores it by value, keeping captured state valid after the spawning
- * routine returns.
+ * Runs a functor without arguments as a task. The class stores the functor by value. Captured
+ * state stays valid after the spawning routine returns.
  */
 class tarch::tasking::FunctorTask final : public tarch::tasking::Task {
 public:
