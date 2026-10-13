@@ -402,10 +402,11 @@ namespace {
    * Runs the predictor of the cells of one team. A thread behind the last cell still calls
    * predict() to reach the barriers of the team.
    */
-  struct PredictorOfCell final {
+  template <typename StoragePrecision>
+  struct LinearPredictorOfCell final {
     exahype2::dg::BasisTables<double> tables{};
     const double*                     locations{nullptr};
-    double*                           cellStates{nullptr};
+    StoragePrecision*                 cellStates{nullptr};
     double*                           faceStates{nullptr};
     double*                           faceFluxes{nullptr};
     double*                           scratch{nullptr};
@@ -482,31 +483,32 @@ namespace {
     deviceCounts.copyBack(counts);
   }
 
+  template <typename StoragePrecision>
   void predictOnDevice(
     const Tables&                         tables,
     const exahype2::dg::tests::CellChain& geometry,
     const std::vector<double>&            locations,
-    std::vector<double>&                  cellStates,
+    std::vector<StoragePrecision>&        cellStates,
     std::vector<double>&                  faceStates,
     std::vector<double>&                  faceFluxes
   ) {
     const exahype2::dg::tests::DeviceBasisTables deviceTables(tables);
     const std::vector<double> scratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::Size, 0.0);
 
-    const exahype2::dg::tests::DeviceBuffer<double> deviceLocations(locations);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceCellStates(cellStates);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceFaceStates(faceStates);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceFaceFluxes(faceFluxes);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceScratch(scratch);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
+    const exahype2::dg::tests::DeviceBuffer<double>           deviceLocations(locations);
+    const exahype2::dg::tests::DeviceBuffer<StoragePrecision> deviceCellStates(cellStates);
+    const exahype2::dg::tests::DeviceBuffer<double>           deviceFaceStates(faceStates);
+    const exahype2::dg::tests::DeviceBuffer<double>           deviceFaceFluxes(faceFluxes);
+    const exahype2::dg::tests::DeviceBuffer<double>           deviceScratch(scratch);
+    const exahype2::dg::tests::DeviceBuffer<double>           deviceCellCentres(geometry.cellCentres);
+    const exahype2::dg::tests::DeviceBuffer<double>           deviceCellSizes(geometry.cellSizes);
 
     const int threadsPerTeam = tarch::accelerator::getTeamThreads(CellLayout::NodesPerCell);
     const int threadsPerCell = std::min(CellLayout::NodesPerCell, threadsPerTeam);
     const int cellsPerTeam   = threadsPerTeam / threadsPerCell;
     tarch::accelerator::parallelFor(
       tarch::accelerator::TeamRange((Setup::NumberOfCells + cellsPerTeam - 1) / cellsPerTeam, threadsPerTeam, 0),
-      PredictorOfCell{
+      LinearPredictorOfCell<StoragePrecision>{
         deviceTables.getView(),
         deviceLocations.getData(),
         deviceCellStates.getData(),
@@ -557,7 +559,8 @@ exahype2::dg::ader::tests::LinearPredictorTest::run() {
   testMethod(testThePredictorWritesTheTimeAveragesAndTheFacesAndLeavesTheCellState);
   testMethod(testASolverWithoutFluxGetsZeroFaceFluxes);
   testMethod(testEveryCellOfADeviceRangeSelectsItsPointSources);
-  testMethod(testEveryCellOfADeviceRangeMatchesTheHostPredictor);
+  testMethod(testEveryCellOfADeviceRangeMatchesTheHostPredictor<double>);
+  testMethod(testEveryCellOfADeviceRangeMatchesTheHostPredictor<float>);
 }
 
 /**
@@ -1096,7 +1099,7 @@ exahype2::dg::ader::tests::LinearPredictorTest::testNoPointSourceLeavesTheSample
   PointSourceTable                            table;
   table.placeInside(cellCentre, cellSize);
 
-  const double cellState[CellStateSize]                 = {};
+  const double state[StateSize]                         = {};
   const int    pointSourceIndices[NumberOfPointSources] = {0, 1};
 
   double pointSourceValues[SampleSize];
@@ -1106,7 +1109,7 @@ exahype2::dg::ader::tests::LinearPredictorTest::testNoPointSourceLeavesTheSample
 
   Predictor<PointSourceSolver>::evaluatePointSources(
     pointSourceValues,
-    cellState,
+    state,
     pointSourceIndices,
     0,
     table.getData(),
@@ -1141,9 +1144,11 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceIsSpreadByTheBasisAnd
     cellVolume *= cellSize(axis);
   }
 
-  double cellState[CellStateSize];
-  for (int entry = 0; entry < CellStateSize; entry++) {
-    cellState[entry] = 0.5 + 0.01 * entry;
+  double state[StateSize] = {};
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int value = 0; value < NumberOfData; value++) {
+      state[cellNode * StateStride + value] = 0.5 + 0.01 * (cellNode * NumberOfData + value);
+    }
   }
 
   const int pointSourceIndices[NumberOfPointSources] = {1, 0};
@@ -1155,7 +1160,7 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceIsSpreadByTheBasisAnd
 
   Predictor<PointSourceSolver>::evaluatePointSources(
     pointSourceValues,
-    cellState,
+    state,
     pointSourceIndices,
     NumberOfPointSources,
     table.getData(),
@@ -1185,7 +1190,7 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceIsSpreadByTheBasisAnd
                 getReferenceCoordinate(pointSource, axis)
               );
             }
-            const double stateValue = cellState[cellNode * NumberOfData + unknown];
+            const double stateValue = state[cellNode * StateStride + unknown];
             expected += spread * tables.inverseCellQuadratureWeights[cellNode] / cellVolume
               * getPointSourceForce(unknown, pointSource, timePosition, stateValue);
           }
@@ -1616,21 +1621,23 @@ exahype2::dg::ader::tests::LinearPredictorTest::testEveryCellOfADeviceRangeSelec
 /**
  * The predictor of every cell of a device range reproduces the serial host loop.
  */
+template <typename StoragePrecision>
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testEveryCellOfADeviceRangeMatchesTheHostPredictor() {
   const Tables                         tables;
   const exahype2::dg::tests::CellChain geometry;
   const std::vector<double>            locations = getPointSourceLocations(geometry);
-  const std::vector<double> cellStates = exahype2::dg::tests::getRamp(Setup::AllCellStatesCardinality, 0.5, 0.002);
-  const std::vector<double> faceStates(Setup::AllFaceStatesCardinality, 0.0);
-  const std::vector<double> faceFluxes(Setup::AllFaceFluxesCardinality, 0.0);
+  const auto initialState = exahype2::dg::tests::getRamp(Setup::AllCellStatesCardinality, 0.5, 0.002);
+  const std::vector<StoragePrecision> cellStates(initialState.begin(), initialState.end());
+  const std::vector<double>           faceStates(Setup::AllFaceStatesCardinality, 0.0);
+  const std::vector<double>           faceFluxes(Setup::AllFaceFluxesCardinality, 0.0);
 
-  std::vector<double> deviceCellResult      = cellStates;
-  std::vector<double> deviceFaceStateResult = faceStates;
-  std::vector<double> deviceFaceFluxResult  = faceFluxes;
+  std::vector<StoragePrecision> deviceCellResult      = cellStates;
+  std::vector<double>           deviceFaceStateResult = faceStates;
+  std::vector<double>           deviceFaceFluxResult  = faceFluxes;
   predictOnDevice(tables, geometry, locations, deviceCellResult, deviceFaceStateResult, deviceFaceFluxResult);
 
-  std::vector<double> hostCellStates = cellStates;
+  std::vector<double> hostCellStates(cellStates.begin(), cellStates.end());
   std::vector<double> hostFaceStates = faceStates;
   std::vector<double> hostFaceFluxes = faceFluxes;
   std::vector<double> hostScratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::Size, 0.0);

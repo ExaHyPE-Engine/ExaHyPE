@@ -25,11 +25,11 @@ public:
     std::vector<exahype2::plotter::DataField> plottedFields
   );
 
-  INLINE_METHOD void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void performTimeStep(const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests);
 
 private:
   [[nodiscard]] INLINE_METHOD double updatePatches(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency        adjacency,
     double                   timeStepSize
   );

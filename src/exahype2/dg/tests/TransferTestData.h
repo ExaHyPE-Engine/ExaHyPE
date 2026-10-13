@@ -3,7 +3,7 @@
 #pragma once
 
 #include "exahype2/dg/Basis.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 
 namespace exahype2::dg::tests {
   struct TransferSetup;
@@ -46,7 +46,7 @@ struct exahype2::dg::tests::TransferOperators final {
 };
 
 /**
- * Writes the linear profile at the nodes of block, which setTransferCoordinatesOf() places.
+ * Writes the linear profile at the nodes of block. setTransferCoordinatesOf() places these nodes.
  */
 template <int Nodes>
 void

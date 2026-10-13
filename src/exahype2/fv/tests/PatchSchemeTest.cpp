@@ -12,9 +12,9 @@
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
 #include "exahype2/fv/tests/HaloProfileTestData.h"
 #include "exahype2/fv/singlestep/SingleStep.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
 #include "tarch/accelerator/ParallelFor.h"
@@ -245,7 +245,7 @@ namespace {
   };
 
   /**
-   * Writes the inner value plus one into the outer half, which marks every written volume.
+   * Writes the inner value plus one into the outer half. The offset marks every written volume.
    */
   template <int Unknowns>
   struct IncrementBoundaryTerm {
@@ -920,7 +920,8 @@ namespace {
   }
 
   /**
-   * Returns a state that depends on the volume index only, so patches with different halo sizes read the same field.
+   * Returns a state that depends on the volume index only. Patches with different halo sizes read
+   * the same field.
    */
   double getLogicalState(const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int unknown) {
     double phase = 0.7 * (unknown + 1);

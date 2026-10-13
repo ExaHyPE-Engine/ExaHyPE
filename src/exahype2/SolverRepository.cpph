@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/Assertions.h"
 #include "tarch/mpi/ReductionRecord.h"
 
@@ -42,10 +42,13 @@ exahype2::SolverRepository<Solvers...>::getMaxTimeStamp() const {
 template <typename... Solvers>
 template <typename Solver>
 INLINE_METHOD int
-exahype2::SolverRepository<Solvers...>::getNumberOfCellsOf(const Solver& solver, const peano4::Partition& partition) {
-  int numberOfCells = partition.getCells().size;
-  if constexpr (requires { solver.getNumberOfCells(partition); }) {
-    numberOfCells = solver.getNumberOfCells(partition);
+exahype2::SolverRepository<Solvers...>::getNumberOfCellsOf(
+  const Solver&                   solver,
+  const peano4::CellConnectivity& cellConnectivity
+) {
+  int numberOfCells = cellConnectivity.getCells().size;
+  if constexpr (requires { solver.getNumberOfCells(cellConnectivity); }) {
+    numberOfCells = solver.getNumberOfCells(cellConnectivity);
   }
   assertion(numberOfCells >= 0, numberOfCells);
   return numberOfCells;
@@ -56,23 +59,23 @@ exahype2::SolverRepository<Solvers...>::getNumberOfCellsOf(const Solver& solver,
  */
 template <typename... Solvers>
 INLINE_METHOD std::uint64_t
-exahype2::SolverRepository<Solvers...>::getNumberOfSolverCells(const peano4::Partition& partition) const {
+exahype2::SolverRepository<Solvers...>::getNumberOfSolverCells(const peano4::CellConnectivity& cellConnectivity) const {
   std::uint64_t result = 0;
-  forEachSolver([&result, &partition](const auto& solver) {
-    result += static_cast<std::uint64_t>(getNumberOfCellsOf(solver, partition));
+  forEachSolver([&result, &cellConnectivity](const auto& solver) {
+    result += static_cast<std::uint64_t>(getNumberOfCellsOf(solver, cellConnectivity));
   });
   return result;
 }
 
 template <typename... Solvers>
 INLINE_METHOD std::uint64_t
-exahype2::SolverRepository<Solvers...>::getNumberOfCellDoFs(const peano4::Partition& partition) const {
+exahype2::SolverRepository<Solvers...>::getNumberOfCellDoFs(const peano4::CellConnectivity& cellConnectivity) const {
   std::uint64_t result = 0;
-  forEachSolver([&result, &partition](const auto& solver) {
+  forEachSolver([&result, &cellConnectivity](const auto& solver) {
     const int numberOfDoFs = solver.getNumberOfDoFs();
     assertion(numberOfDoFs >= 0, numberOfDoFs);
-    result +=
-      static_cast<std::uint64_t>(getNumberOfCellsOf(solver, partition)) * static_cast<std::uint64_t>(numberOfDoFs);
+    result += static_cast<std::uint64_t>(getNumberOfCellsOf(solver, cellConnectivity))
+      * static_cast<std::uint64_t>(numberOfDoFs);
   });
   return result;
 }
@@ -94,8 +97,8 @@ exahype2::SolverRepository<Solvers...>::finishSimulation() {
 
 template <typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::allocate(const peano4::Partition& partition) {
-  forEachSolver([&partition](auto& solver) { solver.allocate(partition); });
+exahype2::SolverRepository<Solvers...>::allocate(const peano4::CellConnectivity& cellConnectivity) {
+  forEachSolver([&cellConnectivity](auto& solver) { solver.allocate(cellConnectivity); });
 }
 
 template <typename... Solvers>
@@ -112,48 +115,57 @@ exahype2::SolverRepository<Solvers...>::getAllocatedBytes() const {
  */
 template <typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::requestRefinementForGridConstruction(const peano4::Partition& partition) {
-  _refinementRequests.clear(partition.getNumberOfSlots());
-  forEachSolver([this, &partition](auto& solver) {
-    solver.requestRefinementForGridConstruction(partition, _refinementRequests);
+exahype2::SolverRepository<Solvers...>::requestRefinementForGridConstruction(
+  const peano4::CellConnectivity& cellConnectivity
+) {
+  _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
+  forEachSolver([this, &cellConnectivity](auto& solver) {
+    solver.requestRefinementForGridConstruction(cellConnectivity, _refinementRequests);
   });
-  _requestsOfTheRun     = _refinementRequests.getRefinementRequests(partition);
+  _requestsOfTheRun     = _refinementRequests.getRefinementRequests(cellConnectivity);
   _localRequestsPending = false;
 }
 
 template <typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::initialise(const peano4::Partition& partition) {
-  _refinementRequests.clear(partition.getNumberOfSlots());
-  forEachSolver([this, &partition](auto& solver) { solver.initialise(partition, _refinementRequests); });
-  commitRefinementRequests(partition);
+exahype2::SolverRepository<Solvers...>::initialise(const peano4::CellConnectivity& cellConnectivity) {
+  _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
+  forEachSolver([this, &cellConnectivity](auto& solver) { solver.initialise(cellConnectivity, _refinementRequests); });
+  commitRefinementRequests(cellConnectivity);
 }
 
 template <typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::performTimeStep(const peano4::Partition& partition) {
-  _refinementRequests.clear(partition.getNumberOfSlots());
-  forEachSolver([this, &partition](auto& solver) { solver.performTimeStep(partition, _refinementRequests); });
-  commitRefinementRequests(partition);
+exahype2::SolverRepository<Solvers...>::performTimeStep(const peano4::CellConnectivity& cellConnectivity) {
+  _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
+  forEachSolver([this, &cellConnectivity](auto& solver) {
+    solver.performTimeStep(cellConnectivity, _refinementRequests);
+  });
+  commitRefinementRequests(cellConnectivity);
 }
 
 template <typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::regrid(const peano4::Partition& partition, const peano4::Regrid& regrid) {
-  _refinementRequests.clear(partition.getNumberOfSlots());
-  forEachSolver([this, &partition, &regrid](auto& solver) { solver.regrid(partition, regrid, _refinementRequests); });
-  commitRefinementRequests(partition);
+exahype2::SolverRepository<Solvers...>::regrid(
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Regrid&           regrid
+) {
+  _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
+  forEachSolver([this, &cellConnectivity, &regrid](auto& solver) {
+    solver.regrid(cellConnectivity, regrid, _refinementRequests);
+  });
+  commitRefinementRequests(cellConnectivity);
 }
 
 template <typename... Solvers>
 INLINE_METHOD void
 exahype2::SolverRepository<Solvers...>::plot(
-  const peano4::Partition&     partition,
-  const tarch::plotter::Format format,
-  const std::string&           outputDirectory
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory
 ) {
-  forEachSolver([&partition, format, &outputDirectory](auto& solver) {
-    solver.plot(partition, format, outputDirectory);
+  forEachSolver([&cellConnectivity, format, &outputDirectory](auto& solver) {
+    solver.plot(cellConnectivity, format, outputDirectory);
   });
 }
 
@@ -164,52 +176,44 @@ exahype2::SolverRepository<Solvers...>::getRefinementRequests() const {
 }
 
 /**
- * Collects the refinement requests of this rank. adoptFrom() gathers them over all ranks.
+ * Collects the refinement requests of this rank. readValuesFromGlobalReduction() gathers them over
+ * all ranks.
  */
 template <typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::commitRefinementRequests(const peano4::Partition& partition) {
-  _localRequests        = _refinementRequests.getLocalRefinementRequests(partition);
+exahype2::SolverRepository<Solvers...>::commitRefinementRequests(const peano4::CellConnectivity& cellConnectivity) {
+  _localRequests        = _refinementRequests.getLocalRefinementRequests(cellConnectivity);
   _localRequestsPending = true;
 }
 
 /**
  * Adds the values of every solver and the number of committed refinement requests of this rank to
- * record. The repository keeps these requests until adoptFrom() reads record.
+ * record.
  */
 template <typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::contributeTo(tarch::mpi::ReductionRecord& record) {
-  forEachSolver([&record](auto& solver) { solver.contributeTo(record); });
+exahype2::SolverRepository<Solvers...>::addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record) {
+  forEachSolver([&record](auto& solver) { solver.addLocalValuesToGlobalReduction(record); });
   _numberOfRequestsSlot = record.addSum(_localRequestsPending ? _localRequests.size() : 0U);
-  if (_localRequestsPending) {
-    _localRequestsOfRecords.emplace_back(std::move(_localRequests));
-  } else {
-    _localRequestsOfRecords.emplace_back(std::nullopt);
-  }
-  _localRequests.clear();
-  _localRequestsPending = false;
 }
 
 /**
- * Passes the reduced values to every solver. The records arrive in the order of contributeTo().
- * The committed requests of record replace the requests of the run. Only a step in which some rank
- * requests a change gathers the requests over all ranks. Every rank calls this function
- * collectively.
+ * Passes the reduced values to every solver. The committed requests replace the requests of the
+ * run. Only a step in which some rank requests a change gathers the requests over all ranks. Every
+ * rank calls this function collectively.
  */
 template <typename... Solvers>
 INLINE_METHOD void
-exahype2::SolverRepository<Solvers...>::adoptFrom(const tarch::mpi::ReductionRecord& record) {
-  assertion(not _localRequestsOfRecords.empty());
-  forEachSolver([&record](auto& solver) { solver.adoptFrom(record); });
-  auto localRequests = std::move(_localRequestsOfRecords.front());
-  _localRequestsOfRecords.pop_front();
-  if (not localRequests.has_value()) {
+exahype2::SolverRepository<Solvers...>::readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record) {
+  forEachSolver([&record](auto& solver) { solver.readValuesFromGlobalReduction(record); });
+  if (not _localRequestsPending) {
     return;
   }
+  _localRequestsPending = false;
   if (record.getSum(_numberOfRequestsSlot) > 0) {
-    _requestsOfTheRun = exahype2::RefinementRequests::gatherRefinementRequests(std::move(*localRequests));
+    _requestsOfTheRun = exahype2::RefinementRequests::gatherRefinementRequests(std::move(_localRequests));
   } else {
     _requestsOfTheRun.clear();
   }
+  _localRequests.clear();
 }

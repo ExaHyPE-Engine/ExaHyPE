@@ -7,9 +7,10 @@
 #include "exahype2/dg/limiting/LimiterStatus.h"
 #include "exahype2/dg/limiting/tests/LimiterTestData.h"
 #include "exahype2/dg/tests/KernelTestData.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
+#include "peano4/HaloExchange.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -222,6 +223,7 @@ exahype2::dg::limiting::tests::DetectorTest::run() {
   testMethod(testJudgeCandidateFailsADivergedPredictor);
   testMethod(testJudgeCandidateRejectsACandidateOutsideTheReferenceExtrema);
   testMethod(testSpreadStatusLiftsByTheNeighbours);
+  testMethod(testSpreadStatusesReadsThePreviousRing);
   testMethod(testClearFacesWritesRegularAndZerosTheSubcellHalo);
   testMethod(testAFixedRuleReportsNoWaveSpeeds);
   testMethod(testEveryCellOfADeviceRangeJudgesLikeTheHost);
@@ -708,29 +710,117 @@ void
 exahype2::dg::limiting::tests::DetectorTest::testSpreadStatusLiftsByTheNeighbours() {
   CellStatus cell;
   cell.neighbourHalves[0] = Troubled;
-  Judge::spreadStatus(cell.status, cell.neighbourStatusHalves.data(), cell.ownStatusHalves.data());
+  Judge::spreadStatus(cell.status, cell.neighbourStatusHalves.data());
   validateEquals(cell.status[StatusIndex], Limited);
   validateEquals(cell.status[WasTroubledIndex], 1);
-  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    validateEqualsWithParams1(cell.faceHalves[faceNumber], Limited, faceNumber);
-  }
 
   CellStatus haloCell;
   haloCell.neighbourHalves[1] = Limited;
-  Judge::spreadStatus(haloCell.status, haloCell.neighbourStatusHalves.data(), haloCell.ownStatusHalves.data());
+  Judge::spreadStatus(haloCell.status, haloCell.neighbourStatusHalves.data());
   validateEquals(haloCell.status[StatusIndex], Halo);
   validateEquals(haloCell.status[WasTroubledIndex], 0);
-  validateEquals(haloCell.faceHalves[0], Halo);
 
   CellStatus troubledCell;
   troubledCell.status[StatusIndex] = Troubled;
-  Judge::spreadStatus(
-    troubledCell.status,
-    troubledCell.neighbourStatusHalves.data(),
-    troubledCell.ownStatusHalves.data()
-  );
+  Judge::spreadStatus(troubledCell.status, troubledCell.neighbourStatusHalves.data());
   validateEquals(troubledCell.status[StatusIndex], Troubled);
-  validateEquals(troubledCell.faceHalves[0], Troubled);
+}
+
+/**
+ * A troubled corner cell adds one ring of Limited cells and one ring of Halo cells.
+ */
+void
+exahype2::dg::limiting::tests::DetectorTest::testSpreadStatusesReadsThePreviousRing() {
+  constexpr int Depth = 1;
+  peano4::tests::buildRegularGrid(Depth);
+  const auto&                                cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto                                 cells            = cellConnectivity.getCells();
+  tarch::accelerator::ChunkedMemoryPool<int> statuses(exahype2::dg::limiting::NumberOfStatusEntries);
+  tarch::accelerator::ChunkedMemoryPool<int> faceStatuses(Judge::StatusValuesPerFace);
+  statuses.reserve(cellConnectivity.getNumberOfSlots());
+  faceStatuses.reserve(cellConnectivity.getNumberOfFaces());
+  std::vector<int> statusValues;
+  std::vector<int> faceValues;
+  statuses.copyToHost(statusValues);
+  faceStatuses.copyToHost(faceValues);
+  std::fill(statusValues.begin(), statusValues.end(), 0);
+  std::fill(faceValues.begin(), faceValues.end(), Regular);
+  const auto paddedStatus = static_cast<std::size_t>(statuses.getPaddedChunkSize());
+  const auto paddedFace   = static_cast<std::size_t>(faceStatuses.getPaddedChunkSize());
+  for (int entry = 0; entry < cells.size; entry++) {
+    const int  slot    = cells[entry];
+    const auto lattice = cellConnectivity.getCellLattice(slot);
+    int        sum     = 0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      sum += lattice(axis);
+    }
+    const int status                                                               = sum == 0 ? Troubled : Regular;
+    statusValues[static_cast<std::size_t>(slot) * paddedStatus + StatusIndex]      = status;
+    statusValues[static_cast<std::size_t>(slot) * paddedStatus + WasTroubledIndex] = sum == 0 ? 1 : 0;
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      const auto face = static_cast<std::size_t>(cellConnectivity.getCellFace(slot, faceNumber));
+      faceValues[face * paddedFace + exahype2::dg::getOwnHalf(faceNumber)] = status;
+    }
+  }
+  statuses.copyFromHost(statusValues);
+  faceStatuses.copyFromHost(faceValues);
+  peano4::HaloExchange<int> exchange(faceStatuses);
+  exchange.rebuild(cellConnectivity);
+  std::array<std::vector<int>, exahype2::dg::limiting::NumberOfSpreadRings> statusesAfterSpread;
+  std::array<bool, exahype2::dg::limiting::NumberOfSpreadRings>             facesUnchanged{};
+
+  for (int ring = 0; ring < exahype2::dg::limiting::NumberOfSpreadRings; ring++) {
+    exchange.post();
+    exchange.wait();
+    faceStatuses.copyToHost(faceValues);
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(cells.size),
+      exahype2::dg::limiting::SpreadStatuses<exahype2::dg::limiting::tests::StubSolver, double>{
+        cellConnectivity.onDevice(),
+        cellConnectivity.onDevice().getCells(),
+        statuses.getView(),
+        std::as_const(faceStatuses).getView()
+      }
+    );
+    std::vector<int> facesAfterSpread;
+    faceStatuses.copyToHost(facesAfterSpread);
+    facesUnchanged[ring] = facesAfterSpread == faceValues;
+    statuses.copyToHost(statusesAfterSpread[ring]);
+    if (ring + 1 < exahype2::dg::limiting::NumberOfSpreadRings) {
+      tarch::accelerator::parallelFor(
+        tarch::accelerator::Range(cells.size),
+        exahype2::dg::limiting::WriteStatusesOntoFaces{
+          cellConnectivity.onDevice(),
+          std::as_const(statuses).getView(),
+          faceStatuses.getView()
+        }
+      );
+    }
+  }
+  for (int ring = 0; ring < exahype2::dg::limiting::NumberOfSpreadRings; ring++) {
+    validateWithParams1(facesUnchanged[ring], ring);
+    for (int entry = 0; entry < cells.size; entry++) {
+      const int  slot     = cells[entry];
+      const auto lattice  = cellConnectivity.getCellLattice(slot);
+      int        distance = 0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        distance += lattice(axis);
+      }
+      const int expected = distance <= ring + 1 ? std::max(Regular, Troubled - distance) : Regular;
+      validateEqualsWithParams2(
+        statusesAfterSpread[ring][static_cast<std::size_t>(slot) * paddedStatus + StatusIndex],
+        expected,
+        slot,
+        ring
+      );
+      validateEqualsWithParams2(
+        statusesAfterSpread[ring][static_cast<std::size_t>(slot) * paddedStatus + WasTroubledIndex],
+        distance <= 1 ? 1 : 0,
+        slot,
+        ring
+      );
+    }
+  }
 }
 
 /**
@@ -880,8 +970,8 @@ exahype2::dg::limiting::tests::DetectorTest::testEveryCellOfADeviceRangeJudgesLi
 }
 
 /**
- * The block kernels count and list the cells on the subcell scheme in the order of the partition
- * with the local cells first.
+ * The block kernels count and list the cells on the subcell scheme in the order of the cell
+ * connectivity with the local cells first.
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFirst() {
@@ -889,10 +979,10 @@ exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFi
   constexpr int                NumberOfBlocks = 2;
   constexpr std::array<int, 4> StatusPattern{Regular, Halo, Troubled, Limited};
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition          = peano4::Spacetree::getInstance().getPartition();
-  const auto  cells              = partition.getCells();
-  const int   numberOfSlots      = partition.getNumberOfSlots();
-  const int   numberOfLocalCells = partition.getCells(peano4::Adjacency::Local).size;
+  const auto& cellConnectivity   = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto  cells              = cellConnectivity.getCells();
+  const int   numberOfSlots      = cellConnectivity.getNumberOfSlots();
+  const int   numberOfLocalCells = cellConnectivity.getCells(peano4::Adjacency::Local).size;
 
   tarch::accelerator::ChunkedMemoryPool<int> statuses(exahype2::dg::limiting::NumberOfStatusEntries);
   statuses.reserve(numberOfSlots);
@@ -927,7 +1017,7 @@ exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFi
   tarch::accelerator::parallelReduce(
     tarch::accelerator::Range(NumberOfBlocks),
     exahype2::dg::limiting::CountCellsOnSubcellScheme{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       std::as_const(statuses).getView(),
       NumberOfBlocks,
       numberOfLocalCells,
@@ -945,7 +1035,7 @@ exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFi
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(NumberOfBlocks),
     exahype2::dg::limiting::ListCellsOnSubcellScheme{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       std::as_const(statuses).getView(),
       NumberOfBlocks,
       std::as_const(countsOfBlocks).getData(),

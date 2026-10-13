@@ -9,7 +9,7 @@
 #include "tarch/plotter/Format.h"
 
 namespace peano4 {
-  class Partition;
+  class CellConnectivity;
   struct Regrid;
 } // namespace peano4
 
@@ -24,8 +24,8 @@ namespace exahype2 {
 
 /**
  * Runs every phase on every solver. Every solver outlives the repository. A phase that votes
- * merges the votes of all solvers into one list of refinement requests. adoptFrom() gathers the
- * requests of all ranks after the reduction of the step.
+ * merges the votes of all solvers into one list of refinement requests.
+ * readValuesFromGlobalReduction() gathers the requests of all ranks after the reduction of the step.
  */
 template <typename... Solvers>
 class exahype2::SolverRepository final {
@@ -40,24 +40,26 @@ public:
 
   [[nodiscard]] INLINE_METHOD double getMinTimeStamp() const;
   [[nodiscard]] INLINE_METHOD double getMaxTimeStamp() const;
-  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfSolverCells(const peano4::Partition& partition) const;
-  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfCellDoFs(const peano4::Partition& partition) const;
+  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfSolverCells(
+    const peano4::CellConnectivity& cellConnectivity
+  ) const;
+  [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfCellDoFs(const peano4::CellConnectivity& cellConnectivity) const;
 
   INLINE_METHOD void startSimulation();
   INLINE_METHOD void finishSimulation();
-  INLINE_METHOD void allocate(const peano4::Partition& partition);
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
-  INLINE_METHOD void requestRefinementForGridConstruction(const peano4::Partition& partition);
-  INLINE_METHOD void initialise(const peano4::Partition& partition);
-  INLINE_METHOD void performTimeStep(const peano4::Partition& partition);
-  INLINE_METHOD void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid);
+  INLINE_METHOD void requestRefinementForGridConstruction(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void initialise(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void performTimeStep(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void regrid(const peano4::CellConnectivity& cellConnectivity, const peano4::Regrid& regrid);
   INLINE_METHOD void plot(
-    const peano4::Partition& partition,
-    tarch::plotter::Format   format,
-    const std::string&       outputDirectory
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
   );
-  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
-  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] INLINE_METHOD const std::vector<peano4::RefinementRequest>& getRefinementRequests() const;
 
@@ -68,10 +70,13 @@ private:
   template <typename Operation>
   INLINE_METHOD void forEachSolver(const Operation& operation) const;
 
-  INLINE_METHOD void commitRefinementRequests(const peano4::Partition& partition);
+  INLINE_METHOD void commitRefinementRequests(const peano4::CellConnectivity& cellConnectivity);
 
   template <typename Solver>
-  [[nodiscard]] static INLINE_METHOD int getNumberOfCellsOf(const Solver& solver, const peano4::Partition& partition);
+  [[nodiscard]] static INLINE_METHOD int getNumberOfCellsOf(
+    const Solver&                   solver,
+    const peano4::CellConnectivity& cellConnectivity
+  );
 
   std::tuple<Solvers&...> _solvers;
 
@@ -80,16 +85,11 @@ private:
   std::vector<peano4::RefinementRequest> _requestsOfTheRun{};
 
   /**
-   * The requests of this rank that the next contributeTo() counts.
+   * The requests of this rank that the next addLocalValuesToGlobalReduction() counts.
    */
   std::vector<peano4::RefinementRequest> _localRequests{};
   bool                                   _localRequestsPending{false};
-  /**
-   * The local requests of every record that contributeTo() filled and adoptFrom() has not read, in
-   * the order of the records. A step without committed requests adds std::nullopt.
-   */
-  std::deque<std::optional<std::vector<peano4::RefinementRequest>>> _localRequestsOfRecords{};
-  int                                                               _numberOfRequestsSlot{0};
+  int                                    _numberOfRequestsSlot{0};
 };
 
 #include "exahype2/SolverRepository.cpph"

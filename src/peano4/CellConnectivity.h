@@ -15,7 +15,7 @@ namespace peano4 {
   struct LevelJump;
   struct ExchangedFace;
   struct Neighbour;
-  class Partition;
+  class CellConnectivity;
   class Spacetree;
 
   TARGET_DECLARE
@@ -39,9 +39,9 @@ enum class peano4::FaceKind : std::uint8_t { Interior, Boundary, Hanging, Coarse
 enum class peano4::Adjacency : std::uint8_t { Local, Remote };
 
 /**
- * One level jump of the partition: A coarse face and the fine faces one level below it. The coarse
- * cell lies on side coarseSide of the coarse face. The cell of a hanging fine face lies on the other
- * side.
+ * One level jump of the cell connectivity: A coarse face and the fine faces one level below it. The
+ * coarse cell lies on side coarseSide of the coarse face. The cell of a hanging fine face lies on the
+ * other side.
  */
 struct peano4::LevelJump final {
   int coarseFace{-1};
@@ -72,9 +72,9 @@ struct peano4::Neighbour final {
  * The cells one rank owns, numbered by slots, with their faces, their level jumps and the faces the
  * rank exchanges with neighbour ranks. A cell keeps its slot through every regrid that keeps the
  * cell, and every regrid renumbers the faces. Every list is sorted by adjacency and then by level or
- * kind, so every group a caller loops over is one span.
+ * kind. Every group a caller loops over is therefore one span.
  */
-class peano4::Partition final {
+class peano4::CellConnectivity final {
 public:
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getNumberOfSlots() const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getNumberOfFaces() const noexcept;
@@ -137,7 +137,7 @@ public:
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
   getDomainOffset() const noexcept;
 
-  [[nodiscard]] INLINE_METHOD const Partition& onDevice() const noexcept;
+  [[nodiscard]] INLINE_METHOD const CellConnectivity& onDevice() const noexcept;
 
 private:
   friend class peano4::Spacetree;
@@ -189,10 +189,10 @@ private:
   double        _domainOffset[DIMENSIONS]{};
 
   /**
-   * The partition with the same arrays in device memory, or null in that partition itself and in a
-   * build without a GPU backend.
+   * The cell connectivity with the same arrays in device memory, or null in that cell connectivity
+   * itself and in a build without a GPU backend.
    */
-  const Partition* _deviceTwin{nullptr};
+  const CellConnectivity* _deviceTwin{nullptr};
 };
 
-#include "peano4/Partition.cpph"
+#include "peano4/CellConnectivity.cpph"

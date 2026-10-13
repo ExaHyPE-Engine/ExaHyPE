@@ -13,7 +13,7 @@
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecision>::rebuild(
-  [[maybe_unused]] const peano4::Partition& partition
+  [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity
 ) {}
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -36,7 +36,7 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 template <typename ExchangeHalo>
 INLINE_METHOD void
 exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecision>::advance(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   const Region&            region,
   const ExchangeHalo&      exchangeHalo,
   const double             timeStamp,
@@ -47,12 +47,12 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
   if (_scratch.getSize() < scratchValues) {
     _scratch.allocate(scratchValues);
   }
-  exchangeHalo([this, &partition, &region, timeStamp, timeStepSize](const peano4::Adjacency adjacency) {
+  exchangeHalo([this, &cellConnectivity, &region, timeStamp, timeStepSize](const peano4::Adjacency adjacency) {
     const auto cells = region.getCells(adjacency);
     tarch::accelerator::parallelFor(
       tarch::accelerator::TeamRange(cells.size),
       exahype2::fv::singlestep::AdvanceSubgrids<Derived, StoragePrecision, ComputePrecision>{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         cells,
         region.subcells,
         region.halo,
@@ -408,19 +408,20 @@ exahype2::fv::singlestep::AdvanceSubgrids<Derived, StoragePrecision, ComputePrec
   const int               slot = cells[entry];
   const StoragePrecision* haloHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    haloHalves[faceNumber] = halo.getChunk(partition.getCellFace(slot, faceNumber));
+    haloHalves[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
   const ComputePrecision* appliedHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    const int        face   = partition.getCellFace(slot, faceNumber);
+    const int        face   = cellConnectivity.getCellFace(slot, faceNumber);
     const int        own    = exahype2::dg::getOwnHalf(faceNumber);
     const int* const status = faceStatuses.getChunk(face);
-    const bool       outer  = exahype2::dg::getBoundaryFaceNumber(partition, face) < 0
+    const bool       outer  = appliedFluxes.segments != nullptr
+                       and exahype2::dg::getBoundaryFaceNumber(cellConnectivity, face) < 0
                        and not exahype2::dg::limiting::runsSubcellScheme(
                          static_cast<exahype2::dg::limiting::LimiterStatus>(status[1 - own])
                        );
     appliedHalves[faceNumber] = outer ? appliedFluxes.getChunk(face)
-                                          + exahype2::dg::getCorrectionHalf(partition, face, faceNumber)
+                                          + exahype2::dg::getCorrectionHalf(cellConnectivity, face, faceNumber)
                                               * (Step::Kernel::AppliedFluxValuesPerFace / 2)
                                       : nullptr;
   }
@@ -431,9 +432,9 @@ exahype2::fv::singlestep::AdvanceSubgrids<Derived, StoragePrecision, ComputePrec
     subcells.getChunk(slot),
     evolvedSubcells,
     haloHalves,
-    partition.getCellCentre(slot),
-    partition.getCellWidth(slot),
-    exahype2::fv::getBoundaryFaceMask(partition, slot),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
+    exahype2::fv::getBoundaryFaceMask(cellConnectivity, slot),
     timeStamp,
     timeStepSize,
     appliedHalves,

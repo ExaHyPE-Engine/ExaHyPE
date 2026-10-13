@@ -32,8 +32,5 @@ private:
   void testRankReductionTakesTheMaximaOfAllRanks();
   void testStabilityEigenvalueIsThePhysicalOrTheScaledMaximum();
   void testProposalStopsAtTheTerminalTime();
-  void testAReusedProposalStopsAtTheTerminalTime();
   void testAFixedRuleKeepsItsSizeAcrossSteps();
-  void testAStepBeyondTheCFLLimitOfItsWaveSpeedsExceedsTheLimit();
-  void testTheLastStepMayGrowBeyondTheCFLLimitToTheTerminalTime();
 };

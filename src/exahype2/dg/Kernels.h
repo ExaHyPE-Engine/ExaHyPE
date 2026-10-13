@@ -4,8 +4,8 @@
 
 #include "exahype2/ErrorMeasurement.h"
 #include "exahype2/dg/Basis.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -26,14 +26,14 @@ namespace exahype2::dg {
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getOwnHalf(int faceNumber);
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getCorrectionHalf(
-    const peano4::Partition& partition,
-    int                      face,
-    int                      faceNumber
+    const peano4::CellConnectivity& cellConnectivity,
+    int                             face,
+    int                             faceNumber
   );
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getBoundaryFaceNumber(
-    const peano4::Partition& partition,
-    int                      face
+    const peano4::CellConnectivity& cellConnectivity,
+    int                             face
   );
 
   template <typename Derived, typename StoragePrecision, typename QuadraturePrecision>
@@ -267,7 +267,7 @@ struct exahype2::dg::ProjectSolutionOntoFaces final {
   using CellPool  = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::ConstView solution{};
   typename StatePool::View     faceStates{};
@@ -289,7 +289,7 @@ struct exahype2::dg::ProjectSolutionOntoPlane final {
   using CellPool  = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::ConstView solution{};
   typename StatePool::View     faceStates{};
@@ -346,7 +346,7 @@ template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::ApplyBoundaryConditions final {
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition        partition{};
+  peano4::CellConnectivity cellConnectivity{};
   tarch::Span<const int>   faces{};
   typename StatePool::View faceStates{};
   const ComputePrecision*  quadraturePoints{nullptr};
@@ -365,7 +365,7 @@ struct exahype2::dg::SolveRiemannProblems final {
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using FluxPool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition        partition{};
+  peano4::CellConnectivity cellConnectivity{};
   tarch::Span<const int>   faces{};
   typename StatePool::View faceStates{};
   typename FluxPool::View  faceFluxes{};
@@ -390,9 +390,9 @@ struct exahype2::dg::RestrictFluxHalves final {
 
   using FluxPool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition       partition{};
-  typename FluxPool::View faceFluxes{};
-  const double*           restrictionMatrix{nullptr};
+  peano4::CellConnectivity cellConnectivity{};
+  typename FluxPool::View  faceFluxes{};
+  const double*            restrictionMatrix{nullptr};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
@@ -419,10 +419,10 @@ struct exahype2::dg::RestrictStateHalves final {
  */
 template <typename Operation>
 struct exahype2::dg::ForLevelJumpOnPlane final {
-  peano4::Partition partition{};
-  int               normal{0};
-  double            position{0.0};
-  Operation         operation{};
+  peano4::CellConnectivity cellConnectivity{};
+  int                      normal{0};
+  double                   position{0.0};
+  Operation                operation{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
@@ -431,7 +431,7 @@ template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::MeasureNodeEigenvalues final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::ConstView solution{};
   const StoragePrecision*      quadraturePoints{nullptr};
@@ -456,7 +456,7 @@ struct exahype2::dg::MeasureNodeErrors final {
 
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::ConstView solution{};
   const StoragePrecision*      quadraturePoints{nullptr};
@@ -469,8 +469,8 @@ struct exahype2::dg::MeasureNodeErrors final {
 };
 
 /**
- * Fills one cell of the partition after a regrid from the cells in source. The slots of source
- * belong to the partition before the regrid.
+ * Fills one cell of the cell connectivity after a regrid from the cells in source. The slots of
+ * source belong to the cell connectivity before the regrid.
  */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::RegridCells final {

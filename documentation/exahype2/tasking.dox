@@ -6,7 +6,7 @@
 
 A solver family advances its solution with tarch::accelerator::parallelFor
 and tarch::accelerator::parallelReduce over the cell and face spans of the
-partition. With the host backend these dispatches are OpenMP loops; with a GPU
+cell connectivity. With the host backend these dispatches are OpenMP loops; with a GPU
 backend they are device kernels over the pools in device memory.
 
 # Dispatches
@@ -24,7 +24,7 @@ while the migrated cells travel.
 # Tasks
 
 peano4::topology::runChunkedTasks spawns tarch::tasking tasks for the host
-work of the tree and partition build after a regrid, one task per chunk of
+work of the tree and cell connectivity build after a regrid, one task per chunk of
 spawn-level blocks. @ref page_tarch_tasking describes the interfaces.
 
 # Choosing the layout

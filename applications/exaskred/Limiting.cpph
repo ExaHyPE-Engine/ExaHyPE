@@ -75,3 +75,24 @@ applications::exahype2::exaskred::limiting::isAdmissibleState(const T* const Q, 
   }
   return Q[Shortcuts::h] >= static_cast<T>(minimumWaterHeight);
 }
+
+/**
+ * Returns whether the numberOfStates states of Q are finite and either all wet, above
+ * minimumWetHeight, or all dry at rest.
+ */
+template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::limiting::isAdmissibleCell(
+  const T* const Q,
+  const int      numberOfStates,
+  const double   minimumWetHeight
+) {
+  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(Q, numberOfStates);
+  const auto fullyWet  = statistics.minHeight > static_cast<T>(minimumWetHeight);
+  const auto dryAtRest = statistics.minHeight >= T{} and statistics.maxHeight <= T{} and statistics.maxMomentum <= T{};
+  return statistics.finite and (fullyWet or dryAtRest);
+}

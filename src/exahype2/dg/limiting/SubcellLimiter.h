@@ -6,9 +6,9 @@
 #include "exahype2/dg/limiting/Detector.h"
 #include "exahype2/dg/limiting/LimiterStatus.h"
 #include "exahype2/dg/limiting/SubcellScheme.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/HaloExchange.h"
 #include "peano4/MigrationExchange.h"
-#include "peano4/Partition.h"
 #include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/Buffer.h"
@@ -66,21 +66,25 @@ public:
 
   INLINE_METHOD SubcellLimiter(double relaxationParameter, double differencesScaling);
 
-  INLINE_METHOD void allocate(const peano4::Partition& partition);
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void release();
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
-  INLINE_METHOD void initialise(const peano4::Partition& partition, const CellPool& solution);
-  INLINE_METHOD void openTimeStep(const peano4::Partition& partition, const CellPool& solution);
+  INLINE_METHOD void initialise(const peano4::CellConnectivity& cellConnectivity, const CellPool& solution);
+  INLINE_METHOD void openTimeStep(const peano4::CellConnectivity& cellConnectivity, const CellPool& solution);
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics closeTimeStep(
-    const peano4::Partition& partition,
-    CellPool&                solution,
-    double                   timeStamp,
-    double                   timeStepSize
+    const peano4::CellConnectivity& cellConnectivity,
+    CellPool&                       solution,
+    double                          timeStamp,
+    double                          timeStepSize
   );
-  INLINE_METHOD void regrid(const peano4::Partition& partition, const peano4::Regrid& regrid, const CellPool& solution);
-  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
-  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void regrid(
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    const CellPool&                 solution
+  );
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<int>::View getStatuses();
   [[nodiscard]] INLINE_METHOD typename FluxPool::View getAppliedFluxes();
@@ -92,34 +96,34 @@ public:
   [[nodiscard]] INLINE_METHOD int getNumberOfCellsOnSubcellScheme() const;
 
 private:
-  INLINE_METHOD void rebuild(const peano4::Partition& partition);
-  INLINE_METHOD void sampleSubcells(const peano4::Partition& partition);
-  INLINE_METHOD void clearFaces(const peano4::Partition& partition);
-  INLINE_METHOD void openStep(const peano4::Partition& partition, const CellPool& solution);
+  INLINE_METHOD void rebuild(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void sampleSubcells(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void clearFaces(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void openStep(const peano4::CellConnectivity& cellConnectivity, const CellPool& solution);
   INLINE_METHOD void reduceExtrema(tarch::Span<const int> cells, const CellPool& solution);
-  INLINE_METHOD void mergeNeighbourExtrema(const peano4::Partition& partition, bool mergeLastRound);
+  INLINE_METHOD void mergeNeighbourExtrema(const peano4::CellConnectivity& cellConnectivity, bool mergeLastRound);
   [[nodiscard]] INLINE_METHOD exahype2::dg::limiting::JudgedCells judgeCandidates(
-    const peano4::Partition& partition,
-    const CellPool&          solution,
-    double                   timeStamp,
-    double                   timeStepSize
+    const peano4::CellConnectivity& cellConnectivity,
+    const CellPool&                 solution,
+    double                          timeStamp,
+    double                          timeStepSize
   );
-  INLINE_METHOD void spreadStatuses(const peano4::Partition& partition);
-  INLINE_METHOD void listCellsOnSubcellScheme(const peano4::Partition& partition);
+  INLINE_METHOD void spreadStatuses(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void listCellsOnSubcellScheme(const peano4::CellConnectivity& cellConnectivity);
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics recompute(
-    const peano4::Partition& partition,
-    CellPool&                solution,
-    double                   timeStamp,
-    double                   timeStepSize
+    const peano4::CellConnectivity& cellConnectivity,
+    CellPool&                       solution,
+    double                          timeStamp,
+    double                          timeStepSize
   );
 
   template <typename Interpolate, typename Restrict, typename Exchange, typename Work>
   INLINE_METHOD void exchangeFaces(
-    const peano4::Partition& partition,
-    const Interpolate&       interpolation,
-    const Restrict&          restriction,
-    Exchange&                exchange,
-    const Work&              workOnCells
+    const peano4::CellConnectivity& cellConnectivity,
+    const Interpolate&              interpolation,
+    const Restrict&                 restriction,
+    Exchange&                       exchange,
+    const Work&                     workOnCells
   );
 
   const double _relaxationParameter;
@@ -161,7 +165,8 @@ private:
    */
   int _localTroubledCells{0};
   /**
-   * The number of troubled cells on all ranks in the time step of the last adoptFrom().
+   * The number of troubled cells on all ranks in the time step of the last
+   * readValuesFromGlobalReduction().
    */
   int _globalTroubledCells{0};
   int _troubledCellsSlot{0};

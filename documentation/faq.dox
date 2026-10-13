@@ -40,7 +40,7 @@ cmake .. -DPEANO_EXTRA_CXX_FLAGS="-std=c++20"
   ~~~~~~~~~~~~~~~~~~~
 cmake .. -DPEANO_EXTRA_CXX_FLAGS="--std=c++20"
   ~~~~~~~~~~~~~~~~~~~
-  Some compilers want you to use two hyphens, others expect one. Most
+  Some compilers expect two hyphens, others expect one. Most
   Clang-based compiler installations do not bring their own C++ standard
   library to the table. They use the pre-existing GCC STL. Now, if your
   Clang-based compiler - that includes NVIDIA and Intel - is built against a
@@ -214,7 +214,7 @@ undefined reference to for_write_seq_list
 
     Similar arguments hold for jinja2. Peano's API and all extensions can work without
     numpy in principle. However, not all features (solvers in ExaHyPE, e.g.)
-    might be available if you have no numpy.
+    might be available without numpy.
 
 - ***A formatting script reports that a tool is not installed***. Install the tools
   with ``pip install -r requirements.txt``; the scripts find them on the ``PATH``.
@@ -260,7 +260,7 @@ C++ core
 --------
 
 -   **Where is the information whether a point or face is at the
-    boundary or not?** `peano4::Partition::getFaceKind()` returns
+    boundary or not?** `peano4::CellConnectivity::getFaceKind()` returns
     `peano4::FaceKind::Boundary` for a face on a non-periodic domain
     boundary. A solver supplies its own geometry predicate for an embedded
     boundary inside the Cartesian domain.
@@ -272,7 +272,7 @@ Parallelisation
 -   **Why does adaptive refinement need several regrids?** A refinement
     request names a cell that already exists and can expose one additional
     level. The next criterion evaluation can then request cells on that new
-    level. Each regrid rebuilds the tree and the partition, then transfers
+    level. Each regrid rebuilds the tree and the cell connectivity, then transfers
     the solution through `peano4::Regrid` into the target rank ownership.
 
 -   **Why can the rank partition remain imbalanced?** Peano assigns complete

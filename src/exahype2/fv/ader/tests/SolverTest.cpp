@@ -14,7 +14,7 @@
 #include "exahype2/fv/reconstruction/weno/NonlinearWeights.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
@@ -143,15 +143,15 @@ namespace {
    */
   template <typename Solver, bool Smooth, bool Error>
   struct IntegrateOverCells final {
-    peano4::Partition                    partition{};
+    peano4::CellConnectivity                    cellConnectivity{};
     typename Solver::Patches::ConstView solution{};
     double                               timeStamp{0.0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, double& accumulator) const {
       constexpr int Volumes = Solver::PatchSize;
-      const int     cell    = partition.getCells()[entry];
-      const auto    centre  = partition.getCellCentre(cell);
-      const auto    width   = partition.getCellWidth(cell);
+      const int     cell    = cellConnectivity.getCells()[entry];
+      const auto    centre  = cellConnectivity.getCellCentre(cell);
+      const auto    width   = cellConnectivity.getCellWidth(cell);
       const auto    size    = exahype2::fv::getVolumeSize(width, Volumes);
       double        volume  = 1.0;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -173,12 +173,12 @@ namespace {
   TARGET_DECLARE_END
 
   template <typename Solver, bool Smooth, bool Error>
-  double integrate(const Solver& solver, const peano4::Partition& partition) {
+  double integrate(const Solver& solver, const peano4::CellConnectivity& cellConnectivity) {
     double result = 0.0;
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getCells().size),
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
       IntegrateOverCells<Solver, Smooth, Error>{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         solver.getSolution().getView(),
         solver.getTimeStepping().getTimeStamp()
       },
@@ -204,9 +204,9 @@ namespace {
     return limits;
   }
 
-  const peano4::Partition& buildPeriodicGrid(const int depth) {
+  const peano4::CellConnectivity& buildPeriodicGrid(const int depth) {
     peano4::tests::buildRegularGrid(depth, std::bitset<DIMENSIONS>((1ULL << DIMENSIONS) - 1));
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   /**
@@ -215,27 +215,27 @@ namespace {
   template <typename Solver>
   void finishStep(Solver& solver) {
     tarch::mpi::ReductionRecord record;
-    solver.contributeTo(record);
+    solver.addLocalValuesToGlobalReduction(record);
     record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-    solver.adoptFrom(record);
+    solver.readValuesFromGlobalReduction(record);
   }
 
   template <typename Solver>
-  void startOn(Solver& solver, const peano4::Partition& partition, const double terminalTime) {
+  void startOn(Solver& solver, const peano4::CellConnectivity& cellConnectivity, const double terminalTime) {
     solver.setLimits(getLimits(terminalTime));
-    solver.allocate(partition);
+    solver.allocate(cellConnectivity);
     exahype2::RefinementRequests requests;
-    requests.clear(partition.getNumberOfSlots());
-    solver.initialise(partition, requests);
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.initialise(cellConnectivity, requests);
     finishStep(solver);
   }
 
   template <typename Solver>
-  void advance(Solver& solver, const peano4::Partition& partition, const int steps) {
+  void advance(Solver& solver, const peano4::CellConnectivity& cellConnectivity, const int steps) {
     exahype2::RefinementRequests requests;
     for (int step = 0; step < steps; step++) {
-      requests.clear(partition.getNumberOfSlots());
-      solver.performTimeStep(partition, requests);
+      requests.clear(cellConnectivity.getNumberOfSlots());
+      solver.performTimeStep(cellConnectivity, requests);
       finishStep(solver);
     }
   }
@@ -247,16 +247,16 @@ namespace {
   template <int Order, int Volumes>
   double getAdvectionError(const int depth, const double endTime) {
     using Solver          = AdvectionSolver<Order, Volumes, true>;
-    const auto& partition = buildPeriodicGrid(depth);
+    const auto& cellConnectivity = buildPeriodicGrid(depth);
     Solver      solver;
-    startOn(solver, partition, endTime);
+    startOn(solver, cellConnectivity, endTime);
     exahype2::RefinementRequests requests;
     for (int step = 0; step < 100000 and solver.getTimeStepping().getTimeStamp() < endTime; step++) {
-      requests.clear(partition.getNumberOfSlots());
-      solver.performTimeStep(partition, requests);
+      requests.clear(cellConnectivity.getNumberOfSlots());
+      solver.performTimeStep(cellConnectivity, requests);
       finishStep(solver);
     }
-    const double error = integrate<Solver, true, true>(solver, partition);
+    const double error = integrate<Solver, true, true>(solver, cellConnectivity);
     solver.release();
     return error;
   }
@@ -277,11 +277,11 @@ exahype2::fv::ader::tests::SolverTest::run() {
 void
 exahype2::fv::ader::tests::SolverTest::testAUniformStateStaysUniform() {
   using Solver          = AdvectionSolver<2, 4, false>;
-  const auto& partition = buildPeriodicGrid(2);
+  const auto& cellConnectivity = buildPeriodicGrid(2);
   Solver      solver;
-  startOn(solver, partition, 1.0);
-  advance(solver, partition, 4);
-  const double error = integrate<Solver, false, true>(solver, partition);
+  startOn(solver, cellConnectivity, 1.0);
+  advance(solver, cellConnectivity, 4);
+  const double error = integrate<Solver, false, true>(solver, cellConnectivity);
   validateWithParams1(error < 1.0e-12, error);
   validate(solver.getTimeStepping().getTimeStamp() > 0.0);
   solver.release();
@@ -290,12 +290,12 @@ exahype2::fv::ader::tests::SolverTest::testAUniformStateStaysUniform() {
 void
 exahype2::fv::ader::tests::SolverTest::testPeriodicAdvectionConservesMass() {
   using Solver          = AdvectionSolver<3, 6, true>;
-  const auto& partition = buildPeriodicGrid(2);
+  const auto& cellConnectivity = buildPeriodicGrid(2);
   Solver      solver;
-  startOn(solver, partition, 1.0);
-  const double massBefore = integrate<Solver, true, false>(solver, partition);
-  advance(solver, partition, 4);
-  const double massAfter = integrate<Solver, true, false>(solver, partition);
+  startOn(solver, cellConnectivity, 1.0);
+  const double massBefore = integrate<Solver, true, false>(solver, cellConnectivity);
+  advance(solver, cellConnectivity, 4);
+  const double massAfter = integrate<Solver, true, false>(solver, cellConnectivity);
   validateWithParams2(std::abs(massAfter - massBefore) <= 1.0e-12 * std::abs(massBefore), massBefore, massAfter);
   solver.release();
 }
@@ -319,17 +319,17 @@ exahype2::fv::ader::tests::SolverTest::testALevelJumpConservesMass() {
   if (not spacetree.regrid({peano4::tests::getRefinementOfCentreCell(Depth)}, regrid)) {
     tarch::terminateWithError("The regrid of the test grid must change the grid.");
   }
-  const auto&                  partition = spacetree.getPartition();
+  const auto&                  cellConnectivity = spacetree.getCellConnectivity();
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.regrid(partition, regrid, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.regrid(cellConnectivity, regrid, requests);
   spacetree.finishRegrid();
   finishStep(solver);
-  validate(partition.getMaximumLevel() > partition.getMinimumLevel());
+  validate(cellConnectivity.getMaximumLevel() > cellConnectivity.getMinimumLevel());
 
-  const double massBefore = integrate<Solver, true, false>(solver, partition);
-  advance(solver, partition, 4);
-  const double massAfter = integrate<Solver, true, false>(solver, partition);
+  const double massBefore = integrate<Solver, true, false>(solver, cellConnectivity);
+  advance(solver, cellConnectivity, 4);
+  const double massAfter = integrate<Solver, true, false>(solver, cellConnectivity);
   validateWithParams2(std::abs(massAfter - massBefore) <= 1.0e-12 * std::abs(massBefore), massBefore, massAfter);
   solver.release();
 }
@@ -359,11 +359,11 @@ exahype2::fv::ader::tests::SolverTest::testSmoothAdvectionConvergesAtHighOrder()
 void
 exahype2::fv::ader::tests::SolverTest::testReleaseFreesEveryPool() {
   using Solver          = AdvectionSolver<2, 4, true>;
-  const auto& partition = buildPeriodicGrid(1);
+  const auto& cellConnectivity = buildPeriodicGrid(1);
   Solver      solver;
   validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
-  startOn(solver, partition, 1.0);
-  advance(solver, partition, 1);
+  startOn(solver, cellConnectivity, 1.0);
+  advance(solver, cellConnectivity, 1);
   validate(solver.getAllocatedBytes().getTotal() > solver.getSolution().getAllocatedBytes().getTotal());
   solver.release();
   validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});

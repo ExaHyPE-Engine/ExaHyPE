@@ -9,7 +9,7 @@
 #include "exahype2/fv/ader/PatchPredictor.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "peano4/HaloExchange.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -31,7 +31,7 @@ namespace exahype2::fv::ader {
  * side, that side applies the numerical flux of the Galerkin step, averaged over each volume face,
  * so the subgrid and the Galerkin cell beside it exchange the same flux.
  *
- * The predicted face halves cover every face of the partition.
+ * The predicted face halves cover every face of the cell connectivity.
  *
  * With a fallback reconstruction in Derived, every recomputing cell judges its corrected subgrid
  * with exahype2::fv::ader::Fallback and repeats a troubled step with the fallback scheme. It shares
@@ -60,13 +60,13 @@ public:
       typename exahype2::fv::ader::FallbackReconstructionOf<Generated>::Type>,
     void>;
 
-  INLINE_METHOD void rebuild(const peano4::Partition& partition);
+  INLINE_METHOD void rebuild(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void release();
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
   template <typename ExchangeHalo>
   INLINE_METHOD void advance(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     const Region&            region,
     const ExchangeHalo&      exchangeHalo,
     double                   timeStamp,
@@ -75,35 +75,35 @@ public:
 
 private:
   INLINE_METHOD void predict(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     const Region&            region,
     tarch::Span<const int>   cells,
     double                   timeStamp,
     double                   timeStepSize
   );
   INLINE_METHOD void solveRiemannProblems(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     const Region&            region,
     peano4::Adjacency        adjacency,
     double                   timeStamp,
     double                   timeStepSize
   );
   INLINE_METHOD void correct(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     const Region&            region,
     tarch::Span<const int>   cells,
     double                   timeStamp,
     double                   timeStepSize
   );
   INLINE_METHOD void fixUp(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     const Region&            region,
     tarch::Span<const int>   cells,
     double                   timeStamp,
     double                   timeStepSize
   );
   [[nodiscard]] INLINE_METHOD auto getCorrection(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     const Region&            region,
     tarch::Span<const int>   cells,
     double                   timeStamp,
@@ -129,7 +129,9 @@ TARGET_DECLARE
 /**
  * Solves the Riemann problems on every listed face with two recomputing sides or on the domain
  * boundary and reduces the largest wave speed. On a face with one recomputing side, that side's flux
- * half takes the flux that it applied in the Galerkin step from appliedFluxes instead.
+ * half takes the flux that it applied in the Galerkin step from appliedFluxes instead. Without
+ * appliedFluxes, the other side's half takes the state of its subcells in halo, constant in time,
+ * and the Riemann problem runs as on every other face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ader::SolveSubcellRiemannProblems final {
@@ -138,10 +140,11 @@ struct exahype2::fv::ader::SolveSubcellRiemannProblems final {
   using Scheme     = typename Step::template Scheme<>;
   using StatePool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
+  using HaloPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
   static constexpr int AppliedFluxValuesPerHalf = Kernel::AppliedFluxValuesPerFace / 2;
 
-  peano4::Partition              partition{};
+  peano4::CellConnectivity              cellConnectivity{};
   tarch::Span<const int>         faces{};
   typename StatePool::View       faceStates{};
   typename StatePool::View       faceFluxes{};
@@ -150,10 +153,21 @@ struct exahype2::fv::ader::SolveSubcellRiemannProblems final {
   const double*                  nodesToSubcells{nullptr};
   double                         timeStamp{0.0};
   double                         timeStepSize{0.0};
+  typename HaloPool::ConstView   halo{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, double& accumulator) const;
 
 private:
+  INLINE_METHOD GPU_CALLABLE_METHOD void fillHalfFromHalo(
+    int                                          face,
+    int                                          side,
+    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& faceWidth,
+    int                                          normal,
+    ComputePrecision* NOALIAS                    states,
+    ComputePrecision* NOALIAS                    fluxes
+  ) const;
+
   INLINE_METHOD GPU_CALLABLE_METHOD void imposeAppliedFlux(
     const ComputePrecision* NOALIAS appliedHalf,
     ComputePrecision* NOALIAS       fluxHalf,

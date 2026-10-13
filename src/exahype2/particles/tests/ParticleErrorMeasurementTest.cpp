@@ -31,7 +31,7 @@ namespace {
   };
 
   /**
-   * Deletes the time series file, which only the global master writes.
+   * Deletes the time series file. Only the global master writes this file.
    */
   void deleteTimeSeriesFile(const std::string& fileName) {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -51,7 +51,7 @@ exahype2::particles::tests::ParticleErrorMeasurementTest::run() {
 void
 exahype2::particles::tests::ParticleErrorMeasurementTest::testTheNormsSumThePositionErrorsOfEveryRank() {
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
   exahype2::particles::ParticleSet<NumberOfData> particles;
   std::vector<double>                            candidates;
@@ -62,7 +62,7 @@ exahype2::particles::tests::ParticleErrorMeasurementTest::testTheNormsSumThePosi
     candidates.push_back(1.0);
     candidates.push_back(2.0);
   }
-  particles.insert(partition, candidates);
+  particles.insert(cellConnectivity, candidates);
   const auto globalNumberOfParticles = static_cast<double>(peano4::tests::getGlobalSumOf(particles.getSize()));
 
   exahype2::ErrorMeasurement measurement;

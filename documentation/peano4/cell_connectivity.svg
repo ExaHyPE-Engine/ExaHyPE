@@ -19,7 +19,7 @@
     </marker>
   </defs>
 
-  <!-- Panel 1: the spacetree cut along the curve into three partitions -->
+  <!-- Panel 1: the spacetree cut along the curve into the cells of three ranks -->
   <text x="20" y="22" class="title">1. Spacetree cut along the curve</text>
   <g transform="translate(20,40)">
     <rect x="0" y="0" width="90" height="90" class="cell rank0"/>
@@ -48,8 +48,8 @@
     <text x="8" y="196" class="slot">rank 2</text>
   </g>
 
-  <!-- Panel 2: one partition with its slots, its remote faces and one level jump -->
-  <text x="340" y="22" class="title">2. The partition of rank 1</text>
+  <!-- Panel 2: one cell connectivity with its slots, its remote faces and one level jump -->
+  <text x="340" y="22" class="title">2. The cell connectivity of rank 1</text>
   <g transform="translate(340,40)">
     <rect x="0" y="0" width="90" height="90" class="cell rank1"/>
     <rect x="0" y="90" width="90" height="90" class="cell rank1"/>

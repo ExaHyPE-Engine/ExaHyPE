@@ -157,7 +157,7 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
+  const double waveSpeed = applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
     QL,
     QR,
     x,
@@ -170,6 +170,15 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
     FL,
     FR
   );
+  double fluxLeft[NumberOfUnknowns];
+  double fluxRight[NumberOfUnknowns];
+  flux(QL, x, h, t, dt, normal, fluxLeft);
+  flux(QR, x, h, t, dt, normal, fluxRight);
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    FL[unknown] += fluxLeft[unknown];
+    FR[unknown] += fluxRight[unknown];
+  }
+  return waveSpeed;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -179,22 +188,11 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
-  if (numberOfStates == 1) {
-    return applications::exahype2::exaskred::limiting::isAdmissibleState<
-      Shortcuts,
-      NumberOfUnknowns,
-      NumberOfAuxiliaryVariables
-    >(Q, 0.0);
-  }
-  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
+  return applications::exahype2::exaskred::limiting::isAdmissibleCell<
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
-  >(Q, numberOfStates);
-  const auto minimumDgWaterHeight = DGWetHeight;
-  const auto fullyWet             = statistics.minHeight > minimumDgWaterHeight;
-  const auto dryAtRest = statistics.minHeight >= 0.0 and statistics.maxHeight <= 0.0 and statistics.maxMomentum <= 0.0;
-  return statistics.finite and (fullyWet or dryAtRest);
+  >(Q, numberOfStates, WetHeight);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double

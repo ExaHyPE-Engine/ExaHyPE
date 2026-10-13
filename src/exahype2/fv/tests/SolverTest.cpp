@@ -10,9 +10,9 @@
 #include "exahype2/fv/singlestep/Solver.h"
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/singlestep/SingleStep.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/RefinementRequest.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
@@ -212,9 +212,9 @@ namespace {
     }
   };
 
-  const peano4::Partition& buildGrid() {
+  const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   /**
@@ -223,9 +223,9 @@ namespace {
   template <typename Solver>
   void finishStep(Solver& solver) {
     tarch::mpi::ReductionRecord record;
-    solver.contributeTo(record);
+    solver.addLocalValuesToGlobalReduction(record);
     record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-    solver.adoptFrom(record);
+    solver.readValuesFromGlobalReduction(record);
   }
 
   /**
@@ -243,16 +243,16 @@ namespace {
     if (not spacetree.regrid(refinementRequests, regrid)) {
       tarch::terminateWithError("The regrid of the test grid must change the grid.");
     }
-    const auto& partition = spacetree.getPartition();
-    requests.clear(partition.getNumberOfSlots());
-    solver.regrid(partition, regrid, requests);
+    const auto& cellConnectivity = spacetree.getCellConnectivity();
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.regrid(cellConnectivity, regrid, requests);
     spacetree.finishRegrid();
     finishStep(solver);
   }
 
-  int getNumberOfCellsOfLevel(const peano4::Partition& partition, const int level) {
-    return partition.getCells(peano4::Adjacency::Local, level).size
-      + partition.getCells(peano4::Adjacency::Remote, level).size;
+  int getNumberOfCellsOfLevel(const peano4::CellConnectivity& cellConnectivity, const int level) {
+    return cellConnectivity.getCells(peano4::Adjacency::Local, level).size
+      + cellConnectivity.getCells(peano4::Adjacency::Remote, level).size;
   }
 
   exahype2::Limits getLimitsOfTheDomain() {
@@ -270,26 +270,26 @@ namespace {
    * at the centre of the volume of level that covers it.
    */
   struct CountMismatchesAgainstTheProfile final {
-    peano4::Partition                partition{};
+    peano4::CellConnectivity         cellConnectivity{};
     LinearSolver::Patches::ConstView solution{};
     int                              level{0};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, int& accumulator) const {
-      const int                             cell      = partition.getCells()[entry];
-      const int                             cellLevel = partition.getCellLevel(cell);
-      const auto                            lattice   = partition.getCellLattice(cell);
+      const int                             cell      = cellConnectivity.getCells()[entry];
+      const int                             cellLevel = cellConnectivity.getCellLevel(cell);
+      const auto                            lattice   = cellConnectivity.getCellLattice(cell);
       tarch::la::Vector<DIMENSIONS, double> coarseCentre;
       tarch::la::Vector<DIMENSIONS, double> coarseWidth;
       tarch::la::Vector<DIMENSIONS, int>    childPosition(0);
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         if (cellLevel == level) {
-          coarseCentre(axis) = partition.getCellCentre(cell, axis);
-          coarseWidth(axis)  = partition.getCellWidth(cell, axis);
+          coarseCentre(axis) = cellConnectivity.getCellCentre(cell, axis);
+          coarseWidth(axis)  = cellConnectivity.getCellWidth(cell, axis);
         } else {
           const int parentLattice = lattice(axis) / peano4::SubdivisionFactor;
-          coarseWidth(axis)       = partition.getWidthOfLevel(level, axis);
-          coarseCentre(axis)      = partition.getDomainOffset()(axis) + (parentLattice + 0.5) * coarseWidth(axis);
-          childPosition(axis)     = lattice(axis) % peano4::SubdivisionFactor;
+          coarseWidth(axis)       = cellConnectivity.getWidthOfLevel(level, axis);
+          coarseCentre(axis)  = cellConnectivity.getDomainOffset()(axis) + (parentLattice + 0.5) * coarseWidth(axis);
+          childPosition(axis) = lattice(axis) % peano4::SubdivisionFactor;
         }
       }
       const double* const values = solution.getChunk(cell);
@@ -314,11 +314,11 @@ namespace {
    * Adds one to the accumulator for every value of one cell that differs from PostprocessedValue.
    */
   struct CountValuesWithoutPostprocessing final {
-    peano4::Partition                        partition{};
+    peano4::CellConnectivity                 cellConnectivity{};
     PostprocessingSolver::Patches::ConstView solution{};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, int& accumulator) const {
-      const int cell = partition.getCells()[entry];
+      const int cell = cellConnectivity.getCells()[entry];
       for (int value = 0; value < ValuesPerPatch; value++) {
         if (solution.getChunk(cell)[value] != PostprocessedValue) {
           accumulator++;
@@ -335,14 +335,14 @@ namespace {
    */
   template <typename SolverType>
   int getNumberOfMismatchesAgainstTheProfileOfLevel(
-    const SolverType&        solver,
-    const peano4::Partition& partition,
-    const int                level
+    const SolverType&               solver,
+    const peano4::CellConnectivity& cellConnectivity,
+    const int                       level
   ) {
     int mismatches = 0;
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getCells().size),
-      CountMismatchesAgainstTheProfile{partition.onDevice(), solver.getSolution().getView(), level},
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
+      CountMismatchesAgainstTheProfile{cellConnectivity.onDevice(), solver.getSolution().getView(), level},
       tarch::accelerator::Sum<int>{mismatches}
     );
     return mismatches;
@@ -351,11 +351,14 @@ namespace {
   /**
    * Counts the values of every cell that the patch postprocessing has not overwritten.
    */
-  int getNumberOfValuesWithoutPostprocessing(const PostprocessingSolver& solver, const peano4::Partition& partition) {
+  int getNumberOfValuesWithoutPostprocessing(
+    const PostprocessingSolver&     solver,
+    const peano4::CellConnectivity& cellConnectivity
+  ) {
     int values = 0;
     tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(partition.getCells().size),
-      CountValuesWithoutPostprocessing{partition.onDevice(), solver.getSolution().getView()},
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
+      CountValuesWithoutPostprocessing{cellConnectivity.onDevice(), solver.getSolution().getView()},
       tarch::accelerator::Sum<int>{values}
     );
     return values;
@@ -382,18 +385,18 @@ exahype2::fv::tests::SolverTest::run() {
  */
 void
 exahype2::fv::tests::SolverTest::testThePostprocessingOfTheUpdatedPatchFeedsTheNextTimeStep() {
-  const auto&          partition = buildGrid();
+  const auto&          cellConnectivity = buildGrid();
   PostprocessingSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
-  validate(getNumberOfValuesWithoutPostprocessing(solver, partition) > 0);
-  solver.performTimeStep(partition, requests);
+  validate(getNumberOfValuesWithoutPostprocessing(solver, cellConnectivity) > 0);
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
-  validateEquals(getNumberOfValuesWithoutPostprocessing(solver, partition), 0);
+  validateEquals(getNumberOfValuesWithoutPostprocessing(solver, cellConnectivity), 0);
   validateNumericalEquals(
     solver.getTimeStepping().getTimeStepSizeOfNextStep(),
     TimeStepFactor * CoarseWidth / (PatchSize * DIMENSIONS * PostprocessedWaveSpeed)
@@ -406,20 +409,20 @@ exahype2::fv::tests::SolverTest::testThePostprocessingOfTheUpdatedPatchFeedsTheN
  */
 void
 exahype2::fv::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
-  const auto&                                             partition = buildGrid();
+  const auto&                                             cellConnectivity = buildGrid();
   LinearSolverFor<exahype2::TimeStepping::Rule::Adaptive> solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
-  solver.performTimeStep(partition, requests);
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   peano4::Spacetree::getInstance().markPersistentDataLive();
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
-  requests.clear(partition.getNumberOfSlots());
-  solver.performTimeStep(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   validateNumericalEquals(
     solver.getTimeStepping().getTimeStepSizeOfLastStep(),
@@ -430,24 +433,24 @@ exahype2::fv::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() 
 
 void
 exahype2::fv::tests::SolverTest::testInitialisationWritesTheInitialConditionIntoEveryVolume() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   LinearSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  requests.merge(exahype2::RefinementCommand::Erase, partition.getCells());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  requests.merge(exahype2::RefinementCommand::Erase, cellConnectivity.getCells());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
 
-  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, cellConnectivity, Depth), 0);
   validateEquals(solver.getNumberOfDoFs(), ValuesPerPatch);
-  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
   validateNumericalEquals(solver.getTimeStepping().getMinMeshWidth(), CoarseWidth / PatchSize);
   validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth / PatchSize);
   validate(solver.getAllocatedBytes().getTotal() > 0);
-  validate(requests.getRefinementRequests(partition).empty());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
   solver.release();
 }
 
@@ -457,28 +460,28 @@ exahype2::fv::tests::SolverTest::testInitialisationWritesTheInitialConditionInto
  */
 void
 exahype2::fv::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   LinearSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), 0.0);
 
   for (int step = 0; step < 3; step++) {
-    requests.clear(partition.getNumberOfSlots());
-    solver.performTimeStep(partition, requests);
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.performTimeStep(cellConnectivity, requests);
     finishStep(solver);
     const double expectedStepSize = step == 0 ? 0.0 : TimeStepFactor;
-    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0, step);
+    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, cellConnectivity, Depth), 0, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStamp(), step * TimeStepFactor, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSizeOfLastStep(), expectedStepSize, step);
     validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSize(), TimeStepFactor, step);
   }
-  validate(requests.getRefinementRequests(partition).empty());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
   solver.release();
 }
 
@@ -487,44 +490,44 @@ exahype2::fv::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdva
  */
 void
 exahype2::fv::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   LinearSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
-  solver.performTimeStep(partition, requests);
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
 
   regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize / peano4::SubdivisionFactor);
-  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(partition, Depth + 1)) > 0);
-  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0);
+  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(cellConnectivity, Depth + 1)) > 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, cellConnectivity, Depth), 0);
   validateNumericalEquals(
     solver.getTimeStepping().getMinMeshWidth(),
     CoarseWidth / (peano4::SubdivisionFactor * PatchSize)
   );
   validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth / PatchSize);
 
-  requests.clear(partition.getNumberOfSlots());
-  solver.performTimeStep(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
   validateNumericalEquals(
     solver.getTimeStepping().getTimeStepSizeOfLastStep(),
     coarseTimeStepSize / peano4::SubdivisionFactor
   );
-  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, cellConnectivity, Depth), 0);
 
   regridWithLiveData(solver, peano4::tests::getErasureOfEveryCell(Depth), requests);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize);
-  validateEquals(partition.getMaximumLevel(), Depth);
-  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, partition, Depth), 0);
-  validateEquals(peano4::tests::getGlobalSumOf(partition.getCells().size), RegularCells);
+  validateEquals(cellConnectivity.getMaximumLevel(), Depth);
+  validateEquals(getNumberOfMismatchesAgainstTheProfileOfLevel(solver, cellConnectivity, Depth), 0);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
   solver.release();
 }
 
@@ -534,22 +537,22 @@ exahype2::fv::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution()
  */
 void
 exahype2::fv::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend() {
-  const auto& partition = buildGrid();
-  const auto& rank      = tarch::mpi::Rank::getInstance();
+  const auto& cellConnectivity = buildGrid();
+  const auto& rank             = tarch::mpi::Rank::getInstance();
 
   LinearSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  solver.initialise(partition, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
   finishStep(solver);
 
   const std::string outputDirectory =
     (tarch::tests::getWritableTestDirectory() / "FiniteVolumeSolverPlotTest").string() + "/";
   std::filesystem::create_directories(outputDirectory + "patch/");
   const tarch::AllocatedBytes bytesBeforePlot = solver.getAllocatedBytes();
-  solver.plot(partition, tarch::plotter::Format::VTU, outputDirectory);
+  solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory);
   const tarch::AllocatedBytes bytesAfterPlot = solver.getAllocatedBytes();
 
   const auto&           solution = solver.getSolution();
@@ -573,12 +576,12 @@ exahype2::fv::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend
  */
 void
 exahype2::fv::tests::SolverTest::testReleaseFreesEveryPool() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
 
   LinearSolver solver;
   solver.setLimits(getLimitsOfTheDomain());
   validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
-  solver.allocate(partition);
+  solver.allocate(cellConnectivity);
   const tarch::AllocatedBytes solutionBytes = solver.getSolution().getAllocatedBytes();
   validate(solutionBytes.getTotal() > 0);
   validate(solver.getAllocatedBytes().host >= solutionBytes.host);

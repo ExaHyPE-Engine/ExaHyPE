@@ -52,13 +52,14 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getAlloc
 /**
  * Predicts the listed cells and returns the largest wave speed of the faces inside their patches
  * and the numbers of the diverged and the unconverged volumes. A diverged volume writes NaN. With a
- * previousSolution, every cell first copies its patch there.
+ * previousSolution, every cell first copies its patch there. With statuses, a cell with a diverged or
+ * an unconverged volume writes FallbackStatus::FailedPrediction into its status.
  */
 template <typename StoragePrecision, typename ComputePrecision>
 template <typename Derived>
 INLINE_METHOD exahype2::fv::ader::PredictionStatistics
 exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
-  const peano4::Partition&           partition,
+  const peano4::CellConnectivity&           cellConnectivity,
   const tarch::Span<const int>       cells,
   const typename CellPool::View      solution,
   const typename FacePool::ConstView halo,
@@ -66,7 +67,8 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
   const typename StatePool::View     faceFluxes,
   const double                       timeStamp,
   const double                       timeStepSize,
-  const typename CellPool::View      previousSolution
+  const typename CellPool::View      previousSolution,
+  const tarch::accelerator::ChunkedMemoryPool<int>::View statuses
 ) {
   exahype2::fv::ader::PredictionStatistics statistics;
   if (cells.size == 0) {
@@ -83,7 +85,7 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
       Scheme<Derived>::Predictor::getTeamScratchBytes(threadsPerTeam)
     ),
     exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       cells,
       numberOfTeams,
       getThreadsPerVolume<Derived>(),
@@ -97,7 +99,8 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
       scratchSizePerTeam,
       static_cast<int>(_scratch.getSize() / static_cast<std::size_t>(scratchSizePerTeam)),
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      statuses
     },
     tarch::accelerator::Custom<exahype2::fv::ader::PredictionStatistics>{statistics}
   );

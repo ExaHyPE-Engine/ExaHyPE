@@ -3,7 +3,7 @@
 #pragma once
 
 #include "exahype2/RefinementCommand.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/Buffer.h"
@@ -24,7 +24,7 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * Refinement votes of one solver, one command per slot of the partition. Every vote method
+ * Refinement votes of one solver, one command per slot of the cell connectivity. Every vote method
  * computes the commands on the device and merges them into requests.
  */
 class exahype2::RefinementVotes final {
@@ -38,44 +38,44 @@ public:
 
   template <typename Derived, typename StoragePrecision>
   INLINE_METHOD void voteOnGridConstruction(
-    const peano4::Partition&      partition,
-    const exahype2::Limits&       limits,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    const exahype2::Limits&         limits,
+    exahype2::RefinementRequests&   requests
   );
 
   template <typename Derived, typename SolutionView>
   INLINE_METHOD void voteOnEveryCell(
-    const peano4::Partition&      partition,
-    const SolutionView&           solution,
-    const exahype2::Limits&       limits,
-    double                        timeStamp,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    const SolutionView&             solution,
+    const exahype2::Limits&         limits,
+    double                          timeStamp,
+    exahype2::RefinementRequests&   requests
   );
 
   template <typename Derived, typename SolutionView>
   INLINE_METHOD void voteOnCells(
-    const peano4::Partition&      partition,
-    const std::vector<int>&       cells,
-    const SolutionView&           solution,
-    const exahype2::Limits&       limits,
-    double                        timeStamp,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    const std::vector<int>&         cells,
+    const SolutionView&             solution,
+    const exahype2::Limits&         limits,
+    double                          timeStamp,
+    exahype2::RefinementRequests&   requests
   );
 
   INLINE_METHOD void release();
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
   [[nodiscard]] static INLINE_METHOD bool canRefineOrErase(
-    const peano4::Partition& partition,
-    const exahype2::Limits&  limits
+    const peano4::CellConnectivity& cellConnectivity,
+    const exahype2::Limits&         limits
   );
 
 private:
   INLINE_METHOD void reserve(int numberOfSlots);
   INLINE_METHOD void merge(
-    const peano4::Partition&      partition,
-    int                           votes,
-    tarch::Span<const int>        cellsOnHost,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    int                             votes,
+    tarch::Span<const int>          cellsOnHost,
+    exahype2::RefinementRequests&   requests
   );
 
   tarch::accelerator::Buffer<exahype2::RefinementCommand> _commands{tarch::MemoryLocation::Device};
@@ -97,12 +97,12 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * Calls the refinement criterion of Derived on one cell of a grid under construction, whose
- * patch holds no data yet, and adds one to the accumulator when the command differs from Keep.
+ * Calls the refinement criterion of Derived on one cell of a grid under construction and adds one
+ * to the accumulator when the command differs from Keep. The patch of the cell is still empty.
  */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::VoteOnGridConstruction final {
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   exahype2::RefinementCommand* commands{nullptr};
   double                       maxAdmissibleSize{0.0};
   double                       minAdmissibleSize{0.0};
@@ -116,7 +116,7 @@ struct exahype2::VoteOnGridConstruction final {
  */
 template <typename Derived, typename SolutionView>
 struct exahype2::VoteOnRefinement final {
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   SolutionView                 solution{};
   exahype2::RefinementCommand* commands{nullptr};

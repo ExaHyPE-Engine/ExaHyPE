@@ -102,16 +102,18 @@ tarch::accelerator::releaseReductionScratch() {
  * empty loop.
  */
 int
-tarch::accelerator::getNumberOfHostTasks(const int numberOfItems, const int numberOfThreads, const double secondsPerItem) {
+tarch::accelerator::getNumberOfHostTasks(
+  const int    numberOfItems,
+  const int    numberOfThreads,
+  const double secondsPerItem
+) {
   assertion(numberOfItems >= 0, numberOfItems);
   assertion(numberOfThreads > 0, numberOfThreads);
   assertion(std::isfinite(secondsPerItem) and secondsPerItem >= 0.0, secondsPerItem);
-  const int    fewestTasks        = std::max(1, std::min(numberOfItems, numberOfThreads));
-  const int    mostTasks          = std::max(1, std::min(numberOfItems, MaximumHostTasksPerThread * numberOfThreads));
-  const double tasksOfMinimumWork = std::min(
-    numberOfItems * secondsPerItem / MinimumSecondsPerHostTask,
-    static_cast<double>(mostTasks)
-  );
+  const int    fewestTasks = std::max(1, std::min(numberOfItems, numberOfThreads));
+  const int    mostTasks   = std::max(1, std::min(numberOfItems, MaximumHostTasksPerThread * numberOfThreads));
+  const double tasksOfMinimumWork =
+    std::min(numberOfItems * secondsPerItem / MinimumSecondsPerHostTask, static_cast<double>(mostTasks));
   return std::clamp(static_cast<int>(std::lround(tasksOfMinimumWork)), fewestTasks, mostTasks);
 }
 

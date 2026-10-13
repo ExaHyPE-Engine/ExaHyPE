@@ -14,13 +14,13 @@ exahype2::plotter::FacePlotter::FacePlotter(std::string filename, std::vector<Da
  * has its lower cell on another rank.
  */
 std::vector<int>
-exahype2::plotter::FacePlotter::getPlottedFaces(const peano4::Partition& partition) {
+exahype2::plotter::FacePlotter::getPlottedFaces(const peano4::CellConnectivity& cellConnectivity) {
   std::vector<int> faces;
   for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
     for (const auto kind : {peano4::FaceKind::Interior, peano4::FaceKind::Boundary, peano4::FaceKind::Hanging}) {
-      for (const int face : partition.getFaces(adjacency, kind)) {
-        const bool lowerCellLocal  = partition.getFaceCell(face, 0) >= 0;
-        const bool upperCellLocal  = partition.getFaceCell(face, 1) >= 0;
+      for (const int face : cellConnectivity.getFaces(adjacency, kind)) {
+        const bool lowerCellLocal  = cellConnectivity.getFaceCell(face, 0) >= 0;
+        const bool upperCellLocal  = cellConnectivity.getFaceCell(face, 1) >= 0;
         const bool lowerCellRemote = kind == peano4::FaceKind::Interior and adjacency == peano4::Adjacency::Remote;
         if (lowerCellLocal or (upperCellLocal and not lowerCellRemote)) {
           faces.push_back(face);

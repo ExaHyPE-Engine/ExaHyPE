@@ -77,7 +77,7 @@ tarch::la::ExactAccumulator::roundQuotient() const {
   static_assert(Divisor > 0, "The divisor of a rounded quotient must be positive.");
   constexpr std::int64_t WideDivisor = Divisor;
   std::int64_t           digits[NumberOfLimbs];
-  std::int64_t carry = 0;
+  std::int64_t           carry = 0;
   for (int limb = 0; limb < NumberOfLimbs; limb++) {
     const std::int64_t total = _limbs[limb] + carry;
     digits[limb]             = total & LimbMask;

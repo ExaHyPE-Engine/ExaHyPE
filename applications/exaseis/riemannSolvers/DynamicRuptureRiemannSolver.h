@@ -13,10 +13,11 @@ namespace applications::exahype2::exaseis {
   template <typename Value>
   INLINE_METHOD GPU_CALLABLE_METHOD Value getBoxcar(double coordinate, Value halfWidth);
 
-  template <typename Value>
+  template <typename Shortcuts, typename Value>
   INLINE_METHOD GPU_CALLABLE_METHOD Value getFrictionalStrength(
     Value         normalStress,
     Value         slip,
+    const Value*  Q,
     const double* x,
     double        t
   );

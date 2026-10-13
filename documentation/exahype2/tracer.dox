@@ -25,7 +25,7 @@ tracers.insert_with_data([[x0, y0, q0, q1, q2, q3]])
 tracers.insert_from_file("particles.dat", scale_factor=1.0)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A coordinate carries at least one component per axis of the build. The
+A coordinate lists at least one component per axis of the build. The
 argument `transform` of `insert_by_coordinates` names a C++ callable of the
 solver that maps every coordinate onto the position the particle takes; the
 curvilinear ExaSeis applications pass `invertProjection` to place a tracer at
@@ -34,7 +34,7 @@ the mesh position of a physical coordinate.
 # Moving the tracers
 
 A solver moves a set after the grid initialisation and after every time step
-the two flags select, with the forces the set carries:
+the two flags select, with the forces of the set:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 solver.trace(
@@ -62,7 +62,7 @@ same state.
 The set lives in exahype2::particles::ParticleSet: the position and the data
 of every particle in one array, the two-integer number of the particle and
 the slot of the cell that holds it. A particle that left its rank travels to
-the rank whose partition holds its new position after every trace.
+the rank whose cells contain its new position after every trace.
 
 # Sampling the traces of a plane
 

@@ -230,14 +230,14 @@ exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, Di
     ComputePrecision* ownStateHalves[peano4::FacesPerCell];
     ComputePrecision* ownFluxHalves[peano4::FacesPerCell];
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-      const int face             = partition.getCellFace(slot, faceNumber);
+      const int face             = cellConnectivity.getCellFace(slot, faceNumber);
       const int half             = exahype2::dg::getOwnHalf(faceNumber);
       ownStateHalves[faceNumber] = faceStates.getChunk(face) + half * StateValuesPerFace;
       ownFluxHalves[faceNumber]  = faceFluxes.getChunk(face) + half * FluxValuesPerFace;
     }
     const int outcome = exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
-      partition.getCellCentre(slot),
-      partition.getCellWidth(slot),
+      cellConnectivity.getCellCentre(slot),
+      cellConnectivity.getCellWidth(slot),
       ownStateHalves,
       ownFluxHalves,
       solution.getChunk(slot),

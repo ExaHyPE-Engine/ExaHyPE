@@ -27,6 +27,7 @@ class SubcellLimiting:
         number_of_dmp_observables=0,
         dmp_relaxation_parameter=0.0,
         dmp_differences_scaling=0.0,
+        galerkin_flux_coupling=True,
     ):
         """Enables a-posteriori limiting with the finite-volume ``scheme``.
 
@@ -34,6 +35,11 @@ class SubcellLimiting:
         its neighbours by the larger of ``dmp_relaxation_parameter`` and
         ``dmp_differences_scaling`` times that range (Dumbser et al., arXiv:1406.7416,
         equation 23).
+
+        With ``galerkin_flux_coupling``, a subgrid applies on a face to a Galerkin cell the numerical
+        flux of the Galerkin step, so both sides exchange the same flux. Without it, the subgrid
+        solves the subcell Riemann problem with the subcells of the Galerkin cell in its halo, which
+        keeps the subcell scheme's own stability at the price of conservation on these faces.
         """
         if self.subcell_limiter_is_enabled:
             raise RuntimeError("The subcell limiter is already configured.")
@@ -75,6 +81,7 @@ class SubcellLimiting:
         self._subcell_limiter_number_of_dmp_observables = number_of_dmp_observables
         self._subcell_limiter_dmp_relaxation_parameter = dmp_relaxation_parameter
         self._subcell_limiter_dmp_differences_scaling = dmp_differences_scaling
+        self._subcell_limiter_galerkin_flux_coupling = bool(galerkin_flux_coupling)
         return self
 
     @property
@@ -155,6 +162,9 @@ class SubcellLimiting:
             "using Reconstruction         = {};".format(scheme.reconstruction),
             "using FallbackReconstruction = {};".format(
                 scheme.fallback_reconstruction or "void"
+            ),
+            "static constexpr bool GalerkinFluxCoupling = {};".format(
+                "true" if self._subcell_limiter_galerkin_flux_coupling else "false"
             ),
         ]
 

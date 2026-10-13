@@ -70,13 +70,13 @@ exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, C
 ) const {
   constexpr int FluxValuesPerFace                    = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
   const int     slot                                 = cells[entry];
-  const tarch::la::Vector<DIMENSIONS, double> centre = partition.getCellCentre(slot);
-  const tarch::la::Vector<DIMENSIONS, double> width  = partition.getCellWidth(slot);
+  const tarch::la::Vector<DIMENSIONS, double> centre = cellConnectivity.getCellCentre(slot);
+  const tarch::la::Vector<DIMENSIONS, double> width  = cellConnectivity.getCellWidth(slot);
   const ComputePrecision*                     fluxes[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    const int face = partition.getCellFace(slot, faceNumber);
-    fluxes[faceNumber] =
-      faceFluxes.getChunk(face) + exahype2::dg::getCorrectionHalf(partition, face, faceNumber) * FluxValuesPerFace;
+    const int face     = cellConnectivity.getCellFace(slot, faceNumber);
+    fluxes[faceNumber] = faceFluxes.getChunk(face)
+      + exahype2::dg::getCorrectionHalf(cellConnectivity, face, faceNumber) * FluxValuesPerFace;
   }
   StoragePrecision* const updated = solution.getChunk(slot);
   accumulator                     = exahype2::dg::MaxEigenvalueStatistics::combine(

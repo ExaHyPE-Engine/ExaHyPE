@@ -110,11 +110,9 @@ tarch::accelerator::Device::isMPIGPUAware() const {
 std::string
 tarch::accelerator::Device::getIdOfCurrentDevice() const {
   std::array<char, 32> busAddress{};
-  CHECK_HIP_ERROR(hipDeviceGetPCIBusId(
-    busAddress.data(),
-    static_cast<int>(busAddress.size()),
-    tarch::accelerator::getCurrentDevice()
-  ));
+  CHECK_HIP_ERROR(
+    hipDeviceGetPCIBusId(busAddress.data(), static_cast<int>(busAddress.size()), tarch::accelerator::getCurrentDevice())
+  );
   return busAddress.data();
 }
 

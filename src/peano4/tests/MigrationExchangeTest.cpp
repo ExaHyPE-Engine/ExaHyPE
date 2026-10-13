@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MigrationExchangeTest.h"
 
+#include "peano4/CellConnectivity.h"
 #include "peano4/MigrationExchange.h"
-#include "peano4/Partition.h"
 #include "peano4/RefinementRequest.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
@@ -46,16 +46,16 @@ namespace {
    * Writes the level and the lattice position of one cell into its chunk.
    */
   struct FillChunkWithCellIdentity final {
-    peano4::Partition partition{};
-    const int*        cells{nullptr};
-    Pool::View        chunks{};
+    peano4::CellConnectivity cellConnectivity{};
+    const int*               cells{nullptr};
+    Pool::View               chunks{};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index) const {
       const int     slot  = cells[index];
       double* const chunk = chunks.getChunk(slot);
-      chunk[0]            = partition.getCellLevel(slot);
+      chunk[0]            = cellConnectivity.getCellLevel(slot);
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        chunk[1 + axis] = partition.getCellLattice(slot)(axis);
+        chunk[1 + axis] = cellConnectivity.getCellLattice(slot)(axis);
       }
       chunk[MarkerEntry] = FilledMarker;
     }
@@ -66,20 +66,20 @@ namespace {
    * migration marker.
    */
   struct CountMismatchesInSlot final {
-    peano4::Partition partition{};
-    Pool::ConstView   chunks{};
-    const int*        filledSlots{nullptr};
-    int*              mismatchesOfEntry{nullptr};
+    peano4::CellConnectivity cellConnectivity{};
+    Pool::ConstView          chunks{};
+    const int*               filledSlots{nullptr};
+    int*                     mismatchesOfEntry{nullptr};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry) const {
       const int           slot       = filledSlots[entry];
       const double* const chunk      = chunks.getChunk(slot);
       int                 mismatches = 0;
-      if (chunk[0] != partition.getCellLevel(slot)) {
+      if (chunk[0] != cellConnectivity.getCellLevel(slot)) {
         mismatches++;
       }
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        if (chunk[1 + axis] != partition.getCellLattice(slot)(axis)) {
+        if (chunk[1 + axis] != cellConnectivity.getCellLattice(slot)(axis)) {
           mismatches++;
         }
       }
@@ -140,24 +140,28 @@ namespace {
   /**
    * Writes the level and the lattice position of every cell into its chunk.
    */
-  void fillChunksWithCellIdentity(Pool& pool, const peano4::Partition& partition) {
+  void fillChunksWithCellIdentity(Pool& pool, const peano4::CellConnectivity& cellConnectivity) {
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(partition.getCells().size),
-      FillChunkWithCellIdentity{partition.onDevice(), partition.onDevice().getCells().data, pool.getView()}
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
+      FillChunkWithCellIdentity{
+        cellConnectivity.onDevice(),
+        cellConnectivity.onDevice().getCells().data,
+        pool.getView()
+      }
     );
   }
 
   int getNumberOfMismatchesInFilledSlots(
-    const Pool&              pool,
-    const peano4::Partition& partition,
-    const std::vector<int>&  filledSlots
+    const Pool&                     pool,
+    const peano4::CellConnectivity& cellConnectivity,
+    const std::vector<int>&         filledSlots
   ) {
     tarch::accelerator::Buffer<int> slots(pool.getLocation());
     slots.setValues(filledSlots);
     tarch::accelerator::Buffer<int> mismatchesOfEntry(filledSlots.size(), pool.getLocation());
     tarch::accelerator::parallelFor(
       tarch::accelerator::Range(static_cast<int>(filledSlots.size())),
-      CountMismatchesInSlot{partition.onDevice(), pool.getView(), slots.getData(), mismatchesOfEntry.getData()}
+      CountMismatchesInSlot{cellConnectivity.onDevice(), pool.getView(), slots.getData(), mismatchesOfEntry.getData()}
     );
     const std::vector<int> mismatches = mismatchesOfEntry.getValues();
     return std::accumulate(mismatches.begin(), mismatches.end(), 0);
@@ -177,13 +181,13 @@ namespace {
    * Runs one regrid with the requests, migrates the pool and returns the outcome.
    */
   Outcome migrateAndCount(Exchange& exchange, Pool& pool, const std::vector<peano4::RefinementRequest>& requests) {
-    auto&          spacetree = peano4::Spacetree::getInstance();
-    const auto&    partition = spacetree.getPartition();
+    auto&          spacetree        = peano4::Spacetree::getInstance();
+    const auto&    cellConnectivity = spacetree.getCellConnectivity();
     peano4::Regrid regrid;
     if (not spacetree.regrid(requests, regrid)) {
       tarch::terminateWithError("The regrid of the test grid must change the grid.");
     }
-    pool.reserve(partition.getNumberOfSlots());
+    pool.reserve(cellConnectivity.getNumberOfSlots());
 
     std::vector<int> filledSlots;
     int              sentCells = 0;
@@ -205,9 +209,9 @@ namespace {
     outcome.receivedSlots      = peano4::tests::getGlobalSumOf(receivedSlots);
     outcome.locallyFilledSlots = peano4::tests::getGlobalSumOf(static_cast<int>(filledSlots.size()) - receivedSlots);
     outcome.mismatches =
-      peano4::tests::getGlobalSumOf(getNumberOfMismatchesInFilledSlots(pool, partition, filledSlots));
+      peano4::tests::getGlobalSumOf(getNumberOfMismatchesInFilledSlots(pool, cellConnectivity, filledSlots));
     spacetree.finishRegrid();
-    fillChunksWithCellIdentity(pool, partition);
+    fillChunksWithCellIdentity(pool, cellConnectivity);
     return outcome;
   }
 
@@ -218,8 +222,8 @@ namespace {
     peano4::tests::buildRegularGrid(Depth);
     auto& spacetree = peano4::Spacetree::getInstance();
     spacetree.markPersistentDataLive();
-    pool.reserve(spacetree.getPartition().getNumberOfSlots());
-    fillChunksWithCellIdentity(pool, spacetree.getPartition());
+    pool.reserve(spacetree.getCellConnectivity().getNumberOfSlots());
+    fillChunksWithCellIdentity(pool, spacetree.getCellConnectivity());
   }
 } // namespace
 
@@ -268,10 +272,10 @@ peano4::tests::MigrationExchangeTest::testExchangesHoldDistinctTags() {
   second.migrate(pool, noMoves, IdentityTransfer{std::as_const(pool).getView()});
   validate(second.getTag() > first.getTag());
 
-  const int tags[2]{first.getTag(), second.getTag()};
-  int       minimumTags[2]{0, 0};
-  int       maximumTags[2]{0, 0};
-  MPI_Comm  communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  const int      tags[2]{first.getTag(), second.getTag()};
+  int            minimumTags[2]{0, 0};
+  int            maximumTags[2]{0, 0};
+  const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
   tarch::mpi::allreduce(tags, minimumTags, 2, MPI_INT, MPI_MIN, communicator);
   tarch::mpi::allreduce(tags, maximumTags, 2, MPI_INT, MPI_MAX, communicator);
   validateEquals(minimumTags[0], maximumTags[0]);

@@ -12,9 +12,9 @@
 #include "exahype2/terms/BoundaryConditions.h"
 #include "exahype2/terms/InitialCondition.h"
 #include "exahype2/terms/RefinementCriterion.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/HaloExchange.h"
 #include "peano4/MigrationExchange.h"
-#include "peano4/Partition.h"
 #include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -70,24 +70,27 @@ public:
   );
 
   INLINE_METHOD void requestRefinementForGridConstruction(
-    const peano4::Partition&      partition,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
   );
-  INLINE_METHOD void allocate(const peano4::Partition& partition);
-  INLINE_METHOD void initialise(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void initialise(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
+  );
   INLINE_METHOD void regrid(
-    const peano4::Partition&      partition,
-    const peano4::Regrid&         regrid,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    exahype2::RefinementRequests&   requests
   );
   INLINE_METHOD void plot(
-    const peano4::Partition& partition,
-    tarch::plotter::Format   format,
-    const std::string&       outputDirectory
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
   );
   INLINE_METHOD void release();
-  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
-  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
   INLINE_METHOD void setLimits(const exahype2::Limits& limits);
   INLINE_METHOD void openErrorMeasurement(const std::string& fileName, double timeDeltaBetweenSnapshots);
@@ -97,10 +100,10 @@ public:
   [[nodiscard]] INLINE_METHOD int getNumberOfDoFs() const;
 
 protected:
-  INLINE_METHOD void applyBoundaryConditions(const peano4::Partition& partition);
-  INLINE_METHOD void interpolateCoarseHalos(const peano4::Partition& partition, peano4::Adjacency adjacency);
+  INLINE_METHOD void applyBoundaryConditions(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void interpolateCoarseHalos(const peano4::CellConnectivity& cellConnectivity, peano4::Adjacency adjacency);
   INLINE_METHOD void closeTimeStep(
-    const peano4::Partition&      partition,
+    const peano4::CellConnectivity&      cellConnectivity,
     double                        timeStepSize,
     double                        maxEigenvalue,
     exahype2::RefinementRequests& requests
@@ -114,10 +117,10 @@ protected:
   exahype2::TimeStepping _timeStepping;
 
 private:
-  INLINE_METHOD void projectOntoFaces(const peano4::Partition& partition);
-  [[nodiscard]] INLINE_METHOD double measureMaxEigenvalue(const peano4::Partition& partition);
-  INLINE_METHOD void measureError(const peano4::Partition& partition);
-  INLINE_METHOD void measureMeshWidths(const peano4::Partition& partition);
+  INLINE_METHOD void projectOntoFaces(const peano4::CellConnectivity& cellConnectivity);
+  [[nodiscard]] INLINE_METHOD double measureMaxEigenvalue(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void measureError(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void measureMeshWidths(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void proposeTimeStepSize(double maxEigenvalue);
   [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
   [[nodiscard]] INLINE_METHOD double getFixedTimeStepSize() const;

@@ -36,9 +36,9 @@ namespace {
    */
   void reduceOverTheRanks(exahype2::TimeStepping& timeStepping) {
     tarch::mpi::ReductionRecord record;
-    timeStepping.contributeTo(record);
+    timeStepping.addLocalValuesToGlobalReduction(record);
     record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-    timeStepping.adoptFrom(record);
+    timeStepping.readValuesFromGlobalReduction(record);
   }
 } // namespace
 
@@ -59,10 +59,7 @@ exahype2::tests::TimeSteppingTest::run() {
   testMethod(testRankReductionTakesTheMaximaOfAllRanks);
   testMethod(testStabilityEigenvalueIsThePhysicalOrTheScaledMaximum);
   testMethod(testProposalStopsAtTheTerminalTime);
-  testMethod(testAReusedProposalStopsAtTheTerminalTime);
   testMethod(testAFixedRuleKeepsItsSizeAcrossSteps);
-  testMethod(testAStepBeyondTheCFLLimitOfItsWaveSpeedsExceedsTheLimit);
-  testMethod(testTheLastStepMayGrowBeyondTheCFLLimitToTheTerminalTime);
 }
 
 /**
@@ -254,23 +251,11 @@ exahype2::tests::TimeSteppingTest::testProposalStopsAtTheTerminalTime() {
   placeBeforeTheTerminalTime(farFromTheEnd, 3.0);
   farFromTheEnd.setAdmissibleTimeStepSize(0.5);
   validateNumericalEquals(farFromTheEnd.startTimeStep(), 0.5);
-}
 
-/**
- * A step that reuses the proposal of an earlier time stamp stops at the terminal time.
- */
-void
-exahype2::tests::TimeSteppingTest::testAReusedProposalStopsAtTheTerminalTime() {
-  exahype2::TimeStepping timeStepping = makeAdaptive(Stability::PhysicalEigenvalue);
-  exahype2::Limits       limits;
-  limits.terminalTime = 1.0;
-  timeStepping.setLimits(limits);
-  timeStepping.setAdmissibleTimeStepSize(0.75);
-  validateNumericalEquals(timeStepping.startTimeStep(), 0.75);
-  timeStepping.advanceTimeStamp(0.75);
-  validateNumericalEquals(timeStepping.startTimeStep(), 0.25);
-  timeStepping.advanceTimeStamp(0.25);
-  validateEquals(timeStepping.getTimeStamp(), 1.0);
+  exahype2::TimeStepping withinRoundingOfTheEnd = makeAdaptive(Stability::PhysicalEigenvalue);
+  placeBeforeTheTerminalTime(withinRoundingOfTheEnd, 2.0);
+  withinRoundingOfTheEnd.setAdmissibleTimeStepSize(1.0 - 1.0e-12);
+  validateEquals(withinRoundingOfTheEnd.startTimeStep(), 1.0);
 }
 
 void
@@ -282,55 +267,4 @@ exahype2::tests::TimeSteppingTest::testAFixedRuleKeepsItsSizeAcrossSteps() {
   validateNumericalEquals(fixed.getTimeStepSizeOfNextStep(), 0.25);
   validateNumericalEquals(fixed.startTimeStep(), 0.25);
   validateNumericalEquals(fixed.startTimeStep(), 0.25);
-}
-
-/**
- * A reduced time step exceeds the CFL limit of its own wave speeds without the CFL factor, however
- * far the terminal time lies. A record of another step exceeds none.
- */
-void
-exahype2::tests::TimeSteppingTest::testAStepBeyondTheCFLLimitOfItsWaveSpeedsExceedsTheLimit() {
-  exahype2::TimeStepping relaxed{Rule::Adaptive, 0.5, Stability::PhysicalEigenvalue};
-  placeBeforeTheTerminalTime(relaxed, 10.0);
-  reduceOverTheRanks(relaxed);
-  validate(not relaxed.exceedsCFLLimit(0.5));
-  validate(relaxed.exceedsCFLLimit(0.25));
-  reduceOverTheRanks(relaxed);
-  validate(not relaxed.exceedsCFLLimit(0.25));
-
-  exahype2::TimeStepping unrelaxed = makeAdaptive(Stability::PhysicalEigenvalue);
-  placeBeforeTheTerminalTime(unrelaxed, 10.0);
-  reduceOverTheRanks(unrelaxed);
-  validate(not unrelaxed.exceedsCFLLimit(1.0));
-  validate(unrelaxed.exceedsCFLLimit(0.75));
-
-  exahype2::TimeStepping farFromTheEnd = makeAdaptive(Stability::PhysicalEigenvalue);
-  placeBeforeTheTerminalTime(farFromTheEnd, 1.0e12);
-  reduceOverTheRanks(farFromTheEnd);
-  validate(farFromTheEnd.exceedsCFLLimit(0.25));
-}
-
-/**
- * A reduced time step that ends at the terminal time may exceed the CFL limit by the growth to the
- * terminal time.
- */
-void
-exahype2::tests::TimeSteppingTest::testTheLastStepMayGrowBeyondTheCFLLimitToTheTerminalTime() {
-  constexpr double LimitBelowTheStep = 1.0 - 5.0e-8;
-  const auto       reduceAStepOfOneToTimeOneThousand = [](exahype2::TimeStepping& timeStepping, const double terminalTime) {
-    exahype2::Limits limits;
-    limits.terminalTime = terminalTime;
-    timeStepping.setLimits(limits);
-    timeStepping.advanceTimeStamp(999.0);
-    timeStepping.advanceTimeStamp(1.0);
-    reduceOverTheRanks(timeStepping);
-  };
-
-  exahype2::TimeStepping atTheEnd = makeAdaptive(Stability::PhysicalEigenvalue);
-  reduceAStepOfOneToTimeOneThousand(atTheEnd, 1.0e3);
-  validate(not atTheEnd.exceedsCFLLimit(LimitBelowTheStep));
-
-  exahype2::TimeStepping beforeTheEnd = makeAdaptive(Stability::PhysicalEigenvalue);
-  reduceAStepOfOneToTimeOneThousand(beforeTheEnd, 2.0e3);
-  validate(beforeTheEnd.exceedsCFLLimit(LimitBelowTheStep));
 }

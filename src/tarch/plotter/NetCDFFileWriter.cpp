@@ -117,7 +117,9 @@ tarch::plotter::NetCDFFileWriter::write(
 
   constexpr auto LargestIndex = static_cast<unsigned long long>(std::numeric_limits<int>::max());
   if (totalNodes > LargestIndex or totalElements > LargestIndex) {
-    tarch::terminateWithError("The NetCDF plotter numbers the points and the cells of a plot with 32-bit integers only.");
+    tarch::terminateWithError(
+      "The NetCDF plotter numbers the points and the cells of a plot with 32-bit integers only."
+    );
   }
 
   int ncid = -1;

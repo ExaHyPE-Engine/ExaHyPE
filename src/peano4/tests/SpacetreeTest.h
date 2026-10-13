@@ -33,7 +33,7 @@ private:
   void testRejectedRequestsChangeNoPlan();
   void testARegridWithLiveDataReturnsTheSlotMoves();
   void testTheTreeBytesCountTheSpareTree();
-  void testThePartitionBytesCountTheFreedSlots();
+  void testTheCellConnectivityBytesCountTheFreedSlots();
   void testTheTreeBytesCountTheEvaluatedPlan();
   void testTheCellLookupFindsEveryCellAndNothingElse();
   void testThePeriodicBoundariesReturnTheInitialisedValue();

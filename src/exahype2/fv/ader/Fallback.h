@@ -25,9 +25,10 @@
 namespace exahype2::fv::ader {
   /**
    * The status of a patch of the ADER-WENO scheme after its candidate update, also written into
-   * the own half of each of its faces.
+   * the own half of each of its faces. Between the prediction and the correction, a patch with a
+   * volume whose Picard iteration diverged or stopped at its sweep limit is FailedPrediction.
    */
-  enum class FallbackStatus : int { Accepted = 0, FallsBack = 1 };
+  enum class FallbackStatus : int { Accepted = 0, FallsBack = 1, FailedPrediction = 2 };
 
   template <typename Derived, typename Reconstruct>
   struct FallbackSolver;
@@ -161,11 +162,12 @@ struct exahype2::fv::ader::FallbackSolver final {
 /**
  * The a-posteriori fallback of the ADER-WENO scheme on the patch of one cell of Derived after the
  * MOOD paradigm. FallbackDerived is Derived with the fallback reconstruction, which reads one layer
- * of the halo of Derived. A volume is troubled when its candidate leaves the finite states, fails
- * the physical admissibility term of Derived, or leaves the extrema of the observables of Derived
- * over its previous state and the previous states around it, widened by the larger of
- * Derived::DmpRelaxationParameter and Derived::DmpDifferencesScaling times their range. A patch
- * with a troubled volume repeats its step with FallbackDerived from its previous states.
+ * of the halo of Derived. A patch is troubled when its candidate states together fail the physical
+ * admissibility term of Derived, as the nodes of a cell of the limited ADER-DG solver do, or when
+ * one of its volumes leaves the finite states or the extrema of the observables of Derived over its
+ * previous state and the previous states around it, widened by the larger of
+ * Derived::DmpRelaxationParameter and Derived::DmpDifferencesScaling times their range. A troubled
+ * patch repeats its step with FallbackDerived from its previous states.
  *
  * Both sides of a face evaluate the fallback flux from the same previous states, the patch from its
  * previous patch and the halo, so they agree on it bit by bit.
@@ -193,13 +195,18 @@ struct exahype2::fv::ader::Fallback final {
   );
 
   template <typename StoragePrecision>
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isAdmissible(
-    int                                          volume,
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissible(
     const StoragePrecision* NOALIAS              candidate,
-    const StoragePrecision* NOALIAS              previous,
-    const StoragePrecision* const                halo[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  );
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isAdmissible(
+    int                             volume,
+    const StoragePrecision* NOALIAS candidate,
+    const StoragePrecision* NOALIAS previous,
+    const StoragePrecision* const   halo[peano4::FacesPerCell]
   );
 
   template <typename StoragePrecision>

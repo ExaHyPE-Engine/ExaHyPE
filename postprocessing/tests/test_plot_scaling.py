@@ -59,7 +59,8 @@ class PlotScalingTest(unittest.TestCase):
             folder = pathlib.Path(directory)
             (folder / "a.log").write_text(LOG, encoding="utf-8")
             (folder / "b.log").write_text(
-                LOG.replace("512 Ranks on 256 Nodes", "8 Ranks on 4 Nodes"), encoding="utf-8"
+                LOG.replace("512 Ranks on 256 Nodes", "8 Ranks on 4 Nodes"),
+                encoding="utf-8",
             )
             runs = _read_runs([str(folder / "*.log")])
         self.assertEqual([run.nodes for run in runs], [4, 256])
@@ -78,7 +79,9 @@ class PlotScalingTest(unittest.TestCase):
         self.assertEqual(_grid_label(run_of(2, 1.0, 1000, dimensions=2)), "1,000 cells")
 
     def test_the_efficiency_follows_the_rate_against_the_fewest_nodes(self):
-        efficiency = _parallel_efficiency([run_of(2, 4.0), run_of(4, 2.0), run_of(8, 1.25)])
+        efficiency = _parallel_efficiency(
+            [run_of(2, 4.0), run_of(4, 2.0), run_of(8, 1.25)]
+        )
         self.assertEqual(len(efficiency), 3)
         for value, expected in zip(efficiency, [1.0, 1.0, 0.8]):
             self.assertAlmostEqual(value, expected)

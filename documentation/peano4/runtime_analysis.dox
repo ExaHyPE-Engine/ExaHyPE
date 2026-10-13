@@ -29,7 +29,7 @@ identify a small local workload relative to the halo traffic.
 # Memory
 
 The first lines of the `Memory` section sum the bytes the pools allocate over
-the ranks. `CPU Grid` and `GPU Grid` hold the partition and the tree in host and
+the ranks. `CPU Grid` and `GPU Grid` hold the cell connectivity and the tree in host and
 device memory, `CPU Solver Data` and `GPU Solver Data` the application data.
 `Resident` sums the resident set of the processes, the pages they have written,
 over the ranks. `Free` continues that line with the available and the total

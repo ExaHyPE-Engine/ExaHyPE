@@ -3,8 +3,8 @@
 #include "ParticleSetTest.h"
 
 #include "exahype2/particles/ParticleSet.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -26,9 +26,9 @@ namespace {
 
   using Set = exahype2::particles::ParticleSet<NumberOfData>;
 
-  const peano4::Partition& buildGrid() {
+  const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   int getCellAt(const tarch::la::Vector<DIMENSIONS, int>& lattice) {
@@ -70,7 +70,7 @@ namespace {
    */
   struct MoveParticleOnDevice final {
     exahype2::particles::ParticleSetView<NumberOfData> particles{};
-    peano4::Partition                                  partition{};
+    peano4::CellConnectivity                           cellConnectivity{};
     double                                             target{0.0};
     double                                             coordinate{0.0};
 
@@ -82,7 +82,7 @@ namespace {
       }
       const tarch::la::Vector<DIMENSIONS, double> position(coordinate);
       particle.setX(position);
-      if (not particles.isInsideCell(partition, index, position, tarch::la::Vector<DIMENSIONS, double>(0.0))) {
+      if (not particles.isInsideCell(cellConnectivity, index, position, tarch::la::Vector<DIMENSIONS, double>(0.0))) {
         particles.markAsMovedOutOfCell(index);
         numberOfMovedParticles++;
       }
@@ -140,14 +140,14 @@ exahype2::particles::tests::ParticleSetTest::run() {
  */
 void
 exahype2::particles::tests::ParticleSetTest::testAParticleMarkedOnTheDeviceMovesToTheCellThatContainsIt() {
-  const auto&         partition = buildGrid();
+  const auto&         cellConnectivity = buildGrid();
   std::vector<double> candidates;
   for (const auto& candidate :
        {getCandidateAt(0.1, 0.1, 10.0), getCandidateAt(0.5, 0.5, 20.0), getCandidateAt(0.9, 0.9, 30.0)}) {
     candidates.insert(candidates.end(), candidate.begin(), candidate.end());
   }
   Set particles;
-  particles.insert(partition, candidates);
+  particles.insert(cellConnectivity, candidates);
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 3);
 
   const auto moveOnTheDevice = [&](const double target) {
@@ -156,10 +156,10 @@ exahype2::particles::tests::ParticleSetTest::testAParticleMarkedOnTheDeviceMoves
     int        numberOfMovedParticles = 0;
     tarch::accelerator::parallelReduce(
       tarch::accelerator::Range(view.numberOfParticles),
-      MoveParticleOnDevice{view, partition.onDevice(), target, 0.95},
+      MoveParticleOnDevice{view, cellConnectivity.onDevice(), target, 0.95},
       tarch::accelerator::Sum<int>{numberOfMovedParticles}
     );
-    particles.relocateParticlesMovedOutOfCells(partition, numberOfMovedParticles);
+    particles.relocateParticlesMovedOutOfCells(cellConnectivity, numberOfMovedParticles);
     return numberOfMovedParticles;
   };
 
@@ -169,7 +169,11 @@ exahype2::particles::tests::ParticleSetTest::testAParticleMarkedOnTheDeviceMoves
   validateEquals(particles.getGlobalNumberOfParticles(), 3);
   particles.download();
   for (int index = 0; index < particles.getSize(); index++) {
-    validateEqualsWithParams1(particles.getSlot(index), Set::getSlotAt(partition, particles.getPosition(index)), index);
+    validateEqualsWithParams1(
+      particles.getSlot(index),
+      Set::getSlotAt(cellConnectivity, particles.getPosition(index)),
+      index
+    );
     validateNumericalEqualsWithParams1(particles.getData(index)[1], particles.getData(index)[0] + 2.0, index);
     if (particles.getData(index)[0] == 20.0) {
       validateNumericalEquals(particles.getPosition(index)(0), 0.95);
@@ -188,7 +192,7 @@ exahype2::particles::tests::ParticleSetTest::testAParticleMarkedOnTheDeviceMoves
  */
 void
 exahype2::particles::tests::ParticleSetTest::testInsertKeepsTheParticlesOfTheRank() {
-  const auto&         partition = buildGrid();
+  const auto&         cellConnectivity = buildGrid();
   std::vector<double> candidates;
   for (const auto& candidate :
        {getCandidateAt(0.1, 0.1, 10.0),
@@ -200,12 +204,16 @@ exahype2::particles::tests::ParticleSetTest::testInsertKeepsTheParticlesOfTheRan
   }
 
   Set particles;
-  particles.insert(partition, candidates);
+  particles.insert(cellConnectivity, candidates);
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 3);
 
   const int rank = tarch::mpi::Rank::getInstance().getRank();
   for (int index = 0; index < particles.getSize(); index++) {
-    validateEqualsWithParams1(particles.getSlot(index), Set::getSlotAt(partition, particles.getPosition(index)), index);
+    validateEqualsWithParams1(
+      particles.getSlot(index),
+      Set::getSlotAt(cellConnectivity, particles.getPosition(index)),
+      index
+    );
     validateEqualsWithParams1(particles.getNumber(index).first, rank, index);
     validateEqualsWithParams1(particles.getNumber(index).second, index, index);
     validateNumericalEqualsWithParams1(particles.getData(index)[1], particles.getData(index)[0] + 1.0, index);
@@ -217,45 +225,45 @@ exahype2::particles::tests::ParticleSetTest::testInsertKeepsTheParticlesOfTheRan
  */
 void
 exahype2::particles::tests::ParticleSetTest::testAPositionOnAFaceBelongsToTheLowerCell() {
-  const auto&  partition = buildGrid();
-  const double width     = 1.0 / peano4::power(peano4::SubdivisionFactor, Depth);
+  const auto&  cellConnectivity = buildGrid();
+  const double width            = 1.0 / peano4::power(peano4::SubdivisionFactor, Depth);
 
   tarch::la::Vector<DIMENSIONS, double> onFace(0.5 * width);
   onFace(0) = 2.0 * width;
   tarch::la::Vector<DIMENSIONS, int> lowerLattice(0);
   lowerLattice(0) = 1;
-  validateEquals(Set::getSlotAt(partition, onFace), getCellAt(lowerLattice));
+  validateEquals(Set::getSlotAt(cellConnectivity, onFace), getCellAt(lowerLattice));
 
   tarch::la::Vector<DIMENSIONS, double> onWall(0.5 * width);
   onWall(0) = 0.0;
-  validateEquals(Set::getSlotAt(partition, onWall), getCellAt(tarch::la::Vector<DIMENSIONS, int>(0)));
+  validateEquals(Set::getSlotAt(cellConnectivity, onWall), getCellAt(tarch::la::Vector<DIMENSIONS, int>(0)));
 
   tarch::la::Vector<DIMENSIONS, double> onUpperWall(0.5 * width);
   onUpperWall(0) = 1.0;
   tarch::la::Vector<DIMENSIONS, int> lastLattice(0);
   lastLattice(0) = peano4::power(peano4::SubdivisionFactor, Depth) - 1;
-  validateEquals(Set::getSlotAt(partition, onUpperWall), getCellAt(lastLattice));
+  validateEquals(Set::getSlotAt(cellConnectivity, onUpperWall), getCellAt(lastLattice));
 
   tarch::la::Vector<DIMENSIONS, double> outside(0.5 * width);
   outside(0) = -0.5 * width;
-  validateEquals(Set::getSlotAt(partition, outside), -1);
+  validateEquals(Set::getSlotAt(cellConnectivity, outside), -1);
 }
 
 void
 exahype2::particles::tests::ParticleSetTest::testRelocateMovesAParticleToTheCellThatContainsIt() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
   Set         particles;
-  particles.insert(partition, getCandidateAt(0.05, 0.05, 1.0));
+  particles.insert(cellConnectivity, getCandidateAt(0.05, 0.05, 1.0));
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 1);
 
   const tarch::la::Vector<DIMENSIONS, double> target(0.95);
   for (int index = 0; index < particles.getSize(); index++) {
     particles.getParticle(index).setX(target);
   }
-  particles.relocate(partition);
+  particles.relocate(cellConnectivity);
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 1);
   for (int index = 0; index < particles.getSize(); index++) {
-    validateEquals(particles.getSlot(index), Set::getSlotAt(partition, target));
+    validateEquals(particles.getSlot(index), Set::getSlotAt(cellConnectivity, target));
     validate(particles.getSlot(index) >= 0);
     validateNumericalEquals(particles.getPosition(index)(0), 0.95);
     validateNumericalEquals(particles.getData(index)[0], 1.0);
@@ -265,7 +273,7 @@ exahype2::particles::tests::ParticleSetTest::testRelocateMovesAParticleToTheCell
 
 void
 exahype2::particles::tests::ParticleSetTest::testInsertAndRelocateCountTheParticlesOfAllRanks() {
-  const auto&         partition = buildGrid();
+  const auto&         cellConnectivity = buildGrid();
   std::vector<double> candidates;
   for (const auto& candidate :
        {getCandidateAt(0.1, 0.1, 10.0), getCandidateAt(0.5, 0.5, 20.0), getCandidateAt(0.9, 0.9, 30.0)}) {
@@ -273,17 +281,17 @@ exahype2::particles::tests::ParticleSetTest::testInsertAndRelocateCountThePartic
   }
   Set particles;
   validateEquals(particles.getGlobalNumberOfParticles(), 0);
-  particles.insert(partition, candidates);
+  particles.insert(cellConnectivity, candidates);
   validateEquals(particles.getGlobalNumberOfParticles(), 3);
 
-  particles.relocate(partition);
+  particles.relocate(cellConnectivity);
   validateEquals(particles.getGlobalNumberOfParticles(), 3);
 
   const tarch::la::Vector<DIMENSIONS, double> target(0.95);
   for (int index = 0; index < particles.getSize(); index++) {
     particles.getParticle(index).setX(target);
   }
-  particles.relocate(partition);
+  particles.relocate(cellConnectivity);
   validateEquals(particles.getGlobalNumberOfParticles(), 3);
   validateEquals(peano4::tests::getGlobalSumOf(particles.getSize()), 3);
 
@@ -293,9 +301,9 @@ exahype2::particles::tests::ParticleSetTest::testInsertAndRelocateCountThePartic
 
 void
 exahype2::particles::tests::ParticleSetTest::testUploadAndDownloadCarryTheValues() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
   Set         particles;
-  particles.insert(partition, getCandidateAt(0.5, 0.5, 3.0));
+  particles.insert(cellConnectivity, getCandidateAt(0.5, 0.5, 3.0));
   validateEquals(getNumberOfMismatchesOfTheDeviceCopy(particles, 3.0, 7.0, 0.25), 0);
   validateEquals(particles.getView().numberOfParticles, particles.getSize());
   particles.download();
@@ -307,9 +315,9 @@ exahype2::particles::tests::ParticleSetTest::testUploadAndDownloadCarryTheValues
 
 void
 exahype2::particles::tests::ParticleSetTest::testAHostWriteReachesTheDeviceCopy() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
   Set         particles;
-  particles.insert(partition, getCandidateAt(0.5, 0.5, 3.0));
+  particles.insert(cellConnectivity, getCandidateAt(0.5, 0.5, 3.0));
   particles.upload();
   for (int index = 0; index < particles.getSize(); index++) {
     particles.getParticle(index).setData(0, 5.0);
@@ -319,12 +327,12 @@ exahype2::particles::tests::ParticleSetTest::testAHostWriteReachesTheDeviceCopy(
 
 void
 exahype2::particles::tests::ParticleSetTest::testRelocateKeepsTheDeviceValuesWhileNoParticleLeaves() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
   Set         particles;
-  particles.insert(partition, getCandidateAt(0.5, 0.5, 3.0));
-  particles.relocate(partition);
+  particles.insert(cellConnectivity, getCandidateAt(0.5, 0.5, 3.0));
+  particles.relocate(cellConnectivity);
   validateEquals(getNumberOfMismatchesOfTheDeviceCopy(particles, 3.0, 7.0, 0.5), 0);
-  particles.relocate(partition);
+  particles.relocate(cellConnectivity);
   validateEquals(particles.getGlobalNumberOfParticles(), 1);
   particles.upload();
   particles.download();
@@ -336,10 +344,10 @@ exahype2::particles::tests::ParticleSetTest::testRelocateKeepsTheDeviceValuesWhi
 
 void
 exahype2::particles::tests::ParticleSetTest::testReleaseFreesEveryArray() {
-  const auto& partition = buildGrid();
+  const auto& cellConnectivity = buildGrid();
   Set         particles;
   validateEquals(particles.getAllocatedBytes().getTotal(), std::size_t{0});
-  particles.insert(partition, getCandidateAt(0.5, 0.5, 3.0));
+  particles.insert(cellConnectivity, getCandidateAt(0.5, 0.5, 3.0));
   particles.upload();
   if (particles.getSize() > 0) {
     validate(particles.getAllocatedBytes().getTotal() > 0);

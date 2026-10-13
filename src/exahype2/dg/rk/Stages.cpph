@@ -393,7 +393,7 @@ exahype2::dg::rk::OpenStage<Derived, StoragePrecision, ComputePrecision>::operat
   ComputePrecision* ownStateHalves[peano4::FacesPerCell];
   ComputePrecision* ownFluxHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    const int face             = partition.getCellFace(slot, faceNumber);
+    const int face             = cellConnectivity.getCellFace(slot, faceNumber);
     const int half             = exahype2::dg::getOwnHalf(faceNumber);
     ownStateHalves[faceNumber] = faceStates.getChunk(face) + half * StateValuesPerFace;
     ownFluxHalves[faceNumber]  = faceFluxes.getChunk(face) + half * FluxValuesPerFace;
@@ -410,8 +410,8 @@ exahype2::dg::rk::OpenStage<Derived, StoragePrecision, ComputePrecision>::operat
     derivativeOperator,
     leftFaceCoefficients,
     rightFaceCoefficients,
-    partition.getCellCentre(slot),
-    partition.getCellWidth(slot),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
     stageTimeStamp,
     timeStepSize
   );
@@ -424,9 +424,9 @@ exahype2::dg::rk::AddStageFaceIntegrals<Derived, ComputePrecision>::operator()(c
   const int               slot              = cells[entry];
   const ComputePrecision* fluxes[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    const int face = partition.getCellFace(slot, faceNumber);
-    fluxes[faceNumber] =
-      faceFluxes.getChunk(face) + exahype2::dg::getCorrectionHalf(partition, face, faceNumber) * FluxValuesPerFace;
+    const int face     = cellConnectivity.getCellFace(slot, faceNumber);
+    fluxes[faceNumber] = faceFluxes.getChunk(face)
+      + exahype2::dg::getCorrectionHalf(cellConnectivity, face, faceNumber) * FluxValuesPerFace;
   }
   Kernel::addFaceIntegrals(
     estimates.getChunk(slot),
@@ -436,7 +436,7 @@ exahype2::dg::rk::AddStageFaceIntegrals<Derived, ComputePrecision>::operator()(c
     inverseCellQuadratureWeights,
     leftFaceCoefficients,
     rightFaceCoefficients,
-    partition.getCellWidth(slot),
+    cellConnectivity.getCellWidth(slot),
     timeStepSize
   );
 }
@@ -455,8 +455,8 @@ exahype2::dg::rk::CombineStages<Derived, StoragePrecision, ComputePrecision>::op
       solution.getChunk(slot),
       estimates.getChunk(slot),
       stateQuadraturePoints,
-      partition.getCellCentre(slot),
-      partition.getCellWidth(slot),
+      cellConnectivity.getCellCentre(slot),
+      cellConnectivity.getCellWidth(slot),
       timeStamp,
       timeStepSize
     )

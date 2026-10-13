@@ -40,12 +40,12 @@ exahype2::particles::tests::TrajectoryRecordingTest::testASnapshotDueOnTheRankOf
   const int rank          = tarch::mpi::Rank::getInstance().getRank();
   const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
   exahype2::particles::ParticleSet<NumberOfData> particles;
   std::vector<double>                            candidate(DIMENSIONS, 0.2);
   candidate.push_back(1.0);
-  particles.insert(partition, candidate);
+  particles.insert(cellConnectivity, candidate);
   validateEquals(particles.getGlobalNumberOfParticles(), 1);
 
   const std::string fileName = (tarch::tests::getWritableTestDirectory() / "TrajectoryRecordingDueTest").string();
@@ -69,7 +69,7 @@ exahype2::particles::tests::TrajectoryRecordingTest::testEveryParticleOfTheRankB
   const int rank          = tarch::mpi::Rank::getInstance().getRank();
   const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
   exahype2::particles::ParticleSet<NumberOfData> particles;
   std::vector<double>                            candidates;
@@ -79,7 +79,7 @@ exahype2::particles::tests::TrajectoryRecordingTest::testEveryParticleOfTheRankB
     }
     candidates.push_back(10.0 * coordinate);
   }
-  particles.insert(partition, candidates);
+  particles.insert(cellConnectivity, candidates);
 
   const std::string fileName = (tarch::tests::getWritableTestDirectory() / "TrajectoryRecordingTest").string();
   const std::string writtenFile =

@@ -52,7 +52,7 @@ public:
   struct Scratch final {
     static constexpr int StateSize             = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
     static constexpr int TimeAveragedStateSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
-    static constexpr int FluxSize = DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
+    static constexpr int FluxSize        = DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
     static constexpr int PointSourceSize = EvaluatePointSources
       ? (CellLayout::NodesPerAxis + 1) * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns
       : 0;
@@ -105,10 +105,9 @@ private:
     double                          position
   );
 
-  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluatePointSources(
     ComputePrecision* NOALIAS                              pointSourceValues,
-    const StoragePrecision* NOALIAS                        cellState,
+    const ComputePrecision* NOALIAS                        state,
     const int* NOALIAS                                     pointSourceIndices,
     int                                                    numberOfPointSources,
     const double* NOALIAS                                  pointSourceLocations,

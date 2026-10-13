@@ -17,17 +17,6 @@ namespace tarch::mpi {
     std::source_location location = std::source_location::current()
   );
 
-  int iallreduce(
-    const void*          sendBuffer,
-    void*                receiveBuffer,
-    int                  count,
-    MPI_Datatype         datatype,
-    MPI_Op               operation,
-    MPI_Comm             communicator,
-    MPI_Request*         request,
-    std::source_location location = std::source_location::current()
-  );
-
   int allgather(
     const void*          sendBuffer,
     int                  sendCount,

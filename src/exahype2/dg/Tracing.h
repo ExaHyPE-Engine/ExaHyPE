@@ -4,7 +4,7 @@
 
 #include "exahype2/particles/Forces.h"
 #include "exahype2/particles/ParticleSet.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
@@ -63,7 +63,7 @@ namespace exahype2::dg {
 
   template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, int... DifferenceFields, typename Pool>
   INLINE_METHOD void traceFaceValues(
-    const peano4::Partition&                                partition,
+    const peano4::CellConnectivity&                         cellConnectivity,
     const Pool&                                             faceStates,
     const double* NOALIAS                                   quadratureNodes,
     exahype2::particles::ParticleSet<NumberOfParticleData>& particles,
@@ -73,7 +73,7 @@ namespace exahype2::dg {
 
   template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
   INLINE_METHOD void traceParticles(
-    const peano4::Partition&                                partition,
+    const peano4::CellConnectivity&                         cellConnectivity,
     const Pool&                                             solution,
     const double* NOALIAS                                   quadratureNodes,
     double                                                  timeStepSize,
@@ -92,7 +92,7 @@ TARGET_DECLARE
  */
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
 struct exahype2::dg::TraceFaceValues final {
-  peano4::Partition                                          partition{};
+  peano4::CellConnectivity                                   cellConnectivity{};
   typename Pool::ConstView                                   faceStates{};
   const double*                                              quadratureNodes{nullptr};
   exahype2::particles::ParticleSetView<NumberOfParticleData> particles{};
@@ -108,7 +108,7 @@ struct exahype2::dg::TraceFaceValues final {
  */
 template <int NodesPerAxis, int NumberOfData, int NumberOfParticleData, typename Fields, typename Pool>
 struct exahype2::dg::TraceParticles final {
-  peano4::Partition                                          partition{};
+  peano4::CellConnectivity                                   cellConnectivity{};
   typename Pool::ConstView                                   solution{};
   const double*                                              quadratureNodes{nullptr};
   double                                                     timeStepSize{0.0};

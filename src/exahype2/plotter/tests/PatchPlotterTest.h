@@ -22,5 +22,6 @@ public:
 private:
   void testEveryVolumeOfEveryPatchBecomesOneCell();
   void testEveryNodeOfEveryPatchBecomesOnePoint();
+  void testOneNodePerPatchBecomesOneCell();
   void testEveryNodeReadsTheSubcellThatContainsIt();
 };

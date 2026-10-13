@@ -22,8 +22,27 @@ exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>::getFal
 }
 
 /**
- * Returns whether the candidate state of volume is finite, physically admissible and inside the
- * relaxed extrema of the previous states around it.
+ * Returns whether the candidate states of the patch together pass the physical admissibility term
+ * of Derived.
+ */
+template <typename Derived, typename FallbackDerived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>::isPhysicallyAdmissible(
+  const StoragePrecision* NOALIAS const        candidate,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+) {
+  if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>) {
+    return Derived::isPhysicallyAdmissible(candidate, VolumesPerPatch, cellCentre, cellSize);
+  } else {
+    return true;
+  }
+}
+
+/**
+ * Returns whether the candidate state of volume is finite and inside the relaxed extrema of the
+ * previous states around it.
  */
 template <typename Derived, typename FallbackDerived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -32,24 +51,11 @@ exahype2::fv::ader::Fallback<Derived, FallbackDerived, ComputePrecision>::isAdmi
   const int                                    volume,
   const StoragePrecision* NOALIAS const        candidate,
   const StoragePrecision* NOALIAS const        previous,
-  const StoragePrecision* const                halo[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const StoragePrecision* const                halo[peano4::FacesPerCell]
 ) {
   const StoragePrecision* const state = candidate + static_cast<std::ptrdiff_t>(volume) * NumberOfData;
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     if (not std::isfinite(state[unknown])) {
-      return false;
-    }
-  }
-  if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>) {
-    const auto index = peano4::dDelinearised(volume, PatchSize);
-    if (not Derived::isPhysicallyAdmissible(
-          state,
-          1,
-          exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, index),
-          exahype2::fv::getVolumeSize(cellSize, PatchSize)
-        )) {
       return false;
     }
   }

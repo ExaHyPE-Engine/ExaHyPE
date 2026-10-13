@@ -155,7 +155,8 @@ public:
     ComputePrecision* NOALIAS                          volumeScratch,
     ComputePrecision* const                            stateHalves[peano4::FacesPerCell],
     ComputePrecision* const                            fluxHalves[peano4::FacesPerCell],
-    const exahype2::dg::ader::TeamWorkers&             workers
+    const exahype2::dg::ader::TeamWorkers&             workers,
+    bool                                               unconvergedWritesNaN = false
   );
 
   template <typename StoragePrecision>

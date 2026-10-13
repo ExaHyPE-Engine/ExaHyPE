@@ -123,7 +123,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::reconstructPatch(
  * Evolves the nodal polynomial of volume in patchScratch with the space-time predictor and stores
  * its face states and fluxes: Those on a face inside the patch into patchScratch, those on a face
  * of the patch into the halves of that face, and its source update into patchScratch. A diverged
- * prediction stores NaN instead. The threads of workers predict the volume together in
+ * prediction stores NaN instead, and so does an unconverged one with unconvergedWritesNaN. The threads of workers predict the volume together in
  * volumeScratch. Every thread of the team calls this. Returns the outcome of the Picard iteration,
  * or zero on a thread without a cell.
  */
@@ -140,7 +140,8 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictVolume(
   ComputePrecision* NOALIAS const                    volumeScratch,
   ComputePrecision* const                            stateHalves[peano4::FacesPerCell],
   ComputePrecision* const                            fluxHalves[peano4::FacesPerCell],
-  const exahype2::dg::ader::TeamWorkers&             workers
+  const exahype2::dg::ader::TeamWorkers&             workers,
+  const bool                                         unconvergedWritesNaN
 ) {
   using Layout          = typename Predictor::CellLayout;
   using PredictorBlock  = typename Predictor::Scratch;
@@ -171,7 +172,8 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictVolume(
     PicardResidualTolerance,
     workers
   );
-  const bool diverged = outcome == exahype2::dg::ader::DivergedPicardIteration;
+  const bool diverged = outcome == exahype2::dg::ader::DivergedPicardIteration
+                    or (unconvergedWritesNaN and outcome == exahype2::dg::ader::UnconvergedPicardIteration);
 
   if (workers.hasCell) {
     for (int item = workers.thread; item < peano4::FacesPerCell * EntriesPerSide; item += workers.threads) {

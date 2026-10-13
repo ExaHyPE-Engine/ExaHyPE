@@ -47,19 +47,19 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::allocate(
-  const peano4::Partition& partition
+  const peano4::CellConnectivity& cellConnectivity
 ) {
   SubcellProjection<double>::initialise();
   if constexpr (not std::is_same_v<StoragePrecision, double>) {
     SubcellProjection<StoragePrecision>::initialise();
   }
-  _previousSolution.reserve(partition.getNumberOfSlots());
-  _subcells.reserve(partition.getNumberOfSlots());
-  _statuses.reserve(partition.getNumberOfSlots());
+  _previousSolution.reserve(cellConnectivity.getNumberOfSlots());
+  _subcells.reserve(cellConnectivity.getNumberOfSlots());
+  _statuses.reserve(cellConnectivity.getNumberOfSlots());
   if constexpr (Detector::UsesMaximumPrinciple) {
-    _referenceExtrema.reserve(partition.getNumberOfSlots());
+    _referenceExtrema.reserve(cellConnectivity.getNumberOfSlots());
   }
-  rebuild(partition);
+  rebuild(cellConnectivity);
 }
 
 template <
@@ -127,33 +127,33 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::initialise(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   const CellPool&          solution
 ) {
-  sampleSubcells(partition);
+  sampleSubcells(cellConnectivity);
   if constexpr (Detector::UsesMaximumPrinciple) {
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(partition.getCells().size),
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
       exahype2::dg::limiting::ReduceSampledExtrema<Derived, StoragePrecision, ComputePrecision>{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         std::as_const(_subcells).getView(),
         _referenceExtrema.getView()
       }
     );
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(partition.getCells().size),
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
       exahype2::dg::limiting::WriteExtremaOntoFaces<Derived, StoragePrecision, ComputePrecision>{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         std::as_const(_referenceExtrema).getView(),
         _extremaFaces.getView()
       }
     );
-    mergeNeighbourExtrema(partition, true);
+    mergeNeighbourExtrema(cellConnectivity, true);
   }
   tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(partition.getCells().size),
+    tarch::accelerator::Range(cellConnectivity.getCells().size),
     exahype2::dg::limiting::OpenInitialStatuses<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       solution.getView(),
       std::as_const(_referenceExtrema).getView(),
       _statuses.getView(),
@@ -176,17 +176,17 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::sampleSubcells(
-  const peano4::Partition& partition
+  const peano4::CellConnectivity& cellConnectivity
 ) {
   CellPool   copyOnHost{SubcellScheme::SubcellValuesPerCell, tarch::MemoryLocation::Heap};
   CellPool&  subcells = _subcells.download(copyOnHost);
-  const auto cells    = partition.getCells();
+  const auto cells    = cellConnectivity.getCells();
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int entry) {
     const int slot = cells[entry];
     SubcellScheme::sampleInitialCondition(
       subcells.getChunk(slot),
-      partition.getCellCentre(slot),
-      partition.getCellWidth(slot)
+      cellConnectivity.getCellCentre(slot),
+      cellConnectivity.getCellWidth(slot)
     );
   });
   _subcells.upload(subcells);
@@ -204,18 +204,18 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::openTimeStep(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   const CellPool&          solution
 ) {
   if constexpr (Detector::UsesMaximumPrinciple) {
     if (not _holdsExtremaOfSolution) {
-      reduceExtrema(partition.onDevice().getCells(), solution);
+      reduceExtrema(cellConnectivity.onDevice().getCells(), solution);
       _holdsExtremaOfSolution = true;
     }
   }
-  openStep(partition, solution);
+  openStep(cellConnectivity, solution);
   if constexpr (Detector::UsesMaximumPrinciple) {
-    mergeNeighbourExtrema(partition, false);
+    mergeNeighbourExtrema(cellConnectivity, false);
   }
 }
 
@@ -231,19 +231,19 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::closeTimeStep(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   CellPool&                solution,
   const double             timeStamp,
   const double             timeStepSize
 ) {
-  const auto judged     = judgeCandidates(partition, solution, timeStamp, timeStepSize);
+  const auto judged     = judgeCandidates(cellConnectivity, solution, timeStamp, timeStepSize);
   auto       statistics = judged.statistics;
   _localTroubledCells   = judged.troubledCells;
-  spreadStatuses(partition);
-  listCellsOnSubcellScheme(partition);
+  spreadStatuses(cellConnectivity);
+  listCellsOnSubcellScheme(cellConnectivity);
   statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
     statistics,
-    recompute(partition, solution, timeStamp, timeStepSize)
+    recompute(cellConnectivity, solution, timeStamp, timeStepSize)
   );
   if constexpr (Detector::UsesMaximumPrinciple) {
     reduceExtrema(tarch::Span<const int>{_recomputedCells.getData(), _cellCounts.recomputedCells}, solution);
@@ -269,7 +269,7 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::regrid(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   const peano4::Regrid&    regrid,
   const CellPool&          solution
 ) {
@@ -293,7 +293,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   _statusMigration
     .migrate(_statuses, regrid, exahype2::dg::limiting::StatusTransfer{std::as_const(_statuses).getView()});
 
-  rebuild(partition);
+  rebuild(cellConnectivity);
   _holdsExtremaOfSolution = false;
 }
 
@@ -319,7 +319,11 @@ INLINE_METHOD typename exahype2::dg::limiting::SubcellLimiter<
   SubcellFamily
 >::FluxPool::View
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::getAppliedFluxes() {
-  return _appliedFluxes.getView();
+  if constexpr (exahype2::dg::limiting::couplesGalerkinFlux<Derived>()) {
+    return _appliedFluxes.getView();
+  } else {
+    return {};
+  }
 }
 
 /**
@@ -392,7 +396,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 }
 
 /**
- * Returns the number of troubled cells on all ranks in the time step of the last adoptFrom().
+ * Returns the number of troubled cells on all ranks in the time step of the last
+ * readValuesFromGlobalReduction().
  */
 template <
   typename Derived,
@@ -418,7 +423,7 @@ template <
   typename ComputePrecision,
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::contributeTo(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::addLocalValuesToGlobalReduction(
   tarch::mpi::ReductionRecord& record
 ) {
   assertion(_localTroubledCells >= 0, _localTroubledCells);
@@ -434,14 +439,11 @@ template <
   typename ComputePrecision,
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
-exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::adoptFrom(
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::readValuesFromGlobalReduction(
   const tarch::mpi::ReductionRecord& record
 ) {
   const auto globalTroubledCells = record.getSum(_troubledCellsSlot);
-  assertion(
-    globalTroubledCells <= static_cast<std::uint64_t>(std::numeric_limits<int>::max()),
-    globalTroubledCells
-  );
+  assertion(globalTroubledCells <= static_cast<std::uint64_t>(std::numeric_limits<int>::max()), globalTroubledCells);
   _globalTroubledCells = static_cast<int>(globalTroubledCells);
 }
 
@@ -452,24 +454,26 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::rebuild(
-  const peano4::Partition& partition
+  const peano4::CellConnectivity& cellConnectivity
 ) {
-  _subcellHalo.reserve(partition.getNumberOfFaces());
-  _appliedFluxes.reserve(partition.getNumberOfFaces());
-  _faceStatuses.reserve(partition.getNumberOfFaces());
-  if constexpr (Detector::UsesMaximumPrinciple) {
-    _extremaFaces.reserve(partition.getNumberOfFaces());
+  _subcellHalo.reserve(cellConnectivity.getNumberOfFaces());
+  if constexpr (exahype2::dg::limiting::couplesGalerkinFlux<Derived>()) {
+    _appliedFluxes.reserve(cellConnectivity.getNumberOfFaces());
   }
-  _haloExchange.rebuild(partition);
-  _statusExchange.rebuild(partition);
+  _faceStatuses.reserve(cellConnectivity.getNumberOfFaces());
   if constexpr (Detector::UsesMaximumPrinciple) {
-    _extremaExchange.rebuild(partition);
+    _extremaFaces.reserve(cellConnectivity.getNumberOfFaces());
   }
-  _cellsOnSubcellScheme.allocate(static_cast<std::size_t>(partition.getCells().size));
-  _recomputedCells.allocate(static_cast<std::size_t>(partition.getCells().size));
+  _haloExchange.rebuild(cellConnectivity);
+  _statusExchange.rebuild(cellConnectivity);
+  if constexpr (Detector::UsesMaximumPrinciple) {
+    _extremaExchange.rebuild(cellConnectivity);
+  }
+  _cellsOnSubcellScheme.allocate(static_cast<std::size_t>(cellConnectivity.getCells().size));
+  _recomputedCells.allocate(static_cast<std::size_t>(cellConnectivity.getCells().size));
   _cellCounts = exahype2::dg::limiting::SubcellSchemeCounts{};
-  _family.rebuild(partition);
-  clearFaces(partition);
+  _family.rebuild(cellConnectivity);
+  clearFaces(cellConnectivity);
 }
 
 /**
@@ -483,10 +487,10 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::clearFaces(
-  const peano4::Partition& partition
+  const peano4::CellConnectivity& cellConnectivity
 ) {
   tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(partition.getNumberOfFaces()),
+    tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
     exahype2::dg::limiting::ClearFaces<Derived, StoragePrecision, ComputePrecision>{
       _faceStatuses.getView(),
       _extremaFaces.getView(),
@@ -506,13 +510,13 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::openStep(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   const CellPool&          solution
 ) {
   tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(partition.getCells().size),
+    tarch::accelerator::Range(cellConnectivity.getCells().size),
     exahype2::dg::limiting::OpenStep<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       solution.getView(),
       _previousSolution.getView(),
       _statuses.getView(),
@@ -559,13 +563,13 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::mergeNeighbourExtrema(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   const bool               mergeLastRound
 ) {
   for (int round = 1; round <= DIMENSIONS; round++) {
     const bool lastRound = round == DIMENSIONS;
     exchangeFaces(
-      partition,
+      cellConnectivity,
       exahype2::dg::limiting::InterpolateExtremaHalves<Derived, StoragePrecision, ComputePrecision>{
         _extremaFaces.getView()
       },
@@ -573,15 +577,15 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
         _extremaFaces.getView()
       },
       _extremaExchange,
-      [this, &partition, round, lastRound, mergeLastRound](const peano4::Adjacency adjacency) {
-        const auto cells = partition.onDevice().getCells(adjacency);
+      [this, &cellConnectivity, round, lastRound, mergeLastRound](const peano4::Adjacency adjacency) {
+        const auto cells = cellConnectivity.onDevice().getCells(adjacency);
         if (cells.isEmpty() or (lastRound and not mergeLastRound)) {
           return;
         }
         tarch::accelerator::parallelFor(
           tarch::accelerator::Range(cells.size),
           exahype2::dg::limiting::MergeNeighbourExtrema<Derived, StoragePrecision, ComputePrecision>{
-            partition.onDevice(),
+            cellConnectivity.onDevice(),
             cells,
             _referenceExtrema.getView(),
             _extremaFaces.getView(),
@@ -604,16 +608,16 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD exahype2::dg::limiting::JudgedCells
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::judgeCandidates(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   const CellPool&          solution,
   const double             timeStamp,
   const double             timeStepSize
 ) {
   exahype2::dg::limiting::JudgedCells judged;
   tarch::accelerator::parallelReduce(
-    tarch::accelerator::Range(partition.getCells().size),
+    tarch::accelerator::Range(cellConnectivity.getCells().size),
     exahype2::dg::limiting::JudgeCandidates<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       solution.getView(),
       _statuses.getView(),
       _faceStatuses.getView(),
@@ -643,27 +647,37 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::spreadStatuses(
-  const peano4::Partition& partition
+  const peano4::CellConnectivity& cellConnectivity
 ) {
   for (int ring = 0; ring < exahype2::dg::limiting::NumberOfSpreadRings; ring++) {
     exchangeFaces(
-      partition,
+      cellConnectivity,
       exahype2::dg::limiting::InterpolateStatusHalves{_faceStatuses.getView()},
       exahype2::dg::limiting::RestrictStatusHalves{_faceStatuses.getView()},
       _statusExchange,
-      [this, &partition](const peano4::Adjacency adjacency) {
-        const auto cells = partition.onDevice().getCells(adjacency);
+      [this, &cellConnectivity](const peano4::Adjacency adjacency) {
+        const auto cells = cellConnectivity.onDevice().getCells(adjacency);
         tarch::accelerator::parallelFor(
           tarch::accelerator::Range(cells.size),
           exahype2::dg::limiting::SpreadStatuses<Derived, ComputePrecision>{
-            partition.onDevice(),
+            cellConnectivity.onDevice(),
             cells,
             _statuses.getView(),
-            _faceStatuses.getView()
+            std::as_const(_faceStatuses).getView()
           }
         );
       }
     );
+    if (ring + 1 < exahype2::dg::limiting::NumberOfSpreadRings) {
+      tarch::accelerator::parallelFor(
+        tarch::accelerator::Range(cellConnectivity.getCells().size),
+        exahype2::dg::limiting::WriteStatusesOntoFaces{
+          cellConnectivity.onDevice(),
+          std::as_const(_statuses).getView(),
+          _faceStatuses.getView()
+        }
+      );
+    }
   }
 }
 
@@ -678,9 +692,9 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::listCellsOnSubcellScheme(
-  const peano4::Partition& partition
+  const peano4::CellConnectivity& cellConnectivity
 ) {
-  const int numberOfCells = partition.getCells().size;
+  const int numberOfCells = cellConnectivity.getCells().size;
   assertion(
     _cellsOnSubcellScheme.getSize() == static_cast<std::size_t>(numberOfCells),
     _cellsOnSubcellScheme.getSize(),
@@ -700,10 +714,10 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   tarch::accelerator::parallelReduce(
     tarch::accelerator::Range(numberOfBlocks),
     exahype2::dg::limiting::CountCellsOnSubcellScheme{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       std::as_const(_statuses).getView(),
       numberOfBlocks,
-      partition.getCells(peano4::Adjacency::Local).size,
+      cellConnectivity.getCells(peano4::Adjacency::Local).size,
       _cellCountsOfBlocks.getData()
     },
     tarch::accelerator::Custom<exahype2::dg::limiting::SubcellSchemeCountsReduction>{_cellCounts}
@@ -711,7 +725,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(numberOfBlocks),
     exahype2::dg::limiting::ListCellsOnSubcellScheme{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       std::as_const(_statuses).getView(),
       numberOfBlocks,
       std::as_const(_cellCountsOfBlocks).getData(),
@@ -743,7 +757,7 @@ template <
   template <typename, typename, typename> class SubcellFamily>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::recompute(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   CellPool&                solution,
   const double             timeStamp,
   const double             timeStepSize
@@ -751,7 +765,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(_cellCounts.cellsOnScheme),
     exahype2::dg::limiting::ProjectSubgridsOntoFaces<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       tarch::Span<const int>{_cellsOnSubcellScheme.getData(), _cellCounts.cellsOnScheme},
       std::as_const(_previousSolution).getView(),
       _subcells.getView(),
@@ -761,37 +775,39 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       timeStamp <= 0.0
     }
   );
-  const auto boundaryFaces = partition.onDevice().getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary);
+  const auto boundaryFaces = cellConnectivity.onDevice().getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary);
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(boundaryFaces.size),
     exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision, ComputePrecision>{
-      {partition.onDevice(), boundaryFaces, _subcellHalo.getView(), timeStamp},
+      {cellConnectivity.onDevice(), boundaryFaces, _subcellHalo.getView(), timeStamp},
       std::as_const(_statuses).getView()
     }
   );
 
   // A coarse cell beside finer cells applies the restriction of the Galerkin fluxes of its fine faces.
-  exahype2::restrictFineFaces(
-    partition,
-    exahype2::dg::RestrictFluxHalves<Derived, ComputePrecision>{
-      partition.onDevice(),
-      _appliedFluxes.getView(),
-      Derived::template DGMatrices<double>::WeightedRestrictionMatrix1D
-    }
-  );
+  if constexpr (exahype2::dg::limiting::couplesGalerkinFlux<Derived>()) {
+    exahype2::restrictFineFaces(
+      cellConnectivity,
+      exahype2::dg::RestrictFluxHalves<Derived, ComputePrecision>{
+        cellConnectivity.onDevice(),
+        _appliedFluxes.getView(),
+        Derived::template DGMatrices<double>::WeightedRestrictionMatrix1D
+      }
+    );
+  }
 
   const tarch::Span<const int> recomputedCells{_recomputedCells.getData(), _cellCounts.recomputedCells};
   // A level jump copies coarse subcells into the fine halo. The halo then stays within the range of
   // the coarse subgrid at a shock.
-  const auto exchangeHalo = [this, &partition](const auto& workOnCells) {
+  const auto exchangeHalo = [this, &cellConnectivity](const auto& workOnCells) {
     exchangeFaces(
-      partition,
+      cellConnectivity,
       exahype2::fv::InjectHaloHalves<Derived, StoragePrecision, ComputePrecision>{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         _subcellHalo.getView()
       },
       exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>{
-        partition.onDevice(),
+        cellConnectivity.onDevice(),
         _subcellHalo.getView()
       },
       _haloExchange,
@@ -799,14 +815,15 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
     );
   };
   _family.advance(
-    partition,
+    cellConnectivity,
     exahype2::dg::limiting::SubcellRegion<StoragePrecision, ComputePrecision>{
       recomputedCells,
       _cellCounts.localRecomputedCells,
       _subcells.getView(),
       std::as_const(_subcellHalo).getView(),
       std::as_const(_faceStatuses).getView(),
-      std::as_const(_appliedFluxes).getView()
+      exahype2::dg::limiting::couplesGalerkinFlux<Derived>() ? std::as_const(_appliedFluxes).getView()
+                                                             : typename FluxPool::ConstView{}
     },
     exchangeHalo,
     timeStamp,
@@ -817,7 +834,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   tarch::accelerator::parallelReduce(
     tarch::accelerator::TeamRange(recomputedCells.size),
     exahype2::dg::limiting::ProjectRecomputedSubgrids<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       recomputedCells,
       solution.getView(),
       std::as_const(_subcells).getView(),
@@ -844,18 +861,18 @@ template <
 template <typename Interpolate, typename Restrict, typename Exchange, typename Work>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::exchangeFaces(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   const Interpolate&       interpolation,
   const Restrict&          restriction,
   Exchange&                exchange,
   const Work&              workOnCells
 ) {
   exchange.post();
-  exahype2::interpolateCoarseFaces(partition, peano4::Adjacency::Local, interpolation);
-  exahype2::restrictFineFaces(partition, peano4::Adjacency::Local, restriction);
+  exahype2::interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Local, interpolation);
+  exahype2::restrictFineFaces(cellConnectivity, peano4::Adjacency::Local, restriction);
   exchange.wait();
-  exahype2::interpolateCoarseFaces(partition, peano4::Adjacency::Remote, interpolation);
-  exahype2::restrictFineFaces(partition, peano4::Adjacency::Remote, restriction);
+  exahype2::interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Remote, interpolation);
+  exahype2::restrictFineFaces(cellConnectivity, peano4::Adjacency::Remote, restriction);
   exchange.post();
   workOnCells(peano4::Adjacency::Local);
   exchange.wait();

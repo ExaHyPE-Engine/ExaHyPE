@@ -50,8 +50,11 @@ exahype2::fv::interpolatePiecewiseLinear(
   const tarch::la::Vector<DIMENSIONS, double>& position,
   const int                                    unknown
 ) {
-  static_assert(PatchSize >= 2);
+  static_assert(PatchSize > 0);
   assertion(unknown >= 0 and unknown < NumberOfData, unknown);
+  if constexpr (PatchSize == 1) {
+    return exahype2::fv::interpolatePiecewiseConstant<PatchSize, NumberOfData>(centre, width, Q, position, unknown);
+  }
   tarch::la::Vector<DIMENSIONS, double> offset;
   tarch::la::Vector<DIMENSIONS, double> volumeSize;
   tarch::la::Vector<DIMENSIONS, int>    lowerVolume;
@@ -184,7 +187,7 @@ TARGET_DECLARE_END
 template <int PatchSize, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
 INLINE_METHOD void
 exahype2::fv::traceParticles(
-  const peano4::Partition&                                partition,
+  const peano4::CellConnectivity&                         cellConnectivity,
   const Pool&                                             solution,
   const double                                            timeStepSize,
   exahype2::particles::ParticleSet<NumberOfParticleData>& particles,
@@ -206,14 +209,21 @@ exahype2::fv::traceParticles(
         NumberOfParticleData,
         exahype2::particles::FieldList<FieldIndices...>,
         Pool
-      >{partition.onDevice(), solution.getView(), timeStepSize, set, forces, domainOffset, domainWidth, periodicAxes},
+      >{cellConnectivity.onDevice(),
+        solution.getView(),
+        timeStepSize,
+        set,
+        forces,
+        domainOffset,
+        domainWidth,
+        periodicAxes},
       tarch::accelerator::Sum<int>{numberOfMovedParticles}
     );
   }
   if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
     return;
   }
-  particles.relocateParticlesMovedOutOfCells(partition, numberOfMovedParticles);
+  particles.relocateParticlesMovedOutOfCells(cellConnectivity, numberOfMovedParticles);
   // Every moved particle samples the fields of the cell that holds it now.
   if (timeStepSize > 0.0 and particles.getSize() > 0) {
     particles.upload();
@@ -227,7 +237,15 @@ exahype2::fv::traceParticles(
         NumberOfParticleData,
         exahype2::particles::FieldList<FieldIndices...>,
         Pool
-      >{partition.onDevice(), solution.getView(), 0.0, set, forces, domainOffset, domainWidth, periodicAxes, true},
+      >{cellConnectivity.onDevice(),
+        solution.getView(),
+        0.0,
+        set,
+        forces,
+        domainOffset,
+        domainWidth,
+        periodicAxes,
+        true},
       tarch::accelerator::Sum<int>{movedParticlesAfterSampling}
     );
     assertion(movedParticlesAfterSampling == 0, movedParticlesAfterSampling);
@@ -250,8 +268,8 @@ exahype2::fv::TraceParticles<PatchSize, NumberOfData, NumberOfParticleData, Fiel
   tarch::la::Vector<DIMENSIONS, double> centre;
   tarch::la::Vector<DIMENSIONS, double> width;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    centre(axis) = partition.getCellCentre(slot, axis);
-    width(axis)  = partition.getCellWidth(slot, axis);
+    centre(axis) = cellConnectivity.getCellCentre(slot, axis);
+    width(axis)  = cellConnectivity.getCellWidth(slot, axis);
   }
   const auto* const Q = solution.getChunk(slot);
   const auto        interpolateAt =
@@ -276,7 +294,7 @@ exahype2::fv::TraceParticles<PatchSize, NumberOfData, NumberOfParticleData, Fiel
   exahype2::particles::reflectAtWalls(particle, newPosition, WallDamping, domainOffset, domainWidth, periodicAxes);
   exahype2::particles::wrapIntoDomain(newPosition, domainOffset, domainWidth, periodicAxes);
   particle.setX(newPosition);
-  if (not particles.isInsideCell(partition, index, newPosition, domainOffset)) {
+  if (not particles.isInsideCell(cellConnectivity, index, newPosition, domainOffset)) {
     particles.markAsMovedOutOfCell(index);
     numberOfMovedParticles++;
   }

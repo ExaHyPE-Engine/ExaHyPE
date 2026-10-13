@@ -16,8 +16,8 @@
 #include "exahype2/terms/PhysicalAdmissibility.h"
 #include "exahype2/terms/SourceTerm.h"
 #include "exahype2/terms/SubcellRiemannSolver.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -30,6 +30,19 @@
 namespace exahype2::dg::limiting {
   template <typename Derived, typename ComputePrecision>
   class SubcellScheme;
+
+  /**
+   * Returns whether a subgrid of Derived applies the flux of the Galerkin step on its faces to
+   * Galerkin cells. Without Derived::GalerkinFluxCoupling it does.
+   */
+  template <typename Derived>
+  constexpr bool couplesGalerkinFlux() {
+    if constexpr (requires { Derived::GalerkinFluxCoupling; }) {
+      return Derived::GalerkinFluxCoupling;
+    } else {
+      return true;
+    }
+  }
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct ProjectSubgridsOntoFaces;
@@ -296,7 +309,7 @@ struct exahype2::dg::limiting::ProjectSubgridsOntoFaces final {
   using CellPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition              partition{};
+  peano4::CellConnectivity       cellConnectivity{};
   tarch::Span<const int>         cells{};
   typename CellPool::ConstView   previousSolution{};
   typename CellPool::View        subcells{};
@@ -331,7 +344,7 @@ struct exahype2::dg::limiting::ProjectRecomputedSubgrids final {
   using Kernel   = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::View      nodes{};
   typename CellPool::ConstView subcells{};
@@ -349,7 +362,8 @@ struct exahype2::dg::limiting::ProjectRecomputedSubgrids final {
 /**
  * The cells a subcell step advances, the local cells first, and the data it reads. A face status
  * half of at least Limited marks a side that recomputes. appliedFluxes holds on every face the
- * numerical flux of the Galerkin step that each side applies, the lower side first.
+ * numerical flux of the Galerkin step that each side applies, the lower side first, and stays empty
+ * without the coupling to the Galerkin flux.
  */
 template <typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::SubcellRegion final {

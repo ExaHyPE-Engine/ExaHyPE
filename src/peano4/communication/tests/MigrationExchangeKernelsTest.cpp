@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MigrationExchangeKernelsTest.h"
 
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Regrid.h"
 #include "peano4/communication/MigrationExchangeKernels.h"
 #include "tarch/CompilerSpecificSettings.h"

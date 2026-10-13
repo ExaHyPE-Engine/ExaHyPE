@@ -82,22 +82,21 @@ namespace tarch::accelerator {
       const int                  numberOfThreads = omp_get_num_threads();
       // The blocks fix the merge order of the partial values for every number of tasks.
       const int numberOfBlocks = std::max(1, std::min(range.n, MaximumHostTasksPerThread * numberOfThreads));
-      const int numberOfTasks  = getNumberOfHostTasks(
-        range.n,
-        numberOfThreads,
-        secondsPerItem.load(std::memory_order_relaxed)
-      );
+      const int numberOfTasks =
+        getNumberOfHostTasks(range.n, numberOfThreads, secondsPerItem.load(std::memory_order_relaxed));
       const int              rangeSize = range.n;
       std::vector<ValueType> partials(static_cast<std::size_t>(numberOfBlocks), Reducer::identity());
       ValueType* const       partialValues = partials.data();
       assertion(numberOfTasks <= numberOfBlocks, numberOfTasks, numberOfBlocks);
       // OpenMP moves a task body into a function of its own. That function inherits always_inline
       // from the enclosing function. GCC and icpx then fail to compile it. The tasks start in a lambda.
-      [](const int        numberOfTasks,
-         const int        numberOfBlocks,
-         const int        rangeSize,
-         const Functor&   functor,
-         ValueType* const partialValues) {
+      [](
+        const int        numberOfTasks,
+        const int        numberOfBlocks,
+        const int        rangeSize,
+        const Functor&   functor,
+        ValueType* const partialValues
+      ) {
 #if defined(PEANO_OPENMP_TASKLOOP_SUPPORTED)
         const auto numberOfTaskItems = static_cast<unsigned long>(numberOfTasks);
 #pragma omp taskloop default(none) num_tasks(numberOfTasks) \
@@ -105,7 +104,7 @@ namespace tarch::accelerator {
         for (unsigned long taskNumber = 0; taskNumber < numberOfTaskItems; taskNumber++) {
           const auto task       = static_cast<int>(taskNumber);
           const int  firstBlock = static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * task / numberOfTasks);
-          const int  endBlock   = static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * (task + 1) / numberOfTasks);
+          const int endBlock = static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * (task + 1) / numberOfTasks);
           for (int block = firstBlock; block < endBlock; block++) {
             const int begin   = static_cast<int>(static_cast<std::int64_t>(rangeSize) * block / numberOfBlocks);
             const int end     = static_cast<int>(static_cast<std::int64_t>(rangeSize) * (block + 1) / numberOfBlocks);
@@ -119,10 +118,12 @@ namespace tarch::accelerator {
 #else
         tarch::accelerator::reportMissingTaskloopSupportOnce();
         for (int task = 0; task < numberOfTasks; task++) {
-#pragma omp task default(none) firstprivate(task, numberOfTasks, numberOfBlocks, rangeSize) shared(functor, partialValues)
+#pragma omp task default(none) firstprivate(task, numberOfTasks, numberOfBlocks, rangeSize) \
+  shared(functor, partialValues)
           {
             const int firstBlock = static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * task / numberOfTasks);
-            const int endBlock   = static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * (task + 1) / numberOfTasks);
+            const int endBlock =
+              static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * (task + 1) / numberOfTasks);
             for (int block = firstBlock; block < endBlock; block++) {
               const int begin   = static_cast<int>(static_cast<std::int64_t>(rangeSize) * block / numberOfBlocks);
               const int end     = static_cast<int>(static_cast<std::int64_t>(rangeSize) * (block + 1) / numberOfBlocks);

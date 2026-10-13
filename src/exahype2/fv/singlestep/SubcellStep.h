@@ -3,7 +3,7 @@
 #pragma once
 
 #include "exahype2/dg/limiting/SubcellScheme.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/Buffer.h"
@@ -36,13 +36,13 @@ public:
   using Kernel = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
   using Region = exahype2::dg::limiting::SubcellRegion<StoragePrecision, ComputePrecision>;
 
-  INLINE_METHOD void rebuild(const peano4::Partition& partition);
+  INLINE_METHOD void rebuild(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void release();
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
   template <typename ExchangeHalo>
   INLINE_METHOD void advance(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     const Region&            region,
     const ExchangeHalo&      exchangeHalo,
     double                   timeStamp,
@@ -121,7 +121,7 @@ struct exahype2::fv::singlestep::AdvanceSubgrids final {
   using FluxPool   = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition              partition{};
+  peano4::CellConnectivity              cellConnectivity{};
   tarch::Span<const int>         cells{};
   typename CellPool::View        subcells{};
   typename CellPool::ConstView   halo{};

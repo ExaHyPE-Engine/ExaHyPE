@@ -84,22 +84,22 @@ INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePreci
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::allocate(
-  const peano4::Partition& partition
+  const peano4::CellConnectivity& cellConnectivity
 ) {
-  Base::allocate(partition);
+  Base::allocate(cellConnectivity);
   if constexpr (HasLimiter) {
-    _limiter->allocate(partition);
+    _limiter->allocate(cellConnectivity);
   }
-  rebuildCouplingFaces(partition);
-  reservePredictorScratch(partition);
+  rebuildCouplingFaces(cellConnectivity);
+  reservePredictorScratch(cellConnectivity);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::reservePredictorScratch(
-  const peano4::Partition& partition
+  const peano4::CellConnectivity& cellConnectivity
 ) {
-  const auto chunks = static_cast<std::size_t>(getNumberOfPredictorChunks(this->getNumberOfCells(partition)));
+  const auto chunks = static_cast<std::size_t>(getNumberOfPredictorChunks(this->getNumberOfCells(cellConnectivity)));
   if (_predictorScratch.getSize() < chunks * Predictor::ScratchSize) {
     _predictorScratch.allocate(chunks * Predictor::ScratchSize);
   }
@@ -187,10 +187,10 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::initialise(
-  const peano4::Partition&      partition,
-  exahype2::RefinementRequests& requests
+  const peano4::CellConnectivity& cellConnectivity,
+  exahype2::RefinementRequests&   requests
 ) {
-  Base::initialise(partition, requests);
+  Base::initialise(cellConnectivity, requests);
   if constexpr (Derived::NumberOfPointSources > 0) {
     static_assert(
       exahype2::terms::HasPointSourceLocations<Derived, Derived::NumberOfPointSources>,
@@ -206,7 +206,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     );
   }
   if constexpr (HasLimiter) {
-    _limiter->initialise(partition, this->_solution);
+    _limiter->initialise(cellConnectivity, this->_solution);
   }
 }
 
@@ -220,14 +220,14 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::performTimeStep(
-  const peano4::Partition&      partition,
-  exahype2::RefinementRequests& requests
+  const peano4::CellConnectivity& cellConnectivity,
+  exahype2::RefinementRequests&   requests
 ) {
   if (_drivenByPartner) {
     return;
   }
   if (_coupledTimeStep) {
-    _coupledTimeStep(partition, requests);
+    _coupledTimeStep(cellConnectivity, requests);
     return;
   }
   constexpr auto Local        = peano4::Adjacency::Local;
@@ -236,9 +236,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   const double   timeStamp    = this->_timeStepping.getTimeStamp();
 
   if constexpr (HasLimiter) {
-    _limiter->openTimeStep(partition, this->_solution);
+    _limiter->openTimeStep(cellConnectivity, this->_solution);
   }
-  predict(partition, Remote, timeStepSize);
+  predict(cellConnectivity, Remote, timeStepSize);
 
   const typename Base::InterpolateHalves interpolateHalves{
     this->_faceStates.getView(),
@@ -246,32 +246,33 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     DGMatrices<double>::ProlongationMatrix1D
   };
   const typename Base::RestrictFluxes restrictFluxes{
-    partition.onDevice(),
+    cellConnectivity.onDevice(),
     this->_faceFluxes.getView(),
     DGMatrices<double>::WeightedRestrictionMatrix1D
   };
   this->_stateExchange.post();
   this->_fluxExchange.post();
-  predict(partition, Local, timeStepSize);
-  exahype2::interpolateCoarseFaces(partition, Local, interpolateHalves);
-  this->solveRiemannProblems(partition, Local, timeStamp, timeStepSize, getAppliedFluxes());
+  predict(cellConnectivity, Local, timeStepSize);
+  exahype2::interpolateCoarseFaces(cellConnectivity, Local, interpolateHalves);
+  this->solveRiemannProblems(cellConnectivity, Local, timeStamp, timeStepSize, getAppliedFluxes());
   this->_stateExchange.wait();
   this->_fluxExchange.wait();
-  exahype2::interpolateCoarseFaces(partition, Remote, interpolateHalves);
-  this->solveRiemannProblems(partition, Remote, timeStamp, timeStepSize, getAppliedFluxes());
+  exahype2::interpolateCoarseFaces(cellConnectivity, Remote, interpolateHalves);
+  this->solveRiemannProblems(cellConnectivity, Remote, timeStamp, timeStepSize, getAppliedFluxes());
 
-  exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
+  exahype2::restrictFineFaces(cellConnectivity, Remote, restrictFluxes);
   this->_restrictedFluxExchange.post();
-  exahype2::restrictFineFaces(partition, Local, restrictFluxes);
-  auto statistics = correct(partition, Local, timeStepSize);
+  exahype2::restrictFineFaces(cellConnectivity, Local, restrictFluxes);
+  auto statistics = correct(cellConnectivity, Local, timeStepSize);
   this->_restrictedFluxExchange.wait();
-  statistics = exahype2::dg::MaxEigenvalueStatistics::combine(statistics, correct(partition, Remote, timeStepSize));
+  statistics =
+    exahype2::dg::MaxEigenvalueStatistics::combine(statistics, correct(cellConnectivity, Remote, timeStepSize));
   if constexpr (HasLimiter) {
-    statistics = _limiter->closeTimeStep(partition, this->_solution, timeStamp, timeStepSize);
+    statistics = _limiter->closeTimeStep(cellConnectivity, this->_solution, timeStamp, timeStepSize);
   }
   this->closeTimeStep(timeStepSize, statistics);
-  this->measureError(partition);
-  this->voteOnRefinement(partition, requests);
+  this->measureError(cellConnectivity);
+  this->voteOnRefinement(cellConnectivity, requests);
 }
 
 /**
@@ -310,99 +311,104 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   setCouplingMatrix(fromPartnerMatrix);
   partner.setCouplingMatrix(toPartnerMatrix);
   partner.leaveTimeStepsToPartner();
-  _coupledTimeStep = [this, &partner](const peano4::Partition& partition, exahype2::RefinementRequests& requests) {
-    constexpr auto Local        = peano4::Adjacency::Local;
-    constexpr auto Remote       = peano4::Adjacency::Remote;
-    const double   timeStepSize = std::min(this->_timeStepping.startTimeStep(), partner._timeStepping.startTimeStep());
-    const double   timeStamp    = this->_timeStepping.getTimeStamp();
+  _coupledTimeStep =
+    [this, &partner](const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests) {
+      constexpr auto Local      = peano4::Adjacency::Local;
+      constexpr auto Remote     = peano4::Adjacency::Remote;
+      const double timeStepSize = std::min(this->_timeStepping.startTimeStep(), partner._timeStepping.startTimeStep());
+      const double timeStamp    = this->_timeStepping.getTimeStamp();
 
-    if constexpr (HasLimiter) {
-      _limiter->openTimeStep(partition, this->_solution);
-    }
-    if constexpr (Partner::HasLimiter) {
-      partner._limiter->openTimeStep(partition, partner._solution);
-    }
-    predict(partition, Remote, timeStepSize);
-    partner.predict(partition, Remote, timeStepSize);
+      if constexpr (HasLimiter) {
+        _limiter->openTimeStep(cellConnectivity, this->_solution);
+      }
+      if constexpr (Partner::HasLimiter) {
+        partner._limiter->openTimeStep(cellConnectivity, partner._solution);
+      }
+      predict(cellConnectivity, Remote, timeStepSize);
+      partner.predict(cellConnectivity, Remote, timeStepSize);
 
-    const typename Base::InterpolateHalves interpolateHalves{
-      this->_faceStates.getView(),
-      this->_faceFluxes.getView(),
-      DGMatrices<double>::ProlongationMatrix1D
-    };
-    const typename Partner::InterpolateHalves interpolatePartnerHalves{
-      partner._faceStates.getView(),
-      partner._faceFluxes.getView(),
-      Partner::template DGMatrices<double>::ProlongationMatrix1D
-    };
-    const typename Base::RestrictFluxes restrictFluxes{
-      partition.onDevice(),
-      this->_faceFluxes.getView(),
-      DGMatrices<double>::WeightedRestrictionMatrix1D
-    };
-    const typename Partner::RestrictFluxes restrictPartnerFluxes{
-      partition.onDevice(),
-      partner._faceFluxes.getView(),
-      Partner::template DGMatrices<double>::WeightedRestrictionMatrix1D
-    };
-    const double partnerTimeStamp = partner.getTimeStepping().getTimeStamp();
+      const typename Base::InterpolateHalves interpolateHalves{
+        this->_faceStates.getView(),
+        this->_faceFluxes.getView(),
+        DGMatrices<double>::ProlongationMatrix1D
+      };
+      const typename Partner::InterpolateHalves interpolatePartnerHalves{
+        partner._faceStates.getView(),
+        partner._faceFluxes.getView(),
+        Partner::template DGMatrices<double>::ProlongationMatrix1D
+      };
+      const typename Base::RestrictFluxes restrictFluxes{
+        cellConnectivity.onDevice(),
+        this->_faceFluxes.getView(),
+        DGMatrices<double>::WeightedRestrictionMatrix1D
+      };
+      const typename Partner::RestrictFluxes restrictPartnerFluxes{
+        cellConnectivity.onDevice(),
+        partner._faceFluxes.getView(),
+        Partner::template DGMatrices<double>::WeightedRestrictionMatrix1D
+      };
+      const double partnerTimeStamp = partner.getTimeStepping().getTimeStamp();
 
-    this->_stateExchange.post();
-    this->_fluxExchange.post();
-    partner._stateExchange.post();
-    partner._fluxExchange.post();
-    predict(partition, Local, timeStepSize);
-    partner.predict(partition, Local, timeStepSize);
-    exahype2::interpolateCoarseFaces(partition, Local, interpolateHalves);
-    exahype2::interpolateCoarseFaces(partition, Local, interpolatePartnerHalves);
-    copyFaceHalvesFromPartner(partition, partner, Local);
-    partner.copyFaceHalvesFromPartner(partition, *this, Local);
-    this->solveRiemannProblems(partition, Local, timeStamp, timeStepSize, getAppliedFluxes());
-    partner.solveRiemannProblems(partition, Local, partnerTimeStamp, timeStepSize, partner.getAppliedFluxes());
-    this->_stateExchange.wait();
-    this->_fluxExchange.wait();
-    partner._stateExchange.wait();
-    partner._fluxExchange.wait();
-    exahype2::interpolateCoarseFaces(partition, Remote, interpolateHalves);
-    exahype2::interpolateCoarseFaces(partition, Remote, interpolatePartnerHalves);
-    copyFaceHalvesFromPartner(partition, partner, Remote);
-    partner.copyFaceHalvesFromPartner(partition, *this, Remote);
-    this->solveRiemannProblems(partition, Remote, timeStamp, timeStepSize, getAppliedFluxes());
-    partner.solveRiemannProblems(partition, Remote, partnerTimeStamp, timeStepSize, partner.getAppliedFluxes());
+      this->_stateExchange.post();
+      this->_fluxExchange.post();
+      partner._stateExchange.post();
+      partner._fluxExchange.post();
+      predict(cellConnectivity, Local, timeStepSize);
+      partner.predict(cellConnectivity, Local, timeStepSize);
+      exahype2::interpolateCoarseFaces(cellConnectivity, Local, interpolateHalves);
+      exahype2::interpolateCoarseFaces(cellConnectivity, Local, interpolatePartnerHalves);
+      copyFaceHalvesFromPartner(cellConnectivity, partner, Local);
+      partner.copyFaceHalvesFromPartner(cellConnectivity, *this, Local);
+      this->solveRiemannProblems(cellConnectivity, Local, timeStamp, timeStepSize, getAppliedFluxes());
+      partner.solveRiemannProblems(cellConnectivity, Local, partnerTimeStamp, timeStepSize, partner.getAppliedFluxes());
+      this->_stateExchange.wait();
+      this->_fluxExchange.wait();
+      partner._stateExchange.wait();
+      partner._fluxExchange.wait();
+      exahype2::interpolateCoarseFaces(cellConnectivity, Remote, interpolateHalves);
+      exahype2::interpolateCoarseFaces(cellConnectivity, Remote, interpolatePartnerHalves);
+      copyFaceHalvesFromPartner(cellConnectivity, partner, Remote);
+      partner.copyFaceHalvesFromPartner(cellConnectivity, *this, Remote);
+      this->solveRiemannProblems(cellConnectivity, Remote, timeStamp, timeStepSize, getAppliedFluxes());
+      partner.solveRiemannProblems(cellConnectivity, Remote, partnerTimeStamp, timeStepSize, partner.getAppliedFluxes());
 
-    exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
-    exahype2::restrictFineFaces(partition, Remote, restrictPartnerFluxes);
-    this->_restrictedFluxExchange.post();
-    partner._restrictedFluxExchange.post();
-    exahype2::restrictFineFaces(partition, Local, restrictFluxes);
-    exahype2::restrictFineFaces(partition, Local, restrictPartnerFluxes);
-    auto statistics        = correct(partition, Local, timeStepSize);
-    auto partnerStatistics = partner.correct(partition, Local, timeStepSize);
-    this->_restrictedFluxExchange.wait();
-    partner._restrictedFluxExchange.wait();
-    statistics = exahype2::dg::MaxEigenvalueStatistics::combine(statistics, correct(partition, Remote, timeStepSize));
-    partnerStatistics = exahype2::dg::MaxEigenvalueStatistics::combine(
-      partnerStatistics,
-      partner.correct(partition, Remote, timeStepSize)
-    );
-    if constexpr (HasLimiter) {
-      statistics = _limiter->closeTimeStep(partition, this->_solution, timeStamp, timeStepSize);
-    }
-    if constexpr (Partner::HasLimiter) {
-      partnerStatistics =
-        partner._limiter
-          ->closeTimeStep(partition, partner._solution, partner.getTimeStepping().getTimeStamp(), timeStepSize);
-    }
-    this->closeTimeStep(timeStepSize, statistics);
-    partner.closeTimeStep(timeStepSize, partnerStatistics);
-    if constexpr (requires { partner.traceTracers(partition, timeStepSize, false); }) {
-      partner.traceTracers(partition, timeStepSize, false);
-    }
-    this->measureError(partition);
-    partner.measureError(partition);
-    this->voteOnRefinement(partition, requests);
-    partner.voteOnRefinement(partition, requests);
-  };
+      exahype2::restrictFineFaces(cellConnectivity, Remote, restrictFluxes);
+      exahype2::restrictFineFaces(cellConnectivity, Remote, restrictPartnerFluxes);
+      this->_restrictedFluxExchange.post();
+      partner._restrictedFluxExchange.post();
+      exahype2::restrictFineFaces(cellConnectivity, Local, restrictFluxes);
+      exahype2::restrictFineFaces(cellConnectivity, Local, restrictPartnerFluxes);
+      auto statistics        = correct(cellConnectivity, Local, timeStepSize);
+      auto partnerStatistics = partner.correct(cellConnectivity, Local, timeStepSize);
+      this->_restrictedFluxExchange.wait();
+      partner._restrictedFluxExchange.wait();
+      statistics =
+        exahype2::dg::MaxEigenvalueStatistics::combine(statistics, correct(cellConnectivity, Remote, timeStepSize));
+      partnerStatistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+        partnerStatistics,
+        partner.correct(cellConnectivity, Remote, timeStepSize)
+      );
+      if constexpr (HasLimiter) {
+        statistics = _limiter->closeTimeStep(cellConnectivity, this->_solution, timeStamp, timeStepSize);
+      }
+      if constexpr (Partner::HasLimiter) {
+        partnerStatistics = partner._limiter->closeTimeStep(
+          cellConnectivity,
+          partner._solution,
+          partner.getTimeStepping().getTimeStamp(),
+          timeStepSize
+        );
+      }
+      this->closeTimeStep(timeStepSize, statistics);
+      partner.closeTimeStep(timeStepSize, partnerStatistics);
+      if constexpr (requires { partner.traceTracers(cellConnectivity, timeStepSize, false); }) {
+        partner.traceTracers(cellConnectivity, timeStepSize, false);
+      }
+      this->measureError(cellConnectivity);
+      partner.measureError(cellConnectivity);
+      this->voteOnRefinement(cellConnectivity, requests);
+      partner.voteOnRefinement(cellConnectivity, requests);
+    };
 }
 
 /**
@@ -436,15 +442,18 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 template <typename Partner>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::copyFaceHalvesFromPartner(
-  [[maybe_unused]] const peano4::Partition& partition,
-  const Partner&                            partner,
-  const peano4::Adjacency                   adjacency
+  [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
+  const Partner&                                   partner,
+  const peano4::Adjacency                          adjacency
 ) {
   assertion(
     _couplingMatrix.getSize() == static_cast<std::size_t>(Partner::NodesPerAxis * NodesPerAxis),
     _couplingMatrix.getSize()
   );
-  assertion(partition.getNumberOfFaces() <= partner.getFaceStates().getCapacity(), partition.getNumberOfFaces());
+  assertion(
+    cellConnectivity.getNumberOfFaces() <= partner.getFaceStates().getCapacity(),
+    cellConnectivity.getNumberOfFaces()
+  );
   using PartnerPrecision   = typename Partner::StatePool::ValueType;
   const bool local         = adjacency == peano4::Adjacency::Local;
   const int  firstFace     = local ? 0 : _numberOfLocalCouplingFaces;
@@ -470,45 +479,46 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::rebuildCouplingFaces(
-  [[maybe_unused]] const peano4::Partition& partition
+  [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity
 ) {
   if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
     std::vector<int> couplingFaces;
     for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
-      for (const int face : partition.getFaces(adjacency, peano4::FaceKind::Interior, peano4::FaceKind::Intermediate)) {
-        const auto kind = partition.getFaceKind(face);
+      for (const int face :
+           cellConnectivity.getFaces(adjacency, peano4::FaceKind::Interior, peano4::FaceKind::Intermediate)) {
+        const auto kind = cellConnectivity.getFaceKind(face);
         if (kind == peano4::FaceKind::Boundary) {
           continue;
         }
         int ownedSide = -1;
         int farSide   = -1;
         for (int side = 0; side < 2; side++) {
-          const int slot = partition.getFaceCell(face, side);
+          const int slot = cellConnectivity.getFaceCell(face, side);
           if (slot < 0) {
             continue;
           }
-          if (Derived::ownsCell(partition.getCellCentre(slot), partition.getCellWidth(slot))) {
+          if (Derived::ownsCell(cellConnectivity.getCellCentre(slot), cellConnectivity.getCellWidth(slot))) {
             ownedSide = side;
           } else {
             farSide = side;
           }
         }
-        if (ownedSide < 0 or (farSide < 0 and partition.getFaceCell(face, 1 - ownedSide) >= 0)) {
+        if (ownedSide < 0 or (farSide < 0 and cellConnectivity.getFaceCell(face, 1 - ownedSide) >= 0)) {
           continue;
         }
         if (farSide < 0) {
-          const int                             owned  = partition.getFaceCell(face, ownedSide);
-          const int                             normal = partition.getFaceNormal(face);
-          tarch::la::Vector<DIMENSIONS, double> centre = partition.getCellCentre(owned);
-          centre(normal) += (ownedSide == 0 ? 1.0 : -1.0) * partition.getCellWidth(owned)(normal);
-          if (Derived::ownsCell(centre, partition.getCellWidth(owned))) {
+          const int                             owned  = cellConnectivity.getFaceCell(face, ownedSide);
+          const int                             normal = cellConnectivity.getFaceNormal(face);
+          tarch::la::Vector<DIMENSIONS, double> centre = cellConnectivity.getCellCentre(owned);
+          centre(normal) += (ownedSide == 0 ? 1.0 : -1.0) * cellConnectivity.getCellWidth(owned)(normal);
+          if (Derived::ownsCell(centre, cellConnectivity.getCellWidth(owned))) {
             continue;
           }
         }
         if (kind != peano4::FaceKind::Interior) {
           tarch::terminateWithError(
-            "The coupling face " + toString(partition.getFaceLattice(face)) + " on level "
-            + std::to_string(partition.getFaceLevel(face)) + " must lie away from level jumps."
+            "The coupling face " + toString(cellConnectivity.getFaceLattice(face)) + " on level "
+            + std::to_string(cellConnectivity.getFaceLevel(face)) + " must lie away from level jumps."
           );
         }
         couplingFaces.push_back(face);
@@ -529,16 +539,16 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::regrid(
-  const peano4::Partition&      partition,
-  const peano4::Regrid&         regrid,
-  exahype2::RefinementRequests& requests
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Regrid&           regrid,
+  exahype2::RefinementRequests&   requests
 ) {
   if constexpr (HasLimiter) {
-    _limiter->regrid(partition, regrid, this->_solution);
+    _limiter->regrid(cellConnectivity, regrid, this->_solution);
   }
-  Base::regrid(partition, regrid, requests);
-  rebuildCouplingFaces(partition);
-  reservePredictorScratch(partition);
+  Base::regrid(cellConnectivity, regrid, requests);
+  rebuildCouplingFaces(cellConnectivity);
+  reservePredictorScratch(cellConnectivity);
 }
 
 /**
@@ -548,14 +558,14 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::plot(
-  const peano4::Partition&     partition,
-  const tarch::plotter::Format format,
-  const std::string&           outputDirectory
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory
 ) {
   if constexpr (HasLimiter) {
     this->_plotter.template plotNodes<NodesPerAxis, NumberOfData, Limiter::SubcellScheme::SubcellsPerAxis>(
-      partition,
-      this->getCellsOnHost(partition),
+      cellConnectivity,
+      this->getCellsOnHost(cellConnectivity),
       this->downloadSolution(),
       this->_nodePositionsOnHost.data(),
       &_limiter->downloadSubcells(),
@@ -565,9 +575,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
       format,
       outputDirectory
     );
-    this->plotFaces(partition, format, outputDirectory);
+    this->plotFaces(cellConnectivity, format, outputDirectory);
   } else {
-    Base::plot(partition, format, outputDirectory);
+    Base::plot(cellConnectivity, format, outputDirectory);
   }
 }
 
@@ -637,19 +647,20 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::predict(
-  const peano4::Partition& partition,
-  const peano4::Adjacency  adjacency,
-  const double             timeStepSize
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const double                    timeStepSize
 ) {
   assertion(
     _predictorScratch.getSize()
-    >= static_cast<std::size_t>(getNumberOfPredictorChunks(this->getNumberOfCells(partition))) * Predictor::ScratchSize
+    >= static_cast<std::size_t>(getNumberOfPredictorChunks(this->getNumberOfCells(cellConnectivity)))
+      * Predictor::ScratchSize
   );
   exahype2::dg::ader::PredictionCounts counts;
   if constexpr (HasLimiter) {
-    counts = predictCells(partition, adjacency, timeStepSize, _limiter->getStatuses());
+    counts = predictCells(cellConnectivity, adjacency, timeStepSize, _limiter->getStatuses());
   } else {
-    counts = predictCells(partition, adjacency, timeStepSize, exahype2::dg::ader::NoLimiter{});
+    counts = predictCells(cellConnectivity, adjacency, timeStepSize, exahype2::dg::ader::NoLimiter{});
     if (counts.divergedCells > 0) {
       tarch::terminateWithError(
         "The space-time predictor diverges in " + std::to_string(counts.divergedCells) + " cells."
@@ -680,12 +691,12 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::contributeTo(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::addLocalValuesToGlobalReduction(
   tarch::mpi::ReductionRecord& record
 ) {
-  Base::contributeTo(record);
+  Base::addLocalValuesToGlobalReduction(record);
   if constexpr (HasLimiter) {
-    _limiter->contributeTo(record);
+    _limiter->addLocalValuesToGlobalReduction(record);
   }
   if constexpr (not Derived::IsLinear) {
     assertion(_unconvergedPredictions >= 0, _unconvergedPredictions);
@@ -701,12 +712,12 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::adoptFrom(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::readValuesFromGlobalReduction(
   const tarch::mpi::ReductionRecord& record
 ) {
-  Base::adoptFrom(record);
+  Base::readValuesFromGlobalReduction(record);
   if constexpr (HasLimiter) {
-    _limiter->adoptFrom(record);
+    _limiter->readValuesFromGlobalReduction(record);
   }
   if constexpr (not Derived::IsLinear) {
     const auto globalPredictions = record.getSum(_unconvergedPredictionsSlot);
@@ -728,12 +739,12 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 template <typename DivergenceMarks>
 INLINE_METHOD exahype2::dg::ader::PredictionCounts
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::predictCells(
-  const peano4::Partition& partition,
-  const peano4::Adjacency  adjacency,
-  const double             timeStepSize,
-  const DivergenceMarks&   divergenceMarks
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const double                    timeStepSize,
+  const DivergenceMarks&          divergenceMarks
 ) {
-  const auto                           cells = this->getCells(partition, adjacency);
+  const auto                           cells = this->getCells(cellConnectivity, adjacency);
   exahype2::dg::ader::PredictionCounts counts;
   if (cells.size == 0) {
     return counts;
@@ -743,7 +754,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   tarch::accelerator::parallelReduce(
     tarch::accelerator::TeamRange(numberOfTeams, threadsPerTeam, Predictor::getTeamScratchBytes(threadsPerTeam)),
     exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, DivergenceMarks>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       cells,
       numberOfTeams,
       getPredictorThreadsPerCell(),
@@ -771,16 +782,16 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::correct(
-  const peano4::Partition& partition,
-  const peano4::Adjacency  adjacency,
-  const double             timeStepSize
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const double                    timeStepSize
 ) {
-  const auto                            cells = this->getCells(partition, adjacency);
+  const auto                            cells = this->getCells(cellConnectivity, adjacency);
   exahype2::dg::MaxEigenvalueStatistics statistics;
   tarch::accelerator::parallelReduce(
     tarch::accelerator::Range(cells.size),
     exahype2::dg::ader::CorrectCells<Derived, UsesAdaptiveTimeStepping and not HasLimiter, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       cells,
       this->_solution.getView(),
       std::as_const(this->_faceFluxes).getView(),

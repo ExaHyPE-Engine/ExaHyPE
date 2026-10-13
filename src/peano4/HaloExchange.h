@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -35,7 +35,7 @@ public:
   HaloExchange& operator=(HaloExchange&& other)      = delete;
   INLINE_METHOD ~HaloExchange() noexcept;
 
-  INLINE_METHOD void rebuild(const peano4::Partition& partition);
+  INLINE_METHOD void rebuild(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void release();
   INLINE_METHOD void post();
   INLINE_METHOD void wait();

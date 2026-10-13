@@ -23,8 +23,8 @@ def parse_arguments():
         help="Water height below which a state counts as dry (hThreshold).",
     )
     parser.add_argument(
-        "--dg-wet-height", type=float, default=1e-3,
-        help="Water height above which every node of a DG cell must lie for the cell to skip the limiter.",
+        "--wet-height", type=float, default=1e-3,
+        help="Water height above which every state of a wet cell or volume lies (admissibility).",
     )
     parser.add_argument("--degrees-of-freedom", type=int, default=16)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
@@ -57,6 +57,15 @@ def parse_arguments():
     parser.add_argument(
         "--no-fallback", action="store_true",
         help="ADER-WENO without the a-posteriori fallback to the Godunov scheme.",
+    )
+    parser.add_argument(
+        "--no-galerkin-flux-coupling", action="store_true",
+        help="The subcell limiter solves subcell Riemann problems on faces to Galerkin cells "
+        "instead of applying the Galerkin flux there.",
+    )
+    parser.add_argument(
+        "--error-samples", type=int, default=100,
+        help="Number of error measurements up to the end time.",
     )
     args, _ = parser.parse_known_args()
     if args.grid_levels is not None:
@@ -125,7 +134,8 @@ if args.solver == "aderdg":
             "godunov": exahype2.fv.Godunov(),
             "muscl-hancock": exahype2.fv.MusclHancock(),
             "weno": weno,
-        }[args.limiter]
+        }[args.limiter],
+        galerkin_flux_coupling=not args.no_galerkin_flux_coupling,
     )
     implementation = "ADERDGSolver.cpph"
 else:
@@ -150,13 +160,13 @@ else:
     implementation = "FVSolver.cpph"
 
 solver.set_pde_terms(analytical_solution=True)
-solver.measure_error(every=args.end_time / 100.0)
+solver.measure_error(every=args.end_time / args.error_samples)
 
 project.add_solver(solver)
 
 project.add_constant("g", 9.81)
 project.add_constant("hThreshold", args.dry_threshold)
-project.add_constant("DGWetHeight", args.dg_wet_height)
+project.add_constant("WetHeight", args.wet_height)
 project.add_constant("LakeRadius", 1.0)
 project.add_constant("ReferenceDepth", 0.1)
 project.add_constant("OrbitDisplacement", 0.5)

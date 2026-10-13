@@ -27,9 +27,13 @@ exahype2::dg::getOwnHalf(const int faceNumber) {
  * half. That half stores the flux restricted from the fine faces.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
-exahype2::dg::getCorrectionHalf(const peano4::Partition& partition, const int face, const int faceNumber) {
+exahype2::dg::getCorrectionHalf(
+  const peano4::CellConnectivity& cellConnectivity,
+  const int                       face,
+  const int                       faceNumber
+) {
   const int own = exahype2::dg::getOwnHalf(faceNumber);
-  return partition.getFaceKind(face) == peano4::FaceKind::Coarse ? 1 - own : own;
+  return cellConnectivity.getFaceKind(face) == peano4::FaceKind::Coarse ? 1 - own : own;
 }
 
 /**
@@ -37,12 +41,12 @@ exahype2::dg::getCorrectionHalf(const peano4::Partition& partition, const int fa
  * face. The cell on the lower side of a boundary face holds it as its upper face.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
-exahype2::dg::getBoundaryFaceNumber(const peano4::Partition& partition, const int face) {
-  if (partition.getFaceKind(face) != peano4::FaceKind::Boundary) {
+exahype2::dg::getBoundaryFaceNumber(const peano4::CellConnectivity& cellConnectivity, const int face) {
+  if (cellConnectivity.getFaceKind(face) != peano4::FaceKind::Boundary) {
     return -1;
   }
-  const int normal = partition.getFaceNormal(face);
-  return partition.getFaceCell(face, 0) >= 0 ? normal + DIMENSIONS : normal;
+  const int normal = cellConnectivity.getFaceNormal(face);
+  return cellConnectivity.getFaceCell(face, 0) >= 0 ? normal + DIMENSIONS : normal;
 }
 
 /**
@@ -226,7 +230,7 @@ exahype2::dg::ProjectSolutionOntoFaces<Derived, StoragePrecision, ComputePrecisi
   const int         slot                 = cells[entry];
   ComputePrecision* ownStateHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    ownStateHalves[faceNumber] = faceStates.getChunk(partition.getCellFace(slot, faceNumber))
+    ownStateHalves[faceNumber] = faceStates.getChunk(cellConnectivity.getCellFace(slot, faceNumber))
       + exahype2::dg::getOwnHalf(faceNumber) * StateElementsPerFace;
   }
   exahype2::dg::extrapolateStateToFaces<Derived>(
@@ -244,8 +248,8 @@ exahype2::dg::ProjectSolutionOntoPlane<Derived, StoragePrecision, ComputePrecisi
   constexpr double PlaneTolerance       = 1.0e-8;
   assertion(normal >= 0 and normal < DIMENSIONS, normal);
   const int    slot      = cells[entry];
-  const double width     = partition.getCellWidth(slot, normal);
-  const double lowerFace = partition.getCellCentre(slot, normal) - 0.5 * width;
+  const double width     = cellConnectivity.getCellWidth(slot, normal);
+  const double lowerFace = cellConnectivity.getCellCentre(slot, normal) - 0.5 * width;
   if (
     std::abs(lowerFace - position) > PlaneTolerance * width
     and std::abs(lowerFace + width - position) > PlaneTolerance * width
@@ -258,8 +262,9 @@ exahype2::dg::ProjectSolutionOntoPlane<Derived, StoragePrecision, ComputePrecisi
     NumberOfData,
     StoragePrecision,
     ComputePrecision
-  >(faceStates.getChunk(partition.getCellFace(slot, normal)) + exahype2::dg::getOwnHalf(normal) * StateElementsPerFace,
-    faceStates.getChunk(partition.getCellFace(slot, normal + DIMENSIONS))
+  >(faceStates.getChunk(cellConnectivity.getCellFace(slot, normal))
+      + exahype2::dg::getOwnHalf(normal) * StateElementsPerFace,
+    faceStates.getChunk(cellConnectivity.getCellFace(slot, normal + DIMENSIONS))
       + exahype2::dg::getOwnHalf(normal + DIMENSIONS) * StateElementsPerFace,
     solution.getChunk(slot),
     leftFaceCoefficients,
@@ -861,12 +866,12 @@ exahype2::dg::SolveRiemannProblems<Derived, ComputePrecision>::operator()(const 
     fluxes,
     quadraturePoints,
     faceQuadratureWeights,
-    partition.getFaceCentre(face),
-    partition.getFaceWidth(face),
+    cellConnectivity.getFaceCentre(face),
+    cellConnectivity.getFaceWidth(face),
     timeStamp,
     timeStepSize,
-    partition.getFaceNormal(face),
-    exahype2::dg::getBoundaryFaceNumber(partition, face)
+    cellConnectivity.getFaceNormal(face),
+    exahype2::dg::getBoundaryFaceNumber(cellConnectivity, face)
   );
   // The halves now hold the numerical flux minus the predicted flux of their side, times the sign of
   // the outward normal of that side.
@@ -882,13 +887,13 @@ template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ApplyBoundaryConditions<Derived, ComputePrecision>::operator()(const int entry) const {
   const int face       = faces[entry];
-  const int faceNumber = exahype2::dg::getBoundaryFaceNumber(partition, face);
+  const int faceNumber = exahype2::dg::getBoundaryFaceNumber(cellConnectivity, face);
   if (faceNumber >= 0) {
     exahype2::dg::applyBoundaryConditions<Derived>(
       faceStates.getChunk(face),
       quadraturePoints,
-      partition.getFaceCentre(face),
-      partition.getFaceWidth(face),
+      cellConnectivity.getFaceCentre(face),
+      cellConnectivity.getFaceWidth(face),
       timeStamp,
       faceNumber
     );
@@ -903,8 +908,9 @@ exahype2::dg::RestrictFluxHalves<Derived, ComputePrecision>::operator()(const pe
   const ComputePrecision* fine[peano4::SubfacesPerFace];
   for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
     const int fineFace = levelJump.fineFaces[subface];
-    const int half     = partition.getFaceKind(fineFace) == peano4::FaceKind::Hanging ? levelJump.coarseSide : fineSide;
-    fine[subface]      = faceFluxes.getChunk(fineFace) + half * FluxElementsPerFace;
+    const int half =
+      cellConnectivity.getFaceKind(fineFace) == peano4::FaceKind::Hanging ? levelJump.coarseSide : fineSide;
+    fine[subface] = faceFluxes.getChunk(fineFace) + half * FluxElementsPerFace;
   }
   exahype2::dg::restrictFace<NodesPerAxis, NumberOfUnknowns>(
     fine,
@@ -938,9 +944,9 @@ exahype2::dg::ForLevelJumpOnPlane<Operation>::operator()(const peano4::LevelJump
   assertion(normal >= 0 and normal < DIMENSIONS, normal);
   const int face = levelJump.coarseFace;
   if (
-    partition.getFaceNormal(face) == normal
-    and std::abs(partition.getFaceCentre(face, normal) - position)
-      <= PlaneTolerance * partition.getFaceWidth(face, normal)
+    cellConnectivity.getFaceNormal(face) == normal
+    and std::abs(cellConnectivity.getFaceCentre(face, normal) - position)
+      <= PlaneTolerance * cellConnectivity.getFaceWidth(face, normal)
   ) {
     operation(levelJump);
   }
@@ -1183,8 +1189,8 @@ exahype2::dg::MeasureNodeEigenvalues<Derived, StoragePrecision>::operator()(
   const auto statistics = exahype2::dg::reduceMaxEigenvalues<Derived>(
     solution.getChunk(slot),
     quadraturePoints,
-    partition.getCellCentre(slot),
-    partition.getCellWidth(slot),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
     timeStamp,
     0.0
   );
@@ -1199,8 +1205,8 @@ exahype2::dg::MeasureNodeErrors<Derived, StoragePrecision>::operator()(const int
   const int      slot             = cells[entry];
   double         errors[NumberOfNorms]{0.0, 0.0, 0.0};
   exahype2::dg::forEachNode<NodesPerAxis, NumberOfData>(
-    partition.getCellCentre(slot),
-    partition.getCellWidth(slot),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
     quadraturePoints,
     quadratureWeights,
     solution.getChunk(slot),

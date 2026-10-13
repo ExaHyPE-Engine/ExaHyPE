@@ -37,6 +37,13 @@ namespace applications::exahype2::exaskred::limiting {
 
   template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
   INLINE_METHOD GPU_CALLABLE_METHOD bool isAdmissibleState(const T* const Q, const double minimumWaterHeight);
+
+  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isAdmissibleCell(
+    const T* const Q,
+    const int      numberOfStates,
+    const double   minimumWetHeight
+  );
 } // namespace applications::exahype2::exaskred::limiting
 
 #include "Limiting.cpph"

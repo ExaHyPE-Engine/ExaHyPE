@@ -11,7 +11,7 @@
 #include "exahype2/terms/BoundaryConditions.h"
 #include "exahype2/terms/InitialCondition.h"
 #include "exahype2/terms/RefinementCriterion.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Regrid.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/Buffer.h"
@@ -97,22 +97,28 @@ public:
     double                                           differencesScaling
   );
 
-  INLINE_METHOD void allocate(const peano4::Partition& partition);
-  INLINE_METHOD void initialise(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
-  INLINE_METHOD void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void initialise(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
+  );
+  INLINE_METHOD void performTimeStep(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests
+  );
   INLINE_METHOD void regrid(
-    const peano4::Partition&      partition,
-    const peano4::Regrid&         regrid,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    exahype2::RefinementRequests&   requests
   );
   INLINE_METHOD void plot(
-    const peano4::Partition& partition,
-    tarch::plotter::Format   format,
-    const std::string&       outputDirectory
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
   );
   INLINE_METHOD void release();
-  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
-  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
   [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
@@ -142,31 +148,35 @@ private:
 
   [[nodiscard]] static INLINE_METHOD exahype2::dg::BasisTables<ComputePrecision> getBasisTables();
 
-  INLINE_METHOD void predict(const peano4::Partition& partition, peano4::Adjacency adjacency, double timeStepSize);
+  INLINE_METHOD void predict(
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize
+  );
   template <typename DivergenceMarks>
   [[nodiscard]] INLINE_METHOD exahype2::dg::ader::PredictionCounts predictCells(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize,
-    const DivergenceMarks&   divergenceMarks
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const DivergenceMarks&          divergenceMarks
   );
   [[nodiscard]] INLINE_METHOD typename Base::FluxPool::View getAppliedFluxes();
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics correct(
-    const peano4::Partition& partition,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize
   );
 
   INLINE_METHOD void setCouplingMatrix(const std::vector<double>& fromPartnerMatrix);
   INLINE_METHOD void leaveTimeStepsToPartner();
   template <typename Partner>
   INLINE_METHOD void copyFaceHalvesFromPartner(
-    const peano4::Partition& partition,
-    const Partner&           partner,
-    peano4::Adjacency        adjacency
+    const peano4::CellConnectivity& cellConnectivity,
+    const Partner&                  partner,
+    peano4::Adjacency               adjacency
   );
-  INLINE_METHOD void rebuildCouplingFaces(const peano4::Partition& partition);
-  INLINE_METHOD void reservePredictorScratch(const peano4::Partition& partition);
+  INLINE_METHOD void rebuildCouplingFaces(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void reservePredictorScratch(const peano4::CellConnectivity& cellConnectivity);
   [[nodiscard]] static INLINE_METHOD int getPredictorTeamThreads();
   [[nodiscard]] static INLINE_METHOD int getPredictorThreadsPerCell();
   [[nodiscard]] static INLINE_METHOD int getNumberOfPredictorChunks(int cells);
@@ -191,8 +201,8 @@ private:
   /**
    * Runs the time steps of this solver and its coupling partner. It is empty without a partner.
    */
-  std::function<void(const peano4::Partition&, exahype2::RefinementRequests&)> _coupledTimeStep{};
-  bool                                                                         _drivenByPartner{false};
+  std::function<void(const peano4::CellConnectivity&, exahype2::RefinementRequests&)> _coupledTimeStep{};
+  bool                                                                                _drivenByPartner{false};
 
   /**
    * Two entries per coupling face: The face and the side of this solver's cell. The local faces

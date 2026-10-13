@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 
 namespace peano4 {
   struct Prolongation;
@@ -42,7 +42,7 @@ struct peano4::TransferredCell final {
 
 /**
  * The cells this rank sends to a partner rank and the slots it receives from that rank. Both lists
- * are sorted by level and lattice position, so both ranks derive the same order.
+ * are sorted by level and lattice position. Both ranks therefore derive the same order.
  */
 struct peano4::RankTransfer final {
   int                          rank{-1};

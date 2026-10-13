@@ -82,6 +82,7 @@ theSolver = exahype2.dg.ader.Solver(
         "jacobian": 1,
         "metricDerivative": 9,
         "curveGrid": 3,
+        **my_scenario.auxiliary_variables,
     },
     time_stepping=exahype2.TimeStepping.Adaptive(0.9),
     basis=exahype2.dg.GaussLobatto,

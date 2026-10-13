@@ -4,8 +4,8 @@
 
 #include "exahype2/RefinementCommand.h"
 #include "exahype2/RefinementRequests.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/RefinementRequest.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
@@ -21,9 +21,9 @@ namespace {
 
   using Control = peano4::RefinementRequest::RefinementControl;
 
-  const peano4::Partition& buildGrid() {
+  const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
   int getCellAt(const tarch::la::Vector<DIMENSIONS, int>& lattice) {
@@ -64,22 +64,22 @@ namespace {
   bool isOriginParentWhollyOwned() { return peano4::tests::getGlobalSumOf(ownsEveryChildOf(Origin) ? 1 : 0) == 1; }
 
   /**
-   * Votes of one solver, one per slot of the partition.
+   * Votes of one solver, one per slot of the cell connectivity.
    */
   struct Votes final {
     std::vector<exahype2::RefinementCommand> commands;
 
-    explicit Votes(const peano4::Partition& partition) :
-      commands(static_cast<std::size_t>(partition.getNumberOfSlots()), exahype2::RefinementCommand::Keep) {}
+    explicit Votes(const peano4::CellConnectivity& cellConnectivity) :
+      commands(static_cast<std::size_t>(cellConnectivity.getNumberOfSlots()), exahype2::RefinementCommand::Keep) {}
 
-    void voteOnEveryCell(const peano4::Partition& partition, const exahype2::RefinementCommand command) {
-      for (const int cell : partition.getCells()) {
+    void voteOnEveryCell(const peano4::CellConnectivity& cellConnectivity, const exahype2::RefinementCommand command) {
+      for (const int cell : cellConnectivity.getCells()) {
         commands[static_cast<std::size_t>(cell)] = command;
       }
     }
 
     /**
-     * Casts the vote on the cell at the lattice origin, which one rank owns.
+     * Casts the vote on the cell at the lattice origin. One rank owns this cell.
      */
     void voteOnTheOriginCell(const exahype2::RefinementCommand command) {
       const int cell = getCellAt(Origin);
@@ -123,24 +123,24 @@ exahype2::tests::RefinementRequestsTest::run() {
 
 void
 exahype2::tests::RefinementRequestsTest::testKeepVotesRaiseNoRequest() {
-  const auto&                  partition = buildGrid();
-  const Votes                  votes(partition);
+  const auto&                  cellConnectivity = buildGrid();
+  const Votes                  votes(cellConnectivity);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  requests.merge(votes.commands, partition.getCells());
-  validate(requests.getRefinementRequests(partition).empty());
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  requests.merge(votes.commands, cellConnectivity.getCells());
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
 }
 
 void
 exahype2::tests::RefinementRequestsTest::testARefineVoteBecomesARequestOnEveryRank() {
-  const auto& partition = buildGrid();
-  Votes       votes(partition);
+  const auto& cellConnectivity = buildGrid();
+  Votes       votes(cellConnectivity);
   votes.voteOnTheOriginCell(exahype2::RefinementCommand::Refine);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  requests.merge(votes.commands, partition.getCells());
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  requests.merge(votes.commands, cellConnectivity.getCells());
 
-  const auto refinementRequests = requests.getRefinementRequests(partition);
+  const auto refinementRequests = requests.getRefinementRequests(cellConnectivity);
   validateEquals(refinementRequests.size(), std::size_t{1});
   validateEquals(static_cast<int>(refinementRequests[0].getRefinementControl()), static_cast<int>(Control::Refine));
   validateEquals(refinementRequests[0].level, Depth);
@@ -152,18 +152,18 @@ exahype2::tests::RefinementRequestsTest::testARefineVoteBecomesARequestOnEveryRa
  */
 void
 exahype2::tests::RefinementRequestsTest::testAnEraseStandsOnceEveryChildVotes() {
-  const auto& partition         = buildGrid();
+  const auto& cellConnectivity  = buildGrid();
   const int   wholeParents      = getNumberOfWhollyOwnedParents();
   const bool  originParentWhole = isOriginParentWhollyOwned();
   validate(wholeParents >= 1 or tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
 
-  Votes votes(partition);
-  votes.voteOnEveryCell(partition, exahype2::RefinementCommand::Erase);
+  Votes votes(cellConnectivity);
+  votes.voteOnEveryCell(cellConnectivity, exahype2::RefinementCommand::Erase);
   exahype2::RefinementRequests requests;
-  requests.clear(partition.getNumberOfSlots());
-  requests.merge(votes.commands, partition.getCells());
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  requests.merge(votes.commands, cellConnectivity.getCells());
 
-  const auto refinementRequests = requests.getRefinementRequests(partition);
+  const auto refinementRequests = requests.getRefinementRequests(cellConnectivity);
   validateEquals(static_cast<int>(refinementRequests.size()), wholeParents);
   validateEquals(getNumberOfRequestsWith(refinementRequests, Control::Erase), wholeParents);
   for (const auto& request : refinementRequests) {
@@ -172,56 +172,56 @@ exahype2::tests::RefinementRequestsTest::testAnEraseStandsOnceEveryChildVotes() 
   validateEquals(containsRequestAt(refinementRequests, Depth - 1, Origin), originParentWhole);
 
   votes.voteOnTheOriginCell(exahype2::RefinementCommand::Keep);
-  requests.clear(partition.getNumberOfSlots());
-  requests.merge(votes.commands, partition.getCells());
-  const auto requestsWithOneKeep = requests.getRefinementRequests(partition);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  requests.merge(votes.commands, cellConnectivity.getCells());
+  const auto requestsWithOneKeep = requests.getRefinementRequests(cellConnectivity);
   validateEquals(static_cast<int>(requestsWithOneKeep.size()), wholeParents - (originParentWhole ? 1 : 0));
   validate(not containsRequestAt(requestsWithOneKeep, Depth - 1, Origin));
 }
 
 void
 exahype2::tests::RefinementRequestsTest::testRefineWinsAndKeepBeatsErase() {
-  const auto& partition = buildGrid();
-  Votes       eraseVotes(partition);
-  eraseVotes.voteOnEveryCell(partition, exahype2::RefinementCommand::Erase);
-  const Votes keepVotes(partition);
-  Votes       refineVote(partition);
-  refineVote.voteOnEveryCell(partition, exahype2::RefinementCommand::Erase);
+  const auto& cellConnectivity = buildGrid();
+  Votes       eraseVotes(cellConnectivity);
+  eraseVotes.voteOnEveryCell(cellConnectivity, exahype2::RefinementCommand::Erase);
+  const Votes keepVotes(cellConnectivity);
+  Votes       refineVote(cellConnectivity);
+  refineVote.voteOnEveryCell(cellConnectivity, exahype2::RefinementCommand::Erase);
   refineVote.voteOnTheOriginCell(exahype2::RefinementCommand::Refine);
   const int  wholeParents      = getNumberOfWhollyOwnedParents();
   const bool originParentWhole = isOriginParentWhollyOwned();
 
   exahype2::RefinementRequests keepAgainstErase;
-  keepAgainstErase.clear(partition.getNumberOfSlots());
-  keepAgainstErase.merge(eraseVotes.commands, partition.getCells());
-  keepAgainstErase.merge(keepVotes.commands, partition.getCells());
-  validate(keepAgainstErase.getRefinementRequests(partition).empty());
+  keepAgainstErase.clear(cellConnectivity.getNumberOfSlots());
+  keepAgainstErase.merge(eraseVotes.commands, cellConnectivity.getCells());
+  keepAgainstErase.merge(keepVotes.commands, cellConnectivity.getCells());
+  validate(keepAgainstErase.getRefinementRequests(cellConnectivity).empty());
 
   for (const bool keepFirst : {false, true}) {
-    keepAgainstErase.clear(partition.getNumberOfSlots());
+    keepAgainstErase.clear(cellConnectivity.getNumberOfSlots());
     if (keepFirst) {
-      keepAgainstErase.merge(exahype2::RefinementCommand::Keep, partition.getCells());
+      keepAgainstErase.merge(exahype2::RefinementCommand::Keep, cellConnectivity.getCells());
     }
-    keepAgainstErase.merge(eraseVotes.commands, partition.getCells());
+    keepAgainstErase.merge(eraseVotes.commands, cellConnectivity.getCells());
     if (not keepFirst) {
-      keepAgainstErase.merge(exahype2::RefinementCommand::Keep, partition.getCells());
+      keepAgainstErase.merge(exahype2::RefinementCommand::Keep, cellConnectivity.getCells());
     }
-    validate(keepAgainstErase.getRefinementRequests(partition).empty());
+    validate(keepAgainstErase.getRefinementRequests(cellConnectivity).empty());
   }
 
-  keepAgainstErase.clear(partition.getNumberOfSlots());
-  keepAgainstErase.merge(eraseVotes.commands, partition.getCells());
+  keepAgainstErase.clear(cellConnectivity.getNumberOfSlots());
+  keepAgainstErase.merge(eraseVotes.commands, cellConnectivity.getCells());
   keepAgainstErase.merge(exahype2::RefinementCommand::Keep, tarch::Span<const int>{});
   validateEquals(
-    getNumberOfRequestsWith(keepAgainstErase.getRefinementRequests(partition), Control::Erase),
+    getNumberOfRequestsWith(keepAgainstErase.getRefinementRequests(cellConnectivity), Control::Erase),
     wholeParents
   );
 
   exahype2::RefinementRequests refineAgainstErase;
-  refineAgainstErase.clear(partition.getNumberOfSlots());
-  refineAgainstErase.merge(eraseVotes.commands, partition.getCells());
-  refineAgainstErase.merge(refineVote.commands, partition.getCells());
-  const auto refinementRequests = refineAgainstErase.getRefinementRequests(partition);
+  refineAgainstErase.clear(cellConnectivity.getNumberOfSlots());
+  refineAgainstErase.merge(eraseVotes.commands, cellConnectivity.getCells());
+  refineAgainstErase.merge(refineVote.commands, cellConnectivity.getCells());
+  const auto refinementRequests = refineAgainstErase.getRefinementRequests(cellConnectivity);
   validateEquals(getNumberOfRequestsWith(refinementRequests, Control::Refine), 1);
   validateEquals(
     getNumberOfRequestsWith(refinementRequests, Control::Erase),

@@ -8,7 +8,7 @@
 #include "tarch/plotter/Format.h"
 
 namespace peano4 {
-  class Partition;
+  class CellConnectivity;
 } // namespace peano4
 
 namespace tarch::accelerator {
@@ -35,7 +35,7 @@ public:
 
   template <int NodesPerAxis, int ValuesPerNode, typename Precision, typename Predicate>
   INLINE_METHOD void plot(
-    const peano4::Partition&                                partition,
+    const peano4::CellConnectivity&                         cellConnectivity,
     const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
     const double*                                           quadratureNodes,
     double                                                  timeStamp,
@@ -47,7 +47,7 @@ public:
 private:
   static constexpr const char* OutputSubdirectory = "face/";
 
-  [[nodiscard]] static std::vector<int> getPlottedFaces(const peano4::Partition& partition);
+  [[nodiscard]] static std::vector<int> getPlottedFaces(const peano4::CellConnectivity& cellConnectivity);
 
   std::string                                 _filename;
   std::vector<DataField>                      _fields;

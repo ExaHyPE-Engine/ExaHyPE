@@ -3,8 +3,8 @@
 #pragma once
 
 #include "exahype2/RefinementCommand.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
 

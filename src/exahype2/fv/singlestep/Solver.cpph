@@ -24,23 +24,23 @@ INLINE_METHOD exahype2::fv::singlestep::Solver<Derived, StoragePrecision, Comput
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeStep(
-  const peano4::Partition&      partition,
+  const peano4::CellConnectivity&      cellConnectivity,
   exahype2::RefinementRequests& requests
 ) {
   const double timeStepSize = this->_timeStepping.startTimeStep();
 
   this->_haloExchange.post();
-  this->applyBoundaryConditions(partition);
-  this->interpolateCoarseHalos(partition, peano4::Adjacency::Local);
-  double maxEigenvalue = updatePatches(partition, peano4::Adjacency::Local, timeStepSize);
+  this->applyBoundaryConditions(cellConnectivity);
+  this->interpolateCoarseHalos(cellConnectivity, peano4::Adjacency::Local);
+  double maxEigenvalue = updatePatches(cellConnectivity, peano4::Adjacency::Local, timeStepSize);
   this->_haloExchange.wait();
-  this->interpolateCoarseHalos(partition, peano4::Adjacency::Remote);
+  this->interpolateCoarseHalos(cellConnectivity, peano4::Adjacency::Remote);
   maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
     maxEigenvalue,
-    updatePatches(partition, peano4::Adjacency::Remote, timeStepSize)
+    updatePatches(cellConnectivity, peano4::Adjacency::Remote, timeStepSize)
   );
 
-  this->closeTimeStep(partition, timeStepSize, maxEigenvalue, requests);
+  this->closeTimeStep(cellConnectivity, timeStepSize, maxEigenvalue, requests);
 }
 
 /**
@@ -51,16 +51,16 @@ exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::p
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD double
 exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::updatePatches(
-  const peano4::Partition& partition,
+  const peano4::CellConnectivity& cellConnectivity,
   const peano4::Adjacency  adjacency,
   const double             timeStepSize
 ) {
-  const auto cells         = partition.onDevice().getCells(adjacency);
+  const auto cells         = cellConnectivity.onDevice().getCells(adjacency);
   double     maxEigenvalue = 0.0;
   tarch::accelerator::parallelReduce(
     tarch::accelerator::TeamRange(cells.size),
     exahype2::fv::singlestep::UpdatePatches<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       cells,
       this->_solution.getView(),
       std::as_const(this->_halo).getView(),

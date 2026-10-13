@@ -4,8 +4,8 @@
 
 #include "exahype2/dg/Kernels.h"
 #include "exahype2/dg/limiting/SubcellScheme.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -44,6 +44,8 @@ namespace exahype2::dg::limiting {
 
   template <typename Derived, typename ComputePrecision>
   struct SpreadStatuses;
+
+  struct WriteStatusesOntoFaces;
 
   struct SubcellSchemeCounts;
 
@@ -155,8 +157,7 @@ public:
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void spreadStatus(
     int* NOALIAS     status,
-    const int* const neighbourStatusHalves[peano4::FacesPerCell],
-    int* const       ownStatusHalves[peano4::FacesPerCell]
+    const int* const neighbourStatusHalves[peano4::FacesPerCell]
   );
 
 private:
@@ -273,7 +274,7 @@ struct exahype2::dg::limiting::ReduceSampledExtrema final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   typename CellPool::ConstView subcells{};
   typename CellPool::View      referenceExtrema{};
 
@@ -291,7 +292,7 @@ struct exahype2::dg::limiting::OpenInitialStatuses final {
   using CellPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   typename CellPool::ConstView nodes{};
   typename CellPool::ConstView sampledExtrema{};
   typename StatusPool::View    statuses{};
@@ -328,7 +329,7 @@ struct exahype2::dg::limiting::WriteExtremaOntoFaces final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   typename CellPool::ConstView referenceExtrema{};
   typename CellPool::View      extremaFaces{};
 
@@ -346,7 +347,7 @@ struct exahype2::dg::limiting::OpenStep final {
   using CellPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   typename CellPool::ConstView solution{};
   typename CellPool::View      previousSolution{};
   typename StatusPool::View    statuses{};
@@ -384,11 +385,11 @@ struct exahype2::dg::limiting::MergeNeighbourExtrema final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition       partition{};
-  tarch::Span<const int>  cells{};
-  typename CellPool::View referenceExtrema{};
-  typename CellPool::View extremaFaces{};
-  int                     round{1};
+  peano4::CellConnectivity cellConnectivity{};
+  tarch::Span<const int>   cells{};
+  typename CellPool::View  referenceExtrema{};
+  typename CellPool::View  extremaFaces{};
+  int                      round{1};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 
@@ -433,7 +434,7 @@ struct exahype2::dg::limiting::JudgeCandidates final {
   using CellPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity     cellConnectivity{};
   typename CellPool::ConstView candidates{};
   typename StatusPool::View    statuses{};
   typename StatusPool::View    faceStatuses{};
@@ -451,18 +452,31 @@ struct exahype2::dg::limiting::JudgeCandidates final {
 };
 
 /**
- * Raises the status of every listed cell by the statuses of its face neighbours. Writes the raised
- * status onto the faces of the cell.
+ * Raises the status of every listed cell by the statuses of its face neighbours. The faces hold
+ * the statuses of the previous ring.
  */
 template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::limiting::SpreadStatuses final {
   using Kernel     = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition         partition{};
-  tarch::Span<const int>    cells{};
-  typename StatusPool::View statuses{};
-  typename StatusPool::View faceStatuses{};
+  peano4::CellConnectivity       cellConnectivity{};
+  tarch::Span<const int>         cells{};
+  typename StatusPool::View      statuses{};
+  typename StatusPool::ConstView faceStatuses{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+};
+
+/**
+ * Copies cell statuses onto the faces after every cell completes the ring.
+ */
+struct exahype2::dg::limiting::WriteStatusesOntoFaces final {
+  using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
+
+  peano4::CellConnectivity       cellConnectivity{};
+  typename StatusPool::ConstView statuses{};
+  typename StatusPool::View      faceStatuses{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
@@ -490,12 +504,12 @@ struct exahype2::dg::limiting::SubcellSchemeCountsReduction final {
 
 /**
  * Writes the counts of one block of consecutive cells into countsOfBlocks. Adds these counts to
- * counts. The first numberOfLocalCells cells of the partition are the local ones.
+ * counts. The first numberOfLocalCells cells of the cell connectivity are the local ones.
  */
 struct exahype2::dg::limiting::CountCellsOnSubcellScheme final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition                            partition{};
+  peano4::CellConnectivity                     cellConnectivity{};
   StatusPool::ConstView                        statuses{};
   int                                          numberOfBlocks{0};
   int                                          numberOfLocalCells{0};
@@ -510,13 +524,13 @@ struct exahype2::dg::limiting::CountCellsOnSubcellScheme final {
 /**
  * Writes the slots of the cells of one block that are not Regular into cellsOnScheme. Writes the
  * slots of the cells of the block that recompute into recomputedCells. Both lists append these
- * slots behind the entries of the earlier blocks. Both lists keep the order of the partition with
- * the local cells first.
+ * slots behind the entries of the earlier blocks. Both lists keep the order of the cell
+ * connectivity with the local cells first.
  */
 struct exahype2::dg::limiting::ListCellsOnSubcellScheme final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition                                  partition{};
+  peano4::CellConnectivity                           cellConnectivity{};
   StatusPool::ConstView                              statuses{};
   int                                                numberOfBlocks{0};
   const exahype2::dg::limiting::SubcellSchemeCounts* countsOfBlocks{nullptr};

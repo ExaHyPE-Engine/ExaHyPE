@@ -5,17 +5,17 @@
 #include "tarch/tests/TestCase.h"
 
 namespace peano4::tests {
-  class PartitionTest;
+  class CellConnectivityTest;
 } // namespace peano4::tests
 
-class peano4::tests::PartitionTest final : public tarch::tests::TestCase {
+class peano4::tests::CellConnectivityTest final : public tarch::tests::TestCase {
 public:
-  PartitionTest();
-  PartitionTest(const PartitionTest& other)            = delete;
-  PartitionTest(PartitionTest&& other)                 = delete;
-  PartitionTest& operator=(const PartitionTest& other) = delete;
-  PartitionTest& operator=(PartitionTest&& other)      = delete;
-  ~PartitionTest() override                            = default;
+  CellConnectivityTest();
+  CellConnectivityTest(const CellConnectivityTest& other)            = delete;
+  CellConnectivityTest(CellConnectivityTest&& other)                 = delete;
+  CellConnectivityTest& operator=(const CellConnectivityTest& other) = delete;
+  CellConnectivityTest& operator=(CellConnectivityTest&& other)      = delete;
+  ~CellConnectivityTest() override                                   = default;
 
   void run() override;
 

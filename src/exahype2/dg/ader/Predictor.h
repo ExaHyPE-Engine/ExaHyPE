@@ -6,7 +6,7 @@
 #include "exahype2/dg/ader/LinearPredictor.h"
 #include "exahype2/dg/ader/NonlinearPredictor.h"
 #include "exahype2/dg/ader/TeamWorkers.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -106,7 +106,7 @@ struct exahype2::dg::ader::PredictCells final {
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using FluxPool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition                           partition{};
+  peano4::CellConnectivity                    cellConnectivity{};
   tarch::Span<const int>                      cells{};
   int                                         numberOfTeams{0};
   int                                         threadsPerCell{1};

@@ -134,12 +134,9 @@ def userIncludes():
     return CurvilinearElastic.userIncludes()
 
 
-def abstractDeclarations():
-    return """
-protected:
-  static constexpr int    PmlCellWidth     = 1;
-  static constexpr double PmlAlphaConstant = 1.5;
-  static constexpr double PmlAlphaScalar   = 0.0;
-  static constexpr double PmlRelativeError = 0.001;
-  static constexpr int    PmlPower         = 1;
-"""
+def add_constants(project):
+    project.add_constant("PmlCellWidth", 1, "int")
+    project.add_constant("PmlAlphaConstant", 1.5, "double")
+    project.add_constant("PmlAlphaScalar", 0.0, "double")
+    project.add_constant("PmlRelativeError", 0.001, "double")
+    project.add_constant("PmlPower", 1, "int")

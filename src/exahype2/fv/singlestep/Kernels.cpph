@@ -25,12 +25,12 @@ exahype2::fv::singlestep::UpdatePatches<Derived, StoragePrecision, ComputePrecis
   const int               slot = cells[entry];
   const StoragePrecision* faces[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    faces[faceNumber] = halo.getChunk(partition.getCellFace(slot, faceNumber));
+    faces[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
   StoragePrecision* const                     patch         = solution.getChunk(slot);
-  const tarch::la::Vector<DIMENSIONS, double> cellCentre    = partition.getCellCentre(slot);
-  const tarch::la::Vector<DIMENSIONS, double> cellSize      = partition.getCellWidth(slot);
-  const int                                   boundaryFaces = exahype2::fv::getBoundaryFaceMask(partition, slot);
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre    = cellConnectivity.getCellCentre(slot);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize      = cellConnectivity.getCellWidth(slot);
+  const int                                   boundaryFaces = exahype2::fv::getBoundaryFaceMask(cellConnectivity, slot);
   const double                                stepStart     = timeStamp;
   const double                                stepSize      = timeStepSize;
   [[maybe_unused]] constexpr bool             PostprocessesPatch =

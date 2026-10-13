@@ -5,7 +5,7 @@
 \tableofcontents
 
 Peano expresses dynamic adaptivity as cell requests and realises a structural
-change as one rebuild of the tree and the partition followed by one data
+change as one rebuild of the tree and the cell connectivity followed by one data
 transfer. A request names one cell whose neighbourhood refines or whose parent
 may erase. Refinement wins over erasure wherever the requests conflict, and
 each regrid exposes one additional level on which a criterion can decide again.
@@ -21,7 +21,7 @@ fields:
   peano4::SubdivisionFactor cells per parent cell along each axis.
 
 A request is trivially copyable and travels between ranks as a byte record.
-The order of the requests has no meaning.
+The result is independent of the order of the requests.
 
 # Refinement-plan evaluation
 
@@ -51,7 +51,7 @@ plans and the same rank-boundary order without a structural exchange.
    gives every rank the same request set.
 2. The tree adopts the plan and derives the balanced ownership.
 3. peano4::Spacetree::regrid() keeps the slot of every surviving cell and
-   returns the peano4::Regrid of section @ref peano_partition "the partition":
+   returns the peano4::Regrid of section @ref peano_cell_connectivity "the cell connectivity":
    prolongations, restrictions, the slots that move to another rank and the
    freed slots.
 4. Every solver's `regrid()` restricts and prolongates its cell pools in
@@ -60,7 +60,7 @@ plans and the same rank-boundary order without a structural exchange.
    count and rebuilds them.
 
 During grid construction no solver data exists: a changed plan rebuilds the
-tree and the partition directly, and the criterion runs again on the coarser
+tree and the cell connectivity directly, and the criterion runs again on the coarser
 cells until no request arrives.
 
 # Producing requests
@@ -87,7 +87,7 @@ the cell slots whose ownership changes.
 
 Plan evaluation scales with the request count and performs lattice lookups
 without scanning the rank-local entity arrays. A regrid costs the rebuild of
-the tree and the partition of the rank plus the transfer of the changed cells.
+the tree and the cell connectivity of the rank plus the transfer of the changed cells.
 Stable criteria stop emitting requests once the standing plan satisfies them,
 and erase criteria avoid alternating with protective refine requests.
 

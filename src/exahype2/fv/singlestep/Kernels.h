@@ -4,7 +4,7 @@
 
 #include "exahype2/fv/Kernels.h"
 #include "exahype2/fv/singlestep/PatchUpdate.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -14,7 +14,7 @@
 /**
  * @file
  * The loop functors of the single-step finite-volume solver family over the cells of the
- * partition. Every loop body calls functions of exahype2::fv::singlestep::PatchUpdate.
+ * cellConnectivity. Every loop body calls functions of exahype2::fv::singlestep::PatchUpdate.
  */
 TARGET_DECLARE
 namespace exahype2::fv::singlestep {
@@ -32,7 +32,7 @@ struct exahype2::fv::singlestep::UpdatePatches final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::Partition            partition{};
+  peano4::CellConnectivity            cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::View      solution{};
   typename FacePool::ConstView halo{};

@@ -13,10 +13,10 @@ TARGET_DECLARE
  * Returns the mask whose bit f is set when face f of the cell lies on the domain boundary.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
-exahype2::fv::getBoundaryFaceMask(const peano4::Partition& partition, const int cell) {
+exahype2::fv::getBoundaryFaceMask(const peano4::CellConnectivity& cellConnectivity, const int cell) {
   int mask = 0;
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    if (partition.getFaceKind(partition.getCellFace(cell, faceNumber)) == peano4::FaceKind::Boundary) {
+    if (cellConnectivity.getFaceKind(cellConnectivity.getCellFace(cell, faceNumber)) == peano4::FaceKind::Boundary) {
       mask |= 1 << faceNumber;
     }
   }
@@ -27,15 +27,15 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
   const int face      = boundaryFaces[entry];
-  const int lowerCell = partition.getFaceCell(face, 0);
-  const int slot      = lowerCell >= 0 ? lowerCell : partition.getFaceCell(face, 1);
-  const int normal    = partition.getFaceNormal(face);
+  const int lowerCell = cellConnectivity.getFaceCell(face, 0);
+  const int slot      = lowerCell >= 0 ? lowerCell : cellConnectivity.getFaceCell(face, 1);
+  const int normal    = cellConnectivity.getFaceNormal(face);
   // The face is the upper face of the cell on its lower side.
   const int faceNumber = lowerCell >= 0 ? normal + DIMENSIONS : normal;
   Kernel::applyBoundaryConditions(
     halo.getChunk(face),
-    partition.getCellCentre(slot),
-    partition.getCellWidth(slot),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
     timeStamp,
     faceNumber
   );
@@ -46,7 +46,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::InterpolateHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
   const peano4::LevelJump& levelJump
 ) const {
-  const int                     normal = partition.getFaceNormal(levelJump.coarseFace);
+  const int                     normal = cellConnectivity.getFaceNormal(levelJump.coarseFace);
   const StoragePrecision* const coarse = halo.getChunk(levelJump.coarseFace);
   for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
     Kernel::interpolateHalo(coarse, halo.getChunk(levelJump.fineFaces[subface]), levelJump.coarseSide, normal, subface);
@@ -58,7 +58,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::InjectHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
   const peano4::LevelJump& levelJump
 ) const {
-  const int                     normal = partition.getFaceNormal(levelJump.coarseFace);
+  const int                     normal = cellConnectivity.getFaceNormal(levelJump.coarseFace);
   const StoragePrecision* const coarse = halo.getChunk(levelJump.coarseFace);
   for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
     Kernel::injectHalo(coarse, halo.getChunk(levelJump.fineFaces[subface]), levelJump.coarseSide, normal, subface);
@@ -70,7 +70,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
   const peano4::LevelJump& levelJump
 ) const {
-  const int               normal = partition.getFaceNormal(levelJump.coarseFace);
+  const int               normal = cellConnectivity.getFaceNormal(levelJump.coarseFace);
   const StoragePrecision* fine[peano4::SubfacesPerFace];
   for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
     fine[subface] = halo.getChunk(levelJump.fineFaces[subface]);
@@ -84,10 +84,10 @@ exahype2::fv::ProjectPatchesOntoFaces<Derived, StoragePrecision, ComputePrecisio
   const int                            entry,
   const tarch::accelerator::TeamHandle team
 ) const {
-  const int         slot = partition.getCells()[entry];
+  const int         slot = cellConnectivity.getCells()[entry];
   StoragePrecision* faces[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    faces[faceNumber] = halo.getChunk(partition.getCellFace(slot, faceNumber));
+    faces[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
   const StoragePrecision* const patch = solution.getChunk(slot);
   tarch::accelerator::parallelFor(
@@ -103,13 +103,13 @@ exahype2::fv::MeasurePatchEigenvalues<Derived, StoragePrecision, ComputePrecisio
   const int entry,
   double&   accumulator
 ) const {
-  const int slot = partition.getCells()[entry];
+  const int slot = cellConnectivity.getCells()[entry];
   accumulator    = exahype2::MaxEigenvalueReduction::combine(
     accumulator,
     Kernel::reduceMaxEigenvalue(
       solution.getChunk(slot),
-      partition.getCellCentre(slot),
-      partition.getCellWidth(slot),
+      cellConnectivity.getCellCentre(slot),
+      cellConnectivity.getCellWidth(slot),
       timeStamp
     )
   );
@@ -118,11 +118,11 @@ exahype2::fv::MeasurePatchEigenvalues<Derived, StoragePrecision, ComputePrecisio
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::MeasurePatchErrors<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
-  const int slot = partition.getCells()[entry];
+  const int slot = cellConnectivity.getCells()[entry];
   Kernel::measureErrors(
     solution.getChunk(slot),
-    partition.getCellCentre(slot),
-    partition.getCellWidth(slot),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
     timeStamp,
     timeStepSize,
     errorsPerCell + static_cast<std::ptrdiff_t>(entry) * NumberOfNorms

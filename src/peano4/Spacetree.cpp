@@ -125,7 +125,7 @@ namespace {
 
 static_assert(std::is_standard_layout_v<peano4::Spacetree::Statistics>);
 static_assert(std::is_trivially_copyable_v<peano4::Spacetree::Statistics>);
-static_assert(std::is_trivially_copyable_v<peano4::Partition>);
+static_assert(std::is_trivially_copyable_v<peano4::CellConnectivity>);
 
 peano4::Spacetree peano4::Spacetree::_singleton;
 
@@ -146,7 +146,7 @@ peano4::Spacetree::init(
 }
 
 /**
- * Frees the tree and the partition and clears the plan, so the next init() starts a new grid.
+ * Frees the tree and the cell connectivity and clears the plan. The next init() starts a new grid.
  */
 void
 peano4::Spacetree::shutdown() {
@@ -162,16 +162,16 @@ peano4::Spacetree::shutdown() {
   _persistentDataLiveUniform = false;
   _dynamicLoadBalancing      = true;
   _regridPending             = false;
-  _arrays                    = PartitionArrays{};
+  _arrays                    = CellConnectivityArrays{};
   _deviceArrays              = DeviceArrays{};
-  _partition                 = Partition{};
-  _partitionOnDevice         = Partition{};
+  _cellConnectivity          = CellConnectivity{};
+  _cellConnectivityOnDevice  = CellConnectivity{};
   _statistics                = Statistics{};
 }
 
 /**
- * Every rank calls this function with the same target level, so the base partition follows from the
- * rank count without communication.
+ * Every rank calls this function with the same target level. Every rank then derives the owners of
+ * the base grid from the rank count without communication.
  */
 void
 peano4::Spacetree::scheduleRegularGridConstruction(const int targetLevel) {
@@ -189,7 +189,7 @@ peano4::Spacetree::markPersistentDataLive() {
 
 /**
  * Allows or forbids a regrid to move a block to another rank. The grid construction derives the
- * decomposition either way, so a run that forbids the move keeps that first decomposition.
+ * decomposition either way. A run that forbids the move keeps that first decomposition.
  */
 void
 peano4::Spacetree::enableDynamicLoadBalancing(const bool enable) {
@@ -223,9 +223,9 @@ peano4::Spacetree::acquireTree() {
   return std::make_unique<peano4::topology::Tree>(rank, _domainOffset, _domainWidth, _periodicBoundaries);
 }
 
-const peano4::Partition&
-peano4::Spacetree::getPartition() const noexcept {
-  return _partition;
+const peano4::CellConnectivity&
+peano4::Spacetree::getCellConnectivity() const noexcept {
+  return _cellConnectivity;
 }
 
 const peano4::Spacetree::Statistics&
@@ -280,8 +280,8 @@ peano4::Spacetree::derivePlanUpdate(
 }
 
 /**
- * Builds the tree from the target level and the plan. Every rank derives the same block owners, so
- * the build needs no communication.
+ * Builds the tree from the target level and the plan. Every rank derives the same block owners
+ * without communication.
  */
 void
 peano4::Spacetree::buildTree(const peano4::topology::Tree::RefinementPlan& refinementPlan) {
@@ -327,8 +327,8 @@ peano4::Spacetree::deriveOwnersForPlan(const peano4::topology::Tree::RefinementP
     return {};
   }
   const int spawnLevel = deriveSpawnLevel();
-  // Current owners that split a cell with a leaf child would separate sibling leaves that coarsen
-  // together or restrict to one coarse face, so the balanced owners replace them.
+  // Current owners that split a cell with a leaf child would separate the children of one parent
+  // that coarsen together or restrict to one coarse face. The balanced owners replace such owners.
   const bool standingOwnersSplitSiblingCells =
     _tree->ownershipPlanSplitsCellWithLeafChild(_targetLevel, spawnLevel, updatedPlan, _blockOwners);
   if (not _dynamicLoadBalancing and not standingOwnersSplitSiblingCells) {
@@ -355,8 +355,8 @@ peano4::Spacetree::deriveOwnersForPlan(const peano4::topology::Tree::RefinementP
 }
 
 /**
- * Sets the live marker on every rank once one rank has set it, so every rank takes the same regrid
- * branch. A caller may set the marker on the global master alone.
+ * Sets the live marker on every rank once one rank has set it. Every rank then takes the same
+ * regrid branch. A caller may set the marker on the global master alone.
  */
 void
 peano4::Spacetree::votePersistentDataLive() {
@@ -380,9 +380,9 @@ peano4::Spacetree::votePersistentDataLive() {
 }
 
 /**
- * Applies the requests to the grid and returns whether the partition changed. The first call builds
- * the scheduled base grid. Once the pools store live data, the surviving cells keep their slots and
- * the argument regrid receives the slot moves, which a caller applies before finishRegrid().
+ * Applies the requests to the grid and returns whether the cell connectivity changed. The first call
+ * builds the scheduled base grid. Once the pools store live data, the surviving cells keep their
+ * slots and the argument regrid receives the slot moves. A caller applies them before finishRegrid().
  */
 bool
 peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid& regrid) {
@@ -391,7 +391,7 @@ peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid
 
   if (_tree == nullptr) {
     buildTree(_refinementPlan);
-    buildPartition();
+    buildCellConnectivity();
     _statistics.numberOfStationaryRegrids = 0;
     deriveStatistics();
     return true;
@@ -410,7 +410,7 @@ peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid
   if (not _persistentDataLive) {
     _refinementPlan = std::move(updatedPlan);
     buildTree(_refinementPlan);
-    buildPartition();
+    buildCellConnectivity();
     deriveStatistics();
     return true;
   }
@@ -423,7 +423,7 @@ peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid
   newTree->buildRegularGrid(_targetLevel, spawnLevel, numberOfRanks, updatedPlan, owners);
 
   std::swap(_tree, newTree);
-  rebuildPartition(*newTree, regrid);
+  rebuildCellConnectivity(*newTree, regrid);
   _spareTrees.push_back(std::move(newTree));
   _refinementPlan = std::move(updatedPlan);
   if (not balancedOwners.empty()) {
@@ -444,14 +444,14 @@ peano4::Spacetree::finishRegrid() {
   _arrays.freeSlots
     .insert(_arrays.freeSlots.end(), _arrays.slotsFreedByRegrid.begin(), _arrays.slotsFreedByRegrid.end());
   _arrays.slotsFreedByRegrid.clear();
-  _statistics.partitionBytes = getPartitionBytes();
-  _regridPending             = false;
+  _statistics.cellConnectivityBytes = getCellConnectivityBytes();
+  _regridPending                    = false;
 }
 
 /**
- * Derives the statistics of this rank from the partition and the tree. A refined cell counts for
- * the rank that owns it, so the ranks together count it once. A rank without cells reports the
- * largest int and double as its minimum level and cell width, so a minimum over the ranks skips it.
+ * Derives the statistics of this rank from the cell connectivity and the tree. Only the rank that
+ * owns a refined cell counts it. A rank without cells reports the largest int and double as its
+ * minimum level and cell width. A minimum over the ranks skips these values.
  */
 void
 peano4::Spacetree::deriveStatistics() {
@@ -467,14 +467,15 @@ peano4::Spacetree::deriveStatistics() {
     }
   }
   _statistics.numberOfFaces        = _arrays.numberOfFaces;
-  _statistics.numberOfHangingFaces = _partition.getFaces(Adjacency::Local, FaceKind::Hanging).size
-    + _partition.getFaces(Adjacency::Remote, FaceKind::Hanging).size;
+  _statistics.numberOfHangingFaces = _cellConnectivity.getFaces(Adjacency::Local, FaceKind::Hanging).size
+    + _cellConnectivity.getFaces(Adjacency::Remote, FaceKind::Hanging).size;
   _statistics.numberOfExchangedFaces = static_cast<int>(_arrays.exchangedFaces.size());
-  _statistics.partitionBytes         = getPartitionBytes();
+  _statistics.cellConnectivityBytes  = getCellConnectivityBytes();
   _statistics.treeBytes              = getTreeBytes();
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    _statistics.minimumCellWidth(axis) = _arrays.cells.empty() ? std::numeric_limits<double>::max()
-                                                               : _partition.getWidthOfLevel(_arrays.maximumLevel, axis);
+    _statistics.minimumCellWidth(axis) = _arrays.cells.empty()
+      ? std::numeric_limits<double>::max()
+      : _cellConnectivity.getWidthOfLevel(_arrays.maximumLevel, axis);
   }
 }
 
@@ -488,7 +489,8 @@ peano4::Spacetree::getLatticeKey(
 }
 
 /**
- * Returns the slot of the cell at the level and lattice position, or -1 when this rank owns no such cell.
+ * Returns the slot of the cell at the level and lattice position, or -1 for a cell that another rank
+ * owns or that the grid lacks.
  */
 int
 peano4::Spacetree::getCellAt(const int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const {
@@ -500,10 +502,11 @@ peano4::Spacetree::getCellAt(const int level, const tarch::la::Vector<DIMENSIONS
 }
 
 /**
- * Builds the partition of the tree with new slot numbers, independent of any earlier partition.
+ * Builds the cell connectivity of the tree with new slot numbers, independent of any earlier cell
+ * connectivity.
  */
 void
-peano4::Spacetree::buildPartition() {
+peano4::Spacetree::buildCellConnectivity() {
   assertion(_arrays.slotsFreedByRegrid.empty());
   _arrays.numberOfSlots = 0;
   _arrays.freeSlots.clear();
@@ -515,16 +518,16 @@ peano4::Spacetree::buildPartition() {
   deriveFaces(records);
   orderLists(records);
   numberCellsAlongCurve(records);
-  assemblePartitions();
+  assembleCellConnectivities();
 }
 
 /**
- * Rebuilds the partition of the changed tree and derives the slot moves. The old lookup tables live
- * until the moves exist, so a new cell finds the old slot of its parent or children. finishRegrid()
- * releases the freed slots.
+ * Rebuilds the cell connectivity of the changed tree and derives the slot moves. The old lookup
+ * tables live until the moves exist. A new cell finds the old slot of its parent or children in
+ * them. finishRegrid() releases the freed slots.
  */
 void
-peano4::Spacetree::rebuildPartition(const peano4::topology::Tree& previousTree, Regrid& regrid) {
+peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previousTree, Regrid& regrid) {
   assertion(_arrays.slotsFreedByRegrid.empty());
   assertion(_periodicBoundaries == _tree->getPeriodicBoundaries());
   const int rank = tarch::mpi::Rank::getInstance().getRank();
@@ -557,7 +560,7 @@ peano4::Spacetree::rebuildPartition(const peano4::topology::Tree& previousTree, 
     }
   }
 
-  // The partition still points to the arrays of the old grid, so the new lattices come from _arrays.
+  // _cellConnectivity still points to the arrays of the old grid. The new lattices come from _arrays.
   const auto newLatticeOf = [this](const int slot) {
     tarch::la::Vector<DIMENSIONS, int> result(0);
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -584,7 +587,7 @@ peano4::Spacetree::rebuildPartition(const peano4::topology::Tree& previousTree, 
   deriveFaces(records);
   orderLists(records);
   numberCellsAlongCurve(records);
-  assemblePartitions();
+  assembleCellConnectivities();
 
   regrid                  = Regrid{};
   regrid.oldNumberOfSlots = oldNumberOfSlots;
@@ -641,7 +644,8 @@ peano4::Spacetree::rebuildPartition(const peano4::topology::Tree& previousTree, 
           beyondOneLevel();
         }
         regrid.createdSlots.push_back(slot);
-        // The ownership plans never split a cell with a leaf child, so every child has the owner of the first one.
+        // The ownership plans never split a cell with a leaf child. Every child has the owner of the
+        // first one.
         const int owner = previousTree.getOwnerOfCellAt(level + 1, firstChild);
         for (int child = 1; child < peano4::ChildrenPerCell; child++) {
           [[maybe_unused]] const auto childLattice =
@@ -774,7 +778,7 @@ peano4::Spacetree::getTreeBytes() const noexcept {
 }
 
 tarch::AllocatedBytes
-peano4::Spacetree::getPartitionBytes() const noexcept {
+peano4::Spacetree::getCellConnectivityBytes() const noexcept {
   std::size_t hostBytes = tarch::getAllocatedBytesOf(_arrays.widthOfLevel) + tarch::getAllocatedBytesOf(_arrays.cells)
     + tarch::getAllocatedBytesOf(_arrays.cellRanges) + tarch::getAllocatedBytesOf(_arrays.cellLevel)
     + tarch::getAllocatedBytesOf(_arrays.cellLattice) + tarch::getAllocatedBytesOf(_arrays.facesOfCell)
@@ -883,7 +887,7 @@ peano4::Spacetree::collectCells(std::vector<CellRecord>& records) const {
 }
 
 /**
- * Assigns every cell a slot. With preserveSlots, a cell the lookup tables know keeps its slot. Every
+ * Assigns every cell a slot. With preserveSlots, a cell the lookup tables list keeps its slot. Every
  * other cell takes a free slot or, without one, the next slot beyond the range.
  */
 void
@@ -1146,8 +1150,8 @@ peano4::Spacetree::deriveFaces(const std::vector<CellRecord>& records) {
 }
 
 /**
- * Sorts the lists by adjacency and then by level or kind, so every group a caller loops over is one
- * span. The exchanged faces of a neighbour are sorted by level, normal and lattice position. A fine
+ * Sorts the lists by adjacency and then by level or kind. Every group a caller loops over is
+ * therefore one span. The exchanged faces of a neighbour are sorted by level, normal and lattice position. A fine
  * face of a remote coarse face is remote, and so is a cell with a remote face.
  */
 void
@@ -1210,7 +1214,7 @@ peano4::Spacetree::orderLists(const std::vector<CellRecord>& records) {
   _arrays.faceRanges.assign(static_cast<std::size_t>(2 * (peano4::NumberOfFaceKinds + 1)), 0);
   for (int face = 0; face < _arrays.numberOfFaces; face++) {
     _arrays.faceRanges[static_cast<std::size_t>(
-      _partition.getRangeIndexOfKind(adjacencyOfFace(face), _arrays.faceKind[static_cast<std::size_t>(face)])
+      _cellConnectivity.getRangeIndexOfKind(adjacencyOfFace(face), _arrays.faceKind[static_cast<std::size_t>(face)])
     )]++;
   }
   turnCountsIntoOffsets(_arrays.faceRanges);
@@ -1219,7 +1223,7 @@ peano4::Spacetree::orderLists(const std::vector<CellRecord>& records) {
     std::vector<int> next = _arrays.faceRanges;
     for (int face = 0; face < _arrays.numberOfFaces; face++) {
       const auto range = static_cast<std::size_t>(
-        _partition.getRangeIndexOfKind(adjacencyOfFace(face), _arrays.faceKind[static_cast<std::size_t>(face)])
+        _cellConnectivity.getRangeIndexOfKind(adjacencyOfFace(face), _arrays.faceKind[static_cast<std::size_t>(face)])
       );
       _arrays.faces[static_cast<std::size_t>(next[range]++)] = face;
     }
@@ -1271,9 +1275,9 @@ peano4::Spacetree::orderLists(const std::vector<CellRecord>& records) {
 }
 
 /**
- * Numbers the cells along the space-filling curve over all ranks; every rank calls this. The walk
- * records the cells of this rank in curve order, and the ranks own consecutive sections of the
- * curve in rank order, so the cells of the lower ranks precede them.
+ * Numbers the cells along the space-filling curve over all ranks. Every rank calls this function.
+ * The walk records the cells of this rank in curve order, and the ranks own consecutive sections of
+ * the curve in rank order. The cells of the lower ranks therefore precede the cells of this rank.
  */
 void
 peano4::Spacetree::numberCellsAlongCurve(const std::vector<CellRecord>& records) {
@@ -1297,45 +1301,45 @@ peano4::Spacetree::numberCellsAlongCurve(const std::vector<CellRecord>& records)
 }
 
 /**
- * Points the partition to the host arrays. With a GPU backend, it also copies every array a kernel
- * reads to the device and points the device twin to the copies. The range arrays, the neighbours
- * and the curve indices stay in host memory, because only the host reads them.
+ * Points the cell connectivity to the host arrays. With a GPU backend, it also copies every array a
+ * kernel reads to the device and points the device twin to the copies. Only the host reads the range
+ * arrays, the neighbours and the curve indices, and they stay in host memory.
  */
 void
-peano4::Spacetree::assemblePartitions() {
-  const auto fill = [this](Partition& partition) {
-    partition._numberOfSlots      = _arrays.numberOfSlots;
-    partition._numberOfFaces      = _arrays.numberOfFaces;
-    partition._numberOfCells      = static_cast<int>(_arrays.cells.size());
-    partition._numberOfLevelJumps = static_cast<int>(_arrays.levelJumps.size());
-    partition._numberOfNeighbours = static_cast<int>(_arrays.neighbours.size());
-    partition._minimumLevel       = _arrays.minimumLevel;
-    partition._maximumLevel       = _arrays.maximumLevel;
-    partition._cellRanges         = _arrays.cellRanges.data();
-    partition._faceRanges         = _arrays.faceRanges.data();
-    partition._levelJumpRanges    = _arrays.levelJumpRanges.data();
-    partition._neighbours         = _arrays.neighbours.data();
-    partition._exchangedFaces     = _arrays.exchangedFaces.data();
-    partition._cellCurveIndex     = _arrays.cellCurveIndex.data();
+peano4::Spacetree::assembleCellConnectivities() {
+  const auto fill = [this](CellConnectivity& cellConnectivity) {
+    cellConnectivity._numberOfSlots      = _arrays.numberOfSlots;
+    cellConnectivity._numberOfFaces      = _arrays.numberOfFaces;
+    cellConnectivity._numberOfCells      = static_cast<int>(_arrays.cells.size());
+    cellConnectivity._numberOfLevelJumps = static_cast<int>(_arrays.levelJumps.size());
+    cellConnectivity._numberOfNeighbours = static_cast<int>(_arrays.neighbours.size());
+    cellConnectivity._minimumLevel       = _arrays.minimumLevel;
+    cellConnectivity._maximumLevel       = _arrays.maximumLevel;
+    cellConnectivity._cellRanges         = _arrays.cellRanges.data();
+    cellConnectivity._faceRanges         = _arrays.faceRanges.data();
+    cellConnectivity._levelJumpRanges    = _arrays.levelJumpRanges.data();
+    cellConnectivity._neighbours         = _arrays.neighbours.data();
+    cellConnectivity._exchangedFaces     = _arrays.exchangedFaces.data();
+    cellConnectivity._cellCurveIndex     = _arrays.cellCurveIndex.data();
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      partition._domainOffset[axis] = _domainOffset(axis);
+      cellConnectivity._domainOffset[axis] = _domainOffset(axis);
     }
-    partition._deviceTwin = nullptr;
+    cellConnectivity._deviceTwin = nullptr;
   };
 
-  fill(_partition);
-  _partition._cells        = _arrays.cells.data();
-  _partition._cellLevel    = _arrays.cellLevel.data();
-  _partition._cellLattice  = _arrays.cellLattice.data();
-  _partition._facesOfCell  = _arrays.facesOfCell.data();
-  _partition._faces        = _arrays.faces.data();
-  _partition._faceLevel    = _arrays.faceLevel.data();
-  _partition._faceNormal   = _arrays.faceNormal.data();
-  _partition._faceLattice  = _arrays.faceLattice.data();
-  _partition._cellsOfFace  = _arrays.cellsOfFace.data();
-  _partition._faceKind     = _arrays.faceKind.data();
-  _partition._levelJumps   = _arrays.levelJumps.data();
-  _partition._widthOfLevel = _arrays.widthOfLevel.data();
+  fill(_cellConnectivity);
+  _cellConnectivity._cells        = _arrays.cells.data();
+  _cellConnectivity._cellLevel    = _arrays.cellLevel.data();
+  _cellConnectivity._cellLattice  = _arrays.cellLattice.data();
+  _cellConnectivity._facesOfCell  = _arrays.facesOfCell.data();
+  _cellConnectivity._faces        = _arrays.faces.data();
+  _cellConnectivity._faceLevel    = _arrays.faceLevel.data();
+  _cellConnectivity._faceNormal   = _arrays.faceNormal.data();
+  _cellConnectivity._faceLattice  = _arrays.faceLattice.data();
+  _cellConnectivity._cellsOfFace  = _arrays.cellsOfFace.data();
+  _cellConnectivity._faceKind     = _arrays.faceKind.data();
+  _cellConnectivity._levelJumps   = _arrays.levelJumps.data();
+  _cellConnectivity._widthOfLevel = _arrays.widthOfLevel.data();
 
 #if defined(PEANO_WITH_GPU_BACKEND)
   _deviceArrays.cells.setValues(_arrays.cells);
@@ -1351,19 +1355,19 @@ peano4::Spacetree::assemblePartitions() {
   _deviceArrays.levelJumps.setValues(_arrays.levelJumps);
   _deviceArrays.widthOfLevel.setValues(_arrays.widthOfLevel);
 
-  fill(_partitionOnDevice);
-  _partitionOnDevice._cells        = _deviceArrays.cells.getData();
-  _partitionOnDevice._cellLevel    = _deviceArrays.cellLevel.getData();
-  _partitionOnDevice._cellLattice  = _deviceArrays.cellLattice.getData();
-  _partitionOnDevice._facesOfCell  = _deviceArrays.facesOfCell.getData();
-  _partitionOnDevice._faces        = _deviceArrays.faces.getData();
-  _partitionOnDevice._faceLevel    = _deviceArrays.faceLevel.getData();
-  _partitionOnDevice._faceNormal   = _deviceArrays.faceNormal.getData();
-  _partitionOnDevice._faceLattice  = _deviceArrays.faceLattice.getData();
-  _partitionOnDevice._cellsOfFace  = _deviceArrays.cellsOfFace.getData();
-  _partitionOnDevice._faceKind     = _deviceArrays.faceKind.getData();
-  _partitionOnDevice._levelJumps   = _deviceArrays.levelJumps.getData();
-  _partitionOnDevice._widthOfLevel = _deviceArrays.widthOfLevel.getData();
-  _partition._deviceTwin           = &_partitionOnDevice;
+  fill(_cellConnectivityOnDevice);
+  _cellConnectivityOnDevice._cells        = _deviceArrays.cells.getData();
+  _cellConnectivityOnDevice._cellLevel    = _deviceArrays.cellLevel.getData();
+  _cellConnectivityOnDevice._cellLattice  = _deviceArrays.cellLattice.getData();
+  _cellConnectivityOnDevice._facesOfCell  = _deviceArrays.facesOfCell.getData();
+  _cellConnectivityOnDevice._faces        = _deviceArrays.faces.getData();
+  _cellConnectivityOnDevice._faceLevel    = _deviceArrays.faceLevel.getData();
+  _cellConnectivityOnDevice._faceNormal   = _deviceArrays.faceNormal.getData();
+  _cellConnectivityOnDevice._faceLattice  = _deviceArrays.faceLattice.getData();
+  _cellConnectivityOnDevice._cellsOfFace  = _deviceArrays.cellsOfFace.getData();
+  _cellConnectivityOnDevice._faceKind     = _deviceArrays.faceKind.getData();
+  _cellConnectivityOnDevice._levelJumps   = _deviceArrays.levelJumps.getData();
+  _cellConnectivityOnDevice._widthOfLevel = _deviceArrays.widthOfLevel.getData();
+  _cellConnectivity._deviceTwin           = &_cellConnectivityOnDevice;
 #endif
 }

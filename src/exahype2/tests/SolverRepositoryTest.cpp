@@ -6,7 +6,7 @@
 #include "exahype2/RefinementRequests.h"
 #include "exahype2/SolverRepository.h"
 #include "exahype2/TimeStepping.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Regrid.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
@@ -40,7 +40,7 @@ namespace {
 
     [[nodiscard]] const exahype2::TimeStepping& getTimeStepping() const { return timeStepping; }
     [[nodiscard]] int getNumberOfDoFs() const { return numberOfDoFs; }
-    [[nodiscard]] int getNumberOfCells([[maybe_unused]] const peano4::Partition& partition) const
+    [[nodiscard]] int getNumberOfCells([[maybe_unused]] const peano4::CellConnectivity& cellConnectivity) const
       requires OwnsCells
     {
       return numberOfCells;
@@ -49,43 +49,43 @@ namespace {
 
     void startSimulation() { phaseCalls++; }
     void finishSimulation() { phaseCalls++; }
-    void allocate([[maybe_unused]] const peano4::Partition& partition) { phaseCalls++; }
+    void allocate([[maybe_unused]] const peano4::CellConnectivity& cellConnectivity) { phaseCalls++; }
     void release() { phaseCalls++; }
     void requestRefinementForGridConstruction(
-      [[maybe_unused]] const peano4::Partition&      partition,
-      [[maybe_unused]] exahype2::RefinementRequests& requests
+      [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
+      [[maybe_unused]] exahype2::RefinementRequests&   requests
     ) {
       phaseCalls++;
     }
     void initialise(
-      [[maybe_unused]] const peano4::Partition&      partition,
-      [[maybe_unused]] exahype2::RefinementRequests& requests
+      [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
+      [[maybe_unused]] exahype2::RefinementRequests&   requests
     ) {
       phaseCalls++;
     }
-    void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests) {
+    void performTimeStep(const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests) {
       phaseCalls++;
-      requests.merge(timeStepCommand, partition.getCells());
+      requests.merge(timeStepCommand, cellConnectivity.getCells());
     }
     void regrid(
-      [[maybe_unused]] const peano4::Partition&      partition,
-      [[maybe_unused]] const peano4::Regrid&         regrid,
-      [[maybe_unused]] exahype2::RefinementRequests& requests
+      [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
+      [[maybe_unused]] const peano4::Regrid&           regrid,
+      [[maybe_unused]] exahype2::RefinementRequests&   requests
     ) {
       phaseCalls++;
     }
     void plot(
-      [[maybe_unused]] const peano4::Partition&     partition,
-      [[maybe_unused]] const tarch::plotter::Format format,
-      [[maybe_unused]] const std::string&           outputDirectory
+      [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
+      [[maybe_unused]] const tarch::plotter::Format    format,
+      [[maybe_unused]] const std::string&              outputDirectory
     ) {
       phaseCalls++;
     }
-    void contributeTo(tarch::mpi::ReductionRecord& record) {
+    void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record) {
       phaseCalls++;
       slot = record.addSum(1);
     }
-    void adoptFrom(const tarch::mpi::ReductionRecord& record) {
+    void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record) {
       phaseCalls++;
       reducedValue = record.getSum(slot);
     }
@@ -103,7 +103,7 @@ exahype2::tests::SolverRepositoryTest::run() {
 }
 
 /**
- * A solver without its own cell count counts every cell of the partition.
+ * A solver without its own cell count counts every cell of the cell connectivity.
  */
 void
 exahype2::tests::SolverRepositoryTest::testTheRepositoryReducesTheValuesOfEverySolver() {
@@ -119,18 +119,18 @@ exahype2::tests::SolverRepositoryTest::testTheRepositoryReducesTheValuesOfEveryS
   fine.allocatedBytes   = {512, 0};
 
   peano4::tests::buildRegularGrid(Depth);
-  const auto& partition = peano4::Spacetree::getInstance().getPartition();
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
   const exahype2::SolverRepository repository{coarse, fine};
   validateNumericalEquals(repository.getMinTimeStamp(), 0.25);
   validateNumericalEquals(repository.getMaxTimeStamp(), 0.5);
   validateEquals(
-    repository.getNumberOfSolverCells(partition),
-    std::uint64_t{3} + static_cast<std::uint64_t>(partition.getCells().size)
+    repository.getNumberOfSolverCells(cellConnectivity),
+    std::uint64_t{3} + static_cast<std::uint64_t>(cellConnectivity.getCells().size)
   );
   validateEquals(
-    repository.getNumberOfCellDoFs(partition),
-    std::uint64_t{3} * 64 + static_cast<std::uint64_t>(partition.getCells().size) * 128
+    repository.getNumberOfCellDoFs(cellConnectivity),
+    std::uint64_t{3} * 64 + static_cast<std::uint64_t>(cellConnectivity.getCells().size) * 128
   );
   validateEquals(repository.getAllocatedBytes().host, std::size_t{1536});
   validateEquals(repository.getAllocatedBytes().device, std::size_t{256});
@@ -138,23 +138,23 @@ exahype2::tests::SolverRepositoryTest::testTheRepositoryReducesTheValuesOfEveryS
 
 void
 exahype2::tests::SolverRepositoryTest::testEveryPhaseCallReachesEverySolver() {
-  RecordingSolver<false>     first;
-  RecordingSolver<false>     second;
-  exahype2::SolverRepository repository{first, second};
-  const peano4::Partition    partition{};
-  const peano4::Regrid       regrid{};
+  RecordingSolver<false>         first;
+  RecordingSolver<false>         second;
+  exahype2::SolverRepository     repository{first, second};
+  const peano4::CellConnectivity cellConnectivity{};
+  const peano4::Regrid           regrid{};
 
   repository.startSimulation();
-  repository.allocate(partition);
-  repository.requestRefinementForGridConstruction(partition);
-  repository.initialise(partition);
-  repository.performTimeStep(partition);
-  repository.regrid(partition, regrid);
-  repository.plot(partition, tarch::plotter::Format::VTU, "");
+  repository.allocate(cellConnectivity);
+  repository.requestRefinementForGridConstruction(cellConnectivity);
+  repository.initialise(cellConnectivity);
+  repository.performTimeStep(cellConnectivity);
+  repository.regrid(cellConnectivity, regrid);
+  repository.plot(cellConnectivity, tarch::plotter::Format::VTU, "");
   tarch::mpi::ReductionRecord record;
-  repository.contributeTo(record);
+  repository.addLocalValuesToGlobalReduction(record);
   record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-  repository.adoptFrom(record);
+  repository.readValuesFromGlobalReduction(record);
   repository.finishSimulation();
 
   const auto numberOfRanks = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getNumberOfRanks());
@@ -166,32 +166,29 @@ exahype2::tests::SolverRepositoryTest::testEveryPhaseCallReachesEverySolver() {
 }
 
 /**
- * Two posted reductions gather the refinement requests of the steps that filled them.
+ * Every reduction gathers the refinement requests of the step that filled it.
  */
 void
 exahype2::tests::SolverRepositoryTest::testEveryReductionGathersTheRequestsOfItsOwnStep() {
   peano4::tests::buildRegularGrid(Depth);
-  const auto&                partition = peano4::Spacetree::getInstance().getPartition();
+  const auto&                cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
   RecordingSolver<false>     solver;
   exahype2::SolverRepository repository{solver};
-  MPI_Comm                   communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  const MPI_Comm             communicator = tarch::mpi::Rank::getInstance().getCommunicator();
 
   solver.timeStepCommand = exahype2::RefinementCommand::Refine;
-  repository.performTimeStep(partition);
+  repository.performTimeStep(cellConnectivity);
   tarch::mpi::ReductionRecord refiningStep;
-  repository.contributeTo(refiningStep);
-  refiningStep.post(communicator);
+  repository.addLocalValuesToGlobalReduction(refiningStep);
+  refiningStep.allreduce(communicator);
+  repository.readValuesFromGlobalReduction(refiningStep);
+  validate(not repository.getRefinementRequests().empty());
 
   solver.timeStepCommand = exahype2::RefinementCommand::Keep;
-  repository.performTimeStep(partition);
+  repository.performTimeStep(cellConnectivity);
   tarch::mpi::ReductionRecord keepingStep;
-  repository.contributeTo(keepingStep);
-  keepingStep.post(communicator);
-
-  refiningStep.wait();
-  repository.adoptFrom(refiningStep);
-  validate(not repository.getRefinementRequests().empty());
-  keepingStep.wait();
-  repository.adoptFrom(keepingStep);
+  repository.addLocalValuesToGlobalReduction(keepingStep);
+  keepingStep.allreduce(communicator);
+  repository.readValuesFromGlobalReduction(keepingStep);
   validate(repository.getRefinementRequests().empty());
 }

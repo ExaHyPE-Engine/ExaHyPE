@@ -13,7 +13,7 @@ compile_commands.json
 *.dylib
 *.mod
 *.smod
-
+.cache
 # Python
 __pycache__/
 *.py[cod]

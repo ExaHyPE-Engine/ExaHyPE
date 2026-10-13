@@ -10,10 +10,10 @@
 #include "peano4/grid/tests/LatticeIndexMapTest.h"
 #include "peano4/sfc/tests/GrammarTest.h"
 #include "peano4/sfc/tests/SpaceFillingCurveTest.h"
+#include "peano4/tests/CellConnectivityTest.h"
 #include "peano4/tests/HaloExchangeTest.h"
 #include "peano4/tests/LoopTest.h"
 #include "peano4/tests/MigrationExchangeTest.h"
-#include "peano4/tests/PartitionTest.h"
 #include "peano4/tests/RefinementRequestTest.h"
 #include "peano4/tests/SpacetreeTest.h"
 #include "peano4/topology/tests/ChunkedTasksTest.h"
@@ -27,7 +27,7 @@ peano4::getUnitTests() {
   result->addTestCase(new peano4::tests::LoopTest());
   result->addTestCase(new peano4::tests::RefinementRequestTest());
   result->addTestCase(new peano4::tests::SpacetreeTest());
-  result->addTestCase(new peano4::tests::PartitionTest());
+  result->addTestCase(new peano4::tests::CellConnectivityTest());
   result->addTestCase(new peano4::tests::HaloExchangeTest());
   result->addTestCase(new peano4::tests::MigrationExchangeTest());
 

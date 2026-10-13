@@ -3,7 +3,7 @@
 #include "RuntimeParametersTest.h"
 
 #include "exahype2/runner/RuntimeParameters.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/Termination.h"
 #include "tarch/la/Vector.h"
 #include "tarch/plotter/Format.h"
@@ -32,8 +32,8 @@ namespace {
   }
 
   /**
-   * Writes content to a new file whose name contains a per-run identifier, so two processes never overwrite each
-   * other's file. The caller deletes the file.
+   * Writes content to a new file whose name contains a per-run identifier. Two processes never
+   * overwrite each other's file. The caller deletes the file.
    */
   std::string writeConfiguration(const std::string& content) {
     static const std::string testRunIdentifier =

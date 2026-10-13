@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "HaloExchangeKernelsTest.h"
 
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/communication/HaloExchangeKernels.h"
 #include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"

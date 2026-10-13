@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/MemoryLocation.h"
@@ -63,7 +63,7 @@ struct exahype2::particles::ParticleSetView final {
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool hasMovedOutOfCell(int index) const;
   INLINE_METHOD GPU_CALLABLE_METHOD void markAsMovedOutOfCell(int index) const;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool isInsideCell(
-    const peano4::Partition&                     partition,
+    const peano4::CellConnectivity&              cellConnectivity,
     int                                          index,
     const tarch::la::Vector<DIMENSIONS, double>& position,
     const tarch::la::Vector<DIMENSIONS, double>& domainOffset
@@ -104,15 +104,18 @@ public:
   ParticleSet& operator=(ParticleSet&& other)      = delete;
   ~ParticleSet()                                   = default;
 
-  INLINE_METHOD void insert(const peano4::Partition& partition, const std::vector<double>& candidates);
-  INLINE_METHOD void relocate(const peano4::Partition& partition);
-  INLINE_METHOD void relocateParticlesMovedOutOfCells(const peano4::Partition& partition, int numberOfMovedParticles);
+  INLINE_METHOD void insert(const peano4::CellConnectivity& cellConnectivity, const std::vector<double>& candidates);
+  INLINE_METHOD void relocate(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void relocateParticlesMovedOutOfCells(
+    const peano4::CellConnectivity& cellConnectivity,
+    int                             numberOfMovedParticles
+  );
   INLINE_METHOD void upload();
   INLINE_METHOD void download();
   INLINE_METHOD void release();
 
   [[nodiscard]] static INLINE_METHOD int getSlotAt(
-    const peano4::Partition&                     partition,
+    const peano4::CellConnectivity&              cellConnectivity,
     const tarch::la::Vector<DIMENSIONS, double>& position
   );
 
@@ -151,9 +154,9 @@ private:
     std::vector<int>&    numbers
   );
   INLINE_METHOD void placeParticles(
-    const peano4::Partition&   partition,
-    const std::vector<double>& values,
-    const std::vector<int>&    numbers
+    const peano4::CellConnectivity& cellConnectivity,
+    const std::vector<double>&      values,
+    const std::vector<int>&         numbers
   );
   INLINE_METHOD void appendArrivals(
     const std::vector<double>& values,

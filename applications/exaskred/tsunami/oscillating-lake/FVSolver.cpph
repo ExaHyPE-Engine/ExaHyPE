@@ -156,7 +156,7 @@ applications::exahype2::exaskred::FVSolver::solveRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
+  const double waveSpeed = applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
     QL,
     QR,
     x,
@@ -169,6 +169,15 @@ applications::exahype2::exaskred::FVSolver::solveRiemannProblem(
     FL,
     FR
   );
+  double fluxLeft[NumberOfUnknowns];
+  double fluxRight[NumberOfUnknowns];
+  flux(QL, x, h, t, dt, normal, fluxLeft);
+  flux(QR, x, h, t, dt, normal, fluxRight);
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    FL[unknown] += fluxLeft[unknown];
+    FR[unknown] += fluxRight[unknown];
+  }
+  return waveSpeed;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -178,15 +187,10 @@ applications::exahype2::exaskred::FVSolver::isPhysicallyAdmissible(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
-  for (int state = 0; state < numberOfStates; state++) {
-    if (not applications::exahype2::exaskred::limiting::isAdmissibleState<
-          Shortcuts,
-          NumberOfUnknowns,
-          NumberOfAuxiliaryVariables
-        >(Q + state * (NumberOfUnknowns + NumberOfAuxiliaryVariables), 0.0)) {
-      return false;
-    }
-  }
-  return true;
+  return applications::exahype2::exaskred::limiting::isAdmissibleCell<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(Q, numberOfStates, WetHeight);
 }
 TARGET_DECLARE_END

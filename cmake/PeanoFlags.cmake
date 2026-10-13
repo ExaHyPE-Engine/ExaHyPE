@@ -55,16 +55,11 @@ function(peano_apply_flags)
     -Werror
   )
 
-  # The -Xcompiler warnings reach only the host compiler. That compiler has to be GCC or Clang. The
-  # nvcc warnings below cover the device code.
-  set(PEANO_CUDA_WARNINGS "")
-  # nvcc hands the host compiler a generated file with GNU line markers, which GCC flags under
-  # -Wpedantic without a dedicated switch to silence them.
-  foreach(_peano_warning ${PEANO_CXX_WARNINGS})
-    if(NOT _peano_warning STREQUAL "-Wpedantic")
-      list(APPEND PEANO_CUDA_WARNINGS "-Xcompiler=${_peano_warning}")
-    endif()
-  endforeach()
+  set(PEANO_CUDA_HOST_WARNINGS ${PEANO_CXX_WARNINGS})
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    list(REMOVE_ITEM PEANO_CUDA_HOST_WARNINGS -Wpedantic)
+  endif()
+  list(TRANSFORM PEANO_CUDA_HOST_WARNINGS PREPEND "-Xcompiler=" OUTPUT_VARIABLE PEANO_CUDA_WARNINGS)
 
   list(APPEND PEANO_CUDA_WARNINGS
     -Werror=all-warnings
@@ -100,6 +95,7 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,Clang>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,Clang>:-ffp-contract=on>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-ffp-contract=on>
     "$<$<COMPILE_LANG_AND_ID:HIP,Clang>:SHELL:-Xarch_host -ffp-contract=on>"
   )
 

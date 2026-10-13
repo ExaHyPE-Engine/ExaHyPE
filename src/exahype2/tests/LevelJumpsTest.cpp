@@ -3,9 +3,9 @@
 #include "LevelJumpsTest.h"
 
 #include "exahype2/LevelJumps.h"
+#include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
-#include "peano4/Partition.h"
 #include "peano4/RefinementRequest.h"
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
@@ -29,7 +29,7 @@ namespace {
    * The curve starts in that cell. On more than one rank the first rank then holds refined cells
    * only beside coarse cells of another rank.
    */
-  const peano4::Partition& buildPartitionWithLevelJumps() {
+  const peano4::CellConnectivity& buildCellConnectivityWithLevelJumps() {
     peano4::tests::buildRegularGrid(Depth);
     // A request refines the cells up to the ring radius around its cell. The requested cells
     // therefore stay one ring radius inside the far side of the first cell of level one.
@@ -45,26 +45,26 @@ namespace {
       requests.push_back(request);
     });
     peano4::tests::refineGrid(requests);
-    return peano4::Spacetree::getInstance().getPartition();
+    return peano4::Spacetree::getInstance().getCellConnectivity();
   }
 
-  int getNumberOfLevelJumpsCoarserThanEveryCell(const peano4::Partition& partition) {
+  int getNumberOfLevelJumpsCoarserThanEveryCell(const peano4::CellConnectivity& cellConnectivity) {
     int result = 0;
     for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
-      for (const auto& levelJump : partition.getLevelJumps(adjacency)) {
-        result += levelJump.level < partition.getMinimumLevel() ? 1 : 0;
+      for (const auto& levelJump : cellConnectivity.getLevelJumps(adjacency)) {
+        result += levelJump.level < cellConnectivity.getMinimumLevel() ? 1 : 0;
       }
     }
     return result;
   }
 
   /**
-   * Returns every level jump of the partition. The partition stores the remote level jumps right
-   * after the local ones.
+   * Returns every level jump of cellConnectivity. The remote level jumps follow the local ones in
+   * memory.
    */
-  tarch::Span<const peano4::LevelJump> getEveryLevelJump(const peano4::Partition& partition) {
-    const auto local  = partition.getLevelJumps(peano4::Adjacency::Local);
-    const auto remote = partition.getLevelJumps(peano4::Adjacency::Remote);
+  tarch::Span<const peano4::LevelJump> getEveryLevelJump(const peano4::CellConnectivity& cellConnectivity) {
+    const auto local  = cellConnectivity.getLevelJumps(peano4::Adjacency::Local);
+    const auto remote = cellConnectivity.getLevelJumps(peano4::Adjacency::Remote);
     return {local.data, local.size + remote.size};
   }
 
@@ -101,9 +101,9 @@ namespace {
   };
   TARGET_DECLARE_END
 
-  std::vector<int> getRemoteMarks(const peano4::Partition& partition) {
-    const auto       local  = partition.getLevelJumps(peano4::Adjacency::Local);
-    const auto       remote = partition.getLevelJumps(peano4::Adjacency::Remote);
+  std::vector<int> getRemoteMarks(const peano4::CellConnectivity& cellConnectivity) {
+    const auto       local  = cellConnectivity.getLevelJumps(peano4::Adjacency::Local);
+    const auto       remote = cellConnectivity.getLevelJumps(peano4::Adjacency::Remote);
     std::vector<int> marks(static_cast<std::size_t>(local.size), 0);
     marks.insert(marks.end(), static_cast<std::size_t>(remote.size), 1);
     return marks;
@@ -132,11 +132,11 @@ exahype2::tests::LevelJumpsTest::run() {
  */
 void
 exahype2::tests::LevelJumpsTest::testHoldsIntermediateFaceReturnsFalseOnEveryLevelOfTheRefinedGrid() {
-  const auto& partition = buildPartitionWithLevelJumps();
+  const auto& cellConnectivity = buildCellConnectivityWithLevelJumps();
   for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
-    validate(partition.getFaces(adjacency, peano4::FaceKind::Intermediate).isEmpty());
-    for (int level = 0; level <= partition.getMaximumLevel(); level++) {
-      validateWithParams1(not exahype2::holdsIntermediateFace(partition, adjacency, level), level);
+    validate(cellConnectivity.getFaces(adjacency, peano4::FaceKind::Intermediate).isEmpty());
+    for (int level = 0; level <= cellConnectivity.getMaximumLevel(); level++) {
+      validateWithParams1(not exahype2::holdsIntermediateFace(cellConnectivity, adjacency, level), level);
     }
   }
 }
@@ -146,10 +146,10 @@ exahype2::tests::LevelJumpsTest::testHoldsIntermediateFaceReturnsFalseOnEveryLev
  */
 void
 exahype2::tests::LevelJumpsTest::testTheInterpolationsVisitEveryLevelJumpOnceAfterTheWritesOfItsCoarseFace() {
-  const auto& partition  = buildPartitionWithLevelJumps();
-  const auto  levelJumps = getEveryLevelJump(partition.onDevice());
+  const auto& cellConnectivity = buildCellConnectivityWithLevelJumps();
+  const auto  levelJumps       = getEveryLevelJump(cellConnectivity.onDevice());
 
-  const std::vector<int> remote = getRemoteMarks(partition);
+  const std::vector<int> remote = getRemoteMarks(cellConnectivity);
   std::vector<int>       local(remote.size());
   for (std::size_t jump = 0; jump < remote.size(); jump++) {
     local[jump] = 1 - remote[jump];
@@ -160,13 +160,13 @@ exahype2::tests::LevelJumpsTest::testTheInterpolationsVisitEveryLevelJumpOnceAft
   tarch::accelerator::Buffer<int>       missedVisits   = getDeviceCopyOf(std::vector<int>(remote.size(), 0));
 
   exahype2::interpolateCoarseFaces(
-    partition,
+    cellConnectivity,
     peano4::Adjacency::Local,
     RecordVisit{levelJumps, localOnDevice.getData(), visits.getData(), missedVisits.getData(), true}
   );
   const std::vector<int> visitsBeforeExchange = visits.getValues();
   exahype2::interpolateCoarseFaces(
-    partition,
+    cellConnectivity,
     peano4::Adjacency::Remote,
     RecordVisit{levelJumps, remoteOnDevice.getData(), visits.getData(), missedVisits.getData(), true}
   );
@@ -175,7 +175,7 @@ exahype2::tests::LevelJumpsTest::testTheInterpolationsVisitEveryLevelJumpOnceAft
 
   validate(not remote.empty() or tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
-    validate(peano4::tests::getGlobalSumOf(getNumberOfLevelJumpsCoarserThanEveryCell(partition)) > 0);
+    validate(peano4::tests::getGlobalSumOf(getNumberOfLevelJumpsCoarserThanEveryCell(cellConnectivity)) > 0);
   }
   for (std::size_t jump = 0; jump < remote.size(); jump++) {
     validateEqualsWithParams1(visitsBeforeExchange[jump], local[jump], jump);
@@ -186,16 +186,16 @@ exahype2::tests::LevelJumpsTest::testTheInterpolationsVisitEveryLevelJumpOnceAft
 
 void
 exahype2::tests::LevelJumpsTest::testTheRestrictionVisitsEveryLevelJumpOnceAfterTheWritesOfItsFineFaces() {
-  const auto& partition  = buildPartitionWithLevelJumps();
-  const auto  levelJumps = getEveryLevelJump(partition.onDevice());
-  const auto  count      = static_cast<std::size_t>(levelJumps.size);
+  const auto& cellConnectivity = buildCellConnectivityWithLevelJumps();
+  const auto  levelJumps       = getEveryLevelJump(cellConnectivity.onDevice());
+  const auto  count            = static_cast<std::size_t>(levelJumps.size);
 
   const tarch::accelerator::Buffer<int> everyLevelJump = getDeviceCopyOf(std::vector<int>(count, 1));
   tarch::accelerator::Buffer<int>       visits         = getDeviceCopyOf(std::vector<int>(count, 0));
   tarch::accelerator::Buffer<int>       missedVisits   = getDeviceCopyOf(std::vector<int>(count, 0));
 
   exahype2::restrictFineFaces(
-    partition,
+    cellConnectivity,
     RecordVisit{levelJumps, everyLevelJump.getData(), visits.getData(), missedVisits.getData(), false}
   );
 
@@ -212,10 +212,10 @@ exahype2::tests::LevelJumpsTest::testTheRestrictionVisitsEveryLevelJumpOnceAfter
  */
 void
 exahype2::tests::LevelJumpsTest::testTheGroupedRestrictionsVisitEveryLevelJumpOnceAfterTheWritesOfItsFineFaces() {
-  const auto& partition  = buildPartitionWithLevelJumps();
-  const auto  levelJumps = getEveryLevelJump(partition.onDevice());
+  const auto& cellConnectivity = buildCellConnectivityWithLevelJumps();
+  const auto  levelJumps       = getEveryLevelJump(cellConnectivity.onDevice());
 
-  const std::vector<int> remote = getRemoteMarks(partition);
+  const std::vector<int> remote = getRemoteMarks(cellConnectivity);
   std::vector<int>       local(remote.size());
   for (std::size_t jump = 0; jump < remote.size(); jump++) {
     local[jump] = 1 - remote[jump];
@@ -226,13 +226,13 @@ exahype2::tests::LevelJumpsTest::testTheGroupedRestrictionsVisitEveryLevelJumpOn
   tarch::accelerator::Buffer<int>       missedVisits   = getDeviceCopyOf(std::vector<int>(remote.size(), 0));
 
   exahype2::restrictFineFaces(
-    partition,
+    cellConnectivity,
     peano4::Adjacency::Remote,
     RecordVisit{levelJumps, remoteOnDevice.getData(), visits.getData(), missedVisits.getData(), false}
   );
   const std::vector<int> visitsBeforeTheMessages = visits.getValues();
   exahype2::restrictFineFaces(
-    partition,
+    cellConnectivity,
     peano4::Adjacency::Local,
     RecordVisit{levelJumps, localOnDevice.getData(), visits.getData(), missedVisits.getData(), false}
   );

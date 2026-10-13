@@ -9,7 +9,7 @@
 #include "exahype2/fv/Patch.h"
 #include "exahype2/fv/ader/Fallback.h"
 #include "exahype2/fv/ader/Scheme.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -19,7 +19,7 @@
 /**
  * @file
  * The loop functors of the ADER-WENO solver family over the cells, the faces and the level jumps of
- * the partition. Every loop body calls functions of exahype2::fv::ader::Scheme.
+ * the cell connectivity. Every loop body calls functions of exahype2::fv::ader::Scheme.
  */
 TARGET_DECLARE
 namespace exahype2::fv::ader {
@@ -62,14 +62,14 @@ struct exahype2::fv::ader::PredictionStatistics final {
 
 /**
  * The largest wave speed of the corrected volumes, the number of patches that repeat their step
- * with the fallback scheme, and the number of their volumes that the fallback leaves troubled.
+ * with the fallback scheme, and the number of these patches that the fallback leaves troubled.
  */
 struct exahype2::fv::ader::CorrectionStatistics final {
   using ValueType = exahype2::fv::ader::CorrectionStatistics;
 
   double maxEigenvalue{0.0};
   int    fallbackCells{0};
-  int    troubledFallbackVolumes{0};
+  int    troubledFallbackCells{0};
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType identity();
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType combine(ValueType left, ValueType right);
@@ -81,7 +81,9 @@ struct exahype2::fv::ader::CorrectionStatistics final {
  * the largest wave speed of the faces inside the patches and counts the volumes whose Picard
  * iteration diverged or stopped at its sweep limit. Team entry advances the cells entry,
  * entry + numberOfTeams and so on. All its threads reconstruct the patch together and then predict
- * groups of volumes at once, threadsPerVolume threads per volume. The team keeps the
+ * groups of volumes at once, threadsPerVolume threads per volume. With statuses, a cell with such a
+ * volume writes FallbackStatus::FailedPrediction into its status and the volume writes NaN, as a
+ * diverged one does, so a neighbour that reads its face halves falls back as well. The team keeps the
  * reconstruction and the predictions inside the patch and the
  * work of its volumes in its chunk of scratchSizePerTeam values in scratch.
  */
@@ -90,9 +92,10 @@ struct exahype2::fv::ader::PredictPatches final {
   using Scheme    = exahype2::fv::ader::Scheme<Derived, ComputePrecision>;
   using CellPool  = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using FacePool  = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
-  using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using StatePool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::Partition                           partition{};
+  peano4::CellConnectivity                           cellConnectivity{};
   tarch::Span<const int>                      cells{};
   int                                         numberOfTeams{0};
   int                                         threadsPerVolume{1};
@@ -107,6 +110,7 @@ struct exahype2::fv::ader::PredictPatches final {
   int                                         scratchChunks{0};
   double                                      timeStamp{0.0};
   double                                      timeStepSize{0.0};
+  typename StatusPool::View                   statuses{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,
@@ -123,7 +127,7 @@ struct exahype2::fv::ader::SolveRiemannProblems final {
   using Scheme    = exahype2::fv::ader::Scheme<Derived, ComputePrecision>;
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition        partition{};
+  peano4::CellConnectivity        cellConnectivity{};
   tarch::Span<const int>   faces{};
   typename StatePool::View faceStates{};
   typename StatePool::View faceFluxes{};
@@ -139,7 +143,7 @@ struct exahype2::fv::ader::SolveRiemannProblems final {
  * on a device and with one thread on the host.
  *
  * With a FallbackDerived, every patch then judges its corrected volumes with
- * exahype2::fv::ader::Fallback. A patch with a troubled volume repeats its step from
+ * exahype2::fv::ader::Fallback. A troubled patch or a patch with a failed prediction repeats its step from
  * previousSolution and the halo with FallbackDerived, keeping the ADER-WENO flux on the faces where
  * it does not share the fallback flux with its neighbour: the faces of a level jump and, with
  * limiterFaceStatuses, the faces to a cell off the subcell scheme. Every patch writes its status
@@ -156,7 +160,7 @@ struct exahype2::fv::ader::CorrectPatches final {
 
   static constexpr bool FallsBack = not std::is_void_v<FallbackDerived>;
 
-  peano4::Partition              partition{};
+  peano4::CellConnectivity              cellConnectivity{};
   tarch::Span<const int>         cells{};
   typename CellPool::View        solution{};
   typename StatePool::ConstView  faceFluxes{};
@@ -225,7 +229,7 @@ struct exahype2::fv::ader::RestrictFluxHalves final {
   using Scheme    = exahype2::fv::ader::Scheme<Derived, ComputePrecision>;
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::Partition        partition{};
+  peano4::CellConnectivity        cellConnectivity{};
   typename StatePool::View faceFluxes{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;

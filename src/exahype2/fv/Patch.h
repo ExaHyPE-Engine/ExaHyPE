@@ -4,7 +4,7 @@
 
 #include "exahype2/TimeStepping.h"
 #include "peano4/Constants.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"

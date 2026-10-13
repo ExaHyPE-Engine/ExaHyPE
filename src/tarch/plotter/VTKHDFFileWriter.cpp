@@ -46,10 +46,10 @@ tarch::plotter::VTKHDFFileWriter::write(
   unsigned long long       totalCells         = localCells;
   unsigned long long       totalConnectivity  = localConnectivity;
 
-  const auto& rank          = tarch::mpi::Rank::getInstance();
-  MPI_Comm    comm          = rank.getCommunicator();
-  const bool  useParallelIO = rank.getNumberOfRanks() > 1;
-  const bool  isMaster      = rank.isGlobalMaster();
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const MPI_Comm comm          = rank.getCommunicator();
+  const bool     useParallelIO = rank.getNumberOfRanks() > 1;
+  const bool     isMaster      = rank.isGlobalMaster();
   if (useParallelIO) {
     const unsigned long long local[3]  = {localPoints, localCells, localConnectivity};
     unsigned long long       prefix[3] = {0, 0, 0};

@@ -4,7 +4,7 @@
 
 #include "exahype2/dg/Basis.h"
 #include "exahype2/fv/ader/Kernels.h"
-#include "peano4/Partition.h"
+#include "peano4/CellConnectivity.h"
 #include "tarch/Span.h"
 #include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
@@ -37,7 +37,7 @@ public:
 
   template <typename Derived>
   [[nodiscard]] INLINE_METHOD exahype2::fv::ader::PredictionStatistics predict(
-    const peano4::Partition&     partition,
+    const peano4::CellConnectivity&     cellConnectivity,
     tarch::Span<const int>       cells,
     typename CellPool::View      solution,
     typename FacePool::ConstView halo,
@@ -45,7 +45,8 @@ public:
     typename StatePool::View     faceFluxes,
     double                       timeStamp,
     double                       timeStepSize,
-    typename CellPool::View      previousSolution = {}
+    typename CellPool::View      previousSolution = {},
+    tarch::accelerator::ChunkedMemoryPool<int>::View statuses = {}
   );
 
 private:

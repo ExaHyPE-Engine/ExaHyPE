@@ -13,6 +13,9 @@ class DynamicRuptureScenario(Scenario):
 
     requiredKeys = ["f_wy", "f_wz"]
 
+    # The initial condition writes these fault parameters into the auxiliary variables of every node.
+    auxiliary_variables = {}
+
     dynamicRuptureDictionary = {
         "initialStresses": """
       sxx = 0;
@@ -34,8 +37,7 @@ class DynamicRuptureScenario(Scenario):
     }
 
     def generate_required_files(self):
-        # f_wy and f_wz are the half-widths of the cohesion box. A zero width locks the whole fault,
-        # so they have no default.
+        # A zero half-width of the cohesion box locks the whole fault.
         missing = [
             key for key in self.requiredKeys if key not in self.dynamicRuptureDictionary
         ]
@@ -44,7 +46,7 @@ class DynamicRuptureScenario(Scenario):
                 type(self).__name__
                 + " does not set "
                 + ", ".join(missing)
-                + " in dynamicRuptureDictionary; the cohesion boxcar half-widths have no default."
+                + " in dynamicRuptureDictionary; set both cohesion boxcar half-widths."
             )
 
         for suffix in (".h", ".cpph"):

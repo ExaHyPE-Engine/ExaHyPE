@@ -93,7 +93,9 @@ std::string
 tarch::accelerator::Device::getIdOfCurrentDevice() const {
 #if defined(KOKKOS_ENABLE_CUDA)
   std::array<char, 32> busAddress{};
-  if (cudaDeviceGetPCIBusId(busAddress.data(), static_cast<int>(busAddress.size()), Kokkos::device_id()) != cudaSuccess) {
+  if (
+    cudaDeviceGetPCIBusId(busAddress.data(), static_cast<int>(busAddress.size()), Kokkos::device_id()) != cudaSuccess
+  ) {
     tarch::terminateWithError("The CUDA runtime cannot report the PCI bus address of the GPU.");
   }
   return busAddress.data();

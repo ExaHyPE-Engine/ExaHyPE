@@ -33,7 +33,7 @@ first, reads
     R -> R left S left R up P right Q right P up R left S left R
     S -> S left R left S down Q right P right Q down S left R left S
 
-A grammar carries no coordinates. The position of a child within its parent
+A grammar stores turtle steps only, never coordinates. The position of a child within its parent
 follows from adding up the turtle steps that precede it.
 
 # The grammar as C++
@@ -92,7 +92,7 @@ build.
 peano4::grid::AutomatonState stores the curve state of a cell next to its
 level and geometry. peano4::grid::AutomatonState::refineState() reads the
 children of that state from the active curve and derives every child's
-geometry and curve state from its table entry. The partition build in
+geometry and curve state from its table entry. The cell connectivity build in
 peano4::Spacetree and the rank partition in peano4::topology::Tree loop over
 the same child sequence. The active curve is
 the alias peano4::sfc::ActiveCurve, which CMake configures from
@@ -108,8 +108,8 @@ peano4::sfc::ActiveCurve::ChildrenPerCell, so a Hilbert build bisects every
 cell and a Peano build splits it in three. The Discontinuous Galerkin solvers
 derive their interpolation and restriction matrices between a cell and its
 children in C++ (exahype2/dg/Basis.h) from the quadrature nodes and the
-subdivision factor, so the Python code generator holds no table that depends
-on the curve. The 3^d neighbourhood of a cell is a property of the lattice,
+subdivision factor, so every table of the Python code generator is independent
+of the curve. The 3^d neighbourhood of a cell is a property of the lattice,
 not of the curve; peano4::CellsPerNeighbourhood names it.
 
 # Adding a curve

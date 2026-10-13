@@ -59,9 +59,9 @@ namespace {
    */
   void reduceOverTheRanks(exahype2::TimeStepping& timeStepping) {
     tarch::mpi::ReductionRecord record;
-    timeStepping.contributeTo(record);
+    timeStepping.addLocalValuesToGlobalReduction(record);
     record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-    timeStepping.adoptFrom(record);
+    timeStepping.readValuesFromGlobalReduction(record);
   }
 
   /**
@@ -69,9 +69,9 @@ namespace {
    */
   void reduceOverTheRanks(exahype2::runner::GlobalStatistics& statistics) {
     tarch::mpi::ReductionRecord record;
-    statistics.contributeTo(record, true);
+    statistics.addLocalValuesToGlobalReduction(record, true);
     record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
-    statistics.adoptFrom(record);
+    statistics.readValuesFromGlobalReduction(record);
   }
 } // namespace
 
@@ -173,8 +173,8 @@ exahype2::runner::tests::StatisticsTest::testTheGlobalViewSumsAndBoundsTheRankSt
   validateEquals(statistics.getGlobalMaxRankBoundaryFaces(), getGlobalMaximumOf(rankBoundaryFaces));
   validateEquals(statistics.getGlobalMinRankLoad(), getGlobalMinimumOf(cells));
   validateEquals(statistics.getGlobalMaxRankLoad(), getGlobalMaximumOf(cells));
-  validateEquals(statistics.getGlobalPartitionHostBytes(), getGlobalSumOf(local.partitionBytes.host));
-  validateEquals(statistics.getGlobalPartitionDeviceBytes(), getGlobalSumOf(local.partitionBytes.device));
+  validateEquals(statistics.getGlobalCellConnectivityHostBytes(), getGlobalSumOf(local.cellConnectivityBytes.host));
+  validateEquals(statistics.getGlobalCellConnectivityDeviceBytes(), getGlobalSumOf(local.cellConnectivityBytes.device));
   validateEquals(statistics.getGlobalTreeBytes(), getGlobalSumOf(local.treeBytes));
   validateEquals(statistics.getGlobalSolverHostBytes(), getGlobalSumOf(100 + rank));
   validateEquals(statistics.getGlobalSolverDeviceBytes(), getGlobalSumOf(7 + rank));

@@ -19,19 +19,21 @@ INLINE_METHOD exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecisi
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(const peano4::Partition& partition) {
-  Base::allocate(partition);
-  _estimates.reserve(partition.getNumberOfSlots());
-  reserveStageScratch(partition);
+exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(
+  const peano4::CellConnectivity& cellConnectivity
+) {
+  Base::allocate(cellConnectivity);
+  _estimates.reserve(cellConnectivity.getNumberOfSlots());
+  reserveStageScratch(cellConnectivity);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::reserveStageScratch(
-  const peano4::Partition& partition
+  const peano4::CellConnectivity& cellConnectivity
 ) {
   const auto chunks =
-    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(this->getNumberOfCells(partition)));
+    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(this->getNumberOfCells(cellConnectivity)));
   const auto size = chunks * static_cast<std::size_t>(Stage::StateValuesPerCell);
   if (_stageScratch.getSize() < size) {
     _stageScratch.allocate(size);
@@ -60,8 +62,8 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getAlloca
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeStep(
-  const peano4::Partition&      partition,
-  exahype2::RefinementRequests& requests
+  const peano4::CellConnectivity& cellConnectivity,
+  exahype2::RefinementRequests&   requests
 ) {
   using Tableau               = typename Stage::Tableau;
   constexpr auto Local        = peano4::Adjacency::Local;
@@ -74,34 +76,34 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTi
     DGMatrices<double>::ProlongationMatrix1D
   };
   const typename Base::RestrictFluxes restrictFluxes{
-    partition.onDevice(),
+    cellConnectivity.onDevice(),
     this->_faceFluxes.getView(),
     DGMatrices<double>::WeightedRestrictionMatrix1D
   };
   for (int stage = 0; stage < NumberOfRungeKuttaStages; stage++) {
     const double stageTimeStamp = this->_timeStepping.getTimeStamp() + Tableau::Nodes[stage] * timeStepSize;
-    openStage(partition, Remote, stage, timeStepSize);
+    openStage(cellConnectivity, Remote, stage, timeStepSize);
     this->_stateExchange.post();
     this->_fluxExchange.post();
-    openStage(partition, Local, stage, timeStepSize);
-    exahype2::interpolateCoarseFaces(partition, Local, interpolateHalves);
-    this->solveRiemannProblems(partition, Local, stageTimeStamp, timeStepSize);
+    openStage(cellConnectivity, Local, stage, timeStepSize);
+    exahype2::interpolateCoarseFaces(cellConnectivity, Local, interpolateHalves);
+    this->solveRiemannProblems(cellConnectivity, Local, stageTimeStamp, timeStepSize);
     this->_stateExchange.wait();
     this->_fluxExchange.wait();
-    exahype2::interpolateCoarseFaces(partition, Remote, interpolateHalves);
-    this->solveRiemannProblems(partition, Remote, stageTimeStamp, timeStepSize);
-    exahype2::restrictFineFaces(partition, Remote, restrictFluxes);
+    exahype2::interpolateCoarseFaces(cellConnectivity, Remote, interpolateHalves);
+    this->solveRiemannProblems(cellConnectivity, Remote, stageTimeStamp, timeStepSize);
+    exahype2::restrictFineFaces(cellConnectivity, Remote, restrictFluxes);
     this->_restrictedFluxExchange.post();
-    exahype2::restrictFineFaces(partition, Local, restrictFluxes);
-    addFaceIntegrals(partition, Local, stage, timeStepSize);
+    exahype2::restrictFineFaces(cellConnectivity, Local, restrictFluxes);
+    addFaceIntegrals(cellConnectivity, Local, stage, timeStepSize);
     this->_restrictedFluxExchange.wait();
-    addFaceIntegrals(partition, Remote, stage, timeStepSize);
+    addFaceIntegrals(cellConnectivity, Remote, stage, timeStepSize);
   }
 
-  const auto statistics = combineFinalState(partition, timeStepSize);
+  const auto statistics = combineFinalState(cellConnectivity, timeStepSize);
   this->closeTimeStep(timeStepSize, statistics);
-  this->measureError(partition);
-  this->voteOnRefinement(partition, requests);
+  this->measureError(cellConnectivity);
+  this->voteOnRefinement(cellConnectivity, requests);
 }
 
 /**
@@ -110,13 +112,13 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTi
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
-  const peano4::Partition&      partition,
-  const peano4::Regrid&         regrid,
-  exahype2::RefinementRequests& requests
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Regrid&           regrid,
+  exahype2::RefinementRequests&   requests
 ) {
-  Base::regrid(partition, regrid, requests);
+  Base::regrid(cellConnectivity, regrid, requests);
   _estimates.reserve(regrid.newNumberOfSlots);
-  reserveStageScratch(partition);
+  reserveStageScratch(cellConnectivity);
 }
 
 /**
@@ -162,13 +164,13 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getEstima
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage(
-  const peano4::Partition& partition,
-  const peano4::Adjacency  adjacency,
-  const int                stage,
-  const double             timeStepSize
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const int                       stage,
+  const double                    timeStepSize
 ) {
   using Tableau    = typename Stage::Tableau;
-  const auto cells = this->getCells(partition, adjacency);
+  const auto cells = this->getCells(cellConnectivity, adjacency);
   assertion(
     _stageScratch.getSize()
     >= static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(cells.size)) * Stage::StateValuesPerCell
@@ -177,7 +179,7 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(cells.size),
     exahype2::dg::rk::OpenStage<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       cells,
       std::as_const(this->_solution).getView(),
       _estimates.getView(),
@@ -202,16 +204,16 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::addFaceIntegrals(
-  const peano4::Partition& partition,
-  const peano4::Adjacency  adjacency,
-  const int                stage,
-  const double             timeStepSize
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const int                       stage,
+  const double                    timeStepSize
 ) {
-  const auto cells = this->getCells(partition, adjacency);
+  const auto cells = this->getCells(cellConnectivity, adjacency);
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(cells.size),
     exahype2::dg::rk::AddStageFaceIntegrals<Derived, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       cells,
       _estimates.getView(),
       std::as_const(this->_faceFluxes).getView(),
@@ -232,16 +234,16 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::addFaceIn
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::combineFinalState(
-  const peano4::Partition& partition,
-  const double             timeStepSize
+  const peano4::CellConnectivity& cellConnectivity,
+  const double                    timeStepSize
 ) {
   using Tableau                               = typename Stage::Tableau;
-  const auto                            cells = this->getCells(partition);
+  const auto                            cells = this->getCells(cellConnectivity);
   exahype2::dg::MaxEigenvalueStatistics statistics;
   tarch::accelerator::parallelReduce(
     tarch::accelerator::Range(cells.size),
     exahype2::dg::rk::CombineStages<Derived, StoragePrecision, ComputePrecision>{
-      partition.onDevice(),
+      cellConnectivity.onDevice(),
       cells,
       this->_solution.getView(),
       std::as_const(_estimates).getView(),

@@ -59,42 +59,42 @@ public:
     std::vector<exahype2::plotter::DataField> plottedFields
   );
 
-  INLINE_METHOD void allocate(const peano4::Partition& partition);
-  INLINE_METHOD void performTimeStep(const peano4::Partition& partition, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void performTimeStep(const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests);
   INLINE_METHOD void regrid(
-    const peano4::Partition&      partition,
+    const peano4::CellConnectivity&      cellConnectivity,
     const peano4::Regrid&         regrid,
     exahype2::RefinementRequests& requests
   );
   INLINE_METHOD void release();
-  INLINE_METHOD void contributeTo(tarch::mpi::ReductionRecord& record);
-  INLINE_METHOD void adoptFrom(const tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
+  INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
 private:
-  INLINE_METHOD void reserveFaces(const peano4::Partition& partition);
+  INLINE_METHOD void reserveFaces(const peano4::CellConnectivity& cellConnectivity);
   [[nodiscard]] INLINE_METHOD double predictPatches(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency        adjacency,
     double                   timeStepSize
   );
   [[nodiscard]] INLINE_METHOD double solveRiemannProblems(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency        adjacency,
     double                   timeStepSize
   );
   [[nodiscard]] INLINE_METHOD double correctPatches(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency        adjacency,
     double                   timeStepSize
   );
   [[nodiscard]] INLINE_METHOD double fixUpPatches(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency        adjacency,
     double                   timeStepSize
   );
   [[nodiscard]] INLINE_METHOD auto getCorrection(
-    const peano4::Partition& partition,
+    const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency        adjacency,
     double                   timeStepSize
   );
@@ -122,20 +122,20 @@ private:
 
   /**
    * The patches of this rank that repeated their step with the fallback scheme since the last
-   * reduction, the volumes the fallback left troubled and the volumes whose prediction diverged.
+   * reduction, the patches the fallback left troubled and the volumes whose prediction diverged.
    */
   int _fallbackCells{0};
-  int _troubledFallbackVolumes{0};
+  int _troubledFallbackCells{0};
   int _divergedPredictions{0};
   int _fallbackCellsSlot{0};
-  int _troubledFallbackVolumesSlot{0};
+  int _troubledFallbackCellsSlot{0};
   int _divergedPredictionsSlot{0};
 
   /**
    * The global sums of the reductions since the last report of the global master.
    */
   std::uint64_t                         _reportedFallbackCells{0};
-  std::uint64_t                         _reportedTroubledFallbackVolumes{0};
+  std::uint64_t                         _reportedTroubledFallbackCells{0};
   std::uint64_t                         _reportedDivergedPredictions{0};
   std::chrono::steady_clock::time_point _lastFallbackReport{};
 };

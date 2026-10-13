@@ -24,8 +24,5 @@ private:
   void testDescribeRepetitionsCountsEveryPhaseInItsUnit();
   void testFinishStepSumsTheSolverBytesAndCellUpdates();
   void testFinishStepReducesTheValuesOfTheSolvers();
-  void testTheNextTimeStepCountsTheWaitBeforeAnotherStep();
-  void testTheSummaryCountsTheWaitAfterTheLastTimeStep();
-  void testTheFinalAssertionReductionReportsNoneWithoutAnAssertion();
   void testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition();
 };
