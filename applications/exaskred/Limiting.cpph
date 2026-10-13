@@ -78,14 +78,15 @@ applications::exahype2::exaskred::limiting::isAdmissibleState(const T* const Q, 
 
 /**
  * Returns whether the numberOfStates states of Q are finite and either all wet, above
- * minimumWetHeight, or all dry at rest.
+ * minimumWetHeight, or all dry at rest, at most maximumDryHeight deep.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::limiting::isAdmissibleCell(
   const T* const Q,
   const int      numberOfStates,
-  const double   minimumWetHeight
+  const double   minimumWetHeight,
+  const double   maximumDryHeight
 ) {
   const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
     Shortcuts,
@@ -93,6 +94,27 @@ applications::exahype2::exaskred::limiting::isAdmissibleCell(
     NumberOfAuxiliaryVariables
   >(Q, numberOfStates);
   const auto fullyWet  = statistics.minHeight > static_cast<T>(minimumWetHeight);
-  const auto dryAtRest = statistics.minHeight >= T{} and statistics.maxHeight <= T{} and statistics.maxMomentum <= T{};
+  const auto dryAtRest = statistics.minHeight >= T{} and statistics.maxHeight <= static_cast<T>(maximumDryHeight) and statistics.maxMomentum <= T{};
   return statistics.finite and (fullyWet or dryAtRest);
+}
+
+/**
+ * Sets the momentum of every state of Q that is shallower than filmHeight to zero.
+ */
+template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::limiting::removeFilmMomentum(
+  T* const     Q,
+  const int    numberOfStates,
+  const double filmHeight
+) {
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  for (int state = 0; state < numberOfStates; state++) {
+    T* const values = Q + state * NumberOfData;
+    if (values[Shortcuts::h] < static_cast<T>(filmHeight)) {
+      for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+        values[Shortcuts::hu + dimension] = T{};
+      }
+    }
+  }
 }

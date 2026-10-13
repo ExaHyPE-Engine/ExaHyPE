@@ -485,6 +485,21 @@ def postprocess_updated_patch():
     )
 
 
+
+def postprocess_updated_subcells():
+    return PDETerm(
+        cpp="postprocessUpdatedSubcells",
+        concept="HasPostprocessUpdatedSubcells",
+        parameters=(
+            "{P}* const NOALIAS Q // [PatchSize^DIMENSIONS * ({N} + {A})]",
+            COORDINATES + " x",
+            COORDINATES + " h",
+            "const double t",
+            "const double dt",
+        ),
+        precision="storage",
+    )
+
 class PDETerms:
     """Stores the PDE terms that a script sets on one solver. ``set()`` checks every term
     against the table of the solver family."""

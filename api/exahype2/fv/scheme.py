@@ -151,9 +151,6 @@ class MusclHancock:
             halo_width=self.halo_width,
             subcell_family="::exahype2::fv::singlestep::SubcellStep",
             subcell_family_include="exahype2/fv/singlestep/SubcellStep.h",
-            fallback_reconstruction=(
-                "::exahype2::fv::reconstruction::LimitedLinear<::exahype2::fv::limiter::Zero>"
-            ),
             includes=[
                 "exahype2/fv/singlestep/PatchUpdate.h",
                 "exahype2/fv/limiter/SlopeLimiter.h",

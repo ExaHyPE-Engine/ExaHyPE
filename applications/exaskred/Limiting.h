@@ -42,7 +42,15 @@ namespace applications::exahype2::exaskred::limiting {
   INLINE_METHOD GPU_CALLABLE_METHOD bool isAdmissibleCell(
     const T* const Q,
     const int      numberOfStates,
-    const double   minimumWetHeight
+    const double   minimumWetHeight,
+    const double   maximumDryHeight = 0.0
+  );
+
+  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD void removeFilmMomentum(
+    T* const     Q,
+    const int    numberOfStates,
+    const double filmHeight
   );
 } // namespace applications::exahype2::exaskred::limiting
 

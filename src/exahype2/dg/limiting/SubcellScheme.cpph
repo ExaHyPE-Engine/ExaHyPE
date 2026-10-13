@@ -426,6 +426,22 @@ template <typename Derived, typename ComputePrecision>
 template <typename Reconstruct>
 template <typename Precision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::postprocessUpdatedPatch(
+  Precision* const                             Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt
+)
+  requires exahype2::terms::HasPostprocessUpdatedSubcells<Derived, Precision>
+{
+  Derived::postprocessUpdatedSubcells(Q, x, h, t, dt);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::boundaryConditions(
   const Precision* const                       inside,
   Precision* const                             outside,

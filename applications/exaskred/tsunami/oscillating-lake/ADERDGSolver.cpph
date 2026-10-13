@@ -192,7 +192,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
     Shortcuts,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables
-  >(Q, numberOfStates, WetHeight);
+  >(Q, numberOfStates, WetHeight, DryHeight);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -239,5 +239,39 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
     NumberOfAuxiliaryVariables,
     DGOrder
   >(QL, QR, x, h, t, dt, normal, maxEigenvalue, interfaceGravity, FL, FR);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::postprocessUpdatedPatch(
+  double* const NOALIAS                                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt
+) {
+  if constexpr (RemovesFilmMomentum) {
+    applications::exahype2::exaskred::limiting::removeFilmMomentum<
+      Shortcuts,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables
+    >(Q, (DGOrder + 1) * (DGOrder + 1), hThreshold);
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::postprocessUpdatedSubcells(
+  double* const NOALIAS                                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt
+) {
+  if constexpr (RemovesFilmMomentum) {
+    applications::exahype2::exaskred::limiting::removeFilmMomentum<
+      Shortcuts,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables
+    >(Q, PatchSize * PatchSize, hThreshold);
+  }
 }
 TARGET_DECLARE_END

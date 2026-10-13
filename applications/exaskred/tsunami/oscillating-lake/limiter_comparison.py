@@ -40,6 +40,12 @@ CASES = {
                                   label="ADER-WENO, scaling + fallback"),
     "weno-fallback-volumes": dict(solver="ader-weno", scaling=False, fallback=True,
                                   granularity="volumes", label="ADER-WENO, volume fallback"),
+    "weno-fallback-volumes-film": dict(solver="ader-weno", scaling=False, fallback=True,
+                                       granularity="volumes", film_momentum=True,
+                                       label="ADER-WENO, volume fallback, film momentum removed"),
+    "weno-fallback-volumes-film-dry": dict(solver="ader-weno", scaling=False, fallback=True,
+                                           granularity="volumes", film_momentum=True, films_dry=True,
+                                           label="ADER-WENO, volume fallback, films at rest dry"),
     "weno-fallback-neighbours": dict(solver="ader-weno", scaling=False, fallback=True,
                                      granularity="volumes_and_neighbours",
                                      label="ADER-WENO, volume + neighbour fallback"),
@@ -52,6 +58,10 @@ CASES = {
     "dg-weno-scaling-fallback-volumes": dict(solver="aderdg", limiter="weno", scaling=True,
                                              fallback=True, granularity="volumes",
                                              label="ADER-DG + ADER-WENO, scaling + volume fallback"),
+    "dg-weno-scaling-fallback-volumes-film-dry": dict(
+        solver="aderdg", limiter="weno", scaling=True, fallback=True, granularity="volumes",
+        film_momentum=True, films_dry=True,
+        label="ADER-DG + ADER-WENO, scaling + volume fallback, films at rest dry"),
 }
 
 
@@ -80,7 +90,7 @@ def build_command(case, args):
         sys.executable, str(APPLICATION),
         "--solver", case["solver"],
         "--degrees-of-freedom", str(2 * args.dg_order + 1),
-        "--patch-size", str(args.dg_order + 1),
+        "--patch-size", str(args.patch_size or args.dg_order + 1),
         "--weno-order", str(args.weno_order),
         "--end-time", str(args.end_time),
         "--cfl", str(args.cfl),
@@ -96,6 +106,10 @@ def build_command(case, args):
         command.append("--no-fallback")
     if case.get("granularity"):
         command += ["--fallback-granularity", case["granularity"]]
+    if case.get("film_momentum") or args.film_fix:
+        command.append("--remove-film-momentum")
+    if case.get("films_dry") or args.film_fix:
+        command.append("--films-dry")
     if case["solver"] == "aderdg" and args.galerkin_flux_coupling == "off":
         command.append("--no-galerkin-flux-coupling")
     command += ["--error-samples", str(args.error_samples)]
@@ -132,8 +146,8 @@ def experiment(name, args):
     console = (directory / "console.log").read_text(errors="replace")
     metadata = {
         "case": name, **case, "dg_order": args.dg_order, "weno_order": args.weno_order,
-        "patch_size": args.dg_order + 1, "grid_levels": args.grid_levels, "cfl": args.cfl,
-        "dry_threshold": args.dry_threshold,
+        "patch_size": args.patch_size or args.dg_order + 1, "grid_levels": args.grid_levels, "cfl": args.cfl,
+        "dry_threshold": args.dry_threshold, "film_fix": args.film_fix,
         "galerkin_flux_coupling": args.galerkin_flux_coupling, "error_samples": args.error_samples,
         "end_time": args.end_time, "build_command": build, "run_command": run,
         "peano_build": str(args.peano_build.resolve()),
@@ -164,9 +178,12 @@ VARIANT_STYLE = {
     "weno-scaling-fallback": ("#008300", (0, (1, 1))),
     "weno-fallback-volumes": ("#4a3aa6", "-"),
     "weno-fallback-neighbours": ("#8a8a00", "--"),
+    "weno-fallback-volumes-film": ("#2a78d6", "--"),
+    "weno-fallback-volumes-film-dry": ("#eb6834", "-."),
     "weno-scaling-fallback-volumes": ("#4a3aa6", (0, (1, 1.5))),
     "weno-scaling-fallback-neighbours": ("#8a8a00", (0, (3, 1, 1, 1, 1, 1))),
     "dg-weno-scaling-fallback-volumes": ("#4a3aa6", "-"),
+    "dg-weno-scaling-fallback-volumes-film-dry": ("#eb6834", "-."),
 }
 NORM_STYLE = {"L1": ("#2a78d6", "-"), "L2": ("#eb6834", "--"), "L\u221e": ("#1baf7a", "-.")}
 # The VolumeStatus values of exahype2::fv::ader::Fallback after Accepted, in their order.
@@ -377,7 +394,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", nargs="+", default=list(CASES), choices=list(CASES))
     parser.add_argument("--dg-order", type=int, default=5)
+    parser.add_argument("--patch-size", type=int, default=None,
+                        help="Volumes per patch axis of ADER-WENO (default: DG order + 1).")
     parser.add_argument("--weno-order", type=int, default=3)
+    parser.add_argument("--film-fix", action="store_true",
+                        help="Remove the momentum of films below the dry threshold and admit them at rest as dry.")
     parser.add_argument("--grid-levels", type=int, default=4)
     parser.add_argument("--end-time", type=float, default=10.0)
     parser.add_argument("--cfl", type=float, default=0.5)

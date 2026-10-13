@@ -15,6 +15,7 @@
 #include "exahype2/terms/MaxEigenvalue.h"
 #include "exahype2/terms/NonconservativeProduct.h"
 #include "exahype2/terms/PhysicalAdmissibility.h"
+#include "exahype2/terms/PostprocessUpdatedSubcells.h"
 #include "exahype2/terms/SourceTerm.h"
 #include "exahype2/terms/SubcellRiemannSolver.h"
 #include "peano4/CellConnectivity.h"
@@ -190,7 +191,8 @@ private:
 /**
  * Derived in the form the finite-volume schemes of the subgrid read. With the fixed time step rule,
  * the update computes no wave speeds. solveRiemannProblem() calls the subcell Riemann solver of
- * Derived, and every other term calls the term of Derived with the same name.
+ * Derived, postprocessUpdatedPatch() calls postprocessUpdatedSubcells() of Derived, and every other
+ * term calls the term of Derived with the same name.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename Reconstruct>
@@ -301,6 +303,16 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     const tarch::la::Vector<DIMENSIONS, double>& h
   )
     requires exahype2::terms::HasPhysicalAdmissibility<Derived, Precision>;
+
+  template <typename Precision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void postprocessUpdatedPatch(
+    Precision*                                   Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    double                                       t,
+    double                                       dt
+  )
+    requires exahype2::terms::HasPostprocessUpdatedSubcells<Derived, Precision>;
 };
 
 /**

@@ -26,6 +26,14 @@ def parse_arguments():
         "--wet-height", type=float, default=1e-3,
         help="Water height above which every state of a wet cell or volume lies (admissibility).",
     )
+    parser.add_argument(
+        "--remove-film-momentum", action="store_true",
+        help="Set the momentum of states below hThreshold to zero after every step.",
+    )
+    parser.add_argument(
+        "--films-dry", action="store_true",
+        help="Admit states below hThreshold at rest as dry instead of only empty states.",
+    )
     parser.add_argument("--degrees-of-freedom", type=int, default=16)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=5)
@@ -134,7 +142,9 @@ if args.solver == "aderdg":
     solver.set_pde_terms(
         subcell_riemann_solver=True,
         physical_admissibility=True,
+        postprocess_updated_subcells=True,
     )
+    solver.postprocess_updated_patch = True
     solver.add_subcell_limiter(
         {
             "godunov": exahype2.fv.Godunov(),
@@ -163,6 +173,7 @@ else:
         riemann_solver=True,
         physical_admissibility=True,
     )
+    solver.postprocess_updated_patch = True
     implementation = "FVSolver.cpph"
 
 solver.set_pde_terms(analytical_solution=True)
@@ -173,6 +184,8 @@ project.add_solver(solver)
 project.add_constant("g", 9.81)
 project.add_constant("hThreshold", args.dry_threshold)
 project.add_constant("WetHeight", args.wet_height)
+project.add_constant("RemovesFilmMomentum", "true" if args.remove_film_momentum else "false", "bool")
+project.add_constant("DryHeight", args.dry_threshold if args.films_dry else 0.0)
 project.add_constant("LakeRadius", 1.0)
 project.add_constant("ReferenceDepth", 0.1)
 project.add_constant("OrbitDisplacement", 0.5)
