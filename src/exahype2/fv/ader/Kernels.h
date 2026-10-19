@@ -113,6 +113,7 @@ struct exahype2::fv::ader::PredictPatches final {
   double                                      timeStepSize{0.0};
   typename StatusPool::View                   statuses{};
   typename StatePool::View                    interiorUpdates{};
+  typename StatusPool::ConstView              limiterFaceStatuses{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,

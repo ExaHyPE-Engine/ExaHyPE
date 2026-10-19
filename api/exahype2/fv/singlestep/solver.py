@@ -14,6 +14,7 @@ def _pde_terms():
         {
             "diffusive_source": exahype2.pde_terms.diffusive_source(),
             "limited_difference": exahype2.pde_terms.limited_difference(),
+            "reconstruction_support": exahype2.pde_terms.reconstruction_support(),
             "reconstruction": exahype2.pde_terms.PDETerm(
                 cpp="reconstruct",
                 concept="HasReconstruction",
@@ -39,7 +40,9 @@ def _pde_terms():
 class Solver(FiniteVolumeSolver):
     """A finite-volume solver that advances every volume in one step from the volumes around it.
 
-    ``scheme`` is :class:`exahype2.fv.Godunov` or :class:`exahype2.fv.MusclHancock`.
+    ``scheme`` is :class:`exahype2.fv.Godunov` or :class:`exahype2.fv.MusclHancock`. MUSCL-Hancock
+    uses zero slopes in a volume when the volume or one of its neighbours fails the
+    ``reconstruction_support`` PDE term.
     """
 
     SOLVER_FAMILY_INCLUDE = "exahype2/fv/singlestep/Solver.h"

@@ -142,7 +142,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     ComputePrecision* NOALIAS                    patchScratch,
-    const exahype2::dg::ader::TeamWorkers&       workers
+    const exahype2::dg::ader::TeamWorkers&       workers,
+    const StoragePrecision* const*               cornerHalos = nullptr
   );
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int predictVolume(

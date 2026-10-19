@@ -15,7 +15,10 @@ class SubcellLimiting:
     """The a-posteriori subcell limiter of a discontinuous Galerkin solver.
 
     The limiter reads the ``physical_admissibility``, ``dmp_observables``,
-    ``dmp_relaxation_parameter`` and ``subcell_riemann_solver`` PDE terms of the solver.
+    ``dmp_relaxation_parameter``, ``subcell_riemann_solver``, ``reconstruction_support`` and
+    ``reconstruction_weights`` PDE terms of the solver. A subcell whose reconstruction stencil
+    holds a subcell that fails ``reconstruction_support`` reconstructs to first order, and a WENO
+    subcell reconstruction weighs every entry by the entry that ``reconstruction_weights`` names.
     """
 
     @property

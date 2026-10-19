@@ -263,6 +263,72 @@ namespace {
     }
     return difference;
   }
+
+  struct WeightsOfFirstEntry {
+    static int reconstructionWeightsOf(const int) { return 0; }
+  };
+
+  // Returns the largest difference between the nodal polynomial of the second entry and the sum
+  // of the nodal polynomials of the first and the third entry, whose averages the second entry
+  // sums. WeightSource weighs every entry.
+  template <int Order, int VolumesPerAxis, typename WeightSource>
+  double sumReconstructionDifference() {
+    using Reconstruction    = WENO<Order>;
+    using Basis             = typename Reconstruction::Basis;
+    constexpr int HaloWidth = Reconstruction::HaloSize;
+    constexpr int Volumes   = numberOfVolumesInPatch<VolumesPerAxis>();
+    constexpr int NodalSize = Basis::NodesPerCell * NumberOfData;
+
+    const auto average = [](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int unknown) {
+      double first = 0.0;
+      double third = 0.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        first += std::sin((1.7 + 0.4 * axis) * volumeIndex(axis));
+        third += std::cos((0.9 + 0.7 * axis) * volumeIndex(axis));
+      }
+      first += volumeIndex(0) >= VolumesPerAxis / 2 ? 2.0 : 0.0;
+      third += volumeIndex(DIMENSIONS - 1) >= VolumesPerAxis / 3 ? 5.0 : 0.0;
+      return unknown == 0 ? first : unknown == 2 ? third : first + third;
+    };
+
+    std::vector<double> q(Volumes * NumberOfData);
+    for (int volume = 0; volume < Volumes; volume++) {
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        q[volume * NumberOfData + unknown] = average(volumeIndexOf<VolumesPerAxis>(volume), unknown);
+      }
+    }
+    std::vector<std::vector<double>> faceInStorage(
+      peano4::FacesPerCell,
+      std::vector<double>(faceOverlapStorageSize<VolumesPerAxis, HaloWidth>(), 0.0)
+    );
+    forEachOverlapVoxel<VolumesPerAxis, HaloWidth>(
+      [&](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int face, const int overlapIndex) {
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          faceInStorage[face][overlapIndex * NumberOfData + unknown] = average(volumeIndex, unknown);
+        }
+      }
+    );
+    const double* faceInputPatches[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      faceInputPatches[face] = faceInStorage[face].data();
+    }
+
+    std::vector<double> nodalStates(Volumes * NodalSize);
+    std::vector<double> patchScratch(Reconstruction::template PatchScratchSize<VolumesPerAxis, NumberOfData>);
+    Reconstruction::template reconstructPatch<VolumesPerAxis, NumberOfData, WeightSource>(
+      q.data(),
+      faceInputPatches,
+      nodalStates.data(),
+      patchScratch.data()
+    );
+
+    double difference = 0.0;
+    for (int node = 0; node < Volumes * Basis::NodesPerCell; node++) {
+      const double* const state = &nodalStates[node * NumberOfData];
+      difference = std::max(difference, std::abs(state[1] - state[0] - state[2]));
+    }
+    return difference;
+  }
 } // namespace
 
 exahype2::fv::tests::WENOTest::WENOTest() :
@@ -272,6 +338,7 @@ void
 exahype2::fv::tests::WENOTest::run() {
   testMethod(testWENOReconstructsPolynomialsExactly);
   testMethod(testPatchReconstructionMatchesVolumeReconstruction);
+  testMethod(testSharedWeightsReconstructSumsOfEntries);
 }
 
 void
@@ -294,4 +361,22 @@ exahype2::fv::tests::WENOTest::testPatchReconstructionMatchesVolumeReconstructio
 
   validateWithParams1(secondOrderDifference < 1e-12, secondOrderDifference);
   validateWithParams1(thirdOrderDifference < 1e-12, thirdOrderDifference);
+}
+
+/**
+ * With the weights of one entry, the reconstruction is linear, so it reconstructs the sum of two
+ * entries as the sum of their reconstructions. Every entry with its own weights breaks this.
+ */
+void
+exahype2::fv::tests::WENOTest::testSharedWeightsReconstructSumsOfEntries() {
+  using exahype2::fv::reconstruction::weno::OwnWeights;
+  const double secondOrderShared = sumReconstructionDifference<2, 4, WeightsOfFirstEntry>();
+  const double thirdOrderShared  = sumReconstructionDifference<3, 6, WeightsOfFirstEntry>();
+  const double secondOrderOwn    = sumReconstructionDifference<2, 4, OwnWeights>();
+  const double thirdOrderOwn     = sumReconstructionDifference<3, 6, OwnWeights>();
+
+  validateWithParams1(secondOrderShared < 1e-12, secondOrderShared);
+  validateWithParams1(thirdOrderShared < 1e-12, thirdOrderShared);
+  validateWithParams1(secondOrderOwn > 1e-3, secondOrderOwn);
+  validateWithParams1(thirdOrderOwn > 1e-3, thirdOrderOwn);
 }

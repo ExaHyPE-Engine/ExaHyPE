@@ -425,6 +425,31 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
 template <typename Derived, typename ComputePrecision>
 template <typename Reconstruct>
 template <typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::supportsHighOrderReconstruction(
+  const Precision* const                       Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h
+)
+  requires exahype2::terms::HasReconstructionSupport<Derived, Precision>
+{
+  return Derived::supportsHighOrderReconstruction(Q, x, h);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::reconstructionWeightsOf(
+  const int entry
+)
+  requires exahype2::terms::HasReconstructionWeights<Derived>
+{
+  return Derived::reconstructionWeightsOf(entry);
+}
+
+template <typename Derived, typename ComputePrecision>
+template <typename Reconstruct>
+template <typename Precision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<Reconstruct>::postprocessUpdatedPatch(
   Precision* const                             Q,

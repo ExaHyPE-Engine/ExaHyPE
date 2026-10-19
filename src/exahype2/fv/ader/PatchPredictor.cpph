@@ -70,7 +70,8 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
   const double                       timeStepSize,
   const typename CellPool::View      previousSolution,
   const tarch::accelerator::ChunkedMemoryPool<int>::View statuses,
-  const typename StatePool::View     interiorUpdates
+  const typename StatePool::View     interiorUpdates,
+  const tarch::accelerator::ChunkedMemoryPool<int>::ConstView limiterFaceStatuses
 ) {
   exahype2::fv::ader::PredictionStatistics statistics;
   if (cells.size == 0) {
@@ -103,7 +104,8 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
       timeStamp,
       timeStepSize,
       statuses,
-      interiorUpdates
+      interiorUpdates,
+      limiterFaceStatuses
     },
     tarch::accelerator::Custom<exahype2::fv::ader::PredictionStatistics>{statistics}
   );

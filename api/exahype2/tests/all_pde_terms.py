@@ -38,6 +38,7 @@ fv_solver.set_pde_terms(
     source=nothing,
     riemann_solver=zero,
     limited_difference=zero,
+    reconstruction_support="return true;",
     reconstruction=nothing,
     analytical_solution=nothing,
 )
@@ -62,6 +63,7 @@ ader_weno_solver.set_pde_terms(
     ncp=nothing,
     source=nothing,
     riemann_solver=zero,
+    reconstruction_weights="return entry == 2 ? 0 : entry;",
     analytical_solution=nothing,
 )
 ader_weno_solver.measure_error()
@@ -117,6 +119,7 @@ nonlinear_solver.set_pde_terms(
     physical_admissibility="return true;",
     dmp_observables=nothing,
     dmp_relaxation_parameter="return specifiedRelaxationParameter;",
+    reconstruction_weights="return entry == 2 ? 0 : entry;",
     analytical_solution=nothing,
 )
 nonlinear_solver.add_subcell_limiter(

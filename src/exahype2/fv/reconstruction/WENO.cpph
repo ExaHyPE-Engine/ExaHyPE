@@ -27,6 +27,46 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::volumeIsAvailable
   return axesOutsideOfPatch <= 1;
 }
 
+/**
+ * Returns the state of a volume beyond a corner of a two-dimensional patch, or null if the volume
+ * lies elsewhere or its corner is not available. cornerHalos holds per corner the face halo of a
+ * face neighbour that touches the diagonal cell, which lies along axis 0 of that face.
+ */
+template <
+  int Order,
+  exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
+  template <typename> class Limiter>
+template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*
+exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::cornerState(
+  const StoragePrecision* const*            cornerHalos,
+  const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
+) {
+  if constexpr (DIMENSIONS != 2) {
+    return nullptr;
+  } else {
+    if (cornerHalos == nullptr) {
+      return nullptr;
+    }
+    int corner = 0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      if (volumeIndex(axis) < -HaloSize or volumeIndex(axis) >= NumberOfVolumesPerAxis + HaloSize
+          or (volumeIndex(axis) >= 0 and volumeIndex(axis) < NumberOfVolumesPerAxis)) {
+        return nullptr;
+      }
+      corner += volumeIndex(axis) >= NumberOfVolumesPerAxis ? (1 << axis) : 0;
+    }
+    if (cornerHalos[corner] == nullptr) {
+      return nullptr;
+    }
+    tarch::la::Vector<DIMENSIONS, int> overlapCell;
+    overlapCell(0) = volumeIndex(0) < 0 ? volumeIndex(0) + HaloSize : volumeIndex(0) - NumberOfVolumesPerAxis + HaloSize;
+    overlapCell(1) = volumeIndex(1) < 0 ? volumeIndex(1) + NumberOfVolumesPerAxis : volumeIndex(1) - NumberOfVolumesPerAxis;
+    const int overlapIndex = exahype2::fv::getFaceVolumeIndex(overlapCell, NumberOfVolumesPerAxis, HaloSize, 0);
+    return &cornerHalos[corner][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
+  }
+}
+
 template <
   int Order,
   exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
@@ -64,13 +104,14 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::volumeState(
 /**
  * Reconstructs the nodal coefficients of every entry along one line of 2 * Order + 1 values that
  * centres on the reconstructed volume. The values of one line position are consecutive, and
- * only stencils whose positions are all available enter the combination.
+ * only stencils whose positions are all available enter the combination. The oscillation
+ * indicators of the entry that WeightSource names weigh the stencils of an entry.
  */
 template <
   int Order,
   exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
   template <typename> class Limiter>
-template <int NumberOfData, typename ComputePrecision>
+template <int NumberOfData, typename WeightSource, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructAlongLine(
   const Tables&                         tables,
@@ -90,12 +131,8 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructAlongL
     }
   }
 
-  for (int entry = 0; entry < NumberOfData; entry++) {
-    ComputePrecision candidates[Stencils][Nodes];
-    ComputePrecision linearWeights[Stencils];
-    ComputePrecision oscillationIndicators[Stencils];
-    int              numberOfStencils = 0;
-
+  const auto candidatesOf = [&](const int entry, ComputePrecision candidates[Stencils][Nodes]) {
+    int numberOfStencils = 0;
     for (int stencil = 0; stencil < Stencils; stencil++) {
       if (not stencilIsAdmissible[stencil]) {
         continue;
@@ -110,23 +147,48 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructAlongL
         }
         candidates[numberOfStencils][node] = coefficient;
       }
+      numberOfStencils++;
+    }
+    return numberOfStencils;
+  };
+
+  ComputePrecision linearWeights[Stencils];
+  int              numberOfStencils = 0;
+  for (int stencil = 0; stencil < Stencils; stencil++) {
+    if (stencilIsAdmissible[stencil]) {
+      linearWeights[numberOfStencils++] = static_cast<ComputePrecision>(Tables::linearWeight(stencil));
+    }
+  }
+  assertion(numberOfStencils > 0);
+
+  for (int entry = 0; entry < NumberOfData; entry++) {
+    const int weightSource = WeightSource::reconstructionWeightsOf(entry);
+    assertion(weightSource >= 0 and weightSource < NumberOfData, entry, weightSource);
+
+    ComputePrecision candidates[Stencils][Nodes];
+    ComputePrecision sourceCandidates[Stencils][Nodes];
+    candidatesOf(entry, candidates);
+    if (weightSource != entry) {
+      candidatesOf(weightSource, sourceCandidates);
+    }
+    const ComputePrecision(&weighted)[Stencils][Nodes] = weightSource == entry ? candidates : sourceCandidates;
+
+    ComputePrecision oscillationIndicators[Stencils];
+    for (int stencil = 0; stencil < numberOfStencils; stencil++) {
       // Derivatives annihilate a constant. Remove it before evaluating the
       // quadratic form, otherwise smooth single-precision data can produce
       // a negative indicator through cancellation of large constant terms.
-      const ComputePrecision reference = candidates[numberOfStencils][0];
+      const ComputePrecision reference = weighted[stencil][0];
       ComputePrecision indicator = ComputePrecision(0);
       for (int row = 0; row < Nodes; row++) {
         for (int column = 0; column < Nodes; column++) {
           indicator += static_cast<ComputePrecision>(tables.oscillationIndicatorMatrix[row * Nodes + column])
-            * (candidates[numberOfStencils][row] - reference)
-            * (candidates[numberOfStencils][column] - reference);
+            * (weighted[stencil][row] - reference)
+            * (weighted[stencil][column] - reference);
         }
       }
-      linearWeights[numberOfStencils]         = static_cast<ComputePrecision>(Tables::linearWeight(stencil));
-      oscillationIndicators[numberOfStencils] = std::max(ComputePrecision(0), indicator);
-      numberOfStencils++;
+      oscillationIndicators[stencil] = std::max(ComputePrecision(0), indicator);
     }
-    assertion(numberOfStencils > 0);
 
     ComputePrecision nonlinearWeights[Stencils];
     Weighting::weights(numberOfStencils, linearWeights, oscillationIndicators, nonlinearWeights);
@@ -152,7 +214,7 @@ template <
   int Order,
   exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
   template <typename> class Limiter>
-template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
+template <int NumberOfVolumesPerAxis, int NumberOfData, typename WeightSource, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPolynomial(
   const StoragePrecision* NOALIAS const     inputPatch,
@@ -272,7 +334,7 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPolyno
       }
 
       ComputePrecision coefficients[Nodes * NumberOfData];
-      reconstructAlongLine<NumberOfData>(ReconstructionTables, lineValues, lineIsAvailable, coefficients);
+      reconstructAlongLine<NumberOfData, WeightSource>(ReconstructionTables, lineValues, lineIsAvailable, coefficients);
       for (int node = 0; node < Nodes; node++) {
         for (int entry = 0; entry < NumberOfData; entry++) {
           output[(outputBase + node * outputStrides[sweptAxis]) * NumberOfData + entry] =
@@ -288,27 +350,26 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPolyno
  * the coefficients into output. The axes before sweptAxis hold a volume and a node of it, and the
  * later axes the positions from Order volumes below to Order volumes above the patch. After the
  * last sweep, output holds the nodal polynomial of every volume, one volume after the other. A
- * work item is the target volume of a line and EntriesPerItem consecutive entries, and the
- * threads of the team of workers divide the work items among themselves.
+ * work item is the target volume of a line with all its entries, and the threads of the team of
+ * workers divide the work items among themselves.
  */
 template <
   int Order,
   exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
   template <typename> class Limiter>
-template <int NumberOfVolumesPerAxis, int NumberOfData, int EntriesPerItem, typename ComputePrecision>
+template <int NumberOfVolumesPerAxis, int NumberOfData, typename WeightSource, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::sweepPatch(
   const int                              sweptAxis,
   const ComputePrecision* NOALIAS const  input,
   ComputePrecision* NOALIAS const        output,
-  const exahype2::dg::ader::TeamWorkers& workers
+  const exahype2::dg::ader::TeamWorkers& workers,
+  const bool                             cornerIsAvailable[peano4::VerticesPerCell]
 ) {
-  static_assert(NumberOfData % EntriesPerItem == 0);
   constexpr int    Volumes      = NumberOfVolumesPerAxis;
   constexpr int    Nodes        = Tables::NumberOfNodes;
   constexpr int    Window       = 2 * Order + 1;
   constexpr int    Extent       = Volumes + 2 * Order;
-  constexpr int    ItemsPerLine = NumberOfData / EntriesPerItem;
   constexpr int    NodesPerCell = peano4::power(Nodes, DIMENSIONS);
   constexpr Tables ReconstructionTables{};
   const bool       isLastSweep = sweptAxis == DIMENSIONS - 1;
@@ -318,7 +379,7 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::sweepPatch(
   int outputExtents[DIMENSIONS];
   int inputStride  = 1;
   int outputStride = 1;
-  int items        = Volumes * ItemsPerLine;
+  int items        = Volumes;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     inputStrides[axis]  = inputStride;
     outputStrides[axis] = outputStride;
@@ -331,14 +392,14 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::sweepPatch(
   }
 
   for (int item = workers.teamThread; item < items; item += workers.teamThreads) {
-    const int firstEntry = (item % ItemsPerLine) * EntriesPerItem;
-    int       remainder  = item / ItemsPerLine;
-    const int target     = remainder % Volumes;
+    int       remainder = item;
+    const int target    = remainder % Volumes;
     remainder /= Volumes;
 
     int coordinates[DIMENSIONS];
     int inputBase         = 0;
     int axesOutsideOfLine = 0;
+    int cornerOfLine      = 0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       if (axis == sweptAxis) {
         coordinates[axis] = 0;
@@ -350,26 +411,30 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::sweepPatch(
       if (axis > sweptAxis) {
         const int volume = coordinates[axis] - Order;
         axesOutsideOfLine += (volume < 0 or volume >= Volumes) ? 1 : 0;
+        cornerOfLine += volume >= Volumes ? (1 << axis) : 0;
       }
     }
     if (axesOutsideOfLine > 1) {
       continue;
     }
 
-    ComputePrecision lineValues[Window * EntriesPerItem];
+    ComputePrecision lineValues[Window * NumberOfData];
     bool             lineIsAvailable[Window];
     for (int position = 0; position < Window; position++) {
       const int volume          = target - Order + position;
-      lineIsAvailable[position] = axesOutsideOfLine + ((volume < 0 or volume >= Volumes) ? 1 : 0) <= 1;
-      const int offset          = (inputBase + (target + position) * inputStrides[sweptAxis]) * NumberOfData + firstEntry;
-      for (int entry = 0; entry < EntriesPerItem; entry++) {
-        lineValues[position * EntriesPerItem + entry] = lineIsAvailable[position] ? input[offset + entry]
-                                                                                  : ComputePrecision(0);
+      const int axesOutside     = axesOutsideOfLine + ((volume < 0 or volume >= Volumes) ? 1 : 0);
+      lineIsAvailable[position] = axesOutside <= 1
+                               or (DIMENSIONS == 2 and axesOutside == 2
+                                   and cornerIsAvailable[cornerOfLine + (volume >= Volumes ? (1 << sweptAxis) : 0)]);
+      const int offset          = (inputBase + (target + position) * inputStrides[sweptAxis]) * NumberOfData;
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        lineValues[position * NumberOfData + entry] = lineIsAvailable[position] ? input[offset + entry]
+                                                                                : ComputePrecision(0);
       }
     }
 
-    ComputePrecision coefficients[Nodes * EntriesPerItem];
-    reconstructAlongLine<EntriesPerItem>(ReconstructionTables, lineValues, lineIsAvailable, coefficients);
+    ComputePrecision coefficients[Nodes * NumberOfData];
+    reconstructAlongLine<NumberOfData, WeightSource>(ReconstructionTables, lineValues, lineIsAvailable, coefficients);
 
     for (int node = 0; node < Nodes; node++) {
       coordinates[sweptAxis] = target * Nodes + node;
@@ -391,8 +456,8 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::sweepPatch(
           outputIndex += coordinates[axis] * outputStrides[axis];
         }
       }
-      for (int entry = 0; entry < EntriesPerItem; entry++) {
-        output[outputIndex * NumberOfData + firstEntry + entry] = coefficients[node * EntriesPerItem + entry];
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        output[outputIndex * NumberOfData + entry] = coefficients[node * NumberOfData + entry];
       }
     }
   }
@@ -411,14 +476,15 @@ template <
   int Order,
   exahype2::fv::reconstruction::weno::NonlinearWeighting Weighting,
   template <typename> class Limiter>
-template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
+template <int NumberOfVolumesPerAxis, int NumberOfData, typename WeightSource, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPatch(
   const StoragePrecision* NOALIAS const  inputPatch,
   const StoragePrecision* NOALIAS const  faceInputPatches[peano4::FacesPerCell],
   ComputePrecision* NOALIAS const        nodalStates,
   ComputePrecision* NOALIAS const        scratch,
-  const exahype2::dg::ader::TeamWorkers& workers
+  const exahype2::dg::ader::TeamWorkers& workers,
+  const StoragePrecision* const*         cornerHalos
 ) {
   static_assert(
     NumberOfVolumesPerAxis >= 2 * Order,
@@ -448,6 +514,12 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPatch(
       for (int entry = 0; entry < NumberOfData; entry++) {
         box[entry] = static_cast<ComputePrecision>(state[entry]);
       }
+    } else if (const StoragePrecision* const corner =
+                 cornerState<NumberOfVolumesPerAxis, NumberOfData>(cornerHalos, index);
+               corner != nullptr) {
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        box[entry] = static_cast<ComputePrecision>(corner[entry]);
+      }
     } else {
       for (int entry = 0; entry < NumberOfData; entry++) {
         box[entry] = ComputePrecision(0);
@@ -456,14 +528,14 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPatch(
   }
   exahype2::dg::ader::synchronise(workers);
 
+  bool cornerIsAvailable[peano4::VerticesPerCell];
+  for (int corner = 0; corner < peano4::VerticesPerCell; corner++) {
+    cornerIsAvailable[corner] = cornerHalos != nullptr and cornerHalos[corner] != nullptr;
+  }
   for (int sweptAxis = 0; sweptAxis < DIMENSIONS; sweptAxis++) {
     const ComputePrecision* const input  = buffers[sweptAxis];
     ComputePrecision* const       output = sweptAxis == DIMENSIONS - 1 ? nodalStates : buffers[sweptAxis + 1];
-    if (workers.teamThreads > 1) {
-      sweepPatch<NumberOfVolumesPerAxis, NumberOfData, 1>(sweptAxis, input, output, workers);
-    } else {
-      sweepPatch<NumberOfVolumesPerAxis, NumberOfData, NumberOfData>(sweptAxis, input, output, workers);
-    }
+    sweepPatch<NumberOfVolumesPerAxis, NumberOfData, WeightSource>(sweptAxis, input, output, workers, cornerIsAvailable);
     exahype2::dg::ader::synchronise(workers);
   }
 }

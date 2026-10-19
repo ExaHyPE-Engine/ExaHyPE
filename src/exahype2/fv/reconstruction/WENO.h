@@ -31,7 +31,9 @@ TARGET_DECLARE
  * first axis for every volume of the window around the volume, every further sweep reconstructs
  * the nodal coefficients of the previous one along the next axis. On every line, each candidate
  * stencil determines a polynomial of full order, and the @c Weighting combines them by their
- * oscillation indicators.
+ * oscillation indicators. The @c WeightSource of exahype2::fv::reconstruction::weno names per entry
+ * the entry whose indicators weigh it, so entries that must stay in balance, such as the water
+ * height and the bathymetry of the shallow water equations, share their nonlinear weights.
  *
  * The halo of a patch holds no volume beyond an edge or a corner of the patch, and a stencil that
  * would read such a volume drops out of the combination. The two patches that share a face must
@@ -83,7 +85,12 @@ struct exahype2::fv::reconstruction::WENO final {
     return size;
   }();
 
-  template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
+  template <
+    int NumberOfVolumesPerAxis,
+    int NumberOfData,
+    typename WeightSource = exahype2::fv::reconstruction::weno::OwnWeights,
+    typename StoragePrecision,
+    typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static void reconstructPolynomial(
     const StoragePrecision* NOALIAS const     inputPatch,
     const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
@@ -93,13 +100,19 @@ struct exahype2::fv::reconstruction::WENO final {
     ComputePrecision* NOALIAS const           scratch
   );
 
-  template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
+  template <
+    int NumberOfVolumesPerAxis,
+    int NumberOfData,
+    typename WeightSource = exahype2::fv::reconstruction::weno::OwnWeights,
+    typename StoragePrecision,
+    typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static void reconstructPatch(
     const StoragePrecision* NOALIAS const  inputPatch,
     const StoragePrecision* NOALIAS const  faceInputPatches[peano4::FacesPerCell],
     ComputePrecision* NOALIAS const        nodalStates,
     ComputePrecision* NOALIAS const        scratch,
-    const exahype2::dg::ader::TeamWorkers& workers = exahype2::dg::ader::TeamWorkers{}
+    const exahype2::dg::ader::TeamWorkers& workers     = exahype2::dg::ader::TeamWorkers{},
+    const StoragePrecision* const*         cornerHalos = nullptr
   );
 
   template <int NumberOfVolumesPerAxis>
@@ -114,15 +127,22 @@ struct exahype2::fv::reconstruction::WENO final {
     const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
   );
 
-  template <int NumberOfVolumesPerAxis, int NumberOfData, int EntriesPerItem, typename ComputePrecision>
+  template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD static const StoragePrecision* cornerState(
+    const StoragePrecision* const*            cornerHalos,
+    const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
+  );
+
+  template <int NumberOfVolumesPerAxis, int NumberOfData, typename WeightSource, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static void sweepPatch(
     int                                    sweptAxis,
     const ComputePrecision* NOALIAS const  input,
     ComputePrecision* NOALIAS const        output,
-    const exahype2::dg::ader::TeamWorkers& workers
+    const exahype2::dg::ader::TeamWorkers& workers,
+    const bool                             cornerIsAvailable[peano4::VerticesPerCell]
   );
 
-  template <int NumberOfData, typename ComputePrecision>
+  template <int NumberOfData, typename WeightSource, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static void reconstructAlongLine(
     const Tables&                         tables,
     const ComputePrecision* NOALIAS const lineValues,

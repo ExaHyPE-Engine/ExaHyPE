@@ -13,6 +13,8 @@ def _pde_terms():
     terms.update(
         {
             "physical_admissibility": exahype2.pde_terms.physical_admissibility(),
+            "reconstruction_support": exahype2.pde_terms.reconstruction_support(),
+            "reconstruction_weights": exahype2.pde_terms.reconstruction_weights(),
             "dmp_observables": exahype2.pde_terms.dmp_observables(),
             "dmp_relaxation_parameter": exahype2.pde_terms.dmp_relaxation_parameter(),
         }
@@ -32,7 +34,12 @@ class Solver(FiniteVolumeSolver):
     fails the ``physical_admissibility`` PDE term, or leaves the extrema of the
     ``number_of_dmp_observables`` observables of the ``dmp_observables`` PDE term over the volumes
     around it, widened by the larger of ``dmp_relaxation_parameter`` and
-    ``dmp_differences_scaling`` times their range.
+    ``dmp_differences_scaling`` times their range. A volume whose stencil holds a volume that
+    fails the ``reconstruction_support`` PDE term keeps its average as polynomial, such as a
+    volume next to a dry volume in a shallow water solver. The ``reconstruction_weights`` PDE
+    term returns for an entry of ``Q`` the entry whose oscillation indicators weigh its stencils,
+    such as the water height for the bathymetry of a shallow water solver, which keeps the lake
+    at rest.
     """
 
     SOLVER_FAMILY_INCLUDE = "exahype2/fv/ader/Solver.h"

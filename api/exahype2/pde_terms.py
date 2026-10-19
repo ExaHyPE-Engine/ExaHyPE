@@ -369,6 +369,33 @@ def limited_difference():
     )
 
 
+def reconstruction_support():
+    return PDETerm(
+        cpp="supportsHighOrderReconstruction",
+        concept="HasReconstructionSupport",
+        parameters=(
+            "const {P}* const NOALIAS Q // [{N} + {A}]",
+            COORDINATES + " x",
+            COORDINATES + " h",
+        ),
+        returns="bool",
+        precision="storage",
+        flag="USE_RECONSTRUCTION_SUPPORT",
+    )
+
+
+def reconstruction_weights():
+    return PDETerm(
+        cpp="reconstructionWeightsOf",
+        concept="HasReconstructionWeights",
+        parameters=("const int entry",),
+        returns="int",
+        precision="storage",
+        flag="USE_RECONSTRUCTION_WEIGHTS",
+        concept_arguments=(),
+    )
+
+
 def physical_admissibility():
     return PDETerm(
         cpp="isPhysicallyAdmissible",

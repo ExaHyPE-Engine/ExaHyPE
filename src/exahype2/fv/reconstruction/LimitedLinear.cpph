@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 #include "exahype2/TimeStepping.h"
+#include "exahype2/terms/ReconstructionSupport.h"
 #include "tarch/Assertions.h"
 
 TARGET_DECLARE
@@ -39,7 +40,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::getNeighbourAlongNormal(
 /**
  * Reconstructs the two face states of centreState and evolves them by half a time step. A
  * SolverType with limitedDifference or reconstruct overrides the limiter or the linear
- * reconstruction. Auxiliary variables keep their reconstructed values.
+ * reconstruction. A SolverType with supportsHighOrderReconstruction gets zero slopes when one of the
+ * three states fails it. Auxiliary variables keep their reconstructed values.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
@@ -106,6 +108,19 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::evolveFaceStates(
       const ComputePrecision forwardDifference  = rightStateForCompute[unknown] - centreStateForCompute[unknown];
       const ComputePrecision backwardDifference = centreStateForCompute[unknown] - leftStateForCompute[unknown];
       limitedDifferences[unknown]               = Limiter::limitedDifference(forwardDifference, backwardDifference);
+    }
+  }
+  if constexpr (exahype2::terms::HasReconstructionSupport<SolverType, StoragePrecision>) {
+    auto neighbourCentre = volumeCentre;
+    neighbourCentre(normal) -= volumeSize(normal);
+    bool supported = SolverType::supportsHighOrderReconstruction(leftState, neighbourCentre, volumeSize)
+      and SolverType::supportsHighOrderReconstruction(centreState, volumeCentre, volumeSize);
+    neighbourCentre(normal) += 2.0 * volumeSize(normal);
+    supported = supported and SolverType::supportsHighOrderReconstruction(rightState, neighbourCentre, volumeSize);
+    if (not supported) {
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        limitedDifferences[unknown] = ComputePrecision(0);
+      }
     }
   }
 

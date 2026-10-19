@@ -11,5 +11,6 @@ namespace exahype2::fv::tests {
   private:
     void testWENOReconstructsPolynomialsExactly();
     void testPatchReconstructionMatchesVolumeReconstruction();
+    void testSharedWeightsReconstructSumsOfEntries();
   };
 } // namespace exahype2::fv::tests

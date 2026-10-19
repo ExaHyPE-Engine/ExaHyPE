@@ -146,7 +146,8 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::pr
     timeStepSize,
     exahype2::fv::ader::fallsBack<Derived>() ? _previousSubcells.getView() : typename CellPool::View{},
     exahype2::fv::ader::fallsBack<Derived>() ? _statuses.getView() : decltype(_statuses.getView()){},
-    exahype2::fv::ader::fallsBackPerVolume<Derived>() ? _interiorUpdates.getView() : decltype(_interiorUpdates.getView()){}
+    exahype2::fv::ader::fallsBackPerVolume<Derived>() ? _interiorUpdates.getView() : decltype(_interiorUpdates.getView()){},
+    region.faceStatuses
   ));
 }
 

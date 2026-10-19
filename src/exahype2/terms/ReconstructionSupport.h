@@ -1,0 +1,17 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include <concepts>
+#include "tarch/la/Vector.h"
+
+namespace exahype2::terms {
+  template <typename SolverType, typename Precision>
+  concept HasReconstructionSupport = requires(
+    const Precision* const                       Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h
+  ) {
+    { SolverType::supportsHighOrderReconstruction(Q, x, h) } -> std::same_as<bool>;
+  };
+} // namespace exahype2::terms

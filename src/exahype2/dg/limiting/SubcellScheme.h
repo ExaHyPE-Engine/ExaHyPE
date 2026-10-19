@@ -16,6 +16,8 @@
 #include "exahype2/terms/NonconservativeProduct.h"
 #include "exahype2/terms/PhysicalAdmissibility.h"
 #include "exahype2/terms/PostprocessUpdatedSubcells.h"
+#include "exahype2/terms/ReconstructionSupport.h"
+#include "exahype2/terms/ReconstructionWeights.h"
 #include "exahype2/terms/SourceTerm.h"
 #include "exahype2/terms/SubcellRiemannSolver.h"
 #include "peano4/CellConnectivity.h"
@@ -303,6 +305,17 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     const tarch::la::Vector<DIMENSIONS, double>& h
   )
     requires exahype2::terms::HasPhysicalAdmissibility<Derived, Precision>;
+
+  template <typename Precision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool supportsHighOrderReconstruction(
+    const Precision*                             Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h
+  )
+    requires exahype2::terms::HasReconstructionSupport<Derived, Precision>;
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int reconstructionWeightsOf(int entry)
+    requires exahype2::terms::HasReconstructionWeights<Derived>;
 
   template <typename Precision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void postprocessUpdatedPatch(

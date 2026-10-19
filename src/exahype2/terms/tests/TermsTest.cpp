@@ -28,6 +28,8 @@
 #include "exahype2/terms/PointSourceLocations.h"
 #include "exahype2/terms/PostprocessUpdatedPatch.h"
 #include "exahype2/terms/Reconstruction.h"
+#include "exahype2/terms/ReconstructionSupport.h"
+#include "exahype2/terms/ReconstructionWeights.h"
 #include "exahype2/terms/RefinementCriterion.h"
 #include "exahype2/terms/RiemannSolver.h"
 #include "exahype2/terms/SourceTerm.h"
@@ -174,6 +176,12 @@ struct exahype2::terms::tests::TermsTest::Complete {
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h
   );
+  static bool supportsHighOrderReconstruction(
+    const double*                                Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h
+  );
+  static int reconstructionWeightsOf(int entry);
   static void mapDmpObservables(double* observables, const double* Q);
   static double dmpRelaxationParameter(int observable, double specifiedRelaxationParameter);
   static void analyticalSolution(
@@ -313,6 +321,8 @@ exahype2::terms::tests::TermsTest::testEveryTermOfACompleteSolverSatisfiesItsCon
   validateEquals((exahype2::terms::HasLimitedDifference<Complete, double>), true);
   validateEquals((exahype2::terms::HasReconstruction<Complete, double>), true);
   validateEquals((exahype2::terms::HasPhysicalAdmissibility<Complete, double>), true);
+  validateEquals((exahype2::terms::HasReconstructionSupport<Complete, double>), true);
+  validateEquals((exahype2::terms::HasReconstructionWeights<Complete>), true);
   validateEquals((exahype2::terms::HasDmpObservables<Complete, double>), true);
   validateEquals((exahype2::terms::HasDmpRelaxationParameter<Complete, double>), true);
   validateEquals((exahype2::terms::HasAnalyticalSolution<Complete>), true);

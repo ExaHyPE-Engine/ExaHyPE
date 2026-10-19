@@ -19,6 +19,8 @@ namespace exahype2::fv::reconstruction::weno {
 
   template <int Exponent>
   struct JiangShu;
+
+  struct OwnWeights;
 } // namespace exahype2::fv::reconstruction::weno
 
 TARGET_DECLARE
@@ -41,6 +43,14 @@ struct exahype2::fv::reconstruction::weno::JiangShu final {
     const ComputePrecision* NOALIAS oscillationIndicators,
     ComputePrecision* NOALIAS       nonlinearWeights
   );
+};
+
+/**
+ * A weight source names for every entry the entry whose oscillation indicators weigh the stencils
+ * of its reconstruction. Every entry of OwnWeights takes its own.
+ */
+struct exahype2::fv::reconstruction::weno::OwnWeights final {
+  INLINE_METHOD GPU_CALLABLE_METHOD static int reconstructionWeightsOf(const int entry) { return entry; }
 };
 TARGET_DECLARE_END
 

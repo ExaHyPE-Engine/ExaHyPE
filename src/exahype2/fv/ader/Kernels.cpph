@@ -86,7 +86,35 @@ exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>:
         previous[value] = patch[value];
       }
     }
+#if defined(EXAHYPE2_WENO_CORNER_HALOS)
+    const StoragePrecision* cornerHalos[peano4::VerticesPerCell];
+    for (int corner = 0; corner < peano4::VerticesPerCell; corner++) {
+      cornerHalos[corner] = nullptr;
+      if constexpr (DIMENSIONS == 2) {
+        const int upperX = corner & 1;
+        const int upperY = (corner >> 1) & 1;
+        const int yFace  = cellConnectivity.getCellFace(slot, 1 + upperY * DIMENSIONS);
+        if (cellConnectivity.getFaceKind(yFace) != peano4::FaceKind::Interior) {
+          continue;
+        }
+        const int neighbour = cellConnectivity.getFaceCell(yFace, upperY);
+        if (neighbour < 0) {
+          continue;
+        }
+        const int xFace = cellConnectivity.getCellFace(neighbour, upperX * DIMENSIONS);
+        if (cellConnectivity.getFaceKind(xFace) != peano4::FaceKind::Interior) {
+          continue;
+        }
+        if (limiterFaceStatuses.segments != nullptr and limiterFaceStatuses.getChunk(xFace)[upperX] == 0) {
+          continue;
+        }
+        cornerHalos[corner] = halo.getChunk(xFace);
+      }
+    }
+    Scheme::reconstructPatch(patch, haloOfCell, cellCentre, cellSize, patchScratch, workers, cornerHalos);
+#else
     Scheme::reconstructPatch(patch, haloOfCell, cellCentre, cellSize, patchScratch, workers);
+#endif
     for (int first = 0; first < Scheme::VolumesPerPatch; first += workers.groups) {
       workers.hasCell = inGroup and first + workers.group < Scheme::VolumesPerPatch;
       // A thread without a volume keeps the barriers of the team on the first volume.
