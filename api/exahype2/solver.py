@@ -318,6 +318,8 @@ class Solver:
         def render_template(template):
             return render_jinja2_template(template, d, KeepUndefined)
 
+        self._add_solver_family_entries(d)
+
         d["DIMENSIONS"] = self._dimensions
         d["NAMESPACE"] = self._namespace
         d["FULL_QUALIFIED_NAMESPACE"] = "::".join(self._namespace)
@@ -410,7 +412,6 @@ class Solver:
             self._finish_simulation_implementation
         )
 
-        self._add_solver_family_entries(d)
         precision = d["STORAGE_PRECISION"]
         hooks = [
             (term, body) for term, body in self._hooks() if body is True or body.strip()

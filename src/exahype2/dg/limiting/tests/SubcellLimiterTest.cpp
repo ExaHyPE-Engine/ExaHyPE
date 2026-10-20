@@ -249,7 +249,7 @@ namespace {
 
   template <typename Solver>
   using SolverOf =
-    exahype2::dg::ader::Solver<Solver, double, double, exahype2::dg::limiting::SubcellLimiter<Solver, double, double>>;
+    exahype2::dg::ader::Solver<Solver, double, double, double, exahype2::dg::limiting::SubcellLimiter<Solver, double, double>>;
 
   /**
    * The PDE terms of every test solver. A constant state stays constant under them.

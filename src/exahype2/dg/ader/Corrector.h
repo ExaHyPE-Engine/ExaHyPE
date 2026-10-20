@@ -13,10 +13,10 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::ader {
-  template <typename Derived, typename ComputePrecision>
+  template <typename Derived, typename CorrectorPrecision>
   class Corrector;
 
-  template <typename Derived, bool ReportEigenvalues, typename StoragePrecision, typename ComputePrecision>
+  template <typename Derived, bool ReportEigenvalues, typename StoragePrecision, typename CorrectorPrecision>
   struct CorrectCells;
 } // namespace exahype2::dg::ader
 
@@ -24,7 +24,7 @@ TARGET_DECLARE
 /**
  * The corrector phase of one cell of an ADER-DG solver.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename CorrectorPrecision>
 class exahype2::dg::ader::Corrector final {
 public:
   using CellLayout = exahype2::dg::PaddedLayout<Derived>;
@@ -33,12 +33,12 @@ public:
   static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics correct(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    const ComputePrecision* const                faceFluxes[peano4::FacesPerCell],
+    const CorrectorPrecision* const                faceFluxes[peano4::FacesPerCell],
     StoragePrecision* NOALIAS                    cellState,
-    const ComputePrecision* NOALIAS              faceQuadratureWeights,
-    const ComputePrecision* NOALIAS              inverseCellQuadratureWeights,
-    const ComputePrecision* NOALIAS              leftFaceCoefficients,
-    const ComputePrecision* NOALIAS              rightFaceCoefficients,
+    const CorrectorPrecision* NOALIAS              faceQuadratureWeights,
+    const CorrectorPrecision* NOALIAS              inverseCellQuadratureWeights,
+    const CorrectorPrecision* NOALIAS              leftFaceCoefficients,
+    const CorrectorPrecision* NOALIAS              rightFaceCoefficients,
     const StoragePrecision* NOALIAS              stateQuadraturePoints,
     double                                       timeStamp,
     double                                       timeStepSize,
@@ -50,21 +50,21 @@ public:
  * Corrects every listed cell and reduces the wave-speed maxima of the updated solution when
  * ReportEigenvalues is true.
  */
-template <typename Derived, bool ReportEigenvalues, typename StoragePrecision, typename ComputePrecision>
+template <typename Derived, bool ReportEigenvalues, typename StoragePrecision, typename CorrectorPrecision>
 struct exahype2::dg::ader::CorrectCells final {
   using CellLayout = exahype2::dg::PaddedLayout<Derived>;
 
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
-  using FluxPool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using FluxPool = tarch::accelerator::ChunkedMemoryPool<CorrectorPrecision>;
 
   peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::View      solution{};
   typename FluxPool::ConstView faceFluxes{};
-  const ComputePrecision*      faceQuadratureWeights{nullptr};
-  const ComputePrecision*      inverseCellQuadratureWeights{nullptr};
-  const ComputePrecision*      leftFaceCoefficients{nullptr};
-  const ComputePrecision*      rightFaceCoefficients{nullptr};
+  const CorrectorPrecision*      faceQuadratureWeights{nullptr};
+  const CorrectorPrecision*      inverseCellQuadratureWeights{nullptr};
+  const CorrectorPrecision*      leftFaceCoefficients{nullptr};
+  const CorrectorPrecision*      rightFaceCoefficients{nullptr};
   const StoragePrecision*      stateQuadraturePoints{nullptr};
   double                       timeStamp{0.0};
   double                       timeStepSize{0.0};

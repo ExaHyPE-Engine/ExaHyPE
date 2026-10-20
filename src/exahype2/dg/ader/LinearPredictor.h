@@ -15,7 +15,7 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::ader {
-  template <typename Derived, typename ComputePrecision>
+  template <typename Derived, typename PredictorPrecision>
   class LinearPredictor;
 } // namespace exahype2::dg::ader
 
@@ -28,18 +28,18 @@ TARGET_DECLARE
  * The Cauchy-Kovalewski space-time predictor of a linear system. The threads of one cell split its
  * nodes and lines. Every buffer uses the padded strides of exahype2::dg::PaddedLayout.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename PredictorPrecision>
 class exahype2::dg::ader::LinearPredictor final {
 public:
   using CellLayout = exahype2::dg::PaddedLayout<Derived>;
-  using Tables     = exahype2::dg::BasisTables<ComputePrecision>;
+  using Tables     = exahype2::dg::BasisTables<PredictorPrecision>;
 
-  static constexpr bool EvaluateFlux = exahype2::terms::HasFlux<Derived, ComputePrecision>;
+  static constexpr bool EvaluateFlux = exahype2::terms::HasFlux<Derived, PredictorPrecision>;
   static constexpr bool EvaluateNonconservativeProduct =
-    exahype2::terms::HasNonconservativeProduct<Derived, ComputePrecision>;
-  static constexpr bool EvaluateSource             = exahype2::terms::HasSourceTerm<Derived, ComputePrecision>;
-  static constexpr bool EvaluateMaterialParameters = exahype2::terms::HasMaterialParameters<Derived, ComputePrecision>;
-  static constexpr bool EvaluatePointSources       = exahype2::terms::HasPointSource<Derived, ComputePrecision>;
+    exahype2::terms::HasNonconservativeProduct<Derived, PredictorPrecision>;
+  static constexpr bool EvaluateSource             = exahype2::terms::HasSourceTerm<Derived, PredictorPrecision>;
+  static constexpr bool EvaluateMaterialParameters = exahype2::terms::HasMaterialParameters<Derived, PredictorPrecision>;
+  static constexpr bool EvaluatePointSources       = exahype2::terms::HasPointSource<Derived, PredictorPrecision>;
   static constexpr bool AccumulatesFlux            = EvaluateFlux or EvaluateNonconservativeProduct;
   static constexpr bool AccumulatesSource          = EvaluateSource;
 
@@ -66,12 +66,12 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
   );
 
-  template <typename StoragePrecision>
+  template <typename StoragePrecision, typename CorrectorPrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void predict(
-    ComputePrecision* const NOALIAS              faceStates[peano4::FacesPerCell],
-    ComputePrecision* const NOALIAS              faceFluxes[peano4::FacesPerCell],
+    CorrectorPrecision* const NOALIAS            faceStates[peano4::FacesPerCell],
+    CorrectorPrecision* const NOALIAS            faceFluxes[peano4::FacesPerCell],
     const StoragePrecision* NOALIAS              cellState,
-    ComputePrecision* NOALIAS                    scratch,
+    PredictorPrecision* NOALIAS                  scratch,
     const int* NOALIAS                           pointSourceIndices,
     int                                          numberOfPointSources,
     const double* NOALIAS                        pointSourceLocations,
@@ -88,55 +88,55 @@ private:
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void initialiseState(
-    ComputePrecision* NOALIAS       state,
+    PredictorPrecision* NOALIAS     state,
     const StoragePrecision* NOALIAS cellState,
     const TeamWorkers&              workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD double evaluateLagrangeBasis(
-    const ComputePrecision* NOALIAS quadraturePoints,
-    int                             index,
-    double                          position
+    const PredictorPrecision* NOALIAS quadraturePoints,
+    int                               index,
+    double                            position
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluatePointSources(
-    ComputePrecision* NOALIAS                              pointSourceValues,
-    const ComputePrecision* NOALIAS                        state,
-    const int* NOALIAS                                     pointSourceIndices,
-    int                                                    numberOfPointSources,
-    const double* NOALIAS                                  pointSourceLocations,
-    const ComputePrecision* NOALIAS                        quadraturePoints,
-    const ComputePrecision* NOALIAS                        inverseCellQuadratureWeights,
-    const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
-    const tarch::la::Vector<DIMENSIONS, double>&           cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
-    double                                                 timeStamp,
-    double                                                 timeStepSize,
-    const TeamWorkers&                                     workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS                              pointSourceValues,
+    const PredictorPrecision* NOALIAS                        state,
+    const int* NOALIAS                                       pointSourceIndices,
+    int                                                      numberOfPointSources,
+    const double* NOALIAS                                    pointSourceLocations,
+    const PredictorPrecision* NOALIAS                        quadraturePoints,
+    const PredictorPrecision* NOALIAS                        inverseCellQuadratureWeights,
+    const tarch::la::Vector<DIMENSIONS, PredictorPrecision>& inverseCellSize,
+    const tarch::la::Vector<DIMENSIONS, double>&             cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&             cellSize,
+    double                                                   timeStamp,
+    double                                                   timeStepSize,
+    const TeamWorkers&                                       workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void addPointSourcesToState(
-    ComputePrecision* NOALIAS       state,
-    const ComputePrecision* NOALIAS pointSourceValues,
-    const ComputePrecision* NOALIAS quadratureWeights,
-    double                          timeStepSize,
-    const TeamWorkers&              workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS       state,
+    const PredictorPrecision* NOALIAS pointSourceValues,
+    const PredictorPrecision* NOALIAS quadratureWeights,
+    double                            timeStepSize,
+    const TeamWorkers&                workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void seedTimeAveragedState(
-    ComputePrecision* NOALIAS       timeAveragedState,
-    const ComputePrecision* NOALIAS state,
-    const TeamWorkers&              workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS       timeAveragedState,
+    const PredictorPrecision* NOALIAS state,
+    const TeamWorkers&                workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void clearFluxes(
-    ComputePrecision* NOALIAS flux,
-    const TeamWorkers&        workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS flux,
+    const TeamWorkers&          workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateFlux(
-    ComputePrecision* NOALIAS                    flux,
-    const ComputePrecision* NOALIAS              state,
+    PredictorPrecision* NOALIAS                  flux,
+    const PredictorPrecision* NOALIAS            state,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -145,20 +145,20 @@ private:
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void addNonconservativeProduct(
-    ComputePrecision* NOALIAS                              flux,
-    const ComputePrecision* NOALIAS                        state,
-    const ComputePrecision* NOALIAS                        derivativeOperator,
-    const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
-    const tarch::la::Vector<DIMENSIONS, double>&           cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
-    double                                                 timeStamp,
-    double                                                 timeStepSize,
-    const TeamWorkers&                                     workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS                              flux,
+    const PredictorPrecision* NOALIAS                        state,
+    const PredictorPrecision* NOALIAS                        derivativeOperator,
+    const tarch::la::Vector<DIMENSIONS, PredictorPrecision>& inverseCellSize,
+    const tarch::la::Vector<DIMENSIONS, double>&             cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&             cellSize,
+    double                                                   timeStamp,
+    double                                                   timeStepSize,
+    const TeamWorkers&                                       workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void applyMaterialParameterMatrix(
-    ComputePrecision* NOALIAS                    flux,
-    const ComputePrecision* NOALIAS              state,
+    PredictorPrecision* NOALIAS                  flux,
+    const PredictorPrecision* NOALIAS            state,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -167,7 +167,7 @@ private:
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void overwriteStateWithLinearSource(
-    ComputePrecision* NOALIAS                    state,
+    PredictorPrecision* NOALIAS                  state,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -176,38 +176,39 @@ private:
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void addFluxesToTimeDerivative(
-    ComputePrecision* NOALIAS       state,
-    const ComputePrecision* NOALIAS flux,
-    const TeamWorkers&              workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS       state,
+    const PredictorPrecision* NOALIAS flux,
+    const TeamWorkers&                workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void addPointSourceDerivativeToState(
-    ComputePrecision* NOALIAS       state,
-    const ComputePrecision* NOALIAS pointSourceValues,
-    const ComputePrecision* NOALIAS derivativeCoefficients,
-    const TeamWorkers&              workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS       state,
+    const PredictorPrecision* NOALIAS pointSourceValues,
+    const PredictorPrecision* NOALIAS derivativeCoefficients,
+    const TeamWorkers&                workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void accumulateTimeAveragedState(
-    ComputePrecision* NOALIAS       timeAveragedState,
-    const ComputePrecision* NOALIAS state,
-    ComputePrecision                timeAverageFactor,
-    const TeamWorkers&              workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS       timeAveragedState,
+    const PredictorPrecision* NOALIAS state,
+    PredictorPrecision                timeAverageFactor,
+    const TeamWorkers&                workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void addPointSourcesToTimeAveragedFlux(
-    ComputePrecision* NOALIAS       timeAveragedFlux,
-    const ComputePrecision* NOALIAS pointSourceValues,
-    const ComputePrecision* NOALIAS quadratureWeights,
-    const TeamWorkers&              workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS       timeAveragedFlux,
+    const PredictorPrecision* NOALIAS pointSourceValues,
+    const PredictorPrecision* NOALIAS quadratureWeights,
+    const TeamWorkers&                workers = TeamWorkers{}
   );
 
+  template<typename CorrectorPrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateToFaces(
-    ComputePrecision* const NOALIAS faceStates[peano4::FacesPerCell],
-    ComputePrecision* const NOALIAS faceFluxes[peano4::FacesPerCell],
-    const ComputePrecision* NOALIAS timeAveragedState,
-    const Tables&                   tables,
-    const TeamWorkers&              workers = TeamWorkers{}
+    CorrectorPrecision* const NOALIAS faceStates[peano4::FacesPerCell],
+    CorrectorPrecision* const NOALIAS faceFluxes[peano4::FacesPerCell],
+    const PredictorPrecision* NOALIAS timeAveragedState,
+    const Tables&                     tables,
+    const TeamWorkers&                workers = TeamWorkers{}
   );
 };
 TARGET_DECLARE_END

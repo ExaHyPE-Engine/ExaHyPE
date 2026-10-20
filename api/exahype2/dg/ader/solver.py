@@ -3,6 +3,8 @@
 import exahype2.pde_terms
 import exahype2.solver
 
+from exahype2.precision import cpp_type
+
 from exahype2.dg.basis import GaussLegendreBasis
 from exahype2.dg.basis import GaussLobattoBasis
 from exahype2.dg.limiting.subcell_limiting import SubcellLimiting
@@ -50,7 +52,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
     SOLVER_FAMILY = "ader"
     SOLVER_FAMILY_INCLUDE = "exahype2/dg/ader/Solver.h"
     SOLVER_FAMILY_CONCEPT = "::exahype2::dg::ader::SolverConcept"
-    SOLVER_FAMILY_CONCEPT_PRECISIONS = ("STORAGE_PRECISION", "COMPUTE_PRECISION")
+    SOLVER_FAMILY_CONCEPT_PRECISIONS = ("STORAGE_PRECISION", "CORRECTOR_PRECISION")
     PDE_TERMS = _pde_terms()
 
     def __init__(
@@ -63,6 +65,8 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         basis=GaussLegendreBasis,
         linear=False,
         precision="double",
+        predictor_precision=None,
+        corrector_precision=None,
         point_sources=0,
         initialise_patches=False,
     ):
@@ -94,6 +98,18 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         self._initialise_patches = bool(initialise_patches)
         self._owns_cell_predicate = ""
         self._plots_face_predicate = ""
+
+        if predictor_precision is not None:
+          self._predictor_precision = cpp_type(predictor_precision)
+          self.precision.add_compute_precision(predictor_precision)
+        else:
+          self._predictor_precision = self.precision.compute
+
+        if corrector_precision is not None:
+          self._corrector_precision = cpp_type(corrector_precision)
+          self.precision.add_compute_precision(corrector_precision)
+        else:
+          self._corrector_precision = self.precision.compute
 
     @property
     def order(self):
@@ -226,10 +242,11 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         return render_tracer_update(tracer, self._table_class("Quadrature"))
 
     def _solver_family_class(self):
-        return "::exahype2::dg::ader::Solver<{}, {}, {}, {}>".format(
+        return "::exahype2::dg::ader::Solver<{}, {}, {}, {}, {}>".format(
             self._solver_type(),
             self.precision.storage,
-            self.precision.compute,
+            self._predictor_precision,
+            self._corrector_precision,
             self._subcell_limiter_cpp_type(),
         )
 
@@ -257,6 +274,8 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
     def _table_precisions(self):
         """Returns the solver precisions plus double for the mesh transfer operators."""
         result = list(self.precision.types)
+        if self._predictor_precision not in result:
+            result.append(self._predictor_precision)
         if "double" not in result:
             result.append("double")
         return result
@@ -268,6 +287,9 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         d["DG_ORDER"] = self._order
         d["INITIALISE_PATCHES"] = self._initialise_patches
         d["TABLE_PRECISIONS"] = self._table_precisions()
+        d["PREDICTOR_PRECISION"] = self._predictor_precision
+        d["CORRECTOR_PRECISION"] = self._corrector_precision
+        d["CORRECTOR_PRECISION"] = "double"
         d["LIMITER_ARGUMENTS"] = self._subcell_limiter_arguments()
         d["MAX_ADMISSIBLE_MESH_WIDTH"] = (
             "parameters.getMaxAdmissiblePatchSize(DomainSize)"

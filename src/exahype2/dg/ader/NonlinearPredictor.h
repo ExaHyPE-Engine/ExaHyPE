@@ -19,7 +19,7 @@
 namespace exahype2::dg::ader {
   struct PicardResidual;
 
-  template <typename Derived, typename ComputePrecision>
+  template <typename Derived, typename PredictorPrecision>
   class NonlinearPredictor;
 } // namespace exahype2::dg::ader
 
@@ -49,18 +49,18 @@ struct exahype2::dg::ader::PicardResidual final {
  * onto the halves of its faces and returns the number of Picard sweeps or an outcome of
  * PicardOutcome.h. The threads of a team run several cells together, one group of threads per cell.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename PredictorPrecision>
 class exahype2::dg::ader::NonlinearPredictor final {
 public:
   using CellLayout = exahype2::dg::PaddedLayout<Derived>;
-  using Tables     = exahype2::dg::BasisTables<ComputePrecision>;
+  using Tables     = exahype2::dg::BasisTables<PredictorPrecision>;
 
-  static constexpr bool EvaluateDiffusiveFlux = exahype2::terms::HasDiffusiveFlux<Derived, ComputePrecision>;
-  static constexpr bool EvaluateFlux = exahype2::terms::HasFlux<Derived, ComputePrecision> or EvaluateDiffusiveFlux;
+  static constexpr bool EvaluateDiffusiveFlux = exahype2::terms::HasDiffusiveFlux<Derived, PredictorPrecision>;
+  static constexpr bool EvaluateFlux = exahype2::terms::HasFlux<Derived, PredictorPrecision> or EvaluateDiffusiveFlux;
   static constexpr bool EvaluateNonconservativeProduct =
-    exahype2::terms::HasNonconservativeProduct<Derived, ComputePrecision>;
-  static constexpr bool EvaluateSource          = exahype2::terms::HasSourceTerm<Derived, ComputePrecision>;
-  static constexpr bool EvaluateDiffusiveSource = exahype2::terms::HasDiffusiveSourceTerm<Derived, ComputePrecision>;
+    exahype2::terms::HasNonconservativeProduct<Derived, PredictorPrecision>;
+  static constexpr bool EvaluateSource          = exahype2::terms::HasSourceTerm<Derived, PredictorPrecision>;
+  static constexpr bool EvaluateDiffusiveSource = exahype2::terms::HasDiffusiveSourceTerm<Derived, PredictorPrecision>;
   static constexpr bool AccumulatesFlux         = EvaluateFlux;
   static constexpr bool AccumulatesSource = EvaluateSource or EvaluateDiffusiveSource or EvaluateNonconservativeProduct;
   static constexpr bool NeedsStateGradient =
@@ -91,12 +91,12 @@ public:
     static constexpr int Size                     = StateGradientOffset + StateGradientSize;
   };
 
-  template <typename StoragePrecision>
+  template <typename StoragePrecision, typename CorrectorPrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD int predict(
-    ComputePrecision* const NOALIAS              faceStates[peano4::FacesPerCell],
-    ComputePrecision* const NOALIAS              faceFluxes[peano4::FacesPerCell],
+    CorrectorPrecision* const NOALIAS            faceStates[peano4::FacesPerCell],
+    CorrectorPrecision* const NOALIAS            faceFluxes[peano4::FacesPerCell],
     const StoragePrecision* NOALIAS              cellState,
-    ComputePrecision* NOALIAS                    scratch,
+    PredictorPrecision* NOALIAS                  scratch,
     const Tables&                                tables,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -133,25 +133,25 @@ private:
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void initialiseState(
-    ComputePrecision* NOALIAS       spaceTimeState,
+    PredictorPrecision* NOALIAS     spaceTimeState,
     const StoragePrecision* NOALIAS cellState,
     const TeamWorkers&              workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void computeSpaceTimeGradient(
-    ComputePrecision* NOALIAS                              stateGradient,
-    const ComputePrecision* NOALIAS                        spaceTimeState,
-    const ComputePrecision* NOALIAS                        derivativeOperator,
-    const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
-    int                                                    timeNode,
-    const TeamWorkers&                                     workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS                              stateGradient,
+    const PredictorPrecision* NOALIAS                        spaceTimeState,
+    const PredictorPrecision* NOALIAS                        derivativeOperator,
+    const tarch::la::Vector<DIMENSIONS, PredictorPrecision>& inverseCellSize,
+    int                                                      timeNode,
+    const TeamWorkers&                                       workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeFlux(
-    ComputePrecision* NOALIAS                    flux,
-    const ComputePrecision* NOALIAS              spaceTimeState,
-    const ComputePrecision* NOALIAS              stateGradient,
-    const ComputePrecision* NOALIAS              quadraturePoints,
+    PredictorPrecision* NOALIAS                  flux,
+    const PredictorPrecision* NOALIAS            spaceTimeState,
+    const PredictorPrecision* NOALIAS            stateGradient,
+    const PredictorPrecision* NOALIAS            quadraturePoints,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -161,41 +161,41 @@ private:
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void averageFluxOverTime(
-    ComputePrecision* NOALIAS timeAveragedFlux,
-    const ComputePrecision*   flux,
-    const ComputePrecision*   firstFlux,
-    ComputePrecision          weight,
-    int                       timeNode,
-    const TeamWorkers&        workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS timeAveragedFlux,
+    const PredictorPrecision*   flux,
+    const PredictorPrecision*   firstFlux,
+    PredictorPrecision          weight,
+    int                         timeNode,
+    const TeamWorkers&          workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void clearRightHandSide(
-    ComputePrecision* NOALIAS rightHandSide,
-    int                       timeNode,
-    const TeamWorkers&        workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS rightHandSide,
+    int                         timeNode,
+    const TeamWorkers&          workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void subtractFluxDivergence(
-    ComputePrecision* NOALIAS                              rightHandSide,
-    const ComputePrecision* NOALIAS                        flux,
-    const ComputePrecision* NOALIAS                        stiffnessOperatorTransposed,
-    const ComputePrecision* NOALIAS                        cellQuadratureWeights,
-    const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
-    double                                                 timeStepSize,
-    int                                                    timeNode,
-    int                                                    axis,
-    const TeamWorkers&                                     workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS                              rightHandSide,
+    const PredictorPrecision* NOALIAS                        flux,
+    const PredictorPrecision* NOALIAS                        stiffnessOperatorTransposed,
+    const PredictorPrecision* NOALIAS                        cellQuadratureWeights,
+    const tarch::la::Vector<DIMENSIONS, PredictorPrecision>& inverseCellSize,
+    double                                                   timeStepSize,
+    int                                                      timeNode,
+    int                                                      axis,
+    const TeamWorkers&                                       workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeSource(
-    ComputePrecision* NOALIAS                    rightHandSide,
-    ComputePrecision* NOALIAS                    firstSource,
-    ComputePrecision* NOALIAS                    timeAveragedSource,
-    const ComputePrecision* NOALIAS              spaceTimeState,
-    const ComputePrecision* NOALIAS              stateGradient,
-    const ComputePrecision* NOALIAS              quadraturePoints,
-    const ComputePrecision* NOALIAS              quadratureWeights,
-    const ComputePrecision* NOALIAS              cellQuadratureWeights,
+    PredictorPrecision* NOALIAS                  rightHandSide,
+    PredictorPrecision* NOALIAS                  firstSource,
+    PredictorPrecision* NOALIAS                  timeAveragedSource,
+    const PredictorPrecision* NOALIAS            spaceTimeState,
+    const PredictorPrecision* NOALIAS            stateGradient,
+    const PredictorPrecision* NOALIAS            quadraturePoints,
+    const PredictorPrecision* NOALIAS            quadratureWeights,
+    const PredictorPrecision* NOALIAS            cellQuadratureWeights,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -206,19 +206,19 @@ private:
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD PicardResidual solvePicardSystem(
-    ComputePrecision* NOALIAS       spaceTimeState,
-    const ComputePrecision* NOALIAS rightHandSide,
-    const StoragePrecision* NOALIAS cellState,
-    const ComputePrecision* NOALIAS inversePicardOperator,
-    const ComputePrecision* NOALIAS inverseCellQuadratureWeights,
-    double                          squaredTolerance,
-    const TeamWorkers&              workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS       spaceTimeState,
+    const PredictorPrecision* NOALIAS rightHandSide,
+    const StoragePrecision* NOALIAS   cellState,
+    const PredictorPrecision* NOALIAS inversePicardOperator,
+    const PredictorPrecision* NOALIAS inverseCellQuadratureWeights,
+    double                            squaredTolerance,
+    const TeamWorkers&                workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void averageStateOverTime(
-    ComputePrecision* NOALIAS       spaceTimeState,
-    const ComputePrecision* NOALIAS quadratureWeights,
-    const TeamWorkers&              workers = TeamWorkers{}
+    PredictorPrecision* NOALIAS       spaceTimeState,
+    const PredictorPrecision* NOALIAS quadratureWeights,
+    const TeamWorkers&                workers = TeamWorkers{}
   );
 };
 TARGET_DECLARE_END

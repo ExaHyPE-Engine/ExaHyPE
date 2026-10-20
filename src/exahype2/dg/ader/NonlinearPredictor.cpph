@@ -23,11 +23,11 @@ exahype2::dg::ader::PicardResidual::add(const PicardResidual& other) {
  * UnconvergedPicardIteration or DivergedPicardIteration, and zero on a thread without a cell.
  */
 template <typename Derived, typename ComputePrecision>
-template <typename StoragePrecision>
+template <typename StoragePrecision, typename CorrectorPrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
-  ComputePrecision* const NOALIAS              faceStates[peano4::FacesPerCell],
-  ComputePrecision* const NOALIAS              faceFluxes[peano4::FacesPerCell],
+  CorrectorPrecision* const NOALIAS            faceStates[peano4::FacesPerCell],
+  CorrectorPrecision* const NOALIAS            faceFluxes[peano4::FacesPerCell],
   const StoragePrecision* NOALIAS const        cellState,
   ComputePrecision* NOALIAS const              scratch,
   const Tables&                                tables,
@@ -198,7 +198,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
         CellLayout::NumberOfData,
         CellLayout::PaddedNumberOfData,
         ComputePrecision,
-        ComputePrecision,
+        CorrectorPrecision,
         ComputePrecision
       >(faceStates[direction],
         faceStates[direction + DIMENSIONS],
@@ -212,7 +212,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
           NumberOfUnknowns,
           CellLayout::PaddedNumberOfUnknowns,
           ComputePrecision,
-          ComputePrecision,
+          CorrectorPrecision,
           ComputePrecision
         >(faceFluxes[direction],
           faceFluxes[direction + DIMENSIONS],

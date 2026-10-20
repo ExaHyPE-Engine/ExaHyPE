@@ -41,6 +41,10 @@ class Precision:
     def __init__(self, storage="double", compute=None):
         self.storage = cpp_type(storage)
         self.compute = cpp_type(storage if compute is None else compute)
+        self.extra_types = set()
+
+    def add_compute_precision(self, precision):
+        self.extra_types.add(cpp_type(precision))
 
     @classmethod
     def of(cls, value):
@@ -53,13 +57,13 @@ class Precision:
 
     @property
     def types(self):
-        """Returns the distinct C++ types, the compute type first."""
-        result = [self.compute]
-        if self.storage not in result:
-            result.append(self.storage)
+        """Returns the distinct C++ types"""
+        result = self.extra_types
+        result.add(self.compute)
+        result.add(self.storage)
         return result
 
     def __repr__(self):
-        return "Precision(storage={!r}, compute={!r})".format(
-            self.storage, self.compute
+        return "Precision(storage={!r}, compute={!r}, extra types={!r})".format(
+            self.storage, self.compute, self.extra_types
         )

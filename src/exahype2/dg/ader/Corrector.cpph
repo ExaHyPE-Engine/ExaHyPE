@@ -10,18 +10,18 @@ TARGET_DECLARE
  * the new time stamp. The maxima are zero without ReportEigenvalues. faceFluxes points to the
  * flux half of every face that the cell reads.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, typename CorrectorPrecision>
 template <bool ReportEigenvalues, typename StoragePrecision, typename Postprocessing>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
-exahype2::dg::ader::Corrector<Derived, ComputePrecision>::correct(
+exahype2::dg::ader::Corrector<Derived, CorrectorPrecision>::correct(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const ComputePrecision* const                faceFluxes[peano4::FacesPerCell],
+  const CorrectorPrecision* const                faceFluxes[peano4::FacesPerCell],
   StoragePrecision* NOALIAS const              cellState,
-  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
-  const ComputePrecision* NOALIAS const        inverseCellQuadratureWeights,
-  const ComputePrecision* NOALIAS const        leftFaceCoefficients,
-  const ComputePrecision* NOALIAS const        rightFaceCoefficients,
+  const CorrectorPrecision* NOALIAS const        faceQuadratureWeights,
+  const CorrectorPrecision* NOALIAS const        inverseCellQuadratureWeights,
+  const CorrectorPrecision* NOALIAS const        leftFaceCoefficients,
+  const CorrectorPrecision* NOALIAS const        rightFaceCoefficients,
   const StoragePrecision* NOALIAS const        stateQuadraturePoints,
   const double                                 timeStamp,
   const double                                 timeStepSize,
@@ -62,9 +62,9 @@ exahype2::dg::ader::Corrector<Derived, ComputePrecision>::correct(
   return statistics;
 }
 
-template <typename Derived, bool ReportEigenvalues, typename StoragePrecision, typename ComputePrecision>
+template <typename Derived, bool ReportEigenvalues, typename StoragePrecision, typename CorrectorPrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, ComputePrecision>::operator()(
+exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, CorrectorPrecision>::operator()(
   const int                              entry,
   exahype2::dg::MaxEigenvalueStatistics& accumulator
 ) const {
@@ -72,7 +72,7 @@ exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, C
   const int     slot                                 = cells[entry];
   const tarch::la::Vector<DIMENSIONS, double> centre = cellConnectivity.getCellCentre(slot);
   const tarch::la::Vector<DIMENSIONS, double> width  = cellConnectivity.getCellWidth(slot);
-  const ComputePrecision*                     fluxes[peano4::FacesPerCell];
+  const CorrectorPrecision*                     fluxes[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     const int face     = cellConnectivity.getCellFace(slot, faceNumber);
     fluxes[faceNumber] = faceFluxes.getChunk(face)
@@ -81,7 +81,7 @@ exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, C
   StoragePrecision* const updated = solution.getChunk(slot);
   accumulator                     = exahype2::dg::MaxEigenvalueStatistics::combine(
     accumulator,
-    exahype2::dg::ader::Corrector<Derived, ComputePrecision>::template correct<ReportEigenvalues>(
+    exahype2::dg::ader::Corrector<Derived, CorrectorPrecision>::template correct<ReportEigenvalues>(
       centre,
       width,
       fluxes,
