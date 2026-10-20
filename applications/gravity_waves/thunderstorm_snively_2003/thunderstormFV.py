@@ -8,7 +8,7 @@ import exahype2
 from atmosphereE import Atmosphere
 from exahype2.fv.scheme import Limiter          # add near the top
 
-from f_wave import f_wave_riemannsolver, max_eigenavalue
+from f_wave import max_eigenavalue
 stratified_atmosphere = Atmosphere()
 
 
