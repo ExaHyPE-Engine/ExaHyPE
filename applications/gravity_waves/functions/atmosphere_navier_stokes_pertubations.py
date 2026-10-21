@@ -869,56 +869,68 @@ class Atmosphere():
             """
                     )
 
-    # def source(self):
-    #     return (
-    #     """
-    #     std::fill_n(S, NumberOfUnknowns, 0);
 
-    #     constexpr auto gravity = 9.81;
 
-    #     // ---- gravity (well-balanced splitting) ----------------------------
-    #     const auto rhoPertubation = Q[Shortcuts::rho] - Q[Shortcuts::backgroundstate+0];
-    #     S[Shortcuts::j+DIMENSIONS-1] = -1 * rhoPertubation * gravity;
-    #     S[Shortcuts::E]              = -gravity * Q[Shortcuts::j + DIMENSIONS-1];
 
-    #     // ---- Rayleigh damping sponge --------------------------------------
-    #     // Relaxes the state toward the stored background near the outer
-    #     // boundaries. Exactly zero at equilibrium, so it does not disturb
-    #     // the well-balanced steady state.
-    #     constexpr auto spongeRate     = 0.01;   // [1/s] peak relaxation rate
-    #     constexpr auto spongeTopFrac  = 0.20;   // fraction of domain height
-    #     constexpr auto spongeSideFrac = 0.10;   // fraction of width, each side
+    def source_with_TS_3D(self, omega, k_x, x_zero, z_zero, t_zero, F_zero, sigma_x, sigma_z, sigma_t, time_offset=0.0):
 
-    #     const auto xMin = DomainOffset[0];
-    #     const auto xMax = DomainOffset[0] + DomainSize[0];
-    #     const auto zMax = DomainOffset[DIMENSIONS-1] + DomainSize[DIMENSIONS-1];
 
-    #     const auto topThickness  = spongeTopFrac  * DomainSize[DIMENSIONS-1];
-    #     const auto sideThickness = spongeSideFrac * DomainSize[0];
+        return (
+            """
 
-    #     // s in [0,1] inside the layer, 0 outside; s*s is C1 at the inner edge
-    #     auto ramp = [](const double s) {
-    #         return (s <= 0.0) ? 0.0 : std::fmin(1.0, s * s);
-    #     };
+            // Using 
 
-    #     double sigma = 0.0;
-    #     sigma = std::fmax(sigma, ramp((x(DIMENSIONS-1) - (zMax - topThickness)) / topThickness));
-    #     sigma = std::fmax(sigma, ramp(((xMin + sideThickness) - x(0)) / sideThickness));
-    #     sigma = std::fmax(sigma, ramp((x(0) - (xMax - sideThickness)) / sideThickness));
-    #     sigma *= spongeRate;
+            static constexpr double timeOffset = """ + str(time_offset) + """;
+            const double simulationTime = t + timeOffset;
 
-    #     //currently remove damping
-    #     sigma = 0; 
+            std::fill_n(S, NumberOfUnknowns, 0);
 
-    #     if (sigma > 0.0) {
-    #         S[Shortcuts::rho] -= sigma * (Q[Shortcuts::rho] - Q[Shortcuts::backgroundstate+0]);
-    #         S[Shortcuts::j+0] -= sigma *  Q[Shortcuts::j+0];   // background momentum is zero
-    #         S[Shortcuts::j+1] -= sigma *  Q[Shortcuts::j+1];
-    #         S[Shortcuts::E]   -= sigma * (Q[Shortcuts::E]   - Q[Shortcuts::backgroundstate+2]);
-    #     }
-    #     """
-    # )
+            constexpr double gravitySurface = 9.782231107143115;   // [m/s^2]
+            constexpr double effectiveEarthRadius = 6336531.01897801; // [m]
+            const double ratio = effectiveEarthRadius / (effectiveEarthRadius + x(DIMENSIONS-1));
+            const double gravity = gravitySurface * ratio * ratio;            S[Shortcuts::j+DIMENSIONS-1] = -1 * Q[Shortcuts::rho] * gravity;
+            S[Shortcuts::E] = -gravity * Q[Shortcuts::j + DIMENSIONS-1];
 
+
+            //thunderstorm source
+
+
+            // frequency
+            static constexpr double omega =""" + str(omega) + """;   // in rad/s
+            static constexpr double xZero = """ + str(x_zero) + """; // in m
+            static constexpr double zZero =""" + str(z_zero) + """;  // in m
+            static constexpr double tZero = """ + str(t_zero) + """;   // in s
+
+            static constexpr double kX = """ + str(k_x) + """;; // in rad/m
+
+            static constexpr double sigmaXSq = """ + str(sigma_x) + """ * """ + str(sigma_x) + """; // in m
+            static constexpr double sigmaZSq = """ + str(sigma_z) + """ * """ + str(sigma_z) + """;  // in m
+            static constexpr double sigmaTSq = """ + str(sigma_t) + """ * """ + str(sigma_t) + """;       // in s
+
+            static constexpr double FZero =""" + str(F_zero) + """;
+            const double exponentialXTerm = tarch::la::pow((x(0) - xZero), 2) / (2 * sigmaXSq);
+            const double exponentialYTerm = tarch::la::pow((x(1) - xZero), 2) / (2 * sigmaXSq);
+            const double exponentialZTerm = tarch::la::pow((x(DIMENSIONS-1) - zZero), 2) / (2 * sigmaZSq);
+            const double exponentialTTerm = tarch::la::pow((simulationTime - tZero), 2) / (2 * sigmaTSq);
+            //const double cosTerm          = std::cos(kX * x(0)) * std::cos(omega * simulationTime);
+
+            const double cosTerm = std::cos(kX * (x(0))) * std::cos(kX * (x(1)))
+                         * std::cos(omega * (simulationTime));
+
+
+
+            // 0: rho, 2: rhov
+            S[Shortcuts::j + DIMENSIONS-1 ] += (Q[Shortcuts::rho] + Q[Shortcuts::backgroundstate + 0]) * FZero * tarch::la::pow(tarch::la::E, -exponentialXTerm - exponentialYTerm - exponentialZTerm - exponentialTTerm)
+                * cosTerm;
+
+
+            """
+                    )
+
+
+        
+
+    
 
     def map_observerables(self): 
 
