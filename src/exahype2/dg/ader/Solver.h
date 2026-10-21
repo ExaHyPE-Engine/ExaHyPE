@@ -24,7 +24,7 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 namespace exahype2::dg::ader {
-  template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+  template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
   class Solver;
 
   /**
@@ -50,7 +50,7 @@ namespace exahype2::dg::ader {
  * subcell limiter that checks every corrected cell and recomputes the rejected ones.
  */
 TARGET_DECLARE
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 class exahype2::dg::ader::Solver : public exahype2::dg::Solver<Derived, StoragePrecision, CorrectorPrecision> {
 public:
   using Base = exahype2::dg::Solver<Derived, StoragePrecision, CorrectorPrecision>;
@@ -129,14 +129,15 @@ public:
   );
 
 private:
-  template <typename PartnerDerived, typename PartnerStorage, typename PartnerPredictorCompute, typename PartnerCorrectorCompute, typename PartnerLimiter>
+  template <typename PartnerDerived, typename PartnerStorage, typename PartnerPredictorCompute, typename PartnerTimeAverageCompute, typename PartnerCorrectorCompute, typename PartnerLimiter>
   friend class exahype2::dg::ader::Solver;
 
   using LimiterSlot = std::conditional_t<HasLimiter, std::optional<Limiter>, exahype2::dg::ader::NoLimiter>;
 
-  using Predictor = exahype2::dg::ader::Predictor<Derived, PredictorPrecision>;
+  using Predictor = exahype2::dg::ader::Predictor<Derived, PredictorPrecision, TimeAveragedPrecision>;
 
   [[nodiscard]] static INLINE_METHOD exahype2::dg::BasisTables<PredictorPrecision> getBasisTables();
+  [[nodiscard]] static INLINE_METHOD exahype2::dg::BasisTables<TimeAveragedPrecision> getTimeAveragedBasisTables();
 
   INLINE_METHOD void predict(
     const peano4::CellConnectivity& cellConnectivity,
@@ -174,6 +175,7 @@ private:
   tarch::accelerator::Buffer<double> _pointSourceLocations{tarch::MemoryLocation::Device};
 
   tarch::accelerator::Buffer<PredictorPrecision> _predictorScratch{tarch::MemoryLocation::Device};
+  tarch::accelerator::Buffer<TimeAveragedPrecision> _predictorTimeAveragedScratch{tarch::MemoryLocation::Device};
 
   int _unconvergedPredictions{0};
   int _unconvergedPredictionsSlot{0};

@@ -182,12 +182,12 @@ namespace {
     }
   };
 
-  using InertScratch           = exahype2::dg::ader::Predictor<InertNonlinearSolver, double>::Nonlinear::Scratch;
-  using TermScratch            = exahype2::dg::ader::Predictor<TermSolver, double>::Nonlinear::Scratch;
-  using DivergingScratch       = exahype2::dg::ader::Predictor<DivergingSolver, double>::Nonlinear::Scratch;
-  using InertLinearScratch     = exahype2::dg::ader::Predictor<InertLinearSolver, double>::Linear::Scratch;
-  using TransportScratch       = exahype2::dg::ader::Predictor<TransportSolver, double>::Linear::Scratch;
-  using SourceTransportScratch = exahype2::dg::ader::Predictor<SourceTransportSolver, double>::Linear::Scratch;
+  using InertScratch           = exahype2::dg::ader::Predictor<InertNonlinearSolver, double, double>::Nonlinear::Scratch;
+  using TermScratch            = exahype2::dg::ader::Predictor<TermSolver, double, double>::Nonlinear::Scratch;
+  using DivergingScratch       = exahype2::dg::ader::Predictor<DivergingSolver, double, double>::Nonlinear::Scratch;
+  using InertLinearScratch     = exahype2::dg::ader::Predictor<InertLinearSolver, double, double>::Linear::Scratch;
+  using TransportScratch       = exahype2::dg::ader::Predictor<TransportSolver, double, double>::Linear::Scratch;
+  using SourceTransportScratch = exahype2::dg::ader::Predictor<SourceTransportSolver, double, double>::Linear::Scratch;
 
   struct FaceBuffers final {
     double  state[peano4::FacesPerCell][CellLayout::NodesPerFace * NumberOfData]{};
@@ -281,16 +281,18 @@ namespace {
   }
 
   template <typename Derived>
-  int predict(const Tables& tables, FaceBuffers& faces, double (&cellState)[CellStateSize], double* const scratch) {
+  int predict(const Tables& tables, FaceBuffers& faces, double (&cellState)[CellStateSize], double* const picardScratch, double* const timeAveragedScratch) {
     const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
-    return exahype2::dg::ader::Predictor<Derived, double>::predict(
+    return exahype2::dg::ader::Predictor<Derived, double, double>::predict(
       cellCentre,
       getCellSize(),
       faces.statePointers,
       faces.fluxPointers,
       cellState,
       nullptr,
-      scratch,
+      picardScratch,
+      timeAveragedScratch,
+      tables.getView(),
       tables.getView(),
       TimeStamp,
       TimeStepSize
@@ -393,9 +395,10 @@ exahype2::dg::ader::tests::PredictorTest::testAnInertNonlinearSystemLeavesTheCel
   fillVaryingCellState(cellState);
 
   FaceBuffers faces;
-  double      scratch[InertScratch::Size] = {};
+  double      picardScratch[InertScratch::PicardSize] = {};
+  double*     timeAveragedScratch = nullptr;
 
-  const int numberOfSweeps = predict<InertNonlinearSolver>(tables, faces, cellState, scratch);
+  const int numberOfSweeps = predict<InertNonlinearSolver>(tables, faces, cellState, picardScratch, timeAveragedScratch);
 
   validateEquals(numberOfSweeps, 1);
 
@@ -408,7 +411,7 @@ exahype2::dg::ader::tests::PredictorTest::testAnInertNonlinearSystemLeavesTheCel
         value
       );
       validateEqualsWithParams2(
-        scratch[InertScratch::TimeAveragedStateOffset + cellNode * CellLayout::PaddedNumberOfData + value],
+        picardScratch[InertScratch::TimeAveragedStateOffset + cellNode * CellLayout::PaddedNumberOfData + value],
         getVaryingCellStateEntry(cellNode, value),
         cellNode,
         value
@@ -434,9 +437,10 @@ exahype2::dg::ader::tests::PredictorTest::testTheNonlinearPredictorMovesALinearP
   fillLinearCellState(tables, cellState, cellSize(0));
 
   FaceBuffers faces;
-  double      scratch[TermScratch::Size] = {};
+  double      picardScratch[TermScratch::PicardSize] = {};
+  double      timeAveragedScratch[TermScratch::TimeAveragedSize] = {};
 
-  const int numberOfSweeps = predict<TermSolver>(tables, faces, cellState, scratch);
+  const int numberOfSweeps = predict<TermSolver>(tables, faces, cellState, picardScratch, timeAveragedScratch);
 
   // The first sweep reaches the solution and the second one confirms it.
   validateEquals(numberOfSweeps, 2);
@@ -466,7 +470,7 @@ exahype2::dg::ader::tests::PredictorTest::testTheNonlinearPredictorMovesALinearP
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       validateNumericalEqualsWithParams2(
-        scratch[TermScratch::TimeAveragedSourceOffset + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
+        timeAveragedScratch[TermScratch::TimeAveragedSourceOffset + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
         getNonlinearSourceAverage(),
         cellNode,
         unknown
@@ -510,9 +514,10 @@ exahype2::dg::ader::tests::PredictorTest::testADivergingNonlinearPredictorReport
   fillLinearCellState(tables, cellState, cellSize(0));
 
   FaceBuffers faces;
-  double      scratch[DivergingScratch::Size] = {};
+  double      picardScratch[DivergingScratch::PicardSize] = {};
+  double      timeAveragedScratch[DivergingScratch::TimeAveragedSize] = {};
 
-  const int outcome = predict<DivergingSolver>(tables, faces, cellState, scratch);
+  const int outcome = predict<DivergingSolver>(tables, faces, cellState, picardScratch, timeAveragedScratch);
 
   validateEquals(outcome, exahype2::dg::ader::DivergedPicardIteration);
 }
@@ -530,7 +535,7 @@ exahype2::dg::ader::tests::PredictorTest::testAnInertLinearSystemLeavesTheCellAt
   FaceBuffers faces;
   double      scratch[InertLinearScratch::Size] = {};
 
-  const int numberOfSweeps = predict<InertLinearSolver>(tables, faces, cellState, scratch);
+  const int numberOfSweeps = predict<InertLinearSolver>(tables, faces, cellState, scratch, nullptr);
 
   validateEquals(numberOfSweeps, 0);
 
@@ -565,7 +570,7 @@ exahype2::dg::ader::tests::PredictorTest::testTheLinearPredictorTranslatesALinea
   FaceBuffers faces;
   double      scratch[TransportScratch::Size] = {};
 
-  predict<TransportSolver>(tables, faces, cellState, scratch);
+  predict<TransportSolver>(tables, faces, cellState, scratch, nullptr);
 
   const double transportSpeed = LinearFluxSpeed + LinearProductSpeed;
 
@@ -618,7 +623,7 @@ exahype2::dg::ader::tests::PredictorTest::testTheLinearPredictorFollowsTheTaylor
   FaceBuffers faces;
   double      scratch[SourceTransportScratch::Size] = {};
 
-  predict<SourceTransportSolver>(tables, faces, cellState, scratch);
+  predict<SourceTransportSolver>(tables, faces, cellState, scratch, nullptr);
 
   const double             transportSpeed = LinearFluxSpeed + LinearProductSpeed;
   const TaylorCoefficients coefficients   = getTaylorCoefficients(transportSpeed, LinearSourceRate);
@@ -705,19 +710,19 @@ exahype2::dg::ader::tests::PredictorTest::testTheVolumeIntegralSubtractsTheDiver
       values[unknown] = timeAveragedSource[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown];
     }
   };
-  exahype2::dg::ader::Predictor<NonlinearStub, double>::subtractTimeAveragedVolumeIntegral<true, true>(
+  exahype2::dg::ader::Predictor<NonlinearStub, double, double>::subtractTimeAveragedVolumeIntegral<true, true>(
     withBothTerms,
     timeAveragedFlux,
     sourceOfNode,
     TimeStepSize
   );
-  exahype2::dg::ader::Predictor<NonlinearStub, double>::subtractTimeAveragedVolumeIntegral<false, true>(
+  exahype2::dg::ader::Predictor<NonlinearStub, double, double>::subtractTimeAveragedVolumeIntegral<false, true>(
     withoutFlux,
     timeAveragedFlux,
     sourceOfNode,
     TimeStepSize
   );
-  exahype2::dg::ader::Predictor<NonlinearStub, double>::subtractTimeAveragedVolumeIntegral<true, false>(
+  exahype2::dg::ader::Predictor<NonlinearStub, double, double>::subtractTimeAveragedVolumeIntegral<true, false>(
     withoutSource,
     timeAveragedFlux,
     sourceOfNode,

@@ -388,7 +388,8 @@ namespace {
     double*                           cellStates{nullptr};
     double*                           faceStates{nullptr};
     double*                           faceFluxes{nullptr};
-    double*                           scratch{nullptr};
+    double*                           picardScratch{nullptr};
+    double*                           timeAveragedScratch{nullptr};
     int*                              sweeps{nullptr};
     const double*                     cellCentres{nullptr};
     const double*                     cellSizes{nullptr};
@@ -409,12 +410,15 @@ namespace {
       const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
       const tarch::la::Vector<DIMENSIONS, double> cellSize(cellSizes + coordinateOffset);
       const int                                   stateOffset   = pointed * Setup::CellStateCardinality;
-      const int                                   scratchOffset = pointed * StubScratch::Size;
+      const int                                   picardScratchOffset = pointed * StubScratch::PicardSize;
+      const int                                   timeAveragedScratchOffset = pointed * StubScratch::TimeAveragedSize;
       const int                                   outcome = Predictor<exahype2::dg::ader::tests::StubSolver>::predict(
         faceState,
         faceFlux,
         cellStates + stateOffset,
-        scratch + scratchOffset,
+        picardScratch + picardScratchOffset,
+        timeAveragedScratch + timeAveragedScratchOffset,
+        tables,
         tables,
         cellCentre,
         cellSize,
@@ -438,13 +442,15 @@ namespace {
     std::vector<double>&                  faceFluxes
   ) {
     const exahype2::dg::tests::DeviceBasisTables deviceTables(tables);
-    const std::vector<double> scratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::Size, 0.0);
+    const std::vector<double> picardScratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::PicardSize, 0.0);
+    const std::vector<double> timeAveragedScratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::TimeAveragedSize, 0.0);
     std::vector<int>          sweeps(Setup::NumberOfCells, 0);
 
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellStates(cellStates);
     const exahype2::dg::tests::DeviceBuffer<double> deviceFaceStates(faceStates);
     const exahype2::dg::tests::DeviceBuffer<double> deviceFaceFluxes(faceFluxes);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceScratch(scratch);
+    const exahype2::dg::tests::DeviceBuffer<double> devicePicardScratch(picardScratch);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceTimeAveragedScratch(timeAveragedScratch);
     const exahype2::dg::tests::DeviceBuffer<int>    deviceSweeps(sweeps);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
     const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
@@ -463,7 +469,8 @@ namespace {
         deviceCellStates.getData(),
         deviceFaceStates.getData(),
         deviceFaceFluxes.getData(),
-        deviceScratch.getData(),
+        devicePicardScratch.getData(),
+        deviceTimeAveragedScratch.getData(),
         deviceSweeps.getData(),
         deviceCellCentres.getData(),
         deviceCellSizes.getData(),
@@ -1515,25 +1522,28 @@ void
 exahype2::dg::ader::tests::NonlinearPredictorTest::testTheScratchBlocksFollowEachOtherWithoutOverlap() {
   using Scratch = Predictor<FullSolver>::Scratch;
 
+  validateEquals(Scratch::TimeAveragedFluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
+  validateEquals(Scratch::TimeAveragedSourceSize, UnknownStride * CellLayout::NodesPerCell);
+
   validateEquals(Scratch::SpaceTimeStateSize, StateStride * CellLayout::SpaceTimeNodes);
   validateEquals(Scratch::RightHandSideSize, UnknownStride * CellLayout::SpaceTimeNodes);
   validateEquals(Scratch::FluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::FirstFluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
-  validateEquals(Scratch::TimeAveragedFluxSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::FirstSourceSize, UnknownStride * CellLayout::NodesPerCell);
-  validateEquals(Scratch::TimeAveragedSourceSize, UnknownStride * CellLayout::NodesPerCell);
   validateEquals(Scratch::StateGradientSize, DIMENSIONS * UnknownStride * CellLayout::NodesPerCell);
+
+  validateEquals(Scratch::TimeAveragedFluxOffset, 0);
+  validateEquals(Scratch::TimeAveragedSourceOffset, Scratch::TimeAveragedFluxOffset + Scratch::TimeAveragedFluxSize);
+  validateEquals(Scratch::TimeAveragedSize, Scratch::TimeAveragedSourceOffset + Scratch::TimeAveragedSourceSize);
 
   validateEquals(Scratch::SpaceTimeStateOffset, 0);
   validateEquals(Scratch::TimeAveragedStateOffset, Scratch::SpaceTimeStateOffset);
   validateEquals(Scratch::RightHandSideOffset, Scratch::SpaceTimeStateOffset + Scratch::SpaceTimeStateSize);
   validateEquals(Scratch::FluxOffset, Scratch::RightHandSideOffset + Scratch::RightHandSideSize);
   validateEquals(Scratch::FirstFluxOffset, Scratch::FluxOffset + Scratch::FluxSize);
-  validateEquals(Scratch::TimeAveragedFluxOffset, Scratch::FirstFluxOffset + Scratch::FirstFluxSize);
-  validateEquals(Scratch::FirstSourceOffset, Scratch::TimeAveragedFluxOffset + Scratch::TimeAveragedFluxSize);
-  validateEquals(Scratch::TimeAveragedSourceOffset, Scratch::FirstSourceOffset + Scratch::FirstSourceSize);
-  validateEquals(Scratch::StateGradientOffset, Scratch::TimeAveragedSourceOffset + Scratch::TimeAveragedSourceSize);
-  validateEquals(Scratch::Size, Scratch::StateGradientOffset + Scratch::StateGradientSize);
+  validateEquals(Scratch::FirstSourceOffset, Scratch::FirstFluxOffset + Scratch::FirstFluxSize);
+  validateEquals(Scratch::StateGradientOffset, Scratch::FirstSourceOffset + Scratch::FirstSourceSize);
+  validateEquals(Scratch::PicardSize, Scratch::StateGradientOffset + Scratch::StateGradientSize);
 }
 
 /**
@@ -1555,7 +1565,8 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testATermTheSolverLacksHasZer
   validateEquals(Bare::Scratch::StateGradientSize, 0);
   validate(not Bare::AccumulatesSource);
   validate(not Bare::NeedsStateGradient);
-  validate(Bare::Scratch::Size < Full::Scratch::Size);
+  validate(Bare::Scratch::TimeAveragedSize < Full::Scratch::TimeAveragedSize);
+  validate(Bare::Scratch::PicardSize < Full::Scratch::PicardSize);
 
   // The nonconservative product enters the source. It needs the source buffers without a source term.
   validate(Product::AccumulatesSource);
@@ -1588,13 +1599,16 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
   fillLinearCellState(tables, cellState, cellSize(0));
 
   FaceBuffers faces;
-  double      scratch[ProfileScratch::Size] = {};
+  double      picardScratch[ProfileScratch::PicardSize] = {};
+  double      timeAveragedScratch[ProfileScratch::TimeAveragedSize] = {};
 
   const int numberOfSweeps = Predictor<ProfileSolver>::predict(
     faces.statePointers.data(),
     faces.fluxPointers.data(),
     cellState,
-    scratch,
+    picardScratch,
+    timeAveragedScratch,
+    tables.getView(),
     tables.getView(),
     cellCentre,
     cellSize,
@@ -1632,7 +1646,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int value = 0; value < NumberOfData; value++) {
       validateNumericalEqualsWithParams2(
-        scratch[ProfileScratch::TimeAveragedStateOffset + cellNode * StateStride + value],
+        picardScratch[ProfileScratch::TimeAveragedStateOffset + cellNode * StateStride + value],
         averagedState[cellNode * NumberOfData + value],
         cellNode,
         value
@@ -1640,7 +1654,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
     }
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       validateNumericalEqualsWithParams2(
-        scratch[ProfileScratch::TimeAveragedSourceOffset + cellNode * UnknownStride + unknown],
+        timeAveragedScratch[ProfileScratch::TimeAveragedSourceOffset + cellNode * UnknownStride + unknown],
         sourceAverage,
         cellNode,
         unknown
@@ -1649,7 +1663,7 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         const double fluxDerivative = axis == 0 ? FluxSpeed * Slope : 0.0;
         validateNumericalEqualsWithParams3(
-          scratch[ProfileScratch::TimeAveragedFluxOffset + axis * FluxAxisStride + cellNode * UnknownStride + unknown],
+          timeAveragedScratch[ProfileScratch::TimeAveragedFluxOffset + axis * FluxAxisStride + cellNode * UnknownStride + unknown],
           fluxDerivative,
           axis,
           cellNode,
@@ -1720,13 +1734,16 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAZeroSquaredToleranceRepo
 
   const double cellState[CellStateSize] = {};
   FaceBuffers  faces;
-  double       scratch[ProfileScratch::Size] = {};
+  double       picardScratch[ProfileScratch::PicardSize] = {};
+  double       timeAveragedScratch[ProfileScratch::TimeAveragedSize] = {};
 
   const int outcome = Predictor<ProfileSolver>::predict(
     faces.statePointers.data(),
     faces.fluxPointers.data(),
     cellState,
-    scratch,
+    picardScratch,
+    timeAveragedScratch,
+    tables.getView(),
     tables.getView(),
     cellCentre,
     cellSize,
@@ -1776,14 +1793,18 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAToleranceBelowTheRoundin
 
   FaceBuffers convergedFaces;
   FaceBuffers unconvergedFaces;
-  double      convergedScratch[ProfileScratch::Size]   = {};
-  double      unconvergedScratch[ProfileScratch::Size] = {};
+  double      convergedPicardScratch[ProfileScratch::PicardSize]   = {};
+  double      convergedTimeAveragedScratch[ProfileScratch::TimeAveragedSize]   = {};
+  double      unconvergedPicardScratch[ProfileScratch::PicardSize] = {};
+  double      unconvergedTimeAveragedScratch[ProfileScratch::TimeAveragedSize] = {};
 
   const int convergedOutcome = Predictor<ProfileSolver>::predict(
     convergedFaces.statePointers.data(),
     convergedFaces.fluxPointers.data(),
     cellState,
-    convergedScratch,
+    convergedPicardScratch,
+    convergedTimeAveragedScratch,
+    tables.getView(),
     tables.getView(),
     cellCentre,
     cellSize,
@@ -1795,7 +1816,9 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAToleranceBelowTheRoundin
     unconvergedFaces.statePointers.data(),
     unconvergedFaces.fluxPointers.data(),
     cellState,
-    unconvergedScratch,
+    unconvergedPicardScratch,
+    unconvergedTimeAveragedScratch,
+    tables.getView(),
     tables.getView(),
     cellCentre,
     cellSize,
@@ -1812,8 +1835,8 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testAToleranceBelowTheRoundin
 
   for (int entry = 0; entry < CellLayout::NodesPerCell * StateStride; entry++) {
     validateNumericalEqualsWithParams1(
-      unconvergedScratch[ProfileScratch::TimeAveragedStateOffset + entry],
-      convergedScratch[ProfileScratch::TimeAveragedStateOffset + entry],
+      unconvergedPicardScratch[ProfileScratch::TimeAveragedStateOffset + entry],
+      convergedPicardScratch[ProfileScratch::TimeAveragedStateOffset + entry],
       entry
     );
   }
@@ -1854,7 +1877,8 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryCellOfADeviceRangeMa
   std::vector<double> hostCellStates = cellStates;
   std::vector<double> hostFaceStates = faceStates;
   std::vector<double> hostFaceFluxes = faceFluxes;
-  std::vector<double> hostScratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::Size, 0.0);
+  std::vector<double> hostPicardScratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::PicardSize, 0.0);
+  std::vector<double> hostTimeAveragedScratch(static_cast<std::size_t>(Setup::NumberOfCells) * StubScratch::TimeAveragedSize, 0.0);
   const exahype2::dg::BasisTables<double> hostTables = tables.getView();
   for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
     double* faceState[peano4::FacesPerCell];
@@ -1864,12 +1888,15 @@ exahype2::dg::ader::tests::NonlinearPredictorTest::testEveryCellOfADeviceRangeMa
     const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
     const tarch::la::Vector<DIMENSIONS, double> cellSize(geometry.cellSizes.data() + coordinateOffset);
     const int                                   stateOffset   = cell * Setup::CellStateCardinality;
-    const int                                   scratchOffset = cell * StubScratch::Size;
+    const int                                   picardScratchOffset = cell * StubScratch::PicardSize;
+    const int                                   timeAveragedScratchOffset = cell * StubScratch::TimeAveragedSize;
     const int                                   hostSweeps = Predictor<exahype2::dg::ader::tests::StubSolver>::predict(
       faceState,
       faceFlux,
       hostCellStates.data() + stateOffset,
-      hostScratch.data() + scratchOffset,
+      hostPicardScratch.data() + picardScratchOffset,
+      hostTimeAveragedScratch.data() + timeAveragedScratchOffset,
+      hostTables,
       hostTables,
       cellCentre,
       cellSize,

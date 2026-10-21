@@ -19,7 +19,7 @@
 namespace exahype2::dg::ader {
   struct PicardResidual;
 
-  template <typename Derived, typename PredictorPrecision>
+  template <typename Derived, typename PredictorPrecision, typename TimeAveragePrecision>
   class NonlinearPredictor;
 } // namespace exahype2::dg::ader
 
@@ -49,11 +49,12 @@ struct exahype2::dg::ader::PicardResidual final {
  * onto the halves of its faces and returns the number of Picard sweeps or an outcome of
  * PicardOutcome.h. The threads of a team run several cells together, one group of threads per cell.
  */
-template <typename Derived, typename PredictorPrecision>
+template <typename Derived, typename PredictorPrecision, typename TimeAveragePrecision = PredictorPrecision>
 class exahype2::dg::ader::NonlinearPredictor final {
 public:
-  using CellLayout = exahype2::dg::PaddedLayout<Derived>;
-  using Tables     = exahype2::dg::BasisTables<PredictorPrecision>;
+  using CellLayout          = exahype2::dg::PaddedLayout<Derived>;
+  using Tables              = exahype2::dg::BasisTables<PredictorPrecision>;
+  using TimeAveragedTables  = exahype2::dg::BasisTables<TimeAveragePrecision>;
 
   static constexpr bool EvaluateDiffusiveFlux = exahype2::terms::HasDiffusiveFlux<Derived, PredictorPrecision>;
   static constexpr bool EvaluateFlux = exahype2::terms::HasFlux<Derived, PredictorPrecision> or EvaluateDiffusiveFlux;
@@ -72,23 +73,26 @@ public:
     static constexpr int FluxSize =
       EvaluateFlux ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
     static constexpr int FirstFluxSize        = FluxSize;
-    static constexpr int TimeAveragedFluxSize = FluxSize;
     static constexpr int FirstSourceSize =
       AccumulatesSource ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell : 0;
-    static constexpr int TimeAveragedSourceSize = FirstSourceSize;
     static constexpr int StateGradientSize =
       NeedsStateGradient ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
+
+    static constexpr int TimeAveragedFluxSize = FluxSize;
+    static constexpr int TimeAveragedSourceSize = FirstSourceSize;
+
+    static constexpr int TimeAveragedFluxOffset   = 0;
+    static constexpr int TimeAveragedSourceOffset = TimeAveragedFluxOffset + TimeAveragedFluxSize;
+    static constexpr int TimeAveragedSize         = TimeAveragedSourceOffset + TimeAveragedSourceSize;
 
     static constexpr int SpaceTimeStateOffset     = 0;
     static constexpr int TimeAveragedStateOffset  = SpaceTimeStateOffset;
     static constexpr int RightHandSideOffset      = SpaceTimeStateOffset + SpaceTimeStateSize;
     static constexpr int FluxOffset               = RightHandSideOffset + RightHandSideSize;
     static constexpr int FirstFluxOffset          = FluxOffset + FluxSize;
-    static constexpr int TimeAveragedFluxOffset   = FirstFluxOffset + FirstFluxSize;
-    static constexpr int FirstSourceOffset        = TimeAveragedFluxOffset + TimeAveragedFluxSize;
-    static constexpr int TimeAveragedSourceOffset = FirstSourceOffset + FirstSourceSize;
-    static constexpr int StateGradientOffset      = TimeAveragedSourceOffset + TimeAveragedSourceSize;
-    static constexpr int Size                     = StateGradientOffset + StateGradientSize;
+    static constexpr int FirstSourceOffset        = FirstFluxOffset + FirstFluxSize;
+    static constexpr int StateGradientOffset      = FirstSourceOffset + FirstSourceSize;
+    static constexpr int PicardSize               = StateGradientOffset + StateGradientSize;
   };
 
   template <typename StoragePrecision, typename CorrectorPrecision>
@@ -96,8 +100,10 @@ public:
     CorrectorPrecision* const NOALIAS            faceStates[peano4::FacesPerCell],
     CorrectorPrecision* const NOALIAS            faceFluxes[peano4::FacesPerCell],
     const StoragePrecision* NOALIAS              cellState,
-    PredictorPrecision* NOALIAS                  scratch,
+    PredictorPrecision* NOALIAS                  picardScratch,
+    TimeAveragePrecision* NOALIAS                timeAveragedScratch,
     const Tables&                                tables,
+    const TimeAveragedTables&                    timeAveragedTables,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -161,12 +167,12 @@ private:
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void averageFluxOverTime(
-    PredictorPrecision* NOALIAS timeAveragedFlux,
-    const PredictorPrecision*   flux,
-    const PredictorPrecision*   firstFlux,
-    PredictorPrecision          weight,
-    int                         timeNode,
-    const TeamWorkers&          workers = TeamWorkers{}
+    TimeAveragePrecision* NOALIAS timeAveragedFlux,
+    const PredictorPrecision*     flux,
+    const PredictorPrecision*     firstFlux,
+    TimeAveragePrecision          weight,
+    int                           timeNode,
+    const TeamWorkers&            workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void clearRightHandSide(
@@ -190,12 +196,12 @@ private:
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeSource(
     PredictorPrecision* NOALIAS                  rightHandSide,
     PredictorPrecision* NOALIAS                  firstSource,
-    PredictorPrecision* NOALIAS                  timeAveragedSource,
+    TimeAveragePrecision* NOALIAS                timeAveragedSource,
     const PredictorPrecision* NOALIAS            spaceTimeState,
     const PredictorPrecision* NOALIAS            stateGradient,
-    const PredictorPrecision* NOALIAS            quadraturePoints,
-    const PredictorPrecision* NOALIAS            quadratureWeights,
-    const PredictorPrecision* NOALIAS            cellQuadratureWeights,
+    const TimeAveragePrecision* NOALIAS          quadraturePoints,
+    const TimeAveragePrecision* NOALIAS          quadratureWeights,
+    const TimeAveragePrecision* NOALIAS          cellQuadratureWeights,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,

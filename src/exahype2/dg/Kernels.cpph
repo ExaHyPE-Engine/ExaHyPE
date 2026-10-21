@@ -486,7 +486,7 @@ exahype2::dg::solveRiemannProblem(
   const auto rightMaxEigenvalue = static_cast<ComputePrecision>(
     Derived::maxEigenvalue(averageRightState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
   );
-  const ComputePrecision maxEigenvalue = std::fmax(leftMaxEigenvalue, rightMaxEigenvalue);
+  const ComputePrecision maxEigenvalue = fmax(leftMaxEigenvalue, rightMaxEigenvalue);
 
   for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
     SIMD()
@@ -591,7 +591,7 @@ exahype2::dg::solveLinearRiemannProblem(
   const auto rightMaxEigenvalue = static_cast<ComputePrecision>(
     Derived::maxEigenvalue(averageRightState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
   );
-  const ComputePrecision maxEigenvalue = std::fmax(leftMaxEigenvalue, rightMaxEigenvalue);
+  const ComputePrecision maxEigenvalue = fmax(leftMaxEigenvalue, rightMaxEigenvalue);
 
   [[maybe_unused]] ComputePrecision averageState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   SIMD(aligned(averageState, averageLeftState, averageRightState : PEANO_WITH_ALIGNMENT))

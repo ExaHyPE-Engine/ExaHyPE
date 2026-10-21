@@ -66,6 +66,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         linear=False,
         precision="double",
         predictor_precision=None,
+        time_average_precision=None,
         corrector_precision=None,
         point_sources=0,
         initialise_patches=False,
@@ -104,6 +105,12 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
           self.precision.add_compute_precision(predictor_precision)
         else:
           self._predictor_precision = self.precision.compute
+
+        if time_average_precision is not None:
+          self._time_average_precision = cpp_type(time_average_precision)
+          self.precision.add_compute_precision(time_average_precision)
+        else:
+          self._time_average_precision = self._predictor_precision
 
         if corrector_precision is not None:
           self._corrector_precision = cpp_type(corrector_precision)
@@ -242,10 +249,11 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         return render_tracer_update(tracer, self._table_class("Quadrature"))
 
     def _solver_family_class(self):
-        return "::exahype2::dg::ader::Solver<{}, {}, {}, {}, {}>".format(
+        return "::exahype2::dg::ader::Solver<{}, {}, {}, {}, {}, {}>".format(
             self._solver_type(),
             self.precision.storage,
             self._predictor_precision,
+            self._time_average_precision,
             self._corrector_precision,
             self._subcell_limiter_cpp_type(),
         )
@@ -274,8 +282,6 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
     def _table_precisions(self):
         """Returns the solver precisions plus double for the mesh transfer operators."""
         result = list(self.precision.types)
-        if self._predictor_precision not in result:
-            result.append(self._predictor_precision)
         if "double" not in result:
             result.append("double")
         return result
@@ -288,8 +294,8 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         d["INITIALISE_PATCHES"] = self._initialise_patches
         d["TABLE_PRECISIONS"] = self._table_precisions()
         d["PREDICTOR_PRECISION"] = self._predictor_precision
+        d["TIME_AVERAGE_PRECISION"] = self._time_average_precision
         d["CORRECTOR_PRECISION"] = self._corrector_precision
-        d["CORRECTOR_PRECISION"] = "double"
         d["LIMITER_ARGUMENTS"] = self._subcell_limiter_arguments()
         d["MAX_ADMISSIBLE_MESH_WIDTH"] = (
             "parameters.getMaxAdmissiblePatchSize(DomainSize)"

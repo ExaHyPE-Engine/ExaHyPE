@@ -16,21 +16,23 @@ TARGET_DECLARE
  * other call reads while this call runs. Returns the outcome of NonlinearPredictor::predict(), or
  * zero for a linear Derived and for a thread without a cell.
  */
-template <typename Derived, typename PredictorPrecision>
+template <typename Derived, typename PredictorPrecision, typename TimeAveragePrecision>
 template <typename StoragePrecision, typename CorrectorPrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD int
-exahype2::dg::ader::Predictor<Derived, PredictorPrecision>::predict(
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  CorrectorPrecision* const* const             faceStates,
-  CorrectorPrecision* const* const             faceFluxes,
-  StoragePrecision* NOALIAS const              cellState,
-  const double* NOALIAS const                  pointSourceLocations,
-  PredictorPrecision* NOALIAS const            scratch,
-  const Tables&                                tables,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  const TeamWorkers&                           workers
+exahype2::dg::ader::Predictor<Derived, PredictorPrecision, TimeAveragePrecision>::predict(
+  const tarch::la::Vector<DIMENSIONS, double>&            cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&            cellSize,
+  CorrectorPrecision* const* const                        faceStates,
+  CorrectorPrecision* const* const                        faceFluxes,
+  StoragePrecision* NOALIAS const                         cellState,
+  const double* NOALIAS const                             pointSourceLocations,
+  PredictorPrecision* NOALIAS const                       scratch,
+  TimeAveragePrecision* NOALIAS const                     timeAveragedScratch,
+  const exahype2::dg::BasisTables<PredictorPrecision>&    tables,
+  const exahype2::dg::BasisTables<TimeAveragePrecision>&  timeAveragedTables,
+  const double                                            timeStamp,
+  const double                                            timeStepSize,
+  const TeamWorkers&                                      workers
 ) {
   assertion(timeStamp >= 0.0, timeStamp, cellCentre);
   assertion(timeStepSize >= 0.0, timeStepSize, cellCentre);
@@ -121,7 +123,9 @@ exahype2::dg::ader::Predictor<Derived, PredictorPrecision>::predict(
       faceFluxes,
       cellState,
       scratch,
+      timeAveragedScratch,
       tables,
+      timeAveragedTables,
       cellCentre,
       cellSize,
       timeStamp,
@@ -132,10 +136,10 @@ exahype2::dg::ader::Predictor<Derived, PredictorPrecision>::predict(
     if (not workers.hasCell) {
       return outcome;
     }
-    const PredictorPrecision* const timeAveragedSource = scratch + Scratch::TimeAveragedSourceOffset;
+    const TimeAveragePrecision* const timeAveragedSource = timeAveragedScratch + Scratch::TimeAveragedSourceOffset;
     subtractTimeAveragedVolumeIntegral<Nonlinear::AccumulatesFlux, Nonlinear::AccumulatesSource>(
       cellState,
-      scratch + Scratch::TimeAveragedFluxOffset,
+      timeAveragedScratch + Scratch::TimeAveragedFluxOffset,
       [&](const int cellNode, PredictorPrecision* const values) {
         for (int unknown = 0; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
           values[unknown] = timeAveragedSource[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown];
@@ -151,9 +155,9 @@ exahype2::dg::ader::Predictor<Derived, PredictorPrecision>::predict(
 /**
  * Returns the team scratch bytes a predictor launch with teams of teamThreads threads asks for.
  */
-template <typename Derived, typename PredictorPrecision>
+template <typename Derived, typename PredictorPrecision, typename TimeAveragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD int
-exahype2::dg::ader::Predictor<Derived, PredictorPrecision>::getTeamScratchBytes(const int teamThreads) {
+exahype2::dg::ader::Predictor<Derived, PredictorPrecision, TimeAveragePrecision>::getTeamScratchBytes(const int teamThreads) {
   return Nonlinear::getTeamScratchBytes(teamThreads);
 }
 
@@ -162,15 +166,15 @@ exahype2::dg::ader::Predictor<Derived, PredictorPrecision>::getTeamScratchBytes(
  * timeAveragedFlux stores the derivative of the flux along its own axis, one block per axis.
  * sourceOfNode(cellNode, values) writes the time-averaged source of one node.
  */
-template <typename Derived, typename PredictorPrecision>
+template <typename Derived, typename PredictorPrecision, typename TimeAveragePrecision>
 template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::Predictor<Derived, PredictorPrecision>::subtractTimeAveragedVolumeIntegral(
-  StoragePrecision* NOALIAS const                          cellState,
-  [[maybe_unused]] const PredictorPrecision* NOALIAS const timeAveragedFlux,
-  [[maybe_unused]] const SourceOfNode&                     sourceOfNode,
-  const double                                             timeStepSize,
-  const TeamWorkers&                                       workers
+exahype2::dg::ader::Predictor<Derived, PredictorPrecision, TimeAveragePrecision>::subtractTimeAveragedVolumeIntegral(
+  StoragePrecision* NOALIAS const                            cellState,
+  [[maybe_unused]] const TimeAveragePrecision* NOALIAS const timeAveragedFlux,
+  [[maybe_unused]] const SourceOfNode&                       sourceOfNode,
+  const double                                               timeStepSize,
+  const TeamWorkers&                                         workers
 ) {
   constexpr int UnknownStride = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride    = UnknownStride * CellLayout::NodesPerCell;
@@ -203,9 +207,9 @@ exahype2::dg::ader::Predictor<Derived, PredictorPrecision>::subtractTimeAveraged
   }
 }
 
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename DivergenceMarks>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragePrecision, typename CorrectorPrecision, typename DivergenceMarks>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::PredictCells<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, DivergenceMarks>::operator()(
+exahype2::dg::ader::PredictCells<Derived, StoragePrecision, PredictorPrecision, TimeAveragePrecision, CorrectorPrecision, DivergenceMarks>::operator()(
   const int                            entry,
   const tarch::accelerator::TeamHandle team,
   PredictionCounts&                    accumulator
@@ -233,7 +237,7 @@ exahype2::dg::ader::PredictCells<Derived, StoragePrecision, PredictorPrecision, 
       ownStateHalves[faceNumber] = faceStates.getChunk(face) + half * StateValuesPerFace;
       ownFluxHalves[faceNumber]  = faceFluxes.getChunk(face) + half * FluxValuesPerFace;
     }
-    const int outcome = exahype2::dg::ader::Predictor<Derived, PredictorPrecision>::predict(
+    const int outcome = exahype2::dg::ader::Predictor<Derived, PredictorPrecision, TimeAveragePrecision>::predict(
       cellConnectivity.getCellCentre(slot),
       cellConnectivity.getCellWidth(slot),
       ownStateHalves,
@@ -241,7 +245,9 @@ exahype2::dg::ader::PredictCells<Derived, StoragePrecision, PredictorPrecision, 
       solution.getChunk(slot),
       pointSourceLocations,
       predictorScratch + chunk * predictorScratchSize,
+      predictorTimeAveragedScratch + chunk * predictorTimeAveragedScratchSize,
       tables,
+      timeAveragedTables,
       timeStamp,
       timeStepSize,
       workers

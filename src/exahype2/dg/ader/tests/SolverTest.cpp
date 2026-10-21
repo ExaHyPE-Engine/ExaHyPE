@@ -304,7 +304,7 @@ namespace {
   /**
    * A solver with the linear profile of LinearTerms and a fixed time step rule.
    */
-  struct FixedRuleADERDGSolver final : exahype2::dg::ader::Solver<FixedRuleADERDGSolver, double, double, double, void>,
+  struct FixedRuleADERDGSolver final : exahype2::dg::ader::Solver<FixedRuleADERDGSolver, double, double, double, double, void>,
                                        LinearTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -332,7 +332,7 @@ namespace {
    * A solver with the linear profile of LinearTerms, an adaptive time step rule and a unit wave
    * speed.
    */
-  struct AdaptiveADERDGSolver final : exahype2::dg::ader::Solver<AdaptiveADERDGSolver, double, double, double, void>,
+  struct AdaptiveADERDGSolver final : exahype2::dg::ader::Solver<AdaptiveADERDGSolver, double, double, double, double, void>,
                                       LinearTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
@@ -372,7 +372,7 @@ namespace {
    * Side 1.
    */
   template <int Side>
-  struct HalfSolver final : exahype2::dg::ader::Solver<HalfSolver<Side>, double, double, double, void>, LinearTerms {
+  struct HalfSolver final : exahype2::dg::ader::Solver<HalfSolver<Side>, double, double, double, double, void>, LinearTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
     static constexpr int  NumberOfAuxiliaryVariables = 0;

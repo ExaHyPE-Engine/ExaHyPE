@@ -46,8 +46,8 @@ exahype2::dg::ader::getCFLFactor(const int order) {
   return Factors[order];
 }
 
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
-INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::Solver(
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
+INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::Solver(
   const double                                     timeStepFactor,
   const std::string&                               name,
   const std::vector<exahype2::plotter::DataField>& plottedFields
@@ -64,8 +64,8 @@ INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPre
  * relaxationParameter and differencesScaling widen the range of the discrete maximum
  * principle of the limiter.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
-INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::Solver(
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
+INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::Solver(
   const double                                     timeStepFactor,
   const std::string&                               name,
   const std::vector<exahype2::plotter::DataField>& plottedFields,
@@ -81,9 +81,9 @@ INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPre
   );
 }
 
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::allocate(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::allocate(
   const peano4::CellConnectivity& cellConnectivity
 ) {
   Base::allocate(cellConnectivity);
@@ -94,23 +94,27 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
   reservePredictorScratch(cellConnectivity);
 }
 
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::reservePredictorScratch(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::reservePredictorScratch(
   const peano4::CellConnectivity& cellConnectivity
 ) {
   const auto chunks = static_cast<std::size_t>(getNumberOfPredictorChunks(this->getNumberOfCells(cellConnectivity)));
   if (_predictorScratch.getSize() < chunks * Predictor::ScratchSize) {
     _predictorScratch.allocate(chunks * Predictor::ScratchSize);
   }
+  if constexpr (not Derived::IsLinear) {
+    if (_predictorTimeAveragedScratch.getSize() < chunks * Predictor::TimeAveragedScratchSize) {
+      _predictorTimeAveragedScratch.allocate(chunks * Predictor::TimeAveragedScratchSize);
+  }}
 }
 
 /**
  * Returns the threads per team of a predictor launch that asks for one thread per node of a cell.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD int
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getPredictorTeamThreads() {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getPredictorTeamThreads() {
   return tarch::accelerator::getTeamThreads(Predictor::CellLayout::NodesPerCell);
 }
 
@@ -118,9 +122,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Returns the number of threads that advance one cell in a predictor launch. Every group of this
  * many threads of a team advances its own cell.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD int
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getPredictorThreadsPerCell() {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getPredictorThreadsPerCell() {
   return std::min(Predictor::CellLayout::NodesPerCell, getPredictorTeamThreads());
 }
 
@@ -128,9 +132,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Returns the number of scratch chunks of a predictor dispatch over cells. Every cell group of a
  * running team takes one chunk.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD int
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getNumberOfPredictorChunks(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getNumberOfPredictorChunks(
   const int cells
 ) {
   const int groups = getPredictorTeamThreads() / getPredictorThreadsPerCell();
@@ -141,9 +145,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Returns the number of teams of a predictor dispatch over cells. The host launches one team per
  * cell. A device launches one team per group of cells, at most as many as it runs at once.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD int
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getNumberOfPredictorTeams(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getNumberOfPredictorTeams(
   const int cells
 ) {
   if (tarch::accelerator::getNumberOfScratchChunks(cells) < cells) {
@@ -155,12 +159,13 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
   return std::max(1, std::min((cells + groups - 1) / groups, concurrentTeams));
 }
 
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::release() {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::release() {
   Base::release();
   _pointSourceLocations.release();
   _predictorScratch.release();
+  _predictorTimeAveragedScratch.release();
   _couplingFaces.release();
   _couplingMatrix.release();
   _numberOfCouplingFaces = 0;
@@ -176,13 +181,22 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
     Quadrature<PredictorPrecision>::deallocate();
     DGMatrices<PredictorPrecision>::deallocate();
   }
+  if constexpr (
+        not std::is_same_v<TimeAveragedPrecision, double>
+    and not std::is_same_v<TimeAveragedPrecision, StoragePrecision>
+    and not std::is_same_v<TimeAveragedPrecision, CorrectorPrecision>
+    and not std::is_same_v<TimeAveragedPrecision, PredictorPrecision>
+  ) {
+    Quadrature<TimeAveragedPrecision>::deallocate();
+    DGMatrices<TimeAveragedPrecision>::deallocate();
+  }
 }
 
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD tarch::AllocatedBytes
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getAllocatedBytes() const {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getAllocatedBytes() const {
   auto result = Base::getAllocatedBytes() + _pointSourceLocations.getAllocatedBytes()
-    + _couplingFaces.getAllocatedBytes() + _couplingMatrix.getAllocatedBytes() + _predictorScratch.getAllocatedBytes();
+    + _couplingFaces.getAllocatedBytes() + _couplingMatrix.getAllocatedBytes() + _predictorScratch.getAllocatedBytes() + _predictorTimeAveragedScratch.getAllocatedBytes();
   if constexpr (HasLimiter) {
     result += _limiter->getAllocatedBytes();
   }
@@ -193,9 +207,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Writes the initial condition into every cell and, with a limiter, into every subgrid.
  * initPointSourceLocations() runs after the initial condition.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::initialise(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::initialise(
   const peano4::CellConnectivity& cellConnectivity,
   exahype2::RefinementRequests&   requests
 ) {
@@ -208,6 +222,15 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
   ) {
     Quadrature<PredictorPrecision>::initialise();
     DGMatrices<PredictorPrecision>::initialise();
+  }
+  if constexpr (
+        not std::is_same_v<TimeAveragedPrecision, double>
+    and not std::is_same_v<TimeAveragedPrecision, StoragePrecision>
+    and not std::is_same_v<TimeAveragedPrecision, CorrectorPrecision>
+    and not std::is_same_v<TimeAveragedPrecision, PredictorPrecision>
+  ) {
+    Quadrature<TimeAveragedPrecision>::initialise();
+    DGMatrices<TimeAveragedPrecision>::initialise();
   }
 
   if constexpr (Derived::NumberOfPointSources > 0) {
@@ -234,9 +257,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * exchange the face halves while the local cells predict and the restricted fluxes while the local
  * cells correct. A solver with a coupling partner runs the time steps of both solvers.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::performTimeStep(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::performTimeStep(
   const peano4::CellConnectivity& cellConnectivity,
   exahype2::RefinementRequests&   requests
 ) {
@@ -296,9 +319,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Returns the number of cells on all ranks that the limiter marked as troubled in the time step of
  * the last adopted reduction, or zero without a limiter.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD int
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getNumberOfTroubledCells() const {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getNumberOfTroubledCells() const {
   if constexpr (HasLimiter) {
     return _limiter->getGlobalNumberOfTroubledCells();
   } else {
@@ -311,10 +334,10 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * solver then advances both solvers with the smaller time step size. fromPartnerMatrix and
  * toPartnerMatrix store the input node as the major index.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 template <typename Partner>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::coupleWith(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::coupleWith(
   Partner&                   partner,
   const std::vector<double>& fromPartnerMatrix,
   const std::vector<double>& toPartnerMatrix
@@ -431,9 +454,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
 /**
  * Stores the matrix that maps the partner's face nodes onto this solver's face nodes.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::setCouplingMatrix(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::setCouplingMatrix(
   const std::vector<double>& fromPartnerMatrix
 ) {
   assertion(fromPartnerMatrix.size() % static_cast<std::size_t>(NodesPerAxis) == 0, fromPartnerMatrix.size());
@@ -444,9 +467,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
   _couplingMatrix.setValues(matrix);
 }
 
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::leaveTimeStepsToPartner() {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::leaveTimeStepsToPartner() {
   assertion(not _coupledTimeStep);
   _drivenByPartner = true;
 }
@@ -455,10 +478,10 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Copies the partner's face states and fluxes on the local or the remote coupling faces into the
  * partner's halves in this solver's pools.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 template <typename Partner>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::copyFaceHalvesFromPartner(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::copyFaceHalvesFromPartner(
   [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
   const Partner&                                   partner,
   const peano4::Adjacency                          adjacency
@@ -493,9 +516,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * faces first. The far cell of an exchanged face is the owned cell mirrored across the face. A
  * coupling face on a level jump is a fatal error.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::rebuildCouplingFaces(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::rebuildCouplingFaces(
   [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity
 ) {
   if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
@@ -553,9 +576,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
 /**
  * Moves the solution and, with a limiter, the statuses and the subgrids through the regrid.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::regrid(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::regrid(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Regrid&           regrid,
   exahype2::RefinementRequests&   requests
@@ -572,9 +595,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Writes one snapshot. With a limiter, every plot cell stores its status. A limited cell plots at
  * every node the subcell that contains the node.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::plot(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::plot(
   const peano4::CellConnectivity& cellConnectivity,
   const tarch::plotter::Format    format,
   const std::string&              outputDirectory
@@ -601,9 +624,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
 /**
  * Returns the time step size of the CFL condition of the ADER-DG scheme on the scaled wave speed.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD double
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getTimeStepSizeFromCFL() const {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getTimeStepSizeFromCFL() const {
   if constexpr (UsesAdaptiveTimeStepping) {
     return this->_timeStepping.getFactor() * PNPM / this->_timeStepping.getMaxScaledEigenvalueOfThisStep();
   } else {
@@ -614,23 +637,24 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
 /**
  * Returns the normalised fraction of the admissible mesh width a fixed rule advances by.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD double
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getFixedTimeStepSize() const {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getFixedTimeStepSize() const {
   const double maxAdmissibleMeshWidth = this->_timeStepping.getLimits().maxAdmissibleMeshWidth;
   assertion(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
   return this->_timeStepping.getFactor() * this->_timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth;
 }
 
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD const typename exahype2::dg::ader::Solver<
   Derived,
   StoragePrecision,
   PredictorPrecision,
+  TimeAveragedPrecision,
   CorrectorPrecision,
   Limiter
 >::LimiterType&
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getLimiter() const {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getLimiter() const {
   if constexpr (HasLimiter) {
     return *_limiter;
   } else {
@@ -638,9 +662,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
   }
 }
 
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD exahype2::dg::BasisTables<PredictorPrecision>
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::getBasisTables() {
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getBasisTables() {
   return exahype2::dg::BasisTables<PredictorPrecision>{
     Quadrature<PredictorPrecision>::QuadraturePoints1D,
     Quadrature<PredictorPrecision>::QuadratureWeights1D,
@@ -656,15 +680,33 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
   };
 }
 
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
+INLINE_METHOD exahype2::dg::BasisTables<TimeAveragedPrecision>
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::getTimeAveragedBasisTables() {
+  return exahype2::dg::BasisTables<TimeAveragedPrecision>{
+    Quadrature<TimeAveragedPrecision>::QuadraturePoints1D,
+    Quadrature<TimeAveragedPrecision>::QuadratureWeights1D,
+    Quadrature<TimeAveragedPrecision>::InverseQuadratureWeights1D,
+    Quadrature<TimeAveragedPrecision>::QuadratureWeightsInCell,
+    Quadrature<TimeAveragedPrecision>::InverseQuadratureWeightsInCell,
+    DGMatrices<TimeAveragedPrecision>::StiffnessOperator1D,
+    DGMatrices<TimeAveragedPrecision>::StiffnessOperatorTransposed1D,
+    DGMatrices<TimeAveragedPrecision>::DerivativeOperator1D,
+    DGMatrices<TimeAveragedPrecision>::InversePicardOperator1D,
+    DGMatrices<TimeAveragedPrecision>::BasisFunctionValuesLeft1D,
+    DGMatrices<TimeAveragedPrecision>::BasisFunctionValuesRight1D
+  };
+}
+
 /**
  * Runs the space-time predictor of the local or the remote cells. A solver with a limiter marks
  * every cell whose Picard iteration diverges or stops at its sweep limit for the limiter. A solver
  * without a limiter terminates the run on a diverged cell and continues an unconverged cell with
  * the last iterate.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::predict(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::predict(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Adjacency         adjacency,
   const double                    timeStepSize
@@ -693,9 +735,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Adds the values of the base solver and of the limiter and the unconverged predictions of this rank
  * since the last reduction to record.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::addLocalValuesToGlobalReduction(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::addLocalValuesToGlobalReduction(
   tarch::mpi::ReductionRecord& record
 ) {
   Base::addLocalValuesToGlobalReduction(record);
@@ -714,9 +756,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Picard iteration of any cell stopped at its sweep limit since the last reduction. With a limiter,
  * no iteration stops there.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD void
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::readValuesFromGlobalReduction(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::readValuesFromGlobalReduction(
   const tarch::mpi::ReductionRecord& record
 ) {
   Base::readValuesFromGlobalReduction(record);
@@ -739,10 +781,10 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Runs the predictor kernel and returns the numbers of the diverged and the unconverged cells.
  * With a limiter, the kernel marks these cells in divergenceMarks and returns zero counts.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 template <typename DivergenceMarks>
 INLINE_METHOD exahype2::dg::ader::PredictionCounts
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::predictCells(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::predictCells(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Adjacency         adjacency,
   const double                    timeStepSize,
@@ -757,7 +799,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
   const int threadsPerTeam = getPredictorTeamThreads();
   tarch::accelerator::parallelReduce(
     tarch::accelerator::TeamRange(numberOfTeams, threadsPerTeam, Predictor::getTeamScratchBytes(threadsPerTeam)),
-    exahype2::dg::ader::PredictCells<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, DivergenceMarks>{
+    exahype2::dg::ader::PredictCells<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, DivergenceMarks>{
       cellConnectivity.onDevice(),
       cells,
       numberOfTeams,
@@ -766,9 +808,12 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
       this->_faceStates.getView(),
       this->_faceFluxes.getView(),
       getBasisTables(),
+      getTimeAveragedBasisTables(),
       _pointSourceLocations.getData(),
       _predictorScratch.getData(),
+      _predictorTimeAveragedScratch.getData(),
       Predictor::ScratchSize,
+      Predictor::TimeAveragedScratchSize,
       static_cast<int>(_predictorScratch.getSize() / Predictor::ScratchSize),
       divergenceMarks,
       this->_timeStepping.getTimeStamp(),
@@ -783,9 +828,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, Correc
  * Adds the face integrals of the local or the remote cells to their solution and returns the
  * wave-speed maxima of the updated solution. With a limiter, the maxima are zero.
  */
-template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename CorrectorPrecision, typename Limiter>
+template <typename Derived, typename StoragePrecision, typename PredictorPrecision, typename TimeAveragedPrecision, typename CorrectorPrecision, typename Limiter>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
-exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, CorrectorPrecision, Limiter>::correct(
+exahype2::dg::ader::Solver<Derived, StoragePrecision, PredictorPrecision, TimeAveragedPrecision, CorrectorPrecision, Limiter>::correct(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Adjacency         adjacency,
   const double                    timeStepSize
