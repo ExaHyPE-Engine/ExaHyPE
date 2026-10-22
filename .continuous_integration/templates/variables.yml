@@ -17,8 +17,6 @@
     IMAGE_LLVM: "llvm.sif"
     IMAGE_NVIDIA: "nvidia.sif"
     IMAGE_AMD: "amd.sif"
-    APPTAINER_BINDDIR: "/dine/data/do009/peano"
-    APPTAINER_IMAGEDIR: "/dine/data/do009/peano/images"
     MPI_RANKS: "4"
     OMP_THREADS: "4"
     MIN_GRID_LEVELS_PEANO: "2"
