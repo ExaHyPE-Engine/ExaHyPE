@@ -367,7 +367,7 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
         const ComputePrecision fluxFromLeftInterface = rightGoingFluxLeftFace[unknown];
         const ComputePrecision fluxToRightInterface  = leftGoingFluxRightFace[unknown];
         const auto             contribution          = static_cast<StateUpdatePrecision>(
-          std::fma(scale, fluxFromLeftInterface - fluxToRightInterface, ComputePrecision{0})
+          scale * (fluxFromLeftInterface - fluxToRightInterface)
         );
         axisUpdates[unknown] += contribution;
       }
@@ -486,15 +486,15 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
         const ComputePrecision leftJump  = centreStateForCompute[unknown] - leftState[unknown];
         const ComputePrecision rightJump = rightState[unknown] - centreStateForCompute[unknown];
         ComputePrecision       fluxLeftFace =
-          std::fma(-leftMaxEigenvalue, leftJump, EvaluateFlux ? leftFluxes[unknown] : ComputePrecision{0});
+          -leftMaxEigenvalue * leftJump + (EvaluateFlux ? leftFluxes[unknown] : ComputePrecision{0});
         ComputePrecision fluxRightFace =
-          std::fma(-rightMaxEigenvalue, rightJump, EvaluateFlux ? rightFluxes[unknown] : ComputePrecision{0});
+          -rightMaxEigenvalue * rightJump + (EvaluateFlux ? rightFluxes[unknown] : ComputePrecision{0});
         if constexpr (EvaluateNonconservativeProduct) {
           fluxLeftFace -= leftNonconservativeProduct[unknown];
           fluxRightFace += centreNonconservativeProduct[unknown];
         }
         const auto contribution =
-          static_cast<StateUpdatePrecision>(std::fma(scale, fluxLeftFace - fluxRightFace, ComputePrecision{0}));
+          static_cast<StateUpdatePrecision>( scale * (fluxLeftFace - fluxRightFace));
         axisUpdates[unknown] += contribution;
       }
     }

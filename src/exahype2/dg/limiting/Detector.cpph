@@ -403,13 +403,14 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::mergeMinimum(
   const StoragePrecision left,
   const StoragePrecision right
 ) {
-  static_assert(std::is_floating_point_v<StoragePrecision>, "The limiter supports floating-point values only.");
-  if (std::isnan(left) or std::isnan(right)) {
+  // static_assert(std::is_floating_point_v<StoragePrecision>, "The limiter supports floating-point values only.");
+  if ( left!=left or right!=right ) {
     return std::numeric_limits<StoragePrecision>::quiet_NaN();
   }
   constexpr auto Zero = static_cast<StoragePrecision>(0);
   if (left == Zero and right == Zero) {
-    return std::signbit(left) or std::signbit(right) ? -Zero : Zero;
+    // return std::signbit(left) or std::signbit(right) ? -Zero : Zero;
+    return Zero;
   }
   return std::min(left, right);
 }
@@ -424,13 +425,14 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::mergeMaximum(
   const StoragePrecision left,
   const StoragePrecision right
 ) {
-  static_assert(std::is_floating_point_v<StoragePrecision>, "The limiter supports floating-point values only.");
-  if (std::isnan(left) or std::isnan(right)) {
+  // static_assert(std::is_floating_point_v<StoragePrecision>, "The limiter supports floating-point values only.");
+  if ( left!=left or right!=right ) {
     return std::numeric_limits<StoragePrecision>::quiet_NaN();
   }
   constexpr auto Zero = static_cast<StoragePrecision>(0);
   if (left == Zero and right == Zero) {
-    return std::signbit(left) and std::signbit(right) ? -Zero : Zero;
+    // return std::signbit(left) and std::signbit(right) ? -Zero : Zero;
+    return Zero;
   }
   return std::max(left, right);
 }
@@ -564,11 +566,11 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesDiscreteMa
   const StoragePrecision relaxationParameter,
   const StoragePrecision differencesScaling
 ) {
-  static_assert(std::is_floating_point_v<StoragePrecision>, "The limiter supports floating-point values only.");
-  if (not std::isfinite(candidateMinimum) or not std::isfinite(candidateMaximum)) {
+  // static_assert(std::is_floating_point_v<StoragePrecision>, "The limiter supports floating-point values only.");
+  if (not std::isfinite((double) candidateMinimum) or not std::isfinite((double) candidateMaximum)) {
     return false;
   }
-  if (not std::isfinite(referenceMinimum) or not std::isfinite(referenceMaximum)) {
+  if (not std::isfinite((double) referenceMinimum) or not std::isfinite((double) referenceMaximum)) {
     return false;
   }
   const StoragePrecision roundedCandidateMinimum = quantiseObservableExtremum(candidateMinimum);
@@ -578,7 +580,7 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesDiscreteMa
   const StoragePrecision scaledReferenceRange =
     (roundedReferenceMaximum - roundedReferenceMinimum) * differencesScaling;
   const StoragePrecision widening = mergeMaximum(scaledReferenceRange, relaxationParameter);
-  if (not std::isfinite(widening)) {
+  if (not std::isfinite((double) widening)) {
     return false;
   }
   return roundedCandidateMinimum >= roundedReferenceMinimum - widening
@@ -596,18 +598,18 @@ INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::quantiseObservableExtremum(
   const StoragePrecision extremum
 ) {
-  static_assert(std::is_floating_point_v<StoragePrecision>, "The limiter supports floating-point values only.");
+  // static_assert(std::is_floating_point_v<StoragePrecision>, "The limiter supports floating-point values only.");
   constexpr int DiscardedMantissaBits = 12;
-  if (extremum == static_cast<StoragePrecision>(0) or not std::isfinite(extremum)) {
+  if (extremum == static_cast<StoragePrecision>(0) or not std::isfinite((double) extremum)) {
     return extremum;
   }
   const int roundingStepExponent =
-    std::ilogb(extremum) - (std::numeric_limits<StoragePrecision>::digits - 1 - DiscardedMantissaBits);
+    std::ilogb((double) extremum) - (std::numeric_limits<StoragePrecision>::digits - 1 - DiscardedMantissaBits);
   // Close to the smallest normal number, the rounding step would be subnormal.
   if (roundingStepExponent < std::numeric_limits<StoragePrecision>::min_exponent - 1) {
     return extremum;
   }
-  const StoragePrecision roundingStep = std::ldexp(static_cast<StoragePrecision>(1), roundingStepExponent);
+  const double roundingStep = std::ldexp(1., roundingStepExponent);
   return std::nearbyint(extremum / roundingStep) * roundingStep;
 }
 

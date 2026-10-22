@@ -418,10 +418,6 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::restrictHalo(
   const int                             side,
   const int                             normal
 ) {
-  static_assert(
-    std::is_floating_point_v<StoragePrecision>,
-    "The finite-volume solver supports floating-point values only."
-  );
   assertion(side == 0 or side == 1, side);
 
   constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
@@ -503,10 +499,6 @@ exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>::restrictPatch(
   const StoragePrecision* const NOALIAS children[peano4::ChildrenPerCell],
   StoragePrecision* NOALIAS const       parent
 ) {
-  static_assert(
-    std::is_floating_point_v<StoragePrecision>,
-    "The finite-volume solver supports floating-point values only."
-  );
   constexpr int SubdivisionFactor = peano4::SubdivisionFactor;
   constexpr int ChildrenPerCell   = peano4::ChildrenPerCell;
 

@@ -41,10 +41,10 @@ class SubcellLimiting:
                 "The subcell limiter supports the schemes exahype2.fv.Godunov() and "
                 "exahype2.fv.MusclHancock() only."
             )
-        if self.precision.storage not in ("float", "double"):
-            raise ValueError(
-                "The subcell limiter supports float and double solution storage only."
-            )
+        # if self.precision.storage not in ("float", "double"):
+        #     raise ValueError(
+        #         "The subcell limiter supports float and double solution storage only."
+        #     )
         subcells_per_axis = 2 * self._order + 1
         if scheme.halo_width > subcells_per_axis:
             raise ValueError(
