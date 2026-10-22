@@ -409,8 +409,7 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::mergeMinimum(
   }
   constexpr auto Zero = static_cast<StoragePrecision>(0);
   if (left == Zero and right == Zero) {
-    // return std::signbit(left) or std::signbit(right) ? -Zero : Zero;
-    return Zero;
+    return std::signbit((double) left) or std::signbit((double) right) ? -Zero : Zero;
   }
   return std::min(left, right);
 }
@@ -431,8 +430,7 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::mergeMaximum(
   }
   constexpr auto Zero = static_cast<StoragePrecision>(0);
   if (left == Zero and right == Zero) {
-    // return std::signbit(left) and std::signbit(right) ? -Zero : Zero;
-    return Zero;
+    return std::signbit((double) left) and std::signbit((double) right) ? -Zero : Zero;
   }
   return std::max(left, right);
 }
