@@ -6,10 +6,8 @@ class Atmosphere():
 
     def compute_gamma(self): 
         return (""" 
-
                 const auto totalNumberDensity = Q[Shortcuts::O] + Q[Shortcuts::O2] + Q[Shortcuts::N2];
                 const auto gamma = (1.4 * (totalNumberDensity - Q[Shortcuts::O]) + 1.67 * Q[Shortcuts::O]) / totalNumberDensity;
-        
                 """)
 
     def compute_cv(self):
@@ -19,13 +17,12 @@ class Atmosphere():
 
                 const auto meanMolarMass = (Q[Shortcuts::O]  * 0.016
                                 + Q[Shortcuts::O2] * 0.032
-                                + Q[Shortcuts::N2] * 0.028) / totalNumberDensity;   
+                                + Q[Shortcuts::N2] * 0.028) / totalNumberDensity;
 
-                constexpr auto universalGasConstant = 8.314;  
-                const auto gasConstant = universalGasConstant / meanMolarMass;  
+                constexpr auto universalGasConstant = 8.314;
+                const auto gasConstant = universalGasConstant / meanMolarMass;
                 [[maybe_unused]] const auto cv = gasConstant / (gamma -1);
                 """)
-
 
 
     def initial_conditions(self):
@@ -35,13 +32,13 @@ class Atmosphere():
             auto interpolateBetweenRows = [](const std::string bottomRow, const std::string topRow, const int csvIndex, const double currentHeight) {
                 const auto bottomRowValue  = tarch::reader::CSVReader::extractFundamentalTypeFromRow<double>(csvSeparator, csvIndex, bottomRow);
                 const auto topRowValue     = tarch::reader::CSVReader::extractFundamentalTypeFromRow<double>(csvSeparator, csvIndex, topRow);
-                const auto topRowHeight    = tarch::reader::CSVReader::extractFundamentalTypeFromRow<double>(csvSeparator, csvHeightIndex, topRow) * 1000.0;
-                const auto bottomRowHeight = tarch::reader::CSVReader::extractFundamentalTypeFromRow<double>(csvSeparator, csvHeightIndex, bottomRow) * 1000.0;
+                const auto topRowHeight    = tarch::reader::CSVReader::extractFundamentalTypeFromRow<double>(csvSeparator, csvHeightIndex, topRow) * 1000;
+                const auto bottomRowHeight = tarch::reader::CSVReader::extractFundamentalTypeFromRow<double>(csvSeparator, csvHeightIndex, bottomRow) * 1000;
 
                 return bottomRowValue + (currentHeight - bottomRowHeight) * (topRowValue - bottomRowValue) / (topRowHeight - bottomRowHeight);
             };
 
-            std::fill_n(Q, Shortcuts::NumberOfDistinctVariables, 0.0);
+            std::fill_n(Q, Shortcuts::NumberOfDistinctVariables, 0);
 
             // initialize CSV reader and skip first line of file, which contains column names
             static tarch::reader::CSVReader csvReader("./thunderstorm_model_smooth.csv", 1);
@@ -183,22 +180,22 @@ class Atmosphere():
             const bool isInflow = outward * Qinside[Shortcuts::j + normal] < 0.0;
 
             if (isTop || isSide) {
-            if (isOutflow) {
-                // Three characteristics leave, one enters: one condition, and the
-                // hydrostatic pressure is the natural choice. rho and j are already
-                // extrapolated by the copy_n above.
-                double joSq = 0.0;
-                for (int d = 0; d < DIMENSIONS; d++) joSq += Qoutside[Shortcuts::j+d] * Qoutside[Shortcuts::j+d];
-                Qoutside[Shortcuts::E] = Qinside[Shortcuts::backgroundstate + 2]
-                                    + 0.5 * joSq / Qoutside[Shortcuts::rho];
-            } 
-            
-            if (isInflow){
-                for (int d = 0; d < DIMENSIONS; d++) Qoutside[Shortcuts::j+d] = 0.0;
-                Qoutside[Shortcuts::rho] = Qinside[Shortcuts::backgroundstate + 0];
+                if (isOutflow) {
+                    // Three characteristics leave, one enters: one condition, and the
+                    // hydrostatic pressure is the natural choice. rho and j are already
+                    // extrapolated by the copy_n above.
+                    double joSq = 0.0;
+                    for (int d = 0; d < DIMENSIONS; d++) joSq += Qoutside[Shortcuts::j+d] * Qoutside[Shortcuts::j+d];
+                    Qoutside[Shortcuts::E] = Qinside[Shortcuts::backgroundstate + 2]
+                                        + 0.5 * joSq / Qoutside[Shortcuts::rho];
+                } 
+                
+                if (isInflow){
+                    for (int d = 0; d < DIMENSIONS; d++) Qoutside[Shortcuts::j+d] = 0.0;
+                    Qoutside[Shortcuts::rho] = Qinside[Shortcuts::backgroundstate + 0];
 
 
-            }
+                }
             }
 
 
@@ -249,8 +246,6 @@ class Atmosphere():
     def evaluate_pressure(self):
         return (
             """
-
-
             const auto jDot = j[0]*j[0]+j[1]*j[1]
             #if DIMENSIONS==3
                 + j[2]*j[2]
@@ -283,7 +278,7 @@ class Atmosphere():
             const auto backgroundPressure = Q[Shortcuts::backgroundstate + 1];
             const auto backgroundE = Q[Shortcuts::backgroundstate + 2];
 
-            const auto invRho = 1./rho_full; 
+            const auto invRho = 1/rho_full; 
             
             """
                         )
@@ -370,7 +365,7 @@ class Atmosphere():
                         
         flux_heat = (
             """
-                const auto cp = gasConstant + cv;
+            const auto cp = gasConstant + cv;
 
             const auto kappa = mu * 1.5 * cp;
             const auto invCv = 1/cv;
@@ -563,7 +558,7 @@ class Atmosphere():
             auto pressure = pressurePertubation + Q[Shortcuts::backgroundstate+1];
             const auto u_n = Q[Shortcuts::j+normal]/rho_full;
 
-                        const auto radicand = gamma * (pressure/rho_full);
+            const auto radicand = gamma * (pressure/rho_full);
             if (not (radicand > 0.0)) {
                 ::tarch::triggerNonCriticalAssertion(
                     __FILE__, __LINE__,
@@ -579,12 +574,10 @@ class Atmosphere():
             
             const auto c = std::sqrt(gamma * (pressure/rho_full));
             double lambda = std::fmax(
-            std::abs(u_n-c), std::abs(u_n+c)
+                std::abs(u_n-c), std::abs(u_n+c)
             );
             return lambda;
         };
-
-
 
         
         [[maybe_unused]] auto diffusiveEval = [&](
@@ -593,7 +586,7 @@ class Atmosphere():
         ){ """
                     + self.compute_gamma()
                     + """
-            auto rho_full = Q[Shortcuts::rho] + Q[Shortcuts::backgroundstate + 0];
+//            auto rho_full = Q[Shortcuts::rho] + Q[Shortcuts::backgroundstate + 0];
             const auto nu = (mu_molecular / rho_full) + eddy_viscosity; 
             double smaxDiffusive = molecularDiffusionCoeff;
             smaxDiffusive = std::fmax(smaxDiffusive, (4./3.) * nu);
@@ -636,7 +629,7 @@ class Atmosphere():
                         + self.eigenvalue_functions()
                         + """
 
-            // Compute max eigenvalue from teh convective flux
+            // Compute max eigenvalue from the convective flux
             auto smax_c = std::fmax(
                 maxEval(&QavL[0], direction), 
                 maxEval(&QavR[0], direction)
@@ -648,14 +641,12 @@ class Atmosphere():
                 diffusiveEval(&QavR[0], direction)
             ); 
 
-
             auto eta = (2*DGOrder+1) / (h[direction]* std::sqrt(0.5*M_PI)); 
-
-            auto smax = smax_c + 2*eta*smax_d; 
+            auto smax = smax_c + 2*eta*smax_d;
 
             for (int xy = 0; xy < faceSize; xy++) {
                 for (int n = 0; n < NumberOfUnknowns; n++) {
-                    FL[xy*NumberOfUnknowns+n] = 0.5 * (FL[xy * NumberOfUnknowns + n] + FR[xy * NumberOfUnknowns + n]) + 0.5*smax*(QL[xy*strideQ + n] - QR[xy*strideQ + n]);  
+                    FL[xy*NumberOfUnknowns+n] = 0.5 * (FL[xy * NumberOfUnknowns + n] + FR[xy * NumberOfUnknowns + n]) + 0.5*smax*(QL[xy*strideQ + n] - QR[xy*strideQ + n]);
                 }
             }
 
@@ -713,14 +704,12 @@ class Atmosphere():
             """
             std::fill_n(S, NumberOfUnknowns, 0);
 
-            constexpr double gravitySurface = 9.782231107143115;   // [m/s^2]
+            constexpr double gravitySurface = 9.782231107143115;      // [m/s^2]
             constexpr double effectiveEarthRadius = 6336531.01897801; // [m]
             const double ratio = effectiveEarthRadius / (effectiveEarthRadius + x(DIMENSIONS-1));
             const double gravity = gravitySurface * ratio * ratio;
             S[Shortcuts::j+DIMENSIONS-1] = -1 * Q[Shortcuts::rho] * gravity;
             S[Shortcuts::E] = -gravity * Q[Shortcuts::j + DIMENSIONS-1];
-
-
             """
                     )
 
@@ -740,9 +729,7 @@ class Atmosphere():
             static constexpr double timeOffset = """ + str(time_offset) + """;
             const double simulationTime = t + timeOffset;
 
-            std::fill_n(S, NumberOfUnknowns, 0);
-
- 
+            std::fill_n(S, NumberOfUnknowns, 0); 
 
             // frequency
             static constexpr double omega =""" + str(omega) + """;   // in rad/s
@@ -768,8 +755,6 @@ class Atmosphere():
             // 0: rho, 2: rhov
             S[Shortcuts::j + DIMENSIONS-1 ] += (Q[Shortcuts::rho] + Q[Shortcuts::backgroundstate + 0]) * FZero * tarch::la::pow(tarch::la::E, -exponentialXTerm - exponentialYTerm - exponentialTTerm)
                 * cosTerm;
-
-            
                 
 
             // ---- Rayleigh sponge: absorbs waves at the top --------------------
@@ -825,12 +810,11 @@ class Atmosphere():
             constexpr double gravitySurface = 9.782231107143115;   // [m/s^2]
             constexpr double effectiveEarthRadius = 6336531.01897801; // [m]
             const double ratio = effectiveEarthRadius / (effectiveEarthRadius + x(DIMENSIONS-1));
-            const double gravity = gravitySurface * ratio * ratio;            S[Shortcuts::j+DIMENSIONS-1] = -1 * Q[Shortcuts::rho] * gravity;
+            const double gravity = gravitySurface * ratio * ratio;
+            S[Shortcuts::j+DIMENSIONS-1] = -1 * Q[Shortcuts::rho] * gravity;
             S[Shortcuts::E] = -gravity * Q[Shortcuts::j + DIMENSIONS-1];
 
-
             //thunderstorm source
-
 
             // frequency
             static constexpr double omega =""" + str(omega) + """;   // in rad/s
@@ -856,11 +840,12 @@ class Atmosphere():
             // smooth switch-on, 1 for ramp_time = 0
             static constexpr double rampTime = """ + str(ramp_time) + """; // in s
             double ramp = 1.0;
+/*
             if (simulationTime < rampTime) {
                 const double r = std::sin(0.5 * M_PI * simulationTime / rampTime);
                 ramp = r * r;
             }
-
+*/
             // 0: rho, 2: rhov
             S[Shortcuts::j + DIMENSIONS-1 ] += (Q[Shortcuts::rho] + Q[Shortcuts::backgroundstate + 0]) * FZero * tarch::la::pow(tarch::la::E, -exponentialXTerm - exponentialYTerm - exponentialTTerm)
                 * cosTerm * ramp;
@@ -965,18 +950,14 @@ class Atmosphere():
             return false;   // inadmissible -> recomputed with FV
         }
         
-        
         //return true;
-
 
 
         [[maybe_unused]] const double z = x[DIMENSIONS-1];
         const double t = limiterTime;
         [[maybe_unused]] const double limiterheight = t*55; 
 
-         if (z > limiterheight) return false;
-
-
+        if (z > limiterheight) return false;
 
         return true;
         """)
