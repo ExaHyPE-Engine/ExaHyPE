@@ -51,9 +51,9 @@ class Atmosphere():
             const auto domainMidHeight = DomainOffset[DIMENSIONS-1] + 0.5 * DomainSize[DIMENSIONS-1];
             const bool isBottom = x[DIMENSIONS-1] < domainMidHeight && normal == DIMENSIONS-1;
 
-            auto exp_coeff1 = -1 * std::pow( (t-(t_0 - PT_div_4))/PT_div_4, 2);
+            auto exp_coeff1 = -1 * std::pow( (t-(t_0 - PT_div_4))/PT_div_4, 2) ;
             auto exp_coeff2 = -1 * std::pow( (t-(t_0 + PT_div_4))/PT_div_4, 2);
-            auto vertical_velocity = 0.01*(std::exp(exp_coeff1) - std::exp(exp_coeff2));
+            auto vertical_velocity = 0.01*((-2/(PT_div_4*PT_div_4))*(t - (t_0-PT_div_4))*std::exp(exp_coeff1) - (-2/(PT_div_4*PT_div_4))*(t - (t_0+PT_div_4))*std::exp(exp_coeff2));
     
             if (isBottom){
                 Qoutside[Shortcuts::j+1] = 2*(Qinside[Shortcuts::rho] + Qinside[Shortcuts::backgroundstate + 0])* vertical_velocity - Qinside[Shortcuts::j + 1]; 
