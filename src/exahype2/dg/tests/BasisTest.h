@@ -11,11 +11,11 @@ namespace exahype2::dg::tests {
 class exahype2::dg::tests::BasisTest final : public tarch::tests::TestCase {
 public:
   BasisTest();
-  BasisTest(const BasisTest&)            = delete;
-  BasisTest(BasisTest&&)                 = delete;
-  BasisTest& operator=(const BasisTest&) = delete;
-  BasisTest& operator=(BasisTest&&)      = delete;
-  ~BasisTest() override                  = default;
+  BasisTest(const BasisTest& other)            = delete;
+  BasisTest(BasisTest&& other)                 = delete;
+  BasisTest& operator=(const BasisTest& other) = delete;
+  BasisTest& operator=(BasisTest&& other)      = delete;
+  ~BasisTest() override                        = default;
 
   void run() override;
 
@@ -29,17 +29,20 @@ private:
   void testReadsFloatValuesInPlace();
   void testEvaluatePolynomialOrder1();
   void testEvaluatePolynomialOrder2();
-  void testTheOrderInvariantProductIgnoresTheFactorOrder();
-  void testTheSmallestValuesAreTakenPerEntry();
+  void testTheReferencesAndBoundsFollowTheValueRanges();
+  void testTheLargestProductOfEntriesIsThePowerOfTheLargestMagnitude();
   void testProductMatchesTheDefinition();
   void testResultIsAccumulatedOrOverwritten();
   void testScalingMultipliesEveryProduct();
   void testStridesAddressTheIntendedSlices();
   void testANarrowerResultIsRoundedOnce();
+  void testThePairWeightsRecombineToTheOperatorRows();
   void testTheDerivativeOfAConstantLineIsExactlyZero();
-  void testTheDerivativeActsOnTheDifferencesFromTheSmallestValue();
+  void testTheDerivativeActsOnTheDifferencesFromTheCentreNode();
+  void testADerivativeInPlaceEqualsADerivativeIntoAnotherBuffer();
+  void testTheDerivativeOfAReflectedLineIsTheReflectedDerivative();
   void testGradientOfALinearPolynomialIsItsSlope();
-  void testEachBlockHoldsTheDerivativeAlongItsOwnAxis();
+  void testEachBlockStoresTheDerivativeAlongItsOwnAxis();
   void testNarrowStorageIsDifferentiatedInTheComputePrecision();
   void testTheGradientOfAConstantStateIsExactlyZero();
   void testALinearFluxDifferentiatesToItsPhysicalSlope();
@@ -47,13 +50,22 @@ private:
   void testTwoCallsOverAlternateLinesDifferentiateLikeOneCall();
   void testAPaddedNodeStrideProjectsOnlyTheEntries();
   void testTheLowerAndUpperFaceUseTheirOwnCoefficients();
+  void testTheFacesOfAReflectedFieldAreTheSwappedFaces();
   void testTheFaceNodesRunWithTheLowestTangentialAxisFastest();
   void testAFieldOfFloatAccumulatesTheFacesInDouble();
+  void testThreadsThatDivideTheFaceItemsWriteThePairedFaces();
+  void testTheLinesOfAnAxisRunThroughTheFaceNodes();
   void testOneDimensionalIdentityLeavesDataUnchanged();
   void testTwoDimensionalIdentityLeavesDataUnchanged();
   void testThreeDimensionalIdentityLeavesDataUnchanged();
   void testProjectionPreservesAConstantField();
+  void testTheProjectionOfASwappedFieldIsTheSwappedProjection();
+  void testTheProjectionOfAReflectedFieldIsTheReflectedProjection();
+  void testBothProjectionRulesProjectTheSameField();
+  void testEverySplitOfTheStagesAmongThreadsProjectsLikeOneThread();
   void testLagrangeBasisFunctionIsCardinal();
+  void testTheLagrangeBasisFunctionsReproduceALinearFunction();
+  void testTheMirrorBasisFunctionAtTheNegatedOffsetReturnsTheSameBits();
   void testInterpolationEvaluatesTheCoarsePolynomialAtTheChildNodes();
   void testRestrictionIsTheInterpolationTransposedOverTheChildWidth();
   void testWeightedRestrictionPreservesConstants();
@@ -67,7 +79,17 @@ private:
   void testFaceRestrictionProjectsALinearProfile();
   void testCellRestrictionProjectsALinearState();
   void testConstantFacesAndCellsRestrictBitwise();
+  void testANegatedFieldTransfersToTheNegatedFieldBitwise();
 
   template <int Order>
   void validateAffineInterpolant(const double* nodes);
+
+  template <int Nodes>
+  void validateReflectedDerivative(const double* operatorMatrix);
+
+  template <int Nodes>
+  void validateReflectedFaces(const double* leftCoefficients, const double* rightCoefficients);
+
+  template <int Nodes>
+  void validateMirroredBasisFunctions();
 };

@@ -11,7 +11,7 @@
 - Free-Surface Geophysical Flows
   - \subpage applications_exahype2_exaskred
 
-This directory holds links to some showcase applications of ExaHyPE. Many of these
+This directory contains links to some showcase applications of ExaHyPE. Many of these
 applications are the base for some cooked-down test cases.
 That is, they are complex collections of Python scripts, but there are
 simplified ones with hardcoded setting, setups, ... which then end up in `tests`.

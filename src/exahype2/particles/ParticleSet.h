@@ -29,6 +29,15 @@ namespace exahype2::particles {
 } // namespace exahype2::particles
 
 TARGET_DECLARE
+namespace exahype2::particles {
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getLatticeIndexOf(
+    double coordinate,
+    double latticeOffset,
+    double width,
+    int    cellsPerAxis
+  );
+} // namespace exahype2::particles
+
 /**
  * View of one particle. The array values stores the DIMENSIONS coordinates first and then
  * numberOfData data entries.

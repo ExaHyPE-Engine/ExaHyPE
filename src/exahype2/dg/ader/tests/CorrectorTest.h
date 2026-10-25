@@ -9,16 +9,16 @@ namespace exahype2::dg::ader::tests {
 } // namespace exahype2::dg::ader::tests
 
 /**
- * Checks the corrector phase of one ADER-DG cell.
+ * Checks the corrector phase on the nodes of one ADER-DG cell and the team count of its launch.
  */
 class exahype2::dg::ader::tests::CorrectorTest final : public tarch::tests::TestCase {
 public:
   CorrectorTest();
-  CorrectorTest(const CorrectorTest&)            = delete;
-  CorrectorTest(CorrectorTest&&)                 = delete;
-  CorrectorTest& operator=(const CorrectorTest&) = delete;
-  CorrectorTest& operator=(CorrectorTest&&)      = delete;
-  ~CorrectorTest() override                      = default;
+  CorrectorTest(const CorrectorTest& other)            = delete;
+  CorrectorTest(CorrectorTest&& other)                 = delete;
+  CorrectorTest& operator=(const CorrectorTest& other) = delete;
+  CorrectorTest& operator=(CorrectorTest&& other)      = delete;
+  ~CorrectorTest() override                            = default;
 
   void run() override;
 
@@ -26,4 +26,5 @@ private:
   void testTheFaceIntegralsReachTheCellState();
   void testZeroFluxDifferencesLeaveTheCellStateBitwise();
   void testTheCorrectionReportsTheWaveSpeedsOfTheUpdatedState();
+  void testALaunchRunsBetweenOneTeamAndOneTeamPerCell();
 };

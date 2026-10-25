@@ -3,11 +3,9 @@
 \page tarch_tests Unit tests
 
 
-Peano introduces its own lightweight test concept with picks up best
-practices from the JUnit world. While it is simple and has no external
-dependencies (all test routines are collected within the `tarch`
-subdirectory), it provides a few macros to handle numeric data---which
-might be convenient for AMR applications; so there's some added value.
+Peano introduces its own lightweight test concept that picks up best
+practices from the JUnit world. The `tarch` subdirectory contains all
+test routines. The test concept provides macros for numeric data.
 It also provides test routines for vectors.
 
 

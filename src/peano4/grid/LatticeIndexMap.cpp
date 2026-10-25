@@ -33,19 +33,19 @@ peano4::grid::LatticeIndexMap::clear() {
  */
 void
 peano4::grid::LatticeIndexMap::grow() {
-  const auto heldKeys   = std::move(_keys);
-  const auto heldValues = std::move(_values);
+  const auto keysBeforeGrowth   = std::move(_keys);
+  const auto valuesBeforeGrowth = std::move(_values);
 
-  const std::size_t capacity = heldKeys.empty() ? SmallestCapacity : 2 * heldKeys.size();
+  const std::size_t capacity = keysBeforeGrowth.empty() ? SmallestCapacity : 2 * keysBeforeGrowth.size();
   _keys.assign(capacity, EmptyKey);
   _values.assign(capacity, NoEntry);
   _slotMask           = capacity - 1;
   _size               = 0;
   _numberOfTombstones = 0;
 
-  for (std::size_t slot = 0; slot < heldKeys.size(); slot++) {
-    if (heldKeys[slot] != EmptyKey and heldKeys[slot] != TombstoneKey) {
-      insert(heldKeys[slot], heldValues[slot]);
+  for (std::size_t slot = 0; slot < keysBeforeGrowth.size(); slot++) {
+    if (keysBeforeGrowth[slot] != EmptyKey and keysBeforeGrowth[slot] != TombstoneKey) {
+      insert(keysBeforeGrowth[slot], valuesBeforeGrowth[slot]);
     }
   }
 }

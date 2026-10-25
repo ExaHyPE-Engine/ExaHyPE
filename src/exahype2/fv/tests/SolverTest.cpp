@@ -241,7 +241,7 @@ namespace {
 
   /**
    * Applies the refinement requests to the standing grid and moves the solver data through the
-   * regrid. Every slot the regrid keeps then holds its data. The reduction of the step follows.
+   * regrid. Every slot the regrid keeps then contains its data. The reduction of the step follows.
    */
   template <typename Solver>
   void regridWithLiveData(
@@ -402,7 +402,7 @@ exahype2::fv::tests::SolverTest::run() {
 }
 
 /**
- * After one step every volume holds PostprocessedValue and PostprocessedWaveSpeed sets the size
+ * After one step every volume contains PostprocessedValue and PostprocessedWaveSpeed sets the size
  * of the next step.
  */
 void
@@ -508,7 +508,7 @@ exahype2::fv::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdva
 }
 
 /**
- * The error file holds the initial row until recordLastTimeStamp() appends the row of the last time stamp once.
+ * The error file contains the initial row until recordLastTimeStamp() appends the row of the last time stamp once.
  */
 void
 exahype2::fv::tests::SolverTest::testRecordLastTimeStampAppendsOneRowToTheErrorFile() {

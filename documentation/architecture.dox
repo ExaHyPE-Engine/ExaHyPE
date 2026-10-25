@@ -45,18 +45,18 @@ A phase calls one method of every solver through the generated
 `SolverRepository`: `allocate()`, `initialise()`, `performTimeStep()`,
 `regrid()`, `plot()`, `startSimulation()` and `finishSimulation()`. A solver
 family implements a phase as a sequence of dispatches over the cell
-connectivity, so there is no grid sweep and no per-cell callback.
+connectivity.
 
 ## Grid representation and data pools
 
-Every MPI rank owns one peano4::Spacetree. It holds the refinement plan of the
+Every MPI rank owns one peano4::Spacetree. It stores the refinement plan of the
 whole domain, the rank ownership table and the materialised structure of the
 local blocks. After grid construction and after every regrid the spacetree
 builds the peano4::CellConnectivity of the rank: the cells with their level and
 lattice position, the faces with their kind (interior, boundary, hanging,
 coarse or intermediate face of a level jump) and their two adjacent cells, the
 level jumps with their coarse face and fine faces, and the faces a neighbour
-rank holds too in canonical order. A kernel copies the cell connectivity by
+rank stores too in canonical order. A kernel copies the cell connectivity by
 value and derives the centre and the width of every cell from its level and
 lattice position. @ref peano_cell_connectivity describes the interface.
 
@@ -69,10 +69,10 @@ are renumbered and their data rebuilt.
 
 A solver family advances its solution with `parallelFor` and `parallelReduce`
 over the cell and face spans of the cell connectivity. Ranks exchange the halves of
-the faces both hold through peano4::HaloExchange: `post()` gathers the local
-halves into one buffer per neighbour rank and starts the messages, `wait()`
+the faces both store through peano4::HaloExchange. Its `post()` gathers the local
+halves into one buffer per neighbour rank and starts the messages. Its `wait()`
 scatters the received halves. Both ranks derive the message layout from the
-canonical face order, so no rank tells the other what it sends.
+canonical face order. A message then contains the face halves alone.
 
 ## Regridding
 
@@ -88,7 +88,7 @@ move to another rank.
 # Python API
 
 The Python API models the generated program at one level: an
-exahype2.Project holds the solvers of the solver families
+exahype2.Project contains the solvers of the solver families
 (`exahype2.fv.Solver`, `exahype2.dg.ader.Solver`, `exahype2.dg.rk.Solver`),
 their PDE terms, tracers, constants and runtime parameters.
 `generate_and_build()` emits the solver classes with the PDE terms as static

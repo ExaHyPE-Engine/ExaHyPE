@@ -11,11 +11,11 @@ namespace exahype2::dg::limiting::tests {
 class exahype2::dg::limiting::tests::DetectorTest final : public tarch::tests::TestCase {
 public:
   DetectorTest();
-  DetectorTest(const DetectorTest&)            = delete;
-  DetectorTest(DetectorTest&&)                 = delete;
-  DetectorTest& operator=(const DetectorTest&) = delete;
-  DetectorTest& operator=(DetectorTest&&)      = delete;
-  ~DetectorTest() override                     = default;
+  DetectorTest(const DetectorTest& other)            = delete;
+  DetectorTest(DetectorTest&& other)                 = delete;
+  DetectorTest& operator=(const DetectorTest& other) = delete;
+  DetectorTest& operator=(DetectorTest&& other)      = delete;
+  ~DetectorTest() override                           = default;
 
   void run() override;
 
@@ -45,5 +45,10 @@ private:
   void testClearFacesWritesRegularAndZerosTheSubcellHalo();
   void testAFixedRuleReportsNoWaveSpeeds();
   void testEveryCellOfADeviceRangeJudgesLikeTheHost();
-  void testTheCellListsHoldTheLocalCellsFirst();
+  void testEveryTeamOfADeviceJudgesLikeTheHost();
+  void testEveryTeamOfADeviceReducesTheExtremaLikeTheHost();
+  void testTheTeamsOfALaunchOpenTheInitialStatusesLikeTheHost();
+  void testTheTeamsOfALaunchCoverTheCells();
+  void testTheCellListsStartWithTheLocalCells();
+  void testTheStatusTransferCopiesTheParentAndRaisesToTheChildren();
 };

@@ -10,7 +10,7 @@ namespace {
   constexpr std::uint64_t SignBit = std::uint64_t{1} << 63;
 
   /**
-   * Number of leading entries of a packed record. They hold the sizes of the three segments.
+   * Number of leading entries of a packed record. They store the sizes of the three segments.
    */
   constexpr int HeaderSize = 3;
 
@@ -28,7 +28,7 @@ namespace {
 
   /**
    * Sums, minimises and maximises the three segments of one packed record. The header of the record
-   * holds the segment sizes. The parameter types follow MPI_User_function.
+   * stores the segment sizes. The parameter types follow MPI_User_function.
    */
   void reducePackedRecords(
     void*                          incoming,

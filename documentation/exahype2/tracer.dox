@@ -17,7 +17,7 @@ tracers = project.add_tracer(name="MyTracer", particle_attributes=4)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The insertions run once at the start of the grid initialisation on the rank
-whose mesh holds the position:
+whose mesh contains the position:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 tracers.insert_by_coordinates([[x0, y0], [x1, y1]])
@@ -51,17 +51,17 @@ solver.trace(
 
 `fields_to_interpolate` lists the data entries that receive the first
 unknowns of the solver in this order. The interpolation scheme 0 reads no
-solver value, 1 reads the volume that holds the position and 2 interpolates
-between the volumes; a DG solver family evaluates its nodal polynomial for
-every scheme other than 0. The integration scheme 0 keeps the particle in
-place, and the schemes 1 to 6 advance it with the interpolated velocity and
-the forces of `force_method`. A finite-volume time step moves the tracers
-through the solution it read, so the tracers and the fluid advance from the
+solver value. Scheme 1 reads the volume that contains the position. Scheme 2
+interpolates between the volumes. A DG solver family evaluates its nodal
+polynomial for every scheme other than 0. The integration scheme 0 keeps the
+particle in place. The schemes 1 to 6 advance it with the interpolated velocity
+and the forces of `force_method`. A finite-volume time step moves the tracers
+through the solution it read. The tracers and the fluid then advance from the
 same state.
 
 The set lives in exahype2::particles::ParticleSet: the position and the data
 of every particle in one array, the two-integer number of the particle and
-the slot of the cell that holds it. A particle that left its rank travels to
+the slot of the cell that contains it. A particle that left its rank travels to
 the rank whose cells contain its new position after every trace.
 
 # Sampling the traces of a plane
@@ -101,10 +101,10 @@ tracers.dump_into_database(
 
 Each row contains the particle number, the time stamp, the coordinates and
 the data entries. The particle number combines the rank of insertion with a
-rank-local counter, so a particle keeps its identity after it migrates. An MPI
-run appends the records of each rank to `<filename>-rank-<rank>.csv`; a serial
-run writes `<filename>.csv`. `postprocessing/plot_probe_data.py` reads one
-CSV file and groups its rows by particle number.
+rank-local counter. A particle keeps this number after it migrates. An MPI run
+appends the records of each rank to `<filename>-rank-<rank>.csv`. A serial run
+writes `<filename>.csv`. `postprocessing/plot_probe_data.py` reads one CSV file
+and groups its rows by particle number.
 
 # Measuring the position error
 

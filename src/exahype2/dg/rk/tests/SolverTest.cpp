@@ -625,7 +625,7 @@ exahype2::dg::rk::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAnd
 }
 
 /**
- * The error file holds the initial row until recordLastTimeStamp() appends the row of the last time stamp once.
+ * The error file contains the initial row until recordLastTimeStamp() appends the row of the last time stamp once.
  */
 void
 exahype2::dg::rk::tests::SolverTest::testRecordLastTimeStampAppendsOneRowToTheErrorFile() {

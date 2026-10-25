@@ -43,6 +43,17 @@ public:
 
   static constexpr int ScratchSize = Derived::IsLinear ? Linear::Scratch::Size : Nonlinear::Scratch::Size;
 
+  /**
+   * True if predict() writes the face fluxes.
+   */
+  static constexpr bool WritesFaceFluxes = not Derived::IsLinear or Linear::WritesFaceFluxes;
+
+  [[nodiscard]] static INLINE_METHOD int getTeamThreads();
+  [[nodiscard]] static INLINE_METHOD int getThreadsPerCell();
+  [[nodiscard]] static INLINE_METHOD int getNumberOfTeams(int cells);
+  [[nodiscard]] static INLINE_METHOD int getNumberOfScratchChunks(int cells);
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getTeamScratchBytes(int teamThreads);
+
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD int predict(
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
@@ -54,34 +65,48 @@ public:
     ComputePrecision* NOALIAS                    scratch,
     const Tables&                                tables,
     double                                       timeStamp,
-    double                                       timeStepSize,
-    const TeamWorkers&                           workers = TeamWorkers{}
+    double                                       timeStepSize
   );
 
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getTeamScratchBytes(int teamThreads);
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD int predictInTeam(
+    const TeamWorkers&                           workers,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    ComputePrecision* const*                     faceStates,
+    ComputePrecision* const*                     faceFluxes,
+    StoragePrecision* NOALIAS                    cellState,
+    const double* NOALIAS                        pointSourceLocations,
+    ComputePrecision* NOALIAS                    scratch,
+    const Tables&                                tables,
+    double                                       timeStamp,
+    double                                       timeStepSize
+  );
 
 private:
   friend class exahype2::dg::ader::tests::PredictorTest;
 
   template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
   static INLINE_METHOD GPU_CALLABLE_METHOD void subtractTimeAveragedVolumeIntegral(
-    StoragePrecision* NOALIAS       cellState,
-    const ComputePrecision* NOALIAS timeAveragedFlux,
-    const SourceOfNode&             sourceOfNode,
-    double                          timeStepSize,
-    const TeamWorkers&              workers = TeamWorkers{}
+    StoragePrecision* NOALIAS cellState,
+    ComputePrecision* NOALIAS timeAveragedFlux,
+    const SourceOfNode&       sourceOfNode,
+    double                    timeStepSize,
+    const TeamWorkers&        workers = TeamWorkers{}
   );
 };
 
 /**
  * The numbers of cells of one predictor sweep whose Picard iteration diverged or stopped at its
- * sweep limit.
+ * sweep limit, and the smallest slot of a diverged cell. firstDivergedCell is -1 without a diverged
+ * cell.
  */
 struct exahype2::dg::ader::PredictionCounts final {
   using ValueType = exahype2::dg::ader::PredictionCounts;
 
   int divergedCells{0};
   int unconvergedCells{0};
+  int firstDivergedCell{-1};
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType identity();
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType combine(ValueType left, ValueType right);
@@ -95,7 +120,8 @@ struct exahype2::dg::ader::PredictionCounts final {
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename DivergenceMarks>
 struct exahype2::dg::ader::PredictCells final {
-  using CellLayout = exahype2::dg::PaddedLayout<Derived>;
+  using Kernel     = exahype2::dg::ader::Predictor<Derived, ComputePrecision>;
+  using CellLayout = typename Kernel::CellLayout;
 
   static constexpr bool HasLimiter = not std::is_empty_v<DivergenceMarks>;
 
@@ -105,19 +131,17 @@ struct exahype2::dg::ader::PredictCells final {
 
   peano4::CellConnectivity                    cellConnectivity{};
   tarch::Span<const int>                      cells{};
-  int                                         numberOfTeams{0};
+  int                                         numberOfTeams{1};
   int                                         threadsPerCell{1};
   typename CellPool::View                     solution{};
   typename StatePool::View                    faceStates{};
   typename FluxPool::View                     faceFluxes{};
+  DivergenceMarks                             divergenceMarks{};
   exahype2::dg::BasisTables<ComputePrecision> tables{};
   const double*                               pointSourceLocations{nullptr};
-  ComputePrecision*                           predictorScratch{nullptr};
-  int                                         predictorScratchSize{0};
-  int                                         predictorScratchChunks{0};
-  DivergenceMarks                             divergenceMarks{};
   double                                      timeStamp{0.0};
   double                                      timeStepSize{0.0};
+  ComputePrecision*                           scratch{nullptr};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,

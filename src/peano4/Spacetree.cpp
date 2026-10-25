@@ -1035,8 +1035,8 @@ peano4::Spacetree::addExchangedFace(const int rank, const int face, const int si
 
 /**
  * Derives every face of the local cells with its kind and registers one level jump per level
- * between a hanging face and its coarse face. A face this rank and a neighbour rank both hold enters
- * the exchange list with the side this rank owns.
+ * between a hanging face and its coarse face. A face that this rank and a neighbour rank both store
+ * enters the exchange list with the side this rank owns.
  */
 void
 peano4::Spacetree::deriveFaces(const std::vector<CellRecord>& records) {
@@ -1323,6 +1323,7 @@ peano4::Spacetree::assembleCellConnectivities() {
     cellConnectivity._cellCurveIndex     = _arrays.cellCurveIndex.data();
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       cellConnectivity._domainOffset[axis] = _domainOffset(axis);
+      cellConnectivity._domainCentre[axis] = _domainOffset(axis) + 0.5 * _domainWidth(axis);
     }
     cellConnectivity._deviceTwin = nullptr;
   };

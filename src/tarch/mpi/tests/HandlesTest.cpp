@@ -38,7 +38,7 @@ tarch::mpi::tests::HandlesTest::HandlesTest() :
 void
 tarch::mpi::tests::HandlesTest::run() {
   testMethod(testASplitByParityNumbersTheRanksOfEachHalf);
-  testMethod(testADuplicateHoldsTheSameRanksAndCommunicates);
+  testMethod(testADuplicateContainsTheSameRanksAndCommunicates);
   testMethod(testTheTagUpperBoundIsAnAttribute);
   testMethod(testAnInfoObjectIsCreatedAndFreed);
   testMethod(testARecordTypeAndOperationReduceRecords);
@@ -85,7 +85,7 @@ tarch::mpi::tests::HandlesTest::testASplitByParityNumbersTheRanksOfEachHalf() {
  * over it.
  */
 void
-tarch::mpi::tests::HandlesTest::testADuplicateHoldsTheSameRanksAndCommunicates() {
+tarch::mpi::tests::HandlesTest::testADuplicateContainsTheSameRanksAndCommunicates() {
   const auto& rank = tarch::mpi::Rank::getInstance();
 
   MPI_Comm duplicate = MPI_COMM_NULL;

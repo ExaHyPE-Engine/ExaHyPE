@@ -16,7 +16,7 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * Exchanges the faces this rank and a neighbour rank both hold. post() sends the half of a face
+ * Exchanges the faces that both this rank and a neighbour rank store. post() sends the half of a face
  * chunk that this rank owns and wait() writes the half of the neighbour. The buffers use the memory
  * location of the pool.
  */

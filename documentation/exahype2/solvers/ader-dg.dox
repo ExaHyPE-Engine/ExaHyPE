@@ -13,8 +13,8 @@ to the faces, solves the face Riemann problems, and corrects the cell solution.
 
 The predictor uses the cell polynomial to form a space-time approximation. It
 writes the time-averaged solution and flux onto the cell's own half of every
-face. Once both halves of a face hold their traces, the Riemann solver
-produces the numerical flux of the face, which the corrector adds to the cell.
+face. Once both halves of a face contain their traces, the Riemann solver
+computes the numerical flux of the face. The corrector adds this flux to the cell.
 
 For a linear PDE, the face contribution can be integrated in time before its
 spatial projection. This avoids a space-time face representation in the

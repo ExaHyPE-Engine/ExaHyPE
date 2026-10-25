@@ -32,10 +32,10 @@ max_eigenvalue = r"""
   tests::exahype2::aderdg::grmhd::multiplyMatrixVector(gCov, bContr, bCov);
 
   // The comoving magnetic field b has b^2 = B^2 (1 - v^2) + (v B)^2.
-  const double v2                          = vContr[0] * vCov[0] + vContr[1] * vCov[1] + vContr[2] * vCov[2];
+  const double v2                          = tests::exahype2::aderdg::grmhd::dotProduct(vContr, vCov);
   const double inverseLorentzFactorSquared = 1.0 - v2;
-  const double b2                          = bContr[0] * bCov[0] + bContr[1] * bCov[1] + bContr[2] * bCov[2];
-  const double vDotB                       = vContr[0] * bCov[0] + vContr[1] * bCov[1] + vContr[2] * bCov[2];
+  const double b2                          = tests::exahype2::aderdg::grmhd::dotProduct(bContr, bCov);
+  const double vDotB                       = tests::exahype2::aderdg::grmhd::dotProduct(vContr, bCov);
   const double comovingB2                  = b2 * inverseLorentzFactorSquared + vDotB * vDotB;
 
   const double enthalpyFactor           = AdiabaticIndex / (AdiabaticIndex - 1.0);
@@ -102,21 +102,14 @@ flux = r"""
   double bCov[3];
   tests::exahype2::aderdg::grmhd::multiplyMatrixVector(gCov, bContr, bCov);
 
-  const double vCrossBCov[3] = {
-    rootDeterminant * (vContr[1] * bContr[2] - vContr[2] * bContr[1]),
-    rootDeterminant * (vContr[2] * bContr[0] - vContr[0] * bContr[2]),
-    rootDeterminant * (vContr[0] * bContr[1] - vContr[1] * bContr[0])
-  };
+  double vCrossBCov[3];
+  double vCrossBContr[3];
+  tests::exahype2::aderdg::grmhd::crossProduct(vContr, bContr, rootDeterminant, vCrossBCov);
+  tests::exahype2::aderdg::grmhd::crossProduct(vCov, bCov, inverseRootDeterminant, vCrossBContr);
 
-  const double vCrossBContr[3] = {
-    inverseRootDeterminant * (vCov[1] * bCov[2] - vCov[2] * bCov[1]),
-    inverseRootDeterminant * (vCov[2] * bCov[0] - vCov[0] * bCov[2]),
-    inverseRootDeterminant * (vCov[0] * bCov[1] - vCov[1] * bCov[0])
-  };
-
-  const double v2 = vContr[0] * vCov[0] + vContr[1] * vCov[1] + vContr[2] * vCov[2];
-  const double e2 = vCrossBContr[0] * vCrossBCov[0] + vCrossBContr[1] * vCrossBCov[1] + vCrossBContr[2] * vCrossBCov[2];
-  const double b2 = bContr[0] * bCov[0] + bContr[1] * bCov[1] + bContr[2] * bCov[2];
+  const double v2 = tests::exahype2::aderdg::grmhd::dotProduct(vContr, vCov);
+  const double e2 = tests::exahype2::aderdg::grmhd::dotProduct(vCrossBContr, vCrossBCov);
+  const double b2 = tests::exahype2::aderdg::grmhd::dotProduct(bContr, bCov);
 
   const double electromagneticEnergy = 0.5 * (b2 + e2);
   const double lorentzFactor         = 1.0 / std::sqrt(1.0 - v2);
@@ -173,7 +166,7 @@ flux = r"""
       assertion(false, normal);
   }
 
-  // Q carries the fluid values multiplied by the root of the metric determinant.
+  // Q stores the fluid values multiplied by the root of the metric determinant.
   for (int i = Shortcuts::rho; i <= Shortcuts::E; i++) {
     F[i] = lapse * F[i] - shift[normal] * Q[i];
   }
@@ -217,21 +210,14 @@ ncp = r"""
   double sContr[3];
   tests::exahype2::aderdg::grmhd::multiplyMatrixVector(gContr, &Q[Shortcuts::vel], sContr);
 
-  const double vCrossBCov[3] = {
-    rootDeterminant * (vContr[1] * bContr[2] - vContr[2] * bContr[1]),
-    rootDeterminant * (vContr[2] * bContr[0] - vContr[0] * bContr[2]),
-    rootDeterminant * (vContr[0] * bContr[1] - vContr[1] * bContr[0])
-  };
+  double vCrossBCov[3];
+  double vCrossBContr[3];
+  tests::exahype2::aderdg::grmhd::crossProduct(vContr, bContr, rootDeterminant, vCrossBCov);
+  tests::exahype2::aderdg::grmhd::crossProduct(vCov, bCov, inverseRootDeterminant, vCrossBContr);
 
-  const double vCrossBContr[3] = {
-    inverseRootDeterminant * (vCov[1] * bCov[2] - vCov[2] * bCov[1]),
-    inverseRootDeterminant * (vCov[2] * bCov[0] - vCov[0] * bCov[2]),
-    inverseRootDeterminant * (vCov[0] * bCov[1] - vCov[1] * bCov[0])
-  };
-
-  const double v2 = vContr[0] * vCov[0] + vContr[1] * vCov[1] + vContr[2] * vCov[2];
-  const double e2 = vCrossBContr[0] * vCrossBCov[0] + vCrossBContr[1] * vCrossBCov[1] + vCrossBContr[2] * vCrossBCov[2];
-  const double b2 = bContr[0] * bCov[0] + bContr[1] * bCov[1] + bContr[2] * bCov[2];
+  const double v2 = tests::exahype2::aderdg::grmhd::dotProduct(vContr, vCov);
+  const double e2 = tests::exahype2::aderdg::grmhd::dotProduct(vCrossBContr, vCrossBCov);
+  const double b2 = tests::exahype2::aderdg::grmhd::dotProduct(bContr, bCov);
 
   const double electromagneticEnergy = 0.5 * (b2 + e2);
   const double lorentzFactor         = 1.0 / std::sqrt(1.0 - v2);
@@ -245,28 +231,42 @@ ncp = r"""
     {0., 0., 1.}
   };
 
-  // The stress terms run over the six components of the symmetric metric in the order of gij.
-  int metricIndex = 0;
+  // The ten terms of the momentum along normal and of the energy add in fixed point. A permutation
+  // of the axes then adds the same terms in another order and returns the same bits.
+  constexpr int NumberOfTerms = 10;
+  double        momentumTerms[NumberOfTerms];
+  double        energyTerms[NumberOfTerms];
+  int           term = 0;
   for (int i = 0; i < 3; i++) {
     const double stressMixed = scaledEnthalpy * vCov[i] * vContr[normal] - vCrossBCov[i] * vCrossBContr[normal]
                              - bCov[i] * bContr[normal] + (p + electromagneticEnergy) * kroneckerDelta[i][normal];
-    BTimesDeltaQ[Shortcuts::vel + normal] -= Q[Shortcuts::vel + i] * deltaQ[Shortcuts::shift + i];
-    BTimesDeltaQ[Shortcuts::E] -= rootDeterminant * stressMixed * deltaQ[Shortcuts::shift + i];
+    momentumTerms[term] = -Q[Shortcuts::vel + i] * deltaQ[Shortcuts::shift + i];
+    energyTerms[term]   = -rootDeterminant * stressMixed * deltaQ[Shortcuts::shift + i];
+    term++;
+  }
 
+  // The stress terms run over the six components of the symmetric metric in the order of gij.
+  int metricIndex = 0;
+  for (int i = 0; i < 3; i++) {
     for (int j = i; j < 3; j++) {
-      double stressContr = scaledEnthalpy * vContr[i] * vContr[j] - vCrossBContr[i] * vCrossBContr[j]
-                         - bContr[i] * bContr[j] + (p + electromagneticEnergy) * gContr[i][j];
+      double stressContr = tarch::la::productInOrderOfMagnitude(scaledEnthalpy, vContr[i], vContr[j])
+                         - vCrossBContr[i] * vCrossBContr[j] - bContr[i] * bContr[j]
+                         + (p + electromagneticEnergy) * gContr[i][j];
       if (i != j) {
         stressContr = 2.0 * stressContr;
       }
-      BTimesDeltaQ[Shortcuts::vel + normal] -= 0.5 * rootDeterminant * lapse * stressContr * deltaQ[Shortcuts::gij + metricIndex];
-      BTimesDeltaQ[Shortcuts::E] -= 0.5 * rootDeterminant * stressContr * shift[normal] * deltaQ[Shortcuts::gij + metricIndex];
+      momentumTerms[term] = -0.5 * rootDeterminant * lapse * stressContr * deltaQ[Shortcuts::gij + metricIndex];
+      energyTerms[term]   = -0.5 * rootDeterminant * stressContr * shift[normal] * deltaQ[Shortcuts::gij + metricIndex];
+      term++;
       metricIndex++;
     }
   }
 
-  BTimesDeltaQ[Shortcuts::vel + normal] += (Q[Shortcuts::E] + Q[Shortcuts::rho]) * deltaQ[Shortcuts::lapse];
-  BTimesDeltaQ[Shortcuts::E] += sContr[normal] * deltaQ[Shortcuts::lapse];
+  momentumTerms[term] = (Q[Shortcuts::E] + Q[Shortcuts::rho]) * deltaQ[Shortcuts::lapse];
+  energyTerms[term]   = sContr[normal] * deltaQ[Shortcuts::lapse];
+  assertion(term + 1 == NumberOfTerms, term);
+  BTimesDeltaQ[Shortcuts::vel + normal] = tarch::la::sumInFixedPoint(momentumTerms, NumberOfTerms);
+  BTimesDeltaQ[Shortcuts::E]            = tarch::la::sumInFixedPoint(energyTerms, NumberOfTerms);
   BTimesDeltaQ[Shortcuts::B + 0] = lapse * rootDeterminant * gContr[0][normal] * deltaQ[Shortcuts::psi]
                                  - Q[Shortcuts::shift + 0] * deltaQ[Shortcuts::B + normal];
   BTimesDeltaQ[Shortcuts::B + 1] = lapse * rootDeterminant * gContr[1][normal] * deltaQ[Shortcuts::psi]

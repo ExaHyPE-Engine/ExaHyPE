@@ -46,8 +46,8 @@ class TPV6(DynamicRuptureScenario):
 
     def initial_conditions(self):
         return """
-        //Look on Curve_grid if x coord is >=20
-        if(x[0] >= 20.0)
+        constexpr double EdgeTolerance = 1e-8;
+        if (x[0] >= 20.0 - EdgeTolerance)
         {   //Far Side
             Q[Shortcuts::rho] = 2.225;
             Q[Shortcuts::cp ] = 3.75;
@@ -70,7 +70,9 @@ class TPV6(DynamicRuptureScenario):
       syz = 0;
     """,
         "n_yz": """
-      if ((6.0 <= x[1]) && (x[1] <= 9.0) && (18.5 <= x[2]) && (x[2] <= 21.5)) {
+      constexpr double EdgeTolerance = 1e-8;
+      if ((6.0 - EdgeTolerance <= x[1]) and (x[1] <= 9.0 + EdgeTolerance) and (18.5 - EdgeTolerance <= x[2])
+          and (x[2] <= 21.5 + EdgeTolerance)) {
          return 11.6;
       }
       return 0.0;""",

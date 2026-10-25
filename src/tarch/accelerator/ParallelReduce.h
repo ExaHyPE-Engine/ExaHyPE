@@ -47,8 +47,8 @@ namespace tarch::accelerator {
   void parallelReduce(const TeamRange& range, Functor functor, Reducer reducer);
 #endif
 
-#if (not defined(PEANO_WITH_GPU_BACKEND_CUDA) and not defined(PEANO_WITH_GPU_BACKEND_HIP)) or defined(__CUDACC__) \
-  or defined(__HIPCC__)
+  // Every translation unit of every backend reduces over a team. A host translation unit of the
+  // CUDA and HIP backends runs a team on one thread.
   TARGET_DECLARE
   template <typename Reducer>
   INLINE_METHOD GPU_CALLABLE_METHOD void reduceOverTeam(
@@ -57,7 +57,6 @@ namespace tarch::accelerator {
     Reducer                     reducer
   );
   TARGET_DECLARE_END
-#endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
   template <typename Reducer>
@@ -79,13 +78,9 @@ namespace tarch::accelerator {
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #include "tarch/accelerator/kokkos/ParallelReduce.cpph"
 #elif defined(PEANO_WITH_GPU_BACKEND_CUDA)
-#if defined(__CUDACC__)
 #include "tarch/accelerator/cuda/ParallelReduce.cpph"
-#endif
 #elif defined(PEANO_WITH_GPU_BACKEND_HIP)
-#if defined(__HIPCC__)
 #include "tarch/accelerator/hip/ParallelReduce.cpph"
-#endif
 #elif defined(PEANO_WITH_GPU_BACKEND_SYCL)
 #include "tarch/accelerator/sycl/ParallelReduce.cpph"
 #elif defined(PEANO_WITH_GPU_BACKEND_OMPT)

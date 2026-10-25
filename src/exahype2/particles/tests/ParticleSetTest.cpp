@@ -14,6 +14,7 @@
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Scalar.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
@@ -124,7 +125,8 @@ exahype2::particles::tests::ParticleSetTest::ParticleSetTest() :
 void
 exahype2::particles::tests::ParticleSetTest::run() {
   testMethod(testInsertKeepsTheParticlesOfTheRank);
-  testMethod(testAPositionOnAFaceBelongsToTheLowerCell);
+  testMethod(testALatticeIndexOnAFacePicksTheCellTowardsTheCentre);
+  testMethod(testAPositionOnAFaceBelongsToTheCellTowardsTheCentre);
   testMethod(testRelocateMovesAParticleToTheCellThatContainsIt);
   testMethod(testInsertAndRelocateCountTheParticlesOfAllRanks);
   testMethod(testUploadAndDownloadCarryTheValues);
@@ -136,7 +138,7 @@ exahype2::particles::tests::ParticleSetTest::run() {
 
 /**
  * relocateParticlesMovedOutOfCells() puts a particle that a kernel moved and marked into the cell
- * that holds it and keeps the device values of the other particles.
+ * that contains it and keeps the device values of the other particles.
  */
 void
 exahype2::particles::tests::ParticleSetTest::testAParticleMarkedOnTheDeviceMovesToTheCellThatContainsIt() {
@@ -221,18 +223,66 @@ exahype2::particles::tests::ParticleSetTest::testInsertKeepsTheParticlesOfTheRan
 }
 
 /**
- * A position on a face belongs to the lower cell and a position on a domain wall to the cell at the wall.
+ * A coordinate on or next to a face belongs to the neighbour of the face on the side of the lattice
+ * centre and a coordinate on the face through the centre to the cell below that face.
  */
 void
-exahype2::particles::tests::ParticleSetTest::testAPositionOnAFaceBelongsToTheLowerCell() {
-  const auto&  cellConnectivity = buildGrid();
-  const double width            = 1.0 / peano4::power(peano4::SubdivisionFactor, Depth);
+exahype2::particles::tests::ParticleSetTest::testALatticeIndexOnAFacePicksTheCellTowardsTheCentre() {
+  constexpr double Width = 0.25;
+  constexpr double Band  = 0.5 * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
+  for (const int cellsPerAxis : {3, 4}) {
+    for (int face = 0; face <= cellsPerAxis; face++) {
+      const int cellTowardsTheCentre = 2 * face < cellsPerAxis ? face : face - 1;
+      for (const double shift : {-Band, 0.0, Band}) {
+        validateEqualsWithParams3(
+          exahype2::particles::getLatticeIndexOf(face * Width + shift, 0.0, Width, cellsPerAxis),
+          cellTowardsTheCentre,
+          cellsPerAxis,
+          face,
+          shift
+        );
+      }
+      if (2 * face != cellsPerAxis) {
+        validateEqualsWithParams2(
+          exahype2::particles::getLatticeIndexOf((cellsPerAxis - face) * Width, 0.0, Width, cellsPerAxis),
+          cellsPerAxis - 1 - cellTowardsTheCentre,
+          cellsPerAxis,
+          face
+        );
+      }
+    }
+    for (int cell = 0; cell < cellsPerAxis; cell++) {
+      validateEqualsWithParams2(
+        exahype2::particles::getLatticeIndexOf((cell + 0.5) * Width, 0.0, Width, cellsPerAxis),
+        cell,
+        cellsPerAxis,
+        cell
+      );
+    }
+  }
+}
 
-  tarch::la::Vector<DIMENSIONS, double> onFace(0.5 * width);
-  onFace(0) = 2.0 * width;
-  tarch::la::Vector<DIMENSIONS, int> lowerLattice(0);
-  lowerLattice(0) = 1;
-  validateEquals(Set::getSlotAt(cellConnectivity, onFace), getCellAt(lowerLattice));
+/**
+ * A position on a face belongs to the cell on the side of the domain centre and a position on a
+ * domain wall to the cell at the wall.
+ */
+void
+exahype2::particles::tests::ParticleSetTest::testAPositionOnAFaceBelongsToTheCellTowardsTheCentre() {
+  const auto&  cellConnectivity = buildGrid();
+  const int    cellsPerAxis     = peano4::power(peano4::SubdivisionFactor, Depth);
+  const double width            = 1.0 / cellsPerAxis;
+
+  tarch::la::Vector<DIMENSIONS, double> onLowerFace(0.5 * width);
+  onLowerFace(0) = width;
+  tarch::la::Vector<DIMENSIONS, int> secondLattice(0);
+  secondLattice(0) = 1;
+  validateEquals(Set::getSlotAt(cellConnectivity, onLowerFace), getCellAt(secondLattice));
+
+  tarch::la::Vector<DIMENSIONS, double> onUpperFace(0.5 * width);
+  onUpperFace(0) = (cellsPerAxis - 1) * width;
+  tarch::la::Vector<DIMENSIONS, int> secondLastLattice(0);
+  secondLastLattice(0) = cellsPerAxis - 2;
+  validateEquals(Set::getSlotAt(cellConnectivity, onUpperFace), getCellAt(secondLastLattice));
 
   tarch::la::Vector<DIMENSIONS, double> onWall(0.5 * width);
   onWall(0) = 0.0;
@@ -241,7 +291,7 @@ exahype2::particles::tests::ParticleSetTest::testAPositionOnAFaceBelongsToTheLow
   tarch::la::Vector<DIMENSIONS, double> onUpperWall(0.5 * width);
   onUpperWall(0) = 1.0;
   tarch::la::Vector<DIMENSIONS, int> lastLattice(0);
-  lastLattice(0) = peano4::power(peano4::SubdivisionFactor, Depth) - 1;
+  lastLattice(0) = cellsPerAxis - 1;
   validateEquals(Set::getSlotAt(cellConnectivity, onUpperWall), getCellAt(lastLattice));
 
   tarch::la::Vector<DIMENSIONS, double> outside(0.5 * width);

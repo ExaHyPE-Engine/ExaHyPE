@@ -332,10 +332,10 @@ void
 peano4::tests::SpacetreeTest::testARankWithoutCellsReportsNoLevel() {
   peano4::tests::buildRegularGrid(0);
   const auto& statistics = peano4::Spacetree::getInstance().getStatistics();
-  const bool  holdsCells = not peano4::Spacetree::getInstance().getCellConnectivity().getCells().isEmpty();
+  const bool  ownsCells  = not peano4::Spacetree::getInstance().getCellConnectivity().getCells().isEmpty();
 
   validateEquals(peano4::tests::getGlobalSumOf(statistics.numberOfCells), 1);
-  validateEquals(statistics.minimumLevel, holdsCells ? 0 : std::numeric_limits<int>::max());
+  validateEquals(statistics.minimumLevel, ownsCells ? 0 : std::numeric_limits<int>::max());
   validateEquals(statistics.maximumLevel, 0);
 }
 

@@ -12,7 +12,7 @@ namespace {
   constexpr double Gamma         = 1.4;
   constexpr double ShockPosition = 0.111;
   // A high-order candidate can reach vacuum at a shock before the limiter rejects it. The limiter
-  // rejects every density up to DensityFloor, so the floor changes no admissible state.
+  // rejects every density up to DensityFloor.
   constexpr double DensityFloor = 1.0e-12;
 
   double momentumSquared(const double* const Q) {
@@ -92,8 +92,8 @@ tutorials::exahype2::limiting::ADERDGSolver::maxEigenvalue(
 ) {
   const double inverseDensity = 1.0 / std::max(Q[Shortcuts::rho], DensityFloor);
   const double pressure       = (Gamma - 1.0) * (Q[Shortcuts::E] - 0.5 * inverseDensity * momentumSquared(Q));
-  // The solver computes the time step size before the limiter checks the cell, so the eigenvalue of a
-  // candidate with negative pressure stays finite.
+  // The solver computes the time step size before the limiter checks the cell. The eigenvalue of a
+  // candidate with negative pressure has to stay finite.
   const double soundSpeed     = std::sqrt(std::abs(Gamma * pressure * inverseDensity));
   const double normalVelocity = Q[Shortcuts::j + normal] * inverseDensity;
 

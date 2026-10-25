@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ErrorMeasurement.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 
@@ -71,9 +72,9 @@ exahype2::ErrorMeasurement::record(const ErrorSums& localSums, const double time
     rank.getCommunicator()
   );
 
-  ErrorSums globalSums;
-  for (const ErrorSums& sumsOfRank : sumsOfRanks) {
-    globalSums.merge(sumsOfRank);
+  ErrorSums globalSums = sumsOfRanks.front();
+  for (std::size_t sumsOfRank = 1; sumsOfRank < sumsOfRanks.size(); sumsOfRank++) {
+    globalSums.merge(sumsOfRanks[sumsOfRank]);
   }
 
   const std::array<double, NumberOfNorms> norms{
@@ -83,6 +84,28 @@ exahype2::ErrorMeasurement::record(const ErrorSums& localSums, const double time
   };
   _database.addGlobalSnapshot(timeStamp, NumberOfNorms, norms.data());
   return norms;
+}
+
+/**
+ * Returns sums without terms whose bounds are the largest errors over all ranks. Every rank calls
+ * this function collectively and receives the same bounds.
+ */
+exahype2::ErrorSums
+exahype2::ErrorMeasurement::getEmptySumsOfAllRanks(const LargestErrors& largestErrors) {
+  const double localLargest[2]  = {largestErrors.error, largestErrors.squaredError};
+  double       globalLargest[2] = {0.0, 0.0};
+  tarch::mpi::allreduce(
+    localLargest,
+    globalLargest,
+    2,
+    MPI_DOUBLE,
+    MPI_MAX,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  ErrorSums sums;
+  sums.summedError.clear(globalLargest[0]);
+  sums.summedSquaredError.clear(globalLargest[1]);
+  return sums;
 }
 
 void

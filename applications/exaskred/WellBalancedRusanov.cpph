@@ -4,7 +4,7 @@
 /**
  * Replaces the physical fluxes FL and FR of the nodes of one Galerkin face by a well-balanced
  * Rusanov flux and returns the largest wave speed of the nodes. The dissipation acts on the
- * free-surface jump, so a resting layer with a flat free surface stays at rest over any terrain. The
+ * free-surface jump. A resting layer with a flat free surface then stays at rest over any terrain. The
  * callable maxEigenvalue(Q, x, h, t, dt, normal) returns the wave speed of one state and
  * interfaceGravity(QL, QR) the gravity between two states.
  */

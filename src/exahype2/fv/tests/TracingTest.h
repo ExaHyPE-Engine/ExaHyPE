@@ -11,17 +11,18 @@ namespace exahype2::fv::tests {
 class exahype2::fv::tests::TracingTest final : public tarch::tests::TestCase {
 public:
   TracingTest();
-  TracingTest(const TracingTest&)            = delete;
-  TracingTest(TracingTest&&)                 = delete;
-  TracingTest& operator=(const TracingTest&) = delete;
-  TracingTest& operator=(TracingTest&&)      = delete;
-  ~TracingTest() override                    = default;
+  TracingTest(const TracingTest& other)            = delete;
+  TracingTest(TracingTest&& other)                 = delete;
+  TracingTest& operator=(const TracingTest& other) = delete;
+  TracingTest& operator=(TracingTest&& other)      = delete;
+  ~TracingTest() override                          = default;
 
   void run() override;
 
 private:
   void testPiecewiseConstantReadsTheVolumeThatContainsThePosition();
   void testPiecewiseLinearReproducesALinearField();
+  void testPiecewiseLinearReturnsTheSameBitsAtMirroredPositions();
   void testInterpolationOnOneVolumePatches();
   void testInterpolationOnRectangularPatches();
   void testClampIntoPatchProjectsOntoTheVolumeCentres();

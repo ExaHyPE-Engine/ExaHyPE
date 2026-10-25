@@ -51,8 +51,8 @@ struct peano4::LevelJump final {
 };
 
 /**
- * One face this rank and a neighbour rank both hold. The member side is the side of the cell this
- * rank owns.
+ * One face that this rank and a neighbour rank both store. The member side is the side of the cell
+ * this rank owns.
  */
 struct peano4::ExchangedFace final {
   int face{-1};
@@ -69,7 +69,7 @@ struct peano4::Neighbour final {
 };
 
 /**
- * Holds the cells one rank owns, numbered by slots, with their faces, their level jumps and the
+ * Stores the cells one rank owns, numbered by slots, with their faces, their level jumps and the
  * faces the rank exchanges with neighbour ranks. A regrid keeps the slot of every surviving cell and
  * renumbers the faces. The lists are sorted by adjacency and then by level or kind and a caller
  * loops over one span per group.
@@ -132,6 +132,10 @@ public:
   ) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getFaceWidth(int face, int axis) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getFaceCell(int face, int side) const noexcept;
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getCellCentreBesideFace(
+    int face,
+    int side
+  ) const noexcept;
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getWidthOfLevel(int level, int axis) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
@@ -144,6 +148,11 @@ private:
 
   [[nodiscard]] INLINE_METHOD int getRangeIndexOfLevel(Adjacency adjacency, int level) const noexcept;
   [[nodiscard]] INLINE_METHOD int getRangeIndexOfKind(Adjacency adjacency, FaceKind kind) const noexcept;
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getPositionOfLatticeCoordinate(
+    double latticeCoordinate,
+    int    level,
+    int    axis
+  ) const noexcept;
 
   int _numberOfSlots{0};
   int _numberOfFaces{0};
@@ -176,6 +185,7 @@ private:
 
   const double* _widthOfLevel{nullptr};
   double        _domainOffset[DIMENSIONS]{};
+  double        _domainCentre[DIMENSIONS]{};
 
   const CellConnectivity* _deviceTwin{nullptr};
 };

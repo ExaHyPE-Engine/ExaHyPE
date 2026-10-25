@@ -86,7 +86,7 @@ class RenderCurveTest(unittest.TestCase):
         )
 
     def test_the_cells_of_one_patch_join_into_one_centre(self):
-        # The left and the right column form one patch each; the right one comes first on the curve.
+        # The left and the right column form one patch each. The right one comes first on the curve.
         snapshot = make_grid_snapshot(2, [0, 0, 0, 0], curve_indices=[7, 3, 7, 3])
         centres = patch_centres_along_curve(snapshot, cell_polygons(snapshot))
         np.testing.assert_allclose(centres, [[0.75, 0.5], [0.25, 0.5]])

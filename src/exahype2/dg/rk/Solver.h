@@ -51,12 +51,12 @@ public:
 
   using EstimatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  Solver()                         = delete;
-  Solver(const Solver&)            = delete;
-  Solver(Solver&&)                 = delete;
-  Solver& operator=(const Solver&) = delete;
-  Solver& operator=(Solver&&)      = delete;
-  ~Solver()                        = default;
+  Solver()                               = delete;
+  Solver(const Solver& other)            = delete;
+  Solver(Solver&& other)                 = delete;
+  Solver& operator=(const Solver& other) = delete;
+  Solver& operator=(Solver&& other)      = delete;
+  ~Solver()                              = default;
 
   INLINE_METHOD Solver(
     double                                           timeStepFactor,
@@ -87,12 +87,6 @@ private:
   static constexpr int NumberOfRungeKuttaStages = Stage::Tableau::Stages;
 
   INLINE_METHOD void openStage(
-    const peano4::CellConnectivity& cellConnectivity,
-    peano4::Adjacency               adjacency,
-    int                             stage,
-    double                          timeStepSize
-  );
-  INLINE_METHOD void addFaceIntegrals(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
     int                             stage,

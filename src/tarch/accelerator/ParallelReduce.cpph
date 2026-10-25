@@ -70,12 +70,15 @@ namespace tarch::accelerator {
   /**
    * Reduces over the range on the host threads. The partial values merge in an order that depends
    * on the thread count alone. Inside a parallel region the time per item of the previous call with
-   * this functor type sets the number of tasks.
+   * this functor type sets the number of tasks. An empty range returns at once.
    */
   template <typename Reducer, typename Functor>
   INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     using ValueType = typename Reducer::ValueType;
+    if (range.n == 0) {
+      return;
+    }
     if (omp_in_parallel()) {
       static std::atomic<double> secondsPerItem{0.0};
       const auto                 startTime       = std::chrono::steady_clock::now();

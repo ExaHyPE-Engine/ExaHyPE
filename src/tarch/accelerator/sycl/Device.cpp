@@ -76,7 +76,7 @@ tarch::accelerator::Device::getNumberOfDevices() const {
 
 /**
  * Returns the work items the current device runs at once. These are its compute units times the
- * largest work group one compute unit holds.
+ * largest work group of one compute unit.
  */
 int
 tarch::accelerator::Device::getNumberOfConcurrentThreads() const {

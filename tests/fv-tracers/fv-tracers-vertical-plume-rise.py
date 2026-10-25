@@ -92,6 +92,9 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The vertical plume tracer test runs in 2D only.")
+
 initial_conditions = """
   Q[Shortcuts::rho]       = 1.0;
   Q[Shortcuts::rhoU + 0]  = 0.0;
@@ -142,7 +145,7 @@ fv_solver = exahype2.fv.Solver(
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 2, "rhoE": 1},
     auxiliary_variables=0,
-    time_stepping=exahype2.TimeStepping.Fixed(0.01 / (args.degrees_of_freedom**0.5)),
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
     scheme=exahype2.fv.Godunov(),
 )
 

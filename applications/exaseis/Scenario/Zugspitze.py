@@ -8,7 +8,7 @@ import os
 class Zugspitze(Scenario):
     """
     An area of 80 km by 80 km around the Zugspitze, whose topography scatters the waves at the
-    surface. The scenario has no analytical solution. Duru et al. use it in "A stable discontinuous
+    surface. The scenario defines no analytical solution. Duru et al. use it in "A stable discontinuous
     Galerkin method for linear elastodynamics in 3D geometrically complex elastic solids using
     physics based numerical fluxes" (https://doi.org/10.1016/j.cma.2021.114386).
     """
@@ -99,9 +99,9 @@ class Zugspitze(Scenario):
         # os.symlink() creates a dangling link for a missing source.
         if not os.path.exists(source):
             raise FileNotFoundError(
-                "The Zugspitze topography "
+                "The Zugspitze scenario reads the topography file '"
                 + source
-                + " is missing, so the scenario cannot be built."
+                + "'. The command 'git lfs pull' downloads it."
             )
 
         try:

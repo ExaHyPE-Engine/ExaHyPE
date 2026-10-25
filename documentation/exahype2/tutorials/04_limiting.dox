@@ -28,23 +28,22 @@ oscillations can drive the density or pressure negative and crash the run. The
 # The Equations
 
 We solve the 2D compressible Euler equations for density \f$\rho\f$, momentum
-\f$\rho \mathbf{u}\f$ and energy \f$E\f$. There is no source term. The conserved
-variables are addressed through the generated `Shortcuts` enum (`Shortcuts::rho`,
-`Shortcuts::j + 0/1`, `Shortcuts::E`), so the same indices work in both
-implementation files.
+\f$\rho \mathbf{u}\f$ and energy \f$E\f$ without a source term. The generated
+`Shortcuts` enum (`Shortcuts::rho`, `Shortcuts::j + 0/1`, `Shortcuts::E`) names
+the conserved variables. Both implementation files use the same indices.
 
 # The Configuration
 
 The domain is the box \f$[-1, 1]^2\f$. The bottom-left quadrant starts with
 \f$\rho = 0.125,\ p = 0.1\f$ and the rest of the box with \f$\rho = 1,\ p = 1\f$,
-both at rest. The outer state never changes during the run, so the boundaries are
-Dirichlet conditions that hold that initial outer state.
+both at rest. The outer state stays constant during the run. Dirichlet conditions
+at the boundaries keep that initial outer state.
 
 Limiting is a feature of the discontinuous Galerkin solver. We create the
 high-order `ADERDGSolver` and switch its limiter on with
 `add_subcell_limiter`. The subcell scheme a troubled cell falls back on evaluates
 the same flux and eigenvalue as the high-order scheme, and the terms
-`dmp_observables` and `physical_admissibility` hold the two tests:
+`dmp_observables` and `physical_admissibility` switch on the two tests:
 
     aderdg_solver = exahype2.dg.ader.Solver(
         name = "ADERDGSolver", order = 5, ...
@@ -56,30 +55,30 @@ the same flux and eigenvalue as the high-order scheme, and the terms
     aderdg_solver.add_subcell_limiter(
         exahype2.fv.Godunov(),
         number_of_dmp_observables = 4,
-        dmp_relaxation_parameter  = 0.01,
-        dmp_differences_scaling   = 0.03,
+        dmp_relaxation_parameter  = 1.0e-4,
+        dmp_differences_scaling   = 1.0e-3,
     )
 
 A cell is recomputed when either test rejects its candidate. The discrete maximum
 principle takes the observables written in `Limiter.cpp` and requires the
-candidate to stay inside the range the cell itself held one step earlier, widened
-by the `dmp_*` parameters. The troubled-cell test rejects any state that is not
-finite or whose density or pressure is not positive.
+candidate to stay inside the range that the cell and its neighbours had one step
+earlier, widened by the `dmp_*` parameters. The troubled-cell test rejects any
+state that is not finite or whose density or pressure is not positive.
 
 # The Implementation Files
 
-`ADERDGSolver.cpp` holds the Euler equations as a 2D Riemann problem. The subcell
+`ADERDGSolver.cpp` implements the Euler equations as a 2D Riemann problem. The subcell
 scheme a troubled cell falls back on evaluates these same terms. A density floor
 keeps the reciprocal finite when an oscillation briefly pushes a cell towards the
-vacuum, and the eigenvalue takes the magnitude of the pressure, so a candidate the
-limiter is about to reject still yields a finite time step:
+vacuum. The eigenvalue takes the magnitude of the pressure. A candidate that the
+limiter rejects then still yields a finite time step:
 
 @include tutorials/04_limiting/ADERDGSolver.cpp
 
-`Limiter.cpp` holds the two callbacks the limiter asks the solver for: the
+`Limiter.cpp` implements the two callbacks the limiter asks the solver for: the
 troubled-cell test, and the observables the discrete maximum principle bounds. The
-solver declares them only while the limiter is configured, so the notebook adds
-this file to the build only then:
+solver declares them only with a configured limiter. The notebook adds this file
+to the build only then:
 
 @include tutorials/04_limiting/Limiter.cpp
 
@@ -104,9 +103,9 @@ limiter keeps the solution physical (positive density and pressure) right throug
 these discontinuities, quietly swapping troubled ADER-DG cells for Finite Volume
 ones.
 
-The limiter also writes a `LimiterStatus` field beside the solution, so picking it
-in the dropdown shows which cells ran on the Finite Volume subgrid at each
-snapshot. Expect a thin band tracking the shocks and the contact.
+The limiter also writes a `LimiterStatus` field beside the solution. Pick it in the
+dropdown to see which cells ran on the Finite Volume subgrid at each snapshot.
+Expect a thin band tracking the shocks and the contact.
 
 # Why We Need the Limiter
 

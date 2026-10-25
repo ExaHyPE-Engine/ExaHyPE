@@ -87,6 +87,26 @@ struct exahype2::fv::reconstruction::Constant final {
     bool EvaluateCustomRiemann,
     bool EvaluateMaxEigenvalue,
     typename StoragePrecision,
+    typename ComputePrecision
+  >
+  using TeamTerms = std::conditional_t<
+    EvaluateCustomRiemann,
+    exahype2::fv::NoTermRing,
+    exahype2::fv::WaveSpeedsOfTeam<ComputePrecision>
+  >;
+
+  template <
+    typename SolverType,
+    int  NumberOfVolumesPerAxis,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateDiffusiveSource,
+    bool EvaluateCustomRiemann,
+    bool EvaluateMaxEigenvalue,
+    typename StoragePrecision,
     typename ComputePrecision,
     typename Terms
   >

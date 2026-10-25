@@ -69,6 +69,14 @@ namespace tarch::accelerator {
   // A team runs its range serially on the host. The barrier does nothing.
   INLINE_METHOD void teamBarrier([[maybe_unused]] const CpuTeam& team) {}
 
+  INLINE_METHOD bool isTrueInEveryThreadOfTeam([[maybe_unused]] const CpuTeam& team, const bool condition) {
+    return condition;
+  }
+
+  INLINE_METHOD bool isTrueInAnyThreadOfTeam([[maybe_unused]] const CpuTeam& team, const bool condition) {
+    return condition;
+  }
+
   template <typename Functor>
   INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     tarch::accelerator::parallelForOnHost(range, functor);

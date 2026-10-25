@@ -256,7 +256,7 @@ namespace applications::exahype2::exaskred::riemann {
         if (hMiddle + bRight > bLeft) {
           wetDryState = WetDryState::DryWetWallInundation;
         } else {
-          // The momentum is too small, so the dry side mirrors the wet state as a wall boundary.
+          // The momentum is too small to flood the dry side. The dry side mirrors the wet state as a wall.
           hLeft  = hRight;
           uLeft  = -uRight;
           huLeft = -huRight;
@@ -270,7 +270,7 @@ namespace applications::exahype2::exaskred::riemann {
         if (hMiddle + bLeft > bRight) {
           wetDryState = WetDryState::WetDryWallInundation;
         } else {
-          // The momentum is too small, so the dry side mirrors the wet state as a wall boundary.
+          // The momentum is too small to flood the dry side. The dry side mirrors the wet state as a wall.
           hRight  = hLeft;
           uRight  = -uLeft;
           huRight = -huLeft;
@@ -342,7 +342,7 @@ namespace applications::exahype2::exaskred::riemann {
       T lambdaStarHStarMinus = middleSpeeds[0];
       T lambdaStarHStarPlus  = middleSpeeds[1];
 
-      // A dry side has no characteristic speed, so its bound takes the remaining speeds only.
+      // The bound on the side of a dry state omits the characteristic speed of that state.
       T extEinfeldtSpeeds[2] = {0, 0};
       if (hLeft > hThreshold and hRight > hThreshold) {
         extEinfeldtSpeeds[0] = std::min(characteristicSpeeds[0], roeSpeeds[0]);
@@ -388,7 +388,7 @@ namespace applications::exahype2::exaskred::riemann {
          or riemannStructure == RiemannStructure::RarefactionRarefaction)
         and hMiddle > hThreshold
       ) {
-        // The barriers come from GeoClaw, since the literature gives no explicit bounds.
+        // The barriers come from GeoClaw.
         T rareBarrier[2] = {static_cast<T>(0.5), static_cast<T>(0.9)};
 
         // A transonic rarefaction in either wave family lowers the barrier.
@@ -595,7 +595,7 @@ namespace applications::exahype2::exaskred::riemann {
 
       // The flux waves follow George2008, extended as in Clawpack by the flux updates of the transverse component.
       if (wetDryState == WetDryState::WetDryWall) {
-        // A wall boundary sends zero ghost updates, so only the left-going wave contributes.
+        // A wall boundary sends zero ghost updates. Only the left-going wave contributes.
         fWaves[0][0] = beta[0] * eigenVectors[1][0];
         fWaves[1][0] = beta[0] * eigenVectors[2][0];
         fWaves[2][0] = beta[0] * eigenVectors[1][0];
@@ -607,7 +607,7 @@ namespace applications::exahype2::exaskred::riemann {
         waveSpeeds[0] = eigenValues[0];
         waveSpeeds[1] = waveSpeeds[2] = 0.0;
       } else if (wetDryState == WetDryState::DryWetWall) {
-        // A wall boundary sends zero ghost updates, so only the right-going wave contributes.
+        // A wall boundary sends zero ghost updates. Only the right-going wave contributes.
         fWaves[0][2] = beta[2] * eigenVectors[1][2];
         fWaves[1][2] = beta[2] * eigenVectors[2][2];
         fWaves[2][2] = beta[2] * eigenVectors[1][2];
@@ -704,8 +704,8 @@ namespace applications::exahype2::exaskred::riemann {
 
     T hLeft  = QL[Shortcuts::h];
     T hRight = QR[Shortcuts::h];
-    // The solver works in the frame aligned with the face normal, so hu is the momentum component
-    // along that normal and hv the transverse one.
+    // The solver works in the frame of the face normal. hu is the momentum component along that
+    // normal and hv the transverse one.
     T       huLeft         = QL[Shortcuts::hu + normal];
     T       huRight        = QR[Shortcuts::hu + normal];
     T       hvLeft         = QL[Shortcuts::hu + 1 - normal];

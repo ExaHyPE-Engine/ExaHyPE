@@ -48,7 +48,7 @@ tarch::accelerator::Device::init() {
 }
 
 /**
- * Synchronises and resets the device of this rank, the only device the rank holds a context on.
+ * Synchronises and resets the device of this rank. The rank creates a context on this device only.
  */
 void
 tarch::accelerator::Device::shutdown() {
@@ -78,7 +78,7 @@ tarch::accelerator::Device::getNumberOfDevices() const {
 
 /**
  * Returns the threads the current device runs at once. These are its multiprocessors times the
- * threads one multiprocessor holds.
+ * resident threads of one multiprocessor.
  */
 int
 tarch::accelerator::Device::getNumberOfConcurrentThreads() const {

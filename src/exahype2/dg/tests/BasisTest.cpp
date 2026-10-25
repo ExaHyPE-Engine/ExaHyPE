@@ -5,6 +5,7 @@
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/tests/TransferTestData.h"
 #include "peano4/CellConnectivity.h"
+#include "peano4/Constants.h"
 #include "peano4/Loop.h"
 #include "tarch/la/Vector.h"
 
@@ -169,7 +170,7 @@ namespace {
   constexpr double WalkPoints[]     = {0.25, 0.75};
   constexpr double WalkWeights[]    = {0.5, 0.5};
 
-  constexpr int NumberOfEntries     = 3;
+  constexpr int NumberOfEntries     = PEANO_WITH_SIMDLEN;
   constexpr int NumberOfTargetNodes = 4;
   constexpr int NumberOfSourceNodes = 2;
 
@@ -222,6 +223,145 @@ namespace {
   double getCubicValue(const double x) { return 1.0 + 2.0 * x - 3.0 * x * x + 4.0 * x * x * x; }
 
   using Setup = exahype2::dg::tests::TransferSetup;
+
+  constexpr int ProjectionInputDofs  = 3;
+  constexpr int ProjectionOutputDofs = 4;
+  constexpr int ProjectionValues     = 2;
+
+  using ProjectionMatrix = std::array<double, static_cast<std::size_t>(ProjectionInputDofs* ProjectionOutputDofs)>;
+
+  /**
+   * Returns a projection matrix that is its own mirror image and whose entries are not dyadic.
+   */
+  ProjectionMatrix getMirrorSymmetricProjection() {
+    const auto getTerm = [](const int inputDof, const int outputDof) {
+      return 0.13 * (inputDof + 1) * (outputDof + 2) + 0.07 / (inputDof + outputDof + 3);
+    };
+    ProjectionMatrix matrix{};
+    for (int inputDof = 0; inputDof < ProjectionInputDofs; inputDof++) {
+      for (int outputDof = 0; outputDof < ProjectionOutputDofs; outputDof++) {
+        matrix[static_cast<std::size_t>(inputDof * ProjectionOutputDofs + outputDof)] = getTerm(inputDof, outputDof)
+          + getTerm(ProjectionInputDofs - 1 - inputDof, ProjectionOutputDofs - 1 - outputDof);
+      }
+    }
+    return matrix;
+  }
+
+  /**
+   * Returns the position of value in a field of ProjectionValues values per degree of freedom and
+   * dofsPerAxis degrees of freedom along each of Dimensions axes after a swap of the axes first and
+   * second. A negative second reflects the axis first.
+   */
+  template <int Dimensions>
+  int getMovedValue(const int value, const int dofsPerAxis, const int first, const int second) {
+    const int entry = value % ProjectionValues;
+    int       rest  = value / ProjectionValues;
+    int       index[Dimensions];
+    for (int axis = 0; axis < Dimensions; axis++) {
+      index[axis] = rest % dofsPerAxis;
+      rest /= dofsPerAxis;
+    }
+    if (second < 0) {
+      index[first] = dofsPerAxis - 1 - index[first];
+    } else {
+      std::swap(index[first], index[second]);
+    }
+    int moved = 0;
+    for (int axis = Dimensions - 1; axis >= 0; axis--) {
+      moved = moved * dofsPerAxis + index[axis];
+    }
+    return moved * ProjectionValues + entry;
+  }
+
+  /**
+   * Returns a field of ProjectionInputDofs degrees of freedom per axis with values that are not
+   * dyadic.
+   */
+  template <int Dimensions>
+  std::vector<double> getProjectionInput() {
+    std::vector<double> input(
+      static_cast<std::size_t>(peano4::power(ProjectionInputDofs, Dimensions) * ProjectionValues)
+    );
+    for (std::size_t value = 0; value < input.size(); value++) {
+      input[value] = 1.0 + 0.37 * static_cast<double>(value % 11) - 0.05 * static_cast<double>(value);
+    }
+    return input;
+  }
+
+  /**
+   * Returns the projection of input with getMirrorSymmetricProjection() on one thread.
+   */
+  template <int Dimensions, exahype2::dg::ProjectionRule Rule>
+  std::vector<double> project(const std::vector<double>& input) {
+    const ProjectionMatrix matrix = getMirrorSymmetricProjection();
+    std::vector<double>    output(
+      static_cast<std::size_t>(peano4::power(ProjectionOutputDofs, Dimensions) * ProjectionValues)
+    );
+    exahype2::dg::projectTensorProduct<Dimensions, ProjectionInputDofs, ProjectionOutputDofs, ProjectionValues, Rule>(
+      input.data(),
+      output.data(),
+      matrix.data()
+    );
+    return output;
+  }
+
+  /**
+   * Fills every node of fineCell from coarseCell with exahype2::dg::interpolateNode().
+   */
+  void interpolateEveryNode(
+    const double* const coarseCell,
+    double* const       fineCell,
+    const double* const prolongationMatrix1D,
+    const int           childPosition
+  ) {
+    double referencesAndBounds[exahype2::dg::ReferencesAndBoundsEntries<Setup::ValuesPerNode>];
+    for (int value = 0; value < Setup::ValuesPerNode; value++) {
+      exahype2::dg::computeReferenceAndBoundOfParent<Setup::NodesPerAxis, Setup::ValuesPerNode>(
+        coarseCell,
+        prolongationMatrix1D,
+        value,
+        referencesAndBounds
+      );
+    }
+    for (int fineNode = 0; fineNode < Setup::CellNodes; fineNode++) {
+      exahype2::dg::interpolateNode<Setup::NodesPerAxis, Setup::ValuesPerNode>(
+        coarseCell,
+        fineCell,
+        prolongationMatrix1D,
+        referencesAndBounds,
+        childPosition,
+        fineNode
+      );
+    }
+  }
+
+  /**
+   * Fills every node of coarseCell from fineCells with exahype2::dg::restrictNode().
+   */
+  void restrictEveryNode(
+    const double* const fineCells[peano4::ChildrenPerCell],
+    double* const       coarseCell,
+    const double* const restrictionMatrix1D
+  ) {
+    double referencesAndBounds[exahype2::dg::ReferencesAndBoundsEntries<Setup::ValuesPerNode>];
+    for (int value = 0; value < Setup::ValuesPerNode; value++) {
+      exahype2::dg::computeReferenceAndBoundOfChildren<Setup::NodesPerAxis, Setup::ValuesPerNode>(
+        fineCells,
+        restrictionMatrix1D,
+        value,
+        referencesAndBounds
+      );
+    }
+    for (int coarseNode = 0; coarseNode < Setup::CellNodes; coarseNode++) {
+      exahype2::dg::restrictNode<Setup::NodesPerAxis, Setup::ValuesPerNode>(
+        fineCells,
+        coarseCell,
+        restrictionMatrix1D,
+        referencesAndBounds,
+        coarseNode
+      );
+    }
+  }
 } // namespace
 
 /**
@@ -264,17 +404,20 @@ exahype2::dg::tests::BasisTest::run() {
   testMethod(testReadsFloatValuesInPlace);
   testMethod(testEvaluatePolynomialOrder1);
   testMethod(testEvaluatePolynomialOrder2);
-  testMethod(testTheOrderInvariantProductIgnoresTheFactorOrder);
-  testMethod(testTheSmallestValuesAreTakenPerEntry);
+  testMethod(testTheReferencesAndBoundsFollowTheValueRanges);
+  testMethod(testTheLargestProductOfEntriesIsThePowerOfTheLargestMagnitude);
   testMethod(testProductMatchesTheDefinition);
   testMethod(testResultIsAccumulatedOrOverwritten);
   testMethod(testScalingMultipliesEveryProduct);
   testMethod(testStridesAddressTheIntendedSlices);
   testMethod(testANarrowerResultIsRoundedOnce);
+  testMethod(testThePairWeightsRecombineToTheOperatorRows);
   testMethod(testTheDerivativeOfAConstantLineIsExactlyZero);
-  testMethod(testTheDerivativeActsOnTheDifferencesFromTheSmallestValue);
+  testMethod(testTheDerivativeActsOnTheDifferencesFromTheCentreNode);
+  testMethod(testADerivativeInPlaceEqualsADerivativeIntoAnotherBuffer);
+  testMethod(testTheDerivativeOfAReflectedLineIsTheReflectedDerivative);
   testMethod(testGradientOfALinearPolynomialIsItsSlope);
-  testMethod(testEachBlockHoldsTheDerivativeAlongItsOwnAxis);
+  testMethod(testEachBlockStoresTheDerivativeAlongItsOwnAxis);
   testMethod(testNarrowStorageIsDifferentiatedInTheComputePrecision);
   testMethod(testTheGradientOfAConstantStateIsExactlyZero);
   testMethod(testALinearFluxDifferentiatesToItsPhysicalSlope);
@@ -282,13 +425,22 @@ exahype2::dg::tests::BasisTest::run() {
   testMethod(testTwoCallsOverAlternateLinesDifferentiateLikeOneCall);
   testMethod(testAPaddedNodeStrideProjectsOnlyTheEntries);
   testMethod(testTheLowerAndUpperFaceUseTheirOwnCoefficients);
+  testMethod(testTheFacesOfAReflectedFieldAreTheSwappedFaces);
   testMethod(testTheFaceNodesRunWithTheLowestTangentialAxisFastest);
   testMethod(testAFieldOfFloatAccumulatesTheFacesInDouble);
+  testMethod(testThreadsThatDivideTheFaceItemsWriteThePairedFaces);
+  testMethod(testTheLinesOfAnAxisRunThroughTheFaceNodes);
   testMethod(testOneDimensionalIdentityLeavesDataUnchanged);
   testMethod(testTwoDimensionalIdentityLeavesDataUnchanged);
   testMethod(testThreeDimensionalIdentityLeavesDataUnchanged);
   testMethod(testProjectionPreservesAConstantField);
+  testMethod(testTheProjectionOfASwappedFieldIsTheSwappedProjection);
+  testMethod(testTheProjectionOfAReflectedFieldIsTheReflectedProjection);
+  testMethod(testBothProjectionRulesProjectTheSameField);
+  testMethod(testEverySplitOfTheStagesAmongThreadsProjectsLikeOneThread);
   testMethod(testLagrangeBasisFunctionIsCardinal);
+  testMethod(testTheLagrangeBasisFunctionsReproduceALinearFunction);
+  testMethod(testTheMirrorBasisFunctionAtTheNegatedOffsetReturnsTheSameBits);
   testMethod(testInterpolationEvaluatesTheCoarsePolynomialAtTheChildNodes);
   testMethod(testRestrictionIsTheInterpolationTransposedOverTheChildWidth);
   testMethod(testWeightedRestrictionPreservesConstants);
@@ -302,6 +454,7 @@ exahype2::dg::tests::BasisTest::run() {
   testMethod(testFaceRestrictionProjectsALinearProfile);
   testMethod(testCellRestrictionProjectsALinearState);
   testMethod(testConstantFacesAndCellsRestrictBitwise);
+  testMethod(testANegatedFieldTransfersToTheNegatedFieldBitwise);
 }
 
 /**
@@ -324,6 +477,11 @@ exahype2::dg::tests::BasisTest::testNodeCountsFollowTheNumberOfNodesPerAxis() {
  */
 void
 exahype2::dg::tests::BasisTest::testEveryNodeIsPaddedToTheVectorWidth() {
+  validateEquals(exahype2::dg::getPaddedCountOf(0), 0);
+  validateEquals(exahype2::dg::getPaddedCountOf(1), PEANO_WITH_SIMDLEN);
+  validateEquals(exahype2::dg::getPaddedCountOf(PEANO_WITH_SIMDLEN), PEANO_WITH_SIMDLEN);
+  validateEquals(exahype2::dg::getPaddedCountOf(PEANO_WITH_SIMDLEN + 1), 2 * PEANO_WITH_SIMDLEN);
+
   validateEquals(PaddedCell::NodesPerAxis, NodesPerAxis);
   validateEquals(PaddedCell::NumberOfUnknowns, NumberOfUnknowns);
   validateEquals(PaddedCell::NumberOfData, NumberOfData);
@@ -527,32 +685,86 @@ exahype2::dg::tests::BasisTest::testEvaluatePolynomialOrder2() {
 }
 
 /**
- * Every permutation of three factors returns the same bits.
+ * Every reference is the midpoint of the value range of its entry, every bound the larger of its
+ * magnitude and the weight times the width of the range, only an entry with a range wider than zero
+ * varies, and negated nodes negate the references.
  */
 void
-exahype2::dg::tests::BasisTest::testTheOrderInvariantProductIgnoresTheFactorOrder() {
-  constexpr double First   = 0.1;
-  constexpr double Second  = 0.7;
-  constexpr double Third   = 3.3;
-  const double     product = exahype2::dg::orderInvariantProduct(First, Second, Third);
-  validateEquals(exahype2::dg::orderInvariantProduct(Third, Second, First), product);
-  validateEquals(exahype2::dg::orderInvariantProduct(Second, Third, First), product);
-  validateEquals(exahype2::dg::orderInvariantProduct(Third, First, Second), product);
-  validateNumericalEquals(product, First * Second * Third);
+exahype2::dg::tests::BasisTest::testTheReferencesAndBoundsFollowTheValueRanges() {
+  constexpr int    Values                      = 2;
+  constexpr int    Nodes                       = 3;
+  constexpr double LargestWeight               = 0.25;
+  const float      first[Nodes * Values]       = {4.0F, -1.0F, 2.5F, 7.0F, 3.0F, 0.5F};
+  const float      second[Nodes * Values]      = {0.1F, 1.0F, 5.0F, 2.0F, 3.0F, 0.3F};
+  const float      negated[Nodes * Values]     = {-3.0F, -0.3F, -5.0F, -2.0F, -0.1F, -1.0F};
+  const float      negatedRest[Nodes * Values] = {-3.0F, -0.5F, -2.5F, -7.0F, -4.0F, 1.0F};
+  const float      oneEntry[Nodes * Values]    = {2.0F, -1.0F, 2.0F, 6.0F, 2.0F, 0.5F};
+  const float*     arrays[2]                   = {first, second};
+  const float*     negatedArrays[2]            = {negated, negatedRest};
+  double           reference[Values]           = {};
+  double           bound[Values]               = {};
+  bool             varies[Values]              = {};
+  double           negatedReference[Values]    = {};
+  double           negatedBound[Values]        = {};
+  bool             negatedVaries[Values]       = {};
+  exahype2::dg::computeReferencesAndBoundsOfTransferTerms<Values>(
+    reference,
+    bound,
+    varies,
+    arrays,
+    2,
+    Nodes,
+    LargestWeight
+  );
+  exahype2::dg::computeReferencesAndBoundsOfTransferTerms<Values>(
+    negatedReference,
+    negatedBound,
+    negatedVaries,
+    negatedArrays,
+    2,
+    Nodes,
+    LargestWeight
+  );
+  validateEquals(reference[0], 0.5 * (static_cast<double>(0.1F) + 5.0));
+  validateEquals(reference[1], 0.5 * (-1.0 + 7.0));
+  validateEquals(bound[0], 0.5 * (static_cast<double>(0.1F) + 5.0));
+  validateEquals(bound[1], 3.0);
+  validate(varies[0] and varies[1]);
+  validateEquals(negatedReference[0], -reference[0]);
+  validateEquals(negatedReference[1], -reference[1]);
+  validateEquals(negatedBound[0], bound[0]);
+  validateEquals(negatedBound[1], bound[1]);
+  validate(negatedVaries[0] and negatedVaries[1]);
+
+  const float* constantArrays[1] = {second};
+  exahype2::dg::computeReferencesAndBoundsOfTransferTerms<Values>(reference, bound, varies, constantArrays, 1, 1, 4.0);
+  validateEquals(reference[0], static_cast<double>(0.1F));
+  validateEquals(bound[0], static_cast<double>(0.1F));
+  validate(not varies[0] and not varies[1]);
+
+  const float* oneEntryArrays[1] = {oneEntry};
+  exahype2::dg::computeReferencesAndBoundsOfTransferTerms<Values>(
+    reference,
+    bound,
+    varies,
+    oneEntryArrays,
+    1,
+    Nodes,
+    4.0
+  );
+  validateEquals(reference[0], 2.0);
+  validate(not varies[0] and varies[1]);
 }
 
 /**
- * Every entry of the reference drops to the smallest value of that entry over the nodes.
+ * The largest product of entries is the power of the largest magnitude among the entries.
  */
 void
-exahype2::dg::tests::BasisTest::testTheSmallestValuesAreTakenPerEntry() {
-  constexpr int Values                = 2;
-  constexpr int Nodes                 = 3;
-  const float   nodes[Nodes * Values] = {4.0F, -1.0F, 2.5F, 7.0F, 3.0F, 0.5F};
-  double        reference[Values]     = {3.0, 0.0};
-  exahype2::dg::takeSmallestValues<Values>(reference, nodes, Nodes);
-  validateEquals(reference[0], 2.5);
-  validateEquals(reference[1], -1.0);
+exahype2::dg::tests::BasisTest::testTheLargestProductOfEntriesIsThePowerOfTheLargestMagnitude() {
+  const double matrix[4] = {0.5, -1.5, 0.25, 1.0};
+  validateEquals(exahype2::dg::getLargestProductOfEntries<0>(matrix, 4), 1.0);
+  validateEquals(exahype2::dg::getLargestProductOfEntries<1>(matrix, 4), 1.5);
+  validateEquals(exahype2::dg::getLargestProductOfEntries<3>(matrix, 4), 1.5 * 1.5 * 1.5);
 }
 
 void
@@ -733,6 +945,34 @@ exahype2::dg::tests::BasisTest::testANarrowerResultIsRoundedOnce() {
   validateNumericalEquals(static_cast<double>(result[0]), expected);
 }
 
+/**
+ * The half sum and the half difference of the weights of a mirror node pair recombine to the
+ * weights of both nodes.
+ */
+void
+exahype2::dg::tests::BasisTest::testThePairWeightsRecombineToTheOperatorRows() {
+  const DerivativeOperator derivativeOperator;
+  const auto               derivativeWeights =
+    exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator.entries);
+
+  for (int row = 0; row < NodesPerAxis; row++) {
+    for (int pair = 0; pair < NodesPerAxis / 2; pair++) {
+      validateNumericalEqualsWithParams2(
+        derivativeWeights.sumWeights[row][pair] + derivativeWeights.differenceWeights[row][pair],
+        derivativeOperator.entries[row * NodesPerAxis + pair],
+        row,
+        pair
+      );
+      validateNumericalEqualsWithParams2(
+        derivativeWeights.sumWeights[row][pair] - derivativeWeights.differenceWeights[row][pair],
+        derivativeOperator.entries[row * NodesPerAxis + NodesPerAxis - 1 - pair],
+        row,
+        pair
+      );
+    }
+  }
+}
+
 void
 exahype2::dg::tests::BasisTest::testTheDerivativeOfAConstantLineIsExactlyZero() {
   const DerivativeOperator derivativeOperator;
@@ -750,16 +990,15 @@ exahype2::dg::tests::BasisTest::testTheDerivativeOfAConstantLineIsExactlyZero() 
     result[entry] = 7.0;
   }
 
-  exahype2::dg::differentiateAlongAxis<
+  exahype2::dg::differentiateAlongAxis<NumberOfEntries, NodesPerAxis, true, double, double>(
+    result,
     NumberOfEntries,
-    NodesPerAxis,
+    values,
     NumberOfEntries,
-    NodesPerAxis,
-    NumberOfEntries,
-    true,
-    double,
-    double
-  >(result, values, derivativeOperator.entries, 3.7, 1.0 / 0.3);
+    exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator.entries),
+    3.7,
+    1.0 / 0.3
+  );
 
   for (int entry = 0; entry < NodesPerAxis * NumberOfEntries; entry++) {
     validateEqualsWithParams1(result[entry], 0.0, entry);
@@ -767,10 +1006,11 @@ exahype2::dg::tests::BasisTest::testTheDerivativeOfAConstantLineIsExactlyZero() 
 }
 
 void
-exahype2::dg::tests::BasisTest::testTheDerivativeActsOnTheDifferencesFromTheSmallestValue() {
+exahype2::dg::tests::BasisTest::testTheDerivativeActsOnTheDifferencesFromTheCentreNode() {
   const DerivativeOperator derivativeOperator;
+  constexpr int            CentreNode = NodesPerAxis / 2;
 
-  // The line falls along the axis. The last node stores the smallest value.
+  // The line falls along the axis.
   double values[NodesPerAxis * NumberOfEntries];
   for (int node = 0; node < NodesPerAxis; node++) {
     for (int entry = 0; entry < NumberOfEntries; entry++) {
@@ -781,7 +1021,7 @@ exahype2::dg::tests::BasisTest::testTheDerivativeActsOnTheDifferencesFromTheSmal
   for (int node = 0; node < NodesPerAxis; node++) {
     for (int entry = 0; entry < NumberOfEntries; entry++) {
       differences[node * NumberOfEntries + entry] =
-        values[node * NumberOfEntries + entry] - values[(NodesPerAxis - 1) * NumberOfEntries + entry];
+        values[node * NumberOfEntries + entry] - values[CentreNode * NumberOfEntries + entry];
     }
   }
 
@@ -792,16 +1032,14 @@ exahype2::dg::tests::BasisTest::testTheDerivativeActsOnTheDifferencesFromTheSmal
     expected[entry]    = 5.0 + entry;
   }
 
-  exahype2::dg::differentiateAlongAxis<
+  exahype2::dg::differentiateAlongAxis<NumberOfEntries, NodesPerAxis, false, double, double>(
+    accumulated,
     NumberOfEntries,
-    NodesPerAxis,
+    values,
     NumberOfEntries,
-    NodesPerAxis,
-    NumberOfEntries,
-    false,
-    double,
-    double
-  >(accumulated, values, derivativeOperator.entries, 0.25);
+    exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator.entries),
+    0.25
+  );
   exahype2::dg::applyOperatorAlongAxis<
     NumberOfEntries,
     NodesPerAxis,
@@ -828,6 +1066,136 @@ exahype2::dg::tests::BasisTest::testTheDerivativeActsOnTheDifferencesFromTheSmal
         node,
         entry
       );
+    }
+  }
+}
+
+/**
+ * A derivative that overwrites or accumulates into its own line returns the bits of the same
+ * derivative into another buffer.
+ */
+void
+exahype2::dg::tests::BasisTest::testADerivativeInPlaceEqualsADerivativeIntoAnotherBuffer() {
+  const DerivativeOperator derivativeOperator;
+  const auto               derivativeWeights =
+    exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator.entries);
+
+  double values[NodesPerAxis * NumberOfEntries];
+  for (int node = 0; node < NodesPerAxis; node++) {
+    for (int entry = 0; entry < NumberOfEntries; entry++) {
+      values[node * NumberOfEntries + entry] = 1.0 / 7.0 * (1 + entry) + 0.3 * node * node - 0.1 * entry * node;
+    }
+  }
+  double overwritten[NodesPerAxis * NumberOfEntries] = {};
+  double accumulated[NodesPerAxis * NumberOfEntries];
+  double overwrittenInPlace[NodesPerAxis * NumberOfEntries];
+  double accumulatedInPlace[NodesPerAxis * NumberOfEntries];
+  std::copy(std::begin(values), std::end(values), std::begin(accumulated));
+  std::copy(std::begin(values), std::end(values), std::begin(overwrittenInPlace));
+  std::copy(std::begin(values), std::end(values), std::begin(accumulatedInPlace));
+
+  exahype2::dg::differentiateAlongAxis<NumberOfEntries, NodesPerAxis, true, double, double>(
+    overwritten,
+    NumberOfEntries,
+    values,
+    NumberOfEntries,
+    derivativeWeights,
+    2.5
+  );
+  exahype2::dg::differentiateAlongAxis<NumberOfEntries, NodesPerAxis, false, double, double>(
+    accumulated,
+    NumberOfEntries,
+    values,
+    NumberOfEntries,
+    derivativeWeights,
+    2.5
+  );
+  exahype2::dg::differentiateAlongAxis<NumberOfEntries, NodesPerAxis, true, double, double>(
+    overwrittenInPlace,
+    NumberOfEntries,
+    overwrittenInPlace,
+    NumberOfEntries,
+    derivativeWeights,
+    2.5
+  );
+  exahype2::dg::differentiateAlongAxis<NumberOfEntries, NodesPerAxis, false, double, double>(
+    accumulatedInPlace,
+    NumberOfEntries,
+    accumulatedInPlace,
+    NumberOfEntries,
+    derivativeWeights,
+    2.5
+  );
+
+  for (int entry = 0; entry < NodesPerAxis * NumberOfEntries; entry++) {
+    validateEqualsWithParams1(overwrittenInPlace[entry], overwritten[entry], entry);
+    validateEqualsWithParams1(accumulatedInPlace[entry], accumulated[entry], entry);
+  }
+}
+
+/**
+ * A line reflected along its axis, with or without the sign of its values swapped, returns the
+ * reflected derivative with the opposite sign change bitwise, for two to five nodes.
+ */
+void
+exahype2::dg::tests::BasisTest::testTheDerivativeOfAReflectedLineIsTheReflectedDerivative() {
+  // The reflection of the rows and the columns negates every operator.
+  constexpr double TwoNodeOperator[4]   = {-1.1, 1.1, -1.1, 1.1};
+  constexpr double ThreeNodeOperator[9] = {-1.7, 2.3, -0.6, -0.45, 0.0, 0.45, 0.6, -2.3, 1.7};
+  constexpr double FourNodeOperator[16] =
+    {-2.7, 3.9, -1.7, 0.5, -0.8, -0.3, 1.4, -0.3, 0.3, -1.4, 0.3, 0.8, -0.5, 1.7, -3.9, 2.7};
+  constexpr double FiveNodeOperator[25] = {-5.1, 6.9,  -2.9, 1.3, -0.2, -1.2, -0.6, 2.4, -0.8, 0.2, 0.4,  -1.3, 0.0,
+                                           1.3,  -0.4, -0.2, 0.8, -2.4, 0.6,  1.2,  0.2, -1.3, 2.9, -6.9, 5.1};
+  validateReflectedDerivative<2>(TwoNodeOperator);
+  validateReflectedDerivative<3>(ThreeNodeOperator);
+  validateReflectedDerivative<4>(FourNodeOperator);
+  validateReflectedDerivative<5>(FiveNodeOperator);
+}
+
+template <int Nodes>
+void
+exahype2::dg::tests::BasisTest::validateReflectedDerivative(const double* const operatorMatrix) {
+  constexpr int Entries = PEANO_WITH_SIMDLEN;
+  for (const double sign : {1.0, -1.0}) {
+    double values[Nodes * Entries];
+    double reflected[Nodes * Entries];
+    for (int node = 0; node < Nodes; node++) {
+      for (int entry = 0; entry < Entries; entry++) {
+        values[node * Entries + entry]                  = 0.1 * (1 + 3 * node) - 0.7 * entry + 0.013 * node * node;
+        reflected[(Nodes - 1 - node) * Entries + entry] = sign * values[node * Entries + entry];
+      }
+    }
+
+    const auto derivativeWeights = exahype2::dg::getDerivativeWeightsOfNodePairs<Nodes>(operatorMatrix);
+    double     derivative[Nodes * Entries];
+    double     reflectedDerivative[Nodes * Entries];
+    exahype2::dg::differentiateAlongAxis<Entries, Nodes, true, double, double>(
+      derivative,
+      Entries,
+      values,
+      Entries,
+      derivativeWeights,
+      0.5
+    );
+    exahype2::dg::differentiateAlongAxis<Entries, Nodes, true, double, double>(
+      reflectedDerivative,
+      Entries,
+      reflected,
+      Entries,
+      derivativeWeights,
+      0.5
+    );
+
+    for (int node = 0; node < Nodes; node++) {
+      for (int entry = 0; entry < Entries; entry++) {
+        validateEqualsWithParams3(
+          reflectedDerivative[(Nodes - 1 - node) * Entries + entry],
+          -sign * derivative[node * Entries + entry],
+          Nodes,
+          node,
+          entry
+        );
+      }
     }
   }
 }
@@ -876,7 +1244,7 @@ exahype2::dg::tests::BasisTest::testGradientOfALinearPolynomialIsItsSlope() {
 }
 
 void
-exahype2::dg::tests::BasisTest::testEachBlockHoldsTheDerivativeAlongItsOwnAxis() {
+exahype2::dg::tests::BasisTest::testEachBlockStoresTheDerivativeAlongItsOwnAxis() {
   const DerivativeOperator derivativeOperator;
   const auto               cellSize = getCellSize();
 
@@ -1079,12 +1447,12 @@ exahype2::dg::tests::BasisTest::testTwoCallsOverAlternateLinesDifferentiateLikeO
   std::copy(std::begin(wholeFlux), std::end(wholeFlux), std::begin(alternateFlux));
 
   exahype2::dg::differentiateFluxInPlace<Order2Layout>(wholeFlux, derivativeOperator.entries, inverseCellSize);
-  for (int firstLine = 0; firstLine < 2; firstLine++) {
+  for (int firstItem = 0; firstItem < 2; firstItem++) {
     exahype2::dg::differentiateFluxInPlace<Order2Layout>(
       alternateFlux,
       derivativeOperator.entries,
       inverseCellSize,
-      firstLine,
+      firstItem,
       2
     );
   }
@@ -1205,6 +1573,92 @@ exahype2::dg::tests::BasisTest::testTheLowerAndUpperFaceUseTheirOwnCoefficients(
   }
 }
 
+/**
+ * A field reflected along the first axis, with or without the sign of its values swapped, returns
+ * the two faces swapped with that sign change bitwise, for two to five nodes.
+ */
+void
+exahype2::dg::tests::BasisTest::testTheFacesOfAReflectedFieldAreTheSwappedFaces() {
+  // The right coefficients are the reflected left coefficients, and both sum to one.
+  constexpr double TwoNodeLeft[2]    = {0.7, 0.3};
+  constexpr double TwoNodeRight[2]   = {0.3, 0.7};
+  constexpr double ThreeNodeLeft[3]  = {0.77, 0.46, -0.23};
+  constexpr double ThreeNodeRight[3] = {-0.23, 0.46, 0.77};
+  constexpr double FourNodeLeft[4]   = {1.1, -0.3, 0.27, -0.07};
+  constexpr double FourNodeRight[4]  = {-0.07, 0.27, -0.3, 1.1};
+  constexpr double FiveNodeLeft[5]   = {1.3, -0.6, 0.45, -0.2, 0.05};
+  constexpr double FiveNodeRight[5]  = {0.05, -0.2, 0.45, -0.6, 1.3};
+  validateReflectedFaces<2>(TwoNodeLeft, TwoNodeRight);
+  validateReflectedFaces<3>(ThreeNodeLeft, ThreeNodeRight);
+  validateReflectedFaces<4>(FourNodeLeft, FourNodeRight);
+  validateReflectedFaces<5>(FiveNodeLeft, FiveNodeRight);
+}
+
+template <int Nodes>
+void
+exahype2::dg::tests::BasisTest::validateReflectedFaces(
+  const double* const leftCoefficients,
+  const double* const rightCoefficients
+) {
+  constexpr int Entries       = 2;
+  constexpr int NodesOfCell   = exahype2::dg::getNodesPerCell(Nodes);
+  constexpr int NodesOfFace   = exahype2::dg::getNodesPerFace(Nodes);
+  constexpr int ReflectedAxis = 0;
+  for (const double sign : {1.0, -1.0}) {
+    double field[NodesOfCell * Entries];
+    double reflected[NodesOfCell * Entries];
+    for (int cellNode = 0; cellNode < NodesOfCell; cellNode++) {
+      auto mirroredNode           = peano4::dDelinearised(cellNode, Nodes);
+      mirroredNode(ReflectedAxis) = Nodes - 1 - mirroredNode(ReflectedAxis);
+      const int mirroredCellNode  = peano4::dLinearised(mirroredNode, Nodes);
+      for (int entry = 0; entry < Entries; entry++) {
+        field[cellNode * Entries + entry] = 0.1 * (1 + cellNode) - 0.7 * entry + 0.013 * cellNode * cellNode;
+        reflected[mirroredCellNode * Entries + entry] = sign * field[cellNode * Entries + entry];
+      }
+    }
+
+    double lowerFace[NodesOfFace * Entries];
+    double upperFace[NodesOfFace * Entries];
+    double lowerFaceOfReflected[NodesOfFace * Entries];
+    double upperFaceOfReflected[NodesOfFace * Entries];
+    exahype2::dg::extrapolateNodalFieldToFacePair<Nodes, Entries, Entries, double, double, double>(
+      lowerFace,
+      upperFace,
+      field,
+      leftCoefficients,
+      rightCoefficients,
+      ReflectedAxis
+    );
+    exahype2::dg::extrapolateNodalFieldToFacePair<Nodes, Entries, Entries, double, double, double>(
+      lowerFaceOfReflected,
+      upperFaceOfReflected,
+      reflected,
+      leftCoefficients,
+      rightCoefficients,
+      ReflectedAxis
+    );
+
+    for (int faceNode = 0; faceNode < NodesOfFace; faceNode++) {
+      for (int entry = 0; entry < Entries; entry++) {
+        validateEqualsWithParams3(
+          lowerFaceOfReflected[faceNode * Entries + entry],
+          sign * upperFace[faceNode * Entries + entry],
+          Nodes,
+          faceNode,
+          entry
+        );
+        validateEqualsWithParams3(
+          upperFaceOfReflected[faceNode * Entries + entry],
+          sign * lowerFace[faceNode * Entries + entry],
+          Nodes,
+          faceNode,
+          entry
+        );
+      }
+    }
+  }
+}
+
 void
 exahype2::dg::tests::BasisTest::testTheFaceNodesRunWithTheLowestTangentialAxisFastest() {
   // Every cell node has its own value. A coefficient vector with a single one copies the value at
@@ -1302,6 +1756,78 @@ exahype2::dg::tests::BasisTest::testAFieldOfFloatAccumulatesTheFacesInDouble() {
   }
 }
 
+/**
+ * Threads that divide the items of extrapolateNodalFieldToFaces() write the faces of
+ * extrapolateNodalFieldToFacePair() bitwise.
+ */
+void
+exahype2::dg::tests::BasisTest::testThreadsThatDivideTheFaceItemsWriteThePairedFaces() {
+  constexpr int Threads    = 3;
+  constexpr int FieldSize  = CellNodes * NumberOfData;
+  constexpr int FaceValues = FaceNodes * NumberOfData;
+  double        field[DIMENSIONS * FieldSize];
+  for (int entry = 0; entry < DIMENSIONS * FieldSize; entry++) {
+    field[entry] = 1.0 + 0.5 * entry + 0.01 * entry * entry;
+  }
+  const EndCoefficients coefficients;
+
+  double pairedFaces[peano4::FacesPerCell][FaceValues] = {};
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    exahype2::dg::extrapolateNodalFieldToFacePair<NodesPerAxis, NumberOfData, NumberOfData, double, double, double>(
+      pairedFaces[direction],
+      pairedFaces[direction + DIMENSIONS],
+      field + direction * FieldSize,
+      coefficients.left,
+      coefficients.right,
+      direction
+    );
+  }
+
+  double  faceValues[peano4::FacesPerCell][FaceValues] = {};
+  double* faces[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    faces[face] = faceValues[face];
+  }
+  for (int thread = 0; thread < Threads; thread++) {
+    exahype2::dg::extrapolateNodalFieldToFaces<
+      NodesPerAxis,
+      NumberOfData,
+      NumberOfData,
+      FieldSize,
+      double,
+      double,
+      double
+    >(faces, field, coefficients.left, coefficients.right, thread, Threads);
+  }
+
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    for (int entry = 0; entry < FaceValues; entry++) {
+      validateEqualsWithParams2(faceValues[face][entry], pairedFaces[face][entry], face, entry);
+    }
+  }
+}
+
+/**
+ * Line i of an axis runs through face node i of the faces normal to the axis.
+ */
+void
+exahype2::dg::tests::BasisTest::testTheLinesOfAnAxisRunThroughTheFaceNodes() {
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    for (int line = 0; line < FaceNodes; line++) {
+      for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
+        validateEqualsWithParams3(
+          exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, line)
+            + normalIndex * exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis),
+          getCellNodeInAxisOrder(axis, line, normalIndex),
+          axis,
+          line,
+          normalIndex
+        );
+      }
+    }
+  }
+}
+
 void
 exahype2::dg::tests::BasisTest::testOneDimensionalIdentityLeavesDataUnchanged() {
   constexpr int                           Dofs          = 2;
@@ -1312,7 +1838,11 @@ exahype2::dg::tests::BasisTest::testOneDimensionalIdentityLeavesDataUnchanged() 
   const std::array<double, FieldEntries>  input{1.0, 2.0, 3.0, 4.0};
   std::array<double, FieldEntries>        output{};
 
-  exahype2::dg::projectTensorProduct<1, Dofs, Dofs, ValuesPerDof>(input.data(), output.data(), identity.data());
+  exahype2::dg::projectTensorProduct<1, Dofs, Dofs, ValuesPerDof, exahype2::dg::ProjectionRule::PairedProducts>(
+    input.data(),
+    output.data(),
+    identity.data()
+  );
 
   for (int index = 0; index < Dofs * ValuesPerDof; index++) {
     validateNumericalEquals(output[index], input[index]);
@@ -1327,7 +1857,11 @@ exahype2::dg::tests::BasisTest::testTwoDimensionalIdentityLeavesDataUnchanged() 
   const std::array<double, MatrixEntries> input{1.0, 2.0, 3.0, 4.0};
   std::array<double, MatrixEntries>       output{};
 
-  exahype2::dg::projectTensorProduct<2, Dofs, Dofs, 1>(input.data(), output.data(), identity.data());
+  exahype2::dg::projectTensorProduct<2, Dofs, Dofs, 1, exahype2::dg::ProjectionRule::PairedProducts>(
+    input.data(),
+    output.data(),
+    identity.data()
+  );
 
   for (int index = 0; index < Dofs * Dofs; index++) {
     validateNumericalEquals(output[index], input[index]);
@@ -1343,7 +1877,11 @@ exahype2::dg::tests::BasisTest::testThreeDimensionalIdentityLeavesDataUnchanged(
   const std::array<double, CellEntries>   input{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
   std::array<double, CellEntries>         output{};
 
-  exahype2::dg::projectTensorProduct<3, Dofs, Dofs, 1>(input.data(), output.data(), identity.data());
+  exahype2::dg::projectTensorProduct<3, Dofs, Dofs, 1, exahype2::dg::ProjectionRule::PairedProducts>(
+    input.data(),
+    output.data(),
+    identity.data()
+  );
 
   for (int index = 0; index < Dofs * Dofs * Dofs; index++) {
     validateNumericalEquals(output[index], input[index]);
@@ -1358,30 +1896,235 @@ exahype2::dg::tests::BasisTest::testProjectionPreservesAConstantField() {
   // Each column sums to one. The projection then reproduces a constant field exactly.
   const std::array<double, MatrixEntries> columnStochasticMatrix{0.25, 0.75, 0.75, 0.25};
   const std::array<double, MatrixEntries> input{Constant, Constant, Constant, Constant};
-  std::array<double, MatrixEntries>       output{};
+  std::array<double, MatrixEntries>       pairedOutput{};
+  std::array<double, MatrixEntries>       butterflyOutput{};
 
-  exahype2::dg::projectTensorProduct<2, Dofs, Dofs, 1>(input.data(), output.data(), columnStochasticMatrix.data());
+  exahype2::dg::projectTensorProduct<2, Dofs, Dofs, 1, exahype2::dg::ProjectionRule::PairedProducts>(
+    input.data(),
+    pairedOutput.data(),
+    columnStochasticMatrix.data()
+  );
+  exahype2::dg::projectTensorProduct<2, Dofs, Dofs, 1, exahype2::dg::ProjectionRule::Butterfly>(
+    input.data(),
+    butterflyOutput.data(),
+    columnStochasticMatrix.data()
+  );
 
   for (int index = 0; index < Dofs * Dofs; index++) {
-    validateNumericalEquals(output[index], Constant);
+    validateNumericalEqualsWithParams1(pairedOutput[index], Constant, index);
+    validateNumericalEqualsWithParams1(butterflyOutput[index], Constant, index);
   }
+}
+
+/**
+ * The projection of a field with two swapped axes is the projection with these axes swapped,
+ * bitwise, in 2D and 3D.
+ */
+void
+exahype2::dg::tests::BasisTest::testTheProjectionOfASwappedFieldIsTheSwappedProjection() {
+  const auto validateSwaps = [this]<int Dimensions, exahype2::dg::ProjectionRule Rule>() {
+    const std::vector<double> input  = getProjectionInput<Dimensions>();
+    const std::vector<double> output = project<Dimensions, Rule>(input);
+    for (int first = 0; first < Dimensions; first++) {
+      for (int second = first + 1; second < Dimensions; second++) {
+        std::vector<double> swappedInput(input.size());
+        for (int value = 0; value < static_cast<int>(input.size()); value++) {
+          swappedInput[getMovedValue<Dimensions>(value, ProjectionInputDofs, first, second)] = input[value];
+        }
+        const std::vector<double> swappedOutput = project<Dimensions, Rule>(swappedInput);
+        for (int value = 0; value < static_cast<int>(output.size()); value++) {
+          validateEqualsWithParams4(
+            swappedOutput[getMovedValue<Dimensions>(value, ProjectionOutputDofs, first, second)],
+            output[value],
+            Dimensions,
+            first,
+            second,
+            value
+          );
+        }
+      }
+    }
+  };
+  validateSwaps.template operator()<2, exahype2::dg::ProjectionRule::PairedProducts>();
+  validateSwaps.template operator()<3, exahype2::dg::ProjectionRule::PairedProducts>();
+  validateSwaps.template operator()<2, exahype2::dg::ProjectionRule::Butterfly>();
+  validateSwaps.template operator()<3, exahype2::dg::ProjectionRule::Butterfly>();
+}
+
+/**
+ * The projection of a field reflected along one axis, with its second value negated, is the
+ * reflected and negated projection, bitwise, in 2D and 3D.
+ */
+void
+exahype2::dg::tests::BasisTest::testTheProjectionOfAReflectedFieldIsTheReflectedProjection() {
+  const auto validateReflections = [this]<int Dimensions, exahype2::dg::ProjectionRule Rule>() {
+    const std::vector<double> input  = getProjectionInput<Dimensions>();
+    const std::vector<double> output = project<Dimensions, Rule>(input);
+    for (int axis = 0; axis < Dimensions; axis++) {
+      std::vector<double> reflectedInput(input.size());
+      for (int value = 0; value < static_cast<int>(input.size()); value++) {
+        const double sign = value % ProjectionValues == 1 ? -1.0 : 1.0;
+        reflectedInput[getMovedValue<Dimensions>(value, ProjectionInputDofs, axis, -1)] = sign * input[value];
+      }
+      const std::vector<double> reflectedOutput = project<Dimensions, Rule>(reflectedInput);
+      for (int value = 0; value < static_cast<int>(output.size()); value++) {
+        const double sign = value % ProjectionValues == 1 ? -1.0 : 1.0;
+        validateEqualsWithParams3(
+          reflectedOutput[getMovedValue<Dimensions>(value, ProjectionOutputDofs, axis, -1)],
+          sign * output[value],
+          Dimensions,
+          axis,
+          value
+        );
+      }
+    }
+  };
+  validateReflections.template operator()<2, exahype2::dg::ProjectionRule::PairedProducts>();
+  validateReflections.template operator()<3, exahype2::dg::ProjectionRule::PairedProducts>();
+  validateReflections.template operator()<2, exahype2::dg::ProjectionRule::Butterfly>();
+  validateReflections.template operator()<3, exahype2::dg::ProjectionRule::Butterfly>();
+}
+
+/**
+ * Both projection rules return the same projection up to rounding in 2D and 3D.
+ */
+void
+exahype2::dg::tests::BasisTest::testBothProjectionRulesProjectTheSameField() {
+  const auto validateRules = [this]<int Dimensions>() {
+    const std::vector<double> input    = getProjectionInput<Dimensions>();
+    const std::vector<double> paired   = project<Dimensions, exahype2::dg::ProjectionRule::PairedProducts>(input);
+    const std::vector<double> mirrored = project<Dimensions, exahype2::dg::ProjectionRule::Butterfly>(input);
+    validateNumericalBuffersEquals(mirrored, paired);
+  };
+  validateRules.template operator()<2>();
+  validateRules.template operator()<3>();
+}
+
+/**
+ * Every split of the lines or of the values of each stage among threads projects the bits of one
+ * thread in 2D and 3D.
+ */
+void
+exahype2::dg::tests::BasisTest::testEverySplitOfTheStagesAmongThreadsProjectsLikeOneThread() {
+  using Rule                            = exahype2::dg::ProjectionRule;
+  using Item                            = exahype2::dg::ProjectionItem;
+  const ProjectionMatrix matrix         = getMirrorSymmetricProjection();
+  const auto             validateSplits = [this, &matrix]<int Dimensions, Rule StageRule, Item StageItem>() {
+    constexpr int ScratchValues = exahype2::dg::getScratchValuesOfTensorProduct<
+      Dimensions,
+      ProjectionInputDofs,
+      ProjectionOutputDofs,
+      ProjectionValues
+    >();
+    const std::vector<double> input  = getProjectionInput<Dimensions>();
+    const std::vector<double> output = project<Dimensions, StageRule>(input);
+    const auto                weights =
+      exahype2::dg::getProjectionWeightsOfDofPairs<ProjectionInputDofs, ProjectionOutputDofs>(matrix.data());
+    for (const int threads : {1, 2, 3, 7, 32}) {
+      std::vector<double> scratch(ScratchValues);
+      std::vector<double> splitOutput(output.size());
+      for (int stage = 0; stage < exahype2::dg::getStagesOfTensorProduct<Dimensions>(); stage++) {
+        for (int thread = threads - 1; thread >= 0; thread--) {
+          exahype2::dg::projectTensorProductStage<
+            Dimensions,
+            ProjectionInputDofs,
+            ProjectionOutputDofs,
+            ProjectionValues,
+            StageRule,
+            StageItem
+          >(stage, input.data(), splitOutput.data(), matrix.data(), weights, scratch.data(), thread, threads);
+        }
+      }
+      for (int value = 0; value < static_cast<int>(output.size()); value++) {
+        validateEqualsWithParams3(splitOutput[value], output[value], Dimensions, threads, value);
+      }
+    }
+  };
+  validateSplits.template operator()<2, Rule::PairedProducts, Item::Line>();
+  validateSplits.template operator()<3, Rule::PairedProducts, Item::Line>();
+  validateSplits.template operator()<2, Rule::Butterfly, Item::Line>();
+  validateSplits.template operator()<3, Rule::Butterfly, Item::Line>();
+  validateSplits.template operator()<2, Rule::PairedProducts, Item::ValueOfLine>();
+  validateSplits.template operator()<3, Rule::PairedProducts, Item::ValueOfLine>();
+  validateSplits.template operator()<2, Rule::Butterfly, Item::ValueOfLine>();
+  validateSplits.template operator()<3, Rule::Butterfly, Item::ValueOfLine>();
 }
 
 void
 exahype2::dg::tests::BasisTest::testLagrangeBasisFunctionIsCardinal() {
   for (int basisFunction = 0; basisFunction < MatrixNodesPerAxis; basisFunction++) {
     for (int node = 0; node < MatrixNodesPerAxis; node++) {
-      const double value =
-        exahype2::dg::getLagrangeBasisFunction1D<MatrixNodesPerAxis>(MatrixNodes, basisFunction, MatrixNodes[node]);
+      const double value = exahype2::dg::getLagrangeBasisFunction1D<MatrixNodesPerAxis>(
+        MatrixNodes,
+        basisFunction,
+        MatrixNodes[node] - 0.5
+      );
       const double expected = node == basisFunction ? 1.0 : 0.0;
       validateNumericalEqualsWithEpsWithParams2(value, expected, MatrixTolerance, basisFunction, node);
     }
   }
   double partitionOfUnity = 0.0;
   for (int basisFunction = 0; basisFunction < MatrixNodesPerAxis; basisFunction++) {
-    partitionOfUnity += exahype2::dg::getLagrangeBasisFunction1D<MatrixNodesPerAxis>(MatrixNodes, basisFunction, 0.3);
+    partitionOfUnity += exahype2::dg::getLagrangeBasisFunction1D<MatrixNodesPerAxis>(MatrixNodes, basisFunction, -0.2);
   }
   validateNumericalEqualsWithEps(partitionOfUnity, 1.0, MatrixTolerance);
+}
+
+/**
+ * The basis functions reproduce a linear function of the offset from the centre of the interval.
+ */
+void
+exahype2::dg::tests::BasisTest::testTheLagrangeBasisFunctionsReproduceALinearFunction() {
+  for (int sample = 0; sample <= 8; sample++) {
+    const double offsetFromCentre = 0.125 * sample - 0.5;
+    double       linear           = 0.0;
+    for (int basisFunction = 0; basisFunction < MatrixNodesPerAxis; basisFunction++) {
+      linear +=
+        exahype2::dg::getLagrangeBasisFunction1D<MatrixNodesPerAxis>(MatrixNodes, basisFunction, offsetFromCentre)
+        * (MatrixNodes[basisFunction] - 0.5);
+    }
+    validateNumericalEqualsWithEpsWithParams1(linear, offsetFromCentre, MatrixTolerance, sample);
+  }
+}
+
+/**
+ * On nodes that mirror exactly at one half, the mirror basis function at the negated offset returns
+ * the same bits as the basis function at the offset, for two to five nodes.
+ */
+void
+exahype2::dg::tests::BasisTest::testTheMirrorBasisFunctionAtTheNegatedOffsetReturnsTheSameBits() {
+  validateMirroredBasisFunctions<2>();
+  validateMirroredBasisFunctions<3>();
+  validateMirroredBasisFunctions<4>();
+  validateMirroredBasisFunctions<5>();
+}
+
+template <int Nodes>
+void
+exahype2::dg::tests::BasisTest::validateMirroredBasisFunctions() {
+  // One minus an upper node is exact. The lower nodes then mirror the upper nodes exactly.
+  double nodes[Nodes];
+  for (int node = Nodes / 2; node < Nodes; node++) {
+    nodes[node] = 0.5 + 0.07 * (node - Nodes / 2) + 0.031 * (node + 1);
+  }
+  if constexpr (Nodes % 2 == 1) {
+    nodes[Nodes / 2] = 0.5;
+  }
+  for (int node = 0; node < Nodes / 2; node++) {
+    nodes[node] = 1.0 - nodes[Nodes - 1 - node];
+  }
+
+  for (const double offsetFromCentre : {0.0, 0.1, 0.123, 0.29, 0.37, 0.5}) {
+    for (int basisFunction = 0; basisFunction < Nodes; basisFunction++) {
+      validateEqualsWithParams3(
+        exahype2::dg::getLagrangeBasisFunction1D<Nodes>(nodes, basisFunction, offsetFromCentre),
+        exahype2::dg::getLagrangeBasisFunction1D<Nodes>(nodes, Nodes - 1 - basisFunction, -offsetFromCentre),
+        Nodes,
+        basisFunction,
+        offsetFromCentre
+      );
+    }
+  }
 }
 
 void
@@ -1548,12 +2291,7 @@ exahype2::dg::tests::BasisTest::testCellInterpolationReproducesALinearState() {
 
   for (int child = 0; child < Setup::ChildrenPerCell; child++) {
     double fineCell[Setup::CellNodes * Setup::ValuesPerNode] = {};
-    exahype2::dg::interpolateCell<Setup::NodesPerAxis, Setup::ValuesPerNode>(
-      coarseCell,
-      fineCell,
-      operators.prolongation.data(),
-      child
-    );
+    interpolateEveryNode(coarseCell, fineCell, operators.prolongation.data(), child);
     for (int node = 0; node < Setup::CellNodes; node++) {
       double coordinates[DIMENSIONS];
       setTransferCoordinatesOf(coordinates, DIMENSIONS, node, child);
@@ -1603,12 +2341,7 @@ exahype2::dg::tests::BasisTest::testAConstantFaceAndCellInterpolateBitwise() {
   }
   for (int child = 0; child < Setup::ChildrenPerCell; child++) {
     double fineCell[Setup::CellNodes * Setup::ValuesPerNode] = {};
-    exahype2::dg::interpolateCell<Setup::NodesPerAxis, Setup::ValuesPerNode>(
-      coarseCell,
-      fineCell,
-      operators.prolongation.data(),
-      child
-    );
+    interpolateEveryNode(coarseCell, fineCell, operators.prolongation.data(), child);
     for (int node = 0; node < Setup::CellNodes; node++) {
       for (int value = 0; value < Setup::ValuesPerNode; value++) {
         validateEqualsWithParams3(
@@ -1671,11 +2404,7 @@ exahype2::dg::tests::BasisTest::testCellRestrictionProjectsALinearState() {
   }
 
   double coarseCell[Setup::CellNodes * Setup::ValuesPerNode];
-  exahype2::dg::restrictCell<Setup::NodesPerAxis, Setup::ValuesPerNode>(
-    fineCellPointers,
-    coarseCell,
-    operators.restriction.data()
-  );
+  restrictEveryNode(fineCellPointers, coarseCell, operators.restriction.data());
 
   for (int node = 0; node < Setup::CellNodes; node++) {
     double coordinates[DIMENSIONS];
@@ -1688,6 +2417,89 @@ exahype2::dg::tests::BasisTest::testCellRestrictionProjectsALinearState() {
         value
       );
     }
+  }
+}
+
+/**
+ * The restriction and the interpolation of a negated field return the negated field bitwise.
+ */
+void
+exahype2::dg::tests::BasisTest::testANegatedFieldTransfersToTheNegatedFieldBitwise() {
+  constexpr int           FaceValues = Setup::FaceNodes * Setup::ValuesPerNode;
+  constexpr int           CellValues = Setup::CellNodes * Setup::ValuesPerNode;
+  const TransferOperators operators;
+
+  double        fineFaces[peano4::SubfacesPerFace][FaceValues];
+  double        negatedFineFaces[peano4::SubfacesPerFace][FaceValues];
+  double        fineCells[Setup::ChildrenPerCell][CellValues];
+  double        negatedFineCells[Setup::ChildrenPerCell][CellValues];
+  const double* fineFacePointers[peano4::SubfacesPerFace];
+  const double* negatedFineFacePointers[peano4::SubfacesPerFace];
+  const double* fineCellPointers[Setup::ChildrenPerCell];
+  const double* negatedFineCellPointers[Setup::ChildrenPerCell];
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    for (int entry = 0; entry < FaceValues; entry++) {
+      fineFaces[subface][entry]        = 0.3 + 0.37 * ((subface * FaceValues + entry) % 7) - 0.11 * subface;
+      negatedFineFaces[subface][entry] = -fineFaces[subface][entry];
+    }
+    fineFacePointers[subface]        = fineFaces[subface];
+    negatedFineFacePointers[subface] = negatedFineFaces[subface];
+  }
+  for (int child = 0; child < Setup::ChildrenPerCell; child++) {
+    for (int entry = 0; entry < CellValues; entry++) {
+      fineCells[child][entry]        = 0.3 + 0.37 * ((child * CellValues + entry) % 11) - 0.07 * child;
+      negatedFineCells[child][entry] = -fineCells[child][entry];
+    }
+    fineCellPointers[child]        = fineCells[child];
+    negatedFineCellPointers[child] = negatedFineCells[child];
+  }
+
+  double coarseFace[FaceValues];
+  double negatedCoarseFace[FaceValues];
+  double coarseCell[CellValues];
+  double negatedCoarseCell[CellValues];
+  exahype2::dg::restrictFace<Setup::NodesPerAxis, Setup::ValuesPerNode>(
+    fineFacePointers,
+    coarseFace,
+    operators.restriction.data()
+  );
+  exahype2::dg::restrictFace<Setup::NodesPerAxis, Setup::ValuesPerNode>(
+    negatedFineFacePointers,
+    negatedCoarseFace,
+    operators.restriction.data()
+  );
+  restrictEveryNode(fineCellPointers, coarseCell, operators.restriction.data());
+  restrictEveryNode(negatedFineCellPointers, negatedCoarseCell, operators.restriction.data());
+  for (int entry = 0; entry < FaceValues; entry++) {
+    validateEqualsWithParams1(negatedCoarseFace[entry], -coarseFace[entry], entry);
+  }
+  for (int entry = 0; entry < CellValues; entry++) {
+    validateEqualsWithParams1(negatedCoarseCell[entry], -coarseCell[entry], entry);
+  }
+
+  double fineFace[FaceValues];
+  double negatedFineFace[FaceValues];
+  double fineCell[CellValues];
+  double negatedFineCell[CellValues];
+  exahype2::dg::interpolateFace<Setup::NodesPerAxis, Setup::ValuesPerNode>(
+    coarseFace,
+    fineFace,
+    operators.prolongation.data(),
+    1
+  );
+  exahype2::dg::interpolateFace<Setup::NodesPerAxis, Setup::ValuesPerNode>(
+    negatedCoarseFace,
+    negatedFineFace,
+    operators.prolongation.data(),
+    1
+  );
+  interpolateEveryNode(coarseCell, fineCell, operators.prolongation.data(), 1);
+  interpolateEveryNode(negatedCoarseCell, negatedFineCell, operators.prolongation.data(), 1);
+  for (int entry = 0; entry < FaceValues; entry++) {
+    validateEqualsWithParams1(negatedFineFace[entry], -fineFace[entry], entry);
+  }
+  for (int entry = 0; entry < CellValues; entry++) {
+    validateEqualsWithParams1(negatedFineCell[entry], -fineCell[entry], entry);
   }
 }
 
@@ -1717,11 +2529,7 @@ exahype2::dg::tests::BasisTest::testConstantFacesAndCellsRestrictBitwise() {
     coarseFace,
     operators.restriction.data()
   );
-  exahype2::dg::restrictCell<Setup::NodesPerAxis, Setup::ValuesPerNode>(
-    fineCellPointers,
-    coarseCell,
-    operators.restriction.data()
-  );
+  restrictEveryNode(fineCellPointers, coarseCell, operators.restriction.data());
   for (int node = 0; node < Setup::FaceNodes; node++) {
     for (int value = 0; value < Setup::ValuesPerNode; value++) {
       validateEqualsWithParams2(

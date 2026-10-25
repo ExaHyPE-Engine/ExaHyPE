@@ -246,7 +246,7 @@ exahype2::runner::GlobalStatistics::readValuesFromGlobalReduction(const tarch::m
 
   _globalNumberOfInnerUnrefinedCells = getSum(SumOfCells);
   _globalNumberOfInnerRefinedCells   = getSum(SumOfRefinedCells);
-  // The ranks on both sides of a rank boundary face count it. The grid holds half of their sum.
+  // The ranks on both sides of a rank boundary face count it. The grid contains half of their sum.
   assertion(getSum(SumOfRankBoundaryFaces) % 2 == 0, getSum(SumOfRankBoundaryFaces));
   assertion(
     getSum(SumOfRankBoundaryFaces) / 2 <= getSum(SumOfFaces),

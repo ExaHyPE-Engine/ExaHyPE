@@ -15,10 +15,11 @@
 #include "tarch/la/Vector.h"
 
 namespace {
-  using Setup      = exahype2::dg::ader::tests::KernelTestSetup;
-  using Tables     = exahype2::dg::tests::BasisTableSet;
-  using StubLayout = exahype2::dg::ader::tests::StubLayout;
-  using CellLayout = Setup::CellLayout;
+  using Setup             = exahype2::dg::ader::tests::KernelTestSetup;
+  using Tables            = exahype2::dg::tests::BasisTableSet;
+  using StubLayout        = exahype2::dg::ader::tests::StubLayout;
+  using RiemannSolverTerm = exahype2::dg::ader::tests::RiemannSolverTerm;
+  using CellLayout        = Setup::CellLayout;
 
   template <typename Solver>
   using Predictor = exahype2::dg::ader::LinearPredictor<Solver, double>;
@@ -57,7 +58,7 @@ namespace {
       double* NOALIAS const                                         fluxValues
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        fluxValues[unknown] += (1.0 + direction) * state[unknown];
+        fluxValues[unknown] = (1.0 + direction) * state[unknown];
       }
     }
   };
@@ -138,13 +139,13 @@ namespace {
   struct SourceSolver final : StubLayout, SourceTerm {};
   struct MarkerSolver final : StubLayout, FluxTerm, ProductTerm, MaterialTerm, SourceTerm {};
   struct PointSourceSolver final : StubLayout, PointSourceTerm {};
-  struct ProductSolver final : StubLayout, ProductTerm {};
+  struct ProductSolver final : StubLayout, ProductTerm, RiemannSolverTerm {};
   struct FullSolver final : StubLayout, FluxTerm, ProductTerm, MaterialTerm, SourceTerm, PointSourceTerm {};
 
   /**
    * A linear system that transports a profile along the first axis and lets it grow.
    */
-  struct ProfileSolver final : StubLayout {
+  struct ProfileSolver final : StubLayout, RiemannSolverTerm {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
       const double* NOALIAS const                                   state,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
@@ -155,7 +156,7 @@ namespace {
       double* NOALIAS const                                         values
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        values[unknown] += LinearFluxSpeed * (1.0 + direction) * state[unknown];
+        values[unknown] = LinearFluxSpeed * (1.0 + direction) * state[unknown];
       }
     }
 
@@ -544,8 +545,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::run() {
   testMethod(testASourceOutsideIsRejected);
   testMethod(testASourceOnAFaceBelongsToBothCells);
   testMethod(testSelectionKeepsTheTableOrder);
-  testMethod(testTheBasisFunctionIsOneAtItsOwnNodeAndZeroAtTheOthers);
-  testMethod(testTheBasisFunctionsReproduceALinearFunction);
   testMethod(testNoPointSourceLeavesTheSamplesEmpty);
   testMethod(testASourceIsSpreadByTheBasisAndScaledByTheWeightAndVolume);
   testMethod(testTheTimeIntegralSkipsTheSampleAtTheStart);
@@ -555,6 +554,7 @@ exahype2::dg::ader::tests::LinearPredictorTest::run() {
   testMethod(testATermTheSolverLacksHasZeroExtent);
   testMethod(testThePredictorWritesTheTimeAveragesAndTheFacesAndLeavesTheCellState);
   testMethod(testASolverWithoutFluxGetsZeroFaceFluxes);
+  testMethod(testASolverWithoutRiemannSolverLeavesTheFaceFluxes);
   testMethod(testEveryCellOfADeviceRangeSelectsItsPointSources);
   testMethod(testEveryCellOfADeviceRangeMatchesTheHostPredictor<double>);
   testMethod(testEveryCellOfADeviceRangeMatchesTheHostPredictor<float>);
@@ -722,7 +722,7 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheTimeAveragedStateGrowsByT
 
 /**
  * The next Taylor coefficient is the source minus the flux divergence, or the negative divergence
- * without a source.
+ * without a source. The flux keeps its values.
  */
 void
 exahype2::dg::ader::tests::LinearPredictorTest::testTheNextDerivativeIsTheSourceMinusTheFluxDivergence() {
@@ -762,6 +762,15 @@ exahype2::dg::ader::tests::LinearPredictorTest::testTheNextDerivativeIsTheSource
       const int entry = cellNode * StateStride + unknown;
       validateNumericalEqualsWithParams2(withSource[entry], 3.0 * initialState[entry] - sumOverAxes, cellNode, unknown);
       validateNumericalEqualsWithParams2(withoutSource[entry], -sumOverAxes, cellNode, unknown);
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        validateEqualsWithParams3(
+          flux[axis * AxisStride + cellNode * UnknownStride + unknown],
+          1.0 + axis,
+          axis,
+          cellNode,
+          unknown
+        );
+      }
     }
     for (int value = NumberOfUnknowns; value < StateStride; value++) {
       const int entry = cellNode * StateStride + value;
@@ -1039,40 +1048,6 @@ exahype2::dg::ader::tests::LinearPredictorTest::testSelectionKeepsTheTableOrder(
   validateEquals(pointSourceIndices[2], -1);
 }
 
-void
-exahype2::dg::ader::tests::LinearPredictorTest::testTheBasisFunctionIsOneAtItsOwnNodeAndZeroAtTheOthers() {
-  const Tables tables;
-  for (int index = 0; index < NodesPerAxis; index++) {
-    for (int node = 0; node < NodesPerAxis; node++) {
-      const double value = Predictor<StubLayout>::evaluateLagrangeBasis(
-        tables.quadraturePoints.data(),
-        index,
-        tables.quadraturePoints[node]
-      );
-      const double expected = (index == node) ? 1.0 : 0.0;
-      validateNumericalEqualsWithParams2(value, expected, index, node);
-    }
-  }
-}
-
-void
-exahype2::dg::ader::tests::LinearPredictorTest::testTheBasisFunctionsReproduceALinearFunction() {
-  const Tables tables;
-  for (int sample = 0; sample <= 8; sample++) {
-    const double position = 0.125 * sample;
-    double       constant = 0.0;
-    double       linear   = 0.0;
-    for (int index = 0; index < NodesPerAxis; index++) {
-      const double value =
-        Predictor<StubLayout>::evaluateLagrangeBasis(tables.quadraturePoints.data(), index, position);
-      constant += value;
-      linear += value * tables.quadraturePoints[index];
-    }
-    validateNumericalEqualsWithParams1(constant, 1.0, sample);
-    validateNumericalEqualsWithParams1(linear, position, sample);
-  }
-}
-
 /**
  * An empty list of point sources leaves every sample at zero.
  */
@@ -1169,10 +1144,10 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASourceIsSpreadByTheBasisAnd
             const int pointSource = pointSourceIndices[entry];
             double    spread      = 1.0;
             for (int axis = 0; axis < DIMENSIONS; axis++) {
-              spread *= Predictor<StubLayout>::evaluateLagrangeBasis(
+              spread *= exahype2::dg::getLagrangeBasisFunction1D<NodesPerAxis>(
                 tables.quadraturePoints.data(),
                 nodeIndex(axis),
-                getReferenceCoordinate(pointSource, axis)
+                getReferenceCoordinate(pointSource, axis) - 0.5
               );
             }
             const double stateValue = state[cellNode * StateStride + unknown];
@@ -1554,6 +1529,54 @@ exahype2::dg::ader::tests::LinearPredictorTest::testASolverWithoutFluxGetsZeroFa
   for (int face = 0; face < peano4::FacesPerCell; face++) {
     for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
       validateEqualsWithParams2(faces.flux[face][entry], 0.0, face, entry);
+    }
+  }
+}
+
+/**
+ * A solver without a Riemann solver leaves the face fluxes as they are.
+ */
+void
+exahype2::dg::ader::tests::LinearPredictorTest::testASolverWithoutRiemannSolverLeavesTheFaceFluxes() {
+  const Tables                                tables;
+  const auto                                  cellSize = getCellSize();
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
+
+  double cellState[CellStateSize];
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int value = 0; value < NumberOfData; value++) {
+      cellState[cellNode * NumberOfData + value] = getLinearCellStateEntry(tables, cellNode, value, cellSize(0));
+    }
+  }
+
+  FaceBuffers faces;
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
+      faces.flux[face][entry] = MarkerValue;
+    }
+  }
+  double scratch[MarkerScratch::Size] = {};
+
+  validate(Predictor<MarkerSolver>::EvaluateFlux);
+  validate(not Predictor<MarkerSolver>::WritesFaceFluxes);
+  Predictor<MarkerSolver>::predict(
+    faces.statePointers,
+    faces.fluxPointers,
+    cellState,
+    scratch,
+    nullptr,
+    0,
+    nullptr,
+    tables.getView(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
+
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
+      validateEqualsWithParams2(faces.flux[face][entry], MarkerValue, face, entry);
     }
   }
 }

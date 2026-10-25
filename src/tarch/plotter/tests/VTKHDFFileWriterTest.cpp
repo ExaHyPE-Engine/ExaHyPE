@@ -291,7 +291,7 @@ tarch::plotter::tests::VTKHDFFileWriterTest::testTwoTimeSteps() {
       "The dataset Steps/PartOffsets does not count one part per step before."
     );
 
-    // The geometry arrays hold both steps one after the other.
+    // The geometry arrays store both steps one after the other.
     const auto numberOfPoints = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
     check(
       numberOfPoints.size() == 2 and numberOfPoints[0] == 4 * numberOfRanks and numberOfPoints[1] == 4 * numberOfRanks,

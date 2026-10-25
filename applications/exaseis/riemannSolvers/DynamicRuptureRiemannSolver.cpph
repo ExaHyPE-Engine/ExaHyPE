@@ -70,6 +70,7 @@ applications::exahype2::exaseis::getFrictionalStrength(
     forcedWeakening = 1;
   }
 
+  assertion(criticalSlipDistance > 0, criticalSlipDistance);
   const Value frictionCoefficient = static_cast<Value>(StaticFrictionCoefficient)
     - static_cast<Value>(StaticFrictionCoefficient - DynamicFrictionCoefficient)
       * std::max<Value>(forcedWeakening, std::min<Value>(slip, criticalSlipDistance) / criticalSlipDistance);

@@ -11,16 +11,16 @@ namespace peano4::grid::tests {
 class peano4::grid::tests::LatticeIndexMapTest final : public tarch::tests::TestCase {
 public:
   LatticeIndexMapTest();
-  LatticeIndexMapTest(const LatticeIndexMapTest&)            = delete;
-  LatticeIndexMapTest(LatticeIndexMapTest&&)                 = delete;
-  LatticeIndexMapTest& operator=(const LatticeIndexMapTest&) = delete;
-  LatticeIndexMapTest& operator=(LatticeIndexMapTest&&)      = delete;
-  ~LatticeIndexMapTest() override                            = default;
+  LatticeIndexMapTest(const LatticeIndexMapTest& other)            = delete;
+  LatticeIndexMapTest(LatticeIndexMapTest&& other)                 = delete;
+  LatticeIndexMapTest& operator=(const LatticeIndexMapTest& other) = delete;
+  LatticeIndexMapTest& operator=(LatticeIndexMapTest&& other)      = delete;
+  ~LatticeIndexMapTest() override                                  = default;
 
   void run() override;
 
 private:
-  void testEmptyMapHoldsNothing();
+  void testAnEmptyMapContainsNoEntry();
   void testInsertReportsWhetherItStored();
   void testEveryStoredKeyIsFound();
   void testClusteredKeysCollide();

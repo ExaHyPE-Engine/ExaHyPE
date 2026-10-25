@@ -109,6 +109,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::release() {
   SolverFamily::release();
 {%- for tracer in TRACERS %}
   _{{tracer.NAME}}.release();
+{%- if tracer.ERROR %}
+  _{{tracer.NAME}}ErrorMeasurement.release();
+{%- endif %}
 {%- endfor %}
 }
 

@@ -94,12 +94,47 @@ namespace {
   };
 
   /**
-   * Derives the chunk of a new cell from the chunks of its old slots and marks how it arrived.
+   * Writes the level and the lattice position of the child at childPosition of the cell parent into
+   * target and marks it as prolonged.
+   */
+  GPU_CALLABLE_METHOD void writeChildOf(const double* const parent, const int childPosition, double* const target) {
+    int position = childPosition;
+    target[0]    = parent[0] + 1.0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      target[1 + axis] = parent[1 + axis] * peano4::SubdivisionFactor + position % peano4::SubdivisionFactor;
+      position /= peano4::SubdivisionFactor;
+    }
+    target[MarkerEntry] = ProlongedMarker;
+  }
+
+  /**
+   * Writes the level and the lattice position of the parent of the cell firstChild into target and
+   * marks it as restricted.
+   */
+  GPU_CALLABLE_METHOD void writeParentOf(const double* const firstChild, double* const target) {
+    target[0] = firstChild[0] - 1.0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const int parentCoordinate = static_cast<int>(firstChild[1 + axis]) / peano4::SubdivisionFactor;
+      target[1 + axis]           = static_cast<double>(parentCoordinate);
+    }
+    target[MarkerEntry] = RestrictedMarker;
+  }
+
+  /**
+   * Derives the chunk of a new cell from the chunks of its old slots and marks how it arrived. One
+   * work item fills the whole chunk.
    */
   struct IdentityTransfer final {
+    static constexpr int WorkItemsPerChunk      = 1;
+    static constexpr int PreparedValuesPerChunk = 0;
+
     Pool::ConstView source{};
 
-    INLINE_METHOD GPU_CALLABLE_METHOD void copy(const int slot, double* const target) const {
+    INLINE_METHOD GPU_CALLABLE_METHOD void copy(
+      const int                  slot,
+      double* const              target,
+      [[maybe_unused]] const int itemOfChunk
+    ) const {
       const double* const kept = source.getChunk(slot);
       for (int entry = 0; entry < ChunkSize; entry++) {
         target[entry] = kept[entry];
@@ -108,31 +143,73 @@ namespace {
     }
 
     INLINE_METHOD GPU_CALLABLE_METHOD void interpolateFromParent(
-      const int     parentSlot,
-      double* const target,
-      const int     childPosition
+      const int                            parentSlot,
+      double* const                        target,
+      const int                            childPosition,
+      [[maybe_unused]] const int           itemOfChunk,
+      [[maybe_unused]] const double* const prepared
     ) const {
-      const double* const parent   = source.getChunk(parentSlot);
-      int                 position = childPosition;
-      target[0]                    = parent[0] + 1.0;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        target[1 + axis] = parent[1 + axis] * peano4::SubdivisionFactor + position % peano4::SubdivisionFactor;
-        position /= peano4::SubdivisionFactor;
-      }
-      target[MarkerEntry] = ProlongedMarker;
+      writeChildOf(source.getChunk(parentSlot), childPosition, target);
     }
 
     INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(
-      const int* const childSlots,
-      double* const    target
+      const int* const                     childSlots,
+      double* const                        target,
+      [[maybe_unused]] const int           itemOfChunk,
+      [[maybe_unused]] const double* const prepared
     ) const {
-      const double* const firstChild = source.getChunk(childSlots[0]);
-      target[0]                      = firstChild[0] - 1.0;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        const int parentCoordinate = static_cast<int>(firstChild[1 + axis]) / peano4::SubdivisionFactor;
-        target[1 + axis]           = static_cast<double>(parentCoordinate);
-      }
-      target[MarkerEntry] = RestrictedMarker;
+      writeParentOf(source.getChunk(childSlots[0]), target);
+    }
+  };
+
+  /**
+   * An IdentityTransfer whose preparation item k copies the entry k of the parent or of the first
+   * child into prepared. Its fills read the parent or the first child from prepared.
+   */
+  struct PreparedIdentityTransfer final {
+    static constexpr int WorkItemsPerChunk        = 1;
+    static constexpr int PreparedValuesPerChunk   = MarkerEntry;
+    static constexpr int PreparationItemsPerChunk = MarkerEntry;
+
+    Pool::ConstView source{};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void prepareInterpolation(
+      const int     parentSlot,
+      double* const prepared,
+      const int     itemOfChunk
+    ) const {
+      prepared[itemOfChunk] = source.getChunk(parentSlot)[itemOfChunk];
+    }
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void prepareRestriction(
+      const int* const childSlots,
+      double* const    prepared,
+      const int        itemOfChunk
+    ) const {
+      prepared[itemOfChunk] = source.getChunk(childSlots[0])[itemOfChunk];
+    }
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void copy(const int slot, double* const target, const int itemOfChunk) const {
+      IdentityTransfer{source}.copy(slot, target, itemOfChunk);
+    }
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void interpolateFromParent(
+      [[maybe_unused]] const int parentSlot,
+      double* const              target,
+      const int                  childPosition,
+      [[maybe_unused]] const int itemOfChunk,
+      const double* const        prepared
+    ) const {
+      writeChildOf(prepared, childPosition, target);
+    }
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(
+      [[maybe_unused]] const int* const childSlots,
+      double* const                     target,
+      [[maybe_unused]] const int        itemOfChunk,
+      const double* const               prepared
+    ) const {
+      writeParentOf(prepared, target);
     }
   };
   TARGET_DECLARE_END
@@ -178,8 +255,9 @@ namespace {
   };
 
   /**
-   * Runs one regrid with the requests, migrates the pool and returns the outcome.
+   * Runs one regrid with the requests, migrates the pool with a Transfer and returns the outcome.
    */
+  template <typename Transfer>
   Outcome migrateAndCount(Exchange& exchange, Pool& pool, const std::vector<peano4::RefinementRequest>& requests) {
     auto&          spacetree        = peano4::Spacetree::getInstance();
     const auto&    cellConnectivity = spacetree.getCellConnectivity();
@@ -203,7 +281,7 @@ namespace {
       filledSlots.push_back(restriction.parentSlot);
     }
 
-    exchange.migrate(pool, regrid, IdentityTransfer{std::as_const(pool).getView()});
+    exchange.migrate(pool, regrid, Transfer{std::as_const(pool).getView()});
     Outcome outcome;
     outcome.sentCells          = peano4::tests::getGlobalSumOf(sentCells);
     outcome.receivedSlots      = peano4::tests::getGlobalSumOf(receivedSlots);
@@ -232,8 +310,9 @@ peano4::tests::MigrationExchangeTest::MigrationExchangeTest() :
 
 void
 peano4::tests::MigrationExchangeTest::run() {
-  testMethod(testEveryFilledSlotHoldsTheChunkOfItsCell);
-  testMethod(testExchangesHoldDistinctTags);
+  testMethod(testEveryFilledSlotStoresTheChunkOfItsCell);
+  testMethod(testAPreparingTransferFillsEverySlotWithTheChunkOfItsCell);
+  testMethod(testExchangesGetDistinctTags);
   testMethod(testReleaseFreesTheBuffersAndKeepsTheTag);
 }
 
@@ -242,17 +321,41 @@ peano4::tests::MigrationExchangeTest::run() {
  * sent cell arrives.
  */
 void
-peano4::tests::MigrationExchangeTest::testEveryFilledSlotHoldsTheChunkOfItsCell() {
+peano4::tests::MigrationExchangeTest::testEveryFilledSlotStoresTheChunkOfItsCell() {
   Pool pool(ChunkSize, tarch::MemoryLocation::Device);
   buildGridWithLiveChunks(pool);
   Exchange exchange(pool.getLocation());
 
-  const Outcome refine = migrateAndCount(exchange, pool, {peano4::tests::getRefinementOfCentreCell(Depth)});
+  const Outcome refine =
+    migrateAndCount<IdentityTransfer>(exchange, pool, {peano4::tests::getRefinementOfCentreCell(Depth)});
   validateEquals(refine.sentCells, refine.receivedSlots);
   validate(refine.locallyFilledSlots > 0);
   validateEquals(refine.mismatches, 0);
 
-  const Outcome erase = migrateAndCount(exchange, pool, peano4::tests::getErasureOfEveryCell(Depth));
+  const Outcome erase = migrateAndCount<IdentityTransfer>(exchange, pool, peano4::tests::getErasureOfEveryCell(Depth));
+  validateEquals(erase.sentCells, erase.receivedSlots);
+  validate(erase.locallyFilledSlots > 0);
+  validateEquals(erase.mismatches, 0);
+}
+
+/**
+ * A transfer that prepares fills every slot of a refinement and of the erase back with the chunk of
+ * its cell.
+ */
+void
+peano4::tests::MigrationExchangeTest::testAPreparingTransferFillsEverySlotWithTheChunkOfItsCell() {
+  Pool pool(ChunkSize, tarch::MemoryLocation::Device);
+  buildGridWithLiveChunks(pool);
+  Exchange exchange(pool.getLocation());
+
+  const Outcome refine =
+    migrateAndCount<PreparedIdentityTransfer>(exchange, pool, {peano4::tests::getRefinementOfCentreCell(Depth)});
+  validateEquals(refine.sentCells, refine.receivedSlots);
+  validate(refine.locallyFilledSlots > 0);
+  validateEquals(refine.mismatches, 0);
+
+  const Outcome erase =
+    migrateAndCount<PreparedIdentityTransfer>(exchange, pool, peano4::tests::getErasureOfEveryCell(Depth));
   validateEquals(erase.sentCells, erase.receivedSlots);
   validate(erase.locallyFilledSlots > 0);
   validateEquals(erase.mismatches, 0);
@@ -262,7 +365,7 @@ peano4::tests::MigrationExchangeTest::testEveryFilledSlotHoldsTheChunkOfItsCell(
  * Two exchanges get distinct tags in their first migrate. Every rank reserves the same tags.
  */
 void
-peano4::tests::MigrationExchangeTest::testExchangesHoldDistinctTags() {
+peano4::tests::MigrationExchangeTest::testExchangesGetDistinctTags() {
   Pool                 pool(ChunkSize, tarch::MemoryLocation::Device);
   Exchange             first(pool.getLocation());
   Exchange             second(pool.getLocation());
@@ -292,7 +395,8 @@ peano4::tests::MigrationExchangeTest::testReleaseFreesTheBuffersAndKeepsTheTag()
   buildGridWithLiveChunks(pool);
   Exchange exchange(pool.getLocation());
 
-  const Outcome refine = migrateAndCount(exchange, pool, {peano4::tests::getRefinementOfCentreCell(Depth)});
+  const Outcome refine =
+    migrateAndCount<IdentityTransfer>(exchange, pool, {peano4::tests::getRefinementOfCentreCell(Depth)});
   validateEquals(refine.mismatches, 0);
   const int tag = exchange.getTag();
 
@@ -300,7 +404,7 @@ peano4::tests::MigrationExchangeTest::testReleaseFreesTheBuffersAndKeepsTheTag()
   validateEquals(exchange.getAllocatedBytes().getTotal(), std::size_t{0});
   validateEquals(exchange.getTag(), tag);
 
-  const Outcome erase = migrateAndCount(exchange, pool, peano4::tests::getErasureOfEveryCell(Depth));
+  const Outcome erase = migrateAndCount<IdentityTransfer>(exchange, pool, peano4::tests::getErasureOfEveryCell(Depth));
   validateEquals(erase.sentCells, erase.receivedSlots);
   validateEquals(erase.mismatches, 0);
 }

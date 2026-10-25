@@ -21,7 +21,7 @@ The section appears with more than one rank; the configuration summary names
 the number of ranks. `Load Balance` divides the average cell count of a rank
 by the cell count of the most loaded rank and prints the minimum and maximum
 cells per rank. `Rank Boundary Faces` gives the percentage of the faces two
-ranks hold and their minimum and maximum per rank.
+ranks store and their minimum and maximum per rank.
 
 A low balance value identifies unequal ownership. Many rank-boundary faces
 identify a small local workload relative to the halo traffic.
@@ -29,13 +29,13 @@ identify a small local workload relative to the halo traffic.
 # Memory
 
 The first lines of the `Memory` section sum the bytes the pools allocate over
-the ranks. `CPU Grid` and `GPU Grid` hold the cell connectivity and the tree in host and
-device memory, `CPU Solver Data` and `GPU Solver Data` the application data.
+the ranks. `CPU Grid` and `GPU Grid` count the bytes of the cell connectivity and the tree in
+host and device memory, `CPU Solver Data` and `GPU Solver Data` the bytes of the application data.
 `Resident` sums the resident set of the processes, the pages they have written,
 over the ranks. `Free` continues that line with the available and the total
 memory of the nodes. Linux backs an allocated page with memory on its first
-write, so `Resident` can stay below the allocated bytes until the time steps
-have written every pool.
+write. `Resident` can stay below the allocated bytes until the time steps have
+written every pool.
 
 # Regridding
 

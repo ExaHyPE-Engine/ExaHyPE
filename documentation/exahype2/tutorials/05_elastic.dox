@@ -7,10 +7,10 @@
 The final tutorial steps up to **three dimensions** and to a system with **nine
 unknowns**: the linear elastic wave equations, the workhorse of computational
 seismology. An isotropic *explosion* at the centre of a cube radiates an outgoing
-spherical wave, which we visualise by **slicing the 3D cube** interactively. A 3D
-high-order ADER-DG solver is also a genuinely **HPC-scale** workload, so this part
-doubles as a tour of how ExaHyPE uses parallel hardware - and we measure its
-MPI strong scaling directly. The notebook is
+spherical wave. We visualise it by **slicing the 3D cube** interactively. A 3D
+high-order ADER-DG solver is also a genuinely **HPC-scale** workload. This part
+doubles as a tour of how ExaHyPE uses parallel hardware. We measure its OpenMP
+strong scaling directly. The notebook is
 `tutorials/05_elastic/ElasticWaves.ipynb` with its implementation in
 `ADERDGSolver.cpp`.
 
@@ -30,11 +30,11 @@ We use the first-order **velocity-stress** form. The unknowns are the velocity
 @f$
 
 Here \f$\rho\f$ is the density and \f$\lambda, \mu\f$ the Lamé parameters. The
-medium carries two wave types: fast **P-waves** at
+medium supports two wave types: fast **P-waves** at
 \f$c_p = \sqrt{(\lambda + 2\mu)/\rho}\f$ and slower **S-waves** at
 \f$c_s = \sqrt{\mu/\rho}\f$. We pick \f$\rho = 1\f$, \f$c_p = 2\f$, \f$c_s = 1\f$.
 The isotropic explosion (a Gaussian bump on the diagonal stresses) excites only
-P-waves, so we expect a clean expanding spherical shell.
+P-waves. We expect a clean expanding spherical shell.
 
 # The Configuration
 
@@ -71,7 +71,7 @@ unknowns are a velocity of multiplicity 3 and a stress of multiplicity 6:
 
 # The Implementation File
 
-`ADERDGSolver.cpp` holds the PDE terms. The unknowns are addressed through the
+`ADERDGSolver.cpp` contains the PDE terms. The code addresses the unknowns through the
 generated `Shortcuts` enum (`Shortcuts::v + 0..2`, `Shortcuts::sigma + 0..5`).
 `initialCondition` sets the Gaussian explosion (equal diagonal stresses, at rest);
 `boundaryConditions` gives a quiescent exterior to reflect off; `maxEigenvalue`
@@ -82,7 +82,7 @@ out per direction with the Lamé parameters recovered from \f$\rho, c_p, c_s\f$.
 
 # Running and Visualising in 3D
 
-A 3D high-order run is heavier than the 2D tutorials - at order 4 each cell carries
+A 3D high-order run is heavier than the 2D tutorials - at order 4 each cell stores
 \f$(4+1)^3 = 125\f$ degrees of freedom per unknown:
 
     export OMP_NUM_THREADS=4
@@ -92,8 +92,8 @@ A 3D field is best explored slice by slice. `show_solution_3D` cuts axis-aligned
 2D slices through the cube: pick the slice axis with the **slice ⊥** dropdown
 (x/y/z), move the **slice** slider through the volume, pick a field, and animate
 over time with the **time** slider / Play. Picking a slice (or the field or axis)
-warms all of that slice's time frames in parallel across cores - a brief
-*Prefetching N/M* - so the time slider and playback are then smooth:
+renders all of that slice's time frames in parallel across cores during a brief
+*Prefetching N/M*. The time slider and playback then run smoothly:
 
     from postprocessing import render_solution
     render_solution.show_solution_3D("ADERDGSolver", field="sigma")
@@ -124,20 +124,21 @@ surfaces**, neither of which needs a code change:
 - **Threads (OpenMP).** The thread count per rank is the `OMP_NUM_THREADS`
   environment variable; the startup banner echoes it as `OpenMP   N Threads`.
 
-The notebook measures the first one, **MPI strong scaling**: it runs the same
-problem on 1, 2 and 4 ranks (one thread per rank, so the measurement is pure
-MPI), reads the `Average Time Step` the solver prints (with plotting
-off, `-ns 0`, to time pure compute), and plots the speedup against the ideal
-linear line. The gap is the usual strong-scaling reality - halo exchange between
-the subdomains, load imbalance and the serial fraction of the time step.
+The notebook measures the second one, **OpenMP strong scaling**: it runs the same
+problem on 1, 2 and 4 threads of one process, reads the `Average Time Step` the
+solver prints (with plotting off, `-ns 0`, to time pure compute), and plots the
+speedup against the ideal linear line. On one node, threads scale better than as
+many MPI ranks with one thread each. Every rank copies the faces on the boundary
+of its subdomain into messages and waits in MPI for the faces of its neighbours
+in every time step. The threads of one process read these faces in place.
 
 # Exercise - Launch a Shear Wave
 
 The isotropic explosion sets the three **diagonal** stresses equal. That is a pure
-volume change, so it radiates only the fast **P-wave** - the clean spherical shell
-(a ring in any slice). A **shear** source - a single *off-diagonal* stress - instead
-launches the slower **S-wave** (\f$c_s = 1\f$, half the P-wave speed), whose
-radiation is not spherical but a four-lobed **quadrupole**.
+volume change. It radiates only the fast **P-wave**, the clean spherical shell (a
+ring in any slice). A **shear** source, a single *off-diagonal* stress, launches
+the slower **S-wave** (\f$c_s = 1\f$, half the P-wave speed). Its radiation forms
+a four-lobed **quadrupole**.
 
 In `ADERDGSolver.cpp`, inside `initialCondition`, replace the three diagonal-stress
 lines

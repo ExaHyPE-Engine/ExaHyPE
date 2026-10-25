@@ -11,15 +11,16 @@ namespace tarch::accelerator::tests {
 class tarch::accelerator::tests::ScratchTest final : public tarch::tests::TestCase {
 public:
   ScratchTest();
-  ScratchTest(const ScratchTest&)            = delete;
-  ScratchTest(ScratchTest&&)                 = delete;
-  ScratchTest& operator=(const ScratchTest&) = delete;
-  ScratchTest& operator=(ScratchTest&&)      = delete;
-  ~ScratchTest() override                    = default;
+  ScratchTest(const ScratchTest& other)            = delete;
+  ScratchTest(ScratchTest&& other)                 = delete;
+  ScratchTest& operator=(const ScratchTest& other) = delete;
+  ScratchTest& operator=(ScratchTest&& other)      = delete;
+  ~ScratchTest() override                          = default;
 
   void run() override;
 
 private:
   void testEveryWorkItemNamesAChunkOfTheDispatch();
   void testTheChunksCoverTheTeamOfTheEnclosingRegion();
+  void testPersistentTeamsFitTheWorkItemsAndTheDevice();
 };

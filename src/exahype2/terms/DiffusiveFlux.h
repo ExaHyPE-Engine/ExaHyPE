@@ -5,6 +5,9 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::terms {
+  /**
+   * flux() overwrites every entry of F with the flux along normal.
+   */
   template <typename SolverType, typename Precision>
   concept HasDiffusiveFlux = requires(
     const Precision* const                       Q,

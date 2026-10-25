@@ -34,7 +34,17 @@ namespace exahype2::dg::ader {
     int                                   threadsPerCell
   );
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void synchronise(const TeamWorkers& workers);
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD TeamWorkers getWorkersWithThreadsOfTeam(
+    const tarch::accelerator::TeamHandle& team,
+    int                                   threadsPerCell
+  );
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier(const TeamWorkers& workers);
+
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInAnyThreadOfTeam(
+    const TeamWorkers& workers,
+    bool               condition
+  );
 } // namespace exahype2::dg::ader
 TARGET_DECLARE_END
 

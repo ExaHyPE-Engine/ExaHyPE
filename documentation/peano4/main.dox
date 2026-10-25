@@ -10,7 +10,7 @@ phase order, the rank coordination, the reporting and the shutdown.
 
 # Repository callbacks
 
-The generated `SolverRepository` holds one instance of every solver of the
+The generated `SolverRepository` contains one instance of every solver of the
 project. Its free functions forward every phase to every solver, and the main
 collects them in an exahype2::runner::SolverRepositoryCallbacks record:
 

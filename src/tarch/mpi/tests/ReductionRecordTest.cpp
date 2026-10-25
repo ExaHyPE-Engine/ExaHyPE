@@ -23,7 +23,7 @@ tarch::mpi::tests::ReductionRecordTest::run() {
 }
 
 /**
- * Every slot holds the sum, minimum or maximum of the values that the ranks add to it.
+ * Every slot contains the sum, minimum or maximum of the values that the ranks add to it.
  */
 void
 tarch::mpi::tests::ReductionRecordTest::testAllreduceReducesEverySlotOverTheRanks() {

@@ -184,9 +184,10 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
   _admissibleTimeStepSizeOfNextStep = timeStepSizeFromCFL;
   if (not std::isfinite(timeStepSizeFromCFL) or timeStepSizeFromCFL <= NumericalZero) {
     tarch::triggerNonCriticalAssertion(
-      "The CFL condition has to give a finite time step size above " + formatValue(NumericalZero) + ".",
-      "The CFL condition gives the time step size " + formatValue(timeStepSizeFromCFL)
-        + " at t = " + formatValue(_timeStamp) + "."
+      "The simulation is unstable at t = " + formatValue(_timeStamp) + ": The maximum eigenvalue is "
+        + formatValue(_maxEigenvalue) + " and the time step size is " + formatValue(timeStepSizeFromCFL) + " (minimum "
+        + formatValue(NumericalZero) + ").",
+      "Check the PDE terms, the initial condition and the boundary conditions."
     );
     return;
   }

@@ -14,11 +14,11 @@ namespace exahype2::dg::ader::tests {
 class exahype2::dg::ader::tests::LinearPredictorTest final : public tarch::tests::TestCase {
 public:
   LinearPredictorTest();
-  LinearPredictorTest(const LinearPredictorTest&)            = delete;
-  LinearPredictorTest(LinearPredictorTest&&)                 = delete;
-  LinearPredictorTest& operator=(const LinearPredictorTest&) = delete;
-  LinearPredictorTest& operator=(LinearPredictorTest&&)      = delete;
-  ~LinearPredictorTest() override                            = default;
+  LinearPredictorTest(const LinearPredictorTest& other)            = delete;
+  LinearPredictorTest(LinearPredictorTest&& other)                 = delete;
+  LinearPredictorTest& operator=(const LinearPredictorTest& other) = delete;
+  LinearPredictorTest& operator=(LinearPredictorTest&& other)      = delete;
+  ~LinearPredictorTest() override                                  = default;
 
   void run() override;
 
@@ -38,8 +38,6 @@ private:
   void testASourceOutsideIsRejected();
   void testASourceOnAFaceBelongsToBothCells();
   void testSelectionKeepsTheTableOrder();
-  void testTheBasisFunctionIsOneAtItsOwnNodeAndZeroAtTheOthers();
-  void testTheBasisFunctionsReproduceALinearFunction();
   void testNoPointSourceLeavesTheSamplesEmpty();
   void testASourceIsSpreadByTheBasisAndScaledByTheWeightAndVolume();
   void testTheTimeIntegralSkipsTheSampleAtTheStart();
@@ -49,6 +47,7 @@ private:
   void testATermTheSolverLacksHasZeroExtent();
   void testThePredictorWritesTheTimeAveragesAndTheFacesAndLeavesTheCellState();
   void testASolverWithoutFluxGetsZeroFaceFluxes();
+  void testASolverWithoutRiemannSolverLeavesTheFaceFluxes();
   void testEveryCellOfADeviceRangeSelectsItsPointSources();
   template <typename StoragePrecision>
   void testEveryCellOfADeviceRangeMatchesTheHostPredictor();

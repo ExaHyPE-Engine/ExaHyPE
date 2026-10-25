@@ -3,102 +3,176 @@
 
 #include "exahype2/terms/PostprocessUpdatedPatch.h"
 #include "tarch/Assertions.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/Scratch.h"
+
+/**
+ * Returns the threads per team of a corrector launch. Every thread of a team corrects its own
+ * nodes.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD int
+exahype2::dg::ader::Corrector<Derived, StoragePrecision, ComputePrecision>::getTeamThreads() {
+  return tarch::accelerator::getTeamThreads(tarch::accelerator::TeamRange::BackendDefault);
+}
+
+/**
+ * Returns the number of teams of a corrector dispatch over cells. The host launches one team per
+ * cell. A device launches at most as many teams as it runs at once and at most one team per
+ * getTeamThreads() nodes.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD int
+exahype2::dg::ader::Corrector<Derived, StoragePrecision, ComputePrecision>::getNumberOfTeams(const int cells) {
+  assertion(cells >= 0, cells);
+  const int teamThreads = getTeamThreads();
+  const int teamsOfNodes =
+    static_cast<int>((static_cast<std::int64_t>(cells) * CellLayout::NodesPerCell + teamThreads - 1) / teamThreads);
+  return tarch::accelerator::getNumberOfPersistentTeams(std::min(cells, teamsOfNodes), teamThreads);
+}
 
 TARGET_DECLARE
 /**
- * Adds the face integrals to cellState, calls postprocessCell and returns the wave-speed maxima at
- * the new time stamp. The maxima are zero without ReportEigenvalues. faceFluxes points to the
- * flux half of every face that the cell reads.
+ * Subtracts the face integrals of one node from the unknowns of that node of cellValues.
+ * faceFluxes points to the flux half of every face that the cell reads. inverseCellSize is the
+ * reciprocal cell extent along every axis.
  */
-template <typename Derived, typename ComputePrecision>
-template <bool ReportEigenvalues, typename StoragePrecision, typename Postprocessing>
-INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
-exahype2::dg::ader::Corrector<Derived, ComputePrecision>::correct(
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const ComputePrecision* const                faceFluxes[peano4::FacesPerCell],
-  StoragePrecision* NOALIAS const              cellState,
-  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
-  const ComputePrecision* NOALIAS const        inverseCellQuadratureWeights,
-  const ComputePrecision* NOALIAS const        leftFaceCoefficients,
-  const ComputePrecision* NOALIAS const        rightFaceCoefficients,
-  const StoragePrecision* NOALIAS const        stateQuadraturePoints,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  Postprocessing&&                             postprocessCell
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::Corrector<Derived, StoragePrecision, ComputePrecision>::correctNode(
+  StoragePrecision* NOALIAS const       cellValues,
+  const int                             node,
+  const ComputePrecision* const         faceFluxes[peano4::FacesPerCell],
+  const ComputePrecision* NOALIAS const faceQuadratureWeights,
+  const ComputePrecision* NOALIAS const inverseCellQuadratureWeights,
+  const ComputePrecision* NOALIAS const leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const rightFaceCoefficients,
+  const double                          inverseCellSize[DIMENSIONS],
+  const double                          timeStepSize
 ) {
-  assertion(cellState != nullptr);
-  assertion(stateQuadraturePoints != nullptr);
-  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp, cellCentre);
-  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, cellCentre);
-  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    assertion(faceFluxes[faceNumber] != nullptr, faceNumber);
-  }
-
-  exahype2::dg::addFaceIntegrals<Derived, CellLayout::NumberOfData>(
-    cellState,
+  exahype2::dg::addFaceIntegralsOfNode<Derived, CellLayout::NumberOfData>(
+    cellValues,
+    node,
     faceFluxes,
     faceQuadratureWeights,
     inverseCellQuadratureWeights,
     leftFaceCoefficients,
     rightFaceCoefficients,
-    cellSize,
+    inverseCellSize,
     timeStepSize
   );
-
-  postprocessCell();
-
-  exahype2::dg::MaxEigenvalueStatistics statistics;
-  if constexpr (ReportEigenvalues) {
-    statistics = exahype2::dg::reduceMaxEigenvalues<Derived>(
-      cellState,
-      stateQuadraturePoints,
-      cellCentre,
-      cellSize,
-      timeStamp + timeStepSize,
-      timeStepSize
-    );
-  }
-  return statistics;
 }
 
 template <typename Derived, bool ReportEigenvalues, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, ComputePrecision>::operator()(
   const int                              entry,
+  const tarch::accelerator::TeamHandle   team,
   exahype2::dg::MaxEigenvalueStatistics& accumulator
 ) const {
-  constexpr int FluxValuesPerFace                    = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
-  const int     slot                                 = cells[entry];
-  const tarch::la::Vector<DIMENSIONS, double> centre = cellConnectivity.getCellCentre(slot);
-  const tarch::la::Vector<DIMENSIONS, double> width  = cellConnectivity.getCellWidth(slot);
-  const ComputePrecision*                     fluxes[peano4::FacesPerCell];
-  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    const int face     = cellConnectivity.getCellFace(slot, faceNumber);
-    fluxes[faceNumber] = faceFluxes.getChunk(face)
-      + exahype2::dg::getCorrectionHalf(cellConnectivity, face, faceNumber) * FluxValuesPerFace;
-  }
-  StoragePrecision* const updated = solution.getChunk(slot);
-  accumulator                     = exahype2::dg::MaxEigenvalueStatistics::combine(
-    accumulator,
-    exahype2::dg::ader::Corrector<Derived, ComputePrecision>::template correct<ReportEigenvalues>(
-      centre,
-      width,
-      fluxes,
+  constexpr int  NodesPerCell      = CellLayout::NodesPerCell;
+  constexpr int  FluxValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
+  constexpr bool Postprocesses     = exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>;
+  assertion(numberOfTeams >= 1, numberOfTeams);
+  assertion(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
+  const int thread      = tarch::accelerator::getThreadOfTeam(team);
+  const int threads     = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+  const int cellsOfTeam = entry < cells.size ? (cells.size - 1 - entry) / numberOfTeams + 1 : 0;
+
+  // The threads of the team divide the nodes of all its cells among themselves. A thread reads the
+  // width and the face fluxes of a cell only when its next node lies in another cell.
+  exahype2::dg::MaxEigenvalueStatistics statisticsOfThread;
+  int                                   cellOfThread = -1;
+  int                                   slot         = -1;
+  StoragePrecision*                     updated      = nullptr;
+  tarch::la::Vector<DIMENSIONS, double> width;
+  double                                inverseCellSize[DIMENSIONS];
+  const ComputePrecision*               fluxes[peano4::FacesPerCell];
+  for (int item = thread; item < cellsOfTeam * NodesPerCell; item += threads) {
+    if (item / NodesPerCell != cellOfThread) {
+      cellOfThread = item / NodesPerCell;
+      slot         = cells[entry + cellOfThread * numberOfTeams];
+      width        = cellConnectivity.getCellWidth(slot);
+      updated      = solution.getChunk(slot);
+      for (int direction = 0; direction < DIMENSIONS; direction++) {
+        assertion(width(direction) > 0.0, width, direction);
+        inverseCellSize[direction] = 1.0 / width(direction);
+      }
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        const int face     = cellConnectivity.getCellFace(slot, faceNumber);
+        fluxes[faceNumber] = faceFluxes.getChunk(face)
+          + exahype2::dg::getCorrectionHalf(cellConnectivity, face, faceNumber) * FluxValuesPerFace;
+      }
+    }
+    const int node = item % NodesPerCell;
+    Kernel::correctNode(
       updated,
+      node,
+      fluxes,
       faceQuadratureWeights,
       inverseCellQuadratureWeights,
       leftFaceCoefficients,
       rightFaceCoefficients,
-      stateQuadraturePoints,
-      timeStamp,
-      timeStepSize,
-      [&]() {
-        if constexpr (exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>) {
-          Derived::postprocessUpdatedPatch(updated, centre, width, timeStamp, timeStepSize);
-        }
+      inverseCellSize,
+      timeStepSize
+    );
+    if constexpr (ReportEigenvalues and not Postprocesses) {
+      statisticsOfThread = exahype2::dg::MaxEigenvalueStatistics::combine(
+        statisticsOfThread,
+        exahype2::dg::getMaxEigenvaluesOfNode<Derived>(
+          node,
+          updated,
+          stateQuadraturePoints,
+          cellConnectivity.getCellCentre(slot),
+          width,
+          timeStamp + timeStepSize,
+          timeStepSize
+        )
+      );
+    }
+  }
+
+  if constexpr (Postprocesses) {
+    tarch::accelerator::teamBarrier(team);
+    for (int cellOfTeam = thread; cellOfTeam < cellsOfTeam; cellOfTeam += threads) {
+      const int slotOfCell = cells[entry + cellOfTeam * numberOfTeams];
+      Derived::postprocessUpdatedPatch(
+        solution.getChunk(slotOfCell),
+        cellConnectivity.getCellCentre(slotOfCell),
+        cellConnectivity.getCellWidth(slotOfCell),
+        timeStamp,
+        timeStepSize
+      );
+    }
+    if constexpr (ReportEigenvalues) {
+      tarch::accelerator::teamBarrier(team);
+      for (int item = thread; item < cellsOfTeam * NodesPerCell; item += threads) {
+        const int slotOfNode = cells[entry + item / NodesPerCell * numberOfTeams];
+        statisticsOfThread   = exahype2::dg::MaxEigenvalueStatistics::combine(
+          statisticsOfThread,
+          exahype2::dg::getMaxEigenvaluesOfNode<Derived>(
+            item % NodesPerCell,
+            solution.getChunk(slotOfNode),
+            stateQuadraturePoints,
+            cellConnectivity.getCellCentre(slotOfNode),
+            cellConnectivity.getCellWidth(slotOfNode),
+            timeStamp + timeStepSize,
+            timeStepSize
+          )
+        );
       }
-    )
-  );
+    }
+  }
+
+  if constexpr (ReportEigenvalues) {
+    tarch::accelerator::reduceOverTeam(
+      team,
+      statisticsOfThread,
+      tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{accumulator}
+    );
+  }
 }
 TARGET_DECLARE_END

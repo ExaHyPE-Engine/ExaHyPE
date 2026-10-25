@@ -44,9 +44,14 @@ private:
   INLINE_METHOD void postTransfers(
     const Pool&                              pool,
     const std::vector<peano4::RankTransfer>& transfers,
-    const Transfer&                          transfer
+    const Transfer&                          transfer,
+    double*                                  prepared
   );
   INLINE_METHOD void receiveTransfers(Pool& pool);
+
+  [[nodiscard]] static INLINE_METHOD int getNumberOfWorkItems(std::size_t chunks, int workItemsPerChunk);
+  template <typename Transfer, typename Preparation>
+  static INLINE_METHOD void prepareChunks(std::size_t chunks, const Preparation& preparation);
 
   static constexpr int NoTag = -1;
 

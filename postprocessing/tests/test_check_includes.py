@@ -47,17 +47,17 @@ class IncludeConventionTest(unittest.TestCase):
             [(2, 'spells "A.h" without its path from src')],
         )
 
-    def test_an_inline_definition_file_holds_no_pragma_once(self):
+    def test_a_pragma_once_in_an_inline_definition_file_is_reported(self):
         text = '#pragma once\n#include "tarch/A.h"\n'
         self.assertEqual(
             messages("/repo/src/tarch/Foo.cpph", text),
-            [(0, "an inline definition file holds a #pragma once")],
+            [(0, "an inline definition file must not contain #pragma once")],
         )
 
     def test_a_header_without_pragma_once_is_reported(self):
         self.assertEqual(
             messages("/repo/tests/fv/PDE.h", "int f();\n"),
-            [(0, "a header holds no #pragma once")],
+            [(0, "a header needs a #pragma once")],
         )
 
     def test_a_standard_header_below_src_belongs_to_the_precompiled_header(self):
@@ -116,7 +116,7 @@ class CheckIncludesScriptTest(unittest.TestCase):
         self.repository.write("src/tarch/Foo.h", '#include "../Bar.h"\n')
         result = self.repository.run("check_includes", "--conventions-only")
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn("src/tarch/Foo.h: a header holds no #pragma once", result.stdout)
+        self.assertIn("src/tarch/Foo.h: a header needs a #pragma once", result.stdout)
 
     def test_a_clean_repository_passes(self):
         self.repository.write(

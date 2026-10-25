@@ -76,7 +76,7 @@ exahype2::tests::ErrorMeasurementTest::testEveryRankFindsASnapshotDueForTheNewes
   const std::string fileName = (tarch::tests::getWritableTestDirectory() / "ErrorMeasurementDueTest").string();
   measurement.open(fileName, 1.0);
   validateEquals(measurement.isSnapshotDue(0.5), true);
-  [[maybe_unused]] const auto norms = measurement.record(exahype2::ErrorSums{}, 0.5);
+  [[maybe_unused]] const auto norms = measurement.record(std::vector<double>{}, 0.5);
 
   validateEquals(measurement.isSnapshotDue(0.5), true);
   validateEquals(measurement.isSnapshotDue(0.9), false);
@@ -108,26 +108,19 @@ exahype2::tests::ErrorMeasurementTest::testRecordIsExactAcrossRankPartitions() {
   exahype2::ErrorMeasurement measurement;
   const std::string fileName = (tarch::tests::getWritableTestDirectory() / "ErrorMeasurementPartitionTest").string();
   measurement.open(fileName, 0.0);
-  const double errors[9] = {1.0, 4.0, 1.0, 0x1p-53, 0x1p-50, 0.0, 0x1p-53, 0x1p-50, 0.0};
+  const std::vector<double> errors{1.0, 4.0, 1.0, 0x1p-53, 0x1p-50, 0.0, 0x1p-53, 0x1p-50, 0.0};
 
-  exahype2::ErrorSums togetherSums;
-  if (rank == 0) {
-    for (int cell = 0; cell < 3; cell++) {
-      togetherSums.add(errors + 3 * static_cast<std::ptrdiff_t>(cell));
-    }
-  }
-  const auto together = measurement.record(togetherSums, 0.0);
+  const auto together = measurement.record(rank == 0 ? errors : std::vector<double>{}, 0.0);
 
   const int           lastOwner = numberOfRanks > 1 ? 1 : 0;
-  exahype2::ErrorSums partitionedSums;
+  std::vector<double> partitionedErrors;
   if (rank == 0) {
-    partitionedSums.add(errors);
-    partitionedSums.add(errors + 3);
+    partitionedErrors.insert(partitionedErrors.end(), errors.begin(), errors.begin() + 6);
   }
   if (rank == lastOwner) {
-    partitionedSums.add(errors + 6);
+    partitionedErrors.insert(partitionedErrors.end(), errors.begin() + 6, errors.end());
   }
-  const auto partitioned = measurement.record(partitionedSums, 1.0);
+  const auto partitioned = measurement.record(partitionedErrors, 1.0);
 
   validateEquals(together[0], 1.0 + 0x1p-52);
   for (int norm = 0; norm < exahype2::ErrorMeasurement::NumberOfNorms; norm++) {
@@ -174,17 +167,14 @@ exahype2::tests::ErrorMeasurementTest::testRecordSumsTheIntegralNormsAndTakesThe
   exahype2::ErrorMeasurement measurement;
   const std::string          fileName = (tarch::tests::getWritableTestDirectory() / "ErrorMeasurementTest").string();
   measurement.open(fileName, 0.0);
-  const double        errorsPerCell[6] = {1.0, 4.0, rank, 2.0, 5.0, 0.5};
-  exahype2::ErrorSums sums;
-  sums.add(errorsPerCell);
-  sums.add(errorsPerCell + 3);
+  const std::vector<double> errorsPerCell{1.0, 4.0, rank, 2.0, 5.0, 0.5};
 
-  const auto norms = measurement.record(sums, 0.25);
+  const auto norms = measurement.record(errorsPerCell, 0.25);
   validateNumericalEquals(norms[0], 3.0 * numberOfRanks);
   validateNumericalEquals(norms[1], std::sqrt(9.0 * numberOfRanks));
   validateNumericalEquals(norms[2], std::max(numberOfRanks - 1.0, 0.5));
 
-  const auto emptyNorms = measurement.record(exahype2::ErrorSums{}, 0.5);
+  const auto emptyNorms = measurement.record(std::vector<double>{}, 0.5);
   validateNumericalEquals(emptyNorms[0], 0.0);
   validateNumericalEquals(emptyNorms[1], 0.0);
   validateNumericalEquals(emptyNorms[2], 0.0);
@@ -196,12 +186,20 @@ exahype2::tests::ErrorMeasurementTest::testDeviceSumsMatchTheHostSumsWhateverThe
   constexpr int       NumberOfCells = 3000;
   std::vector<double> ascending;
   ascending.reserve(static_cast<std::size_t>(NumberOfCells) * 3);
-  exahype2::ErrorSums hostSums;
+  exahype2::LargestErrors largestErrors;
+  double                  sumInIndexOrder = 0.0;
   for (int cell = 0; cell < NumberOfCells; cell++) {
     const double error = std::pow(10.0, -static_cast<double>(cell % 9)) * (1.0 + cell);
     ascending.push_back(error);
     ascending.push_back(error * error);
     ascending.push_back(error);
+    largestErrors.error        = std::max(largestErrors.error, error);
+    largestErrors.squaredError = std::max(largestErrors.squaredError, error * error);
+    sumInIndexOrder += error;
+  }
+  const exahype2::ErrorSums emptySums = exahype2::ErrorMeasurement::getEmptySumsOfAllRanks(largestErrors);
+  exahype2::ErrorSums       hostSums  = emptySums;
+  for (int cell = 0; cell < NumberOfCells; cell++) {
     hostSums.add(ascending.data() + 3 * static_cast<std::ptrdiff_t>(cell));
   }
   std::vector<double> descending;
@@ -215,18 +213,19 @@ exahype2::tests::ErrorMeasurementTest::testDeviceSumsMatchTheHostSumsWhateverThe
   tarch::accelerator::Buffer<exahype2::ErrorSums> partialSums(tarch::MemoryLocation::Device);
   errorsOnDevice.setValues(ascending);
   const exahype2::ErrorSums ascendingSums =
-    exahype2::ErrorMeasurement::sumErrorsOfCells(errorsOnDevice.getData(), NumberOfCells, partialSums);
+    exahype2::ErrorMeasurement::sumErrorsOfCells(errorsOnDevice.getData(), NumberOfCells, emptySums, partialSums);
   errorsOnDevice.setValues(descending);
   const exahype2::ErrorSums descendingSums =
-    exahype2::ErrorMeasurement::sumErrorsOfCells(errorsOnDevice.getData(), NumberOfCells, partialSums);
+    exahype2::ErrorMeasurement::sumErrorsOfCells(errorsOnDevice.getData(), NumberOfCells, emptySums, partialSums);
   const exahype2::ErrorSums noSums =
-    exahype2::ErrorMeasurement::sumErrorsOfCells(errorsOnDevice.getData(), 0, partialSums);
+    exahype2::ErrorMeasurement::sumErrorsOfCells(errorsOnDevice.getData(), 0, emptySums, partialSums);
 
   for (const exahype2::ErrorSums& deviceSums : {ascendingSums, descendingSums}) {
     validateEquals(deviceSums.summedError.round(), hostSums.summedError.round());
     validateEquals(deviceSums.summedSquaredError.round(), hostSums.summedSquaredError.round());
     validateEquals(deviceSums.maxError, hostSums.maxError);
   }
+  validateNumericalEqualsWithEps(hostSums.summedError.round(), sumInIndexOrder, 1.0e-12 * sumInIndexOrder);
   validateEquals(noSums.summedError.round(), 0.0);
   validateEquals(noSums.maxError, 0.0);
 }
@@ -238,10 +237,11 @@ exahype2::tests::ErrorMeasurementTest::testTheOwnedBufferSumsTheErrorsOfEveryCel
   const std::string fileName = (tarch::tests::getWritableTestDirectory() / "ErrorMeasurementBufferTest").string();
   measurement.open(fileName, 0.0);
 
-  exahype2::ErrorSums hostSums;
+  std::vector<double> errorsOnHost;
   for (int cell = 0; cell < NumberOfCells; cell++) {
-    const double errors[3] = {getErrorOfCell(cell), getErrorOfCell(cell) * getErrorOfCell(cell), getErrorOfCell(cell)};
-    hostSums.add(errors);
+    errorsOnHost.push_back(getErrorOfCell(cell));
+    errorsOnHost.push_back(getErrorOfCell(cell) * getErrorOfCell(cell));
+    errorsOnHost.push_back(getErrorOfCell(cell));
   }
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(NumberOfCells),
@@ -250,7 +250,7 @@ exahype2::tests::ErrorMeasurementTest::testTheOwnedBufferSumsTheErrorsOfEveryCel
   validate(measurement.getAllocatedBytes().getTotal() >= static_cast<std::size_t>(NumberOfCells) * 3 * sizeof(double));
 
   const auto norms    = measurement.record(NumberOfCells, 0.25);
-  const auto expected = measurement.record(hostSums, 0.5);
+  const auto expected = measurement.record(errorsOnHost, 0.5);
   for (int norm = 0; norm < exahype2::ErrorMeasurement::NumberOfNorms; norm++) {
     validateEqualsWithParams1(norms[static_cast<std::size_t>(norm)], expected[static_cast<std::size_t>(norm)], norm);
   }

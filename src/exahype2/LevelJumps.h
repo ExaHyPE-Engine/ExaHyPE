@@ -11,7 +11,7 @@ namespace exahype2 {
   template <typename Operation>
   struct ForEachLevelJump;
 
-  INLINE_METHOD bool holdsIntermediateFace(
+  INLINE_METHOD bool containsIntermediateFace(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
     int                             level

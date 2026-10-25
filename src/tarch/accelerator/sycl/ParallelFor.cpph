@@ -81,6 +81,22 @@ namespace tarch::accelerator {
     ::sycl::group_barrier(team.item.get_group());
   }
 
+  /**
+   * Returns whether condition is true in every work item of the team. Every work item receives the
+   * same value.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInEveryThreadOfTeam(const SyclTeam& team, const bool condition) {
+    return ::sycl::all_of_group(team.item.get_group(), condition);
+  }
+
+  /**
+   * Returns whether condition is true in any work item of the team. Every work item receives the
+   * same value.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInAnyThreadOfTeam(const SyclTeam& team, const bool condition) {
+    return ::sycl::any_of_group(team.item.get_group(), condition);
+  }
+
   template <typename Functor>
   INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);

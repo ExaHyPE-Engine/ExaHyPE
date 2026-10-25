@@ -17,15 +17,17 @@ def generate_radial_particles(
     particles_per_ray=50,
     r_min=0.05,
     r_max=1.0,
-    centre_x=1.5,
-    centre_y=1.5,
+    centre_x=0.0,
+    centre_y=0.0,
 ):
     """
     Generates a .dat file with particle positions on rays around (centre_x, centre_y).
+    No ray lies on an axis. A tracer on an axis of a Hilbert grid reads only the
+    cell below its face.
     """
     with open(file_path, "w") as file:
         for i in range(num_rays):
-            theta = 2 * math.pi * i / num_rays
+            theta = 2 * math.pi * (i + 0.5) / num_rays
             for j in range(particles_per_ray):
                 r = r_min + j * (r_max - r_min) / (particles_per_ray - 1)
                 x = centre_x + r * math.cos(theta)
@@ -88,7 +90,7 @@ project = exahype2.Project(
     project_name=".",
     dimensions=2,
     size=[3.0, 3.0, 3.0],
-    offset=[0.0, 0.0, 0.0],
+    offset=[-1.5, -1.5, -1.5],
     periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
@@ -96,14 +98,18 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The radial jet tracer test runs in 2D only.")
+
 initial_conditions = """
   constexpr double Epsilon = 1e-3;
-  constexpr double CentreX = 1.5;
-  constexpr double CentreY = 1.5;
+  constexpr double CentreX = 0.0;
+  constexpr double CentreY = 0.0;
 
   const double offsetX       = x(0) - CentreX;
   const double offsetY       = x(1) - CentreY;
-  const double radiusSquared = offsetX * offsetX + offsetY * offsetY + Epsilon * Epsilon;
+  const double radiusSquared = tarch::la::productRoundedOnce(offsetX, offsetX)
+                             + tarch::la::productRoundedOnce(offsetY, offsetY) + Epsilon * Epsilon;
 
   Q[Shortcuts::rho] = 1.0;
   Q[Shortcuts::u]   = offsetX / radiusSquared;
@@ -133,8 +139,8 @@ analytical_solution = """
   // r(t)^2 = r(0)^2 + 2t. The entries of solution are the position and the tracer data of
   // tracer_attributes, with zero mass and acceleration for a tracer.
   constexpr double Epsilon = 1e-3;
-  constexpr double CentreX = 1.5;
-  constexpr double CentreY = 1.5;
+  constexpr double CentreX = 0.0;
+  constexpr double CentreY = 0.0;
 
   const double initialX             = particle->getData(1);
   const double initialY             = particle->getData(2);
@@ -161,7 +167,7 @@ fv_solver = exahype2.fv.Solver(
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "u": 1, "v": 1, "e": 1},
     auxiliary_variables=0,
-    time_stepping=exahype2.TimeStepping.Fixed(0.0025 / (args.degrees_of_freedom**0.5)),
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
     scheme=exahype2.fv.Godunov(),
 )
 

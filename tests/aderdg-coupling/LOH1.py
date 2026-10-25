@@ -49,10 +49,7 @@ project = exahype2.Project(
 )
 
 if project.dimensions != 3:
-    raise ValueError(
-        f"LOH1 coupling is a 3D testcase, but the project was configured for "
-        f"{project.dimensions}D."
-    )
+    raise ValueError("The LOH1 coupling test runs in 3D only.")
 
 # The plane between the two solvers is a cell boundary of the finest level. The low-precision
 # solver owns the slab of one finest cell below the upper domain boundary.

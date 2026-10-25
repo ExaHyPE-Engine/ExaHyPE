@@ -14,15 +14,15 @@ namespace tarch::mpi::tests {
 class tarch::mpi::tests::RankTest final : public tarch::tests::TestCase {
 public:
   RankTest();
-  RankTest(const RankTest&)            = delete;
-  RankTest(RankTest&&)                 = delete;
-  RankTest& operator=(const RankTest&) = delete;
-  RankTest& operator=(RankTest&&)      = delete;
-  ~RankTest() override                 = default;
+  RankTest(const RankTest& other)            = delete;
+  RankTest(RankTest&& other)                 = delete;
+  RankTest& operator=(const RankTest& other) = delete;
+  RankTest& operator=(RankTest&& other)      = delete;
+  ~RankTest() override                       = default;
 
   void run() override;
 
 private:
   void testRankOnNodeMatchesTheSharedMemorySplit();
-  void testNodeMasterHoldsNodeRankZero();
+  void testTheNodeMasterHasNodeRankZero();
 };

@@ -44,6 +44,9 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The periodic advection tracer test runs in 2D only.")
+
 initial_conditions = """
   Q[0] = 1.0;
   Q[1] = 0.5;

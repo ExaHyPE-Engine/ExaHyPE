@@ -20,11 +20,12 @@ namespace tarch::accelerator {
   constexpr int DefaultThreadsPerTeam = OmptThreadsPerTeam;
 
   /**
-   * Holds the team scratch of the running team. The threads of a team read their indices from the
-   * OpenMP runtime.
+   * Points to the team scratch and one vote per thread of the running team. The threads of a team
+   * read their indices from the OpenMP runtime.
    */
   struct OmptTeam final {
     unsigned char* scratch{nullptr};
+    int*           votes{nullptr};
   };
   using TeamHandle = OmptTeam;
   TARGET_DECLARE_END

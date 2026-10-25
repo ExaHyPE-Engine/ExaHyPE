@@ -22,6 +22,7 @@
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/Scratch.h"
 #include "tarch/la/Vector.h"
 
 namespace {
@@ -44,6 +45,8 @@ namespace {
 
   constexpr double NoRelaxation = 0.0;
   constexpr double NoScaling    = 0.0;
+
+  constexpr int CellsPerTestBatch = 3;
   TARGET_DECLARE_END
 
   constexpr double Tolerance        = 1.0e-12;
@@ -89,16 +92,16 @@ namespace {
   }
 
   /**
-   * CellStatus holds the status of one cell and the face halves that judgeCandidate() and
+   * CellStatus stores the status of one cell and the face halves that judgeCandidate() and
    * spreadStatus() read and write.
    */
   struct CellStatus final {
-    CellStatus()                             = default;
-    CellStatus(const CellStatus&)            = delete;
-    CellStatus(CellStatus&&)                 = delete;
-    CellStatus& operator=(const CellStatus&) = delete;
-    CellStatus& operator=(CellStatus&&)      = delete;
-    ~CellStatus()                            = default;
+    CellStatus()                                   = default;
+    CellStatus(const CellStatus& other)            = delete;
+    CellStatus(CellStatus&& other)                 = delete;
+    CellStatus& operator=(const CellStatus& other) = delete;
+    CellStatus& operator=(CellStatus&& other)      = delete;
+    ~CellStatus()                                  = default;
 
     int    status[exahype2::dg::limiting::NumberOfStatusEntries]{Regular, Regular, 0, 0};
     double candidateExtrema[Layout::ExtremaPerCell]{};
@@ -154,7 +157,281 @@ namespace {
       );
     }
   };
+
+  struct JudgeBatchInTeam final {
+    using Coordinates = tarch::la::Vector<DIMENSIONS, double>;
+
+    int*          statuses{nullptr};
+    int*          faceStatuses{nullptr};
+    const double* candidates{nullptr};
+    const double* referenceExtrema{nullptr};
+    double*       candidateExtrema{nullptr};
+    double*       scratch{nullptr};
+    int           scratchValuesPerTeam{0};
+    const double* nodesToLobatto{nullptr};
+    const double* nodesToSubcells{nullptr};
+    const double* quadraturePoints{nullptr};
+    const double* cellCentres{nullptr};
+    const double* cellSizes{nullptr};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      const int                              batch,
+      const tarch::accelerator::TeamHandle   team,
+      exahype2::dg::MaxEigenvalueStatistics& accumulator
+    ) const {
+      const int first = batch * CellsPerTestBatch;
+      const int cellsOfBatch =
+        Setup::NumberOfCells - first < CellsPerTestBatch ? Setup::NumberOfCells - first : CellsPerTestBatch;
+      double* const chunk = scratch + static_cast<std::ptrdiff_t>(batch) * scratchValuesPerTeam;
+      COMPILE_IF_ON_DEVICE(admitBatchWithThreadsOfTeam(team, first, cellsOfBatch, chunk);)
+      exahype2::dg::MaxEigenvalueStatistics statistics;
+      for (int cellOfBatch = 0; cellOfBatch < cellsOfBatch; cellOfBatch++) {
+        const int cell = first + cellOfBatch;
+        int*      ownStatusHalves[peano4::FacesPerCell];
+        for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+          ownStatusHalves[faceNumber] =
+            faceStatuses + static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber;
+        }
+        const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
+        const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
+        const tarch::la::Vector<DIMENSIONS, double> cellSize(cellSizes + coordinateOffset);
+        statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+          statistics,
+          Judge::judgeCandidateInTeam(
+            team,
+            statuses + static_cast<std::ptrdiff_t>(cell) * exahype2::dg::limiting::NumberOfStatusEntries,
+            ownStatusHalves,
+            candidates + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
+            cellOfBatch,
+            referenceExtrema + static_cast<std::ptrdiff_t>(cell) * Layout::ExtremaPerCell,
+            nodesToLobatto,
+            nodesToSubcells,
+            quadraturePoints,
+            NoRelaxation,
+            NoScaling,
+            cellCentre,
+            cellSize,
+            Layout::TimeStamp,
+            Layout::TimeStepSize,
+            candidateExtrema + static_cast<std::ptrdiff_t>(cell) * Layout::ExtremaPerCell,
+            chunk
+          )
+        );
+      }
+      COMPILE_IF_ON_HOST(accumulator = exahype2::dg::MaxEigenvalueStatistics::combine(accumulator, statistics);)
+      COMPILE_IF_ON_DEVICE(
+        tarch::accelerator::reduceOverTeam(
+          team,
+          statistics,
+          tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{accumulator}
+        );
+      )
+    }
+
+  private:
+    /**
+     * Projects the candidates of the cellsOfBatch cells from first onto their subcells in chunk.
+     * Thread i of team then admits cell i of the batch.
+     */
+    template <typename StoragePrecision>
+    INLINE_METHOD GPU_CALLABLE_METHOD void admitBatchWithThreadsOfTeam(
+      const tarch::accelerator::TeamHandle team,
+      const int                            first,
+      const int                            cellsOfBatch,
+      StoragePrecision* const              chunk
+    ) const {
+      for (int cellOfBatch = 0; cellOfBatch < cellsOfBatch; cellOfBatch++) {
+        Judge::projectCandidateOfBatchInTeam(
+          team,
+          candidates + static_cast<std::ptrdiff_t>(first + cellOfBatch) * Layout::ValuesPerCell,
+          nodesToSubcells,
+          cellOfBatch,
+          chunk
+        );
+      }
+      const int cellOfBatch = tarch::accelerator::getThreadOfTeam(team);
+      if (cellOfBatch < cellsOfBatch) {
+        const int cell = first + cellOfBatch;
+        Judge::admitCandidateOfBatch(
+          team,
+          candidates + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
+          cellOfBatch,
+          Coordinates(cellCentres + cell * DIMENSIONS),
+          Coordinates(cellSizes + cell * DIMENSIONS),
+          chunk
+        );
+      }
+      tarch::accelerator::teamBarrier(team);
+    }
+  };
+
+  struct ReduceExtremaInTeam final {
+    const double* nodes{nullptr};
+    double*       extrema{nullptr};
+    double*       scratch{nullptr};
+    int           scratchValuesPerTeam{0};
+    const double* nodesToLobatto{nullptr};
+    const double* nodesToSubcells{nullptr};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int cell, const tarch::accelerator::TeamHandle team) const {
+      Judge::reduceExtremaInTeam(
+        team,
+        extrema + static_cast<std::ptrdiff_t>(cell) * Layout::ExtremaPerCell,
+        nodes + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
+        nodesToLobatto,
+        nodesToSubcells,
+        scratch + static_cast<std::ptrdiff_t>(cell) * scratchValuesPerTeam
+      );
+    }
+  };
   TARGET_DECLARE_END
+
+  /**
+   * Returns a launch of teams teams with the team size and the team scratch of Judge.
+   */
+  tarch::accelerator::TeamRange getTeams(const int teams) {
+    return tarch::accelerator::TeamRange(teams, Judge::getTeamThreads(), Judge::getTeamScratchBytes());
+  }
+
+  /**
+   * Returns the number of values in the scratch chunk of one judging team of a launch of getTeams().
+   */
+  int getScratchValuesPerTeam() { return Judge::getScratchValuesPerTeam(Judge::getTeamThreads()); }
+
+  /**
+   * Returns the number of values in the scratch chunk of one team of a launch of getTeams() that
+   * reduces extrema.
+   */
+  int getExtremaScratchValuesPerTeam() { return Judge::getExtremaScratchValuesPerTeam(Judge::getTeamThreads()); }
+
+  exahype2::dg::MaxEigenvalueStatistics judgeInTeamsOnDevice(
+    const exahype2::dg::limiting::tests::SubcellProjections& tables,
+    const exahype2::dg::tests::CellChain&                    geometry,
+    std::vector<int>&                                        statuses,
+    std::vector<int>&                                        faceStatuses,
+    const std::vector<double>&                               candidates,
+    const std::vector<double>&                               referenceExtrema,
+    std::vector<double>&                                     candidateExtrema
+  ) {
+    constexpr int                      Batches = (Setup::NumberOfCells + CellsPerTestBatch - 1) / CellsPerTestBatch;
+    const int                          scratchValuesPerTeam = getScratchValuesPerTeam();
+    tarch::accelerator::Buffer<double> deviceScratch(
+      static_cast<std::size_t>(Batches) * scratchValuesPerTeam,
+      tarch::MemoryLocation::Device
+    );
+    const exahype2::dg::tests::DeviceBuffer<int>    deviceStatuses(statuses);
+    const exahype2::dg::tests::DeviceBuffer<int>    deviceFaceStatuses(faceStatuses);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceCandidates(candidates);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceReferenceExtrema(referenceExtrema);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceCandidateExtrema(candidateExtrema);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceNodesToLobatto(tables.nodesToLobatto);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceNodesToSubcells(tables.nodesToSubcells);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceQuadraturePoints(tables.quadraturePoints);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
+
+    exahype2::dg::MaxEigenvalueStatistics statistics;
+    tarch::accelerator::parallelReduce(
+      getTeams(Batches),
+      JudgeBatchInTeam{
+        deviceStatuses.getData(),
+        deviceFaceStatuses.getData(),
+        deviceCandidates.getData(),
+        deviceReferenceExtrema.getData(),
+        deviceCandidateExtrema.getData(),
+        deviceScratch.getData(),
+        scratchValuesPerTeam,
+        deviceNodesToLobatto.getData(),
+        deviceNodesToSubcells.getData(),
+        deviceQuadraturePoints.getData(),
+        deviceCellCentres.getData(),
+        deviceCellSizes.getData()
+      },
+      tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{statistics}
+    );
+
+    deviceStatuses.copyBack(statuses);
+    deviceFaceStatuses.copyBack(faceStatuses);
+    deviceCandidateExtrema.copyBack(candidateExtrema);
+    return statistics;
+  }
+
+  exahype2::dg::MaxEigenvalueStatistics judgeOnHost(
+    const exahype2::dg::limiting::tests::SubcellProjections& tables,
+    const exahype2::dg::tests::CellChain&                    geometry,
+    std::vector<int>&                                        statuses,
+    std::vector<int>&                                        faceStatuses,
+    const std::vector<double>&                               candidates,
+    const std::vector<double>&                               referenceExtrema,
+    std::vector<double>&                                     candidateExtrema
+  ) {
+    exahype2::dg::MaxEigenvalueStatistics statistics;
+    for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
+      int* ownStatusHalves[peano4::FacesPerCell];
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        ownStatusHalves[faceNumber] =
+          faceStatuses.data() + static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber;
+      }
+      const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
+      const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
+      const tarch::la::Vector<DIMENSIONS, double> cellSize(geometry.cellSizes.data() + coordinateOffset);
+      statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+        statistics,
+        Judge::judgeCandidate(
+          statuses.data() + static_cast<std::ptrdiff_t>(cell) * exahype2::dg::limiting::NumberOfStatusEntries,
+          ownStatusHalves,
+          candidates.data() + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
+          referenceExtrema.data() + static_cast<std::ptrdiff_t>(cell) * Layout::ExtremaPerCell,
+          tables.nodesToLobatto.data(),
+          tables.nodesToSubcells.data(),
+          tables.quadraturePoints.data(),
+          NoRelaxation,
+          NoScaling,
+          cellCentre,
+          cellSize,
+          Layout::TimeStamp,
+          Layout::TimeStepSize,
+          candidateExtrema.data() + static_cast<std::ptrdiff_t>(cell) * Layout::ExtremaPerCell
+        )
+      );
+    }
+    return statistics;
+  }
+
+  std::vector<int> getStatusesOfChain() {
+    std::vector<int> statuses(
+      static_cast<std::size_t>(Setup::NumberOfCells) * exahype2::dg::limiting::NumberOfStatusEntries,
+      0
+    );
+    for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
+      const auto statusOffset = static_cast<std::size_t>(cell) * exahype2::dg::limiting::NumberOfStatusEntries;
+      statuses[statusOffset + WasTroubledIndex]       = cell % 3 == 0 ? 1 : 0;
+      statuses[statusOffset + PredictorDivergedIndex] = cell == 4 ? 1 : 0;
+    }
+    return statuses;
+  }
+
+  std::vector<double> getReferenceExtremaOfChain() {
+    std::vector<double> referenceExtrema(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ExtremaPerCell, 0.0);
+    for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
+      referenceExtrema[static_cast<std::size_t>(cell) * Layout::ExtremaPerCell + 1] = cell % 2 == 0 ? 100.0 : 0.5;
+    }
+    return referenceExtrema;
+  }
+
+  /**
+   * JudgeTest stores the candidates, the marks and the reference extrema of a chain of cells.
+   */
+  struct JudgeTest final {
+    const exahype2::dg::limiting::tests::SubcellProjections tables{};
+    const exahype2::dg::tests::CellChain                    geometry{};
+    const std::vector<double>                               candidates =
+      exahype2::dg::tests::getRamp(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ValuesPerCell, 1.0, 0.01);
+    const std::vector<int>    statuses         = getStatusesOfChain();
+    const std::vector<double> referenceExtrema = getReferenceExtremaOfChain();
+    const std::vector<int>    faceStatuses =
+      std::vector<int>(static_cast<std::size_t>(Setup::NumberOfCells) * peano4::FacesPerCell, 0);
+  };
 
   exahype2::dg::MaxEigenvalueStatistics judgeOnDevice(
     const exahype2::dg::limiting::tests::SubcellProjections& tables,
@@ -227,7 +504,12 @@ exahype2::dg::limiting::tests::DetectorTest::run() {
   testMethod(testClearFacesWritesRegularAndZerosTheSubcellHalo);
   testMethod(testAFixedRuleReportsNoWaveSpeeds);
   testMethod(testEveryCellOfADeviceRangeJudgesLikeTheHost);
-  testMethod(testTheCellListsHoldTheLocalCellsFirst);
+  testMethod(testEveryTeamOfADeviceJudgesLikeTheHost);
+  testMethod(testEveryTeamOfADeviceReducesTheExtremaLikeTheHost);
+  testMethod(testTheTeamsOfALaunchOpenTheInitialStatusesLikeTheHost);
+  testMethod(testTheTeamsOfALaunchCoverTheCells);
+  testMethod(testTheCellListsStartWithTheLocalCells);
+  testMethod(testTheStatusTransferCopiesTheParentAndRaisesToTheChildren);
 }
 
 void
@@ -406,13 +688,18 @@ exahype2::dg::limiting::tests::DetectorTest::testTheAdmissibilityCombinesNodesAn
   const tarch::la::Vector<DIMENSIONS, double>             width(1.0);
   std::vector<double>                                     nodes    = getConstantNodes(1.0, 1.0);
   std::vector<double>                                     subcells = getConstantSubgrid(1.0, 1.0);
-  const double* const                                     lobatto  = tables.nodesToLobatto.data();
-  validate(Judge::isPhysicallyAdmissible(nodes.data(), subcells.data(), lobatto, centre, width));
+  const auto                                              isAdmissible =
+    [&tables, &centre, &width](const std::vector<double>& cellNodes, const std::vector<double>& cellSubcells) {
+      std::vector<double> lobattoSamples(Layout::ValuesPerCell);
+      Judge::project<Layout::NodesPerAxis>(cellNodes.data(), tables.nodesToLobatto.data(), lobattoSamples.data());
+      return Judge::isPhysicallyAdmissible(cellNodes.data(), cellSubcells.data(), lobattoSamples.data(), centre, width);
+    };
+  validate(isAdmissible(nodes, subcells));
   subcells[static_cast<std::size_t>(Layout::SubcellsPerCell - 1) * Layout::NumberOfData] = -1.0;
-  validate(not Judge::isPhysicallyAdmissible(nodes.data(), subcells.data(), lobatto, centre, width));
+  validate(not isAdmissible(nodes, subcells));
   subcells[static_cast<std::size_t>(Layout::SubcellsPerCell - 1) * Layout::NumberOfData] = 1.0;
   nodes[0]                                                                               = 0.0;
-  validate(not Judge::isPhysicallyAdmissible(nodes.data(), subcells.data(), lobatto, centre, width));
+  validate(not isAdmissible(nodes, subcells));
 }
 
 /**
@@ -425,7 +712,11 @@ exahype2::dg::limiting::tests::DetectorTest::testTheAdmissibilityCoversTheLobatt
   const tarch::la::Vector<DIMENSIONS, double>             centre(0.0);
   const tarch::la::Vector<DIMENSIONS, double>             width(1.0);
   const std::vector<double>                               subcells = getConstantSubgrid(1.0, 1.0);
-  const double* const                                     lobatto  = tables.nodesToLobatto.data();
+  const auto isAdmissible = [&tables, &centre, &width, &subcells](const std::vector<double>& cellNodes) {
+    std::vector<double> lobattoSamples(Layout::ValuesPerCell);
+    Judge::project<Layout::NodesPerAxis>(cellNodes.data(), tables.nodesToLobatto.data(), lobattoSamples.data());
+    return Judge::isPhysicallyAdmissible(cellNodes.data(), subcells.data(), lobattoSamples.data(), centre, width);
+  };
 
   // steeperNodes stays positive at the nodes. Its interpolant reaches -0.5 at the left face.
   const std::vector<double> steepNodes = getSteepNodes(tables.quadraturePoints);
@@ -435,11 +726,11 @@ exahype2::dg::limiting::tests::DetectorTest::testTheAdmissibilityCoversTheLobatt
     steeperNodes[index]     = 2.0 * steepNodes[index] - 2.5;
     steeperNodes[index + 1] = 1.0;
   }
-  validate(Judge::isPhysicallyAdmissible(steepNodes.data(), subcells.data(), lobatto, centre, width));
+  validate(isAdmissible(steepNodes));
   for (int node = 0; node < Layout::NodesPerCell; node++) {
     validateWithParams1(steeperNodes[static_cast<std::size_t>(node) * Layout::NumberOfData] > 0.0, node);
   }
-  validate(not Judge::isPhysicallyAdmissible(steeperNodes.data(), subcells.data(), lobatto, centre, width));
+  validate(not isAdmissible(steeperNodes));
 }
 
 void
@@ -898,62 +1189,30 @@ exahype2::dg::limiting::tests::DetectorTest::testAFixedRuleReportsNoWaveSpeeds()
  */
 void
 exahype2::dg::limiting::tests::DetectorTest::testEveryCellOfADeviceRangeJudgesLikeTheHost() {
-  const exahype2::dg::limiting::tests::SubcellProjections tables;
-  const exahype2::dg::tests::CellChain                    geometry;
-  const std::vector<double>                               candidates =
-    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ValuesPerCell, 1.0, 0.01);
-  std::vector<int> statuses(
-    static_cast<std::size_t>(Setup::NumberOfCells) * exahype2::dg::limiting::NumberOfStatusEntries,
-    0
+  const JudgeTest  test;
+  std::vector<int> deviceStatuses     = test.statuses;
+  std::vector<int> deviceFaceStatuses = test.faceStatuses;
+  const auto       deviceStatistics   = judgeOnDevice(
+    test.tables,
+    test.geometry,
+    deviceStatuses,
+    deviceFaceStatuses,
+    test.candidates,
+    test.referenceExtrema
   );
-  std::vector<double> referenceExtrema(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ExtremaPerCell, 0.0);
-  for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
-    const auto statusOffset  = static_cast<std::size_t>(cell) * exahype2::dg::limiting::NumberOfStatusEntries;
-    const auto extremaOffset = static_cast<std::size_t>(cell) * Layout::ExtremaPerCell;
-    statuses[statusOffset + WasTroubledIndex]       = cell % 3 == 0 ? 1 : 0;
-    statuses[statusOffset + PredictorDivergedIndex] = cell == 4 ? 1 : 0;
-    referenceExtrema[extremaOffset + 1]             = cell % 2 == 0 ? 100.0 : 0.5;
-  }
-  const std::vector<int> faceStatuses(static_cast<std::size_t>(Setup::NumberOfCells) * peano4::FacesPerCell, 0);
 
-  std::vector<int> deviceStatuses     = statuses;
-  std::vector<int> deviceFaceStatuses = faceStatuses;
-  const auto       deviceStatistics =
-    judgeOnDevice(tables, geometry, deviceStatuses, deviceFaceStatuses, candidates, referenceExtrema);
-
-  std::vector<int>                      hostStatuses     = statuses;
-  std::vector<int>                      hostFaceStatuses = faceStatuses;
-  exahype2::dg::MaxEigenvalueStatistics hostStatistics;
-  for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
-    int* ownStatusHalves[peano4::FacesPerCell];
-    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-      ownStatusHalves[faceNumber] =
-        hostFaceStatuses.data() + static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber;
-    }
-    const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
-    const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
-    const tarch::la::Vector<DIMENSIONS, double> cellSize(geometry.cellSizes.data() + coordinateOffset);
-    double                                      candidateExtrema[Layout::ExtremaPerCell];
-    hostStatistics = exahype2::dg::MaxEigenvalueStatistics::combine(
-      hostStatistics,
-      Judge::judgeCandidate(
-        hostStatuses.data() + static_cast<std::ptrdiff_t>(cell) * exahype2::dg::limiting::NumberOfStatusEntries,
-        ownStatusHalves,
-        candidates.data() + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
-        referenceExtrema.data() + static_cast<std::ptrdiff_t>(cell) * Layout::ExtremaPerCell,
-        tables.nodesToLobatto.data(),
-        tables.nodesToSubcells.data(),
-        tables.quadraturePoints.data(),
-        NoRelaxation,
-        NoScaling,
-        cellCentre,
-        cellSize,
-        Layout::TimeStamp,
-        Layout::TimeStepSize,
-        candidateExtrema
-      )
-    );
-  }
+  std::vector<int>    hostStatuses     = test.statuses;
+  std::vector<int>    hostFaceStatuses = test.faceStatuses;
+  std::vector<double> hostExtrema(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ExtremaPerCell, 0.0);
+  const auto          hostStatistics = judgeOnHost(
+    test.tables,
+    test.geometry,
+    hostStatuses,
+    hostFaceStatuses,
+    test.candidates,
+    test.referenceExtrema,
+    hostExtrema
+  );
 
   int troubled = 0;
   for (std::size_t entry = 0; entry < hostStatuses.size(); entry++) {
@@ -970,11 +1229,227 @@ exahype2::dg::limiting::tests::DetectorTest::testEveryCellOfADeviceRangeJudgesLi
 }
 
 /**
+ * A team per batch of three cells writes the statuses, the faces, the candidate extrema and the
+ * wave speeds of the serial host loop.
+ */
+void
+exahype2::dg::limiting::tests::DetectorTest::testEveryTeamOfADeviceJudgesLikeTheHost() {
+  const JudgeTest     test;
+  std::vector<int>    deviceStatuses     = test.statuses;
+  std::vector<int>    deviceFaceStatuses = test.faceStatuses;
+  std::vector<double> deviceExtrema(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ExtremaPerCell, 0.0);
+  const auto          deviceStatistics = judgeInTeamsOnDevice(
+    test.tables,
+    test.geometry,
+    deviceStatuses,
+    deviceFaceStatuses,
+    test.candidates,
+    test.referenceExtrema,
+    deviceExtrema
+  );
+
+  std::vector<int>    hostStatuses     = test.statuses;
+  std::vector<int>    hostFaceStatuses = test.faceStatuses;
+  std::vector<double> hostExtrema(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ExtremaPerCell, 0.0);
+  const auto          hostStatistics = judgeOnHost(
+    test.tables,
+    test.geometry,
+    hostStatuses,
+    hostFaceStatuses,
+    test.candidates,
+    test.referenceExtrema,
+    hostExtrema
+  );
+
+  validate(hostStatistics.maxPhysicalEigenvalue > 0.0);
+  for (std::size_t entry = 0; entry < hostStatuses.size(); entry++) {
+    validateEqualsWithParams1(deviceStatuses[entry], hostStatuses[entry], entry);
+  }
+  for (std::size_t entry = 0; entry < hostFaceStatuses.size(); entry++) {
+    validateEqualsWithParams1(deviceFaceStatuses[entry], hostFaceStatuses[entry], entry);
+  }
+  validateNumericalBuffersEquals(deviceExtrema, hostExtrema);
+  validateNumericalEquals(deviceStatistics.maxPhysicalEigenvalue, hostStatistics.maxPhysicalEigenvalue);
+  validateNumericalEquals(deviceStatistics.maxScaledEigenvalue, hostStatistics.maxScaledEigenvalue);
+}
+
+/**
+ * A team per cell writes the extrema of reduceExtrema().
+ */
+void
+exahype2::dg::limiting::tests::DetectorTest::testEveryTeamOfADeviceReducesTheExtremaLikeTheHost() {
+  const exahype2::dg::limiting::tests::SubcellProjections tables;
+  const std::vector<double>                               nodes =
+    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ValuesPerCell, -2.0, 0.013);
+  std::vector<double> hostExtrema(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ExtremaPerCell, 0.0);
+  for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
+    Judge::reduceExtrema(
+      hostExtrema.data() + static_cast<std::ptrdiff_t>(cell) * Layout::ExtremaPerCell,
+      nodes.data() + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
+      tables.nodesToLobatto.data(),
+      tables.nodesToSubcells.data()
+    );
+  }
+
+  std::vector<double>                deviceExtrema(hostExtrema.size(), 0.0);
+  tarch::accelerator::Buffer<double> deviceScratch(
+    static_cast<std::size_t>(Setup::NumberOfCells) * getExtremaScratchValuesPerTeam(),
+    tarch::MemoryLocation::Device
+  );
+  const exahype2::dg::tests::DeviceBuffer<double> deviceNodes(nodes);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceExtremaBuffer(deviceExtrema);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceNodesToLobatto(tables.nodesToLobatto);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceNodesToSubcells(tables.nodesToSubcells);
+  tarch::accelerator::parallelFor(
+    getTeams(Setup::NumberOfCells),
+    ReduceExtremaInTeam{
+      deviceNodes.getData(),
+      deviceExtremaBuffer.getData(),
+      deviceScratch.getData(),
+      getExtremaScratchValuesPerTeam(),
+      deviceNodesToLobatto.getData(),
+      deviceNodesToSubcells.getData()
+    }
+  );
+  deviceExtremaBuffer.copyBack(deviceExtrema);
+
+  validateNumericalBuffersEquals(deviceExtrema, hostExtrema);
+}
+
+/**
+ * The teams of a launch open the status of every cell like openInitialStatus().
+ */
+void
+exahype2::dg::limiting::tests::DetectorTest::testTheTeamsOfALaunchOpenTheInitialStatusesLikeTheHost() {
+  constexpr int Depth = 1;
+  peano4::tests::buildRegularGrid(Depth);
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto  cells            = cellConnectivity.getCells();
+  const exahype2::dg::limiting::tests::SubcellProjections tables;
+  tarch::accelerator::ChunkedMemoryPool<double>           nodes(Layout::ValuesPerCell);
+  tarch::accelerator::ChunkedMemoryPool<double>           sampledExtrema(Judge::ExtremaPerCell);
+  tarch::accelerator::ChunkedMemoryPool<int>              statuses(exahype2::dg::limiting::NumberOfStatusEntries);
+  nodes.reserve(cellConnectivity.getNumberOfSlots());
+  sampledExtrema.reserve(cellConnectivity.getNumberOfSlots());
+  statuses.reserve(cellConnectivity.getNumberOfSlots());
+  std::vector<double> nodeValues;
+  std::vector<double> extremaValues;
+  std::vector<int>    expectedStatuses;
+  nodes.copyToHost(nodeValues);
+  sampledExtrema.copyToHost(extremaValues);
+  statuses.copyToHost(expectedStatuses);
+  std::fill(expectedStatuses.begin(), expectedStatuses.end(), 0);
+  statuses.copyFromHost(expectedStatuses);
+
+  const std::vector<double> steepNodes    = getSteepNodes(tables.quadraturePoints);
+  const std::vector<double> constantNodes = getConstantNodes(2.0, 0.0);
+  const std::vector<double> subcells      = getConstantSubgrid(2.0, 0.0);
+  double                    sampled[Judge::ExtremaPerCell];
+  Judge::reduceSampledExtrema(sampled, subcells.data());
+  const auto paddedNodes   = static_cast<std::size_t>(nodes.getPaddedChunkSize());
+  const auto paddedExtrema = static_cast<std::size_t>(sampledExtrema.getPaddedChunkSize());
+  const auto paddedStatus  = static_cast<std::size_t>(statuses.getPaddedChunkSize());
+  for (int entry = 0; entry < cells.size; entry++) {
+    const auto                 slot      = static_cast<std::size_t>(cells[entry]);
+    const std::vector<double>& cellNodes = entry % 2 == 0 ? steepNodes : constantNodes;
+    std::copy(cellNodes.begin(), cellNodes.end(), nodeValues.begin() + static_cast<std::ptrdiff_t>(slot * paddedNodes));
+    std::copy(
+      std::begin(sampled),
+      std::end(sampled),
+      extremaValues.begin() + static_cast<std::ptrdiff_t>(slot * paddedExtrema)
+    );
+    Judge::openInitialStatus(
+      expectedStatuses.data() + slot * paddedStatus,
+      nodeValues.data() + slot * paddedNodes,
+      extremaValues.data() + slot * paddedExtrema,
+      tables.nodesToLobatto.data(),
+      tables.nodesToSubcells.data(),
+      NoRelaxation,
+      NoScaling
+    );
+  }
+  nodes.copyFromHost(nodeValues);
+  sampledExtrema.copyFromHost(extremaValues);
+
+  const int                          numberOfTeams        = Judge::getNumberOfTeams(cells.size);
+  const int                          scratchValuesPerTeam = getExtremaScratchValuesPerTeam();
+  tarch::accelerator::Buffer<double> deviceScratch(
+    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(numberOfTeams)) * scratchValuesPerTeam,
+    tarch::MemoryLocation::Device
+  );
+  const exahype2::dg::tests::DeviceBuffer<double> deviceNodesToLobatto(tables.nodesToLobatto);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceNodesToSubcells(tables.nodesToSubcells);
+  tarch::accelerator::parallelFor(
+    getTeams(numberOfTeams),
+    exahype2::dg::limiting::OpenInitialStatuses<exahype2::dg::limiting::tests::StubSolver, double, double>{
+      cellConnectivity.onDevice(),
+      numberOfTeams,
+      std::as_const(nodes).getView(),
+      std::as_const(sampledExtrema).getView(),
+      statuses.getView(),
+      deviceNodesToLobatto.getData(),
+      deviceNodesToSubcells.getData(),
+      NoRelaxation,
+      NoScaling,
+      deviceScratch.getData(),
+      scratchValuesPerTeam
+    }
+  );
+  std::vector<int> openedStatuses;
+  statuses.copyToHost(openedStatuses);
+
+  for (int entry = 0; entry < cells.size; entry++) {
+    const auto slot = static_cast<std::size_t>(cells[entry]);
+    for (int value = 0; value < exahype2::dg::limiting::NumberOfStatusEntries; value++) {
+      const std::size_t index = slot * paddedStatus + static_cast<std::size_t>(value);
+      validateEqualsWithParams2(openedStatuses[index], expectedStatuses[index], entry, value);
+    }
+  }
+}
+
+/**
+ * A launch of the detector covers every cell with at most one team per cell and reserves the
+ * scratch that its device code reads. Every cell of a batch has a thread of its own.
+ */
+void
+exahype2::dg::limiting::tests::DetectorTest::testTheTeamsOfALaunchCoverTheCells() {
+  for (const int cells : {1, 2, 7, 1000, 1000000}) {
+    const int teams = Judge::getNumberOfTeams(cells);
+    validateWithParams2(teams >= 1 and teams <= cells, cells, teams);
+  }
+  const int teamThreads = Judge::getTeamThreads();
+  validateWithParams2(
+    Judge::CellsPerBatch >= 1 and Judge::CellsPerBatch <= teamThreads,
+    Judge::CellsPerBatch,
+    teamThreads
+  );
+  validateWithParams1(
+    Judge::getTeamScratchBytes() >= Judge::CellsPerBatch * static_cast<int>(sizeof(int)),
+    Judge::getTeamScratchBytes()
+  );
+#if defined(PEANO_WITH_GPU_BACKEND)
+  validateWithParams1(
+    Judge::getExtremaScratchValuesPerTeam(teamThreads)
+      >= Judge::ProjectionScratchValues + (teamThreads + 1) * Layout::ExtremaPerCell,
+    teamThreads
+  );
+  validateWithParams1(
+    Judge::getScratchValuesPerTeam(teamThreads)
+      >= Judge::CellsPerBatch * Layout::SubcellValuesPerCell + Judge::getExtremaScratchValuesPerTeam(teamThreads),
+    teamThreads
+  );
+#else
+  validateEqualsWithParams1(Judge::getExtremaScratchValuesPerTeam(teamThreads), 0, teamThreads);
+  validateEqualsWithParams1(Judge::getScratchValuesPerTeam(teamThreads), 0, teamThreads);
+#endif
+}
+
+/**
  * The block kernels count and list the cells on the subcell scheme in the order of the cell
  * connectivity with the local cells first.
  */
 void
-exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFirst() {
+exahype2::dg::limiting::tests::DetectorTest::testTheCellListsStartWithTheLocalCells() {
   constexpr int                Depth          = 1;
   constexpr int                NumberOfBlocks = 2;
   constexpr std::array<int, 4> StatusPattern{Regular, Halo, Troubled, Limited};
@@ -1050,5 +1525,48 @@ exahype2::dg::limiting::tests::DetectorTest::testTheCellListsHoldTheLocalCellsFi
   }
   for (std::size_t entry = 0; entry < expectedRecomputedCells.size(); entry++) {
     validateEqualsWithParams1(listedRecomputedCells[entry], expectedRecomputedCells[entry], entry);
+  }
+}
+
+/**
+ * A child copies the status of its parent. A parent takes the entry-wise maximum of its children.
+ */
+void
+exahype2::dg::limiting::tests::DetectorTest::testTheStatusTransferCopiesTheParentAndRaisesToTheChildren() {
+  using Transfer = exahype2::dg::limiting::StatusTransfer;
+  tarch::accelerator::ChunkedMemoryPool<int> pool(Transfer::WorkItemsPerChunk, tarch::MemoryLocation::Heap);
+  pool.reserve(peano4::ChildrenPerCell);
+  int childSlots[peano4::ChildrenPerCell];
+  for (int child = 0; child < peano4::ChildrenPerCell; child++) {
+    for (int entry = 0; entry < Transfer::WorkItemsPerChunk; entry++) {
+      pool.getChunk(child)[entry] = (3 * child + 2 * entry) % 5;
+    }
+    childSlots[child] = child;
+  }
+
+  const Transfer transfer{std::as_const(pool).getView()};
+  int            restricted[Transfer::WorkItemsPerChunk];
+  for (int entry = 0; entry < Transfer::WorkItemsPerChunk; entry++) {
+    transfer.restrictFromChildren(childSlots, restricted, entry, nullptr);
+  }
+  for (int entry = 0; entry < Transfer::WorkItemsPerChunk; entry++) {
+    int largest = 0;
+    for (int child = 0; child < peano4::ChildrenPerCell; child++) {
+      largest = pool.getChunk(child)[entry] > largest ? pool.getChunk(child)[entry] : largest;
+    }
+    validateEqualsWithParams1(restricted[entry], largest, entry);
+  }
+
+  for (int child = 0; child < peano4::ChildrenPerCell; child++) {
+    int copied[Transfer::WorkItemsPerChunk];
+    int interpolated[Transfer::WorkItemsPerChunk];
+    for (int entry = 0; entry < Transfer::WorkItemsPerChunk; entry++) {
+      transfer.copy(child, copied, entry);
+      transfer.interpolateFromParent(child, interpolated, peano4::ChildrenPerCell - 1 - child, entry, nullptr);
+    }
+    for (int entry = 0; entry < Transfer::WorkItemsPerChunk; entry++) {
+      validateEqualsWithParams2(copied[entry], pool.getChunk(child)[entry], child, entry);
+      validateEqualsWithParams2(interpolated[entry], pool.getChunk(child)[entry], child, entry);
+    }
   }
 }

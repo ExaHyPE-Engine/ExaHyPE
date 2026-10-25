@@ -3,7 +3,7 @@
 
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
-#include "tarch/Sort.h"
+#include "tarch/la/ScalarOperations.h"
 #include "tarch/la/Vector.h"
 
 template <std::size_t NumberOfVolumesPerAxis>
@@ -55,8 +55,7 @@ exahype2::computeMultiresolutionDetail(
     nodeCoordinate[NumberOfNodes / 2] = 0.0;
   }
 
-  // The slope denominator is the same for every axis. Mirrored coordinates square to the same
-  // bits and its sum needs no sorting.
+  // The slope denominator is the same for every axis. Mirrored coordinates square to the same bits.
   double nodeCoordinateSquareSum = 0.0;
   for (int i = 0; i < NumberOfNodes; i++) {
     nodeCoordinateSquareSum += nodeCoordinate[i] * nodeCoordinate[i];
@@ -77,58 +76,43 @@ exahype2::computeMultiresolutionDetail(
     return std::numeric_limits<double>::infinity();
   }
 
-  // The sorted summation fixes the addition order. The values permuted by a reflection or an axis
-  // swap give the bitwise identical sum.
-  double scratch[NumberOfVolumes];
-  for (int i = 0; i < NumberOfVolumes; i++) {
-    scratch[i] = values[i];
-  }
-  tarch::sortAscending(scratch, NumberOfVolumes);
-  double indicatorSum = 0.0;
-  for (int i = 0; i < NumberOfVolumes; i++) {
-    indicatorSum += scratch[i];
-  }
-  const double mean = indicatorSum / static_cast<double>(NumberOfVolumes);
+  // The fixed-point sum returns the same bits for every order of its summands. The values permuted
+  // by a reflection or an axis swap then give the bitwise identical mean.
+  const double mean = tarch::la::sumInFixedPoint(values, NumberOfVolumes) / static_cast<double>(NumberOfVolumes);
 
   double slope[DIMENSIONS];
+  double products[NumberOfVolumes];
   for (int d = 0; d < DIMENSIONS; d++) {
     peano4::dForEach(NumberOfNodes, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
       const int linearised = peano4::dLinearised(counter, NumberOfNodes);
-      scratch[linearised]  = values[linearised] * nodeCoordinate[counter(d)];
+      products[linearised] = values[linearised] * nodeCoordinate[counter(d)];
     });
-    // A reflection along d negates every product. Summing the positive and the negative products
-    // separately in sorted order then negates the numerator to the last bit.
-    tarch::sortAscending(scratch, NumberOfVolumes);
-    int firstNonNegative = 0;
-    while (firstNonNegative < NumberOfVolumes and scratch[firstNonNegative] < 0.0) {
-      firstNonNegative++;
-    }
-    double positivePartSum = 0.0;
-    for (int i = firstNonNegative; i < NumberOfVolumes; i++) {
-      positivePartSum += scratch[i];
-    }
-    double negativePartSum = 0.0;
-    for (int i = firstNonNegative - 1; i >= 0; i--) {
-      negativePartSum += -scratch[i];
-    }
-    const double slopeNumerator = positivePartSum - negativePartSum;
+    // A reflection along d negates every product. The fixed-point sum then negates the numerator to
+    // the last bit.
+    const double slopeNumerator = tarch::la::sumInFixedPoint(products, NumberOfVolumes);
     slope[d]                    = (slopeDenominator > 0.0) ? slopeNumerator / slopeDenominator : 0.0;
   }
 
   double maxRelativeResidual = 0.0;
   peano4::dForEach(NumberOfNodes, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
     const int linearised = peano4::dLinearised(counter, NumberOfNodes);
-    // A reflection negates a slope and its coordinate together and each term keeps its bits. An
-    // axis swap permutes the terms and the sorted summation keeps their sum.
+    // A reflection negates a slope together with its coordinate. Each term then keeps its bits. An
+    // axis swap permutes the terms of a sum that keeps its bits.
     double correction[DIMENSIONS];
     for (int d = 0; d < DIMENSIONS; d++) {
-      correction[d] = slope[d] * nodeCoordinate[counter(d)];
+      // A compiler may fuse a plain product into the plain sum of 2D. The ordered sum of 3D reads
+      // rounded products.
+      if constexpr (DIMENSIONS == 2) {
+        correction[d] = tarch::la::productRoundedOnce(slope[d], nodeCoordinate[counter(d)]);
+      } else {
+        correction[d] = slope[d] * nodeCoordinate[counter(d)];
+      }
     }
-    tarch::sortAscending(correction, DIMENSIONS);
-    double prediction = mean;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      prediction += correction[d];
-    }
+#if DIMENSIONS == 2
+    const double prediction = mean + (correction[0] + correction[1]);
+#else
+    const double prediction = mean + tarch::la::sumInOrderOfValue(correction[0], correction[1], correction[2]);
+#endif
     const double residual = std::abs(values[linearised] - prediction);
     maxRelativeResidual   = std::max(maxRelativeResidual, residual / (std::abs(values[linearised]) + floor));
   });

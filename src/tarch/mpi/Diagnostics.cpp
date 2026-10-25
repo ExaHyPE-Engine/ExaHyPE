@@ -163,7 +163,7 @@ tarch::mpi::Diagnostics::plotMessageQueues() {
     logError("The MPI queue is empty.");
   } else {
     logError(
-      "The MPI queue still holds a message from rank " << status.MPI_SOURCE << " with tag " << status.MPI_TAG << "."
+      "The MPI queue still contains a message from rank " << status.MPI_SOURCE << " with tag " << status.MPI_TAG << "."
     );
   }
 }

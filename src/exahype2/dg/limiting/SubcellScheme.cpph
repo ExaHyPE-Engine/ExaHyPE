@@ -8,6 +8,15 @@
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Scratch.h"
 
+/**
+ * Returns the threads per team of a launch that asks for one thread per subcell of a cell.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD int
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::getTeamThreads() {
+  return tarch::accelerator::getTeamThreads(SubcellsPerCell);
+}
+
 TARGET_DECLARE
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -31,7 +40,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::sampleInitialC
 
 /**
  * Averages the nodal polynomial of a cell onto its subcells. The projection applies nodesToSubcells
- * along every axis.
+ * along every axis. nodesToSubcells is its own mirror image.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -44,11 +53,37 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectNodesOn
   assertion(nodes != nullptr);
   assertion(subcells != nullptr);
   assertion(nodesToSubcells != nullptr);
-  exahype2::dg::projectTensorProduct<DIMENSIONS, NodesPerAxis, SubcellsPerAxis, NumberOfData>(
-    nodes,
-    subcells,
-    nodesToSubcells
-  );
+  exahype2::dg::projectTensorProduct<
+    DIMENSIONS,
+    NodesPerAxis,
+    SubcellsPerAxis,
+    NumberOfData,
+    exahype2::dg::ProjectionRule::Butterfly
+  >(nodes, subcells, nodesToSubcells);
+}
+
+/**
+ * Writes the projection of projectNodesOntoSubcells() into subcells. The threads of team divide the
+ * values of the lines of every projection stage among themselves. scratch provides
+ * SubcellProjectionScratchValues values.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectNodesOntoSubcellsInTeam(
+  const tarch::accelerator::TeamHandle  team,
+  const StoragePrecision* NOALIAS const nodes,
+  StoragePrecision* NOALIAS const       subcells,
+  const StoragePrecision* NOALIAS const nodesToSubcells,
+  StoragePrecision* NOALIAS const       scratch
+) {
+  const int  thread  = tarch::accelerator::getThreadOfTeam(team);
+  const int  threads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+  const auto weights = exahype2::dg::getProjectionWeightsOfDofPairs<NodesPerAxis, SubcellsPerAxis>(nodesToSubcells);
+  for (int stage = 0; stage < exahype2::dg::getStagesOfTensorProduct<DIMENSIONS>(); stage++) {
+    projectNodesOntoSubcells(nodes, subcells, nodesToSubcells, weights, scratch, stage, thread, threads);
+    tarch::accelerator::teamBarrier(team);
+  }
 }
 
 /**
@@ -65,15 +100,79 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubgrid
   const StoragePrecision* NOALIAS const previousSolution,
   StoragePrecision* const               haloHalves[peano4::FacesPerCell],
   const StoragePrecision* NOALIAS const nodesToSubcells,
-  const bool                            holdsInitialSubcells
+  const bool                            subcellsStoreInitialCondition
 ) {
   const auto previousStatus = static_cast<exahype2::dg::limiting::LimiterStatus>(
     status[static_cast<int>(exahype2::dg::limiting::StatusEntry::PreviousStatus)]
   );
-  if (not exahype2::dg::limiting::runsSubcellScheme(previousStatus) and not holdsInitialSubcells) {
+  if (not exahype2::dg::limiting::runsSubcellScheme(previousStatus) and not subcellsStoreInitialCondition) {
     projectNodesOntoSubcells(previousSolution, subcells, nodesToSubcells);
   }
   Subgrid::projectOntoFaces(subcells, haloHalves);
+}
+
+/**
+ * Runs projectSubgridOntoFaces() on a host thread and projectSubgridOntoFacesWithThreadsOfTeam() on
+ * a device.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubgridOntoFacesInTeam(
+  [[maybe_unused]] const tarch::accelerator::TeamHandle team,
+  const int* NOALIAS const                              status,
+  StoragePrecision* NOALIAS const                       subcells,
+  const StoragePrecision* NOALIAS const                 previousSolution,
+  StoragePrecision* const                               haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* NOALIAS const                 nodesToSubcells,
+  const bool                                            subcellsStoreInitialCondition,
+  [[maybe_unused]] StoragePrecision* NOALIAS const      scratch
+) {
+  COMPILE_IF_ON_HOST(projectSubgridOntoFaces(
+                       status,
+                       subcells,
+                       previousSolution,
+                       haloHalves,
+                       nodesToSubcells,
+                       subcellsStoreInitialCondition
+  );)
+  COMPILE_IF_ON_DEVICE(projectSubgridOntoFacesWithThreadsOfTeam(
+                         team,
+                         status,
+                         subcells,
+                         previousSolution,
+                         haloHalves,
+                         nodesToSubcells,
+                         subcellsStoreInitialCondition,
+                         scratch
+  );)
+}
+
+/**
+ * Runs projectSubgridOntoFaces() with the threads of team. The threads divide the values of the
+ * lines of every projection stage and the values of the face layers among themselves. scratch
+ * provides SubcellProjectionScratchValues values.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubgridOntoFacesWithThreadsOfTeam(
+  const tarch::accelerator::TeamHandle  team,
+  const int* NOALIAS const              status,
+  StoragePrecision* NOALIAS const       subcells,
+  const StoragePrecision* NOALIAS const previousSolution,
+  StoragePrecision* const               haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* NOALIAS const nodesToSubcells,
+  const bool                            subcellsStoreInitialCondition,
+  StoragePrecision* NOALIAS const       scratch
+) {
+  const auto previousStatus = static_cast<exahype2::dg::limiting::LimiterStatus>(
+    status[static_cast<int>(exahype2::dg::limiting::StatusEntry::PreviousStatus)]
+  );
+  if (not exahype2::dg::limiting::runsSubcellScheme(previousStatus) and not subcellsStoreInitialCondition) {
+    projectNodesOntoSubcellsInTeam(team, previousSolution, subcells, nodesToSubcells, scratch);
+  }
+  Subgrid::projectOntoFacesInTeam(team, subcells, haloHalves);
 }
 
 /**
@@ -145,9 +244,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recompute(
 }
 
 /**
- * Runs recompute() on a host thread. On a device the threads of the team divide the subcells and
- * the nodes of the cell among themselves in every phase of recompute(). Every thread returns the
- * wave speeds of its subcells.
+ * Runs recompute() on a host thread and recomputeWithThreadsOfTeam() on a device.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -181,77 +278,108 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeInTea
     );
   )
   COMPILE_IF_ON_DEVICE(
-    using Reconstruction         = typename Derived::Reconstruction;
-    using FallbackReconstruction = typename Derived::FallbackReconstruction;
-    const int thread             = tarch::accelerator::getThreadOfTeam(team);
-    const int threads            = tarch::accelerator::getNumberOfThreadsPerTeam(team);
-    for (int subcell = thread; subcell < SubgridScheme<Reconstruction>::VolumesPerPatch; subcell += threads) {
-      static_cast<void>(SubgridScheme<Reconstruction>::computeVolumeUpdate(
-        subcell,
-        subcells,
-        haloHalves,
-        cellCentre,
-        cellSize,
-        timeStamp,
-        timeStepSize,
-        boundaryFaces,
-        evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * SubgridScheme<Reconstruction>::NumberOfData
-      ));
-    } if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision> and not std::is_void_v<FallbackReconstruction>) {
-      // Every thread marks in the team scratch whether one of its evolved subcells fails.
-      unsigned char* const failures = tarch::accelerator::getTeamScratch(team);
-      bool                 fails    = false;
-      for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
-        fails = fails
-          or not Derived::isPhysicallyAdmissible(
-                  evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData,
-                  1,
-                  cellCentre,
-                  cellSize
-          );
-      }
-      failures[thread] = fails ? 1 : 0;
-      tarch::accelerator::teamBarrier(team);
-      bool needsFallback = false;
-      for (int other = 0; other < threads; other++) {
-        needsFallback = needsFallback or failures[other] != 0;
-      }
-      tarch::accelerator::teamBarrier(team);
-      if (needsFallback) {
-        for (int subcell = thread; subcell < SubgridScheme<FallbackReconstruction>::VolumesPerPatch;
-             subcell += threads) {
-          static_cast<void>(SubgridScheme<FallbackReconstruction>::computeVolumeUpdate(
-            subcell,
-            subcells,
-            haloHalves,
-            cellCentre,
-            cellSize,
-            timeStamp,
-            timeStepSize,
-            boundaryFaces,
-            evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * SubgridScheme<FallbackReconstruction>::NumberOfData
-          ));
-        }
-      }
-    } tarch::accelerator::teamBarrier(team);
+    statistics = recomputeWithThreadsOfTeam(
+      team,
+      nodes,
+      subcells,
+      evolvedSubcells,
+      haloHalves,
+      subcellsToNodes,
+      cellCentre,
+      cellSize,
+      boundaryFaces,
+      timeStamp,
+      timeStepSize
+    );
+  )
+  return statistics;
+}
+
+/**
+ * Runs every phase of recompute() with the threads of team. The threads divide the subcells and the
+ * nodes of the cell among themselves. The projection onto the nodes then overwrites evolvedSubcells
+ * with ScratchValuesPerRecomputedCell values. Every thread returns the wave speeds of its subcells.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::recomputeWithThreadsOfTeam(
+  const tarch::accelerator::TeamHandle         team,
+  StoragePrecision* NOALIAS const              nodes,
+  StoragePrecision* NOALIAS const              subcells,
+  StoragePrecision* NOALIAS const              evolvedSubcells,
+  const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+  const StoragePrecision* NOALIAS const        subcellsToNodes,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const int                                    boundaryFaces,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  exahype2::dg::MaxEigenvalueStatistics statistics;
+
+  using Reconstruction         = typename Derived::Reconstruction;
+  using FallbackReconstruction = typename Derived::FallbackReconstruction;
+  const int thread             = tarch::accelerator::getThreadOfTeam(team);
+  const int threads            = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+  for (int subcell = thread; subcell < SubgridScheme<Reconstruction>::VolumesPerPatch; subcell += threads) {
+    static_cast<void>(SubgridScheme<Reconstruction>::computeVolumeUpdate(
+      subcell,
+      subcells,
+      haloHalves,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces,
+      evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * SubgridScheme<Reconstruction>::NumberOfData
+    ));
+  }
+  if constexpr (
+    exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision> and not std::is_void_v<FallbackReconstruction>
+  ) {
+    bool fails = false;
     for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
-      for (int value = subcell * NumberOfData; value < (subcell + 1) * NumberOfData; value++) {
-        subcells[value] = evolvedSubcells[value];
-      }
-    } tarch::accelerator::teamBarrier(team);
-    for (int node = thread; node < exahype2::dg::getNodesPerCell(NodesPerAxis); node += threads) {
-      projectSubcellsOntoNode(subcells, nodes, subcellsToNodes, node);
-    } if constexpr (ReportEigenvalues) {
-      for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
-        statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
-          statistics,
-          reduceMaxEigenvaluesOfSubcell(subcells, subcell, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+      fails = fails
+        or not Derived::isPhysicallyAdmissible(
+                evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * NumberOfData,
+                1,
+                cellCentre,
+                cellSize
         );
+    }
+    if (tarch::accelerator::isTrueInAnyThreadOfTeam(team, fails)) {
+      for (int subcell = thread; subcell < SubgridScheme<FallbackReconstruction>::VolumesPerPatch; subcell += threads) {
+        static_cast<void>(SubgridScheme<FallbackReconstruction>::computeVolumeUpdate(
+          subcell,
+          subcells,
+          haloHalves,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          boundaryFaces,
+          evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * SubgridScheme<FallbackReconstruction>::NumberOfData
+        ));
       }
     }
-    // The reduction of the team may run through the scratch. Every thread leaves it first.
-    tarch::accelerator::teamBarrier(team);
-  )
+  }
+  tarch::accelerator::teamBarrier(team);
+  for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
+    for (int value = subcell * NumberOfData; value < (subcell + 1) * NumberOfData; value++) {
+      subcells[value] = evolvedSubcells[value];
+    }
+  }
+  tarch::accelerator::teamBarrier(team);
+  projectSubcellsOntoNodesInTeam(team, subcells, nodes, subcellsToNodes, evolvedSubcells);
+  if constexpr (ReportEigenvalues) {
+    for (int subcell = thread; subcell < SubcellsPerCell; subcell += threads) {
+      statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+        statistics,
+        reduceMaxEigenvaluesOfSubcell(subcells, subcell, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+      );
+    }
+  }
   return statistics;
 }
 
@@ -378,7 +506,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::advanceSubcell
 
 /**
  * Projects the subcell averages of a cell back onto its nodes. The projection applies
- * subcellsToNodes along every axis.
+ * subcellsToNodes along every axis. subcellsToNodes is its own mirror image.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -391,54 +519,101 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubcell
   assertion(subcells != nullptr);
   assertion(nodes != nullptr);
   assertion(subcellsToNodes != nullptr);
-  exahype2::dg::projectTensorProduct<DIMENSIONS, SubcellsPerAxis, NodesPerAxis, NumberOfData>(
-    subcells,
-    nodes,
-    subcellsToNodes
-  );
+  exahype2::dg::projectTensorProduct<
+    DIMENSIONS,
+    SubcellsPerAxis,
+    NodesPerAxis,
+    NumberOfData,
+    exahype2::dg::ProjectionRule::Butterfly
+  >(subcells, nodes, subcellsToNodes);
 }
 
 /**
- * Projects the subcell averages of a cell onto one of its nodes. The sums run in the order of
- * projectSubcellsOntoNodes(). The threads of a team call it for different nodes of one cell.
+ * Writes the projection of projectSubcellsOntoNodes() into nodes. The threads of team divide the
+ * values of the lines of every projection stage among themselves. scratch provides
+ * NodeProjectionScratchValues values.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubcellsOntoNode(
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubcellsOntoNodesInTeam(
+  const tarch::accelerator::TeamHandle  team,
   const StoragePrecision* NOALIAS const subcells,
   StoragePrecision* NOALIAS const       nodes,
   const StoragePrecision* NOALIAS const subcellsToNodes,
-  const int                             node
+  StoragePrecision* NOALIAS const       scratch
 ) {
-  constexpr int SubcellsAlongThirdAxis = DIMENSIONS == 3 ? SubcellsPerAxis : 1;
+  const int  thread  = tarch::accelerator::getThreadOfTeam(team);
+  const int  threads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+  const auto weights = exahype2::dg::getProjectionWeightsOfDofPairs<SubcellsPerAxis, NodesPerAxis>(subcellsToNodes);
+  for (int stage = 0; stage < exahype2::dg::getStagesOfTensorProduct<DIMENSIONS>(); stage++) {
+    projectSubcellsOntoNodes(subcells, nodes, subcellsToNodes, weights, scratch, stage, thread, threads);
+    tarch::accelerator::teamBarrier(team);
+  }
+}
+
+/**
+ * Runs stage of projectSubcellsOntoNodes() for the values firstItem, firstItem + itemStride and so
+ * on of the lines of every projection. weights contains the pair weights of subcellsToNodes. The
+ * stages before it have written their values into scratch.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubcellsOntoNodes(
+  const StoragePrecision* NOALIAS const                                                             subcells,
+  StoragePrecision* NOALIAS const                                                                   nodes,
+  const StoragePrecision* NOALIAS const                                                             subcellsToNodes,
+  const exahype2::dg::ProjectionWeightsOfDofPairs<SubcellsPerAxis, NodesPerAxis, StoragePrecision>& weights,
+  StoragePrecision* NOALIAS const                                                                   scratch,
+  const int                                                                                         stage,
+  const int                                                                                         firstItem,
+  const int                                                                                         itemStride
+) {
   assertion(subcells != nullptr);
   assertion(nodes != nullptr);
   assertion(subcellsToNodes != nullptr);
-  assertion(node >= 0 and node < exahype2::dg::getNodesPerCell(NodesPerAxis), node);
-  const int                  firstIndex  = node % NodesPerAxis;
-  const int                  secondIndex = (node / NodesPerAxis) % NodesPerAxis;
-  [[maybe_unused]] const int thirdIndex  = node / (NodesPerAxis * NodesPerAxis);
-  for (int value = 0; value < NumberOfData; value++) {
-    StoragePrecision projected{0};
-    for (int thirdSubcell = 0; thirdSubcell < SubcellsAlongThirdAxis; thirdSubcell++) {
-      StoragePrecision plane{0};
-      for (int secondSubcell = 0; secondSubcell < SubcellsPerAxis; secondSubcell++) {
-        StoragePrecision line{0};
-        for (int firstSubcell = 0; firstSubcell < SubcellsPerAxis; firstSubcell++) {
-          const int subcell = (thirdSubcell * SubcellsPerAxis + secondSubcell) * SubcellsPerAxis + firstSubcell;
-          line += subcells[subcell * NumberOfData + value] * subcellsToNodes[firstSubcell * NodesPerAxis + firstIndex];
-        }
-        plane += line * subcellsToNodes[secondSubcell * NodesPerAxis + secondIndex];
-      }
-      if constexpr (DIMENSIONS == 3) {
-        projected += plane * subcellsToNodes[thirdSubcell * NodesPerAxis + thirdIndex];
-      } else {
-        projected = plane;
-      }
-    }
-    nodes[node * NumberOfData + value] = projected;
-  }
+  assertion(scratch != nullptr);
+  exahype2::dg::projectTensorProductStage<
+    DIMENSIONS,
+    SubcellsPerAxis,
+    NodesPerAxis,
+    NumberOfData,
+    exahype2::dg::ProjectionRule::Butterfly,
+    exahype2::dg::ProjectionItem::ValueOfLine
+  >(stage, subcells, nodes, subcellsToNodes, weights, scratch, firstItem, itemStride);
+}
+
+/**
+ * Runs stage of projectNodesOntoSubcells() for the values firstItem, firstItem + itemStride and so
+ * on of the lines of every projection. weights contains the pair weights of nodesToSubcells. The
+ * stages before it have written their values into scratch.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectNodesOntoSubcells(
+  const StoragePrecision* NOALIAS const                                                             nodes,
+  StoragePrecision* NOALIAS const                                                                   subcells,
+  const StoragePrecision* NOALIAS const                                                             nodesToSubcells,
+  const exahype2::dg::ProjectionWeightsOfDofPairs<NodesPerAxis, SubcellsPerAxis, StoragePrecision>& weights,
+  StoragePrecision* NOALIAS const                                                                   scratch,
+  const int                                                                                         stage,
+  const int                                                                                         firstItem,
+  const int                                                                                         itemStride
+) {
+  assertion(nodes != nullptr);
+  assertion(subcells != nullptr);
+  assertion(nodesToSubcells != nullptr);
+  assertion(scratch != nullptr);
+  exahype2::dg::projectTensorProductStage<
+    DIMENSIONS,
+    NodesPerAxis,
+    SubcellsPerAxis,
+    NumberOfData,
+    exahype2::dg::ProjectionRule::Butterfly,
+    exahype2::dg::ProjectionItem::ValueOfLine
+  >(stage, nodes, subcells, nodesToSubcells, weights, scratch, firstItem, itemStride);
 }
 
 template <typename Derived, typename ComputePrecision>
@@ -555,20 +730,24 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::SubgridSolver<
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::ProjectSubgridsOntoFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
-  const int entry
+  const int                            entry,
+  const tarch::accelerator::TeamHandle team
 ) const {
   const int         slot = cells[entry];
   StoragePrecision* haloHalves[peano4::FacesPerCell];
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     haloHalves[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
-  Kernel::projectSubgridOntoFaces(
+  Kernel::projectSubgridOntoFacesInTeam(
+    team,
     statuses.getChunk(slot),
     subcells.getChunk(slot),
     previousSolution.getChunk(slot),
     haloHalves,
     nodesToSubcells,
-    holdsInitialSubcells
+    subcellsStoreInitialCondition,
+    scratch
+      + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::ScratchValuesPerRecomputedCell
   );
 }
 
@@ -577,7 +756,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int entry
 ) const {
-  const int  face      = boundaryConditions.boundaryFaces[entry];
+  assertion(
+    entry >= 0 and entry < boundaryConditions.boundaryFaces.size * Kernel::Subgrid::VolumesPerLayer,
+    entry,
+    boundaryConditions.boundaryFaces.size
+  );
+  const int  face      = boundaryConditions.boundaryFaces[entry / Kernel::Subgrid::VolumesPerLayer];
   const int  lowerCell = boundaryConditions.cellConnectivity.getFaceCell(face, 0);
   const int  slot      = lowerCell >= 0 ? lowerCell : boundaryConditions.cellConnectivity.getFaceCell(face, 1);
   const auto status    = static_cast<exahype2::dg::limiting::LimiterStatus>(
@@ -600,8 +784,8 @@ exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrec
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     haloHalves[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
-  StoragePrecision* const evolvedSubcells =
-    scratch + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::SubcellValuesPerCell;
+  StoragePrecision* const evolvedSubcells = scratch
+    + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::ScratchValuesPerRecomputedCell;
   const tarch::la::Vector<DIMENSIONS, double> centre     = cellConnectivity.getCellCentre(slot);
   const tarch::la::Vector<DIMENSIONS, double> width      = cellConnectivity.getCellWidth(slot);
   const exahype2::dg::MaxEigenvalueStatistics statistics = Kernel::recomputeInTeam(
@@ -619,67 +803,38 @@ exahype2::dg::limiting::RecomputeSubcells<Derived, StoragePrecision, ComputePrec
   );
   COMPILE_IF_ON_HOST(accumulator = exahype2::dg::MaxEigenvalueStatistics::combine(accumulator, statistics);)
   COMPILE_IF_ON_DEVICE(
-    const tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics> reducer{accumulator};
-    tarch::accelerator::reduceOverTeam(team, statistics, reducer);
+    tarch::accelerator::reduceOverTeam(
+      team,
+      statistics,
+      tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{accumulator}
+    );
   )
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>::copy(
-  const int               slot,
-  StoragePrecision* const target
+exahype2::dg::limiting::ProjectNodesOntoSubgrids<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int                            entry,
+  const tarch::accelerator::TeamHandle team
 ) const {
-  const StoragePrecision* const subgrid = getSubgrid(slot, target);
-  if (subgrid != target) {
-    for (int value = 0; value < Kernel::SubcellValuesPerCell; value++) {
-      target[value] = subgrid[value];
+  assertion(numberOfTeams > 0, numberOfTeams);
+  assertion(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
+  StoragePrecision* const chunk = scratch
+    + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::SubcellProjectionScratchValues;
+  for (int cell = entry; cell < cells.size; cell += numberOfTeams) {
+    const int  slot   = cells[cell];
+    const auto status = static_cast<exahype2::dg::limiting::LimiterStatus>(
+      statuses.getChunk(slot)[static_cast<int>(exahype2::dg::limiting::StatusEntry::Status)]
+    );
+    if (not exahype2::dg::limiting::runsSubcellScheme(status)) {
+      Kernel::projectNodesOntoSubcellsInTeam(
+        team,
+        nodes.getChunk(slot),
+        subcells.getChunk(slot),
+        nodesToSubcells,
+        chunk
+      );
     }
   }
-}
-
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>::interpolateFromParent(
-  const int               parentSlot,
-  StoragePrecision* const target,
-  const int               childPosition
-) const {
-  StoragePrecision projection[Kernel::SubcellValuesPerCell];
-  Kernel::Subgrid::interpolatePatch(getSubgrid(parentSlot, projection), target, childPosition);
-}
-
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>::restrictFromChildren(
-  const int* const        childSlots,
-  StoragePrecision* const target
-) const {
-  StoragePrecision        projections[peano4::ChildrenPerCell][Kernel::SubcellValuesPerCell];
-  const StoragePrecision* children[peano4::ChildrenPerCell];
-  for (int child = 0; child < peano4::ChildrenPerCell; child++) {
-    children[child] = getSubgrid(childSlots[child], projections[child]);
-  }
-  Kernel::Subgrid::restrictPatch(children, target);
-}
-
-/**
- * Returns the subgrid of a cell on the subcell scheme. For every other cell it writes the
- * projection of the nodes into projection and returns projection.
- */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision*
-exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>::getSubgrid(
-  const int               slot,
-  StoragePrecision* const projection
-) const {
-  const auto status = static_cast<exahype2::dg::limiting::LimiterStatus>(
-    statuses.getChunk(slot)[static_cast<int>(exahype2::dg::limiting::StatusEntry::Status)]
-  );
-  if (exahype2::dg::limiting::runsSubcellScheme(status)) {
-    return subcells.getChunk(slot);
-  }
-  Kernel::projectNodesOntoSubcells(nodes.getChunk(slot), projection, nodesToSubcells);
-  return projection;
 }
 TARGET_DECLARE_END

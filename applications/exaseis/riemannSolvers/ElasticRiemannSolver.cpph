@@ -106,8 +106,8 @@ applications::exahype2::exaseis::rotateIntoLocalBasis(
 
 /**
  * Writes the velocity and the traction of a welded interface that keeps the outgoing characteristics
- * of left and right. Along a direction where one side has no impedance, both sides keep their
- * velocities and a side with impedance gets zero traction.
+ * of left and right. Along a direction where the impedance of one side is zero, both sides keep their
+ * velocities. A side with a non-zero impedance then gets zero traction.
  */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -247,7 +247,7 @@ applications::exahype2::exaseis::writeFluxFluctuation(
 
 /**
  * Adds the left flux fluctuation of every face node to the flux trace FL and subtracts the right one
- * from FR, so both hold the numerical flux. Returns the largest wave speed on the face.
+ * from FR. Both traces then contain the numerical flux. Returns the largest wave speed on the face.
  * solveInterface writes the interface values of one node.
  */
 template <

@@ -21,8 +21,10 @@ public:
 
 private:
   void testTheRegularGridLinksEveryFaceToItsCells();
+  void testTheCentresOfMirrorCellsAndFacesAreNegated();
   void testEveryFaceOfThePeriodicGridIsInterior();
   void testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace();
+  void testTheCellCentreBesideEveryFaceMatchesItsCellBitwise();
   void testTheListsGroupByAdjacencyLevelAndKind();
   void testARegridKeepsTheSlotsOfSurvivingCellsAndReusesFreedOnes();
   void testTheExchangedFacesMatchAcrossRanks();

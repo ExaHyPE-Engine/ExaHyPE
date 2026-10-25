@@ -124,7 +124,7 @@ exahype2::particles::TrajectoryDatabase::resetWriteTracking() {
 
 /**
  * Returns the action for a snapshot of particle number at x and timestamp: Append, Replace or
- * Ignore. The caller holds _mutex.
+ * Ignore. The caller locks _mutex.
  */
 exahype2::particles::TrajectoryDatabase::AddSnapshotAction
 exahype2::particles::TrajectoryDatabase::getAction(
@@ -163,7 +163,7 @@ exahype2::particles::TrajectoryDatabase::getAction(
 
 /**
  * Returns the action of getAction(), raises _maxPositionDelta to the position delta of the particle
- * and inserts an empty list for a new particle. The caller holds _mutex.
+ * and inserts an empty list for a new particle. The caller locks _mutex.
  */
 exahype2::particles::TrajectoryDatabase::AddSnapshotAction
 exahype2::particles::TrajectoryDatabase::prepareSnapshot(

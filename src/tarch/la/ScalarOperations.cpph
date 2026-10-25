@@ -1,6 +1,9 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/Assertions.h"
+#include "tarch/la/FixedPointSum.h"
+
 TARGET_DECLARE
 INLINE_METHOD GPU_CALLABLE_METHOD int
 tarch::la::abs(const int value) {
@@ -61,5 +64,270 @@ tarch::la::round(const double value) {
 INLINE_METHOD GPU_CALLABLE_METHOD int
 tarch::la::round(const float value) {
   return static_cast<int>(std::floor(value + static_cast<float>(0.5)));
+}
+
+/**
+ * Returns an unsigned integer whose order is the order of the floating-point values. Both zeros
+ * return the same integer.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::BitPatternOf<Value>
+tarch::la::getOrderKeyOf(const Value value) {
+  static_assert(std::is_floating_point_v<Value>, "The order keys support floating-point values only.");
+  using Bits             = tarch::la::BitPatternOf<Value>;
+  constexpr Bits SignBit = Bits{1} << (8 * sizeof(Value) - 1);
+  const Bits     bits    = std::bit_cast<Bits>(value);
+  if ((bits << 1) == 0) {
+    return SignBit;
+  }
+  return (bits & SignBit) != 0 ? Bits(~bits) : Bits(bits | SignBit);
+}
+
+/**
+ * Returns an unsigned integer whose order is the order of the magnitudes of the floating-point
+ * values.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::BitPatternOf<Value>
+tarch::la::getMagnitudeKeyOf(const Value value) {
+  static_assert(std::is_floating_point_v<Value>, "The magnitude keys support floating-point values only.");
+  using Bits                   = tarch::la::BitPatternOf<Value>;
+  constexpr Bits MagnitudeMask = ~(Bits{1} << (8 * sizeof(Value) - 1));
+  return std::bit_cast<Bits>(value) & MagnitudeMask;
+}
+
+/**
+ * Returns whether lhs lies below rhs. The device pass compares the keys of getOrderKeyOf(). A GPU
+ * compares integers at the full rate and doubles at the rate of its double-precision units. Every
+ * pair of numbers returns the same result on the host and on a device.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::isBelow(const Value lhs, const Value rhs) {
+  if constexpr (std::is_floating_point_v<Value>) {
+    COMPILE_IF_ON_HOST(return lhs < rhs;)
+    COMPILE_IF_ON_DEVICE(return tarch::la::getOrderKeyOf(lhs) < tarch::la::getOrderKeyOf(rhs);)
+  } else {
+    return lhs < rhs;
+  }
+}
+
+/**
+ * Returns whether the magnitude of lhs lies below the magnitude of rhs. The device pass compares the
+ * keys of getMagnitudeKeyOf(). A GPU compares integers at the full rate and doubles at the rate of
+ * its double-precision units.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::isBelowInMagnitude(const Value lhs, const Value rhs) {
+  if constexpr (std::is_floating_point_v<Value>) {
+    COMPILE_IF_ON_HOST(return std::abs(lhs) < std::abs(rhs);)
+    COMPILE_IF_ON_DEVICE(return tarch::la::getMagnitudeKeyOf(lhs) < tarch::la::getMagnitudeKeyOf(rhs);)
+  } else {
+    return std::abs(lhs) < std::abs(rhs);
+  }
+}
+
+/**
+ * Returns whether the magnitudes of lhs and rhs are equal. The device pass compares the keys of
+ * getMagnitudeKeyOf(). A GPU compares integers at the full rate and doubles at the rate of its
+ * double-precision units.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::isEqualInMagnitude(const Value lhs, const Value rhs) {
+  if constexpr (std::is_floating_point_v<Value>) {
+    COMPILE_IF_ON_HOST(return std::abs(lhs) == std::abs(rhs);)
+    COMPILE_IF_ON_DEVICE(return tarch::la::getMagnitudeKeyOf(lhs) == tarch::la::getMagnitudeKeyOf(rhs);)
+  } else {
+    return std::abs(lhs) == std::abs(rhs);
+  }
+}
+
+/**
+ * Swaps the three values into the order of ascending magnitude without a branch.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::la::orderByMagnitude(Value& first, Value& second, Value& third) {
+  const bool  firstPairSwaps   = tarch::la::isBelowInMagnitude(second, first);
+  const Value lowerOfFirstPair = firstPairSwaps ? second : first;
+  const Value upperOfFirstPair = firstPairSwaps ? first : second;
+  const bool  thirdIsBelow     = tarch::la::isBelowInMagnitude(third, upperOfFirstPair);
+  const Value lowerOfRest      = thirdIsBelow ? third : upperOfFirstPair;
+  third                        = thirdIsBelow ? upperOfFirstPair : third;
+  const bool restIsBelow       = tarch::la::isBelowInMagnitude(lowerOfRest, lowerOfFirstPair);
+  first                        = restIsBelow ? lowerOfRest : lowerOfFirstPair;
+  second                       = restIsBelow ? lowerOfFirstPair : lowerOfRest;
+}
+
+/**
+ * Returns the sum of the three values, added in the order of ascending magnitude. The two largest
+ * values add first when their magnitudes are equal. Every order of the arguments returns the same
+ * bits. Three negated arguments return the negated bits.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+tarch::la::sumInOrderOfMagnitude(const Value first, const Value second, const Value third) {
+  Value smallest = first;
+  Value middle   = second;
+  Value largest  = third;
+  tarch::la::orderByMagnitude(smallest, middle, largest);
+  const bool  largestAddsFirst = tarch::la::isEqualInMagnitude(middle, largest);
+  const Value pairedWithMiddle = largestAddsFirst ? largest : smallest;
+  const Value addedLast        = largestAddsFirst ? smallest : largest;
+  return (pairedWithMiddle + middle) + addedLast;
+}
+
+/**
+ * Returns the sum of the squares of the three values. Two fused multiply-adds add the squares in the
+ * order of ascending magnitude. Every order and every sign of the arguments returns the same bits.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+tarch::la::sumOfSquaresInOrderOfMagnitude(const Value first, const Value second, const Value third) {
+  static_assert(std::is_floating_point_v<Value>, "The sum of squares supports floating-point values only.");
+  Value smallest = first;
+  Value middle   = second;
+  Value largest  = third;
+  tarch::la::orderByMagnitude(smallest, middle, largest);
+  return std::fma(largest, largest, std::fma(middle, middle, tarch::la::productRoundedOnce(smallest, smallest)));
+}
+
+/**
+ * Returns the product of the two values rounded once. A floating-point product rounds through a
+ * fused multiply-add with a zero addend. No compiler then fuses the product into a later addition.
+ * A zero factor returns positive zero.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+tarch::la::productRoundedOnce(const Value first, const Value second) {
+  if constexpr (std::is_floating_point_v<Value>) {
+    return std::fma(first, second, Value(0));
+  } else {
+    return first * second;
+  }
+}
+
+/**
+ * Returns the product of the three values, multiplied in the order of ascending magnitude. Every
+ * order of the arguments returns the same bits.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+tarch::la::productInOrderOfMagnitude(const Value first, const Value second, const Value third) {
+  Value smallest = first;
+  Value middle   = second;
+  Value largest  = third;
+  tarch::la::orderByMagnitude(smallest, middle, largest);
+  return (smallest * middle) * largest;
+}
+
+/**
+ * Swaps the three values into ascending order without a branch.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tarch::la::orderByValue(Value& first, Value& second, Value& third) {
+  const bool  firstPairSwaps   = tarch::la::isBelow(second, first);
+  const Value lowerOfFirstPair = firstPairSwaps ? second : first;
+  const Value upperOfFirstPair = firstPairSwaps ? first : second;
+  const bool  thirdIsBelow     = tarch::la::isBelow(third, upperOfFirstPair);
+  const Value lowerOfRest      = thirdIsBelow ? third : upperOfFirstPair;
+  third                        = thirdIsBelow ? upperOfFirstPair : third;
+  const bool restIsBelow       = tarch::la::isBelow(lowerOfRest, lowerOfFirstPair);
+  first                        = restIsBelow ? lowerOfRest : lowerOfFirstPair;
+  second                       = restIsBelow ? lowerOfFirstPair : lowerOfRest;
+}
+
+/**
+ * Returns the sum of the smallest and the largest of the three values plus the middle one. Every
+ * order of the arguments returns the same bits. Three negated arguments return the negated bits.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+tarch::la::sumInOrderOfValue(const Value first, const Value second, const Value third) {
+  Value smallest = first;
+  Value middle   = second;
+  Value largest  = third;
+  tarch::la::orderByValue(smallest, middle, largest);
+  return (smallest + largest) + middle;
+}
+
+/**
+ * Returns the mean of the three values. Every order of finite arguments returns the same bits.
+ * Three equal arguments return their value. Three negated arguments return the negated mean.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+tarch::la::meanInOrderOfValue(const Value first, const Value second, const Value third) {
+  Value smallest = first;
+  Value median   = second;
+  Value largest  = third;
+  tarch::la::orderByValue(smallest, median, largest);
+  return median + ((smallest - median) + (largest - median)) / Value{3};
+}
+
+/**
+ * Returns the sum of the first size entries of values on a 64-bit fixed-point grid. The grid scales
+ * the entry of largest magnitude below 2^61 / size. Every entry rounds to the grid on its own. Every
+ * order of the entries then returns the same bits. Negated entries return the negated sum. Entries
+ * that are not all finite return their sum in index order.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::sumInFixedPoint(const double* const values, const int size) {
+  assertion(size >= 0, size);
+  assertion(size == 0 or values != nullptr, size);
+  double largestMagnitude = 0.0;
+  bool   entriesAreFinite = true;
+  for (int entry = 0; entry < size; entry++) {
+    entriesAreFinite = entriesAreFinite and std::isfinite(values[entry]);
+    largestMagnitude = std::max(largestMagnitude, std::abs(values[entry]));
+  }
+  if (not entriesAreFinite) {
+    double sum = 0.0;
+    for (int entry = 0; entry < size; entry++) {
+      sum += values[entry];
+    }
+    return sum;
+  }
+  if (largestMagnitude == 0.0) {
+    return 0.0;
+  }
+  int sizeBits = 0;
+  while ((1 << sizeBits) < size) {
+    sizeBits++;
+  }
+  // The largest magnitude lies below 2^(ilogb + 1). Two factors apply the shift without overflow.
+  const int    shift      = 60 - sizeBits - std::ilogb(largestMagnitude);
+  const double lowerScale = std::ldexp(1.0, shift / 2);
+  const double upperScale = std::ldexp(1.0, shift - shift / 2);
+  std::int64_t sum        = 0;
+  for (int entry = 0; entry < size; entry++) {
+    sum += static_cast<std::int64_t>(std::nearbyint((values[entry] * lowerScale) * upperScale));
+  }
+  return (static_cast<double>(sum) / lowerScale) / upperScale;
+}
+
+/**
+ * Returns the mean of the values rounded once to the nearest double. The values sum on the grid of
+ * a tarch::la::FixedPointSum bounded by their largest magnitude. Every order of the values returns
+ * the same bits.
+ */
+template <int Count>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tarch::la::meanInFixedPoint(const double (&values)[Count]) {
+  static_assert(Count > 0);
+  double largestMagnitude = 0.0;
+  for (const double value : values) {
+    assertion(std::isfinite(value), value);
+    largestMagnitude = std::max(largestMagnitude, std::abs(value));
+  }
+  tarch::la::FixedPointSum<Count> sum;
+  sum.clear(largestMagnitude);
+  for (const double value : values) {
+    sum.add(value);
+  }
+  return sum.template roundQuotient<Count>();
 }
 TARGET_DECLARE_END

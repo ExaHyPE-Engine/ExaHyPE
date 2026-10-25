@@ -52,6 +52,10 @@ namespace exahype2::fv {
   struct PatchTransfer;
 } // namespace exahype2::fv
 
+/**
+ * Fills the outer half of every listed boundary face through the boundary conditions. The launch
+ * runs one thread per volume of a layer of every listed face.
+ */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ApplyBoundaryConditions final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
@@ -109,7 +113,7 @@ struct exahype2::fv::RestrictHaloHalves final {
 
 /**
  * Copies the boundary layers of the patch of every cell into the halves of its faces that the
- * cell writes. The launch runs one team per cell and one thread per volume of the layers.
+ * cell writes. The launch runs one team per cell and one thread per value of one half.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ProjectPatchesOntoFaces final {
@@ -148,16 +152,16 @@ struct exahype2::fv::UpdatePatches final {
   ) const;
 
 private:
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double updatePatchOnDevice(
+  INLINE_METHOD GPU_CALLABLE_METHOD void reduceWaveSpeedsWithThreadsOfTeam(
     tarch::accelerator::TeamHandle               team,
+    double                                       partial,
     StoragePrecision*                            patch,
-    const StoragePrecision* const                faces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          boundaryFaces
-  );
+    double                                       stepStart,
+    double                                       stepSize,
+    double&                                      accumulator
+  ) const;
 };
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -189,22 +193,33 @@ struct exahype2::fv::MeasurePatchErrors final {
 };
 
 /**
- * Fills patches of the new grid from source, the pool of the old grid, during a regrid.
+ * Fills patches of the new grid from source, the pool of the old grid, during a regrid. Every work
+ * item fills one volume of a patch.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::PatchTransfer final {
   using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
+  static constexpr int WorkItemsPerChunk      = Kernel::VolumesPerPatch;
+  static constexpr int PreparedValuesPerChunk = 0;
+
   typename CellPool::ConstView source{};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void copy(int slot, StoragePrecision* target) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void copy(int slot, StoragePrecision* target, int itemOfChunk) const;
   INLINE_METHOD GPU_CALLABLE_METHOD void interpolateFromParent(
     int               parentSlot,
     StoragePrecision* target,
-    int               childPosition
+    int               childPosition,
+    int               itemOfChunk,
+    const double*     prepared
   ) const;
-  INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(const int* childSlots, StoragePrecision* target) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(
+    const int*        childSlots,
+    StoragePrecision* target,
+    int               itemOfChunk,
+    const double*     prepared
+  ) const;
 };
 TARGET_DECLARE_END
 

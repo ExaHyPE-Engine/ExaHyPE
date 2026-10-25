@@ -8,6 +8,8 @@
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/Solver.h"
 #include "exahype2/dg/limiting/SubcellLimiter.h"
+#include "exahype2/dg/limiting/tests/LimiterTestData.h"
+#include "exahype2/fv/FiniteVolumeScheme.h"
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
 #include "peano4/CellConnectivity.h"
@@ -17,6 +19,7 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
 #include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
@@ -33,18 +36,17 @@ namespace {
   /**
    * The smallest depth whose regular grid has at least three cells per axis.
    */
-  constexpr int    Depth                = SubdivisionFactor >= 3 ? 1 : 2;
-  constexpr int    CellsPerAxis         = peano4::power(SubdivisionFactor, Depth);
-  constexpr int    RegularCells         = peano4::power(CellsPerAxis, DIMENSIONS);
-  constexpr double CoarseWidth          = 1.0 / CellsPerAxis;
-  constexpr int    Order                = 1;
-  constexpr int    NodesPerAxis         = Order + 1;
-  constexpr int    SubcellsPerAxis      = 2 * Order + 1;
-  constexpr auto   EntriesPerOperator   = static_cast<std::size_t>(NodesPerAxis) * NodesPerAxis;
-  constexpr auto   EntriesPerProjection = static_cast<std::size_t>(NodesPerAxis) * SubcellsPerAxis;
-  constexpr double TimeStepFactor       = 0.5;
-  constexpr double ConstantState        = 1.0;
-  constexpr double Tolerance            = 1.0e-12;
+  constexpr int    Depth              = SubdivisionFactor >= 3 ? 1 : 2;
+  constexpr int    CellsPerAxis       = peano4::power(SubdivisionFactor, Depth);
+  constexpr int    RegularCells       = peano4::power(CellsPerAxis, DIMENSIONS);
+  constexpr double CoarseWidth        = 1.0 / CellsPerAxis;
+  constexpr int    Order              = 1;
+  constexpr int    NodesPerAxis       = Order + 1;
+  constexpr int    SubcellsPerAxis    = 2 * Order + 1;
+  constexpr auto   EntriesPerOperator = static_cast<std::size_t>(NodesPerAxis) * NodesPerAxis;
+  constexpr double TimeStepFactor     = 0.5;
+  constexpr double ConstantState      = 1.0;
+  constexpr double Tolerance          = 1.0e-12;
   TARGET_DECLARE_END
 
   const double QuadratureNodes[NodesPerAxis]   = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
@@ -208,30 +210,22 @@ namespace {
   };
 
   /**
-   * The projection tables of the limiter. A node takes the value of the subcell it lies in.
+   * The projection tables of exahype2::dg::limiting::tests::SubcellProjections on the device.
    */
   template <typename Precision>
   class SubcellProjection final {
   public:
     static void initialise() {
-      std::vector<double> nodesToSubcells(EntriesPerProjection);
-      std::vector<double> subcellsToNodes(EntriesPerProjection);
-      std::vector<double> nodesToLobatto(EntriesPerOperator);
-      for (int node = 0; node < NodesPerAxis; node++) {
-        const int subcellOfNode = static_cast<int>(QuadratureNodes[node] * SubcellsPerAxis);
-        for (int subcell = 0; subcell < SubcellsPerAxis; subcell++) {
-          nodesToSubcells[static_cast<std::size_t>(node) * SubcellsPerAxis + subcell] =
-            getBasisValue((subcell + 0.5) / SubcellsPerAxis, node);
-          subcellsToNodes[static_cast<std::size_t>(subcell) * NodesPerAxis + node] =
-            subcell == subcellOfNode ? 1.0 : 0.0;
-        }
-        nodesToLobatto[static_cast<std::size_t>(node) * NodesPerAxis]     = getBasisValue(0.0, node);
-        nodesToLobatto[static_cast<std::size_t>(node) * NodesPerAxis + 1] = getBasisValue(1.0, node);
-      }
-      QuadraturePoints1D = getTableOf<Precision>({QuadratureNodes, QuadratureNodes + NodesPerAxis});
-      NodesToSubcells1D  = getTableOf<Precision>(nodesToSubcells);
-      SubcellsToNodes1D  = getTableOf<Precision>(subcellsToNodes);
-      NodesToLobatto1D   = getTableOf<Precision>(nodesToLobatto);
+      static_assert(
+        NodesPerAxis == exahype2::dg::limiting::tests::StubLayout::NodesPerAxis
+          and SubcellsPerAxis == exahype2::dg::limiting::tests::StubLayout::SubcellsPerAxis,
+        "The subcell limiter test and the limiter test data use the same polynomial order."
+      );
+      const exahype2::dg::limiting::tests::SubcellProjections projections{};
+      QuadraturePoints1D = getTableOf<Precision>(projections.quadraturePoints);
+      NodesToSubcells1D  = getTableOf<Precision>(projections.nodesToSubcells);
+      SubcellsToNodes1D  = getTableOf<Precision>(projections.subcellsToNodes);
+      NodesToLobatto1D   = getTableOf<Precision>(projections.nodesToLobatto);
     }
 
     static void deallocate() {
@@ -566,7 +560,9 @@ exahype2::dg::limiting::tests::SubcellLimiterTest::testTheSubgridBoundaryConditi
 
   const auto boundaryFaces = cellConnectivity.onDevice().getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary);
   tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(boundaryFaces.size),
+    tarch::accelerator::Range(
+      boundaryFaces.size * exahype2::fv::FiniteVolumeScheme<CornerSolver, double>::VolumesPerLayer
+    ),
     exahype2::dg::limiting::ApplySubgridBoundaryConditions<CornerSolver, double, double>{
       {cellConnectivity.onDevice(), boundaryFaces, halo.getView(), 0.0},
       std::as_const(statuses).getView()

@@ -36,7 +36,7 @@
 
 namespace {
   /**
-   * PhaseName holds the names of the program steps and the time loop in the reports and the Score-P
+   * PhaseName lists the names of the program steps and the time loop in the reports and the Score-P
    * regions.
    */
   struct PhaseName final {
@@ -449,8 +449,8 @@ exahype2::runner::Runner::finishStep(const Step step) {
     _callbacks.getNumberOfCellDoFs ? _callbacks.getNumberOfCellDoFs() : 0
   );
 
-  // A rank without a non-critical assertion holds -1. The shifted rank keeps the order of the
-  // unsigned maximum.
+  // getNonCriticalAssertionRank() returns -1 on a rank without a non-critical assertion. The shifted
+  // rank keeps the order of the unsigned maximum.
   const int assertionRank = tarch::getNonCriticalAssertionRank();
   assertion(assertionRank >= -1, assertionRank);
   const int                   shiftedAssertionRank = assertionRank + 1;
@@ -1004,7 +1004,7 @@ exahype2::runner::Runner::runTimeLoop() {
   double        nextPlotAtStep     = 0.0;
   unsigned long completedTimeSteps = 0;
   int           completedPlots     = 0;
-  // lastLoggedStep holds the last reported step. The shutdown reports it once.
+  // lastLoggedStep stores the last reported step. The shutdown reports it once.
   unsigned long lastLoggedStep    = 0;
   bool          justWroteSnapshot = false;
   auto          lastReport        = std::chrono::steady_clock::now();

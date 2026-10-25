@@ -57,7 +57,7 @@ class MeshSnapshot:
 
 @dataclass
 class SnapshotRef:
-    """A picklable reference to one snapshot, which a worker process loads without re-parsing the index."""
+    """A picklable reference to one snapshot that a worker process loads without parsing the index."""
 
     fmt: str
     path: str
@@ -217,7 +217,7 @@ def _grid_to_payload(index_dir: Path, grid: ET.Element) -> dict:
     if topology is None or geometry is None:
         raise ValueError("XDMF grid is missing Topology or Geometry")
     topology_ref = _data_item_ref(index_dir, topology.find("DataItem").text)
-    # An XYZ geometry is one interleaved DataItem, and an X_Y_Z geometry has one DataItem per axis.
+    # An XYZ geometry is one interleaved DataItem. An X_Y_Z geometry has one DataItem per axis.
     geometry_refs = [
         _data_item_ref(index_dir, di.text) for di in geometry.findall("DataItem")
     ]
@@ -307,7 +307,8 @@ def _decode_xdmf_topology(topology: np.ndarray) -> object:
     if flat.size == 0:
         return np.empty((0, 0), dtype=np.int64)
 
-    # A stream of one fixed-arity element type has a constant stride, so one reshape splits it.
+    # The elements of a stream of one fixed-arity element type follow at a constant stride. One
+    # reshape splits such a stream.
     first = int(flat[0])
     if first in XDMF_NODE_COUNTS:
         stride = XDMF_NODE_COUNTS[first] + 1
@@ -446,7 +447,9 @@ def _netcdf_mesh_variable(dataset):
     for variable in dataset.variables.values():
         if getattr(variable, "cf_role", None) == "mesh_topology":
             return variable
-    raise ValueError("NetCDF file has no mesh_topology variable")
+    raise ValueError(
+        "The NetCDF reader reads files with a mesh_topology variable only."
+    )
 
 
 _COMPONENT_SUFFIX = re.compile(r"^(.*)_(\d+)$")
@@ -502,7 +505,7 @@ def _netcdf_fields(
     return fields
 
 
-# A .pvd collection lists one .pvtu file per step, and each .pvtu file lists one .vtu file per rank.
+# A .pvd collection lists one .pvtu file per step. Each .pvtu file lists one .vtu file per rank.
 def _local_tag(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
@@ -617,8 +620,8 @@ def _load_vtu_meshio(ref: SnapshotRef, path: Path) -> MeshSnapshot:
             import warnings
 
             warnings.warn(
-                f"{piece.name} holds several <Piece> elements; meshio reads only one. "
-                "Install vtk for complete multi-piece VTU reading.",
+                f"meshio reads only one of the <Piece> elements of the VTU file {piece.name}. "
+                "The vtk package reads all of them.",
                 stacklevel=2,
             )
         points, blocks, node_data, cell_data = _read_vtu_piece(piece)
@@ -680,7 +683,7 @@ def _read_vtu_piece(path: Path):
 
 
 def _drop_trivial_z(points: np.ndarray) -> np.ndarray:
-    """Drops a z column of zeros, so a planar mesh stored with three columns reads as 2D."""
+    """Drops a z column of zeros. A planar mesh stored with three columns then reads as 2D."""
     if points.ndim == 2 and points.shape[1] == 3 and np.all(points[:, 2] == 0.0):
         return points[:, :2]
     return points
@@ -874,8 +877,8 @@ def _candidate_directories(directory: str | Path | None) -> list[Path]:
     else:
         cwd = Path(".")
         roots = [cwd, Path("output")] + sorted(cwd.glob("*.output"))
-        # The output directory has an arbitrary name, so the search includes every
-        # immediate sub-directory.
+        # The output directory can have any name. The search includes every immediate
+        # sub-directory.
         roots += [
             child
             for child in sorted(cwd.iterdir())

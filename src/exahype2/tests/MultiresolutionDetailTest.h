@@ -32,4 +32,5 @@ private:
   void testRefinementCommandFromDetail();
   void testRefineOnDetail();
   void testRefineOnDetailRunsOnTheDevice();
+  void testDetailIsBitwiseInvariantUnderSwapsOnTheDevice();
 };

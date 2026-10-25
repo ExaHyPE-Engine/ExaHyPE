@@ -1910,9 +1910,9 @@ peano4::topology::Tree::deriveBalancedBlockOwners(
       const auto subtreeWeight = getLeafWeight(level, latticeIndex);
       const bool isIndivisible =
         level + 1 >= depth and level > spawnLevel and not hasOnlyRefinedChildren(level, latticeIndex);
-      const bool holdsBoundary = nextBoundary < numberOfActiveRanks
+      const bool containsBoundary = nextBoundary < numberOfActiveRanks
         and static_cast<std::int64_t>(nextBoundary) * totalWeight < (leafPrefix + subtreeWeight) * numberOfActiveRanks;
-      if (isIndivisible or not holdsBoundary) {
+      if (isIndivisible or not containsBoundary) {
         placeBoundariesWithinUnit(subtreeWeight);
         return;
       }

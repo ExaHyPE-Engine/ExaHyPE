@@ -230,8 +230,8 @@ namespace tarch::accelerator {
     ValueType     partialResult = Reducer::identity();
     const Reducer partialReducer{partialResult};
     const int     scratchBytes = tarch::accelerator::getTeamScratchBytes(range.scratchBytes);
-    const Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy =
-      Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>(range.n, tarch::accelerator::getTeamThreads(range.threads))
+    const tarch::accelerator::KokkosTeamPolicy policy =
+      tarch::accelerator::KokkosTeamPolicy(range.n, tarch::accelerator::getTeamThreads(range.threads))
         .set_scratch_size(0, Kokkos::PerTeam(scratchBytes));
     Kokkos::parallel_reduce(
       policy,

@@ -108,6 +108,9 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The volcanic plume tracer test runs in 2D only.")
+
 initial_conditions = """
   const double plumeCentreX = DomainSize[0] * 0.5;
   const double plumeWidth   = DomainSize[0] * 0.1;
@@ -174,8 +177,8 @@ compute_primitive_variables = r"""
   const auto u0 = Q[Shortcuts::rhoU] * irho;
   const auto u1 = Q[Shortcuts::rhoV] * irho;
 
-  const auto squareOfU0 = u0 * u0;
-  const auto squareOfU1 = u1 * u1;
+  const auto squareOfU0 = tarch::la::productRoundedOnce(u0, u0);
+  const auto squareOfU1 = tarch::la::productRoundedOnce(u1, u1);
   const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 

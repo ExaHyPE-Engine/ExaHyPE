@@ -25,4 +25,5 @@ namespace peano4::tests {
   int getNumberOfCellsPerAxisRefinedAroundTheCentre();
 
   int getGlobalSumOf(int localValue);
+  std::vector<double> getGlobalMaximaOf(const std::vector<double>& localValues);
 } // namespace peano4::tests

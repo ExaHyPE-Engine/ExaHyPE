@@ -3,6 +3,7 @@
 
 #include "exahype2/TimeStepping.h"
 #include "tarch/Assertions.h"
+#include "tarch/la/ScalarOperations.h"
 
 TARGET_DECLARE
 /**
@@ -432,7 +433,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::evaluateFaceTerms(
 /**
  * Advances one volume with the MUSCL-Hancock update. A custom Riemann solver adds the
  * non-conservative product over the face jump to its fluxes. The evolved states of the interior
- * neighbours and the terms of the lower face come from the ring when it holds them and the terms
+ * neighbours and the terms of the lower face come from the ring when it contains them and the terms
  * of the upper face go into the ring for the neighbour above.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
@@ -483,13 +484,10 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
   const double halfTimeStamp = timeStamp + 0.5 * timeStepSize;
   assertion(std::isfinite(halfTimeStamp), timeStamp, timeStepSize);
 
-  // The axes add their flux differences into one update that enters outputState once. Mirrored
-  // volumes then get mirrored states.
-  StateUpdatePrecision axisUpdates[NumberOfUnknowns];
-  SIMD()
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    axisUpdates[unknown] = static_cast<StateUpdatePrecision>(0);
-  }
+  // Every axis writes its flux difference into its own update. The updates of an unknown add with
+  // tarch::la::sumInOrderOfValue() in 3D and enter outputState once. Mirrored and swapped volumes
+  // receive mirrored and swapped states.
+  StateUpdatePrecision axisUpdates[DIMENSIONS][NumberOfUnknowns];
 
   int strideInVolumes = 1;
   for (int normal = 0; normal < DIMENSIONS; normal++) {
@@ -628,10 +626,13 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
         rightNeighbourPlus);
     }
 
-    auto leftFaceCentre(leftVolumeCentre);
-    leftFaceCentre(normal) += 0.5 * volumeSize(normal);
+    // The offset of a face from the patch centre is a multiple of half the volume width. Two faces
+    // that mirror at the patch centre therefore get exactly negated offsets.
+    const double lowerFaceOffset = static_cast<double>(volumeIndex(normal)) - 0.5 * NumberOfVolumesPerAxis;
+    auto         leftFaceCentre(volumeCentre);
+    leftFaceCentre(normal) = std::fma(lowerFaceOffset, volumeSize(normal), patchCentre(normal));
     auto rightFaceCentre(volumeCentre);
-    rightFaceCentre(normal) += 0.5 * volumeSize(normal);
+    rightFaceCentre(normal) = std::fma(lowerFaceOffset + 1.0, volumeSize(normal), patchCentre(normal));
 
     // The lower face comes from the ring when the neighbour below is an interior volume that
     // evaluated it as its upper face. This call evaluates the upper face and stores it in the ring.
@@ -723,16 +724,16 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
         exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, rightFace->maxWaveSpeed);
       }
 
-      // The term of the axis rounds through a fused multiply-add with a zero addend before it
-      // joins the sum. Both axis orders then add the same rounded terms under every contraction rule.
+      // productRoundedOnce() rounds the term of the axis before it joins the sum. Both axis orders then
+      // add the same rounded terms with and without fused multiply-adds.
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         ComputePrecision divergence = leftFace->rightGoingFlux[unknown] - rightFace->leftGoingFlux[unknown];
         if constexpr (EvaluateNonconservativeProduct) {
           divergence -= volumeNonconservativeProduct[unknown];
         }
-        const auto contribution = static_cast<StateUpdatePrecision>(std::fma(scale, divergence, ComputePrecision{0}));
-        axisUpdates[unknown] += contribution;
+        const auto contribution = static_cast<StateUpdatePrecision>(tarch::la::productRoundedOnce(scale, divergence));
+        axisUpdates[normal][unknown] = contribution;
       }
     } else {
       [[maybe_unused]] ComputePrecision accumulatedNonconservativeProduct[NumberOfUnknowns]
@@ -754,16 +755,16 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
         }
       }
 
-      // The term of the axis rounds through a fused multiply-add with a zero addend before it
-      // joins the sum. Both axis orders then add the same rounded terms under every contraction rule.
+      // productRoundedOnce() rounds the term of the axis before it joins the sum. Both axis orders then
+      // add the same rounded terms with and without fused multiply-adds.
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         ComputePrecision divergence = leftFace->flux[unknown] - rightFace->flux[unknown];
         if constexpr (EvaluateNonconservativeProduct) {
           divergence -= accumulatedNonconservativeProduct[unknown];
         }
-        const auto contribution = static_cast<StateUpdatePrecision>(std::fma(scale, divergence, ComputePrecision{0}));
-        axisUpdates[unknown] += contribution;
+        const auto contribution = static_cast<StateUpdatePrecision>(tarch::la::productRoundedOnce(scale, divergence));
+        axisUpdates[normal][unknown] = contribution;
       }
     }
     strideInVolumes *= NumberOfVolumesPerAxis;
@@ -771,8 +772,14 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
 
   SIMD()
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+#if DIMENSIONS == 2
+    const StateUpdatePrecision update = axisUpdates[0][unknown] + axisUpdates[1][unknown];
+#else
+    const StateUpdatePrecision update =
+      tarch::la::sumInOrderOfValue(axisUpdates[0][unknown], axisUpdates[1][unknown], axisUpdates[2][unknown]);
+#endif
     outputState[unknown] =
-      static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + axisUpdates[unknown]);
+      static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + update);
   }
   // The assertion stays out of the SIMD loop. The body of that loop must not emit diagnostics.
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {

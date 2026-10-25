@@ -1,9 +1,47 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/la/ScalarOperations.h"
+
 TARGET_DECLARE
 /**
- * Writes the product of matrix and vector into result.
+ * Returns the sum of the three products of the components of first and second. Every order of the
+ * axes returns the same bits.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tests::exahype2::aderdg::grmhd::dotProduct(const double* const first, const double* const second) {
+  return tarch::la::sumInOrderOfMagnitude(
+    tarch::la::productRoundedOnce(first[0], second[0]),
+    tarch::la::productRoundedOnce(first[1], second[1]),
+    tarch::la::productRoundedOnce(first[2], second[2])
+  );
+}
+
+/**
+ * Writes scale times the cross product of first and second into result. Every product rounds on
+ * its own before the difference. A permutation of the axes then returns the permuted result
+ * bitwise, negated for an odd permutation.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tests::exahype2::aderdg::grmhd::crossProduct(
+  const double* const first,
+  const double* const second,
+  const double        scale,
+  double* const       result
+) {
+  assertion(result != first and result != second);
+  for (int axis = 0; axis < 3; axis++) {
+    const int    nextAxis   = (axis + 1) % 3;
+    const int    otherAxis  = (axis + 2) % 3;
+    const double difference = tarch::la::productRoundedOnce(first[nextAxis], second[otherAxis])
+      - tarch::la::productRoundedOnce(first[otherAxis], second[nextAxis]);
+    result[axis] = scale * difference;
+  }
+}
+
+/**
+ * Writes the product of matrix and vector into result. A permutation of the axes returns the
+ * permuted product bitwise.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tests::exahype2::aderdg::grmhd::multiplyMatrixVector(
@@ -13,30 +51,42 @@ tests::exahype2::aderdg::grmhd::multiplyMatrixVector(
 ) {
   assertion(result != vector);
 
-  result[0] = matrix[0][0] * vector[0] + matrix[0][1] * vector[1] + matrix[0][2] * vector[2];
-  result[1] = matrix[1][0] * vector[0] + matrix[1][1] * vector[1] + matrix[1][2] * vector[2];
-  result[2] = matrix[2][0] * vector[0] + matrix[2][1] * vector[1] + matrix[2][2] * vector[2];
+  result[0] = dotProduct(matrix[0], vector);
+  result[1] = dotProduct(matrix[1], vector);
+  result[2] = dotProduct(matrix[2], vector);
 }
 
 /**
- * Writes the inverse of matrix into inverse and returns the determinant of matrix.
+ * Writes the inverse of matrix into inverse and returns the determinant of matrix. The determinant
+ * adds its six rounded triple products in fixed point. A permutation of the axes then returns the
+ * same determinant and the permuted inverse bitwise.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 tests::exahype2::aderdg::grmhd::invertMatrix3x3(const double (&matrix)[3][3], double (&inverse)[3][3]) {
-  const double determinant = matrix[0][0] * matrix[1][1] * matrix[2][2] - matrix[0][0] * matrix[1][2] * matrix[2][1]
-    - matrix[1][0] * matrix[0][1] * matrix[2][2] + matrix[1][0] * matrix[0][2] * matrix[2][1]
-    + matrix[2][0] * matrix[0][1] * matrix[1][2] - matrix[2][0] * matrix[0][2] * matrix[1][1];
+  const double terms[6] = {
+    tarch::la::productInOrderOfMagnitude(matrix[0][0], matrix[1][1], matrix[2][2]),
+    -tarch::la::productInOrderOfMagnitude(matrix[0][0], matrix[1][2], matrix[2][1]),
+    -tarch::la::productInOrderOfMagnitude(matrix[1][0], matrix[0][1], matrix[2][2]),
+    tarch::la::productInOrderOfMagnitude(matrix[1][0], matrix[0][2], matrix[2][1]),
+    tarch::la::productInOrderOfMagnitude(matrix[2][0], matrix[0][1], matrix[1][2]),
+    -tarch::la::productInOrderOfMagnitude(matrix[2][0], matrix[0][2], matrix[1][1])
+  };
+  const double determinant = tarch::la::sumInFixedPoint(terms, 6);
   assertion(determinant != 0.0, determinant);
 
-  inverse[0][0] = (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]) / determinant;
-  inverse[0][1] = (matrix[0][2] * matrix[2][1] - matrix[0][1] * matrix[2][2]) / determinant;
-  inverse[0][2] = (matrix[0][1] * matrix[1][2] - matrix[0][2] * matrix[1][1]) / determinant;
-  inverse[1][0] = (matrix[1][2] * matrix[2][0] - matrix[1][0] * matrix[2][2]) / determinant;
-  inverse[1][1] = (matrix[0][0] * matrix[2][2] - matrix[0][2] * matrix[2][0]) / determinant;
-  inverse[1][2] = (matrix[0][2] * matrix[1][0] - matrix[0][0] * matrix[1][2]) / determinant;
-  inverse[2][0] = (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]) / determinant;
-  inverse[2][1] = (matrix[0][1] * matrix[2][0] - matrix[0][0] * matrix[2][1]) / determinant;
-  inverse[2][2] = (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]) / determinant;
+  const auto differenceOfProducts =
+    [](const double first, const double second, const double third, const double fourth) {
+      return tarch::la::productRoundedOnce(first, second) - tarch::la::productRoundedOnce(third, fourth);
+    };
+  inverse[0][0] = differenceOfProducts(matrix[1][1], matrix[2][2], matrix[1][2], matrix[2][1]) / determinant;
+  inverse[0][1] = differenceOfProducts(matrix[0][2], matrix[2][1], matrix[0][1], matrix[2][2]) / determinant;
+  inverse[0][2] = differenceOfProducts(matrix[0][1], matrix[1][2], matrix[0][2], matrix[1][1]) / determinant;
+  inverse[1][0] = differenceOfProducts(matrix[1][2], matrix[2][0], matrix[1][0], matrix[2][2]) / determinant;
+  inverse[1][1] = differenceOfProducts(matrix[0][0], matrix[2][2], matrix[0][2], matrix[2][0]) / determinant;
+  inverse[1][2] = differenceOfProducts(matrix[0][2], matrix[1][0], matrix[0][0], matrix[1][2]) / determinant;
+  inverse[2][0] = differenceOfProducts(matrix[1][0], matrix[2][1], matrix[1][1], matrix[2][0]) / determinant;
+  inverse[2][1] = differenceOfProducts(matrix[0][1], matrix[2][0], matrix[0][0], matrix[2][1]) / determinant;
+  inverse[2][2] = differenceOfProducts(matrix[0][0], matrix[1][1], matrix[0][1], matrix[1][0]) / determinant;
 
   return determinant;
 }
@@ -93,7 +143,7 @@ tests::exahype2::aderdg::grmhd::evaluateRecoveryFunction(
 
 /**
  * Writes the squared velocity between lowerStart and upperStart into v2, found with a safeguarded
- * Newton method. The method sets failed when the residuals at both starts carry the same sign or
+ * Newton method. The method sets failed when the residuals at both starts have the same sign or
  * when it exceeds its iterations.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -208,7 +258,7 @@ tests::exahype2::aderdg::grmhd::findSquaredVelocity(
 }
 
 /**
- * Converts the primitive variables V into the conserved variables Q. V holds the pressure in the
+ * Converts the primitive variables V into the conserved variables Q. V stores the pressure in the
  * slot of E. The suffixes Cov and Contr mark the covariant and the contravariant components.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -240,22 +290,15 @@ tests::exahype2::aderdg::grmhd::convertPrimitiveToConserved(double* const Q, con
   double bCov[3];
   multiplyMatrixVector(gCov, bContr, bCov);
 
-  const double vCrossBCov[3] = {
-    rootDeterminant * (vContr[1] * bContr[2] - vContr[2] * bContr[1]),
-    rootDeterminant * (vContr[2] * bContr[0] - vContr[0] * bContr[2]),
-    rootDeterminant * (vContr[0] * bContr[1] - vContr[1] * bContr[0])
-  };
+  double vCrossBCov[3];
+  double vCrossBContr[3];
+  crossProduct(vContr, bContr, rootDeterminant, vCrossBCov);
+  crossProduct(vCov, bCov, inverseRootDeterminant, vCrossBContr);
 
-  const double vCrossBContr[3] = {
-    inverseRootDeterminant * (vCov[1] * bCov[2] - vCov[2] * bCov[1]),
-    inverseRootDeterminant * (vCov[2] * bCov[0] - vCov[0] * bCov[2]),
-    inverseRootDeterminant * (vCov[0] * bCov[1] - vCov[1] * bCov[0])
-  };
-
-  const double vDotB = vCov[0] * bContr[0] + vCov[1] * bContr[1] + vCov[2] * bContr[2];
-  const double v2    = vContr[0] * vCov[0] + vContr[1] * vCov[1] + vContr[2] * vCov[2];
-  const double e2 = vCrossBContr[0] * vCrossBCov[0] + vCrossBContr[1] * vCrossBCov[1] + vCrossBContr[2] * vCrossBCov[2];
-  const double b2 = bContr[0] * bCov[0] + bContr[1] * bCov[1] + bContr[2] * bCov[2];
+  const double vDotB = dotProduct(vCov, bContr);
+  const double v2    = dotProduct(vContr, vCov);
+  const double e2    = dotProduct(vCrossBContr, vCrossBCov);
+  const double b2    = dotProduct(bContr, bCov);
   assertion(v2 < 1.0, v2);
 
   const double electromagneticEnergy = 0.5 * (b2 + e2);
@@ -288,7 +331,7 @@ tests::exahype2::aderdg::grmhd::convertPrimitiveToConserved(double* const Q, con
 }
 
 /**
- * Converts the conserved variables Q into the primitive variables V, which hold the pressure in the
+ * Converts the conserved variables Q into the primitive variables V. V stores the pressure in the
  * slot of E. A failed recovery and a density or pressure below the atmosphere values set the
  * velocity to zero and raise the state to the atmosphere.
  */
@@ -323,7 +366,7 @@ tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(const double* const 
   const double rootDeterminant        = std::sqrt(determinant);
   const double inverseRootDeterminant = 1. / rootDeterminant;
 
-  // Q carries the fluid values multiplied by the root of the metric determinant.
+  // Q stores the fluid values multiplied by the root of the metric determinant.
   double fluidValues[NumberOfFluidValues];
   for (int i = 0; i < NumberOfFluidValues; i++) {
     fluidValues[i] = inverseRootDeterminant * Q[i];
@@ -352,9 +395,9 @@ tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(const double* const 
   double bCov[3];
   multiplyMatrixVector(gCov, bContr, bCov);
 
-  const double s2  = sCov[0] * sContr[0] + sCov[1] * sContr[1] + sCov[2] * sContr[2];
-  const double b2  = bContr[0] * bCov[0] + bContr[1] * bCov[1] + bContr[2] * bCov[2];
-  const double sb  = sCov[0] * bContr[0] + sCov[1] * bContr[1] + sCov[2] * bContr[2];
+  const double s2  = dotProduct(sCov, sContr);
+  const double b2  = dotProduct(bContr, bCov);
+  const double sb  = dotProduct(sCov, bContr);
   const double sb2 = sb * sb;
 
   // The root finder follows method 3 of Del Zanna et al. (2007), A&A 473, 11-30.
@@ -362,7 +405,8 @@ tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(const double* const 
 
   const double lowerStart = 0.;
   const double upperStart = 1.0 - 1e-10;
-  // The tolerance lies above the spacing of doubles near v2, so the root finder stops before MaximumIterations.
+  // The tolerance lies above the spacing of doubles near v2. The root finder then stops before
+  // MaximumIterations.
   const double tolerance = 1.0e-15;
   double       w         = 0;
   double       v2        = 0;

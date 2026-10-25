@@ -304,7 +304,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::applyBoundary
 ) {
   const auto boundaryFaces = cellConnectivity.onDevice().getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary);
   tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(boundaryFaces.size),
+    tarch::accelerator::Range(boundaryFaces.size * FiniteVolumeScheme::VolumesPerLayer),
     exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecision>{
       cellConnectivity.onDevice(),
       boundaryFaces,
@@ -320,7 +320,11 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::projectOntoFa
   const peano4::CellConnectivity& cellConnectivity
 ) {
   tarch::accelerator::parallelFor(
-    tarch::accelerator::TeamRange(cellConnectivity.getCells().size),
+    tarch::accelerator::TeamRange(
+      cellConnectivity.getCells().size,
+      tarch::accelerator::getTeamThreads(FiniteVolumeScheme::ValuesPerHalfFace),
+      0
+    ),
     exahype2::fv::ProjectPatchesOntoFaces<Derived, StoragePrecision, ComputePrecision>{
       cellConnectivity.onDevice(),
       std::as_const(_solution).getView(),
@@ -344,7 +348,11 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::updatePatches
   const auto cells         = cellConnectivity.onDevice().getCells(adjacency);
   double     maxEigenvalue = 0.0;
   tarch::accelerator::parallelReduce(
-    tarch::accelerator::TeamRange(cells.size),
+    tarch::accelerator::TeamRange(
+      cells.size,
+      FiniteVolumeScheme::getTeamThreads(),
+      FiniteVolumeScheme::template getTeamScratchBytes<StoragePrecision>()
+    ),
     exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>{
       cellConnectivity.onDevice(),
       cells,

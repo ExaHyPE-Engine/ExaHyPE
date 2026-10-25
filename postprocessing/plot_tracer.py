@@ -114,7 +114,9 @@ def PlotTracer(argv=None):
 
     if args.z is not None and len(positionIndexes) < 3:
         raise SystemExit(
-            "--z was given but {} holds two-dimensional data".format(args.file_name)
+            'Command line argument "--z" expects three-dimensional data in {}.'.format(
+                args.file_name
+            )
         )
 
     csvData = [row for row in csvData[1:] if row]

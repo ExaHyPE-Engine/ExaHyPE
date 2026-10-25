@@ -123,10 +123,10 @@ exahype2::plotter::tests::FacePlotterTest::testEveryFaceOfAnAdaptiveGridIsWritte
   peano4::tests::refineGrid({peano4::tests::getRefinementOfCentreCell(AdaptiveDepth)});
   const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
-  int heldFaces = 0;
+  int storedFaces = 0;
   for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
     for (const auto kind : {peano4::FaceKind::Interior, peano4::FaceKind::Boundary, peano4::FaceKind::Hanging}) {
-      heldFaces += cellConnectivity.getFaces(adjacency, kind).size;
+      storedFaces += cellConnectivity.getFaces(adjacency, kind).size;
     }
   }
   const int exchangedFaces = cellConnectivity.getFaces(peano4::Adjacency::Remote, peano4::FaceKind::Interior).size;
@@ -161,9 +161,9 @@ exahype2::plotter::tests::FacePlotterTest::testEveryFaceOfAnAdaptiveGridIsWritte
   );
 
   const int globalExchangedFaces = peano4::tests::getGlobalSumOf(exchangedFaces);
-  const int globalHeldFaces      = peano4::tests::getGlobalSumOf(heldFaces);
+  const int globalStoredFaces    = peano4::tests::getGlobalSumOf(storedFaces);
   const int globalPlottedFaces   = peano4::tests::getGlobalSumOf(plottedFaces);
   deleteOutputDirectory(outputDirectory);
   validateEquals(globalExchangedFaces % 2, 0);
-  validateEquals(globalPlottedFaces, globalHeldFaces - globalExchangedFaces / 2);
+  validateEquals(globalPlottedFaces, globalStoredFaces - globalExchangedFaces / 2);
 }

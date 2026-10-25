@@ -65,12 +65,12 @@ public:
   using StatePool   = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using FluxPool    = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  Solver()                         = delete;
-  Solver(const Solver&)            = delete;
-  Solver(Solver&&)                 = delete;
-  Solver& operator=(const Solver&) = delete;
-  Solver& operator=(Solver&&)      = delete;
-  ~Solver()                        = default;
+  Solver()                               = delete;
+  Solver(const Solver& other)            = delete;
+  Solver(Solver&& other)                 = delete;
+  Solver& operator=(const Solver& other) = delete;
+  Solver& operator=(Solver&& other)      = delete;
+  ~Solver()                              = default;
 
   INLINE_METHOD Solver(
     double                                           timeStepFactor,
@@ -138,6 +138,18 @@ protected:
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency
   ) const;
+  template <typename Operation>
+  INLINE_METHOD void interpolateCoarseFaces(
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    const Operation&                operation
+  ) const;
+  template <typename Operation>
+  INLINE_METHOD void restrictFineFaces(
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency,
+    const Operation&                operation
+  ) const;
   [[nodiscard]] INLINE_METHOD const CellPool& downloadSolution();
   [[nodiscard]] INLINE_METHOD const StatePool& downloadFaceStates();
   INLINE_METHOD void projectSolutionOntoFaces(const peano4::CellConnectivity& cellConnectivity);
@@ -180,7 +192,7 @@ protected:
   std::vector<double> _nodeWeightsOnHost{};
 
 private:
-  INLINE_METHOD void rebuildOwnedLists(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void rebuildOwnership(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void measureMeshWidths(const peano4::CellConnectivity& cellConnectivity);
 
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
@@ -194,6 +206,8 @@ private:
 
   tarch::accelerator::Buffer<int> _ownedRiemannFaces{tarch::MemoryLocation::Device};
   int                             _numberOfLocalOwnedRiemannFaces{0};
+
+  tarch::accelerator::Buffer<char> _ownsCoarseSideOfFace{tarch::MemoryLocation::Device};
 
   exahype2::ErrorMeasurement _errorMeasurement{};
 

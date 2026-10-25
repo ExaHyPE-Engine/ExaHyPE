@@ -11,11 +11,11 @@ namespace tarch::accelerator::tests {
 class tarch::accelerator::tests::ParallelConstructsTest final : public tarch::tests::TestCase {
 public:
   ParallelConstructsTest();
-  ParallelConstructsTest(const ParallelConstructsTest&)            = delete;
-  ParallelConstructsTest(ParallelConstructsTest&&)                 = delete;
-  ParallelConstructsTest& operator=(const ParallelConstructsTest&) = delete;
-  ParallelConstructsTest& operator=(ParallelConstructsTest&&)      = delete;
-  ~ParallelConstructsTest() override                               = default;
+  ParallelConstructsTest(const ParallelConstructsTest& other)            = delete;
+  ParallelConstructsTest(ParallelConstructsTest&& other)                 = delete;
+  ParallelConstructsTest& operator=(const ParallelConstructsTest& other) = delete;
+  ParallelConstructsTest& operator=(ParallelConstructsTest&& other)      = delete;
+  ~ParallelConstructsTest() override                                     = default;
 
   void run() override;
 
@@ -28,6 +28,7 @@ private:
   void testParallelForTeamRangeMD2();
   void testParallelForTeamRangeMD3();
   void testTeamBarrier();
+  void testEveryThreadOfATeamReceivesTheVotesOfTheTeam();
   void testParallelReduceSum();
   void testParallelReduceMin();
   void testParallelReduceMax();
@@ -42,9 +43,11 @@ private:
   void testReductionScratchKeepsAnAddressThatFits();
   void testWaitForDeviceCompletesTheLaunchedLoop();
   void testAReductionOverManyTeamsSumsEveryTeam();
+  void testAReductionOverTeamsOfThreeWarpsSumsEveryTeam();
   void testReduceOverTeamCombinesEveryThread();
   void testEveryTeamRunsTheDefaultNumberOfThreads();
   void testATeamLaunchRunsTheRequestedThreads();
+  void testATeamLaunchStopsAtTheDefaultNumberOfThreads();
   void testTeamScratchMirrorsWithinTheTeam();
   void testTheDeviceRunsADefaultTeamAtOnce();
   void testTheNumberOfHostTasksFollowsTheTimePerItem();

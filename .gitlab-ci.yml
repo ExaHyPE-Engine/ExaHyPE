@@ -19,8 +19,8 @@ workflow:
     # Else do not create a pipeline
     - when: never
 
-# Cancelling a superseded trigger job cancels its whole child pipeline, which the
-# child's own interruptible default cannot arrange from the inside.
+# A newer pipeline cancels a superseded interruptible trigger job and with it the whole
+# child pipeline. The interruptible default of the child pipeline cannot cancel it from inside.
 default:
   interruptible: true
 

@@ -41,12 +41,12 @@ public:
   using CellPool      = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool    = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  SubcellLimiter()                                 = delete;
-  SubcellLimiter(const SubcellLimiter&)            = delete;
-  SubcellLimiter(SubcellLimiter&&)                 = delete;
-  SubcellLimiter& operator=(const SubcellLimiter&) = delete;
-  SubcellLimiter& operator=(SubcellLimiter&&)      = delete;
-  ~SubcellLimiter()                                = default;
+  SubcellLimiter()                                       = delete;
+  SubcellLimiter(const SubcellLimiter& other)            = delete;
+  SubcellLimiter(SubcellLimiter&& other)                 = delete;
+  SubcellLimiter& operator=(const SubcellLimiter& other) = delete;
+  SubcellLimiter& operator=(SubcellLimiter&& other)      = delete;
+  ~SubcellLimiter()                                      = default;
 
   INLINE_METHOD SubcellLimiter(double relaxationParameter, double differencesScaling);
 
@@ -80,10 +80,12 @@ public:
 
 private:
   INLINE_METHOD void rebuild(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void projectNodesOfFreedCells(const std::vector<int>& freedSlots, const CellPool& solution);
   INLINE_METHOD void sampleSubcells(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void clearFaces(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void openStep(const peano4::CellConnectivity& cellConnectivity, const CellPool& solution);
   INLINE_METHOD void reduceExtrema(tarch::Span<const int> cells, const CellPool& solution);
+  INLINE_METHOD void reserveDetectorScratch(int numberOfTeams, int scratchValuesPerTeam);
   INLINE_METHOD void mergeNeighbourExtrema(const peano4::CellConnectivity& cellConnectivity, bool mergeLastRound);
   [[nodiscard]] INLINE_METHOD exahype2::dg::limiting::JudgedCells judgeCandidates(
     const peano4::CellConnectivity& cellConnectivity,
@@ -131,6 +133,7 @@ private:
 
   tarch::accelerator::Buffer<int> _cellsOnSubcellScheme{tarch::MemoryLocation::Device};
   tarch::accelerator::Buffer<int> _recomputedCells{tarch::MemoryLocation::Device};
+  tarch::accelerator::Buffer<int> _freedCells{tarch::MemoryLocation::Device};
   tarch::accelerator::Buffer<exahype2::dg::limiting::SubcellSchemeCounts> _cellCountsOfBlocks{
     tarch::MemoryLocation::Device
   };
@@ -139,9 +142,10 @@ private:
   int  _localTroubledCells{0};
   int  _globalTroubledCells{0};
   int  _troubledCellsSlot{0};
-  bool _holdsExtremaOfSolution{false};
+  bool _extremaOfSolutionAreReduced{false};
 
   tarch::accelerator::Buffer<StoragePrecision> _recomputeScratch{tarch::MemoryLocation::Device};
+  tarch::accelerator::Buffer<StoragePrecision> _detectorScratch{tarch::MemoryLocation::Device};
 };
 
 #include "exahype2/dg/limiting/SubcellLimiter.cpph"

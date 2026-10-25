@@ -25,7 +25,7 @@ namespace {
     }
   }
 
-  bool chunkHolds(const Pool& pool, const int slot, const double seed) {
+  bool isChunkFilled(const Pool& pool, const int slot, const double seed) {
     const double* const chunk = pool.getChunk(slot);
     for (int element = 0; element < ChunkSize; element++) {
       if (chunk[element] != seed + element) {
@@ -134,7 +134,7 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testReserveAllocatesWholeSegme
     fillChunk(pool, slot, 3.0 * slot);
   }
   for (int slot = 0; slot < pool.getCapacity(); slot++) {
-    validateWithParams1(chunkHolds(pool, slot, 3.0 * slot), slot);
+    validateWithParams1(isChunkFilled(pool, slot, 3.0 * slot), slot);
   }
 }
 
@@ -173,7 +173,7 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testGrowthKeepsChunksInPlace()
 
   validate(pool.getChunk(0) == firstChunk);
   for (int slot = 0; slot < 3; slot++) {
-    validateWithParams1(chunkHolds(pool, slot, 10.0 * slot), slot);
+    validateWithParams1(isChunkFilled(pool, slot, 10.0 * slot), slot);
   }
   validateEquals(pool.getNumberOfSegments(), 10);
 }
@@ -280,7 +280,7 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testMoveTransfersSegments() {
   Pool moved(std::move(source));
   validateEquals(moved.getNumberOfSegments(), 1);
   validate(moved.getChunk(1) == chunk);
-  validate(chunkHolds(moved, 1, 11.0));
+  validate(isChunkFilled(moved, 1, 11.0));
   validate(moved.getView().getChunk(1) == chunk);
 
   Pool target(ChunkSize, tarch::MemoryLocation::Heap);
@@ -288,7 +288,7 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testMoveTransfersSegments() {
   target = std::move(moved);
   validateEquals(target.getNumberOfSegments(), 1);
   validate(target.getChunk(1) == chunk);
-  validate(chunkHolds(target, 1, 11.0));
+  validate(isChunkFilled(target, 1, 11.0));
 }
 
 void
@@ -304,7 +304,7 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testRelease() {
   pool.reserve(1);
   validateEquals(pool.getNumberOfSegments(), 1);
   fillChunk(pool, 0, 1.0);
-  validate(chunkHolds(pool, 0, 1.0));
+  validate(isChunkFilled(pool, 0, 1.0));
 }
 
 /**
@@ -336,7 +336,7 @@ tarch::accelerator::tests::ChunkedMemoryPoolTest::testHostCopiesRoundTrip() {
 
   pool.copyFromHost(host);
   for (int slot = 0; slot < pool.getCapacity(); slot++) {
-    validateWithParams1(chunkHolds(pool, slot, slot + 1.0), slot);
+    validateWithParams1(isChunkFilled(pool, slot, slot + 1.0), slot);
   }
 }
 

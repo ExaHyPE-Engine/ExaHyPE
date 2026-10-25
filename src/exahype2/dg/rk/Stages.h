@@ -27,9 +27,6 @@ namespace exahype2::dg::rk {
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct OpenStage;
 
-  template <typename Derived, typename ComputePrecision>
-  struct AddStageFaceIntegrals;
-
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct CombineStages;
 } // namespace exahype2::dg::rk
@@ -156,6 +153,7 @@ private:
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void volumeIntegral(
     const ComputePrecision* NOALIAS              stageState,
+    ComputePrecision* NOALIAS                    nodalFluxes,
     ComputePrecision* NOALIAS                    estimate,
     const ComputePrecision* NOALIAS              quadratureNodes,
     const ComputePrecision* NOALIAS              derivativeOperator,
@@ -166,23 +164,19 @@ private:
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void projectOntoFaces(
-    const ComputePrecision* NOALIAS              stageState,
-    ComputePrecision* const NOALIAS              faceStates[peano4::FacesPerCell],
-    ComputePrecision* const NOALIAS              faceFluxes[peano4::FacesPerCell],
-    const ComputePrecision* NOALIAS              leftFaceCoefficients,
-    const ComputePrecision* NOALIAS              rightFaceCoefficients,
-    const ComputePrecision* NOALIAS              quadratureNodes,
-    const ComputePrecision* NOALIAS              derivativeOperator,
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize
+    const ComputePrecision* NOALIAS stageState,
+    const ComputePrecision* NOALIAS nodalFluxes,
+    ComputePrecision* const NOALIAS faceStates[peano4::FacesPerCell],
+    ComputePrecision* const NOALIAS faceFluxes[peano4::FacesPerCell],
+    const ComputePrecision* NOALIAS leftFaceCoefficients,
+    const ComputePrecision* NOALIAS rightFaceCoefficients
   );
 };
 
 /**
- * Opens the stage on every listed cell. stageScratch stores one stage state per scratch chunk of
- * the dispatch.
+ * Adds the face integrals of the stage before to its estimate and opens the stage on every listed
+ * cell. No cell writes a flux half that another cell reads. scratch stores one stage state per
+ * scratch chunk of the dispatch.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::rk::OpenStage final {
@@ -203,62 +197,47 @@ struct exahype2::dg::rk::OpenStage final {
   typename Kernel::Weights     weights{};
   const ComputePrecision*      quadratureNodes{nullptr};
   const ComputePrecision*      derivativeOperator{nullptr};
-  const ComputePrecision*      leftFaceCoefficients{nullptr};
-  const ComputePrecision*      rightFaceCoefficients{nullptr};
-  ComputePrecision*            stageScratch{nullptr};
-  int                          stage{0};
-  double                       stageTimeStamp{0.0};
-  double                       timeStepSize{0.0};
-
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
-};
-
-/**
- * Adds the face integrals of every listed cell to the estimate of the stage.
- */
-template <typename Derived, typename ComputePrecision>
-struct exahype2::dg::rk::AddStageFaceIntegrals final {
-  using Kernel     = exahype2::dg::rk::Stage<Derived, ComputePrecision>;
-  using CellLayout = typename Kernel::CellLayout;
-
-  using EstimatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
-  using FluxPool     = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
-
-  peano4::CellConnectivity     cellConnectivity{};
-  tarch::Span<const int>       cells{};
-  typename EstimatePool::View  estimates{};
-  typename FluxPool::ConstView faceFluxes{};
   const ComputePrecision*      faceQuadratureWeights{nullptr};
   const ComputePrecision*      inverseCellQuadratureWeights{nullptr};
   const ComputePrecision*      leftFaceCoefficients{nullptr};
   const ComputePrecision*      rightFaceCoefficients{nullptr};
   int                          stage{0};
+  double                       stageTimeStamp{0.0};
   double                       timeStepSize{0.0};
+  ComputePrecision*            scratch{nullptr};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
 /**
- * Adds the weighted estimates to the solution of every listed cell, postprocesses it and reduces
- * the wave-speed maxima with an adaptive rule.
+ * Adds the face integrals of the last stage to its estimate and the weighted estimates to the
+ * solution of every listed cell. Postprocesses every cell and reduces the wave-speed maxima with an
+ * adaptive rule.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::rk::CombineStages final {
-  using Kernel = exahype2::dg::rk::Stage<Derived, ComputePrecision>;
+  using Kernel     = exahype2::dg::rk::Stage<Derived, ComputePrecision>;
+  using CellLayout = typename Kernel::CellLayout;
 
   static constexpr bool UsesAdaptiveTimeStepping = Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive;
 
   using CellPool     = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using EstimatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
+  using FluxPool     = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::CellConnectivity         cellConnectivity{};
-  tarch::Span<const int>           cells{};
-  typename CellPool::View          solution{};
-  typename EstimatePool::ConstView estimates{};
-  typename Kernel::Weights         weights{};
-  const StoragePrecision*          stateQuadraturePoints{nullptr};
-  double                           timeStamp{0.0};
-  double                           timeStepSize{0.0};
+  peano4::CellConnectivity     cellConnectivity{};
+  tarch::Span<const int>       cells{};
+  typename CellPool::View      solution{};
+  typename EstimatePool::View  estimates{};
+  typename FluxPool::ConstView faceFluxes{};
+  typename Kernel::Weights     weights{};
+  const ComputePrecision*      faceQuadratureWeights{nullptr};
+  const ComputePrecision*      inverseCellQuadratureWeights{nullptr};
+  const ComputePrecision*      leftFaceCoefficients{nullptr};
+  const ComputePrecision*      rightFaceCoefficients{nullptr};
+  const StoragePrecision*      stateQuadraturePoints{nullptr};
+  double                       timeStamp{0.0};
+  double                       timeStepSize{0.0};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                                    entry,

@@ -22,7 +22,7 @@
 #include "tarch/database/tests/GlobalTimeSeriesDatabaseTest.h"
 #include "tarch/instrumentation/tests/CommandLineSinkTest.h"
 #include "tarch/instrumentation/tests/WatchTest.h"
-#include "tarch/la/tests/ExactAccumulatorTest.h"
+#include "tarch/la/tests/FixedPointSumTest.h"
 #include "tarch/la/tests/MatrixTest.h"
 #include "tarch/la/tests/MatrixVectorTest.h"
 #include "tarch/la/tests/ScalarTest.h"
@@ -51,7 +51,6 @@
 #include "tarch/tests/CPUFeatureDetectionTest.h"
 #include "tarch/tests/MemoryUsageTest.h"
 #include "tarch/tests/NonCriticalAssertionsTest.h"
-#include "tarch/tests/SortTest.h"
 #include "tarch/tests/SpanTest.h"
 #include "tarch/tests/TestCaseTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
@@ -60,7 +59,7 @@ tarch::tests::TestCase*
 tarch::getUnitTests() {
   auto* const result = new tarch::tests::TreeTestCaseCollection();
 
-  result->addTestCase(new tarch::la::tests::ExactAccumulatorTest());
+  result->addTestCase(new tarch::la::tests::FixedPointSumTest());
   result->addTestCase(new tarch::la::tests::MatrixTest());
   result->addTestCase(new tarch::la::tests::MatrixVectorTest());
   result->addTestCase(new tarch::la::tests::ScalarTest());
@@ -70,7 +69,6 @@ tarch::getUnitTests() {
   result->addTestCase(new tarch::tests::CPUFeatureDetectionTest());
   result->addTestCase(new tarch::tests::MemoryUsageTest());
   result->addTestCase(new tarch::tests::NonCriticalAssertionsTest());
-  result->addTestCase(new tarch::tests::SortTest());
   result->addTestCase(new tarch::tests::SpanTest());
   result->addTestCase(new tarch::tests::TestCaseTest());
 

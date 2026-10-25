@@ -189,7 +189,7 @@ void
 peano4::tests::HaloExchangeTest::run() {
   testMethod(testExchangeFillsTheRemoteHalves);
   testMethod(testCoarseExchangeFillsTheRemoteHalvesOfCoarseFacesOnly);
-  testMethod(testExchangesHoldDistinctTags);
+  testMethod(testTwoExchangesOfOnePoolGetDistinctTags);
   testMethod(testReleaseFreesTheBuffersAndKeepsTheTag);
 }
 
@@ -280,7 +280,7 @@ peano4::tests::HaloExchangeTest::testCoarseExchangeFillsTheRemoteHalvesOfCoarseF
  * tags.
  */
 void
-peano4::tests::HaloExchangeTest::testExchangesHoldDistinctTags() {
+peano4::tests::HaloExchangeTest::testTwoExchangesOfOnePoolGetDistinctTags() {
   peano4::tests::buildRegularGrid(Depth);
   const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
   Pool        pool(ElementsPerFace, tarch::MemoryLocation::Device);

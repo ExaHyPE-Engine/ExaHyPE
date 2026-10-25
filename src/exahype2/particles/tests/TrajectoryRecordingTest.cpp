@@ -54,9 +54,9 @@ exahype2::particles::tests::TrajectoryRecordingTest::testASnapshotDueOnTheRankOf
   exahype2::particles::TrajectoryDatabase database(1.0e-8, 0.1);
   database.setOutputFileName(fileName);
 
-  const bool holdsTheParticle = particles.getSize() > 0;
+  const bool ownsTheParticle = particles.getSize() > 0;
   validateEquals(exahype2::particles::isSnapshotDueOnSomeRank(particles, 5.0, 0.0, 1.0, database), false);
-  validateEquals(exahype2::particles::isSnapshotDue(particles, 0.5, 0.0, 1.0, database), holdsTheParticle);
+  validateEquals(exahype2::particles::isSnapshotDue(particles, 0.5, 0.0, 1.0, database), ownsTheParticle);
   validateEquals(exahype2::particles::isSnapshotDueOnSomeRank(particles, 0.5, 0.0, 1.0, database), true);
   exahype2::particles::recordSnapshots(particles, 0.5, 0.0, 1.0, database);
   validateEquals(exahype2::particles::isSnapshotDueOnSomeRank(particles, 0.55, 0.0, 1.0, database), false);

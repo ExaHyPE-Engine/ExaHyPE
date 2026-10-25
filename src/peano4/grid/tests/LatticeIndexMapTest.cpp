@@ -21,7 +21,7 @@ peano4::grid::tests::LatticeIndexMapTest::LatticeIndexMapTest() :
 
 void
 peano4::grid::tests::LatticeIndexMapTest::run() {
-  testMethod(testEmptyMapHoldsNothing);
+  testMethod(testAnEmptyMapContainsNoEntry);
   testMethod(testInsertReportsWhetherItStored);
   testMethod(testEveryStoredKeyIsFound);
   testMethod(testClusteredKeysCollide);
@@ -53,7 +53,7 @@ peano4::grid::tests::LatticeIndexMapTest::testBytesCountTheKeyAndValueArrays() {
 }
 
 void
-peano4::grid::tests::LatticeIndexMapTest::testEmptyMapHoldsNothing() {
+peano4::grid::tests::LatticeIndexMapTest::testAnEmptyMapContainsNoEntry() {
   const peano4::grid::LatticeIndexMap map;
   validateEquals(map.getSize(), 0);
   validateEquals(map.find(0), peano4::grid::LatticeIndexMap::NoEntry);

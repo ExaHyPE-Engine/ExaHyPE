@@ -115,6 +115,22 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     bool EvaluateCustomRiemann,
     bool EvaluateMaxEigenvalue,
     typename StoragePrecision,
+    typename ComputePrecision
+  >
+  using TeamTerms = exahype2::fv::NoTermRing;
+
+  template <
+    typename SolverType,
+    int  NumberOfVolumesPerAxis,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateDiffusiveSource,
+    bool EvaluateCustomRiemann,
+    bool EvaluateMaxEigenvalue,
+    typename StoragePrecision,
     typename ComputePrecision,
     typename Terms
   >

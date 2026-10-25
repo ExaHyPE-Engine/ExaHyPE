@@ -26,6 +26,14 @@ namespace tarch::accelerator {
   // DefaultThreadsPerTeam threads.
   inline constexpr int DefaultThreadsPerTeam = KokkosThreadsPerTeam;
   inline constexpr int TeamScratchBytes      = 16384;
+#if defined(KOKKOS_ENABLE_HIP)
+  // The AMD compiler limits the registers of a Kokkos kernel without launch bounds to those of a
+  // block of 1024 threads.
+  using KokkosTeamPolicy =
+    Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace, Kokkos::LaunchBounds<KokkosThreadsPerTeam, 1>>;
+#else
+  using KokkosTeamPolicy = Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>;
+#endif
 } // namespace tarch::accelerator
 
 #endif

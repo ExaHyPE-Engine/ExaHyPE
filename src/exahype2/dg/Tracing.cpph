@@ -257,7 +257,7 @@ exahype2::dg::traceParticles(
     return;
   }
   particles.relocateParticlesMovedOutOfCells(cellConnectivity, numberOfMovedParticles);
-  // Every moved particle samples the fields of the cell that holds it now.
+  // Every moved particle samples the fields of the cell that contains it after the move.
   if (timeStepSize > 0.0 and particles.getSize() > 0) {
     particles.upload();
     const auto set                         = particles.getView();

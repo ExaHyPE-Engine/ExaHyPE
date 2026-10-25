@@ -6,6 +6,7 @@
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/Kernels.h"
 #include "exahype2/dg/Solver.h"
+#include "exahype2/dg/ader/Corrector.h"
 #include "exahype2/dg/ader/Predictor.h"
 #include "exahype2/plotter/PatchPlotter.h"
 #include "exahype2/terms/BoundaryConditions.h"
@@ -72,12 +73,12 @@ public:
 
   static constexpr double PicardResidualTolerance = 1e-7;
 
-  Solver()                         = delete;
-  Solver(const Solver&)            = delete;
-  Solver(Solver&&)                 = delete;
-  Solver& operator=(const Solver&) = delete;
-  Solver& operator=(Solver&&)      = delete;
-  ~Solver()                        = default;
+  Solver()                               = delete;
+  Solver(const Solver& other)            = delete;
+  Solver(Solver&& other)                 = delete;
+  Solver& operator=(const Solver& other) = delete;
+  Solver& operator=(Solver&& other)      = delete;
+  ~Solver()                              = default;
 
   INLINE_METHOD Solver(
     double                                           timeStepFactor,
@@ -135,6 +136,10 @@ private:
   using LimiterSlot = std::conditional_t<HasLimiter, std::optional<Limiter>, exahype2::dg::ader::NoLimiter>;
 
   using Predictor = exahype2::dg::ader::Predictor<Derived, ComputePrecision>;
+  using Corrector = exahype2::dg::ader::Corrector<Derived, StoragePrecision, ComputePrecision>;
+  template <bool ReportEigenvalues>
+  using CorrectorCells =
+    exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, ComputePrecision>;
 
   [[nodiscard]] static INLINE_METHOD exahype2::dg::BasisTables<ComputePrecision> getBasisTables();
 
@@ -149,6 +154,10 @@ private:
     peano4::Adjacency               adjacency,
     double                          timeStepSize,
     const DivergenceMarks&          divergenceMarks
+  );
+  INLINE_METHOD void interpolatePredictedHalves(
+    const peano4::CellConnectivity& cellConnectivity,
+    peano4::Adjacency               adjacency
   );
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics correct(
     const peano4::CellConnectivity& cellConnectivity,
@@ -166,10 +175,6 @@ private:
   );
   INLINE_METHOD void rebuildCouplingFaces(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void reservePredictorScratch(const peano4::CellConnectivity& cellConnectivity);
-  [[nodiscard]] static INLINE_METHOD int getPredictorTeamThreads();
-  [[nodiscard]] static INLINE_METHOD int getPredictorThreadsPerCell();
-  [[nodiscard]] static INLINE_METHOD int getNumberOfPredictorChunks(int cells);
-  [[nodiscard]] static INLINE_METHOD int getNumberOfPredictorTeams(int cells);
 
   tarch::accelerator::Buffer<double> _pointSourceLocations{tarch::MemoryLocation::Device};
 

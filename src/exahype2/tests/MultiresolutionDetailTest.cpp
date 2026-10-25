@@ -49,6 +49,20 @@ namespace {
       );
     }
   };
+
+  struct ComputeDetailOfEveryPatch final {
+    const double* patches{nullptr};
+    double*       details{nullptr};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int patch) const {
+      details[patch] = exahype2::computeMultiresolutionDetail(
+        patches + static_cast<std::ptrdiff_t>(patch) * NumberOfVolumes,
+        exahype2::getVolumeCentresInUnitInterval<NumberOfDofsPerAxis>(),
+        1,
+        Density<double>{}
+      );
+    }
+  };
   TARGET_DECLARE_END
 
   constexpr auto VolumeCentres = exahype2::getVolumeCentresInUnitInterval<NumberOfDofsPerAxis>();
@@ -62,6 +76,19 @@ namespace {
 
   double getVolumeCoordinate(const int volume) {
     return (static_cast<double>(volume) + 0.5) / static_cast<double>(NumberOfDofsPerAxis) - 0.5;
+  }
+
+  std::vector<double> getAsymmetricPatch() {
+    std::vector<double> patch(NumberOfVolumes);
+    peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
+      double value = 1.0 + std::sin(3.0 * getVolumeCoordinate(counter(0)));
+      for (int d = 1; d < DIMENSIONS; d++) {
+        value += 0.3 * std::cos(2.0 * getVolumeCoordinate(counter(d)))
+          + 0.7 * getVolumeCoordinate(counter(0)) * getVolumeCoordinate(counter(d));
+      }
+      patch[peano4::dLinearised(counter, NumberOfDofsPerAxis)] = value;
+    });
+    return patch;
   }
 
   std::vector<double> getSmoothPatch() {
@@ -102,6 +129,7 @@ exahype2::tests::MultiresolutionDetailTest::run() {
   testMethod(testRefinementCommandFromDetail);
   testMethod(testRefineOnDetail);
   testMethod(testRefineOnDetailRunsOnTheDevice);
+  testMethod(testDetailIsBitwiseInvariantUnderSwapsOnTheDevice);
 }
 
 void
@@ -165,17 +193,8 @@ exahype2::tests::MultiresolutionDetailTest::testStepFieldHasLargeDetail() {
 
 void
 exahype2::tests::MultiresolutionDetailTest::testDetailIsBitwiseInvariantUnderReflectionsAndSwaps() {
-  std::vector<double> patch(NumberOfVolumes);
-  std::vector<double> transformed(NumberOfVolumes);
-  peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
-    double value = 1.0 + std::sin(3.0 * getVolumeCoordinate(counter(0)));
-    for (int d = 1; d < DIMENSIONS; d++) {
-      value += 0.3 * std::cos(2.0 * getVolumeCoordinate(counter(d)))
-        + 0.7 * getVolumeCoordinate(counter(0)) * getVolumeCoordinate(counter(d));
-    }
-    patch[peano4::dLinearised(counter, NumberOfDofsPerAxis)] = value;
-  });
-
+  const std::vector<double> patch = getAsymmetricPatch();
+  std::vector<double>       transformed(NumberOfVolumes);
   for (const auto& nodes : {VolumeCentres, LobattoNodes}) {
     const double patchDetail = exahype2::computeMultiresolutionDetail(patch.data(), nodes, 1, getValueOf);
     validateTrue(patchDetail > 1.0e-6);
@@ -393,4 +412,31 @@ exahype2::tests::MultiresolutionDetailTest::testRefineOnDetailRunsOnTheDevice() 
   const std::vector<exahype2::RefinementCommand> deviceCommands = commands.getValues();
   validateTrue(deviceCommands[0] == exahype2::RefinementCommand::Erase);
   validateTrue(deviceCommands[1] == exahype2::RefinementCommand::Refine);
+}
+
+void
+exahype2::tests::MultiresolutionDetailTest::testDetailIsBitwiseInvariantUnderSwapsOnTheDevice() {
+  const std::vector<double> patch = getAsymmetricPatch();
+  std::vector<double>       patches(2 * NumberOfVolumes);
+  peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
+    tarch::la::Vector<DIMENSIONS, int> swapped = counter;
+    swapped(0)                                 = counter(1);
+    swapped(1)                                 = counter(0);
+    const int volume                           = peano4::dLinearised(counter, NumberOfDofsPerAxis);
+    patches[volume]                            = patch[volume];
+    patches[NumberOfVolumes + volume]          = patch[peano4::dLinearised(swapped, NumberOfDofsPerAxis)];
+  });
+
+  constexpr int                      NumberOfPatches = 2;
+  tarch::accelerator::Buffer<double> devicePatches(patches.size(), tarch::MemoryLocation::Device);
+  devicePatches.setValues(patches);
+  tarch::accelerator::Buffer<double> details(NumberOfPatches, tarch::MemoryLocation::Device);
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(NumberOfPatches),
+    ComputeDetailOfEveryPatch{devicePatches.getData(), details.getData()}
+  );
+
+  const std::vector<double> deviceDetails = details.getValues();
+  validateTrue(deviceDetails[0] > 1.0e-6);
+  validateEquals(deviceDetails[1], deviceDetails[0]);
 }

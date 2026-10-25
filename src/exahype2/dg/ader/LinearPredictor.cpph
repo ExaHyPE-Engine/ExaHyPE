@@ -3,6 +3,7 @@
 
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
+#include "tarch/la/ScalarOperations.h"
 #include "tarch/la/VectorOperations.h"
 
 TARGET_DECLARE
@@ -37,10 +38,10 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::selectPointSourc
 }
 
 /**
- * Extrapolates the time averages of the state and of the flux over the time step to the faces of
- * the cell on the threads of workers. scratch has the extent of Scratch and stores the time-averaged
- * state and spatial terms for the volume integral. A thread without a cell takes part in every
- * barrier of the team and writes nothing.
+ * Extrapolates the time averages of the state and, with WritesFaceFluxes, of the flux over the time
+ * step to the faces of the cell on the threads of workers. scratch has the extent of Scratch and
+ * stores the time-averaged state and spatial terms for the volume integral. A thread without a cell
+ * only takes part in the barriers of the team.
  */
 template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
@@ -102,6 +103,14 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
   // The coefficient of the ith Taylor term enters the time average with dt^i / (i + 1)!.
   auto timeAverageFactor = static_cast<ComputePrecision>(1.0);
 
+  // The flux of Derived writes every unknown of a node. The padding lanes of the flux stay zero
+  // through every pass.
+  if constexpr (EvaluateFlux) {
+    if (workers.hasCell) {
+      clearFluxes(flux, workers);
+    }
+  }
+
   // The terms of Derived are linear in the state and the last pass evaluates the time-averaged flux
   // from the time-averaged state. A barrier precedes every stage that reads the nodes of other
   // threads.
@@ -109,35 +118,36 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
     const bool                    isLastPass = derivative == NodesPerAxis - 1;
     const ComputePrecision* const values     = isLastPass ? timeAveragedState : state;
 
-    if (workers.hasCell) {
-      clearFluxes(flux, workers);
+    if constexpr (not EvaluateFlux) {
+      if (workers.hasCell) {
+        clearFluxes(flux, workers);
+      }
     }
 
     if constexpr (EvaluateFlux) {
       if (workers.hasCell) {
         evaluateFlux(flux, values, cellCentre, cellSize, timeStamp, timeStepSize, workers);
       }
-      exahype2::dg::ader::synchronise(workers);
-      if (isLastPass) {
+      exahype2::dg::ader::teamBarrier(workers);
+      if (WritesFaceFluxes and isLastPass) {
         if (workers.hasCell) {
-          for (int direction = workers.thread; direction < DIMENSIONS; direction += workers.threads) {
-            exahype2::dg::extrapolateNodalFieldToFacePair<
-              NodesPerAxis,
-              NumberOfUnknowns,
-              CellLayout::PaddedNumberOfUnknowns,
-              ComputePrecision,
-              ComputePrecision,
-              ComputePrecision
-            >(faceFluxes[direction],
-              faceFluxes[direction + DIMENSIONS],
-              flux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
-              tables.leftFaceCoefficients,
-              tables.rightFaceCoefficients,
-              direction);
-          }
+          exahype2::dg::extrapolateNodalFieldToFaces<
+            NodesPerAxis,
+            NumberOfUnknowns,
+            CellLayout::PaddedNumberOfUnknowns,
+            CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
+            ComputePrecision,
+            ComputePrecision,
+            ComputePrecision
+          >(faceFluxes,
+            flux,
+            tables.leftFaceCoefficients,
+            tables.rightFaceCoefficients,
+            workers.thread,
+            workers.threads);
         }
         // The derivative overwrites the flux that the extrapolation reads.
-        exahype2::dg::ader::synchronise(workers);
+        exahype2::dg::ader::teamBarrier(workers);
       }
       if (workers.hasCell) {
         exahype2::dg::differentiateFluxInPlace<Derived>(
@@ -151,7 +161,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
     }
 
     if constexpr (EvaluateNonconservativeProduct) {
-      exahype2::dg::ader::synchronise(workers);
+      exahype2::dg::ader::teamBarrier(workers);
       if (workers.hasCell) {
         addNonconservativeProduct(
           flux,
@@ -166,7 +176,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
         );
       }
     }
-    exahype2::dg::ader::synchronise(workers);
+    exahype2::dg::ader::teamBarrier(workers);
 
     if constexpr (EvaluateMaterialParameters) {
       if (workers.hasCell) {
@@ -208,8 +218,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
 }
 
 /**
- * Extrapolates the time-averaged state to the faces of the cell, one axis per thread. Without a
- * flux, the face fluxes become zero.
+ * Extrapolates the time-averaged state to the faces of the cell. With WritesFaceFluxes and without
+ * a flux, the face fluxes become zero.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -220,25 +230,24 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::extrapolateToFac
   const Tables&                         tables,
   const TeamWorkers&                    workers
 ) {
-  for (int direction = workers.thread; direction < DIMENSIONS; direction += workers.threads) {
-    exahype2::dg::extrapolateNodalFieldToFacePair<
-      CellLayout::NodesPerAxis,
-      CellLayout::NumberOfData,
-      CellLayout::PaddedNumberOfData,
-      ComputePrecision,
-      ComputePrecision,
-      ComputePrecision
-    >(faceStates[direction],
-      faceStates[direction + DIMENSIONS],
-      timeAveragedState,
-      tables.leftFaceCoefficients,
-      tables.rightFaceCoefficients,
-      direction);
-    if constexpr (not EvaluateFlux) {
-      for (int entry = 0; entry < CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns; entry++) {
-        faceFluxes[direction][entry]              = static_cast<ComputePrecision>(0);
-        faceFluxes[direction + DIMENSIONS][entry] = static_cast<ComputePrecision>(0);
-      }
+  exahype2::dg::extrapolateNodalFieldToFaces<
+    CellLayout::NodesPerAxis,
+    CellLayout::NumberOfData,
+    CellLayout::PaddedNumberOfData,
+    0,
+    ComputePrecision,
+    ComputePrecision,
+    ComputePrecision
+  >(faceStates,
+    timeAveragedState,
+    tables.leftFaceCoefficients,
+    tables.rightFaceCoefficients,
+    workers.thread,
+    workers.threads);
+  if constexpr (WritesFaceFluxes and not EvaluateFlux) {
+    constexpr int FluxValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
+    for (int entry = workers.thread; entry < peano4::FacesPerCell * FluxValuesPerFace; entry += workers.threads) {
+      faceFluxes[entry / FluxValuesPerFace][entry % FluxValuesPerFace] = static_cast<ComputePrecision>(0);
     }
   }
 }
@@ -263,27 +272,6 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::initialiseState(
       localState[value] = static_cast<ComputePrecision>(cellState[cellNode * CellLayout::NumberOfData + value]);
     }
   }
-}
-
-/**
- * Returns the Lagrange basis function of node index at position on the reference interval.
- */
-template <typename Derived, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD double
-exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateLagrangeBasis(
-  const ComputePrecision* NOALIAS const quadraturePoints,
-  const int                             index,
-  const double                          position
-) {
-  assertion(index >= 0 and index < CellLayout::NodesPerAxis, index);
-  double value = 1.0;
-  for (int node = 0; node < CellLayout::NodesPerAxis; node++) {
-    if (node != index) {
-      value *= (position - static_cast<double>(quadraturePoints[node]))
-        / (static_cast<double>(quadraturePoints[index]) - static_cast<double>(quadraturePoints[node]));
-    }
-  }
-  return value;
 }
 
 /**
@@ -369,14 +357,19 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
         );
 
         const double* const location = pointSourceLocations + static_cast<std::ptrdiff_t>(pointSource) * DIMENSIONS;
-        double              spread   = 1.0;
+        double              basisValues[DIMENSIONS];
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          spread *= evaluateLagrangeBasis(
+          basisValues[axis] = exahype2::dg::getLagrangeBasisFunction1D<NodesPerAxis>(
             quadraturePoints,
             index(axis),
-            (location[axis] - cellCentre(axis)) * static_cast<double>(inverseCellSize(axis)) + 0.5
+            (location[axis] - cellCentre(axis)) * static_cast<double>(inverseCellSize(axis))
           );
         }
+#if DIMENSIONS == 2
+        const double spread = basisValues[0] * basisValues[1];
+#else
+        const double spread = tarch::la::productInOrderOfMagnitude(basisValues[0], basisValues[1], basisValues[2]);
+#endif
         const auto update = static_cast<ComputePrecision>(
           static_cast<TimePrecision>(spread) * static_cast<TimePrecision>(inverseCellQuadratureWeights[cellNode])
           * static_cast<TimePrecision>(inverseCellVolume)
@@ -463,8 +456,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::clearFluxes(
 }
 
 /**
- * Writes the flux of Derived at every node into flux, one block per axis. The coefficients stay at
- * the cell centre and the start of the time step.
+ * Writes the flux of Derived at every node into flux, one block per axis. Derived::flux() writes
+ * every unknown of a node. The padding lanes keep their values. The coefficients stay at the cell
+ * centre and the start of the time step.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -477,7 +471,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateFlux(
   const double                                 timeStepSize,
   const TeamWorkers&                           workers
 ) {
-  constexpr int AxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
+  constexpr int FluxStride = CellLayout::PaddedNumberOfUnknowns;
+  constexpr int AxisStride = CellLayout::NodesPerCell * FluxStride;
 
   for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     UNROLL(DIMENSIONS)
@@ -489,7 +484,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateFlux(
         timeStamp,
         timeStepSize,
         axis,
-        flux + cellNode * CellLayout::PaddedNumberOfUnknowns + axis * AxisStride
+        flux + cellNode * FluxStride + axis * AxisStride
       );
     }
   }
@@ -522,6 +517,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
   }
 
   ComputePrecision lineGradient[NodesPerAxis * FluxStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  const auto       derivativeWeights = exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator);
   ComputePrecision productValues[FluxStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
   const auto addProductOfLine = [&](const int firstNode, const int nodeStrideAlongAxis, const int axis) {
@@ -547,52 +543,19 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
     }
   };
 
-  for (int line = workers.thread; line < CellLayout::NodesPerFace; line += workers.threads) {
-    const int firstNode = line * NodesPerAxis;
-    exahype2::dg::differentiateAlongAxis<
+  for (int item = workers.thread; item < DIMENSIONS * CellLayout::NodesPerFace; item += workers.threads) {
+    const int axis       = item / CellLayout::NodesPerFace;
+    const int firstNode  = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, item % CellLayout::NodesPerFace);
+    const int nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis);
+    exahype2::dg::differentiateAlongAxis<FluxStride, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
+      lineGradient,
       FluxStride,
-      NodesPerAxis,
-      StateStride,
-      NodesPerAxis,
-      FluxStride,
-      true,
-      ComputePrecision,
-      ComputePrecision
-    >(lineGradient, state + firstNode * StateStride, derivativeOperator, inverseCellSize(0));
-    addProductOfLine(firstNode, 1, 0);
-  }
-
-  for (int line = workers.thread; line < CellLayout::NodesPerFace; line += workers.threads) {
-    const int z         = line / NodesPerAxis;
-    const int x         = line - z * NodesPerAxis;
-    const int firstNode = z * NodesPerAxis * NodesPerAxis + x;
-    exahype2::dg::differentiateAlongAxis<
-      FluxStride,
-      NodesPerAxis,
-      StateStride * NodesPerAxis,
-      NodesPerAxis,
-      FluxStride,
-      true,
-      ComputePrecision,
-      ComputePrecision
-    >(lineGradient, state + firstNode * StateStride, derivativeOperator, inverseCellSize(1));
-    addProductOfLine(firstNode, NodesPerAxis, 1);
-  }
-
-  if constexpr (DIMENSIONS == 3) {
-    for (int line = workers.thread; line < NodesPerAxis * NodesPerAxis; line += workers.threads) {
-      exahype2::dg::differentiateAlongAxis<
-        FluxStride,
-        NodesPerAxis,
-        StateStride * NodesPerAxis * NodesPerAxis,
-        NodesPerAxis,
-        FluxStride,
-        true,
-        ComputePrecision,
-        ComputePrecision
-      >(lineGradient, state + line * StateStride, derivativeOperator, inverseCellSize(DIMENSIONS - 1));
-      addProductOfLine(line, NodesPerAxis * NodesPerAxis, DIMENSIONS - 1);
-    }
+      state + firstNode * StateStride,
+      nodeStride * StateStride,
+      derivativeWeights,
+      inverseCellSize(axis)
+    );
+    addProductOfLine(firstNode, nodeStride, axis);
   }
 }
 
@@ -664,7 +627,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::overwriteStateWi
 
 /**
  * Adds the negative flux divergence to the source in state, or overwrites state with it without a
- * source term. The result is the next Taylor coefficient.
+ * source term. The result is the next Taylor coefficient. The auxiliary variables and the padding
+ * of state keep their values.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -676,19 +640,21 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addFluxesToTimeD
   constexpr int FluxStride = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride = CellLayout::NodesPerCell * FluxStride;
 
+  // The select takes the computed derivative. A select between two loaded values becomes a gather
+  // of the selected addresses.
   for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
     SIMD()
-    for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
-      const int        entry      = cellNode * FluxStride + unknown;
-      ComputePrecision derivative = -(flux[entry] + flux[entry + AxisStride]);
-      if constexpr (DIMENSIONS == 3) {
-        derivative -= flux[entry + 2 * AxisStride];
-      }
-      if constexpr (EvaluateSource) {
-        state[cellNode * CellLayout::PaddedNumberOfData + unknown] += derivative;
-      } else {
-        state[cellNode * CellLayout::PaddedNumberOfData + unknown] = derivative;
-      }
+    for (int lane = 0; lane < FluxStride; lane++) {
+      const int              fluxEntry  = cellNode * FluxStride + lane;
+      const int              entry      = cellNode * CellLayout::PaddedNumberOfData + lane;
+      const ComputePrecision derivative = DIMENSIONS == 2 ? -(flux[fluxEntry] + flux[fluxEntry + AxisStride])
+                                                          : -tarch::la::sumInOrderOfValue(
+                                                              flux[fluxEntry],
+                                                              flux[fluxEntry + AxisStride],
+                                                              flux[fluxEntry + 2 * AxisStride]
+                                                            );
+      const ComputePrecision update     = EvaluateSource ? state[entry] + derivative : derivative;
+      state[entry]                      = lane < CellLayout::NumberOfUnknowns ? update : state[entry];
     }
   }
 }

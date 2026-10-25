@@ -116,3 +116,21 @@ peano4::tests::getGlobalSumOf(const int localValue) {
   );
   return globalValue;
 }
+
+/**
+ * Returns the maximum of every entry over all ranks. Every rank passes a vector of the same size.
+ */
+std::vector<double>
+peano4::tests::getGlobalMaximaOf(const std::vector<double>& localValues) {
+  assertion(localValues.size() <= static_cast<std::size_t>(std::numeric_limits<int>::max()), localValues.size());
+  std::vector<double> globalValues(localValues.size());
+  tarch::mpi::allreduce(
+    localValues.data(),
+    globalValues.data(),
+    static_cast<int>(localValues.size()),
+    MPI_DOUBLE,
+    MPI_MAX,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  return globalValues;
+}

@@ -13,15 +13,11 @@ class SWERestingLake(Scenario):
     """
     Resting lake scenario for the shallow water equations.
 
-    The real water height H as defined by the sum of the water column h and
-    the bathymetry b is constant over the entire domain, meaning that there
-    should be no changes on the entire domain, but because we use the sum of
-    the derivatives of h and b (h' + b') instead of the derivative of the sum
-    (h + b)' some rounding errors will creep in, which causes unphysical
-    waves to appear.
-    As such this scenario is nice for testing how large these unphysical waves
-    are for a given algorithm, and how stable the algorithm is, i.e. does it
-    dampen out these waves or do they oscillate out of control.
+    The free surface h + b of the water column h and the bathymetry b is
+    constant over the domain. The exact solution stays at rest. The scheme
+    evaluates the sum h' + b' of the derivatives. The rounding errors of this
+    sum start spurious waves. The scenario measures the size of these waves
+    and whether the scheme damps them.
     """
 
     _offset = -0.5

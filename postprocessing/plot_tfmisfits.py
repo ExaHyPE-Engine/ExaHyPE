@@ -62,7 +62,9 @@ def tracer_extractor(
 
     if z is not None and len(positionIndexes) < 3:
         raise SystemExit(
-            "--z was given but {} holds two-dimensional data".format(file_name)
+            'Command line argument "--z" expects three-dimensional data in {}.'.format(
+                file_name
+            )
         )
 
     csvData = [row for row in csvData[1:] if row]
@@ -210,7 +212,8 @@ def plot_time_frequency_misfits(argv=None):
     # The interpolation needs the time stamps of the second file inside those of the first.
     if (min(dt2) < min(dt1)) or (max(dt2) > max(dt1)):
         warnings.warn(
-            "The second file contains time stamps outside the time interval of the first file, so the misfit uses only its time stamps inside that interval",
+            "The misfit uses only the time stamps of the second file inside the time "
+            "interval of the first file.",
             UserWarning,
         )
         dt2, vx2 = zip(

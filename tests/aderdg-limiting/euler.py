@@ -45,22 +45,23 @@ def flux(gamma):
   // rejection. The floor keeps the reciprocal finite without changing
   // admissible states.
   const double inverseDensity = 1.0 / std::max(density, DensityFloor);
-  double momentumSquared = 0.0;
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    momentumSquared +=
-      Q[Shortcuts::j + dimension] * Q[Shortcuts::j + dimension];
-  }}
+  const double momentumSquared =
+    tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(Q + Shortcuts::j));
   const double pressure =
     (Gamma - 1.0) * (energy - 0.5 * inverseDensity * momentumSquared);
   const double normalMomentum = Q[Shortcuts::j + normal];
 
+  // Every flux component rounds on its own. A sum of the fluxes of two states then adds the same
+  // rounded values for mirrored faces with and without fused multiply-adds.
   F[Shortcuts::rho] = normalMomentum;
   for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    F[Shortcuts::j + dimension] =
-      normalMomentum * Q[Shortcuts::j + dimension] * inverseDensity;
+    F[Shortcuts::j + dimension] = tarch::la::productRoundedOnce(
+      normalMomentum * Q[Shortcuts::j + dimension], inverseDensity
+    );
   }}
-  F[Shortcuts::rhoE] =
-    normalMomentum * (energy + pressure) * inverseDensity;
+  F[Shortcuts::rhoE] = tarch::la::productRoundedOnce(
+    normalMomentum * (energy + pressure), inverseDensity
+  );
   F[Shortcuts::j + normal] += pressure;
 """
 
@@ -75,11 +76,8 @@ def max_eigenvalue(gamma):
   // density and taking the pressure magnitude keep finite inputs finite without
   // changing admissible states.
   const double inverseDensity = 1.0 / std::max(density, DensityFloor);
-  double momentumSquared = 0.0;
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    momentumSquared +=
-      Q[Shortcuts::j + dimension] * Q[Shortcuts::j + dimension];
-  }}
+  const double momentumSquared =
+    tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(Q + Shortcuts::j));
   const double pressure =
     (Gamma - 1.0) * (energy - 0.5 * inverseDensity * momentumSquared);
   const double soundSpeed =
@@ -114,11 +112,8 @@ def physical_admissibility(gamma, additional_state_condition=None):
     if (density <= 1.0e-12 or energy <= 1.0e-12) {{
       return false;
     }}
-    double momentumSquared = 0.0;
-    for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-      momentumSquared +=
-        values[Shortcuts::j + dimension] * values[Shortcuts::j + dimension];
-    }}
+    const double momentumSquared =
+      tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(values + Shortcuts::j));
     const double pressure =
       (Gamma - 1.0) * (energy - 0.5 * momentumSquared / density);
     if (not std::isfinite(pressure) or pressure <= 1.0e-12) {{
@@ -155,12 +150,8 @@ def physical_admissibility_with_contact_sensor(
     }}
     minimumDensity = std::min(minimumDensity, density);
     maximumDensity = std::max(maximumDensity, density);
-    double momentumSquared = 0.0;
-    for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-      momentumSquared +=
-        values[Shortcuts::j + dimension]
-        * values[Shortcuts::j + dimension];
-    }}
+    const double momentumSquared =
+      tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(values + Shortcuts::j));
     const double pressure =
       (Gamma - 1.0) * (energy - 0.5 * momentumSquared / density);
     if (not std::isfinite(pressure) or pressure <= 1.0e-12) {{
@@ -187,12 +178,11 @@ def dmp_observables(gamma):
   // admissible states.
   const {{{{COMPUTE_PRECISION}}}} inverseDensity =
     1.0 / std::max(density, DensityFloor);
-  {{{{COMPUTE_PRECISION}}}} momentumSquared = 0.0;
+  const {{{{COMPUTE_PRECISION}}}} momentumSquared =
+    tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, {{{{COMPUTE_PRECISION}}}}>(Q + Shortcuts::j));
   observables[0] = density;
   for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    const auto momentum = Q[Shortcuts::j + dimension];
-    momentumSquared += momentum * momentum;
-    observables[1 + dimension] = momentum * inverseDensity;
+    observables[1 + dimension] = Q[Shortcuts::j + dimension] * inverseDensity;
   }}
   observables[1 + DIMENSIONS] =
     (Gamma - 1.0)

@@ -26,7 +26,7 @@ tarch::accelerator::tests::MemoryAllocationTest::run() {
   testMethod(testAllocateMemory);
   testMethod(testLocationSpecificAllocators);
   testMethod(testLocationSpecificCopyFunctions);
-  testMethod(testTheCurrentDeviceHoldsForEveryHostThread);
+  testMethod(testTheCurrentDeviceAppliesToEveryHostThread);
   testMethod(testOnlyTheDeviceLocationOfAGPUBuildIsGPUMemory);
 }
 
@@ -180,7 +180,7 @@ tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFunctio
  * The device that one host thread sets is the current device of every other host thread.
  */
 void
-tarch::accelerator::tests::MemoryAllocationTest::testTheCurrentDeviceHoldsForEveryHostThread() {
+tarch::accelerator::tests::MemoryAllocationTest::testTheCurrentDeviceAppliesToEveryHostThread() {
   const int deviceOfTheRank = tarch::accelerator::getCurrentDevice();
   const int selectedDevice  = deviceOfTheRank + 1;
   int       deviceOfAnotherThread{-1};

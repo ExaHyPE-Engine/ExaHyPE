@@ -136,8 +136,8 @@ class CompareSolutionTest(unittest.TestCase):
 
     def test_rotated_connectivity_matches_unordered_for_anisotropic_cell(self):
         # A 1 x 0.1 cell: The canonical vertex order quantises each axis by the
-        # cell's own extent along that axis; a single per-cell quantum would
-        # collapse the thin axis and falsely reject rotated connectivity.
+        # extent of the cell along that axis. One quantum per cell would collapse
+        # the thin axis and reject the rotated connectivity.
         points = [[0.0, 0.0], [1.0, 0.0], [1.0, 0.1], [0.0, 0.1]]
         node_values = [1.0, 2.0, 3.0, 4.0]
         left = make_snapshot(points, [[0, 1, 2, 3]], node_data={"q": node_values})
@@ -166,9 +166,9 @@ class CompareSolutionTest(unittest.TestCase):
         self.assertIsNone(self.compare(left, right, unordered=True))
 
     def test_rounding_noise_on_a_coincident_coordinate_matches_unordered(self):
-        # Two vertices of a quad carry the same coordinate analytically, but different writers
-        # store it with one-ulp differences. The tie in the canonical sort must not break on
-        # that noise, or the same cell compares against a permuted vertex list.
+        # Two vertices of a quad agree in one coordinate analytically. Two writers store it with a
+        # difference of one unit in the last place. The tie in the canonical sort must not break
+        # on that difference. The same cell would otherwise compare against a permuted vertex list.
         base = 0.888888888888888888
         noisy = np.nextafter(base, 0.0)
         left = make_snapshot(

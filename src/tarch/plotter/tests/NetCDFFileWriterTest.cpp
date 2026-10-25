@@ -327,7 +327,7 @@ tarch::plotter::tests::NetCDFFileWriterTest::testTwoQuadrangles2DWithData() {
 }
 
 /**
- * The collective write completes when the ranks hold different non-zero cell counts.
+ * The collective write completes when the ranks write different non-zero cell counts.
  */
 void
 tarch::plotter::tests::NetCDFFileWriterTest::testUnevenCellCounts() {

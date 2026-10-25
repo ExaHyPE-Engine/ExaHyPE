@@ -17,8 +17,6 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::ader {
-  struct PicardResidual;
-
   template <typename Derived, typename ComputePrecision>
   class NonlinearPredictor;
 } // namespace exahype2::dg::ader
@@ -29,31 +27,20 @@ namespace exahype2::dg::ader::tests {
 
 TARGET_DECLARE
 /**
- * The squared Picard residual of the nodes one thread solved, in fixed point: highLimb and
- * lowLimb hold the sum of the scaled squares, exceeds records a square at or above the
- * tolerance, and diverged records an iterate outside the divergence bound. add() sums two
- * residuals exactly.
- */
-struct exahype2::dg::ader::PicardResidual final {
-  std::uint64_t highLimb{0};
-  std::uint64_t lowLimb{0};
-  bool          exceeds{false};
-  bool          diverged{false};
-
-  INLINE_METHOD GPU_CALLABLE_METHOD void add(const PicardResidual& other);
-};
-
-/**
  * The space-time predictor of one cell of a nonlinear ADER-DG solver Derived. predict() iterates
  * the Picard system of the space-time state, writes the time-averaged state and flux of the cell
  * onto the halves of its faces and returns the number of Picard sweeps or an outcome of
  * PicardOutcome.h. The threads of a team run several cells together, one group of threads per cell.
+ * Every node of a cell counts the squared changes of its own values in integer units of the squared
+ * tolerance and the first thread of the cell adds the node counts. The residual of a sweep is the
+ * same for every number of threads per cell and for every order of the nodes and of the unknowns.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::ader::NonlinearPredictor final {
 public:
-  using CellLayout = exahype2::dg::PaddedLayout<Derived>;
-  using Tables     = exahype2::dg::BasisTables<ComputePrecision>;
+  using CellLayout        = exahype2::dg::PaddedLayout<Derived>;
+  using Tables            = exahype2::dg::BasisTables<ComputePrecision>;
+  using DerivativeWeights = exahype2::dg::DerivativeWeightsOfNodePairs<CellLayout::NodesPerAxis, ComputePrecision>;
 
   static constexpr bool EvaluateDiffusiveFlux = exahype2::terms::HasDiffusiveFlux<Derived, ComputePrecision>;
   static constexpr bool EvaluateFlux = exahype2::terms::HasFlux<Derived, ComputePrecision> or EvaluateDiffusiveFlux;
@@ -78,6 +65,7 @@ public:
     static constexpr int TimeAveragedSourceSize = FirstSourceSize;
     static constexpr int StateGradientSize =
       NeedsStateGradient ? CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell * DIMENSIONS : 0;
+    static constexpr int NodeResidualSize = exahype2::dg::getPaddedCountOf(CellLayout::NodesPerCell);
 
     static constexpr int SpaceTimeStateOffset     = 0;
     static constexpr int TimeAveragedStateOffset  = SpaceTimeStateOffset;
@@ -88,7 +76,8 @@ public:
     static constexpr int FirstSourceOffset        = TimeAveragedFluxOffset + TimeAveragedFluxSize;
     static constexpr int TimeAveragedSourceOffset = FirstSourceOffset + FirstSourceSize;
     static constexpr int StateGradientOffset      = TimeAveragedSourceOffset + TimeAveragedSourceSize;
-    static constexpr int Size                     = StateGradientOffset + StateGradientSize;
+    static constexpr int NodeResidualOffset       = StateGradientOffset + StateGradientSize;
+    static constexpr int Size                     = NodeResidualOffset + NodeResidualSize;
   };
 
   template <typename StoragePrecision>
@@ -107,28 +96,43 @@ public:
   );
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getTeamScratchBytes(int teamThreads);
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double getSquaredResidual(
-    const PicardResidual& residual,
-    double                squaredTolerance
-  );
 
 private:
   friend class exahype2::dg::ader::tests::NonlinearPredictorTest;
 
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getReservedTeamScratchBytes(int teamThreads);
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD unsigned char* getAlignedTeamScratch(
+  static constexpr int ValuesPerNodeResidual = CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns;
+
+  /**
+   * The units of one squared tolerance in the node residuals. The units of the values of one node
+   * add up to at most 2^(digits - 1) and then add exactly in ComputePrecision.
+   */
+  static constexpr double ResidualUnitsOfTolerance = []() {
+    constexpr double LargestExactSum =
+      static_cast<double>(std::uint64_t{1} << (std::numeric_limits<ComputePrecision>::digits - 1));
+    double units = LargestExactSum;
+    while (units * ValuesPerNodeResidual > LargestExactSum) {
+      units *= 0.5;
+    }
+    return units;
+  }();
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double getResidualOfCell(
+    const ComputePrecision* NOALIAS nodeResiduals,
+    const TeamWorkers&              workers
+  );
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double sumNodeResiduals(
+    const ComputePrecision* NOALIAS nodeResiduals
+  );
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double getLargestOfCell(
+    double             value,
     const TeamWorkers& workers
   );
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD PicardResidual combineOverGroup(
-    const TeamWorkers&    workers,
-    const PicardResidual& residual
-  );
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isAnyActive(const TeamWorkers& workers, bool active);
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double getSquaredTolerance(
     const StoragePrecision* NOALIAS cellState,
-    double                          picardTolerance
+    double                          picardTolerance,
+    const TeamWorkers&              workers = TeamWorkers{}
   );
 
   template <typename StoragePrecision>
@@ -141,7 +145,7 @@ private:
   static INLINE_METHOD GPU_CALLABLE_METHOD void computeSpaceTimeGradient(
     ComputePrecision* NOALIAS                              stateGradient,
     const ComputePrecision* NOALIAS                        spaceTimeState,
-    const ComputePrecision* NOALIAS                        derivativeOperator,
+    const DerivativeWeights&                               derivativeWeights,
     const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
     int                                                    timeNode,
     const TeamWorkers&                                     workers = TeamWorkers{}
@@ -175,16 +179,22 @@ private:
     const TeamWorkers&        workers = TeamWorkers{}
   );
 
-  static INLINE_METHOD GPU_CALLABLE_METHOD void subtractFluxDivergence(
-    ComputePrecision* NOALIAS                              rightHandSide,
-    const ComputePrecision* NOALIAS                        flux,
-    const ComputePrecision* NOALIAS                        stiffnessOperatorTransposed,
+  static INLINE_METHOD GPU_CALLABLE_METHOD void differentiateFlux(
+    ComputePrecision*                                      fluxDerivative,
+    const ComputePrecision*                                flux,
+    const DerivativeWeights&                               stiffnessWeights,
     const ComputePrecision* NOALIAS                        cellQuadratureWeights,
     const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
     double                                                 timeStepSize,
     int                                                    timeNode,
-    int                                                    axis,
     const TeamWorkers&                                     workers = TeamWorkers{}
+  );
+
+  static INLINE_METHOD GPU_CALLABLE_METHOD void subtractFluxDivergence(
+    ComputePrecision* NOALIAS       rightHandSide,
+    const ComputePrecision* NOALIAS fluxDerivative,
+    int                             timeNode,
+    const TeamWorkers&              workers = TeamWorkers{}
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluateSpaceTimeSource(
@@ -205,8 +215,9 @@ private:
   );
 
   template <typename StoragePrecision>
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD PicardResidual solvePicardSystem(
+  static INLINE_METHOD GPU_CALLABLE_METHOD void solvePicardSystem(
     ComputePrecision* NOALIAS       spaceTimeState,
+    ComputePrecision* NOALIAS       nodeResiduals,
     const ComputePrecision* NOALIAS rightHandSide,
     const StoragePrecision* NOALIAS cellState,
     const ComputePrecision* NOALIAS inversePicardOperator,

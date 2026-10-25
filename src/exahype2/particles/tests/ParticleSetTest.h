@@ -21,7 +21,8 @@ public:
 
 private:
   void testInsertKeepsTheParticlesOfTheRank();
-  void testAPositionOnAFaceBelongsToTheLowerCell();
+  void testALatticeIndexOnAFacePicksTheCellTowardsTheCentre();
+  void testAPositionOnAFaceBelongsToTheCellTowardsTheCentre();
   void testRelocateMovesAParticleToTheCellThatContainsIt();
   void testInsertAndRelocateCountTheParticlesOfAllRanks();
   void testUploadAndDownloadCarryTheValues();

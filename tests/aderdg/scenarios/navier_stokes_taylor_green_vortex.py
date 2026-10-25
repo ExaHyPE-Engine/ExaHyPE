@@ -21,7 +21,7 @@ class NavierStokesTaylorGreenVortex(Scenario):
     """
 
     _dimensions = 2
-    _offset = 0.0
+    _offset = -math.pi
     _domain_size = 2 * math.pi
     _periodic_bc = True
     _end_time = 10.0

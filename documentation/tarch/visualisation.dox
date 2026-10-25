@@ -25,8 +25,8 @@ the patch centres in the order of the `CurveIndex` cell field.
 
 # Adaptive meshes
 
-A coarse face can adjoin several fine faces, so the output mesh can be
-non-conforming. Discontinuous point fields can also carry different values
+A coarse face can adjoin several fine faces. The output mesh can then be
+non-conforming. Discontinuous point fields can also store different values
 at coincident coordinates. A visualisation filter that requires a continuous
 field needs an explicit interpolation or resampling step.
 

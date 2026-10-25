@@ -9,9 +9,9 @@ approach used in ExaHyPE. It is a high-order method both in space and time, and 
 overview of the method; for more details, see <a href="https://www.mdpi.com/2075-1680/7/3/63">the ADER-DG overview paper</a>.
 
 Each timestep of the ADER-DG algorithm consists of two key steps:
-1. a <em> predictor step </em>, which solves a space-time DG problem locally within each cell
-2. a <em> corrector step </em>, which uses the results of the predictor to compute the solution at the next timestep via a
-discontinuous Galerkin scheme in space, and considering the influence of neighbour elements
+1. a <em> predictor step </em> that solves a space-time DG problem locally within each cell
+2. a <em> corrector step </em> that uses the results of the predictor and the neighbour elements to compute the solution
+at the next timestep with a discontinuous Galerkin scheme in space
 
 For simplicity, we consider the problem \f$ \frac{\partial Q}{\partial t} + \nabla \cdot F(Q) = 0. \f$
 The spatial domain \f$ \Omega \f$ is discretized on a tree-structured Cartesian grid of cells \f$ T_i \f$. At each timestep \f$ t^n \f$,
@@ -36,8 +36,8 @@ By integration by parts, and substitution of the discrete space-time solution an
 \f[
     \left( \int_{T_i} \theta_k(x, t^{n+1}) \theta_l(x, t^{n+1}) dxdt - \int_{\Delta_t }\int_{T_i} \frac{\partial \theta_k}{\partial t} \theta_l dxdt \right) \hat{q}_l + \left( \int_{\Delta_t }\int_{T_i} \theta_k \nabla \theta_l dxdt \right) F(\hat{q}_l) = \left( \int_{T_i} \theta_k(x, t^n)\phi_l dx \right) \hat{Q}_l^n
 \f]
-Note that the Einstein's summation convention is used here. In ExaHyPE this is solved in general via Picard iterations. And for linear PDEs, we use the Cauchy-Kowalevskaya method to lower
-computational cost.
+The formula uses the Einstein summation convention. ExaHyPE solves this system with Picard iterations in general. For a
+linear PDE, ExaHyPE uses the cheaper Cauchy-Kowalevskaya procedure.
 
 ### Corrector
 

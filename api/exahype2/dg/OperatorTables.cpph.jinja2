@@ -23,6 +23,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD constexpr std::array<Precision, {{ table.lengt
   for (std::size_t entry = 0; entry < result.size(); entry++) {
     result[entry] = static_cast<Precision>(Values[entry]);
   }
+{%- if table.name == "QuadraturePoints1D" %}
+  // One minus a rounded upper point is exact. Every lower point then mirrors its upper point exactly
+  // at one half in every precision.
+  for (std::size_t entry = 0; entry < result.size() / 2; entry++) {
+    result[entry] = Precision{1} - result[result.size() - 1 - entry];
+  }
+{%- endif %}
   return result;
 }
 {%- endfor %}

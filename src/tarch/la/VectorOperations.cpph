@@ -270,44 +270,47 @@ tarch::la::norm1(const Vector<4, Scalar>& vector) {
 }
 
 /**
- * Rounds every square on its own before the sum. Swapping the first two components returns the
- * same value bitwise.
+ * Rounds every square on its own before the sum with and without fused multiply-adds. Swapping the first
+ * two components returns the same value bitwise.
  */
 template <int Size, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar
 tarch::la::norm2Squared(const Vector<Size, Scalar>& vector) {
-  Scalar result(vector(0) * vector(0));
+  Scalar result = tarch::la::productRoundedOnce(vector(0), vector(0));
   for (int i = 1; i < Size; i++) {
-    const Scalar square = vector(i) * vector(i);
-    result += square;
+    result += tarch::la::productRoundedOnce(vector(i), vector(i));
   }
   return result;
 }
 
+/**
+ * Rounds both squares on their own before the sum with and without fused multiply-adds. A swap of the two
+ * components then returns the same bits.
+ */
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar
 tarch::la::norm2Squared(const Vector<2, Scalar>& vector) {
-  const Scalar first  = vector._values[0] * vector._values[0];
-  const Scalar second = vector._values[1] * vector._values[1];
+  const Scalar first  = tarch::la::productRoundedOnce(vector._values[0], vector._values[0]);
+  const Scalar second = tarch::la::productRoundedOnce(vector._values[1], vector._values[1]);
   return first + second;
 }
 
+/**
+ * Every order and every sign of the components returns the same bits.
+ */
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar
 tarch::la::norm2Squared(const Vector<3, Scalar>& vector) {
-  const Scalar first  = vector._values[0] * vector._values[0];
-  const Scalar second = vector._values[1] * vector._values[1];
-  const Scalar third  = vector._values[2] * vector._values[2];
-  return first + second + third;
+  return tarch::la::sumOfSquaresInOrderOfMagnitude(vector._values[0], vector._values[1], vector._values[2]);
 }
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar
 tarch::la::norm2Squared(const Vector<4, Scalar>& vector) {
-  const Scalar first  = vector._values[0] * vector._values[0];
-  const Scalar second = vector._values[1] * vector._values[1];
-  const Scalar third  = vector._values[2] * vector._values[2];
-  const Scalar fourth = vector._values[3] * vector._values[3];
+  const Scalar first  = tarch::la::productRoundedOnce(vector._values[0], vector._values[0]);
+  const Scalar second = tarch::la::productRoundedOnce(vector._values[1], vector._values[1]);
+  const Scalar third  = tarch::la::productRoundedOnce(vector._values[2], vector._values[2]);
+  const Scalar fourth = tarch::la::productRoundedOnce(vector._values[3], vector._values[3]);
   return first + second + third + fourth;
 }
 

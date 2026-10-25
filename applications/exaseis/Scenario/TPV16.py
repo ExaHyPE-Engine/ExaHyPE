@@ -88,7 +88,7 @@ class TPV16(DynamicRuptureScenario):
       );
 
       Q[Shortcuts::criticalSlipDistance] = 0.4;
-      if (std::abs(x[1] - 20.0) < 24.0 and x[1] < 19.5) {
+      if (std::abs(x[2] - 20.0) < 24.0 and x[1] < 19.5) {
         Q[Shortcuts::criticalSlipDistance] = faultSampler.samplePiecewiseConstant(
           "slip",
           {x[2], x[1]}

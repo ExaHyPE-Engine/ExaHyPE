@@ -22,6 +22,9 @@ tarch::accelerator::addDeviceCopy([[maybe_unused]] const Value& hostValue) {
 #endif
 }
 
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL) and defined(SYCL_EXT_ONEAPI_DEVICE_GLOBAL)
+#include "tarch/accelerator/sycl/DeviceCopies.cpph"
+#else
 TARGET_DECLARE
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD Value&
@@ -30,3 +33,4 @@ tarch::accelerator::getDeviceCopy() {
   return deviceCopy;
 }
 TARGET_DECLARE_END
+#endif

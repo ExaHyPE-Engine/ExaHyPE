@@ -15,6 +15,35 @@
 #include <mpi.h>
 
 TARGET_DECLARE
+/**
+ * Returns the index along one axis of the lattice cell that contains coordinate. A coordinate
+ * within tarch::la::NUMERICAL_ZERO_DIFFERENCE of a face belongs to the neighbour of that face on the
+ * side of the lattice centre. A coordinate on the face through the lattice centre belongs to the
+ * cell below that face.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::particles::getLatticeIndexOf(
+  const double coordinate,
+  const double latticeOffset,
+  const double width,
+  const int    cellsPerAxis
+) {
+  assertion(width > 0.0, width);
+  assertion(cellsPerAxis > 0, cellsPerAxis);
+  const int    index     = static_cast<int>(std::floor((coordinate - latticeOffset) / width));
+  const double lowerFace = latticeOffset + index * width;
+  int          face      = -1;
+  if (coordinate - lowerFace <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
+    face = index;
+  } else if (lowerFace + width - coordinate <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
+    face = index + 1;
+  }
+  if (face < 0) {
+    return index;
+  }
+  return 2 * face < cellsPerAxis ? face : face - 1;
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::particles::Particle::getX(const int axis) const {
   assertion(axis >= 0 and axis < DIMENSIONS, axis);
@@ -85,8 +114,8 @@ exahype2::particles::ParticleSetView<NumberOfData>::markAsMovedOutOfCell(const i
 }
 
 /**
- * Returns whether the cell that holds the particle index also holds position, with the rule of
- * ParticleSet::getSlotAt(). A position on the lower face of a cell belongs to the cell below it.
+ * Returns whether the cell that contains the particle index also contains position, with the rule
+ * of exahype2::particles::getLatticeIndexOf().
  */
 template <int NumberOfData>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
@@ -98,16 +127,13 @@ exahype2::particles::ParticleSetView<NumberOfData>::isInsideCell(
 ) const {
   const int slot = getSlot(index);
   assertion(slot >= 0, index, slot);
+  const int  cellsPerAxis = peano4::power(peano4::SubdivisionFactor, cellConnectivity.getCellLevel(slot));
+  const auto lattice      = cellConnectivity.getCellLattice(slot);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     const double width = cellConnectivity.getCellWidth(slot, axis);
-    const int    ownIndex =
-      static_cast<int>(std::floor((cellConnectivity.getCellCentre(slot, axis) - domainOffset(axis)) / width));
-    int          cellIndex = static_cast<int>(std::floor((position(axis) - domainOffset(axis)) / width));
-    const double lowerFace = domainOffset(axis) + cellIndex * width;
-    if (cellIndex >= 1 and position(axis) - lowerFace <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
-      cellIndex--;
-    }
-    if (cellIndex != ownIndex) {
+    if (
+      exahype2::particles::getLatticeIndexOf(position(axis), domainOffset(axis), width, cellsPerAxis) != lattice(axis)
+    ) {
       return false;
     }
   }
@@ -146,7 +172,7 @@ exahype2::particles::ParticleSet<NumberOfData>::getSize() const noexcept {
 
 /**
  * Returns the number of particles of all ranks that insert() counted. A relocation keeps the
- * count. A particle that no rank holds stops the run.
+ * count. A particle outside the cells of every rank stops the run.
  */
 template <int NumberOfData>
 INLINE_METHOD int
@@ -217,8 +243,7 @@ exahype2::particles::ParticleSet<NumberOfData>::getSlot(const int index) const {
 
 /**
  * Returns the slot of the cell of this rank that contains position, or a negative value if no cell
- * of this rank contains it. A position on a face belongs to the lower cell along the face normal.
- * A position on the lower domain wall belongs to the cell at the wall.
+ * of this rank contains it. Every axis picks its cell with exahype2::particles::getLatticeIndexOf().
  */
 template <int NumberOfData>
 INLINE_METHOD int
@@ -235,13 +260,12 @@ exahype2::particles::ParticleSet<NumberOfData>::getSlotAt(
     tarch::la::Vector<DIMENSIONS, int> lattice;
     bool                               insideDomain = true;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      const double width     = cellConnectivity.getWidthOfLevel(level, axis);
-      const double relative  = (position(axis) - domainOffset(axis)) / width;
-      int          index     = static_cast<int>(std::floor(relative));
-      const double lowerFace = domainOffset(axis) + index * width;
-      if (index >= 1 and position(axis) - lowerFace <= tarch::la::NUMERICAL_ZERO_DIFFERENCE) {
-        index--;
-      }
+      const int index = exahype2::particles::getLatticeIndexOf(
+        position(axis),
+        domainOffset(axis),
+        cellConnectivity.getWidthOfLevel(level, axis),
+        cellsPerAxis
+      );
       insideDomain  = insideDomain and index >= 0 and index < cellsPerAxis;
       lattice(axis) = index;
     }
@@ -361,7 +385,7 @@ exahype2::particles::ParticleSet<NumberOfData>::relocate(const peano4::CellConne
 
 /**
  * Moves the numberOfMovedParticles particles that a kernel marked with
- * ParticleSetView::markAsMovedOutOfCell() into the cells that hold them, on this rank or on
+ * ParticleSetView::markAsMovedOutOfCell() into the cells that contain them, on this rank or on
  * another one. Only the marked particles leave the device. Every rank calls it after every time
  * step of a moving set, with zero for a rank without marked particles.
  */
@@ -474,9 +498,9 @@ exahype2::particles::ParticleSet<NumberOfData>::takeMovedParticlesFromTheDevice(
 }
 
 /**
- * Appends the particles of values and numbers to the cells that hold them, at once for a cell on
+ * Appends the particles of values and numbers to the cells that contain them, at once for a cell on
  * this rank and after an exchange with the other ranks otherwise. Every rank calls it at the same
- * time. A particle that no rank holds stops the run.
+ * time. A particle outside the cells of every rank stops the run.
  */
 template <int NumberOfData>
 INLINE_METHOD void

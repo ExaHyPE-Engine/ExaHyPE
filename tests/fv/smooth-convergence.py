@@ -66,7 +66,7 @@ fv_solver = exahype2.fv.Solver(
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_stepping=exahype2.TimeStepping.Fixed(0.0001),
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
     scheme=exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.vanalbada),
 )
 

@@ -52,6 +52,36 @@ namespace tarch::accelerator {
   INLINE_METHOD void teamBarrier([[maybe_unused]] const OmptTeam& team) {
 #pragma omp barrier
   }
+
+  /**
+   * Returns whether condition is true in every thread of the team. Every thread receives the same
+   * value.
+   */
+  INLINE_METHOD bool isTrueInEveryThreadOfTeam(const OmptTeam& team, const bool condition) {
+    team.votes[omp_get_thread_num()] = condition ? 1 : 0;
+#pragma omp barrier
+    bool isTrueInEveryThread = true;
+    for (int thread = 0; thread < omp_get_num_threads(); thread++) {
+      isTrueInEveryThread = isTrueInEveryThread and team.votes[thread] != 0;
+    }
+#pragma omp barrier
+    return isTrueInEveryThread;
+  }
+
+  /**
+   * Returns whether condition is true in any thread of the team. Every thread receives the same
+   * value.
+   */
+  INLINE_METHOD bool isTrueInAnyThreadOfTeam(const OmptTeam& team, const bool condition) {
+    team.votes[omp_get_thread_num()] = condition ? 1 : 0;
+#pragma omp barrier
+    bool isTrueInAnyThread = false;
+    for (int thread = 0; thread < omp_get_num_threads(); thread++) {
+      isTrueInAnyThread = isTrueInAnyThread or team.votes[thread] != 0;
+    }
+#pragma omp barrier
+    return isTrueInAnyThread;
+  }
   TARGET_DECLARE_END
 
   /**
@@ -148,9 +178,10 @@ namespace tarch::accelerator {
 #pragma omp parallel num_threads(threads)
     {
       alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
-#pragma omp allocate(teamScratch) allocator(omp_pteam_mem_alloc)
+      static int                                         teamVotes[OmptThreadsPerTeam];
+#pragma omp allocate(teamScratch, teamVotes) allocator(omp_pteam_mem_alloc)
       for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
-        functor(team, tarch::accelerator::OmptTeam{teamScratch});
+        functor(team, tarch::accelerator::OmptTeam{teamScratch, teamVotes});
 #pragma omp barrier
       }
     }

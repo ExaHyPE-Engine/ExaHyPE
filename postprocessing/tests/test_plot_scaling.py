@@ -86,7 +86,7 @@ class PlotScalingTest(unittest.TestCase):
         for value, expected in zip(efficiency, [1.0, 1.0, 0.8]):
             self.assertAlmostEqual(value, expected)
 
-    def test_the_strong_scaling_plot_holds_the_run_and_the_ideal_line(self):
+    def test_the_strong_scaling_plot_draws_the_run_and_the_ideal_line(self):
         figure = _create_strong_scaling_plot(RUNS, ("Number of Cores", 48.0))
         axis = figure.axes[0]
         self.assertEqual(axis.get_yscale(), "log")
@@ -96,7 +96,7 @@ class PlotScalingTest(unittest.TestCase):
         self.assertEqual(labels, ["$81^3$", "Ideal"])
         self.assertEqual(list(axis.get_lines()[0].get_xdata()), [2, 4, 8])
 
-    def test_the_efficiency_plot_holds_the_run_and_the_ideal(self):
+    def test_the_efficiency_plot_draws_the_run_and_the_ideal(self):
         figure = _create_efficiency_plot(RUNS, None)
         axis = figure.axes[0]
         self.assertEqual(axis.get_yscale(), "linear")

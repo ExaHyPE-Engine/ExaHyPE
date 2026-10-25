@@ -17,8 +17,8 @@ fields:
 
 - `refinementControl` selects `Refine` or `Erase`.
 - `level` is the cell level counted from the root.
-- `latticeIndex` is the cell position on that level's lattice, which holds
-  peano4::SubdivisionFactor cells per parent cell along each axis.
+- `latticeIndex` is the cell position on the lattice of that level. The lattice
+  contains peano4::SubdivisionFactor cells per parent cell along each axis.
 
 A request is trivially copyable and travels between ranks as a byte record.
 The result is independent of the order of the requests.
@@ -34,11 +34,11 @@ containing the two ends of that band. Existing cells in these regions flag
 their unrefined corner vertices. Levels finer than the requesting cell do not
 participate.
 
-An erase request names the parent cell whose children may disappear. A flagged
-vertex is removed only when every existing adjacent cell asks to erase and no
-refine request protects that region. Finer flagged vertices veto the removal of
-a coarse flag that they still require. All removals are evaluated against one
-snapshot, so the request order does not affect the result.
+An erase request names the parent cell whose children may disappear. The regrid
+removes a flagged vertex only when every existing adjacent cell asks to erase and
+no refine request protects that region. Finer flagged vertices veto the removal
+of a coarse flag that they still require. The regrid evaluates all removals
+against one snapshot. Every order of the requests then gives the same result.
 
 The resulting flag sets are sorted by lattice key. Every rank that receives
 the same request set therefore derives the same refinement and ownership

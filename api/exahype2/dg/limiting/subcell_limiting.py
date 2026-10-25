@@ -156,7 +156,7 @@ class SubcellLimiting:
             "tables": [
                 table(
                     "QuadraturePoints1D",
-                    flatten(self._basis.quadrature_points),
+                    self._basis.rounded_quadrature_points,
                     self._basis.QuadraturePoints1DDocumentation,
                 ),
                 table(

@@ -11,11 +11,11 @@ namespace exahype2::dg::tests {
 class exahype2::dg::tests::KernelsTest final : public tarch::tests::TestCase {
 public:
   KernelsTest();
-  KernelsTest(const KernelsTest&)            = delete;
-  KernelsTest(KernelsTest&&)                 = delete;
-  KernelsTest& operator=(const KernelsTest&) = delete;
-  KernelsTest& operator=(KernelsTest&&)      = delete;
-  ~KernelsTest() override                    = default;
+  KernelsTest(const KernelsTest& other)            = delete;
+  KernelsTest(KernelsTest&& other)                 = delete;
+  KernelsTest& operator=(const KernelsTest& other) = delete;
+  KernelsTest& operator=(KernelsTest&& other)      = delete;
+  ~KernelsTest() override                          = default;
 
   void run() override;
 
@@ -41,7 +41,7 @@ private:
   void testLinearFormBuildsTheFluxFromTheStateJump();
   void testLinearFormAddsTheNonconservativeProduct();
   void testLinearFormAppliesTheMaterialParameterMatrix();
-  void testAnInteriorFaceHoldsTheDifferencesToItsOwnFluxes();
+  void testAnInteriorFaceStoresTheDifferencesToItsOwnFluxes();
   void testABoundaryFaceTakesTheBoundaryState();
   void testTheSolversRiemannSolverReceivesTheFace();
   void testTheLinearRiemannSolverWritesOppositeDissipations();
@@ -54,6 +54,8 @@ private:
   void testAnisotropicAccumulation();
   void testInvalidEigenvalueAccumulation();
   void testReduceMaxEigenvaluesOverTheCellNodes();
+  void testTheFinishOfACellPostprocessesItsNodesOnce();
+  void testTheMeanOfAFaceKeepsItsBitsUnderReflectionsAndSwaps();
   void testTheReductionKeepsTheLargerAndAnInvalidObservation();
   void testTheStateInterpolationFillsTheCoarseSideOfTheFineFaces();
   void testTheStateRestrictionFillsTheFineSideOfTheCoarseFace();

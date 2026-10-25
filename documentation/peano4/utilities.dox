@@ -3,28 +3,28 @@
 
 ## d-dimensional loops
 
-Peano builds every core library for two and three spatial dimensions. The preprocessor macro
-`DIMENSIONS`, which the build system sets per target from the CMake `DIMENSION` keyword, selects
-the dimension at compile time, and the cache variable `SUPPORTED_DIMENSIONS` lists the dimensions
-of a build.
+Peano builds every core library for two and three spatial dimensions. The build system sets the
+preprocessor macro `DIMENSIONS` per target from the CMake `DIMENSION` keyword. The macro selects the
+dimension at compile time. The cache variable `SUPPORTED_DIMENSIONS` lists the dimensions of a
+build.
 
 The header `peano4/Loop.h` offers the d-dimensional loops:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 peano4::dForEach(20, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
-  // k holds the d-dimensional index of the current entry of the 20^d patch.
+  // k is the d-dimensional index of the current entry of the 20^d patch.
   const tarch::la::Vector<DIMENSIONS, double> somePosition =
     offset + tarch::la::convertScalar<double>(k) * h;
   [...]
 });
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-peano4::dForEach also takes a vector of per-axis ranges, and peano4::dForEachCorner visits the
-2^d corners of a cube together with their linearised index. Both are constexpr functions, so they
-take the execution space of their caller: Host code passes host lambdas, and a kernel passes
-device lambdas.
+peano4::dForEach also takes a vector of per-axis ranges. peano4::dForEachCorner visits the 2^d
+corners of a cube together with their linearised index. Both are constexpr functions. They run in
+the execution space of their caller. Host code passes host lambdas. A kernel passes device
+lambdas.
 
-peano4::dLinearised() converts a d-dimensional index into one integer, and peano4::dDelinearised()
+peano4::dLinearised() converts a d-dimensional index into one integer. peano4::dDelinearised()
 converts the integer back. peano4::dLinearisedExclusive() and peano4::dDelinearisedExclusive() do
-the same for the indices of a face, which skip one dimension.
+the same for the indices of a face. These indices skip one dimension.
 */

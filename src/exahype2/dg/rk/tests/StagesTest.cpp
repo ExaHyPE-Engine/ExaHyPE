@@ -549,9 +549,21 @@ exahype2::dg::rk::tests::StagesTest::testAConstantFluxGivesZerosBitwise() {
   for (int entry = 0; entry < UnknownsPerStage; entry++) {
     estimate[entry] = 9.0;
   }
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<FluxSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
 
   StageOf<FluxSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -578,9 +590,21 @@ exahype2::dg::rk::tests::StagesTest::testTheDivergenceOfALinearFluxIsItsSlope() 
   double cellState[StateValuesPerCell];
   fillLinearState(tables, cellState, 0, Slope);
   double estimate[UnknownsPerStage] = {};
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<FluxSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
 
   StageOf<FluxSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -615,9 +639,21 @@ exahype2::dg::rk::tests::StagesTest::testTheSourceTermIsScaledByTheTimeStep() {
   for (int entry = 0; entry < UnknownsPerStage; entry++) {
     estimate[entry] = 9.0;
   }
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<SourceSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
 
   StageOf<SourceSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -648,8 +684,20 @@ exahype2::dg::rk::tests::StagesTest::testTheNonconservativeProductSeesTheNodalGr
   fillLinearState(tables, cellState, DIMENSIONS - 1, Slope);
   double estimate[UnknownsPerStage] = {};
 
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<ProductSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
   StageOf<ProductSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -680,8 +728,20 @@ exahype2::dg::rk::tests::StagesTest::testTheDiffusiveFluxSeesTheNodalGradients()
   fillLinearState(tables, cellState, DIMENSIONS - 1, Slope);
   double estimate[UnknownsPerStage] = {};
 
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<DiffusiveSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
   StageOf<DiffusiveSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -719,8 +779,31 @@ exahype2::dg::rk::tests::StagesTest::testMirroredCellsReceiveMirroredEstimates()
 
   double estimate[NodesPerCell * AcousticUnknowns];
   double mirroredEstimate[NodesPerCell * AcousticUnknowns];
+  double nodalFluxes[DIMENSIONS * NodesPerCell * AcousticUnknowns];
+  double mirroredNodalFluxes[DIMENSIONS * NodesPerCell * AcousticUnknowns];
+  exahype2::dg::evaluateNodalFluxes<AcousticSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
+  exahype2::dg::evaluateNodalFluxes<AcousticSolver>(
+    mirroredNodalFluxes,
+    mirroredCellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
   StageOf<AcousticSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -731,6 +814,7 @@ exahype2::dg::rk::tests::StagesTest::testMirroredCellsReceiveMirroredEstimates()
   );
   StageOf<AcousticSolver>::volumeIntegral(
     mirroredCellState,
+    mirroredNodalFluxes,
     mirroredEstimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -765,18 +849,24 @@ exahype2::dg::rk::tests::StagesTest::testTheFaceStatesOfALinearStateAreItsValues
   fillLinearState(tables, stageState, 0, Slope);
   FaceHalves halves;
 
-  StageOf<FluxSolver>::projectOntoFaces(
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<FluxSolver>(
+    nodalFluxes,
     stageState,
-    halves.statePointers,
-    halves.fluxPointers,
-    tables.leftFaceCoefficients.data(),
-    tables.rightFaceCoefficients.data(),
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
     cellCentre,
     cellSize,
     TimeStamp,
     TimeStepSize
+  );
+  StageOf<FluxSolver>::projectOntoFaces(
+    stageState,
+    nodalFluxes,
+    halves.statePointers,
+    halves.fluxPointers,
+    tables.leftFaceCoefficients.data(),
+    tables.rightFaceCoefficients.data()
   );
 
   for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {

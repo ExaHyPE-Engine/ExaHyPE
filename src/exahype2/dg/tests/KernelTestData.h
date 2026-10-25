@@ -237,8 +237,8 @@ private:
 };
 
 /**
- * A chain of cells along the first axis. Two neighbouring cells hold the face between them and
- * every other face belongs to one cell. The work list stores every face once with one of its cells
+ * A chain of cells along the first axis. The face between two neighbouring cells belongs to both
+ * cells and every other face belongs to one cell. The work list stores every face once with one of its cells
  * and the number of the face in that cell.
  */
 struct exahype2::dg::tests::CellChain final {

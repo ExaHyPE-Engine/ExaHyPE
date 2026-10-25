@@ -300,8 +300,9 @@ namespace {
   struct CopyBoundarySolver final : Layout<NumberOfVolumesPerAxis, NumberOfUnknowns, Constant>,
                                     CopyBoundaryTerm<NumberOfUnknowns> {};
 
+  template <int VolumesPerAxis>
   struct CopyBoundaryMusclSolver final
-    : Layout<NumberOfVolumesPerAxis, NumberOfUnknowns, LimitedLinear<exahype2::fv::limiter::Zero>>,
+    : Layout<VolumesPerAxis, NumberOfUnknowns, LimitedLinear<exahype2::fv::limiter::Zero>>,
       CopyBoundaryTerm<NumberOfUnknowns> {};
 
   struct IncrementBoundarySolver final : Layout<NumberOfVolumesPerAxis, NumberOfUnknowns, Constant>,
@@ -380,6 +381,37 @@ namespace {
       [[maybe_unused]] const int                                    normal
     ) {
       return 1.0;
+    }
+  };
+
+  /**
+   * A scalar that every axis advects with the position along that axis as its velocity.
+   */
+  template <typename Reconstruct>
+  struct RadialAdvectionSolver final : SchemeLayout<NumberOfVolumesPerAxis, 1, Reconstruct, Rule::Adaptive> {
+    template <typename ComputePrecision>
+    static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
+      const ComputePrecision* NOALIAS const                         state,
+      const tarch::la::Vector<DIMENSIONS, double>&                  position,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      const int                                                     normal,
+      ComputePrecision* NOALIAS const                               fluxes
+    ) {
+      fluxes[0] = static_cast<ComputePrecision>(position(normal)) * state[0];
+    }
+
+    template <typename ComputePrecision>
+    static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        state,
+      const tarch::la::Vector<DIMENSIONS, double>&                  position,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      const int                                                     normal
+    ) {
+      return std::abs(position(normal));
     }
   };
 
@@ -578,11 +610,116 @@ namespace {
       );
     }
   };
+
+  /**
+   * Advances the patch of one cell in place with FiniteVolumeScheme::updateInTeam() of Kernel and
+   * reduces the wave speeds of every thread into the accumulator of the team.
+   */
+  template <typename Kernel>
+  struct UpdatePatchOfCellInTeam final {
+    double*       patches{nullptr};
+    const double* faces{nullptr};
+    const double* cellCentres{nullptr};
+    const double* cellSizes{nullptr};
+    double        timeStepSize{0.0};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      const int                            cell,
+      const tarch::accelerator::TeamHandle team,
+      double&                              accumulator
+    ) const {
+      const double* facesOfCell[peano4::FacesPerCell];
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        facesOfCell[faceNumber] =
+          faces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::ValuesPerFace;
+      }
+      const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
+      const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
+      const tarch::la::Vector<DIMENSIONS, double> cellSize(cellSizes + coordinateOffset);
+      const double                                partial = Kernel::updateInTeam(
+        team,
+        patches + static_cast<std::ptrdiff_t>(cell) * Kernel::ValuesPerPatch,
+        facesOfCell,
+        cellCentre,
+        cellSize,
+        exahype2::dg::tests::KernelTestSetup::TimeStamp,
+        timeStepSize,
+        cell % 2 == 0 ? NoBoundaryFaces : 1
+      );
+      const tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction> reducer{accumulator};
+      tarch::accelerator::reduceOverTeam(team, partial, reducer);
+    }
+  };
+
+  /**
+   * Fills the outer volumes of one face of a cell at one tangential position with
+   * FiniteVolumeScheme::applyBoundaryConditions() of Kernel. entry runs over the tangential volumes
+   * of the faces of the cells with the tangential volume fastest and the face number next.
+   */
+  template <typename Kernel>
+  struct ApplyBoundaryConditionsAtTangentialVolume final {
+    double*       faces{nullptr};
+    const double* cellCentres{nullptr};
+    const double* cellSizes{nullptr};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry) const {
+      const int            face             = entry / Kernel::VolumesPerLayer;
+      const std::ptrdiff_t coordinateOffset = static_cast<std::ptrdiff_t>(face / peano4::FacesPerCell) * DIMENSIONS;
+      Kernel::applyBoundaryConditions(
+        faces + static_cast<std::ptrdiff_t>(face) * Kernel::ValuesPerFace,
+        tarch::la::Vector<DIMENSIONS, double>(cellCentres + coordinateOffset),
+        tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
+        exahype2::dg::tests::KernelTestSetup::TimeStamp,
+        face % peano4::FacesPerCell,
+        entry % Kernel::VolumesPerLayer
+      );
+    }
+  };
+
+  /**
+   * Copies the boundary layers of the patch of one cell into the faces of the cell with
+   * FiniteVolumeScheme::projectOntoFacesInTeam() of Kernel.
+   */
+  template <typename Kernel>
+  struct ProjectPatchOfCellInTeam final {
+    const double* patches{nullptr};
+    double*       faces{nullptr};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int cell, const tarch::accelerator::TeamHandle team) const {
+      double* facesOfCell[peano4::FacesPerCell];
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        facesOfCell[faceNumber] =
+          faces + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::ValuesPerFace;
+      }
+      Kernel::projectOntoFacesInTeam(
+        team,
+        patches + static_cast<std::ptrdiff_t>(cell) * Kernel::ValuesPerPatch,
+        facesOfCell
+      );
+    }
+  };
   TARGET_DECLARE_END
 
   template <int VolumesPerAxis>
   constexpr int getNumberOfVolumesInPatch() {
     return peano4::power(VolumesPerAxis, DIMENSIONS);
+  }
+
+  /**
+   * Fills the outer half of face faceNumber with FiniteVolumeScheme::applyBoundaryConditions() of
+   * Kernel at every tangential volume.
+   */
+  template <typename Kernel>
+  void applyBoundaryConditionsToFace(
+    double* const                                face,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    const double                                 timeStamp,
+    const int                                    faceNumber
+  ) {
+    for (int tangentialVolume = 0; tangentialVolume < Kernel::VolumesPerLayer; tangentialVolume++) {
+      Kernel::applyBoundaryConditions(face, cellCentre, cellSize, timeStamp, faceNumber, tangentialVolume);
+    }
   }
 
   template <typename Precision>
@@ -1175,6 +1312,26 @@ namespace {
     return patch;
   }
 
+  using TransferKernel = exahype2::fv::FiniteVolumeScheme<HaloProfileSolver, double>;
+
+  /**
+   * Fills every volume of child from parent with interpolateVolume().
+   */
+  void interpolateEveryVolume(const double* const parent, double* const child, const int childPosition) {
+    for (int fineVolume = 0; fineVolume < TransferKernel::VolumesPerPatch; fineVolume++) {
+      TransferKernel::interpolateVolume(parent, child, childPosition, fineVolume);
+    }
+  }
+
+  /**
+   * Fills every volume of parent from children with restrictVolume().
+   */
+  void restrictEveryVolume(const double* const children[peano4::ChildrenPerCell], double* const parent) {
+    for (int coarseVolume = 0; coarseVolume < TransferKernel::VolumesPerPatch; coarseVolume++) {
+      TransferKernel::restrictVolume(children, parent, coarseVolume);
+    }
+  }
+
   std::vector<double> updateOnDevice(
     const std::vector<double>&            patches,
     const std::vector<double>&            faces,
@@ -1205,6 +1362,99 @@ namespace {
     deviceEigenvalues.copyBack(eigenvalues);
     return eigenvalues;
   }
+
+  /**
+   * Advances every patch of patches in place by timeStepSize with the teams of an update of Kernel
+   * on the device and returns the largest wave speed.
+   */
+  template <typename Kernel>
+  double updateInTeamsOnDevice(
+    std::vector<double>&                  patches,
+    const std::vector<double>&            faces,
+    const exahype2::dg::tests::CellChain& geometry,
+    const double                          timeStepSize
+  ) {
+    const exahype2::dg::tests::DeviceBuffer<double> devicePatches(patches);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceFaces(faces);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
+    const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
+    double                                          eigenvalue = 0.0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::TeamRange(
+        exahype2::dg::tests::KernelTestSetup::NumberOfCells,
+        Kernel::getTeamThreads(),
+        Kernel::template getTeamScratchBytes<double>()
+      ),
+      UpdatePatchOfCellInTeam<Kernel>{
+        devicePatches.getData(),
+        deviceFaces.getData(),
+        deviceCellCentres.getData(),
+        deviceCellSizes.getData(),
+        timeStepSize
+      },
+      tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{eigenvalue}
+    );
+    devicePatches.copyBack(patches);
+    return eigenvalue;
+  }
+
+  /**
+   * Advances every patch of patches in place by timeStepSize on the host and returns the largest
+   * wave speed.
+   */
+  template <typename Kernel>
+  double updateInPlaceOnHost(
+    std::vector<double>&                  patches,
+    const std::vector<double>&            faces,
+    const exahype2::dg::tests::CellChain& geometry,
+    const double                          timeStepSize
+  ) {
+    double eigenvalue = 0.0;
+    for (int cell = 0; cell < exahype2::dg::tests::KernelTestSetup::NumberOfCells; cell++) {
+      const double* facesOfCell[peano4::FacesPerCell];
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        facesOfCell[faceNumber] = faces.data()
+          + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::ValuesPerFace;
+      }
+      const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
+      const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
+      const tarch::la::Vector<DIMENSIONS, double> cellSize(geometry.cellSizes.data() + coordinateOffset);
+      double* const patch = patches.data() + static_cast<std::ptrdiff_t>(cell) * Kernel::ValuesPerPatch;
+      eigenvalue          = exahype2::MaxEigenvalueReduction::combine(
+        eigenvalue,
+        Kernel::update(
+          patch,
+          patch,
+          facesOfCell,
+          cellCentre,
+          cellSize,
+          exahype2::dg::tests::KernelTestSetup::TimeStamp,
+          timeStepSize,
+          cell % 2 == 0 ? NoBoundaryFaces : 1
+        )
+      );
+    }
+    return eigenvalue;
+  }
+
+  /**
+   * Writes the smooth Euler states of fillSmoothEulerPatchAndFaces() into the patch and the faces of
+   * every cell of the test chain.
+   */
+  template <typename Solver>
+  void fillSmoothEulerPatchesAndFacesOfChain(std::vector<double>& patches, std::vector<double>& faces) {
+    std::vector<double>              q;
+    std::vector<std::vector<double>> faceStorage;
+    fillSmoothEulerPatchAndFaces<Solver>(q, faceStorage);
+    patches.clear();
+    faces.clear();
+    for (int cell = 0; cell < exahype2::dg::tests::KernelTestSetup::NumberOfCells; cell++) {
+      patches.insert(patches.end(), q.begin(), q.end());
+      for (const std::vector<double>& face : faceStorage) {
+        faces.insert(faces.end(), face.begin(), face.end());
+      }
+    }
+  }
 } // namespace
 
 exahype2::fv::tests::FiniteVolumeSchemeTest::FiniteVolumeSchemeTest() :
@@ -1220,15 +1470,17 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::run() {
   testMethod(testBoundaryConditionsCopyAUniformStateOntoTheOuterHalf);
   testMethod(testEachOuterLayerReadsTheMatchingInnerLayer);
   testMethod(testEachOuterVolumeIsWrittenOnce);
+  testMethod(testEveryThreadOfADeviceAppliesTheBoundaryConditionsLikeTheHost);
   testMethod(testProjectionFillsTheOwnHalfOfEveryFace);
+  testMethod(testEveryTeamOfADeviceProjectsLikeTheHost);
   testMethod(testHaloInterpolationReproducesALinearProfile);
   testMethod(testAConstantFaceInterpolatesBitwise);
   testMethod(testHaloInjectionCopiesTheCoveringVolume);
   testMethod(testHaloRestrictionAveragesTheCoveringVolumes);
   testMethod(testConstantFineFacesRestrictBitwise);
-  testMethod(testPatchInterpolationCopiesTheCoveringVolume);
-  testMethod(testPatchRestrictionInvertsTheInterpolation);
-  testMethod(testPatchRestrictionAveragesExactly);
+  testMethod(testVolumeInterpolationCopiesTheCoveringVolume);
+  testMethod(testVolumeRestrictionInvertsTheInterpolation);
+  testMethod(testVolumeRestrictionAveragesExactly);
   testMethod(testAVolumeFaceOnTheDomainBoundaryReachesTheRiemannSolver);
   testMethod(testZeroTimeStepPreservesState);
   testMethod(testUniformStateIsPreserved);
@@ -1246,12 +1498,14 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::run() {
   testMethod(testPeriodicAdvectionConservesMass);
   testMethod(testSodShockTubeReachesStarStates);
   testMethod(testMirroredVolumesReceiveMirroredStates);
+  testMethod(testAPositionDependentFluxKeepsMirroredVolumesMirrored);
   testMethod(testReconstructionHookReproducingDefaultChangesNothing);
   testMethod(testLimiterHookReproducingMinmodChangesNothing);
   testMethod(testThePostprocessingRunsBeforeTheWaveSpeedsOfTheUpdatedPatch);
   testMethod(testReduceMaxEigenvalueTakesTheLargestWaveSpeedOverTheVolumes);
   testMethod(testMeasureErrorsSumsTheWeightedNorms);
   testMethod(testEveryCellOfADeviceRangeUpdatesLikeTheHost);
+  testMethod(testEveryTeamOfADeviceUpdatesInPlaceLikeTheHost);
   testMethod(testTheTermRingKeepsAWindowOfEntries);
   testMethod(testTheSweepUpdatesLikeTheVolumeUpdates);
   testMethod(testTheSweepUpdatesInPlaceLikeIntoASecondPatch);
@@ -1471,7 +1725,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testBoundaryConditionsCopyAUniformS
 
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     std::vector<double> face(Kernel::ValuesPerFace, uniformValue);
-    Kernel::applyBoundaryConditions(face.data(), patchCentre, patchSize, 0.0, faceNumber);
+    applyBoundaryConditionsToFace<Kernel>(face.data(), patchCentre, patchSize, 0.0, faceNumber);
     for (const double entry : face) {
       validateNumericalEqualsWithParams1(entry, uniformValue, faceNumber);
     }
@@ -1480,7 +1734,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testBoundaryConditionsCopyAUniformS
 
 void
 exahype2::fv::tests::FiniteVolumeSchemeTest::testEachOuterLayerReadsTheMatchingInnerLayer() {
-  using Kernel = exahype2::fv::FiniteVolumeScheme<CopyBoundaryMusclSolver, double>;
+  using Kernel = exahype2::fv::FiniteVolumeScheme<CopyBoundaryMusclSolver<NumberOfVolumesPerAxis>, double>;
   const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
   const tarch::la::Vector<DIMENSIONS, double> patchSize(1.0);
 
@@ -1500,7 +1754,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEachOuterLayerReadsTheMatchingI
       }
     }
 
-    Kernel::applyBoundaryConditions(face.data(), patchCentre, patchSize, 0.0, faceNumber);
+    applyBoundaryConditionsToFace<Kernel>(face.data(), patchCentre, patchSize, 0.0, faceNumber);
 
     for (int tangentialVolume = 0; tangentialVolume < Kernel::VolumesPerLayer; tangentialVolume++) {
       auto haloVolume = peano4::dDelinearisedExclusive(tangentialVolume, Kernel::PatchSize, normal);
@@ -1530,7 +1784,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEachOuterVolumeIsWrittenOnce() 
 
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     std::vector<double> face(Kernel::ValuesPerFace, 0.0);
-    Kernel::applyBoundaryConditions(face.data(), patchCentre, patchSize, 0.0, faceNumber);
+    applyBoundaryConditionsToFace<Kernel>(face.data(), patchCentre, patchSize, 0.0, faceNumber);
 
     int    numberOfWrittenEntries = 0;
     double maximumEntry           = 0.0;
@@ -1543,6 +1797,44 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEachOuterVolumeIsWrittenOnce() 
     validateEqualsWithParams1(numberOfWrittenEntries, expectedWrittenEntries, faceNumber);
     validateNumericalEqualsWithParams1(maximumEntry, 1.0, faceNumber);
   }
+}
+
+/**
+ * Every thread of a device range fills the outer volumes of its face at its tangential position like
+ * the host.
+ */
+void
+exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryThreadOfADeviceAppliesTheBoundaryConditionsLikeTheHost() {
+  using Kernel        = exahype2::fv::FiniteVolumeScheme<CopyBoundaryMusclSolver<20>, double>;
+  constexpr int Faces = exahype2::dg::tests::KernelTestSetup::NumberOfCells * peano4::FacesPerCell;
+  const exahype2::dg::tests::CellChain geometry;
+  std::vector<double>                  hostFaces =
+    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Faces) * Kernel::ValuesPerFace, 1.0, 0.001);
+  std::vector<double> deviceFaces(hostFaces);
+
+  const exahype2::dg::tests::DeviceBuffer<double> facesOnDevice(deviceFaces);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(Faces * Kernel::VolumesPerLayer),
+    ApplyBoundaryConditionsAtTangentialVolume<Kernel>{
+      facesOnDevice.getData(),
+      deviceCellCentres.getData(),
+      deviceCellSizes.getData()
+    }
+  );
+  facesOnDevice.copyBack(deviceFaces);
+  for (int face = 0; face < Faces; face++) {
+    const std::ptrdiff_t coordinateOffset = static_cast<std::ptrdiff_t>(face / peano4::FacesPerCell) * DIMENSIONS;
+    applyBoundaryConditionsToFace<Kernel>(
+      hostFaces.data() + static_cast<std::ptrdiff_t>(face) * Kernel::ValuesPerFace,
+      tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),
+      tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
+      exahype2::dg::tests::KernelTestSetup::TimeStamp,
+      face % peano4::FacesPerCell
+    );
+  }
+  validateNumericalBuffersEquals(deviceFaces, hostFaces);
 }
 
 void
@@ -1585,6 +1877,46 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testProjectionFillsTheOwnHalfOfEver
       }
     });
   }
+}
+
+/**
+ * Every team of a device range copies the boundary layers of its patch into its faces like one host
+ * thread.
+ */
+void
+exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryTeamOfADeviceProjectsLikeTheHost() {
+  constexpr int Cells                           = exahype2::dg::tests::KernelTestSetup::NumberOfCells;
+  const auto    validateTeamsProjectLikeTheHost = [&](const auto kernel) {
+    using Kernel = typename decltype(kernel)::type;
+    const std::vector<double> patches =
+      exahype2::dg::tests::getRamp(static_cast<std::size_t>(Cells) * Kernel::ValuesPerPatch, 1.0, 0.001);
+    std::vector<double> hostFaces(static_cast<std::size_t>(Cells) * peano4::FacesPerCell * Kernel::ValuesPerFace, -1.0);
+    std::vector<double> deviceFaces(hostFaces);
+    const exahype2::dg::tests::DeviceBuffer<double> devicePatches(patches);
+    const exahype2::dg::tests::DeviceBuffer<double> facesOnDevice(deviceFaces);
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::TeamRange(Cells, tarch::accelerator::getTeamThreads(Kernel::ValuesPerHalfFace), 0),
+      ProjectPatchOfCellInTeam<Kernel>{devicePatches.getData(), facesOnDevice.getData()}
+    );
+    facesOnDevice.copyBack(deviceFaces);
+    for (int cell = 0; cell < Cells; cell++) {
+      double* facesOfCell[peano4::FacesPerCell];
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+        facesOfCell[faceNumber] = hostFaces.data()
+          + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * Kernel::ValuesPerFace;
+      }
+      Kernel::projectOntoFaces(
+        patches.data() + static_cast<std::ptrdiff_t>(cell) * Kernel::ValuesPerPatch,
+        facesOfCell
+      );
+    }
+    validateNumericalBuffersEquals(deviceFaces, hostFaces);
+  };
+
+  validateTeamsProjectLikeTheHost(std::type_identity<exahype2::fv::FiniteVolumeScheme<ProjectionSolver, double>>{});
+  validateTeamsProjectLikeTheHost(
+    std::type_identity<exahype2::fv::FiniteVolumeScheme<SodSolver<20, Constant>, double>>{}
+  );
 }
 
 void
@@ -1773,12 +2105,11 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testConstantFineFacesRestrictBitwis
 }
 
 void
-exahype2::fv::tests::FiniteVolumeSchemeTest::testPatchInterpolationCopiesTheCoveringVolume() {
-  using Kernel                     = exahype2::fv::FiniteVolumeScheme<HaloProfileSolver, double>;
+exahype2::fv::tests::FiniteVolumeSchemeTest::testVolumeInterpolationCopiesTheCoveringVolume() {
   const std::vector<double> parent = getRampPatch();
   for (int child = 0; child < Setup::ChildrenPerCell; child++) {
     std::vector<double> fine(Setup::ValuesPerCell, 0.0);
-    Kernel::interpolatePatch(parent.data(), fine.data(), child);
+    interpolateEveryVolume(parent.data(), fine.data(), child);
     const auto childPosition = peano4::dDelinearised(child, Setup::SubdivisionFactor);
     peano4::dForEach(Setup::DofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineVolume) {
       tarch::la::Vector<DIMENSIONS, int> coarseVolume;
@@ -1798,19 +2129,18 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testPatchInterpolationCopiesTheCove
 }
 
 void
-exahype2::fv::tests::FiniteVolumeSchemeTest::testPatchRestrictionInvertsTheInterpolation() {
-  using Kernel                     = exahype2::fv::FiniteVolumeScheme<HaloProfileSolver, double>;
+exahype2::fv::tests::FiniteVolumeSchemeTest::testVolumeRestrictionInvertsTheInterpolation() {
   const std::vector<double> parent = getRampPatch();
 
   std::vector<std::vector<double>> children(Setup::ChildrenPerCell, std::vector<double>(Setup::ValuesPerCell, 0.0));
   const double*                    childPointers[Setup::ChildrenPerCell];
   for (int child = 0; child < Setup::ChildrenPerCell; child++) {
-    Kernel::interpolatePatch(parent.data(), children[static_cast<std::size_t>(child)].data(), child);
+    interpolateEveryVolume(parent.data(), children[static_cast<std::size_t>(child)].data(), child);
     childPointers[child] = children[static_cast<std::size_t>(child)].data();
   }
 
   std::vector<double> restricted(Setup::ValuesPerCell, 0.0);
-  Kernel::restrictPatch(childPointers, restricted.data());
+  restrictEveryVolume(childPointers, restricted.data());
   for (int value = 0; value < Setup::ValuesPerCell; value++) {
     validateEqualsWithParams1(
       restricted[static_cast<std::size_t>(value)],
@@ -1824,8 +2154,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testPatchRestrictionInvertsTheInter
  * Two cancelling large values in the first coarse volume leave the exact mean of the remaining ones.
  */
 void
-exahype2::fv::tests::FiniteVolumeSchemeTest::testPatchRestrictionAveragesExactly() {
-  using Kernel                           = exahype2::fv::FiniteVolumeScheme<HaloProfileSolver, double>;
+exahype2::fv::tests::FiniteVolumeSchemeTest::testVolumeRestrictionAveragesExactly() {
   constexpr double                 Large = 1.0e16;
   std::vector<std::vector<double>> children(Setup::ChildrenPerCell, std::vector<double>(Setup::ValuesPerCell, 1.0));
   const double*                    childPointers[Setup::ChildrenPerCell];
@@ -1838,7 +2167,7 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testPatchRestrictionAveragesExactly
   }
 
   std::vector<double> restricted(Setup::ValuesPerCell, 0.0);
-  Kernel::restrictPatch(childPointers, restricted.data());
+  restrictEveryVolume(childPointers, restricted.data());
   for (int value = 0; value < Setup::ValuesPerCell; value++) {
     const double expected =
       value < Setup::NumberOfData ? static_cast<double>(Setup::ChildrenPerCell - 2) / Setup::ChildrenPerCell : 1.0;
@@ -2277,6 +2606,71 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testMirroredVolumesReceiveMirroredS
   }
 }
 
+/**
+ * A flux that reads the positions of the faces and the volumes keeps two volumes that mirror at the
+ * patch centre bitwise equal, with either reconstruction.
+ */
+void
+exahype2::fv::tests::FiniteVolumeSchemeTest::testAPositionDependentFluxKeepsMirroredVolumesMirrored() {
+  validateMirroredRadialAdvection<Constant>();
+  validateMirroredRadialAdvection<LimitedLinear<exahype2::fv::limiter::Minmod>>();
+}
+
+template <typename Reconstruct>
+void
+exahype2::fv::tests::FiniteVolumeSchemeTest::validateMirroredRadialAdvection() {
+  using Kernel                           = exahype2::fv::FiniteVolumeScheme<RadialAdvectionSolver<Reconstruct>, double>;
+  constexpr int       VolumesPerAxisIn3D = (DIMENSIONS == 3) ? NumberOfVolumesPerAxis : 1;
+  std::vector<double> qIn(Kernel::ValuesPerPatch, 0.0);
+  std::vector<double> qOut(Kernel::ValuesPerPatch, 0.0);
+
+  const auto getVolume = [](const int x, const int y, const int z) {
+    return (z * NumberOfVolumesPerAxis + y) * NumberOfVolumesPerAxis + x;
+  };
+  for (int z = 0; z < VolumesPerAxisIn3D; z++) {
+    for (int y = 0; y < NumberOfVolumesPerAxis; y++) {
+      for (int x = 0; x < NumberOfVolumesPerAxis; x++) {
+        const double offset     = x - 0.5 * (NumberOfVolumesPerAxis - 1);
+        qIn[getVolume(x, y, z)] = 1.0 + 0.03 * offset * offset + 0.05 * y + 0.07 * z;
+      }
+    }
+  }
+  const std::vector<std::vector<double>> faceStorage(
+    peano4::FacesPerCell,
+    std::vector<double>(Kernel::ValuesPerFace, 1.0)
+  );
+
+  // A centre at the origin and a width without a binary representation make the positions round.
+  // A time step that spans several volume widths turns a rounding of a face position into a
+  // rounding of the state.
+  const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.0);
+  const tarch::la::Vector<DIMENSIONS, double> patchExtent(0.7);
+  static_cast<void>(Kernel::update(
+    qIn.data(),
+    qOut.data(),
+    getFacePointersOf(faceStorage).data(),
+    patchCentre,
+    patchExtent,
+    0.0,
+    0.5,
+    NoBoundaryFaces
+  ));
+
+  for (int z = 0; z < VolumesPerAxisIn3D; z++) {
+    for (int y = 0; y < NumberOfVolumesPerAxis; y++) {
+      for (int x = 0; x < NumberOfVolumesPerAxis; x++) {
+        validateEqualsWithParams3(
+          qOut[getVolume(x, y, z)],
+          qOut[getVolume(NumberOfVolumesPerAxis - 1 - x, y, z)],
+          x,
+          y,
+          z
+        );
+      }
+    }
+  }
+}
+
 void
 exahype2::fv::tests::FiniteVolumeSchemeTest::testReconstructionHookReproducingDefaultChangesNothing() {
   constexpr int    Steps        = 3;
@@ -2402,4 +2796,63 @@ exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryCellOfADeviceRangeUpdatesL
 
   validateNumericalBuffersEquals(deviceUpdated, hostUpdated);
   validateNumericalBuffersEquals(deviceEigenvalues, hostEigenvalues);
+}
+
+/**
+ * Every team of a device range advances its patch in place like one host thread, for a
+ * MUSCL-Hancock patch and for Godunov patches that a team stages with their wave speeds, stages
+ * alone or advances in rounds.
+ */
+void
+exahype2::fv::tests::FiniteVolumeSchemeTest::testEveryTeamOfADeviceUpdatesInPlaceLikeTheHost() {
+  constexpr int                        Cells             = exahype2::dg::tests::KernelTestSetup::NumberOfCells;
+  constexpr double                     EulerTimeStepSize = 0.001;
+  const exahype2::dg::tests::CellChain geometry;
+  const auto                           validateTeamsUpdateLikeTheHost = [&](
+                                                                          const auto                 kernel,
+                                                                          std::vector<double>        hostPatches,
+                                                                          const std::vector<double>& faces,
+                                                                          const double               timeStepSize
+                                                                        ) {
+    using Kernel = typename decltype(kernel)::type;
+    std::vector<double> devicePatches(hostPatches);
+    const double        deviceEigenvalue = updateInTeamsOnDevice<Kernel>(devicePatches, faces, geometry, timeStepSize);
+    const double        hostEigenvalue   = updateInPlaceOnHost<Kernel>(hostPatches, faces, geometry, timeStepSize);
+    validateNumericalBuffersEquals(devicePatches, hostPatches);
+    validateNumericalEquals(deviceEigenvalue, hostEigenvalue);
+  };
+
+  validateTeamsUpdateLikeTheHost(
+    std::type_identity<DeviceKernel>{},
+    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Cells) * DeviceKernel::ValuesPerPatch, 1.0, 0.001),
+    exahype2::dg::tests::getRamp(
+      static_cast<std::size_t>(Cells) * peano4::FacesPerCell * DeviceKernel::ValuesPerFace,
+      1.5,
+      0.002
+    ),
+    exahype2::dg::tests::KernelTestSetup::TimeStepSize
+  );
+
+  const auto validateSodTeamsUpdateLikeTheHost = [&](const auto solver) {
+    using Solver = typename decltype(solver)::type;
+    std::vector<double> patches;
+    std::vector<double> faces;
+    fillSmoothEulerPatchesAndFacesOfChain<Solver>(patches, faces);
+    validateTeamsUpdateLikeTheHost(
+      std::type_identity<exahype2::fv::FiniteVolumeScheme<Solver, double>>{},
+      patches,
+      faces,
+      EulerTimeStepSize
+    );
+  };
+  using StagedWithWaveSpeeds = SodSolver<4, Constant>;
+  using Staged               = SodSolver<DIMENSIONS == 2 ? 20 : 7, Constant>;
+  using InRounds             = SodSolver<DIMENSIONS == 2 ? 48 : 20, Constant>;
+  static_assert(exahype2::fv::FiniteVolumeScheme<StagedWithWaveSpeeds, double>::TeamStorage<double>::ReadsWaveSpeeds);
+  static_assert(exahype2::fv::FiniteVolumeScheme<Staged, double>::TeamStorage<double>::StagesPatch);
+  static_assert(not exahype2::fv::FiniteVolumeScheme<Staged, double>::TeamStorage<double>::ReadsWaveSpeeds);
+  static_assert(not exahype2::fv::FiniteVolumeScheme<InRounds, double>::TeamStorage<double>::StagesPatch);
+  validateSodTeamsUpdateLikeTheHost(std::type_identity<StagedWithWaveSpeeds>{});
+  validateSodTeamsUpdateLikeTheHost(std::type_identity<Staged>{});
+  validateSodTeamsUpdateLikeTheHost(std::type_identity<InRounds>{});
 }

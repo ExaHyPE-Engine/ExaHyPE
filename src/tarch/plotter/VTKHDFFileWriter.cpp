@@ -341,7 +341,7 @@ tarch::plotter::VTKHDFFileWriter::write(
     mesh.types.data()
   );
 
-  // The Offsets block of a step holds the first connectivity entry of every cell. Its last entry
+  // The Offsets block of a step stores the first connectivity entry of every cell. Its last entry
   // counts the connectivity entries of the step.
   forEachRangeInParallel(localCells, [&](const std::size_t firstCell, const std::size_t endCell) {
     for (std::size_t cell = firstCell; cell < endCell; cell++) {

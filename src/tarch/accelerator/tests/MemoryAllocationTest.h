@@ -24,6 +24,6 @@ private:
   void testAllocateMemory();
   void testLocationSpecificAllocators();
   void testLocationSpecificCopyFunctions();
-  void testTheCurrentDeviceHoldsForEveryHostThread();
+  void testTheCurrentDeviceAppliesToEveryHostThread();
   void testOnlyTheDeviceLocationOfAGPUBuildIsGPUMemory();
 };

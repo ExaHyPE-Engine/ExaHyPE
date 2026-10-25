@@ -32,12 +32,11 @@ AXIS_NAMES = ("x", "y", "z")
 IMAGE_FORMATS = ("png", "pdf", "svg", "pgf")
 
 
-# Fields the solvers always inject; they are kept but never chosen as a default
-# and are pushed to the end of the field selector.
-HOUSEKEEPING_FIELDS = ("Subdomain", "RefinementLevel")
+# The solvers add these fields to every snapshot. The field selector lists them last, and
+# default_field() never picks one of them.
+HOUSEKEEPING_FIELDS = ("Subdomain", "RefinementLevel", "CurveIndex")
 
-# Regular Cartesian meshes above this many cells are too large to draw as
-# polygons; the viewer requires the imshow fast path for them.
+# The viewer draws a mesh above this many cells only as an image of a regular Cartesian grid.
 LARGE_MESH = 250_000
 
 # Figure layout (image axes + colour-bar axes as left/bottom/width/height
@@ -48,10 +47,8 @@ CBAR_RECT = (0.80, 0.06, 0.03, 0.88)
 LABELLED_IMAGE_RECT = (0.10, 0.09, 0.72, 0.84)
 LABELLED_CBAR_RECT = (0.85, 0.09, 0.03, 0.84)
 
-# The common mesh model and the per-format readers live in solution_io, which
-# compare_solution also imports. The dual import makes this work both as a package
-# (postprocessing.solution_io) and when the script is run directly from the
-# postprocessing/ directory (solution_io as a sibling module).
+# solution_io defines the mesh model and the readers of every format. The second import serves a
+# run of this script from the postprocessing/ directory with solution_io as a sibling module.
 try:
     from postprocessing.solution_io import (
         MeshSnapshot,
@@ -122,6 +119,13 @@ def ordered_field_options(variables: list[str]) -> list[str]:
     regular = [name for name in variables if name not in HOUSEKEEPING_FIELDS]
     housekeeping = [name for name in variables if name in HOUSEKEEPING_FIELDS]
     return regular + housekeeping
+
+
+def clim_of_field(
+    name: str, clim_field: str, clim: tuple[float, float] | None
+) -> tuple[float, float] | None:
+    """Returns clim for the field clim_field and None for every other field."""
+    return clim if name == clim_field else None
 
 
 def _autoscale(values: np.ndarray, clip_outliers: bool) -> tuple[float, float]:
@@ -443,7 +447,12 @@ def render_slice_figure(
         vmin, vmax = _autoscale(values, clip_outliers=False)
     figure = _new_figure(figsize, dpi)
     axes = figure.add_axes([0.10, 0.10, 0.74, 0.82])
-    interpolation = "nearest" if np.isnan(image).any() else "bicubic"
+    # A cell field such as CurveIndex has one value per cell. An interpolation blends the values
+    # of neighbouring cells.
+    _, centre = snapshot.field(field)
+    interpolation = (
+        "nearest" if centre == "cell" or np.isnan(image).any() else "bicubic"
+    )
     artist = axes.imshow(
         image,
         origin="lower",
@@ -668,7 +677,7 @@ def _run_prefetch(tasks, worker, store, progress=None):
                         progress(done, len(tasks))
             return
         except Exception:
-            pass  # a broken pool must never break the viewer; render inline instead
+            pass  # The loop below renders every frame inline after a failure of the pool.
     for done, task in enumerate(tasks, start=1):
         index, png = worker(task)
         store(index, png)
@@ -738,9 +747,9 @@ def render_solution_image(
     width: int = 720,
 ) -> bytes:
     """Render one snapshot to PNG bytes."""
-    # Open path-like inputs; anything else is assumed to be a SolutionSource already. A plain
-    # isinstance check would reject a SolutionSource imported through solution_io's sibling-module
-    # path (a distinct class object from this module's postprocessing.solution_io.SolutionSource).
+    # The function opens a path. Every other input counts as a SolutionSource. The sibling-module
+    # import of solution_io yields a second SolutionSource class that an isinstance check would
+    # reject.
     if isinstance(source, (str, os.PathLike)):
         source = SolutionSource.open(source)
     snapshot = source.snapshot(index % source.count)
@@ -802,9 +811,10 @@ def show_solution(
 ):
     """Interactive viewer with time, frame and field selectors plus play/stop.
 
-    ``normalise="global"`` holds the colour scale fixed across time;
-    ``clip_outliers=True`` or ``clim=(lo, hi)`` tames outliers. Outside a notebook the
-    last frame is rendered and returned as PNG bytes.
+    ``normalise="global"`` keeps the colour scale fixed across time.
+    ``clip_outliers=True`` cuts the colour range at the outliers. ``clim=(lo, hi)`` sets
+    the colour range of ``field`` only. Every other field of the selector keeps its own range.
+    Outside a notebook the last frame is rendered and returned as PNG bytes.
     """
     import asyncio
 
@@ -821,16 +831,17 @@ def show_solution(
         )
     if regular_grid(first) is None and first.num_cells > LARGE_MESH:
         raise ValueError(
-            f"This mesh has {first.num_cells:,} cells and is not a regular Cartesian "
-            "grid, so it cannot be drawn efficiently. Use a coarser mesh or fewer snapshots."
+            f"The plot draws an irregular mesh of at most {LARGE_MESH:,} cells. This mesh "
+            f"has {first.num_cells:,} cells. Use a coarser mesh or fewer snapshots."
         )
 
     cache: dict[tuple[str, int], bytes] = {}
     clim_cache: dict[str, tuple[float, float]] = {}
 
     def clim_for(name: str) -> tuple[float, float] | None:
-        if clim is not None:
-            return clim
+        fixed = clim_of_field(name, chosen, clim)
+        if fixed is not None:
+            return fixed
         if normalise != "global":
             return None
         if name not in clim_cache:

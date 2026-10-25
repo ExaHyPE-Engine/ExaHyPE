@@ -11,16 +11,17 @@ namespace peano4::tests {
 class peano4::tests::MigrationExchangeTest final : public tarch::tests::TestCase {
 public:
   MigrationExchangeTest();
-  MigrationExchangeTest(const MigrationExchangeTest&)            = delete;
-  MigrationExchangeTest(MigrationExchangeTest&&)                 = delete;
-  MigrationExchangeTest& operator=(const MigrationExchangeTest&) = delete;
-  MigrationExchangeTest& operator=(MigrationExchangeTest&&)      = delete;
-  ~MigrationExchangeTest() override                              = default;
+  MigrationExchangeTest(const MigrationExchangeTest& other)            = delete;
+  MigrationExchangeTest(MigrationExchangeTest&& other)                 = delete;
+  MigrationExchangeTest& operator=(const MigrationExchangeTest& other) = delete;
+  MigrationExchangeTest& operator=(MigrationExchangeTest&& other)      = delete;
+  ~MigrationExchangeTest() override                                    = default;
 
   void run() override;
 
 private:
-  void testEveryFilledSlotHoldsTheChunkOfItsCell();
-  void testExchangesHoldDistinctTags();
+  void testEveryFilledSlotStoresTheChunkOfItsCell();
+  void testAPreparingTransferFillsEverySlotWithTheChunkOfItsCell();
+  void testExchangesGetDistinctTags();
   void testReleaseFreesTheBuffersAndKeepsTheTag();
 };

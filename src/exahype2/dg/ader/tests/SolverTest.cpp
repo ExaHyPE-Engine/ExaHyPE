@@ -329,6 +329,40 @@ namespace {
   };
 
   /**
+   * A solver with the linear profile of LinearTerms, a fixed time step rule and a linear predictor.
+   * The Riemann solver of ExaHyPE reads its face states only. Its predictor writes face states only.
+   */
+  struct LinearFixedRuleADERDGSolver final
+    : exahype2::dg::ader::Solver<LinearFixedRuleADERDGSolver, double, double, void>,
+      LinearTerms {
+    static constexpr int  DGOrder                    = ::Order;
+    static constexpr int  NumberOfUnknowns           = 1;
+    static constexpr int  NumberOfAuxiliaryVariables = 0;
+    static constexpr bool IsLinear                   = true;
+    static constexpr int  NumberOfPointSources       = 0;
+
+    static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
+
+    template <typename Precision>
+    using Quadrature = QuadratureTables<Precision, 0>;
+    template <typename Precision>
+    using DGMatrices = DGMatrixTables<Precision, 0>;
+
+    LinearFixedRuleADERDGSolver() :
+      Solver(TimeStepFactor, "LinearFixedRuleADERDGSolver", {{"q", 1}}) {}
+
+    /**
+     * Overwrites every face flux with value.
+     */
+    void presetFaceFluxes(const double value) {
+      const auto values = static_cast<std::size_t>(_faceFluxes.getNumberOfSegments())
+        * static_cast<std::size_t>(_faceFluxes.getSegmentSize())
+        * static_cast<std::size_t>(_faceFluxes.getPaddedChunkSize());
+      _faceFluxes.copyFromHost(std::vector<double>(values, value));
+    }
+  };
+
+  /**
    * A solver with the linear profile of LinearTerms, an adaptive time step rule and a unit wave
    * speed.
    */
@@ -359,6 +393,51 @@ namespace {
       [[maybe_unused]] const int                                    normal
     ) {
       return 1.0;
+    }
+  };
+
+  /**
+   * A solver with a fixed time step rule whose initial condition lies Increment below the linear
+   * profile of LinearTerms. Its postprocessing adds Increment to every node of a cell.
+   */
+  struct PostprocessingSolver final : exahype2::dg::ader::Solver<PostprocessingSolver, double, double, void>,
+                                      LinearTerms {
+    static constexpr int  DGOrder                    = ::Order;
+    static constexpr int  NumberOfUnknowns           = 1;
+    static constexpr int  NumberOfAuxiliaryVariables = 0;
+    static constexpr bool IsLinear                   = false;
+    static constexpr int  NumberOfPointSources       = 0;
+
+    static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
+
+    static constexpr double Increment = 0.5;
+
+    template <typename Precision>
+    using Quadrature = QuadratureTables<Precision, 0>;
+    template <typename Precision>
+    using DGMatrices = DGMatrixTables<Precision, 0>;
+
+    PostprocessingSolver() :
+      Solver(TimeStepFactor, "PostprocessingSolver", {{"q", 1}}) {}
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
+      double* const                                                 Q,
+      const tarch::la::Vector<DIMENSIONS, double>&                  x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+    ) {
+      Q[0] = getProfile(x) - Increment;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void postprocessUpdatedPatch(
+      double* const                                                 Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt
+    ) {
+      for (int node = 0; node < NodesInCell; node++) {
+        Q[node] += Increment;
+      }
     }
   };
 
@@ -395,11 +474,39 @@ namespace {
     ) {
       return Side == 0 ? x(0) < Interface : x(0) > Interface;
     }
+
+    /**
+     * Overwrites every state and flux value of a face with the number of the face.
+     */
+    void writeFaceNumbersIntoFaces() {
+      for (auto* const pool : {&this->_faceStates, &this->_faceFluxes}) {
+        const auto          paddedChunkSize = static_cast<std::size_t>(pool->getPaddedChunkSize());
+        std::vector<double> values(
+          static_cast<std::size_t>(pool->getNumberOfSegments()) * static_cast<std::size_t>(pool->getSegmentSize())
+          * paddedChunkSize
+        );
+        for (std::size_t value = 0; value < values.size(); value++) {
+          values[value] = static_cast<double>(value / paddedChunkSize);
+        }
+        pool->copyFromHost(values);
+      }
+    }
   };
 
   const peano4::CellConnectivity& buildGrid() {
     peano4::tests::buildRegularGrid(Depth);
     return peano4::Spacetree::getInstance().getCellConnectivity();
+  }
+
+  /**
+   * Returns the identity map of the nodes of one axis.
+   */
+  std::vector<double> getIdentityOperator() {
+    std::vector<double> identity(EntriesPerOperator, 0.0);
+    for (int node = 0; node < NodesPerAxis; node++) {
+      identity[static_cast<std::size_t>(node) * NodesPerAxis + node] = 1.0;
+    }
+    return identity;
   }
 
   /**
@@ -414,11 +521,11 @@ namespace {
     (solvers.readValuesFromGlobalReduction(record), ...);
   }
 
-  template <typename Solver>
+  template <typename... Solvers>
   void regridWithLiveData(
-    Solver&                                       solver,
     const std::vector<peano4::RefinementRequest>& refinementRequests,
-    exahype2::RefinementRequests&                 requests
+    exahype2::RefinementRequests&                 requests,
+    Solvers&... solvers
   ) {
     auto&          spacetree = peano4::Spacetree::getInstance();
     peano4::Regrid regrid;
@@ -427,9 +534,9 @@ namespace {
     }
     const auto& cellConnectivity = spacetree.getCellConnectivity();
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.regrid(cellConnectivity, regrid, requests);
+    (solvers.regrid(cellConnectivity, regrid, requests), ...);
     spacetree.finishRegrid();
-    finishStep(solver);
+    finishStep(solvers...);
   }
 
   int getNumberOfCellsOfLevel(const peano4::CellConnectivity& cellConnectivity, const int level) {
@@ -748,6 +855,58 @@ namespace {
   }
 
   /**
+   * Returns the number of local level jumps and the number of values that differ from the number of
+   * their face in the halves that the interpolation and the restriction of these level jumps write.
+   */
+  template <typename Solver>
+  std::pair<int, int> getLevelJumpMismatchesAgainstTheFaceNumbers(
+    const Solver&                   solver,
+    const peano4::CellConnectivity& cellConnectivity
+  ) {
+    constexpr int NodesPerFace       = exahype2::dg::getNodesPerFace(NodesPerAxis);
+    constexpr int StateValuesPerHalf = NodesPerFace * (Solver::NumberOfUnknowns + Solver::NumberOfAuxiliaryVariables);
+    constexpr int FluxValuesPerHalf  = NodesPerFace * Solver::NumberOfUnknowns;
+    std::vector<double> states;
+    std::vector<double> fluxes;
+    solver.getFaceStates().copyToHost(states);
+    solver.getFaceFluxes().copyToHost(fluxes);
+    int        mismatches            = 0;
+    const auto countMismatchesOfHalf = [&mismatches](
+                                         const std::vector<double>& values,
+                                         const int                  paddedChunkSize,
+                                         const int                  valuesPerHalf,
+                                         const int                  face,
+                                         const int                  half
+                                       ) {
+      const auto firstValue = static_cast<std::size_t>(face) * static_cast<std::size_t>(paddedChunkSize)
+        + static_cast<std::size_t>(half) * static_cast<std::size_t>(valuesPerHalf);
+      assertion(firstValue + static_cast<std::size_t>(valuesPerHalf) <= values.size(), firstValue, values.size());
+      for (std::size_t value = firstValue; value < firstValue + static_cast<std::size_t>(valuesPerHalf); value++) {
+        if (values[value] != static_cast<double>(face)) {
+          mismatches++;
+        }
+      }
+    };
+    const int  statePaddedChunkSize = solver.getFaceStates().getPaddedChunkSize();
+    const int  fluxPaddedChunkSize  = solver.getFaceFluxes().getPaddedChunkSize();
+    const auto levelJumps           = cellConnectivity.getLevelJumps(peano4::Adjacency::Local);
+    for (const peano4::LevelJump& levelJump : levelJumps) {
+      for (const int fineFace : levelJump.fineFaces) {
+        countMismatchesOfHalf(states, statePaddedChunkSize, StateValuesPerHalf, fineFace, levelJump.coarseSide);
+        countMismatchesOfHalf(fluxes, fluxPaddedChunkSize, FluxValuesPerHalf, fineFace, levelJump.coarseSide);
+      }
+      countMismatchesOfHalf(
+        fluxes,
+        fluxPaddedChunkSize,
+        FluxValuesPerHalf,
+        levelJump.coarseFace,
+        1 - levelJump.coarseSide
+      );
+    }
+    return {levelJumps.size, mismatches};
+  }
+
+  /**
    * Returns the number of counted faces and the number of their face nodes that differ from the
    * profile.
    */
@@ -813,9 +972,12 @@ void
 exahype2::dg::ader::tests::SolverTest::run() {
   testMethod(testInitialisationWritesTheInitialConditionIntoEveryNode);
   testMethod(testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp);
+  testMethod(testThePostprocessingRunsOnceForEveryCellOfATimeStep);
   testMethod(testARefinementAndTheEraseBackKeepTheSolution);
+  testMethod(testALinearTimeStepReadsNoFaceFluxAcrossALevelJump);
   testMethod(testRefinementReducesTheNextAdaptiveTimeStep);
   testMethod(testTwoCoupledSolversExchangeTheirTracesAndAdvanceTogether);
+  testMethod(testACoupledSolverInterpolatesAndRestrictsOnlyTheLevelJumpsOfItsCells);
   testMethod(testTheCellAndFaceGroupsSplitAtTheRankBoundary);
   testMethod(testTheProjectionWritesTheTracesOfTheSolutionIntoBothHalvesOfEveryInteriorFace);
   testMethod(testTheProjectionOntoAPlaneWritesTheTracesOfTheSolutionIntoItsFaces);
@@ -926,7 +1088,7 @@ exahype2::dg::ader::tests::SolverTest::testTheProjectionOntoAPlaneWritesBothHalv
   solver.initialise(cellConnectivity, requests);
   finishStep(solver);
   peano4::Spacetree::getInstance().markPersistentDataLive();
-  regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
+  regridWithLiveData({peano4::tests::getRefinementOfCentreCell(Depth)}, requests, solver);
 
   const int    firstRefinedCell = CellsPerAxis / 2 - peano4::tests::getNumberOfCellsPerAxisRefinedAroundTheCentre() / 2;
   const double blockBoundary    = firstRefinedCell * CoarseWidth;
@@ -958,7 +1120,7 @@ exahype2::dg::ader::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeS
   finishStep(solver);
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
-  regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
+  regridWithLiveData({peano4::tests::getRefinementOfCentreCell(Depth)}, requests, solver);
   requests.clear(cellConnectivity.getNumberOfSlots());
   solver.performTimeStep(cellConnectivity, requests);
   finishStep(solver);
@@ -974,13 +1136,9 @@ void
 exahype2::dg::ader::tests::SolverTest::testTwoCoupledSolversExchangeTheirTracesAndAdvanceTogether() {
   const auto& cellConnectivity = buildGrid();
 
-  std::vector<double> identity(EntriesPerOperator, 0.0);
-  for (int node = 0; node < NodesPerAxis; node++) {
-    identity[static_cast<std::size_t>(node) * NodesPerAxis + node] = 1.0;
-  }
   HalfSolver<0> left;
   HalfSolver<1> right;
-  left.coupleWith(right, identity, identity);
+  left.coupleWith(right, getIdentityOperator(), getIdentityOperator());
   exahype2::RefinementRequests requests;
   left.setLimits(getLimitsOfTheDomain());
   right.setLimits(getLimitsOfTheDomain());
@@ -1014,6 +1172,44 @@ exahype2::dg::ader::tests::SolverTest::testTwoCoupledSolversExchangeTheirTracesA
     );
   }
   validate(requests.getRefinementRequests(cellConnectivity).empty());
+  left.release();
+  right.release();
+}
+
+/**
+ * A coupled solver interpolates and restricts only the level jumps whose coarse side it owns.
+ */
+void
+exahype2::dg::ader::tests::SolverTest::testACoupledSolverInterpolatesAndRestrictsOnlyTheLevelJumpsOfItsCells() {
+  const auto& cellConnectivity = buildGrid();
+
+  HalfSolver<0> left;
+  HalfSolver<1> right;
+  left.coupleWith(right, getIdentityOperator(), getIdentityOperator());
+  exahype2::RefinementRequests requests;
+  left.setLimits(getLimitsOfTheDomain());
+  right.setLimits(getLimitsOfTheDomain());
+  left.allocate(cellConnectivity);
+  right.allocate(cellConnectivity);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  left.initialise(cellConnectivity, requests);
+  right.initialise(cellConnectivity, requests);
+  finishStep(left, right);
+  peano4::Spacetree::getInstance().markPersistentDataLive();
+  regridWithLiveData({peano4::tests::getRefinementOfCentreCell(Depth)}, requests, left, right);
+  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(cellConnectivity, Depth + 1)) > 0);
+
+  left.writeFaceNumbersIntoFaces();
+  right.writeFaceNumbersIntoFaces();
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  left.performTimeStep(cellConnectivity, requests);
+  right.performTimeStep(cellConnectivity, requests);
+  finishStep(left, right);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(left, cellConnectivity), 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(right, cellConnectivity), 0);
+  const auto [levelJumps, mismatches] = getLevelJumpMismatchesAgainstTheFaceNumbers(left, cellConnectivity);
+  validate(peano4::tests::getGlobalSumOf(levelJumps) > 0);
+  validateEquals(peano4::tests::getGlobalSumOf(mismatches), 0);
   left.release();
   right.release();
 }
@@ -1079,6 +1275,30 @@ exahype2::dg::ader::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionA
 }
 
 /**
+ * The corrector calls the postprocessing of the solver once for every cell of a time step.
+ */
+void
+exahype2::dg::ader::tests::SolverTest::testThePostprocessingRunsOnceForEveryCellOfATimeStep() {
+  const auto& cellConnectivity = buildGrid();
+
+  PostprocessingSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
+  const int nodes = cellConnectivity.getCells().size * NodesInCell;
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), nodes);
+
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
+  finishStep(solver);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
+  solver.release();
+}
+
+/**
  * The prolongation reproduces the linear profile on every child and the restriction of the
  * children returns it on the coarse cell within rounding.
  */
@@ -1098,7 +1318,7 @@ exahype2::dg::ader::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolu
   const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
   peano4::Spacetree::getInstance().markPersistentDataLive();
 
-  regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
+  regridWithLiveData({peano4::tests::getRefinementOfCentreCell(Depth)}, requests, solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize / SubdivisionFactor);
   validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(cellConnectivity, Depth + 1)) > 0);
   validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
@@ -1111,11 +1331,40 @@ exahype2::dg::ader::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolu
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSizeOfLastStep(), coarseTimeStepSize / SubdivisionFactor);
   validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
 
-  regridWithLiveData(solver, peano4::tests::getErasureOfEveryCell(Depth), requests);
+  regridWithLiveData(peano4::tests::getErasureOfEveryCell(Depth), requests, solver);
   validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize);
   validateEquals(cellConnectivity.getMaximumLevel(), Depth);
   validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
   validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
+  solver.release();
+}
+
+/**
+ * A time step of a linear solver whose predictor writes face states only reads a face flux across a
+ * level jump only after the Riemann solvers write it.
+ */
+void
+exahype2::dg::ader::tests::SolverTest::testALinearTimeStepReadsNoFaceFluxAcrossALevelJump() {
+  const auto& cellConnectivity = buildGrid();
+
+  LinearFixedRuleADERDGSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
+  peano4::Spacetree::getInstance().markPersistentDataLive();
+  regridWithLiveData({peano4::tests::getRefinementOfCentreCell(Depth)}, requests, solver);
+  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(cellConnectivity, Depth + 1)) > 0);
+
+  // The transfers of a level jump assert finite values in an Asserts build and trap a value that is
+  // not a number in a build with floating-point exception traps.
+  solver.presetFaceFluxes(std::numeric_limits<double>::quiet_NaN());
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
+  finishStep(solver);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
   solver.release();
 }
 

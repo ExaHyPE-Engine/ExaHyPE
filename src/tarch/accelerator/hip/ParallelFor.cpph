@@ -2,8 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
+#if defined(__HIPCC__)
+  // Every launch runs at most HipBlockSize threads per block. The AMD compiler limits the registers
+  // of a kernel without launch bounds to those of a block of 1024 threads.
   template <typename Functor>
-  __global__ void flatKernel1D(const Functor functor, const int numberOfItems) {
+  __global__ void __launch_bounds__(
+    tarch::accelerator::HipBlockSize
+  ) flatKernel1D(const Functor functor, const int numberOfItems) {
     const int firstIndex = blockIdx.x * blockDim.x + threadIdx.x;
     const int stride     = gridDim.x * blockDim.x;
     for (int i = firstIndex; i < numberOfItems; i += stride) {
@@ -12,10 +17,11 @@ namespace tarch::accelerator {
   }
 
   template <typename Functor>
-  __global__ void teamKernel(const Functor functor) {
+  __global__ void __launch_bounds__(tarch::accelerator::HipBlockSize) teamKernel(const Functor functor) {
     extern __shared__ unsigned char teamScratch[];
     functor(static_cast<int>(blockIdx.x), HipTeam{teamScratch});
   }
+#endif
 
   INLINE_METHOD GPU_CALLABLE_METHOD int getThreadOfTeam([[maybe_unused]] const HipTeam& team) {
     COMPILE_IF_ON_DEVICE(return static_cast<int>(threadIdx.x);)
@@ -35,6 +41,30 @@ namespace tarch::accelerator {
    */
   INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier([[maybe_unused]] const HipTeam& team) {
     COMPILE_IF_ON_DEVICE(__syncthreads();)
+  }
+
+  /**
+   * Returns whether condition is true in every thread of the team. Every thread receives the same
+   * value. The call waits for every thread of the team like teamBarrier().
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInEveryThreadOfTeam(
+    [[maybe_unused]] const HipTeam& team,
+    const bool                      condition
+  ) {
+    COMPILE_IF_ON_DEVICE(return __syncthreads_and(condition ? 1 : 0) != 0;)
+    COMPILE_IF_ON_HOST(return condition;)
+  }
+
+  /**
+   * Returns whether condition is true in any thread of the team. Every thread receives the same
+   * value. The call waits for every thread of the team like teamBarrier().
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInAnyThreadOfTeam(
+    [[maybe_unused]] const HipTeam& team,
+    const bool                      condition
+  ) {
+    COMPILE_IF_ON_DEVICE(return __syncthreads_or(condition ? 1 : 0) != 0;)
+    COMPILE_IF_ON_HOST(return condition;)
   }
 
   /**
@@ -95,6 +125,7 @@ namespace tarch::accelerator {
     }
   }
 
+#if defined(__HIPCC__)
   /**
    * Launches the loop on the stream of the current device and returns. The stream runs launches
    * and copies in order. A caller that reads device memory on the host without copyFrom() or a
@@ -160,4 +191,5 @@ namespace tarch::accelerator {
     >>>(functor);
     CHECK_HIP_ERROR(hipGetLastError());
   }
+#endif
 } // namespace tarch::accelerator

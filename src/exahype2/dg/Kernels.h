@@ -53,17 +53,23 @@ namespace exahype2::dg {
   );
 
   template <typename Derived, typename ComputePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateFluxToFaces(
-    ComputePrecision* const NOALIAS              faceFluxes[peano4::FacesPerCell],
+  INLINE_METHOD GPU_CALLABLE_METHOD void evaluateNodalFluxes(
+    ComputePrecision* NOALIAS                    nodalFluxes,
     const ComputePrecision* NOALIAS              cellState,
-    const ComputePrecision* NOALIAS              leftFaceCoefficients,
-    const ComputePrecision* NOALIAS              rightFaceCoefficients,
     const ComputePrecision* NOALIAS              quadratureNodes,
     const ComputePrecision* NOALIAS              derivativeOperator,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize
+  );
+
+  template <typename Derived, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateFluxToFaces(
+    ComputePrecision* const NOALIAS faceFluxes[peano4::FacesPerCell],
+    const ComputePrecision* NOALIAS nodalFluxes,
+    const ComputePrecision* NOALIAS leftFaceCoefficients,
+    const ComputePrecision* NOALIAS rightFaceCoefficients
   );
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -130,6 +136,49 @@ namespace exahype2::dg {
     int                                          direction
   );
 
+  template <int NodesPerAxis, int Lanes, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void addWeightedValuesOfLine(
+    ComputePrecision* NOALIAS       sum,
+    const ComputePrecision* NOALIAS weightedValues,
+    int                             firstNode,
+    int                             nodeStride
+  );
+
+  template <int NodesPerAxis, int NumberOfData, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void computeMeanOfFace(
+    ComputePrecision* NOALIAS       mean,
+    const ComputePrecision* NOALIAS state,
+    const ComputePrecision* NOALIAS faceQuadratureWeights
+  );
+
+  template <typename Derived, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void summariseRiemannFace(
+    ComputePrecision* NOALIAS                    faceSummary,
+    const ComputePrecision* NOALIAS              leftState,
+    const ComputePrecision* NOALIAS              rightState,
+    const ComputePrecision* NOALIAS              faceQuadratureWeights,
+    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          direction
+  );
+
+  template <typename Derived, bool Linear, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void solveRiemannProblemAtNode(
+    int                                          faceNode,
+    const ComputePrecision* NOALIAS              faceSummary,
+    ComputePrecision* NOALIAS                    leftFlux,
+    ComputePrecision* NOALIAS                    rightFlux,
+    const ComputePrecision* NOALIAS              leftState,
+    const ComputePrecision* NOALIAS              rightState,
+    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          direction
+  );
+
   template <typename Derived, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void solveRiemannProblemOnHalves(
     ComputePrecision* NOALIAS                    leftFlux,
@@ -175,6 +224,9 @@ namespace exahype2::dg {
   template <typename Operation>
   struct ForLevelJumpOnPlane;
 
+  template <typename Operation>
+  struct ForOwnedLevelJump;
+
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void addFaceIntegral(
     StoragePrecision* NOALIAS       nodeUpdate,
@@ -191,6 +243,19 @@ namespace exahype2::dg {
   );
 
   template <typename Derived, int NumberOfValuesPerNode, typename StoragePrecision, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void addFaceIntegralsOfNode(
+    StoragePrecision* NOALIAS       cellValues,
+    int                             node,
+    const ComputePrecision* const   faceFluxes[peano4::FacesPerCell],
+    const ComputePrecision* NOALIAS faceQuadratureWeights,
+    const ComputePrecision* NOALIAS inverseCellQuadratureWeights,
+    const ComputePrecision* NOALIAS leftFaceCoefficients,
+    const ComputePrecision* NOALIAS rightFaceCoefficients,
+    const double                    inverseCellSize[DIMENSIONS],
+    double                          timeStepSize
+  );
+
+  template <typename Derived, int NumberOfValuesPerNode, typename StoragePrecision, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void addFaceIntegrals(
     StoragePrecision* NOALIAS                    cellValues,
     const ComputePrecision* const                faceFluxes[peano4::FacesPerCell],
@@ -199,6 +264,17 @@ namespace exahype2::dg {
     const ComputePrecision* NOALIAS              leftFaceCoefficients,
     const ComputePrecision* NOALIAS              rightFaceCoefficients,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStepSize
+  );
+
+  template <typename Derived, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD MaxEigenvalueStatistics getMaxEigenvaluesOfNode(
+    int                                          cellNode,
+    const Precision* NOALIAS                     cellState,
+    const Precision* NOALIAS                     quadratureNodes,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
     double                                       timeStepSize
   );
 
@@ -229,7 +305,7 @@ namespace exahype2::dg {
   struct MeasureNodeErrors;
 
   template <typename Derived, typename StoragePrecision>
-  struct RegridCells;
+  struct CellTransfer;
 
   template <typename Derived, typename PartnerDerived, typename PartnerPrecision, typename ComputePrecision>
   struct CopyPartnerFaceHalves;
@@ -424,6 +500,17 @@ struct exahype2::dg::ForLevelJumpOnPlane final {
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
 };
 
+/**
+ * Calls operation for a level jump whose coarse face ownsCoarseSideOfFace marks.
+ */
+template <typename Operation>
+struct exahype2::dg::ForOwnedLevelJump final {
+  tarch::Span<const char> ownsCoarseSideOfFace{};
+  Operation               operation{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
 template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::MeasureNodeEigenvalues final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
@@ -466,26 +553,44 @@ struct exahype2::dg::MeasureNodeErrors final {
 };
 
 /**
- * Fills one cell of the cell connectivity after a regrid from the cells in source. The slots of
- * source belong to the cell connectivity before the regrid.
+ * Fills cells of the new grid from source, the pool of the old grid, during a regrid.
+ * prepareInterpolation() and prepareRestriction() write the references and the bounds of a cell
+ * with one work item per value. Every work item of a fill writes one node of a cell.
  */
 template <typename Derived, typename StoragePrecision>
-struct exahype2::dg::RegridCells final {
-  static constexpr int NodesPerAxis  = Derived::DGOrder + 1;
-  static constexpr int NumberOfData  = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
-  static constexpr int ValuesPerCell = exahype2::dg::getNodesPerCell(NodesPerAxis) * NumberOfData;
+struct exahype2::dg::CellTransfer final {
+  static constexpr int NodesPerAxis             = Derived::DGOrder + 1;
+  static constexpr int NumberOfData             = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+  static constexpr int WorkItemsPerChunk        = exahype2::dg::getNodesPerCell(NodesPerAxis);
+  static constexpr int PreparedValuesPerChunk   = exahype2::dg::ReferencesAndBoundsEntries<NumberOfData>;
+  static constexpr int PreparationItemsPerChunk = NumberOfData;
 
-  typename tarch::accelerator::ChunkedMemoryPool<StoragePrecision>::ConstView source{};
-  const double*                                                               prolongationMatrix{nullptr};
-  const double*                                                               restrictionMatrix{nullptr};
+  using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void copy(int slot, StoragePrecision* target) const;
+  typename CellPool::ConstView source{};
+  const double*                prolongationMatrix{nullptr};
+  const double*                restrictionMatrix{nullptr};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void prepareInterpolation(int parentSlot, double* prepared, int itemOfChunk) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void prepareRestriction(
+    const int* childSlots,
+    double*    prepared,
+    int        itemOfChunk
+  ) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void copy(int slot, StoragePrecision* target, int itemOfChunk) const;
   INLINE_METHOD GPU_CALLABLE_METHOD void interpolateFromParent(
     int               parentSlot,
     StoragePrecision* target,
-    int               childPosition
+    int               childPosition,
+    int               itemOfChunk,
+    const double*     prepared
   ) const;
-  INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(const int* childSlots, StoragePrecision* target) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(
+    const int*        childSlots,
+    StoragePrecision* target,
+    int               itemOfChunk,
+    const double*     prepared
+  ) const;
 };
 
 /**
