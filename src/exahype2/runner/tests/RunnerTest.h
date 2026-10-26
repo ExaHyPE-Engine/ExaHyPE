@@ -22,6 +22,7 @@ public:
 private:
   void testDescribeMeshUpdatesReportsTheStepCountAndWallClock();
   void testDescribeRepetitionsCountsEveryPhaseInItsUnit();
+  void testAReportInsideARegridCountsTheRegridAgain();
   void testFinishStepSumsTheSolverBytesAndCellUpdates();
   void testFinishStepReducesTheValuesOfTheSolvers();
   void testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition();

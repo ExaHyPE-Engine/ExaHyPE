@@ -37,6 +37,7 @@ namespace {
     int                         slot{-1};
     std::uint64_t               reducedValue{0};
     exahype2::RefinementCommand timeStepCommand{exahype2::RefinementCommand::Keep};
+    exahype2::RefinementCommand regridCommand{exahype2::RefinementCommand::Keep};
 
     [[nodiscard]] const exahype2::TimeStepping& getTimeStepping() const { return timeStepping; }
     [[nodiscard]] int getNumberOfDoFs() const { return numberOfDoFs; }
@@ -68,11 +69,12 @@ namespace {
       requests.merge(timeStepCommand, cellConnectivity.getCells());
     }
     void regrid(
-      [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
-      [[maybe_unused]] const peano4::Regrid&           regrid,
-      [[maybe_unused]] exahype2::RefinementRequests&   requests
+      const peano4::CellConnectivity&        cellConnectivity,
+      [[maybe_unused]] const peano4::Regrid& regrid,
+      exahype2::RefinementRequests&          requests
     ) {
       phaseCalls++;
+      requests.merge(regridCommand, cellConnectivity.getCells());
     }
     void plot(
       [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
@@ -101,6 +103,7 @@ exahype2::tests::SolverRepositoryTest::run() {
   testMethod(testTheRepositoryReducesTheValuesOfEverySolver);
   testMethod(testEveryPhaseCallReachesEverySolver);
   testMethod(testEveryReductionGathersTheRequestsOfItsOwnStep);
+  testMethod(testARegridErasesARequestedRefinementOnlyOnce);
 }
 
 /**
@@ -190,4 +193,58 @@ exahype2::tests::SolverRepositoryTest::testEveryReductionGathersTheRequestsOfIts
   keepingStep.allreduce(communicator);
   repository.readValuesFromGlobalReduction(keepingStep);
   validate(repository.getRefinementRequests().empty());
+}
+
+/**
+ * A regrid deletes the erase request of every cell that it refines for the second time.
+ */
+void
+exahype2::tests::SolverRepositoryTest::testARegridErasesARequestedRefinementOnlyOnce() {
+  const MPI_Comm             communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
+  const int                  numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const peano4::Regrid       regrid{};
+  RecordingSolver<false>     solver;
+  exahype2::SolverRepository repository{solver};
+
+  const auto finishStep = [&repository, communicator] {
+    tarch::mpi::ReductionRecord record;
+    repository.addLocalValuesToGlobalReduction(record);
+    record.allreduce(communicator);
+    repository.readValuesFromGlobalReduction(record);
+  };
+  const auto runTimeStep = [&solver, &repository, &finishStep] {
+    peano4::tests::buildRegularGrid(Depth - 1);
+    solver.timeStepCommand = exahype2::RefinementCommand::Refine;
+    repository.performTimeStep(peano4::Spacetree::getInstance().getCellConnectivity());
+    finishStep();
+  };
+  const auto runRegridStep = [&solver, &repository, &regrid, &finishStep](
+                               const int                         depth,
+                               const exahype2::RefinementCommand command
+                             ) {
+    peano4::tests::buildRegularGrid(depth);
+    solver.regridCommand = command;
+    repository.regrid(peano4::Spacetree::getInstance().getCellConnectivity(), regrid);
+    finishStep();
+  };
+
+  peano4::tests::buildRegularGrid(Depth);
+  const auto&                  cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  exahype2::RefinementRequests eraseVotes;
+  eraseVotes.clear(cellConnectivity.getNumberOfSlots());
+  eraseVotes.merge(exahype2::RefinementCommand::Erase, cellConnectivity.getCells());
+  const auto eraseRequests = eraseVotes.getRefinementRequests(cellConnectivity);
+  validate(not eraseRequests.empty() or numberOfRanks > 1);
+
+  runTimeStep();
+  runRegridStep(Depth, exahype2::RefinementCommand::Erase);
+  validate(repository.getRefinementRequests() == eraseRequests);
+  runRegridStep(Depth - 1, exahype2::RefinementCommand::Refine);
+  validate(not repository.getRefinementRequests().empty());
+  runRegridStep(Depth, exahype2::RefinementCommand::Erase);
+  validate(repository.getRefinementRequests().empty());
+
+  runTimeStep();
+  runRegridStep(Depth, exahype2::RefinementCommand::Erase);
+  validate(repository.getRefinementRequests() == eraseRequests);
 }

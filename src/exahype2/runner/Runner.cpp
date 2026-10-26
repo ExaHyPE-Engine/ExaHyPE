@@ -93,8 +93,8 @@ namespace {
 
 #if defined(PEANO_WITH_GPU_BACKEND)
   /**
-   * Returns the smallest and the largest number of GPUs that the ranks of one node use, or nothing
-   * if the backend of some rank names no physical device. Every rank calls this function.
+   * Returns the smallest and the largest number of GPUs that the ranks of one node use. Returns
+   * std::nullopt when the device id of some rank is empty. Every rank calls this function.
    */
   std::optional<std::pair<int, int>> countDevicesPerNode() {
     constexpr int              IdLength = 64;
@@ -799,7 +799,6 @@ exahype2::runner::Runner::applyMeshUpdates() {
   int    stepsOfThisRegrid{0};
   double secondsSinceLastReport{0.0};
   while (hasPendingMeshUpdates() and stepsOfThisRegrid < MaximumMeshUpdateSteps) {
-    // A report inside the regrid resets the collection. The regrid counts itself on its first step.
     secondsSinceLastReport += runMeshUpdateStep(stepsOfThisRegrid == 0);
     stepsOfThisRegrid++;
     if (secondsSinceLastReport >= SecondsBetweenMeshUpdateReports) {
@@ -809,22 +808,25 @@ exahype2::runner::Runner::applyMeshUpdates() {
   }
   if (hasPendingMeshUpdates()) {
     reportMeshUpdates();
-    std::ostringstream message;
-    message << "The solvers must stop requesting mesh updates within " << MaximumMeshUpdateSteps
-            << " dynamic AMR steps.";
-    tarch::terminateWithError(message.str());
+    tarch::terminateWithError(
+      "The grid still changes after " + std::to_string(MaximumMeshUpdateSteps) + " regrid steps at t = "
+      + Format::getScientific(_callbacks.getMinTimeStamp()) + ". Check the refinement criterion of the solvers."
+    );
   }
 }
 
 /**
  * Runs one regrid step and adds it to the collected mesh updates. Returns its wall clock in
- * seconds. With startsRegrid, the step also counts a regrid.
+ * seconds. With startsRegrid, the step also counts a regrid. The first step after a report counts
+ * the running regrid in the new collection.
  */
 double
 exahype2::runner::Runner::runMeshUpdateStep(const bool startsRegrid) {
   if (startsRegrid) {
-    _meshUpdates.regrids++;
     _numberOfRegrids++;
+  }
+  if (startsRegrid or _meshUpdates.steps == 0) {
+    _meshUpdates.regrids++;
   }
   const double elapsedSeconds = runStep(Step::DynamicAMR);
   assertion(elapsedSeconds >= 0.0, elapsedSeconds);

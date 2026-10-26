@@ -71,6 +71,7 @@ private:
   INLINE_METHOD void forEachSolver(const Operation& operation) const;
 
   INLINE_METHOD void commitRefinementRequests(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void deleteEraseRequestsOfRepeatedRefinements();
 
   template <typename Solver>
   [[nodiscard]] static INLINE_METHOD int getNumberOfCellsOf(
@@ -83,6 +84,7 @@ private:
   RefinementRequests _refinementRequests{};
 
   std::vector<peano4::RefinementRequest> _requestsOfTheRun{};
+  std::vector<peano4::RefinementRequest> _refinementsOfTheRegrid{};
 
   std::vector<peano4::RefinementRequest> _localRequests{};
   bool                                   _localRequestsPending{false};

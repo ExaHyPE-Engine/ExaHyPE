@@ -37,6 +37,7 @@ void
 exahype2::runner::tests::RunnerTest::run() {
   testMethod(testDescribeMeshUpdatesReportsTheStepCountAndWallClock);
   testMethod(testDescribeRepetitionsCountsEveryPhaseInItsUnit);
+  testMethod(testAReportInsideARegridCountsTheRegridAgain);
   testMethod(testFinishStepSumsTheSolverBytesAndCellUpdates);
   testMethod(testFinishStepReducesTheValuesOfTheSolvers);
   testMethod(testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition);
@@ -74,6 +75,41 @@ exahype2::runner::tests::RunnerTest::testDescribeRepetitionsCountsEveryPhaseInIt
   validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Construction", 5, 0), std::string("5 Steps"));
   validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Initialisation", 1, 0), std::string("1 Round"));
   validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Initialisation", 2, 0), std::string("2 Rounds"));
+}
+
+/**
+ * The first step after a report inside a regrid counts the regrid in the new collection.
+ */
+void
+exahype2::runner::tests::RunnerTest::testAReportInsideARegridCountsTheRegridAgain() {
+  static const std::vector<peano4::RefinementRequest> noRequests;
+  peano4::tests::buildRegularGrid(peano4::tests::DepthWithCoarseCellsBesideTheCentreBlock);
+  exahype2::runner::SolverRepositoryCallbacks callbacks;
+  callbacks.requestRefinementForGridConstruction = [] {};
+  callbacks.allocate                             = [] {};
+  callbacks.initialise                           = [] {};
+  callbacks.performTimeStep                      = [] {};
+  callbacks.regrid                               = []([[maybe_unused]] const peano4::Regrid& regrid) {};
+  callbacks.plot                                 = [] {};
+  callbacks.getRefinementRequests = []() -> const std::vector<peano4::RefinementRequest>& { return noRequests; };
+  exahype2::runner::Runner runner(
+    tarch::la::Vector<DIMENSIONS, double>(0.0),
+    tarch::la::Vector<DIMENSIONS, double>(1.0),
+    std::bitset<DIMENSIONS>(),
+    callbacks
+  );
+
+  runner.startMeshUpdates();
+  static_cast<void>(runner.runMeshUpdateStep(true));
+  static_cast<void>(runner.runMeshUpdateStep(false));
+  validateEquals(runner._meshUpdates.regrids, 1);
+  validateEquals(runner._meshUpdates.steps, 2);
+
+  runner.reportMeshUpdates();
+  static_cast<void>(runner.runMeshUpdateStep(false));
+  validateEquals(runner._meshUpdates.regrids, 1);
+  validateEquals(runner._meshUpdates.steps, 1);
+  validateEquals(runner._numberOfRegrids, 1);
 }
 
 void

@@ -23,4 +23,5 @@ private:
   void testTheRepositoryReducesTheValuesOfEverySolver();
   void testEveryPhaseCallReachesEverySolver();
   void testEveryReductionGathersTheRequestsOfItsOwnStep();
+  void testARegridErasesARequestedRefinementOnlyOnce();
 };

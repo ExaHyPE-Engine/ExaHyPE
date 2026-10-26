@@ -252,8 +252,9 @@ exahype2::runner::Runner::runTimeLoop() calls exahype2::runner::Runner::applyMes
 8. The generated `regrid()` calls exahype2::SolverRepository::regrid().
 9. exahype2::SolverRepository::regrid() calls `regrid()` of every solver.
 10. exahype2::SolverRepository::commitRefinementRequests() gathers the votes of the created cells for the next sweep.
-11. exahype2::runner::Runner::regrid() calls peano4::Spacetree::finishRegrid().
-12. peano4::Spacetree::finishRegrid() adds the freed slots to the free list.
+11. exahype2::SolverRepository::deleteEraseRequestsOfRepeatedRefinements() deletes the erase request of every cell that the regrid refines for the second time.
+12. exahype2::runner::Runner::regrid() calls peano4::Spacetree::finishRegrid().
+13. peano4::Spacetree::finishRegrid() adds the freed slots to the free list.
 
 exahype2::fv::Solver::regrid():
 

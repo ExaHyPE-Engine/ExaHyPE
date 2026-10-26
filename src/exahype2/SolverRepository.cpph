@@ -132,6 +132,7 @@ exahype2::SolverRepository<Solvers...>::initialise(const peano4::CellConnectivit
   _refinementRequests.clear(cellConnectivity.getNumberOfSlots());
   forEachSolver([this, &cellConnectivity](auto& solver) { solver.initialise(cellConnectivity, _refinementRequests); });
   commitRefinementRequests(cellConnectivity);
+  _refinementsOfTheRegrid.clear();
 }
 
 template <typename... Solvers>
@@ -142,6 +143,7 @@ exahype2::SolverRepository<Solvers...>::performTimeStep(const peano4::CellConnec
     solver.performTimeStep(cellConnectivity, _refinementRequests);
   });
   commitRefinementRequests(cellConnectivity);
+  _refinementsOfTheRegrid.clear();
 }
 
 template <typename... Solvers>
@@ -155,6 +157,7 @@ exahype2::SolverRepository<Solvers...>::regrid(
     solver.regrid(cellConnectivity, regrid, _refinementRequests);
   });
   commitRefinementRequests(cellConnectivity);
+  deleteEraseRequestsOfRepeatedRefinements();
 }
 
 template <typename... Solvers>
@@ -190,6 +193,45 @@ INLINE_METHOD void
 exahype2::SolverRepository<Solvers...>::commitRefinementRequests(const peano4::CellConnectivity& cellConnectivity) {
   _localRequests        = _refinementRequests.getLocalRefinementRequests(cellConnectivity);
   _localRequestsPending = true;
+}
+
+/**
+ * Deletes every committed erase request of a cell whose refine request is in _requestsOfTheRun and
+ * in _refinementsOfTheRegrid. Then adds the refine requests of _requestsOfTheRun to
+ * _refinementsOfTheRegrid. A cell refines on its own request at most twice in one regrid.
+ */
+template <typename... Solvers>
+INLINE_METHOD void
+exahype2::SolverRepository<Solvers...>::deleteEraseRequestsOfRepeatedRefinements() {
+  using Control = peano4::RefinementRequest::RefinementControl;
+  assertion(_localRequestsPending);
+  assertion(std::is_sorted(_requestsOfTheRun.begin(), _requestsOfTheRun.end()));
+  assertion(std::is_sorted(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end()));
+  std::erase_if(_localRequests, [this](const peano4::RefinementRequest& request) {
+    if (request.getRefinementControl() != Control::Erase) {
+      return false;
+    }
+    peano4::RefinementRequest refinement = request;
+    refinement.setRefinementControl(Control::Refine);
+    return std::binary_search(_requestsOfTheRun.begin(), _requestsOfTheRun.end(), refinement)
+       and std::binary_search(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end(), refinement);
+  });
+
+  const auto firstErase = std::partition_point(
+    _requestsOfTheRun.begin(),
+    _requestsOfTheRun.end(),
+    [](const peano4::RefinementRequest& request) { return request.getRefinementControl() == Control::Refine; }
+  );
+  std::vector<peano4::RefinementRequest> refinements;
+  refinements.reserve(_refinementsOfTheRegrid.size() + static_cast<std::size_t>(firstErase - _requestsOfTheRun.begin()));
+  std::set_union(
+    _refinementsOfTheRegrid.begin(),
+    _refinementsOfTheRegrid.end(),
+    _requestsOfTheRun.begin(),
+    firstErase,
+    std::back_inserter(refinements)
+  );
+  _refinementsOfTheRegrid = std::move(refinements);
 }
 
 /**
