@@ -920,8 +920,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::solvePicardSy
     }
 
     // The units of every value are integers. Their sum is exact in every order. A change that is not
-    // a number counts as an infinite change. A comparison with a value that is not a number raises a
-    // floating-point exception. std::isnan() tests a change without one. The cell state is finite.
+    // a number counts as an infinite change. An ordered comparison with a value that is not a number
+    // raises a floating-point exception. The quiet comparison square != square detects such a value.
+    // The cell state is finite.
     double units           = 0.0;
     int    unboundedValues = 0;
     for (int timeNode = 0; timeNode < NodesPerAxis; timeNode++) {
@@ -933,7 +934,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::solvePicardSy
         const auto   newValue   = nodeCellState[unknown] + updatedTimeSlice[unknown + NodeStride * timeNode];
         const double difference = isUnknown ? static_cast<double>(newValue - stateNode[unknown]) : 0.0;
         const double square     = tarch::la::productRoundedOnce(difference, difference);
-        const double change     = std::isnan(square) ? Infinity : square;
+        const double change     = square != square ? Infinity : square;
         unboundedValues += change <= SquaredDivergenceBound ? 0 : 1;
         units += not isUnknown        ? 0.0
           : change < squaredTolerance ? std::floor(change * inverseTolerance * ResidualUnitsOfTolerance)

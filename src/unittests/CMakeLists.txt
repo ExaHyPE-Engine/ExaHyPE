@@ -155,6 +155,7 @@ set(GPU_TEST_SOURCES
   exahype2/LevelJumpsTest.cpp
   exahype2/MultiresolutionDetailTest.cpp
   exahype2/RefinementVotesTest.cpp
+  exahype2/dg/BasisTest.cpp
   exahype2/dg/KernelsTest.cpp
   exahype2/dg/TracingTest.cpp
   exahype2/dg/ader/LinearPredictorTest.cpp
