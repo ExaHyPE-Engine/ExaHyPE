@@ -36,10 +36,10 @@ namespace {
     int*                           numberOfRecords, // NOLINT(readability-non-const-parameter)
     [[maybe_unused]] MPI_Datatype* datatype
   ) {
-    assertion(*numberOfRecords == 1, *numberOfRecords);
+    ASSERTION(*numberOfRecords == 1, *numberOfRecords);
     const auto* const source = static_cast<const std::uint64_t*>(incoming);
     auto* const       target = static_cast<std::uint64_t*>(accumulating);
-    assertion(source[0] == target[0] and source[1] == target[1] and source[2] == target[2], source[0], target[0]);
+    ASSERTION(source[0] == target[0] and source[1] == target[1] and source[2] == target[2], source[0], target[0]);
     const std::uint64_t firstMinimum = HeaderSize + target[0];
     const std::uint64_t firstMaximum = firstMinimum + target[1];
     const std::uint64_t end          = firstMaximum + target[2];
@@ -79,7 +79,7 @@ tarch::mpi::ReductionRecord::addMaximum(const std::uint64_t value) {
  */
 int
 tarch::mpi::ReductionRecord::addSums(const std::span<const std::uint64_t> values) {
-  assertion(not values.empty());
+  ASSERTION(not values.empty());
   _sums.insert(_sums.end(), values.begin(), values.end());
   return static_cast<int>(_sums.size() - values.size());
 }
@@ -90,7 +90,7 @@ tarch::mpi::ReductionRecord::addSums(const std::span<const std::uint64_t> values
  */
 int
 tarch::mpi::ReductionRecord::addMinima(const std::span<const std::uint64_t> values) {
-  assertion(not values.empty());
+  ASSERTION(not values.empty());
   _minima.insert(_minima.end(), values.begin(), values.end());
   return static_cast<int>(_minima.size() - values.size());
 }
@@ -101,7 +101,7 @@ tarch::mpi::ReductionRecord::addMinima(const std::span<const std::uint64_t> valu
  */
 int
 tarch::mpi::ReductionRecord::addMaxima(const std::span<const std::uint64_t> values) {
-  assertion(not values.empty());
+  ASSERTION(not values.empty());
   _maxima.insert(_maxima.end(), values.begin(), values.end());
   return static_cast<int>(_maxima.size() - values.size());
 }
@@ -130,7 +130,7 @@ tarch::mpi::ReductionRecord::allreduce(MPI_Comm communicator) {
   packed.insert(packed.end(), _sums.begin(), _sums.end());
   packed.insert(packed.end(), _minima.begin(), _minima.end());
   packed.insert(packed.end(), _maxima.begin(), _maxima.end());
-  assertion(packed.size() <= static_cast<std::size_t>(std::numeric_limits<int>::max()), packed.size());
+  ASSERTION(packed.size() <= static_cast<std::size_t>(std::numeric_limits<int>::max()), packed.size());
 
   // One element of the record type spans the whole record. The operation then sees the header in
   // every call of a pipelined reduction.
@@ -152,19 +152,19 @@ tarch::mpi::ReductionRecord::allreduce(MPI_Comm communicator) {
 
 std::uint64_t
 tarch::mpi::ReductionRecord::getSum(const int slot) const {
-  assertion(slot >= 0 and slot < static_cast<int>(_sums.size()), slot, _sums.size());
+  ASSERTION(slot >= 0 and slot < static_cast<int>(_sums.size()), slot, _sums.size());
   return _sums[static_cast<std::size_t>(slot)];
 }
 
 std::uint64_t
 tarch::mpi::ReductionRecord::getMinimum(const int slot) const {
-  assertion(slot >= 0 and slot < static_cast<int>(_minima.size()), slot, _minima.size());
+  ASSERTION(slot >= 0 and slot < static_cast<int>(_minima.size()), slot, _minima.size());
   return _minima[static_cast<std::size_t>(slot)];
 }
 
 std::uint64_t
 tarch::mpi::ReductionRecord::getMaximum(const int slot) const {
-  assertion(slot >= 0 and slot < static_cast<int>(_maxima.size()), slot, _maxima.size());
+  ASSERTION(slot >= 0 and slot < static_cast<int>(_maxima.size()), slot, _maxima.size());
   return _maxima[static_cast<std::size_t>(slot)];
 }
 

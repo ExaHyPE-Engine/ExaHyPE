@@ -9,7 +9,7 @@
 INLINE_METHOD
 exahype2::plotter::ParticlePlotter::ParticlePlotter(std::string filename) :
   _filename(std::move(filename)) {
-  assertion(not _filename.empty());
+  ASSERTION(not _filename.empty());
 }
 
 /**
@@ -71,6 +71,6 @@ exahype2::plotter::ParticlePlotter::plot(
   if (_fileWriter == nullptr) {
     _fileWriter = tarch::plotter::createFileWriter(format);
   }
-  assertion(_fileWriter->getFormat() == format);
+  ASSERTION(_fileWriter->getFormat() == format);
   _fileWriter->write(mesh, outputDirectory + OutputSubdirectory, _filename, timeStamp);
 }

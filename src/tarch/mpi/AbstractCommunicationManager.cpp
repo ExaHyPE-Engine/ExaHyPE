@@ -43,7 +43,7 @@ tarch::mpi::AbstractCommunicationManager::usesDedicatedThread() {
  */
 void
 tarch::mpi::AbstractCommunicationManager::registerPoller(Poller poller) {
-  assertion(static_cast<bool>(poller));
+  ASSERTION(static_cast<bool>(poller));
   _pollers.push_back(std::move(poller));
 }
 

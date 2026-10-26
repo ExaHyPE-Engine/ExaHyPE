@@ -18,10 +18,6 @@ namespace exahype2 {
   struct FindLargestErrorsOfCells;
   struct SumErrorsOfCells;
   struct MergeErrorSums;
-
-  namespace tests {
-    class ErrorMeasurementTest;
-  } // namespace tests
 } // namespace exahype2
 
 /**
@@ -87,8 +83,6 @@ public:
   [[nodiscard]] tarch::AllocatedBytes getAllocatedBytes() const;
 
 private:
-  friend class exahype2::tests::ErrorMeasurementTest;
-
   [[nodiscard]] static ErrorSums getEmptySumsOfAllRanks(const LargestErrors& largestErrors);
   std::array<double, NumberOfNorms> record(const ErrorSums& localSums, double timeStamp);
 

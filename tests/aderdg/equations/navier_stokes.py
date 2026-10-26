@@ -289,7 +289,7 @@ class NavierStokes(Equation):
 #endif
       break;
     default:
-      assertion(false, normal);
+      ASSERTION(false, normal);
   }
 
   F[Shortcuts::j+0] -= Fj[0];

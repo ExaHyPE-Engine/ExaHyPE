@@ -67,8 +67,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::evolveFaceStates(
   ComputePrecision* NOALIAS const              evolvedPlusState
 ) {
   using GeometryPrecision = decltype(ComputePrecision{} * double{});
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
-  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
   ComputePrecision leftStateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   ComputePrecision centreStateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   ComputePrecision rightStateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -220,7 +220,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::evolveFaceStates(
     }
   }
   for (int unknown = 0; unknown < NumberOfData; unknown++) {
-    assertion(std::isfinite(evolvedMinusState[unknown]) and std::isfinite(evolvedPlusState[unknown]), unknown, normal);
+    ASSERTION(std::isfinite(evolvedMinusState[unknown]) and std::isfinite(evolvedPlusState[unknown]), unknown, normal);
   }
 }
 
@@ -244,8 +244,8 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::rusanovFaceFlux(
     SolverType::maxEigenvalue(leftState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
   const ComputePrecision rightMaxEigenvalue =
     SolverType::maxEigenvalue(rightState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
-  assertion(exahype2::MaxEigenvalueReduction::isPhysicalValue(leftMaxEigenvalue), leftMaxEigenvalue, normal);
-  assertion(exahype2::MaxEigenvalueReduction::isPhysicalValue(rightMaxEigenvalue), rightMaxEigenvalue, normal);
+  ASSERTION(exahype2::MaxEigenvalueReduction::isPhysicalValue(leftMaxEigenvalue), leftMaxEigenvalue, normal);
+  ASSERTION(exahype2::MaxEigenvalueReduction::isPhysicalValue(rightMaxEigenvalue), rightMaxEigenvalue, normal);
   const ComputePrecision maxEigenvalue =
     rightMaxEigenvalue > leftMaxEigenvalue ? rightMaxEigenvalue : leftMaxEigenvalue;
 
@@ -479,10 +479,10 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
   using StateUpdatePrecision = decltype(StoragePrecision{} + ComputePrecision{});
   const int volume           = centreOffset / NumberOfData;
 
-  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp);
-  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
+  ASSERTION(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp);
+  ASSERTION(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
   const double halfTimeStamp = timeStamp + 0.5 * timeStepSize;
-  assertion(std::isfinite(halfTimeStamp), timeStamp, timeStepSize);
+  ASSERTION(std::isfinite(halfTimeStamp), timeStamp, timeStepSize);
 
   // Every axis writes its flux difference into its own update. The updates of an unknown add with
   // tarch::la::sumInOrderOfValue() in 3D and enter outputState once. Mirrored and swapped volumes
@@ -783,7 +783,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
   }
   // The assertion stays out of the SIMD loop. The body of that loop must not emit diagnostics.
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    assertion(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
+    ASSERTION(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }
 }
 TARGET_DECLARE_END

@@ -10,9 +10,9 @@
 
 void*
 tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   void* data = omp_target_alloc(sizeInBytes, device);
-  assertion(data);
+  ASSERTION(data);
   return data;
 }
 
@@ -20,13 +20,13 @@ void*
 tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
   // The pinned host allocator llvm_omp_target_host_mem_alloc is an extension of the LLVM OpenMP runtime.
   void* data = omp_alloc(sizeInBytes, llvm_omp_target_host_mem_alloc);
-  assertion(data);
+  ASSERTION(data);
   return data;
 }
 
 void
 tarch::accelerator::freeDeviceMemory(void* data, int device) {
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   omp_target_free(data, device);
 }
 
@@ -40,7 +40,7 @@ tarch::accelerator::copyToDeviceMemory(void* target, const void* source, std::si
   constexpr std::size_t TargetOffset = 0;
   constexpr std::size_t SourceOffset = 0;
   const int             hostDevice   = omp_get_initial_device();
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   omp_target_memcpy(target, source, sizeInBytes, TargetOffset, SourceOffset, device, hostDevice);
 }
 
@@ -59,7 +59,7 @@ tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, std::
   constexpr std::size_t TargetOffset = 0;
   constexpr std::size_t SourceOffset = 0;
   const int             hostDevice   = omp_get_initial_device();
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   omp_target_memcpy(target, source, sizeInBytes, TargetOffset, SourceOffset, hostDevice, device);
 }
 

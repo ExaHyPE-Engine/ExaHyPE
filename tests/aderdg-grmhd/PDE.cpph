@@ -29,7 +29,7 @@ tests::exahype2::aderdg::grmhd::crossProduct(
   const double        scale,
   double* const       result
 ) {
-  assertion(result != first and result != second);
+  ASSERTION(result != first and result != second);
   for (int axis = 0; axis < 3; axis++) {
     const int    nextAxis   = (axis + 1) % 3;
     const int    otherAxis  = (axis + 2) % 3;
@@ -49,7 +49,7 @@ tests::exahype2::aderdg::grmhd::multiplyMatrixVector(
   const double* const vector,
   double* const       result
 ) {
-  assertion(result != vector);
+  ASSERTION(result != vector);
 
   result[0] = dotProduct(matrix[0], vector);
   result[1] = dotProduct(matrix[1], vector);
@@ -72,7 +72,7 @@ tests::exahype2::aderdg::grmhd::invertMatrix3x3(const double (&matrix)[3][3], do
     -tarch::la::productInOrderOfMagnitude(matrix[2][0], matrix[0][2], matrix[1][1])
   };
   const double determinant = tarch::la::sumInFixedPoint(terms, 6);
-  assertion(determinant != 0.0, determinant);
+  ASSERTION(determinant != 0.0, determinant);
 
   const auto differenceOfProducts =
     [](const double first, const double second, const double third, const double fourth) {
@@ -109,7 +109,7 @@ tests::exahype2::aderdg::grmhd::evaluateRecoveryFunction(
   const double  sb2,
   double* const w
 ) {
-  assertion(squaredVelocity >= 0.0 and squaredVelocity < 1.0, squaredVelocity);
+  ASSERTION(squaredVelocity >= 0.0 and squaredVelocity < 1.0, squaredVelocity);
 
   constexpr double Third       = 1. / 3.;
   constexpr double InverseOf27 = 1. / 27.;
@@ -161,8 +161,8 @@ tests::exahype2::aderdg::grmhd::findSquaredVelocity(
   const double        sb2,
   bool* const         failed
 ) {
-  assertion(lowerStart[0] < upperStart[0], lowerStart[0], upperStart[0]);
-  assertion(tolerance[0] > 0.0, tolerance[0]);
+  ASSERTION(lowerStart[0] < upperStart[0], lowerStart[0], upperStart[0]);
+  ASSERTION(tolerance[0] > 0.0, tolerance[0]);
 
   constexpr double ResidualTolerance = 1e-60;
   failed[0]                          = false;
@@ -279,7 +279,7 @@ tests::exahype2::aderdg::grmhd::convertPrimitiveToConserved(double* const Q, con
 
   double       gContr[3][3];
   const double determinant = invertMatrix3x3(gCov, gContr);
-  assertion(determinant > 0.0, determinant);
+  ASSERTION(determinant > 0.0, determinant);
 
   const double rootDeterminant        = std::sqrt(determinant);
   const double inverseRootDeterminant = 1. / rootDeterminant;
@@ -299,7 +299,7 @@ tests::exahype2::aderdg::grmhd::convertPrimitiveToConserved(double* const Q, con
   const double v2    = dotProduct(vContr, vCov);
   const double e2    = dotProduct(vCrossBContr, vCrossBCov);
   const double b2    = dotProduct(bContr, bCov);
-  assertion(v2 < 1.0, v2);
+  ASSERTION(v2 < 1.0, v2);
 
   const double electromagneticEnergy = 0.5 * (b2 + e2);
 
@@ -361,7 +361,7 @@ tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(const double* const 
 
   double       gContr[3][3];
   const double determinant = invertMatrix3x3(gCov, gContr);
-  assertion(determinant > 0.0, determinant);
+  ASSERTION(determinant > 0.0, determinant);
 
   const double rootDeterminant        = std::sqrt(determinant);
   const double inverseRootDeterminant = 1. / rootDeterminant;

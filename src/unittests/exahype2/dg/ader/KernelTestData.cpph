@@ -1,0 +1,115 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::unittests::StubSolver::flux(
+  const double* NOALIAS const                                   state,
+  const tarch::la::Vector<DIMENSIONS, double>&                  position,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  const int                                                     direction,
+  double* NOALIAS const                                         values
+) {
+  for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
+    values[unknown] = KernelTestSetup::FluxSpeed * (1.0 + direction) * state[unknown] + 0.01 * position(0);
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::unittests::StubSolver::flux(
+  const double* NOALIAS const                                   state,
+  const double* const NOALIAS                                   stateGradients[DIMENSIONS],
+  const tarch::la::Vector<DIMENSIONS, double>&                  position,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  const int                                                     direction,
+  double* NOALIAS const                                         values
+) {
+  for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
+    values[unknown] = KernelTestSetup::FluxSpeed * (1.0 + direction) * state[unknown] + 0.01 * position(0)
+      + KernelTestSetup::DiffusionSpeed * stateGradients[direction][unknown];
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::unittests::StubSolver::nonconservativeProduct(
+  const double* NOALIAS const                                   state,
+  const double* NOALIAS const                                   stateGradient,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  const int                                                     direction,
+  double* NOALIAS const                                         values
+) {
+  for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
+    values[unknown] =
+      KernelTestSetup::ProductSpeed * (1.0 + direction) * stateGradient[unknown] + 0.01 * state[unknown];
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::unittests::StubSolver::sourceTerm(
+  const double* NOALIAS const                                   state,
+  const tarch::la::Vector<DIMENSIONS, double>&                  position,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  double* NOALIAS const                                         values
+) {
+  for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
+    values[unknown] = KernelTestSetup::SourceStrength + 0.1 * state[unknown] - 0.01 * position(0);
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::unittests::StubSolver::diffusiveSourceTerm(
+  [[maybe_unused]] const double* NOALIAS const                  state,
+  const double* NOALIAS const                                   stateGradient,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  double* NOALIAS const                                         values
+) {
+  for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
+    double sumOverAxes = 0.0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      sumOverAxes += stateGradient[axis * KernelTestSetup::NumberOfUnknowns + unknown];
+    }
+    values[unknown] = KernelTestSetup::DiffusiveSourceStrength * sumOverAxes;
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::unittests::StubSolver::multiplyMaterialParameterMatrix(
+  const double* NOALIAS const                                   state,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  const int                                                     direction,
+  double* NOALIAS const                                         values
+) {
+  for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
+    values[unknown] *= 1.0 + 0.25 * state[0] + 0.125 * direction;
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ader::unittests::StubSolver::pointSource(
+  const double* NOALIAS const                  state,
+  [[maybe_unused]] const double* NOALIAS const nodePosition,
+  const double                                 timeStamp,
+  [[maybe_unused]] const double                timeStepSize,
+  double* NOALIAS const                        forceVector,
+  const int                                    pointSource
+) {
+  for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
+    forceVector[unknown] = 1.0 + unknown + pointSource + timeStamp + state[unknown];
+  }
+}
+TARGET_DECLARE_END

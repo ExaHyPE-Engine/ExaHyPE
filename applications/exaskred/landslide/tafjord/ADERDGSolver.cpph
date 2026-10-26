@@ -88,7 +88,7 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
 
 /**
  * Refines a cell that overlaps the region of the displacement file. Every other cell keeps its
- * level. No cell receives interpolated bathymetry or slide material after the initialisation.
+ * level. The initial condition writes the bathymetry and the slide material of every cell.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
@@ -97,13 +97,13 @@ applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                t
 ) {
-  assertion(h(0) > 0.0 and h(1) > 0.0, h);
+  ASSERTION(h(0) > 0.0 and h(1) > 0.0, h);
   const auto displacementSize     = applications::exahype2::exaskred::RuntimeParameters::displacementSize();
   const auto displacementOffset   = applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
   const auto displacementPosition = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
   bool       overlapsDisplacement = true;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(displacementSize(axis) >= 0.0, axis, displacementSize(axis));
+    ASSERTION(displacementSize(axis) >= 0.0, axis, displacementSize(axis));
     const double lower   = displacementOffset(axis) + displacementPosition(axis);
     const double upper   = lower + displacementSize(axis);
     overlapsDisplacement = overlapsDisplacement and x(axis) + 0.5 * h(axis) > lower and x(axis) - 0.5 * h(axis) < upper;

@@ -12,7 +12,7 @@ template <typename Shortcuts, typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaseis::FaceNodeSide<Value>
 applications::exahype2::exaseis::getFaceNodeSide(const Value* const Q, const int normal) {
   static_assert(DIMENSIONS == 3, "The elastic Riemann solvers are three-dimensional");
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
 
   FaceNodeSide<Value> side;
   side.density            = Q[Shortcuts::rho];
@@ -35,7 +35,7 @@ applications::exahype2::exaseis::getFaceNodeSide(const Value* const Q, const int
     side.metricNorm     = 1;
     side.normal[normal] = 1;
   }
-  assertion(side.metricNorm > 0, side.metricNorm);
+  ASSERTION(side.metricNorm > 0, side.metricNorm);
 
   const Value* const stress = Q + Shortcuts::sigma;
   const Value        traction[3]{
@@ -273,7 +273,7 @@ applications::exahype2::exaseis::solveRiemannProblemOnFaceNodes(
     const Value* const rightData = QR + node * NumberOfData;
     const auto         left      = getFaceNodeSide<Shortcuts>(leftData, normal);
     const auto         right     = getFaceNodeSide<Shortcuts>(rightData, normal);
-    assertion(
+    ASSERTION(
       left.pressureImpedance > 0 and right.pressureImpedance > 0,
       left.pressureImpedance,
       right.pressureImpedance

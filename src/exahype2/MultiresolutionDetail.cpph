@@ -33,9 +33,9 @@ exahype2::computeMultiresolutionDetail(
   const double                                    floor
 ) {
   static_assert(NumberOfNodesPerAxis > 0);
-  assertion(Q != nullptr);
-  assertion(numberOfUnknownsPlusAuxiliaryVariables > 0, numberOfUnknownsPlusAuxiliaryVariables);
-  assertion(floor > 0.0, floor);
+  ASSERTION(Q != nullptr);
+  ASSERTION(numberOfUnknownsPlusAuxiliaryVariables > 0, numberOfUnknownsPlusAuxiliaryVariables);
+  ASSERTION(floor > 0.0, floor);
 
   if constexpr (NumberOfNodesPerAxis < 2) {
     return 0.0;
@@ -47,7 +47,7 @@ exahype2::computeMultiresolutionDetail(
   // The upper half negates the lower half. The coordinates are antisymmetric to the last bit.
   double nodeCoordinate[NumberOfNodes];
   for (int i = 0; i < NumberOfNodes / 2; i++) {
-    assertion(nodesInUnitInterval[i] >= 0.0 and nodesInUnitInterval[i] <= 1.0, i, nodesInUnitInterval[i]);
+    ASSERTION(nodesInUnitInterval[i] >= 0.0 and nodesInUnitInterval[i] <= 1.0, i, nodesInUnitInterval[i]);
     nodeCoordinate[i]                     = nodesInUnitInterval[i] - 0.5;
     nodeCoordinate[NumberOfNodes - 1 - i] = -(nodesInUnitInterval[i] - 0.5);
   }
@@ -127,8 +127,8 @@ TARGET_DECLARE
  */
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand
 exahype2::getRefinementCommandFromDetail(const double detail, const double eps, const double coarsenSafetyFactor) {
-  assertion(eps > 0.0, eps);
-  assertion(coarsenSafetyFactor > 0.0, coarsenSafetyFactor);
+  ASSERTION(eps > 0.0, eps);
+  ASSERTION(coarsenSafetyFactor > 0.0, coarsenSafetyFactor);
   if (detail > eps) {
     return exahype2::RefinementCommand::Refine;
   }

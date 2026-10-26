@@ -41,10 +41,6 @@ namespace exahype2::dg::limiting {
   struct ProjectNodesOntoSubgrids;
 } // namespace exahype2::dg::limiting
 
-namespace exahype2::dg::limiting::tests {
-  class SubcellSchemeTest;
-} // namespace exahype2::dg::limiting::tests
-
 TARGET_DECLARE
 /**
  * SubcellScheme runs the finite-volume scheme on the subgrid of one cell of Derived with PatchSize
@@ -104,6 +100,60 @@ public:
   );
 
   template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectSubgridOntoFacesInTeam(
+    tarch::accelerator::TeamHandle  team,
+    const int* NOALIAS              status,
+    StoragePrecision* NOALIAS       subcells,
+    const StoragePrecision* NOALIAS previousSolution,
+    StoragePrecision* const         haloHalves[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS nodesToSubcells,
+    bool                            subcellsStoreInitialCondition,
+    StoragePrecision* NOALIAS       scratch
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics recomputeInTeam(
+    tarch::accelerator::TeamHandle               team,
+    StoragePrecision* NOALIAS                    nodes,
+    StoragePrecision* NOALIAS                    subcells,
+    StoragePrecision* NOALIAS                    evolvedSubcells,
+    const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS              subcellsToNodes,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    int                                          boundaryFaces,
+    double                                       timeStamp,
+    double                                       timeStepSize
+  );
+
+private:
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics reduceMaxEigenvalues(
+    const StoragePrecision* NOALIAS              subcells,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize
+  );
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
+  reduceMaxEigenvaluesOfSubcell(
+    const StoragePrecision* NOALIAS              subcells,
+    int                                          subcell,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize
+  );
+
+  template <typename Reconstruct>
+  struct SubgridSolver;
+
+  template <typename Reconstruct>
+  using SubgridScheme = exahype2::fv::FiniteVolumeScheme<SubgridSolver<Reconstruct>, ComputePrecision>;
+
+  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void projectSubgridOntoFaces(
     const int* NOALIAS              status,
     StoragePrecision* NOALIAS       subcells,
@@ -114,7 +164,7 @@ public:
   );
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void projectSubgridOntoFacesInTeam(
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectSubgridOntoFacesWithThreadsOfTeam(
     tarch::accelerator::TeamHandle  team,
     const int* NOALIAS              status,
     StoragePrecision* NOALIAS       subcells,
@@ -137,62 +187,6 @@ public:
     int                                          boundaryFaces,
     double                                       timeStamp,
     double                                       timeStepSize
-  );
-
-  template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics recomputeInTeam(
-    tarch::accelerator::TeamHandle               team,
-    StoragePrecision* NOALIAS                    nodes,
-    StoragePrecision* NOALIAS                    subcells,
-    StoragePrecision* NOALIAS                    evolvedSubcells,
-    const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
-    const StoragePrecision* NOALIAS              subcellsToNodes,
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    int                                          boundaryFaces,
-    double                                       timeStamp,
-    double                                       timeStepSize
-  );
-
-  template <typename StoragePrecision>
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
-  reduceMaxEigenvaluesOfSubcell(
-    const StoragePrecision* NOALIAS              subcells,
-    int                                          subcell,
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize
-  );
-
-  template <typename StoragePrecision>
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics reduceMaxEigenvalues(
-    const StoragePrecision* NOALIAS              subcells,
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize
-  );
-
-private:
-  friend class exahype2::dg::limiting::tests::SubcellSchemeTest;
-
-  template <typename Reconstruct>
-  struct SubgridSolver;
-
-  template <typename Reconstruct>
-  using SubgridScheme = exahype2::fv::FiniteVolumeScheme<SubgridSolver<Reconstruct>, ComputePrecision>;
-
-  template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void projectSubgridOntoFacesWithThreadsOfTeam(
-    tarch::accelerator::TeamHandle  team,
-    const int* NOALIAS              status,
-    StoragePrecision* NOALIAS       subcells,
-    const StoragePrecision* NOALIAS previousSolution,
-    StoragePrecision* const         haloHalves[peano4::FacesPerCell],
-    const StoragePrecision* NOALIAS nodesToSubcells,
-    bool                            subcellsStoreInitialCondition,
-    StoragePrecision* NOALIAS       scratch
   );
 
   template <typename StoragePrecision>

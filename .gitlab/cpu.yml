@@ -1,0 +1,62 @@
+.CPU:
+  extends: .ChildPipeline
+  stage: CPU
+  needs: []
+
+.Sanitizer:
+  variables:
+    SANITIZER: "address+undefined"
+    APPTAINERENV_ASAN_OPTIONS: "detect_leaks=0"
+    APPTAINERENV_UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1"
+    APPTAINERENV_OMPI_MCA_pml: "ob1"
+    APPTAINERENV_OMPI_MCA_osc: "^ucx"
+    APPTAINERENV_OMPI_MCA_btl: "self,sm,tcp"
+    # The binary memory patcher of Open MPI rewrites the allocator entry points that the address
+    # sanitizer interposes. MPI_Init_thread then raises a segmentation fault.
+    APPTAINERENV_OMPI_MCA_memory: "^patcher"
+    APPTAINERENV_UCX_TLS: "tcp,sm"
+
+GCC:
+  extends: [.CPU, .Hilbert, .Sanitizer]
+  variables:
+    TOOLCHAIN: "GCC"
+    CC: "gcc"
+    CXX: "g++"
+    FC: "gfortran"
+    IMAGE_TAG: "${IMAGE_GCC}"
+
+Intel:
+  extends: [.CPU, .Peano]
+  variables:
+    TOOLCHAIN: "Intel"
+    CC: "icx"
+    CXX: "icpx"
+    FC: "ifx"
+    IMAGE_TAG: "${IMAGE_INTEL}"
+
+LLVM:
+  extends: [.CPU, .Peano, .Sanitizer]
+  variables:
+    TOOLCHAIN: "LLVM"
+    CC: "clang"
+    CXX: "clang++"
+    FC: "gfortran" # TODO: flang
+    IMAGE_TAG: "${IMAGE_LLVM}"
+
+NVIDIA:
+  extends: [.CPU, .Peano]
+  variables:
+    TOOLCHAIN: "NVIDIA"
+    CC: "nvc"
+    CXX: "nvc++"
+    FC: "nvfortran"
+    IMAGE_TAG: "${IMAGE_NVIDIA}"
+
+AMD:
+  extends: [.CPU, .Peano]
+  variables:
+    TOOLCHAIN: "AMD"
+    CC: "amdclang"
+    CXX: "amdclang++"
+    FC: "flang"
+    IMAGE_TAG: "${IMAGE_AMD}"

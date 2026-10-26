@@ -52,7 +52,7 @@ tarch::getTotalMemoryInBytes() {
 
 namespace {
   /**
-   * Returns one field of /proc/meminfo in KiB, or nothing when the kernel does not report it.
+   * Returns one field of /proc/meminfo in KiB, or std::nullopt when the kernel omits it.
    */
   std::optional<std::uint64_t> readMemoryInformationInKiB(const std::string_view field) {
     std::ifstream memoryInformation("/proc/meminfo");
@@ -125,14 +125,14 @@ tarch::getMemoryUsageInBytes() {
   std::ifstream statFile("/proc/self/stat");
   std::string   line;
   if (not std::getline(statFile, line)) {
-    logError("The memory measurement cannot read the file /proc/self/stat.");
+    LOG_ERROR("The memory measurement cannot read the file /proc/self/stat.");
     return 0;
   }
   // Field 24 of /proc/self/stat is the resident set size in pages. Field 2 may contain spaces and
   // ends at the last closing bracket.
   const auto commandEnd = line.rfind(')');
   if (commandEnd == std::string::npos) {
-    logError("The memory measurement cannot parse the line '" << line << "' of the file /proc/self/stat.");
+    LOG_ERROR("The memory measurement cannot parse the line '" << line << "' of the file /proc/self/stat.");
     return 0;
   }
   std::istringstream fields(line.substr(commandEnd + 1));
@@ -142,7 +142,7 @@ tarch::getMemoryUsageInBytes() {
   }
   std::uint64_t residentPages = 0;
   if (not(fields >> residentPages)) {
-    logError("The memory measurement cannot read the resident memory from the file /proc/self/stat.");
+    LOG_ERROR("The memory measurement cannot read the resident memory from the file /proc/self/stat.");
     return 0;
   }
   return residentPages * static_cast<std::uint64_t>(sysconf(_SC_PAGESIZE));

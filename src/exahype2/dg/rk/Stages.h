@@ -31,10 +31,6 @@ namespace exahype2::dg::rk {
   struct CombineStages;
 } // namespace exahype2::dg::rk
 
-namespace exahype2::dg::rk::tests {
-  class StagesTest;
-} // namespace exahype2::dg::rk::tests
-
 TARGET_DECLARE
 /**
  * The Butcher tableau of the explicit Runge-Kutta scheme of one order. Order one is the explicit
@@ -141,8 +137,6 @@ public:
   );
 
 private:
-  friend class exahype2::dg::rk::tests::StagesTest;
-
   template <typename StoragePrecision, typename TargetPrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void combineEstimates(
     const Weights&                  weights,
@@ -175,8 +169,8 @@ private:
 
 /**
  * Adds the face integrals of the stage before to its estimate and opens the stage on every listed
- * cell. No cell writes a flux half that another cell reads. scratch stores one stage state per
- * scratch chunk of the dispatch.
+ * cell. The flux halves that one cell writes and those that the other cells read are disjoint.
+ * scratch stores one stage state per scratch chunk of the dispatch.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::rk::OpenStage final {

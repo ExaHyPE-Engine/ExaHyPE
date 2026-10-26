@@ -34,8 +34,6 @@ public:
     std::string_view fileName
   );
 
-  static bool debugMessagesAreEnabled(std::string_view scopeName);
-
   template <typename MessageFactory>
   static void debugIfEnabled(
     std::string_view functionSignature,
@@ -137,6 +135,7 @@ private:
 
   static void configureDebugFilter();
   static bool debugMessagesAreConfigured();
+  static bool debugMessagesAreEnabled(std::string_view scopeName);
 
   static const Configuration& getConfiguration();
   static void updateConfiguration(const std::function<void(Configuration&)>& update);

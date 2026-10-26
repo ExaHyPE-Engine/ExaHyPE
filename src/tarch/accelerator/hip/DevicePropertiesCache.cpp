@@ -13,7 +13,7 @@ tarch::accelerator::hip::DevicePropertiesCache::getProperties() {
 
   int deviceId = -1;
   CHECK_HIP_ERROR(hipGetDevice(&deviceId));
-  assertion(deviceId >= 0);
+  ASSERTION(deviceId >= 0);
 
   std::lock_guard<std::mutex> guard(instance._mtx);
 

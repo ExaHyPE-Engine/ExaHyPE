@@ -27,7 +27,7 @@ exahype2::dg::ader::Corrector<Derived, StoragePrecision, ComputePrecision>::getT
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD int
 exahype2::dg::ader::Corrector<Derived, StoragePrecision, ComputePrecision>::getNumberOfTeams(const int cells) {
-  assertion(cells >= 0, cells);
+  ASSERTION(cells >= 0, cells);
   const int teamThreads = getTeamThreads();
   const int teamsOfNodes =
     static_cast<int>((static_cast<std::int64_t>(cells) * CellLayout::NodesPerCell + teamThreads - 1) / teamThreads);
@@ -76,8 +76,8 @@ exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, C
   constexpr int  NodesPerCell      = CellLayout::NodesPerCell;
   constexpr int  FluxValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
   constexpr bool Postprocesses     = exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>;
-  assertion(numberOfTeams >= 1, numberOfTeams);
-  assertion(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
+  ASSERTION(numberOfTeams >= 1, numberOfTeams);
+  ASSERTION(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
   const int thread      = tarch::accelerator::getThreadOfTeam(team);
   const int threads     = tarch::accelerator::getNumberOfThreadsPerTeam(team);
   const int cellsOfTeam = entry < cells.size ? (cells.size - 1 - entry) / numberOfTeams + 1 : 0;
@@ -98,7 +98,7 @@ exahype2::dg::ader::CorrectCells<Derived, ReportEigenvalues, StoragePrecision, C
       width        = cellConnectivity.getCellWidth(slot);
       updated      = solution.getChunk(slot);
       for (int direction = 0; direction < DIMENSIONS; direction++) {
-        assertion(width(direction) > 0.0, width, direction);
+        ASSERTION(width(direction) > 0.0, width, direction);
         inverseCellSize[direction] = 1.0 / width(direction);
       }
       for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {

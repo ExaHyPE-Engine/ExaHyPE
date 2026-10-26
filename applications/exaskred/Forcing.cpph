@@ -12,7 +12,7 @@ applications::exahype2::exaskred::forcing::getCoriolisParameterOnSphere(
   const double latitudeInDegrees,
   const double angularVelocity
 ) {
-  assertion(latitudeInDegrees >= -90.0 and latitudeInDegrees <= 90.0, latitudeInDegrees);
+  ASSERTION(latitudeInDegrees >= -90.0 and latitudeInDegrees <= 90.0, latitudeInDegrees);
   return 2.0 * angularVelocity * std::sin(std::numbers::pi_v<double> * latitudeInDegrees / 180.0);
 }
 
@@ -28,9 +28,9 @@ applications::exahype2::exaskred::forcing::getManningFriction(
   const double manningCoefficient,
   const double minimumWaterHeight
 ) {
-  assertion(gravity >= 0.0, gravity);
-  assertion(manningCoefficient >= 0.0, manningCoefficient);
-  assertion(minimumWaterHeight >= 0.0, minimumWaterHeight);
+  ASSERTION(gravity >= 0.0, gravity);
+  ASSERTION(manningCoefficient >= 0.0, manningCoefficient);
+  ASSERTION(minimumWaterHeight >= 0.0, minimumWaterHeight);
   if (not std::isfinite(waterHeight) or waterHeight <= minimumWaterHeight) {
     return 0.0;
   }

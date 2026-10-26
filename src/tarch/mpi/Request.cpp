@@ -33,7 +33,7 @@ namespace {
     }
 
     if (diagnostics.getTimeoutWarning() > std::chrono::seconds(0) and now >= nextWarning) {
-      logWarning(
+      LOG_WARNING(
         operation << " at " << location.file_name() << ":" << location.line() << " still waits for MPI request"
       );
       nextWarning = now + diagnostics.getTimeoutWarning();

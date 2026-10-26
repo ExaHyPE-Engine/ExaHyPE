@@ -128,6 +128,19 @@ struct exahype2::fv::reconstruction::Constant final {
     const Terms&                                 terms
   );
 
+  template <typename SolverType, typename Terms, typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision getMaxEigenvalue(
+    const Terms&                                 terms,
+    int                                          volume,
+    const ComputePrecision* NOALIAS              state,
+    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          normal
+  );
+
+private:
   template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename Terms, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static const ComputePrecision* getFluxAndMaxEigenvalue(
     const Terms&                                 terms,
@@ -140,18 +153,6 @@ struct exahype2::fv::reconstruction::Constant final {
     int                                          normal,
     ComputePrecision* NOALIAS                    fluxBuffer,
     ComputePrecision&                            maxEigenvalue
-  );
-
-  template <typename SolverType, typename Terms, typename ComputePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision getMaxEigenvalue(
-    const Terms&                                 terms,
-    int                                          volume,
-    const ComputePrecision* NOALIAS              state,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          normal
   );
 };
 TARGET_DECLARE_END

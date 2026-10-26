@@ -1,18 +1,21 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+/**
+ * split() pins every interface to a face of the cells of cellSize.
+ */
 INLINE_METHOD
-exahype2::Curvi::Curvi(const Point& domainOffset, const Point& domainSize, const Point& minCellSize) :
+exahype2::Curvi::Curvi(const Point& domainOffset, const Point& domainSize, const Point& cellSize) :
   _domainOffset(domainOffset),
   _domainSize(domainSize),
-  _minCellSize(minCellSize) {}
+  _cellSize(cellSize) {}
 
 /**
  * Pins the interface to the cell boundary closest to position.
  */
 INLINE_METHOD double
 exahype2::Curvi::split(int normal, double position, Perturbation perturbation) {
-  const int splitIndex = static_cast<int>(std::round((position - _domainOffset[normal]) / _minCellSize[normal]));
+  const int splitIndex = static_cast<int>(std::round((position - _domainOffset[normal]) / _cellSize[normal]));
   return split(normal, splitIndex, position, std::move(perturbation));
 }
 

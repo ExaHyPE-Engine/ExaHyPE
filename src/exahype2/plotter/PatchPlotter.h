@@ -83,12 +83,12 @@ public:
     const std::string&                                                            outputDirectory
   );
 
+private:
   template <int NodesPerAxis, int SubcellsPerAxis>
   [[nodiscard]] static INLINE_METHOD std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)> containingSubcells(
     const double* nodePositions
   );
 
-private:
   static constexpr const char* OutputSubdirectory = "patch/";
 
   static constexpr std::size_t RefinementLevelField = 0;

@@ -45,7 +45,7 @@ applications::exahype2::exaskred::projection::AlbersEqualArea::forward(
   const double longitudeInDegrees,
   const double latitudeInDegrees
 ) const {
-  assertion(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);
+  ASSERTION(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);
   const double eccentricitySquared = eccentricity * eccentricity;
   const double firstParallel       = firstStandardParallel * DegreesToRadians;
   const double secondParallel      = secondStandardParallel * DegreesToRadians;
@@ -71,7 +71,7 @@ applications::exahype2::exaskred::projection::AlbersEqualArea::forward(
  */
 INLINE_METHOD GPU_CALLABLE_METHOD std::pair<double, double>
 applications::exahype2::exaskred::projection::AlbersEqualArea::inverse(const double x, const double y) const {
-  assertion(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);
+  ASSERTION(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);
   const double eccentricitySquared         = eccentricity * eccentricity;
   const double oneMinusEccentricitySquared = 1.0 - eccentricitySquared;
   const double firstParallel               = firstStandardParallel * DegreesToRadians;
@@ -117,7 +117,7 @@ applications::exahype2::exaskred::projection::AlbersEqualArea::inverse(const dou
  */
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, double>
 applications::exahype2::exaskred::projection::AlbersEqualArea::inverseJacobian(const double x, const double y) const {
-  assertion(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);
+  ASSERTION(eccentricity > 0.0 and eccentricity < 1.0, eccentricity);
   const double eccentricitySquared = eccentricity * eccentricity;
   const double firstParallel       = firstStandardParallel * DegreesToRadians;
   const double secondParallel      = secondStandardParallel * DegreesToRadians;

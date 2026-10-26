@@ -419,10 +419,10 @@ tarch::plotter::NetCDFFileWriter::write(
         int* const         nodesOfCell = elementNodes + cell * static_cast<std::size_t>(maxElementNodes);
         const std::int32_t firstNode   = cell == 0 ? 0 : mesh.offsets[cell - 1];
         const std::int32_t endNode     = mesh.offsets[cell];
-        assertion(endNode - firstNode == maxElementNodes, cell, firstNode, endNode, maxElementNodes);
+        ASSERTION(endNode - firstNode == maxElementNodes, cell, firstNode, endNode, maxElementNodes);
         for (std::int32_t node = firstNode; node < endNode; node++) {
           const std::int32_t point = mesh.connectivity[static_cast<std::size_t>(node)];
-          assertion(point >= 0 and static_cast<unsigned long long>(point) < localNumberOfNodes, cell, point);
+          ASSERTION(point >= 0 and static_cast<unsigned long long>(point) < localNumberOfNodes, cell, point);
           nodesOfCell[node - firstNode] = static_cast<int>(offsetNodes + static_cast<unsigned long long>(point));
         }
       }
@@ -471,7 +471,7 @@ tarch::plotter::NetCDFFileWriter::write(
     };
   writeFields(mesh.pointFields, offsetNodes, localNumberOfNodes);
   writeFields(mesh.cellFields, offsetElements, localNumberOfElements);
-  assertion(variable == fieldVariables.size(), variable, fieldVariables.size());
+  ASSERTION(variable == fieldVariables.size(), variable, fieldVariables.size());
 
   check(nc_close(ncid));
 

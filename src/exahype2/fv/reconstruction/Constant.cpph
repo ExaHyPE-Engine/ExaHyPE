@@ -41,7 +41,7 @@ exahype2::fv::reconstruction::Constant::StateTerms<
   ) {
   constexpr int                         NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   const StoragePrecision* NOALIAS const state        = patch + centreOffset;
-  // The compiler unrolls the copy of the state into registers. No flux below writes into them. The
+  // The compiler unrolls the copy of the state into registers. The fluxes below only read them. The
   // compiler then evaluates every expression of the state that does not depend on the normal once.
   ComputePrecision stateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   for (int unknown = 0; unknown < NumberOfData; unknown++) {
@@ -75,7 +75,7 @@ exahype2::fv::reconstruction::Constant::getFluxAndMaxEigenvalue(
   ComputePrecision* NOALIAS const              fluxBuffer,
   ComputePrecision&                            maxEigenvalue
 ) {
-  assertion(volume >= -1, volume);
+  ASSERTION(volume >= -1, volume);
   if constexpr (Terms::Lookahead > 0) {
     if (volume >= 0) {
       const auto& entry = terms.at(volume);
@@ -108,7 +108,7 @@ exahype2::fv::reconstruction::Constant::getMaxEigenvalue(
   const double                                 timeStepSize,
   const int                                    normal
 ) {
-  assertion(volume >= -1, volume);
+  ASSERTION(volume >= -1, volume);
   if constexpr (Terms::Lookahead > 0) {
     if (volume >= 0) {
       return terms.at(volume).maxEigenvalue[normal];
@@ -303,8 +303,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
       leftState  = leftStateComputeBuffer;
       rightState = rightStateComputeBuffer;
     }
-    assertion(leftState);
-    assertion(rightState);
+    ASSERTION(leftState);
+    ASSERTION(rightState);
 #endif
 
     if constexpr (EvaluateCustomRiemann) {
@@ -453,19 +453,19 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
         timeStepSize,
         normal
       );
-      assertion(
+      ASSERTION(
         exahype2::MaxEigenvalueReduction::isPhysicalValue(leftMaxEigenvalue),
         leftMaxEigenvalue,
         volume,
         normal
       );
-      assertion(
+      ASSERTION(
         exahype2::MaxEigenvalueReduction::isPhysicalValue(centreMaxEigenvalue),
         centreMaxEigenvalue,
         volume,
         normal
       );
-      assertion(
+      ASSERTION(
         exahype2::MaxEigenvalueReduction::isPhysicalValue(rightMaxEigenvalue),
         rightMaxEigenvalue,
         volume,
@@ -513,7 +513,7 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
   }
   // The assertion stays out of the SIMD loop. The body of that loop must not emit diagnostics.
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    assertion(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
+    ASSERTION(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }
 }
 TARGET_DECLARE_END

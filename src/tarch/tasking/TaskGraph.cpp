@@ -41,7 +41,7 @@ namespace {
       if (_useDynamicStorage) {
         _dynamicStorage.push_back(token);
       } else {
-        assertion(_size < static_cast<int>(_staticStorage.size()));
+        ASSERTION(_size < static_cast<int>(_staticStorage.size()));
         _staticStorage[_size++] = token;
       }
     }
@@ -74,7 +74,7 @@ tarch::tasking::spawnTask(
   const std::span<void* const>    outDependencies,
   const tarch::tasking::RunSerial runSerial
 ) {
-  assertion(task != nullptr);
+  ASSERTION(task != nullptr);
 
   if (runSerial == tarch::tasking::RunSerial::Yes) {
     runAndDelete(task);
@@ -223,7 +223,9 @@ tarch::tasking::spawnTask(
     runAndDelete(task);
   } else {
     if (not loggedConservativeSpawnTaskFallback.exchange(true, std::memory_order_relaxed)) {
-      logWarning("The compiler does not support OpenMP iterator dependencies. The tasks with dependencies run slower.");
+      LOG_WARNING(
+        "The compiler does not support OpenMP iterator dependencies. The tasks with dependencies run slower."
+      );
     }
 
     for (int dependencyIndex = 0; dependencyIndex < filteredInDependencies.getSize(); dependencyIndex++) {
@@ -244,7 +246,7 @@ tarch::tasking::spawnTask(
  */
 void
 tarch::tasking::waitForDependency(void* const dependency) {
-  assertion(dependency);
+  ASSERTION(dependency);
   tarch::tasking::waitForDependencies({&dependency, 1});
 }
 
@@ -279,7 +281,7 @@ tarch::tasking::waitForDependencies(const std::span<void* const> dependencies) {
   }
 
   if (not loggedConservativeDependencyWaitFallback.exchange(true, std::memory_order_relaxed)) {
-    logWarning("The compiler does not support OpenMP task waits with dependencies. The task waits run slower.");
+    LOG_WARNING("The compiler does not support OpenMP task waits with dependencies. The task waits run slower.");
   }
 
 #pragma omp taskwait

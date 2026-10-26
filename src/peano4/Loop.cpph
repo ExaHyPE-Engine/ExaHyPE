@@ -10,11 +10,11 @@
 INLINE_METHOD GPU_CALLABLE_METHOD int
 peano4::dLinearised(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
   int result = counter(DIMENSIONS - 1);
-  assertion(counter(DIMENSIONS - 1) >= 0, counter, max);
-  assertion(counter(DIMENSIONS - 1) < max, counter, max);
+  ASSERTION(counter(DIMENSIONS - 1) >= 0, counter, max);
+  ASSERTION(counter(DIMENSIONS - 1) < max, counter, max);
   for (int d = DIMENSIONS - 2; d >= 0; d--) {
-    assertion(counter(d) >= 0, counter(d), max);
-    assertion(counter(d) < max, counter(d), max);
+    ASSERTION(counter(d) >= 0, counter(d), max);
+    ASSERTION(counter(d) < max, counter(d), max);
     result = result * max + counter(d);
   }
   return result;
@@ -26,14 +26,14 @@ peano4::dLinearised(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) 
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 peano4::dLinearisedExclusive(const tarch::la::Vector<DIMENSIONS, int>& counter, const int max, const int dim) {
-  assertion(max > 0, counter, max);
-  assertion(dim >= 0 and dim < DIMENSIONS, counter, dim);
+  ASSERTION(max > 0, counter, max);
+  ASSERTION(dim >= 0 and dim < DIMENSIONS, counter, dim);
   int result = 0;
   int stride = 1;
   for (int d = 0; d < DIMENSIONS; d++) {
     if (d != dim) {
-      assertion(counter(d) >= 0, counter, max);
-      assertion(counter(d) < max, counter, max);
+      ASSERTION(counter(d) >= 0, counter, max);
+      ASSERTION(counter(d) < max, counter, max);
       result += counter(d) * stride;
       stride *= max;
     }
@@ -46,8 +46,8 @@ peano4::dLinearisedExclusive(const tarch::la::Vector<DIMENSIONS, int>& counter, 
  */
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int>
 peano4::dDelinearised(const int index, const int max) {
-  assertion(index >= 0, index, max);
-  assertion(max > 0, index, max);
+  ASSERTION(index >= 0, index, max);
+  ASSERTION(max > 0, index, max);
   tarch::la::Vector<DIMENSIONS, int> counter;
   int                                rest = index;
   for (int d = 0; d < DIMENSIONS - 1; d++) {
@@ -55,7 +55,7 @@ peano4::dDelinearised(const int index, const int max) {
     rest /= max;
   }
   counter(DIMENSIONS - 1) = rest;
-  assertion(counter(DIMENSIONS - 1) < max, index, max);
+  ASSERTION(counter(DIMENSIONS - 1) < max, index, max);
   return counter;
 }
 
@@ -64,9 +64,9 @@ peano4::dDelinearised(const int index, const int max) {
  */
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int>
 peano4::dDelinearisedExclusive(const int index, const int max, const int dim) {
-  assertion(index >= 0, index, max);
-  assertion(max > 0, index, max);
-  assertion(dim >= 0 and dim < DIMENSIONS, index, dim);
+  ASSERTION(index >= 0, index, max);
+  ASSERTION(max > 0, index, max);
+  ASSERTION(dim >= 0 and dim < DIMENSIONS, index, dim);
   tarch::la::Vector<DIMENSIONS, int> counter(0);
   int                                rest = index;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -75,7 +75,7 @@ peano4::dDelinearisedExclusive(const int index, const int max, const int dim) {
       rest /= max;
     }
   }
-  assertion(rest == 0, index, max, dim);
+  ASSERTION(rest == 0, index, max, dim);
   return counter;
 }
 

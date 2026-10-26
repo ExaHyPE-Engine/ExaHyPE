@@ -74,7 +74,7 @@ peano4::communication::CommunicationManager::shutdown() {
 
 MPI_Comm
 peano4::communication::CommunicationManager::getCommunicator() const {
-  assertion(_exchangeCommunicator != MPI_COMM_NULL);
+  ASSERTION(_exchangeCommunicator != MPI_COMM_NULL);
   return _exchangeCommunicator;
 }
 
@@ -84,7 +84,7 @@ peano4::communication::CommunicationManager::getCommunicator() const {
  */
 int
 peano4::communication::CommunicationManager::reserveTag() {
-  assertion(_exchangeCommunicator != MPI_COMM_NULL);
+  ASSERTION(_exchangeCommunicator != MPI_COMM_NULL);
   if (_nextTag > _tagUpperBound) {
     tarch::terminateWithError(
       "The MPI library provides message tags up to " + std::to_string(_tagUpperBound) + " only."
@@ -99,7 +99,7 @@ peano4::communication::CommunicationManager::reserveTag() {
  */
 void
 peano4::communication::CommunicationManager::registerInFlightTransfer(std::function<bool()> pollTransfer) {
-  assertion(static_cast<bool>(pollTransfer));
+  ASSERTION(static_cast<bool>(pollTransfer));
   auto* const transfer = new InFlightTransfer{std::move(pollTransfer), nullptr};
   transfer->next       = _newInFlightTransfers.load(std::memory_order_relaxed);
   while (not _newInFlightTransfers
@@ -108,8 +108,8 @@ peano4::communication::CommunicationManager::registerInFlightTransfer(std::funct
 }
 
 /**
- * Polls every in-flight transfer once and removes the completed ones. Returns whether no transfer
- * is left in flight.
+ * Polls every in-flight transfer once and removes the completed ones. Returns whether every transfer
+ * has completed.
  */
 bool
 peano4::communication::CommunicationManager::pollInFlightTransfers() {

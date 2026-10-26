@@ -29,9 +29,6 @@ struct tarch::FloatingPointExceptions final {
 
   static constexpr ExceptionMask DefaultExceptions = DivisionByZero | Invalid | Overflow;
 
-  static bool enableExceptionTraps(ExceptionMask exceptions = DefaultExceptions) noexcept;
-  static void disableExceptionTraps() noexcept;
-
   class ScopedTrap final {
   public:
     ScopedTrap(const char* file, int line, ExceptionMask exceptions = DefaultExceptions);
@@ -46,4 +43,8 @@ struct tarch::FloatingPointExceptions final {
     [[maybe_unused]] const ExceptionMask _previousExceptions;
     [[maybe_unused]] std::fenv_t         _previousEnvironment;
   };
+
+private:
+  static bool enableExceptionTraps(ExceptionMask exceptions = DefaultExceptions) noexcept;
+  static void disableExceptionTraps() noexcept;
 };

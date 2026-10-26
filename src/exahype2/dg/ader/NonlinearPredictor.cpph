@@ -33,9 +33,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   constexpr int NumberOfUnknowns      = CellLayout::NumberOfUnknowns;
   constexpr int MaximumNumberOfSweeps = 2 * NodesPerAxis + 1;
 
-  assertion(timeStepSize >= 0.0, timeStepSize);
-  assertion(picardTolerance > 0.0, picardTolerance);
-  assertion(workers.thread >= 0 and workers.thread < workers.threads, workers.thread, workers.threads);
+  ASSERTION(timeStepSize >= 0.0, timeStepSize);
+  ASSERTION(picardTolerance > 0.0, picardTolerance);
+  ASSERTION(workers.thread >= 0 and workers.thread < workers.threads, workers.thread, workers.threads);
 
   ComputePrecision* NOALIAS const spaceTimeState     = scratch + Scratch::SpaceTimeStateOffset;
   ComputePrecision* NOALIAS const rightHandSide      = scratch + Scratch::RightHandSideOffset;
@@ -263,7 +263,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getTeamScratchBytes(const int teamThreads) {
-  assertion(teamThreads > 0, teamThreads);
+  ASSERTION(teamThreads > 0, teamThreads);
   return teamThreads == 1 ? 0 : teamThreads * static_cast<int>(sizeof(double));
 }
 
@@ -282,10 +282,10 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getResidualOf
   if (workers.teamThreads == 1) {
     return sumNodeResiduals(nodeResiduals);
   }
-  assertion(workers.scratch != nullptr, workers.teamThread, workers.teamThreads);
+  ASSERTION(workers.scratch != nullptr, workers.teamThread, workers.teamThreads);
   double* const sums        = reinterpret_cast<double*>(workers.scratch);
   const int     firstThread = workers.teamThread - workers.thread;
-  assertion(firstThread >= 0 and firstThread < workers.teamThreads, firstThread, workers.teamThreads);
+  ASSERTION(firstThread >= 0 and firstThread < workers.teamThreads, firstThread, workers.teamThreads);
   if (workers.hasCell and workers.thread == 0) {
     sums[firstThread] = sumNodeResiduals(nodeResiduals);
   }
@@ -306,8 +306,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getLargestOfC
   if (workers.teamThreads == 1) {
     return value;
   }
-  assertion(workers.scratch != nullptr, workers.teamThread, workers.teamThreads);
-  assertion(workers.teamThread >= 0 and workers.teamThread < workers.teamThreads, workers.teamThread);
+  ASSERTION(workers.scratch != nullptr, workers.teamThread, workers.teamThreads);
+  ASSERTION(workers.teamThread >= 0 and workers.teamThread < workers.teamThreads, workers.teamThread);
   double* const values       = reinterpret_cast<double*>(workers.scratch);
   values[workers.teamThread] = value;
   exahype2::dg::ader::teamBarrier(workers);
@@ -337,7 +337,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::sumNodeResidu
     if (std::isinf(nodeResiduals[cellNode])) {
       return std::numeric_limits<double>::infinity();
     }
-    assertion(
+    ASSERTION(
       nodeResiduals[cellNode] >= 0 and nodeResiduals[cellNode] == std::floor(nodeResiduals[cellNode]),
       nodeResiduals[cellNode],
       cellNode
@@ -371,8 +371,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::getSquaredTol
   constexpr double ValuesPerIterate =
     static_cast<double>(CellLayout::NumberOfUnknowns * CellLayout::NodesPerCell * CellLayout::NodesPerAxis);
   constexpr double SquaredRounding = ValuesPerIterate * RoundingOfValue * RoundingOfValue;
-  assertion(cellState != nullptr);
-  assertion(picardTolerance > 0.0, picardTolerance);
+  ASSERTION(cellState != nullptr);
+  ASSERTION(picardTolerance > 0.0, picardTolerance);
 
   double largestMagnitude = 0.0;
   if (workers.hasCell) {
@@ -440,9 +440,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::computeSpaceT
   constexpr int GradientStride = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride     = GradientStride * CellLayout::NodesPerCell;
 
-  assertion(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
+  ASSERTION(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
+    ASSERTION(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
   }
 
   const ComputePrecision* NOALIAS const timeSlice = spaceTimeState + timeNode * CellLayout::NodesPerCell * StateStride;
@@ -495,7 +495,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
 
   using TimePrecision = std::common_type_t<ComputePrecision, double>;
 
-  assertion(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
+  ASSERTION(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
 
   const auto timePosition = static_cast<double>(
     static_cast<TimePrecision>(timeStamp)
@@ -552,8 +552,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::averageFluxOv
 ) {
   constexpr int FluxEntries = DIMENSIONS * CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
 
-  assertion(timeNode >= 0 and timeNode < CellLayout::NodesPerAxis, timeNode);
-  assertion(timeNode > 0 or flux == firstFlux, timeNode);
+  ASSERTION(timeNode >= 0 and timeNode < CellLayout::NodesPerAxis, timeNode);
+  ASSERTION(timeNode > 0 or flux == firstFlux, timeNode);
 
   if (workers.threads == 1) {
     if (timeNode == 0) {
@@ -588,7 +588,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::clearRightHan
 ) {
   constexpr int SliceEntries = CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell;
 
-  assertion(timeNode >= 0 and timeNode < CellLayout::NodesPerAxis, timeNode);
+  ASSERTION(timeNode >= 0 and timeNode < CellLayout::NodesPerAxis, timeNode);
 
   ComputePrecision* NOALIAS const timeSlice = rightHandSide + SliceEntries * timeNode;
   for (int entry = workers.thread; entry < SliceEntries; entry += workers.threads) {
@@ -620,9 +620,9 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::differentiate
   constexpr int NodeStride     = CellLayout::PaddedNumberOfUnknowns;
   constexpr int FluxAxisStride = CellLayout::NodesPerCell * NodeStride;
 
-  assertion(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
+  ASSERTION(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
+    ASSERTION(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
   }
 
   for (int item = workers.thread; item < DIMENSIONS * NodesPerFace; item += workers.threads) {
@@ -668,7 +668,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::subtractFluxD
   constexpr int NodeStride     = CellLayout::PaddedNumberOfUnknowns;
   constexpr int FluxAxisStride = CellLayout::NodesPerCell * NodeStride;
 
-  assertion(timeNode >= 0 and timeNode < CellLayout::NodesPerAxis, timeNode);
+  ASSERTION(timeNode >= 0 and timeNode < CellLayout::NodesPerAxis, timeNode);
 
   ComputePrecision* NOALIAS const timeSlice     = rightHandSide + timeNode * FluxAxisStride;
   const auto                      addDivergence = [timeSlice, fluxDerivative](const int nodeEntry) {
@@ -734,7 +734,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
 
   using TimePrecision = std::common_type_t<ComputePrecision, double>;
 
-  assertion(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
+  ASSERTION(timeNode >= 0 and timeNode < NodesPerAxis, timeNode);
 
   const auto timePosition = static_cast<double>(
     static_cast<TimePrecision>(timeStamp)
@@ -889,7 +889,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::solvePicardSy
   constexpr double LargestFiniteValue     = static_cast<double>(std::numeric_limits<ComputePrecision>::max());
   constexpr double SquaredDivergenceBound = LargestFiniteValue < 1e40 ? LargestFiniteValue : 1e40;
   constexpr double Infinity               = std::numeric_limits<double>::infinity();
-  assertion(squaredTolerance >= 0.0 and std::isfinite(squaredTolerance), squaredTolerance);
+  ASSERTION(squaredTolerance >= 0.0 and std::isfinite(squaredTolerance), squaredTolerance);
   // A square below a tolerance under the smallest normal double stays below one unit.
   const double inverseTolerance = 1.0 / std::max(squaredTolerance, std::numeric_limits<double>::min());
 

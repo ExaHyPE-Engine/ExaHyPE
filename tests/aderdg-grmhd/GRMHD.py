@@ -163,7 +163,7 @@ flux = r"""
       F[Shortcuts::B + 2]   = inductionFlux[2][2];
       break;
     default:
-      assertion(false, normal);
+      ASSERTION(false, normal);
   }
 
   // Q stores the fluid values multiplied by the root of the metric determinant.
@@ -264,7 +264,7 @@ ncp = r"""
 
   momentumTerms[term] = (Q[Shortcuts::E] + Q[Shortcuts::rho]) * deltaQ[Shortcuts::lapse];
   energyTerms[term]   = sContr[normal] * deltaQ[Shortcuts::lapse];
-  assertion(term + 1 == NumberOfTerms, term);
+  ASSERTION(term + 1 == NumberOfTerms, term);
   BTimesDeltaQ[Shortcuts::vel + normal] = tarch::la::sumInFixedPoint(momentumTerms, NumberOfTerms);
   BTimesDeltaQ[Shortcuts::E]            = tarch::la::sumInFixedPoint(energyTerms, NumberOfTerms);
   BTimesDeltaQ[Shortcuts::B + 0] = lapse * rootDeterminant * gContr[0][normal] * deltaQ[Shortcuts::psi]

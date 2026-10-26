@@ -50,9 +50,9 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectNodesOn
   StoragePrecision* NOALIAS const       subcells,
   const StoragePrecision* NOALIAS const nodesToSubcells
 ) {
-  assertion(nodes != nullptr);
-  assertion(subcells != nullptr);
-  assertion(nodesToSubcells != nullptr);
+  ASSERTION(nodes != nullptr);
+  ASSERTION(subcells != nullptr);
+  ASSERTION(nodesToSubcells != nullptr);
   exahype2::dg::projectTensorProduct<
     DIMENSIONS,
     NodesPerAxis,
@@ -397,7 +397,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::reduceMaxEigen
   const double                                 timeStamp,
   const double                                 timeStepSize
 ) {
-  assertion(subcell >= 0 and subcell < SubcellsPerCell, subcell);
+  ASSERTION(subcell >= 0 and subcell < SubcellsPerCell, subcell);
   tarch::la::Vector<DIMENSIONS, int> index;
   int                                remainder = subcell;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -428,7 +428,7 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::reduceMaxEigen
   const double                                 timeStamp,
   const double                                 timeStepSize
 ) {
-  assertion(subcells != nullptr);
+  ASSERTION(subcells != nullptr);
   exahype2::dg::MaxEigenvalueStatistics result;
   forEachSubcell(
     cellCentre,
@@ -460,10 +460,10 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::forEachSubcell
   Value* const                                 values,
   Functor&&                                    functor
 ) {
-  assertion(values != nullptr);
+  ASSERTION(values != nullptr);
   const auto subcellSize = exahype2::fv::getVolumeSize(cellSize, SubcellsPerAxis);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(subcellSize(axis) > 0.0, subcellSize, axis);
+    ASSERTION(subcellSize(axis) > 0.0, subcellSize, axis);
   }
   peano4::dForEach(SubcellsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& subcell) {
     const int  index         = peano4::dLinearised(subcell, SubcellsPerAxis);
@@ -516,9 +516,9 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubcell
   StoragePrecision* NOALIAS const       nodes,
   const StoragePrecision* NOALIAS const subcellsToNodes
 ) {
-  assertion(subcells != nullptr);
-  assertion(nodes != nullptr);
-  assertion(subcellsToNodes != nullptr);
+  ASSERTION(subcells != nullptr);
+  ASSERTION(nodes != nullptr);
+  ASSERTION(subcellsToNodes != nullptr);
   exahype2::dg::projectTensorProduct<
     DIMENSIONS,
     SubcellsPerAxis,
@@ -570,10 +570,10 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectSubcell
   const int                                                                                         firstItem,
   const int                                                                                         itemStride
 ) {
-  assertion(subcells != nullptr);
-  assertion(nodes != nullptr);
-  assertion(subcellsToNodes != nullptr);
-  assertion(scratch != nullptr);
+  ASSERTION(subcells != nullptr);
+  ASSERTION(nodes != nullptr);
+  ASSERTION(subcellsToNodes != nullptr);
+  ASSERTION(scratch != nullptr);
   exahype2::dg::projectTensorProductStage<
     DIMENSIONS,
     SubcellsPerAxis,
@@ -602,10 +602,10 @@ exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::projectNodesOn
   const int                                                                                         firstItem,
   const int                                                                                         itemStride
 ) {
-  assertion(nodes != nullptr);
-  assertion(subcells != nullptr);
-  assertion(nodesToSubcells != nullptr);
-  assertion(scratch != nullptr);
+  ASSERTION(nodes != nullptr);
+  ASSERTION(subcells != nullptr);
+  ASSERTION(nodesToSubcells != nullptr);
+  ASSERTION(scratch != nullptr);
   exahype2::dg::projectTensorProductStage<
     DIMENSIONS,
     NodesPerAxis,
@@ -756,7 +756,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int entry
 ) const {
-  assertion(
+  ASSERTION(
     entry >= 0 and entry < boundaryConditions.boundaryFaces.size * Kernel::Subgrid::VolumesPerLayer,
     entry,
     boundaryConditions.boundaryFaces.size
@@ -817,8 +817,8 @@ exahype2::dg::limiting::ProjectNodesOntoSubgrids<Derived, StoragePrecision, Comp
   const int                            entry,
   const tarch::accelerator::TeamHandle team
 ) const {
-  assertion(numberOfTeams > 0, numberOfTeams);
-  assertion(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
+  ASSERTION(numberOfTeams > 0, numberOfTeams);
+  ASSERTION(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
   StoragePrecision* const chunk = scratch
     + static_cast<std::ptrdiff_t>(tarch::accelerator::getScratchChunk(entry)) * Kernel::SubcellProjectionScratchValues;
   for (int cell = entry; cell < cells.size; cell += numberOfTeams) {

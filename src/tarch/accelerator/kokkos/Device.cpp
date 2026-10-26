@@ -22,17 +22,17 @@ tarch::accelerator::Device::init() {
   Kokkos::initialize();
   numberOfDevices = Kokkos::num_devices();
 
-  logDebug("-----------------------------------------");
+  LOG_DEBUG("-----------------------------------------");
   std::stringstream configuration;
   Kokkos::print_configuration(configuration, true);
 
   std::string line;
   while (std::getline(configuration, line)) {
     if (not line.empty()) {
-      logDebug(line);
+      LOG_DEBUG(line);
     }
   }
-  logDebug("-----------------------------------------");
+  LOG_DEBUG("-----------------------------------------");
 
   return isInitialised();
 }
@@ -64,7 +64,7 @@ tarch::accelerator::Device::getNumberOfDevices() const {
 
 /**
  * Returns whether the MPI library sends and receives the buffers of the CUDA or HIP device of
- * Kokkos, or std::nullopt for another device or an MPI library that answers no such query.
+ * Kokkos, or std::nullopt for another device or an MPI library that cannot answer this query.
  */
 std::optional<bool>
 tarch::accelerator::Device::isMPIGPUAware() const {

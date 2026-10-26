@@ -129,7 +129,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   const peano4::Regrid&           regrid,
   exahype2::RefinementRequests&   requests
 ) {
-  assertion(regrid.newNumberOfSlots >= regrid.oldNumberOfSlots, regrid.newNumberOfSlots, regrid.oldNumberOfSlots);
+  ASSERTION(regrid.newNumberOfSlots >= regrid.oldNumberOfSlots, regrid.newNumberOfSlots, regrid.oldNumberOfSlots);
   _solution.reserve(regrid.newNumberOfSlots);
   _migration.migrate(
     _solution,
@@ -175,7 +175,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   std::vector<int> createdCells;
   createdCells.reserve(regrid.createdSlots.size());
   for (const int slot : regrid.createdSlots) {
-    assertion(slot >= 0 and slot < cellConnectivity.getNumberOfSlots(), slot, cellConnectivity.getNumberOfSlots());
+    ASSERTION(slot >= 0 and slot < cellConnectivity.getNumberOfSlots(), slot, cellConnectivity.getNumberOfSlots());
     if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
       if (not Derived::ownsCell(cellConnectivity.getCellCentre(slot), cellConnectivity.getCellWidth(slot))) {
         continue;
@@ -216,7 +216,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
 }
 
 /**
- * Frees every buffer and operator table. None outlives the accelerator runtime.
+ * Frees every buffer and operator table.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -500,7 +500,7 @@ INLINE_METHOD void
 exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::projectSolutionOntoFaces(
   const peano4::CellConnectivity& cellConnectivity
 ) {
-  assertion(cellConnectivity.getNumberOfFaces() <= _faceStates.getCapacity(), cellConnectivity.getNumberOfFaces());
+  ASSERTION(cellConnectivity.getNumberOfFaces() <= _faceStates.getCapacity(), cellConnectivity.getNumberOfFaces());
   const auto project = [this, &cellConnectivity](const peano4::Adjacency adjacency) {
     const auto cells = getCells(cellConnectivity, adjacency);
     tarch::accelerator::parallelFor(
@@ -547,8 +547,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::projectSoluti
   const int                       normal,
   const double                    position
 ) {
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
-  assertion(cellConnectivity.getNumberOfFaces() <= _faceStates.getCapacity(), cellConnectivity.getNumberOfFaces());
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(cellConnectivity.getNumberOfFaces() <= _faceStates.getCapacity(), cellConnectivity.getNumberOfFaces());
   const auto project = [this, &cellConnectivity, normal, position](const peano4::Adjacency adjacency) {
     const auto cells = getCells(cellConnectivity, adjacency);
     tarch::accelerator::parallelFor(
@@ -703,7 +703,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::measureError(
 
 /**
  * Casts the refinement votes of the cells the solver advances. The first call after a regrid
- * casts none.
+ * returns at once.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -746,7 +746,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::plotFaces(
   const std::string&              outputDirectory
 ) {
   if constexpr (exahype2::terms::HasFacePredicate<Derived>) {
-    assertion(_facePlotter.has_value());
+    ASSERTION(_facePlotter.has_value());
     projectSolutionOntoFaces(cellConnectivity);
     _facePlotter->template plot<NodesPerAxis, NumberOfData>(
       cellConnectivity,
@@ -779,7 +779,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwners
     std::vector<int>  cells;
     for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
       for (const int slot : cellConnectivity.getCells(adjacency)) {
-        assertion(slot >= 0 and slot < cellConnectivity.getNumberOfSlots(), slot, cellConnectivity.getNumberOfSlots());
+        ASSERTION(slot >= 0 and slot < cellConnectivity.getNumberOfSlots(), slot, cellConnectivity.getNumberOfSlots());
         if (Derived::ownsCell(cellConnectivity.getCellCentre(slot), cellConnectivity.getCellWidth(slot))) {
           owned[static_cast<std::size_t>(slot)] = 1;
           cells.push_back(slot);
@@ -799,7 +799,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwners
         bool advanced = false;
         for (int side = 0; side < 2; side++) {
           const int slot = cellConnectivity.getFaceCell(face, side);
-          assertion(slot < cellConnectivity.getNumberOfSlots(), slot, cellConnectivity.getNumberOfSlots());
+          ASSERTION(slot < cellConnectivity.getNumberOfSlots(), slot, cellConnectivity.getNumberOfSlots());
           advanced = advanced or (slot >= 0 and owned[static_cast<std::size_t>(slot)] != 0);
         }
         if (advanced) {
@@ -816,8 +816,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwners
     for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
       for (const peano4::LevelJump& levelJump : cellConnectivity.getLevelJumps(adjacency)) {
         const int face = levelJump.coarseFace;
-        assertion(face >= 0 and face < cellConnectivity.getNumberOfFaces(), face, cellConnectivity.getNumberOfFaces());
-        assertion(levelJump.coarseSide == 0 or levelJump.coarseSide == 1, levelJump.coarseSide);
+        ASSERTION(face >= 0 and face < cellConnectivity.getNumberOfFaces(), face, cellConnectivity.getNumberOfFaces());
+        ASSERTION(levelJump.coarseSide == 0 or levelJump.coarseSide == 1, levelJump.coarseSide);
         const tarch::la::Vector<DIMENSIONS, double> centre =
           cellConnectivity.getCellCentreBesideFace(face, levelJump.coarseSide);
         if (Derived::ownsCell(centre, cellConnectivity.getFaceWidth(face))) {

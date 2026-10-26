@@ -42,9 +42,9 @@ fWave = r"""
   const auto EL                     = QL[Shortcuts::rhoE];
   const auto pL                     = (GAMMA - 1.0) * (EL - 0.5 * rhoL * uSqL);
 
-  assertion(rhoL > 0, rhoL);
-  assertion(EL > 0, EL);
-  assertion(pL > 0, pL);
+  ASSERTION(rhoL > 0, rhoL);
+  ASSERTION(EL > 0, EL);
+  ASSERTION(pL > 0, pL);
 
   const auto rhoR                   = QR[Shortcuts::rho];
   const auto sqrtRhoR               = sqrt(rhoR);
@@ -59,9 +59,9 @@ fWave = r"""
   const auto ER                     = QR[Shortcuts::rhoE];
   const auto pR                     = (GAMMA - 1.0) * (ER - 0.5 * rhoR * uSqR);
 
-  assertion(rhoR > 0, rhoR);
-  assertion(ER > 0, ER);
-  assertion(pR > 0, pR);
+  ASSERTION(rhoR > 0, rhoR);
+  ASSERTION(ER > 0, ER);
+  ASSERTION(pR > 0, pR);
 
   /********************************************
    * Roe averages from LeVeque Chapter 15.3.4 *

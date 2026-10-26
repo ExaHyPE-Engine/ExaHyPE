@@ -160,7 +160,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   const peano4::Regrid&           regrid,
   exahype2::RefinementRequests&   requests
 ) {
-  assertion(regrid.newNumberOfSlots >= regrid.oldNumberOfSlots, regrid.newNumberOfSlots, regrid.oldNumberOfSlots);
+  ASSERTION(regrid.newNumberOfSlots >= regrid.oldNumberOfSlots, regrid.newNumberOfSlots, regrid.oldNumberOfSlots);
   _solution.reserve(regrid.newNumberOfSlots);
   _migration.migrate(
     _solution,
@@ -218,7 +218,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
 }
 
 /**
- * Frees the pools, the exchanges and every device buffer. No allocation outlives the runtime.
+ * Frees the pools, the exchanges and every device buffer.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -367,7 +367,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::updatePatches
 }
 
 /**
- * Returns the largest wave speed over the volumes of the solution. Returns zero when no wave speed
+ * Returns the largest wave speed over the volumes of the solution. Returns zero unless a wave speed
  * feeds the time step size.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -479,7 +479,7 @@ INLINE_METHOD double
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getFixedTimeStepSize() const {
   const double                maxAdmissibleMeshWidth = _timeStepping.getLimits().maxAdmissibleMeshWidth;
   [[maybe_unused]] const bool meshWidthIsFinite      = std::isfinite(maxAdmissibleMeshWidth);
-  assertion(meshWidthIsFinite and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
+  ASSERTION(meshWidthIsFinite and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
   return _timeStepping.getFactor() * _timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth;
 }
 

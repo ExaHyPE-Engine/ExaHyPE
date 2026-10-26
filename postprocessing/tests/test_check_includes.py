@@ -99,7 +99,7 @@ class IncludeCleanerTest(unittest.TestCase):
             Finding(
                 "/repo/src/a.cpp",
                 3,
-                'warning: no header providing "assertion" is directly included [misc-include-cleaner]',
+                'warning: no header providing "ASSERTION" is directly included [misc-include-cleaner]',
             ),
         ]
         self.assertEqual(include_cleaner_findings(findings), findings[2:])

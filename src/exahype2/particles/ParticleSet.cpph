@@ -28,8 +28,8 @@ exahype2::particles::getLatticeIndexOf(
   const double width,
   const int    cellsPerAxis
 ) {
-  assertion(width > 0.0, width);
-  assertion(cellsPerAxis > 0, cellsPerAxis);
+  ASSERTION(width > 0.0, width);
+  ASSERTION(cellsPerAxis > 0, cellsPerAxis);
   const int    index     = static_cast<int>(std::floor((coordinate - latticeOffset) / width));
   const double lowerFace = latticeOffset + index * width;
   int          face      = -1;
@@ -46,7 +46,7 @@ exahype2::particles::getLatticeIndexOf(
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::particles::Particle::getX(const int axis) const {
-  assertion(axis >= 0 and axis < DIMENSIONS, axis);
+  ASSERTION(axis >= 0 and axis < DIMENSIONS, axis);
   return values[axis];
 }
 
@@ -57,7 +57,7 @@ exahype2::particles::Particle::getX() const {
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::particles::Particle::setX(const int axis, const double value) {
-  assertion(axis >= 0 and axis < DIMENSIONS, axis);
+  ASSERTION(axis >= 0 and axis < DIMENSIONS, axis);
   values[axis] = value;
 }
 
@@ -70,34 +70,34 @@ exahype2::particles::Particle::setX(const tarch::la::Vector<DIMENSIONS, double>&
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::particles::Particle::getData(const int index) const {
-  assertion(index >= 0 and index < numberOfData, index, numberOfData);
+  ASSERTION(index >= 0 and index < numberOfData, index, numberOfData);
   return values[DIMENSIONS + index];
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::particles::Particle::setData(const int index, const double value) {
-  assertion(index >= 0 and index < numberOfData, index, numberOfData);
+  ASSERTION(index >= 0 and index < numberOfData, index, numberOfData);
   values[DIMENSIONS + index] = value;
 }
 
 template <int NumberOfData>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::particles::Particle
 exahype2::particles::ParticleSetView<NumberOfData>::getParticle(const int index) const {
-  assertion(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  ASSERTION(index >= 0 and index < numberOfParticles, index, numberOfParticles);
   return Particle{values + static_cast<std::ptrdiff_t>(index) * ValuesPerParticle, NumberOfData};
 }
 
 template <int NumberOfData>
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::particles::ParticleSetView<NumberOfData>::getSlot(const int index) const {
-  assertion(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  ASSERTION(index >= 0 and index < numberOfParticles, index, numberOfParticles);
   return slots[index];
 }
 
 template <int NumberOfData>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::particles::ParticleSetView<NumberOfData>::hasMovedOutOfCell(const int index) const {
-  assertion(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  ASSERTION(index >= 0 and index < numberOfParticles, index, numberOfParticles);
   return slots[index] < 0;
 }
 
@@ -108,8 +108,8 @@ exahype2::particles::ParticleSetView<NumberOfData>::hasMovedOutOfCell(const int 
 template <int NumberOfData>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::particles::ParticleSetView<NumberOfData>::markAsMovedOutOfCell(const int index) const {
-  assertion(index >= 0 and index < numberOfParticles, index, numberOfParticles);
-  assertion(slots[index] >= 0, index, slots[index]);
+  ASSERTION(index >= 0 and index < numberOfParticles, index, numberOfParticles);
+  ASSERTION(slots[index] >= 0, index, slots[index]);
   slots[index] = -1 - slots[index];
 }
 
@@ -126,7 +126,7 @@ exahype2::particles::ParticleSetView<NumberOfData>::isInsideCell(
   const tarch::la::Vector<DIMENSIONS, double>& domainOffset
 ) const {
   const int slot = getSlot(index);
-  assertion(slot >= 0, index, slot);
+  ASSERTION(slot >= 0, index, slot);
   const int  cellsPerAxis = peano4::power(peano4::SubdivisionFactor, cellConnectivity.getCellLevel(slot));
   const auto lattice      = cellConnectivity.getCellLattice(slot);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -146,14 +146,14 @@ exahype2::particles::CompactParticlesMovedOutOfCells<NumberOfData>::operator()(c
   constexpr int ValuesPerParticle = ParticleSetView<NumberOfData>::ValuesPerParticle;
   const int     hole              = movedParticles[entry];
   const int     filler            = fillers[entry];
-  assertion(particles.hasMovedOutOfCell(hole), entry, hole);
+  ASSERTION(particles.hasMovedOutOfCell(hole), entry, hole);
   const double* const source = particles.values + static_cast<std::ptrdiff_t>(hole) * ValuesPerParticle;
   double* const       target = movedValues + static_cast<std::ptrdiff_t>(entry) * ValuesPerParticle;
   for (int value = 0; value < ValuesPerParticle; value++) {
     target[value] = source[value];
   }
   if (filler >= 0) {
-    assertion(not particles.hasMovedOutOfCell(filler), entry, filler);
+    ASSERTION(not particles.hasMovedOutOfCell(filler), entry, filler);
     const double* const survivor = particles.values + static_cast<std::ptrdiff_t>(filler) * ValuesPerParticle;
     double* const       vacated  = particles.values + static_cast<std::ptrdiff_t>(hole) * ValuesPerParticle;
     for (int value = 0; value < ValuesPerParticle; value++) {
@@ -198,8 +198,8 @@ exahype2::particles::ParticleSet<NumberOfData>::getAllocatedBytes() const noexce
 template <int NumberOfData>
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double>
 exahype2::particles::ParticleSet<NumberOfData>::getPosition(const int index) const {
-  assertion(index >= 0 and index < getSize(), index, getSize());
-  assertion(_hostValuesAreCurrent);
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
+  ASSERTION(_hostValuesAreCurrent);
   return tarch::la::Vector<DIMENSIONS, double>(_values.data() + static_cast<std::size_t>(index) * ValuesPerParticle);
 }
 
@@ -209,8 +209,8 @@ exahype2::particles::ParticleSet<NumberOfData>::getPosition(const int index) con
 template <int NumberOfData>
 INLINE_METHOD const double*
 exahype2::particles::ParticleSet<NumberOfData>::getData(const int index) const {
-  assertion(index >= 0 and index < getSize(), index, getSize());
-  assertion(_hostValuesAreCurrent);
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
+  ASSERTION(_hostValuesAreCurrent);
   return _values.data() + static_cast<std::size_t>(index) * ValuesPerParticle + DIMENSIONS;
 }
 
@@ -221,8 +221,8 @@ exahype2::particles::ParticleSet<NumberOfData>::getData(const int index) const {
 template <int NumberOfData>
 INLINE_METHOD exahype2::particles::Particle
 exahype2::particles::ParticleSet<NumberOfData>::getParticle(const int index) {
-  assertion(index >= 0 and index < getSize(), index, getSize());
-  assertion(_hostValuesAreCurrent);
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
+  ASSERTION(_hostValuesAreCurrent);
   _deviceValuesAreCurrent = false;
   return Particle{_values.data() + static_cast<std::size_t>(index) * ValuesPerParticle, NumberOfData};
 }
@@ -230,20 +230,21 @@ exahype2::particles::ParticleSet<NumberOfData>::getParticle(const int index) {
 template <int NumberOfData>
 INLINE_METHOD std::pair<int, int>
 exahype2::particles::ParticleSet<NumberOfData>::getNumber(const int index) const {
-  assertion(index >= 0 and index < getSize(), index, getSize());
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
   return {_numbers[static_cast<std::size_t>(index) * 2], _numbers[static_cast<std::size_t>(index) * 2 + 1]};
 }
 
 template <int NumberOfData>
 INLINE_METHOD int
 exahype2::particles::ParticleSet<NumberOfData>::getSlot(const int index) const {
-  assertion(index >= 0 and index < getSize(), index, getSize());
+  ASSERTION(index >= 0 and index < getSize(), index, getSize());
   return _slots[static_cast<std::size_t>(index)];
 }
 
 /**
- * Returns the slot of the cell of this rank that contains position, or a negative value if no cell
- * of this rank contains it. Every axis picks its cell with exahype2::particles::getLatticeIndexOf().
+ * Returns the slot of the cell of this rank that contains position. Returns a negative value for a
+ * position outside the cells of this rank. Every axis picks its cell with
+ * exahype2::particles::getLatticeIndexOf().
  */
 template <int NumberOfData>
 INLINE_METHOD int
@@ -292,7 +293,7 @@ exahype2::particles::ParticleSet<NumberOfData>::append(
   const int           number1,
   const int           slot
 ) {
-  assertion(slot >= 0, slot);
+  ASSERTION(slot >= 0, slot);
   _values.insert(_values.end(), values, values + ValuesPerParticle);
   _numbers.push_back(number0);
   _numbers.push_back(number1);
@@ -310,7 +311,7 @@ exahype2::particles::ParticleSet<NumberOfData>::insert(
   const peano4::CellConnectivity& cellConnectivity,
   const std::vector<double>&      candidates
 ) {
-  assertion(candidates.size() % ValuesPerParticle == 0, candidates.size(), ValuesPerParticle);
+  ASSERTION(candidates.size() % ValuesPerParticle == 0, candidates.size(), ValuesPerParticle);
   download();
   const auto& rank = tarch::mpi::Rank::getInstance();
   for (std::size_t offset = 0; offset < candidates.size(); offset += ValuesPerParticle) {
@@ -335,7 +336,7 @@ exahype2::particles::ParticleSet<NumberOfData>::insert(
       rank.getCommunicator()
     );
   }
-  assertion(_globalNumberOfParticles >= localNumberOfParticles, _globalNumberOfParticles, localNumberOfParticles);
+  ASSERTION(_globalNumberOfParticles >= localNumberOfParticles, _globalNumberOfParticles, localNumberOfParticles);
 }
 
 /**
@@ -395,7 +396,7 @@ exahype2::particles::ParticleSet<NumberOfData>::relocateParticlesMovedOutOfCells
   const peano4::CellConnectivity& cellConnectivity,
   const int                       numberOfMovedParticles
 ) {
-  assertion(numberOfMovedParticles >= 0 and numberOfMovedParticles <= getSize(), numberOfMovedParticles, getSize());
+  ASSERTION(numberOfMovedParticles >= 0 and numberOfMovedParticles <= getSize(), numberOfMovedParticles, getSize());
   std::vector<double> leavingValues;
   std::vector<int>    leavingNumbers;
   if (numberOfMovedParticles > 0) {
@@ -417,7 +418,7 @@ exahype2::particles::ParticleSet<NumberOfData>::takeMovedParticlesFromTheDevice(
   std::vector<double>& values,
   std::vector<int>&    numbers
 ) {
-  assertion(_deviceValuesAreCurrent and _deviceSlotsAreCurrent);
+  ASSERTION(_deviceValuesAreCurrent and _deviceSlotsAreCurrent);
   const int size = getSize();
   const int kept = size - numberOfMovedParticles;
   _slotsOnDevice.copyToHost(_slots.data(), _slots.size());
@@ -429,7 +430,7 @@ exahype2::particles::ParticleSet<NumberOfData>::takeMovedParticlesFromTheDevice(
       movedParticles.push_back(index);
     }
   }
-  assertion(
+  ASSERTION(
     static_cast<int>(movedParticles.size()) == numberOfMovedParticles,
     movedParticles.size(),
     numberOfMovedParticles
@@ -448,13 +449,13 @@ exahype2::particles::ParticleSet<NumberOfData>::takeMovedParticlesFromTheDevice(
     while (tail >= kept and _slots[static_cast<std::size_t>(tail)] < 0) {
       tail--;
     }
-    assertion(tail >= kept, tail, kept, hole);
+    ASSERTION(tail >= kept, tail, kept, hole);
     fillers[entry] = tail;
     tail--;
   }
 
   // The three device arrays of the compaction grow with the largest count of moved particles and
-  // stay allocated. A later step with fewer moved particles allocates nothing on the device.
+  // stay allocated. A later step with fewer moved particles reuses them.
   const auto movedCount = static_cast<std::size_t>(numberOfMovedParticles);
   if (_movedParticlesOnDevice.getSize() < movedCount) {
     const std::size_t capacity = movedCount + movedCount / 2;
@@ -625,8 +626,8 @@ exahype2::particles::ParticleSet<NumberOfData>::appendArrivals(
   const std::vector<int>&    slots
 ) {
   const int arrivals = static_cast<int>(slots.size());
-  assertion(values.size() == slots.size() * ValuesPerParticle, values.size(), slots.size());
-  assertion(numbers.size() == slots.size() * 2, numbers.size(), slots.size());
+  ASSERTION(values.size() == slots.size() * ValuesPerParticle, values.size(), slots.size());
+  ASSERTION(numbers.size() == slots.size() * 2, numbers.size(), slots.size());
   if (arrivals == 0) {
     return;
   }
@@ -671,7 +672,7 @@ exahype2::particles::ParticleSet<NumberOfData>::upload() {
     _deviceSlotsAreCurrent  = false;
   }
   if (not _deviceValuesAreCurrent) {
-    assertion(_hostValuesAreCurrent);
+    ASSERTION(_hostValuesAreCurrent);
     _valuesOnDevice.copyFromHost(_values.data(), _values.size());
     _deviceValuesAreCurrent = true;
   }
@@ -690,7 +691,7 @@ exahype2::particles::ParticleSet<NumberOfData>::download() {
   if (_hostValuesAreCurrent) {
     return;
   }
-  assertion(_valuesOnDevice.getSize() >= _values.size(), _valuesOnDevice.getSize(), _values.size());
+  ASSERTION(_valuesOnDevice.getSize() >= _values.size(), _valuesOnDevice.getSize(), _values.size());
   _valuesOnDevice.copyToHost(_values.data(), _values.size());
   _hostValuesAreCurrent = true;
 }
@@ -722,9 +723,9 @@ exahype2::particles::ParticleSet<NumberOfData>::release() {
 template <int NumberOfData>
 INLINE_METHOD exahype2::particles::ParticleSetView<NumberOfData>
 exahype2::particles::ParticleSet<NumberOfData>::getView() {
-  assertion(_deviceValuesAreCurrent and _deviceSlotsAreCurrent);
-  assertion(_valuesOnDevice.getSize() >= _values.size(), _valuesOnDevice.getSize(), _values.size());
-  assertion(_slotsOnDevice.getSize() >= _slots.size(), _slotsOnDevice.getSize(), _slots.size());
+  ASSERTION(_deviceValuesAreCurrent and _deviceSlotsAreCurrent);
+  ASSERTION(_valuesOnDevice.getSize() >= _values.size(), _valuesOnDevice.getSize(), _values.size());
+  ASSERTION(_slotsOnDevice.getSize() >= _slots.size(), _slotsOnDevice.getSize(), _slots.size());
   _hostValuesAreCurrent = false;
   return ParticleSetView<NumberOfData>{getSize(), _valuesOnDevice.getData(), _slotsOnDevice.getData()};
 }

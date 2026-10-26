@@ -70,7 +70,7 @@ exahype2::particles::advance(
   const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
   const tarch::la::Vector<DIMENSIONS, double>& domainWidth
 ) {
-  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
+  ASSERTION(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
   if (forces.integrationScheme == exahype2::particles::IntegrationScheme::Static) {
     return particle.getX();
   }
@@ -158,7 +158,7 @@ exahype2::particles::advance(
 
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::particles::isPeriodic(const int periodicAxes, const int axis) {
-  assertion(axis >= 0 and axis < DIMENSIONS, axis);
+  ASSERTION(axis >= 0 and axis < DIMENSIONS, axis);
   return ((periodicAxes >> axis) & 1) == 1;
 }
 

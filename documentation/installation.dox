@@ -21,7 +21,6 @@ We still maintain Peano version 3 in the repository.
 We work with the fourth generation of Peano (p4).
 Therefore, the default master is called ```p4```.
 
-
 # Dependencies and Prerequisites
 
 Peano's core is plain C++20/C++23 code.
@@ -50,7 +49,6 @@ If you prefer Windows or MacOS, it should work as long as you provide the
 mandatory tools from above, but we won't be able to help.
 Peano is well-integrated with a number of @ref page_third_party_home "third-party tools",
 but these are all optional.
-
 
 # Configure Peano
 
@@ -93,8 +91,7 @@ Handing in .. does the job for most of the setups.
 
 <div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid black;">
 This might be the right time to look ahead and study the tutorials of the codes you want to use.
-The ExaHyPE 2 extension is always built, so there is nothing to switch on for
-it. The configurable
+The build always includes the ExaHyPE 2 extension. The configurable
 feature options are named `PEANO_WITH_*` (for example `PEANO_WITH_HDF5` and
 `PEANO_WITH_NETCDF`); see the comments next to each entry in ccmake for details.
 </div>
@@ -118,8 +115,11 @@ build
 which uses one build job per available core. Replace `$(nproc)` with an explicit
 number if you want to cap the number of parallel jobs.
 
-
 # Test
+
+The unit tests build only if CMake runs with the option
+
+    cmake .. -DBUILD_TESTING=ON
 
 Once you have compiled, we recommend that you run all tests using
 
@@ -136,7 +136,6 @@ If things don't work (Python complains for example), return to this page and
 read through the text below. But maybe it is the right time to play around
 with code.
 </div>
-
 
 # Install
 
@@ -155,9 +154,8 @@ Peano is ***not*** a piece of software that you use as a black box.
 It is an engine that you use to write your own code.
 You can install Peano and its extensions.
 That means that you move its static libraries to a separate directory.
-But there is no such thing as a Peano application.
+Every application is your own code that links against these libraries.
 </div>
-
 
 # Python Configuration
 
@@ -212,7 +210,6 @@ dependencies, as listed below.
 Peano relies on the following Python packages/projects:
 
 @verbinclude requirements.txt
-
 
 # Prebuilt Environments and Packages
 

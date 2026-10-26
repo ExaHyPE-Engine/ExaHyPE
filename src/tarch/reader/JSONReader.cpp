@@ -333,7 +333,7 @@ namespace {
     while (start <= key.size()) {
       const std::size_t separator = key.find('.', start);
       const std::string part      = key.substr(start, separator - start);
-      assertion(not part.empty(), key);
+      ASSERTION(not part.empty(), key);
       result.push_back(part);
 
       if (separator == std::string::npos) {
@@ -422,7 +422,7 @@ tarch::reader::JSONReader::markRead(const std::string& key) const {
 }
 
 /**
- * Returns the sorted top-level keys that no getter read.
+ * Returns the sorted top-level keys minus the keys that a getter read.
  */
 std::vector<std::string>
 tarch::reader::JSONReader::getUnusedKeys() const {

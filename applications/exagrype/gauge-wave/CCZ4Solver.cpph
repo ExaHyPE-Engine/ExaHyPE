@@ -20,8 +20,8 @@ applications::exahype2::exagrype::CCZ4Solver::analyticalSolution(
   [[maybe_unused]] const double* const         Q,
   double* const                                solution
 ) {
-  assertion(solution != nullptr);
-  assertion(std::isfinite(t) and std::isfinite(x[0]), t, x);
+  ASSERTION(solution != nullptr);
+  ASSERTION(std::isfinite(t) and std::isfinite(x[0]), t, x);
 
   constexpr double NumberOfPeaks = 2.0;
   constexpr double Amplitude     = 0.1;
@@ -56,7 +56,7 @@ applications::exahype2::exagrype::CCZ4Solver::analyticalSolution(
   solution[Shortcuts::grad_phi + 0]         = dxPhi;
 
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    assertion(std::isfinite(solution[unknown]), x, t, unknown);
+    ASSERTION(std::isfinite(solution[unknown]), x, t, unknown);
   }
 }
 

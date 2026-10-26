@@ -6,77 +6,103 @@
 
 ## Gitlab CI
 
-For a full overview of how continuous integration works in gitlab, please consult [their documentation](https://docs.gitlab.com/ee/ci/).
-We detail here some useful info about how we use it within Peano. A few basic things to note:
+[The GitLab documentation](https://docs.gitlab.com/ee/ci/) describes the continuous integration of GitLab. Peano uses it as
+follows:
 
-\li When a developer pushes to any remote branch, the gitlab website "runs a pipeline". This consists of running any steps in the `.gitlab-ci.yml` file.
-\li Our ```.gitlab-ci.yml``` includes `.continuous_integration/gitlab-toolchains.yml`. That file defines one job per compiler toolchain. Each of those jobs triggers a child pipeline that `.continuous_integration/gitlab-pipeline.yml` describes. This file pulls in the reusable templates in `.continuous_integration/templates` and the per-stage job definitions in `.continuous_integration/pipelines`.
-\li Every job runs in a container. The container provides the same software environment on every runner.
+\li Every push to a branch without an open merge request and every merge request start a pipeline of the jobs in
+    `.gitlab-ci.yml`.
+\li `.gitlab-ci.yml` includes the files in `.gitlab`. The stage `Python` compiles the Python sources and checks the import
+    layers of the Python API (`python.yml`). The stage `CPU` runs one job per compiler toolchain (`cpu.yml`). The stage `GPU`
+    runs one job per GPU toolchain (`gpu.yml`).
+\li The matrix of such a job lists the combinations of the build mode `BUILD_MODE` and the space-filling curve
+    `SPACE_FILLING_CURVE` that it covers. Every combination triggers a child pipeline from `.gitlab/pipeline.yml` with the name
+    of its trigger job, for example `GCC: [Debug, Hilbert]`.
+\li Every job runs the build modes `Release`, `Debug` and `Asserts` on the curve of the template `.Peano` or `.Hilbert` that it
+    extends. GCC runs on the Hilbert curve. LLVM, Intel, NVIDIA, AMD and every GPU job run on the Peano curve.
+\li LLVM and GCC set `SANITIZER` to `address+undefined`. Their `Asserts` pipelines then build with AddressSanitizer and
+    UndefinedBehaviorSanitizer.
+\li The child pipeline includes the templates in `templates.yml` and the jobs of the stages `Build`, `Test` and `Application` in
+    `build.yml`, `test.yml` and `application.yml`.
+\li The runners run without a GPU. `.GPU` sets `RUN_UNIT_TESTS` and `RUN_SIMULATIONS` to `false`. A GPU child pipeline only
+    builds the libraries, the unit tests, the tests and the applications for `sm_75`.
+\li A GPU child pipeline skips the API test, the Fortran coupling and the tutorials. Their PDE terms run on the host only. A GPU
+    build rejects such terms. The CPU child pipelines build them with the same compilers.
+\li With both variables set to `true` in `.GPU`, a GPU child pipeline runs everything that a CPU child pipeline runs.
+\li Every job runs its commands in an apptainer image of `APPTAINER_IMAGEDIR`. Every runner then builds with the same software.
+\li The job `Build and Unit Tests` of a child pipeline compiles the libraries and the unit tests of its build mode through
+    ccache and runs these unit tests. The GitLab cache of the runner keeps the ccache objects between pipelines, one cache per
+    child pipeline.
+\li The tests, tutorials and applications run in the build mode of their child pipeline.
+\li Every simulation of a test or an application runs `NUMBER_OF_TIME_STEPS` time steps, writes `NUMBER_OF_SNAPSHOTS`
+    snapshots and uses the grid levels from `MIN_GRID_LEVELS` to `MAX_GRID_LEVELS`. `templates.yml` sets these values for the
+    whole pipeline and the grid levels once per curve. `pipeline.yml` selects the grid levels of the curve of its child
+    pipeline.
+\li A job clones the Git LFS files as pointers. An application job pulls the files of its scenario with `git lfs pull`.
+\li LRZ GitLab limits the unauthenticated requests per IP address. All runners send their requests from one address. GitLab
+    counts a fetch with the CI job token as unauthenticated. The runners fetch the sources with a personal access token (see
+    Clone token below).
 
 ## How do I run the pipeline?
 
-The pipeline runs automatically for all branches and all pushes.
-However, it only runs fully on the protected branches.
-For all other branches, the pipeline only executes the build and test (unit tests) stages.
+Every child pipeline builds the libraries and the unit tests. A CPU child pipeline also runs the unit tests. The jobs that
+extend `.RunOnAnyBranch` run on every branch whose name starts with `muc/`. The jobs that extend `.RunOnlyOnMainBranch` run on `muc/exahype` and in merge requests.
 
-At time of writing, ```gitlab-runner``` is installed multiple nodes of DINE.
-The workers are kept alive by recurring slurm jobs. Peano developers should not need to do
-anything other than push to a branch, and [check the pipelines page on the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines)
-to check that their code has correctly built for each compiler toolchain.
+`gitlab-runner` runs on several nodes of DINE. Recurring Slurm jobs run these runners. A developer pushes to a branch and
+checks on the [pipelines page](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines) that the code builds with every compiler
+toolchain.
 
-One unfortunate consequence of this is that if the slurm job that manages a particular runner goes down during a pipeline run, it will cause the jobs to hang
-until they timeout, meaning that whoever pushed needs to press the restart button on the pipeline page.
+When the Slurm job of a runner ends during a pipeline, the jobs of this runner hang until they time out. The developer then
+restarts the pipeline on the pipelines page.
 
 ## How do I write my own tests?
 
-Unfortunately, the use of the apptainer containers is not pretty, and
-so the best thing to do is describe your desired actions in a bash script and ask for help on the
-continuous-integration channel of the Slack.
-
-### Anatomy of a test
-
-It's best to copy examples, such as the ones in `.continuous_integration/pipelines/test.yml`. But here are some general tips:
+Copy a job of `.gitlab/test.yml` and adapt it:
 
 ```
-.Test_Name:
+My Test:
   stage: Test
-  needs:
-    - job: Build
+  parallel:
+    matrix:
+      - scenario: [first-scenario, second-scenario]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd to/my/directory; ./run_my_executable"
+    - generate tests/my-test "$scenario.py --build-mode $BUILD_MODE"
+    - launch tests/my-test "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  extends: .RunOnAnyBranch
+  needs: [Build and Unit Tests]
 ```
 
-Let's discuss this line-by-line.
+The job runs after the job `Build and Unit Tests` of its child pipeline and reads the libraries that this job installed. Every
+script line runs on the runner from the top level of the Peano checkout. The shell functions of `.gitlab/templates.yml` run a
+command inside the container of the job:
 
-Start by giving your test a name. Syntax is crucial here. Start with a `.` to indicate it's a template, and finish the line with a colon `:`. Every
-subsequent line must be indented with two spaces, python style.
+\li `in_image "command"` runs the command in the container.
+\li `generate directory "arguments"` runs `python3` with the arguments in the directory and the Python API on the
+    `PYTHONPATH`.
+\li `launch directory "executable and arguments"` runs the executable in the directory through `PARALLEL_LAUNCH`.
+    `PARALLEL_LAUNCH` starts `MPI_RANKS` ranks with `OMP_THREADS` threads each.
+\li `check_error_norms directory file tolerance` compares the error norms in the file with the tolerance.
 
-Next, you need to give the job a stage. `Test` is a fine name.
+In a pipeline whose `RUN_SIMULATIONS` is `false`, `launch` and `check_error_norms` skip the run and the check. The job only
+builds the executable. A tutorial runs the cells of its notebook up to the build (`extract_build_cells.py`).
+`.RunOnAnyBranch` runs the job on every branch whose name starts with `muc/`. `.RunOnlyOnMainBranch` runs the job on
+`muc/exahype` and in merge requests.
 
-Next, the job needs the build job. It then runs after the build job and only if the build succeeded. It links
-against the libraries that the build job compiled.
+## How do I add new runners to the project?
 
-Finally, the script. This is very ugly. The first part `apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash` just transforms
-the standard bash terminal into one that runs under the container. The names of the environment variables are set for you. Then we need to pipe in our instructions
-(note the triple `<` sign). Conceptually, you need to imagine that the terminal begins at the top level of Peano. So you need to `cd` into whichever directory you
-need to be and run whichever scripts you need to run. Note the separation with semicolon between separate statements, like in a normal bash terminal.
+More runners run more jobs at once. Only the project owner adds a runner:
 
+\li Open Settings > CI/CD > Runners.
+\li Add a new project runner with the tag `peano-dine-runner`. Every job of the repository requests this tag.
+\li Lock the runner to the current project and click create.
 
-## How do I add new runners to project?
+GitLab then shows a token. Write it down.
 
-Having more runners online at once means more jobs can be run at once. Only the project owner can do these steps:
+Log into a node with `gitlab-runner` and run `gitlab-runner register`. Type in the URL and the token as prompted. Pick `shell`
+as the executor. The registration writes a configuration file into `$HOME/.gitlab-runner`. Move this file into
+`/dine/data/do009/peano/configs`.
 
-\li Heading to Settings > CI/CD > Runners
-\li Add a new project runner with the tag `peano-dine-runner`, the only tag that the repository uses. Lock the runner to the current project and click create.
-
-It will then show you a token. Write it down.
-
-Now we need to register this runner. Log into a node where `gitlab-runner` is available, and then type `gitlab-runner register`. Type in the url and
-token as prompted. Pick `shell` as an executor.
-
-This will then create a new config file in `$HOME/.gitlab-runner` directory. Move this to the /dine/data/do009/peano/configs directory.
-
-You can then run the gitlab-runner and supply this config by calling `gitlab-runner run --config /path/to/config.toml`. This is what the slurm job is supposed to do.
+`gitlab-runner run --config /path/to/config.toml` runs the runner with this configuration. The Slurm job of a runner runs this
+command.
 
 ### Config template
 
@@ -93,15 +119,38 @@ shutdown_timeout = 0
   name = "b101Runner"
   url = "https://gitlab.lrz.de"
   id = 35483
-  token = "keep-this-token-private"
+  token = "my-token"
   token_obtained_at = 2024-06-19T11:16:06Z
   token_expires_at = 0001-01-01T00:00:00Z
   executor = "shell"
   builds_dir = "/dine/data/do009/peano/builds_dir"
   cache_dir  = "/dine/data/do009/peano/cache_dir"
+  pre_get_sources_script = "if [ -r /dine/data/do009/peano/configs/clone-token.sh ]; then . /dine/data/do009/peano/configs/clone-token.sh; fi"
 
 \endverbatim
 
-concurrent denotes the number of concurrent builds that can run at once.
+`concurrent` sets the number of jobs that the runner runs at once.
+
+### Clone token
+
+LRZ GitLab answers unauthenticated requests beyond its rate limit with HTTP 429 until the current window of 30 minutes ends. A
+fetch with the CI job token counts as unauthenticated. A fetch with a personal access token counts as authenticated. Every
+runner sources `/dine/data/do009/peano/configs/clone-token.sh` before it fetches the sources:
+
+\verbatim
+
+if [ "${GIT_LFS_SKIP_SMUDGE:-0}" = "1" ] && [ "$(date +%F)" \< "2027-10-10" ]; then
+  { set +x; } 2>/dev/null
+  export GIT_CONFIG_COUNT=1
+  export GIT_CONFIG_KEY_0="http.https://gitlab.lrz.de/.extraHeader"
+  export GIT_CONFIG_VALUE_0="Authorization: Basic BASE64_OF_USERNAME_AND_TOKEN"
+fi
+
+\endverbatim
+
+The token is a personal access token with the scope `read_repository`. `printf 'username:token' | base64 -w 0` gives
+`BASE64_OF_USERNAME_AND_TOKEN`. The date is the expiry date of the token. From then on the runners fetch without the token. A
+fetch that downloads Git LFS files also fetches without the token. Every job of the runners can read the file. The token
+therefore gets the scope `read_repository` only. The variables need Git 2.31 or newer on the runners.
 
 */

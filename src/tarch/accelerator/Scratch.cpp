@@ -28,8 +28,8 @@ tarch::accelerator::getNumberOfScratchChunks(const int workItems) {
  */
 int
 tarch::accelerator::getNumberOfPersistentTeams(const int workItems, const int teamThreads) {
-  assertion(workItems >= 0, workItems);
-  assertion(teamThreads > 0, teamThreads);
+  ASSERTION(workItems >= 0, workItems);
+  ASSERTION(teamThreads > 0, teamThreads);
 #if defined(PEANO_WITH_GPU_BACKEND)
   const int concurrentTeams = tarch::accelerator::Device::getInstance().getNumberOfConcurrentThreads() / teamThreads;
   return std::max(1, std::min(workItems, concurrentTeams));

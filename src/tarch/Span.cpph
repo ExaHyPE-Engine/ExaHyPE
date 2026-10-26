@@ -6,7 +6,7 @@
 template <typename Element>
 INLINE_METHOD GPU_CALLABLE_METHOD Element&
 tarch::Span<Element>::operator[](const int index) const noexcept {
-  assertion(index >= 0 and index < size, index, size);
+  ASSERTION(index >= 0 and index < size, index, size);
   return data[index];
 }
 
