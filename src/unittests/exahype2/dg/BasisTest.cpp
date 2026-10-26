@@ -5,6 +5,10 @@
 #include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
+#include "tarch/accelerator/Buffer.h"
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
 #include "tarch/la/Vector.h"
 #include "tarch/testing/UnitTest.h"
 #include "unittests/exahype2/dg/TransferTestData.h"
@@ -593,6 +597,69 @@ namespace {
         coarseNode
       );
     }
+  }
+
+  /**
+   * Writes the derivative of the line with the dispatch index.
+   */
+  template <int Nodes>
+  struct DifferentiateLine final {
+    const double* values{nullptr};
+    const double* derivativeOperator{nullptr};
+    double*       derivatives{nullptr};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int line) const {
+      constexpr int Entries = PEANO_WITH_SIMDLEN;
+      exahype2::dg::differentiateAlongAxis<Entries, Nodes, true, double, double>(
+        derivatives + line * Nodes * Entries,
+        Entries,
+        values + line * Nodes * Entries,
+        Entries,
+        exahype2::dg::getDerivativeWeightsOfNodePairs<Nodes>(derivativeOperator),
+        1.5,
+        0.25
+      );
+    }
+  };
+
+  /**
+   * Returns the derivatives of the lines from a dispatch and from the host. The first vector stores
+   * the derivatives of the dispatch.
+   */
+  template <int Nodes>
+  std::pair<std::vector<double>, std::vector<double>> getDerivativesOfDispatchAndHost() {
+    constexpr int       Lines   = 64;
+    constexpr int       Entries = PEANO_WITH_SIMDLEN;
+    std::vector<double> values(Lines * Nodes * Entries);
+    for (std::size_t value = 0; value < values.size(); value++) {
+      values[value] = 0.001 * static_cast<double>(value % 97) - 0.04;
+    }
+    std::vector<double> derivativeOperator(Nodes * Nodes);
+    for (std::size_t entry = 0; entry < derivativeOperator.size(); entry++) {
+      derivativeOperator[entry] = 0.01 * static_cast<double>(entry % 13) - 0.06;
+    }
+
+    tarch::accelerator::Buffer<double> deviceValues(tarch::MemoryLocation::Device);
+    tarch::accelerator::Buffer<double> deviceOperator(tarch::MemoryLocation::Device);
+    tarch::accelerator::Buffer<double> deviceDerivatives(tarch::MemoryLocation::Device);
+    deviceValues.setValues(values);
+    deviceOperator.setValues(derivativeOperator);
+    deviceDerivatives.setValues(std::vector<double>(values.size(), 0.0));
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(Lines),
+      DifferentiateLine<Nodes>{deviceValues.getData(), deviceOperator.getData(), deviceDerivatives.getData()}
+    );
+
+    std::vector<double>            hostDerivatives(values.size(), 0.0);
+    const DifferentiateLine<Nodes> differentiateOnHost{
+      values.data(),
+      derivativeOperator.data(),
+      hostDerivatives.data()
+    };
+    for (int line = 0; line < Lines; line++) {
+      differentiateOnHost(line);
+    }
+    return {deviceDerivatives.getValues(), hostDerivatives};
   }
 } // namespace
 
@@ -1434,6 +1501,20 @@ UNIT_TEST("The derivative of a reflected line is the reflected derivative with t
         VALIDATE_EQUALS(threeNodeMismatches, 0);
         VALIDATE_EQUALS(fourNodeMismatches, 0);
         VALIDATE_EQUALS(fiveNodeMismatches, 0);
+      }
+    }
+  }
+}
+
+UNIT_TEST("A dispatch differentiates lines of eight and sixteen nodes like the host") {
+  GIVEN("Sixty-four lines of eight nodes and sixty-four lines of sixteen nodes") {
+    WHEN("A dispatch and the host differentiate every line") {
+      const auto [eightNodeDispatch, eightNodeHost]     = getDerivativesOfDispatchAndHost<8>();
+      const auto [sixteenNodeDispatch, sixteenNodeHost] = getDerivativesOfDispatchAndHost<16>();
+
+      THEN("The derivatives of the dispatch equal the derivatives of the host") {
+        VALIDATE_NUMERICAL_BUFFERS_EQUALS(eightNodeDispatch, eightNodeHost);
+        VALIDATE_NUMERICAL_BUFFERS_EQUALS(sixteenNodeDispatch, sixteenNodeHost);
       }
     }
   }

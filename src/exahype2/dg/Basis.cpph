@@ -400,10 +400,11 @@ exahype2::dg::differentiateAlongAxis(
     valueStride
   );
 
-  // The vector loop keeps every node of the line in registers. A reflection of the axis maps the
-  // centre node onto itself. An even node count has two centre nodes that swap under the
-  // reflection. Their mean swaps its sign with the values. The difference of the centre node of an
-  // odd node count is zero.
+  // The vector loop keeps every node of the line in registers. A compiler vectorises the innermost
+  // loop only. UNROLL() unrolls the loops over the nodes up to the node count of the highest ADER-DG
+  // order. A reflection of the axis maps the centre node onto itself. An even node count has two
+  // centre nodes that swap under the reflection. Their mean swaps its sign with the values. The
+  // difference of the centre node of an odd node count is zero.
   constexpr int CentreNode = NumberOfNodes / 2;
   SIMD()
   for (int entry = 0; entry < NumberOfEntries; entry++) {
@@ -414,6 +415,7 @@ exahype2::dg::differentiateAlongAxis(
 
     ComputePrecision pairSums[Weights::PairSlots];
     ComputePrecision pairDifferences[Weights::PairSlots];
+    UNROLL(16)
     for (int pair = 0; pair < Weights::Pairs; pair++) {
       // productRoundedOnce() rounds every scaled difference on its own. A device compiler then cannot
       // fuse the last scaling of one node of the pair into the sum.
@@ -426,11 +428,13 @@ exahype2::dg::differentiateAlongAxis(
       pairDifferences[pair] = lower - upper;
     }
 
+    UNROLL(16)
     for (int targetNode = 0; targetNode < NumberOfNodes; targetNode++) {
       AccumulatePrecision accumulator = static_cast<AccumulatePrecision>(0);
       if constexpr (not OverwriteResult) {
         accumulator = static_cast<AccumulatePrecision>(result[targetNode * resultStride + entry]);
       }
+      UNROLL(16)
       for (int pair = 0; pair < Weights::Pairs; pair++) {
         accumulator = accumulator
           + static_cast<AccumulatePrecision>(pairSums[pair] * derivativeWeights.sumWeights[targetNode][pair]);

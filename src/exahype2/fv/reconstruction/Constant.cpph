@@ -500,8 +500,21 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
     }
   }
 
+  // A SIMD loop over fewer unknowns than PEANO_WITH_SIMDLEN cannot vectorise. The SIMD loop adds the
+  // unknowns of whole vectors. The second loop adds the remaining unknowns.
+  constexpr int UnknownsInVectors = NumberOfUnknowns - NumberOfUnknowns % PEANO_WITH_SIMDLEN;
   SIMD()
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+  for (int unknown = 0; unknown < UnknownsInVectors; unknown++) {
+#if DIMENSIONS == 2
+    const StateUpdatePrecision update = axisUpdates[0][unknown] + axisUpdates[1][unknown];
+#else
+    const StateUpdatePrecision update =
+      tarch::la::sumInOrderOfValue(axisUpdates[0][unknown], axisUpdates[1][unknown], axisUpdates[2][unknown]);
+#endif
+    outputState[unknown] =
+      static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + update);
+  }
+  for (int unknown = UnknownsInVectors; unknown < NumberOfUnknowns; unknown++) {
 #if DIMENSIONS == 2
     const StateUpdatePrecision update = axisUpdates[0][unknown] + axisUpdates[1][unknown];
 #else
