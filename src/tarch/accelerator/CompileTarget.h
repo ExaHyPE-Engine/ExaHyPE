@@ -44,6 +44,10 @@
 #undef TARGET_DECLARE_END
 #define TARGET_DECLARE _Pragma("omp declare target")
 #define TARGET_DECLARE_END _Pragma("omp end declare target")
+#if defined(__INTEL_LLVM_COMPILER) and defined(__SPIR__)
+#undef GPU_CALLABLE_METHOD
+#define GPU_CALLABLE_METHOD __attribute__((convergent))
+#endif
 #endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)

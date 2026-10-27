@@ -88,6 +88,7 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     double                                       picardTolerance,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 
@@ -114,9 +115,11 @@ private:
     const ComputePrecision* NOALIAS nodeResiduals,
     const TeamWorkers&              workers
   );
+
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double sumNodeResiduals(
     const ComputePrecision* NOALIAS nodeResiduals
   );
+
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double getLargestOfCell(
     double             value,
     const TeamWorkers& workers
@@ -155,6 +158,7 @@ private:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          timeNode,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 
@@ -205,6 +209,7 @@ private:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          timeNode,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 

@@ -24,18 +24,30 @@ namespace {
 
   /**
    * Solver whose refinement criterion returns the command encoded in the first value of the state.
+   * The runtime parameter refinesEveryCell replaces this command by Refine.
    */
   struct StubSolver final {
+    struct RuntimeParameters final {
+      bool refinesEveryCell{false};
+    };
+
     static GPU_CALLABLE_METHOD exahype2::RefinementCommand refinementCriterion(
       const double* const                                           Q,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& centre,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& width,
-      [[maybe_unused]] const double                                 timeStamp
+      [[maybe_unused]] const double                                 timeStamp,
+      const RuntimeParameters&                                      parameters
     ) {
+      if (parameters.refinesEveryCell) {
+        return exahype2::RefinementCommand::Refine;
+      }
       return Q == nullptr ? exahype2::RefinementCommand::Keep
                           : static_cast<exahype2::RefinementCommand>(static_cast<std::uint8_t>(Q[0]));
     }
   };
+
+  constexpr StubSolver::RuntimeParameters CommandOfThePatch{};
+  constexpr StubSolver::RuntimeParameters RefinementOfEveryCell{.refinesEveryCell = true};
 
   int getNumberOf(const exahype2::RefinementCommand command) { return static_cast<int>(command); }
 
@@ -93,7 +105,8 @@ namespace {
       tarch::la::Vector<DIMENSIONS, double>(width),
       MaxAdmissibleSize,
       MinAdmissibleSize,
-      TimeStamp
+      TimeStamp,
+      CommandOfThePatch
     );
   }
 } // namespace
@@ -177,7 +190,8 @@ UNIT_TEST("The votes pass a refine vote of every cell into the requests, drop a 
         std::as_const(pool).getView(),
         getLimitsAroundTheGrid(),
         TimeStamp,
-        requests
+        requests,
+        CommandOfThePatch
       );
       const auto        refinementRequests = requests.getRefinementRequests(cellConnectivity);
       const std::size_t allocatedBytes     = votes.getAllocatedBytes().getTotal();
@@ -195,11 +209,27 @@ UNIT_TEST("The votes pass a refine vote of every cell into the requests, drop a 
           std::as_const(pool).getView(),
           getLimitsAroundTheGrid(),
           TimeStamp,
-          requests
+          requests,
+          CommandOfThePatch
         );
         const auto refinementRequestsOfTheKeep = requests.getRefinementRequests(cellConnectivity);
 
         THEN("The refinement requests stay empty") { VALIDATE(refinementRequestsOfTheKeep.empty()); }
+
+        AND_WHEN("The solver votes on every cell again with the runtime parameter that refines every cell") {
+          requests.clear(numberOfSlots);
+          votes.voteOnEveryCell<StubSolver>(
+            cellConnectivity,
+            std::as_const(pool).getView(),
+            getLimitsAroundTheGrid(),
+            TimeStamp,
+            requests,
+            RefinementOfEveryCell
+          );
+          const auto refinementRequestsOfTheParameter = requests.getRefinementRequests(cellConnectivity);
+
+          THEN("Refinement requests arise") { VALIDATE(not refinementRequestsOfTheParameter.empty()); }
+        }
 
         AND_WHEN("The votes release their commands") {
           votes.release();
@@ -222,7 +252,7 @@ UNIT_TEST("Without patches, every cell above the largest admissible size refines
     WHEN("The solver votes on the grid construction with a largest admissible size below the cell width") {
       limits.maxAdmissiblePatchSize = 0.5 / peano4::SubdivisionFactor;
       requests.clear(cellConnectivity.getNumberOfSlots());
-      votes.voteOnGridConstruction<StubSolver, double>(cellConnectivity, limits, requests);
+      votes.voteOnGridConstruction<StubSolver, double>(cellConnectivity, limits, requests, CommandOfThePatch);
       const auto refinementRequests = requests.getRefinementRequests(cellConnectivity);
 
       THEN("Refinement requests arise") { VALIDATE(not refinementRequests.empty()); }
@@ -231,7 +261,7 @@ UNIT_TEST("Without patches, every cell above the largest admissible size refines
     WHEN("The solver votes on the grid construction with the largest admissible size one") {
       limits.maxAdmissiblePatchSize = 1.0;
       requests.clear(cellConnectivity.getNumberOfSlots());
-      votes.voteOnGridConstruction<StubSolver, double>(cellConnectivity, limits, requests);
+      votes.voteOnGridConstruction<StubSolver, double>(cellConnectivity, limits, requests, CommandOfThePatch);
       const auto refinementRequests = requests.getRefinementRequests(cellConnectivity);
 
       THEN("The refinement requests stay empty") { VALIDATE(refinementRequests.empty()); }
@@ -258,7 +288,8 @@ UNIT_TEST("Only the listed cells vote whatever the patches of the other cells sa
         std::as_const(pool).getView(),
         getLimitsAroundTheGrid(),
         TimeStamp,
-        requests
+        requests,
+        CommandOfThePatch
       );
       const auto refinementRequests = requests.getRefinementRequests(cellConnectivity);
 
@@ -277,7 +308,8 @@ UNIT_TEST("Only the listed cells vote whatever the patches of the other cells sa
         std::as_const(pool).getView(),
         getLimitsAroundTheGrid(),
         TimeStamp,
-        requests
+        requests,
+        CommandOfThePatch
       );
       const auto refinementRequests = requests.getRefinementRequests(cellConnectivity);
 
@@ -307,7 +339,8 @@ UNIT_TEST("Limits that fix the mesh skip the votes") {
         std::as_const(pool).getView(),
         fixingLimits,
         TimeStamp,
-        requests
+        requests,
+        CommandOfThePatch
       );
       const auto fixedRequests = requests.getRefinementRequests(cellConnectivity);
       requests.clear(numberOfSlots);
@@ -316,7 +349,8 @@ UNIT_TEST("Limits that fix the mesh skip the votes") {
         std::as_const(pool).getView(),
         getLimitsAroundTheGrid(),
         TimeStamp,
-        requests
+        requests,
+        CommandOfThePatch
       );
       const auto openRequests = requests.getRefinementRequests(cellConnectivity);
       votes.release();

@@ -14,6 +14,9 @@ project = exahype2.Project(
     min_grid_levels=2,
     max_grid_levels=2,
 )
+project.add_runtime_parameter("maxEigenvalue", "double", 1.0)
+project.add_runtime_parameter("weights", ("double", 2), [0.5, 0.5])
+project.add_runtime_parameter("label", "string", "terms")
 
 nothing = "\n"
 keep = "return ::exahype2::RefinementCommand::Keep;"
@@ -32,7 +35,7 @@ fv_solver.set_pde_terms(
     initial_condition=nothing,
     boundary_conditions=nothing,
     refinement_criterion=keep,
-    max_eigenvalue=one,
+    max_eigenvalue="return parameters.maxEigenvalue * (parameters.weights(0) + parameters.weights(1));",
     flux=nothing,
     ncp=nothing,
     source=nothing,

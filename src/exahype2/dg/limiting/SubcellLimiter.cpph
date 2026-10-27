@@ -105,19 +105,22 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
  * extrema of the cell and of every cell it touches at a vertex starts on the subcell scheme.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::initialise(
   const peano4::CellConnectivity& cellConnectivity,
-  const CellPool&                 solution
+  const CellPool&                 solution,
+  const RuntimeParameters&        parameters
 ) {
-  sampleSubcells(cellConnectivity);
+  sampleSubcells(cellConnectivity, parameters);
   if constexpr (Detector::UsesMaximumPrinciple) {
     tarch::accelerator::parallelFor(
       tarch::accelerator::Range(cellConnectivity.getCells().size),
       exahype2::dg::limiting::ReduceSampledExtrema<Derived, StoragePrecision, ComputePrecision>{
         cellConnectivity.onDevice(),
         std::as_const(_subcells).getView(),
-        _referenceExtrema.getView()
+        _referenceExtrema.getView(),
+        parameters
       }
     );
     tarch::accelerator::parallelFor(
@@ -147,7 +150,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       static_cast<StoragePrecision>(_relaxationParameter),
       static_cast<StoragePrecision>(_differencesScaling),
       _detectorScratch.getData(),
-      scratchValuesPerTeam
+      scratchValuesPerTeam,
+      parameters
     }
   );
   _extremaOfSolutionAreReduced = false;
@@ -157,9 +161,11 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
  * Writes the initial condition of Derived on the host at the subcell centres of every cell.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::sampleSubcells(
-  const peano4::CellConnectivity& cellConnectivity
+  const peano4::CellConnectivity& cellConnectivity,
+  const RuntimeParameters&        parameters
 ) {
   CellPool   copyOnHost{SubcellScheme::SubcellValuesPerCell, tarch::MemoryLocation::Heap};
   CellPool&  subcells = _subcells.download(copyOnHost);
@@ -169,7 +175,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
     SubcellScheme::sampleInitialCondition(
       subcells.getChunk(slot),
       cellConnectivity.getCellCentre(slot),
-      cellConnectivity.getCellWidth(slot)
+      cellConnectivity.getCellWidth(slot),
+      parameters
     );
   });
   _subcells.upload(subcells);
@@ -181,14 +188,16 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
  * round. The reference extrema of a cell then cover every cell it touches at a vertex.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::openTimeStep(
-  const peano4::CellConnectivity& cellConnectivity,
-  const CellPool&                 solution
+  const peano4::CellConnectivity&           cellConnectivity,
+  const CellPool&                           solution,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   if constexpr (Detector::UsesMaximumPrinciple) {
     if (not _extremaOfSolutionAreReduced) {
-      reduceExtrema(cellConnectivity.onDevice().getCells(), solution);
+      reduceExtrema(cellConnectivity.onDevice().getCells(), solution, parameters);
       _extremaOfSolutionAreReduced = true;
     }
   }
@@ -204,24 +213,30 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
  * speeds of the accepted candidates and of the recomputed subgrids.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::closeTimeStep(
   const peano4::CellConnectivity& cellConnectivity,
   CellPool&                       solution,
   const double                    timeStamp,
-  const double                    timeStepSize
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
 ) {
-  const auto judged     = judgeCandidates(cellConnectivity, solution, timeStamp, timeStepSize);
+  const auto judged     = judgeCandidates(cellConnectivity, solution, timeStamp, timeStepSize, parameters);
   auto       statistics = judged.statistics;
   _localTroubledCells   = judged.troubledCells;
   spreadStatuses(cellConnectivity);
   listCellsOnSubcellScheme(cellConnectivity);
   statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
     statistics,
-    recompute(cellConnectivity, solution, timeStamp, timeStepSize)
+    recompute(cellConnectivity, solution, timeStamp, timeStepSize, parameters)
   );
   if constexpr (Detector::UsesMaximumPrinciple) {
-    reduceExtrema(tarch::Span<const int>{_recomputedCells.getData(), _cellCounts.recomputedCells}, solution);
+    reduceExtrema(
+      tarch::Span<const int>{_recomputedCells.getData(), _cellCounts.recomputedCells},
+      solution,
+      parameters
+    );
   }
   ASSERTION(
     _cellCounts.troubledCells == judged.troubledCells and _cellCounts.recomputedCells >= judged.recomputedCells,
@@ -468,10 +483,12 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
  * Writes the observable extrema of the solution of every listed cell into its reference extrema.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::reduceExtrema(
   const tarch::Span<const int> cells,
-  const CellPool&              solution
+  const CellPool&              solution,
+  const RuntimeParameters&     parameters
 ) {
   if (cells.isEmpty()) {
     return;
@@ -490,7 +507,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       SubcellProjection<StoragePrecision>::NodesToLobatto1D,
       SubcellProjection<StoragePrecision>::NodesToSubcells1D,
       _detectorScratch.getData(),
-      scratchValuesPerTeam
+      scratchValuesPerTeam,
+      parameters
     }
   );
 }
@@ -561,12 +579,14 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
  * the accepted candidates whose cells were not troubled.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD exahype2::dg::limiting::JudgedCells
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::judgeCandidates(
   const peano4::CellConnectivity& cellConnectivity,
   const CellPool&                 solution,
   const double                    timeStamp,
-  const double                    timeStepSize
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
 ) {
   exahype2::dg::limiting::JudgedCells judged;
   const int                           cells = cellConnectivity.getCells().size;
@@ -595,7 +615,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       timeStamp,
       timeStepSize,
       _detectorScratch.getData(),
-      scratchValuesPerTeam
+      scratchValuesPerTeam,
+      parameters
     },
     tarch::accelerator::Custom<exahype2::dg::limiting::JudgedCells>{judged}
   );
@@ -710,12 +731,14 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
  * speeds of the subgrids.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::recompute(
   const peano4::CellConnectivity& cellConnectivity,
   CellPool&                       solution,
   const double                    timeStamp,
-  const double                    timeStepSize
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
 ) {
   // The projection onto the faces and the recomputation take their chunks from this scratch. Every
   // recomputing cell lies on the subcell scheme.
@@ -743,7 +766,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   tarch::accelerator::parallelFor(
     tarch::accelerator::Range(boundaryFaces.size * SubcellScheme::Subgrid::VolumesPerLayer),
     exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision, ComputePrecision>{
-      {cellConnectivity.onDevice(), boundaryFaces, _subcellHalo.getView(), timeStamp},
+      {cellConnectivity.onDevice(), boundaryFaces, _subcellHalo.getView(), timeStamp, parameters},
       std::as_const(_statuses).getView()
     }
   );
@@ -762,7 +785,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       _subcellHalo.getView()
     },
     _haloExchange,
-    [this, &cellConnectivity, &solution, &statistics, timeStamp, timeStepSize](const peano4::Adjacency adjacency) {
+    [this, &cellConnectivity, &solution, &statistics, timeStamp, timeStepSize, &parameters](
+      const peano4::Adjacency adjacency
+    ) {
       const int local = _cellCounts.localRecomputedCells;
       const int first = adjacency == peano4::Adjacency::Local ? 0 : local;
       const int count = adjacency == peano4::Adjacency::Local ? local : _cellCounts.recomputedCells - local;
@@ -778,7 +803,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
           SubcellProjection<StoragePrecision>::SubcellsToNodes1D,
           timeStamp,
           timeStepSize,
-          _recomputeScratch.getData()
+          _recomputeScratch.getData(),
+          parameters
         },
         tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{statisticsOfGroup}
       );

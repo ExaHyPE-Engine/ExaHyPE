@@ -24,11 +24,15 @@ namespace {
    * The layout constants the stub solvers of the Runge-Kutta tests derive from.
    */
   struct StubLayout {
+    struct RuntimeParameters final {};
+
     static constexpr int DGOrder                    = 2;
     static constexpr int RungeKuttaOrder            = 3;
     static constexpr int NumberOfUnknowns           = 2;
     static constexpr int NumberOfAuxiliaryVariables = 1;
   };
+
+  using RuntimeParameters = StubLayout::RuntimeParameters;
 
   template <typename Solver>
   using StageOf = exahype2::dg::rk::Stage<Solver, double>;
@@ -61,7 +65,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = (1.0 + direction) * state[unknown];
@@ -78,7 +83,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       [[maybe_unused]] const int                                    direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = 0.0;
@@ -96,7 +102,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         sourceValues
+      double* NOALIAS const                                         sourceValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         sourceValues[unknown] = (1.0 + unknown) * state[unknown];
@@ -113,7 +120,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       [[maybe_unused]] const int                                    direction,
-      double* NOALIAS const                                         productValues
+      double* NOALIAS const                                         productValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         productValues[unknown] = stateGradient[unknown];
@@ -131,7 +139,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                                  timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      [[maybe_unused]] const int                                    direction
+      [[maybe_unused]] const int                                    direction,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return timeStamp == TimeStamp + TimeStepSize ? WaveSpeed : 0.0;
     }
@@ -151,6 +160,8 @@ namespace {
    * A swap of two axes maps the flux onto itself.
    */
   struct AcousticSolver final {
+    using RuntimeParameters = StubLayout::RuntimeParameters;
+
     static constexpr int DGOrder                    = StubLayout::DGOrder;
     static constexpr int RungeKuttaOrder            = StubLayout::RungeKuttaOrder;
     static constexpr int NumberOfUnknowns           = 1 + DIMENSIONS;
@@ -163,7 +174,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = 0.0;
@@ -319,7 +331,8 @@ namespace {
       cellCentre,
       cellSize,
       TimeStamp,
-      TimeStepSize
+      TimeStepSize,
+      RuntimeParameters{}
     );
   }
 
@@ -371,7 +384,8 @@ namespace {
         tarch::la::Vector<DIMENSIONS, double>(cellCentres + coordinateOffset),
         tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
         TimeStamp,
-        TimeStepSize
+        TimeStepSize,
+        RuntimeParameters{}
       );
     }
   };
@@ -394,7 +408,8 @@ namespace {
         tarch::la::Vector<DIMENSIONS, double>(cellCentres + coordinateOffset),
         tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
         TimeStamp,
-        TimeStepSize
+        TimeStepSize,
+        RuntimeParameters{}
       ));
     }
   };
@@ -489,7 +504,8 @@ namespace {
         tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),
         tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
         TimeStamp,
-        TimeStepSize
+        TimeStepSize,
+        RuntimeParameters{}
       );
     }
   }
@@ -544,7 +560,8 @@ namespace {
         tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),
         tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
         TimeStamp,
-        TimeStepSize
+        TimeStepSize,
+        RuntimeParameters{}
       ));
     }
   }
@@ -647,7 +664,8 @@ UNIT_TEST("The weighted sum written over the cell state equals the weighted sum 
         cellCentre,
         cellSize,
         TimeStamp,
-        TimeStepSize
+        TimeStepSize,
+        RuntimeParameters{}
       ));
       double                    stageState[StateValuesPerCell];
       FaceHalvesOf<InertSolver> halves;
@@ -699,7 +717,8 @@ UNIT_TEST("The open and the close add every weighted estimate to the cell state 
         cellCentre,
         cellSize,
         TimeStamp,
-        TimeStepSize
+        TimeStepSize,
+        RuntimeParameters{}
       ));
       double                    stageState[StateValuesPerCell];
       FaceHalvesOf<InertSolver> halves;
@@ -1125,7 +1144,8 @@ UNIT_TEST("The close writes the weighted sum over the cell state and reports the
         cellCentre,
         cellSize,
         TimeStamp,
-        TimeStepSize
+        TimeStepSize,
+        RuntimeParameters{}
       );
       const auto silentStatistics = StageOf<WaveSpeedSolver>::close<false>(
         weights,
@@ -1135,7 +1155,8 @@ UNIT_TEST("The close writes the weighted sum over the cell state and reports the
         cellCentre,
         cellSize,
         TimeStamp,
-        TimeStepSize
+        TimeStepSize,
+        RuntimeParameters{}
       );
 
       THEN("Both states store the sum and only the report gives the wave speed plain and per extent") {

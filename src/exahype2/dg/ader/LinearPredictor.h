@@ -83,6 +83,7 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 
@@ -107,6 +108,7 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
     double                                                 timeStamp,
     double                                                 timeStepSize,
+    const typename Derived::RuntimeParameters&             parameters,
     const TeamWorkers&                                     workers = TeamWorkers{}
   );
 
@@ -136,6 +138,7 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 
@@ -148,6 +151,7 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
     double                                                 timeStamp,
     double                                                 timeStepSize,
+    const typename Derived::RuntimeParameters&             parameters,
     const TeamWorkers&                                     workers = TeamWorkers{}
   );
 
@@ -158,6 +162,7 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 
@@ -167,6 +172,7 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 

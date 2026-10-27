@@ -9,10 +9,11 @@
 namespace exahype2::particles {
   template <typename SolverType, int NumberOfData>
   INLINE_METHOD std::array<double, ErrorMeasurement::NumberOfNorms> measurePositionErrors(
-    ParticleSet<NumberOfData>& particles,
-    double                     timeStamp,
-    double                     timeStepSize,
-    ErrorMeasurement&          measurement
+    ParticleSet<NumberOfData>&                    particles,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    ErrorMeasurement&                             measurement,
+    const typename SolverType::RuntimeParameters& parameters
   );
 } // namespace exahype2::particles
 

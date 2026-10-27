@@ -36,11 +36,16 @@
 namespace exahype2::terms::unittests {
   struct Tracer final {};
 
+  struct RuntimeParameters final {};
+
   struct Complete {
+    using RuntimeParameters = exahype2::terms::unittests::RuntimeParameters;
+
     static void initialCondition(
       double*                                      Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      const RuntimeParameters&                     parameters
     );
     static void boundaryConditions(
       const double*                                inside,
@@ -48,13 +53,15 @@ namespace exahype2::terms::unittests {
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
       double                                       t,
-      int                                          normal
+      int                                          normal,
+      const RuntimeParameters&                     parameters
     );
     static exahype2::RefinementCommand refinementCriterion(
       const double*                                Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
-      double                                       t
+      double                                       t,
+      const RuntimeParameters&                     parameters
     );
     static double maxEigenvalue(
       const double*                                Q,
@@ -62,7 +69,8 @@ namespace exahype2::terms::unittests {
       const tarch::la::Vector<DIMENSIONS, double>& h,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      const RuntimeParameters&                     parameters
     );
     static void flux(
       const double*                                Q,
@@ -71,7 +79,8 @@ namespace exahype2::terms::unittests {
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double*                                      F
+      double*                                      F,
+      const RuntimeParameters&                     parameters
     );
     static void flux(
       const double*                                Q,
@@ -81,7 +90,8 @@ namespace exahype2::terms::unittests {
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double*                                      F
+      double*                                      F,
+      const RuntimeParameters&                     parameters
     );
     static void nonconservativeProduct(
       const double*                                Q,
@@ -91,7 +101,8 @@ namespace exahype2::terms::unittests {
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double*                                      BTimesDeltaQ
+      double*                                      BTimesDeltaQ,
+      const RuntimeParameters&                     parameters
     );
     static void sourceTerm(
       const double*                                Q,
@@ -99,7 +110,8 @@ namespace exahype2::terms::unittests {
       const tarch::la::Vector<DIMENSIONS, double>& h,
       double                                       t,
       double                                       dt,
-      double*                                      S
+      double*                                      S,
+      const RuntimeParameters&                     parameters
     );
     static void diffusiveSourceTerm(
       const double*                                Q,
@@ -108,7 +120,8 @@ namespace exahype2::terms::unittests {
       const tarch::la::Vector<DIMENSIONS, double>& h,
       double                                       t,
       double                                       dt,
-      double*                                      S
+      double*                                      S,
+      const RuntimeParameters&                     parameters
     );
     static double solveRiemannProblem(
       const double*                                QL,
@@ -121,7 +134,8 @@ namespace exahype2::terms::unittests {
       bool                                         isBoundaryFace,
       int                                          faceIndex,
       double*                                      FL,
-      double*                                      FR
+      double*                                      FR,
+      const RuntimeParameters&                     parameters
     );
     static double solveSubcellRiemannProblem(
       const double*                                QL,
@@ -134,7 +148,8 @@ namespace exahype2::terms::unittests {
       bool                                         isBoundaryFace,
       int                                          faceIndex,
       double*                                      FL,
-      double*                                      FR
+      double*                                      FR,
+      const RuntimeParameters&                     parameters
     );
     static void multiplyMaterialParameterMatrix(
       const double*                                Q,
@@ -143,10 +158,19 @@ namespace exahype2::terms::unittests {
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double*                                      rhs
+      double*                                      rhs,
+      const RuntimeParameters&                     parameters
     );
-    static void pointSource(const double* Q, const double* x, double t, double dt, double* forceVector, int n);
-    static void initPointSourceLocations(double location[2][DIMENSIONS]);
+    static void pointSource(
+      const double*            Q,
+      const double*            x,
+      double                   t,
+      double                   dt,
+      double*                  forceVector,
+      int                      n,
+      const RuntimeParameters& parameters
+    );
+    static void initPointSourceLocations(double location[2][DIMENSIONS], const RuntimeParameters& parameters);
     static double limitedDifference(
       const double*                                QL,
       const double*                                Q,
@@ -154,7 +178,8 @@ namespace exahype2::terms::unittests {
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
       int                                          normal,
-      int                                          unknown
+      int                                          unknown,
+      const RuntimeParameters&                     parameters
     );
     static void reconstruct(
       const double*                                QL,
@@ -166,40 +191,56 @@ namespace exahype2::terms::unittests {
       int                                          normal,
       int                                          unknown,
       double&                                      reconstructedMinus,
-      double&                                      reconstructedPlus
+      double&                                      reconstructedPlus,
+      const RuntimeParameters&                     parameters
     );
     static bool isPhysicallyAdmissible(
       const double*                                Q,
       int                                          numberOfStates,
       const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      const RuntimeParameters&                     parameters
     );
-    static void mapDmpObservables(double* observables, const double* Q);
-    static double dmpRelaxationParameter(int observable, double specifiedRelaxationParameter);
+    static void mapDmpObservables(double* observables, const double* Q, const RuntimeParameters& parameters);
+    static double dmpRelaxationParameter(
+      int                      observable,
+      double                   specifiedRelaxationParameter,
+      const RuntimeParameters& parameters
+    );
     static void analyticalSolution(
       const tarch::la::Vector<DIMENSIONS, double>& x,
       double                                       t,
       double                                       dt,
       const double*                                Q,
-      double*                                      solution
+      double*                                      solution,
+      const RuntimeParameters&                     parameters
     );
-    static void analyticalSolution(exahype2::terms::unittests::Tracer* particle, double t, double dt, double* solution);
+    static void analyticalSolution(
+      exahype2::terms::unittests::Tracer* particle,
+      double                              t,
+      double                              dt,
+      double*                             solution,
+      const RuntimeParameters&            parameters
+    );
     static constexpr std::array<int, 2> MeasuredUnknowns{0, 1};
     static void postprocessUpdatedPatch(
       double*                                      Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
       double                                       t,
-      double                                       dt
+      double                                       dt,
+      const RuntimeParameters&                     parameters
     );
     static bool ownsCell(
       const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      const RuntimeParameters&                     parameters
     );
     static bool plotsFace(
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
-      int                                          normal
+      int                                          normal,
+      const RuntimeParameters&                     parameters
     );
     static constexpr bool InitialisesPatches = true;
   };
@@ -228,16 +269,20 @@ namespace exahype2::terms::unittests {
 
   template <unsigned long long PeriodicAxes>
   struct FiniteVolumeSolverWithoutBoundaryConditions final {
+    using RuntimeParameters = exahype2::terms::unittests::RuntimeParameters;
+
     static void initialCondition(
       double*                                      Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      const RuntimeParameters&                     parameters
     );
     static exahype2::RefinementCommand refinementCriterion(
       const double*                                Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
-      double                                       t
+      double                                       t,
+      const RuntimeParameters&                     parameters
     );
     static constexpr int                     PatchSize                  = 4;
     static constexpr int                     NumberOfUnknowns           = 2;
@@ -246,6 +291,8 @@ namespace exahype2::terms::unittests {
   };
 
   struct Defective final {
+    using RuntimeParameters = exahype2::terms::unittests::RuntimeParameters;
+
     void flux(
       const double*                                Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -253,7 +300,8 @@ namespace exahype2::terms::unittests {
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double*                                      F
+      double*                                      F,
+      const RuntimeParameters&                     parameters
     );
     static void maxEigenvalue(
       const double*                                Q,
@@ -261,14 +309,16 @@ namespace exahype2::terms::unittests {
       const tarch::la::Vector<DIMENSIONS, double>& h,
       double                                       t,
       double                                       dt,
-      int                                          normal
+      int                                          normal,
+      const RuntimeParameters&                     parameters
     );
     static void sourceTerm(
       const double*                                Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
       double                                       t,
       double                                       dt,
-      double*                                      S
+      double*                                      S,
+      const RuntimeParameters&                     parameters
     );
     static void solveRiemannProblem(
       double*                                      FL,
@@ -281,7 +331,14 @@ namespace exahype2::terms::unittests {
       const tarch::la::Vector<DIMENSIONS, double>& h,
       int                                          normal,
       bool                                         isBoundaryFace,
-      int                                          faceIndex
+      int                                          faceIndex,
+      const RuntimeParameters&                     parameters
+    );
+    static exahype2::RefinementCommand refinementCriterion(
+      const double*                                Q,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      double                                       t
     );
   };
 } // namespace exahype2::terms::unittests
@@ -352,6 +409,10 @@ UNIT_TEST("A missing or mistyped term fails its concept") {
       VALIDATE_EQUALS((exahype2::terms::HasCellPredicate<Defective>), false);
       VALIDATE_EQUALS((exahype2::terms::HasFacePredicate<Defective>), false);
       VALIDATE_EQUALS((exahype2::terms::InitialisesPatches<Defective>), false);
+    }
+
+    THEN("The refinement criterion of Defective without the runtime parameters fails its concept") {
+      VALIDATE_EQUALS((exahype2::terms::HasRefinementCriterion<Defective, double>), false);
     }
   }
 }

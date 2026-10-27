@@ -68,6 +68,7 @@ protected:
     std::size_t   numberOfTuples,
     double*       target
   );
+
   static void copyTuples(
     const double* source,
     int           sourceStride,

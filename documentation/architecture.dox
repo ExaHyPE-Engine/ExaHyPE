@@ -79,7 +79,7 @@ canonical face order. A message then contains the face halves alone.
 Every solver votes on refinement per cell; the votes become
 peano4::RefinementRequest records, and exahype2::RefinementRequests gives
 every rank the same request set. The spacetree adopts the plan, rebuilds the
-cell connectivity and returns the peano4::Regrid that names the prolongations, the
+cell connectivity and returns the peano4::Regrid that lists the prolongations, the
 restrictions and the slots that change rank. Every solver's `regrid()` moves
 its cell pools through that record with the interpolation and restriction
 operators of its family and with peano4::MigrationExchange for the slots that

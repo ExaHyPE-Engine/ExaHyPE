@@ -34,6 +34,8 @@ namespace {
   using FixedScheme =
     exahype2::dg::limiting::SubcellScheme<exahype2::dg::limiting::unittests::FixedStepStubSolver, double>;
 
+  using RuntimeParameters = exahype2::dg::limiting::unittests::RuntimeParameters;
+
   TARGET_DECLARE
   constexpr int HaloValuesPerFace = Scheme::HaloValuesPerFace;
   constexpr int HaloValuesPerCell = peano4::FacesPerCell * HaloValuesPerFace;
@@ -48,7 +50,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&    parameters
     ) {
       ASSERTION(Q != nullptr);
       for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -75,7 +78,8 @@ namespace {
       [[maybe_unused]] const bool                                   isBoundaryFace,
       [[maybe_unused]] const int                                    faceIndex,
       double* const                                                 FL,
-      double* const                                                 FR
+      double* const                                                 FR,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       ASSERTION(QL != nullptr and FL != nullptr and FR != nullptr);
       FL[0] = QL[0];
@@ -158,7 +162,8 @@ namespace {
           getCellSize(cell),
           0,
           Layout::TimeStamp,
-          timeStepSize
+          timeStepSize,
+          RuntimeParameters{}
         ),
         tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{accumulator}
       );
@@ -368,7 +373,7 @@ UNIT_TEST("The scheme samples the initial condition at the subcell centres") {
     std::vector<double>                         subcells(Layout::SubcellValuesPerCell);
 
     WHEN("The scheme samples the initial condition of the stub solver that stores the first coordinate and the width") {
-      Scheme::sampleInitialCondition(subcells.data(), centre, width);
+      Scheme::sampleInitialCondition(subcells.data(), centre, width, RuntimeParameters{});
 
       THEN("Every subcell stores the first coordinate of its centre and the width of a subcell") {
         peano4::dForEach(Layout::SubcellsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& subcell) {
@@ -408,7 +413,7 @@ UNIT_TEST("Sampling visits every subcell once at the centre and with the size of
     }
 
     WHEN("The scheme samples the initial condition") {
-      SamplingScheme::sampleInitialCondition(subcells.data(), cellCentre, cellSize);
+      SamplingScheme::sampleInitialCondition(subcells.data(), cellCentre, cellSize, RuntimeParameters{});
       std::vector<double> centresAndSizes;
       std::vector<double> visits;
       for (int subcell = 0; subcell < Layout::SubcellsPerCell; subcell++) {
@@ -485,7 +490,8 @@ UNIT_TEST("The subgrid update of a cell equals the finite-volume update of its s
         width,
         Layout::TimeStamp,
         Layout::TimeStepSize,
-        0
+        0,
+        RuntimeParameters{}
       ));
 
       THEN("Both give the same subgrid") { VALIDATE_NUMERICAL_BUFFERS_EQUALS(subcells, updated); }

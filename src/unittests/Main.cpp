@@ -7,6 +7,7 @@
 #include "tarch/instrumentation/Error.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/la/Vector.h"
+#include "tarch/tasking/Runtime.h"
 #include "tarch/testing/UnitTest.h"
 
 int
@@ -29,13 +30,8 @@ main(int argc, char** argv) {
   {
     const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
 #pragma omp barrier
-#pragma omp master
-    {
-      {
-        const tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
-        returnCode = tarch::testing::runTests(argc, argv);
-      }
-
+    if (tarch::tasking::Runtime::getInstance().getThreadNumber() == 0) {
+      returnCode = tarch::testing::runTests(argc, argv);
       if (tarch::hasNonCriticalAssertionBeenViolated()) {
         LOG_ERROR("A non-critical assertion fails in the unit tests.");
         returnCode = EXIT_FAILURE;

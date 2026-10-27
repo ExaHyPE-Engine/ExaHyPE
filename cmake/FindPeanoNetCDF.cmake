@@ -73,12 +73,12 @@ if(NetCDF_INCLUDE_DIR AND EXISTS "${NetCDF_INCLUDE_DIR}/netcdf_meta.h")
 endif()
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(NetCDF
+find_package_handle_standard_args(PeanoNetCDF
   REQUIRED_VARS NetCDF_LIBRARY NetCDF_INCLUDE_DIR
   VERSION_VAR NetCDF_VERSION
 )
 
-if(NetCDF_FOUND)
+if(PeanoNetCDF_FOUND)
   set(NetCDF_INCLUDE_DIRS "${NetCDF_INCLUDE_DIR}")
   set(NetCDF_LIBRARIES "${NetCDF_LIBRARY}")
 

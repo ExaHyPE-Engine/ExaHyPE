@@ -7,13 +7,14 @@
 namespace exahype2::terms {
   template <typename SolverType, typename Precision>
   concept HasSourceTerm = requires(
-    const Precision* const                       Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    Precision* const                             S
+    const Precision* const                        Q,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const double                                  t,
+    const double                                  dt,
+    Precision* const                              S,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
-    { SolverType::sourceTerm(Q, x, h, t, dt, S) } -> std::same_as<void>;
+    { SolverType::sourceTerm(Q, x, h, t, dt, S, parameters) } -> std::same_as<void>;
   };
 } // namespace exahype2::terms

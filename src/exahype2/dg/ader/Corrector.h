@@ -59,18 +59,19 @@ struct exahype2::dg::ader::CorrectCells final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using FluxPool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  tarch::Span<const int>       cells{};
-  int                          numberOfTeams{1};
-  typename CellPool::View      solution{};
-  typename FluxPool::ConstView faceFluxes{};
-  const ComputePrecision*      faceQuadratureWeights{nullptr};
-  const ComputePrecision*      inverseCellQuadratureWeights{nullptr};
-  const ComputePrecision*      leftFaceCoefficients{nullptr};
-  const ComputePrecision*      rightFaceCoefficients{nullptr};
-  const StoragePrecision*      stateQuadraturePoints{nullptr};
-  double                       timeStamp{0.0};
-  double                       timeStepSize{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              cells{};
+  int                                 numberOfTeams{1};
+  typename CellPool::View             solution{};
+  typename FluxPool::ConstView        faceFluxes{};
+  const ComputePrecision*             faceQuadratureWeights{nullptr};
+  const ComputePrecision*             inverseCellQuadratureWeights{nullptr};
+  const ComputePrecision*             leftFaceCoefficients{nullptr};
+  const ComputePrecision*             rightFaceCoefficients{nullptr};
+  const StoragePrecision*             stateQuadraturePoints{nullptr};
+  double                              timeStamp{0.0};
+  double                              timeStepSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                                    entry,

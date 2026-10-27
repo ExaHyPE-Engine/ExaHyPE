@@ -41,7 +41,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& width,
     const QuadraturePrecision*                   quadraturePoints,
     const QuadraturePrecision*                   quadratureWeights,
-    StoragePrecision*                            nodes
+    StoragePrecision*                            nodes,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename CellPrecision, typename FacePrecision>
@@ -61,7 +62,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename ComputePrecision>
@@ -91,7 +93,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    int                                          faceNumber
+    int                                          faceNumber,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename ComputePrecision>
@@ -105,7 +108,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          direction
+    int                                          direction,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename ComputePrecision>
@@ -119,7 +123,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          direction
+    int                                          direction,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename ComputePrecision>
@@ -133,7 +138,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          direction
+    int                                          direction,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <int NodesPerAxis, int Lanes, typename ComputePrecision>
@@ -161,7 +167,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          direction
+    int                                          direction,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, bool Linear, typename ComputePrecision>
@@ -176,7 +183,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          direction
+    int                                          direction,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename ComputePrecision>
@@ -192,7 +200,8 @@ namespace exahype2::dg {
     double                                       timeStepSize,
     int                                          direction,
     bool                                         isBoundary,
-    int                                          faceNumber
+    int                                          faceNumber,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename ComputePrecision>
@@ -206,7 +215,8 @@ namespace exahype2::dg {
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          direction,
-    int                                          boundaryFaceNumber
+    int                                          boundaryFaceNumber,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename ComputePrecision>
@@ -275,7 +285,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename Precision>
@@ -285,7 +296,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, bool ReportEigenvalues, typename StoragePrecision>
@@ -295,7 +307,8 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& centre,
     const tarch::la::Vector<DIMENSIONS, double>& width,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Derived, typename StoragePrecision>
@@ -421,11 +434,12 @@ template <typename Derived, typename ComputePrecision>
 struct exahype2::dg::ApplyBoundaryConditions final {
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::CellConnectivity cellConnectivity{};
-  tarch::Span<const int>   faces{};
-  typename StatePool::View faceStates{};
-  const ComputePrecision*  quadraturePoints{nullptr};
-  double                   timeStamp{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              faces{};
+  typename StatePool::View            faceStates{};
+  const ComputePrecision*             quadraturePoints{nullptr};
+  double                              timeStamp{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
@@ -439,14 +453,15 @@ struct exahype2::dg::SolveRiemannProblems final {
   using StatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using FluxPool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::CellConnectivity cellConnectivity{};
-  tarch::Span<const int>   faces{};
-  typename StatePool::View faceStates{};
-  typename FluxPool::View  faceFluxes{};
-  const ComputePrecision*  quadraturePoints{nullptr};
-  const ComputePrecision*  faceQuadratureWeights{nullptr};
-  double                   timeStamp{0.0};
-  double                   timeStepSize{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              faces{};
+  typename StatePool::View            faceStates{};
+  typename FluxPool::View             faceFluxes{};
+  const ComputePrecision*             quadraturePoints{nullptr};
+  const ComputePrecision*             faceQuadratureWeights{nullptr};
+  double                              timeStamp{0.0};
+  double                              timeStepSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
@@ -515,11 +530,12 @@ template <typename Derived, typename StoragePrecision>
 struct exahype2::dg::MeasureNodeEigenvalues final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  tarch::Span<const int>       cells{};
-  typename CellPool::ConstView solution{};
-  const StoragePrecision*      quadraturePoints{nullptr};
-  double                       timeStamp{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              cells{};
+  typename CellPool::ConstView        solution{};
+  const StoragePrecision*             quadraturePoints{nullptr};
+  double                              timeStamp{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                                    entry,
@@ -540,14 +556,15 @@ struct exahype2::dg::MeasureNodeErrors final {
 
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  tarch::Span<const int>       cells{};
-  typename CellPool::ConstView solution{};
-  const StoragePrecision*      quadraturePoints{nullptr};
-  const StoragePrecision*      quadratureWeights{nullptr};
-  double*                      errorsPerCell{nullptr};
-  double                       timeStamp{0.0};
-  double                       timeStepSize{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              cells{};
+  typename CellPool::ConstView        solution{};
+  const StoragePrecision*             quadraturePoints{nullptr};
+  const StoragePrecision*             quadratureWeights{nullptr};
+  double*                             errorsPerCell{nullptr};
+  double                              timeStamp{0.0};
+  double                              timeStepSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
@@ -572,12 +589,15 @@ struct exahype2::dg::CellTransfer final {
   const double*                restrictionMatrix{nullptr};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void prepareInterpolation(int parentSlot, double* prepared, int itemOfChunk) const;
+
   INLINE_METHOD GPU_CALLABLE_METHOD void prepareRestriction(
     const int* childSlots,
     double*    prepared,
     int        itemOfChunk
   ) const;
+
   INLINE_METHOD GPU_CALLABLE_METHOD void copy(int slot, StoragePrecision* target, int itemOfChunk) const;
+
   INLINE_METHOD GPU_CALLABLE_METHOD void interpolateFromParent(
     int               parentSlot,
     StoragePrecision* target,
@@ -585,6 +605,7 @@ struct exahype2::dg::CellTransfer final {
     int               itemOfChunk,
     const double*     prepared
   ) const;
+
   INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(
     const int*        childSlots,
     StoragePrecision* target,

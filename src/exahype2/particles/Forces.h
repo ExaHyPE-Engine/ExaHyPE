@@ -76,23 +76,29 @@ namespace exahype2::particles {
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getMass(const Particle& particle);
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getRadius(const Particle& particle);
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getFluidDensity(const Particle& particle);
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getFluidVelocity(
     const Particle& particle
   );
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getVelocity(
     const Particle& particle
   );
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getAcceleration(
     const Particle& particle
   );
+
   INLINE_METHOD GPU_CALLABLE_METHOD void setVelocity(
     Particle&                                    particle,
     const tarch::la::Vector<DIMENSIONS, double>& velocity
   );
+
   INLINE_METHOD GPU_CALLABLE_METHOD void setAcceleration(
     Particle&                                    particle,
     const tarch::la::Vector<DIMENSIONS, double>& acceleration
   );
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD State getState(const Particle& particle);
   INLINE_METHOD GPU_CALLABLE_METHOD void setState(Particle& particle, const State& state);
 

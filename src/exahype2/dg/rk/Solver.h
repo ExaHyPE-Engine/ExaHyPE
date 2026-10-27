@@ -64,16 +64,24 @@ public:
     const std::vector<exahype2::plotter::DataField>& plottedFields
   );
 
-  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
+  template <typename RuntimeParameters>
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity, const RuntimeParameters& parameters);
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void performTimeStep(
     const peano4::CellConnectivity& cellConnectivity,
-    exahype2::RefinementRequests&   requests
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void regrid(
     const peano4::CellConnectivity& cellConnectivity,
     const peano4::Regrid&           regrid,
-    exahype2::RefinementRequests&   requests
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
+
   INLINE_METHOD void release();
 
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
@@ -86,16 +94,22 @@ private:
 
   static constexpr int NumberOfRungeKuttaStages = Stage::Tableau::Stages;
 
+  template <typename RuntimeParameters>
   INLINE_METHOD void openStage(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
     int                             stage,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics combineFinalState(
     const peano4::CellConnectivity& cellConnectivity,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+
   INLINE_METHOD void reserveStageScratch(const peano4::CellConnectivity& cellConnectivity);
 
   EstimatePool _estimates{Stage::EstimateValuesPerCell};

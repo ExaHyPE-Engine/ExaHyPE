@@ -94,7 +94,7 @@ level and geometry. peano4::grid::AutomatonState::refineState() reads the
 children of that state from the active curve and derives every child's
 geometry and curve state from its table entry. The cell connectivity build in
 peano4::Spacetree and the rank partition in peano4::topology::Tree loop over
-the same child sequence. The alias peano4::sfc::ActiveCurve names the active
+the same child sequence. The alias peano4::sfc::ActiveCurve selects the active
 curve. CMake configures it from PEANO_WITH_SPACE_FILLING_CURVE:
 
     cmake .. -DPEANO_WITH_SPACE_FILLING_CURVE=Hilbert
@@ -113,8 +113,8 @@ peano4::CellsPerNeighbourhood names it.
 
 # Adding a curve
 
-Add a header under src/peano4/sfc/curves that defines the grammar and name its
-non-terminals as textbook readers know them. peano4::sfc::ActiveCurve builds
+Add a header under src/peano4/sfc/curves that defines the grammar and gives its
+non-terminals the names of the textbooks. peano4::sfc::ActiveCurve builds
 both the header name and the struct name from the curve name and the suffix
 Grammar. Add the curve name to the PEANO_WITH_SPACE_FILLING_CURVE option in
 cmake/PeanoOptions.cmake and instantiate peano4::sfc::SpaceFillingCurve with

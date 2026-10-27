@@ -30,16 +30,17 @@ template <
 >
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::fv::timestepping::SingleStep::applyToVolume(
-  const int                                    volume,
-  const StoragePrecision* NOALIAS const        inputPatch,
-  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  const int                                    boundaryFaces,
-  Terms&                                       terms,
-  StoragePrecision* NOALIAS const              updatedState
+  const int                                     volume,
+  const StoragePrecision* NOALIAS const         inputPatch,
+  const StoragePrecision* NOALIAS const         faceInputPatches[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  const int                                     boundaryFaces,
+  Terms&                                        terms,
+  StoragePrecision* NOALIAS const               updatedState,
+  const typename SolverType::RuntimeParameters& parameters
 ) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   ASSERTION(inputPatch != nullptr);
@@ -85,7 +86,15 @@ exahype2::fv::timestepping::SingleStep::applyToVolume(
       centreStateForCompute = centreStateComputeBuffer;
     }
     ComputePrecision sources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    SolverType::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
+    SolverType::sourceTerm(
+      centreStateForCompute,
+      volumeCentre,
+      volumeSize,
+      timeStamp,
+      timeStepSize,
+      sources,
+      parameters
+    );
     SIMD(aligned(sources : PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       outputState[unknown] = static_cast<StoragePrecision>(
@@ -122,7 +131,8 @@ exahype2::fv::timestepping::SingleStep::applyToVolume(
     boundaryFaces,
     outputState,
     maxEigenvalueAfterTimeStep,
-    terms);
+    terms,
+    parameters);
 
   return maxEigenvalueAfterTimeStep;
 }

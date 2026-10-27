@@ -9,7 +9,8 @@ exahype2::dg::unittests::StubSolver::boundaryConditions(
   const tarch::la::Vector<DIMENSIONS, double>&                  position,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                                  timeStamp,
-  const int                                                     direction
+  const int                                                     direction,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int value = 0; value < KernelTestSetup::NumberOfData; value++) {
     outsideState[value] = -insideState[value] + position(direction) + timeStamp;
@@ -23,7 +24,8 @@ exahype2::dg::unittests::StubSolver::maxEigenvalue(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
-  const int                                                     direction
+  const int                                                     direction,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   return 0.5 + std::fabs(state[0]) + 0.25 * direction + 0.125 * position(0);
 }
@@ -36,7 +38,8 @@ exahype2::dg::unittests::StubSolver::flux(
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
   const int                                                     direction,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = state[unknown] * (1.0 + direction) + position(0);
@@ -52,7 +55,8 @@ exahype2::dg::unittests::StubSolver::flux(
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
   const int                                                     direction,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = state[unknown] * (1.0 + direction) + position(0);
@@ -69,7 +73,8 @@ exahype2::dg::unittests::StubSolver::sourceTerm(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = 0.5 * state[unknown] - position(0);
@@ -85,7 +90,8 @@ exahype2::dg::unittests::StubSolver::nonconservativeProduct(
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
   const int                                                     direction,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = stateGradient[unknown] * (1.0 + 0.5 * direction) + state[unknown] + position(0);
@@ -100,7 +106,8 @@ exahype2::dg::unittests::StubSolver::multiplyMaterialParameterMatrix(
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
   [[maybe_unused]] const int                                    direction,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] *= 1.0 + 0.25 * state[0];

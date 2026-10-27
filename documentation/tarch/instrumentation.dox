@@ -67,7 +67,7 @@ The logging macros forward information to tarch::instrumentation::Log. Log
 formats each line once and then dispatches it to the configured sinks. The
 tarch::instrumentation::CommandLineSink remains the default terminal sink.
 The same formatted line is forwarded to tarch::instrumentation::FileSink when
-Log::setOutputFile() names a file. File logging is disabled by default.
+Log::setOutputFile() sets a file. File logging is disabled by default.
 The file sink flushes periodically and when it closes.
 
 Warning and Error messages are highlighted only in the terminal sink and only

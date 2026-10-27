@@ -12,6 +12,7 @@
 
 namespace exahype2::dg::unittests {
   struct KernelTestSetup;
+  struct RuntimeParameters;
   struct StubSolver;
   struct DeviceDeleter;
   template <typename T>
@@ -67,9 +68,16 @@ TARGET_DECLARE_END
 
 TARGET_DECLARE
 /**
+ * The runtime parameters of every solver of the kernel tests.
+ */
+struct exahype2::dg::unittests::RuntimeParameters final {};
+
+/**
  * A solver whose terms depend on the state and the direction. A wrong offset changes the result.
  */
 struct exahype2::dg::unittests::StubSolver final {
+  using RuntimeParameters = exahype2::dg::unittests::RuntimeParameters;
+
   static constexpr int DGOrder                    = KernelTestSetup::DofsPerAxis - 1;
   static constexpr int NumberOfUnknowns           = KernelTestSetup::NumberOfUnknowns;
   static constexpr int NumberOfAuxiliaryVariables = KernelTestSetup::NumberOfAuxiliaryVariables;
@@ -80,7 +88,8 @@ struct exahype2::dg::unittests::StubSolver final {
     const tarch::la::Vector<DIMENSIONS, double>& position,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    int                                          direction
+    int                                          direction,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
@@ -89,7 +98,8 @@ struct exahype2::dg::unittests::StubSolver final {
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          direction
+    int                                          direction,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
@@ -99,7 +109,8 @@ struct exahype2::dg::unittests::StubSolver final {
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          direction,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
@@ -110,7 +121,8 @@ struct exahype2::dg::unittests::StubSolver final {
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          direction,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void sourceTerm(
@@ -119,7 +131,8 @@ struct exahype2::dg::unittests::StubSolver final {
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
@@ -130,7 +143,8 @@ struct exahype2::dg::unittests::StubSolver final {
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          direction,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void multiplyMaterialParameterMatrix(
@@ -140,7 +154,8 @@ struct exahype2::dg::unittests::StubSolver final {
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          direction,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 };
 TARGET_DECLARE_END

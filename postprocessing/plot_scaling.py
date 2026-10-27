@@ -244,7 +244,9 @@ def main() -> None:
     args = _build_argument_parser().parse_args()
     runs = _read_runs(args.logs)
     if not runs:
-        raise SystemExit("ERROR: No log reports a time per step and a performance.")
+        raise SystemExit(
+            "ERROR: The plot needs a log that reports a time per step and a performance."
+        )
     for run, efficiency in zip(runs, _parallel_efficiency(runs)):
         print(
             f"{run.nodes:>5} nodes {run.time_per_step:10.4f} s per step "
@@ -257,7 +259,7 @@ def main() -> None:
             top_axis = (label, float(per_node))
         except ValueError as exc:
             raise SystemExit(
-                f"ERROR: The count per node of the top axis is no number: {per_node}"
+                f"ERROR: The count per node of the top axis expects a number (got {per_node})."
             ) from exc
     output = Path(args.output)
     _save(

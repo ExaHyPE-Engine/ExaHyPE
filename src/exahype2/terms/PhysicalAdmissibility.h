@@ -7,11 +7,12 @@
 namespace exahype2::terms {
   template <typename SolverType, typename Precision>
   concept HasPhysicalAdmissibility = requires(
-    const Precision* const                       Q,
-    const int                                    numberOfStates,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h
+    const Precision* const                        Q,
+    const int                                     numberOfStates,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
-    { SolverType::isPhysicallyAdmissible(Q, numberOfStates, x, h) } -> std::same_as<bool>;
+    { SolverType::isPhysicallyAdmissible(Q, numberOfStates, x, h, parameters) } -> std::same_as<bool>;
   };
 } // namespace exahype2::terms

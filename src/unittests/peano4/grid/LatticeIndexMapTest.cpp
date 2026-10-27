@@ -194,7 +194,7 @@ UNIT_TEST("A visit of the entries of a map reaches every entry once with its key
         visitedEntries.emplace_back(key, value);
       });
 
-      THEN("Every visit names a stored key with its value and every value receives one visit") {
+      THEN("Every visit passes a stored key with its value and every value receives one visit") {
         std::vector<int> numberOfVisitsPerValue(NumberOfKeys, 0);
         for (const auto& [key, value] : visitedEntries) {
           VALIDATE_EQUALS(key, getLatticeKey(value, 3));

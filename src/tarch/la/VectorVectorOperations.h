@@ -14,16 +14,19 @@ namespace tarch::la {
     tarch::la::Vector<Size, Scalar>&       lhs,
     const tarch::la::Vector<Size, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>& operator+=(
     tarch::la::Vector<2, Scalar>&       lhs,
     const tarch::la::Vector<2, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>& operator+=(
     tarch::la::Vector<3, Scalar>&       lhs,
     const tarch::la::Vector<3, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>& operator+=(
     tarch::la::Vector<4, Scalar>&       lhs,
@@ -35,16 +38,19 @@ namespace tarch::la {
     tarch::la::Vector<Size, Scalar>&       lhs,
     const tarch::la::Vector<Size, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>& operator-=(
     tarch::la::Vector<2, Scalar>&       lhs,
     const tarch::la::Vector<2, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>& operator-=(
     tarch::la::Vector<3, Scalar>&       lhs,
     const tarch::la::Vector<3, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>& operator-=(
     tarch::la::Vector<4, Scalar>&       lhs,
@@ -56,16 +62,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& lhs,
     const tarch::la::Vector<Size, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> operator+(
     const tarch::la::Vector<2, Scalar>& lhs,
     const tarch::la::Vector<2, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> operator+(
     const tarch::la::Vector<3, Scalar>& lhs,
     const tarch::la::Vector<3, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> operator+(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -77,16 +86,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& lhs,
     const tarch::la::Vector<Size, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> operator-(
     const tarch::la::Vector<2, Scalar>& lhs,
     const tarch::la::Vector<2, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> operator-(
     const tarch::la::Vector<3, Scalar>& lhs,
     const tarch::la::Vector<3, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> operator-(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -98,16 +110,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& lhs,
     const tarch::la::Vector<Size, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> multiplyComponents(
     const tarch::la::Vector<2, Scalar>& lhs,
     const tarch::la::Vector<2, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> multiplyComponents(
     const tarch::la::Vector<3, Scalar>& lhs,
     const tarch::la::Vector<3, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> multiplyComponents(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -119,16 +134,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& lhs,
     const tarch::la::Vector<Size, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> divideComponents(
     const tarch::la::Vector<2, Scalar>& lhs,
     const tarch::la::Vector<2, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> divideComponents(
     const tarch::la::Vector<3, Scalar>& lhs,
     const tarch::la::Vector<3, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> divideComponents(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -140,16 +158,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& lhs,
     const tarch::la::Vector<Size, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar operator*(
     const tarch::la::Vector<2, Scalar>& lhs,
     const tarch::la::Vector<2, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar operator*(
     const tarch::la::Vector<3, Scalar>& lhs,
     const tarch::la::Vector<3, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar operator*(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -161,16 +182,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& lhs,
     const tarch::la::Vector<Size, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar dot(
     const tarch::la::Vector<2, Scalar>& lhs,
     const tarch::la::Vector<2, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar dot(
     const tarch::la::Vector<3, Scalar>& lhs,
     const tarch::la::Vector<3, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar dot(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -182,16 +206,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& lhs,
     const tarch::la::Vector<Size, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar innerDot(
     const tarch::la::Vector<2, Scalar>& lhs,
     const tarch::la::Vector<2, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar innerDot(
     const tarch::la::Vector<3, Scalar>& lhs,
     const tarch::la::Vector<3, Scalar>& rhs
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar innerDot(
     const tarch::la::Vector<4, Scalar>& lhs,

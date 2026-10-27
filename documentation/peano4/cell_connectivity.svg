@@ -79,15 +79,15 @@
     <!-- the level jump: coarse face of cell 0 against the fine faces of cells 2, 5 and 8 -->
     <line x1="90" y1="0" x2="90" y2="90" class="jump"/>
     <text x="96" y="104" class="slot">level jump</text>
-    <!-- the faces rank 0 holds too -->
+    <!-- the faces that rank 0 also stores -->
     <line x1="0" y1="0" x2="90" y2="0" class="remote"/>
     <line x1="90" y1="0" x2="180" y2="0" class="remote"/>
     <line x1="0" y1="0" x2="0" y2="180" class="remote"/>
-    <text x="0" y="-6" class="slot">faces rank 0 holds too</text>
-    <!-- the faces rank 2 holds too -->
+    <text x="0" y="-6" class="slot">faces rank 0 also stores</text>
+    <!-- the faces that rank 2 also stores -->
     <line x1="0" y1="180" x2="90" y2="180" class="remote"/>
     <line x1="90" y1="90" x2="180" y2="90" class="remote"/>
-    <text x="0" y="196" class="slot">faces rank 2 holds too</text>
+    <text x="0" y="196" class="slot">faces rank 2 also stores</text>
   </g>
 
   <!-- Panel 3: the slot moves of one regrid -->

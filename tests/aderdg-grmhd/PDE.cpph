@@ -58,11 +58,10 @@ tests::exahype2::aderdg::grmhd::multiplyMatrixVector(
 
 /**
  * Writes the inverse of the symmetric matrix into inverse and returns the determinant of matrix. The
- * determinant combines three parts in a fixed order: the product of the diagonal entries, twice the
- * product of the off-diagonal entries and the sum of the three products of a diagonal entry with the
- * square of the off-diagonal entry outside its row and column. A permutation of the axes permutes the
- * operands within each part. The triple products and the sum order their operands by magnitude. A
- * permutation of the axes returns the same determinant and the permuted inverse bitwise.
+ * determinant is the product of the diagonal entries plus twice the product of the off-diagonal
+ * entries minus the sum of every diagonal entry times the square of the off-diagonal entry outside
+ * its row and column. A permutation of the axes returns the same determinant and the permuted
+ * inverse bitwise.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 tests::exahype2::aderdg::grmhd::invertMatrix3x3(const double (&matrix)[3][3], double (&inverse)[3][3]) {
@@ -339,12 +338,17 @@ tests::exahype2::aderdg::grmhd::convertPrimitiveToConserved(double* const Q, con
 }
 
 /**
- * Converts the conserved variables Q into the primitive variables V. V stores the pressure in the
- * slot of E. A failed recovery and a density or pressure below the atmosphere values set the
- * velocity to zero and raise the state to the atmosphere.
+ * Converts the conserved variables Q into the primitive variables V, writes the inverse of the
+ * spatial metric into gContr and returns the determinant of the spatial metric. V stores the
+ * pressure in the slot of E. A failed recovery and a density or pressure below the atmosphere values
+ * set the velocity to zero and raise the state to the atmosphere.
  */
-INLINE_METHOD GPU_CALLABLE_METHOD void
-tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(const double* const Q, double* const V) {
+INLINE_METHOD GPU_CALLABLE_METHOD double
+tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(
+  const double* const Q,
+  double* const       V,
+  double (&gContr)[3][3]
+) {
   constexpr double AdiabaticIndex      = 4.0 / 3.0;
   constexpr double AtmospherePressure  = 1e-12;
   constexpr double AtmosphereDensity   = 1e-11;
@@ -367,8 +371,7 @@ tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(const double* const 
     {spatialMetric[2], spatialMetric[4], spatialMetric[5]}
   };
 
-  double       gContr[3][3];
-  const double determinant = invertMatrix3x3(gCov, gContr);
+  const double determinant = tests::exahype2::aderdg::grmhd::invertMatrix3x3(gCov, gContr);
   ASSERTION(determinant > 0.0, determinant);
 
   const double rootDeterminant        = std::sqrt(determinant);
@@ -486,5 +489,6 @@ tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(const double* const 
   for (int i = 0; i < 6; i++) {
     V[Shortcuts::gij + i] = spatialMetric[i];
   }
+  return determinant;
 }
 TARGET_DECLARE_END

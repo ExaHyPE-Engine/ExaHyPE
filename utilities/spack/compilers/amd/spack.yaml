@@ -1,29 +1,44 @@
 spack:
   specs:
-    - llvm-amdgpu@6.4.1
-    - rocm-openmp-extras@6.4.1
-    - python@3.14.0
-    - py-pip@25.1.1
-    - mpich@4.3.2
-    - hwloc@2.12.2
-    - ucx@1.19.0
-    - memkind@1.14.0
-    - papi@7.2.0
-    - likwid@5.4.1
-    - metis@5.1.0
-    - parmetis@4.0.3
-    - boost@1.88.0 +filesystem +fiber +context
-    - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp
-    - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
-    - netcdf-c@4.9.2 +mpi +shared
-    - parallel-netcdf@1.14.1 +cxx -fortran +pic +shared
+    - group: main
+      specs:
+        - llvm-amdgpu@7.2.3
+        - rocm-openmp-extras@7.2.3
+        - hip@7.2.3
+        - python@3.14.5
+        - py-pip@26.2.1
+        - mpich@5.0.2
+        - hwloc@2.13.0
+        - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
+        - netcdf-c@4.9.3 +mpi +shared
+        - kokkos@5.2.2 +serial ~openmp +rocm ~wrapper amdgpu_target=gfx90a
+    - group: acpp
+      needs: [main]
+      specs:
+        - adaptivecpp@25.10.0 +rocm ^llvm@19.1.7 +clang +gold ~libomptarget ~offload ~lldb ~polly libcxx=none libunwind=none targets=x86,amdgpu ^hip@7.2.3
   packages:
     all:
       target: [x86_64]
+  repos:
+    builtin::
+      git: https://github.com/spack/spack-packages.git
+      commit: 093bed090925a0c327ba4fd927f1f1d5e36f2b3e
   concretizer:
     unify: true
     reuse: true
   config:
     install_tree:
       root: /opt/software
-  view: /opt/views/view
+  view:
+    default:
+      root: /opt/views/view
+      group: [main]
+    acpp:
+      root: /opt/views/acpp
+      group: [acpp]
+      link: roots
+  env_vars:
+    set:
+      ACPP_ROCM_PATH: /opt/views/view
+    append_path:
+      CMAKE_PREFIX_PATH: /opt/views/acpp

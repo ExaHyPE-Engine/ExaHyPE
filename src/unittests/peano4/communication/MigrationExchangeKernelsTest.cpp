@@ -33,8 +33,8 @@ namespace {
    * writes the sum of the element of the children. Every element is one work item.
    */
   struct SumTransfer final {
-    static constexpr int WorkItemsPerChunk      = ChunkSize;
-    static constexpr int PreparedValuesPerChunk = 0;
+    static constexpr int                  WorkItemsPerChunk      = ChunkSize;
+    [[maybe_unused]] static constexpr int PreparedValuesPerChunk = 0;
 
     Pool::ConstView source{};
 

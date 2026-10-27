@@ -28,7 +28,7 @@ CPP_SUFFIXES = (
 PYTHON_SUFFIXES = (".py",)
 STYLE_FILE = ".clang-format"
 
-# The agent bundle and the version control data are no sources of the repository.
+# The agent bundle and the version control data are not sources of the repository.
 EXCLUDED_DIRECTORIES = frozenset(
     {
         ".claude",

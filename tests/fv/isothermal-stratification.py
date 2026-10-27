@@ -200,7 +200,7 @@ calculate_pressure_perturbations = (
 limiter = calculate_pressure_perturbations + """
   {{COMPUTE_PRECISION}} rightDifference;
   {{COMPUTE_PRECISION}} leftDifference;
-  if (unknown == 3 and normal == 1) {
+  if (unknown == DIMENSIONS + 1 and normal == 1) {
     pressurePerturbations(
       QL,
       Q,

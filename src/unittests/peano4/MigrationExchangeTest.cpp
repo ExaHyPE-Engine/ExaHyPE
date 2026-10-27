@@ -307,7 +307,7 @@ namespace {
 } // namespace
 
 UNIT_TEST("A refinement and the erase back fill new slots from parents, children and other ranks with their cells") {
-  GIVEN("A regular grid with live data, a pool with one chunk per cell that names the cell and an exchange") {
+  GIVEN("A regular grid with live data, an exchange and a pool whose chunk of a cell stores its level and position") {
     Pool pool(ChunkSize, tarch::MemoryLocation::Device);
     buildGridWithLiveChunks(pool);
     Exchange exchange(pool.getLocation());
@@ -337,7 +337,7 @@ UNIT_TEST("A refinement and the erase back fill new slots from parents, children
 }
 
 UNIT_TEST("A preparing transfer fills every slot of a refinement and of the erase back with the chunk of its cell") {
-  GIVEN("A regular grid with live data, a pool with one chunk per cell that names the cell and an exchange") {
+  GIVEN("A regular grid with live data, an exchange and a pool whose chunk of a cell stores its level and position") {
     Pool pool(ChunkSize, tarch::MemoryLocation::Device);
     buildGridWithLiveChunks(pool);
     Exchange exchange(pool.getLocation());
@@ -399,7 +399,7 @@ UNIT_TEST("Two exchanges receive distinct tags in their first migration and ever
 }
 
 UNIT_TEST("The release frees every buffer and keeps the tag and the next migration moves a later regrid") {
-  GIVEN("A regular grid with live data, a pool with one chunk per cell that names the cell and an exchange") {
+  GIVEN("A regular grid with live data, an exchange and a pool whose chunk of a cell stores its level and position") {
     Pool pool(ChunkSize, tarch::MemoryLocation::Device);
     buildGridWithLiveChunks(pool);
     Exchange exchange(pool.getLocation());

@@ -27,6 +27,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const double                                 picardTolerance,
+  const typename Derived::RuntimeParameters&   parameters,
   const TeamWorkers&                           workers
 ) {
   constexpr int NodesPerAxis          = CellLayout::NodesPerAxis;
@@ -97,6 +98,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
             timeStamp,
             timeStepSize,
             timeNode,
+            parameters,
             workers
           );
         }
@@ -151,6 +153,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::predict(
             timeStamp,
             timeStepSize,
             timeNode,
+            parameters,
             workers
           );
         }
@@ -486,6 +489,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
   const double                                           timeStamp,
   const double                                           timeStepSize,
   const int                                              timeNode,
+  const typename Derived::RuntimeParameters&             parameters,
   const TeamWorkers&                                     workers
 ) {
   constexpr int NodesPerAxis       = CellLayout::NodesPerAxis;
@@ -527,9 +531,19 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
         nodeFlux[unknown] = static_cast<ComputePrecision>(0);
       }
       if constexpr (EvaluateDiffusiveFlux) {
-        Derived::flux(nodeState, nodeGradients, nodePosition, cellSize, timePosition, timeStepSize, axis, nodeFlux);
+        Derived::flux(
+          nodeState,
+          nodeGradients,
+          nodePosition,
+          cellSize,
+          timePosition,
+          timeStepSize,
+          axis,
+          nodeFlux,
+          parameters
+        );
       } else {
-        Derived::flux(nodeState, nodePosition, cellSize, timePosition, timeStepSize, axis, nodeFlux);
+        Derived::flux(nodeState, nodePosition, cellSize, timePosition, timeStepSize, axis, nodeFlux, parameters);
       }
     }
   }
@@ -720,6 +734,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
   const double                                           timeStamp,
   const double                                           timeStepSize,
   const int                                              timeNode,
+  const typename Derived::RuntimeParameters&             parameters,
   const TeamWorkers&                                     workers
 ) {
   static_assert(
@@ -775,7 +790,7 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
     }
 
     if constexpr (EvaluateSource) {
-      Derived::sourceTerm(nodeState, nodePosition, cellSize, timePosition, timeStepSize, localSource);
+      Derived::sourceTerm(nodeState, nodePosition, cellSize, timePosition, timeStepSize, localSource, parameters);
     }
 
     if constexpr (EvaluateDiffusiveSource and EvaluateSource) {
@@ -789,7 +804,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
         cellSize,
         timePosition,
         timeStepSize,
-        diffusiveSourceValues
+        diffusiveSourceValues,
+        parameters
       );
       SIMD(aligned(diffusiveSourceValues : PEANO_WITH_ALIGNMENT))
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -803,7 +819,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
         cellSize,
         timePosition,
         timeStepSize,
-        localSource
+        localSource,
+        parameters
       );
     }
 
@@ -824,7 +841,8 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
           timePosition,
           timeStepSize,
           axis,
-          axisProducts[axis]
+          axisProducts[axis],
+          parameters
         );
       }
       SIMD()

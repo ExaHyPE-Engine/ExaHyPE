@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 find_package(OpenMP REQUIRED)
-set(OMPT_FOUND "${OpenMP_FOUND}")
+set(PeanoOMPT_FOUND "${OpenMP_FOUND}")
 
 if(TARGET PeanoOptions)
   set(OFFLOADING_FLAGS "")
@@ -19,8 +19,9 @@ if(TARGET PeanoOptions)
     elseif(PEANO_WITH_GPU_VENDOR STREQUAL "intel")
       set(OFFLOADING_FLAGS -fopenmp-targets=spir64)
     endif()
-    # A local of a device function stays private to its thread. A team kernel keeps the data that its
-    # threads exchange in omp_pteam_mem_alloc memory.
+    # With -fopenmp-cuda-mode clang keeps every local of a device function in the private memory of
+    # its thread. The threads of a team exchange data through a team scratch that the OpenMP backend
+    # allocates with omp_pteam_mem_alloc.
     list(APPEND OFFLOADING_COMPILE_FLAGS -fopenmp-cuda-mode)
     # The ADER-DG predictor kernel needs more OpenMP optimiser iterations than the default.
     list(APPEND OFFLOADING_COMPILE_FLAGS -mllvm=-openmp-opt-max-iterations=1024)
@@ -42,6 +43,7 @@ if(TARGET PeanoOptions)
   elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Intel|IntelLLVM")
     if(PEANO_WITH_GPU_VENDOR STREQUAL "intel")
       set(OFFLOADING_FLAGS -fopenmp-targets=spir64)
+      set(OFFLOADING_COMPILE_FLAGS -Xopenmp-target-frontend=spir64 -mllvm=-jump-threading-threshold=0)
     endif()
   endif()
 

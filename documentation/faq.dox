@@ -256,7 +256,7 @@ Parallelisation
 ---------------
 
 -   **Why does adaptive refinement need several regrids?** A refinement
-    request names a cell that already exists and can expose one additional
+    request selects a cell that already exists and can expose one additional
     level. The next criterion evaluation can then request cells on that new
     level. Each regrid rebuilds the tree and the cell connectivity, then transfers
     the solution through `peano4::Regrid` into the target rank ownership.

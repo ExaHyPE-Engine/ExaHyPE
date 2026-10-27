@@ -10,8 +10,6 @@ set(TARCH_TEST_SOURCES
 
   tarch/accelerator/BufferTest.cpp
   tarch/accelerator/ChunkedMemoryPoolTest.cpp
-  tarch/accelerator/DeviceCopiesTest.cpp
-  tarch/accelerator/DeviceCopiesTestData.cpp
   tarch/accelerator/MemoryAllocationTest.cpp
   tarch/accelerator/ParallelConstructsTest.cpp
   tarch/accelerator/ScratchTest.cpp
@@ -139,8 +137,6 @@ set(EXAHYPE2_TEST_SOURCES
 set(GPU_TEST_SOURCES
   tarch/accelerator/BufferTest.cpp
   tarch/accelerator/ChunkedMemoryPoolTest.cpp
-  tarch/accelerator/DeviceCopiesTest.cpp
-  tarch/accelerator/DeviceCopiesTestData.cpp
   tarch/accelerator/ParallelConstructsTest.cpp
   tarch/accelerator/ScratchTest.cpp
   tarch/la/FixedPointSumTest.cpp

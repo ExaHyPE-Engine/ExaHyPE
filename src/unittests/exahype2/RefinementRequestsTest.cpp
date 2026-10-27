@@ -165,7 +165,7 @@ UNIT_TEST("A parent erases once all its children vote for it on one rank and a k
       requests.merge(votes.commands, cellConnectivity.getCells());
       const auto refinementRequests = requests.getRefinementRequests(cellConnectivity);
 
-      THEN("The erase requests name the wholly owned parents one level up, at least one on a single rank") {
+      THEN("Every wholly owned parent one level up receives one erase request, at least one on a single rank") {
         VALIDATE(wholeParents >= 1 or tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
         VALIDATE_EQUALS(static_cast<int>(refinementRequests.size()), wholeParents);
         VALIDATE_EQUALS(getNumberOfRequestsWith(refinementRequests, Control::Erase), wholeParents);
@@ -191,7 +191,7 @@ UNIT_TEST("A parent erases once all its children vote for it on one rank and a k
   }
 }
 
-UNIT_TEST("A keep of a second solver blocks every erase and a refine names its cell and blocks the parent's erase") {
+UNIT_TEST("A keep of a second solver blocks every erase and a refine requests its cell and blocks the parent's erase") {
   GIVEN("A regular grid over every rank, the wholly owned parents and the erase votes of one solver") {
     const auto& cellConnectivity  = buildGrid();
     const int   wholeParents      = getNumberOfWhollyOwnedParents();

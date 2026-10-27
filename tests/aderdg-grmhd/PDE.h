@@ -55,7 +55,11 @@ namespace tests::exahype2::aderdg::grmhd {
 
   INLINE_METHOD GPU_CALLABLE_METHOD void convertPrimitiveToConserved(double* Q, const double* V);
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void convertConservedToPrimitive(const double* Q, double* V);
+  INLINE_METHOD GPU_CALLABLE_METHOD double convertConservedToPrimitive(
+    const double* Q,
+    double*       V,
+    double (&gContr)[3][3]
+  );
 } // namespace tests::exahype2::aderdg::grmhd
 
 #include "PDE.cpph"

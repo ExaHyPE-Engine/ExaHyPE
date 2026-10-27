@@ -47,9 +47,12 @@ follows:
 Every child pipeline builds the libraries and the unit tests. A CPU child pipeline also runs the unit tests. The jobs that
 extend `.RunOnAnyBranch` run on every branch whose name starts with `muc/`. The jobs that extend `.RunOnlyOnMainBranch` run on `muc/exahype` and in merge requests.
 
-`gitlab-runner` runs on several nodes of DINE. Recurring Slurm jobs run these runners. A developer pushes to a branch and
-checks on the [pipelines page](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines) that the code builds with every compiler
-toolchain.
+`gitlab-runner` runs as Slurm jobs on COSMA. One permanent runner runs on the node ga004 of the partition `cosma8-shm2`. When
+all job slots of the permanent runner are busy, it submits the on-demand runners on the DINE nodes of the partition
+`bluefield1`. `runners.txt` lists the node, the partition and the mode of every runner. Every runner keeps its configuration,
+its build directories and the container images in one runner directory `<runner-dir>` on `/cosma/apps`. Every runner node
+mounts `/cosma/apps`. A developer pushes to a branch and checks on the
+[pipelines page](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines) that the code builds with every compiler toolchain.
 
 When the Slurm job of a runner ends during a pipeline, the jobs of this runner hang until they time out. The developer then
 restarts the pipeline on the pipelines page.
@@ -99,7 +102,7 @@ GitLab then shows a token. Write it down.
 
 Log into a node with `gitlab-runner` and run `gitlab-runner register`. Type in the URL and the token as prompted. Pick `shell`
 as the executor. The registration writes a configuration file into `$HOME/.gitlab-runner`. Move this file into
-`/dine/data/do009/peano/configs`.
+`<runner-dir>/configs`, add the paths of the config template below and list the runner in `<runner-dir>/configs/runners.txt`.
 
 `gitlab-runner run --config /path/to/config.toml` runs the runner with this configuration. The Slurm job of a runner runs this
 command.
@@ -123,19 +126,21 @@ shutdown_timeout = 0
   token_obtained_at = 2024-06-19T11:16:06Z
   token_expires_at = 0001-01-01T00:00:00Z
   executor = "shell"
-  builds_dir = "/dine/data/do009/peano/builds_dir"
-  cache_dir  = "/dine/data/do009/peano/cache_dir"
-  pre_get_sources_script = "if [ -r /dine/data/do009/peano/configs/clone-token.sh ]; then . /dine/data/do009/peano/configs/clone-token.sh; fi"
+  builds_dir = "<runner-dir>/builds_dir"
+  cache_dir  = "<runner-dir>/cache_dir"
+  environment = ["APPTAINER_BINDDIR=<runner-dir>", "APPTAINER_IMAGEDIR=<runner-dir>/images"]
+  pre_get_sources_script = "if [ -r <runner-dir>/configs/clone-token.sh ]; then . <runner-dir>/configs/clone-token.sh; fi"
 
 \endverbatim
 
-`concurrent` sets the number of jobs that the runner runs at once.
+`concurrent` sets the number of jobs that the runner runs at once. `environment` sets the directory that Apptainer binds into
+the container and the directory of the container images.
 
 ### Clone token
 
 LRZ GitLab answers unauthenticated requests beyond its rate limit with HTTP 429 until the current window of 30 minutes ends. A
 fetch with the CI job token counts as unauthenticated. A fetch with a personal access token counts as authenticated. Every
-runner sources `/dine/data/do009/peano/configs/clone-token.sh` before it fetches the sources:
+runner sources `<runner-dir>/configs/clone-token.sh` before it fetches the sources:
 
 \verbatim
 

@@ -362,8 +362,8 @@ exahype2::runner::RuntimeParameters::printUsage(const std::string& executableNam
   addOption(
     "--timeoutWarning <seconds>",
     "Warn after this many seconds waiting for MPI progress; fractional values such as 0.1 are "
-    "allowed, 0 disables. Setting it also records the origin, partner and tag of every request, so "
-    "the warning names the one that hangs (default: "
+    "allowed, 0 disables. Setting it also records the origin, partner and tag of every request, and "
+    "the warning prints them for the request that hangs (default: "
       + formatDefault(_MPITimeoutWarning) + ")."
   );
   addOption(
@@ -790,13 +790,4 @@ exahype2::runner::RuntimeParameters::getMinAdmissiblePatchSize(
   const tarch::la::Vector<DIMENSIONS, double>& domainSize
 ) const {
   return divideBySubdivisionFactorPower(1.1 * tarch::la::max(domainSize), _maxGridLevels);
-}
-
-double
-exahype2::runner::RuntimeParameters::getMaxAdmissibleCellSize(
-  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-  const int                                    cellsPerPatchPerAxis
-) const {
-  ASSERTION(cellsPerPatchPerAxis > 0, cellsPerPatchPerAxis);
-  return getMaxAdmissiblePatchSize(domainSize) / cellsPerPatchPerAxis;
 }

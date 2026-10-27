@@ -4,7 +4,10 @@
 
 namespace exahype2::terms {
   template <typename SolverType, int NumberOfPointSources>
-  concept HasPointSourceLocations = requires(double location[NumberOfPointSources][DIMENSIONS]) {
-    { SolverType::initPointSourceLocations(location) } -> std::same_as<void>;
+  concept HasPointSourceLocations = requires(
+    double                                        location[NumberOfPointSources][DIMENSIONS],
+    const typename SolverType::RuntimeParameters& parameters
+  ) {
+    { SolverType::initPointSourceLocations(location, parameters) } -> std::same_as<void>;
   };
 } // namespace exahype2::terms

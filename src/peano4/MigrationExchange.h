@@ -47,6 +47,7 @@ private:
     const Transfer&                          transfer,
     double*                                  prepared
   );
+
   INLINE_METHOD void receiveTransfers(Pool& pool);
 
   [[nodiscard]] static INLINE_METHOD int getNumberOfWorkItems(std::size_t chunks, int workItemsPerChunk);

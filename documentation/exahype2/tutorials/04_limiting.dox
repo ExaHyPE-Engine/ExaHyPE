@@ -114,7 +114,7 @@ the notebook, go back to the solver cell, set
 
     use_limiting = False
 
-and re-run from there. Now only the high-order ADER-DG scheme runs, with no Finite
+and re-run from there. Now only the high-order ADER-DG scheme runs, without the Finite
 Volume fallback, and it oscillates uncontrollably at the shock fronts. Within the
 first couple of percent of the run those oscillations drive the density negative,
 the state then grows without bound, the reported maximum eigenvalue jumps by more
