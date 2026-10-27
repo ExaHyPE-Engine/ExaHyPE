@@ -1,0 +1,108 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/shallow-water/ShallowWater.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::shallowwater::DryRing::maxEigenvalue(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::shallowwater::getMaxEigenvalue<Shortcuts>(Q, normal, parameters.gravity, parameters.dryTolerance);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::DryRing::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::shallowwater::computeFlux<Shortcuts>(Q, normal, parameters.dryTolerance, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::DryRing::nonconservativeProduct(
+  const ComputePrecision* const NOALIAS                         Q,
+  const ComputePrecision* const NOALIAS                         deltaQ,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               BTimesDeltaQ,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::shallowwater::computeNonconservativeProduct<Shortcuts>(Q, deltaQ, normal, parameters.gravity, BTimesDeltaQ);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::shallowwater::DryRing::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::shallowwater::getRefinementCommand<Shortcuts>(
+    Q,
+    getNodesInUnitInterval(),
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.detailTolerance
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+examples::shallowwater::DryRing::isPhysicallyAdmissible(
+  const StoragePrecision* const NOALIAS                         Q,
+  const int                                                     numberOfStates,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  return examples::shallowwater::isPhysicallyAdmissible<Shortcuts>(
+    Q,
+    numberOfStates,
+    NumberOfUnknowns + NumberOfAuxiliaryVariables
+  );
+}
+
+INLINE_METHOD void
+examples::shallowwater::DryRing::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  const double radius =
+    std::sqrt(tarch::la::productRoundedOnce(x(0), x(0)) + tarch::la::productRoundedOnce(x(1), x(1)));
+  const double bathymetry = 0.3 * std::exp(-radius * radius / 0.0625);
+  const bool   wet        = radius > 0.35 and radius < 0.65;
+  Q[Shortcuts::h]         = wet ? 0.2 - bathymetry : 0.0;
+  Q[Shortcuts::hv + 0]    = 0.0;
+  Q[Shortcuts::hv + 1]    = 0.0;
+  Q[Shortcuts::b]         = bathymetry;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::DryRing::boundaryConditions(
+  const ComputePrecision* const NOALIAS                         Qinside,
+  ComputePrecision* const NOALIAS                               Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    Qoutside[unknown] = Qinside[unknown];
+  }
+}

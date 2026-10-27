@@ -1,0 +1,217 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "exahype2/MultiresolutionDetail.h"
+#include "peano4/CellConnectivity.h"
+#include "tarch/Assertions.h"
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::elastic::getMaxEigenvalue(const Precision* const NOALIAS Q) {
+  return std::fmax(std::abs(Q[Shortcuts::cp]), std::abs(Q[Shortcuts::cs]));
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::elastic::computeFlux(const Precision* const NOALIAS Q, const int normal, Precision* const NOALIAS F) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(Q[Shortcuts::rho] > 0.0, Q[Shortcuts::rho]);
+  const double inverseDensity     = 1 / Q[Shortcuts::rho];
+  const double shearModulus       = Q[Shortcuts::rho] * Q[Shortcuts::cs] * Q[Shortcuts::cs];
+  const double firstLameParameter = Q[Shortcuts::rho] * Q[Shortcuts::cp] * Q[Shortcuts::cp] - 2 * shearModulus;
+  if constexpr (DIMENSIONS == 2) {
+    switch (normal) {
+    case 0:
+      F[Shortcuts::v + 0]     = -inverseDensity * Q[Shortcuts::sigma + 0];
+      F[Shortcuts::v + 1]     = -inverseDensity * Q[Shortcuts::sigma + 2];
+      F[Shortcuts::sigma + 0] = -(2 * shearModulus + firstLameParameter) * Q[Shortcuts::v + 0];
+      F[Shortcuts::sigma + 1] = -firstLameParameter * Q[Shortcuts::v + 0];
+      F[Shortcuts::sigma + 2] = -shearModulus * Q[Shortcuts::v + 1];
+      break;
+    default:
+      F[Shortcuts::v + 0]     = -inverseDensity * Q[Shortcuts::sigma + 2];
+      F[Shortcuts::v + 1]     = -inverseDensity * Q[Shortcuts::sigma + 1];
+      F[Shortcuts::sigma + 0] = -firstLameParameter * Q[Shortcuts::v + 1];
+      F[Shortcuts::sigma + 1] = -(2 * shearModulus + firstLameParameter) * Q[Shortcuts::v + 1];
+      F[Shortcuts::sigma + 2] = -shearModulus * Q[Shortcuts::v + 0];
+      break;
+    }
+  } else {
+    switch (normal) {
+    case 0:
+      F[Shortcuts::v + 0]     = -inverseDensity * Q[Shortcuts::sigma + 0];
+      F[Shortcuts::v + 1]     = -inverseDensity * Q[Shortcuts::sigma + 3];
+      F[Shortcuts::v + 2]     = -inverseDensity * Q[Shortcuts::sigma + 4];
+      F[Shortcuts::sigma + 0] = -(firstLameParameter + 2 * shearModulus) * Q[Shortcuts::v + 0];
+      F[Shortcuts::sigma + 1] = -firstLameParameter * Q[Shortcuts::v + 0];
+      F[Shortcuts::sigma + 2] = -firstLameParameter * Q[Shortcuts::v + 0];
+      F[Shortcuts::sigma + 3] = -shearModulus * Q[Shortcuts::v + 1];
+      F[Shortcuts::sigma + 4] = -shearModulus * Q[Shortcuts::v + 2];
+      F[Shortcuts::sigma + 5] = 0;
+      break;
+    case 1:
+      F[Shortcuts::v + 0]     = -inverseDensity * Q[Shortcuts::sigma + 3];
+      F[Shortcuts::v + 1]     = -inverseDensity * Q[Shortcuts::sigma + 1];
+      F[Shortcuts::v + 2]     = -inverseDensity * Q[Shortcuts::sigma + 5];
+      F[Shortcuts::sigma + 0] = -firstLameParameter * Q[Shortcuts::v + 1];
+      F[Shortcuts::sigma + 1] = -(firstLameParameter + 2 * shearModulus) * Q[Shortcuts::v + 1];
+      F[Shortcuts::sigma + 2] = -firstLameParameter * Q[Shortcuts::v + 1];
+      F[Shortcuts::sigma + 3] = -shearModulus * Q[Shortcuts::v + 0];
+      F[Shortcuts::sigma + 4] = 0;
+      F[Shortcuts::sigma + 5] = -shearModulus * Q[Shortcuts::v + 2];
+      break;
+    default:
+      F[Shortcuts::v + 0]     = -inverseDensity * Q[Shortcuts::sigma + 4];
+      F[Shortcuts::v + 1]     = -inverseDensity * Q[Shortcuts::sigma + 5];
+      F[Shortcuts::v + 2]     = -inverseDensity * Q[Shortcuts::sigma + 2];
+      F[Shortcuts::sigma + 0] = -firstLameParameter * Q[Shortcuts::v + 2];
+      F[Shortcuts::sigma + 1] = -firstLameParameter * Q[Shortcuts::v + 2];
+      F[Shortcuts::sigma + 2] = -(firstLameParameter + 2 * shearModulus) * Q[Shortcuts::v + 2];
+      F[Shortcuts::sigma + 3] = 0;
+      F[Shortcuts::sigma + 4] = -shearModulus * Q[Shortcuts::v + 0];
+      F[Shortcuts::sigma + 5] = -shearModulus * Q[Shortcuts::v + 1];
+      break;
+    }
+  }
+}
+
+template <class Shortcuts, typename Precision, typename Nodes>
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::elastic::getRefinementCommand(
+  const Precision* const NOALIAS Q,
+  const Nodes&                   nodes,
+  const int                      numberOfValues,
+  const double                   detailTolerance
+) {
+  ASSERTION(detailTolerance > 0.0, detailTolerance);
+  return ::exahype2::refineOnDetail(
+    Q,
+    nodes,
+    numberOfValues,
+    detailTolerance,
+    ::exahype2::DefaultCoarsenSafetyFactor,
+    [](const Precision* const values) {
+      tarch::la::Vector<DIMENSIONS, double> velocity;
+      for (int d = 0; d < DIMENSIONS; d++) {
+        velocity(d) = values[Shortcuts::v + d];
+      }
+      return 1.0 + tarch::la::norm2(velocity);
+    }
+  );
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD void
+examples::elastic::writeMedium(Precision* const NOALIAS Q) {
+  constexpr auto Density    = 1;
+  constexpr auto PWaveSpeed = 2;
+  constexpr auto SWaveSpeed = 1;
+  Q[Shortcuts::rho]         = Density;
+  Q[Shortcuts::cp]          = PWaveSpeed;
+  Q[Shortcuts::cs]          = SWaveSpeed;
+}
+
+/**
+ * Writes the plane P-waves along every axis of the periodic domain [-1, 1] at the time t into Q
+ * (Dumbser and Käser, https://doi.org/10.1111/j.1365-246X.2006.03120.x, chapter 5).
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::elastic::writePlanarWaves(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr auto   ShearModulus       = 1;
+  constexpr auto   FirstLameParameter = 2;
+  constexpr auto   PWaveSpeed         = 2;
+  constexpr double AngularFrequency   = -2 * std::numbers::pi;
+
+  const double valueX = std::cos(AngularFrequency * t - std::numbers::pi * x[0]);
+  const double valueY = std::cos(AngularFrequency * t - std::numbers::pi * x[1]);
+  if constexpr (DIMENSIONS == 2) {
+    Q[Shortcuts::sigma + 0] = valueX * (FirstLameParameter + 2 * ShearModulus) + valueY * FirstLameParameter;
+    Q[Shortcuts::sigma + 1] = valueX * FirstLameParameter + valueY * (FirstLameParameter + 2 * ShearModulus);
+    Q[Shortcuts::sigma + 2] = 0;
+    Q[Shortcuts::v + 0]     = valueX * PWaveSpeed;
+    Q[Shortcuts::v + 1]     = valueY * PWaveSpeed;
+  } else {
+    const double valueZ = std::cos(AngularFrequency * t - std::numbers::pi * x[2]);
+    Q[Shortcuts::sigma + 0] =
+      valueX * (FirstLameParameter + 2 * ShearModulus) + valueY * FirstLameParameter + valueZ * FirstLameParameter;
+    Q[Shortcuts::sigma + 1] =
+      valueX * FirstLameParameter + valueY * (FirstLameParameter + 2 * ShearModulus) + valueZ * FirstLameParameter;
+    Q[Shortcuts::sigma + 2] =
+      valueX * FirstLameParameter + valueY * FirstLameParameter + valueZ * (FirstLameParameter + 2 * ShearModulus);
+    Q[Shortcuts::sigma + 3] = 0;
+    Q[Shortcuts::sigma + 4] = 0;
+    Q[Shortcuts::sigma + 5] = 0;
+    Q[Shortcuts::v + 0]     = valueX * PWaveSpeed;
+    Q[Shortcuts::v + 1]     = valueY * PWaveSpeed;
+    Q[Shortcuts::v + 2]     = valueZ * PWaveSpeed;
+  }
+}
+
+/**
+ * Writes a Ricker pulse of the P-wave at the left edge of the periodic domain of width domainWidth
+ * into the numberOfUnknowns unknowns of Q (Käser, Herrmann and de la Puente,
+ * https://doi.org/10.1111/j.1365-246X.2008.03781.x, section 2.2). The centre of the pulse lies in
+ * the leftmost cell of width h. The periodic boundary places part of the pulse on the right edge.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD void
+examples::elastic::writeRickerPulse(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 domainWidth,
+  const int                                    numberOfUnknowns,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr auto ShearModulus       = 1;
+  constexpr auto FirstLameParameter = 2;
+  constexpr auto PWaveSpeed         = 2;
+
+  const auto tau        = 1.25 * std::numbers::pi * (x[0] - h[0] / 2);
+  const auto tau2       = 1.25 * std::numbers::pi * (x[0] - domainWidth - h[0] / 2);
+  const auto amplitudeX = (1 - 2 * tau * tau) * std::exp(-tau * tau) + (1 - 2 * tau2 * tau2) * std::exp(-tau2 * tau2);
+  constexpr auto AmplitudeY = 0.;
+
+  for (int unknown = 0; unknown < numberOfUnknowns; unknown++) {
+    Q[unknown] = 0.0;
+  }
+  Q[Shortcuts::sigma + 0] = -amplitudeX * (FirstLameParameter + 2 * ShearModulus) + AmplitudeY * FirstLameParameter;
+  Q[Shortcuts::sigma + 1] = -amplitudeX * FirstLameParameter + AmplitudeY * (FirstLameParameter + 2 * ShearModulus);
+  if constexpr (DIMENSIONS == 3) {
+    Q[Shortcuts::sigma + 2] = -amplitudeX * FirstLameParameter + AmplitudeY * FirstLameParameter;
+  }
+  Q[Shortcuts::v + 0] = amplitudeX * PWaveSpeed;
+  Q[Shortcuts::v + 1] = AmplitudeY * PWaveSpeed;
+}
+
+template <class Shortcuts>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::elastic::writeRickerPulseSolution(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const double* const                          Q,
+  const double                                 domainWidth,
+  const int                                    maxGridLevels,
+  const int                                    numberOfUnknowns,
+  double* const                                solution
+) {
+  constexpr auto PWaveSpeed = 2;
+
+  double finestCellWidth = domainWidth;
+  for (int level = 0; level < maxGridLevels; level++) {
+    finestCellWidth /= peano4::SubdivisionFactor;
+  }
+
+  auto distance = x[0] - PWaveSpeed * t - finestCellWidth / 2;
+  distance -= domainWidth * std::round(distance / domainWidth);
+  const auto tau        = 1.25 * std::numbers::pi * (distance);
+  const auto amplitudeX = (1 - 2 * tau * tau) * std::exp(-tau * tau);
+
+  for (int unknown = 0; unknown < numberOfUnknowns; unknown++) {
+    solution[unknown] = Q[unknown];
+  }
+  solution[Shortcuts::v + 0] = amplitudeX * PWaveSpeed;
+}

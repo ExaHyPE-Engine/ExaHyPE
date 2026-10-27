@@ -33,6 +33,12 @@ INLINE_METHOD exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>:
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr auto
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getNodesInUnitInterval() {
+  return Quadrature<double>::getQuadraturePoints1D();
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::requestRefinementForGridConstruction(

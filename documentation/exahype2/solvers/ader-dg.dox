@@ -4,61 +4,56 @@
 
 \tableofcontents
 
-An ADER-DG time step predicts a space-time solution in each cell, projects it
-to the faces, solves the face Riemann problems, and corrects the cell solution.
+An ADER-DG time step predicts a space-time solution in every cell, projects it onto the faces,
+solves the Riemann problems of the faces and corrects the solution of every cell.
 
 @image html documentation/exahype2/solvers/ADER-DG.png
 
 # Data flow
 
-The predictor uses the cell polynomial to form a space-time approximation. It
-writes the time-averaged solution and flux onto the cell's own half of every
-face. Once both halves of a face contain their traces, the Riemann solver
-computes the numerical flux of the face. The corrector adds this flux to the cell.
+The predictor forms a space-time approximation from the polynomial of a cell. It writes the
+time-averaged solution and flux onto the half of every face that belongs to the cell. The Riemann
+solver computes the numerical flux of a face from the traces of both halves. The corrector adds
+the numerical fluxes of the faces to the cell.
 
-For a linear PDE, the face contribution can be integrated in time before its
-spatial projection. This avoids a space-time face representation in the
-corrector.
+For a linear PDE, the predictor integrates the face contribution in time before it projects the
+contribution onto the faces. The corrector then reads time-averaged face values only.
 
 # The time step
 
-The solver family exahype2::dg::ader::Solver runs one time step as:
+The solver family exahype2::dg::ader::Solver runs a time step in four steps:
 
-1. The predictor dispatch over the owned cells writes the traces into the
-   state and flux pools of the faces.
-2. The halo exchange posts the halves of the exchanged faces. While the
-   messages travel, the local level jumps fill their fine faces from their
-   coarse face and the Riemann dispatch over the local faces writes the
-   numerical flux of both halves.
-3. After the wait, the remote level jumps interpolate and the Riemann dispatch
-   runs over the remote faces.
-4. The level jumps restrict the fluxes of their fine faces onto their coarse
-   face, the flux halves of the exchanged faces travel again while the
-   corrector dispatch adds the face integrals of the local cells, and the
-   remote cells follow after the wait. The corrector reports the wave-speed
-   maxima the next time step size reads.
+1. The predictor dispatch over the owned cells writes the traces into the state and flux pools
+   of the faces.
+2. The halo exchange posts the halves of the exchanged faces. The local level jumps fill their
+   fine faces from their coarse face during the message transfer. The Riemann dispatch over the
+   local faces then writes the numerical flux of both halves.
+3. The remote level jumps interpolate after the wait. The Riemann dispatch then runs over the
+   remote faces.
+4. The level jumps restrict the fluxes of their fine faces onto their coarse face. The halo
+   exchange sends the flux halves of the exchanged faces during the corrector dispatch over the
+   local cells. The corrector dispatch over the remote cells follows after the wait. The corrector
+   returns the largest wave speeds for the size of the next time step.
 
-A solver with a subcell limiter (exahype2::dg::limiting::SubcellLimiter)
-judges every corrected candidate by its physical admissibility and by the
-discrete maximum principle, spreads the troubled status over
-`NumberOfSpreadRings` rings of neighbours and recomputes the limited cells
-with the finite-volume scheme of the limiter on their subgrids.
+A solver with a subcell limiter (exahype2::dg::limiting::SubcellLimiter) checks every corrected
+candidate for physical admissibility and for the discrete maximum principle. It spreads the
+troubled status over `NumberOfSpreadRings` rings of neighbours. The finite-volume scheme of the
+limiter recomputes the limited cells on their subgrids.
 
 # Adaptive interfaces
 
-A hanging face couples cells on different levels. The coarse trace is
-interpolated onto the fine faces before the Riemann dispatch, the fine faces
-solve their Riemann problems, and the numerical fluxes of the fine faces
-restrict onto the coarse face before the corrector of the coarse cell reads
-it. Every predictor runs once.
+A hanging face couples cells on different levels. The level jump interpolates the coarse trace
+onto the fine faces before the Riemann dispatch. The Riemann dispatch solves the Riemann problems
+of the fine faces. The level jump restricts the numerical fluxes of the fine faces onto the coarse
+face before the corrector of the coarse cell reads them. Every predictor runs once per time step.
 
 # Coupling two solvers
 
-Two ADER-DG solvers of one project can own complementary parts of the domain
-through `restrict_to_cells()`, and `project.couple(first, second)` runs both
-with the smaller of their time step sizes; the traces of the faces between
-their cells are copied from the partner's face pools, mapped onto the other
-solver's face nodes and compute precision. `tests/aderdg-coupling` couples a
-double and a single precision solver of the same equation.
+`restrict_to_cells()` assigns complementary parts of the domain to two ADER-DG solvers of one
+project. `project.couple(first, second)` advances both solvers with the smaller of their time
+step sizes. The coupling copies the traces of the faces between their cells from the face pools
+of the partner. It maps them onto the face nodes and the compute precision of the other solver.
+`examples/coupling/planar_waves.py` couples a double-precision and a single-precision solver of
+the acoustic wave equations.
 
 */

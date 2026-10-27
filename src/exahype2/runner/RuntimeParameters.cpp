@@ -315,7 +315,9 @@ exahype2::runner::RuntimeParameters::printUsage(const std::string& executableNam
   const auto addOption = [&options](const std::string& argument, const std::string& description) {
     options.emplace_back(argument, description);
   };
-  addOption("-cf, --configFile <path>", "Read runtime settings from JSON (default: auto-detect ./config.json).");
+  const std::string configFileDefault =
+    _projectName.empty() ? std::string("none") : _projectName + ".json in the working directory if it exists";
+  addOption("-cf, --configFile <path>", "Read runtime settings from JSON (default: " + configFileDefault + ").");
   addOption(
     "-et, --endTime <t>",
     "Advance the whole domain to time t and remove the maximum terminal time (default: not set)."
@@ -640,8 +642,8 @@ exahype2::runner::RuntimeParameters::configure(int& argc, char** const argv) {
     _executableName = std::filesystem::path(argv[0]).filename().string();
   }
   extractConfigFileFromCommandLine(argc, argv);
-  if (_configFilePath.empty() and std::filesystem::exists("./config.json")) {
-    _configFilePath = "./config.json";
+  if (_configFilePath.empty() and not _projectName.empty() and std::filesystem::exists(_projectName + ".json")) {
+    _configFilePath = _projectName + ".json";
   }
   readJSONConfiguration();
   applyCommandLineConfiguration(argc, argv);

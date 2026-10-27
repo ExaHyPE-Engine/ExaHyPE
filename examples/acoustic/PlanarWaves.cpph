@@ -1,0 +1,70 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/acoustic/Acoustic.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::acoustic::PlanarWaves::maxEigenvalue(
+  [[maybe_unused]] const ComputePrecision* const NOALIAS        Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  const RuntimeParameters&                                      parameters
+) {
+  return parameters.waveSpeed;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::acoustic::PlanarWaves::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::acoustic::computeFlux<Shortcuts>(Q, normal, parameters.density, parameters.waveSpeed, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::acoustic::PlanarWaves::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::acoustic::getRefinementCommand<Shortcuts>(
+    Q,
+    getNodesInUnitInterval(),
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.density,
+    parameters.waveSpeed,
+    parameters.detailTolerance
+  );
+}
+
+INLINE_METHOD void
+examples::acoustic::PlanarWaves::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::acoustic::writePlanarWave<Shortcuts>(x, 0.0, parameters.density, parameters.waveSpeed, Q);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::acoustic::PlanarWaves::analyticalSolution(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  [[maybe_unused]] const double                dt,
+  [[maybe_unused]] const double* const         Q,
+  double* const                                solution,
+  const RuntimeParameters&                     parameters
+) {
+  examples::acoustic::writePlanarWave<Shortcuts>(x, t, parameters.density, parameters.waveSpeed, solution);
+}

@@ -1,0 +1,1106 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "exahype2/MultiresolutionDetail.h"
+#include "tarch/Assertions.h"
+#include "tarch/la/ScalarOperations.h"
+
+TARGET_DECLARE
+/**
+ * Returns the sum of the three products of the components of first and second. Every order of the
+ * axes returns the same bits.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::grmhd::dotProduct(const double* const first, const double* const second) {
+  return tarch::la::sumInOrderOfMagnitude(
+    tarch::la::productRoundedOnce(first[0], second[0]),
+    tarch::la::productRoundedOnce(first[1], second[1]),
+    tarch::la::productRoundedOnce(first[2], second[2])
+  );
+}
+
+/**
+ * Writes scale times the cross product of first and second into result. Every product rounds on
+ * its own before the difference. A permutation of the axes returns the permuted result bitwise,
+ * negated for an odd permutation.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::crossProduct(
+  const double* const first,
+  const double* const second,
+  const double        scale,
+  double* const       result
+) {
+  ASSERTION(result != first and result != second);
+  for (int axis = 0; axis < 3; axis++) {
+    const int    nextAxis   = (axis + 1) % 3;
+    const int    otherAxis  = (axis + 2) % 3;
+    const double difference = tarch::la::productRoundedOnce(first[nextAxis], second[otherAxis])
+      - tarch::la::productRoundedOnce(first[otherAxis], second[nextAxis]);
+    result[axis] = scale * difference;
+  }
+}
+
+/**
+ * Writes the product of matrix and vector into result. A permutation of the axes returns the
+ * permuted product bitwise.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::multiplyMatrixVector(const double (&matrix)[3][3], const double* const vector, double* const result) {
+  ASSERTION(result != vector);
+  result[0] = examples::grmhd::dotProduct(matrix[0], vector);
+  result[1] = examples::grmhd::dotProduct(matrix[1], vector);
+  result[2] = examples::grmhd::dotProduct(matrix[2], vector);
+}
+
+/**
+ * Writes the inverse of the symmetric matrix into inverse and returns the determinant of matrix. The
+ * determinant is the product of the diagonal entries plus twice the product of the off-diagonal
+ * entries minus the sum of every diagonal entry times the square of the off-diagonal entry outside
+ * its row and column. A permutation of the axes returns the same determinant and the permuted
+ * inverse bitwise.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::grmhd::invertMatrix3x3(const double (&matrix)[3][3], double (&inverse)[3][3]) {
+  ASSERTION(matrix[0][1] == matrix[1][0] and matrix[0][2] == matrix[2][0] and matrix[1][2] == matrix[2][1]);
+  const double diagonal[3]    = {matrix[0][0], matrix[1][1], matrix[2][2]};
+  const double offDiagonal[3] = {matrix[1][2], matrix[0][2], matrix[0][1]};
+  double       diagonalTimesSquares[3];
+  for (int axis = 0; axis < 3; axis++) {
+    diagonalTimesSquares[axis] = tarch::la::productRoundedOnce(
+      diagonal[axis],
+      tarch::la::productRoundedOnce(offDiagonal[axis], offDiagonal[axis])
+    );
+  }
+  const double determinant =
+    (tarch::la::productInOrderOfMagnitude(diagonal[0], diagonal[1], diagonal[2])
+     + 2.0 * tarch::la::productInOrderOfMagnitude(offDiagonal[0], offDiagonal[1], offDiagonal[2]))
+    - tarch::la::sumInOrderOfMagnitude(diagonalTimesSquares[0], diagonalTimesSquares[1], diagonalTimesSquares[2]);
+  ASSERTION(determinant != 0.0, determinant);
+  const auto differenceOfProducts =
+    [](const double first, const double second, const double third, const double fourth) {
+      return tarch::la::productRoundedOnce(first, second) - tarch::la::productRoundedOnce(third, fourth);
+    };
+  inverse[0][0] = differenceOfProducts(matrix[1][1], matrix[2][2], matrix[1][2], matrix[1][2]) / determinant;
+  inverse[1][1] = differenceOfProducts(matrix[0][0], matrix[2][2], matrix[0][2], matrix[0][2]) / determinant;
+  inverse[2][2] = differenceOfProducts(matrix[0][0], matrix[1][1], matrix[0][1], matrix[0][1]) / determinant;
+  inverse[0][1] = differenceOfProducts(matrix[0][2], matrix[1][2], matrix[0][1], matrix[2][2]) / determinant;
+  inverse[0][2] = differenceOfProducts(matrix[0][1], matrix[1][2], matrix[0][2], matrix[1][1]) / determinant;
+  inverse[1][2] = differenceOfProducts(matrix[0][1], matrix[0][2], matrix[0][0], matrix[1][2]) / determinant;
+  inverse[1][0] = inverse[0][1];
+  inverse[2][0] = inverse[0][2];
+  inverse[2][1] = inverse[1][2];
+  return determinant;
+}
+
+/**
+ * Writes the enthalpy w, the residual of the recovery equation and its derivative at the squared
+ * velocity squaredVelocity. The equation follows choice 3 of section 3.2 in Del Zanna et al. (2007),
+ * A&A 473, 11-30.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::evaluateRecoveryFunction(
+  const double  squaredVelocity,
+  double* const residual,
+  double* const residualDerivative,
+  const double  inverseEnthalpyFactor,
+  const double  density,
+  const double  e,
+  const double  s2,
+  const double  b2,
+  const double  sb2,
+  double* const w
+) {
+  ASSERTION(squaredVelocity >= 0.0 and squaredVelocity < 1.0, squaredVelocity);
+  constexpr double Third       = 1. / 3.;
+  constexpr double InverseOf27 = 1. / 27.;
+
+  const double v2  = squaredVelocity;
+  const double rho = density * std::sqrt(1. - v2);
+  const double c3  = 1. - inverseEnthalpyFactor * (1. - v2);
+  const double c2  = inverseEnthalpyFactor * rho + .5 * b2 * (1 + v2) - e;
+  const double c0  = -0.5 * sb2;
+
+  const double c2ic3 = c2 / c3;
+  if (std::abs(c0) < 1.0e-20) {
+    w[0] = -c2ic3;
+  } else {
+    const double c2ic33  = c2ic3 * c2ic3 * c2ic3;
+    const double q       = c0 / c3 + 2.0 * InverseOf27 * c2ic33;
+    const double p       = -Third * c2ic3 * c2ic3;
+    const double sqrtdet = std::sqrt(0.25 * q * q + InverseOf27 * p * p * p);
+    w[0]                 = -Third * c2ic3 + std::pow(-0.5 * q + sqrtdet, Third) + std::pow(-0.5 * q - sqrtdet, Third);
+  }
+
+  const double dc3 = inverseEnthalpyFactor;
+  const double dc2 = 0.5 * (b2 - inverseEnthalpyFactor * rho / (1.0 - v2));
+
+  const double dlogw    = (dc3 * w[0] + dc2) / (3.0 * c3 * w[0] + 2.0 * c2);
+  const double wb       = w[0] + b2;
+  const double vb2      = sb2 / (w[0] * w[0]);
+  residual[0]           = wb * wb * v2 - (2.0 * w[0] + b2) * vb2 - s2;
+  residualDerivative[0] = wb * (wb + 2.0 * dlogw * (w[0] * v2 + vb2));
+}
+
+/**
+ * Writes the squared velocity between lowerStart and upperStart into v2, found with a safeguarded
+ * Newton method. The method sets failed when the residuals at both starts have the same sign or
+ * when it exceeds its iterations.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::findSquaredVelocity(
+  double* const       v2,
+  const double* const lowerStart,
+  const double* const upperStart,
+  const double* const tolerance,
+  double* const       w,
+  const double        inverseEnthalpyFactor,
+  const double        density,
+  const double        e,
+  const double        s2,
+  const double        b2,
+  const double        sb2,
+  bool* const         failed
+) {
+  ASSERTION(lowerStart[0] < upperStart[0], lowerStart[0], upperStart[0]);
+  ASSERTION(tolerance[0] > 0.0, tolerance[0]);
+  constexpr double ResidualTolerance = 1e-60;
+  failed[0]                          = false;
+
+  double lowerResidual      = 0.0;
+  double upperResidual      = 0.0;
+  double residualDerivative = 0.0;
+
+  examples::grmhd::evaluateRecoveryFunction(
+    *lowerStart,
+    &lowerResidual,
+    &residualDerivative,
+    inverseEnthalpyFactor,
+    density,
+    e,
+    s2,
+    b2,
+    sb2,
+    w
+  );
+  if (std::abs(lowerResidual) < ResidualTolerance) {
+    v2[0] = lowerStart[0];
+    return;
+  }
+
+  examples::grmhd::evaluateRecoveryFunction(
+    *upperStart,
+    &upperResidual,
+    &residualDerivative,
+    inverseEnthalpyFactor,
+    density,
+    e,
+    s2,
+    b2,
+    sb2,
+    w
+  );
+  if (std::abs(upperResidual) < ResidualTolerance) {
+    v2[0] = upperStart[0];
+    return;
+  }
+
+  if (lowerResidual * upperResidual > 0.) {
+    failed[0] = true;
+    v2[0]     = 0.;
+    return;
+  }
+
+  double lowerBound = 0.0;
+  double upperBound = 0.0;
+  if (lowerResidual < 0.) {
+    lowerBound = lowerStart[0];
+    upperBound = upperStart[0];
+  } else {
+    upperBound = lowerStart[0];
+    lowerBound = upperStart[0];
+    std::swap(lowerResidual, upperResidual);
+  }
+
+  v2[0]               = .5 * (lowerStart[0] + upperStart[0]);
+  double previousStep = std::abs(upperStart[0] - lowerStart[0]);
+  double step         = previousStep;
+
+  double residual = 0.0;
+  examples::grmhd::evaluateRecoveryFunction(
+    v2[0],
+    &residual,
+    &residualDerivative,
+    inverseEnthalpyFactor,
+    density,
+    e,
+    s2,
+    b2,
+    sb2,
+    w
+  );
+
+  constexpr int MaximumIterations = 400;
+  for (int iteration = 0; iteration < MaximumIterations; iteration++) {
+    if (
+      (((v2[0] - upperBound) * residualDerivative - residual) * ((v2[0] - lowerBound) * residualDerivative - residual)
+       > 0.)
+      or (std::abs(2 * residual) > std::abs(previousStep * residualDerivative))
+    ) {
+      previousStep = step;
+      step         = 0.5 * (upperBound - lowerBound);
+      v2[0]        = lowerBound + step;
+      // The midpoint of a bracket that spans two adjacent doubles rounds onto one of its ends.
+      if (lowerBound == v2[0] or upperBound == v2[0]) {
+        return;
+      }
+    } else {
+      previousStep                  = step;
+      step                          = residual / residualDerivative;
+      const double previousEstimate = v2[0];
+      v2[0]                         = v2[0] - step;
+      if (previousEstimate == v2[0]) {
+        return;
+      }
+    }
+
+    if (std::abs(step) < tolerance[0]) {
+      return;
+    }
+
+    examples::grmhd::evaluateRecoveryFunction(
+      v2[0],
+      &residual,
+      &residualDerivative,
+      inverseEnthalpyFactor,
+      density,
+      e,
+      s2,
+      b2,
+      sb2,
+      w
+    );
+    if (residual < 0) {
+      lowerBound    = v2[0];
+      lowerResidual = residual;
+    } else {
+      upperBound    = v2[0];
+      upperResidual = residual;
+    }
+
+    if (std::abs(residual) < ResidualTolerance) {
+      return;
+    }
+  }
+
+  failed[0] = true;
+  v2[0]     = 0.;
+}
+
+/**
+ * Writes the lapse, the root of the metric determinant, the shift and the spatial metric gCov of a
+ * black hole in Kerr-Schild coordinates at x. The metric follows De Felice and Clarke, section 11.4.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::evaluateKerrSchildMetric(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  double* const                                lapse,
+  double* const                                rootDeterminant,
+  double* const                                shift,
+  double (&gCov)[3][3]
+) {
+  constexpr double SpinParameter = 0.0;
+  constexpr double BlackHoleMass = 1.0;
+
+  const double z2          = x[2] * x[2];
+  const double spinSquared = SpinParameter * SpinParameter;
+
+  const double halfDifference = 0.5 * (tarch::la::norm2Squared(x) - spinSquared);
+  const double r  = std::sqrt(halfDifference + std::sqrt(halfDifference * halfDifference + z2 * spinSquared));
+  const double r2 = r * r;
+
+  const double kerrSchildFunction = BlackHoleMass * r2 * r / (r2 * r2 + spinSquared * z2);
+  const double determinant        = 1.0 + 2.0 * kerrSchildFunction;
+  ASSERTION(determinant > 0.0, determinant);
+
+  // Without spin, the three components of l round alike. A permutation of the axes then permutes
+  // the metric bitwise.
+  const double lx = (r * x[0] + SpinParameter * x[1]) / (r2 + spinSquared);
+  const double ly = (r * x[1] - SpinParameter * x[0]) / (r2 + spinSquared);
+  const double lz = r * x[2] / r2;
+
+  lapse[0] = 1.0 / std::sqrt(determinant);
+  shift[0] = 2.0 * kerrSchildFunction / determinant * lx;
+  shift[1] = 2.0 * kerrSchildFunction / determinant * ly;
+  shift[2] = 2.0 * kerrSchildFunction / determinant * lz;
+
+  gCov[0][0] = 1.0 + 2.0 * kerrSchildFunction * lx * lx;
+  gCov[0][1] = 2.0 * kerrSchildFunction * (lx * ly);
+  gCov[0][2] = 2.0 * kerrSchildFunction * (lx * lz);
+
+  gCov[1][0] = 2.0 * kerrSchildFunction * (lx * ly);
+  gCov[1][1] = 1.0 + 2.0 * kerrSchildFunction * ly * ly;
+  gCov[1][2] = 2.0 * kerrSchildFunction * (ly * lz);
+
+  gCov[2][0] = 2.0 * kerrSchildFunction * (lx * lz);
+  gCov[2][1] = 2.0 * kerrSchildFunction * (ly * lz);
+  gCov[2][2] = 1.0 + 2.0 * kerrSchildFunction * lz * lz;
+
+  rootDeterminant[0] = std::sqrt(determinant);
+}
+TARGET_DECLARE_END
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::grmhd::getMaxEigenvalue(const Precision* const NOALIAS Q, const int normal) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  constexpr double AdiabaticIndex = 4.0 / 3.0;
+  constexpr double EnthalpyFactor = AdiabaticIndex / (AdiabaticIndex - 1.0);
+  constexpr int    NumberOfValues = Shortcuts::gij + 6;
+
+  double primitives[NumberOfValues];
+  double gContr[3][3];
+  examples::grmhd::convertConservedToPrimitive<Shortcuts>(Q, primitives, gContr);
+
+  const double rho     = primitives[Shortcuts::rho];
+  const double vCov[3] = {
+    primitives[Shortcuts::vel + 0],
+    primitives[Shortcuts::vel + 1],
+    primitives[Shortcuts::vel + 2]
+  };
+  const double p         = primitives[Shortcuts::E];
+  const double bContr[3] = {primitives[Shortcuts::B + 0], primitives[Shortcuts::B + 1], primitives[Shortcuts::B + 2]};
+  const double shift[3]  = {
+    primitives[Shortcuts::shift + 0],
+    primitives[Shortcuts::shift + 1],
+    primitives[Shortcuts::shift + 2]
+  };
+  const double lapse = primitives[Shortcuts::lapse];
+
+  const double gCov[3][3] = {
+    {primitives[Shortcuts::gij + 0], primitives[Shortcuts::gij + 1], primitives[Shortcuts::gij + 2]},
+    {primitives[Shortcuts::gij + 1], primitives[Shortcuts::gij + 3], primitives[Shortcuts::gij + 4]},
+    {primitives[Shortcuts::gij + 2], primitives[Shortcuts::gij + 4], primitives[Shortcuts::gij + 5]}
+  };
+
+  double vContr[3];
+  examples::grmhd::multiplyMatrixVector(gContr, vCov, vContr);
+
+  double bCov[3];
+  examples::grmhd::multiplyMatrixVector(gCov, bContr, bCov);
+
+  const double v2                          = examples::grmhd::dotProduct(vContr, vCov);
+  const double inverseLorentzFactorSquared = 1.0 - v2;
+  const double b2                          = examples::grmhd::dotProduct(bContr, bCov);
+  const double vDotB                       = examples::grmhd::dotProduct(vContr, bCov);
+  const double comovingB2                  = b2 * inverseLorentzFactorSquared + vDotB * vDotB;
+
+  const double totalEnthalpy            = rho + EnthalpyFactor * p + comovingB2;
+  const double magnetosonicSpeedSquared = (AdiabaticIndex * p + comovingB2) / totalEnthalpy;
+
+  const double normalVelocity     = vContr[normal];
+  const double normalShift        = shift[normal];
+  const double normalMetric       = gContr[normal][normal];
+  const double inverseDenominator = 1.0 / (1.0 - v2 * magnetosonicSpeedSquared);
+
+  const double deltaU = std::sqrt(
+    magnetosonicSpeedSquared * inverseLorentzFactorSquared
+    * ((1.0 - v2 * magnetosonicSpeedSquared) * normalMetric - normalVelocity * normalVelocity * (1.0 - magnetosonicSpeedSquared))
+  );
+
+  double largestSpeed = std::abs(lapse * normalVelocity - normalShift);
+  largestSpeed        = std::max(
+    largestSpeed,
+    std::abs(lapse * inverseDenominator * (normalVelocity * (1.0 - magnetosonicSpeedSquared) - deltaU) - normalShift)
+  );
+  largestSpeed = std::max(
+    largestSpeed,
+    std::abs(lapse * inverseDenominator * (normalVelocity * (1.0 - magnetosonicSpeedSquared) + deltaU) - normalShift)
+  );
+  largestSpeed = std::max(largestSpeed, 1.0);
+  ASSERTION(std::isfinite(largestSpeed), largestSpeed);
+  return largestSpeed;
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::computeFlux(const Precision* const NOALIAS Q, const int normal, Precision* const NOALIAS F) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  constexpr double AdiabaticIndex = 4.0 / 3.0;
+  constexpr double EnthalpyFactor = AdiabaticIndex / (AdiabaticIndex - 1.0);
+  constexpr int    NumberOfValues = Shortcuts::gij + 6;
+
+  std::fill_n(F, NumberOfValues, 0.0);
+
+  double       primitives[NumberOfValues];
+  double       gContr[3][3];
+  const double determinant = examples::grmhd::convertConservedToPrimitive<Shortcuts>(Q, primitives, gContr);
+
+  const double rho     = primitives[Shortcuts::rho];
+  const double vCov[3] = {
+    primitives[Shortcuts::vel + 0],
+    primitives[Shortcuts::vel + 1],
+    primitives[Shortcuts::vel + 2]
+  };
+  const double p         = primitives[Shortcuts::E];
+  const double bContr[3] = {primitives[Shortcuts::B + 0], primitives[Shortcuts::B + 1], primitives[Shortcuts::B + 2]};
+  const double densitisedBContr[3] = {Q[Shortcuts::B + 0], Q[Shortcuts::B + 1], Q[Shortcuts::B + 2]};
+  const double densitisedSCov[3]   = {Q[Shortcuts::vel + 0], Q[Shortcuts::vel + 1], Q[Shortcuts::vel + 2]};
+  const double shift[3]            = {
+    primitives[Shortcuts::shift + 0],
+    primitives[Shortcuts::shift + 1],
+    primitives[Shortcuts::shift + 2]
+  };
+  const double lapse = primitives[Shortcuts::lapse];
+
+  const double gCov[3][3] = {
+    {primitives[Shortcuts::gij + 0], primitives[Shortcuts::gij + 1], primitives[Shortcuts::gij + 2]},
+    {primitives[Shortcuts::gij + 1], primitives[Shortcuts::gij + 3], primitives[Shortcuts::gij + 4]},
+    {primitives[Shortcuts::gij + 2], primitives[Shortcuts::gij + 4], primitives[Shortcuts::gij + 5]}
+  };
+
+  const double rootDeterminant        = std::sqrt(determinant);
+  const double inverseRootDeterminant = 1. / rootDeterminant;
+
+  double vContr[3];
+  examples::grmhd::multiplyMatrixVector(gContr, vCov, vContr);
+
+  double sContr[3];
+  examples::grmhd::multiplyMatrixVector(gContr, densitisedSCov, sContr);
+
+  double bCov[3];
+  examples::grmhd::multiplyMatrixVector(gCov, bContr, bCov);
+
+  double vCrossBCov[3];
+  double vCrossBContr[3];
+  examples::grmhd::crossProduct(vContr, bContr, rootDeterminant, vCrossBCov);
+  examples::grmhd::crossProduct(vCov, bCov, inverseRootDeterminant, vCrossBContr);
+
+  const double v2 = examples::grmhd::dotProduct(vContr, vCov);
+  const double e2 = examples::grmhd::dotProduct(vCrossBContr, vCrossBCov);
+  const double b2 = examples::grmhd::dotProduct(bContr, bCov);
+
+  const double electromagneticEnergy = 0.5 * (b2 + e2);
+  const double lorentzFactor         = 1.0 / std::sqrt(1.0 - v2);
+
+  const double enthalpy         = rho + EnthalpyFactor * p;
+  const double scaledEnthalpy   = enthalpy * lorentzFactor * lorentzFactor;
+  const double fluidMomentum[3] = {scaledEnthalpy * vContr[0], scaledEnthalpy * vContr[1], scaledEnthalpy * vContr[2]};
+
+  const double transportVelocity[3] = {
+    lapse * vContr[0] - shift[0],
+    lapse * vContr[1] - shift[1],
+    lapse * vContr[2] - shift[2]
+  };
+
+  double inductionFlux[3][3];
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      inductionFlux[i][j] = transportVelocity[i] * densitisedBContr[j] - transportVelocity[j] * densitisedBContr[i];
+    }
+  }
+
+  switch (normal) {
+  case 0:
+    F[Shortcuts::rho]     = vContr[0] * Q[Shortcuts::rho];
+    F[Shortcuts::vel + 0] = rootDeterminant
+      * (fluidMomentum[0] * vCov[0] - vCrossBContr[0] * vCrossBCov[0] - bContr[0] * bCov[0] + p
+         + electromagneticEnergy);
+    F[Shortcuts::vel + 1] =
+      rootDeterminant * (fluidMomentum[0] * vCov[1] - vCrossBContr[0] * vCrossBCov[1] - bContr[0] * bCov[1]);
+    F[Shortcuts::vel + 2] =
+      rootDeterminant * (fluidMomentum[0] * vCov[2] - vCrossBContr[0] * vCrossBCov[2] - bContr[0] * bCov[2]);
+    F[Shortcuts::E]     = sContr[0] - F[Shortcuts::rho];
+    F[Shortcuts::B + 0] = inductionFlux[0][0];
+    F[Shortcuts::B + 1] = inductionFlux[0][1];
+    F[Shortcuts::B + 2] = inductionFlux[0][2];
+    break;
+  case 1:
+    F[Shortcuts::rho] = vContr[1] * Q[Shortcuts::rho];
+    F[Shortcuts::vel + 0] =
+      rootDeterminant * (fluidMomentum[1] * vCov[0] - vCrossBContr[1] * vCrossBCov[0] - bContr[1] * bCov[0]);
+    F[Shortcuts::vel + 1] = rootDeterminant
+      * (fluidMomentum[1] * vCov[1] - vCrossBContr[1] * vCrossBCov[1] - bContr[1] * bCov[1] + p
+         + electromagneticEnergy);
+    F[Shortcuts::vel + 2] =
+      rootDeterminant * (fluidMomentum[1] * vCov[2] - vCrossBContr[1] * vCrossBCov[2] - bContr[1] * bCov[2]);
+    F[Shortcuts::E]     = sContr[1] - F[Shortcuts::rho];
+    F[Shortcuts::B + 0] = inductionFlux[1][0];
+    F[Shortcuts::B + 1] = inductionFlux[1][1];
+    F[Shortcuts::B + 2] = inductionFlux[1][2];
+    break;
+  default:
+    F[Shortcuts::rho] = vContr[2] * Q[Shortcuts::rho];
+    F[Shortcuts::vel + 0] =
+      rootDeterminant * (fluidMomentum[2] * vCov[0] - vCrossBContr[2] * vCrossBCov[0] - bContr[2] * bCov[0]);
+    F[Shortcuts::vel + 1] =
+      rootDeterminant * (fluidMomentum[2] * vCov[1] - vCrossBContr[2] * vCrossBCov[1] - bContr[2] * bCov[1]);
+    F[Shortcuts::vel + 2] = rootDeterminant
+      * (fluidMomentum[2] * vCov[2] - vCrossBContr[2] * vCrossBCov[2] - bContr[2] * bCov[2] + p
+         + electromagneticEnergy);
+    F[Shortcuts::E]     = sContr[2] - F[Shortcuts::rho];
+    F[Shortcuts::B + 0] = inductionFlux[2][0];
+    F[Shortcuts::B + 1] = inductionFlux[2][1];
+    F[Shortcuts::B + 2] = inductionFlux[2][2];
+    break;
+  }
+
+  for (int i = Shortcuts::rho; i <= Shortcuts::E; i++) {
+    F[i] = lapse * F[i] - shift[normal] * Q[i];
+  }
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::computeNonconservativeProduct(
+  const Precision* const NOALIAS Q,
+  const Precision* const NOALIAS deltaQ,
+  const int                      normal,
+  Precision* const NOALIAS       BTimesDeltaQ
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  constexpr double AdiabaticIndex          = 4.0 / 3.0;
+  constexpr double DivergenceCleaningSpeed = 1.0;
+  constexpr double EnthalpyFactor          = AdiabaticIndex / (AdiabaticIndex - 1.);
+  constexpr int    NumberOfValues          = Shortcuts::gij + 6;
+  constexpr double KroneckerDelta[3][3]    = {{1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
+
+  std::fill_n(BTimesDeltaQ, NumberOfValues, 0.0);
+
+  const double lapse    = Q[Shortcuts::lapse];
+  const double shift[3] = {Q[Shortcuts::shift + 0], Q[Shortcuts::shift + 1], Q[Shortcuts::shift + 2]};
+
+  const double gCov[3][3] = {
+    {Q[Shortcuts::gij + 0], Q[Shortcuts::gij + 1], Q[Shortcuts::gij + 2]},
+    {Q[Shortcuts::gij + 1], Q[Shortcuts::gij + 3], Q[Shortcuts::gij + 4]},
+    {Q[Shortcuts::gij + 2], Q[Shortcuts::gij + 4], Q[Shortcuts::gij + 5]}
+  };
+
+  double       primitives[NumberOfValues];
+  double       gContr[3][3];
+  const double determinant = examples::grmhd::convertConservedToPrimitive<Shortcuts>(Q, primitives, gContr);
+
+  const double rootDeterminant        = std::sqrt(determinant);
+  const double inverseRootDeterminant = 1. / rootDeterminant;
+
+  const double rho     = primitives[Shortcuts::rho];
+  const double vCov[3] = {
+    primitives[Shortcuts::vel + 0],
+    primitives[Shortcuts::vel + 1],
+    primitives[Shortcuts::vel + 2]
+  };
+  const double p         = primitives[Shortcuts::E];
+  const double bContr[3] = {primitives[Shortcuts::B + 0], primitives[Shortcuts::B + 1], primitives[Shortcuts::B + 2]};
+  const double densitisedSCov[3] = {Q[Shortcuts::vel + 0], Q[Shortcuts::vel + 1], Q[Shortcuts::vel + 2]};
+
+  double bCov[3];
+  examples::grmhd::multiplyMatrixVector(gCov, bContr, bCov);
+
+  double vContr[3];
+  examples::grmhd::multiplyMatrixVector(gContr, vCov, vContr);
+
+  double sContr[3];
+  examples::grmhd::multiplyMatrixVector(gContr, densitisedSCov, sContr);
+
+  double vCrossBCov[3];
+  double vCrossBContr[3];
+  examples::grmhd::crossProduct(vContr, bContr, rootDeterminant, vCrossBCov);
+  examples::grmhd::crossProduct(vCov, bCov, inverseRootDeterminant, vCrossBContr);
+
+  const double v2 = examples::grmhd::dotProduct(vContr, vCov);
+  const double e2 = examples::grmhd::dotProduct(vCrossBContr, vCrossBCov);
+  const double b2 = examples::grmhd::dotProduct(bContr, bCov);
+
+  const double electromagneticEnergy = 0.5 * (b2 + e2);
+  const double lorentzFactor         = 1.0 / std::sqrt(1.0 - v2);
+
+  const double enthalpy       = rho + EnthalpyFactor * p;
+  const double scaledEnthalpy = enthalpy * lorentzFactor * lorentzFactor;
+
+  // A permutation of the axes permutes the three shift terms, the three diagonal metric terms and the
+  // three off-diagonal metric terms within their groups. Each group adds in order of magnitude. The
+  // groups and the lapse term add in a fixed order. A permutation of the axes keeps both sums bitwise.
+  double momentumShiftTerms[3];
+  double energyShiftTerms[3];
+  for (int i = 0; i < 3; i++) {
+    const double stressMixed = scaledEnthalpy * vCov[i] * vContr[normal] - vCrossBCov[i] * vCrossBContr[normal]
+      - bCov[i] * bContr[normal] + (p + electromagneticEnergy) * KroneckerDelta[i][normal];
+    momentumShiftTerms[i] = -Q[Shortcuts::vel + i] * deltaQ[Shortcuts::shift + i];
+    energyShiftTerms[i]   = -rootDeterminant * stressMixed * deltaQ[Shortcuts::shift + i];
+  }
+
+  // The stress terms run over the six components of the symmetric metric in the order of gij.
+  double momentumDiagonalTerms[3];
+  double energyDiagonalTerms[3];
+  double momentumOffDiagonalTerms[3];
+  double energyOffDiagonalTerms[3];
+  int    metricIndex = 0;
+  int    offDiagonal = 0;
+  for (int i = 0; i < 3; i++) {
+    for (int j = i; j < 3; j++) {
+      double stressContr = tarch::la::productInOrderOfMagnitude(scaledEnthalpy, vContr[i], vContr[j])
+        - vCrossBContr[i] * vCrossBContr[j] - bContr[i] * bContr[j] + (p + electromagneticEnergy) * gContr[i][j];
+      if (i != j) {
+        stressContr = 2.0 * stressContr;
+      }
+      const double momentumTerm = -0.5 * rootDeterminant * lapse * stressContr * deltaQ[Shortcuts::gij + metricIndex];
+      const double energyTerm =
+        -0.5 * rootDeterminant * stressContr * shift[normal] * deltaQ[Shortcuts::gij + metricIndex];
+      if (i == j) {
+        momentumDiagonalTerms[i] = momentumTerm;
+        energyDiagonalTerms[i]   = energyTerm;
+      } else {
+        momentumOffDiagonalTerms[offDiagonal] = momentumTerm;
+        energyOffDiagonalTerms[offDiagonal]   = energyTerm;
+        offDiagonal++;
+      }
+      metricIndex++;
+    }
+  }
+  ASSERTION(metricIndex == 6 and offDiagonal == 3, metricIndex, offDiagonal);
+
+  const auto sumOfGroup = [](const double (&terms)[3]) {
+    return tarch::la::sumInOrderOfMagnitude(terms[0], terms[1], terms[2]);
+  };
+  BTimesDeltaQ[Shortcuts::vel + normal] =
+    ((sumOfGroup(momentumShiftTerms) + sumOfGroup(momentumDiagonalTerms)) + sumOfGroup(momentumOffDiagonalTerms))
+    + (Q[Shortcuts::E] + Q[Shortcuts::rho]) * deltaQ[Shortcuts::lapse];
+  BTimesDeltaQ[Shortcuts::E] =
+    ((sumOfGroup(energyShiftTerms) + sumOfGroup(energyDiagonalTerms)) + sumOfGroup(energyOffDiagonalTerms))
+    + sContr[normal] * deltaQ[Shortcuts::lapse];
+  BTimesDeltaQ[Shortcuts::B + 0] = lapse * rootDeterminant * gContr[0][normal] * deltaQ[Shortcuts::psi]
+    - Q[Shortcuts::shift + 0] * deltaQ[Shortcuts::B + normal];
+  BTimesDeltaQ[Shortcuts::B + 1] = lapse * rootDeterminant * gContr[1][normal] * deltaQ[Shortcuts::psi]
+    - Q[Shortcuts::shift + 1] * deltaQ[Shortcuts::B + normal];
+  BTimesDeltaQ[Shortcuts::B + 2] = lapse * rootDeterminant * gContr[2][normal] * deltaQ[Shortcuts::psi]
+    - Q[Shortcuts::shift + 2] * deltaQ[Shortcuts::B + normal];
+  BTimesDeltaQ[Shortcuts::psi] =
+    inverseRootDeterminant * lapse * DivergenceCleaningSpeed * DivergenceCleaningSpeed * deltaQ[Shortcuts::B + normal]
+    - Q[Shortcuts::shift + normal] * deltaQ[Shortcuts::psi];
+}
+
+template <class Shortcuts, typename Precision, typename Nodes>
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::grmhd::getRefinementCommand(
+  const Precision* const NOALIAS Q,
+  const Nodes&                   nodes,
+  const int                      numberOfValues,
+  const double                   detailTolerance
+) {
+  ASSERTION(detailTolerance > 0.0, detailTolerance);
+  return ::exahype2::refineOnDetail(
+    Q,
+    nodes,
+    numberOfValues,
+    detailTolerance,
+    ::exahype2::DefaultCoarsenSafetyFactor,
+    [](const Precision* const values) { return values[Shortcuts::rho]; }
+  );
+}
+
+/**
+ * Converts the primitive variables V into the conserved variables Q. V stores the pressure in the
+ * slot of E. The suffixes Cov and Contr mark the covariant and the contravariant components.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::convertPrimitiveToConserved(Precision* const Q, const double* const V) {
+  constexpr double AdiabaticIndex = 4.0 / 3.0;
+  constexpr double EnthalpyFactor = AdiabaticIndex / (AdiabaticIndex - 1.0);
+
+  const double rho       = V[Shortcuts::rho];
+  const double vCov[3]   = {V[Shortcuts::vel + 0], V[Shortcuts::vel + 1], V[Shortcuts::vel + 2]};
+  const double p         = V[Shortcuts::E];
+  const double bContr[3] = {V[Shortcuts::B + 0], V[Shortcuts::B + 1], V[Shortcuts::B + 2]};
+
+  const double gCov[3][3] = {
+    {V[Shortcuts::gij + 0], V[Shortcuts::gij + 1], V[Shortcuts::gij + 2]},
+    {V[Shortcuts::gij + 1], V[Shortcuts::gij + 3], V[Shortcuts::gij + 4]},
+    {V[Shortcuts::gij + 2], V[Shortcuts::gij + 4], V[Shortcuts::gij + 5]}
+  };
+
+  double       gContr[3][3];
+  const double determinant = examples::grmhd::invertMatrix3x3(gCov, gContr);
+  ASSERTION(determinant > 0.0, determinant);
+
+  const double rootDeterminant        = std::sqrt(determinant);
+  const double inverseRootDeterminant = 1. / rootDeterminant;
+
+  double vContr[3];
+  examples::grmhd::multiplyMatrixVector(gContr, vCov, vContr);
+
+  double bCov[3];
+  examples::grmhd::multiplyMatrixVector(gCov, bContr, bCov);
+
+  double vCrossBCov[3];
+  double vCrossBContr[3];
+  examples::grmhd::crossProduct(vContr, bContr, rootDeterminant, vCrossBCov);
+  examples::grmhd::crossProduct(vCov, bCov, inverseRootDeterminant, vCrossBContr);
+
+  const double vDotB = examples::grmhd::dotProduct(vCov, bContr);
+  const double v2    = examples::grmhd::dotProduct(vContr, vCov);
+  const double e2    = examples::grmhd::dotProduct(vCrossBContr, vCrossBCov);
+  const double b2    = examples::grmhd::dotProduct(bContr, bCov);
+  ASSERTION(v2 < 1.0, v2);
+
+  const double electromagneticEnergy = 0.5 * (b2 + e2);
+
+  const double lorentzFactor  = 1.0 / std::sqrt(1.0 - v2);
+  const double enthalpy       = rho + EnthalpyFactor * p;
+  const double scaledEnthalpy = enthalpy * lorentzFactor * lorentzFactor;
+
+  Q[Shortcuts::rho]     = rootDeterminant * rho * lorentzFactor;
+  Q[Shortcuts::vel + 0] = rootDeterminant * scaledEnthalpy * vCov[0] + b2 * vCov[0] - vDotB * bCov[0];
+  Q[Shortcuts::vel + 1] = rootDeterminant * scaledEnthalpy * vCov[1] + b2 * vCov[1] - vDotB * bCov[1];
+  Q[Shortcuts::vel + 2] = rootDeterminant * scaledEnthalpy * vCov[2] + b2 * vCov[2] - vDotB * bCov[2];
+  Q[Shortcuts::E]       = rootDeterminant * scaledEnthalpy - p + electromagneticEnergy - Q[Shortcuts::rho];
+  Q[Shortcuts::B + 0]   = rootDeterminant * V[Shortcuts::B + 0];
+  Q[Shortcuts::B + 1]   = rootDeterminant * V[Shortcuts::B + 1];
+  Q[Shortcuts::B + 2]   = rootDeterminant * V[Shortcuts::B + 2];
+
+  Q[Shortcuts::psi]       = V[Shortcuts::psi];
+  Q[Shortcuts::lapse]     = V[Shortcuts::lapse];
+  Q[Shortcuts::shift + 0] = V[Shortcuts::shift + 0];
+  Q[Shortcuts::shift + 1] = V[Shortcuts::shift + 1];
+  Q[Shortcuts::shift + 2] = V[Shortcuts::shift + 2];
+  Q[Shortcuts::gij + 0]   = V[Shortcuts::gij + 0];
+  Q[Shortcuts::gij + 1]   = V[Shortcuts::gij + 1];
+  Q[Shortcuts::gij + 2]   = V[Shortcuts::gij + 2];
+  Q[Shortcuts::gij + 3]   = V[Shortcuts::gij + 3];
+  Q[Shortcuts::gij + 4]   = V[Shortcuts::gij + 4];
+  Q[Shortcuts::gij + 5]   = V[Shortcuts::gij + 5];
+}
+
+/**
+ * Converts the conserved variables Q into the primitive variables V, writes the inverse of the
+ * spatial metric into gContr and returns the determinant of the spatial metric. V stores the
+ * pressure in the slot of E. A failed recovery and a density or pressure below the atmosphere values
+ * set the velocity to zero and raise the state to the atmosphere.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::grmhd::convertConservedToPrimitive(const Precision* const Q, double* const V, double (&gContr)[3][3]) {
+  constexpr double AdiabaticIndex        = 4.0 / 3.0;
+  constexpr double AtmospherePressure    = 1e-12;
+  constexpr double AtmosphereDensity     = 1e-11;
+  constexpr int    NumberOfFluidValues   = 8;
+  constexpr double EnthalpyFactor        = AdiabaticIndex / (AdiabaticIndex - 1.0);
+  constexpr double InverseEnthalpyFactor = 1.0 / EnthalpyFactor;
+
+  const double psi              = Q[Shortcuts::psi];
+  const double lapse            = Q[Shortcuts::lapse];
+  const double shift[3]         = {Q[Shortcuts::shift + 0], Q[Shortcuts::shift + 1], Q[Shortcuts::shift + 2]};
+  const double spatialMetric[6] = {
+    Q[Shortcuts::gij + 0],
+    Q[Shortcuts::gij + 1],
+    Q[Shortcuts::gij + 2],
+    Q[Shortcuts::gij + 3],
+    Q[Shortcuts::gij + 4],
+    Q[Shortcuts::gij + 5]
+  };
+  const double gCov[3][3] = {
+    {spatialMetric[0], spatialMetric[1], spatialMetric[2]},
+    {spatialMetric[1], spatialMetric[3], spatialMetric[4]},
+    {spatialMetric[2], spatialMetric[4], spatialMetric[5]}
+  };
+
+  const double determinant = examples::grmhd::invertMatrix3x3(gCov, gContr);
+  ASSERTION(determinant > 0.0, determinant);
+
+  const double rootDeterminant        = std::sqrt(determinant);
+  const double inverseRootDeterminant = 1. / rootDeterminant;
+
+  double fluidValues[NumberOfFluidValues];
+  for (int i = 0; i < NumberOfFluidValues; i++) {
+    fluidValues[i] = inverseRootDeterminant * Q[i];
+  }
+
+  const double density = fluidValues[Shortcuts::rho];
+
+  const double bContr[3] = {
+    fluidValues[Shortcuts::B + 0],
+    fluidValues[Shortcuts::B + 1],
+    fluidValues[Shortcuts::B + 2]
+  };
+  const double sCov[3] = {
+    fluidValues[Shortcuts::vel + 0],
+    fluidValues[Shortcuts::vel + 1],
+    fluidValues[Shortcuts::vel + 2]
+  };
+
+  bool failed = false;
+
+  double sContr[3];
+  examples::grmhd::multiplyMatrixVector(gContr, sCov, sContr);
+  double bCov[3];
+  examples::grmhd::multiplyMatrixVector(gCov, bContr, bCov);
+
+  const double s2  = examples::grmhd::dotProduct(sCov, sContr);
+  const double b2  = examples::grmhd::dotProduct(bContr, bCov);
+  const double sb  = examples::grmhd::dotProduct(sCov, bContr);
+  const double sb2 = sb * sb;
+
+  const double e = fluidValues[Shortcuts::E] + density;
+
+  const double lowerStart = 0.;
+  const double upperStart = 1.0 - 1e-10;
+  // The tolerance lies above the spacing of doubles near v2. The root finder stops before
+  // MaximumIterations.
+  const double tolerance = 1.0e-15;
+  double       w         = 0;
+  double       v2        = 0;
+  examples::grmhd::findSquaredVelocity(
+    &v2,
+    &lowerStart,
+    &upperStart,
+    &tolerance,
+    &w,
+    InverseEnthalpyFactor,
+    density,
+    e,
+    s2,
+    b2,
+    sb2,
+    &failed
+  );
+
+  double p   = 0;
+  double rho = 0;
+  double vCov[3];
+  if (failed) {
+    p       = AtmospherePressure;
+    rho     = AtmosphereDensity;
+    vCov[0] = 0.0;
+    vCov[1] = 0.0;
+    vCov[2] = 0.0;
+  } else {
+    const double inverseTotalEnthalpy = 1.0 / (w + b2);
+    const double vDotB                = sb / w;
+    rho                               = density * std::sqrt(1. - v2);
+    vCov[0]                           = (sCov[0] + vDotB * bCov[0]) * inverseTotalEnthalpy;
+    vCov[1]                           = (sCov[1] + vDotB * bCov[1]) * inverseTotalEnthalpy;
+    vCov[2]                           = (sCov[2] + vDotB * bCov[2]) * inverseTotalEnthalpy;
+    p                                 = InverseEnthalpyFactor * (w * (1. - v2) - rho);
+  }
+
+  if (rho < AtmosphereDensity * 1.01) {
+    vCov[0] = 0.0;
+    vCov[1] = 0.0;
+    vCov[2] = 0.0;
+    v2      = 0.;
+    rho     = AtmosphereDensity;
+    p       = InverseEnthalpyFactor * (w * (1. - v2) - rho);
+  }
+  if (p < AtmospherePressure * 1.01) {
+    vCov[0] = 0.0;
+    vCov[1] = 0.0;
+    vCov[2] = 0.0;
+    p       = AtmospherePressure;
+  }
+  p = std::max(p, AtmospherePressure);
+
+  V[Shortcuts::rho]       = rho;
+  V[Shortcuts::vel + 0]   = vCov[0];
+  V[Shortcuts::vel + 1]   = vCov[1];
+  V[Shortcuts::vel + 2]   = vCov[2];
+  V[Shortcuts::E]         = p;
+  V[Shortcuts::B + 0]     = bContr[0];
+  V[Shortcuts::B + 1]     = bContr[1];
+  V[Shortcuts::B + 2]     = bContr[2];
+  V[Shortcuts::psi]       = psi;
+  V[Shortcuts::lapse]     = lapse;
+  V[Shortcuts::shift + 0] = shift[0];
+  V[Shortcuts::shift + 1] = shift[1];
+  V[Shortcuts::shift + 2] = shift[2];
+  for (int i = 0; i < 6; i++) {
+    V[Shortcuts::gij + i] = spatialMetric[i];
+  }
+  return determinant;
+}
+
+/**
+ * Writes the state of the circularly polarised Alfven wave at the time t into Q.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::writeAlfvenWave(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr double AdiabaticIndex     = 4.0 / 3.0;
+  constexpr int    NumberOfValues     = Shortcuts::gij + 6;
+  constexpr double Density            = 1.;
+  constexpr double Pressure           = 1.;
+  constexpr double WaveAmplitude      = 1.;
+  constexpr double B0                 = 1.;
+  constexpr double SpecificEnthalpy   = 1.0 + AdiabaticIndex / (AdiabaticIndex - 1.) * Pressure / Density;
+  constexpr double Denominator        = Density * SpecificEnthalpy + B0 * B0 * (1.0 + WaveAmplitude * WaveAmplitude);
+  constexpr double AmplitudeRatio     = 2.0 * WaveAmplitude * B0 * B0 / Denominator;
+  const double     speedFactor        = 0.5 * (1.0 + std::sqrt(1.0 - AmplitudeRatio * AmplitudeRatio));
+  const double     alfvenSpeedSquared = B0 * B0 / (Denominator * speedFactor);
+  const double     alfvenSpeed        = std::sqrt(alfvenSpeedSquared);
+
+  double V[NumberOfValues];
+
+  V[Shortcuts::rho] = Density;
+
+  V[Shortcuts::B + 0] = B0;
+  V[Shortcuts::B + 1] = WaveAmplitude * B0 * std::cos(x[0] - alfvenSpeed * t);
+  V[Shortcuts::B + 2] = WaveAmplitude * B0 * std::sin(x[0] - alfvenSpeed * t);
+
+  V[Shortcuts::vel + 0] = 0.0;
+  V[Shortcuts::vel + 1] = -alfvenSpeed * V[Shortcuts::B + 1] / B0;
+  V[Shortcuts::vel + 2] = -alfvenSpeed * V[Shortcuts::B + 2] / B0;
+  V[Shortcuts::E]       = Pressure;
+
+  V[Shortcuts::psi]       = 0.;
+  V[Shortcuts::lapse]     = 1.0;
+  V[Shortcuts::shift + 0] = 0.;
+  V[Shortcuts::shift + 1] = 0.;
+  V[Shortcuts::shift + 2] = 0.;
+
+  V[Shortcuts::gij + 0] = 1.;
+  V[Shortcuts::gij + 1] = 0.;
+  V[Shortcuts::gij + 2] = 0.;
+  V[Shortcuts::gij + 3] = 1.;
+  V[Shortcuts::gij + 4] = 0.;
+  V[Shortcuts::gij + 5] = 1.;
+
+  examples::grmhd::convertPrimitiveToConserved<Shortcuts>(Q, V);
+}
+
+/**
+ * Writes the stationary spherical accretion of an ideal gas onto a black hole of unit mass in
+ * Kerr-Schild coordinates into Q (https://doi.org/10.1016/j.cpc.2020.107251,
+ * http://dx.doi.org/10.1007/BF00649949). The domain has to exclude the black hole.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::writeMichelAccretion(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* const NOALIAS Q) {
+  constexpr double AdiabaticIndex          = 4.0 / 3.0;
+  constexpr int    MaximumNewtonIterations = 50;
+  constexpr int    NumberOfValues          = Shortcuts::gij + 6;
+  constexpr double CriticalDensity         = 0.0625;
+  constexpr double CriticalRadius          = 8.0;
+  constexpr double PolytropicIndex         = 1.0 / (AdiabaticIndex - 1.0);
+
+  double lapse           = 0.0;
+  double rootDeterminant = 0.0;
+  double shift[3];
+  double gCov[3][3];
+  examples::grmhd::evaluateKerrSchildMetric(x, &lapse, &rootDeterminant, shift, gCov);
+
+  const double r = tarch::la::norm2(x);
+
+  double V[NumberOfValues];
+  if (r < 0.8) {
+    // A placeholder state near the centre avoids a division by zero. The evolution and the boundary
+    // conditions never read it.
+    V[Shortcuts::rho]       = 1;
+    V[Shortcuts::vel + 0]   = 0.;
+    V[Shortcuts::vel + 1]   = 0.;
+    V[Shortcuts::vel + 2]   = 0.;
+    V[Shortcuts::E]         = 1.;
+    V[Shortcuts::B + 0]     = 0.;
+    V[Shortcuts::B + 1]     = 0.;
+    V[Shortcuts::B + 2]     = 0.;
+    V[Shortcuts::psi]       = 0.;
+    V[Shortcuts::lapse]     = 1.;
+    V[Shortcuts::shift + 0] = 0.;
+    V[Shortcuts::shift + 1] = 0.;
+    V[Shortcuts::shift + 2] = 0.;
+    V[Shortcuts::gij + 0]   = 1.;
+    V[Shortcuts::gij + 1]   = 0.;
+    V[Shortcuts::gij + 2]   = 0.;
+    V[Shortcuts::gij + 3]   = 1.;
+    V[Shortcuts::gij + 4]   = 0.;
+    V[Shortcuts::gij + 5]   = 1.;
+    examples::grmhd::convertPrimitiveToConserved<Shortcuts>(Q, V);
+    return;
+  }
+
+  const double schwarzschildRatio = 2.0 / r;
+  const double radialShift        = schwarzschildRatio / (1.0 + schwarzschildRatio);
+
+  const double criticalRadialVelocity = std::sqrt(1.0 / (2.0 * CriticalRadius));
+  const double criticalSoundSpeedSquared =
+    criticalRadialVelocity * criticalRadialVelocity / (1.0 - 3.0 * criticalRadialVelocity * criticalRadialVelocity);
+  const double criticalTemperature = PolytropicIndex * criticalSoundSpeedSquared
+    / ((1.0 + PolytropicIndex) * (1.0 - PolytropicIndex * criticalSoundSpeedSquared));
+
+  const double c1 =
+    criticalRadialVelocity * std::pow(criticalTemperature, PolytropicIndex) * (CriticalRadius * CriticalRadius);
+  const double c2 = (1.0 + (1.0 + PolytropicIndex) * criticalTemperature)
+    * (1.0 + (1.0 + PolytropicIndex) * criticalTemperature)
+    * (1.0 - 2.0 / CriticalRadius + criticalRadialVelocity * criticalRadialVelocity);
+
+  double temperature    = criticalTemperature;
+  double radialVelocity = 0.0;
+  for (int iteration = 0; iteration < MaximumNewtonIterations; iteration++) {
+    radialVelocity        = c1 / (r * r * std::pow(temperature, PolytropicIndex));
+    const double residual = (1.0 + (1.0 + PolytropicIndex) * temperature)
+        * (1.0 + (1.0 + PolytropicIndex) * temperature) * (1.0 - 2.0 / r + radialVelocity * radialVelocity)
+      - c2;
+    const double residualDerivative = 2.0 * (1.0 + PolytropicIndex) * (1.0 + (1.0 + PolytropicIndex) * temperature)
+        * (1.0 - 2.0 / r + radialVelocity * radialVelocity)
+      - 2.0 * PolytropicIndex * radialVelocity * radialVelocity / temperature
+        * (1.0 + (1.0 + PolytropicIndex) * temperature) * (1.0 + (1.0 + PolytropicIndex) * temperature);
+    const double temperatureStep = -residual / residualDerivative;
+    if (std::abs(temperatureStep) < 1.e-10) {
+      break;
+    }
+    temperature = temperature + temperatureStep;
+  }
+  ASSERTION(temperature > 0.0, temperature);
+
+  const double timeComponent =
+    (-schwarzschildRatio * radialVelocity + std::sqrt(radialVelocity * radialVelocity - schwarzschildRatio + 1.0))
+    / (schwarzschildRatio - 1.0);
+  const double lorentzFactor          = lapse * timeComponent;
+  const double eulerianRadialVelocity = (radialVelocity / lorentzFactor + radialShift / lapse);
+
+  // The velocity points along x / r. A permutation of the axes then permutes the velocity bitwise.
+  const double vContr[3] = {
+    x[0] / r * eulerianRadialVelocity,
+    x[1] / r * eulerianRadialVelocity,
+    x[2] / r * eulerianRadialVelocity
+  };
+
+  double vCov[3];
+  examples::grmhd::multiplyMatrixVector(gCov, vContr, vCov);
+
+  const double rho = CriticalDensity * std::pow(temperature / criticalTemperature, PolytropicIndex);
+  const double p   = rho * temperature;
+
+  const double spatialMetric[6] = {gCov[0][0], gCov[0][1], gCov[0][2], gCov[1][1], gCov[1][2], gCov[2][2]};
+
+  // A magnetic field strength B0 of zero gives the hydrodynamic Michel accretion.
+  constexpr double B0        = 0;
+  const double     bContr[3] = {
+    B0 * x[0] / (std::sqrt(rootDeterminant) * r * r * r),
+    B0 * x[1] / (std::sqrt(rootDeterminant) * r * r * r),
+    B0 * x[2] / (std::sqrt(rootDeterminant) * r * r * r)
+  };
+
+  V[Shortcuts::rho]       = rho;
+  V[Shortcuts::vel + 0]   = vCov[0];
+  V[Shortcuts::vel + 1]   = vCov[1];
+  V[Shortcuts::vel + 2]   = vCov[2];
+  V[Shortcuts::E]         = p;
+  V[Shortcuts::B + 0]     = bContr[0];
+  V[Shortcuts::B + 1]     = bContr[1];
+  V[Shortcuts::B + 2]     = bContr[2];
+  V[Shortcuts::psi]       = 0.;
+  V[Shortcuts::lapse]     = lapse;
+  V[Shortcuts::shift + 0] = shift[0];
+  V[Shortcuts::shift + 1] = shift[1];
+  V[Shortcuts::shift + 2] = shift[2];
+  V[Shortcuts::gij + 0]   = spatialMetric[0];
+  V[Shortcuts::gij + 1]   = spatialMetric[1];
+  V[Shortcuts::gij + 2]   = spatialMetric[2];
+  V[Shortcuts::gij + 3]   = spatialMetric[3];
+  V[Shortcuts::gij + 4]   = spatialMetric[4];
+  V[Shortcuts::gij + 5]   = spatialMetric[5];
+
+  examples::grmhd::convertPrimitiveToConserved<Shortcuts>(Q, V);
+}

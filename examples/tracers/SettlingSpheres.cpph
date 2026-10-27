@@ -1,0 +1,110 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "exahype2/particles/Forces.h"
+#include "tarch/Assertions.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::tracers::SettlingSpheres::maxEigenvalue(
+  [[maybe_unused]] const ComputePrecision* const NOALIAS        Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  return 1.0;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::tracers::SettlingSpheres::flux(
+  [[maybe_unused]] const ComputePrecision* const NOALIAS        Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  ComputePrecision* const NOALIAS                               F,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    F[unknown] = 0.0;
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::tracers::SettlingSpheres::refinementCriterion(
+  [[maybe_unused]] const StoragePrecision* const NOALIAS        Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  return ::exahype2::RefinementCommand::Keep;
+}
+
+INLINE_METHOD void
+examples::tracers::SettlingSpheres::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  Q[Shortcuts::rho] = 1.0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::v + d] = 0.0;
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::tracers::SettlingSpheres::boundaryConditions(
+  const StoragePrecision* const NOALIAS                         Qinside,
+  StoragePrecision* const NOALIAS                               Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    Qoutside[unknown] = Qinside[unknown];
+  }
+}
+
+INLINE_METHOD void
+examples::tracers::SettlingSpheres::analyticalSolution(
+  const ::exahype2::particles::Particle* const particle,
+  const double                                 t,
+  [[maybe_unused]] const double                dt,
+  double* const                                solution,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  constexpr double StartHeight  = 2.5;
+  constexpr double FluidDensity = 1.0;
+  constexpr double Gravity      = 1.0;
+  constexpr double Viscosity    = 1.0;
+  ASSERTION(particle != nullptr);
+  ASSERTION(t >= 0.0, t);
+  const double  mass           = ::exahype2::particles::getMass(*particle);
+  const double  radius         = ::exahype2::particles::getRadius(*particle);
+  const double  volume         = 4.0 / 3.0 * std::numbers::pi * radius * radius * radius;
+  const double  acceleration   = (1.0 - FluidDensity * volume / mass) * Gravity;
+  const double  relaxationTime = mass / (6.0 * std::numbers::pi * Viscosity * radius);
+  const double  terminalSpeed  = acceleration * relaxationTime;
+  const double  decay          = std::exp(-t / relaxationTime);
+  const double  fallen         = terminalSpeed * (t - relaxationTime * (1.0 - decay));
+  constexpr int ValuesPerState = DIMENSIONS + 3 + 3 * DIMENSIONS;
+  for (int value = 0; value < ValuesPerState; value++) {
+    solution[value] = 0.0;
+  }
+  for (int d = 0; d < DIMENSIONS - 1; d++) {
+    solution[d] = particle->getX(d);
+  }
+  solution[DIMENSIONS - 1]                                            = StartHeight - fallen;
+  solution[DIMENSIONS + ::exahype2::particles::FluidDensityAttribute] = FluidDensity;
+  solution[DIMENSIONS + ::exahype2::particles::ParticleVelocityAttribute + DIMENSIONS - 1] =
+    -terminalSpeed * (1.0 - decay);
+  solution[DIMENSIONS + ::exahype2::particles::ParticleAccelerationAttribute + DIMENSIONS - 1] = -acceleration * decay;
+  solution[DIMENSIONS + ::exahype2::particles::ParticleMassAttribute]                          = mass;
+  solution[DIMENSIONS + ::exahype2::particles::ParticleRadiusAttribute]                        = radius;
+}

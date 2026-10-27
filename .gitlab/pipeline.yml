@@ -2,11 +2,15 @@ include:
   - local: .gitlab/templates.yml
   - local: .gitlab/build.yml
   - local: .gitlab/test.yml
+  - local: .gitlab/example.yml
+  - local: .gitlab/tutorial.yml
   - local: .gitlab/application.yml
 
 stages:
   - Build
   - Test
+  - Example
+  - Tutorial
   - Application
 
 workflow:

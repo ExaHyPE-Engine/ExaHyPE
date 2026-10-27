@@ -1,0 +1,521 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "exahype2/MultiresolutionDetail.h"
+#include "tarch/Assertions.h"
+#include "tarch/la/ScalarOperations.h"
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::getMaxEigenvalue(
+  const Precision* const NOALIAS               Q,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const int                                    normal,
+  const typename Solver::RuntimeParameters&    parameters
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  double orderFactor = 0.0;
+  if constexpr (requires { Solver::RungeKuttaOrder; }) {
+    constexpr double OrderFactor = 1.0 / (2.0 * Solver::RungeKuttaOrder - 1.0);
+    orderFactor                  = OrderFactor;
+  } else {
+    constexpr double OrderFactor = Solver::PNPM;
+    orderFactor                  = OrderFactor;
+  }
+  return examples::navierstokes::getConvectiveWaveSpeed<Solver>(Q, normal, parameters)
+    + examples::navierstokes::getDiffusiveWaveSpeed<Solver>(Q, parameters) * 2 / (h[normal] * orderFactor);
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::computeFlux(
+  const Precision* const NOALIAS            Q,
+  const Precision* const NOALIAS            deltaQ[DIMENSIONS],
+  const int                                 normal,
+  const typename Solver::RuntimeParameters& parameters,
+  Precision* const NOALIAS                  F
+) {
+  using Shortcuts = typename Solver::Shortcuts;
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  const auto        rho                = Q[Shortcuts::rho];
+  const auto* const j                  = &Q[Shortcuts::j];
+  const auto        E                  = Q[Shortcuts::E];
+  double            backgroundPressure = 0;
+  if constexpr (requires { Shortcuts::backgroundstate; }) {
+    backgroundPressure = Q[Shortcuts::backgroundstate + 1];
+  }
+  const auto invRho   = 1. / rho;
+  const auto pressure = examples::navierstokes::getPressure<Solver>(Q, parameters);
+
+  F[Shortcuts::rho] = j[normal];
+  for (int d = 0; d < DIMENSIONS; d++) {
+    F[Shortcuts::j + d] = invRho * j[normal] * j[d];
+  }
+  F[Shortcuts::E] = invRho * j[normal] * (E + pressure);
+  F[Shortcuts::j + normal] += (pressure - backgroundPressure);
+
+  const double viscosity = parameters.referenceViscosity;
+  const double thermalConductivity =
+    1. / parameters.prandtlNumber * parameters.referenceViscosity * parameters.gamma * parameters.isochoricHeatCapacity;
+  const auto uu  = invRho * Q[Shortcuts::j];
+  const auto uux = invRho * (deltaQ[0][Shortcuts::j + 0] - uu * deltaQ[0][Shortcuts::rho]);
+  const auto uuy = invRho * (deltaQ[1][Shortcuts::j + 0] - uu * deltaQ[1][Shortcuts::rho]);
+  const auto vv  = invRho * Q[Shortcuts::j + 1];
+  const auto vvx = invRho * (deltaQ[0][Shortcuts::j + 1] - vv * deltaQ[0][Shortcuts::rho]);
+  const auto vvy = invRho * (deltaQ[1][Shortcuts::j + 1] - vv * deltaQ[1][Shortcuts::rho]);
+  double     viscousFlux[DIMENSIONS];
+  if constexpr (DIMENSIONS == 2) {
+    const auto divV23 = 2. / 3. * (uux + vvy);
+    if (normal == 0) {
+      viscousFlux[0] = viscosity * (2 * uux - divV23);
+      viscousFlux[1] = viscosity * (uuy + vvx);
+    } else {
+      viscousFlux[0] = viscosity * (uuy + vvx);
+      viscousFlux[1] = viscosity * (2 * vvy - divV23);
+    }
+    F[Shortcuts::j + 0] -= viscousFlux[0];
+    F[Shortcuts::j + 1] -= viscousFlux[1];
+    F[Shortcuts::E] -= viscousFlux[0] * uu + viscousFlux[1] * vv;
+  } else {
+    const auto ww     = invRho * Q[Shortcuts::j + 2];
+    const auto uuz    = invRho * (deltaQ[2][Shortcuts::j + 0] - uu * deltaQ[2][Shortcuts::rho]);
+    const auto vvz    = invRho * (deltaQ[2][Shortcuts::j + 1] - vv * deltaQ[2][Shortcuts::rho]);
+    const auto wwx    = invRho * (deltaQ[0][Shortcuts::j + 2] - ww * deltaQ[0][Shortcuts::rho]);
+    const auto wwy    = invRho * (deltaQ[1][Shortcuts::j + 2] - ww * deltaQ[1][Shortcuts::rho]);
+    const auto wwz    = invRho * (deltaQ[2][Shortcuts::j + 2] - ww * deltaQ[2][Shortcuts::rho]);
+    const auto divV23 = 2. / 3. * (uux + vvy + wwz);
+    if (normal == 0) {
+      viscousFlux[0] = viscosity * (2 * uux - divV23);
+      viscousFlux[1] = viscosity * (uuy + vvx);
+      viscousFlux[2] = viscosity * (uuz + wwx);
+    } else if (normal == 1) {
+      viscousFlux[0] = viscosity * (uuy + vvx);
+      viscousFlux[1] = viscosity * (2 * vvy - divV23);
+      viscousFlux[2] = viscosity * (vvz + wwy);
+    } else {
+      viscousFlux[0] = viscosity * (uuz + wwx);
+      viscousFlux[1] = viscosity * (vvz + wwy);
+      viscousFlux[2] = viscosity * (2 * wwz - divV23);
+    }
+    F[Shortcuts::j + 0] -= viscousFlux[0];
+    F[Shortcuts::j + 1] -= viscousFlux[1];
+    F[Shortcuts::E] -= viscousFlux[0] * uu + viscousFlux[1] * vv;
+    F[Shortcuts::j + 2] -= viscousFlux[2];
+    F[Shortcuts::E] -= viscousFlux[2] * ww;
+  }
+
+  const auto invCv               = 1 / parameters.isochoricHeatCapacity;
+  const auto invRho2             = invRho * invRho;
+  const auto invRho3             = invRho2 * invRho;
+  double     temperatureGradient = 0.0;
+  if constexpr (DIMENSIONS == 2) {
+    const auto dTdW1 = -1 * Q[Shortcuts::E] * invRho2
+      + invRho3 * (Q[Shortcuts::j] * Q[Shortcuts::j] + Q[Shortcuts::j + 1] * Q[Shortcuts::j + 1]);
+    const auto dTdW2    = -1 * Q[Shortcuts::j] * invRho2;
+    const auto dTdW3    = -1 * Q[Shortcuts::j + 1] * invRho2;
+    temperatureGradient = invCv
+      * (dTdW1 * deltaQ[normal][Shortcuts::rho] + dTdW2 * deltaQ[normal][Shortcuts::j + 0]
+         + dTdW3 * deltaQ[normal][Shortcuts::j + 1] + invRho * deltaQ[normal][Shortcuts::E]);
+  } else {
+    const auto dTdW1 = -1 * Q[Shortcuts::E] * invRho2
+      + invRho3
+        * (Q[Shortcuts::j] * Q[Shortcuts::j] + Q[Shortcuts::j + 1] * Q[Shortcuts::j + 1] + Q[Shortcuts::j + 2] * Q[Shortcuts::j + 2]);
+    const auto dTdW2    = -1 * Q[Shortcuts::j] * invRho2;
+    const auto dTdW3    = -1 * Q[Shortcuts::j + 1] * invRho2;
+    const auto dTdW4    = -1 * Q[Shortcuts::j + 2] * invRho2;
+    temperatureGradient = invCv
+      * (dTdW1 * deltaQ[normal][Shortcuts::rho] + dTdW2 * deltaQ[normal][Shortcuts::j + 0]
+         + dTdW3 * deltaQ[normal][Shortcuts::j + 1] + dTdW4 * deltaQ[normal][Shortcuts::j + 2]
+         + invRho * deltaQ[normal][Shortcuts::E]);
+  }
+  if constexpr (examples::navierstokes::hasGravity<Solver>()) {
+    if (normal == DIMENSIONS - 1) {
+      temperatureGradient -= (parameters.gravity * (parameters.gamma - 1)) / parameters.gasConstant;
+    }
+  }
+  F[Shortcuts::E] -= thermalConductivity * temperatureGradient;
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::computeRusanovFlux(
+  const Precision* const NOALIAS               QL,
+  const Precision* const NOALIAS               QR,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const int                                    normal,
+  const typename Solver::RuntimeParameters&    parameters,
+  Precision* const NOALIAS                     FL,
+  Precision* const NOALIAS                     FR
+) {
+  constexpr int ValuesPerNode    = Solver::NumberOfUnknowns + Solver::NumberOfAuxiliaryVariables;
+  constexpr int NumberOfUnknowns = Solver::NumberOfUnknowns;
+  constexpr int NodesPerFace = DIMENSIONS == 3 ? (Solver::DGOrder + 1) * (Solver::DGOrder + 1) : Solver::DGOrder + 1;
+  alignas(16) double averageLeft[ValuesPerNode]  = {0};
+  alignas(16) double averageRight[ValuesPerNode] = {0};
+  const auto         faceWeights                 = Solver::template Quadrature<double>::getQuadratureWeightsOnFace();
+  // The weighted node values add in fixed point. A mirrored face then averages the same values in
+  // another order and returns the same bits.
+  for (int value = 0; value < ValuesPerNode; value++) {
+    double weightedLeft[NodesPerFace];
+    double weightedRight[NodesPerFace];
+    for (int node = 0; node < NodesPerFace; node++) {
+      weightedLeft[node] = tarch::la::productRoundedOnce(
+        static_cast<double>(faceWeights[node]),
+        static_cast<double>(QL[node * ValuesPerNode + value])
+      );
+      weightedRight[node] = tarch::la::productRoundedOnce(
+        static_cast<double>(faceWeights[node]),
+        static_cast<double>(QR[node * ValuesPerNode + value])
+      );
+    }
+    averageLeft[value]  = tarch::la::sumInFixedPoint(weightedLeft, NodesPerFace);
+    averageRight[value] = tarch::la::sumInFixedPoint(weightedRight, NodesPerFace);
+  }
+  auto smax = std::fmax(
+    examples::navierstokes::getConvectiveWaveSpeed<Solver>(&averageLeft[0], normal, parameters),
+    examples::navierstokes::getConvectiveWaveSpeed<Solver>(&averageRight[0], normal, parameters)
+  );
+  const auto factor = 2 * (2 * Solver::DGOrder + 1) / (h[normal] * std::sqrt(0.5 * std::numbers::pi));
+  smax += factor
+    * std::fmax(
+            examples::navierstokes::getDiffusiveWaveSpeed<Solver>(&averageLeft[0], parameters),
+            examples::navierstokes::getDiffusiveWaveSpeed<Solver>(&averageRight[0], parameters)
+    );
+  for (int node = 0; node < NodesPerFace; node++) {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      FL[node * NumberOfUnknowns + unknown] = 0.5
+        * (FL[node * NumberOfUnknowns + unknown] + FR[node * NumberOfUnknowns + unknown]
+           + smax * (QL[node * ValuesPerNode + unknown] - QR[node * ValuesPerNode + unknown]));
+      FR[node * NumberOfUnknowns + unknown] = FL[node * NumberOfUnknowns + unknown];
+    }
+  }
+  return smax;
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::navierstokes::getRefinementCommand(
+  const Precision* const NOALIAS            Q,
+  const typename Solver::RuntimeParameters& parameters
+) {
+  ASSERTION(parameters.detailTolerance > 0.0, parameters.detailTolerance);
+  return ::exahype2::refineOnDetail(
+    Q,
+    Solver::getNodesInUnitInterval(),
+    Solver::NumberOfUnknowns + Solver::NumberOfAuxiliaryVariables,
+    parameters.detailTolerance,
+    ::exahype2::DefaultCoarsenSafetyFactor,
+    [](const Precision* const values) {
+      tarch::la::Vector<DIMENSIONS, double> momentum;
+      for (int d = 0; d < DIMENSIONS; d++) {
+        momentum(d) = values[Solver::Shortcuts::j + d];
+      }
+      return 1.0 + tarch::la::norm2Squared(momentum);
+    }
+  );
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::navierstokes::getRefinementCommandOfBubbles(
+  const Precision* const NOALIAS            Q,
+  const typename Solver::RuntimeParameters& parameters
+) {
+  using Shortcuts = typename Solver::Shortcuts;
+  ASSERTION(parameters.departureTolerance > 0.0, parameters.departureTolerance);
+  if (Q == nullptr) {
+    return ::exahype2::RefinementCommand::Keep;
+  }
+  constexpr int ValuesPerNode    = Solver::NumberOfUnknowns + Solver::NumberOfAuxiliaryVariables;
+  double        largestDeparture = 0.0;
+  for (int node = 0; node < Solver::NodesPerCell; node++) {
+    const Precision* const values            = Q + node * ValuesPerNode;
+    const double           backgroundDensity = values[Shortcuts::backgroundstate + 0];
+    ASSERTION(backgroundDensity > 0.0, backgroundDensity);
+    const double departure = std::abs(values[Shortcuts::rho] - backgroundDensity) / backgroundDensity;
+    ASSERTION(std::isfinite(departure), departure, node);
+    largestDeparture = std::max(largestDeparture, departure);
+  }
+  return ::exahype2::getRefinementCommandFromDetail(
+    largestDeparture,
+    parameters.departureTolerance,
+    ::exahype2::DefaultCoarsenSafetyFactor
+  );
+}
+
+template <class Solver>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr bool
+examples::navierstokes::hasGravity() {
+  return requires { Solver::Shortcuts::height; };
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::getPressure(
+  const Precision* const NOALIAS            Q,
+  const typename Solver::RuntimeParameters& parameters
+) {
+  using Shortcuts                  = typename Solver::Shortcuts;
+  const auto* const j              = &Q[Shortcuts::j];
+  const auto        E              = Q[Shortcuts::E];
+  const auto        rho            = Q[Shortcuts::rho];
+  double            chemicalEnergy = 0.0;
+  if constexpr (examples::navierstokes::hasGravity<Solver>()) {
+    const auto height = Q[Shortcuts::height];
+    chemicalEnergy += rho * parameters.gravity * height;
+  }
+  if constexpr (DIMENSIONS == 2) {
+    const auto jDot = j[0] * j[0] + j[1] * j[1];
+    return (parameters.gamma - 1) * (E - 0.5 * (1 / rho) * jDot - chemicalEnergy);
+  } else {
+    const auto jDot = j[0] * j[0] + j[1] * j[1] + j[2] * j[2];
+    return (parameters.gamma - 1) * (E - 0.5 * (1 / rho) * jDot - chemicalEnergy);
+  }
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::getEnergy(
+  const double                              pressure,
+  const double                              rho,
+  const Precision* const NOALIAS            j,
+  [[maybe_unused]] const double             height,
+  const typename Solver::RuntimeParameters& parameters
+) {
+  double chemicalEnergy = 0.0;
+  if constexpr (examples::navierstokes::hasGravity<Solver>()) {
+    chemicalEnergy += rho * parameters.gravity * height;
+  }
+  if constexpr (DIMENSIONS == 2) {
+    const auto jDot = j[0] * j[0] + j[1] * j[1];
+    return pressure / (parameters.gamma - 1) + 0.5 * (jDot / rho) + chemicalEnergy;
+  } else {
+    const auto jDot = j[0] * j[0] + j[1] * j[1] + j[2] * j[2];
+    return pressure / (parameters.gamma - 1) + 0.5 * (jDot / rho) + chemicalEnergy;
+  }
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::getConvectiveWaveSpeed(
+  const Precision* const NOALIAS            Q,
+  const int                                 normal,
+  const typename Solver::RuntimeParameters& parameters
+) {
+  using Shortcuts           = typename Solver::Shortcuts;
+  const auto rho            = Q[Shortcuts::rho];
+  const auto pressure       = examples::navierstokes::getPressure<Solver>(Q, parameters);
+  const auto normalVelocity = Q[Shortcuts::j + normal] / rho;
+  const auto c              = std::sqrt(parameters.gamma * (pressure / rho));
+  return std::fmax(std::abs(normalVelocity - c), std::abs(normalVelocity + c));
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::getDiffusiveWaveSpeed(
+  const Precision* const NOALIAS            Q,
+  const typename Solver::RuntimeParameters& parameters
+) {
+  using Shortcuts                                = typename Solver::Shortcuts;
+  constexpr double MolecularDiffusionCoefficient = 0.0;
+  double           smaxDiffusive                 = MolecularDiffusionCoefficient;
+  smaxDiffusive = std::fmax(smaxDiffusive, (4. / 3.) * (parameters.referenceViscosity / Q[Shortcuts::rho]));
+  return std::fmax(
+    smaxDiffusive,
+    (parameters.gamma * parameters.referenceViscosity) / (parameters.prandtlNumber * Q[Shortcuts::rho])
+  );
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::computeGravitySource(
+  const Precision* const NOALIAS            Q,
+  const typename Solver::RuntimeParameters& parameters,
+  Precision* const NOALIAS                  S
+) {
+  using Shortcuts = typename Solver::Shortcuts;
+  std::fill_n(S, Solver::NumberOfUnknowns, 0);
+  auto rhoPerturbation = Q[Shortcuts::rho];
+  rhoPerturbation -= Q[Shortcuts::backgroundstate + 0];
+  S[Shortcuts::j + DIMENSIONS - 1] = -1 * rhoPerturbation * parameters.gravity;
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::writeWallState(
+  const Precision* const NOALIAS               Qinside,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const int                                    normal,
+  const typename Solver::RuntimeParameters&    parameters,
+  Precision* const NOALIAS                     Qoutside
+) {
+  using Shortcuts                       = typename Solver::Shortcuts;
+  constexpr double PotentialTemperature = 300.0;
+  for (int value = 0; value < Solver::NumberOfUnknowns + Solver::NumberOfAuxiliaryVariables; value++) {
+    Qoutside[value] = Qinside[value];
+  }
+  Qoutside[Shortcuts::j + normal] = -Qinside[Shortcuts::j + normal];
+  const auto height               = x[DIMENSIONS - 1] - examples::navierstokes::DomainOffset[DIMENSIONS - 1];
+  const auto pressure             = examples::navierstokes::getHydrostaticPressure<Solver>(height, parameters);
+  const auto temperature   = examples::navierstokes::getTemperature<Solver>(PotentialTemperature, pressure, parameters);
+  const auto rho           = pressure / (parameters.gasConstant * temperature);
+  Qoutside[Shortcuts::rho] = rho;
+  Qoutside[Shortcuts::backgroundstate + 0] = Qoutside[Shortcuts::rho];
+  Qoutside[Shortcuts::backgroundstate + 1] = pressure;
+  Qoutside[Shortcuts::E]                   = examples::navierstokes::getEnergy<Solver>(
+    pressure,
+    rho,
+    &Qoutside[Shortcuts::j],
+    Qoutside[Shortcuts::height],
+    parameters
+  );
+}
+
+/**
+ * Writes the hydrostatic atmosphere of constant potential temperature into Q (Müller et al.,
+ * https://doi.org/10.1007/978-3-030-43229-4_27). The pressure of Q follows the hydrostatic
+ * background. The potential temperature of Q adds perturbation to the background.
+ */
+template <class Solver, typename Precision>
+INLINE_METHOD void
+examples::navierstokes::writeAtmosphere(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 perturbation,
+  const typename Solver::RuntimeParameters&    parameters,
+  Precision* const NOALIAS                     Q
+) {
+  using Shortcuts                                 = typename Solver::Shortcuts;
+  constexpr double BackgroundPotentialTemperature = 300.0;
+  const auto       potentialTemperature           = BackgroundPotentialTemperature + perturbation;
+  std::fill_n(Q, Solver::NumberOfUnknowns + Solver::NumberOfAuxiliaryVariables, 0);
+  const auto height      = x[DIMENSIONS - 1] - examples::navierstokes::DomainOffset[DIMENSIONS - 1];
+  const auto pressure    = examples::navierstokes::getHydrostaticPressure<Solver>(height, parameters);
+  const auto temperature = examples::navierstokes::getTemperature<Solver>(potentialTemperature, pressure, parameters);
+  const auto rho         = pressure / (parameters.gasConstant * temperature);
+  Q[Shortcuts::rho]      = rho;
+  Q[Shortcuts::height]   = height;
+  Q[Shortcuts::E] = examples::navierstokes::getEnergy<Solver>(pressure, rho, &Q[Shortcuts::j], height, parameters);
+  const auto backgroundTemperature =
+    examples::navierstokes::getTemperature<Solver>(BackgroundPotentialTemperature, pressure, parameters);
+  const auto backgroundRho          = pressure / (parameters.gasConstant * backgroundTemperature);
+  Q[Shortcuts::backgroundstate + 0] = backgroundRho;
+  Q[Shortcuts::backgroundstate + 1] = pressure;
+}
+
+template <class Solver>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::getHydrostaticPressure(
+  const double                              height,
+  const typename Solver::RuntimeParameters& parameters
+) {
+  constexpr double ReferencePressure              = 100000.0;
+  constexpr double BackgroundPotentialTemperature = 300.0;
+  const double     gamma                          = parameters.gamma;
+  const double     gasConstant                    = parameters.gasConstant;
+  const double     isobaricHeatCapacity           = gamma / (gamma - 1) * gasConstant;
+  return std::pow(
+    (1 - 1 / gamma)
+      * (std::pow(std::pow(gamma, gamma / (gamma - 1)) * ReferencePressure, (gamma - 1) / gamma) / (gamma - 1)
+         - parameters.gravity * std::pow(ReferencePressure, gasConstant / isobaricHeatCapacity) * height
+             / (gasConstant * BackgroundPotentialTemperature)),
+    gamma / (gamma - 1)
+  );
+}
+
+template <class Solver>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::getTemperature(
+  const double                              potentialTemperature,
+  const double                              pressure,
+  const typename Solver::RuntimeParameters& parameters
+) {
+  constexpr double ReferencePressure    = 100000.0;
+  const double     isobaricHeatCapacity = parameters.gamma / (parameters.gamma - 1) * parameters.gasConstant;
+  return potentialTemperature * std::pow((pressure / ReferencePressure), parameters.gasConstant / isobaricHeatCapacity);
+}
+
+INLINE_METHOD double
+examples::navierstokes::getCosineBubblePerturbation(const tarch::la::Vector<DIMENSIONS, double>& x) {
+  constexpr double                      BubbleRadius          = 250;
+  constexpr auto                        TemperatureDifference = 0.5;
+  tarch::la::Vector<DIMENSIONS, double> bubbleCentre(-150);
+  bubbleCentre[0]     = 0;
+  const auto distance = tarch::la::norm2(x - bubbleCentre);
+  return distance <= BubbleRadius
+    ? TemperatureDifference / 2 * (1 + std::cos((std::numbers::pi * distance) / BubbleRadius))
+    : 0;
+}
+
+INLINE_METHOD double
+examples::navierstokes::getTwoBubblesPerturbation(const tarch::la::Vector<DIMENSIONS, double>& x) {
+  constexpr double                      DecayLength               = 50.;
+  constexpr double                      HotBubbleRadius           = 150;
+  constexpr double                      ColdBubbleRadius          = 0;
+  constexpr double                      HotTemperatureDifference  = 0.5;
+  constexpr double                      ColdTemperatureDifference = -0.15;
+  tarch::la::Vector<DIMENSIONS, double> hotBubbleCentre(-200);
+  tarch::la::Vector<DIMENSIONS, double> coldBubbleCentre(140);
+  hotBubbleCentre[0]            = 0;
+  coldBubbleCentre[0]           = 60;
+  const auto hotBubbleDistance  = tarch::la::norm2(x - hotBubbleCentre) - HotBubbleRadius;
+  auto       perturbation       = hotBubbleDistance <= 0
+    ? HotTemperatureDifference
+    : HotTemperatureDifference * std::exp(-(hotBubbleDistance * hotBubbleDistance) / (DecayLength * DecayLength));
+  const auto coldBubbleDistance = tarch::la::norm2(x - coldBubbleCentre) - ColdBubbleRadius;
+  perturbation +=
+    ColdTemperatureDifference * std::exp(-(coldBubbleDistance * coldBubbleDistance) / (DecayLength * DecayLength));
+  return perturbation;
+}
+
+/**
+ * Writes the Arnold-Beltrami-Childress flow at the time t into Q (Fehn, Wall and Kronbichler,
+ * https://doi.org/10.1016/j.jcp.2016.05.009). The viscosity damps the flow.
+ */
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::writeABCFlow(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const typename Solver::RuntimeParameters&    parameters,
+  Precision* const NOALIAS                     Q
+) {
+  using Shortcuts = typename Solver::Shortcuts;
+  static_assert(DIMENSIONS == 3, "The ABC flow runs in 3D only.");
+  const auto meanPressure = 100 / parameters.gamma;
+  const auto decayFactor  = std::exp(-1 * parameters.referenceViscosity * t);
+  const auto pressure     = meanPressure
+    - (std::sin(x[1]) * std::cos(x[0]) + std::sin(x[0]) * std::cos(x[2]) + std::sin(x[2]) * std::cos(x[1]))
+      * decayFactor * decayFactor;
+  const double rho    = 1;
+  Q[Shortcuts::rho]   = rho;
+  Q[Shortcuts::j + 0] = (std::sin(x[2]) + std::cos(x[1])) * decayFactor;
+  Q[Shortcuts::j + 1] = (std::sin(x[0]) + std::cos(x[2])) * decayFactor;
+  Q[Shortcuts::j + 2] = (std::sin(x[1]) + std::cos(x[0])) * decayFactor;
+  Q[Shortcuts::E]     = examples::navierstokes::getEnergy<Solver>(pressure, rho, &Q[Shortcuts::j], 0.0, parameters);
+}
+
+/**
+ * Writes the Taylor-Green vortex at the time t into Q (Taylor and Green,
+ * https://doi.org/10.1098/rspa.1937.0036). The viscosity damps the vortex.
+ */
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::writeTaylorGreenVortex(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const typename Solver::RuntimeParameters&    parameters,
+  Precision* const NOALIAS                     Q
+) {
+  using Shortcuts          = typename Solver::Shortcuts;
+  const double decayFactor = std::exp(-2 * parameters.referenceViscosity * t);
+  const double rho         = 1;
+  Q[Shortcuts::rho]        = rho;
+  Q[Shortcuts::j + 0]      = std::sin(x[0]) * std::cos(x[1]) * decayFactor;
+  Q[Shortcuts::j + 1]      = -1 * std::cos(x[0]) * std::sin(x[1]) * decayFactor;
+  for (int d = 2; d < DIMENSIONS; d++) {
+    Q[Shortcuts::j + d] = 0.0;
+  }
+  const double meanPressure = 100. / parameters.gamma;
+  const double pressure =
+    meanPressure + ((rho * decayFactor * decayFactor) / 4) * (std::cos(2 * x[0]) + std::cos(2 * x[1]));
+  Q[Shortcuts::E] = examples::navierstokes::getEnergy<Solver>(pressure, rho, &Q[Shortcuts::j], 0.0, parameters);
+}

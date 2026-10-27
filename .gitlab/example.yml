@@ -1,0 +1,115 @@
+.Example:
+  stage: Example
+  script:
+    - generate examples/$folder "$script --dimensions $dimensions --precision $precision --build-mode $BUILD_MODE"
+    - launch examples/$folder "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  extends: .RunOnlyOnMainBranch
+  needs: [Build and Unit Tests]
+
+Acoustic:
+  extends: .Example
+  variables:
+    folder: acoustic
+  parallel:
+    matrix:
+      - script: [free_stream.py, planar_waves.py, point_explosion.py, point_source.py]
+        dimensions: [2, 3]
+        precision: [double, float]
+
+Advection:
+  extends: .Example
+  variables:
+    folder: advection
+  parallel:
+    matrix:
+      - script: [linear.py, periodic_bump.py, radial_bump.py]
+        dimensions: [2, 3]
+        precision: [double, float]
+
+Elastic:
+  extends: .Example
+  variables:
+    folder: elastic
+  parallel:
+    matrix:
+      - script: [planar_waves.py, ricker_pulse.py]
+        dimensions: [2, 3]
+        precision: [double, float]
+
+Euler:
+  extends: .Example
+  variables:
+    folder: euler
+  parallel:
+    matrix:
+      - script: [airfoil.py, gaussian_bell.py, isentropic_vortex.py, point_explosion.py, rayleigh_taylor.py]
+        dimensions: [2, 3]
+        precision: [double, float]
+
+GRMHD:
+  extends: .Example
+  variables:
+    folder: grmhd
+  parallel:
+    matrix:
+      - script: [alfven_wave.py]
+        dimensions: [2, 3]
+        precision: [double, float]
+      - script: [michel_spherical_accretion.py]
+        dimensions: [3]
+        precision: [double, float]
+
+Navier-Stokes:
+  extends: .Example
+  variables:
+    folder: navier-stokes
+  parallel:
+    matrix:
+      - script: [abc_flow.py]
+        dimensions: [3]
+        precision: [double, float]
+      - script: [cosine_bubble.py, taylor_green_vortex.py, two_bubbles.py]
+        dimensions: [2, 3]
+        precision: [double, float]
+
+Shallow Water:
+  extends: .Example
+  variables:
+    folder: shallow-water
+  parallel:
+    matrix:
+      - script: [dry_ring.py, radial_dam_break.py, radial_step.py, resting_lake.py, steady_vortex.py]
+        dimensions: [2]
+        precision: [double, float]
+
+Tracers:
+  extends: .Example
+  variables:
+    folder: tracers
+  parallel:
+    matrix:
+      - script: [settling_spheres.py, uniform_flow.py]
+        dimensions: [2, 3]
+        precision: [double, float]
+
+Coupling:
+  stage: Example
+  parallel:
+    matrix:
+      - dimensions: [2, 3]
+  script:
+    - generate examples/coupling "planar_waves.py --dimensions $dimensions --build-mode $BUILD_MODE"
+    - launch examples/coupling "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  extends: .RunOnlyOnMainBranch
+  needs: [Build and Unit Tests]
+
+Fortran:
+  stage: Example
+  script:
+    - in_image "cd examples/fortran && FC=${FC} PYTHONPATH=$CI_PROJECT_DIR/api python3 fortran.py --build-mode $BUILD_MODE"
+    - launch examples/fortran "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  rules:
+    - if: '$GPU_BACKEND != "none"'
+      when: never
+    - !reference [".RunOnlyOnMainBranch", "rules"]
+  needs: [Build and Unit Tests]

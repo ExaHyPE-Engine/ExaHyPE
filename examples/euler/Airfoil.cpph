@@ -1,0 +1,167 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/euler/Euler.h"
+
+namespace {
+  constexpr double Chord          = 100.0;
+  constexpr double InflowMomentum = 0.1;
+
+  double getHalfThickness(const double chordPosition) {
+    if (chordPosition < 0.0 or chordPosition > Chord) {
+      return 0.0;
+    }
+    constexpr double Thickness = 0.12;
+    const double     s         = chordPosition / Chord;
+    return 5.0 * Thickness * Chord
+      * (0.2969 * std::sqrt(s) - 0.1260 * s - 0.3516 * s * s + 0.2843 * s * s * s - 0.1015 * s * s * s * s);
+  }
+
+  template <class Shortcuts, typename Precision>
+  GPU_CALLABLE_METHOD void writeInflow(Precision* const NOALIAS Q) {
+    Q[Shortcuts::rho] = 1.0;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      Q[Shortcuts::rhoU + d] = 0.0;
+    }
+    Q[Shortcuts::rhoU] = InflowMomentum;
+    Q[Shortcuts::rhoE] = 1.0;
+  }
+} // namespace
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::euler::Airfoil::maxEigenvalue(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::euler::getMaxEigenvalue<Shortcuts>(Q, normal, parameters.gamma);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::Airfoil::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::euler::computeFlux<Shortcuts>(Q, normal, parameters.gamma, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::euler::Airfoil::refinementCriterion(
+  [[maybe_unused]] const StoragePrecision* const NOALIAS Q,
+  const tarch::la::Vector<DIMENSIONS, double>&           x,
+  const tarch::la::Vector<DIMENSIONS, double>&           h,
+  [[maybe_unused]] const double                          t,
+  [[maybe_unused]] const RuntimeParameters&              parameters
+) {
+  constexpr double BandHalfWidth = 10.0;
+  const bool       overlapsChord = x[0] + 0.5 * h[0] >= 0.0 and x[0] - 0.5 * h[0] <= Chord;
+  const bool       overlapsBand  = std::abs(x[1]) - 0.5 * h[1] <= BandHalfWidth;
+  return overlapsChord and overlapsBand ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep;
+}
+
+INLINE_METHOD void
+examples::euler::Airfoil::initialCondition(
+  StoragePrecision* const NOALIAS              Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  writeInflow<Shortcuts>(Q);
+  constexpr int NumberOfSamples = 50;
+  double        solidFraction   = 0.0;
+  for (int sample = 0; sample < NumberOfSamples; sample++) {
+    const double halfThickness = getHalfThickness(x[0] + ((sample + 0.5) / NumberOfSamples - 0.5) * h[0]);
+    const double overlap = std::min(x[1] + 0.5 * h[1], halfThickness) - std::max(x[1] - 0.5 * h[1], -halfThickness);
+    solidFraction += std::max(0.0, overlap) / h[1] / NumberOfSamples;
+  }
+  Q[Shortcuts::volumeFraction] = std::clamp(1.0 - solidFraction, 0.0, 1.0);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::Airfoil::boundaryConditions(
+  const ComputePrecision* const NOALIAS                         Qinside,
+  ComputePrecision* const NOALIAS                               Qoutside,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const int                                                     normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  if (normal == 0 and x[0] < DomainOffset[0] + 0.5 * DomainSize[0]) {
+    writeInflow<Shortcuts>(Qoutside);
+  } else {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      Qoutside[unknown] = Qinside[unknown];
+    }
+  }
+  Qoutside[Shortcuts::volumeFraction] = 1.0;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+examples::euler::Airfoil::isPhysicallyAdmissible(
+  const StoragePrecision* const NOALIAS                         Q,
+  const int                                                     numberOfStates,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  if (not examples::euler::isPhysicallyAdmissible<Shortcuts>(Q, numberOfStates, NumberOfData, parameters.gamma)) {
+    return false;
+  }
+  if (numberOfStates == 1) {
+    return true;
+  }
+  for (int state = 0; state < numberOfStates; state++) {
+    if (Q[static_cast<std::ptrdiff_t>(state) * NumberOfData + Shortcuts::volumeFraction] < 1.0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::euler::Airfoil::solveSubcellRiemannProblem(
+  const ComputePrecision* const NOALIAS                         QL,
+  const ComputePrecision* const NOALIAS                         QR,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  [[maybe_unused]] const bool                                   isBoundaryFace,
+  [[maybe_unused]] const int                                    faceIndex,
+  ComputePrecision* const NOALIAS                               FL,
+  ComputePrecision* const NOALIAS                               FR,
+  const RuntimeParameters&                                      parameters
+) {
+  const double maximumWaveSpeed = std::max(
+    examples::euler::getMaxEigenvalue<Shortcuts>(QL, normal, parameters.gamma),
+    examples::euler::getMaxEigenvalue<Shortcuts>(QR, normal, parameters.gamma)
+  );
+  examples::euler::computeFlux<Shortcuts>(QL, normal, parameters.gamma, FL);
+  examples::euler::computeFlux<Shortcuts>(QR, normal, parameters.gamma, FR);
+  const double normalMomentumFluxLeft  = FL[Shortcuts::rhoU + normal];
+  const double normalMomentumFluxRight = FR[Shortcuts::rhoU + normal];
+  const double fluidFractionLeft       = QL[Shortcuts::volumeFraction];
+  const double fluidFractionRight      = QR[Shortcuts::volumeFraction];
+  // Both products of a wall flux round on their own. The fluxes of mirrored
+  // faces then add the same rounded products with and without fused multiply-adds.
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    const double rusanovFlux = 0.5 * (FL[unknown] + FR[unknown] + maximumWaveSpeed * (QL[unknown] - QR[unknown]));
+    FL[unknown]              = tarch::la::productRoundedOnce(fluidFractionRight, rusanovFlux);
+    FR[unknown]              = tarch::la::productRoundedOnce(fluidFractionLeft, rusanovFlux);
+  }
+  FL[Shortcuts::rhoU + normal] += tarch::la::productRoundedOnce(1.0 - fluidFractionRight, normalMomentumFluxLeft);
+  FR[Shortcuts::rhoU + normal] += tarch::la::productRoundedOnce(1.0 - fluidFractionLeft, normalMomentumFluxRight);
+  return maximumWaveSpeed;
+}

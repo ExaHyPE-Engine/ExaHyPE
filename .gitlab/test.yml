@@ -11,170 +11,46 @@ API:
     - !reference [".RunOnAnyBranch", "rules"]
   needs: [Build and Unit Tests]
 
-FV:
+Tests:
   stage: Test
   parallel:
     matrix:
-      - scenario: [breaking-dam, channel-flow, gaussian-bell, gaussian-explosion, point-explosion, smooth-convergence, taylor-green-vortex]
-        dimensions: [2, 3]
-      - scenario: [dry-ring, isothermal-stratification]
-        dimensions: [2]
+      - test: [test_convergence]
+        scenario: [examples/acoustic/planar_waves.py, examples/euler/gaussian_bell.py]
+      - test: [test_free_stream]
+        scenario: [examples/acoustic/free_stream.py]
+      - test: [test_physics]
+        scenario:
+          - examples/euler/airfoil.py
+          - examples/euler/point_explosion.py
+          - examples/euler/rayleigh_taylor.py
+          - examples/shallow-water/dry_ring.py
+      - test: [test_symmetry]
+        scenario:
+          - examples/acoustic/free_stream.py
+          - examples/acoustic/planar_waves.py
+          - examples/acoustic/point_explosion.py
+          - examples/acoustic/point_source.py
+          - examples/advection/linear.py
+          - examples/advection/periodic_bump.py
+          - examples/advection/radial_bump.py
+          - examples/elastic/planar_waves.py
+          - examples/elastic/ricker_pulse.py
+          - examples/euler/airfoil.py
+          - examples/euler/gaussian_bell.py
+          - examples/euler/point_explosion.py
+          - examples/euler/rayleigh_taylor.py
+          - examples/grmhd/michel_spherical_accretion.py
+          - examples/navier-stokes/cosine_bubble.py
+          - examples/navier-stokes/taylor_green_vortex.py
+          - examples/shallow-water/dry_ring.py
+          - examples/shallow-water/radial_dam_break.py
+          - examples/shallow-water/radial_step.py
+          - examples/shallow-water/resting_lake.py
   script:
-    - generate tests/fv "$scenario.py --dimensions $dimensions --build-mode $BUILD_MODE"
-    - launch tests/fv "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-    - 'if [ "$scenario" = gaussian-bell ]; then check_error_norms tests/fv GaussianBell.output/Error.csv 8e-3; fi'
-  extends: .RunOnAnyBranch
-  needs: [Build and Unit Tests]
-
-FV Tracers:
-  stage: Test
-  parallel:
-    matrix:
-      - test: [fv-tracers-advection, fv-tracers-periodic-advection, fv-tracers-circular-bubble, fv-tracers-drag-force-validation, fv-tracers-vertical-plume-rise, fv-tracers-one-body-problem, fv-tracers-radial-jet, fv-tracers-volcanic-plume-rise]
-        dimensions: [2]
-  script:
-    - generate tests/fv-tracers "$test.py --dimensions $dimensions --build-mode $BUILD_MODE"
-    - launch tests/fv-tracers "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-  extends: .RunOnlyOnMainBranch
-  needs: [Build and Unit Tests]
-
-FV Static AMR:
-  stage: Test
-  parallel:
-    matrix:
-      - periodic: ["on", "off"]
-        dimensions: [2, 3]
-  script:
-    - generate tests/fv-static-amr "fv-static-amr.py --periodic-bc $periodic --dimensions $dimensions --build-mode $BUILD_MODE"
-    - launch tests/fv-static-amr "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-  extends: .RunOnlyOnMainBranch
-  needs: [Build and Unit Tests]
-
-Dynamic AMR:
-  stage: Test
-  parallel:
-    matrix:
-      - solver: [fv]
-        test: [acoustic-point-explosion, euler-point-explosion, freestream, periodic-advection, radial-advection]
-        dimensions: [2, 3]
-      - solver: [aderdg, rkdg]
-        test: [acoustic-point-explosion, freestream, periodic-advection, radial-advection]
-        dimensions: [2, 3]
-  script:
-    - generate tests/$solver-dynamic-amr "$test.py --dimensions $dimensions --build-mode $BUILD_MODE"
-    - launch tests/$solver-dynamic-amr "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-    - 'if [ "$test" = freestream ]; then check_error_norms tests/$solver-dynamic-amr FreeStream.output/Error.csv 1e-10; fi'
-  extends: .RunOnlyOnMainBranch
-  needs: [Build and Unit Tests]
-
-ADERDG:
-  stage: Test
-  parallel:
-    matrix:
-      - scenario: [AdvectionLinear, AcousticPlanarWaves, ElasticPlanarWaves, ElasticRickerPulse, EulerGaussianBell, EulerGaussianBell3D, EulerIsentropicVortex, SWERadialDamBreak, SWERestingLake, SWESteadyVortex, NavierStokesCosineBubble, NavierStokesTwoBubbles, NavierStokesTaylorGreen, NavierStokesABCFlow]
-        precision: [float, double]
-  script:
-    - generate tests/aderdg "aderdg.py -s $scenario --build-mode $BUILD_MODE -pr $precision"
-    - launch tests/aderdg "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-    - 'if [ "$scenario" = EulerGaussianBell ] && [ "$precision" = double ]; then check_error_norms tests/aderdg EulerGaussianBell.output/Error_EulerGaussianBell.csv 5e-4; fi'
-  extends: .RunOnAnyBranch
-  needs: [Build and Unit Tests]
-
-ADERDG Static AMR:
-  stage: Test
-  parallel:
-    matrix:
-      - test: [shallow-water-radial-dam-break, acoustic-point-explosion]
-  script:
-    - generate tests/aderdg-static-amr "$test.py --build-mode $BUILD_MODE"
-    - launch tests/aderdg-static-amr "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-  extends: .RunOnlyOnMainBranch
-  needs: [Build and Unit Tests]
-
-ADERDG Limiting:
-  stage: Test
-  parallel:
-    matrix:
-      - test: [euler-airfoil, euler-corner-blast, euler-double-rarefaction, euler-quadrant-riemann, euler-rayleigh-taylor]
-  script:
-    - generate tests/aderdg-limiting "$test.py --build-mode $BUILD_MODE"
-    - launch tests/aderdg-limiting "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-  extends: .RunOnlyOnMainBranch
-  needs: [Build and Unit Tests]
-
-ADERDG GRMHD:
-  stage: Test
-  parallel:
-    matrix:
-      - scenario: [AlfvenWave, MichelSphericalAccretion]
-  script:
-    - generate tests/aderdg-grmhd "aderdg-grmhd.py -s $scenario --build-mode $BUILD_MODE"
-    - launch tests/aderdg-grmhd "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-  extends: .RunOnlyOnMainBranch
-  needs: [Build and Unit Tests]
-
-ADERDG Coupling:
-  stage: Test
-  script:
-    - generate tests/aderdg-coupling "LOH1.py --build-mode $BUILD_MODE"
-    - launch tests/aderdg-coupling "./coupled_LOH1 -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-  extends: .RunOnlyOnMainBranch
-  needs: [Build and Unit Tests]
-
-RKDG:
-  stage: Test
-  parallel:
-    matrix:
-      - scenario: [AdvectionLinear, AcousticPlanarWaves, ElasticPlanarWaves, ElasticRickerPulse, EulerGaussianBell, EulerGaussianBell3D, EulerIsentropicVortex, SWERadialDamBreak, SWERestingLake, SWESteadyVortex, NavierStokesCosineBubble, NavierStokesTwoBubbles, NavierStokesTaylorGreen, NavierStokesABCFlow]
-  script:
-    - generate tests/rkdg "rkdg.py -s $scenario --build-mode $BUILD_MODE"
-    - launch tests/rkdg "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-    - 'if [ "$scenario" = EulerGaussianBell ]; then check_error_norms tests/rkdg EulerGaussianBell.output/Error_EulerGaussianBell.csv 1.5e-3; fi'
-  extends: .RunOnAnyBranch
-  needs: [Build and Unit Tests]
-
-RKDG Static AMR:
-  stage: Test
-  parallel:
-    matrix:
-      - test: [shallow-water-radial-dam-break, acoustic-point-explosion]
-  script:
-    - generate tests/rkdg-static-amr "$test.py --build-mode $BUILD_MODE"
-    - launch tests/rkdg-static-amr "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-  extends: .RunOnlyOnMainBranch
-  needs: [Build and Unit Tests]
-
-Fortran Coupling:
-  stage: Test
-  script:
-    - in_image "cd tests/fortran-coupling && FC=${FC} PYTHONPATH=$CI_PROJECT_DIR/api python3 fortran-coupling.py --build-mode $BUILD_MODE"
-    - launch tests/fortran-coupling "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+    - in_image "PARALLEL_LAUNCH=\"$PARALLEL_LAUNCH\" PYTHONPATH=$CI_PROJECT_DIR/api python3 tests/$test.py --scenario $scenario --build-mode $BUILD_MODE"
   rules:
-    - if: '$GPU_BACKEND != "none"'
+    - if: '$RUN_SIMULATIONS != "true"'
       when: never
-    - !reference [".RunOnlyOnMainBranch", "rules"]
-  needs: [Build and Unit Tests]
-
-Tutorials:
-  stage: Test
-  parallel:
-    matrix:
-      - tutorial: [01_acoustic]
-        notebook: [AcousticWaves.ipynb]
-      - tutorial: [02_shallow-water]
-        notebook: [ShallowWater.ipynb]
-      - tutorial: [03_euler]
-        notebook: [Euler.ipynb]
-      - tutorial: [04_limiting]
-        notebook: [EulerShock.ipynb]
-      - tutorial: [05_elastic]
-        notebook: [ElasticWaves.ipynb]
-  script:
-    # Without RUN_SIMULATIONS, the job runs the cells of the notebook up to its build.
-    - if [ "$RUN_SIMULATIONS" = "true" ]; then tutorial_script=$notebook; else tutorial_script=build.ipy; in_image "python3 .gitlab/extract_build_cells.py tutorials/$tutorial/$notebook tutorials/$tutorial/$tutorial_script"; fi
-    - in_image "cd tutorials/$tutorial && PYTHONPATH=$CI_PROJECT_DIR/api ipython $tutorial_script -- --build-mode $BUILD_MODE"
-  rules:
-    - if: '$GPU_BACKEND != "none"'
-      when: never
-    - !reference [".RunOnlyOnMainBranch", "rules"]
+    - !reference [".RunOnAnyBranch", "rules"]
   needs: [Build and Unit Tests]

@@ -26,8 +26,8 @@
     NUMBER_OF_TIME_STEPS: "500"
     NUMBER_OF_SNAPSHOTS: "2"
     # A pipeline whose RUN_UNIT_TESTS is false builds the unit tests without running them. A pipeline
-    # whose RUN_SIMULATIONS is false builds the executables of its tests, tutorials and applications
-    # without running them.
+    # whose RUN_SIMULATIONS is false builds the executables of its examples, tutorials and
+    # applications without running them and skips the tests.
     RUN_UNIT_TESTS: "true"
     RUN_SIMULATIONS: "true"
     SANITIZER: "none"
@@ -49,7 +49,6 @@
     - in_image() { apptainer exec -e --bind "$APPTAINER_BINDDIR" "$APPTAINER_IMAGEDIR/$IMAGE_TAG" bash -c "$1"; }
     - generate() { in_image "cd $1 && PYTHONPATH=$CI_PROJECT_DIR/api python3 $2"; }
     - launch() { if [ "$RUN_SIMULATIONS" = "true" ]; then in_image "cd $1 && $PARALLEL_LAUNCH $2"; else echo "The pipeline builds $1 without running it."; fi; }
-    - check_error_norms() { if [ "$RUN_SIMULATIONS" = "true" ]; then in_image "cd $1 && PYTHONPATH=$CI_PROJECT_DIR python3 -m postprocessing.check_error_norms $2 $3"; fi; }
     - if [ "$BUILD_MODE" != "Asserts" ]; then SANITIZER="none"; fi
     - export APPTAINERENV_OMPI_MCA_btl_sm_backing_directory="$CI_PROJECT_DIR"
     - echo -e "\e[0Ksection_start:$(date +%s):environment[collapsed=true]\r\e[0KEnvironment"

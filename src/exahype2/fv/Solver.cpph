@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 #include "exahype2/LevelJumps.h"
+#include "exahype2/MultiresolutionDetail.h"
 #include "exahype2/fv/Kernels.h"
 #include "exahype2/terms/MaxEigenvalue.h"
 #include "exahype2/terms/MeasuredUnknowns.h"
@@ -27,6 +28,12 @@ INLINE_METHOD exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>:
   _plotter(std::move(name), std::move(plottedFields)) {
   static_assert(exahype2::fv::ReconstructionScheme<typename Derived::Reconstruction>);
   static_assert(exahype2::fv::TimeSteppingScheme<typename Derived::TimeIntegration>);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr auto
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getNodesInUnitInterval() {
+  return exahype2::getVolumeCentresInUnitInterval<Derived::PatchSize>();
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>

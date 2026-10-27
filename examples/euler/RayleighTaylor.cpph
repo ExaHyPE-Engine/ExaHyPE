@@ -1,0 +1,143 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/euler/Euler.h"
+
+namespace {
+  constexpr double Gravity         = 1.0;
+  constexpr double LightDensity    = 1.0;
+  constexpr double HeavyDensity    = 2.0;
+  constexpr double InterfaceHeight = 1.0;
+} // namespace
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::euler::RayleighTaylor::maxEigenvalue(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::euler::getMaxEigenvalue<Shortcuts>(Q, normal, parameters.gamma);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::RayleighTaylor::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::euler::computeFlux<Shortcuts>(Q, normal, parameters.gamma, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::RayleighTaylor::sourceTerm(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  ComputePrecision* const NOALIAS                               S,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    S[unknown] = 0.0;
+  }
+  S[Shortcuts::rhoU + 1] = -Gravity * Q[Shortcuts::rho];
+  S[Shortcuts::rhoE]     = -Gravity * Q[Shortcuts::rhoU + 1];
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::euler::RayleighTaylor::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::euler::getRefinementCommand<Shortcuts>(
+    Q,
+    getNodesInUnitInterval(),
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.gamma,
+    parameters.detailTolerance
+  );
+}
+
+INLINE_METHOD void
+examples::euler::RayleighTaylor::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  constexpr double InterfacePressure = 5.0;
+  double           shape             = std::cos(2.0 * std::numbers::pi * x[0]);
+  if constexpr (DIMENSIONS == 3) {
+    shape *= std::cos(2.0 * std::numbers::pi * x[2]);
+  }
+  const double heightAboveInterface = x[1] - InterfaceHeight;
+  const double density              = x[1] < InterfaceHeight + 0.06 * shape ? LightDensity : HeavyDensity;
+  const double layerDensity         = x[1] < InterfaceHeight ? LightDensity : HeavyDensity;
+  const double pressure             = InterfacePressure - layerDensity * Gravity * heightAboveInterface;
+  const double relativeHeight       = heightAboveInterface / 2.0;
+  const double velocity = 0.03 * std::sqrt(2.0 * Gravity) * shape * std::exp(-100.0 * relativeHeight * relativeHeight);
+  Q[Shortcuts::rho]     = density;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::rhoU + d] = 0.0;
+  }
+  Q[Shortcuts::rhoU + 1] = density * velocity;
+  Q[Shortcuts::rhoE]     = pressure / (parameters.gamma - 1.0) + 0.5 * density * velocity * velocity;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::RayleighTaylor::boundaryConditions(
+  const ComputePrecision* const NOALIAS                         Qinside,
+  ComputePrecision* const NOALIAS                               Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const int                                                     normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  examples::euler::reflectAtWall<Shortcuts>(Qinside, Qoutside, normal);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+examples::euler::RayleighTaylor::isPhysicallyAdmissible(
+  const StoragePrecision* const NOALIAS                         Q,
+  const int                                                     numberOfStates,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  if (not examples::euler::isPhysicallyAdmissible<Shortcuts>(Q, numberOfStates, NumberOfData, parameters.gamma)) {
+    return false;
+  }
+  double minimumDensity = Q[Shortcuts::rho];
+  double maximumDensity = Q[Shortcuts::rho];
+  for (int state = 1; state < numberOfStates; state++) {
+    const double density = Q[static_cast<std::ptrdiff_t>(state) * NumberOfData + Shortcuts::rho];
+    minimumDensity       = std::min(minimumDensity, density);
+    maximumDensity       = std::max(maximumDensity, density);
+  }
+  constexpr double ContactDensity = 0.5 * (LightDensity + HeavyDensity);
+  const bool       crossesContact = minimumDensity < ContactDensity and maximumDensity > ContactDensity;
+  return not(crossesContact and maximumDensity - minimumDensity > 0.25 * (HeavyDensity - LightDensity));
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::RayleighTaylor::mapDmpObservables(
+  StoragePrecision* const NOALIAS       observables,
+  const StoragePrecision* const NOALIAS Q,
+  const RuntimeParameters&              parameters
+) {
+  examples::euler::mapDmpObservables<Shortcuts>(observables, Q, parameters.gamma);
+}

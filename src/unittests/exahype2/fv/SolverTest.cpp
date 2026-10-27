@@ -399,6 +399,20 @@ namespace {
   }
 } // namespace
 
+UNIT_TEST("The nodes in the unit interval are the centres of the volumes of a patch") {
+  GIVEN("A solver with two volumes per axis") {
+    WHEN("The solver returns its nodes in the unit interval") {
+      constexpr auto Nodes = LinearSolver::getNodesInUnitInterval();
+
+      THEN("The nodes lie at a quarter and at three quarters") {
+        VALIDATE_EQUALS(Nodes.size(), static_cast<std::size_t>(PatchSize));
+        VALIDATE_NUMERICAL_EQUALS(Nodes[0], 0.25);
+        VALIDATE_NUMERICAL_EQUALS(Nodes[1], 0.75);
+      }
+    }
+  }
+}
+
 UNIT_TEST("The initialisation writes the initial condition into every volume") {
   GIVEN("A solver allocated on a regular grid over every rank") {
     const auto&  cellConnectivity = buildGrid();

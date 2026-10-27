@@ -21,22 +21,23 @@ follows:
     extends. GCC runs on the Hilbert curve. LLVM, Intel, NVIDIA, AMD and every GPU job run on the Peano curve.
 \li LLVM and GCC set `SANITIZER` to `address+undefined`. Their `Asserts` pipelines then build with AddressSanitizer and
     UndefinedBehaviorSanitizer.
-\li The child pipeline includes the templates in `templates.yml` and the jobs of the stages `Build`, `Test` and `Application` in
-    `build.yml`, `test.yml` and `application.yml`.
-\li The runners run without a GPU. `.GPU` sets `RUN_UNIT_TESTS` and `RUN_SIMULATIONS` to `false`. A GPU child pipeline only
-    builds the libraries, the unit tests, the tests and the applications for `sm_75`.
-\li A GPU child pipeline skips the API test, the Fortran coupling and the tutorials. Their PDE terms run on the host only. A GPU
+\li The child pipeline includes the templates in `templates.yml` and the jobs of the stages `Build`, `Test`, `Example`,
+    `Tutorial` and `Application` in `build.yml`, `test.yml`, `example.yml`, `tutorial.yml` and `application.yml`.
+\li The runners run without a GPU. `.GPU` sets `RUN_UNIT_TESTS` and `RUN_SIMULATIONS` to `false`. A GPU child pipeline builds
+    the libraries, the unit tests, the examples and the applications for `sm_75`. It skips their runs and the tests.
+\li A GPU child pipeline skips the API test, the Fortran example and the tutorials. Their PDE terms run on the host only. A GPU
     build rejects such terms. The CPU child pipelines build them with the same compilers.
-\li With both variables set to `true` in `.GPU`, a GPU child pipeline runs everything that a CPU child pipeline runs.
+\li A GPU child pipeline runs everything that a CPU child pipeline runs once `.GPU` sets both variables to `true`.
 \li Every job runs its commands in an apptainer image of `APPTAINER_IMAGEDIR`. Every runner then builds with the same software.
 \li The job `Build and Unit Tests` of a child pipeline compiles the libraries and the unit tests of its build mode through
-    ccache and runs these unit tests. The GitLab cache of the runner keeps the ccache objects between pipelines, one cache per
-    child pipeline.
-\li The tests, tutorials and applications run in the build mode of their child pipeline.
-\li Every simulation of a test or an application runs `NUMBER_OF_TIME_STEPS` time steps, writes `NUMBER_OF_SNAPSHOTS`
+    ccache and runs these unit tests. The GitLab cache of the runner keeps the ccache objects of every child pipeline between
+    pipelines.
+\li The tests, examples, tutorials and applications run in the build mode of their child pipeline.
+\li Every simulation of an example or an application runs `NUMBER_OF_TIME_STEPS` time steps, writes `NUMBER_OF_SNAPSHOTS`
     snapshots and uses the grid levels from `MIN_GRID_LEVELS` to `MAX_GRID_LEVELS`. `templates.yml` sets these values for the
     whole pipeline and the grid levels once per curve. `pipeline.yml` selects the grid levels of the curve of its child
-    pipeline.
+    pipeline. A test script sets the time steps, the snapshots and the grid levels of its own runs. An example job runs every
+    script in each dimension of its matrix entry.
 \li A job clones the Git LFS files as pointers. An application job pulls the files of its scenario with `git lfs pull`.
 \li LRZ GitLab limits the unauthenticated requests per IP address. All runners send their requests from one address. GitLab
     counts a fetch with the CI job token as unauthenticated. The runners fetch the sources with a personal access token (see
@@ -45,7 +46,8 @@ follows:
 ## How do I run the pipeline?
 
 Every child pipeline builds the libraries and the unit tests. A CPU child pipeline also runs the unit tests. The jobs that
-extend `.RunOnAnyBranch` run on every branch whose name starts with `muc/`. The jobs that extend `.RunOnlyOnMainBranch` run on `muc/exahype` and in merge requests.
+extend `.RunOnAnyBranch` run on every branch whose name starts with `muc/`. The jobs that extend `.RunOnlyOnMainBranch` run
+on `muc/exahype` and in merge requests.
 
 `gitlab-runner` runs as Slurm jobs on COSMA. One permanent runner runs on the node ga004 of the partition `cosma8-shm2`. When
 all job slots of the permanent runner are busy, it submits the on-demand runners on the DINE nodes of the partition
@@ -54,27 +56,35 @@ its build directories and the container images in one runner directory `<runner-
 mounts `/cosma/apps`. A developer pushes to a branch and checks on the
 [pipelines page](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines) that the code builds with every compiler toolchain.
 
-When the Slurm job of a runner ends during a pipeline, the jobs of this runner hang until they time out. The developer then
+The jobs of a runner hang until they time out when the Slurm job of the runner ends during a pipeline. The developer then
 restarts the pipeline on the pipelines page.
 
-## How do I write my own tests?
+## How do I add a test or an example?
 
-Copy a job of `.gitlab/test.yml` and adapt it:
+A script `tests/test_<property>.py` builds and runs every scenario of its list `SCENARIOS` and checks the property on their
+output. An entry of `SCENARIOS` stores the path of a script relative to the repository, its options and every value that is
+specific to the scenario. The argument `--scenario examples/euler/airfoil.py` restricts a run to the entries of this script.
+A new case is a new entry of `SCENARIOS`. Every pair of a test script and a scenario script is one job of the matrix of the
+job `Tests` in `.gitlab/test.yml`. A new test script or a new scenario script of a test gets an entry there. The job passes
+the build mode of its child pipeline to the script and `PARALLEL_LAUNCH` to its runs.
+
+Every scenario of an example has a script of its own. Every example folder has one job in `.gitlab/example.yml`. A new
+scenario gets an entry in the matrix of the job of its folder. The job builds every script in double and in single precision.
+A new example folder adds a job that extends `.Example`:
 
 ```
-My Test:
-  stage: Test
+My Example:
+  extends: .Example
+  variables:
+    folder: my-example
   parallel:
     matrix:
-      - scenario: [first-scenario, second-scenario]
-  script:
-    - generate tests/my-test "$scenario.py --build-mode $BUILD_MODE"
-    - launch tests/my-test "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-  extends: .RunOnAnyBranch
-  needs: [Build and Unit Tests]
+      - script: [first_scenario.py, second_scenario.py]
+        dimensions: [2, 3]
+        precision: [double, float]
 ```
 
-The job runs after the job `Build and Unit Tests` of its child pipeline and reads the libraries that this job installed. Every
+A job runs after the job `Build and Unit Tests` of its child pipeline and reads the libraries that this job installed. Every
 script line runs on the runner from the top level of the Peano checkout. The shell functions of `.gitlab/templates.yml` run a
 command inside the container of the job:
 
@@ -83,12 +93,9 @@ command inside the container of the job:
     `PYTHONPATH`.
 \li `launch directory "executable and arguments"` runs the executable in the directory through `PARALLEL_LAUNCH`.
     `PARALLEL_LAUNCH` starts `MPI_RANKS` ranks with `OMP_THREADS` threads each.
-\li `check_error_norms directory file tolerance` compares the error norms in the file with the tolerance.
 
-In a pipeline whose `RUN_SIMULATIONS` is `false`, `launch` and `check_error_norms` skip the run and the check. The job only
-builds the executable. A tutorial runs the cells of its notebook up to the build (`extract_build_cells.py`).
-`.RunOnAnyBranch` runs the job on every branch whose name starts with `muc/`. `.RunOnlyOnMainBranch` runs the job on
-`muc/exahype` and in merge requests.
+In a pipeline whose `RUN_SIMULATIONS` is `false`, `launch` skips the run. The job then builds the executable only. A tutorial
+runs the cells of its notebook up to the build (`extract_build_cells.py`).
 
 ## How do I add new runners to the project?
 

@@ -1,0 +1,234 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "exahype2/MultiresolutionDetail.h"
+#include "tarch/Assertions.h"
+#include "tarch/la/ScalarOperations.h"
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::euler::getMomentumSquared(const Precision* const NOALIAS Q) {
+  tarch::la::Vector<DIMENSIONS, double> momentum;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    momentum(d) = Q[Shortcuts::rhoU + d];
+  }
+  return tarch::la::norm2Squared(momentum);
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::euler::getPressure(const Precision* const NOALIAS Q, const double gamma) {
+  const double inverseDensity = 1 / std::max<double>(Q[Shortcuts::rho], 1.0e-12);
+  return (gamma - 1) * (Q[Shortcuts::rhoE] - 0.5 * inverseDensity * examples::euler::getMomentumSquared<Shortcuts>(Q));
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::euler::getMaxEigenvalue(const Precision* const NOALIAS Q, const int normal, const double gamma) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  const double inverseDensity = 1 / std::max<double>(Q[Shortcuts::rho], 1.0e-12);
+  const double pressure       = examples::euler::getPressure<Shortcuts>(Q, gamma);
+  const double speedOfSound   = std::sqrt(std::abs(gamma * pressure * inverseDensity));
+  const double normalVelocity = Q[Shortcuts::rhoU + normal] * inverseDensity;
+  return std::fmax(std::abs(normalVelocity - speedOfSound), std::abs(normalVelocity + speedOfSound));
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::computeFlux(
+  const Precision* const NOALIAS Q,
+  const int                      normal,
+  const double                   gamma,
+  Precision* const NOALIAS       F
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  const double inverseDensity = 1 / std::max<double>(Q[Shortcuts::rho], 1.0e-12);
+  const double pressure       = examples::euler::getPressure<Shortcuts>(Q, gamma);
+  const double normalMomentum = Q[Shortcuts::rhoU + normal];
+  // Every flux component rounds on its own. A sum of the fluxes of two states then adds the same
+  // rounded values for mirrored faces with and without fused multiply-adds.
+  F[Shortcuts::rho] = normalMomentum;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    F[Shortcuts::rhoU + d] = tarch::la::productRoundedOnce(normalMomentum * Q[Shortcuts::rhoU + d], inverseDensity);
+  }
+  F[Shortcuts::rhoE] = tarch::la::productRoundedOnce(normalMomentum * (Q[Shortcuts::rhoE] + pressure), inverseDensity);
+  F[Shortcuts::rhoU + normal] += pressure;
+}
+
+template <class Shortcuts, typename Precision, typename Nodes>
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::euler::getRefinementCommand(
+  const Precision* const NOALIAS Q,
+  const Nodes&                   nodes,
+  const int                      numberOfValues,
+  const double                   gamma,
+  const double                   detailTolerance
+) {
+  ASSERTION(detailTolerance > 0.0, detailTolerance);
+  return ::exahype2::refineOnDetail(
+    Q,
+    nodes,
+    numberOfValues,
+    detailTolerance,
+    ::exahype2::DefaultCoarsenSafetyFactor,
+    [](const Precision* const values) { return values[Shortcuts::rho]; },
+    [gamma](const Precision* const values) {
+      const double momentumSquared = examples::euler::getMomentumSquared<Shortcuts>(values);
+      const double density         = std::max<double>(values[Shortcuts::rho], 1.0e-12);
+      return std::max((gamma - 1.0) * (values[Shortcuts::rhoE] - 0.5 * momentumSquared / density), 1.0e-12);
+    }
+  );
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+examples::euler::isPhysicallyAdmissible(
+  const Precision* const NOALIAS Q,
+  const int                      numberOfStates,
+  const int                      numberOfValues,
+  const double                   gamma
+) {
+  ASSERTION(numberOfStates > 0, numberOfStates);
+  const Precision* values = Q;
+  for (int state = 0; state < numberOfStates; ++state, values += numberOfValues) {
+    for (int value = 0; value < numberOfValues; ++value) {
+      if (not std::isfinite(values[value])) {
+        return false;
+      }
+    }
+    const double density = values[Shortcuts::rho];
+    const double energy  = values[Shortcuts::rhoE];
+    // Densities near the vacuum threshold can cross it through last-bit
+    // differences. Keeping them on the finite-volume scheme prevents a
+    // one-sided status change from seeding asymmetry.
+    if (density <= 1.0e-12 or energy <= 1.0e-12) {
+      return false;
+    }
+    const double momentumSquared = examples::euler::getMomentumSquared<Shortcuts>(values);
+    const double pressure        = (gamma - 1.0) * (energy - 0.5 * momentumSquared / density);
+    if (not std::isfinite(pressure) or pressure <= 1.0e-12) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::mapDmpObservables(
+  Precision* const NOALIAS       observables,
+  const Precision* const NOALIAS Q,
+  const double                   gamma
+) {
+  constexpr double DensityFloor    = 1.0e-12;
+  const double     density         = Q[Shortcuts::rho];
+  const double     inverseDensity  = 1.0 / std::max(density, DensityFloor);
+  const double     momentumSquared = examples::euler::getMomentumSquared<Shortcuts>(Q);
+  observables[0]                   = density;
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    observables[1 + d] = Q[Shortcuts::rhoU + d] * inverseDensity;
+  }
+  observables[1 + DIMENSIONS] = (gamma - 1.0) * (Q[Shortcuts::rhoE] - 0.5 * inverseDensity * momentumSquared);
+}
+
+/**
+ * Writes the Gaussian density bell at the time t into Q. The bell starts at the origin and moves
+ * with unit velocity along every axis of the periodic domain [-0.5, 0.5] at constant pressure
+ * (Ioratti, Dumbser and Loubère, https://doi.org/10.1007/s10915-020-01209-w).
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::writeGaussianBell(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const double                                 gamma,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr double                      Pressure = 1.0;
+  tarch::la::Vector<DIMENSIONS, double> position;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    position[d] = (x[d] - t) + static_cast<int>(t + .5 - x[d]);
+  }
+  Q[Shortcuts::rho] = 0.02 * (1.0 + std::exp(-0.5 * tarch::la::norm2(position) * tarch::la::norm2(position) / 0.01));
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::rhoU + d] = Q[Shortcuts::rho];
+  }
+  Q[Shortcuts::rhoE] =
+    Pressure / (gamma - 1.0) + 0.5 * examples::euler::getMomentumSquared<Shortcuts>(Q) / Q[Shortcuts::rho];
+}
+
+/**
+ * Writes the isentropic vortex at the time t into Q. The vortex starts at the origin, rotates in
+ * the plane of the axes 0 and 1 and moves with unit velocity along the diagonal of the periodic
+ * domain [-5, 5] (Ioratti, Dumbser and Loubère, https://doi.org/10.1007/s10915-020-01209-w).
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::writeIsentropicVortex(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const double                                 gamma,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr double                      Epsilon     = 5.0;
+  constexpr double                      Pi          = std::numbers::pi;
+  constexpr double                      FarDensity  = 1.0;
+  constexpr double                      FarPressure = 1.0;
+  constexpr double                      FarVelocity = 1.0;
+  const double                          cappedTime  = std::fmod(t, 10.);
+  tarch::la::Vector<DIMENSIONS, double> position(x);
+  for (int d = 0; d < 2; d++) {
+    position[d] = (x[d] - FarVelocity * cappedTime) < -5.0 ? (x[d] - FarVelocity * cappedTime) + 10.
+                                                           : (x[d] - FarVelocity * cappedTime);
+  }
+  const tarch::la::Vector<2, double> planarPosition = {position[0], position[1]};
+  const double                       radius         = tarch::la::norm2(planarPosition);
+  const double velocityDisturbanceX = 0.5 * Epsilon / Pi * std::exp(0.5 * (1. - radius * radius)) * (-position[1]);
+  const double velocityDisturbanceY = 0.5 * Epsilon / Pi * std::exp(0.5 * (1. - radius * radius)) * (position[0]);
+  const double temperatureDisturbance =
+    -(gamma - 1.) * Epsilon * Epsilon / 8. / gamma / Pi / Pi * std::exp(1. - radius * radius);
+  const double densityDisturbance  = std::pow(1. + temperatureDisturbance, 1. / (gamma - 1.)) - 1.;
+  const double pressureDisturbance = std::pow(1. + temperatureDisturbance, gamma / (gamma - 1.)) - 1.;
+
+  Q[Shortcuts::rho]      = FarDensity + densityDisturbance;
+  Q[Shortcuts::rhoU + 0] = Q[Shortcuts::rho] * (FarVelocity + velocityDisturbanceX);
+  Q[Shortcuts::rhoU + 1] = Q[Shortcuts::rho] * (FarVelocity + velocityDisturbanceY);
+  for (int d = 2; d < DIMENSIONS; d++) {
+    Q[Shortcuts::rhoU + d] = 0.0;
+  }
+  Q[Shortcuts::rhoE] = (FarPressure + pressureDisturbance) / (gamma - 1)
+    + 0.5 * Q[Shortcuts::rho]
+      * ((FarVelocity + velocityDisturbanceX) * (FarVelocity + velocityDisturbanceX) + (FarVelocity + velocityDisturbanceY) * (FarVelocity + velocityDisturbanceY));
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD void
+examples::euler::writePointExplosion(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 gamma,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr double                            Radius = 0.15;
+  const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
+  Q[Shortcuts::rho] = 1.0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::rhoU + d] = 0.0;
+  }
+  const double pressure = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 5.0 : 1.0;
+  Q[Shortcuts::rhoE]    = pressure / (gamma - 1.0);
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::reflectAtWall(
+  const Precision* const NOALIAS Qinside,
+  Precision* const NOALIAS       Qoutside,
+  const int                      normal
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  Qoutside[Shortcuts::rho] = Qinside[Shortcuts::rho];
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Qoutside[Shortcuts::rhoU + d] = Qinside[Shortcuts::rhoU + d];
+  }
+  Qoutside[Shortcuts::rhoU + normal] = -Qinside[Shortcuts::rhoU + normal];
+  Qoutside[Shortcuts::rhoE]          = Qinside[Shortcuts::rhoE];
+}

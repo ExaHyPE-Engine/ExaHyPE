@@ -1,0 +1,115 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/navier-stokes/NavierStokes.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::CosineBubble::maxEigenvalue(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>&                  h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::navierstokes::getMaxEigenvalue<examples::navierstokes::CosineBubble>(Q, h, normal, parameters);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::CosineBubble::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  const ComputePrecision* const NOALIAS                         deltaQ[DIMENSIONS],
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::navierstokes::computeFlux<examples::navierstokes::CosineBubble>(Q, deltaQ, normal, parameters, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::navierstokes::CosineBubble::solveRiemannProblem(
+  const ComputePrecision* const NOALIAS                         QL,
+  const ComputePrecision* const NOALIAS                         QR,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>&                  h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  [[maybe_unused]] const bool                                   isBoundaryFace,
+  [[maybe_unused]] const int                                    faceIndex,
+  ComputePrecision* const NOALIAS                               FL,
+  ComputePrecision* const NOALIAS                               FR,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::navierstokes::computeRusanovFlux<examples::navierstokes::CosineBubble>(
+    QL,
+    QR,
+    h,
+    normal,
+    parameters,
+    FL,
+    FR
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::navierstokes::CosineBubble::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::navierstokes::getRefinementCommandOfBubbles<examples::navierstokes::CosineBubble>(Q, parameters);
+}
+
+INLINE_METHOD void
+examples::navierstokes::CosineBubble::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::navierstokes::writeAtmosphere<examples::navierstokes::CosineBubble>(
+    x,
+    examples::navierstokes::getCosineBubblePerturbation(x),
+    parameters,
+    Q
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::CosineBubble::boundaryConditions(
+  const ComputePrecision* const NOALIAS                         Qinside,
+  ComputePrecision* const NOALIAS                               Qoutside,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const int                                                     normal,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::navierstokes::writeWallState<examples::navierstokes::CosineBubble>(
+    Qinside,
+    x,
+    normal,
+    parameters,
+    Qoutside
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::CosineBubble::sourceTerm(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  ComputePrecision* const NOALIAS                               S,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::navierstokes::computeGravitySource<examples::navierstokes::CosineBubble>(Q, parameters, S);
+}

@@ -1,0 +1,68 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/advection/Advection.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::advection::PeriodicBump::maxEigenvalue(
+  [[maybe_unused]] const ComputePrecision* const NOALIAS        Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  return 1.0;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::advection::PeriodicBump::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  ComputePrecision* const NOALIAS                               F,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  examples::advection::computeDiagonalFlux<Shortcuts>(Q, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::advection::PeriodicBump::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::advection::getRefinementCommand<Shortcuts>(
+    Q,
+    getNodesInUnitInterval(),
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.detailTolerance
+  );
+}
+
+INLINE_METHOD void
+examples::advection::PeriodicBump::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::advection::writePeriodicBump<Shortcuts>(x, 0.0, parameters.bumpRadius, parameters.smoothBump, Q);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::advection::PeriodicBump::analyticalSolution(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  [[maybe_unused]] const double                dt,
+  [[maybe_unused]] const double* const         Q,
+  double* const                                solution,
+  const RuntimeParameters&                     parameters
+) {
+  examples::advection::writePeriodicBump<Shortcuts>(x, t, parameters.bumpRadius, parameters.smoothBump, solution);
+}

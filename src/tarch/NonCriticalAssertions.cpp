@@ -22,13 +22,11 @@ tarch::triggerNonCriticalAssertion(const std::string& requirement, const std::st
   if (not rankWhichHasSetNonCriticalAssertion
             .compare_exchange_strong(expected, tarch::mpi::Rank::getInstance().getRank())) {
     LOG_DEBUG(requirement);
-    LOG_DEBUG("The rank stops after an earlier non-critical assertion.");
     return;
   }
 
   LOG_ERROR(requirement);
   LOG_ERROR(values);
-  LOG_ERROR("The rank writes its output and shuts down.");
 }
 
 bool

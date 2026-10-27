@@ -144,6 +144,12 @@ namespace {
       dropTable(InverseQuadratureWeightsInCell);
     }
 
+    [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD constexpr std::array<Precision, NodesPerAxis>
+    getQuadraturePoints1D() {
+      constexpr double UpperPoint = 0.78867513459481288225;
+      return {Precision{1} - static_cast<Precision>(UpperPoint), static_cast<Precision>(UpperPoint)};
+    }
+
     inline static Precision* QuadraturePoints1D             = nullptr;
     inline static Precision* QuadratureWeights1D            = nullptr;
     inline static Precision* InverseQuadratureWeights1D     = nullptr;
@@ -1004,6 +1010,20 @@ namespace {
     return {faces, mismatches};
   }
 } // namespace
+
+UNIT_TEST("The nodes in the unit interval are the quadrature points of the basis") {
+  GIVEN("A solver of order one") {
+    WHEN("The solver returns its nodes in the unit interval") {
+      const auto nodes = FixedRuleADERDGSolver::getNodesInUnitInterval();
+
+      THEN("The nodes are the two Gauss-Legendre points") {
+        VALIDATE_EQUALS(nodes.size(), static_cast<std::size_t>(NodesPerAxis));
+        VALIDATE_NUMERICAL_EQUALS(nodes[0], QuadratureNodes[0]);
+        VALIDATE_NUMERICAL_EQUALS(nodes[1], QuadratureNodes[1]);
+      }
+    }
+  }
+}
 
 UNIT_TEST("The initialisation writes the initial condition into every node") {
   GIVEN("A fixed-rule solver on a regular grid and limits whose largest admissible patch is one level below a cell") {

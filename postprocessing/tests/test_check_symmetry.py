@@ -40,6 +40,12 @@ class CheckSymmetryTest(unittest.TestCase):
     def check(self, snapshot, **kinds):
         return check_snapshot(snapshot, CENTRE, "x", 0.0, 0.0, ["Subdomain"], **kinds)
 
+    def test_default_skip_fields_are_the_decomposition_fields_and_the_particle_number(
+        self,
+    ):
+        arguments = build_parser().parse_args(["solution"])
+        self.assertEqual(arguments.skip_fields, ["Subdomain", "CurveIndex", "Number"])
+
     def test_field_kind_defaults(self):
         self.assertEqual(field_kind("rho", 1, [], [], []), "scalar")
         self.assertEqual(field_kind("u", 2, [], [], []), "vector")

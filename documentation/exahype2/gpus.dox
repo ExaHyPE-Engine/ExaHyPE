@@ -8,25 +8,25 @@
 @image html documentation/exahype2/gpus.png
 
 With a GPU backend, every solver stores its cell and face data in pools in
-device memory, and every phase of a time step runs as kernels over the cell,
-face and level-jump spans of the cell connectivity. The host reads data back for file
+device memory. Every phase of a time step runs as kernels over the cell, face
+and level-jump spans of the cell connectivity. The host reads data back for file
 output, for initial conditions that read host objects, for the refinement votes
 of a step that asks for a regrid, and for the reduced error norms.
 
 To run a solver on the GPU:
 
 1. @ref page_installation_home "Configure" Peano with a GPU backend.
-2. Provide PDE terms that run on the device, as described below.
-3. Run some @ref page_exahype_runtime_analysis "performance analysis".
+2. Provide PDE terms that run on the device.
+3. Run a @ref page_exahype_runtime_analysis "performance analysis".
 4. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
 
 
 ## Using ExaHyPE with GPU support
 
-The setup instructions for the GPU backends are collected on
-@ref page_compiler_specific_settings_home "the compiler-specific settings page".
-This page describes how a time step runs on the GPU, which GPU a rank uses, and
-what a PDE term needs to run on the device.
+@ref page_compiler_specific_settings_home "The compiler-specific settings page"
+describes the setup of every GPU backend. This page describes the kernels of a
+time step, the GPU of each rank and the requirements of a PDE term on the
+device.
 
 
 ## How a time step runs on the GPU
@@ -39,7 +39,7 @@ device memory. MPI sends from and receives into device memory. A run with more
 than one rank needs a GPU-aware MPI library. The configuration summary reports
 whether the library is GPU-aware.
 
-A GPU pays off when a rank owns enough cells to fill the device. Every dispatch
+A rank runs its GPU at full load only if it owns enough cells to fill the device. Every dispatch
 costs a kernel launch and a synchronisation. A rank with few cells leaves the
 GPU idle for most of a time step. The MPI decomposition rows of the grid report
 give the cells per rank.
@@ -50,10 +50,9 @@ give the cells per rank.
 tarch::init() gives every MPI rank one GPU. The ranks of a node take the GPUs of
 the node in turn. The rank with number r on its node takes GPU r modulo the
 number of GPUs. Every allocation and every kernel of the rank uses that GPU. A
-rank that sees one GPU only takes that GPU, for example through
-`CUDA_VISIBLE_DEVICES` or a batch system that binds one GPU per task. Two ranks
-on one GPU both store their data in its memory. The GPU interleaves their
-kernels.
+rank that sees one GPU only takes that GPU. `CUDA_VISIBLE_DEVICES` and a batch
+system that binds one GPU per task restrict a rank to one GPU. Two ranks on one
+GPU both store their data in its memory. The GPU interleaves their kernels.
 
 
 ## Provide the PDE terms without state
@@ -64,16 +63,18 @@ object.
 
 A runtime parameter stores a value that changes from run to run.
 `project.add_runtime_parameter(name, type, default)` registers it. The
-executable reads it from `config.json` and the command line. Every term receives
-the generated struct `RuntimeParameters` as its last argument `parameters` and
-reads the value as `parameters.<name>`. The struct also stores the grid
-parameters `maxAdmissiblePatchSize`, `minAdmissiblePatchSize`, `gridLevels` and
+executable reads it from the file `<project_name>.json` in the working directory
+and from the command line. The command-line argument `--configFile` selects
+another JSON file. Every term receives the generated struct `RuntimeParameters`
+as its last argument `parameters`. A term reads the value as
+`parameters.<name>`. The struct also stores the grid parameters
+`maxAdmissiblePatchSize`, `minAdmissiblePatchSize`, `gridLevels` and
 `maxGridLevels`. Code that `on_start_simulation()` or
 `on_start_grid_initialisation()` inserts may overwrite a value of `parameters`.
 Every later term reads the new value.
 
 The Python API generates these terms. `set_pde_terms()` of most ExaHyPE solvers
-takes the C++ body of a term. The generated solver class emits that body as a
+takes the C++ body of a term. The generated solver class writes that body into a
 `static` method with the annotation `GPU_CALLABLE_METHOD`. The host and the
 device then call the same method. The application defines a term given as
 `True`. An application that registers `<Name>.cpph` with
@@ -82,25 +83,26 @@ that file. The generated `<Name>.h` then declares every device term with
 `INLINE_METHOD GPU_CALLABLE_METHOD`. A term that `<Name>.cpp` defines runs on the
 host only. `src/tarch/accelerator/CompileTarget.h` defines the macros:
 
-- `GPU_CALLABLE_METHOD` expands to the appropriate per-backend annotation
-  (`__host__ __device__` for CUDA/HIP, `KOKKOS_FUNCTION` for Kokkos,
-  `ACPP_UNIVERSAL_TARGET` for AdaptiveCpp and an empty expansion for DPC++).
+- `GPU_CALLABLE_METHOD` expands to `__host__ __device__` with CUDA and HIP, to
+  `KOKKOS_FUNCTION` with Kokkos, to `ACPP_UNIVERSAL_TARGET` with AdaptiveCpp and
+  to an empty expansion with DPC++.
 - `TARGET_DECLARE` and `TARGET_DECLARE_END` wrap a block of free functions in an
   `omp declare target` region of the OpenMP target (OMPT) backend. Every other
   backend defines them as empty macros.
 
 An `ASSERTION` in a term on the device aborts the run of a build with
-assertions. Each lowering into Peano writes a README.md file. It lists the
-papers that have an influence on the chosen solver configuration.
+assertions. The generator writes a file `README.md` into every project. It lists
+the papers to cite for the chosen solvers.
 
 
 ## Compile, run and check
 
 The build system is CMake. Configure Peano and the ExaHyPE libraries with a GPU
-backend. The relevant flags are
-`PEANO_WITH_GPU_BACKEND` (one of `none`, `native`, `kokkos`, `acpp`, `ompt`)
-and `PEANO_WITH_GPU_ARCH` (e.g. an NVIDIA `sm_*`, an AMD `gfx*`, or `spir64`
-for Intel). A typical configuration reads:
+backend. The option `PEANO_WITH_GPU_BACKEND` selects one of the backends `none`,
+`native`, `kokkos`, `acpp` and `ompt`. The option `PEANO_WITH_GPU_ARCH` selects
+the device architecture, for example `sm_80` for NVIDIA, `gfx90a` for AMD or
+`spir64` for Intel. The following commands configure and build Peano for an
+NVIDIA GPU of compute capability 8.0:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 mkdir build && cd build
@@ -110,16 +112,14 @@ cmake .. -DCMAKE_BUILD_TYPE=Release \
 make -j
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Pick the backend that matches your toolchain as described on the
-@ref page_compiler_specific_settings_home "compiler-specific settings page".
-Once Peano is rebuilt, the generated solver is GPU ready: Rerun the Python
-script to lower your project, then compile and run.
+@ref page_compiler_specific_settings_home "The compiler-specific settings page"
+lists the backend of each toolchain. Rerun the Python script of the application
+after the rebuild of Peano. The script generates the code and builds the
+executable for the GPU.
 
 
 ## Further reading
 
-- Switch to a toolchain for your particular GPU backend. Information on this can
-  be found on the @ref page_compiler_specific_settings_home "compiler-specific settings page".
 - Consult the @ref page_exahype_performance_optimisation "performance optimisation" discussion.
 - @ref page_tarch_tasking "The tasking layer in the technical architecture".
 

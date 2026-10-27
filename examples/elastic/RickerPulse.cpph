@@ -1,0 +1,79 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "Constants.h"
+
+#include "examples/elastic/Elastic.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::elastic::RickerPulse::maxEigenvalue(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  return examples::elastic::getMaxEigenvalue<Shortcuts>(Q);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::elastic::RickerPulse::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  examples::elastic::computeFlux<Shortcuts>(Q, normal, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::elastic::RickerPulse::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::elastic::getRefinementCommand<Shortcuts>(
+    Q,
+    getNodesInUnitInterval(),
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.detailTolerance
+  );
+}
+
+INLINE_METHOD void
+examples::elastic::RickerPulse::initialCondition(
+  StoragePrecision* const NOALIAS              Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  examples::elastic::writeRickerPulse<Shortcuts>(x, h, examples::elastic::DomainSize[0], NumberOfUnknowns, Q);
+  examples::elastic::writeMedium<Shortcuts>(Q);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::elastic::RickerPulse::analyticalSolution(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  [[maybe_unused]] const double                dt,
+  const double* const                          Q,
+  double* const                                solution,
+  const RuntimeParameters&                     parameters
+) {
+  examples::elastic::writeRickerPulseSolution<Shortcuts>(
+    x,
+    t,
+    Q,
+    examples::elastic::DomainSize[0],
+    parameters.maxGridLevels,
+    NumberOfUnknowns,
+    solution
+  );
+}

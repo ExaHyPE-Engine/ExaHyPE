@@ -1,0 +1,41 @@
+.Tutorial:
+  stage: Tutorial
+  script:
+    # Without RUN_SIMULATIONS, the job runs the cells of the notebook up to its build.
+    - if [ "$RUN_SIMULATIONS" = "true" ]; then tutorial_script=$notebook; else tutorial_script=build.ipy; in_image "python3 .gitlab/extract_build_cells.py tutorials/$tutorial/$notebook tutorials/$tutorial/$tutorial_script"; fi
+    - in_image "cd tutorials/$tutorial && PYTHONPATH=$CI_PROJECT_DIR/api ipython $tutorial_script -- --build-mode $BUILD_MODE"
+  rules:
+    - if: '$GPU_BACKEND != "none"'
+      when: never
+    - !reference [".RunOnlyOnMainBranch", "rules"]
+  needs: [Build and Unit Tests]
+
+01 Acoustic:
+  extends: .Tutorial
+  variables:
+    tutorial: 01_acoustic
+    notebook: AcousticWaves.ipynb
+
+02 Shallow Water:
+  extends: .Tutorial
+  variables:
+    tutorial: 02_shallow-water
+    notebook: ShallowWater.ipynb
+
+03 Euler:
+  extends: .Tutorial
+  variables:
+    tutorial: 03_euler
+    notebook: Euler.ipynb
+
+04 Limiting:
+  extends: .Tutorial
+  variables:
+    tutorial: 04_limiting
+    notebook: EulerShock.ipynb
+
+05 Elastic:
+  extends: .Tutorial
+  variables:
+    tutorial: 05_elastic
+    notebook: ElasticWaves.ipynb

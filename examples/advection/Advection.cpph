@@ -1,0 +1,107 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "exahype2/MultiresolutionDetail.h"
+#include "tarch/Assertions.h"
+#include "tarch/la/ScalarOperations.h"
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::advection::computeLinearFlux(const Precision* const NOALIAS Q, const int normal, Precision* const NOALIAS F) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  for (int d = 0; d < DIMENSIONS; d++) {
+    F[Shortcuts::q + d] = 0.0;
+  }
+  F[Shortcuts::q + normal] = 1.0 * Q[Shortcuts::q + normal];
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::advection::computeDiagonalFlux(const Precision* const NOALIAS Q, Precision* const NOALIAS F) {
+  F[Shortcuts::q] = Q[Shortcuts::q];
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::advection::computeRadialFlux(
+  const Precision* const NOALIAS               Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const int                                    normal,
+  Precision* const NOALIAS                     F
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  const double radius = tarch::la::norm2(x);
+  F[Shortcuts::q]     = (radius > 0.0 ? x(normal) / radius : 0.0) * Q[Shortcuts::q];
+}
+
+template <class Shortcuts, typename Precision, typename Nodes>
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::advection::getRefinementCommand(
+  const Precision* const NOALIAS Q,
+  const Nodes&                   nodes,
+  const int                      numberOfValues,
+  const double                   detailTolerance
+) {
+  ASSERTION(detailTolerance > 0.0, detailTolerance);
+  return ::exahype2::refineOnDetail(
+    Q,
+    nodes,
+    numberOfValues,
+    detailTolerance,
+    ::exahype2::DefaultCoarsenSafetyFactor,
+    [](const Precision* const values) { return 1.0 + values[Shortcuts::q]; }
+  );
+}
+
+TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::advection::getBump(
+  const tarch::la::Vector<DIMENSIONS, double>& offsetFromCentre,
+  const double                                 radius,
+  const bool                                   smooth
+) {
+  ASSERTION(radius > 0.0, radius);
+  if (not smooth) {
+    return tarch::la::smallerEquals(tarch::la::norm2(offsetFromCentre), radius) ? 1.0 : 0.0;
+  }
+  const double scaledRadiusSquared = tarch::la::norm2Squared(offsetFromCentre) / (radius * radius);
+  double       result              = 0.0;
+  if (scaledRadiusSquared < 1.0) {
+    const double exponent              = 1.0 - 1.0 / (1.0 - scaledRadiusSquared);
+    const double minimumNormalExponent = std::log(std::numeric_limits<double>::min());
+    if (exponent >= minimumNormalExponent) {
+      result = std::exp(exponent);
+    }
+  }
+  return result;
+}
+TARGET_DECLARE_END
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::advection::writePeriodicBump(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const double                                 radius,
+  const bool                                   smooth,
+  Precision* const NOALIAS                     Q
+) {
+  ASSERTION(t >= 0.0, t);
+  tarch::la::Vector<DIMENSIONS, double> offsetFromCentre;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    const double travelled = x[d] - t;
+    offsetFromCentre[d]    = travelled - std::floor(travelled) - 0.5;
+  }
+  Q[Shortcuts::q] = examples::advection::getBump(offsetFromCentre, radius, smooth);
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::advection::writeLinear(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  Precision* const NOALIAS                     Q
+) {
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::q + d] = x[d] - t;
+  }
+}

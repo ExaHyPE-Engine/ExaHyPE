@@ -1,0 +1,95 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/euler/Euler.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::euler::PointExplosion::maxEigenvalue(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::euler::getMaxEigenvalue<Shortcuts>(Q, normal, parameters.gamma);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::PointExplosion::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::euler::computeFlux<Shortcuts>(Q, normal, parameters.gamma, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::euler::PointExplosion::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::euler::getRefinementCommand<Shortcuts>(
+    Q,
+    getNodesInUnitInterval(),
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.gamma,
+    parameters.detailTolerance
+  );
+}
+
+INLINE_METHOD void
+examples::euler::PointExplosion::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::euler::writePointExplosion<Shortcuts>(x, parameters.gamma, Q);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::PointExplosion::boundaryConditions(
+  const ComputePrecision* const NOALIAS                         Qinside,
+  ComputePrecision* const NOALIAS                               Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const int                                                     normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  examples::euler::reflectAtWall<Shortcuts>(Qinside, Qoutside, normal);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+examples::euler::PointExplosion::isPhysicallyAdmissible(
+  const StoragePrecision* const NOALIAS                         Q,
+  const int                                                     numberOfStates,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::euler::isPhysicallyAdmissible<Shortcuts>(
+    Q,
+    numberOfStates,
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.gamma
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::PointExplosion::mapDmpObservables(
+  StoragePrecision* const NOALIAS       observables,
+  const StoragePrecision* const NOALIAS Q,
+  const RuntimeParameters&              parameters
+) {
+  examples::euler::mapDmpObservables<Shortcuts>(observables, Q, parameters.gamma);
+}

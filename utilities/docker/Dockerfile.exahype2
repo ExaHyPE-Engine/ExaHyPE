@@ -4,10 +4,11 @@ WORKDIR /opt/spack-environment
 
 COPY utilities/spack/repo.yaml .
 COPY utilities/spack/packages/exahype2 packages/exahype2
+COPY examples/ /exahype2/examples
 COPY tests/ /exahype2/tests
+COPY postprocessing/ /exahype2/postprocessing
 COPY tutorials/ /exahype2/tutorials
 COPY applications/ /exahype2/applications
-COPY benchmarks/ /exahype2/benchmarks
 
 RUN . /opt/spack/share/spack/setup-env.sh && \
     spack config add config:install_tree:root:/opt/software && \

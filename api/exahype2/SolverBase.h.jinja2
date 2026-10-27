@@ -36,6 +36,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} :
 public:
   using SolverFamily      = {{SOLVER_FAMILY_CLASS}};
   using RuntimeParameters = ::{{NAMESPACE | join("::")}}::RuntimeParameters;
+  using StoragePrecision  = {{STORAGE_PRECISION}};
+  using ComputePrecision  = {{COMPUTE_PRECISION}};
 {%- if USE_VARIABLE_SHORTCUTS %}
 
   /**

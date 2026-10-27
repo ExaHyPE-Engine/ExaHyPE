@@ -235,9 +235,9 @@ class Project:
         self._constants[name] = {"name": name, "value": str(value), "type": cpp_type}
 
     def add_runtime_parameter(self, name, parameter_type, default_value):
-        """Registers a parameter that the executable reads from config.json and the command line.
-        Every PDE term reads it as ``parameters.<name>`` from its last argument. ``startSimulation``
-        may overwrite it."""
+        """Registers a parameter that the executable reads from ``<ProjectName>.json`` and the
+        command line. Every PDE term reads it as ``parameters.<name>`` from its last argument.
+        ``startSimulation`` may overwrite it."""
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
             raise ValueError(
                 f"The runtime parameter name '{name}' must be a valid C++ identifier."

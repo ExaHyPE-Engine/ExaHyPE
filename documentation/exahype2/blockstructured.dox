@@ -23,7 +23,10 @@ Runge-Kutta DG and the ADER-DG solvers assemble their kernels from them.
   operators of the DG solver families from the quadrature nodes.
 \li `exahype2/MultiresolutionDetail.h` Computes the relative representation
   error of an affine fit over one patch. The function exahype2::refineOnDetail()
-  maps this error onto a refinement command.
+  maps this error onto a refinement command. The static function
+  getNodesInUnitInterval() of a solver class returns the node positions of one
+  cell along an axis. A finite-volume solver returns the volume centres. A DG
+  solver returns the quadrature points.
 \li `exahype2/Curvi.h` Maps a Cartesian domain onto a curvilinear domain with
   the same cell connectivity and back. The curvilinear cells need not be
   equidistant.

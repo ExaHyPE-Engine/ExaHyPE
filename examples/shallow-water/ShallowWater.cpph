@@ -1,0 +1,220 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "exahype2/MultiresolutionDetail.h"
+#include "tarch/Assertions.h"
+#include "tarch/la/ScalarOperations.h"
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::shallowwater::getMaxEigenvalue(
+  const Precision* const NOALIAS Q,
+  const int                      normal,
+  const double                   gravity,
+  const double                   dryTolerance
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  if (Q[Shortcuts::h] < dryTolerance) {
+    return 0.0;
+  }
+  const auto u = Q[Shortcuts::hv + normal] / Q[Shortcuts::h];
+  const auto c = std::sqrt(gravity * Q[Shortcuts::h]);
+  return std::fmax(std::abs(u + c), std::abs(u - c));
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::computeFlux(
+  const Precision* const NOALIAS Q,
+  const int                      normal,
+  const double                   dryTolerance,
+  Precision* const NOALIAS       F
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  if (Q[Shortcuts::h] < dryTolerance) {
+    F[Shortcuts::h]      = 0.0;
+    F[Shortcuts::hv + 0] = 0.0;
+    F[Shortcuts::hv + 1] = 0.0;
+  } else {
+    const auto inverseHeight = 1 / Q[Shortcuts::h];
+    F[Shortcuts::h]          = Q[Shortcuts::hv + normal];
+    F[Shortcuts::hv + 0]     = Q[Shortcuts::hv + normal] * Q[Shortcuts::hv + 0] * inverseHeight;
+    F[Shortcuts::hv + 1]     = Q[Shortcuts::hv + normal] * Q[Shortcuts::hv + 1] * inverseHeight;
+  }
+  F[Shortcuts::b] = 0.0;
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::computeNonconservativeProduct(
+  const Precision* const NOALIAS Q,
+  const Precision* const NOALIAS deltaQ,
+  const int                      normal,
+  const double                   gravity,
+  Precision* const NOALIAS       BTimesDeltaQ
+) {
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  BTimesDeltaQ[Shortcuts::h]               = 0.0;
+  BTimesDeltaQ[Shortcuts::hv + normal]     = gravity * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
+  BTimesDeltaQ[Shortcuts::hv + 1 - normal] = 0.0;
+  BTimesDeltaQ[Shortcuts::b]               = 0.0;
+}
+
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::shallowwater::computeWellBalancedFlux(
+  const Precision* const NOALIAS QL,
+  const Precision* const NOALIAS QR,
+  const int                      normal,
+  const double                   gravity,
+  const double                   dryTolerance,
+  Precision* const NOALIAS       FL,
+  Precision* const NOALIAS       FR
+) {
+  using Shortcuts                = typename Solver::Shortcuts;
+  constexpr int NumberOfData     = Solver::NumberOfUnknowns + Solver::NumberOfAuxiliaryVariables;
+  constexpr int NumberOfUnknowns = Solver::NumberOfUnknowns;
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(gravity > 0.0, gravity);
+  ASSERTION(dryTolerance >= 0.0, dryTolerance);
+  int nodesPerFace = 1;
+  if constexpr (requires { Solver::DGOrder; }) {
+    nodesPerFace = Solver::NodesPerFace;
+  } else {
+    examples::shallowwater::computeFlux<Shortcuts>(QL, normal, dryTolerance, FL);
+    examples::shallowwater::computeFlux<Shortcuts>(QR, normal, dryTolerance, FR);
+  }
+  double smax = 0;
+  for (int node = 0; node < nodesPerFace; node++) {
+    const std::ptrdiff_t offset = static_cast<std::ptrdiff_t>(node) * NumberOfData;
+    smax =
+      std::max(smax, examples::shallowwater::getMaxEigenvalue<Shortcuts>(QL + offset, normal, gravity, dryTolerance));
+    smax =
+      std::max(smax, examples::shallowwater::getMaxEigenvalue<Shortcuts>(QR + offset, normal, gravity, dryTolerance));
+  }
+  ASSERTION(std::isfinite(smax), smax);
+  for (int node = 0; node < nodesPerFace; node++) {
+    const Precision* const stateLeft    = QL + static_cast<std::ptrdiff_t>(node) * NumberOfData;
+    const Precision* const stateRight   = QR + static_cast<std::ptrdiff_t>(node) * NumberOfData;
+    Precision* const       fluxLeft     = FL + static_cast<std::ptrdiff_t>(node) * NumberOfUnknowns;
+    Precision* const       fluxRight    = FR + static_cast<std::ptrdiff_t>(node) * NumberOfUnknowns;
+    const auto             surfaceLeft  = stateLeft[Shortcuts::h] + stateLeft[Shortcuts::b];
+    const auto             surfaceRight = stateRight[Shortcuts::h] + stateRight[Shortcuts::b];
+    fluxLeft[Shortcuts::h] =
+      0.5 * (fluxLeft[Shortcuts::h] + fluxRight[Shortcuts::h] + smax * (surfaceLeft - surfaceRight));
+    fluxLeft[Shortcuts::hv + 0] = 0.5
+      * (fluxLeft[Shortcuts::hv + 0] + fluxRight[Shortcuts::hv + 0]
+         + smax * (stateLeft[Shortcuts::hv + 0] - stateRight[Shortcuts::hv + 0]));
+    fluxLeft[Shortcuts::hv + 1] = 0.5
+      * (fluxLeft[Shortcuts::hv + 1] + fluxRight[Shortcuts::hv + 1]
+         + smax * (stateLeft[Shortcuts::hv + 1] - stateRight[Shortcuts::hv + 1]));
+    fluxLeft[Shortcuts::b] = 0;
+
+    fluxRight[Shortcuts::h]      = fluxLeft[Shortcuts::h];
+    fluxRight[Shortcuts::hv + 0] = fluxLeft[Shortcuts::hv + 0];
+    fluxRight[Shortcuts::hv + 1] = fluxLeft[Shortcuts::hv + 1];
+    fluxRight[Shortcuts::b]      = 0;
+
+    const auto nonconservativeFlux =
+      0.5 * gravity * 0.5 * (stateLeft[Shortcuts::h] + stateRight[Shortcuts::h]) * (surfaceRight - surfaceLeft);
+    fluxLeft[Shortcuts::hv + normal] += nonconservativeFlux;
+    fluxRight[Shortcuts::hv + normal] -= nonconservativeFlux;
+  }
+  return smax;
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+examples::shallowwater::isPhysicallyAdmissible(
+  const Precision* const NOALIAS Q,
+  const int                      numberOfStates,
+  const int                      numberOfValues
+) {
+  ASSERTION(numberOfStates > 0, numberOfStates);
+  ASSERTION(numberOfValues > Shortcuts::h, numberOfValues);
+  for (int state = 0; state < numberOfStates; state++) {
+    const Precision* const values = Q + static_cast<std::ptrdiff_t>(state) * numberOfValues;
+    for (int value = 0; value < numberOfValues; value++) {
+      if (not std::isfinite(values[value])) {
+        return false;
+      }
+    }
+    if (values[Shortcuts::h] < 0.0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <class Shortcuts, typename Precision, typename Nodes>
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::shallowwater::getRefinementCommand(
+  const Precision* const NOALIAS Q,
+  const Nodes&                   nodes,
+  const int                      numberOfValues,
+  const double                   detailTolerance
+) {
+  ASSERTION(detailTolerance > 0.0, detailTolerance);
+  return ::exahype2::refineOnDetail(
+    Q,
+    nodes,
+    numberOfValues,
+    detailTolerance,
+    ::exahype2::DefaultCoarsenSafetyFactor,
+    [](const Precision* const values) { return values[Shortcuts::h] + values[Shortcuts::b]; }
+  );
+}
+
+TARGET_DECLARE
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::shallowwater::getRefinementCommandOfStep(const tarch::la::Vector<DIMENSIONS, double>& x) {
+  const double firstSquare  = tarch::la::productRoundedOnce(x[0] - 0.5, x[0] - 0.5);
+  const double secondSquare = tarch::la::productRoundedOnce(x[1] - 0.5, x[1] - 0.5);
+  const double radius       = std::sqrt(firstSquare + secondSquare);
+  auto         result       = ::exahype2::RefinementCommand::Keep;
+  if (radius < 0.2) {
+    result = ::exahype2::RefinementCommand::Refine;
+  }
+  return result;
+}
+TARGET_DECLARE_END
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::writeRadialStep(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* const NOALIAS Q) {
+  const double firstSquare  = tarch::la::productRoundedOnce(x[0] - 0.5, x[0] - 0.5);
+  const double secondSquare = tarch::la::productRoundedOnce(x[1] - 0.5, x[1] - 0.5);
+  const double radius       = std::sqrt(firstSquare + secondSquare);
+  Q[Shortcuts::h]           = 1.;
+  Q[Shortcuts::hv + 0]      = 0.;
+  Q[Shortcuts::hv + 1]      = 0.;
+  Q[Shortcuts::b]           = radius < 0.1 ? 0.0 : 0.05;
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::writeRestingLake(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* const NOALIAS Q) {
+  Q[Shortcuts::hv + 0] = 0;
+  Q[Shortcuts::hv + 1] = 0;
+  Q[Shortcuts::b]      = std::sin(2 * std::numbers::pi * (x[0] + x[1]));
+  Q[Shortcuts::h]      = 2 - Q[Shortcuts::b];
+}
+
+/**
+ * Writes a steady vortex over a varying bathymetry into Q (Clain and Figueiredo,
+ * https://doi.org/10.1016/j.compfluid.2016.11.013, section 4.4). The height reads the stored
+ * bathymetry. The momentum reads the stored height.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::writeSteadyVortex(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 gravity,
+  Precision* const NOALIAS                     Q
+) {
+  const double inverseOfFourGravities = 1 / (4 * gravity);
+  const double radiusTerm             = (1 - x[0] * x[0] - x[1] * x[1]);
+  Q[Shortcuts::b]                     = std::exp(radiusTerm / 2) / 5;
+  Q[Shortcuts::h]                     = 1 - inverseOfFourGravities * std::exp(2 * radiusTerm) - Q[Shortcuts::b];
+  Q[Shortcuts::hv + 0]                = x[1] * std::exp(radiusTerm) * Q[Shortcuts::h];
+  Q[Shortcuts::hv + 1]                = -x[0] * std::exp(radiusTerm) * Q[Shortcuts::h];
+}

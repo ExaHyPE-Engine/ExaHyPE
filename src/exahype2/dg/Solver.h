@@ -60,6 +60,8 @@ public:
   template <typename Precision, typename Generated = Derived>
   using DGMatrices = typename Generated::template DGMatrices<Precision>;
 
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD constexpr auto getNodesInUnitInterval();
+
   using DerivedType = Derived;
   using CellPool    = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatePool   = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;

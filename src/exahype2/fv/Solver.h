@@ -55,6 +55,8 @@ public:
 
   static constexpr int PointsPerCell = FiniteVolumeScheme::VolumesPerPatch;
 
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD constexpr auto getNodesInUnitInterval();
+
   Solver()                         = delete;
   Solver(const Solver&)            = delete;
   Solver(Solver&&)                 = delete;

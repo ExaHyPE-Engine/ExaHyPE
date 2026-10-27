@@ -1,0 +1,96 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/grmhd/GRMHD.h"
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::grmhd::MichelSphericalAccretion::maxEigenvalue(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  return examples::grmhd::getMaxEigenvalue<Shortcuts>(Q, normal);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::MichelSphericalAccretion::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  examples::grmhd::computeFlux<Shortcuts>(Q, normal, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::MichelSphericalAccretion::nonconservativeProduct(
+  const ComputePrecision* const NOALIAS                         Q,
+  const ComputePrecision* const NOALIAS                         deltaQ,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               BTimesDeltaQ,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  examples::grmhd::computeNonconservativeProduct<Shortcuts>(Q, deltaQ, normal, BTimesDeltaQ);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::grmhd::MichelSphericalAccretion::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::grmhd::getRefinementCommand<Shortcuts>(
+    Q,
+    getNodesInUnitInterval(),
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.detailTolerance
+  );
+}
+
+INLINE_METHOD void
+examples::grmhd::MichelSphericalAccretion::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  examples::grmhd::writeMichelAccretion<Shortcuts>(x, Q);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::MichelSphericalAccretion::boundaryConditions(
+  [[maybe_unused]] const ComputePrecision* const NOALIAS        Qinside,
+  ComputePrecision* const NOALIAS                               Qoutside,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
+) {
+  examples::grmhd::writeMichelAccretion<Shortcuts>(x, Qoutside);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::MichelSphericalAccretion::analyticalSolution(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const double                t,
+  [[maybe_unused]] const double                dt,
+  [[maybe_unused]] const double* const         Q,
+  double* const                                solution,
+  [[maybe_unused]] const RuntimeParameters&    parameters
+) {
+  examples::grmhd::writeMichelAccretion<Shortcuts>(x, solution);
+}

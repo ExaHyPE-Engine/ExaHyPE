@@ -77,6 +77,14 @@ namespace {
     Arguments withoutConfigurationFile{"ExaHyPE", "--configFile", ""};
     RuntimeParameters::getInstance().configure(withoutConfigurationFile.argc, withoutConfigurationFile.argv.data());
   }
+
+  std::string getPrintedUsageOf(const RuntimeParameters& parameters) {
+    std::ostringstream    usage;
+    std::streambuf* const standardOutput = std::cout.rdbuf(usage.rdbuf());
+    parameters.printUsage("ExaHyPE");
+    std::cout.rdbuf(standardOutput);
+    return usage.str();
+  }
 } // namespace
 
 UNIT_TEST("Numbers parse from the whole argument, signs and exponents included") {
@@ -200,6 +208,56 @@ UNIT_TEST("Both spellings of the load balancing switch disable the load balancin
         VALIDATE_EQUALS(disabledBeforeTheSwitch, false);
         VALIDATE_EQUALS(disabledByTheSwitch, true);
         VALIDATE_EQUALS(withTheSwitch.argc, 1);
+      }
+    }
+  }
+}
+
+UNIT_TEST("The runtime parameters read the file of the project if the command line omits --configFile") {
+  GIVEN("The runtime parameters of a project whose file <ProjectName>.json sets seven snapshots") {
+    auto&     parameters = RuntimeParameters::getInstance();
+    Arguments withoutConfigurationFile{"ExaHyPE", "--configFile", ""};
+    parameters.configure(withoutConfigurationFile.argc, withoutConfigurationFile.argv.data());
+    const std::string configuration = writeConfiguration(R"({"numberOfSnapshots": 7})");
+    const std::string projectName   = std::filesystem::path(configuration).replace_extension().string();
+    parameters.setGeneratedDefaults(-1.0, -1.0, -1, -1, projectName);
+
+    WHEN("The command line passes the executable name only") {
+      Arguments arguments{"ExaHyPE"};
+      parameters.configure(arguments.argc, arguments.argv.data());
+      const std::string configurationFilePath = parameters.getConfigFilePath();
+      const int         numberOfSnapshots     = parameters.getNumberOfSnapshots();
+      parameters.setGeneratedDefaults(-1.0, -1.0, -1, -1, "");
+      std::filesystem::remove(configuration);
+      Arguments defaults{"ExaHyPE", "--configFile", "", "-o", "output", "-ns", "10"};
+      parameters.configure(defaults.argc, defaults.argv.data());
+
+      THEN("The parameters read the seven snapshots of <ProjectName>.json") {
+        VALIDATE_EQUALS(configurationFilePath, configuration);
+        VALIDATE_EQUALS(numberOfSnapshots, 7);
+      }
+    }
+  }
+}
+
+UNIT_TEST("The usage prints the file of the project as the default configuration file") {
+  GIVEN("The runtime parameters of the project FreeStream") {
+    auto& parameters = RuntimeParameters::getInstance();
+    parameters.setGeneratedDefaults(-1.0, -1.0, -1, -1, "FreeStream");
+
+    WHEN("The parameters print their usage for the project and for an empty project name") {
+      const std::string projectUsage = getPrintedUsageOf(parameters);
+      parameters.setGeneratedDefaults(-1.0, -1.0, -1, -1, "");
+      const std::string usage = getPrintedUsageOf(parameters);
+      Arguments         defaults{"ExaHyPE", "--configFile", "", "-o", "output"};
+      parameters.configure(defaults.argc, defaults.argv.data());
+
+      THEN("The usage of the project prints FreeStream.json and the usage of the empty project name prints \"none\"") {
+        VALIDATE(
+          projectUsage.find("JSON (default: FreeStream.json in the working directory if it exists).")
+          != std::string::npos
+        );
+        VALIDATE(usage.find("JSON (default: none).") != std::string::npos);
       }
     }
   }
