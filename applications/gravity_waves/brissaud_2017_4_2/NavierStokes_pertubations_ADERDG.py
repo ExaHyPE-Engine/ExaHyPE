@@ -16,16 +16,18 @@ stratified_atmosphere = Atmosphere()
 
 size = [50e3, 400e3, 1]
 # size = [1200e3, 600e3, 1]
-end_time = 6000
-order = 5
+end_time = 500
 # order = 2
 unknowns = {"rho": 1, "j": 2, "E": 1}
 aux_var = {"height": 1, "backgroundstate": 3, "gradients": 1}   # dTdz, heatflux: diagnostics written by heat_flux_postprocess
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--order", type=int, default=5)
+args = parser.parse_args()
 
-name = "Single_Wave"
-
+order = args.order
+name = f"Single_Wave_order{order}"
 
 project = exahype2.Project(
     namespace=["applications", "gravity_waves", "thunderstorm"],
@@ -37,7 +39,7 @@ project = exahype2.Project(
     periodic_bc=[True, False, False],
     min_end_time=end_time,
     max_end_time=end_time,
-    min_grid_levels=4,
+    min_grid_levels=5,
     max_grid_levels=5,
 )
 
@@ -123,7 +125,11 @@ project.add_action_set_to_initialisation(
         particle_set=probe_particles,
         coordinates=[
             [25e3, 100.0e3],
-            [25e3, 248.9e3],
+            [25e3, 150.0e3],
+            [25e3, 180.0e3],
+            [25e3, 200.0e3],
+            [25e3, 230.0e3],
+            [25e3, 280.0e3],
         ],
     )
 )
