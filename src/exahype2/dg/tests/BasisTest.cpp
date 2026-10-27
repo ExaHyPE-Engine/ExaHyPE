@@ -296,6 +296,7 @@ exahype2::dg::tests::BasisTest::run() {
   testMethod(testProjectionPreservesAConstantField);
   testMethod(testLagrangeBasisFunctionIsCardinal);
   testMethod(testInterpolationEvaluatesTheCoarsePolynomialAtTheChildNodes);
+  testMethod(testEquidistantInterpolationEvaluatesThePolynomialFromFaceToFace);
   testMethod(testRestrictionIsTheInterpolationTransposedOverTheChildWidth);
   testMethod(testWeightedRestrictionPreservesConstants);
   testMethod(testMatricesAreMirrorSymmetricToTheLastBit);
@@ -1402,6 +1403,29 @@ exahype2::dg::tests::BasisTest::testInterpolationEvaluatesTheCoarsePolynomialAtT
       validateNumericalEqualsWithEpsWithParams2(interpolated, getCubicValue(fineNode), MatrixTolerance, child, fine);
     }
   }
+}
+
+/**
+ * The cubic on four nodes is exact at every equidistant point, the faces included, for as many
+ * points as nodes and for more.
+ */
+void
+exahype2::dg::tests::BasisTest::testEquidistantInterpolationEvaluatesThePolynomialFromFaceToFace() {
+  const auto check = [&](const auto& matrix, const int points) {
+    for (int point = 0; point < points; point++) {
+      double interpolated = 0.0;
+      for (int node = 0; node < MatrixNodesPerAxis; node++) {
+        interpolated += matrix[static_cast<std::size_t>(point * MatrixNodesPerAxis + node)] * getCubicValue(MatrixNodes[node]);
+      }
+      const double x = static_cast<double>(point) / (points - 1);
+      validateNumericalEqualsWithEpsWithParams2(interpolated, getCubicValue(x), MatrixTolerance, points, point);
+    }
+  };
+  check(exahype2::dg::getEquidistantInterpolationMatrix1D<MatrixNodesPerAxis, MatrixNodesPerAxis>(MatrixNodes), MatrixNodesPerAxis);
+  check(
+    exahype2::dg::getEquidistantInterpolationMatrix1D<MatrixNodesPerAxis, 2 * MatrixNodesPerAxis - 1>(MatrixNodes),
+    2 * MatrixNodesPerAxis - 1
+  );
 }
 
 void

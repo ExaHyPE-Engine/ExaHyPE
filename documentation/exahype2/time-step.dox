@@ -293,8 +293,8 @@ exahype2::runner::Runner::runTimeLoop() runs one more plot step after the last t
 1. exahype2::runner::Runner::runStep() runs exahype2::runner::Runner::Step::PlotSolution.
 2. The generated `plot()` calls exahype2::SolverRepository::plot().
 3. exahype2::SolverRepository::plot() calls `plot()` of every solver.
-4. exahype2::fv::Solver::plot() copies the solution to the host and calls exahype2::plotter::PatchPlotter::plotVolumes().
-5. exahype2::dg::Solver::plot() calls exahype2::plotter::PatchPlotter::plotNodes() and exahype2::dg::Solver::plotFaces().
+4. exahype2::fv::Solver::plot() fills the halo, copies the solution and the halo to the host and calls exahype2::plotter::PatchPlotter::plotPatch() with the volume centres. exahype2::fv::singlestep::Solver::plot() and exahype2::fv::ader::Solver::plot() plot the reconstruction of a higher-order scheme instead.
+5. exahype2::dg::Solver::plot() calls exahype2::plotter::PatchPlotter::plotPatch() with the polynomial at equidistant points and exahype2::dg::Solver::plotFaces().
 6. exahype2::dg::ader::Solver::plot() adds the limiter statuses and the subcells for a solver with a limiter.
 7. The generated `plot()` of a solver with tracers calls exahype2::plotter::ParticlePlotter::plot() for every tracer set.
 

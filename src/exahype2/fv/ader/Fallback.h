@@ -46,6 +46,12 @@ namespace exahype2::fv::ader {
     Patch            = 5
   };
 
+  /**
+   * The name of the plotted VolumeStatus field, which spells out every status.
+   */
+  constexpr const char* VolumeStatusFieldName =
+    "LimiterStatus[0=Accepted,1=NotFinite,2=Inadmissible,3=MaximumPrinciple,4=Neighbour,5=Patch]";
+
   template <typename Derived, typename Reconstruct>
   struct FallbackSolver;
 

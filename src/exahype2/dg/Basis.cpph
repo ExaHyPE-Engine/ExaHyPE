@@ -644,6 +644,25 @@ exahype2::dg::getLagrangeBasisFunction1D(const double* const nodes, const int ba
 }
 
 /**
+ * Returns the matrix whose entry [point][node] is basis function node at point, where the
+ * PointsPerAxis points lie equidistantly on the unit interval and include both ends.
+ */
+template <int NodesPerAxis, int PointsPerAxis>
+INLINE_METHOD constexpr std::array<double, static_cast<std::size_t>(PointsPerAxis * NodesPerAxis)>
+exahype2::dg::getEquidistantInterpolationMatrix1D(const double* const nodes) {
+  static_assert(PointsPerAxis > 1);
+  std::array<double, static_cast<std::size_t>(PointsPerAxis * NodesPerAxis)> result{};
+  for (int point = 0; point < PointsPerAxis; point++) {
+    const double x = static_cast<double>(point) / (PointsPerAxis - 1);
+    for (int node = 0; node < NodesPerAxis; node++) {
+      result[static_cast<std::size_t>(point * NodesPerAxis + node)] =
+        exahype2::dg::getLagrangeBasisFunction1D<NodesPerAxis>(nodes, node, x);
+    }
+  }
+  return result;
+}
+
+/**
  * Returns the interpolation matrices: Entry [child][fine][coarse] is basis function coarse at
  * node fine of the child interval. The nodes lie on the unit interval, symmetric about one half.
  */

@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/singlestep/Kernels.h"
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
@@ -70,4 +71,81 @@ exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::u
     tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
   );
   return maxEigenvalue;
+}
+
+/**
+ * Writes one snapshot. A constant reconstruction plots the volume centres of the base. Otherwise the
+ * linear reconstruction of every volume yields its limited states on its faces at the time stamp,
+ * and each corner of the volume holds the volume average plus the deviations of the faces that
+ * meet at it.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory
+) {
+  if constexpr (std::is_same_v<typename Derived::Reconstruction, exahype2::fv::reconstruction::Constant>) {
+    Base::plot(cellConnectivity, format, outputDirectory);
+  } else {
+    constexpr int PatchSize    = Derived::PatchSize;
+    constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+    constexpr int Corners      = peano4::VerticesPerCell;
+    using Terms                = typename Derived::Reconstruction::template StateTerms<
+      Derived,
+      PatchSize,
+      Derived::NumberOfUnknowns,
+      Derived::NumberOfAuxiliaryVariables,
+      false,
+      false,
+      false,
+      false,
+      StoragePrecision,
+      ComputePrecision>;
+    const double timeStamp = this->_timeStepping.getTimeStamp();
+    this->template plotReconstruction<2>(
+      cellConnectivity,
+      format,
+      outputDirectory,
+      [&](
+        const int                            cell,
+        const StoragePrecision* const        patch,
+        const StoragePrecision* const* const faces,
+        double* const                        values
+      ) {
+        const auto cellCentre = cellConnectivity.getCellCentre(cell);
+        const auto cellSize   = cellConnectivity.getCellWidth(cell);
+        const auto volumeSize = exahype2::fv::getVolumeSize(cellSize, PatchSize);
+        for (int volume = 0; volume < peano4::power(PatchSize, DIMENSIONS); volume++) {
+          const auto volumeIndex = peano4::dDelinearised(volume, PatchSize);
+          Terms      terms;
+          terms.evaluate(
+            patch,
+            faces,
+            volumeIndex,
+            volume * NumberOfData,
+            cellCentre,
+            cellSize,
+            exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, volumeIndex),
+            volumeSize,
+            timeStamp,
+            0.0
+          );
+          const StoragePrecision* const average = patch + volume * NumberOfData;
+          for (int corner = 0; corner < Corners; corner++) {
+            const auto    cornerIndex = peano4::dDelinearised(corner, 2);
+            double* const state       = values + (volume * Corners + corner) * NumberOfData;
+            for (int entry = 0; entry < NumberOfData; entry++) {
+              state[entry] = static_cast<double>(average[entry]);
+              for (int axis = 0; axis < DIMENSIONS; axis++) {
+                const ComputePrecision face = cornerIndex(axis) == 0 ? terms.minus[axis][entry] : terms.plus[axis][entry];
+                state[entry] += static_cast<double>(face) - static_cast<double>(average[entry]);
+              }
+            }
+          }
+        }
+      }
+    );
+  }
 }

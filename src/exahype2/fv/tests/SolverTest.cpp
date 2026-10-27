@@ -62,6 +62,8 @@ namespace {
     LinearSolverFor() :
       Base(TimeStepFactor, "LinearSolver", {{"q", 1}}) {}
 
+    const typename Base::Faces& getHalo() const { return this->_halo; }
+
     static INLINE_METHOD GPU_CALLABLE_METHOD double getProfile(const tarch::la::Vector<DIMENSIONS, double>& x) {
       double value = 1.0;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -376,6 +378,7 @@ exahype2::fv::tests::SolverTest::run() {
   testMethod(testRefinementReducesTheNextAdaptiveTimeStep);
   testMethod(testThePostprocessingOfTheUpdatedPatchFeedsTheNextTimeStep);
   testMethod(testAPlotAllocatesHostCopiesOnlyWithAGPUBackend);
+  testMethod(testTheVolumeCentresInterpolateALinearProfileAcrossThePatchFaces);
   testMethod(testReleaseFreesEveryPool);
 }
 
@@ -532,8 +535,8 @@ exahype2::fv::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution()
 }
 
 /**
- * A plot writes the .vtu file of every rank and allocates a host copy of the solution only in a
- * build with a GPU backend.
+ * A plot writes the .vtu file of every rank and allocates host copies of the solution and the halo
+ * only in a build with a GPU backend.
  */
 void
 exahype2::fv::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend() {
@@ -558,7 +561,12 @@ exahype2::fv::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend
   const auto&           solution = solver.getSolution();
   LinearSolver::Patches solutionCopy(solution.getChunkSize(), tarch::MemoryLocation::Heap);
   static_cast<void>(solution.download(solutionCopy));
-  validateEquals(bytesAfterPlot.host, bytesBeforePlot.host + solutionCopy.getAllocatedBytes().host);
+  LinearSolver::Faces haloCopy(solver.getHalo().getChunkSize(), tarch::MemoryLocation::Heap);
+  static_cast<void>(solver.getHalo().download(haloCopy));
+  validateEquals(
+    bytesAfterPlot.host,
+    bytesBeforePlot.host + solutionCopy.getAllocatedBytes().host + haloCopy.getAllocatedBytes().host
+  );
   validateEquals(bytesAfterPlot.device, bytesBeforePlot.device);
   const std::string           vtuName = "LinearSolver-0_000000-rank-" + std::to_string(rank.getRank()) + ".vtu";
   const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch" / vtuName;
@@ -569,6 +577,59 @@ exahype2::fv::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend
   if (rank.isGlobalMaster()) {
     std::filesystem::remove_all(outputDirectory);
   }
+}
+
+/**
+ * A linear profile on the patch of the unit cell and on the volumes beyond its faces is exact at
+ * every plot point: at the volume centres, on the faces and in the corners of the patch.
+ */
+void
+exahype2::fv::tests::SolverTest::testTheVolumeCentresInterpolateALinearProfileAcrossThePatchFaces() {
+  using Patch                   = LinearSolver::Patch;
+  constexpr int HaloSize        = Patch::HaloSize;
+  constexpr int ExtendedPerAxis = PatchSize + 2;
+  const auto    getVolumeCentre = [](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+    tarch::la::Vector<DIMENSIONS, double> x;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      x(axis) = (volume(axis) + 0.5) / PatchSize;
+    }
+    return x;
+  };
+
+  std::vector<double> patch(ValuesPerPatch);
+  peano4::dForEach(PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+    patch[static_cast<std::size_t>(peano4::dLinearised(volume, PatchSize))] =
+      LinearSolver::getProfile(getVolumeCentre(volume));
+  });
+  std::vector<std::vector<double>> faces(peano4::FacesPerCell, std::vector<double>(Patch::ValuesPerFace));
+  const double*                    facePointers[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    const int normal = face % DIMENSIONS;
+    const int shift  = face < DIMENSIONS ? -HaloSize : PatchSize - HaloSize;
+    tarch::la::Vector<DIMENSIONS, int> extent(PatchSize);
+    extent(normal) = 2 * HaloSize;
+    peano4::dForEach(extent, [&](const tarch::la::Vector<DIMENSIONS, int>& layer) {
+      auto volume = layer;
+      volume(normal) += shift;
+      faces[static_cast<std::size_t>(face)][static_cast<std::size_t>(
+        exahype2::fv::getFaceVolumeIndex(layer, PatchSize, HaloSize, normal)
+      )] = LinearSolver::getProfile(getVolumeCentre(volume));
+    });
+    facePointers[face] = faces[static_cast<std::size_t>(face)].data();
+  }
+
+  std::vector<double> values(static_cast<std::size_t>(peano4::power(ExtendedPerAxis, DIMENSIONS)));
+  LinearSolver::evaluateVolumeCentres(patch.data(), facePointers, values.data());
+  peano4::dForEach(ExtendedPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& point) {
+    tarch::la::Vector<DIMENSIONS, double> x;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      x(axis) = std::clamp((point(axis) - 0.5) / PatchSize, 0.0, 1.0);
+    }
+    const int index = peano4::dLinearised(point, ExtendedPerAxis);
+    validateNumericalEqualsWithEpsWithParams2(
+      values[static_cast<std::size_t>(index)], LinearSolver::getProfile(x), Tolerance, index, x
+    );
+  });
 }
 
 /**

@@ -65,6 +65,92 @@ exahype2::plotter::tests::PatchPlotterTest::run() {
   testMethod(testEveryNodeOfEveryPatchBecomesOnePoint);
   testMethod(testOneNodePerPatchBecomesOneCell);
   testMethod(testEveryNodeReadsTheSubcellThatContainsIt);
+  testMethod(testEveryElementOfEveryPatchOwnsItsPoints);
+  testMethod(testTheTensorProductEvaluatesTheNodalField);
+}
+
+/**
+ * The bilinear field x + 2y on the nodes {0.25, 0.75} per axis is exact at the faces.
+ */
+void
+exahype2::plotter::tests::PatchPlotterTest::testTheTensorProductEvaluatesTheNodalField() {
+  constexpr int                   NodesPerAxis  = 2;
+  constexpr int                   PointsPerAxis = 2;
+  constexpr std::array<double, 2> Nodes{0.25, 0.75};
+  constexpr std::array<double, 4> Matrix1D{1.5, -0.5, -0.5, 1.5};
+  const auto matrix = exahype2::plotter::PatchPlotter::getTensorProductMatrix<PointsPerAxis, NodesPerAxis>(Matrix1D.data());
+  const auto getField = [](const tarch::la::Vector<DIMENSIONS, double>& x) {
+    double value = 0.0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      value += (axis + 1.0) * x(axis);
+    }
+    return value;
+  };
+  std::array<double, peano4::power(NodesPerAxis, DIMENSIONS)> nodal{};
+  peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
+    tarch::la::Vector<DIMENSIONS, double> x;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      x(axis) = Nodes[static_cast<std::size_t>(nodeIndex(axis))];
+    }
+    nodal[static_cast<std::size_t>(peano4::dLinearised(nodeIndex, NodesPerAxis))] = getField(x);
+  });
+  std::array<double, peano4::power(PointsPerAxis, DIMENSIONS)> points{};
+  exahype2::plotter::PatchPlotter::evaluateNodes<PointsPerAxis, NodesPerAxis, 1>(matrix, nodal.data(), points.data());
+  peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& pointIndex) {
+    tarch::la::Vector<DIMENSIONS, double> x;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      x(axis) = pointIndex(axis);
+    }
+    const int point = peano4::dLinearised(pointIndex, PointsPerAxis);
+    validateNumericalEqualsWithParams1(points[static_cast<std::size_t>(point)], getField(x), point);
+  });
+}
+
+/**
+ * Every element of a patch owns its points, so no two elements share a point.
+ */
+void
+exahype2::plotter::tests::PatchPlotterTest::testEveryElementOfEveryPatchOwnsItsPoints() {
+  constexpr int ElementsPerAxis = 2;
+  constexpr int PointsPerAxis   = 3;
+  constexpr int Elements        = peano4::power(ElementsPerAxis, DIMENSIONS);
+  constexpr int PointsPerPatch  = Elements * peano4::power(PointsPerAxis, DIMENSIONS);
+  const int     rank            = tarch::mpi::Rank::getInstance().getRank();
+  peano4::tests::buildRegularGrid(Depth);
+  const auto&       cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto        cells            = cellConnectivity.getCells();
+  const std::string outputDirectory =
+    (tarch::tests::getWritableTestDirectory() / "PatchPlotterElementTest").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "patch/");
+  exahype2::plotter::PatchPlotter plotter("PatchPlotterElementTest", {{"scalar", 1}, {"pair", 2}});
+  plotter.plotPatch<ElementsPerAxis, PointsPerAxis, ValuesPerVolume>(
+    cellConnectivity,
+    cells,
+    [](const int, double* const values) { std::fill_n(values, PointsPerPatch * ValuesPerVolume, 1.0); },
+    0.5,
+    tarch::plotter::Format::VTU,
+    outputDirectory,
+    [](const int, const int element) { return element; },
+    "Status[0=A,1=B]"
+  );
+
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch"
+    / ("PatchPlotterElementTest-0_500000-rank-" + std::to_string(rank) + ".vtu");
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  const std::string content        = getFileContent(vtuPath);
+  const int         numberOfCells  = cells.size * Elements * peano4::power(PointsPerAxis - 1, DIMENSIONS);
+  const int         numberOfPoints = cells.size * PointsPerPatch;
+  validateWithParams1(
+    content.find("NumberOfCells=\"" + std::to_string(numberOfCells) + "\"") != std::string::npos,
+    vtuPath.string()
+  );
+  validateWithParams1(
+    content.find("NumberOfPoints=\"" + std::to_string(numberOfPoints) + "\"") != std::string::npos,
+    vtuPath.string()
+  );
+  validate(content.find("<PointData") != std::string::npos);
+  validate(content.find("Name=\"Status[0=A,1=B]\"") != std::string::npos);
+  deleteOutputDirectory(outputDirectory);
 }
 
 /**
@@ -121,6 +207,7 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOneP
     &subcellValues,
     &statuses,
     SubcellStatus,
+    "Status[0=A,1=B]",
     0.5,
     tarch::plotter::Format::VTU,
     outputDirectory
@@ -143,7 +230,7 @@ exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOneP
   validate(content.find("<PointData") != std::string::npos);
   validate(content.find("Name=\"pair\"") != std::string::npos);
   validate(content.find("Name=\"CurveIndex\"") != std::string::npos);
-  validate(content.find("Name=\"LimiterStatus\"") != std::string::npos);
+  validate(content.find("Name=\"Status[0=A,1=B]\"") != std::string::npos);
   deleteOutputDirectory(outputDirectory);
 }
 

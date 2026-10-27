@@ -84,10 +84,9 @@ public:
     exahype2::RefinementRequests&   requests
   );
   INLINE_METHOD void plot(
-    const peano4::CellConnectivity&                   cellConnectivity,
-    tarch::plotter::Format                            format,
-    const std::string&                                outputDirectory,
-    const tarch::accelerator::ChunkedMemoryPool<int>* volumeStatuses = nullptr
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
   );
   INLINE_METHOD void release();
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
@@ -100,6 +99,12 @@ public:
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
   [[nodiscard]] INLINE_METHOD int getNumberOfDoFs() const;
 
+  static INLINE_METHOD void evaluateVolumeCentres(
+    const StoragePrecision*        patch,
+    const StoragePrecision* const* faces,
+    double*                        values
+  );
+
 protected:
   INLINE_METHOD void applyBoundaryConditions(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void interpolateCoarseHalos(const peano4::CellConnectivity& cellConnectivity, peano4::Adjacency adjacency);
@@ -108,6 +113,15 @@ protected:
     double                        timeStepSize,
     double                        maxEigenvalue,
     exahype2::RefinementRequests& requests
+  );
+  template <int PointsPerAxis, typename EvaluatePatch>
+  INLINE_METHOD void plotReconstruction(
+    const peano4::CellConnectivity&                   cellConnectivity,
+    tarch::plotter::Format                            format,
+    const std::string&                                outputDirectory,
+    const EvaluatePatch&                              evaluatePatch,
+    const tarch::accelerator::ChunkedMemoryPool<int>* volumeStatuses = nullptr,
+    const char*                                       statusName     = nullptr
   );
 
   Patches _solution{Patch::ValuesPerPatch};
@@ -125,6 +139,17 @@ private:
   INLINE_METHOD void proposeTimeStepSize(double maxEigenvalue);
   [[nodiscard]] INLINE_METHOD double getTimeStepSizeFromCFL() const;
   [[nodiscard]] INLINE_METHOD double getFixedTimeStepSize() const;
+  INLINE_METHOD void fillHalo(const peano4::CellConnectivity& cellConnectivity);
+  template <int ElementsPerAxis, int PointsPerAxis, typename Evaluate>
+  INLINE_METHOD void plotPatch(
+    const peano4::CellConnectivity&                   cellConnectivity,
+    tarch::plotter::Format                            format,
+    const std::string&                                outputDirectory,
+    const Evaluate&                                   evaluate,
+    const tarch::accelerator::ChunkedMemoryPool<int>* volumeStatuses,
+    const char*                                       statusName,
+    const double*                                     pointPositions = nullptr
+  );
 
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
 
@@ -134,6 +159,7 @@ private:
   exahype2::ErrorMeasurement      _errorMeasurement{};
   exahype2::plotter::PatchPlotter _plotter;
   Patches                         _solutionOnHost{Patch::ValuesPerPatch, tarch::MemoryLocation::Heap};
+  Faces                           _haloOnHost{Patch::ValuesPerFace, tarch::MemoryLocation::Heap};
 };
 
 #include "exahype2/fv/Solver.cpph"

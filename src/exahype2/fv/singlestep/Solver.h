@@ -26,6 +26,11 @@ public:
   );
 
   INLINE_METHOD void performTimeStep(const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests);
+  INLINE_METHOD void plot(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory
+  );
 
 private:
   [[nodiscard]] INLINE_METHOD double updatePatches(

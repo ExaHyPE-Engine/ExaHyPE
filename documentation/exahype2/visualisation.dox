@@ -30,7 +30,13 @@ colours the cells by `Subdomain` and joins the patch centres in the order of
 
 ## Finite Volumes
 
-Each finite volume becomes one plot cell with cell-associated fields.
+Godunov writes the value of every volume as a point at the volume centre, plus
+points on the patch faces that average the volumes on both sides, so the viewer
+interpolates between the volumes. Higher-order schemes write their
+reconstruction instead: MUSCL-Hancock the limited linear state at the corners
+of every volume, ADER-WENO the limited polynomial of every volume at
+equidistant points from face to face. With a fallback, the ADER-WENO output
+carries the status of every volume in `LimiterStatus`.
 Patch boundaries appear where the refinement level or cell spacing changes.
 Cell outlines are drawn by default; pass `--no-edges` to
 `postprocessing/render_solution.py` to turn them off when you only want the field.
@@ -38,11 +44,10 @@ Cell outlines are drawn by default; pass `--no-edges` to
 
 ## Discontinuous Galerkin
 
-Each DG node becomes one plot point at its quadrature position, and plot
-cells connect neighbouring nodes within the patch. Gauss-Legendre nodes lie
-inside a cell, so adjacent patches show visible gaps. A cell whose limiter
-status selects the subcell solution plots the value of the containing subcell
-at each DG node.
+The DG polynomial of every cell is evaluated at max(2N - 1, 2) equidistant points
+per axis from face to face, where N is the number of nodes per axis, so
+adjacent cells meet without gaps. A cell whose limiter status selects the
+subcell solution plots the value of the containing subcell at each plot point.
 
 
 As with the Finite Volume output, cell outlines are drawn by default; pass

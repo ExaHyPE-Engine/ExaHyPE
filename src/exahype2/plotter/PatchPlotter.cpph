@@ -15,7 +15,7 @@
  * Writes one snapshot of the cells with one plot cell per finite volume and the interior
  * volume corners of the patches before the corners on the patch faces. Every rank calls this at
  * the same time. The chunk of a slot in values holds the volumes of its patch in linearised order
- * with ValuesPerVolume values each. With volumeStatuses, the cell field LimiterStatus holds the
+ * with ValuesPerVolume values each. With volumeStatuses, the cell field statusName holds the
  * status of each volume from its chunk.
  */
 template <int VolumesPerAxis, int ValuesPerVolume, typename Precision>
@@ -27,7 +27,8 @@ exahype2::plotter::PatchPlotter::plotVolumes(
   const double                                            timeStamp,
   const tarch::plotter::Format                            format,
   const std::string&                                      outputDirectory,
-  const tarch::accelerator::ChunkedMemoryPool<int>* const volumeStatuses
+  const tarch::accelerator::ChunkedMemoryPool<int>* const volumeStatuses,
+  const char* const                                       statusName
 ) {
   static_assert(VolumesPerAxis > 0 and ValuesPerVolume > 0);
   constexpr int CornersPerAxis          = VolumesPerAxis + 1;
@@ -48,8 +49,9 @@ exahype2::plotter::PatchPlotter::plotVolumes(
   const std::size_t      interiorCorners  = static_cast<std::size_t>(cells.size) * InteriorCornersPerPatch;
   const auto             facePoints       = static_cast<std::size_t>(faceCornerPoints.firstPointOfPatch.back());
   tarch::plotter::Mesh   mesh =
-    createMesh(cells.size, CellsPerPatch, interiorCorners + facePoints, false, volumeStatuses != nullptr);
+    createMesh(cells.size, CellsPerPatch, interiorCorners + facePoints, false, volumeStatuses != nullptr ? statusName : nullptr);
   assertion(volumeStatuses == nullptr or volumeStatuses->isHostAccessible());
+  assertion(volumeStatuses == nullptr or statusName != nullptr);
   const double           rank = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
 
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
@@ -138,6 +140,7 @@ exahype2::plotter::PatchPlotter::plotNodes(
     nullptr,
     nullptr,
     0,
+    nullptr,
     timeStamp,
     format,
     outputDirectory
@@ -146,8 +149,8 @@ exahype2::plotter::PatchPlotter::plotNodes(
 
 /**
  * Writes nodal values at their node positions or repeats a single node at the patch corners.
- * A patch with status at least subcellStatus reads each node from its containing subcell.
- * A null statuses omits the status field.
+ * A patch with status at least subcellStatus reads each node from its containing subcell. The
+ * cell field statusName holds the statuses. A null statuses omits the status field.
  */
 template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
 INLINE_METHOD void
@@ -159,6 +162,7 @@ exahype2::plotter::PatchPlotter::plotNodes(
   const tarch::accelerator::ChunkedMemoryPool<std::type_identity_t<Precision>>* const subcellValues,
   const tarch::accelerator::ChunkedMemoryPool<int>* const                             statuses,
   const int                                                                           subcellStatus,
+  const char* const                                                                   statusName,
   const double                                                                        timeStamp,
   const tarch::plotter::Format                                                        format,
   const std::string&                                                                  outputDirectory
@@ -185,7 +189,7 @@ exahype2::plotter::PatchPlotter::plotNodes(
   const auto           subcellOfNode = containingSubcells<NodesPerAxis, SubcellsPerAxis>(nodePositions);
   const bool           hasStatus     = statuses != nullptr;
   const std::size_t    points        = static_cast<std::size_t>(cells.size) * PointsPerPatch;
-  tarch::plotter::Mesh mesh          = createMesh(cells.size, CellsPerPatch, points, true, hasStatus);
+  tarch::plotter::Mesh mesh          = createMesh(cells.size, CellsPerPatch, points, true, hasStatus ? statusName : nullptr);
   const std::size_t    statusField   = mesh.cellFields.size() - 1;
   const double         rank          = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
@@ -232,6 +236,154 @@ exahype2::plotter::PatchPlotter::plotNodes(
     }
   });
   write(mesh, timeStamp, format, outputDirectory);
+}
+
+/**
+ * Writes one snapshot in which ElementsPerAxis elements per axis tile every patch and every element
+ * owns PointsPerAxis points per axis, equidistant from face to face or at the increasing positions
+ * pointPositions within the unit interval. The call evaluate(cell, values)
+ * writes the ValuesPerPoint values of every point of the patch of cell into values, ordered by
+ * element, then by point within the element. The call status(cell, element) returns the status of
+ * an element for the cell field statusName. A null status omits the status field.
+ */
+template <int ElementsPerAxis, int PointsPerAxis, int ValuesPerPoint, typename Evaluate, typename Status>
+INLINE_METHOD void
+exahype2::plotter::PatchPlotter::plotPatch(
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::Span<const int>    cells,
+  const Evaluate&                 evaluate,
+  const double                    timeStamp,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory,
+  const Status&                   status,
+  const char* const               statusName,
+  const double* const             pointPositions
+) {
+  static_assert(ElementsPerAxis > 0 and PointsPerAxis > 1 and ValuesPerPoint > 0);
+  constexpr bool HasStatus         = not std::is_same_v<Status, std::nullptr_t>;
+  constexpr int  ElementsPerPatch  = peano4::power(ElementsPerAxis, DIMENSIONS);
+  constexpr int  PointsPerElement  = peano4::power(PointsPerAxis, DIMENSIONS);
+  constexpr int  CellsPerElement   = peano4::power(PointsPerAxis - 1, DIMENSIONS);
+  constexpr int  PointsPerPatch    = ElementsPerPatch * PointsPerElement;
+  constexpr int  CellsPerPatch     = ElementsPerPatch * CellsPerElement;
+  assertion(
+    cells.size >= 0 and cells.size <= cellConnectivity.getNumberOfSlots(),
+    cells.size,
+    cellConnectivity.getNumberOfSlots()
+  );
+
+  const std::size_t    points      = static_cast<std::size_t>(cells.size) * PointsPerPatch;
+  tarch::plotter::Mesh mesh        = createMesh(cells.size, CellsPerPatch, points, true, HasStatus ? statusName : nullptr);
+  const std::size_t    statusField = mesh.cellFields.size() - 1;
+  const double         rank        = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
+    const int           cell       = cells[patch];
+    const std::size_t   firstCell  = static_cast<std::size_t>(patch) * CellsPerPatch;
+    const std::size_t   firstPoint = static_cast<std::size_t>(patch) * PointsPerPatch;
+    const auto          centre     = cellConnectivity.getCellCentre(cell);
+    const auto          width      = cellConnectivity.getCellWidth(cell);
+    std::vector<double> values(static_cast<std::size_t>(PointsPerPatch) * ValuesPerPoint);
+    evaluate(cell, values.data());
+    peano4::dForEach(ElementsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& elementIndex) {
+      const int         element           = peano4::dLinearised(elementIndex, ElementsPerAxis);
+      const std::size_t firstElementPoint = firstPoint + static_cast<std::size_t>(element) * PointsPerElement;
+      const std::size_t firstElementCell  = firstCell + static_cast<std::size_t>(element) * CellsPerElement;
+      peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& pointIndex) {
+        const int         point     = peano4::dLinearised(pointIndex, PointsPerAxis);
+        const std::size_t meshPoint = firstElementPoint + static_cast<std::size_t>(point);
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          const double position = pointPositions == nullptr
+                                  ? static_cast<double>(pointIndex(axis)) / (PointsPerAxis - 1)
+                                  : pointPositions[pointIndex(axis)];
+          const double fraction = (elementIndex(axis) + position) / ElementsPerAxis;
+          mesh.pointsXYZ[meshPoint * 3 + axis] = centre(axis) - 0.5 * width(axis) + fraction * width(axis);
+        }
+        for (int axis = DIMENSIONS; axis < 3; axis++) {
+          mesh.pointsXYZ[meshPoint * 3 + axis] = 0.0;
+        }
+        copyState(
+          values.data() + (static_cast<std::size_t>(element) * PointsPerElement + point) * ValuesPerPoint,
+          ValuesPerPoint,
+          meshPoint,
+          mesh.pointFields
+        );
+      });
+      connectPatch<PointsPerAxis>(
+        [&](const int point) { return static_cast<std::int32_t>(firstElementPoint + point); },
+        firstElementCell,
+        mesh
+      );
+      if constexpr (HasStatus) {
+        std::fill_n(
+          mesh.cellFields[statusField].values.begin() + firstElementCell,
+          CellsPerElement,
+          static_cast<double>(status(cell, element))
+        );
+      }
+    });
+    std::fill_n(
+      mesh.cellFields[RefinementLevelField].values.begin() + firstCell,
+      CellsPerPatch,
+      static_cast<double>(cellConnectivity.getCellLevel(cell))
+    );
+    std::fill_n(mesh.cellFields[SubdomainField].values.begin() + firstCell, CellsPerPatch, rank);
+    std::fill_n(
+      mesh.cellFields[CurveIndexField].values.begin() + firstCell,
+      CellsPerPatch,
+      static_cast<double>(cellConnectivity.getCellCurveIndex(cell))
+    );
+  });
+  write(mesh, timeStamp, format, outputDirectory);
+}
+
+/**
+ * Returns the matrix whose entry [point][node] is the product over the axes of the entries
+ * [point][node] of matrix1D along each axis, with points and nodes in linearised order.
+ */
+template <int PointsPerAxis, int NodesPerAxis>
+INLINE_METHOD std::vector<double>
+exahype2::plotter::PatchPlotter::getTensorProductMatrix(const double* const matrix1D) {
+  constexpr int PointsPerPatch = peano4::power(PointsPerAxis, DIMENSIONS);
+  constexpr int NodesPerPatch  = peano4::power(NodesPerAxis, DIMENSIONS);
+  assertion(matrix1D != nullptr);
+  std::vector<double> result(static_cast<std::size_t>(PointsPerPatch) * NodesPerPatch);
+  peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& pointIndex) {
+    const int point = peano4::dLinearised(pointIndex, PointsPerAxis);
+    peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
+      double entry = 1.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        entry *= matrix1D[pointIndex(axis) * NodesPerAxis + nodeIndex(axis)];
+      }
+      result[static_cast<std::size_t>(point) * NodesPerPatch + peano4::dLinearised(nodeIndex, NodesPerAxis)] = entry;
+    });
+  });
+  return result;
+}
+
+/**
+ * Writes the Values values at every point of the nodal field nodalValues into pointValues with the
+ * matrix of getTensorProductMatrix().
+ */
+template <int PointsPerAxis, int NodesPerAxis, int Values, typename Precision>
+INLINE_METHOD void
+exahype2::plotter::PatchPlotter::evaluateNodes(
+  const std::vector<double>& tensorProductMatrix,
+  const Precision* const     nodalValues,
+  double* const              pointValues
+) {
+  constexpr int PointsPerPatch = peano4::power(PointsPerAxis, DIMENSIONS);
+  constexpr int NodesPerPatch  = peano4::power(NodesPerAxis, DIMENSIONS);
+  assertion(tensorProductMatrix.size() == static_cast<std::size_t>(PointsPerPatch) * NodesPerPatch);
+  for (int point = 0; point < PointsPerPatch; point++) {
+    const double* const weights = tensorProductMatrix.data() + static_cast<std::size_t>(point) * NodesPerPatch;
+    double* const       result  = pointValues + static_cast<std::ptrdiff_t>(point) * Values;
+    std::fill_n(result, Values, 0.0);
+    for (int node = 0; node < NodesPerPatch; node++) {
+      for (int value = 0; value < Values; value++) {
+        result[value] += weights[node] * static_cast<double>(nodalValues[node * Values + value]);
+      }
+    }
+  }
 }
 
 /**

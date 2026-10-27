@@ -24,4 +24,6 @@ private:
   void testEveryNodeOfEveryPatchBecomesOnePoint();
   void testOneNodePerPatchBecomesOneCell();
   void testEveryNodeReadsTheSubcellThatContainsIt();
+  void testEveryElementOfEveryPatchOwnsItsPoints();
+  void testTheTensorProductEvaluatesTheNodalField();
 };

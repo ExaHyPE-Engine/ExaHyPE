@@ -45,16 +45,17 @@ def table(name, entries, documentation):
     }
 
 
-def computed_table(name, expression, documentation, nodes_per_axis):
+def computed_table(name, expression, documentation, nodes_per_axis, length=None):
     """
     Returns a table that the generated C++ code computes from the quadrature nodes and
-    weights. The table depends on the subdivision factor, a build-time constant of the C++
-    code.
+    weights. Without length, the table holds one matrix per child interval and depends on the
+    subdivision factor, a build-time constant of the C++ code.
     """
     return {
         "name": name,
         "expression": expression,
-        "length": "static_cast<std::size_t>(peano4::SubdivisionFactor) * {0} * {0}".format(
+        "length": length
+        or "static_cast<std::size_t>(peano4::SubdivisionFactor) * {0} * {0}".format(
             nodes_per_axis
         ),
         "documentation": documentation_lines(documentation),
@@ -151,6 +152,17 @@ def dg_matrix_tables(basis):
   fine node of that interval.
 """,
             basis.dofs_per_axis,
+        ),
+        computed_table(
+            "PlotMatrix1D",
+            "::exahype2::dg::getEquidistantInterpolationMatrix1D<NodesPerAxis, {}>("
+            "QuadratureNodes1D)".format(max(2 * basis.dofs_per_axis - 1, 2)),
+            """
+  Evaluation operator of the plot points, packed as [point][node] with the basis
+  function evaluated at max(2 NodesPerAxis - 1, 2) equidistant points from face to face.
+""",
+            basis.dofs_per_axis,
+            max(2 * basis.dofs_per_axis - 1, 2) * basis.dofs_per_axis,
         ),
         computed_table(
             "ProlongationMatrix1D",

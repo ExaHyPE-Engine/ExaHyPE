@@ -553,7 +553,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 
 /**
  * Writes one snapshot. With a limiter, every plot cell stores its status. A limited cell plots at
- * every node the subcell that contains the node.
+ * every plot point the subcell that contains the point.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
@@ -563,17 +563,15 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   const std::string&              outputDirectory
 ) {
   if constexpr (HasLimiter) {
-    this->_plotter.template plotNodes<NodesPerAxis, NumberOfData, Limiter::SubcellScheme::SubcellsPerAxis>(
+    this->template plotPolynomial<std::max(2 * NodesPerAxis - 1, 2), Limiter::SubcellScheme::SubcellsPerAxis>(
       cellConnectivity,
-      this->getCellsOnHost(cellConnectivity),
-      this->downloadSolution(),
-      this->_nodePositionsOnHost.data(),
+      DGMatrices<double>::getPlotMatrix1D().data(),
+      format,
+      outputDirectory,
       &_limiter->downloadSubcells(),
       &_limiter->downloadStatuses(),
       static_cast<int>(exahype2::dg::limiting::LimiterStatus::Limited),
-      this->_timeStepping.getTimeStamp(),
-      format,
-      outputDirectory
+      exahype2::dg::limiting::LimiterStatusFieldName
     );
     this->plotFaces(cellConnectivity, format, outputDirectory);
   } else {

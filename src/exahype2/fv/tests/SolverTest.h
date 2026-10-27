@@ -26,5 +26,6 @@ private:
   void testRefinementReducesTheNextAdaptiveTimeStep();
   void testThePostprocessingOfTheUpdatedPatchFeedsTheNextTimeStep();
   void testAPlotAllocatesHostCopiesOnlyWithAGPUBackend();
+  void testTheVolumeCentresInterpolateALinearProfileAcrossThePatchFaces();
   void testReleaseFreesEveryPool();
 };

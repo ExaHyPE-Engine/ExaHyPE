@@ -165,6 +165,17 @@ protected:
     tarch::plotter::Format          format,
     const std::string&              outputDirectory
   );
+  template <int PointsPerAxis, int SubcellsPerAxis = 1>
+  INLINE_METHOD void plotPolynomial(
+    const peano4::CellConnectivity&                   cellConnectivity,
+    const double*                                     matrix1D,
+    tarch::plotter::Format                            format,
+    const std::string&                                outputDirectory,
+    const CellPool*                                   subcells      = nullptr,
+    const tarch::accelerator::ChunkedMemoryPool<int>* statuses      = nullptr,
+    int                                               subcellStatus = 0,
+    const char*                                       statusName    = nullptr
+  );
 
   exahype2::TimeStepping _timeStepping;
 
@@ -183,8 +194,7 @@ protected:
   exahype2::plotter::PatchPlotter _plotter;
 
   /**
-   * Host copies of the 1D node positions and quadrature weights for the plots and a host initial
-   * condition.
+   * Host copies of the 1D node positions and quadrature weights for a host initial condition.
    */
   std::vector<double> _nodePositionsOnHost{};
   std::vector<double> _nodeWeightsOnHost{};

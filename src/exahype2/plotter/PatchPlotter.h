@@ -37,7 +37,9 @@ struct exahype2::plotter::DataField final {
 /**
  * Writes the patches of the grid cells of a rank into the snapshots of one plot series. The function
  * plotVolumes() writes one plot cell per finite volume and every volume corner once. The function
- * plotNodes() writes nodal values at the plot points of every patch.
+ * plotNodes() writes nodal values at the plot points of every patch. The function plotPatch() writes
+ * the solution that a solver evaluates at equidistant points from face to face of every element of
+ * a patch.
  */
 class exahype2::plotter::PatchPlotter final {
 public:
@@ -56,7 +58,8 @@ public:
     double                                                  timeStamp,
     tarch::plotter::Format                                  format,
     const std::string&                                      outputDirectory,
-    const tarch::accelerator::ChunkedMemoryPool<int>*       volumeStatuses = nullptr
+    const tarch::accelerator::ChunkedMemoryPool<int>*       volumeStatuses = nullptr,
+    const char*                                             statusName     = nullptr
   );
 
   template <int NodesPerAxis, int ValuesPerNode, typename Precision>
@@ -79,14 +82,43 @@ public:
     const tarch::accelerator::ChunkedMemoryPool<std::type_identity_t<Precision>>* subcellValues,
     const tarch::accelerator::ChunkedMemoryPool<int>*                             statuses,
     int                                                                           subcellStatus,
+    const char*                                                                   statusName,
     double                                                                        timeStamp,
     tarch::plotter::Format                                                        format,
     const std::string&                                                            outputDirectory
   );
 
+  template <
+    int ElementsPerAxis,
+    int PointsPerAxis,
+    int ValuesPerPoint,
+    typename Evaluate,
+    typename Status = std::nullptr_t>
+  INLINE_METHOD void plotPatch(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::Span<const int>          cells,
+    const Evaluate&                 evaluate,
+    double                          timeStamp,
+    tarch::plotter::Format          format,
+    const std::string&              outputDirectory,
+    const Status&                   status         = nullptr,
+    const char*                     statusName     = nullptr,
+    const double*                   pointPositions = nullptr
+  );
+
   template <int NodesPerAxis, int SubcellsPerAxis>
   [[nodiscard]] static INLINE_METHOD std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)> containingSubcells(
     const double* nodePositions
+  );
+
+  template <int PointsPerAxis, int NodesPerAxis>
+  [[nodiscard]] static INLINE_METHOD std::vector<double> getTensorProductMatrix(const double* matrix1D);
+
+  template <int PointsPerAxis, int NodesPerAxis, int Values, typename Precision>
+  static INLINE_METHOD void evaluateNodes(
+    const std::vector<double>& tensorProductMatrix,
+    const Precision*           nodalValues,
+    double*                    pointValues
   );
 
 private:
@@ -132,7 +164,7 @@ private:
     int         cellsPerPatch,
     std::size_t numberOfPoints,
     bool        writesPointData,
-    bool        writesStatus
+    const char* statusName
   ) const;
 
   void write(

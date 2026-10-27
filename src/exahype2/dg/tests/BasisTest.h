@@ -55,6 +55,7 @@ private:
   void testProjectionPreservesAConstantField();
   void testLagrangeBasisFunctionIsCardinal();
   void testInterpolationEvaluatesTheCoarsePolynomialAtTheChildNodes();
+  void testEquidistantInterpolationEvaluatesThePolynomialFromFaceToFace();
   void testRestrictionIsTheInterpolationTransposedOverTheChildWidth();
   void testWeightedRestrictionPreservesConstants();
   void testMatricesAreMirrorSymmetricToTheLastBit();

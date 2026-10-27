@@ -27,12 +27,30 @@ SKIPPED_FIELDS = (
 )
 
 
+def is_skipped(name: str) -> bool:
+    """A status field spells out its values behind its name, as in LimiterStatus[0=Regular,...]."""
+    return name.split("[", 1)[0] in SKIPPED_FIELDS
+
+
+def status_field(snapshot: MeshSnapshot) -> str | None:
+    """Returns the name of the LimiterStatus field of the snapshot, or None."""
+    return next(
+        (
+            name
+            for name in snapshot.cell_data
+            if name.split("[", 1)[0] == "LimiterStatus"
+        ),
+        None,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Integrate the fields of a solution output (any plotter format) over the "
         "domain in every snapshot and report their change against a reference snapshot. Cell "
-        "data integrates as volume averages. Point data integrates with the Gauss-Legendre or "
-        "Gauss-Lobatto quadrature of the Galerkin cells the plotted mesh connects. A Galerkin cell "
+        "data integrates as volume averages. Point data integrates with the Gauss-Legendre, "
+        "Gauss-Lobatto or closed Newton-Cotes quadrature of the Galerkin cells the plotted mesh "
+        "connects. A Galerkin cell "
         "that the subcell limiter recomputes plots its subcells at its nodes, so a snapshot with such "
         "cells only approximates the integral; the report marks it."
     )
@@ -101,9 +119,14 @@ def galerkin_cells(snapshot: MeshSnapshot) -> list[np.ndarray]:
 
 
 def unit_rule(kind: str, nodes: int) -> tuple[np.ndarray, np.ndarray]:
-    """Returns the nodes and weights of the Gauss-Legendre or Gauss-Lobatto rule on [0, 1]."""
+    """Returns the nodes and weights of the Gauss-Legendre, Gauss-Lobatto or closed Newton-Cotes
+    (equidistant) rule on [0, 1]."""
     if kind == "legendre":
         points, weights = np.polynomial.legendre.leggauss(nodes)
+    elif kind == "equidistant":
+        points = np.linspace(0.0, 1.0, nodes)
+        moments = 1.0 / np.arange(1, nodes + 1)
+        return points, np.linalg.solve(np.vander(points, increasing=True).T, moments)
     else:
         degree = np.polynomial.legendre.Legendre.basis(nodes - 1)
         points = np.concatenate([[-1.0], np.sort(degree.deriv().roots().real), [1.0]])
@@ -113,7 +136,8 @@ def unit_rule(kind: str, nodes: int) -> tuple[np.ndarray, np.ndarray]:
 
 def quadrature_weights(snapshot: MeshSnapshot, tolerance: float = 1e-4) -> np.ndarray:
     """Returns the quadrature weight of every point of a snapshot whose points are the
-    tensor-product Gauss-Legendre or Gauss-Lobatto nodes of axis-aligned Galerkin cells."""
+    tensor-product Gauss-Legendre, Gauss-Lobatto or equidistant nodes of axis-aligned Galerkin
+    cells."""
     points = np.asarray(snapshot.points, dtype=np.float64)
     dimensions = points.shape[1]
     weights = np.zeros(len(points))
@@ -127,7 +151,7 @@ def quadrature_weights(snapshot: MeshSnapshot, tolerance: float = 1e-4) -> np.nd
         positions = points[cell]
         lower, upper = positions.min(axis=0), positions.max(axis=0)
         cell_weights = None
-        for kind in ("legendre", "lobatto"):
+        for kind in ("legendre", "lobatto", "equidistant"):
             unit_nodes, unit_weights = unit_rule(kind, nodes)
             width = (upper - lower) / (unit_nodes[-1] - unit_nodes[0])
             origin = lower - unit_nodes[0] * width
@@ -138,8 +162,8 @@ def quadrature_weights(snapshot: MeshSnapshot, tolerance: float = 1e-4) -> np.nd
                 break
         if cell_weights is None:
             raise ValueError(
-                "The points of a Galerkin cell are neither Gauss-Legendre nor Gauss-Lobatto "
-                "nodes."
+                "The points of a Galerkin cell are neither Gauss-Legendre, Gauss-Lobatto nor "
+                "equidistant nodes."
             )
         weights[cell] = cell_weights
     return weights
@@ -170,9 +194,10 @@ def integrate(
 def count_limited_cells(snapshot: MeshSnapshot) -> int:
     """Returns the number of Galerkin cells whose plot shows the subcells of the limiter. Every
     plotted cell of a Galerkin cell carries its LimiterStatus, Limited (2) or Troubled (3) there."""
-    if "LimiterStatus" not in snapshot.cell_data:
+    name = status_field(snapshot)
+    if name is None:
         return 0
-    status = np.asarray(snapshot.cell_data["LimiterStatus"]).reshape(-1)
+    status = np.asarray(snapshot.cell_data[name]).reshape(-1)
     limited_points = np.unique(np.asarray(snapshot.cells)[status >= 2].reshape(-1))
     if len(limited_points) == 0:
         return 0
@@ -182,7 +207,7 @@ def count_limited_cells(snapshot: MeshSnapshot) -> int:
 
 
 def default_fields(snapshot: MeshSnapshot) -> list[str]:
-    return [name for name in snapshot.variables if name not in SKIPPED_FIELDS]
+    return [name for name in snapshot.variables if not is_skipped(name)]
 
 
 def main(argv: list[str] | None = None) -> None:

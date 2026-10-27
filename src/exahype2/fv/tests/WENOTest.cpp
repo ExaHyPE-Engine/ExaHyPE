@@ -265,7 +265,7 @@ namespace {
   }
 
   struct WeightsOfFirstEntry {
-    static int reconstructionWeightsOf(const int) { return 0; }
+    GPU_CALLABLE_METHOD static int reconstructionWeightsOf(const int) { return 0; }
   };
 
   // Returns the largest difference between the nodal polynomial of the second entry and the sum

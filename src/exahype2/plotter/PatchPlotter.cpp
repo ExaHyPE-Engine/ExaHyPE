@@ -54,7 +54,7 @@ exahype2::plotter::PatchPlotter::hashLatticeKey(const std::array<std::int64_t, D
 /**
  * Returns a mesh with the arrays of the patches and numberOfPoints points. The data fields become
  * point fields or cell fields, followed by the cell fields RefinementLevel, Subdomain, CurveIndex
- * and, with writesStatus, LimiterStatus. The arrays stay uninitialised. The caller writes every
+ * and, with a statusName, the status field of that name. The arrays stay uninitialised. The caller writes every
  * entry. Every plot cell of a patch stores the curve index of its grid cell. A single-precision
  * plot file stores the curve indices of up to 2^24 grid cells exactly.
  */
@@ -64,7 +64,7 @@ exahype2::plotter::PatchPlotter::createMesh(
   const int         cellsPerPatch,
   const std::size_t numberOfPoints,
   const bool        writesPointData,
-  const bool        writesStatus
+  const char* const statusName
 ) const {
   using Values = tarch::plotter::MeshArray<double>;
   assertion(numberOfPatches >= 0, numberOfPatches);
@@ -84,8 +84,8 @@ exahype2::plotter::PatchPlotter::createMesh(
   mesh.cellFields.push_back({"RefinementLevel", 1, Values(numberOfCells)});
   mesh.cellFields.push_back({"Subdomain", 1, Values(numberOfCells)});
   mesh.cellFields.push_back({"CurveIndex", 1, Values(numberOfCells)});
-  if (writesStatus) {
-    mesh.cellFields.push_back({"LimiterStatus", 1, Values(numberOfCells)});
+  if (statusName != nullptr) {
+    mesh.cellFields.push_back({statusName, 1, Values(numberOfCells)});
   }
   return mesh;
 }

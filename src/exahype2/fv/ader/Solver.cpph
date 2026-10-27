@@ -269,8 +269,9 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getAllo
 }
 
 /**
- * Writes one snapshot of the solution, with a fallback the status of every volume after its last
- * step as LimiterStatus.
+ * Writes one snapshot of the reconstruction: the limited polynomial of every volume at
+ * max(2 NodesPerAxis - 1, 2) equidistant points per axis from face to face, with a fallback the
+ * status of every volume after its last step as LimiterStatus.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -279,10 +280,54 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
   const tarch::plotter::Format    format,
   const std::string&              outputDirectory
 ) {
+  using Basis                      = typename Scheme::Basis;
+  constexpr int NodesPerAxis       = Scheme::NodesPerAxis;
+  constexpr int PointsPerAxis      = std::max(2 * NodesPerAxis - 1, 2);
+  constexpr int NumberOfData       = Scheme::NumberOfData;
+  constexpr int PointsPerVolume    = peano4::power(PointsPerAxis, DIMENSIONS);
+  std::array<double, PointsPerAxis * NodesPerAxis> matrix1D{};
+  for (int point = 0; point < PointsPerAxis; point++) {
+    for (int node = 0; node < NodesPerAxis; node++) {
+      matrix1D[static_cast<std::size_t>(point * NodesPerAxis + node)] =
+        Basis::value(node, static_cast<double>(point) / (PointsPerAxis - 1));
+    }
+  }
+  const auto matrix =
+    exahype2::plotter::PatchPlotter::getTensorProductMatrix<PointsPerAxis, NodesPerAxis>(matrix1D.data());
+  const auto evaluatePatch = [&](
+                               const int                            cell,
+                               const StoragePrecision* const        patch,
+                               const StoragePrecision* const* const faces,
+                               double* const                        values
+                             ) {
+    std::vector<ComputePrecision> scratch(Scheme::PatchScratchSize);
+    Scheme::reconstructPatch(
+      patch,
+      faces,
+      cellConnectivity.getCellCentre(cell),
+      cellConnectivity.getCellWidth(cell),
+      scratch.data(),
+      exahype2::dg::ader::TeamWorkers{}
+    );
+    for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
+      exahype2::plotter::PatchPlotter::evaluateNodes<PointsPerAxis, NodesPerAxis, NumberOfData>(
+        matrix,
+        scratch.data() + Scheme::NodalStatesOffset + volume * Scheme::NodalStateSize,
+        values + volume * PointsPerVolume * NumberOfData
+      );
+    }
+  };
   if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
-    Base::plot(cellConnectivity, format, outputDirectory, &std::as_const(_volumeStatuses).download(_volumeStatusesOnHost));
+    this->template plotReconstruction<PointsPerAxis>(
+      cellConnectivity,
+      format,
+      outputDirectory,
+      evaluatePatch,
+      &std::as_const(_volumeStatuses).download(_volumeStatusesOnHost),
+      exahype2::fv::ader::VolumeStatusFieldName
+    );
   } else {
-    Base::plot(cellConnectivity, format, outputDirectory);
+    this->template plotReconstruction<PointsPerAxis>(cellConnectivity, format, outputDirectory, evaluatePatch);
   }
 }
 

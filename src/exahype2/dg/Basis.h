@@ -209,6 +209,10 @@ namespace exahype2::dg {
   template <int NodesPerAxis>
   INLINE_METHOD constexpr AMRMatrices1D<NodesPerAxis> getInterpolationMatrix1D(const double* nodes);
 
+  template <int NodesPerAxis, int PointsPerAxis>
+  INLINE_METHOD constexpr std::array<double, static_cast<std::size_t>(PointsPerAxis * NodesPerAxis)>
+  getEquidistantInterpolationMatrix1D(const double* nodes);
+
   template <int NodesPerAxis>
   INLINE_METHOD constexpr AMRMatrices1D<NodesPerAxis> getRestrictionMatrix1D(const double* nodes);
 

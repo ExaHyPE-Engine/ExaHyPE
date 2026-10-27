@@ -148,6 +148,10 @@ namespace {
   template <typename Precision>
   class DGMatrices final {
   public:
+    static auto getPlotMatrix1D() {
+      return exahype2::dg::getEquidistantInterpolationMatrix1D<NodesPerAxis, std::max(2 * NodesPerAxis - 1, 2)>(QuadratureNodes);
+    }
+
     static void initialise() {
       std::vector<double> stiffness(EntriesPerOperator);
       std::vector<double> stiffnessTransposed(EntriesPerOperator);

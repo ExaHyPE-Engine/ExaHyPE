@@ -193,7 +193,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
 }
 
 /**
- * Writes one snapshot with one plot point per node. Every rank calls this at the same time.
+ * Writes one snapshot of the nodal polynomial at the plot points of PlotMatrix1D. Every rank calls
+ * this at the same time.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -202,16 +203,79 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
   const tarch::plotter::Format    format,
   const std::string&              outputDirectory
 ) {
-  _plotter.template plotNodes<NodesPerAxis, NumberOfData>(
+  plotPolynomial<std::max(2 * NodesPerAxis - 1, 2)>(
     cellConnectivity,
-    getCellsOnHost(cellConnectivity),
-    downloadSolution(),
-    _nodePositionsOnHost.data(),
-    _timeStepping.getTimeStamp(),
+    DGMatrices<double>::getPlotMatrix1D().data(),
     format,
     outputDirectory
   );
   plotFaces(cellConnectivity, format, outputDirectory);
+}
+
+/**
+ * Writes one snapshot of the nodal polynomial at PointsPerAxis equidistant points per axis from
+ * face to face of every cell. The entry [point][node] of matrix1D is the basis function of node at
+ * point. With statuses, every plot cell stores the status of its cell in the cell field statusName,
+ * and a cell with status at least subcellStatus plots at every point the subcell of subcells that contains the point.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <int PointsPerAxis, int SubcellsPerAxis>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::plotPolynomial(
+  const peano4::CellConnectivity&                   cellConnectivity,
+  const double* const                               matrix1D,
+  const tarch::plotter::Format                      format,
+  const std::string&                                outputDirectory,
+  const CellPool* const                             subcells,
+  const tarch::accelerator::ChunkedMemoryPool<int>* statuses,
+  const int                                         subcellStatus,
+  const char* const                                 statusName
+) {
+  using exahype2::plotter::PatchPlotter;
+  constexpr int PointsPerCell = peano4::power(PointsPerAxis, DIMENSIONS);
+  assertion(statuses == nullptr or (subcells != nullptr and subcells->isHostAccessible()));
+  assertion(statuses == nullptr or statuses->isHostAccessible());
+
+  std::array<double, PointsPerAxis> pointPositions{};
+  for (int point = 0; point < PointsPerAxis; point++) {
+    pointPositions[static_cast<std::size_t>(point)] = static_cast<double>(point) / (PointsPerAxis - 1);
+  }
+  const auto      subcellOfPoint = PatchPlotter::containingSubcells<PointsPerAxis, SubcellsPerAxis>(pointPositions.data());
+  const auto      matrix         = PatchPlotter::getTensorProductMatrix<PointsPerAxis, NodesPerAxis>(matrix1D);
+  const CellPool& solution       = downloadSolution();
+  const auto      evaluate       = [&](const int cell, double* const values) {
+    if (statuses != nullptr and statuses->getChunk(cell)[0] >= subcellStatus) {
+      for (int point = 0; point < PointsPerCell; point++) {
+        const StoragePrecision* const subcell =
+          subcells->getChunk(cell) + subcellOfPoint[static_cast<std::size_t>(point)] * NumberOfData;
+        std::copy_n(subcell, NumberOfData, values + point * NumberOfData);
+      }
+    } else {
+      PatchPlotter::evaluateNodes<PointsPerAxis, NodesPerAxis, NumberOfData>(matrix, solution.getChunk(cell), values);
+    }
+  };
+  const auto cells = getCellsOnHost(cellConnectivity);
+  if (statuses == nullptr) {
+    _plotter.template plotPatch<1, PointsPerAxis, NumberOfData>(
+      cellConnectivity,
+      cells,
+      evaluate,
+      _timeStepping.getTimeStamp(),
+      format,
+      outputDirectory
+    );
+  } else {
+    _plotter.template plotPatch<1, PointsPerAxis, NumberOfData>(
+      cellConnectivity,
+      cells,
+      evaluate,
+      _timeStepping.getTimeStamp(),
+      format,
+      outputDirectory,
+      [&](const int cell, int) { return statuses->getChunk(cell)[0]; },
+      statusName
+    );
+  }
 }
 
 /**

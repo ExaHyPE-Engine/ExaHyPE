@@ -139,27 +139,236 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
 }
 
 /**
- * Writes one snapshot of the solution, with the status of every volume from volumeStatuses where
- * given. Every rank calls this at the same time. In a build with a GPU backend the plot reads a copy
- * of the solution in _solutionOnHost.
+ * Writes one snapshot with the value of every volume at its centre, so that a viewer interpolates
+ * between the volumes. The points on a patch face hold the average of the volumes on both sides of
+ * the face, which the halo provides, so both patches of a face plot the same values. A patch corner
+ * extrapolates the volume beyond it bilinearly from the volumes around it. Every rank calls this at
+ * the same time. In a build with a GPU backend the plot reads host copies of the solution and halo.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
+  const peano4::CellConnectivity& cellConnectivity,
+  const tarch::plotter::Format    format,
+  const std::string&              outputDirectory
+) {
+  constexpr int PatchSize       = Derived::PatchSize;
+  constexpr int ExtendedPerAxis = PatchSize + 2;
+
+  std::array<double, ExtendedPerAxis> pointPositions{};
+  for (int point = 1; point <= PatchSize; point++) {
+    pointPositions[static_cast<std::size_t>(point)] = (point - 0.5) / PatchSize;
+  }
+  pointPositions.back() = 1.0;
+
+  fillHalo(cellConnectivity);
+  const Patches& solution = std::as_const(_solution).download(_solutionOnHost);
+  const Faces&   halo     = std::as_const(_halo).download(_haloOnHost);
+  plotPatch<1, ExtendedPerAxis>(
+    cellConnectivity,
+    format,
+    outputDirectory,
+    [&](const int cell, double* const values) {
+      const StoragePrecision* faces[peano4::FacesPerCell];
+      for (int face = 0; face < peano4::FacesPerCell; face++) {
+        faces[face] = halo.getChunk(cellConnectivity.getCellFace(cell, face));
+      }
+      evaluateVolumeCentres(solution.getChunk(cell), faces, values);
+    },
+    nullptr,
+    nullptr,
+    pointPositions.data()
+  );
+}
+
+/**
+ * Writes the values at the PatchSize + 2 points per axis of plot() into values: the
+ * volume centres of patch and the faces between them, with the volumes beyond each face from the
+ * halo in faces.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::evaluateVolumeCentres(
+  const StoragePrecision* const        patch,
+  const StoragePrecision* const* const faces,
+  double* const                        values
+) {
+  constexpr int PatchSize       = Derived::PatchSize;
+  constexpr int NumberOfData    = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+  constexpr int ExtendedPerAxis = PatchSize + 2;
+  constexpr int ExtendedValues  = peano4::power(ExtendedPerAxis, DIMENSIONS) * NumberOfData;
+  std::vector<double>           extended(ExtendedValues);
+  const auto                    getExtended = [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+    return extended.data() + peano4::dLinearised(index, ExtendedPerAxis) * NumberOfData;
+  };
+  for (int outsideAxes = 0; outsideAxes <= DIMENSIONS; outsideAxes++) {
+    peano4::dForEach(ExtendedPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+      std::array<int, DIMENSIONS> outside{};
+      int                         count = 0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        if (index(axis) == 0 or index(axis) == ExtendedPerAxis - 1) {
+          outside[static_cast<std::size_t>(count++)] = axis;
+        }
+      }
+      if (count != outsideAxes) {
+        return;
+      }
+      double* const target = getExtended(index);
+      if (count == 0) {
+        const auto volume = index - tarch::la::Vector<DIMENSIONS, int>(1);
+        const auto source = patch + peano4::dLinearised(volume, PatchSize) * NumberOfData;
+        std::copy_n(source, NumberOfData, target);
+      } else if (count == 1) {
+        const int  normal = outside[0];
+        const bool upper  = index(normal) != 0;
+        auto       layer  = index - tarch::la::Vector<DIMENSIONS, int>(1);
+        layer(normal)     = upper ? Patch::HaloSize : Patch::HaloSize - 1;
+        const auto source = faces[normal + (upper ? DIMENSIONS : 0)]
+                          + exahype2::fv::getFaceVolumeIndex(layer, PatchSize, Patch::HaloSize, normal) * NumberOfData;
+        std::copy_n(source, NumberOfData, target);
+      } else {
+        std::fill_n(target, NumberOfData, 0.0);
+        for (int kept = 0; kept < (1 << count) - 1; kept++) {
+          auto inner = index;
+          int  moved = 0;
+          for (int entry = 0; entry < count; entry++) {
+            const int axis = outside[static_cast<std::size_t>(entry)];
+            if ((kept & (1 << entry)) == 0) {
+              inner(axis) = index(axis) == 0 ? 1 : ExtendedPerAxis - 2;
+              moved++;
+            }
+          }
+          const double  sign   = moved % 2 == 1 ? 1.0 : -1.0;
+          const double* source = getExtended(inner);
+          for (int value = 0; value < NumberOfData; value++) {
+            target[value] += sign * source[value];
+          }
+        }
+      }
+    });
+  }
+  peano4::dForEach(ExtendedPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& pointIndex) {
+    double* const point = values + peano4::dLinearised(pointIndex, ExtendedPerAxis) * NumberOfData;
+    std::fill_n(point, NumberOfData, 0.0);
+    tarch::la::Vector<DIMENSIONS, int> width(1);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      width(axis) = pointIndex(axis) == 0 or pointIndex(axis) == ExtendedPerAxis - 1 ? 2 : 1;
+    }
+    int sources = 0;
+    peano4::dForEach(width, [&](const tarch::la::Vector<DIMENSIONS, int>& offset) {
+      auto index = pointIndex;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        if (width(axis) == 2) {
+          index(axis) = pointIndex(axis) == 0 ? offset(axis) : ExtendedPerAxis - 2 + offset(axis);
+        }
+      }
+      const double* const source = getExtended(index);
+      for (int value = 0; value < NumberOfData; value++) {
+        point[value] += source[value];
+      }
+      sources++;
+    });
+    for (int value = 0; value < NumberOfData; value++) {
+      point[value] /= sources;
+    }
+  });
+}
+
+/**
+ * Writes one snapshot in which every volume owns PointsPerAxis equidistant points per
+ * axis from face to face. The call evaluatePatch(cell, patch, faces, values) writes the
+ * reconstruction at these points from the patch and the halos on its faces into values, ordered
+ * by volume, then by point. A fresh halo precedes the plot. Every rank calls this at the same time.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <int PointsPerAxis, typename EvaluatePatch>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plotReconstruction(
   const peano4::CellConnectivity&                         cellConnectivity,
   const tarch::plotter::Format                            format,
   const std::string&                                      outputDirectory,
-  const tarch::accelerator::ChunkedMemoryPool<int>* const volumeStatuses
+  const EvaluatePatch&                                    evaluatePatch,
+  const tarch::accelerator::ChunkedMemoryPool<int>* const volumeStatuses,
+  const char* const                                       statusName
 ) {
-  _plotter.template plotVolumes<Derived::PatchSize, Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables>(
+  fillHalo(cellConnectivity);
+  const Patches& solution = std::as_const(_solution).download(_solutionOnHost);
+  const Faces&   halo     = std::as_const(_halo).download(_haloOnHost);
+  plotPatch<Derived::PatchSize, PointsPerAxis>(
     cellConnectivity,
-    cellConnectivity.getCells(),
-    std::as_const(_solution).download(_solutionOnHost),
-    _timeStepping.getTimeStamp(),
     format,
     outputDirectory,
-    volumeStatuses
+    [&](const int cell, double* const values) {
+      const StoragePrecision* faces[peano4::FacesPerCell];
+      for (int face = 0; face < peano4::FacesPerCell; face++) {
+        faces[face] = halo.getChunk(cellConnectivity.getCellFace(cell, face));
+      }
+      evaluatePatch(cell, solution.getChunk(cell), faces, values);
+    },
+    volumeStatuses,
+    statusName
   );
+}
+
+/**
+ * Fills the halo for a reconstruction outside a time step as performTimeStep() does.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::fillHalo(
+  const peano4::CellConnectivity& cellConnectivity
+) {
+  _haloExchange.post();
+  applyBoundaryConditions(cellConnectivity);
+  interpolateCoarseHalos(cellConnectivity, peano4::Adjacency::Local);
+  _haloExchange.wait();
+  interpolateCoarseHalos(cellConnectivity, peano4::Adjacency::Remote);
+}
+
+/**
+ * Writes one snapshot with ElementsPerAxis elements and PointsPerAxis points per axis
+ * that evaluate fills, at pointPositions where given, with the status of every element from
+ * volumeStatuses in the cell field statusName where given.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <int ElementsPerAxis, int PointsPerAxis, typename Evaluate>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plotPatch(
+  const peano4::CellConnectivity&                         cellConnectivity,
+  const tarch::plotter::Format                            format,
+  const std::string&                                      outputDirectory,
+  const Evaluate&                                         evaluate,
+  const tarch::accelerator::ChunkedMemoryPool<int>* const volumeStatuses,
+  const char* const                                       statusName,
+  const double* const                                     pointPositions
+) {
+  constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+  assertion(volumeStatuses == nullptr or volumeStatuses->isHostAccessible());
+  if (volumeStatuses == nullptr) {
+    _plotter.template plotPatch<ElementsPerAxis, PointsPerAxis, NumberOfData>(
+      cellConnectivity,
+      cellConnectivity.getCells(),
+      evaluate,
+      _timeStepping.getTimeStamp(),
+      format,
+      outputDirectory,
+      nullptr,
+      nullptr,
+      pointPositions
+    );
+  } else {
+    _plotter.template plotPatch<ElementsPerAxis, PointsPerAxis, NumberOfData>(
+      cellConnectivity,
+      cellConnectivity.getCells(),
+      evaluate,
+      _timeStepping.getTimeStamp(),
+      format,
+      outputDirectory,
+      [&](const int cell, const int volume) { return volumeStatuses->getChunk(cell)[volume]; },
+      statusName,
+      pointPositions
+    );
+  }
 }
 
 /**
@@ -175,6 +384,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
   _votes.release();
   _errorMeasurement.release();
   _solutionOnHost.release();
+  _haloOnHost.release();
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -217,7 +427,7 @@ INLINE_METHOD tarch::AllocatedBytes
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return _solution.getAllocatedBytes() + _halo.getAllocatedBytes() + _haloExchange.getAllocatedBytes()
     + _migration.getAllocatedBytes() + _votes.getAllocatedBytes() + _errorMeasurement.getAllocatedBytes()
-    + _solutionOnHost.getAllocatedBytes();
+    + _solutionOnHost.getAllocatedBytes() + _haloOnHost.getAllocatedBytes();
 }
 
 /**

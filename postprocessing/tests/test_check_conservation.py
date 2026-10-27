@@ -79,10 +79,18 @@ class CheckConservationTest(unittest.TestCase):
         snapshot = make_galerkin_snapshot("legendre", 3, CELLS, lambda x, y: x)
         self.assertAlmostEqual(quadrature_weights(snapshot).sum(), 1.0, places=12)
 
-    def test_an_equidistant_layout_is_rejected(self):
+    def test_equidistant_nodes_integrate_their_polynomials_exactly(self):
+        # Four equidistant nodes from face to face integrate degree three per axis exactly.
+        snapshot = make_galerkin_snapshot(
+            "equidistant", 4, CELLS, lambda x, y: x**3 * y**2
+        )
+        exact = 2.0**4 / 4.0 * 0.5**3 / 3.0
+        np.testing.assert_allclose(integrate(snapshot, ["q"])["q"], [exact], rtol=1e-12)
+
+    def test_an_irregular_layout_is_rejected(self):
         snapshot = make_galerkin_snapshot("legendre", 4, CELLS, lambda x, y: x)
         snapshot.points[:16] = np.asarray(
-            [[x, y] for y in np.linspace(0.0, 0.5, 4) for x in np.linspace(0.0, 1.0, 4)]
+            [[x, y] for y in [0.0, 0.05, 0.4, 0.5] for x in [0.0, 0.1, 0.8, 1.0]]
         )
         with self.assertRaises(ValueError):
             quadrature_weights(snapshot)
@@ -92,7 +100,7 @@ class CheckConservationTest(unittest.TestCase):
         status = np.zeros(snapshot.num_cells)
         status[[0, 1, 2, 3]] = 2.0
         status[[8]] = 3.0
-        snapshot.cell_data["LimiterStatus"] = status
+        snapshot.cell_data["LimiterStatus[0=Regular,1=Halo,2=Limited,3=Troubled]"] = status
         self.assertEqual(count_limited_cells(snapshot), 2)
 
 
