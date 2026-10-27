@@ -19,8 +19,8 @@ tests::exahype2::aderdg::grmhd::dotProduct(const double* const first, const doub
 
 /**
  * Writes scale times the cross product of first and second into result. Every product rounds on
- * its own before the difference. A permutation of the axes then returns the permuted result
- * bitwise, negated for an odd permutation.
+ * its own before the difference. A permutation of the axes returns the permuted result bitwise,
+ * negated for an odd permutation.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tests::exahype2::aderdg::grmhd::crossProduct(
@@ -57,36 +57,44 @@ tests::exahype2::aderdg::grmhd::multiplyMatrixVector(
 }
 
 /**
- * Writes the inverse of matrix into inverse and returns the determinant of matrix. The determinant
- * adds its six rounded triple products in fixed point. A permutation of the axes then returns the
- * same determinant and the permuted inverse bitwise.
+ * Writes the inverse of the symmetric matrix into inverse and returns the determinant of matrix. The
+ * determinant combines three parts in a fixed order: the product of the diagonal entries, twice the
+ * product of the off-diagonal entries and the sum of the three products of a diagonal entry with the
+ * square of the off-diagonal entry outside its row and column. A permutation of the axes permutes the
+ * operands within each part. The triple products and the sum order their operands by magnitude. A
+ * permutation of the axes returns the same determinant and the permuted inverse bitwise.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 tests::exahype2::aderdg::grmhd::invertMatrix3x3(const double (&matrix)[3][3], double (&inverse)[3][3]) {
-  const double terms[6] = {
-    tarch::la::productInOrderOfMagnitude(matrix[0][0], matrix[1][1], matrix[2][2]),
-    -tarch::la::productInOrderOfMagnitude(matrix[0][0], matrix[1][2], matrix[2][1]),
-    -tarch::la::productInOrderOfMagnitude(matrix[1][0], matrix[0][1], matrix[2][2]),
-    tarch::la::productInOrderOfMagnitude(matrix[1][0], matrix[0][2], matrix[2][1]),
-    tarch::la::productInOrderOfMagnitude(matrix[2][0], matrix[0][1], matrix[1][2]),
-    -tarch::la::productInOrderOfMagnitude(matrix[2][0], matrix[0][2], matrix[1][1])
-  };
-  const double determinant = tarch::la::sumInFixedPoint(terms, 6);
+  ASSERTION(matrix[0][1] == matrix[1][0] and matrix[0][2] == matrix[2][0] and matrix[1][2] == matrix[2][1]);
+  const double diagonal[3]    = {matrix[0][0], matrix[1][1], matrix[2][2]};
+  const double offDiagonal[3] = {matrix[1][2], matrix[0][2], matrix[0][1]};
+  double       diagonalTimesSquares[3];
+  for (int axis = 0; axis < 3; axis++) {
+    diagonalTimesSquares[axis] = tarch::la::productRoundedOnce(
+      diagonal[axis],
+      tarch::la::productRoundedOnce(offDiagonal[axis], offDiagonal[axis])
+    );
+  }
+  const double determinant =
+    (tarch::la::productInOrderOfMagnitude(diagonal[0], diagonal[1], diagonal[2])
+     + 2.0 * tarch::la::productInOrderOfMagnitude(offDiagonal[0], offDiagonal[1], offDiagonal[2]))
+    - tarch::la::sumInOrderOfMagnitude(diagonalTimesSquares[0], diagonalTimesSquares[1], diagonalTimesSquares[2]);
   ASSERTION(determinant != 0.0, determinant);
 
   const auto differenceOfProducts =
     [](const double first, const double second, const double third, const double fourth) {
       return tarch::la::productRoundedOnce(first, second) - tarch::la::productRoundedOnce(third, fourth);
     };
-  inverse[0][0] = differenceOfProducts(matrix[1][1], matrix[2][2], matrix[1][2], matrix[2][1]) / determinant;
-  inverse[0][1] = differenceOfProducts(matrix[0][2], matrix[2][1], matrix[0][1], matrix[2][2]) / determinant;
+  inverse[0][0] = differenceOfProducts(matrix[1][1], matrix[2][2], matrix[1][2], matrix[1][2]) / determinant;
+  inverse[1][1] = differenceOfProducts(matrix[0][0], matrix[2][2], matrix[0][2], matrix[0][2]) / determinant;
+  inverse[2][2] = differenceOfProducts(matrix[0][0], matrix[1][1], matrix[0][1], matrix[0][1]) / determinant;
+  inverse[0][1] = differenceOfProducts(matrix[0][2], matrix[1][2], matrix[0][1], matrix[2][2]) / determinant;
   inverse[0][2] = differenceOfProducts(matrix[0][1], matrix[1][2], matrix[0][2], matrix[1][1]) / determinant;
-  inverse[1][0] = differenceOfProducts(matrix[1][2], matrix[2][0], matrix[1][0], matrix[2][2]) / determinant;
-  inverse[1][1] = differenceOfProducts(matrix[0][0], matrix[2][2], matrix[0][2], matrix[2][0]) / determinant;
-  inverse[1][2] = differenceOfProducts(matrix[0][2], matrix[1][0], matrix[0][0], matrix[1][2]) / determinant;
-  inverse[2][0] = differenceOfProducts(matrix[1][0], matrix[2][1], matrix[1][1], matrix[2][0]) / determinant;
-  inverse[2][1] = differenceOfProducts(matrix[0][1], matrix[2][0], matrix[0][0], matrix[2][1]) / determinant;
-  inverse[2][2] = differenceOfProducts(matrix[0][0], matrix[1][1], matrix[0][1], matrix[1][0]) / determinant;
+  inverse[1][2] = differenceOfProducts(matrix[0][1], matrix[0][2], matrix[0][0], matrix[1][2]) / determinant;
+  inverse[1][0] = inverse[0][1];
+  inverse[2][0] = inverse[0][2];
+  inverse[2][1] = inverse[1][2];
 
   return determinant;
 }
@@ -405,7 +413,7 @@ tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(const double* const 
 
   const double lowerStart = 0.;
   const double upperStart = 1.0 - 1e-10;
-  // The tolerance lies above the spacing of doubles near v2. The root finder then stops before
+  // The tolerance lies above the spacing of doubles near v2. The root finder stops before
   // MaximumIterations.
   const double tolerance = 1.0e-15;
   double       w         = 0;
