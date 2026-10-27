@@ -10,7 +10,7 @@
 namespace tarch::accelerator {
   /**
    * References the Kokkos team member of the running kernel and the team scratch of the launch. The
-   * member exists for the whole kernel, so a nested call may copy this handle by value.
+   * member exists for the whole kernel. A nested call may copy this handle by value.
    */
   struct KokkosTeam final {
     using MemberType = Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>::member_type;
@@ -26,6 +26,14 @@ namespace tarch::accelerator {
   // DefaultThreadsPerTeam threads.
   inline constexpr int DefaultThreadsPerTeam = KokkosThreadsPerTeam;
   inline constexpr int TeamScratchBytes      = 16384;
+#if defined(KOKKOS_ENABLE_HIP)
+  // The AMD compiler limits the registers of a Kokkos kernel without launch bounds to those of a
+  // block of 1024 threads.
+  using KokkosTeamPolicy =
+    Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace, Kokkos::LaunchBounds<KokkosThreadsPerTeam, 1>>;
+#else
+  using KokkosTeamPolicy = Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>;
+#endif
 } // namespace tarch::accelerator
 
 #endif

@@ -124,6 +124,7 @@ void
 exahype2::fv::tests::TracingTest::run() {
   testMethod(testPiecewiseConstantReadsTheVolumeThatContainsThePosition);
   testMethod(testPiecewiseLinearReproducesALinearField);
+  testMethod(testPiecewiseLinearReturnsTheSameBitsAtMirroredPositions);
   testMethod(testInterpolationOnOneVolumePatches);
   testMethod(testInterpolationOnRectangularPatches);
   testMethod(testClampIntoPatchProjectsOntoTheVolumeCentres);
@@ -266,6 +267,80 @@ exahype2::fv::tests::TracingTest::testPiecewiseConstantReadsTheVolumeThatContain
     (exahype2::fv::interpolatePiecewiseConstant<PatchSize, NumberOfData>(centre, width, Q.data(), beyondThePatch, 0)),
     getLinearField(0, lastVolumeCentre)
   );
+}
+
+/**
+ * A mirrored or swapped position in the mirrored or swapped patch returns the bits of the original
+ * position.
+ */
+void
+exahype2::fv::tests::TracingTest::testPiecewiseLinearReturnsTheSameBitsAtMirroredPositions() {
+  const tarch::la::Vector<DIMENSIONS, double> centre(0.0);
+  const tarch::la::Vector<DIMENSIONS, double> width(0.3);
+  std::vector<double>                         original(ValuesPerPatch, 0.0);
+  std::vector<double>                         mirrored(ValuesPerPatch, 0.0);
+  std::vector<double>                         swapped(ValuesPerPatch, 0.0);
+  peano4::dForEach(PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+    tarch::la::Vector<DIMENSIONS, int> mirroredVolume = volume;
+    mirroredVolume(0)                                 = PatchSize - 1 - volume(0);
+    tarch::la::Vector<DIMENSIONS, int> swappedVolume  = volume;
+    swappedVolume(0)                                  = volume(1);
+    swappedVolume(1)                                  = volume(0);
+    for (int unknown = 0; unknown < NumberOfData; unknown++) {
+      const double value = std::sin(1.0 + 0.7 * peano4::dLinearised(volume, PatchSize) + 0.3 * unknown);
+      original[static_cast<std::size_t>(peano4::dLinearised(volume, PatchSize)) * NumberOfData + unknown] = value;
+      mirrored[static_cast<std::size_t>(peano4::dLinearised(mirroredVolume, PatchSize)) * NumberOfData + unknown] =
+        value;
+      swapped[static_cast<std::size_t>(peano4::dLinearised(swappedVolume, PatchSize)) * NumberOfData + unknown] = value;
+    }
+  });
+
+  constexpr double Samples[] = {-0.13, -0.071, -0.02, 0.0, 0.033, 0.09, 0.149};
+  for (const double first : Samples) {
+    for (const double second : Samples) {
+      tarch::la::Vector<DIMENSIONS, double> position(0.01);
+      position(0)                                            = first;
+      position(1)                                            = second;
+      tarch::la::Vector<DIMENSIONS, double> mirroredPosition = position;
+      mirroredPosition(0)                                    = -first;
+      tarch::la::Vector<DIMENSIONS, double> swappedPosition  = position;
+      swappedPosition(0)                                     = second;
+      swappedPosition(1)                                     = first;
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        const double value = exahype2::fv::interpolatePiecewiseLinear<PatchSize, NumberOfData>(
+          centre,
+          width,
+          original.data(),
+          position,
+          unknown
+        );
+        validateEqualsWithParams2(
+          (exahype2::fv::interpolatePiecewiseLinear<PatchSize, NumberOfData>(
+            centre,
+            width,
+            mirrored.data(),
+            mirroredPosition,
+            unknown
+          )),
+          value,
+          first,
+          second
+        );
+        validateEqualsWithParams2(
+          (exahype2::fv::interpolatePiecewiseLinear<PatchSize, NumberOfData>(
+            centre,
+            width,
+            swapped.data(),
+            swappedPosition,
+            unknown
+          )),
+          value,
+          first,
+          second
+        );
+      }
+    }
+  }
 }
 
 /**

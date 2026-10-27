@@ -35,7 +35,7 @@ project = exahype2.Project(
     project_name="RadialAdvection",
     dimensions=2,
     size=[2.0, 2.0, 2.0],
-    offset=[0.0, 0.0, 0.0],
+    offset=[-1.0, -1.0, -1.0],
     periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
@@ -44,7 +44,7 @@ project = exahype2.Project(
 )
 
 initial_conditions = """
-  const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> centre(0.0);
   constexpr double Radius = 0.15;
   Q[Shortcuts::rho] = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 1.0 : 0.0;
 """
@@ -56,7 +56,7 @@ boundary_conditions = """
 """
 
 flux = """
-  const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> centre(0.0);
   const tarch::la::Vector<DIMENSIONS, double> radialOffset = x - centre;
   const double radius = tarch::la::norm2(radialOffset);
   F[Shortcuts::rho] = (radius > 0.0 ? radialOffset(normal) / radius : 0.0) * Q[Shortcuts::rho];

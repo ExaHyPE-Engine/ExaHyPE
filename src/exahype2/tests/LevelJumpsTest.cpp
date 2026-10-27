@@ -26,7 +26,7 @@ namespace {
 
   /**
    * Builds the regular grid with the first cell of level one refined and level jumps around it.
-   * The curve starts in that cell. On more than one rank the first rank then holds refined cells
+   * The curve starts in that cell. On more than one rank the first rank then owns refined cells
    * only beside coarse cells of another rank.
    */
   const peano4::CellConnectivity& buildCellConnectivityWithLevelJumps() {
@@ -71,8 +71,8 @@ namespace {
   TARGET_DECLARE
   /**
    * Counts the visits of every level jump. missedEarlierVisits counts per visit the launched level
-   * jumps that are still unvisited and write a face the visited level jump reads: Its coarse face
-   * with readsCoarseFace, its fine faces otherwise.
+   * jumps that are still unvisited and write a face the visited level jump reads. That face is its
+   * coarse face with readsCoarseFace and one of its fine faces otherwise.
    */
   struct RecordVisit final {
     tarch::Span<const peano4::LevelJump> levelJumps{};
@@ -121,22 +121,22 @@ exahype2::tests::LevelJumpsTest::LevelJumpsTest() :
 
 void
 exahype2::tests::LevelJumpsTest::run() {
-  testMethod(testHoldsIntermediateFaceReturnsFalseOnEveryLevelOfTheRefinedGrid);
+  testMethod(testContainsIntermediateFaceReturnsFalseOnEveryLevelOfTheRefinedGrid);
   testMethod(testTheInterpolationsVisitEveryLevelJumpOnceAfterTheWritesOfItsCoarseFace);
   testMethod(testTheRestrictionVisitsEveryLevelJumpOnceAfterTheWritesOfItsFineFaces);
   testMethod(testTheGroupedRestrictionsVisitEveryLevelJumpOnceAfterTheWritesOfItsFineFaces);
 }
 
 /**
- * holdsIntermediateFace() returns false on every level of a grid whose level jumps span one level.
+ * containsIntermediateFace() returns false on every level of a grid whose level jumps span one level.
  */
 void
-exahype2::tests::LevelJumpsTest::testHoldsIntermediateFaceReturnsFalseOnEveryLevelOfTheRefinedGrid() {
+exahype2::tests::LevelJumpsTest::testContainsIntermediateFaceReturnsFalseOnEveryLevelOfTheRefinedGrid() {
   const auto& cellConnectivity = buildCellConnectivityWithLevelJumps();
   for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
     validate(cellConnectivity.getFaces(adjacency, peano4::FaceKind::Intermediate).isEmpty());
     for (int level = 0; level <= cellConnectivity.getMaximumLevel(); level++) {
-      validateWithParams1(not exahype2::holdsIntermediateFace(cellConnectivity, adjacency, level), level);
+      validateWithParams1(not exahype2::containsIntermediateFace(cellConnectivity, adjacency, level), level);
     }
   }
 }

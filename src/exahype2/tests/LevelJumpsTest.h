@@ -11,16 +11,16 @@ namespace exahype2::tests {
 class exahype2::tests::LevelJumpsTest final : public tarch::tests::TestCase {
 public:
   LevelJumpsTest();
-  LevelJumpsTest(const LevelJumpsTest&)            = delete;
-  LevelJumpsTest(LevelJumpsTest&&)                 = delete;
-  LevelJumpsTest& operator=(const LevelJumpsTest&) = delete;
-  LevelJumpsTest& operator=(LevelJumpsTest&&)      = delete;
-  ~LevelJumpsTest() override                       = default;
+  LevelJumpsTest(const LevelJumpsTest& other)            = delete;
+  LevelJumpsTest(LevelJumpsTest&& other)                 = delete;
+  LevelJumpsTest& operator=(const LevelJumpsTest& other) = delete;
+  LevelJumpsTest& operator=(LevelJumpsTest&& other)      = delete;
+  ~LevelJumpsTest() override                             = default;
 
   void run() override;
 
 private:
-  void testHoldsIntermediateFaceReturnsFalseOnEveryLevelOfTheRefinedGrid();
+  void testContainsIntermediateFaceReturnsFalseOnEveryLevelOfTheRefinedGrid();
   void testTheInterpolationsVisitEveryLevelJumpOnceAfterTheWritesOfItsCoarseFace();
   void testTheRestrictionVisitsEveryLevelJumpOnceAfterTheWritesOfItsFineFaces();
   void testTheGroupedRestrictionsVisitEveryLevelJumpOnceAfterTheWritesOfItsFineFaces();

@@ -410,12 +410,22 @@ class NavierStokes(Equation):
   constexpr int NodesPerFace = (DGOrder+1);
 #endif
 
+  // The weighted node values add in fixed point. A mirrored face then averages the same values in
+  // another order and returns the same bits.
   const auto faceWeights = Quadrature<FaceValue>::getQuadratureWeightsOnFace();
-  for (int xy = 0; xy < NodesPerFace; xy++) {
-    for (int n = 0; n < ValuesPerNode; n++) {
-      QavL[n] += faceWeights[xy] * QL[xy * ValuesPerNode + n];
-      QavR[n] += faceWeights[xy] * QR[xy * ValuesPerNode + n];
+  for (int n = 0; n < ValuesPerNode; n++) {
+    double weightedLeft[NodesPerFace];
+    double weightedRight[NodesPerFace];
+    for (int xy = 0; xy < NodesPerFace; xy++) {
+      weightedLeft[xy]  = tarch::la::productRoundedOnce(
+        static_cast<double>(faceWeights[xy]), static_cast<double>(QL[xy * ValuesPerNode + n])
+      );
+      weightedRight[xy] = tarch::la::productRoundedOnce(
+        static_cast<double>(faceWeights[xy]), static_cast<double>(QR[xy * ValuesPerNode + n])
+      );
     }
+    QavL[n] = static_cast<FaceValue>(tarch::la::sumInFixedPoint(weightedLeft, NodesPerFace));
+    QavR[n] = static_cast<FaceValue>(tarch::la::sumInFixedPoint(weightedRight, NodesPerFace));
   }
 
   """

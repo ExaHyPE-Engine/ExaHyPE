@@ -15,11 +15,11 @@ namespace peano4::communication::tests {
 class peano4::communication::tests::MigrationExchangeKernelsTest final : public tarch::tests::TestCase {
 public:
   MigrationExchangeKernelsTest();
-  MigrationExchangeKernelsTest(const MigrationExchangeKernelsTest&)            = delete;
-  MigrationExchangeKernelsTest(MigrationExchangeKernelsTest&&)                 = delete;
-  MigrationExchangeKernelsTest& operator=(const MigrationExchangeKernelsTest&) = delete;
-  MigrationExchangeKernelsTest& operator=(MigrationExchangeKernelsTest&&)      = delete;
-  ~MigrationExchangeKernelsTest() override                                     = default;
+  MigrationExchangeKernelsTest(const MigrationExchangeKernelsTest& other)            = delete;
+  MigrationExchangeKernelsTest(MigrationExchangeKernelsTest&& other)                 = delete;
+  MigrationExchangeKernelsTest& operator=(const MigrationExchangeKernelsTest& other) = delete;
+  MigrationExchangeKernelsTest& operator=(MigrationExchangeKernelsTest&& other)      = delete;
+  ~MigrationExchangeKernelsTest() override                                           = default;
 
   void run() override;
 
@@ -27,5 +27,6 @@ private:
   void testProlongFillsTheChildFromItsParent();
   void testRestrictFillsTheParentFromItsChildren();
   void testGatherTakesEveryKindOfSentCell();
+  void testPreparationReachesEveryWorkItemOfItsChunk();
   void testScatterWritesTheReceivedChunks();
 };

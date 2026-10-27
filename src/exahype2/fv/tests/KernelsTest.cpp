@@ -51,7 +51,9 @@ exahype2::fv::tests::KernelsTest::testCopyKeepsEveryValue() {
   fillPatch(pool.getChunk(0), 0);
 
   double target[Setup::ValuesPerCell];
-  Transfer{std::as_const(pool).getView()}.copy(0, target);
+  for (int volume = 0; volume < Transfer::WorkItemsPerChunk; volume++) {
+    Transfer{std::as_const(pool).getView()}.copy(0, target, volume);
+  }
 
   for (int value = 0; value < Setup::ValuesPerCell; value++) {
     validateEqualsWithParams1(target[value], pool.getChunk(0)[value], value);
@@ -66,7 +68,9 @@ exahype2::fv::tests::KernelsTest::testInterpolationFromTheParentCopiesTheCoverin
 
   for (int child = 0; child < Setup::ChildrenPerCell; child++) {
     double target[Setup::ValuesPerCell];
-    Transfer{std::as_const(pool).getView()}.interpolateFromParent(0, target, child);
+    for (int volume = 0; volume < Transfer::WorkItemsPerChunk; volume++) {
+      Transfer{std::as_const(pool).getView()}.interpolateFromParent(0, target, child, volume, nullptr);
+    }
 
     const auto childPosition = peano4::dDelinearised(child, Setup::SubdivisionFactor);
     peano4::dForEach(Setup::DofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineVolume) {
@@ -94,7 +98,9 @@ exahype2::fv::tests::KernelsTest::testRestrictionFromTheChildrenAveragesTheCover
   }
 
   double target[Setup::ValuesPerCell];
-  Transfer{std::as_const(pool).getView()}.restrictFromChildren(childSlots, target);
+  for (int volume = 0; volume < Transfer::WorkItemsPerChunk; volume++) {
+    Transfer{std::as_const(pool).getView()}.restrictFromChildren(childSlots, target, volume, nullptr);
+  }
 
   constexpr int VolumesPerCoarseVolume = peano4::power(Setup::SubdivisionFactor, DIMENSIONS);
   peano4::dForEach(Setup::DofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseVolume) {

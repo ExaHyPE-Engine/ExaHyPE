@@ -38,7 +38,7 @@ class ElasticRickerPulse(Scenario):
   constexpr auto SWaveSpeed = 1;
 
   // The pulse is centred in the leftmost cell. It reaches the left edge of the
-  // domain, so the periodic boundary places part of it on the right edge.
+  // domain. The periodic boundary places part of it on the right edge.
   const auto tau  = 1.25*std::numbers::pi*(x[0]-h[0]/2);
   const auto tau2 = 1.25*std::numbers::pi*(x[0]-DomainSize[0]-h[0]/2);
   const auto amplitudeX = (1-2*tau*tau)*std::exp(-tau*tau) + (1-2*tau2*tau2)*std::exp(-tau2*tau2);
@@ -67,7 +67,7 @@ class ElasticRickerPulse(Scenario):
     h /= peano4::SubdivisionFactor;
   }
 
-  // The P-wave moves with speed PWaveSpeed, and the pulse lies in the periodic image closest to x.
+  // The P-wave moves with speed PWaveSpeed. The pulse lies in the periodic image closest to x.
   auto distance = x[0] - PWaveSpeed*t - h/2;
   distance -= DomainSize[0] * std::round(distance / DomainSize[0]);
   const auto tau  = 1.25*std::numbers::pi*(distance);

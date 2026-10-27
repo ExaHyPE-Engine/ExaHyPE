@@ -3,6 +3,7 @@
 #include "GlobalTimeSeriesDatabaseTest.h"
 
 #include "tarch/database/GlobalTimeSeriesDatabase.h"
+#include "tarch/database/SnapshotDatabase.h"
 #include "tarch/mpi/Rank.h"
 
 namespace {
@@ -38,7 +39,7 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::GlobalTimeSeriesDatabaseTe
 
 void
 tarch::database::tests::GlobalTimeSeriesDatabaseTest::run() {
-  // Only the global master writes the global database, so no two ranks write the same file.
+  // Only the global master writes the global database. No two ranks write the same file.
   if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     return;
   }
@@ -47,6 +48,7 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::run() {
   testMethod(testARepeatedTimeStampOverwritesTheRowInTheFile);
   testMethod(testTimeDeltaThrottlesSnapshots);
   testMethod(testASnapshotIsDueForTheNewestTimeStampAndAfterTheTimeDelta);
+  testMethod(testEveryLaterTimestampIsDueBeforeTheTimeDelta);
   testMethod(testADatabaseWithoutFileNameWritesNoFile);
 }
 
@@ -186,6 +188,30 @@ tarch::database::tests::GlobalTimeSeriesDatabaseTest::testASnapshotIsDueForTheNe
   validateEquals(database.isSnapshotDue(0.5), true);
   validateEquals(database.isSnapshotDue(0.9), false);
   validateEquals(database.isSnapshotDue(1.5), true);
+}
+
+/**
+ * Under SnapshotRule::EveryLaterTimestamp a snapshot is due for every later time stamp and for no other one.
+ */
+void
+tarch::database::tests::GlobalTimeSeriesDatabaseTest::testEveryLaterTimestampIsDueBeforeTheTimeDelta() {
+  tarch::database::GlobalTimeSeriesDatabase database;
+  database.setTimeDeltaBetweenTwoSnapshots(1.0);
+  const double data[1] = {0.0};
+  database.addGlobalSnapshot(0.5, 1, data);
+  validateEquals(database.isSnapshotDue(0.75), false);
+
+  database.setSnapshotRule(tarch::database::SnapshotRule::EveryLaterTimestamp);
+  validateEquals(database.isSnapshotDue(0.75), true);
+  validateEquals(database.isSnapshotDue(0.5), false);
+  validateEquals(database.isSnapshotDue(0.25), false);
+  database.addGlobalSnapshot(0.75, 1, data);
+  validateEquals(database.isSnapshotDue(0.75), false);
+
+  database.setSnapshotRule(tarch::database::SnapshotRule::Deltas);
+  validateEquals(database.isSnapshotDue(0.75), true);
+  validateEquals(database.isSnapshotDue(1.5), false);
+  validateEquals(database.isSnapshotDue(1.75), true);
 }
 
 /**

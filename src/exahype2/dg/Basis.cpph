@@ -3,12 +3,14 @@
 
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
-#include "tarch/la/ExactAccumulator.h"
+#include "tarch/la/FixedPointSum.h"
+#include "tarch/la/ScalarOperations.h"
 
 TARGET_DECLARE
 /**
  * Maps a tensor-product reference node from [0, 1]^DIMENSIONS into a cell. Every component of
- * index is smaller than the number of quadrature points.
+ * index is smaller than the number of quadrature points. Two nodes that mirror at the cell centre
+ * get exactly negated offsets from it if their quadrature points mirror exactly at one half.
  */
 template <typename QuadraturePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
@@ -18,13 +20,46 @@ exahype2::dg::getQuadraturePoint(
   const tarch::la::Vector<DIMENSIONS, int>&    index,
   const QuadraturePrecision* NOALIAS           quadraturePoints
 ) {
-  tarch::la::Vector<DIMENSIONS, double> referencePosition;
+  tarch::la::Vector<DIMENSIONS, double> position;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     assertion(index(axis) >= 0, index);
     assertion(cellSize(axis) > 0.0, cellSize);
-    referencePosition(axis) = static_cast<double>(quadraturePoints[index(axis)]);
+    const double offsetFromCentre = static_cast<double>(quadraturePoints[index(axis)]) - 0.5;
+    position(axis)                = std::fma(offsetFromCentre, cellSize(axis), cellCentre(axis));
   }
-  return tarch::la::multiplyComponents(referencePosition, cellSize) + cellCentre - 0.5 * cellSize;
+  return position;
+}
+
+/**
+ * Returns the Lagrange polynomial that is one at node basisFunction and zero at every other node of
+ * the reference interval [0, 1], evaluated at offsetFromCentre from the centre of that interval.
+ * The factors of two mirror nodes multiply first. The mirror basis function at the negated offset
+ * then returns the same bits if the nodes mirror exactly at one half.
+ */
+template <int NodesPerAxis, typename NodePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr double
+exahype2::dg::getLagrangeBasisFunction1D(
+  const NodePrecision* const nodes,
+  const int                  basisFunction,
+  const double               offsetFromCentre
+) {
+  static_assert(NodesPerAxis > 0);
+  assertion(basisFunction >= 0 and basisFunction < NodesPerAxis, basisFunction);
+
+  const double ownOffset = static_cast<double>(nodes[basisFunction]) - 0.5;
+  const auto   getFactor = [&](const int node) {
+    const double nodeOffset = static_cast<double>(nodes[node]) - 0.5;
+    return node == basisFunction ? 1.0 : (offsetFromCentre - nodeOffset) / (ownOffset - nodeOffset);
+  };
+
+  double value = 1.0;
+  for (int pair = 0; pair < NodesPerAxis / 2; pair++) {
+    value *= getFactor(pair) * getFactor(NodesPerAxis - 1 - pair);
+  }
+  if constexpr (NodesPerAxis % 2 == 1) {
+    value *= getFactor(NodesPerAxis / 2);
+  }
+  return value;
 }
 
 /**
@@ -70,7 +105,7 @@ exahype2::dg::forEachNode(
 
 /**
  * Returns the component unknown of the nodal polynomial of the cell at position. Every node
- * stores unknownsPerNode values, and quadratureNodes are the order+1 node coordinates on [0, 1].
+ * stores unknownsPerNode values. quadratureNodes are the order+1 node coordinates on [0, 1].
  */
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision
@@ -114,52 +149,100 @@ exahype2::dg::evaluatePolynomial(
 }
 
 /**
- * Multiplies the three factors in ascending order. Every permutation of the arguments returns the
- * same bits.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD double
-exahype2::dg::orderInvariantProduct(const double firstFactor, const double secondFactor, const double thirdFactor) {
-  double low    = firstFactor;
-  double middle = secondFactor;
-  double high   = thirdFactor;
-  if (low > middle) {
-    const double swap = low;
-    low               = middle;
-    middle            = swap;
-  }
-  if (middle > high) {
-    const double swap = middle;
-    middle            = high;
-    high              = swap;
-  }
-  if (low > middle) {
-    const double swap = low;
-    low               = middle;
-    middle            = swap;
-  }
-  return (low * middle) * high;
-}
-
-/**
- * Lowers every entry of reference to the smallest value of that entry in nodes.
+ * Writes the midpoint of the value range of every entry over the nodes of the arrays into
+ * reference and the larger of its magnitude and largestWeight times the width of the range into
+ * bound. Writes true into varies for every entry whose range is wider than zero. Every order of the
+ * arrays and of the nodes returns the same bits. Negated nodes return the negated midpoints and the
+ * same bounds.
  */
 template <int Values, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::takeSmallestValues(double (&reference)[Values], const T* NOALIAS const nodes, const int numberOfNodes) {
+exahype2::dg::computeReferencesAndBoundsOfTransferTerms(
+  double (&reference)[Values],
+  double (&bound)[Values],
+  bool (&varies)[Values],
+  const T* const NOALIAS arrays[],
+  const int              numberOfArrays,
+  const int              nodesPerArray,
+  const double           largestWeight
+) {
   static_assert(Values > 0);
-  assertion(nodes != nullptr);
-  assertion(numberOfNodes > 0, numberOfNodes);
-  for (int node = 0; node < numberOfNodes; node++) {
-    for (int value = 0; value < Values; value++) {
-      const auto candidate = static_cast<double>(nodes[node * Values + value]);
-      reference[value]     = candidate < reference[value] ? candidate : reference[value];
+  assertion(numberOfArrays > 0, numberOfArrays);
+  assertion(nodesPerArray > 0, nodesPerArray);
+  assertion(std::isfinite(largestWeight) and largestWeight >= 0.0, largestWeight);
+  double smallest[Values];
+  double largest[Values];
+  for (int value = 0; value < Values; value++) {
+    smallest[value] = static_cast<double>(arrays[0][value]);
+    largest[value]  = smallest[value];
+  }
+  for (int array = 0; array < numberOfArrays; array++) {
+    assertion(arrays[array] != nullptr, array);
+    for (int node = 0; node < nodesPerArray; node++) {
+      for (int value = 0; value < Values; value++) {
+        const auto candidate = static_cast<double>(arrays[array][node * Values + value]);
+        assertion(std::isfinite(candidate), array, node, value, candidate);
+        smallest[value] = candidate < smallest[value] ? candidate : smallest[value];
+        largest[value]  = candidate > largest[value] ? candidate : largest[value];
+      }
     }
   }
+  for (int value = 0; value < Values; value++) {
+    exahype2::dg::computeReferenceAndBound(
+      smallest[value],
+      largest[value],
+      largestWeight,
+      reference[value],
+      bound[value],
+      varies[value]
+    );
+  }
+}
+
+/**
+ * Writes the midpoint of the range from smallest to largest into reference and the larger of its
+ * magnitude and largestWeight times the width of the range into bound. Writes into varies whether
+ * the range is wider than zero.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::computeReferenceAndBound(
+  const double smallest,
+  const double largest,
+  const double largestWeight,
+  double&      reference,
+  double&      bound,
+  bool&        varies
+) {
+  reference = 0.5 * (smallest + largest);
+  bound     = std::max(std::abs(reference), largestWeight * (largest - smallest));
+  varies    = largest != smallest;
+  assertion(std::isfinite(bound), smallest, largest, largestWeight);
+}
+
+/**
+ * Returns the power Factors of the largest magnitude of the numberOfEntries entries of matrix. Every
+ * product of Factors entries stays below the result up to the rounding of the product.
+ */
+template <int Factors>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::dg::getLargestProductOfEntries(const double* NOALIAS const matrix, const int numberOfEntries) {
+  static_assert(Factors >= 0);
+  assertion(matrix != nullptr);
+  assertion(numberOfEntries > 0, numberOfEntries);
+  double largestMagnitude = 0.0;
+  for (int entry = 0; entry < numberOfEntries; entry++) {
+    largestMagnitude = std::max(largestMagnitude, std::abs(matrix[entry]));
+  }
+  double product = 1.0;
+  for (int factor = 0; factor < Factors; factor++) {
+    product *= largestMagnitude;
+  }
+  return product;
 }
 
 /**
  * Applies a 1D operator along one axis of a tensor slice. The scaling factors multiply every
- * source value in argument order.
+ * source value in argument order, once per source value.
  */
 template <
   int  NumberOfEntries,
@@ -182,6 +265,23 @@ exahype2::dg::applyOperatorAlongAxis(
 ) {
   using AccumulatePrecision = std::common_type_t<ResultPrecision, ComputePrecision>;
 
+  constexpr bool Scaled      = sizeof...(Scalings) > 0;
+  constexpr int  BlockStride = Scaled ? NumberOfEntries : ValueStride;
+
+  [[maybe_unused]] ComputePrecision scaledValues[Scaled ? NumberOfSourceNodes * NumberOfEntries : 1];
+  const ComputePrecision* NOALIAS   block = values;
+  if constexpr (Scaled) {
+    for (int sourceNode = 0; sourceNode < NumberOfSourceNodes; sourceNode++) {
+      const ComputePrecision* NOALIAS const sourceValues = values + sourceNode * ValueStride;
+      SIMD()
+      for (int entry = 0; entry < NumberOfEntries; entry++) {
+        scaledValues[sourceNode * NumberOfEntries + entry] =
+          (sourceValues[entry] * ... * static_cast<ComputePrecision>(scalings));
+      }
+    }
+    block = scaledValues;
+  }
+
   for (int targetNode = 0; targetNode < NumberOfTargetNodes; targetNode++) {
     ResultPrecision* NOALIAS const resultNode = result + targetNode * ResultStride;
 
@@ -196,14 +296,12 @@ exahype2::dg::applyOperatorAlongAxis(
     }
 
     for (int sourceNode = 0; sourceNode < NumberOfSourceNodes; sourceNode++) {
-      const ComputePrecision* NOALIAS const sourceValues   = values + sourceNode * ValueStride;
+      const ComputePrecision* NOALIAS const sourceValues   = block + sourceNode * BlockStride;
       const ComputePrecision                operatorWeight = operatorMatrix[targetNode * OperatorStride + sourceNode];
       SIMD()
       for (int entry = 0; entry < NumberOfEntries; entry++) {
-        accumulator[entry] = accumulator[entry]
-          + static_cast<AccumulatePrecision>(
-                               (sourceValues[entry] * ... * static_cast<ComputePrecision>(scalings)) * operatorWeight
-          );
+        accumulator[entry] =
+          accumulator[entry] + static_cast<AccumulatePrecision>(sourceValues[entry] * operatorWeight);
       }
     }
 
@@ -214,18 +312,66 @@ exahype2::dg::applyOperatorAlongAxis(
   }
 }
 
+template <int NodesPerAxis, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::DerivativeWeightsOfNodePairs<NodesPerAxis, ComputePrecision>
+exahype2::dg::getDerivativeWeightsOfNodePairs(const ComputePrecision* NOALIAS const derivativeOperator) {
+  using Weights = exahype2::dg::DerivativeWeightsOfNodePairs<NodesPerAxis, ComputePrecision>;
+
+  Weights weights{};
+  for (int targetNode = 0; targetNode < NodesPerAxis; targetNode++) {
+    const ComputePrecision* NOALIAS const operatorRow = derivativeOperator + targetNode * NodesPerAxis;
+    for (int pair = 0; pair < Weights::Pairs; pair++) {
+      const ComputePrecision lowerWeight          = operatorRow[pair];
+      const ComputePrecision upperWeight          = operatorRow[NodesPerAxis - 1 - pair];
+      weights.sumWeights[targetNode][pair]        = static_cast<ComputePrecision>(0.5) * (lowerWeight + upperWeight);
+      weights.differenceWeights[targetNode][pair] = static_cast<ComputePrecision>(0.5) * (lowerWeight - upperWeight);
+    }
+  }
+  return weights;
+}
+
+template <int InputDofs, int OutputDofs, typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ProjectionWeightsOfDofPairs<InputDofs, OutputDofs, Value>
+exahype2::dg::getProjectionWeightsOfDofPairs(const Value* NOALIAS const matrix) {
+  using Weights = exahype2::dg::ProjectionWeightsOfDofPairs<InputDofs, OutputDofs, Value>;
+  assertion(matrix != nullptr);
+#if PEANO_ASSERTIONS
+  for (int inputDof = 0; inputDof < InputDofs; inputDof++) {
+    for (int outputDof = 0; outputDof < OutputDofs; outputDof++) {
+      assertion(
+        matrix[inputDof * OutputDofs + outputDof]
+          == matrix[(InputDofs - 1 - inputDof) * OutputDofs + OutputDofs - 1 - outputDof],
+        inputDof,
+        outputDof
+      );
+    }
+  }
+#endif
+
+  Weights weights{};
+  for (int pair = 0; pair < Weights::Pairs; pair++) {
+    for (int lowerDof = 0; lowerDof < Weights::LowerDofs; lowerDof++) {
+      const Value lowerWeight                   = matrix[pair * OutputDofs + lowerDof];
+      const Value upperWeight                   = matrix[(InputDofs - 1 - pair) * OutputDofs + lowerDof];
+      weights.sumWeights[pair][lowerDof]        = Value{0.5} * (lowerWeight + upperWeight);
+      weights.differenceWeights[pair][lowerDof] = Value{0.5} * (lowerWeight - upperWeight);
+    }
+  }
+  return weights;
+}
+
 /**
- * Applies derivativeOperator along one axis of a tensor slice. The rows of derivativeOperator sum
- * to zero. The function differentiates the differences from the smallest value along the axis. A
- * constant slice returns exact zeros. The scaling factors multiply every difference in argument
- * order.
+ * Applies the derivative operator of derivativeWeights along one line of nodes and multiplies every
+ * difference by the scaling factors in argument order. The nodes of the line start valueStride
+ * values apart in values and resultStride values apart in result. NumberOfEntries is a multiple of
+ * the vector width. A constant line returns exact zeros. A reflection of the line negates and
+ * reflects the result bitwise when the operator is its own negated mirror image. result may equal
+ * values with an equal stride. Every entry reads its values at all nodes of the line before it
+ * writes its first result.
  */
 template <
   int  NumberOfEntries,
   int  NumberOfNodes,
-  int  ValueStride,
-  int  OperatorStride,
-  int  ResultStride,
   bool OverwriteResult,
   typename ResultPrecision,
   typename ComputePrecision,
@@ -233,55 +379,67 @@ template <
 >
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::differentiateAlongAxis(
-  ResultPrecision* NOALIAS const        result,
-  const ComputePrecision* NOALIAS const values,
-  const ComputePrecision* NOALIAS const derivativeOperator,
+  ResultPrecision* const                                                             result,
+  const int                                                                          resultStride,
+  const ComputePrecision* const                                                      values,
+  const int                                                                          valueStride,
+  const exahype2::dg::DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>& derivativeWeights,
   const Scalings... scalings
 ) {
   using AccumulatePrecision = std::common_type_t<ResultPrecision, ComputePrecision>;
+  using Weights             = exahype2::dg::DerivativeWeightsOfNodePairs<NumberOfNodes, ComputePrecision>;
 
-  ComputePrecision reference[NumberOfEntries];
+  static_assert(
+    NumberOfEntries % PEANO_WITH_SIMDLEN == 0,
+    "A derivative along an axis runs over a number of entries that fills whole vectors."
+  );
+  assertion(resultStride >= NumberOfEntries and valueStride >= NumberOfEntries, resultStride, valueStride);
+  assertion(
+    static_cast<const void*>(result) != static_cast<const void*>(values) or resultStride == valueStride,
+    resultStride,
+    valueStride
+  );
+
+  // The vector loop keeps every node of the line in registers. A reflection of the axis maps the
+  // centre node onto itself. An even node count has two centre nodes that swap under the
+  // reflection. Their mean swaps its sign with the values. The difference of the centre node of an
+  // odd node count is zero.
+  constexpr int CentreNode = NumberOfNodes / 2;
   SIMD()
   for (int entry = 0; entry < NumberOfEntries; entry++) {
-    reference[entry] = values[entry];
-  }
-  for (int sourceNode = 1; sourceNode < NumberOfNodes; sourceNode++) {
-    const ComputePrecision* NOALIAS const sourceValues = values + sourceNode * ValueStride;
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
-      reference[entry] = sourceValues[entry] < reference[entry] ? sourceValues[entry] : reference[entry];
+    ComputePrecision reference = values[CentreNode * valueStride + entry];
+    if constexpr (NumberOfNodes % 2 == 0) {
+      reference = static_cast<ComputePrecision>(0.5) * (values[(CentreNode - 1) * valueStride + entry] + reference);
     }
-  }
 
-  for (int targetNode = 0; targetNode < NumberOfNodes; targetNode++) {
-    ResultPrecision* NOALIAS const resultNode = result + targetNode * ResultStride;
+    ComputePrecision pairSums[Weights::PairSlots];
+    ComputePrecision pairDifferences[Weights::PairSlots];
+    for (int pair = 0; pair < Weights::Pairs; pair++) {
+      // productRoundedOnce() rounds every scaled difference on its own. A device compiler then cannot
+      // fuse the last scaling of one node of the pair into the sum.
+      ComputePrecision lower = values[pair * valueStride + entry] - reference;
+      ComputePrecision upper = values[(NumberOfNodes - 1 - pair) * valueStride + entry] - reference;
+      ((lower = tarch::la::productRoundedOnce(lower, static_cast<ComputePrecision>(scalings)),
+        upper = tarch::la::productRoundedOnce(upper, static_cast<ComputePrecision>(scalings))),
+       ...);
+      pairSums[pair]        = lower + upper;
+      pairDifferences[pair] = lower - upper;
+    }
 
-    AccumulatePrecision accumulator[NumberOfEntries];
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
-      if constexpr (OverwriteResult) {
-        accumulator[entry] = static_cast<AccumulatePrecision>(0);
-      } else {
-        accumulator[entry] = static_cast<AccumulatePrecision>(resultNode[entry]);
+    for (int targetNode = 0; targetNode < NumberOfNodes; targetNode++) {
+      AccumulatePrecision accumulator = static_cast<AccumulatePrecision>(0);
+      if constexpr (not OverwriteResult) {
+        accumulator = static_cast<AccumulatePrecision>(result[targetNode * resultStride + entry]);
       }
-    }
-
-    for (int sourceNode = 0; sourceNode < NumberOfNodes; sourceNode++) {
-      const ComputePrecision* NOALIAS const sourceValues = values + sourceNode * ValueStride;
-      const ComputePrecision operatorWeight              = derivativeOperator[targetNode * OperatorStride + sourceNode];
-      SIMD()
-      for (int entry = 0; entry < NumberOfEntries; entry++) {
-        accumulator[entry] =
-          accumulator[entry]
+      for (int pair = 0; pair < Weights::Pairs; pair++) {
+        accumulator = accumulator
+          + static_cast<AccumulatePrecision>(pairSums[pair] * derivativeWeights.sumWeights[targetNode][pair]);
+        accumulator = accumulator
           + static_cast<AccumulatePrecision>(
-            ((sourceValues[entry] - reference[entry]) * ... * static_cast<ComputePrecision>(scalings)) * operatorWeight
+                        pairDifferences[pair] * derivativeWeights.differenceWeights[targetNode][pair]
           );
       }
-    }
-
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
-      resultNode[entry] = static_cast<ResultPrecision>(accumulator[entry]);
+      result[targetNode * resultStride + entry] = static_cast<ResultPrecision>(accumulator);
     }
   }
 }
@@ -301,44 +459,45 @@ exahype2::dg::computeNodalGradients(
   constexpr int NodesPerFace   = exahype2::dg::getNodesPerFace(NodesPerAxis);
   constexpr int NodesPerCell   = exahype2::dg::getNodesPerCell(NodesPerAxis);
   constexpr int EntriesPerAxis = NodesPerCell * Values;
+  constexpr int LineStride     = exahype2::dg::getPaddedCountOf(Values);
 
+  // The lines store LineStride lanes per node. The derivative then runs over whole vectors.
+  ComputePrecision stateLine[NodesPerAxis * LineStride];
+  for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
+    for (int lane = Values; lane < LineStride; lane++) {
+      stateLine[normalIndex * LineStride + lane] = static_cast<ComputePrecision>(0);
+    }
+  }
+
+  const auto derivativeWeights = exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator);
   UNROLL(DIMENSIONS)
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     assertion(cellSize(axis) > 0.0, cellSize);
-    int lowerAxesStride = 1;
-    for (int lowerAxis = 0; lowerAxis < axis; lowerAxis++) {
-      lowerAxesStride *= NodesPerAxis;
-    }
-
+    const int nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis);
     for (int line = 0; line < NodesPerFace; line++) {
-      const int lowerAxesIndex  = line % lowerAxesStride;
-      const int higherAxesIndex = line / lowerAxesStride;
-      const int firstCellNode   = higherAxesIndex * NodesPerAxis * lowerAxesStride + lowerAxesIndex;
-
-      ComputePrecision stateLine[NodesPerAxis * Values];
+      const int firstCellNode = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, line);
       for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
-        const int cellNode = firstCellNode + normalIndex * lowerAxesStride;
+        const int cellNode = firstCellNode + normalIndex * nodeStride;
         for (int value = 0; value < Values; value++) {
-          stateLine[normalIndex * Values + value] = static_cast<ComputePrecision>(cellState[cellNode * Values + value]);
+          stateLine[normalIndex * LineStride + value] =
+            static_cast<ComputePrecision>(cellState[cellNode * Values + value]);
         }
       }
 
-      ComputePrecision gradientLine[NodesPerAxis * Values];
-      exahype2::dg::differentiateAlongAxis<
-        Values,
-        NodesPerAxis,
-        Values,
-        NodesPerAxis,
-        Values,
-        true,
-        ComputePrecision,
-        ComputePrecision
-      >(gradientLine, stateLine, derivativeOperator, 1.0 / cellSize(axis));
+      ComputePrecision gradientLine[NodesPerAxis * LineStride];
+      exahype2::dg::differentiateAlongAxis<LineStride, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
+        gradientLine,
+        LineStride,
+        stateLine,
+        LineStride,
+        derivativeWeights,
+        1.0 / cellSize(axis)
+      );
 
       for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
-        const int cellNode = firstCellNode + normalIndex * lowerAxesStride;
+        const int cellNode = firstCellNode + normalIndex * nodeStride;
         for (int value = 0; value < Values; value++) {
-          gradients[axis * EntriesPerAxis + cellNode * Values + value] = gradientLine[normalIndex * Values + value];
+          gradients[axis * EntriesPerAxis + cellNode * Values + value] = gradientLine[normalIndex * LineStride + value];
         }
       }
     }
@@ -346,10 +505,105 @@ exahype2::dg::computeNodalGradients(
 }
 
 /**
- * Extrapolates the nodal field to the lower and the upper face along direction. The nodes of
- * field start NodeStride values apart, and the lowest tangential axis runs fastest in a face. A
- * constant line of nodes returns its value bitwise at both faces. Only the face nodes
- * firstFaceNode, firstFaceNode + faceNodeStride and so on are written.
+ * Extrapolates the line of nodes of field along direction through faceNode to faceNode of the lower
+ * and the upper face. The lowest tangential axis runs fastest in a face. The coefficients of each
+ * face sum to one. A constant line of nodes then returns its value bitwise at both faces. A
+ * reflection of the normal axis swaps the two faces bitwise when rightFaceCoefficients is the
+ * mirror image of leftFaceCoefficients.
+ */
+template <
+  int NodesPerAxis,
+  int NumberOfEntries,
+  int NodeStride,
+  typename FieldPrecision,
+  typename FacePrecision,
+  typename CoefficientPrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::extrapolateLineToFacePair(
+  FacePrecision* NOALIAS const              lowerFace,
+  FacePrecision* NOALIAS const              upperFace,
+  const FieldPrecision* NOALIAS const       field,
+  const CoefficientPrecision* NOALIAS const leftFaceCoefficients,
+  const CoefficientPrecision* NOALIAS const rightFaceCoefficients,
+  const int                                 direction,
+  const int                                 faceNode
+) {
+  static_assert(NodeStride >= NumberOfEntries);
+
+  using AccumulatePrecision = std::common_type_t<FieldPrecision, FacePrecision, CoefficientPrecision>;
+
+  assertion(direction >= 0 and direction < DIMENSIONS, direction);
+  assertion(faceNode >= 0 and faceNode < exahype2::dg::getNodesPerFace(NodesPerAxis), faceNode);
+
+  const int nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, direction);
+  const int firstNode  = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, direction, faceNode);
+
+  // A reflection of the normal axis maps the centre node onto itself. An even node count has two
+  // centre nodes that swap under the reflection. Their mean swaps its sign with the values.
+  constexpr int CentreIndex = NodesPerAxis / 2;
+  const int     centreNode  = firstNode + CentreIndex * nodeStride;
+
+  AccumulatePrecision reference[NumberOfEntries];
+  if constexpr (NodesPerAxis % 2 == 1) {
+    SIMD()
+    for (int entry = 0; entry < NumberOfEntries; entry++) {
+      reference[entry] = static_cast<AccumulatePrecision>(field[entry + NodeStride * centreNode]);
+    }
+  } else {
+    const int lowerCentreNode = centreNode - nodeStride;
+    SIMD()
+    for (int entry = 0; entry < NumberOfEntries; entry++) {
+      const auto lowerValue = static_cast<AccumulatePrecision>(field[entry + NodeStride * lowerCentreNode]);
+      const auto upperValue = static_cast<AccumulatePrecision>(field[entry + NodeStride * centreNode]);
+      reference[entry]      = static_cast<AccumulatePrecision>(0.5) * (lowerValue + upperValue);
+    }
+  }
+
+  AccumulatePrecision lowerSums[NumberOfEntries];
+  AccumulatePrecision upperSums[NumberOfEntries];
+  SIMD()
+  for (int entry = 0; entry < NumberOfEntries; entry++) {
+    lowerSums[entry] = static_cast<AccumulatePrecision>(0);
+    upperSums[entry] = static_cast<AccumulatePrecision>(0);
+  }
+
+  // The differences of two mirrored nodes enter as their sum and their difference. The difference
+  // of the centre node of an odd node count is zero.
+  constexpr auto Half = static_cast<AccumulatePrecision>(0.5);
+  for (int pair = 0; pair < NodesPerAxis / 2; pair++) {
+    const int                 mirroredPair  = NodesPerAxis - 1 - pair;
+    const int                 lowerNode     = firstNode + pair * nodeStride;
+    const int                 upperNode     = firstNode + mirroredPair * nodeStride;
+    const auto                leftLower     = static_cast<AccumulatePrecision>(leftFaceCoefficients[pair]);
+    const auto                leftUpper     = static_cast<AccumulatePrecision>(leftFaceCoefficients[mirroredPair]);
+    const auto                rightLower    = static_cast<AccumulatePrecision>(rightFaceCoefficients[pair]);
+    const auto                rightUpper    = static_cast<AccumulatePrecision>(rightFaceCoefficients[mirroredPair]);
+    const AccumulatePrecision leftSumWeight = Half * (leftLower + leftUpper);
+    const AccumulatePrecision leftDifferenceWeight  = Half * (leftLower - leftUpper);
+    const AccumulatePrecision rightSumWeight        = Half * (rightLower + rightUpper);
+    const AccumulatePrecision rightDifferenceWeight = Half * (rightLower - rightUpper);
+    for (int entry = 0; entry < NumberOfEntries; entry++) {
+      const auto lower = static_cast<AccumulatePrecision>(field[entry + NodeStride * lowerNode]) - reference[entry];
+      const auto upper = static_cast<AccumulatePrecision>(field[entry + NodeStride * upperNode]) - reference[entry];
+      const AccumulatePrecision sum        = lower + upper;
+      const AccumulatePrecision difference = lower - upper;
+      lowerSums[entry]                     = std::fma(sum, leftSumWeight, lowerSums[entry]);
+      lowerSums[entry]                     = std::fma(difference, leftDifferenceWeight, lowerSums[entry]);
+      upperSums[entry]                     = std::fma(sum, rightSumWeight, upperSums[entry]);
+      upperSums[entry]                     = std::fma(difference, rightDifferenceWeight, upperSums[entry]);
+    }
+  }
+
+  for (int entry = 0; entry < NumberOfEntries; entry++) {
+    lowerFace[entry + NumberOfEntries * faceNode] = static_cast<FacePrecision>(reference[entry] + lowerSums[entry]);
+    upperFace[entry + NumberOfEntries * faceNode] = static_cast<FacePrecision>(reference[entry] + upperSums[entry]);
+  }
+}
+
+/**
+ * Extrapolates every line of nodes of field along direction to the lower and the upper face with
+ * extrapolateLineToFacePair().
  */
 template <
   int NodesPerAxis,
@@ -366,175 +620,521 @@ exahype2::dg::extrapolateNodalFieldToFacePair(
   const FieldPrecision* NOALIAS const       field,
   const CoefficientPrecision* NOALIAS const leftFaceCoefficients,
   const CoefficientPrecision* NOALIAS const rightFaceCoefficients,
-  const int                                 direction,
-  const int                                 firstFaceNode,
-  const int                                 faceNodeStride
+  const int                                 direction
 ) {
-  static_assert(NodeStride >= NumberOfEntries);
+  for (int faceNode = 0; faceNode < exahype2::dg::getNodesPerFace(NodesPerAxis); faceNode++) {
+    exahype2::dg::extrapolateLineToFacePair<
+      NodesPerAxis,
+      NumberOfEntries,
+      NodeStride,
+      FieldPrecision,
+      FacePrecision,
+      CoefficientPrecision
+    >(lowerFace, upperFace, field, leftFaceCoefficients, rightFaceCoefficients, direction, faceNode);
+  }
+}
 
+/**
+ * Extrapolates field to faces with extrapolateLineToFacePair(). Item i of the DIMENSIONS times
+ * NodesPerFace items extrapolates the line through face node i % NodesPerFace along direction
+ * i / NodesPerFace onto faces[direction] and faces[direction + DIMENSIONS]. The call runs the items
+ * firstItem, firstItem + itemStride and so on. The field of direction d starts d * DirectionStride
+ * values after field.
+ */
+template <
+  int NodesPerAxis,
+  int NumberOfEntries,
+  int NodeStride,
+  int DirectionStride,
+  typename FieldPrecision,
+  typename FacePrecision,
+  typename CoefficientPrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::extrapolateNodalFieldToFaces(
+  FacePrecision* const NOALIAS              faces[peano4::FacesPerCell],
+  const FieldPrecision* NOALIAS const       field,
+  const CoefficientPrecision* NOALIAS const leftFaceCoefficients,
+  const CoefficientPrecision* NOALIAS const rightFaceCoefficients,
+  const int                                 firstItem,
+  const int                                 itemStride
+) {
   constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
+  assertion(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
+  for (int item = firstItem; item < DIMENSIONS * NodesPerFace; item += itemStride) {
+    const int direction = item / NodesPerFace;
+    exahype2::dg::extrapolateLineToFacePair<
+      NodesPerAxis,
+      NumberOfEntries,
+      NodeStride,
+      FieldPrecision,
+      FacePrecision,
+      CoefficientPrecision
+    >(faces[direction],
+      faces[direction + DIMENSIONS],
+      field + direction * DirectionStride,
+      leftFaceCoefficients,
+      rightFaceCoefficients,
+      direction,
+      item - direction * NodesPerFace);
+  }
+}
 
-  using AccumulatePrecision = std::common_type_t<FieldPrecision, FacePrecision, CoefficientPrecision>;
+/**
+ * Projects the items firstItem, firstItem + itemStride and so on of source along Axis and calls
+ * combine(targetValue, projected) for every degree of freedom of these items in the projection.
+ * Item makes a line or one value of a line an item. targetValue is the index of the first value of
+ * the item at that degree of freedom, and projected contains the values of the item. Every axis of
+ * source in the bit mask ProjectedAxes has OutputDofs degrees of freedom and every other axis
+ * InputDofs. The entry of inputDof and outputDof is matrix[inputDof * OutputDofs + outputDof].
+ * A reflection of Axis reflects the projection bitwise when matrix is its own mirror image.
+ * Butterfly forms the sums and the differences of an item once for all its output degrees of
+ * freedom and multiplies them with weights, the pair weights of matrix from getProjectionWeightsOfDofPairs().
+ */
+template <
+  int                          Dimensions,
+  int                          InputDofs,
+  int                          OutputDofs,
+  int                          ValuesPerDof,
+  exahype2::dg::ProjectionRule Rule,
+  exahype2::dg::ProjectionItem Item,
+  int                          ProjectedAxes,
+  int                          Axis,
+  typename Value,
+  typename Combine
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::projectLinesAlongAxis(
+  const Value* NOALIAS const                                                                      source,
+  const Value* NOALIAS const                                                                      matrix,
+  [[maybe_unused]] const exahype2::dg::ProjectionWeightsOfDofPairs<InputDofs, OutputDofs, Value>& weights,
+  const Combine&                                                                                  combine,
+  const int                                                                                       firstItem,
+  const int                                                                                       itemStride
+) {
+  constexpr int Pairs         = InputDofs / 2;
+  constexpr int ValuesPerItem = Item == exahype2::dg::ProjectionItem::Line ? ValuesPerDof : 1;
+  constexpr int ItemsPerLine  = ValuesPerDof / ValuesPerItem;
+  static_assert(Axis >= 0 and Axis < Dimensions, "A projection runs along an axis of the field.");
+  static_assert(((ProjectedAxes >> Axis) & 1) == 0, "A projection runs along an axis that no earlier one used.");
+  assertion(source != nullptr and matrix != nullptr);
+  assertion(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
 
-  assertion(direction >= 0 and direction < DIMENSIONS, direction);
-  assertion(firstFaceNode >= 0 and faceNodeStride > 0, firstFaceNode, faceNodeStride);
-
-  int lowerAxesStride = 1;
-  for (int axis = 0; axis < direction; axis++) {
-    lowerAxesStride *= NodesPerAxis;
+  int sourceStrides[Dimensions];
+  int targetStrides[Dimensions];
+  int lines = 1;
+  for (int axis = 0, sourceStride = ValuesPerDof, targetStride = ValuesPerDof; axis < Dimensions; axis++) {
+    const bool sourceIsProjected = ((ProjectedAxes >> axis) & 1) != 0;
+    const int  sourceExtent      = sourceIsProjected ? OutputDofs : InputDofs;
+    const int  targetExtent      = sourceIsProjected or axis == Axis ? OutputDofs : InputDofs;
+    sourceStrides[axis]          = sourceStride;
+    targetStrides[axis]          = targetStride;
+    sourceStride *= sourceExtent;
+    targetStride *= targetExtent;
+    lines *= axis == Axis ? 1 : sourceExtent;
+  }
+  // Writes the offsets of the first value of item in source and in the projection.
+  const auto getOffsetsOfItem = [&sourceStrides, &targetStrides](const int item, int& sourceOffset, int& targetOffset) {
+    int rest     = item / ItemsPerLine;
+    sourceOffset = item % ItemsPerLine * ValuesPerItem;
+    targetOffset = sourceOffset;
+    for (int other = 0; other < Dimensions; other++) {
+      if (other != Axis) {
+        const int extent = ((ProjectedAxes >> other) & 1) != 0 ? OutputDofs : InputDofs;
+        sourceOffset += (rest % extent) * sourceStrides[other];
+        targetOffset += (rest % extent) * targetStrides[other];
+        rest /= extent;
+      }
+    }
+  };
+  const int lineStride = sourceStrides[Axis];
+  if (firstItem >= lines * ItemsPerLine) {
+    return;
   }
 
-  for (int faceNode = firstFaceNode; faceNode < NodesPerFace; faceNode += faceNodeStride) {
-    const int lowerAxesIndex  = faceNode % lowerAxesStride;
-    const int higherAxesIndex = faceNode / lowerAxesStride;
-
-    const int firstCellNode = higherAxesIndex * NodesPerAxis * lowerAxesStride + lowerAxesIndex;
-
-    AccumulatePrecision reference[NumberOfEntries];
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
-      reference[entry] = static_cast<AccumulatePrecision>(field[entry + NodeStride * firstCellNode]);
-    }
-    for (int normalIndex = 1; normalIndex < NodesPerAxis; normalIndex++) {
-      const int cellNode = (higherAxesIndex * NodesPerAxis + normalIndex) * lowerAxesStride + lowerAxesIndex;
-      SIMD()
-      for (int entry = 0; entry < NumberOfEntries; entry++) {
-        const auto nodeValue = static_cast<AccumulatePrecision>(field[entry + NodeStride * cellNode]);
-        reference[entry]     = nodeValue < reference[entry] ? nodeValue : reference[entry];
+  if constexpr (Rule == exahype2::dg::ProjectionRule::PairedProducts) {
+    for (int item = firstItem; item < lines * ItemsPerLine; item += itemStride) {
+      int sourceOffset = 0;
+      int targetOffset = 0;
+      getOffsetsOfItem(item, sourceOffset, targetOffset);
+      const Value* NOALIAS const lineValues = source + sourceOffset;
+      for (int outputDof = 0; outputDof < OutputDofs; outputDof++) {
+        Value projected[ValuesPerItem];
+        for (int entry = 0; entry < ValuesPerItem; entry++) {
+          projected[entry] = Value{0};
+        }
+        for (int pair = 0; pair < Pairs; pair++) {
+          const int   mirroredPair = InputDofs - 1 - pair;
+          const Value lowerWeight  = matrix[pair * OutputDofs + outputDof];
+          const Value upperWeight  = matrix[mirroredPair * OutputDofs + outputDof];
+          for (int entry = 0; entry < ValuesPerItem; entry++) {
+            const Value lowerTerm = tarch::la::productRoundedOnce(lowerWeight, lineValues[pair * lineStride + entry]);
+            const Value upperTerm =
+              tarch::la::productRoundedOnce(upperWeight, lineValues[mirroredPair * lineStride + entry]);
+            projected[entry] += lowerTerm + upperTerm;
+          }
+        }
+        if constexpr (InputDofs % 2 == 1) {
+          const Value centreWeight = matrix[Pairs * OutputDofs + outputDof];
+          for (int entry = 0; entry < ValuesPerItem; entry++) {
+            projected[entry] = std::fma(centreWeight, lineValues[Pairs * lineStride + entry], projected[entry]);
+          }
+        }
+        combine(targetOffset + outputDof * targetStrides[Axis], projected);
       }
     }
+  } else {
+    constexpr int LowerDofs = (OutputDofs + 1) / 2;
+    for (int item = firstItem; item < lines * ItemsPerLine; item += itemStride) {
+      int sourceOffset = 0;
+      int targetOffset = 0;
+      getOffsetsOfItem(item, sourceOffset, targetOffset);
+      const Value* NOALIAS const lineValues = source + sourceOffset;
 
-    AccumulatePrecision lowerValues[NumberOfEntries];
-    AccumulatePrecision upperValues[NumberOfEntries];
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
-      lowerValues[entry] = reference[entry];
-      upperValues[entry] = reference[entry];
-    }
-
-    for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
-      const int cellNode = (higherAxesIndex * NodesPerAxis + normalIndex) * lowerAxesStride + lowerAxesIndex;
-      SIMD()
-      for (int entry = 0; entry < NumberOfEntries; entry++) {
-        const auto difference =
-          static_cast<AccumulatePrecision>(field[entry + NodeStride * cellNode]) - reference[entry];
-        lowerValues[entry] += difference * static_cast<AccumulatePrecision>(leftFaceCoefficients[normalIndex]);
-        upperValues[entry] += difference * static_cast<AccumulatePrecision>(rightFaceCoefficients[normalIndex]);
+      Value sums[Pairs > 0 ? Pairs : 1][ValuesPerItem];
+      Value differences[Pairs > 0 ? Pairs : 1][ValuesPerItem];
+      for (int pair = 0; pair < Pairs; pair++) {
+        for (int entry = 0; entry < ValuesPerItem; entry++) {
+          const Value lowerValue   = lineValues[pair * lineStride + entry];
+          const Value upperValue   = lineValues[(InputDofs - 1 - pair) * lineStride + entry];
+          sums[pair][entry]        = lowerValue + upperValue;
+          differences[pair][entry] = lowerValue - upperValue;
+        }
+      }
+      for (int lowerDof = 0; lowerDof < LowerDofs; lowerDof++) {
+        Value lowerProjection[ValuesPerItem];
+        Value upperProjection[ValuesPerItem];
+        for (int entry = 0; entry < ValuesPerItem; entry++) {
+          Value evenPart{0};
+          Value oddPart{0};
+          for (int pair = 0; pair < Pairs; pair++) {
+            evenPart = std::fma(weights.sumWeights[pair][lowerDof], sums[pair][entry], evenPart);
+            oddPart  = std::fma(weights.differenceWeights[pair][lowerDof], differences[pair][entry], oddPart);
+          }
+          if constexpr (InputDofs % 2 == 1) {
+            evenPart =
+              std::fma(matrix[Pairs * OutputDofs + lowerDof], lineValues[Pairs * lineStride + entry], evenPart);
+          }
+          lowerProjection[entry] = evenPart + oddPart;
+          upperProjection[entry] = evenPart - oddPart;
+          if (OutputDofs % 2 == 1 and lowerDof == LowerDofs - 1) {
+            lowerProjection[entry] = evenPart;
+          }
+        }
+        const int upperDof = OutputDofs - 1 - lowerDof;
+        combine(targetOffset + lowerDof * targetStrides[Axis], lowerProjection);
+        if (upperDof != lowerDof) {
+          combine(targetOffset + upperDof * targetStrides[Axis], upperProjection);
+        }
       }
     }
+  }
+}
 
-    SIMD()
-    for (int entry = 0; entry < NumberOfEntries; entry++) {
-      lowerFace[entry + NumberOfEntries * faceNode] = static_cast<FacePrecision>(lowerValues[entry]);
-      upperFace[entry + NumberOfEntries * faceNode] = static_cast<FacePrecision>(upperValues[entry]);
+/**
+ * Returns the number of values that projectTensorProductStage() writes into its scratch.
+ */
+template <int Dimensions, int InputDofs, int OutputDofs, int ValuesPerDof>
+INLINE_METHOD constexpr int
+exahype2::dg::getScratchValuesOfTensorProduct() {
+  const int firstStageValues = Dimensions * peano4::power(InputDofs, Dimensions - 1) * OutputDofs * ValuesPerDof;
+  const int lastStageValues  = Dimensions == 3 ? peano4::power(OutputDofs, 3) * ValuesPerDof : 0;
+  const int remainingValues  = Dimensions == 3 ? 3 * InputDofs * OutputDofs * OutputDofs * ValuesPerDof : 0;
+  return Dimensions == 1 ? 0
+                         : (firstStageValues > lastStageValues ? firstStageValues : lastStageValues) + remainingValues;
+}
+
+/**
+ * Returns the number of stages of projectTensorProductStage().
+ */
+template <int Dimensions>
+INLINE_METHOD constexpr int
+exahype2::dg::getStagesOfTensorProduct() {
+  return 2 * Dimensions - 1;
+}
+
+/**
+ * Writes the items firstItem, firstItem + itemStride and so on of every projection of one stage
+ * of projectTensorProduct(). Item makes a line or one value of a line an item. weights contains the
+ * pair weights of matrix from getProjectionWeightsOfDofPairs(). The projections of one stage write
+ * disjoint values. A stage reads the values that the stages before it write. The last stage writes
+ * into output.
+ */
+template <
+  int                          Dimensions,
+  int                          InputDofs,
+  int                          OutputDofs,
+  int                          ValuesPerDof,
+  exahype2::dg::ProjectionRule Rule,
+  exahype2::dg::ProjectionItem Item,
+  typename Value
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::projectTensorProductStage(
+  const int                                                                      stage,
+  const Value* NOALIAS const                                                     input,
+  Value* NOALIAS const                                                           output,
+  const Value* NOALIAS const                                                     matrix,
+  const exahype2::dg::ProjectionWeightsOfDofPairs<InputDofs, OutputDofs, Value>& weights,
+  Value* NOALIAS const                                                           scratch,
+  const int                                                                      firstItem,
+  const int                                                                      itemStride
+) {
+  static_assert(Dimensions >= 1 and Dimensions <= 3, "The projection of nodal values supports 1D, 2D and 3D only.");
+  constexpr int In            = InputDofs;
+  constexpr int Out           = OutputDofs;
+  constexpr int Values        = ValuesPerDof;
+  constexpr int ValuesPerItem = Item == exahype2::dg::ProjectionItem::Line ? ValuesPerDof : 1;
+  constexpr int ItemsPerLine  = ValuesPerDof / ValuesPerItem;
+  assertion(stage >= 0 and stage < exahype2::dg::getStagesOfTensorProduct<Dimensions>(), stage);
+  assertion(firstItem >= 0 and firstItem < itemStride, firstItem, itemStride);
+  assertion(input != nullptr and output != nullptr and matrix != nullptr);
+  assertion(Dimensions == 1 or scratch != nullptr);
+
+  // Returns the first item of the projection whose lines start at lineOffset in the sequence of the
+  // caller.
+  const auto getFirstItemOfProjection = [firstItem, itemStride](const int lineOffset) {
+    const int shift = (firstItem - lineOffset * ItemsPerLine) % itemStride;
+    return shift < 0 ? shift + itemStride : shift;
+  };
+  // Returns a combination that overwrites target with the projected values.
+  const auto assignTo = [](Value* const target) {
+    return [target](const int targetValue, const Value* const projected) {
+      for (int entry = 0; entry < ValuesPerItem; entry++) {
+        target[targetValue + entry] = projected[entry];
+      }
+    };
+  };
+  // Returns a combination that overwrites target with the mean of its values and the projected ones.
+  const auto averageInto = [](Value* const target) {
+    return [target](const int targetValue, const Value* const projected) {
+      for (int entry = 0; entry < ValuesPerItem; entry++) {
+        target[targetValue + entry] = Value{0.5} * (target[targetValue + entry] + projected[entry]);
+      }
+    };
+  };
+
+  if constexpr (Dimensions == 1) {
+    exahype2::dg::projectLinesAlongAxis<1, In, Out, Values, Rule, Item, 0, 0>(
+      input,
+      matrix,
+      weights,
+      assignTo(output),
+      firstItem,
+      itemStride
+    );
+  } else if constexpr (Dimensions == 2) {
+    Value* const afterX = scratch;
+    Value* const afterY = scratch + In * Out * Values;
+    if (stage == 0) {
+      exahype2::dg::projectLinesAlongAxis<2, In, Out, Values, Rule, Item, 0, 0>(
+        input,
+        matrix,
+        weights,
+        assignTo(afterX),
+        getFirstItemOfProjection(0),
+        itemStride
+      );
+      exahype2::dg::projectLinesAlongAxis<2, In, Out, Values, Rule, Item, 0, 1>(
+        input,
+        matrix,
+        weights,
+        assignTo(afterY),
+        getFirstItemOfProjection(In),
+        itemStride
+      );
+    } else if (stage == 1) {
+      exahype2::dg::projectLinesAlongAxis<2, In, Out, Values, Rule, Item, 1, 1>(
+        afterX,
+        matrix,
+        weights,
+        assignTo(output),
+        firstItem,
+        itemStride
+      );
+    } else {
+      exahype2::dg::projectLinesAlongAxis<2, In, Out, Values, Rule, Item, 2, 0>(
+        afterY,
+        matrix,
+        weights,
+        averageInto(output),
+        firstItem,
+        itemStride
+      );
+    }
+  } else {
+    constexpr int FirstLines               = In * In;
+    constexpr int RemainingLines           = In * Out;
+    constexpr int LastLines                = Out * Out;
+    constexpr int ValuesPerFirstProjection = In * In * Out * Values;
+    constexpr int FirstStageValues         = 3 * ValuesPerFirstProjection;
+    constexpr int LastStageValues          = Out * Out * Out * Values;
+    // yLast overwrites the projections of stage 0. Only the stages 1 and 2 read these projections.
+    Value* const afterX     = scratch;
+    Value* const afterY     = afterX + ValuesPerFirstProjection;
+    Value* const afterZ     = afterY + ValuesPerFirstProjection;
+    Value* const yLast      = scratch;
+    Value* const remainingX = scratch + (FirstStageValues > LastStageValues ? FirstStageValues : LastStageValues);
+    Value* const remainingY = remainingX + In * Out * Out * Values;
+    Value* const remainingZ = remainingY + In * Out * Out * Values;
+    if (stage == 0) {
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 0, 0>(
+        input,
+        matrix,
+        weights,
+        assignTo(afterX),
+        getFirstItemOfProjection(0),
+        itemStride
+      );
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 0, 1>(
+        input,
+        matrix,
+        weights,
+        assignTo(afterY),
+        getFirstItemOfProjection(FirstLines),
+        itemStride
+      );
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 0, 2>(
+        input,
+        matrix,
+        weights,
+        assignTo(afterZ),
+        getFirstItemOfProjection(2 * FirstLines),
+        itemStride
+      );
+    } else if (stage == 1) {
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 2, 2>(
+        afterY,
+        matrix,
+        weights,
+        assignTo(remainingX),
+        getFirstItemOfProjection(0),
+        itemStride
+      );
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 1, 2>(
+        afterX,
+        matrix,
+        weights,
+        assignTo(remainingY),
+        getFirstItemOfProjection(RemainingLines),
+        itemStride
+      );
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 1, 1>(
+        afterX,
+        matrix,
+        weights,
+        assignTo(remainingZ),
+        getFirstItemOfProjection(2 * RemainingLines),
+        itemStride
+      );
+    } else if (stage == 2) {
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 4, 1>(
+        afterZ,
+        matrix,
+        weights,
+        averageInto(remainingX),
+        getFirstItemOfProjection(0),
+        itemStride
+      );
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 4, 0>(
+        afterZ,
+        matrix,
+        weights,
+        averageInto(remainingY),
+        getFirstItemOfProjection(RemainingLines),
+        itemStride
+      );
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 2, 0>(
+        afterY,
+        matrix,
+        weights,
+        averageInto(remainingZ),
+        getFirstItemOfProjection(2 * RemainingLines),
+        itemStride
+      );
+    } else if (stage == 3) {
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 6, 0>(
+        remainingX,
+        matrix,
+        weights,
+        assignTo(output),
+        getFirstItemOfProjection(0),
+        itemStride
+      );
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 5, 1>(
+        remainingY,
+        matrix,
+        weights,
+        assignTo(yLast),
+        getFirstItemOfProjection(LastLines),
+        itemStride
+      );
+    } else {
+      exahype2::dg::projectLinesAlongAxis<3, In, Out, Values, Rule, Item, 3, 2>(
+        remainingZ,
+        matrix,
+        weights,
+        [output, yLast](const int targetValue, const Value* const zLast) {
+          for (int entry = 0; entry < ValuesPerItem; entry++) {
+            output[targetValue + entry] =
+              tarch::la::meanInOrderOfValue(output[targetValue + entry], yLast[targetValue + entry], zLast[entry]);
+          }
+        },
+        firstItem,
+        itemStride
+      );
     }
   }
 }
 
 /**
  * Applies matrix along every axis of a tensor-product field with ValuesPerDof values per degree
- * of freedom. The matrix is stored as matrix[inputDof * OutputDofs + outputDof].
+ * of freedom. The entry of inputDof and outputDof is matrix[inputDof * OutputDofs + outputDof]. In 2D the result
+ * is the mean of both orders of the axes. In 3D every axis acts last once on the mean of both
+ * orders of the two other axes. tarch::la::meanInOrderOfValue() averages the three results. A swap
+ * of two axes of input then swaps the result bitwise. A reflection of an axis reflects it bitwise
+ * when matrix is its own mirror image. One thread runs every stage of projectTensorProductStage().
  */
-template <int Dimensions, int InputDofs, int OutputDofs, int ValuesPerDof, typename Value>
+template <
+  int                          Dimensions,
+  int                          InputDofs,
+  int                          OutputDofs,
+  int                          ValuesPerDof,
+  exahype2::dg::ProjectionRule Rule,
+  typename Value
+>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::projectTensorProduct(const Value* const input, Value* const output, const Value* const matrix) {
-  static_assert(Dimensions >= 1 and Dimensions <= 3, "The projection of nodal values supports 1D, 2D and 3D only.");
-  if constexpr (Dimensions == 1) {
-    for (int outputX = 0; outputX < OutputDofs; outputX++) {
-      for (int entry = 0; entry < ValuesPerDof; entry++) {
-        Value projected{0};
-        for (int inputX = 0; inputX < InputDofs; inputX++) {
-          projected += input[inputX * ValuesPerDof + entry] * matrix[inputX * OutputDofs + outputX];
-        }
-        output[outputX * ValuesPerDof + entry] = projected;
-      }
-    }
-  } else if constexpr (Dimensions == 2) {
-    Value scratch[InputDofs * OutputDofs * ValuesPerDof];
-    for (int inputY = 0; inputY < InputDofs; inputY++) {
-      for (int outputX = 0; outputX < OutputDofs; outputX++) {
-        for (int entry = 0; entry < ValuesPerDof; entry++) {
-          Value projected{0};
-          for (int inputX = 0; inputX < InputDofs; inputX++) {
-            projected +=
-              input[(inputY * InputDofs + inputX) * ValuesPerDof + entry] * matrix[inputX * OutputDofs + outputX];
-          }
-          scratch[(inputY * OutputDofs + outputX) * ValuesPerDof + entry] = projected;
-        }
-      }
-    }
-    for (int outputY = 0; outputY < OutputDofs; outputY++) {
-      for (int outputX = 0; outputX < OutputDofs; outputX++) {
-        for (int entry = 0; entry < ValuesPerDof; entry++) {
-          Value projected{0};
-          for (int inputY = 0; inputY < InputDofs; inputY++) {
-            projected +=
-              scratch[(inputY * OutputDofs + outputX) * ValuesPerDof + entry] * matrix[inputY * OutputDofs + outputY];
-          }
-          output[(outputY * OutputDofs + outputX) * ValuesPerDof + entry] = projected;
-        }
-      }
-    }
-  } else {
-    Value firstIntermediate[InputDofs * InputDofs * OutputDofs * ValuesPerDof];
-    Value secondIntermediate[InputDofs * OutputDofs * OutputDofs * ValuesPerDof];
-
-    for (int inputZ = 0; inputZ < InputDofs; inputZ++) {
-      for (int inputY = 0; inputY < InputDofs; inputY++) {
-        for (int outputX = 0; outputX < OutputDofs; outputX++) {
-          for (int entry = 0; entry < ValuesPerDof; entry++) {
-            Value projected{0};
-            for (int inputX = 0; inputX < InputDofs; inputX++) {
-              projected += input[((inputZ * InputDofs + inputY) * InputDofs + inputX) * ValuesPerDof + entry]
-                * matrix[inputX * OutputDofs + outputX];
-            }
-            firstIntermediate[((inputZ * InputDofs + inputY) * OutputDofs + outputX) * ValuesPerDof + entry] =
-              projected;
-          }
-        }
-      }
-    }
-
-    for (int inputZ = 0; inputZ < InputDofs; inputZ++) {
-      for (int outputY = 0; outputY < OutputDofs; outputY++) {
-        for (int outputX = 0; outputX < OutputDofs; outputX++) {
-          for (int entry = 0; entry < ValuesPerDof; entry++) {
-            Value projected{0};
-            for (int inputY = 0; inputY < InputDofs; inputY++) {
-              projected +=
-                firstIntermediate[((inputZ * InputDofs + inputY) * OutputDofs + outputX) * ValuesPerDof + entry]
-                * matrix[inputY * OutputDofs + outputY];
-            }
-            secondIntermediate[((inputZ * OutputDofs + outputY) * OutputDofs + outputX) * ValuesPerDof + entry] =
-              projected;
-          }
-        }
-      }
-    }
-
-    for (int outputZ = 0; outputZ < OutputDofs; outputZ++) {
-      for (int outputY = 0; outputY < OutputDofs; outputY++) {
-        for (int outputX = 0; outputX < OutputDofs; outputX++) {
-          for (int entry = 0; entry < ValuesPerDof; entry++) {
-            Value projected{0};
-            for (int inputZ = 0; inputZ < InputDofs; inputZ++) {
-              projected +=
-                secondIntermediate[((inputZ * OutputDofs + outputY) * OutputDofs + outputX) * ValuesPerDof + entry]
-                * matrix[inputZ * OutputDofs + outputZ];
-            }
-            output[((outputZ * OutputDofs + outputY) * OutputDofs + outputX) * ValuesPerDof + entry] = projected;
-          }
-        }
-      }
-    }
+  using Weights = exahype2::dg::ProjectionWeightsOfDofPairs<InputDofs, OutputDofs, Value>;
+  constexpr int ScratchValues =
+    exahype2::dg::getScratchValuesOfTensorProduct<Dimensions, InputDofs, OutputDofs, ValuesPerDof>();
+  assertion(input != nullptr and output != nullptr and matrix != nullptr);
+  Value          scratch[ScratchValues > 0 ? ScratchValues : 1];
+  const Weights  weights    = Rule == exahype2::dg::ProjectionRule::Butterfly
+    ? exahype2::dg::getProjectionWeightsOfDofPairs<InputDofs, OutputDofs>(matrix)
+    : Weights{};
+  constexpr auto WholeLines = exahype2::dg::ProjectionItem::Line;
+  for (int stage = 0; stage < exahype2::dg::getStagesOfTensorProduct<Dimensions>(); stage++) {
+    exahype2::dg::projectTensorProductStage<Dimensions, InputDofs, OutputDofs, ValuesPerDof, Rule, WholeLines>(
+      stage,
+      input,
+      output,
+      matrix,
+      weights,
+      scratch,
+      0,
+      1
+    );
   }
 }
 
 /**
  * Overwrites the flux of every axis with its derivative along that axis. flux stores one block
- * per axis with PaddedNumberOfUnknowns values per node. A constant flux returns exact zeros. The
- * call differentiates the lines firstLine, firstLine + lineStride and so on along every axis. Two
- * calls with distinct first lines below a common stride write disjoint lines.
+ * per axis with PaddedNumberOfUnknowns values per node. Item i of the DIMENSIONS times NodesPerFace
+ * items differentiates line i % NodesPerFace of axis i / NodesPerFace. The call runs the items
+ * firstItem, firstItem + itemStride and so on. A host thread runs its items axis by axis with the
+ * node stride of every axis fixed at compile time. On a device, consecutive threads take consecutive
+ * items across the axes. The threads of a warp then follow one code path.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -542,106 +1142,47 @@ exahype2::dg::differentiateFluxInPlace(
   ComputePrecision* NOALIAS const                        flux,
   const ComputePrecision* NOALIAS const                  derivativeOperator,
   const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
-  const int                                              firstLine,
-  const int                                              lineStride
+  const int                                              firstItem,
+  const int                                              itemStride
 ) {
   using CellLayout           = exahype2::dg::PaddedLayout<Derived>;
   constexpr int NodesPerAxis = CellLayout::NodesPerAxis;
+  constexpr int NodesPerFace = CellLayout::NodesPerFace;
   constexpr int FluxStride   = CellLayout::PaddedNumberOfUnknowns;
   constexpr int AxisStride   = CellLayout::NodesPerCell * FluxStride;
-  constexpr int LineSize     = NodesPerAxis * FluxStride;
 
-  assertion(firstLine >= 0 and lineStride > 0 and firstLine < lineStride, firstLine, lineStride);
+  assertion(firstItem >= 0 and itemStride > 0, firstItem, itemStride);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
   }
 
-  ComputePrecision derivative[LineSize] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  const auto derivativeWeights = exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator);
+  const auto differentiateLine = [&](const int axis, const int line) {
+    const int                       nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, axis) * FluxStride;
+    const int                       firstNode  = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, axis, line);
+    ComputePrecision* NOALIAS const fluxLine   = flux + axis * AxisStride + firstNode * FluxStride;
+    exahype2::dg::differentiateAlongAxis<FluxStride, NodesPerAxis, true, ComputePrecision, ComputePrecision>(
+      fluxLine,
+      nodeStride,
+      fluxLine,
+      nodeStride,
+      derivativeWeights,
+      inverseCellSize(axis)
+    );
+  };
 
-  for (int line = firstLine; line < CellLayout::NodesPerFace; line += lineStride) {
-    ComputePrecision* NOALIAS const fluxLine = flux + line * LineSize;
-    exahype2::dg::differentiateAlongAxis<
-      FluxStride,
-      NodesPerAxis,
-      FluxStride,
-      NodesPerAxis,
-      FluxStride,
-      true,
-      ComputePrecision,
-      ComputePrecision
-    >(derivative, fluxLine, derivativeOperator, inverseCellSize(0));
-    for (int entry = 0; entry < LineSize; entry++) {
-      fluxLine[entry] = derivative[entry];
+  COMPILE_IF_ON_HOST(UNROLL(DIMENSIONS) for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const int distanceToAxis  = firstItem < axis * NodesPerFace ? axis * NodesPerFace - firstItem : 0;
+    const int firstItemOnAxis = firstItem + (distanceToAxis + itemStride - 1) / itemStride * itemStride;
+    for (int item = firstItemOnAxis; item < (axis + 1) * NodesPerFace; item += itemStride) {
+      differentiateLine(axis, item - axis * NodesPerFace);
     }
-  }
-
-  for (int line = firstLine; line < CellLayout::NodesPerFace; line += lineStride) {
-    const int                       z        = line / NodesPerAxis;
-    const int                       x        = line - z * NodesPerAxis;
-    ComputePrecision* NOALIAS const fluxLine = flux + AxisStride + (z * NodesPerAxis * NodesPerAxis + x) * FluxStride;
-    exahype2::dg::differentiateAlongAxis<
-      FluxStride,
-      NodesPerAxis,
-      FluxStride * NodesPerAxis,
-      NodesPerAxis,
-      FluxStride,
-      true,
-      ComputePrecision,
-      ComputePrecision
-    >(derivative, fluxLine, derivativeOperator, inverseCellSize(1));
-    for (int y = 0; y < NodesPerAxis; y++) {
-      SIMD()
-      for (int unknown = 0; unknown < FluxStride; unknown++) {
-        fluxLine[y * NodesPerAxis * FluxStride + unknown] = derivative[y * FluxStride + unknown];
-      }
-    }
-  }
-
-  if constexpr (DIMENSIONS == 3) {
-    for (int line = firstLine; line < NodesPerAxis * NodesPerAxis; line += lineStride) {
-      ComputePrecision* NOALIAS const fluxLine = flux + 2 * AxisStride + line * FluxStride;
-      exahype2::dg::differentiateAlongAxis<
-        FluxStride,
-        NodesPerAxis,
-        FluxStride * NodesPerAxis * NodesPerAxis,
-        NodesPerAxis,
-        FluxStride,
-        true,
-        ComputePrecision,
-        ComputePrecision
-      >(derivative, fluxLine, derivativeOperator, inverseCellSize(DIMENSIONS - 1));
-      for (int z = 0; z < NodesPerAxis; z++) {
-        SIMD()
-        for (int unknown = 0; unknown < FluxStride; unknown++) {
-          fluxLine[z * NodesPerAxis * NodesPerAxis * FluxStride + unknown] = derivative[z * FluxStride + unknown];
-        }
-      }
-    }
-  }
+  })
+  COMPILE_IF_ON_DEVICE(for (int item = firstItem; item < DIMENSIONS * NodesPerFace; item += itemStride) {
+    differentiateLine(item / NodesPerFace, item % NodesPerFace);
+  })
 }
 TARGET_DECLARE_END
-
-/**
- * Evaluates at x the Lagrange polynomial that is one at node basisFunction and zero at every
- * other node.
- */
-template <int NodesPerAxis>
-INLINE_METHOD constexpr double
-exahype2::dg::getLagrangeBasisFunction1D(const double* const nodes, const int basisFunction, const double x) {
-  double numerator = 1.0;
-  for (int node = 0; node < NodesPerAxis; node++) {
-    if (node != basisFunction) {
-      numerator *= x - nodes[node];
-    }
-  }
-  double denominator = 1.0;
-  for (int node = 0; node < NodesPerAxis; node++) {
-    if (node != basisFunction) {
-      denominator *= nodes[basisFunction] - nodes[node];
-    }
-  }
-  return numerator / denominator;
-}
 
 /**
  * Returns the matrix whose entry [point][node] is basis function node at point, where the
@@ -653,17 +1194,17 @@ exahype2::dg::getEquidistantInterpolationMatrix1D(const double* const nodes) {
   static_assert(PointsPerAxis > 1);
   std::array<double, static_cast<std::size_t>(PointsPerAxis * NodesPerAxis)> result{};
   for (int point = 0; point < PointsPerAxis; point++) {
-    const double x = static_cast<double>(point) / (PointsPerAxis - 1);
+    const double offsetFromCentre = (static_cast<double>(point) - 0.5 * (PointsPerAxis - 1)) / (PointsPerAxis - 1);
     for (int node = 0; node < NodesPerAxis; node++) {
       result[static_cast<std::size_t>(point * NodesPerAxis + node)] =
-        exahype2::dg::getLagrangeBasisFunction1D<NodesPerAxis>(nodes, node, x);
+        exahype2::dg::getLagrangeBasisFunction1D<NodesPerAxis>(nodes, node, offsetFromCentre);
     }
   }
   return result;
 }
 
 /**
- * Returns the interpolation matrices: Entry [child][fine][coarse] is basis function coarse at
+ * Returns the interpolation matrices. Entry [child][fine][coarse] is basis function coarse at
  * node fine of the child interval. The nodes lie on the unit interval, symmetric about one half.
  */
 template <int NodesPerAxis>
@@ -676,7 +1217,7 @@ exahype2::dg::getInterpolationMatrix1D(const double* const nodes) {
       const double fineNode = nodes[fine] / SubdivisionFactor + static_cast<double>(child) / SubdivisionFactor;
       for (int coarse = 0; coarse < NodesPerAxis; coarse++) {
         result[(child * NodesPerAxis + fine) * NodesPerAxis + coarse] =
-          exahype2::dg::getLagrangeBasisFunction1D<NodesPerAxis>(nodes, coarse, fineNode);
+          exahype2::dg::getLagrangeBasisFunction1D<NodesPerAxis>(nodes, coarse, fineNode - 0.5);
       }
     }
   }
@@ -730,8 +1271,8 @@ exahype2::dg::getWeightedRestrictionMatrix1D(const double* const nodes, const do
 
 /**
  * Overwrites every entry and its mirror image with their average. Mirrored data then transfers to
- * bitwise mirrored results. The exact matrices are mirror symmetric. The average changes rounding
- * errors only.
+ * bitwise mirrored results. The exact matrices are mirror symmetric and the average changes
+ * rounding errors only.
  */
 template <int NodesPerAxis>
 INLINE_METHOD constexpr void
@@ -772,7 +1313,7 @@ exahype2::dg::transposePerChild(const exahype2::dg::AMRMatrices1D<NodesPerAxis>&
 TARGET_DECLARE
 /**
  * Interpolates the coarse face into the fine face at subface. prolongationMatrix1D stores one
- * block [coarse][fine] per child interval, and the first tangential axis runs fastest in subface
+ * block [coarse][fine] per child interval and the first tangential axis runs fastest in subface
  * and in both faces. A constant coarse face returns its value bitwise.
  */
 template <int NodesPerAxis, int Values, typename T>
@@ -797,24 +1338,41 @@ exahype2::dg::interpolateFace(
   const double* const secondMatrix =
     prolongationMatrix1D + static_cast<std::ptrdiff_t>(subface / SubdivisionFactor) * EntriesPerInterval;
 #endif
-  double reference[Values];
+  constexpr int  NodesPerFace   = peano4::power(NodesPerAxis, DIMENSIONS - 1);
+  const T* const coarseFaces[1] = {coarseFace};
+  double         reference[Values];
+  double         bound[Values];
+  bool           varies[Values];
+  exahype2::dg::computeReferencesAndBoundsOfTransferTerms<Values>(
+    reference,
+    bound,
+    varies,
+    coarseFaces,
+    1,
+    NodesPerFace,
+    exahype2::dg::getLargestProductOfEntries<DIMENSIONS - 1>(
+      prolongationMatrix1D,
+      SubdivisionFactor * EntriesPerInterval
+    )
+  );
+  tarch::la::FixedPointSum<NodesPerFace + 1> emptySums[Values];
   for (int value = 0; value < Values; value++) {
-    reference[value] = static_cast<double>(coarseFace[value]);
+    emptySums[value].clear(bound[value]);
   }
-  exahype2::dg::takeSmallestValues<Values>(reference, coarseFace, peano4::power(NodesPerAxis, DIMENSIONS - 1));
-  tarch::la::ExactAccumulator accumulator;
 #if DIMENSIONS == 2
   for (int fineNode = 0; fineNode < NodesPerAxis; fineNode++) {
     for (int value = 0; value < Values; value++) {
-      accumulator.clear();
-      accumulator.add(reference[value]);
-      for (int coarseNode = 0; coarseNode < NodesPerAxis; coarseNode++) {
-        accumulator.add(
-          firstMatrix[coarseNode * NodesPerAxis + fineNode]
-          * (static_cast<double>(coarseFace[coarseNode * Values + value]) - reference[value])
-        );
+      auto sum = emptySums[value];
+      sum.add(reference[value]);
+      if (varies[value]) {
+        for (int coarseNode = 0; coarseNode < NodesPerAxis; coarseNode++) {
+          sum.add(
+            firstMatrix[coarseNode * NodesPerAxis + fineNode]
+            * (static_cast<double>(coarseFace[coarseNode * Values + value]) - reference[value])
+          );
+        }
       }
-      fineFace[fineNode * Values + value] = static_cast<T>(accumulator.round());
+      fineFace[fineNode * Values + value] = static_cast<T>(sum.round());
     }
   }
 #else
@@ -822,17 +1380,19 @@ exahype2::dg::interpolateFace(
     for (int fineInner = 0; fineInner < NodesPerAxis; fineInner++) {
       const int fineIndex = (fineOuter * NodesPerAxis + fineInner) * Values;
       for (int value = 0; value < Values; value++) {
-        accumulator.clear();
-        accumulator.add(reference[value]);
-        for (int coarseOuter = 0; coarseOuter < NodesPerAxis; coarseOuter++) {
-          for (int coarseInner = 0; coarseInner < NodesPerAxis; coarseInner++) {
-            const double weight = firstMatrix[coarseInner * NodesPerAxis + fineInner]
-              * secondMatrix[coarseOuter * NodesPerAxis + fineOuter];
-            const int coarseIndex = (coarseOuter * NodesPerAxis + coarseInner) * Values;
-            accumulator.add(weight * (static_cast<double>(coarseFace[coarseIndex + value]) - reference[value]));
+        auto sum = emptySums[value];
+        sum.add(reference[value]);
+        if (varies[value]) {
+          for (int coarseOuter = 0; coarseOuter < NodesPerAxis; coarseOuter++) {
+            for (int coarseInner = 0; coarseInner < NodesPerAxis; coarseInner++) {
+              const double weight = firstMatrix[coarseInner * NodesPerAxis + fineInner]
+                * secondMatrix[coarseOuter * NodesPerAxis + fineOuter];
+              const int coarseIndex = (coarseOuter * NodesPerAxis + coarseInner) * Values;
+              sum.add(weight * (static_cast<double>(coarseFace[coarseIndex + value]) - reference[value]));
+            }
           }
         }
-        fineFace[fineIndex + value] = static_cast<T>(accumulator.round());
+        fineFace[fineIndex + value] = static_cast<T>(sum.round());
       }
     }
   }
@@ -840,60 +1400,167 @@ exahype2::dg::interpolateFace(
 }
 
 /**
- * Interpolates the coarse cell into the child at childPosition with the [coarse][fine] blocks of
- * prolongationMatrix1D. A constant cell returns its value bitwise. A reflection or an axis swap
- * of the coarse cell reflects or swaps the children bitwise when the matrices are mirror
- * symmetric.
+ * Writes the reference and the bound of computeReferencesAndBoundsOfTransferTerms() for value into
+ * referencesAndBounds. The Values references come first, then the Values bounds, then 1 for every
+ * value whose range is wider than zero and 0 for every other value. The scan visits the nodes in
+ * the order of computeReferencesAndBoundsOfTransferTerms() and writes its bits.
+ */
+template <int Values, typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::storeReferenceAndBoundOfTransferTerm(
+  const T* const NOALIAS arrays[],
+  const int              numberOfArrays,
+  const int              nodesPerArray,
+  const double           largestWeight,
+  const int              value,
+  double* NOALIAS const  referencesAndBounds
+) {
+  static_assert(Values > 0);
+  assertion(numberOfArrays > 0, numberOfArrays);
+  assertion(nodesPerArray > 0, nodesPerArray);
+  assertion(value >= 0 and value < Values, value);
+  assertion(std::isfinite(largestWeight) and largestWeight >= 0.0, largestWeight);
+  assertion(referencesAndBounds != nullptr);
+  double smallest = static_cast<double>(arrays[0][value]);
+  double largest  = smallest;
+  for (int array = 0; array < numberOfArrays; array++) {
+    assertion(arrays[array] != nullptr, array);
+    for (int node = 0; node < nodesPerArray; node++) {
+      const auto candidate = static_cast<double>(arrays[array][node * Values + value]);
+      assertion(std::isfinite(candidate), array, node, value, candidate);
+      smallest = candidate < smallest ? candidate : smallest;
+      largest  = candidate > largest ? candidate : largest;
+    }
+  }
+  bool varies = false;
+  exahype2::dg::computeReferenceAndBound(
+    smallest,
+    largest,
+    largestWeight,
+    referencesAndBounds[value],
+    referencesAndBounds[Values + value],
+    varies
+  );
+  referencesAndBounds[2 * Values + value] = varies ? 1.0 : 0.0;
+}
+
+/**
+ * Writes the reference and the bound of interpolateNode() with prolongationMatrix1D for value of
+ * coarseCell into referencesAndBounds.
  */
 template <int NodesPerAxis, int Values, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::interpolateCell(
+exahype2::dg::computeReferenceAndBoundOfParent(
   const T* NOALIAS const      coarseCell,
-  T* NOALIAS const            fineCell,
   const double* NOALIAS const prolongationMatrix1D,
-  const int                   childPosition
+  const int                   value,
+  double* NOALIAS const       referencesAndBounds
 ) {
   static_assert(NodesPerAxis > 0 and Values > 0);
   constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
   constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
   assertion(coarseCell != nullptr);
+  assertion(prolongationMatrix1D != nullptr);
+  const T* const coarseCells[1] = {coarseCell};
+  exahype2::dg::storeReferenceAndBoundOfTransferTerm<Values>(
+    coarseCells,
+    1,
+    peano4::power(NodesPerAxis, DIMENSIONS),
+    exahype2::dg::getLargestProductOfEntries<DIMENSIONS>(prolongationMatrix1D, SubdivisionFactor * EntriesPerInterval),
+    value,
+    referencesAndBounds
+  );
+}
+
+/**
+ * Writes the reference and the bound of restrictNode() with restrictionMatrix1D for value of
+ * fineCells into referencesAndBounds.
+ */
+template <int NodesPerAxis, int Values, typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::computeReferenceAndBoundOfChildren(
+  const T* const NOALIAS      fineCells[peano4::ChildrenPerCell],
+  const double* NOALIAS const restrictionMatrix1D,
+  const int                   value,
+  double* NOALIAS const       referencesAndBounds
+) {
+  static_assert(NodesPerAxis > 0 and Values > 0);
+  constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
+  constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
+  assertion(restrictionMatrix1D != nullptr);
+  exahype2::dg::storeReferenceAndBoundOfTransferTerm<Values>(
+    fineCells,
+    peano4::ChildrenPerCell,
+    peano4::power(NodesPerAxis, DIMENSIONS),
+    exahype2::dg::getLargestProductOfEntries<DIMENSIONS>(restrictionMatrix1D, SubdivisionFactor * EntriesPerInterval),
+    value,
+    referencesAndBounds
+  );
+}
+
+/**
+ * Interpolates the coarse cell into the node fineNode of the child at childPosition with the
+ * [coarse][fine] blocks of prolongationMatrix1D. referencesAndBounds stores the entries of
+ * computeReferenceAndBoundOfParent() for every value of the coarse cell. A constant cell returns
+ * its value bitwise. A reflection or an axis swap of the coarse cell reflects or swaps the children
+ * bitwise when the matrices are mirror symmetric.
+ */
+template <int NodesPerAxis, int Values, typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::interpolateNode(
+  const T* NOALIAS const      coarseCell,
+  T* NOALIAS const            fineCell,
+  const double* NOALIAS const prolongationMatrix1D,
+  const double* NOALIAS const referencesAndBounds,
+  const int                   childPosition,
+  const int                   fineNode
+) {
+  static_assert(NodesPerAxis > 0 and Values > 0);
+  constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
+  constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
+  constexpr int NodesPerCell       = peano4::power(NodesPerAxis, DIMENSIONS);
+  assertion(coarseCell != nullptr);
   assertion(fineCell != nullptr);
   assertion(prolongationMatrix1D != nullptr);
+  assertion(referencesAndBounds != nullptr);
   assertion(childPosition >= 0 and childPosition < peano4::ChildrenPerCell, childPosition);
+  assertion(fineNode >= 0 and fineNode < NodesPerCell, fineNode);
 
   const double* matrixPerAxis[DIMENSIONS];
   const auto    child = peano4::dDelinearised(childPosition, SubdivisionFactor);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     matrixPerAxis[axis] = prolongationMatrix1D + static_cast<std::ptrdiff_t>(child(axis)) * EntriesPerInterval;
   }
-  double reference[Values];
+  double                                     reference[Values];
+  bool                                       varies[Values];
+  const auto                                 finePosition = peano4::dDelinearised(fineNode, NodesPerAxis);
+  tarch::la::FixedPointSum<NodesPerCell + 1> sums[Values];
   for (int value = 0; value < Values; value++) {
-    reference[value] = static_cast<double>(coarseCell[value]);
+    reference[value] = referencesAndBounds[value];
+    varies[value]    = referencesAndBounds[2 * Values + value] != 0.0;
+    sums[value].clear(referencesAndBounds[Values + value]);
+    sums[value].add(reference[value]);
   }
-  exahype2::dg::takeSmallestValues<Values>(reference, coarseCell, peano4::power(NodesPerAxis, DIMENSIONS));
-  tarch::la::ExactAccumulator accumulator;
-  peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineNode) {
-    const int fineIndex = peano4::dLinearised(fineNode, NodesPerAxis) * Values;
-    for (int value = 0; value < Values; value++) {
-      accumulator.clear();
-      accumulator.add(reference[value]);
-      peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseNode) {
+  for (int coarseNode = 0; coarseNode < NodesPerCell; coarseNode++) {
+    const auto coarsePosition = peano4::dDelinearised(coarseNode, NodesPerAxis);
+    const auto entryOfAxis    = [&](const int axis) {
+      return matrixPerAxis[axis][coarsePosition(axis) * NodesPerAxis + finePosition(axis)];
+    };
 #if DIMENSIONS == 2
-        const double weight = matrixPerAxis[0][coarseNode(0) * NodesPerAxis + fineNode(0)]
-          * matrixPerAxis[1][coarseNode(1) * NodesPerAxis + fineNode(1)];
+    const double weight = entryOfAxis(0) * entryOfAxis(1);
 #else
-        const double weight = exahype2::dg::orderInvariantProduct(
-          matrixPerAxis[0][coarseNode(0) * NodesPerAxis + fineNode(0)],
-          matrixPerAxis[1][coarseNode(1) * NodesPerAxis + fineNode(1)],
-          matrixPerAxis[2][coarseNode(2) * NodesPerAxis + fineNode(2)]
-        );
+    const double weight = tarch::la::productInOrderOfMagnitude(entryOfAxis(0), entryOfAxis(1), entryOfAxis(2));
 #endif
-        const int coarseIndex = peano4::dLinearised(coarseNode, NodesPerAxis) * Values;
-        accumulator.add(weight * (static_cast<double>(coarseCell[coarseIndex + value]) - reference[value]));
-      });
-      fineCell[fineIndex + value] = static_cast<T>(accumulator.round());
+    const T* const coarseValues = coarseCell + coarseNode * Values;
+    for (int value = 0; value < Values; value++) {
+      if (varies[value]) {
+        sums[value].add(weight * (static_cast<double>(coarseValues[value]) - reference[value]));
+      }
     }
-  });
+  }
+  for (int value = 0; value < Values; value++) {
+    fineCell[fineNode * Values + value] = static_cast<T>(sums[value].round());
+  }
 }
 
 /**
@@ -917,33 +1584,43 @@ exahype2::dg::restrictFace(
     assertion(fineFaces[subface] != nullptr, subface);
   }
 
-  double reference[Values];
+  constexpr int NodesPerFace = peano4::power(NodesPerAxis, DIMENSIONS - 1);
+  double        reference[Values];
+  double        bound[Values];
+  bool          varies[Values];
+  exahype2::dg::computeReferencesAndBoundsOfTransferTerms<Values>(
+    reference,
+    bound,
+    varies,
+    fineFaces,
+    peano4::SubfacesPerFace,
+    NodesPerFace,
+    exahype2::dg::getLargestProductOfEntries<DIMENSIONS - 1>(
+      restrictionMatrix1D,
+      SubdivisionFactor * EntriesPerInterval
+    )
+  );
+  tarch::la::FixedPointSum<peano4::SubfacesPerFace * NodesPerFace + 1> emptySums[Values];
   for (int value = 0; value < Values; value++) {
-    reference[value] = static_cast<double>(fineFaces[0][value]);
+    emptySums[value].clear(bound[value]);
   }
-  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
-    exahype2::dg::takeSmallestValues<Values>(
-      reference,
-      fineFaces[subface],
-      peano4::power(NodesPerAxis, DIMENSIONS - 1)
-    );
-  }
-  tarch::la::ExactAccumulator accumulator;
 #if DIMENSIONS == 2
   for (int coarseNode = 0; coarseNode < NodesPerAxis; coarseNode++) {
     for (int value = 0; value < Values; value++) {
-      accumulator.clear();
-      accumulator.add(reference[value]);
-      for (int subface = 0; subface < SubdivisionFactor; subface++) {
-        const double* const matrix = restrictionMatrix1D + static_cast<std::ptrdiff_t>(subface) * EntriesPerInterval;
-        for (int fineNode = 0; fineNode < NodesPerAxis; fineNode++) {
-          accumulator.add(
-            matrix[fineNode * NodesPerAxis + coarseNode]
-            * (static_cast<double>(fineFaces[subface][fineNode * Values + value]) - reference[value])
-          );
+      auto sum = emptySums[value];
+      sum.add(reference[value]);
+      if (varies[value]) {
+        for (int subface = 0; subface < SubdivisionFactor; subface++) {
+          const double* const matrix = restrictionMatrix1D + static_cast<std::ptrdiff_t>(subface) * EntriesPerInterval;
+          for (int fineNode = 0; fineNode < NodesPerAxis; fineNode++) {
+            sum.add(
+              matrix[fineNode * NodesPerAxis + coarseNode]
+              * (static_cast<double>(fineFaces[subface][fineNode * Values + value]) - reference[value])
+            );
+          }
         }
       }
-      coarseFace[coarseNode * Values + value] = static_cast<T>(accumulator.round());
+      coarseFace[coarseNode * Values + value] = static_cast<T>(sum.round());
     }
   }
 #else
@@ -951,26 +1628,28 @@ exahype2::dg::restrictFace(
     for (int coarseInner = 0; coarseInner < NodesPerAxis; coarseInner++) {
       const int coarseIndex = (coarseOuter * NodesPerAxis + coarseInner) * Values;
       for (int value = 0; value < Values; value++) {
-        accumulator.clear();
-        accumulator.add(reference[value]);
-        for (int subfaceOuter = 0; subfaceOuter < SubdivisionFactor; subfaceOuter++) {
-          for (int subfaceInner = 0; subfaceInner < SubdivisionFactor; subfaceInner++) {
-            const T* const      fineFace = fineFaces[subfaceOuter * SubdivisionFactor + subfaceInner];
-            const double* const innerMatrix =
-              restrictionMatrix1D + static_cast<std::ptrdiff_t>(subfaceInner) * EntriesPerInterval;
-            const double* const outerMatrix =
-              restrictionMatrix1D + static_cast<std::ptrdiff_t>(subfaceOuter) * EntriesPerInterval;
-            for (int fineOuter = 0; fineOuter < NodesPerAxis; fineOuter++) {
-              for (int fineInner = 0; fineInner < NodesPerAxis; fineInner++) {
-                const double weight = innerMatrix[fineInner * NodesPerAxis + coarseInner]
-                  * outerMatrix[fineOuter * NodesPerAxis + coarseOuter];
-                const int fineIndex = (fineOuter * NodesPerAxis + fineInner) * Values;
-                accumulator.add(weight * (static_cast<double>(fineFace[fineIndex + value]) - reference[value]));
+        auto sum = emptySums[value];
+        sum.add(reference[value]);
+        if (varies[value]) {
+          for (int subfaceOuter = 0; subfaceOuter < SubdivisionFactor; subfaceOuter++) {
+            for (int subfaceInner = 0; subfaceInner < SubdivisionFactor; subfaceInner++) {
+              const T* const      fineFace = fineFaces[subfaceOuter * SubdivisionFactor + subfaceInner];
+              const double* const innerMatrix =
+                restrictionMatrix1D + static_cast<std::ptrdiff_t>(subfaceInner) * EntriesPerInterval;
+              const double* const outerMatrix =
+                restrictionMatrix1D + static_cast<std::ptrdiff_t>(subfaceOuter) * EntriesPerInterval;
+              for (int fineOuter = 0; fineOuter < NodesPerAxis; fineOuter++) {
+                for (int fineInner = 0; fineInner < NodesPerAxis; fineInner++) {
+                  const double weight = innerMatrix[fineInner * NodesPerAxis + coarseInner]
+                    * outerMatrix[fineOuter * NodesPerAxis + coarseOuter];
+                  const int fineIndex = (fineOuter * NodesPerAxis + fineInner) * Values;
+                  sum.add(weight * (static_cast<double>(fineFace[fineIndex + value]) - reference[value]));
+                }
               }
             }
           }
         }
-        coarseFace[coarseIndex + value] = static_cast<T>(accumulator.round());
+        coarseFace[coarseIndex + value] = static_cast<T>(sum.round());
       }
     }
   }
@@ -978,59 +1657,65 @@ exahype2::dg::restrictFace(
 }
 
 /**
- * Restricts the children, in linearised order, into the coarse cell. restrictionMatrix1D stores
- * one block [fine][coarse] per child interval. Children of one constant value return that value
- * bitwise.
+ * Restricts the children, in linearised order, into the node coarseNode of the coarse cell.
+ * restrictionMatrix1D stores one block [fine][coarse] per child interval. referencesAndBounds
+ * stores the entries of computeReferenceAndBoundOfChildren() for every value of the children.
+ * Children of one constant value return that value bitwise.
  */
 template <int NodesPerAxis, int Values, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::restrictCell(
+exahype2::dg::restrictNode(
   const T* const NOALIAS      fineCells[peano4::ChildrenPerCell],
   T* NOALIAS const            coarseCell,
-  const double* NOALIAS const restrictionMatrix1D
+  const double* NOALIAS const restrictionMatrix1D,
+  const double* NOALIAS const referencesAndBounds,
+  const int                   coarseNode
 ) {
   static_assert(NodesPerAxis > 0 and Values > 0);
   constexpr int SubdivisionFactor  = peano4::SubdivisionFactor;
   constexpr int EntriesPerInterval = NodesPerAxis * NodesPerAxis;
+  constexpr int NodesPerCell       = peano4::power(NodesPerAxis, DIMENSIONS);
   assertion(coarseCell != nullptr);
   assertion(restrictionMatrix1D != nullptr);
+  assertion(referencesAndBounds != nullptr);
+  assertion(coarseNode >= 0 and coarseNode < NodesPerCell, coarseNode);
   for (int child = 0; child < peano4::ChildrenPerCell; child++) {
     assertion(fineCells[child] != nullptr, child);
   }
 
-  double reference[Values];
+  double     reference[Values];
+  bool       varies[Values];
+  const auto coarsePosition = peano4::dDelinearised(coarseNode, NodesPerAxis);
+  tarch::la::FixedPointSum<peano4::ChildrenPerCell * NodesPerCell + 1> sums[Values];
   for (int value = 0; value < Values; value++) {
-    reference[value] = static_cast<double>(fineCells[0][value]);
+    reference[value] = referencesAndBounds[value];
+    varies[value]    = referencesAndBounds[2 * Values + value] != 0.0;
+    sums[value].clear(referencesAndBounds[Values + value]);
+    sums[value].add(reference[value]);
   }
   for (int child = 0; child < peano4::ChildrenPerCell; child++) {
-    exahype2::dg::takeSmallestValues<Values>(reference, fineCells[child], peano4::power(NodesPerAxis, DIMENSIONS));
-  }
-  tarch::la::ExactAccumulator accumulator;
-  peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseNode) {
-    const int coarseIndex = peano4::dLinearised(coarseNode, NodesPerAxis) * Values;
-    for (int value = 0; value < Values; value++) {
-      accumulator.clear();
-      accumulator.add(reference[value]);
-      peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& childPosition) {
-        const T* const fineCell = fineCells[peano4::dLinearised(childPosition, SubdivisionFactor)];
-        peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineNode) {
+    const auto childPosition = peano4::dDelinearised(child, SubdivisionFactor);
+    for (int fineNode = 0; fineNode < NodesPerCell; fineNode++) {
+      const auto finePosition = peano4::dDelinearised(fineNode, NodesPerAxis);
+      const auto entryOfAxis  = [&](const int axis) {
+        return restrictionMatrix1D
+          [childPosition(axis) * EntriesPerInterval + finePosition(axis) * NodesPerAxis + coarsePosition(axis)];
+      };
 #if DIMENSIONS == 2
-          const double weight =
-            restrictionMatrix1D[childPosition(0) * EntriesPerInterval + fineNode(0) * NodesPerAxis + coarseNode(0)]
-            * restrictionMatrix1D[childPosition(1) * EntriesPerInterval + fineNode(1) * NodesPerAxis + coarseNode(1)];
+      const double weight = entryOfAxis(0) * entryOfAxis(1);
 #else
-          const double weight = exahype2::dg::orderInvariantProduct(
-            restrictionMatrix1D[childPosition(0) * EntriesPerInterval + fineNode(0) * NodesPerAxis + coarseNode(0)],
-            restrictionMatrix1D[childPosition(1) * EntriesPerInterval + fineNode(1) * NodesPerAxis + coarseNode(1)],
-            restrictionMatrix1D[childPosition(2) * EntriesPerInterval + fineNode(2) * NodesPerAxis + coarseNode(2)]
-          );
+      const double weight = tarch::la::productInOrderOfMagnitude(entryOfAxis(0), entryOfAxis(1), entryOfAxis(2));
 #endif
-          const int fineIndex = peano4::dLinearised(fineNode, NodesPerAxis) * Values;
-          accumulator.add(weight * (static_cast<double>(fineCell[fineIndex + value]) - reference[value]));
-        });
-      });
-      coarseCell[coarseIndex + value] = static_cast<T>(accumulator.round());
+      const T* const fineValues = fineCells[child] + fineNode * Values;
+      for (int value = 0; value < Values; value++) {
+        if (varies[value]) {
+          sums[value].add(weight * (static_cast<double>(fineValues[value]) - reference[value]));
+        }
+      }
     }
-  });
+  }
+  for (int value = 0; value < Values; value++) {
+    coarseCell[coarseNode * Values + value] = static_cast<T>(sums[value].round());
+  }
 }
 TARGET_DECLARE_END

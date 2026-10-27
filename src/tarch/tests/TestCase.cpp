@@ -16,7 +16,7 @@ namespace {
       if (base.empty()) {
         continue;
       }
-      // The probe file name contains the process id, so concurrent ranks do not race on it.
+      // The probe file name contains the process id. Concurrent ranks do not race on it.
       const std::filesystem::path probe = base / (".peano-write-probe-" + std::to_string(::getpid()));
       std::ofstream               stream(probe);
       if (stream.good()) {
@@ -26,15 +26,15 @@ namespace {
       }
     }
 
-    // Last resort: The current working directory, which the job owns.
+    // The last resort is the current working directory of the job.
     return std::filesystem::current_path(errorCode);
   }
 } // namespace
 
 /**
- * Returns the directory a test writes its files into, which is the same on every rank because the
- * parallel plotters open one file collectively. The function probes the working directory first
- * and falls back to the system temporary directory.
+ * Returns the directory a test writes its files into, the same on every rank. The parallel plotters
+ * open one file collectively. The function probes the working directory first and falls back to
+ * the system temporary directory.
  */
 std::filesystem::path
 tarch::tests::getWritableTestDirectory() {
@@ -55,7 +55,7 @@ tarch::tests::getToleranceInUnitsInTheLastPlace(const std::vector<double>& refer
   const double unitInTheLastPlace =
     std::nextafter(largestMagnitude, std::numeric_limits<double>::infinity()) - largestMagnitude;
   // A compiler that flushes subnormal results to zero turns a subnormal tolerance into an exact
-  // comparison, so the smallest normal double is the floor.
+  // comparison. The smallest normal double is the floor.
   return MaxUnitsInTheLastPlace * std::max(unitInTheLastPlace, std::numeric_limits<double>::min());
 }
 

@@ -2,60 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ErrorMeasurement.h"
 
-#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/Assertions.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 
 #include <mpi.h>
 
 /**
- * Returns the error sums of numberOfCells cells in errorsPerCell. The partial sums merge pairwise
- * on the device, and only the total is copied to the host.
- */
-exahype2::ErrorSums
-exahype2::ErrorMeasurement::sumErrorsOfCells(
-  const double* const                    errorsPerCell,
-  const int                              numberOfCells,
-  tarch::accelerator::Buffer<ErrorSums>& partialSums
-) {
-  assertion(numberOfCells >= 0, numberOfCells);
-  assertion(errorsPerCell != nullptr or numberOfCells == 0);
-  constexpr int MaximumNumberOfPartialSums = 1024;
-  const int     numberOfPartialSums        = std::clamp(numberOfCells, 1, MaximumNumberOfPartialSums);
-  if (partialSums.getSize() < static_cast<std::size_t>(numberOfPartialSums)) {
-    partialSums.allocate(static_cast<std::size_t>(numberOfPartialSums));
-  }
-  tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(numberOfPartialSums),
-    SumErrorsOfCells{errorsPerCell, numberOfCells, numberOfPartialSums, partialSums.getData()}
-  );
-  for (int stride = 1; stride < numberOfPartialSums; stride *= 2) {
-    tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(numberOfPartialSums),
-      MergeErrorSums{partialSums.getData(), stride, numberOfPartialSums}
-    );
-  }
-  ErrorSums result;
-  partialSums.copyToHost(&result, 1);
-  return result;
-}
-
-/**
- * Records the norms of the first numberOfCells cells in getErrorsPerCell(). This
- * translation unit compiles with the GPU compiler when a device backend is selected.
- */
-std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
-exahype2::ErrorMeasurement::record(const int numberOfCells, const double timeStamp) {
-  assertion(
-    _errorsPerCell.getSize() >= static_cast<std::size_t>(numberOfCells) * NumberOfNorms,
-    _errorsPerCell.getSize(),
-    numberOfCells
-  );
-  return record(sumErrorsOfCells(_errorsPerCell.getData(), numberOfCells, _partialSums), timeStamp);
-}
-
-/**
- * Sets the output file name on the global master only, so only the global master writes the file.
+ * Sets the output file name on the global master only. Only the global master writes the file.
  */
 void
 exahype2::ErrorMeasurement::open(const std::string& fileName, const double timeDeltaBetweenSnapshots) {
@@ -66,6 +20,11 @@ exahype2::ErrorMeasurement::open(const std::string& fileName, const double timeD
   _database.setDataName("l1-error, l2-error, linf-error");
   _database.setTimeDeltaBetweenTwoSnapshots(timeDeltaBetweenSnapshots);
   _open = true;
+}
+
+void
+exahype2::ErrorMeasurement::setSnapshotRule(const tarch::database::SnapshotRule rule) {
+  _database.setSnapshotRule(rule);
 }
 
 /**
@@ -113,9 +72,9 @@ exahype2::ErrorMeasurement::record(const ErrorSums& localSums, const double time
     rank.getCommunicator()
   );
 
-  ErrorSums globalSums;
-  for (const ErrorSums& sumsOfRank : sumsOfRanks) {
-    globalSums.merge(sumsOfRank);
+  ErrorSums globalSums = sumsOfRanks.front();
+  for (std::size_t sumsOfRank = 1; sumsOfRank < sumsOfRanks.size(); sumsOfRank++) {
+    globalSums.merge(sumsOfRanks[sumsOfRank]);
   }
 
   const std::array<double, NumberOfNorms> norms{
@@ -125,6 +84,28 @@ exahype2::ErrorMeasurement::record(const ErrorSums& localSums, const double time
   };
   _database.addGlobalSnapshot(timeStamp, NumberOfNorms, norms.data());
   return norms;
+}
+
+/**
+ * Returns sums without terms whose bounds are the largest errors over all ranks. Every rank calls
+ * this function collectively and receives the same bounds.
+ */
+exahype2::ErrorSums
+exahype2::ErrorMeasurement::getEmptySumsOfAllRanks(const LargestErrors& largestErrors) {
+  const double localLargest[2]  = {largestErrors.error, largestErrors.squaredError};
+  double       globalLargest[2] = {0.0, 0.0};
+  tarch::mpi::allreduce(
+    localLargest,
+    globalLargest,
+    2,
+    MPI_DOUBLE,
+    MPI_MAX,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  ErrorSums sums;
+  sums.summedError.clear(globalLargest[0]);
+  sums.summedSquaredError.clear(globalLargest[1]);
+  return sums;
 }
 
 void

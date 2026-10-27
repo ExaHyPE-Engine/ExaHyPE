@@ -10,12 +10,8 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 /**
- * Drives the registered pollers on a thread of its own.
- *
- * The thread runs between start() and stop(), so every registered concern
- * progresses regardless of what the task scheduler's threads do. It reserves a
- * core: The task runtime shrinks its team by one thread while this manager is
- * selected.
+ * Drives the registered pollers on a thread of its own between start() and stop(). The thread
+ * reserves a core. The task runtime shrinks its team by one thread while a run uses this manager.
  */
 class tarch::mpi::ThreadedCommunicationManager final : public tarch::mpi::AbstractCommunicationManager {
 public:
@@ -32,10 +28,8 @@ public:
   void finishPendingWork() override;
 
 private:
-  /** Consecutive passes that found work pending without finishing it. */
   static constexpr int BusyPassesBeforePacing = 16;
 
-  /** How long a paced pass sleeps, which is the completion latency the pacing may add. */
   static constexpr std::chrono::microseconds PacedPassSleep{20};
 
   std::atomic<bool>          _allPollersIdle{false};
@@ -43,14 +37,6 @@ private:
   bool                       _threadIsRunning{false};
   int                        _consecutiveBusyPasses{0};
 
-  /**
-   * Every pass tests the outstanding requests. A message in flight takes many
-   * passes, and each test contends with the compute threads' own MPI calls
-   * inside the library, so a long busy streak paces itself down to a short
-   * sleep. An idle pass costs no MPI call and needs no pacing. The streak
-   * counter stops at the threshold, as a streak lasts for as long as the rank
-   * has messages in flight.
-   */
   tarch::mpi::HelperThread _pollingThread{[this]() -> bool {
     const bool allPollersIdle = runPollersOnce();
     _allPollersIdle.store(allPollersIdle, std::memory_order_relaxed);

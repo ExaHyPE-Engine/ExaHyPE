@@ -36,7 +36,7 @@
 
 namespace {
   /**
-   * PhaseName holds the names of the program steps and the time loop in the reports and the Score-P
+   * PhaseName lists the names of the program steps and the time loop in the reports and the Score-P
    * regions.
    */
   struct PhaseName final {
@@ -93,8 +93,8 @@ namespace {
 
 #if defined(PEANO_WITH_GPU_BACKEND)
   /**
-   * Returns the smallest and the largest number of GPUs that the ranks of one node use, or nothing
-   * if the backend of some rank names no physical device. Every rank calls this function.
+   * Returns the smallest and the largest number of GPUs that the ranks of one node use. Returns
+   * std::nullopt when the device id of some rank is empty. Every rank calls this function.
    */
   std::optional<std::pair<int, int>> countDevicesPerNode() {
     constexpr int              IdLength = 64;
@@ -351,8 +351,8 @@ exahype2::runner::Runner::launch(
   int    returnCode = EXIT_SUCCESS;
 #pragma omp parallel default(none) shared(runner, returnCode)
   {
-    // Every thread enables its own floating-point trap. The dispatches run on all threads. The
-    // floating-point environment is a per-thread state.
+    // The floating-point environment is a per-thread state. Every thread that runs a dispatch
+    // enables its own trap.
     const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
 #pragma omp barrier
 #pragma omp master
@@ -449,8 +449,8 @@ exahype2::runner::Runner::finishStep(const Step step) {
     _callbacks.getNumberOfCellDoFs ? _callbacks.getNumberOfCellDoFs() : 0
   );
 
-  // A rank without a non-critical assertion holds -1. The shifted rank keeps the order of the
-  // unsigned maximum.
+  // getNonCriticalAssertionRank() returns -1 on a rank without a non-critical assertion. The shifted
+  // rank keeps the order of the unsigned maximum.
   const int assertionRank = tarch::getNonCriticalAssertionRank();
   assertion(assertionRank >= -1, assertionRank);
   const int                   shiftedAssertionRank = assertionRank + 1;
@@ -497,7 +497,7 @@ exahype2::runner::Runner::runStep(const Step step) {
 
 /**
  * Returns the exit code of the run. A run that ended on a non-critical assertion fails. Every rank
- * runs the same steps. Only the global master writes the report.
+ * runs the same steps and only the global master writes the report.
  */
 int
 exahype2::runner::Runner::run() {
@@ -799,7 +799,6 @@ exahype2::runner::Runner::applyMeshUpdates() {
   int    stepsOfThisRegrid{0};
   double secondsSinceLastReport{0.0};
   while (hasPendingMeshUpdates() and stepsOfThisRegrid < MaximumMeshUpdateSteps) {
-    // A report inside the regrid resets the collection. The regrid counts itself on its first step.
     secondsSinceLastReport += runMeshUpdateStep(stepsOfThisRegrid == 0);
     stepsOfThisRegrid++;
     if (secondsSinceLastReport >= SecondsBetweenMeshUpdateReports) {
@@ -809,22 +808,25 @@ exahype2::runner::Runner::applyMeshUpdates() {
   }
   if (hasPendingMeshUpdates()) {
     reportMeshUpdates();
-    std::ostringstream message;
-    message << "The solvers must stop requesting mesh updates within " << MaximumMeshUpdateSteps
-            << " dynamic AMR steps.";
-    tarch::terminateWithError(message.str());
+    tarch::terminateWithError(
+      "The grid still changes after " + std::to_string(MaximumMeshUpdateSteps) + " regrid steps at t = "
+      + Format::getScientific(_callbacks.getMinTimeStamp()) + ". Check the refinement criterion of the solvers."
+    );
   }
 }
 
 /**
  * Runs one regrid step and adds it to the collected mesh updates. Returns its wall clock in
- * seconds. With startsRegrid, the step also counts a regrid.
+ * seconds. With startsRegrid, the step also counts a regrid. The first step after a report counts
+ * the running regrid in the new collection.
  */
 double
 exahype2::runner::Runner::runMeshUpdateStep(const bool startsRegrid) {
   if (startsRegrid) {
-    _meshUpdates.regrids++;
     _numberOfRegrids++;
+  }
+  if (startsRegrid or _meshUpdates.steps == 0) {
+    _meshUpdates.regrids++;
   }
   const double elapsedSeconds = runStep(Step::DynamicAMR);
   assertion(elapsedSeconds >= 0.0, elapsedSeconds);
@@ -848,9 +850,6 @@ exahype2::runner::Runner::formatETA(const double fraction) const {
   return Format::getDuration(remainingSeconds);
 }
 
-/**
- * Moves the value column right of the label. No label of the time loop reaches its values.
- */
 void
 exahype2::runner::Runner::widenValueColumn(const std::size_t indentation, const std::string& label) {
   _valueColumn = std::max(_valueColumn, indentation + getDisplayWidth(label) + 2);
@@ -1007,7 +1006,7 @@ exahype2::runner::Runner::runTimeLoop() {
   double        nextPlotAtStep     = 0.0;
   unsigned long completedTimeSteps = 0;
   int           completedPlots     = 0;
-  // lastLoggedStep holds the last reported step. The shutdown reports it once.
+  // lastLoggedStep stores the last reported step. The shutdown reports it once.
   unsigned long lastLoggedStep    = 0;
   bool          justWroteSnapshot = false;
   auto          lastReport        = std::chrono::steady_clock::now();
@@ -1080,12 +1079,12 @@ exahype2::runner::Runner::runTimeLoop() {
       justWroteSnapshot = true;
       action            = Action::Plot;
     } else if (
-      not stepLimited and snapshotInterval > 0.0 and keepTimeStepping and completedPlots < snapshots - 1
+      not stepLimited and snapshotInterval > 0.0 and keepTimeStepping
+      and (completedTimeSteps == 0 or completedPlots < snapshots - 1)
       and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot)
     ) {
-      // The final plot at termination completes the numbered snapshots. The interval trigger stops
-      // one short. minStamp belongs to the slowest solver and maxStamp to the fastest. The fastest
-      // solver sets the snapshot spacing.
+      // The interval trigger stops one short of the numbered snapshots and the final plot at
+      // termination completes them. minStamp belongs to the slowest solver and maxStamp to the fastest.
       nextMinPlot += snapshotInterval;
       nextMaxPlot += snapshotInterval;
       if (nextMinPlot < minStamp) {
@@ -1116,6 +1115,9 @@ exahype2::runner::Runner::runTimeLoop() {
     }
 
     if (action == Action::Stop) {
+      if (_callbacks.recordLastTimeStamp) {
+        _callbacks.recordLastTimeStamp();
+      }
       // After a non-critical assertion, the report ends with the final plot and no time step summary.
       if (not _stoppedAfterNonCriticalAssertion and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
         logTimeStep(

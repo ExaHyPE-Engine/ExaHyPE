@@ -189,7 +189,7 @@ void
 peano4::tests::HaloExchangeTest::run() {
   testMethod(testExchangeFillsTheRemoteHalves);
   testMethod(testCoarseExchangeFillsTheRemoteHalvesOfCoarseFacesOnly);
-  testMethod(testExchangesHoldDistinctTags);
+  testMethod(testTwoExchangesOfOnePoolGetDistinctTags);
   testMethod(testReleaseFreesTheBuffersAndKeepsTheTag);
 }
 
@@ -276,11 +276,11 @@ peano4::tests::HaloExchangeTest::testCoarseExchangeFillsTheRemoteHalvesOfCoarseF
 }
 
 /**
- * Two exchanges of one pool get distinct tags in their first rebuild, and every rank reserves the
- * same tags.
+ * Two exchanges of one pool get distinct tags in their first rebuild. Every rank reserves the same
+ * tags.
  */
 void
-peano4::tests::HaloExchangeTest::testExchangesHoldDistinctTags() {
+peano4::tests::HaloExchangeTest::testTwoExchangesOfOnePoolGetDistinctTags() {
   peano4::tests::buildRegularGrid(Depth);
   const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
   Pool        pool(ElementsPerFace, tarch::MemoryLocation::Device);
@@ -304,7 +304,7 @@ peano4::tests::HaloExchangeTest::testExchangesHoldDistinctTags() {
 }
 
 /**
- * The release frees the buffers and keeps the tag, and the next rebuild restores a working exchange.
+ * The release frees the buffers and keeps the tag. The next rebuild restores a working exchange.
  */
 void
 peano4::tests::HaloExchangeTest::testReleaseFreesTheBuffersAndKeepsTheTag() {

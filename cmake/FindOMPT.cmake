@@ -19,7 +19,7 @@ if(TARGET PeanoOptions)
     elseif(PEANO_WITH_GPU_VENDOR STREQUAL "intel")
       set(OFFLOADING_FLAGS -fopenmp-targets=spir64)
     endif()
-    # A local of a device function stays private to its thread, so a team kernel keeps the data its
+    # A local of a device function stays private to its thread. A team kernel keeps the data that its
     # threads exchange in omp_pteam_mem_alloc memory.
     list(APPEND OFFLOADING_COMPILE_FLAGS -fopenmp-cuda-mode)
     # The ADER-DG predictor kernel needs more OpenMP optimiser iterations than the default.

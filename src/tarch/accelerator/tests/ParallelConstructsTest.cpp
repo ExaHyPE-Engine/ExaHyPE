@@ -349,6 +349,48 @@ namespace {
   };
 
   /**
+   * Writes the result of two votes of a team for every thread of the team. Thread team % threads of
+   * an even team votes yes in the vote of any thread. Thread team % threads of an odd team votes no
+   * in the vote of every thread.
+   */
+  struct VoteInTeam final {
+    int* anyThreadVotes{nullptr};
+    int* everyThreadVotes{nullptr};
+    int  entriesPerTeam{0};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      const int                            team,
+      const tarch::accelerator::TeamHandle teamHandle
+    ) const {
+      const int  thread            = tarch::accelerator::getThreadOfTeam(teamHandle);
+      const bool isVoter           = thread == team % tarch::accelerator::getNumberOfThreadsPerTeam(teamHandle);
+      const bool isEvenTeam        = team % 2 == 0;
+      const bool isTrueInAnyThread = tarch::accelerator::isTrueInAnyThreadOfTeam(teamHandle, isEvenTeam and isVoter);
+      const bool isTrueInEveryThread =
+        tarch::accelerator::isTrueInEveryThreadOfTeam(teamHandle, isEvenTeam or not isVoter);
+      anyThreadVotes[team * entriesPerTeam + thread]   = isTrueInAnyThread ? 1 : 0;
+      everyThreadVotes[team * entriesPerTeam + thread] = isTrueInEveryThread ? 1 : 0;
+    }
+  };
+
+  /**
+   * Adds the result of a vote of any thread of the team for every thread of the team. Thread
+   * team % threads of an even team votes yes.
+   */
+  struct CountVotesPerTeam final {
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      const int                            team,
+      const tarch::accelerator::TeamHandle teamHandle,
+      int&                                 teamAccumulator
+    ) const {
+      const int  thread  = tarch::accelerator::getThreadOfTeam(teamHandle);
+      const bool isVoter = thread == team % tarch::accelerator::getNumberOfThreadsPerTeam(teamHandle);
+      const int  vote    = tarch::accelerator::isTrueInAnyThreadOfTeam(teamHandle, team % 2 == 0 and isVoter) ? 1 : 0;
+      tarch::accelerator::reduceOverTeam(teamHandle, vote, tarch::accelerator::Sum<int>{teamAccumulator});
+    }
+  };
+
+  /**
    * Lowers the accumulator of the team to the number of threads the smallest team runs.
    */
   struct LowerNumberOfThreadsPerTeam final {
@@ -413,6 +455,7 @@ tarch::accelerator::tests::ParallelConstructsTest::run() {
   testMethod(testParallelForTeamRangeMD2);
   testMethod(testParallelForTeamRangeMD3);
   testMethod(testTeamBarrier);
+  testMethod(testEveryThreadOfATeamReceivesTheVotesOfTheTeam);
   testMethod(testParallelReduceSum);
   testMethod(testParallelReduceMin);
   testMethod(testParallelReduceMax);
@@ -427,9 +470,11 @@ tarch::accelerator::tests::ParallelConstructsTest::run() {
   testMethod(testReductionScratchKeepsAnAddressThatFits);
   testMethod(testWaitForDeviceCompletesTheLaunchedLoop);
   testMethod(testAReductionOverManyTeamsSumsEveryTeam);
+  testMethod(testAReductionOverTeamsOfThreeWarpsSumsEveryTeam);
   testMethod(testReduceOverTeamCombinesEveryThread);
   testMethod(testEveryTeamRunsTheDefaultNumberOfThreads);
   testMethod(testATeamLaunchRunsTheRequestedThreads);
+  testMethod(testATeamLaunchStopsAtTheDefaultNumberOfThreads);
   testMethod(testTeamScratchMirrorsWithinTheTeam);
   testMethod(testTheDeviceRunsADefaultTeamAtOnce);
   testMethod(testTheNumberOfHostTasksFollowsTheTimePerItem);
@@ -500,9 +545,6 @@ tarch::accelerator::tests::ParallelConstructsTest::testAHostReductionMergesItsBl
 }
 #endif
 
-/**
- * The device runs at least the threads of one default team at once.
- */
 void
 tarch::accelerator::tests::ParallelConstructsTest::testTheDeviceRunsADefaultTeamAtOnce() {
   const int threads = tarch::accelerator::Device::getInstance().getNumberOfConcurrentThreads();
@@ -621,6 +663,28 @@ tarch::accelerator::tests::ParallelConstructsTest::testATeamLaunchRunsTheRequest
 }
 
 /**
+ * Every team of a launch that asks for more threads than DefaultThreadsPerTeam runs
+ * DefaultThreadsPerTeam threads.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testATeamLaunchStopsAtTheDefaultNumberOfThreads() {
+  constexpr int                       NumberOfTeams    = 6;
+  constexpr int                       RequestedThreads = 4 * tarch::accelerator::DefaultThreadsPerTeam;
+  const tarch::accelerator::TeamRange range(
+    NumberOfTeams,
+    RequestedThreads,
+    tarch::accelerator::TeamRange::BackendDefault
+  );
+
+  int fewestThreads = std::numeric_limits<int>::max();
+  int mostThreads   = 0;
+  tarch::accelerator::parallelReduce(range, LowerNumberOfThreadsPerTeam{}, tarch::accelerator::Min<int>{fewestThreads});
+  tarch::accelerator::parallelReduce(range, RaiseNumberOfThreadsPerTeam{}, tarch::accelerator::Max<int>{mostThreads});
+  validateEqualsWithParams1(fewestThreads, tarch::accelerator::DefaultThreadsPerTeam, RequestedThreads);
+  validateEqualsWithParams1(mostThreads, tarch::accelerator::DefaultThreadsPerTeam, RequestedThreads);
+}
+
+/**
  * A team reduction over more teams than the host combines directly returns the full sum.
  */
 void
@@ -631,6 +695,24 @@ tarch::accelerator::tests::ParallelConstructsTest::testAReductionOverManyTeamsSu
   double           result        = InitialResult;
   tarch::accelerator::parallelReduce(
     tarch::accelerator::TeamRange(NumberOfTeams),
+    AddIndicesPerTeam{TeamSize},
+    tarch::accelerator::Sum<double>{result}
+  );
+  constexpr double Entries = NumberOfTeams * TeamSize;
+  validateWithParams1(result == InitialResult + 3.0 * Entries * (Entries + 1) / 2.0, result);
+}
+
+/**
+ * A team reduction over teams of three warps returns the full sum.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testAReductionOverTeamsOfThreeWarpsSumsEveryTeam() {
+  constexpr int    NumberOfTeams = 1000;
+  constexpr int    TeamSize      = 8;
+  constexpr double InitialResult = 17.0;
+  double           result        = InitialResult;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(NumberOfTeams, 3 * tarch::accelerator::ThreadsPerWarp, 0),
     AddIndicesPerTeam{TeamSize},
     tarch::accelerator::Sum<double>{result}
   );
@@ -844,6 +926,37 @@ tarch::accelerator::tests::ParallelConstructsTest::testTeamBarrier() {
     }
   }
   validate(correct);
+}
+
+/**
+ * Every thread of a team of two warps receives the result of the votes of all threads of its team.
+ */
+void
+tarch::accelerator::tests::ParallelConstructsTest::testEveryThreadOfATeamReceivesTheVotesOfTheTeam() {
+  constexpr int NumberOfTeams    = 6;
+  const int     threads          = tarch::accelerator::getTeamThreads(2 * tarch::accelerator::ThreadsPerWarp);
+  const int     numberOfVotes    = NumberOfTeams * threads;
+  auto* const   anyThreadVotes   = tarch::allocateMemory<int>(numberOfVotes, tarch::MemoryLocation::Device);
+  auto* const   everyThreadVotes = tarch::allocateMemory<int>(numberOfVotes, tarch::MemoryLocation::Device);
+
+  const tarch::accelerator::TeamRange range(NumberOfTeams, 2 * tarch::accelerator::ThreadsPerWarp, 0);
+  tarch::accelerator::parallelFor(range, VoteInTeam{anyThreadVotes, everyThreadVotes, threads});
+  int votesOfEvenTeams = 0;
+  tarch::accelerator::parallelReduce(range, CountVotesPerTeam{}, tarch::accelerator::Sum<int>{votesOfEvenTeams});
+
+  std::vector<int> hostAnyThreadVotes(numberOfVotes, -1);
+  std::vector<int> hostEveryThreadVotes(numberOfVotes, -1);
+  tarch::copyFrom(anyThreadVotes, hostAnyThreadVotes.data(), numberOfVotes, tarch::MemoryLocation::Device);
+  tarch::copyFrom(everyThreadVotes, hostEveryThreadVotes.data(), numberOfVotes, tarch::MemoryLocation::Device);
+  tarch::freeMemory(anyThreadVotes, tarch::MemoryLocation::Device);
+  tarch::freeMemory(everyThreadVotes, tarch::MemoryLocation::Device);
+
+  for (int vote = 0; vote < numberOfVotes; vote++) {
+    const int expected = (vote / threads) % 2 == 0 ? 1 : 0;
+    validateEqualsWithParams2(hostAnyThreadVotes[vote], expected, vote, threads);
+    validateEqualsWithParams2(hostEveryThreadVotes[vote], expected, vote, threads);
+  }
+  validateEqualsWithParams1(votesOfEvenTeams, (NumberOfTeams + 1) / 2 * threads, threads);
 }
 
 void

@@ -96,6 +96,9 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The circular bubble tracer test runs in 2D only.")
+
 initial_conditions = """
   Q[Shortcuts::rho]  = 1.0;
   Q[Shortcuts::rhoU] = 0.0;
@@ -115,8 +118,8 @@ compute_primitive_variables = r"""
   const auto u0 = Q[Shortcuts::rhoU] * irho;
   const auto u1 = Q[Shortcuts::rhoV] * irho;
 
-  const auto squareOfU0 = u0 * u0;
-  const auto squareOfU1 = u1 * u1;
+  const auto squareOfU0 = tarch::la::productRoundedOnce(u0, u0);
+  const auto squareOfU1 = tarch::la::productRoundedOnce(u1, u1);
   const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 
@@ -150,7 +153,7 @@ fv_solver = exahype2.fv.singlestep.Solver(
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1},
     auxiliary_variables=0,
-    time_stepping=exahype2.TimeStepping.Fixed(0.00064 / (args.degrees_of_freedom**0.5)),
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
     scheme=exahype2.fv.Godunov(),
 )
 

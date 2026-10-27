@@ -8,9 +8,7 @@
 #include "tarch/mpi/Diagnostics.h"
 
 namespace {
-  std::atomic<int> errorCodeOfAbort{0};
-
-  void endRankWithErrorCodeOfAbort() { std::_Exit(errorCodeOfAbort.load()); }
+  std::atomic<int> errorCodeOfAbort{EXIT_FAILURE};
 } // namespace
 
 int tarch::mpi::Rank::_maximumTagValue = -1;
@@ -67,8 +65,8 @@ tarch::mpi::Rank::isGlobalMaster() const {
 }
 
 /**
- * Returns whether the highest reserved tag fits the upper bound MPI reports. Writes a warning when
- * it does not. init() reads that bound. The check passes before init() runs.
+ * Returns whether the highest reserved tag fits the upper bound that init() reads from MPI. Writes
+ * a warning when it does not. The check passes before init() runs.
  */
 bool
 tarch::mpi::Rank::validateReservedTagsAreSupported() {
@@ -129,8 +127,8 @@ tarch::mpi::Rank::init(int* const argc, char*** const argv) {
 
   MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
-  // The split groups the ranks of one node. The lowest rank of a node is its master, and the number
-  // of masters is the number of nodes.
+  // The split groups the ranks of one node. The lowest rank of a node is its master and the
+  // masters count the nodes.
   MPI_Comm nodeCommunicator{MPI_COMM_NULL};
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, _rank, MPI_INFO_NULL, &nodeCommunicator);
   int nodeRank{0};
@@ -192,18 +190,16 @@ tarch::mpi::Rank::getCommunicator() const {
 }
 
 /**
- * Stops every rank of the job from any rank. MPI_Abort reaches every rank, and std::_Exit() stops
- * this rank while MPI is not initialised. The MPI library may end this rank through exit(). An exit
- * handler then ends the rank before the destructors of static objects run. A destructor that frees
- * GPU memory after a failed GPU call fails again. Its call of tarch::terminateWithError() waits for
- * this call forever.
+ * Stops every rank of the job from any rank. The MPI library may end this rank through exit(). An
+ * exit handler then ends the rank before a destructor of a static object fails again and waits
+ * for this call forever.
  */
 void
 tarch::mpi::abort(const int errorCode) {
   std::cout.flush();
   std::cerr.flush();
   errorCodeOfAbort.store(errorCode);
-  if (std::atexit(endRankWithErrorCodeOfAbort) != 0) {
+  if (std::atexit(tarch::mpi::endRankWithErrorCodeOfAbort) != 0) {
     std::_Exit(errorCode);
   }
   int mpiInitialised{0};
@@ -216,4 +212,15 @@ tarch::mpi::abort(const int errorCode) {
     }
   }
   std::_Exit(errorCode);
+}
+
+/**
+ * Ends this rank through std::_Exit() with the error code of abort(). A rank without a call of
+ * abort() ends with EXIT_FAILURE. The process ends before the destructors of static objects run.
+ */
+void
+tarch::mpi::endRankWithErrorCodeOfAbort() {
+  std::cout.flush();
+  std::cerr.flush();
+  std::_Exit(errorCodeOfAbort.load());
 }

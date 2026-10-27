@@ -6,7 +6,7 @@
 
 namespace exahype2 {
   /**
-   * Please destroy after usage
+   * The caller deletes the returned test case.
    */
   tarch::tests::TestCase* getUnitTests();
 } // namespace exahype2

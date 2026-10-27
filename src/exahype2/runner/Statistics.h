@@ -86,9 +86,6 @@ public:
   [[nodiscard]] int getGlobalNumberOfStationaryRegrids() const;
 
 private:
-  /**
-   * Without a refresh request, the memory figures refresh at most once per interval.
-   */
   static constexpr std::chrono::seconds MemorySamplingInterval{1};
 
   std::chrono::steady_clock::time_point _lastMemorySample{};

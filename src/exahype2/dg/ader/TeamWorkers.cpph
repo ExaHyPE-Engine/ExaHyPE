@@ -5,10 +5,7 @@
 
 TARGET_DECLARE
 /**
- * Returns the calling device thread as a worker of a team that runs cells on threadsPerCell
- * threads each. The threads of the team split into groups of threadsPerCell consecutive threads.
- * The threads behind the last full group receive no cell. A team smaller than threadsPerCell runs
- * one cell on all of its threads. On the host the call runs one cell on one thread without a team.
+ * Returns getWorkersWithThreadsOfTeam() on a device. The host runs one cell on one thread.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::TeamWorkers
 exahype2::dg::ader::getWorkers(
@@ -17,15 +14,27 @@ exahype2::dg::ader::getWorkers(
 ) {
   assertion(threadsPerCell > 0, threadsPerCell);
   TeamWorkers workers;
-  COMPILE_IF_ON_DEVICE(workers.teamThread  = tarch::accelerator::getThreadOfTeam(team);
-                       workers.teamThreads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
-                       workers.threads = threadsPerCell < workers.teamThreads ? threadsPerCell : workers.teamThreads;
-                       workers.groups  = workers.teamThreads / workers.threads;
-                       workers.group   = workers.teamThread / workers.threads;
-                       workers.thread  = workers.teamThread - workers.group * workers.threads;
-                       workers.hasCell = workers.group < workers.groups;
-                       workers.team    = &team;
-                       workers.scratch = tarch::accelerator::getTeamScratch(team);)
+  COMPILE_IF_ON_DEVICE(workers = getWorkersWithThreadsOfTeam(team, threadsPerCell);)
+  return workers;
+}
+
+/**
+ * Returns the calling thread as a worker of a team that runs cells on groups of threadsPerCell
+ * consecutive threads. Only the threads of full groups receive a cell. A team smaller than
+ * threadsPerCell runs one cell on all of its threads.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::ader::TeamWorkers
+exahype2::dg::ader::getWorkersWithThreadsOfTeam(const tarch::accelerator::TeamHandle& team, const int threadsPerCell) {
+  TeamWorkers workers;
+  workers.teamThread  = tarch::accelerator::getThreadOfTeam(team);
+  workers.teamThreads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+  workers.threads     = threadsPerCell < workers.teamThreads ? threadsPerCell : workers.teamThreads;
+  workers.groups      = workers.teamThreads / workers.threads;
+  workers.group       = workers.teamThread / workers.threads;
+  workers.thread      = workers.teamThread - workers.group * workers.threads;
+  workers.hasCell     = workers.group < workers.groups;
+  workers.team        = &team;
+  workers.scratch     = tarch::accelerator::getTeamScratch(team);
   return workers;
 }
 
@@ -33,10 +42,23 @@ exahype2::dg::ader::getWorkers(
  * Waits until every thread of the team reaches this point. A team of one thread returns at once.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::ader::synchronise(const TeamWorkers& workers) {
+exahype2::dg::ader::teamBarrier(const TeamWorkers& workers) {
   if (workers.teamThreads > 1) {
     assertion(workers.team != nullptr, workers.teamThread, workers.teamThreads);
-    COMPILE_IF_ON_DEVICE(tarch::accelerator::teamBarrier(*workers.team);)
+    tarch::accelerator::teamBarrier(*workers.team);
   }
+}
+
+/**
+ * Returns whether condition is true in any thread of the team. Every thread receives the same
+ * value. A team of one thread returns condition.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+exahype2::dg::ader::isTrueInAnyThreadOfTeam(const TeamWorkers& workers, const bool condition) {
+  if (workers.teamThreads == 1) {
+    return condition;
+  }
+  assertion(workers.team != nullptr, workers.teamThread, workers.teamThreads);
+  return tarch::accelerator::isTrueInAnyThreadOfTeam(*workers.team, condition);
 }
 TARGET_DECLARE_END

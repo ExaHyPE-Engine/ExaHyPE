@@ -124,7 +124,7 @@ namespace {
       double* NOALIAS const                                         values
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        values[unknown] += DivergingSpeed * state[unknown];
+        values[unknown] = DivergingSpeed * state[unknown];
       }
     }
   };
@@ -145,7 +145,7 @@ namespace {
       double* NOALIAS const                                         values
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        values[unknown] += LinearFluxSpeed * (1.0 + direction) * state[unknown];
+        values[unknown] = LinearFluxSpeed * (1.0 + direction) * state[unknown];
       }
     }
 
@@ -203,9 +203,6 @@ namespace {
     }
   };
 
-  /**
-   * Returns the cell node of face node faceNode at position normalIndex along direction.
-   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     auto nodeIndex       = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
     nodeIndex(direction) = normalIndex;
@@ -310,6 +307,7 @@ exahype2::dg::ader::tests::PredictorTest::run() {
   testMethod(testTheNonlinearPredictorMovesALinearProfileByTheExactAmount);
   testMethod(testADivergingNonlinearPredictorReportsDivergence);
   testMethod(testThePredictionCountsAddUpOverCells);
+  testMethod(testALaunchRunsBetweenOneTeamAndOneTeamPerCell);
   testMethod(testAnInertLinearSystemLeavesTheCellAtRest);
   testMethod(testTheLinearPredictorTranslatesALinearProfileByTheExactAmount);
   testMethod(testTheLinearPredictorFollowsTheTaylorSeriesOfTheSystem);
@@ -428,9 +426,6 @@ exahype2::dg::ader::tests::PredictorTest::testAnInertNonlinearSystemLeavesTheCel
   }
 }
 
-/**
- * The nonlinear predictor changes a linear profile by the exact amount of its terms.
- */
 void
 exahype2::dg::ader::tests::PredictorTest::testTheNonlinearPredictorMovesALinearProfileByTheExactAmount() {
   const Tables tables;
@@ -560,9 +555,6 @@ exahype2::dg::ader::tests::PredictorTest::testAnInertLinearSystemLeavesTheCellAt
   }
 }
 
-/**
- * The linear predictor transports a linear profile by the exact amount of its flux and product.
- */
 void
 exahype2::dg::ader::tests::PredictorTest::testTheLinearPredictorTranslatesALinearProfileByTheExactAmount() {
   const Tables tables;
@@ -686,18 +678,24 @@ exahype2::dg::ader::tests::PredictorTest::testTheLinearPredictorFollowsTheTaylor
 
 /**
  * The volume integral subtracts the flux divergence and adds the source, both times the time step
- * size.
+ * size. The divergence also overwrites the flux of the first axis.
  */
 void
 exahype2::dg::ader::tests::PredictorTest::testTheVolumeIntegralSubtractsTheDivergenceAndAddsTheSource() {
-  double timeAveragedFlux[DIMENSIONS * AveragedAxisStride] = {};
-  double timeAveragedSource[AveragedAxisStride]            = {};
+  double     timeAveragedFlux[DIMENSIONS * AveragedAxisStride] = {};
+  double     timeAveragedSource[AveragedAxisStride]            = {};
+  const auto fillTimeAveragedFlux                              = [&timeAveragedFlux]() {
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          timeAveragedFlux[axis * AveragedAxisStride + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown] =
+            1.0 + axis;
+        }
+      }
+    }
+  };
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        timeAveragedFlux[axis * AveragedAxisStride + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown] =
-          1.0 + axis;
-      }
       timeAveragedSource[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown] = 4.0;
     }
   }
@@ -714,18 +712,21 @@ exahype2::dg::ader::tests::PredictorTest::testTheVolumeIntegralSubtractsTheDiver
       values[unknown] = timeAveragedSource[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown];
     }
   };
+  fillTimeAveragedFlux();
   exahype2::dg::ader::Predictor<NonlinearStub, double>::subtractTimeAveragedVolumeIntegral<true, true>(
     withBothTerms,
     timeAveragedFlux,
     sourceOfNode,
     TimeStepSize
   );
+  fillTimeAveragedFlux();
   exahype2::dg::ader::Predictor<NonlinearStub, double>::subtractTimeAveragedVolumeIntegral<false, true>(
     withoutFlux,
     timeAveragedFlux,
     sourceOfNode,
     TimeStepSize
   );
+  fillTimeAveragedFlux();
   exahype2::dg::ader::Predictor<NonlinearStub, double>::subtractTimeAveragedVolumeIntegral<true, false>(
     withoutSource,
     timeAveragedFlux,
@@ -750,6 +751,12 @@ exahype2::dg::ader::tests::PredictorTest::testTheVolumeIntegralSubtractsTheDiver
       );
       validateNumericalEqualsWithParams2(withoutFlux[entry], initial + TimeStepSize * 4.0, cellNode, unknown);
       validateNumericalEqualsWithParams2(withoutSource[entry], initial - TimeStepSize * sumOverAxes, cellNode, unknown);
+      validateNumericalEqualsWithParams2(
+        timeAveragedFlux[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown],
+        sumOverAxes,
+        cellNode,
+        unknown
+      );
     }
     for (int value = NumberOfUnknowns; value < NumberOfData; value++) {
       const int entry = cellNode * NumberOfData + value;
@@ -764,7 +771,8 @@ exahype2::dg::ader::tests::PredictorTest::testTheVolumeIntegralSubtractsTheDiver
 }
 
 /**
- * The identity counts no cell, and combine() adds both counts.
+ * The identity counts zero cells and combine() adds both counts and keeps the smaller slot of a
+ * diverged cell.
  */
 void
 exahype2::dg::ader::tests::PredictorTest::testThePredictionCountsAddUpOverCells() {
@@ -773,8 +781,36 @@ exahype2::dg::ader::tests::PredictorTest::testThePredictionCountsAddUpOverCells(
   const Counts identity = Counts::identity();
   validateEquals(identity.divergedCells, 0);
   validateEquals(identity.unconvergedCells, 0);
+  validateEquals(identity.firstDivergedCell, -1);
 
-  const Counts combined = Counts::combine(Counts{1, 2}, Counts{3, 4});
+  const Counts combined = Counts::combine(Counts{1, 2, 7}, Counts{3, 4, 5});
   validateEquals(combined.divergedCells, 4);
   validateEquals(combined.unconvergedCells, 6);
+  validateEquals(combined.firstDivergedCell, 5);
+
+  validateEquals(Counts::combine(Counts{0, 0, -1}, Counts{1, 0, 9}).firstDivergedCell, 9);
+  validateEquals(Counts::combine(Counts{1, 0, 9}, Counts{0, 0, -1}).firstDivergedCell, 9);
+  validateEquals(Counts::combine(Counts{0, 1, -1}, Counts{0, 1, -1}).firstDivergedCell, -1);
+}
+
+/**
+ * A predictor launch over cells runs at least one team and at most one team per group of cells that
+ * a team advances at once.
+ */
+void
+exahype2::dg::ader::tests::PredictorTest::testALaunchRunsBetweenOneTeamAndOneTeamPerCell() {
+  using Kernel = exahype2::dg::ader::Predictor<InertNonlinearSolver, double>;
+
+  const int threads        = Kernel::getTeamThreads();
+  const int threadsPerCell = Kernel::getThreadsPerCell();
+  validateWithParams2(threadsPerCell >= 1 and threadsPerCell <= threads, threadsPerCell, threads);
+  validateWithParams1(threadsPerCell <= Kernel::CellLayout::NodesPerCell, threadsPerCell);
+  const int groups = threads / threadsPerCell;
+  for (const int cells : {1, 7, 4096}) {
+    const int teams  = Kernel::getNumberOfTeams(cells);
+    const int chunks = Kernel::getNumberOfScratchChunks(cells);
+    validateWithParams2(teams >= 1 and teams <= cells, teams, cells);
+    validateWithParams3(teams <= (cells + groups - 1) / groups, teams, cells, groups);
+    validateWithParams3(chunks >= groups and chunks % groups == 0, chunks, groups, cells);
+  }
 }

@@ -4,10 +4,12 @@
 
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/TeamWorkers.h"
+#include "exahype2/terms/CellPredicate.h"
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/MaterialParameters.h"
 #include "exahype2/terms/NonconservativeProduct.h"
 #include "exahype2/terms/PointSource.h"
+#include "exahype2/terms/RiemannSolver.h"
 #include "exahype2/terms/SourceTerm.h"
 #include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -26,8 +28,7 @@ namespace exahype2::dg::ader::tests {
 TARGET_DECLARE
 /**
  * The Cauchy-Kovalewski space-time predictor of a linear system. The threads of one cell split its
- * nodes and lines. The predictor evaluates and stores only the terms that Derived declares. Every
- * buffer uses the padded strides of exahype2::dg::PaddedLayout.
+ * nodes and lines. Every buffer uses the padded strides of exahype2::dg::PaddedLayout.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::dg::ader::LinearPredictor final {
@@ -43,12 +44,12 @@ public:
   static constexpr bool EvaluatePointSources       = exahype2::terms::HasPointSource<Derived, ComputePrecision>;
   static constexpr bool AccumulatesFlux            = EvaluateFlux or EvaluateNonconservativeProduct;
   static constexpr bool AccumulatesSource          = EvaluateSource;
+  // A Riemann solver of Derived or of a coupling partner reads the face fluxes of the predictor.
+  // Only a solver with a cell predicate has a coupling partner.
+  // exahype2::dg::solveLinearRiemannProblem() reads the face states only.
+  static constexpr bool WritesFaceFluxes =
+    exahype2::terms::HasRiemannSolver<Derived, ComputePrecision> or exahype2::terms::HasCellPredicate<Derived>;
 
-  /**
-   * The extents and offsets of the scratch block of predict(). After predict(), the flux block
-   * stores the spatial terms of the time-averaged state along every axis: The flux derivative, the
-   * nonconservative product and the point sources.
-   */
   struct Scratch final {
     static constexpr int StateSize             = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
     static constexpr int TimeAveragedStateSize = CellLayout::PaddedNumberOfData * CellLayout::NodesPerCell;
@@ -97,12 +98,6 @@ private:
     ComputePrecision* NOALIAS       state,
     const StoragePrecision* NOALIAS cellState,
     const TeamWorkers&              workers = TeamWorkers{}
-  );
-
-  static INLINE_METHOD GPU_CALLABLE_METHOD double evaluateLagrangeBasis(
-    const ComputePrecision* NOALIAS quadraturePoints,
-    int                             index,
-    double                          position
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void evaluatePointSources(

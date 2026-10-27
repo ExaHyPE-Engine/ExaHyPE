@@ -7,6 +7,7 @@
 #include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
+#include "tarch/accelerator/ParallelFor.h"
 #include "tarch/la/Vector.h"
 
 /**
@@ -79,8 +80,8 @@ public:
   static constexpr int  VolumesPerPatch            = peano4::power(PatchSize, DIMENSIONS);
   static constexpr int  VolumesPerLayer            = peano4::power(PatchSize, DIMENSIONS - 1);
   static constexpr int  ValuesPerPatch             = VolumesPerPatch * NumberOfData;
-  static constexpr int  ValuesPerFace              = 2 * HaloSize * VolumesPerLayer * NumberOfData;
-  static constexpr int  LayerVolumesPerPatch       = peano4::FacesPerCell * HaloSize * VolumesPerLayer;
+  static constexpr int  ValuesPerHalfFace          = HaloSize * VolumesPerLayer * NumberOfData;
+  static constexpr int  ValuesPerFace              = 2 * ValuesPerHalfFace;
   static constexpr bool ReportEigenvalues = Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive;
 
   template <typename StoragePrecision>
@@ -96,7 +97,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    int                                          faceNumber
+    int                                          faceNumber,
+    int                                          tangentialVolume
   );
 
   template <typename StoragePrecision>
@@ -106,8 +108,8 @@ public:
   );
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void projectVolumeOntoFace(
-    int                             layerVolume,
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectOntoFacesInTeam(
+    tarch::accelerator::TeamHandle  team,
     const StoragePrecision* NOALIAS patch,
     StoragePrecision* NOALIAS const faces[peano4::FacesPerCell]
   );
@@ -139,16 +141,18 @@ public:
   );
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void interpolatePatch(
+  static INLINE_METHOD GPU_CALLABLE_METHOD void interpolateVolume(
     const StoragePrecision* NOALIAS parent,
     StoragePrecision* NOALIAS       child,
-    int                             childPosition
+    int                             childPosition,
+    int                             fineVolume
   );
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void restrictPatch(
+  static INLINE_METHOD GPU_CALLABLE_METHOD void restrictVolume(
     const StoragePrecision* const NOALIAS children[peano4::ChildrenPerCell],
-    StoragePrecision* NOALIAS             parent
+    StoragePrecision* NOALIAS             parent,
+    int                                   coarseVolume
   );
 
   template <typename StoragePrecision>
@@ -188,8 +192,34 @@ public:
     double* NOALIAS                              errors
   );
 
+  [[nodiscard]] static INLINE_METHOD int getTeamThreads();
+
+protected:
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, ComputePrecision>
+  getWaveSpeedsOfVolume(
+    int                                          volume,
+    const StoragePrecision* NOALIAS              patch,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize
+  );
+
 private:
   friend class exahype2::fv::tests::PatchSchemeTest;
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectOntoFacesWithThreadsOfTeam(
+    tarch::accelerator::TeamHandle  team,
+    const StoragePrecision* NOALIAS patch,
+    StoragePrecision* NOALIAS const faces[peano4::FacesPerCell]
+  );
+
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getPatchVolumeOfHalfFaceVolume(
+    int faceNumber,
+    int halfFaceVolume
+  );
 
   template <typename Value, typename Functor>
   static INLINE_METHOD constexpr void forEachVolume(

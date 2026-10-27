@@ -71,7 +71,10 @@ until no request arrives.
 
 A criterion can evaluate only cells that exist. Refinement through several
 additional levels therefore requires a new decision after each level appears.
-The time loop resumes only after the complete drain settles.
+A step deletes the erase request of every cell that the regrid refines for
+the second time. A cell refines on its own request at most twice in one
+regrid. Every regrid ends after a finite number of steps. The time loop
+resumes only after the complete drain settles.
 
 # Solver data transfer
 

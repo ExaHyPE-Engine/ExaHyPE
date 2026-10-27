@@ -26,7 +26,8 @@ exahype2::fv::getBoundaryFaceMask(const peano4::CellConnectivity& cellConnectivi
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
-  const int face      = boundaryFaces[entry];
+  assertion(entry >= 0 and entry < boundaryFaces.size * Kernel::VolumesPerLayer, entry, boundaryFaces.size);
+  const int face      = boundaryFaces[entry / Kernel::VolumesPerLayer];
   const int lowerCell = cellConnectivity.getFaceCell(face, 0);
   const int slot      = lowerCell >= 0 ? lowerCell : cellConnectivity.getFaceCell(face, 1);
   const int normal    = cellConnectivity.getFaceNormal(face);
@@ -37,7 +38,8 @@ exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecisio
     cellConnectivity.getCellCentre(slot),
     cellConnectivity.getCellWidth(slot),
     timeStamp,
-    faceNumber
+    faceNumber,
+    entry % Kernel::VolumesPerLayer
   );
 }
 
@@ -89,12 +91,7 @@ exahype2::fv::ProjectPatchesOntoFaces<Derived, StoragePrecision, ComputePrecisio
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     faces[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
   }
-  const StoragePrecision* const patch = solution.getChunk(slot);
-  tarch::accelerator::parallelFor(
-    team,
-    tarch::accelerator::Range(Kernel::LayerVolumesPerPatch),
-    [=](const int layerVolume) { Kernel::projectVolumeOntoFace(layerVolume, patch, faces); }
-  );
+  Kernel::projectOntoFacesInTeam(team, solution.getChunk(slot), faces);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -133,10 +130,12 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>::copy(
   const int               slot,
-  StoragePrecision* const target
+  StoragePrecision* const target,
+  const int               itemOfChunk
 ) const {
+  assertion(itemOfChunk >= 0 and itemOfChunk < WorkItemsPerChunk, itemOfChunk);
   const StoragePrecision* const kept = source.getChunk(slot);
-  for (int value = 0; value < Kernel::ValuesPerPatch; value++) {
+  for (int value = itemOfChunk * Kernel::NumberOfData; value < (itemOfChunk + 1) * Kernel::NumberOfData; value++) {
     target[value] = kept[value];
   }
 }
@@ -144,23 +143,27 @@ exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>::copy(
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>::interpolateFromParent(
-  const int               parentSlot,
-  StoragePrecision* const target,
-  const int               childPosition
+  const int                            parentSlot,
+  StoragePrecision* const              target,
+  const int                            childPosition,
+  const int                            itemOfChunk,
+  [[maybe_unused]] const double* const prepared
 ) const {
-  Kernel::interpolatePatch(source.getChunk(parentSlot), target, childPosition);
+  Kernel::interpolateVolume(source.getChunk(parentSlot), target, childPosition, itemOfChunk);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>::restrictFromChildren(
-  const int* const        childSlots,
-  StoragePrecision* const target
+  const int* const                     childSlots,
+  StoragePrecision* const              target,
+  const int                            itemOfChunk,
+  [[maybe_unused]] const double* const prepared
 ) const {
   const StoragePrecision* children[peano4::ChildrenPerCell];
   for (int child = 0; child < peano4::ChildrenPerCell; child++) {
     children[child] = source.getChunk(childSlots[child]);
   }
-  Kernel::restrictPatch(children, target);
+  Kernel::restrictVolume(children, target, itemOfChunk);
 }
 TARGET_DECLARE_END

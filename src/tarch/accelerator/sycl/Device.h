@@ -10,9 +10,8 @@
 
 namespace tarch::accelerator {
   /**
-   * References the SYCL work item of the running kernel. The item exists for the whole kernel, so a
-   * nested call may copy this handle by value. The scratch is work-group local memory for custom
-   * team reductions.
+   * References the SYCL work item of the running kernel. A nested call may copy this handle by
+   * value. The scratch is work-group local memory for custom team reductions.
    */
   struct SyclTeam final {
     const ::sycl::nd_item<1>& item;

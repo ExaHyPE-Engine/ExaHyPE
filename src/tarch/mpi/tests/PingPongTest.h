@@ -9,9 +9,8 @@ namespace tarch::mpi::tests {
 } // namespace tarch::mpi::tests
 
 /**
- * Ping-pong exchange between two ranks, both single-threaded and issued from
- * concurrent tasks, so the test covers MPI_THREAD_MULTIPLE calls from
- * independent tasks.
+ * Ping-pong exchange between two ranks, single-threaded and from concurrent tasks. The test covers
+ * MPI_THREAD_MULTIPLE calls from independent tasks.
  */
 class tarch::mpi::tests::PingPongTest final : public tarch::tests::TestCase {
 public:

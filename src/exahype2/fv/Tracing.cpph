@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "exahype2/fv/Patch.h"
 #include "exahype2/particles/Integration.h"
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
@@ -39,7 +40,8 @@ exahype2::fv::interpolatePiecewiseConstant(
  * Returns the value of unknown at position from the multilinear interpolation between the
  * centres of the volumes around it. The weight of a corner volume is the product of the axis
  * weights 1 - |d|/h. Beyond the first or the last volume centre along an axis, the interpolant
- * stays constant along that axis.
+ * stays constant along that axis. The axis weights multiply and the corner contributions add
+ * independent of their order. A mirrored position in the mirrored patch then returns the same bits.
  */
 template <int PatchSize, int NumberOfData, typename Storage>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -55,46 +57,41 @@ exahype2::fv::interpolatePiecewiseLinear(
   if constexpr (PatchSize == 1) {
     return exahype2::fv::interpolatePiecewiseConstant<PatchSize, NumberOfData>(centre, width, Q, position, unknown);
   }
-  tarch::la::Vector<DIMENSIONS, double> offset;
   tarch::la::Vector<DIMENSIONS, double> volumeSize;
   tarch::la::Vector<DIMENSIONS, int>    lowerVolume;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     assertion(std::isfinite(width(axis)) and width(axis) > 0.0, axis, width);
-    offset(axis)                       = centre(axis) - 0.5 * width(axis);
     volumeSize(axis)                   = width(axis) / PatchSize;
-    const double biasedPositionInPatch = position(axis) - offset(axis) - volumeSize(axis) / 2.0;
+    const double biasedPositionInPatch = position(axis) - (centre(axis) - 0.5 * width(axis)) - volumeSize(axis) / 2.0;
     lowerVolume(axis)                  = static_cast<int>(std::floor(biasedPositionInPatch / volumeSize(axis)));
     lowerVolume(axis)                  = std::max(0, std::min(lowerVolume(axis), PatchSize - 2));
   }
 
-  double result = 0.0;
-  peano4::dForEachCorner(
-    [&](const tarch::la::Vector<DIMENSIONS, int>& corner, [[maybe_unused]] const int linearisedCorner) {
-      const tarch::la::Vector<DIMENSIONS, int> currentVolume = lowerVolume + corner;
-      double                                   weight        = 1.0;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        const double volumeCentre =
-          centre(axis) - 0.5 * width(axis) + 0.5 * volumeSize(axis) + currentVolume(axis) * volumeSize(axis);
-        const double relativeDistance     = std::abs(volumeCentre - position(axis)) / volumeSize(axis);
-        const bool   extendsBoundaryValue = (position(axis) < volumeCentre and currentVolume(axis) == 0)
-          or (position(axis) > volumeCentre and currentVolume(axis) == PatchSize - 1);
-        if (extendsBoundaryValue) {
-          continue;
-        }
-        if (relativeDistance < 1.0) {
-          weight *= (1.0 - relativeDistance);
-        } else {
-          weight = 0.0;
-        }
-        assertion(tarch::la::smallerEquals(weight, 1.0), weight, corner, relativeDistance);
-      }
-      if (weight > 0.0) {
-        result +=
-          weight * static_cast<double>(Q[peano4::dLinearised(currentVolume, PatchSize) * NumberOfData + unknown]);
-      }
+  double contributions[peano4::VerticesPerCell]{};
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& corner, const int linearisedCorner) {
+    assertion(linearisedCorner >= 0 and linearisedCorner < peano4::VerticesPerCell, linearisedCorner);
+    const tarch::la::Vector<DIMENSIONS, int>    currentVolume = lowerVolume + corner;
+    const tarch::la::Vector<DIMENSIONS, double> volumeCentre =
+      exahype2::fv::getVolumeCentre(centre, width, PatchSize, currentVolume);
+    double axisWeights[DIMENSIONS];
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const double relativeDistance     = std::abs(volumeCentre(axis) - position(axis)) / volumeSize(axis);
+      const bool   extendsBoundaryValue = (position(axis) < volumeCentre(axis) and currentVolume(axis) == 0)
+        or (position(axis) > volumeCentre(axis) and currentVolume(axis) == PatchSize - 1);
+      axisWeights[axis] = extendsBoundaryValue ? 1.0 : std::max(0.0, 1.0 - relativeDistance);
     }
-  );
-  return result;
+#if DIMENSIONS == 2
+    const double weight = axisWeights[0] * axisWeights[1];
+#else
+    const double weight = tarch::la::productInOrderOfMagnitude(axisWeights[0], axisWeights[1], axisWeights[2]);
+#endif
+    assertion(weight >= 0.0 and weight <= 1.0, weight, corner);
+    contributions[linearisedCorner] = tarch::la::productRoundedOnce(
+      weight,
+      static_cast<double>(Q[peano4::dLinearised(currentVolume, PatchSize) * NumberOfData + unknown])
+    );
+  });
+  return tarch::la::sumInFixedPoint(contributions, peano4::VerticesPerCell);
 }
 
 /**
@@ -178,11 +175,11 @@ exahype2::fv::interpolateFields(
 TARGET_DECLARE_END
 
 /**
- * Moves every particle of the set through the patch of its cell, sends every particle that left
- * its cell to the rank that holds it, and then samples the fields of every moved particle in the
- * patch that holds it. A stage position of the integration outside the patch reads the patch at
- * its clamped image. The kernel marks the particles that left their cell and counts them. Only
- * those leave the device.
+ * Moves every particle of the set through the patch of its cell. Sends every particle that left its
+ * cell to the rank that owns its new cell. Samples the fields of every moved particle in the patch
+ * that contains it. A stage position of the integration outside the patch reads the patch at
+ * its clamped image. Only the particles that the kernel marks as having left their cell leave the
+ * device.
  */
 template <int PatchSize, int NumberOfData, int NumberOfParticleData, int... FieldIndices, typename Pool>
 INLINE_METHOD void
@@ -224,7 +221,7 @@ exahype2::fv::traceParticles(
     return;
   }
   particles.relocateParticlesMovedOutOfCells(cellConnectivity, numberOfMovedParticles);
-  // Every moved particle samples the fields of the cell that holds it now.
+  // Every moved particle samples the fields of the cell that contains it now.
   if (timeStepSize > 0.0 and particles.getSize() > 0) {
     particles.upload();
     const auto set                         = particles.getView();

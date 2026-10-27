@@ -35,7 +35,7 @@ namespace {
 
   TARGET_DECLARE
   /**
-   * A flux that adds a multiple of the state. A flux buffer that is not cleared shows.
+   * A flux that adds a multiple of the state. A flux buffer the kernel does not clear shows.
    */
   struct FluxSolver final : Order2Layout {
     static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
@@ -48,7 +48,7 @@ namespace {
       double* NOALIAS const                                         fluxValues
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        fluxValues[unknown] += (direction + 1.0) * state[unknown];
+        fluxValues[unknown] = (direction + 1.0) * state[unknown];
       }
     }
   };
@@ -101,9 +101,6 @@ namespace {
   // The nodes of the three-point Gauss-Legendre rule on the unit interval.
   const double QuadratureNodes[NodesPerAxis] = {0.5 * (1.0 - std::sqrt(0.6)), 0.5, 0.5 * (1.0 + std::sqrt(0.6))};
 
-  /**
-   * Returns the value of the Lagrange basis function of node at x.
-   */
   double getBasisValue(const double x, const int node) {
     double result = 1.0;
     for (int other = 0; other < NodesPerAxis; other++) {
@@ -114,9 +111,6 @@ namespace {
     return result;
   }
 
-  /**
-   * Returns the derivative of the Lagrange basis function of node at x.
-   */
   double getBasisDerivative(const double x, const int node) {
     double result = 0.0;
     for (int omitted = 0; omitted < NodesPerAxis; omitted++) {
@@ -206,9 +200,6 @@ namespace {
     return faceCentre;
   }
 
-  /**
-   * Returns the position of face node faceNode on the face faceNumber.
-   */
   tarch::la::Vector<DIMENSIONS, double> getNodePositionOf(const int faceNumber, const int faceNode) {
     const int  direction  = faceNumber % DIMENSIONS;
     const auto cellSize   = getCellSize();
@@ -299,7 +290,7 @@ namespace {
   };
 
   /**
-   * A nonconservative product that reads the jump of the first auxiliary variable, as a bathymetry does.
+   * A nonconservative product that reads the jump of the first auxiliary variable.
    */
   struct AuxiliaryJumpProduct {
     static INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
@@ -549,9 +540,9 @@ namespace {
     }
   }
 
+  TARGET_DECLARE
   constexpr int EigenvalueCellNodes = exahype2::dg::getNodesPerCell(2);
 
-  TARGET_DECLARE
   /**
    * A solver whose wave speed depends on the state, the direction and the node position.
    */
@@ -571,6 +562,39 @@ namespace {
       return state[0] + direction + 0.25 * position(0);
     }
   };
+
+  /**
+   * A solver whose wave speed is the unknown of a node and whose postprocessing adds one to the
+   * unknown of every node.
+   */
+  struct PostprocessingStubSolver final {
+    static constexpr int DGOrder                    = 1;
+    static constexpr int NumberOfUnknowns           = 1;
+    static constexpr int NumberOfAuxiliaryVariables = 1;
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
+      const double* NOALIAS const                                   state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      [[maybe_unused]] const int                                    direction
+    ) {
+      return state[0];
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void postprocessUpdatedPatch(
+      double* const                                                 Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt
+    ) {
+      for (int cellNode = 0; cellNode < EigenvalueCellNodes; cellNode++) {
+        Q[cellNode * (NumberOfUnknowns + NumberOfAuxiliaryVariables)] += 1.0;
+      }
+    }
+  };
   TARGET_DECLARE_END
 
   using TransferSetup = exahype2::dg::tests::TransferSetup;
@@ -586,11 +610,11 @@ namespace {
     static constexpr int NumberOfAuxiliaryVariables = 0;
   };
 
-  using CellPool    = tarch::accelerator::ChunkedMemoryPool<double>;
-  using RegridCells = exahype2::dg::RegridCells<TransferLayout, double>;
+  using CellPool = tarch::accelerator::ChunkedMemoryPool<double>;
+  using Transfer = exahype2::dg::CellTransfer<TransferLayout, double>;
 
-  RegridCells getRegridOf(const CellPool& pool, const exahype2::dg::tests::TransferOperators& operators) {
-    return RegridCells{pool.getView(), operators.prolongation.data(), operators.restriction.data()};
+  Transfer getTransferOf(const CellPool& pool, const exahype2::dg::tests::TransferOperators& operators) {
+    return Transfer{pool.getView(), operators.prolongation.data(), operators.restriction.data()};
   }
 
   using Setup = exahype2::dg::tests::KernelTestSetup;
@@ -676,11 +700,10 @@ namespace {
       }
       const int cellStateOffset  = cell * Setup::CellStateCardinality;
       const int coordinateOffset = cell * DIMENSIONS;
-      exahype2::dg::extrapolateFluxToFaces<Stub>(
-        facesOfCell,
+      double    nodalFluxes[DIMENSIONS * Setup::StageCardinality];
+      exahype2::dg::evaluateNodalFluxes<Stub>(
+        nodalFluxes,
         cellStates + cellStateOffset,
-        leftFaceCoefficients,
-        rightFaceCoefficients,
         quadratureNodes,
         derivativeOperator,
         tarch::la::Vector<DIMENSIONS, double>(cellCentres + coordinateOffset),
@@ -688,6 +711,7 @@ namespace {
         Setup::TimeStamp,
         Setup::TimeStepSize
       );
+      exahype2::dg::extrapolateFluxToFaces<Stub>(facesOfCell, nodalFluxes, leftFaceCoefficients, rightFaceCoefficients);
     }
   };
   TARGET_DECLARE_END
@@ -1167,7 +1191,7 @@ exahype2::dg::tests::KernelsTest::run() {
   testMethod(testLinearFormBuildsTheFluxFromTheStateJump);
   testMethod(testLinearFormAddsTheNonconservativeProduct);
   testMethod(testLinearFormAppliesTheMaterialParameterMatrix);
-  testMethod(testAnInteriorFaceHoldsTheDifferencesToItsOwnFluxes);
+  testMethod(testAnInteriorFaceStoresTheDifferencesToItsOwnFluxes);
   testMethod(testABoundaryFaceTakesTheBoundaryState);
   testMethod(testTheSolversRiemannSolverReceivesTheFace);
   testMethod(testTheLinearRiemannSolverWritesOppositeDissipations);
@@ -1182,6 +1206,8 @@ exahype2::dg::tests::KernelsTest::run() {
   testMethod(testInvalidEigenvalueAccumulation);
 #endif
   testMethod(testReduceMaxEigenvaluesOverTheCellNodes);
+  testMethod(testTheFinishOfACellPostprocessesItsNodesOnce);
+  testMethod(testTheMeanOfAFaceKeepsItsBitsUnderReflectionsAndSwaps);
   testMethod(testTheReductionKeepsTheLargerAndAnInvalidObservation);
   testMethod(testTheStateInterpolationFillsTheCoarseSideOfTheFineFaces);
   testMethod(testTheStateRestrictionFillsTheFineSideOfTheCoarseFace);
@@ -1221,11 +1247,10 @@ exahype2::dg::tests::KernelsTest::testFaceBuffersAreClearedBeforeTheProjection()
   const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
 
   exahype2::dg::extrapolateStateToFaces<Order2Layout>(state, cellState, coefficients, coefficients);
-  exahype2::dg::extrapolateFluxToFaces<FluxSolver>(
-    flux,
+  double nodalFluxes[DIMENSIONS * CellNodes * NumberOfUnknowns];
+  exahype2::dg::evaluateNodalFluxes<FluxSolver>(
+    nodalFluxes,
     cellState,
-    coefficients,
-    coefficients,
     quadratureNodes,
     coefficients,
     cellCentre,
@@ -1233,6 +1258,7 @@ exahype2::dg::tests::KernelsTest::testFaceBuffersAreClearedBeforeTheProjection()
     0.0,
     0.0
   );
+  exahype2::dg::extrapolateFluxToFaces<FluxSolver>(flux, nodalFluxes, coefficients, coefficients);
 
   for (int face = 0; face < peano4::FacesPerCell; face++) {
     for (int entry = 0; entry < FaceNodes * NumberOfData; entry++) {
@@ -1279,11 +1305,13 @@ exahype2::dg::tests::KernelsTest::testAConstantStateReachesEveryFace() {
 
 void
 exahype2::dg::tests::KernelsTest::testEachFaceNodeSeesOnlyItsOwnLine() {
-  double leftCoefficients[NodesPerAxis];
-  double rightCoefficients[NodesPerAxis];
+  // The face coefficients of a Lagrange basis sum to one.
+  constexpr double CoefficientSum = NodesPerAxis * (NodesPerAxis + 1.0) / 2.0;
+  double           leftCoefficients[NodesPerAxis];
+  double           rightCoefficients[NodesPerAxis];
   for (int index = 0; index < NodesPerAxis; index++) {
-    leftCoefficients[index]  = 1.0 + index;
-    rightCoefficients[index] = 0.0;
+    leftCoefficients[index]  = (1.0 + index) / CoefficientSum;
+    rightCoefficients[index] = (NodesPerAxis - index) / CoefficientSum;
   }
 
   for (int markedCellNode = 0; markedCellNode < CellNodes; markedCellNode++) {
@@ -1337,7 +1365,7 @@ exahype2::dg::tests::KernelsTest::testTheTwoEndsUseTheirOwnCoefficients() {
   const EndCoefficients coefficients;
   exahype2::dg::extrapolateStateToFaces<Order2Layout>(state, cellState, coefficients.left, coefficients.right);
 
-  // The lower face receives the value of the line at zero, the upper face the value at one.
+  // The lower face receives the value of the line at zero and the upper face the value at one.
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       const int firstCellNode = getCellNodeOf(direction, faceNode, 0);
@@ -1417,11 +1445,10 @@ exahype2::dg::tests::KernelsTest::testFluxIsEvaluatedAtCellNodesBeforeExtrapolat
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(0.0);
   const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
 
-  exahype2::dg::extrapolateFluxToFaces<FluxSolver>(
-    flux,
+  double nodalFluxes[DIMENSIONS * CellNodes * NumberOfUnknowns];
+  exahype2::dg::evaluateNodalFluxes<FluxSolver>(
+    nodalFluxes,
     cellState,
-    coefficients,
-    coefficients,
     quadratureNodes,
     coefficients,
     cellCentre,
@@ -1429,6 +1456,7 @@ exahype2::dg::tests::KernelsTest::testFluxIsEvaluatedAtCellNodesBeforeExtrapolat
     0.0,
     0.0
   );
+  exahype2::dg::extrapolateFluxToFaces<FluxSolver>(flux, nodalFluxes, coefficients, coefficients);
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
@@ -1461,11 +1489,10 @@ exahype2::dg::tests::KernelsTest::testASystemWithoutFluxLeavesZeroesBehind() {
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(0.0);
   const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
 
-  exahype2::dg::extrapolateFluxToFaces<Order2Layout>(
-    flux,
+  double nodalFluxes[DIMENSIONS * CellNodes * NumberOfUnknowns];
+  exahype2::dg::evaluateNodalFluxes<Order2Layout>(
+    nodalFluxes,
     cellState,
-    coefficients,
-    coefficients,
     quadratureNodes,
     coefficients,
     cellCentre,
@@ -1473,6 +1500,7 @@ exahype2::dg::tests::KernelsTest::testASystemWithoutFluxLeavesZeroesBehind() {
     0.0,
     0.0
   );
+  exahype2::dg::extrapolateFluxToFaces<Order2Layout>(flux, nodalFluxes, coefficients, coefficients);
 
   for (int face = 0; face < peano4::FacesPerCell; face++) {
     for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
@@ -1520,11 +1548,10 @@ exahype2::dg::tests::KernelsTest::testDiffusiveFluxIsExtrapolatedWithTheNodalGra
   double*     state[peano4::FacesPerCell];
   double*     flux[peano4::FacesPerCell];
   collectPointers(buffers, state, flux);
-  exahype2::dg::extrapolateFluxToFaces<DiffusiveFluxSolver>(
-    flux,
+  double nodalFluxes[DIMENSIONS * CellNodes * NumberOfUnknowns];
+  exahype2::dg::evaluateNodalFluxes<DiffusiveFluxSolver>(
+    nodalFluxes,
     cellState,
-    coefficients,
-    coefficients,
     quadratureNodes,
     derivativeOperator.entries,
     cellCentre,
@@ -1532,6 +1559,7 @@ exahype2::dg::tests::KernelsTest::testDiffusiveFluxIsExtrapolatedWithTheNodalGra
     0.0,
     0.0
   );
+  exahype2::dg::extrapolateFluxToFaces<DiffusiveFluxSolver>(flux, nodalFluxes, coefficients, coefficients);
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
@@ -1567,7 +1595,7 @@ exahype2::dg::tests::KernelsTest::testDiffusiveFluxIsExtrapolatedWithTheNodalGra
 void
 exahype2::dg::tests::KernelsTest::testTheOuterHalfIsFilledFromTheInnerHalf() {
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-    // The cell behind a lower face wrote the upper half, and the other way round.
+    // The cell behind a lower face wrote the upper half and the cell behind an upper face the lower half.
     const int innerSide = faceNumber < DIMENSIONS ? 1 : 0;
     const int outerSide = 1 - innerSide;
     double    faceState[2 * FaceNodes * NumberOfData];
@@ -1617,8 +1645,8 @@ exahype2::dg::tests::KernelsTest::testEveryNodeSeesItsOwnPositionOnTheFace() {
       faceNumber
     );
 
-    // With a zero inner state, the outer state records the node position, and every node has the
-    // normal coordinate of the face centre.
+    // With a zero inner state, the outer state records the node position. Every node has the normal
+    // coordinate of the face centre.
     const int direction = faceNumber % DIMENSIONS;
     for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       const auto   position   = getNodePositionOf(faceNumber, faceNode);
@@ -1892,8 +1920,8 @@ exahype2::dg::tests::KernelsTest::testJumpTermScalesWithTheLargerWaveSpeed() {
     0
   );
 
-  // The right side averages to 5 and the left side to 3. The larger wave speed is 5. The own
-  // fluxes are zero. The left side stores the numerical flux and the right side its negative.
+  // The wave speed is the larger of the two side averages. With zero own fluxes the left side
+  // stores the numerical flux and the right side its negative.
   constexpr double ExpectedMaxEigenvalue = 5.0;
   for (int faceNode = 0; faceNode < RiemannFaceNodes; faceNode++) {
     const int firstEntry = faceNode * Unknowns;
@@ -1996,7 +2024,7 @@ exahype2::dg::tests::KernelsTest::testNonconservativeProductEntersBothSidesAlike
     0
   );
 
-  // The stub returns the state jump. The kernel adds it in halves to both differences. The two
+  // The stub returns the state jump and the kernel adds it in halves to both differences. The two
   // differences add up to that jump.
   for (int faceNode = 0; faceNode < RiemannFaceNodes; faceNode++) {
     for (int unknown = 0; unknown < Unknowns; unknown++) {
@@ -2101,7 +2129,7 @@ exahype2::dg::tests::KernelsTest::testLinearFormBuildsTheFluxFromTheStateJump() 
     0
   );
 
-  // The stub flux returns the half jump, and the wave speed is the larger side average of the first
+  // The stub flux returns the half jump. The wave speed is the larger side average of the first
   // entry.
   constexpr double ExpectedFlux          = 1.0;
   constexpr double ExpectedMaxEigenvalue = 3.0;
@@ -2208,7 +2236,7 @@ exahype2::dg::tests::KernelsTest::testLinearFormAppliesTheMaterialParameterMatri
  * the Rusanov flux.
  */
 void
-exahype2::dg::tests::KernelsTest::testAnInteriorFaceHoldsTheDifferencesToItsOwnFluxes() {
+exahype2::dg::tests::KernelsTest::testAnInteriorFaceStoresTheDifferencesToItsOwnFluxes() {
   Face face;
   fill(face);
 
@@ -2245,7 +2273,7 @@ exahype2::dg::tests::KernelsTest::testABoundaryFaceTakesTheBoundaryState() {
 }
 
 /**
- * The Riemann solver of the solver receives the face arguments, and its fluxes become the
+ * The Riemann solver of the solver receives the face arguments and its fluxes become the
  * differences to the own fluxes.
  */
 void
@@ -2343,7 +2371,7 @@ exahype2::dg::tests::KernelsTest::testEachCellNodeReceivesItsOwnFaceNode() {
 }
 
 /**
- * Every unknown of every cell node receives its own face value, and the entries behind the last
+ * Every unknown of every cell node receives its own face value and the entries behind the last
  * cell node stay unchanged.
  */
 void
@@ -2496,9 +2524,9 @@ exahype2::dg::tests::KernelsTest::testANodeReceivesOnlyItsOwnUpdate() {
 
 void
 exahype2::dg::tests::KernelsTest::testAnisotropicAccumulation() {
-  // Both the eigenvalues and the cell extents differ per axis. A mix-up of the axes changes the
-  // scaled maximum. The largest entry of each table lies on one of the first two axes. The physical
-  // maxima therefore hold in 2D and in 3D.
+  // The eigenvalues and the cell extents differ per axis and a mix-up of the axes changes the
+  // scaled maximum. The largest entry of each table lies on one of the first two axes and the
+  // physical maxima agree in 2D and in 3D.
   constexpr double FirstTable[]  = {3.0, 5.0, 2.0};
   constexpr double SecondTable[] = {7.0, 1.0, 4.0};
 
@@ -2585,6 +2613,112 @@ exahype2::dg::tests::KernelsTest::testReduceMaxEigenvaluesOverTheCellNodes() {
   }
   validateNumericalEquals(statistics.maxPhysicalEigenvalue, lastState + (DIMENSIONS - 1) + 0.25 * lastPosition);
   validateNumericalEquals(statistics.maxScaledEigenvalue, expectedScaled);
+}
+
+/**
+ * The mean of a face returns the same bits for a reflection of a tangential axis, with the sign of
+ * a value changed or kept, and in 3D for a swap of the two tangential axes. Its padding lanes are
+ * zero.
+ */
+void
+exahype2::dg::tests::KernelsTest::testTheMeanOfAFaceKeepsItsBitsUnderReflectionsAndSwaps() {
+  constexpr int    NodesPerAxis   = 4;
+  constexpr int    NodesPerFace   = exahype2::dg::getNodesPerFace(NodesPerAxis);
+  constexpr int    Data           = 2;
+  constexpr double AxisWeights[4] = {0.173927422568727, 0.326072577431273, 0.326072577431273, 0.173927422568727};
+  constexpr int    LinesOfTheFace = DIMENSIONS == 3 ? NodesPerAxis : 1;
+
+  double weights[NodesPerFace];
+  double state[NodesPerFace * Data];
+  double reflected[NodesPerFace * Data];
+  double swapped[NodesPerFace * Data];
+  for (int row = 0; row < LinesOfTheFace; row++) {
+    for (int column = 0; column < NodesPerAxis; column++) {
+      const int faceNode              = row * NodesPerAxis + column;
+      const int reflectedNode         = row * NodesPerAxis + NodesPerAxis - 1 - column;
+      const int swappedNode           = DIMENSIONS == 3 ? column * NodesPerAxis + row : faceNode;
+      weights[faceNode]               = DIMENSIONS == 3 ? AxisWeights[row] * AxisWeights[column] : AxisWeights[column];
+      state[faceNode * Data]          = 0.1 + 0.37 * row + 0.53 * column + 0.01 * row * column;
+      state[faceNode * Data + 1]      = -0.7 + 0.29 * row - 0.41 * column + 0.03 * row * column;
+      reflected[reflectedNode * Data] = state[faceNode * Data];
+      reflected[reflectedNode * Data + 1] = -state[faceNode * Data + 1];
+      swapped[swappedNode * Data]         = state[faceNode * Data];
+      swapped[swappedNode * Data + 1]     = state[faceNode * Data + 1];
+    }
+  }
+
+  constexpr int Lanes = exahype2::dg::getPaddedCountOf(Data);
+  double        mean[Lanes];
+  double        meanOfReflected[Lanes];
+  double        meanOfSwapped[Lanes];
+  exahype2::dg::computeMeanOfFace<NodesPerAxis, Data>(mean, state, weights);
+  exahype2::dg::computeMeanOfFace<NodesPerAxis, Data>(meanOfReflected, reflected, weights);
+  exahype2::dg::computeMeanOfFace<NodesPerAxis, Data>(meanOfSwapped, swapped, weights);
+  validateEquals(meanOfReflected[0], mean[0]);
+  validateEquals(meanOfReflected[1], -mean[1]);
+  validateEquals(meanOfSwapped[0], mean[0]);
+  validateEquals(meanOfSwapped[1], mean[1]);
+  for (int lane = Data; lane < Lanes; lane++) {
+    validateEqualsWithParams1(mean[lane], 0.0, lane);
+  }
+
+  for (int value = 0; value < Data; value++) {
+    double plainSum = 0.0;
+    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+      plainSum += weights[faceNode] * state[faceNode * Data + value];
+    }
+    validateNumericalEqualsWithParams1(mean[value], plainSum, value);
+  }
+}
+
+/**
+ * The finish of a cell postprocesses every node once and returns the wave speeds of the
+ * postprocessed nodes only when it reports them.
+ */
+void
+exahype2::dg::tests::KernelsTest::testTheFinishOfACellPostprocessesItsNodesOnce() {
+  constexpr int Data =
+    PostprocessingStubSolver::NumberOfUnknowns + PostprocessingStubSolver::NumberOfAuxiliaryVariables;
+  const double                                quadratureNodes[2] = {0.25, 0.75};
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(2.0);
+
+  double cellState[EigenvalueCellNodes * Data];
+  for (int cellNode = 0; cellNode < EigenvalueCellNodes; cellNode++) {
+    cellState[cellNode * Data]     = 0.5 * cellNode;
+    cellState[cellNode * Data + 1] = 100.0;
+  }
+
+  const auto statistics = exahype2::dg::finishCell<PostprocessingStubSolver, true>(
+    cellState,
+    quadratureNodes,
+    cellCentre,
+    cellSize,
+    0.0,
+    0.0
+  );
+  for (int cellNode = 0; cellNode < EigenvalueCellNodes; cellNode++) {
+    validateEqualsWithParams1(cellState[cellNode * Data], 0.5 * cellNode + 1.0, cellNode);
+    validateEqualsWithParams1(cellState[cellNode * Data + 1], 100.0, cellNode);
+  }
+  const double largestState = 0.5 * (EigenvalueCellNodes - 1) + 1.0;
+  validateNumericalEquals(statistics.maxPhysicalEigenvalue, largestState);
+  validateNumericalEquals(statistics.maxScaledEigenvalue, DIMENSIONS * largestState / 2.0);
+
+  const auto unreportedStatistics = exahype2::dg::finishCell<PostprocessingStubSolver, false>(
+    cellState,
+    quadratureNodes,
+    cellCentre,
+    cellSize,
+    0.0,
+    0.0
+  );
+  for (int cellNode = 0; cellNode < EigenvalueCellNodes; cellNode++) {
+    validateEqualsWithParams1(cellState[cellNode * Data], 0.5 * cellNode + 2.0, cellNode);
+  }
+  const exahype2::dg::MaxEigenvalueStatistics emptyStatistics;
+  validateEquals(unreportedStatistics.maxPhysicalEigenvalue, emptyStatistics.maxPhysicalEigenvalue);
+  validateEquals(unreportedStatistics.maxScaledEigenvalue, emptyStatistics.maxScaledEigenvalue);
 }
 
 /**
@@ -2711,7 +2845,9 @@ exahype2::dg::tests::KernelsTest::testCopyKeepsEveryValue() {
 
   const exahype2::dg::tests::TransferOperators operators;
   double                                       target[ValuesPerTransferCell];
-  getRegridOf(pool, operators).copy(0, target);
+  for (int node = 0; node < Transfer::WorkItemsPerChunk; node++) {
+    getTransferOf(pool, operators).copy(0, target, node);
+  }
 
   for (int value = 0; value < ValuesPerTransferCell; value++) {
     validateEqualsWithParams1(target[value], pool.getChunk(0)[value], value);
@@ -2728,9 +2864,15 @@ exahype2::dg::tests::KernelsTest::testInterpolationFromTheParentReproducesALinea
   exahype2::dg::tests::fillLinearTransferProfile<TransferSetup::CellNodes>(pool.getChunk(0), DIMENSIONS, -1);
 
   const exahype2::dg::tests::TransferOperators operators;
+  double                                       prepared[Transfer::PreparedValuesPerChunk];
+  for (int item = 0; item < Transfer::PreparationItemsPerChunk; item++) {
+    getTransferOf(pool, operators).prepareInterpolation(0, prepared, item);
+  }
   for (int child = 0; child < TransferSetup::ChildrenPerCell; child++) {
     double target[ValuesPerTransferCell];
-    getRegridOf(pool, operators).interpolateFromParent(0, target, child);
+    for (int node = 0; node < Transfer::WorkItemsPerChunk; node++) {
+      getTransferOf(pool, operators).interpolateFromParent(0, target, child, node, prepared);
+    }
 
     for (int node = 0; node < TransferSetup::CellNodes; node++) {
       double coordinates[DIMENSIONS];
@@ -2762,8 +2904,14 @@ exahype2::dg::tests::KernelsTest::testRestrictionFromTheChildrenReproducesALinea
   }
 
   const exahype2::dg::tests::TransferOperators operators;
-  double                                       target[ValuesPerTransferCell];
-  getRegridOf(pool, operators).restrictFromChildren(childSlots, target);
+  double                                       prepared[Transfer::PreparedValuesPerChunk];
+  for (int item = 0; item < Transfer::PreparationItemsPerChunk; item++) {
+    getTransferOf(pool, operators).prepareRestriction(childSlots, prepared, item);
+  }
+  double target[ValuesPerTransferCell];
+  for (int node = 0; node < Transfer::WorkItemsPerChunk; node++) {
+    getTransferOf(pool, operators).restrictFromChildren(childSlots, target, node, prepared);
+  }
 
   for (int node = 0; node < TransferSetup::CellNodes; node++) {
     double coordinates[DIMENSIONS];
@@ -2827,17 +2975,22 @@ exahype2::dg::tests::KernelsTest::testExtrapolateFluxToFacesOnTheDevice() {
     }
     const int cellStateOffset  = cell * Setup::CellStateCardinality;
     const int coordinateOffset = cell * DIMENSIONS;
-    exahype2::dg::extrapolateFluxToFaces<Stub>(
-      facesOfCell,
+    double    nodalFluxes[DIMENSIONS * Setup::StageCardinality];
+    exahype2::dg::evaluateNodalFluxes<Stub>(
+      nodalFluxes,
       cellStates.data() + cellStateOffset,
-      operators.leftFaceCoefficients.data(),
-      operators.rightFaceCoefficients.data(),
       operators.quadratureNodes.data(),
       operators.derivativeOperator.data(),
       tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),
       tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
       Setup::TimeStamp,
       Setup::TimeStepSize
+    );
+    exahype2::dg::extrapolateFluxToFaces<Stub>(
+      facesOfCell,
+      nodalFluxes,
+      operators.leftFaceCoefficients.data(),
+      operators.rightFaceCoefficients.data()
     );
   }
 

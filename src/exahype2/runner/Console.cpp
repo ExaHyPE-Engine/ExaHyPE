@@ -8,7 +8,7 @@
 
 namespace {
   /**
-   * Columns of the text inside the frame, which adds two columns on either side.
+   * Columns of the text inside the frame. The frame adds two columns on either side.
    */
   constexpr std::size_t ReportWidth = 93;
 
@@ -26,7 +26,7 @@ namespace {
 
   /**
    * Returns the break of a line after the last separator that fits, else at the last space, else
-   * at the width. The separator stays on the broken line, so it ends with " ·".
+   * at the width. The broken line ends with the separator " ·".
    */
   LineBreak getLineBreak(const std::string& prefix, const std::size_t indentationBytes) {
     const auto separator = prefix.rfind(Separator);
@@ -103,7 +103,7 @@ exahype2::runner::Format::getGroupedNumber(const unsigned long value) {
  */
 std::string
 exahype2::runner::Format::getDuration(const double seconds) {
-  // The clamp precedes the integer cast, so a huge or infinite duration neither overflows nor widens the field.
+  // The clamp precedes the integer cast. A huge or infinite duration then neither overflows nor widens the field.
   constexpr long SecondsPerHour = 3600L;
   constexpr long SecondsPerDay  = 24L * SecondsPerHour;
   const auto     capSeconds     = static_cast<double>((MaxDurationDays + 1) * SecondsPerDay);
@@ -130,8 +130,8 @@ exahype2::runner::Format::getDuration(const double seconds) {
 }
 
 /**
- * Returns the number of UTF-8 code points, which equals the terminal columns for the glyphs of the
- * reports. Combining and wide characters are not supported.
+ * Returns the number of UTF-8 code points. The count equals the terminal columns for the glyphs of
+ * the reports but not for combining or wide characters.
  */
 std::size_t
 exahype2::runner::getDisplayWidth(const std::string& text) {
@@ -288,7 +288,7 @@ exahype2::runner::Report::line(const std::string& text, const std::size_t contin
 }
 
 /**
- * Writes the bottom border of an open frame, so the next line or rule opens a new frame.
+ * Writes the bottom border of an open frame. The next line or rule opens a new frame.
  */
 void
 exahype2::runner::Report::close() {

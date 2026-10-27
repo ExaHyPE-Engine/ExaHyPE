@@ -1,5 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import itertools
 import os
 
 import exahype2.codegen
@@ -18,9 +19,17 @@ def flatten(tensor):
 
 
 def tensor_product(entries, dimensions):
-    result = [1.0]
-    for _ in range(dimensions):
-        result = [left * right for left in result for right in entries]
+    """Returns the product of every combination of ``dimensions`` entries, the last index fastest.
+
+    The factors of a product multiply in the order of ascending magnitude. Every order of the axes
+    then gives the same bits.
+    """
+    result = []
+    for indices in itertools.product(range(len(entries)), repeat=dimensions):
+        product = 1.0
+        for factor in sorted((entries[index] for index in indices), key=abs):
+            product *= factor
+        result.append(product)
     return result
 
 
@@ -67,7 +76,7 @@ def quadrature_tables(basis, dimensions):
     return [
         table(
             "QuadraturePoints1D",
-            flatten(basis.quadrature_points),
+            basis.rounded_quadrature_points,
             basis.QuadraturePoints1DDocumentation,
         ),
         table(
@@ -171,7 +180,7 @@ def dg_matrix_tables(basis):
             """
   Interpolation operator of the child intervals, packed as
   [interval][coarse][fine] with the coarse basis function evaluated at the
-  fine node, so a hanging face reads one matrix per tangential axis.
+  fine node. A hanging face reads one matrix per tangential axis.
 """,
             basis.dofs_per_axis,
         ),
@@ -182,8 +191,8 @@ def dg_matrix_tables(basis):
             """
   Restriction operator of the child intervals, packed as
   [interval][fine][coarse] with the fine node's quadrature weight divided by
-  the coarse node's weight, so one sum over the fine nodes of all children is
-  the mass-lumped L2 projection.
+  the coarse node's weight. One sum over the fine nodes of all children is the
+  mass-lumped L2 projection.
 """,
             basis.dofs_per_axis,
         ),
@@ -195,7 +204,7 @@ def add_operator_tables_to_dictionary(basis, dimensions, d):
     Adds the quadrature and the reference operators of the basis to the
     dictionary as the table classes Quadrature and DGMatrices.
     """
-    d["QUADRATURE_NODES_1D"] = render_vector(flatten(basis.quadrature_points))
+    d["QUADRATURE_NODES_1D"] = render_vector(basis.rounded_quadrature_points)
     d["QUADRATURE_WEIGHTS_1D"] = render_vector(flatten(basis.quadrature_weights))
     d["OPERATOR_TABLES"] = [
         {

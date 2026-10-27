@@ -35,7 +35,7 @@ namespace applications::exahype2::exaskred::coupled {
 
   /**
    * Face view of the granular layer: Thickness, momenta, the terrain and the depth of the water
-   * above the layer, which switches on buoyancy.
+   * above the layer. A positive water depth switches on buoyancy.
    */
   struct SlideView {
     static constexpr int h          = 0;

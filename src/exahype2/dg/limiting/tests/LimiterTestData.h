@@ -42,7 +42,7 @@ TARGET_DECLARE_END
 
 TARGET_DECLARE
 /**
- * A solver with one observable, the first value, which is also its wave speed and must be
+ * A solver with the first value as its one observable and its wave speed. The first value must be
  * positive.
  */
 template <exahype2::TimeStepping::Rule Rule>
@@ -103,9 +103,6 @@ struct exahype2::dg::limiting::tests::RelaxedStubSolver final : exahype2::dg::li
   );
 };
 
-/**
- * The stub solver with a subcell Riemann solver.
- */
 struct exahype2::dg::limiting::tests::RiemannStubSolver final : exahype2::dg::limiting::tests::StubSolver {
   static constexpr double SubcellWaveSpeed = 2.0;
 

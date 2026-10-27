@@ -22,39 +22,109 @@ INLINE_METHOD peano4::MigrationExchange<T>::MigrationExchange(const tarch::Memor
 
 /**
  * Fills the slots of the cells that the regrid creates through the device functions copy(slot,
- * target), interpolateFromParent(parentSlot, target, childPosition) and
- * restrictFromChildren(childSlots, target) of the transfer. The fills on this rank run while the
- * messages travel and write no slot that a message reads. Every rank calls this at the same time.
+ * target, itemOfChunk), interpolateFromParent(parentSlot, target, childPosition, itemOfChunk,
+ * prepared) and restrictFromChildren(childSlots, target, itemOfChunk, prepared) of the transfer for
+ * every item itemOfChunk below Transfer::WorkItemsPerChunk. A transfer with a positive
+ * Transfer::PreparedValuesPerChunk writes prepared first through prepareInterpolation(parentSlot,
+ * prepared, itemOfChunk) and prepareRestriction(childSlots, prepared, itemOfChunk) for every item
+ * itemOfChunk below Transfer::PreparationItemsPerChunk. Every rank calls this at the same time.
  */
 template <typename T>
 template <typename Transfer>
 INLINE_METHOD void
 peano4::MigrationExchange<T>::migrate(Pool& pool, const peano4::Regrid& regrid, const Transfer& transfer) {
+  static_assert(Transfer::WorkItemsPerChunk > 0 and Transfer::PreparedValuesPerChunk >= 0);
   assertion(pool.getLocation() == _sendBuffer.getLocation());
   assertion(pool.getCapacity() >= regrid.newNumberOfSlots, pool.getCapacity(), regrid.newNumberOfSlots);
   if (_tag == NoTag) {
     _tag = peano4::communication::CommunicationManager::getInstance().reserveTag();
   }
-  postTransfers(pool, regrid.rankTransfers, transfer);
+  constexpr auto PreparedValuesPerChunk = static_cast<std::size_t>(Transfer::PreparedValuesPerChunk);
+  std::size_t    numberOfSentCells      = 0;
+  for (const auto& rankTransfer : regrid.rankTransfers) {
+    numberOfSentCells += rankTransfer.sentCells.size();
+  }
+  tarch::accelerator::Buffer<double> prepared(
+    (numberOfSentCells + regrid.prolongations.size() + regrid.restrictions.size()) * PreparedValuesPerChunk,
+    pool.getLocation()
+  );
+  double* const preparedOfProlongations = prepared.getData() + numberOfSentCells * PreparedValuesPerChunk;
+  double* const preparedOfRestrictions = preparedOfProlongations + regrid.prolongations.size() * PreparedValuesPerChunk;
+  postTransfers(pool, regrid.rankTransfers, transfer, prepared.getData());
+  // The fills on this rank run while the messages travel. The slots that the fills write and the slots
+  // that a message reads are disjoint.
   if (not regrid.prolongations.empty()) {
     _prolongations.setValues(regrid.prolongations);
+    prepareChunks<Transfer>(
+      regrid.prolongations.size(),
+      peano4::communication::PrepareProlongations<Transfer>{_prolongations.getData(), transfer, preparedOfProlongations}
+    );
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(static_cast<int>(regrid.prolongations.size())),
-      peano4::communication::ProlongChunks<T, Transfer>{_prolongations.getData(), pool.getView(), transfer}
+      tarch::accelerator::Range(getNumberOfWorkItems(regrid.prolongations.size(), Transfer::WorkItemsPerChunk)),
+      peano4::communication::ProlongChunks<T, Transfer>{
+        _prolongations.getData(),
+        pool.getView(),
+        transfer,
+        preparedOfProlongations
+      }
     );
   }
   if (not regrid.restrictions.empty()) {
     _restrictions.setValues(regrid.restrictions);
+    prepareChunks<Transfer>(
+      regrid.restrictions.size(),
+      peano4::communication::PrepareRestrictions<Transfer>{_restrictions.getData(), transfer, preparedOfRestrictions}
+    );
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(static_cast<int>(regrid.restrictions.size())),
-      peano4::communication::RestrictChunks<T, Transfer>{_restrictions.getData(), pool.getView(), transfer}
+      tarch::accelerator::Range(getNumberOfWorkItems(regrid.restrictions.size(), Transfer::WorkItemsPerChunk)),
+      peano4::communication::RestrictChunks<T, Transfer>{
+        _restrictions.getData(),
+        pool.getView(),
+        transfer,
+        preparedOfRestrictions
+      }
     );
   }
   receiveTransfers(pool);
+  // The destructor of prepared frees its memory. The fills that read it have to complete first.
+  if (not prepared.isEmpty()) {
+    tarch::accelerator::waitForDevice();
+  }
 }
 
 /**
- * Gathers the chunks of the sent cells into one send buffer and posts one message per rank of the transfers.
+ * Returns the number of work items of a launch that fills chunks chunks with workItemsPerChunk
+ * work items each.
+ */
+template <typename T>
+INLINE_METHOD int
+peano4::MigrationExchange<T>::getNumberOfWorkItems(const std::size_t chunks, const int workItemsPerChunk) {
+  assertion(workItemsPerChunk > 0, workItemsPerChunk);
+  const auto largestNumberOfChunks = static_cast<std::size_t>(std::numeric_limits<int>::max() / workItemsPerChunk);
+  if (chunks > largestNumberOfChunks) {
+    tarch::terminateWithError(
+      "A regrid fills at most " + std::to_string(largestNumberOfChunks) + " new cells per rank at once."
+    );
+  }
+  return static_cast<int>(chunks) * workItemsPerChunk;
+}
+
+template <typename T>
+template <typename Transfer, typename Preparation>
+INLINE_METHOD void
+peano4::MigrationExchange<T>::prepareChunks(const std::size_t chunks, const Preparation& preparation) {
+  if constexpr (Transfer::PreparedValuesPerChunk > 0) {
+    static_assert(Transfer::PreparationItemsPerChunk > 0);
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(getNumberOfWorkItems(chunks, Transfer::PreparationItemsPerChunk)),
+      preparation
+    );
+  }
+}
+
+/**
+ * Gathers the chunks of the sent cells into one send buffer and posts one message per rank of the
+ * transfers. The prepared values of the sent cells start at prepared.
  */
 template <typename T>
 template <typename Transfer>
@@ -62,7 +132,8 @@ INLINE_METHOD void
 peano4::MigrationExchange<T>::postTransfers(
   const Pool&                              pool,
   const std::vector<peano4::RankTransfer>& transfers,
-  const Transfer&                          transfer
+  const Transfer&                          transfer,
+  double* const                            prepared
 ) {
   assertion(_requests.empty(), _requests.size());
   _numberOfReceivedChunks = 0;
@@ -84,9 +155,19 @@ peano4::MigrationExchange<T>::postTransfers(
   _receiveBuffer.allocate(receivedSlots.size() * valuesPerChunk);
 
   if (not sentCells.empty()) {
+    prepareChunks<Transfer>(
+      sentCells.size(),
+      peano4::communication::PrepareSentCells<Transfer>{_sentCells.getData(), transfer, prepared}
+    );
     tarch::accelerator::parallelFor(
-      tarch::accelerator::Range(static_cast<int>(sentCells.size())),
-      peano4::communication::GatherChunks<T, Transfer>{_sentCells.getData(), _sendBuffer.getData(), transfer, chunkSize}
+      tarch::accelerator::Range(getNumberOfWorkItems(sentCells.size(), Transfer::WorkItemsPerChunk)),
+      peano4::communication::GatherChunks<T, Transfer>{
+        _sentCells.getData(),
+        _sendBuffer.getData(),
+        transfer,
+        chunkSize,
+        prepared
+      }
     );
     // The sends below read the send buffer without a copy. The gather has to be complete first.
     tarch::accelerator::waitForDevice();

@@ -64,7 +64,7 @@ class WorstMeasurementTest(unittest.TestCase):
         self.assertAlmostEqual(worst_measurement(HEADER, ROWS, "l1-error")[1], 9.0e-14)
         self.assertAlmostEqual(worst_measurement(HEADER, ROWS, "l2-error")[1], 7.0e-15)
 
-    def test_a_column_the_database_does_not_hold_is_rejected(self):
+    def test_a_column_outside_the_database_is_rejected(self):
         with self.assertRaises(ValueError):
             worst_measurement(HEADER, ROWS, "l_inf-error")
 

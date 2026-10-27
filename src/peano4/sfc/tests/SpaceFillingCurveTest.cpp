@@ -41,9 +41,8 @@ namespace {
   }
 
   /**
-   * Advances a serpentine walk over a 3^d block: Axis 0 runs in its current
-   * direction, and an axis that reaches a face flips its direction and carries
-   * over to the next axis.
+   * Advances a serpentine walk over a 3^d block. Axis 0 runs in its current direction. An axis
+   * that reaches a face flips its direction and advances the next axis.
    */
   bool advanceSerpentine(Leaf& counter, std::bitset<DIMENSIONS>& positive) {
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -62,8 +61,8 @@ namespace {
 
   /**
    * Appends the leaves of the Peano curve from its closed form. The walk along an axis is positive if
-   * an even number of the flags of the other axes is set, and the middle child along an axis flips
-   * the flag of that axis.
+   * an even number of the flags of the other axes is set. The middle child along an axis flips the
+   * flag of that axis.
    */
   void appendSerpentineLeaves(
     const std::bitset<DIMENSIONS>& evenFlags,
@@ -202,7 +201,7 @@ peano4::sfc::tests::SpaceFillingCurveTest::testPeanoMatchesTheSerpentineClosedFo
 }
 
 /**
- * The second iteration in 2D visits the 4x4 cells in the classic Hilbert order, and the first
+ * The second iteration in 2D visits the 4x4 cells in the classic Hilbert order. The first
  * iteration in 3D visits the octants along the base pattern of Bader, Sect. 8.1.2.
  */
 void

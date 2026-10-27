@@ -16,7 +16,7 @@ class NavierStokesBubbles(Scenario):
     """
 
     _dimensions = 2
-    _offset = 0.0
+    _offset = -500.0
     _domain_size = 1000.0
     _periodic_bc = False
     _end_time = 100
@@ -52,7 +52,8 @@ class NavierStokesBubbles(Scenario):
                       ReferencePressure,
                   (AdiabaticIndex - 1) / AdiabaticIndex) /
             (AdiabaticIndex - 1) -
-        Gravity * std::pow(ReferencePressure, GasConstant / IsobaricHeatCapacity) * x[DIMENSIONS-1] /
+        Gravity * std::pow(ReferencePressure, GasConstant / IsobaricHeatCapacity) *
+            (x[DIMENSIONS-1] - DomainOffset[DIMENSIONS-1]) /
             (GasConstant * BackgroundPotentialTemperature)),
     AdiabaticIndex / (AdiabaticIndex - 1)
   );
@@ -90,7 +91,7 @@ class NavierStokesBubbles(Scenario):
   );
 
   const auto rho = pressure / (GasConstant * temperature);
-  const auto height = x[DIMENSIONS-1];
+  const auto height = x[DIMENSIONS-1] - DomainOffset[DIMENSIONS-1];
   Q[Shortcuts::rho] = rho;
   Q[Shortcuts::height] = height;
 
@@ -204,16 +205,16 @@ void tests::exahype2::aderdg::ADERDGSolver::mapQuantities(
 
 class NavierStokesCosineBubble(NavierStokesBubbles):
     """
-    A single warm bubble in a homogeneous domain, which rises and diffuses outward. The potential
-    temperature shows the bubble best.
+    A single warm bubble in a homogeneous domain. The bubble rises and diffuses outward. The
+    potential temperature shows the bubble best.
     """
 
     def evaluate_perturbation(self):
         return """
   const tarch::la::Vector<DIMENSIONS, double> bubbleCentre = {
-    500, 350
+    0, -150
 #if DIMENSIONS == 3
-    ,350
+    ,-150
 #endif
   };
 
@@ -236,16 +237,16 @@ class NavierStokesTwoBubbles(NavierStokesBubbles):
     def evaluate_perturbation(self):
         return """
   const tarch::la::Vector<DIMENSIONS, double> hotBubbleCentre = {
-    500, 300
+    0, -200
 #if DIMENSIONS == 3
-    ,300
+    ,-200
 #endif
   };
 
   const tarch::la::Vector<DIMENSIONS, double> coldBubbleCentre = {
-    560, 640
+    60, 140
 #if DIMENSIONS == 3
-    ,640
+    ,140
 #endif
   };
 

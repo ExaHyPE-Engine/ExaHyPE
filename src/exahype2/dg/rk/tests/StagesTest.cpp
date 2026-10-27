@@ -500,9 +500,6 @@ exahype2::dg::rk::tests::StagesTest::testTheCombinationWritesInPlace() {
   }
 }
 
-/**
- * The combination adds every weighted estimate with one rounding.
- */
 void
 exahype2::dg::rk::tests::StagesTest::testTheCombinationRoundsEveryWeightedEstimateOnce() {
   double cellState[StateValuesPerCell];
@@ -552,9 +549,21 @@ exahype2::dg::rk::tests::StagesTest::testAConstantFluxGivesZerosBitwise() {
   for (int entry = 0; entry < UnknownsPerStage; entry++) {
     estimate[entry] = 9.0;
   }
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<FluxSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
 
   StageOf<FluxSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -581,9 +590,21 @@ exahype2::dg::rk::tests::StagesTest::testTheDivergenceOfALinearFluxIsItsSlope() 
   double cellState[StateValuesPerCell];
   fillLinearState(tables, cellState, 0, Slope);
   double estimate[UnknownsPerStage] = {};
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<FluxSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
 
   StageOf<FluxSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -593,8 +614,8 @@ exahype2::dg::rk::tests::StagesTest::testTheDivergenceOfALinearFluxIsItsSlope() 
     TimeStepSize
   );
 
-  // Only the flux along the first axis varies, and its physical slope is the reference slope
-  // over the cell extent.
+  // Only the flux along the first axis varies. Its physical slope is the reference slope over the
+  // cell extent.
   const double expected = -TimeStepSize * Slope / cellSize(0);
   for (int entry = 0; entry < UnknownsPerStage; entry++) {
     validateNumericalEqualsWithParams1(estimate[entry], expected, entry);
@@ -618,9 +639,21 @@ exahype2::dg::rk::tests::StagesTest::testTheSourceTermIsScaledByTheTimeStep() {
   for (int entry = 0; entry < UnknownsPerStage; entry++) {
     estimate[entry] = 9.0;
   }
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<SourceSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
 
   StageOf<SourceSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -651,8 +684,20 @@ exahype2::dg::rk::tests::StagesTest::testTheNonconservativeProductSeesTheNodalGr
   fillLinearState(tables, cellState, DIMENSIONS - 1, Slope);
   double estimate[UnknownsPerStage] = {};
 
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<ProductSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
   StageOf<ProductSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -683,8 +728,20 @@ exahype2::dg::rk::tests::StagesTest::testTheDiffusiveFluxSeesTheNodalGradients()
   fillLinearState(tables, cellState, DIMENSIONS - 1, Slope);
   double estimate[UnknownsPerStage] = {};
 
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<DiffusiveSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
   StageOf<DiffusiveSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -722,8 +779,31 @@ exahype2::dg::rk::tests::StagesTest::testMirroredCellsReceiveMirroredEstimates()
 
   double estimate[NodesPerCell * AcousticUnknowns];
   double mirroredEstimate[NodesPerCell * AcousticUnknowns];
+  double nodalFluxes[DIMENSIONS * NodesPerCell * AcousticUnknowns];
+  double mirroredNodalFluxes[DIMENSIONS * NodesPerCell * AcousticUnknowns];
+  exahype2::dg::evaluateNodalFluxes<AcousticSolver>(
+    nodalFluxes,
+    cellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
+  exahype2::dg::evaluateNodalFluxes<AcousticSolver>(
+    mirroredNodalFluxes,
+    mirroredCellState,
+    tables.quadraturePoints.data(),
+    tables.derivativeOperator.data(),
+    cellCentre,
+    cellSize,
+    TimeStamp,
+    TimeStepSize
+  );
   StageOf<AcousticSolver>::volumeIntegral(
     cellState,
+    nodalFluxes,
     estimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -734,6 +814,7 @@ exahype2::dg::rk::tests::StagesTest::testMirroredCellsReceiveMirroredEstimates()
   );
   StageOf<AcousticSolver>::volumeIntegral(
     mirroredCellState,
+    mirroredNodalFluxes,
     mirroredEstimate,
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
@@ -768,18 +849,24 @@ exahype2::dg::rk::tests::StagesTest::testTheFaceStatesOfALinearStateAreItsValues
   fillLinearState(tables, stageState, 0, Slope);
   FaceHalves halves;
 
-  StageOf<FluxSolver>::projectOntoFaces(
+  double nodalFluxes[DIMENSIONS * UnknownsPerStage];
+  exahype2::dg::evaluateNodalFluxes<FluxSolver>(
+    nodalFluxes,
     stageState,
-    halves.statePointers,
-    halves.fluxPointers,
-    tables.leftFaceCoefficients.data(),
-    tables.rightFaceCoefficients.data(),
     tables.quadraturePoints.data(),
     tables.derivativeOperator.data(),
     cellCentre,
     cellSize,
     TimeStamp,
     TimeStepSize
+  );
+  StageOf<FluxSolver>::projectOntoFaces(
+    stageState,
+    nodalFluxes,
+    halves.statePointers,
+    halves.fluxPointers,
+    tables.leftFaceCoefficients.data(),
+    tables.rightFaceCoefficients.data()
   );
 
   for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
@@ -989,7 +1076,7 @@ exahype2::dg::rk::tests::StagesTest::testTheCloseWritesTheWeightedSumInPlaceAndR
 }
 
 /**
- * Every tableau is explicit, its nodes are the row sums of its matrix and its weights sum to one.
+ * Every tableau is explicit with the row sums of its matrix as nodes and weights that sum to one.
  */
 void
 exahype2::dg::rk::tests::StagesTest::testTheButcherTableausAreConsistent() {
@@ -1016,17 +1103,11 @@ exahype2::dg::rk::tests::StagesTest::testTheButcherTableausAreConsistent() {
   check(exahype2::dg::rk::ButcherTableau<4>{});
 }
 
-/**
- * The opened stage of every cell of a device range reproduces the serial host loop.
- */
 void
 exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeOpensAStageLikeTheHost() {
   validateEveryCellOpensLikeTheHost<FullSolver>();
 }
 
-/**
- * The opened stage of a diffusive system of every cell of a device range reproduces the serial host loop.
- */
 void
 exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeOpensADiffusiveStageLikeTheHost() {
   validateEveryCellOpensLikeTheHost<DiffusiveFullSolver>();
@@ -1093,9 +1174,6 @@ exahype2::dg::rk::tests::StagesTest::validateEveryCellOpensLikeTheHost() {
   validateNumericalBuffersEquals(deviceFaceFluxes, hostFaceFluxes);
 }
 
-/**
- * The closed step of every cell of a device range reproduces the serial host loop.
- */
 void
 exahype2::dg::rk::tests::StagesTest::testEveryCellOfADeviceRangeClosesTheStepLikeTheHost() {
   const exahype2::dg::tests::CellChain geometry;

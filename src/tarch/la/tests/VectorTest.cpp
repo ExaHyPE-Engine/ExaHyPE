@@ -31,7 +31,7 @@ tarch::la::tests::VectorTest::run() {
   testMethod(testSpecialisedVectorMembers);
   testMethod(testNaNComparesUnequal);
   testMethod(testSmallerComparisonsHonourTheTolerance);
-  testMethod(testNorm2SquaredHoldsASwapOfTheFirstTwoComponents);
+  testMethod(testEveryOrderOfTheComponentsKeepsNorm2Squared);
 }
 
 void
@@ -719,10 +719,11 @@ tarch::la::tests::VectorTest::testSmallerComparisonsHonourTheTolerance() {
 }
 
 /**
- * Swapping the first two components of a vector keeps its squared norm bitwise.
+ * Every order of the components of a 2D or a 3D vector keeps its squared norm bitwise.
  */
 void
-tarch::la::tests::VectorTest::testNorm2SquaredHoldsASwapOfTheFirstTwoComponents() {
+tarch::la::tests::VectorTest::testEveryOrderOfTheComponentsKeepsNorm2Squared() {
+  constexpr int Permutations[6][3] = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
   for (int step = 0; step < 2000; step++) {
     tarch::la::Vector<2, double> plane;
     plane(0) = -0.298 + 0.001 * step;
@@ -736,10 +737,19 @@ tarch::la::tests::VectorTest::testNorm2SquaredHoldsASwapOfTheFirstTwoComponents(
     space(0) = plane(0);
     space(1) = plane(1);
     space(2) = 0.173 + 0.000431 * step;
-    tarch::la::Vector<3, double> swappedSpace;
-    swappedSpace(0) = space(1);
-    swappedSpace(1) = space(0);
-    swappedSpace(2) = space(2);
-    validateEqualsWithParams1(tarch::la::norm2Squared(space), tarch::la::norm2Squared(swappedSpace), step);
+    for (const auto& order : Permutations) {
+      tarch::la::Vector<3, double> permutedSpace;
+      for (int component = 0; component < 3; component++) {
+        permutedSpace(component) = space(order[component]);
+      }
+      validateEqualsWithParams2(tarch::la::norm2Squared(space), tarch::la::norm2Squared(permutedSpace), step, order[0]);
+    }
   }
+
+  // The squares 1, 1 and 1e16 sum to 1e16 + 2 only in the order of ascending magnitude.
+  tarch::la::Vector<3, double> unbalanced;
+  unbalanced(0) = 1.0e8;
+  unbalanced(1) = 1.0;
+  unbalanced(2) = 1.0;
+  validateEquals(tarch::la::norm2Squared(unbalanced), 1.0e16 + 2.0);
 }

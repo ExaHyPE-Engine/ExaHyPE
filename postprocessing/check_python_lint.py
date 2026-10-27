@@ -16,7 +16,7 @@ from postprocessing.source_tree import resolve_root
 from postprocessing.source_tree import ruff_check
 from postprocessing.source_tree import source_files
 
-# Syntax errors, undefined and unused names and misplaced statements; check_imports reports
+# Syntax errors, undefined and unused names and misplaced statements. check_imports reports
 # the import rules.
 LINT_RULES = ("E4", "E7", "E9", "F")
 

@@ -14,6 +14,7 @@
 #include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
+#include "tarch/accelerator/ParallelFor.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::fv::singlestep {
@@ -44,6 +45,8 @@ class exahype2::fv::singlestep::PatchUpdate final : public exahype2::fv::Patch<D
 public:
   using Base = exahype2::fv::Patch<Derived, ComputePrecision>;
   using Base::getMaxEigenvalueOfVolume;
+  using Base::getWaveSpeedsOfVolume;
+  using Base::HaloSize;
   using Base::NumberOfAuxiliaryVariables;
   using Base::NumberOfData;
   using Base::NumberOfUnknowns;
@@ -51,6 +54,7 @@ public:
   using Base::postprocessUpdatedPatch;
   using Base::ReportEigenvalues;
   using Base::ValuesPerPatch;
+  using Base::VolumesPerLayer;
   using Base::VolumesPerPatch;
 
   template <typename StoragePrecision>
@@ -58,6 +62,21 @@ public:
     const StoragePrecision*                      patch,
     StoragePrecision*                            updated,
     const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          boundaryFaces
+  );
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD int getTeamScratchBytes();
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double updateInTeam(
+    tarch::accelerator::TeamHandle               team,
+    StoragePrecision*                            patch,
+    const StoragePrecision* const                faces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
@@ -131,6 +150,8 @@ public:
   );
 
 private:
+  friend class exahype2::fv::tests::PatchSchemeTest;
+
   /**
    * Names the ring of terms a host sweep with the storage precision keeps. A solver without a
    * reconstruction leaves it uninstantiated.
@@ -152,6 +173,49 @@ private:
       ComputePrecision
     >;
   };
+
+  // A team copies its patch into the team scratch when the patch fits into it. The team writes the
+  // wave speeds of all volumes behind the copy if the reconstruction reads them and the scratch
+  // fits both. Every volume then reads the wave speeds of its neighbours inside the patch from one
+  // evaluation. A compiler may round a wave speed that it inlines at two places differently.
+  template <typename StoragePrecision>
+  struct TeamStorage final {
+    using WaveSpeedTerms = typename Derived::Reconstruction::template TeamTerms<
+      Derived,
+      PatchSize,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      exahype2::terms::HasFlux<Derived, ComputePrecision>,
+      exahype2::terms::HasNonconservativeProduct<Derived, ComputePrecision>,
+      exahype2::terms::HasSourceTerm<Derived, ComputePrecision>,
+      exahype2::terms::HasDiffusiveSourceTerm<Derived, ComputePrecision>,
+      exahype2::terms::HasRiemannSolver<Derived, ComputePrecision>,
+      ReportEigenvalues,
+      StoragePrecision,
+      ComputePrecision
+    >;
+    static constexpr int  PatchBytes       = ValuesPerPatch * static_cast<int>(sizeof(StoragePrecision));
+    static constexpr int  WaveSpeedBytes   = static_cast<int>(sizeof(ComputePrecision));
+    static constexpr int  WaveSpeedsOffset = (PatchBytes + WaveSpeedBytes - 1) / WaveSpeedBytes * WaveSpeedBytes;
+    static constexpr int  WaveSpeedsEnd    = WaveSpeedsOffset + VolumesPerPatch * DIMENSIONS * WaveSpeedBytes;
+    static constexpr bool StagesPatch      = PatchBytes <= tarch::accelerator::TeamScratchBytes;
+    static constexpr bool ReadsWaveSpeeds  = StagesPatch and WaveSpeedsEnd <= tarch::accelerator::TeamScratchBytes
+      and not std::is_same_v<WaveSpeedTerms, exahype2::fv::NoTermRing>;
+    using Terms                       = std::conditional_t<ReadsWaveSpeeds, WaveSpeedTerms, exahype2::fv::NoTermRing>;
+    static constexpr int ScratchBytes = ReadsWaveSpeeds ? WaveSpeedsEnd : (StagesPatch ? PatchBytes : 0);
+  };
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double updateWithThreadsOfTeam(
+    tarch::accelerator::TeamHandle               team,
+    StoragePrecision*                            patch,
+    const StoragePrecision* const                faces[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    int                                          boundaryFaces
+  );
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD constexpr std::size_t getSweepStorageBytes();

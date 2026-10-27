@@ -33,8 +33,8 @@ namespace peano4 {
 enum class peano4::FaceKind : std::uint8_t { Interior, Boundary, Hanging, Coarse, Intermediate };
 
 /**
- * Whether a cell, a face or a level jump reads data a neighbour rank sends: A local one
- * reads local data only, a remote one waits for the halo exchange.
+ * Tells whether a cell, a face or a level jump reads data that a neighbour rank sends. A remote
+ * one waits for the halo exchange.
  */
 enum class peano4::Adjacency : std::uint8_t { Local, Remote };
 
@@ -51,8 +51,8 @@ struct peano4::LevelJump final {
 };
 
 /**
- * One face this rank and a neighbour rank both hold. The member side is the side of the cell this
- * rank owns.
+ * One face that this rank and a neighbour rank both store. The member side is the side of the cell
+ * this rank owns.
  */
 struct peano4::ExchangedFace final {
   int face{-1};
@@ -69,10 +69,10 @@ struct peano4::Neighbour final {
 };
 
 /**
- * The cells one rank owns, numbered by slots, with their faces, their level jumps and the faces the
- * rank exchanges with neighbour ranks. A cell keeps its slot through every regrid that keeps the
- * cell, and every regrid renumbers the faces. Every list is sorted by adjacency and then by level or
- * kind. Every group a caller loops over is therefore one span.
+ * Stores the cells one rank owns, numbered by slots, with their faces, their level jumps and the
+ * faces the rank exchanges with neighbour ranks. A regrid keeps the slot of every surviving cell and
+ * renumbers the faces. The lists are sorted by adjacency and then by level or kind and a caller
+ * loops over one span per group.
  */
 class peano4::CellConnectivity final {
 public:
@@ -132,6 +132,10 @@ public:
   ) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getFaceWidth(int face, int axis) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getFaceCell(int face, int side) const noexcept;
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getCellCentreBesideFace(
+    int face,
+    int side
+  ) const noexcept;
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getWidthOfLevel(int level, int axis) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
@@ -144,6 +148,11 @@ private:
 
   [[nodiscard]] INLINE_METHOD int getRangeIndexOfLevel(Adjacency adjacency, int level) const noexcept;
   [[nodiscard]] INLINE_METHOD int getRangeIndexOfKind(Adjacency adjacency, FaceKind kind) const noexcept;
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getPositionOfLatticeCoordinate(
+    double latticeCoordinate,
+    int    level,
+    int    axis
+  ) const noexcept;
 
   int _numberOfSlots{0};
   int _numberOfFaces{0};
@@ -153,24 +162,13 @@ private:
   int _minimumLevel{0};
   int _maximumLevel{0};
 
-  /**
-   * The range array stores one offset per adjacency and level plus the end offset. Every range array
-   * lies in host memory, also in the device twin.
-   */
   const int* _cells{nullptr};
   const int* _cellRanges{nullptr};
   const int* _cellLevel{nullptr};
   const int* _cellLattice{nullptr};
   const int* _facesOfCell{nullptr};
-  /**
-   * The index of every slot's cell along the space-filling curve over all ranks, in host memory in
-   * the device twin too.
-   */
   const int* _cellCurveIndex{nullptr};
 
-  /**
-   * The range array stores one offset per adjacency and kind plus the end offset.
-   */
   const int*      _faces{nullptr};
   const int*      _faceRanges{nullptr};
   const int*      _faceLevel{nullptr};
@@ -187,11 +185,8 @@ private:
 
   const double* _widthOfLevel{nullptr};
   double        _domainOffset[DIMENSIONS]{};
+  double        _domainCentre[DIMENSIONS]{};
 
-  /**
-   * The cell connectivity with the same arrays in device memory, or null in that cell connectivity
-   * itself and in a build without a GPU backend.
-   */
   const CellConnectivity* _deviceTwin{nullptr};
 };
 

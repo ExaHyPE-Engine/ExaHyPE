@@ -5,7 +5,7 @@
 #if defined(PEANO_WITH_FPE) and defined(_MSC_VER)
 #pragma float_control(precise, on)
 #elif defined(PEANO_WITH_FPE) and (defined(__clang__) or defined(__INTEL_COMPILER) or defined(__INTEL_LLVM_COMPILER))
-// GCC ignores this pragma in C++ with a warning, so only the compilers that accept it see it.
+// GCC warns about this pragma in C++. Only the compilers that accept it see it.
 #pragma STDC FENV_ACCESS ON
 #endif
 
@@ -27,9 +27,6 @@ struct tarch::FloatingPointExceptions final {
 
   static constexpr ExceptionMask AllExceptions = DivisionByZero | Invalid | Overflow | Underflow | Inexact;
 
-  /**
-   * Leaves underflow out, because a subnormal result is representable.
-   */
   static constexpr ExceptionMask DefaultExceptions = DivisionByZero | Invalid | Overflow;
 
   static bool enableExceptionTraps(ExceptionMask exceptions = DefaultExceptions) noexcept;
@@ -46,7 +43,6 @@ struct tarch::FloatingPointExceptions final {
     ScopedTrap& operator=(ScopedTrap&& other)      = delete;
 
   private:
-    // A build without trap support keeps the members but never reads them.
     [[maybe_unused]] const ExceptionMask _previousExceptions;
     [[maybe_unused]] std::fenv_t         _previousEnvironment;
   };

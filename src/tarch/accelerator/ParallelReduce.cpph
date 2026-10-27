@@ -70,12 +70,15 @@ namespace tarch::accelerator {
   /**
    * Reduces over the range on the host threads. The partial values merge in an order that depends
    * on the thread count alone. Inside a parallel region the time per item of the previous call with
-   * this functor type sets the number of tasks.
+   * this functor type sets the number of tasks. An empty range returns at once.
    */
   template <typename Reducer, typename Functor>
   INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     using ValueType = typename Reducer::ValueType;
+    if (range.n == 0) {
+      return;
+    }
     if (omp_in_parallel()) {
       static std::atomic<double> secondsPerItem{0.0};
       const auto                 startTime       = std::chrono::steady_clock::now();
@@ -88,8 +91,8 @@ namespace tarch::accelerator {
       std::vector<ValueType> partials(static_cast<std::size_t>(numberOfBlocks), Reducer::identity());
       ValueType* const       partialValues = partials.data();
       assertion(numberOfTasks <= numberOfBlocks, numberOfTasks, numberOfBlocks);
-      // OpenMP moves a task body into a function of its own. That function inherits always_inline
-      // from the enclosing function. GCC and icpx then fail to compile it. The tasks start in a lambda.
+      // GCC and icpx fail to compile a task body that inherits always_inline from the enclosing
+      // function. The tasks start in a lambda.
       [](
         const int        numberOfTasks,
         const int        numberOfBlocks,

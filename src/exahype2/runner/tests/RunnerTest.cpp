@@ -3,6 +3,7 @@
 #include "RunnerTest.h"
 
 #include "exahype2/runner/Runner.h"
+#include "exahype2/runner/RuntimeParameters.h"
 #include "exahype2/runner/Statistics.h"
 #include "peano4/CellConnectivity.h"
 #include "peano4/RefinementRequest.h"
@@ -15,6 +16,20 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/ReductionRecord.h"
 
+namespace {
+  /**
+   * Passes the number of snapshots to the runtime parameters as a command line does.
+   */
+  void setNumberOfSnapshots(const int numberOfSnapshots) {
+    std::string executable        = "UnitTests";
+    std::string option            = "-ns";
+    std::string value             = std::to_string(numberOfSnapshots);
+    char*       arguments[]       = {executable.data(), option.data(), value.data()};
+    int         numberOfArguments = 3;
+    exahype2::runner::RuntimeParameters::getInstance().configure(numberOfArguments, arguments);
+  }
+} // namespace
+
 exahype2::runner::tests::RunnerTest::RunnerTest() :
   TestCase("exahype2::runner::tests::RunnerTest") {}
 
@@ -22,9 +37,12 @@ void
 exahype2::runner::tests::RunnerTest::run() {
   testMethod(testDescribeMeshUpdatesReportsTheStepCountAndWallClock);
   testMethod(testDescribeRepetitionsCountsEveryPhaseInItsUnit);
+  testMethod(testAReportInsideARegridCountsTheRegridAgain);
   testMethod(testFinishStepSumsTheSolverBytesAndCellUpdates);
   testMethod(testFinishStepReducesTheValuesOfTheSolvers);
   testMethod(testTheGridInitialisationAppliesOnlyTheVotesOfTheInitialCondition);
+  testMethod(testTheTimeLoopWritesTheInitialConditionAndTheLastTimeStamp);
+  testMethod(testOneSnapshotWritesTheInitialConditionAndTheLastTimeStamp);
 }
 
 void
@@ -57,6 +75,41 @@ exahype2::runner::tests::RunnerTest::testDescribeRepetitionsCountsEveryPhaseInIt
   validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Construction", 5, 0), std::string("5 Steps"));
   validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Initialisation", 1, 0), std::string("1 Round"));
   validateEquals(exahype2::runner::Runner::describeRepetitions("Grid Initialisation", 2, 0), std::string("2 Rounds"));
+}
+
+/**
+ * The first step after a report inside a regrid counts the regrid in the new collection.
+ */
+void
+exahype2::runner::tests::RunnerTest::testAReportInsideARegridCountsTheRegridAgain() {
+  static const std::vector<peano4::RefinementRequest> noRequests;
+  peano4::tests::buildRegularGrid(peano4::tests::DepthWithCoarseCellsBesideTheCentreBlock);
+  exahype2::runner::SolverRepositoryCallbacks callbacks;
+  callbacks.requestRefinementForGridConstruction = [] {};
+  callbacks.allocate                             = [] {};
+  callbacks.initialise                           = [] {};
+  callbacks.performTimeStep                      = [] {};
+  callbacks.regrid                               = []([[maybe_unused]] const peano4::Regrid& regrid) {};
+  callbacks.plot                                 = [] {};
+  callbacks.getRefinementRequests = []() -> const std::vector<peano4::RefinementRequest>& { return noRequests; };
+  exahype2::runner::Runner runner(
+    tarch::la::Vector<DIMENSIONS, double>(0.0),
+    tarch::la::Vector<DIMENSIONS, double>(1.0),
+    std::bitset<DIMENSIONS>(),
+    callbacks
+  );
+
+  runner.startMeshUpdates();
+  static_cast<void>(runner.runMeshUpdateStep(true));
+  static_cast<void>(runner.runMeshUpdateStep(false));
+  validateEquals(runner._meshUpdates.regrids, 1);
+  validateEquals(runner._meshUpdates.steps, 2);
+
+  runner.reportMeshUpdates();
+  static_cast<void>(runner.runMeshUpdateStep(false));
+  validateEquals(runner._meshUpdates.regrids, 1);
+  validateEquals(runner._meshUpdates.steps, 1);
+  validateEquals(runner._numberOfRegrids, 1);
 }
 
 void
@@ -188,4 +241,82 @@ exahype2::runner::tests::RunnerTest::testTheGridInitialisationAppliesOnlyTheVote
   validateEquals(peano4::tests::getGlobalSumOf(spacetree.getCellAt(Depth + 1, centreChild) >= 0 ? 1 : 0), 1);
   validateEquals(peano4::tests::getGlobalSumOf(spacetree.getCellAt(Depth, corner) >= 0 ? 1 : 0), 1);
   validateEquals(peano4::tests::getGlobalSumOf(spacetree.getCellAt(Depth + 1, corner) >= 0 ? 1 : 0), 0);
+}
+
+/**
+ * Runs the time loop of a runner whose time steps advance the time stamp by a fixed size and
+ * returns the calls of its callbacks.
+ */
+exahype2::runner::tests::RunnerTest::TimeLoopCalls
+exahype2::runner::tests::RunnerTest::runTimeLoop() {
+  static const std::vector<peano4::RefinementRequest> noRequests;
+  constexpr double                                    TimeStepSize = 0.0078125;
+  peano4::tests::buildRegularGrid(peano4::tests::DepthWithCoarseCellsBesideTheCentreBlock);
+
+  double                                      timeStamp = 0.0;
+  TimeLoopCalls                               calls;
+  exahype2::runner::SolverRepositoryCallbacks callbacks;
+  callbacks.requestRefinementForGridConstruction = [] {};
+  callbacks.allocate                             = [] {};
+  callbacks.initialise                           = [] {};
+  callbacks.performTimeStep                      = [&timeStamp, &calls] {
+    timeStamp += TimeStepSize;
+    calls.timeSteps++;
+  };
+  callbacks.regrid = []([[maybe_unused]] const peano4::Regrid& regrid) {};
+  callbacks.plot   = [&calls] {
+    if (calls.plots == 0) {
+      calls.timeStepsBeforeTheFirstPlot = calls.timeSteps;
+    }
+    calls.plots++;
+    calls.timeStepsBeforeTheLastPlot = calls.timeSteps;
+  };
+  callbacks.recordLastTimeStamp = [&calls] {
+    calls.records++;
+    calls.timeStepsBeforeTheRecord = calls.timeSteps;
+  };
+  callbacks.getRefinementRequests = []() -> const std::vector<peano4::RefinementRequest>& { return noRequests; };
+  callbacks.getMinTimeStamp       = [&timeStamp] { return timeStamp; };
+  callbacks.getMaxTimeStamp       = [&timeStamp] { return timeStamp; };
+
+  exahype2::runner::Runner runner(
+    tarch::la::Vector<DIMENSIONS, double>(0.0),
+    tarch::la::Vector<DIMENSIONS, double>(1.0),
+    std::bitset<DIMENSIONS>(),
+    callbacks
+  );
+  runner.runTimeLoop();
+  return calls;
+}
+
+/**
+ * The time loop plots before its first and after its last time step and records the last time stamp once.
+ */
+void
+exahype2::runner::tests::RunnerTest::testTheTimeLoopWritesTheInitialConditionAndTheLastTimeStamp() {
+  const TimeLoopCalls calls = runTimeLoop();
+
+  validate(calls.timeSteps > 0);
+  validate(calls.plots > 2);
+  validateEquals(calls.timeStepsBeforeTheFirstPlot, 0);
+  validateEquals(calls.timeStepsBeforeTheLastPlot, calls.timeSteps);
+  validateEquals(calls.records, 1);
+  validateEquals(calls.timeStepsBeforeTheRecord, calls.timeSteps);
+}
+
+/**
+ * A run with one snapshot plots the initial condition and the last time stamp.
+ */
+void
+exahype2::runner::tests::RunnerTest::testOneSnapshotWritesTheInitialConditionAndTheLastTimeStamp() {
+  const int defaultNumberOfSnapshots = exahype2::runner::RuntimeParameters::getInstance().getNumberOfSnapshots();
+  setNumberOfSnapshots(1);
+  const TimeLoopCalls calls = runTimeLoop();
+  setNumberOfSnapshots(defaultNumberOfSnapshots);
+
+  validate(calls.timeSteps > 0);
+  validateEquals(calls.plots, 2);
+  validateEquals(calls.timeStepsBeforeTheFirstPlot, 0);
+  validateEquals(calls.timeStepsBeforeTheLastPlot, calls.timeSteps);
+  validateEquals(calls.records, 1);
 }

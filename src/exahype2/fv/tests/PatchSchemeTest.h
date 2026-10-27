@@ -28,15 +28,17 @@ private:
   void testBoundaryConditionsCopyAUniformStateOntoTheOuterHalf();
   void testEachOuterLayerReadsTheMatchingInnerLayer();
   void testEachOuterVolumeIsWrittenOnce();
+  void testEveryThreadOfADeviceAppliesTheBoundaryConditionsLikeTheHost();
   void testProjectionFillsTheOwnHalfOfEveryFace();
+  void testEveryTeamOfADeviceProjectsLikeTheHost();
   void testHaloInterpolationReproducesALinearProfile();
   void testAConstantFaceInterpolatesBitwise();
   void testHaloInjectionCopiesTheCoveringVolume();
   void testHaloRestrictionAveragesTheCoveringVolumes();
   void testConstantFineFacesRestrictBitwise();
-  void testPatchInterpolationCopiesTheCoveringVolume();
-  void testPatchRestrictionInvertsTheInterpolation();
-  void testPatchRestrictionAveragesExactly();
+  void testVolumeInterpolationCopiesTheCoveringVolume();
+  void testVolumeRestrictionInvertsTheInterpolation();
+  void testVolumeRestrictionAveragesExactly();
   void testAVolumeFaceOnTheDomainBoundaryReachesTheRiemannSolver();
   void testZeroTimeStepPreservesState();
   void testUniformStateIsPreserved();
@@ -55,13 +57,18 @@ private:
   void testPeriodicAdvectionConservesMass();
   void testSodShockTubeReachesStarStates();
   void testMirroredVolumesReceiveMirroredStates();
+  void testAPositionDependentFluxKeepsMirroredVolumesMirrored();
   void testReconstructionHookReproducingDefaultChangesNothing();
   void testLimiterHookReproducingMinmodChangesNothing();
   void testThePostprocessingRunsBeforeTheWaveSpeedsOfTheUpdatedPatch();
   void testReduceMaxEigenvalueTakesTheLargestWaveSpeedOverTheVolumes();
   void testMeasureErrorsSumsTheWeightedNorms();
   void testEveryCellOfADeviceRangeUpdatesLikeTheHost();
+  void testEveryTeamOfADeviceUpdatesInPlaceLikeTheHost();
   void testTheTermRingKeepsAWindowOfEntries();
   void testTheSweepUpdatesLikeTheVolumeUpdates();
   void testTheSweepUpdatesInPlaceLikeIntoASecondPatch();
+
+  template <typename Reconstruct>
+  void validateMirroredRadialAdvection();
 };

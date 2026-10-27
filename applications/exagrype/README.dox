@@ -40,8 +40,8 @@ The entries represent:
 - @f$\tilde{A}_{ij}@f$: traceless extrinsic curvature, stored as
   @f$(xx,xy,xz,yy,yz,zz)@f$.
 - @f$\Theta@f$: temporal component of the Z4 vector.
-- @f$\hat{\Gamma}^i@f$: contracted conformal Christoffel symbols together
-  with the spatial Z4 contribution, stored as @f$(x,y,z)@f$.
+- @f$\hat{\Gamma}^i@f$: conformal connection functions, the conformal Christoffel symbols traced
+  with the conformal metric, together with the spatial Z4 contribution, stored as @f$(x,y,z)@f$.
 - @f$\alpha@f$: lapse.
 - @f$\beta^i@f$: shift vector, stored as @f$(x,y,z)@f$.
 - @f$b^i@f$: gamma-driver auxiliary vector, stored as @f$(x,y,z)@f$.
@@ -58,8 +58,8 @@ The entries represent:
   @f$z:(xx,xy,xz,yy,yz,zz)@f$.
 - @f$K@f$: trace of the extrinsic curvature.
 - @f$\phi@f$: conformal factor
-  @f$\phi = (\det \gamma_{ij})^{-1/6}@f$, so that
-  @f$\tilde{\gamma}_{ij} = \phi^2 \gamma_{ij}@f$ has unit determinant.
+  @f$\phi = (\det \gamma_{ij})^{-1/6}@f$. The conformal metric
+  @f$\tilde{\gamma}_{ij} = \phi^2 \gamma_{ij}@f$ then has unit determinant.
 - `grad_phi`: the first derivatives of the conformal factor,
   @f$P_i = \partial_i \phi@f$, stored as @f$(x,y,z)@f$.
 

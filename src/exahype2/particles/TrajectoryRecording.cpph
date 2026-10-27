@@ -56,8 +56,8 @@ exahype2::particles::isSnapshotDueOnSomeRank(
 }
 
 /**
- * Adds a snapshot of every particle of this rank to database if isSnapshotDue() is true, and
- * downloads the particle data only then.
+ * Downloads the particle data and adds a snapshot of every particle of this rank to database if
+ * isSnapshotDue() is true.
  */
 template <int NumberOfData>
 INLINE_METHOD void

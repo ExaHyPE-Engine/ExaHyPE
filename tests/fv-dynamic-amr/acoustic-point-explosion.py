@@ -43,7 +43,7 @@ project = exahype2.Project(
     max_grid_levels=args.max_grid_levels,
 )
 
-# The pulse lies on the diagonal and every wall reflects, so the solution stays symmetric under axis
+# The pulse lies on the diagonal. Every wall reflects. The solution then stays symmetric under axis
 # permutations.
 initial_conditions = """
   const tarch::la::Vector<DIMENSIONS, double> sourceCentre(-0.7);
@@ -84,12 +84,8 @@ refinement_criterion = """
     ::exahype2::DefaultCoarsenSafetyFactor,
     [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
     [](const double* const values) {
-      double velocitySquared = 0.0;
-      for (int d = 0; d < DIMENSIONS; d++) {
-        const double velocity = values[Shortcuts::u + d];
-        const double square   = velocity * velocity;
-        velocitySquared += square;
-      }
+      const double velocitySquared =
+        tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(values + Shortcuts::u));
       return 1.0 + RHO * WAVE_SPEED * std::sqrt(velocitySquared);
     }
   );

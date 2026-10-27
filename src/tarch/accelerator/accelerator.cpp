@@ -11,7 +11,7 @@ namespace {
   std::atomic<bool> loggedMissingTaskloopSupport{false};
 
   /**
-   * GrowingAllocation holds a memory block that grows when a request exceeds its capacity. The
+   * GrowingAllocation owns a memory block that grows when a request exceeds its capacity. The
    * block lives until releaseReductionScratch(). The lock of lockReductionScratch() covers both
    * blocks.
    */
@@ -54,8 +54,7 @@ namespace {
 
 /**
  * Returns device memory of at least sizeInBytes bytes for the partial values of a reduction and
- * locks it until unlockReductionScratch(). One reduction at a time holds the lock. A second host
- * thread that starts a reduction while the first one runs fails the assertion. The memory lives
+ * locks it until unlockReductionScratch(). One reduction at a time owns the lock. The memory lives
  * until releaseReductionScratch().
  */
 void*
@@ -67,7 +66,7 @@ tarch::accelerator::lockReductionScratch(const std::size_t sizeInBytes) {
 
 /**
  * Returns pinned host memory of at least sizeInBytes bytes that receives the partial values of the
- * reduction that holds the lock.
+ * reduction that owns the lock.
  */
 void*
 tarch::accelerator::getReductionStaging(const std::size_t sizeInBytes) {
@@ -86,7 +85,7 @@ tarch::accelerator::unlockReductionScratch() {
 
 /**
  * Frees the memory of both reduction buffers. The device shutdown calls this before it destroys
- * the device context. No reduction holds the lock then.
+ * the device context. No reduction owns the lock then.
  */
 void
 tarch::accelerator::releaseReductionScratch() {

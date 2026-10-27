@@ -34,7 +34,7 @@ enum class exahype2::particles::IntegrationScheme : int {
 };
 
 /**
- * One bit per force, so a set of forces is the sum of its members.
+ * One bit per force. A set of forces is the sum of its members.
  */
 enum class exahype2::particles::ForceType : int {
   None            = 0,

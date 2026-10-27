@@ -11,8 +11,8 @@ namespace {
 
 /**
  * Logs the first fatal message with the location of its caller, flushes the output streams and
- * calls tarch::mpi::abort(). An atomic flag lets the first caller write and abort, and every later
- * caller yields until the process ends.
+ * calls tarch::mpi::abort(). Only the first caller writes and aborts. Every later caller yields
+ * until the process ends.
  */
 [[noreturn]] void
 tarch::terminateWithError(const std::string_view message, const int errorCode, const std::source_location location) {

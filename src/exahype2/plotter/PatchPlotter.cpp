@@ -52,10 +52,9 @@ exahype2::plotter::PatchPlotter::hashLatticeKey(const std::array<std::int64_t, D
 }
 
 /**
- * Returns a mesh with the arrays of the patches and numberOfPoints points. The data fields become
- * point fields or cell fields, followed by the cell fields RefinementLevel, Subdomain, CurveIndex
- * and, with a statusName, the status field of that name. The arrays stay uninitialised. The caller writes every
- * entry. Every plot cell of a patch stores the curve index of its grid cell. A single-precision
+ * Returns a mesh with numberOfPoints points and uninitialised arrays that the caller writes. The
+ * data fields become point fields or cell fields, followed by the cell fields RefinementLevel,
+ * Subdomain, CurveIndex and, with a statusName, the status field of that name. A single-precision
  * plot file stores the curve indices of up to 2^24 grid cells exactly.
  */
 tarch::plotter::Mesh

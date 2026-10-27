@@ -147,7 +147,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::reconstructPatch(
         }
       }
     }
-    exahype2::dg::ader::synchronise(workers);
+    exahype2::dg::ader::teamBarrier(workers);
   }
   using PolynomialLimiter = typename Reconstruction::PolynomialLimiter;
   if constexpr (not std::is_same_v<PolynomialLimiter, exahype2::fv::limiter::Unlimited<Basis>>) {
@@ -163,7 +163,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::reconstructPatch(
         exahype2::fv::getVolumeSize(cellSize, PatchSize)
       );
     }
-    exahype2::dg::ader::synchronise(workers);
+    exahype2::dg::ader::teamBarrier(workers);
   }
 }
 
@@ -255,7 +255,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictVolume(
     }
   }
   // The next volume of the group overwrites volumeScratch.
-  exahype2::dg::ader::synchronise(workers);
+  exahype2::dg::ader::teamBarrier(workers);
   return outcome;
 }
 

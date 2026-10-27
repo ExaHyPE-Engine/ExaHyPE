@@ -3,8 +3,9 @@
 
 namespace tarch::accelerator {
   /**
-   * Returns the work items per team of a launch that asks for requested work items: Whole
-   * sub-groups up to SyclLocalSize, or SyclLocalSize for TeamRange::BackendDefault.
+   * Returns the work items per team of a launch that asks for requested work items. The count
+   * rounds requested up to whole sub-groups and stops at SyclLocalSize. TeamRange::BackendDefault
+   * asks for SyclLocalSize work items.
    */
   INLINE_METHOD int getTeamThreads(const int requested) {
     if (requested == tarch::accelerator::TeamRange::BackendDefault) {
@@ -16,8 +17,8 @@ namespace tarch::accelerator {
   }
 
   /**
-   * Returns the local memory per team of a launch that asks for requested bytes, or
-   * TeamScratchBytes for TeamRange::BackendDefault.
+   * Returns the local memory per team of a launch that asks for requested bytes.
+   * TeamRange::BackendDefault asks for TeamScratchBytes.
    */
   INLINE_METHOD int getTeamScratchBytes(const int requested) {
     if (requested == tarch::accelerator::TeamRange::BackendDefault) {
@@ -28,8 +29,8 @@ namespace tarch::accelerator {
   }
 
   /**
-   * Returns the 64-bit words of the local accessor of a team launch: At least one word. The
-   * address of its first entry then exists.
+   * Returns the 64-bit words of the local accessor of a team launch, at least one. The address of
+   * its first entry then exists.
    */
   INLINE_METHOD int getTeamScratchWords(const int requested) {
     constexpr auto WordBytes = static_cast<int>(sizeof(std::uint64_t));
@@ -78,6 +79,22 @@ namespace tarch::accelerator {
 
   INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier(const SyclTeam& team) {
     ::sycl::group_barrier(team.item.get_group());
+  }
+
+  /**
+   * Returns whether condition is true in every work item of the team. Every work item receives the
+   * same value.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInEveryThreadOfTeam(const SyclTeam& team, const bool condition) {
+    return ::sycl::all_of_group(team.item.get_group(), condition);
+  }
+
+  /**
+   * Returns whether condition is true in any work item of the team. Every work item receives the
+   * same value.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInAnyThreadOfTeam(const SyclTeam& team, const bool condition) {
+    return ::sycl::any_of_group(team.item.get_group(), condition);
   }
 
   template <typename Functor>

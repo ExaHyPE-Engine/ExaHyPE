@@ -4,7 +4,7 @@
 
 /**
  * Score-P user-instrumentation wrapper. Without Score-P, SCOREP_USER_REGION reads its name and every
- * other region macro expands to nothing, so a name that only a region uses counts as referenced.
+ * other region macro expands to nothing. A name that only a region uses then counts as referenced.
  */
 #if defined(SCOREP_USER_ENABLE)
 #include <scorep/SCOREP_User.h>

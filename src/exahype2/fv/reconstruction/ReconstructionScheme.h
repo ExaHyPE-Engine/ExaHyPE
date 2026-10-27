@@ -22,6 +22,9 @@ namespace exahype2::fv {
 
   struct NoTermRing;
 
+  template <typename ComputePrecision>
+  struct WaveSpeedsOfTeam;
+
   /**
    * A reconstruction scheme forms the states that meet at a volume face and adds their flux
    * divergence to the update. The constant HaloSize is the number of layers its stencil reads.
@@ -77,6 +80,21 @@ private:
  */
 struct exahype2::fv::NoTermRing final {
   static constexpr int Lookahead = 0;
+};
+
+/**
+ * Points into the team scratch of a device update. Entry normal * volumes + volume is the largest
+ * wave speed along normal of volume of the patch. The team writes every entry before the first
+ * volume of the patch updates.
+ */
+template <typename ComputePrecision>
+struct exahype2::fv::WaveSpeedsOfTeam final {
+  static constexpr int Lookahead = 0;
+
+  ComputePrecision* waveSpeeds{nullptr};
+  int               volumes{0};
+
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision& at(int volume, int normal) const;
 };
 
 #include "exahype2/fv/reconstruction/ReconstructionScheme.cpph"

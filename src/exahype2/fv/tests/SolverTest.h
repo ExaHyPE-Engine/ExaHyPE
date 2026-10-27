@@ -22,6 +22,7 @@ public:
 private:
   void testInitialisationWritesTheInitialConditionIntoEveryVolume();
   void testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp();
+  void testRecordLastTimeStampAppendsOneRowToTheErrorFile();
   void testARefinementAndTheEraseBackKeepTheSolution();
   void testRefinementReducesTheNextAdaptiveTimeStep();
   void testThePostprocessingOfTheUpdatedPatchFeedsTheNextTimeStep();

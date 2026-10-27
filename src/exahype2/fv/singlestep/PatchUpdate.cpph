@@ -8,10 +8,18 @@
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/NonconservativeProduct.h"
 #include "exahype2/terms/RiemannSolver.h"
+#include "exahype2/terms/PostprocessUpdatedPatch.h"
 #include "exahype2/terms/SourceTerm.h"
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
+
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD int
+exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::getTeamScratchBytes() {
+  return TeamStorage<StoragePrecision>::ScratchBytes;
+}
 
 TARGET_DECLARE
 /**
@@ -39,6 +47,158 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::update(
   COMPILE_IF_ON_DEVICE(
     return updateEveryVolume(patch, updated, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces);
   )
+}
+
+/**
+ * Advances patch in place and returns the largest wave speed of the update that the calling thread
+ * saw. A host thread runs update() with the postprocessing of Derived. A device runs
+ * updateWithThreadsOfTeam(). On a device the caller runs the postprocessing.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateInTeam(
+  [[maybe_unused]] const tarch::accelerator::TeamHandle team,
+  StoragePrecision* const                               patch,
+  const StoragePrecision* const                         faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>&          cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&          cellSize,
+  const double                                          timeStamp,
+  const double                                          timeStepSize,
+  const int                                             boundaryFaces
+) {
+  COMPILE_IF_ON_HOST(return update(patch, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces);)
+  COMPILE_IF_ON_DEVICE(
+    return updateWithThreadsOfTeam(team, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces);
+  )
+}
+
+/**
+ * Advances patch in place with the threads of team and returns the largest wave speed of the
+ * update that the calling thread saw. A team copies a patch that fits into the team scratch first.
+ * The team writes the wave speeds of all volumes behind the copy if the reconstruction reads them.
+ * Every thread then writes its updates straight into patch. A team advances a larger patch in
+ * rounds of one volume per thread that write their updates Delay rounds late, after every round
+ * that reads those volumes.
+ */
+template <typename Derived, typename ComputePrecision>
+template <typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateWithThreadsOfTeam(
+  const tarch::accelerator::TeamHandle         team,
+  StoragePrecision* const                      patch,
+  const StoragePrecision* const                faces[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    boundaryFaces
+) {
+  using Storage                              = TeamStorage<StoragePrecision>;
+  constexpr bool          PostprocessesPatch = exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>;
+  const int               thread             = tarch::accelerator::getThreadOfTeam(team);
+  const int               threads            = tarch::accelerator::getNumberOfThreadsPerTeam(team);
+  double                  partial            = 0.0;
+  typename Storage::Terms terms{};
+  if constexpr (Storage::StagesPatch) {
+    unsigned char* const    scratch = tarch::accelerator::getTeamScratch(team);
+    StoragePrecision* const staged  = reinterpret_cast<StoragePrecision*>(scratch);
+    for (int value = thread; value < ValuesPerPatch; value += threads) {
+      staged[value] = patch[value];
+    }
+    if constexpr (Storage::ReadsWaveSpeeds) {
+      terms.waveSpeeds = reinterpret_cast<ComputePrecision*>(scratch + Storage::WaveSpeedsOffset);
+      terms.volumes    = VolumesPerPatch;
+      for (int volume = thread; volume < VolumesPerPatch; volume += threads) {
+        const auto waveSpeeds = getWaveSpeedsOfVolume(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize);
+        for (int normal = 0; normal < DIMENSIONS; normal++) {
+          terms.at(volume, normal) = waveSpeeds(normal);
+        }
+      }
+    }
+    tarch::accelerator::teamBarrier(team);
+    for (int volume = thread; volume < VolumesPerPatch; volume += threads) {
+      StoragePrecision* const updatedState = patch + static_cast<std::ptrdiff_t>(volume) * NumberOfData;
+      partial                              = exahype2::MaxEigenvalueReduction::combine(
+        partial,
+        computeVolumeUpdate(
+          volume,
+          staged,
+          faces,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          boundaryFaces,
+          terms,
+          updatedState
+        )
+      );
+      if constexpr (not PostprocessesPatch) {
+        partial = exahype2::MaxEigenvalueReduction::combine(
+          partial,
+          getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+        );
+      }
+    }
+    // The caller may reduce over the team through the team scratch.
+    tarch::accelerator::teamBarrier(team);
+  } else {
+    // An update reads the states up to Reach volumes before and behind its volume. A team runs at
+    // least Threads threads.
+    constexpr int Reach   = HaloSize * VolumesPerLayer;
+    constexpr int Threads = std::min(tarch::accelerator::DefaultThreadsPerTeam, VolumesPerPatch);
+    constexpr int Delay   = (Reach + Threads - 1) / Threads;
+    const int     rounds  = (VolumesPerPatch + threads - 1) / threads;
+    assertion(threads >= Threads, threads, Threads);
+    StoragePrecision delayedStates[Delay][NumberOfData]{};
+    for (int round = 0; round < rounds + Delay; round++) {
+      StoragePrecision computedState[NumberOfData]{};
+      const int        computedVolume = round * threads + thread;
+      if (round < rounds) {
+        if (computedVolume < VolumesPerPatch) {
+          partial = exahype2::MaxEigenvalueReduction::combine(
+            partial,
+            computeVolumeUpdate(
+              computedVolume,
+              patch,
+              faces,
+              cellCentre,
+              cellSize,
+              timeStamp,
+              timeStepSize,
+              boundaryFaces,
+              terms,
+              computedState
+            )
+          );
+        }
+        tarch::accelerator::teamBarrier(team);
+      }
+      const int writtenVolume = (round - Delay) * threads + thread;
+      if (round >= Delay and writtenVolume < VolumesPerPatch) {
+        StoragePrecision* const target = patch + static_cast<std::ptrdiff_t>(writtenVolume) * NumberOfData;
+        for (int value = 0; value < NumberOfData; value++) {
+          target[value] = delayedStates[Delay - 1][value];
+        }
+        if constexpr (not PostprocessesPatch) {
+          partial = exahype2::MaxEigenvalueReduction::combine(
+            partial,
+            getMaxEigenvalueOfVolume(writtenVolume, patch, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+          );
+        }
+      }
+      for (int slot = Delay - 1; slot > 0; slot--) {
+        for (int value = 0; value < NumberOfData; value++) {
+          delayedStates[slot][value] = delayedStates[slot - 1][value];
+        }
+      }
+      for (int value = 0; value < NumberOfData; value++) {
+        delayedStates[0][value] = computedState[value];
+      }
+    }
+  }
+  return partial;
 }
 
 /**

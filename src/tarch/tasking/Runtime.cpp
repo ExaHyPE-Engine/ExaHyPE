@@ -101,17 +101,14 @@ tarch::tasking::Runtime::getInstance() {
 bool
 tarch::tasking::Runtime::init() {
 #ifdef __GLIBC__
-  // The kernel serialises the mprotect calls with which glibc grows the arena of every thread in the
-  // first parallel sweep. A large top padding moves the growth out of that sweep. A sanitizer or a
-  // replaced allocator rejects every mallopt() option.
+  // A large top padding moves the arena growth of glibc and its serialised mprotect calls out of the
+  // first parallel sweep. A sanitizer or a replaced allocator rejects every mallopt() option.
   if (mallopt(M_TOP_PAD, 128 * 1024 * 1024) == 0) {
     logDebug("The allocator rejected the requested top padding.");
   }
 #endif
-  // A team thread that spins at a barrier takes the core that the master thread of another rank on
-  // an oversubscribed node needs. The teams of such a node therefore sleep while they wait. The
-  // OpenMP runtime reads the variable when it starts. This call precedes the first OpenMP call and
-  // keeps a value the user set.
+  // On an oversubscribed node a team thread that spins at a barrier takes the core of another rank.
+  // The teams of such a node sleep while they wait, unless the user has set the variable.
   if (oversubscribesNode() and std::getenv("OMP_WAIT_POLICY") == nullptr) {
     setenv("OMP_WAIT_POLICY", "passive", 0);
 #ifdef KMP_VERSION_MAJOR

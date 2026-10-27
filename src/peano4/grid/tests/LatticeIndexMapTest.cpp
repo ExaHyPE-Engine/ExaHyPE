@@ -6,7 +6,7 @@
 
 namespace {
   /**
-   * Packs a lattice position like Tree::serialiseLatticeKey(), so neighbouring positions differ in
+   * Packs a lattice position like Tree::serialiseLatticeKey(). Neighbouring positions differ in
    * their low bits only.
    */
   std::int64_t getLatticeKey(const int firstAxisPosition, const int secondAxisPosition) {
@@ -21,7 +21,7 @@ peano4::grid::tests::LatticeIndexMapTest::LatticeIndexMapTest() :
 
 void
 peano4::grid::tests::LatticeIndexMapTest::run() {
-  testMethod(testEmptyMapHoldsNothing);
+  testMethod(testAnEmptyMapContainsNoEntry);
   testMethod(testInsertReportsWhetherItStored);
   testMethod(testEveryStoredKeyIsFound);
   testMethod(testClusteredKeysCollide);
@@ -53,7 +53,7 @@ peano4::grid::tests::LatticeIndexMapTest::testBytesCountTheKeyAndValueArrays() {
 }
 
 void
-peano4::grid::tests::LatticeIndexMapTest::testEmptyMapHoldsNothing() {
+peano4::grid::tests::LatticeIndexMapTest::testAnEmptyMapContainsNoEntry() {
   const peano4::grid::LatticeIndexMap map;
   validateEquals(map.getSize(), 0);
   validateEquals(map.find(0), peano4::grid::LatticeIndexMap::NoEntry);
@@ -291,7 +291,7 @@ peano4::grid::tests::LatticeIndexMapTest::testProbeChainsSurviveAnErase() {
 }
 
 /**
- * An erased slot takes an entry again, and the growth that drops the tombstones keeps every key.
+ * An erased slot takes an entry again. The growth that drops the tombstones keeps every key.
  */
 void
 peano4::grid::tests::LatticeIndexMapTest::testErasedSlotsTakeEntriesAgain() {

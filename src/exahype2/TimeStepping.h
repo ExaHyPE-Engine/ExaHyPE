@@ -36,16 +36,11 @@ namespace exahype2 {
  * Time stamp, time step size and bounds of one solver. An adaptive rule takes the time step size
  * that the CFL condition admits for the wave speeds and mesh widths of the last step. A fixed rule
  * takes the size that the solver family computes from the mesh widths.
- * addLocalValuesToGlobalReduction() and readValuesFromGlobalReduction() reduce the mesh widths and
- * wave speeds over the ranks in the reduction of a step.
  */
 class exahype2::TimeStepping final {
 public:
   enum class Rule { Adaptive, Fixed };
 
-  /**
-   * Eigenvalue maximum that the CFL condition of the solver family divides by.
-   */
   enum class Stability { PhysicalEigenvalue, ScaledEigenvalue };
 
   TimeStepping()                               = delete;

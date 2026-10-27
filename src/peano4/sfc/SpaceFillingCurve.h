@@ -44,7 +44,6 @@ public:
   using ChildOrder    = std::array<ChildSequence, NumberOfStates>;
 
   INLINE_METHOD static const ChildSequence& getChildren(int state);
-
   INLINE_METHOD static constexpr ChildOrder deriveChildOrder();
 
 private:

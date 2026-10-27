@@ -73,8 +73,8 @@ applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity(
 }
 
 /**
- * Returns the stiffness rate of the free-surface friction drag of Kim et al.
- * (2019), which bounds the admissible time step of a submerged, moving state.
+ * Returns the stiffness rate of the free-surface friction drag of Kim et al. (2019). The rate
+ * bounds the admissible time step of a submerged, moving state.
  */
 template <class Shortcuts, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -201,8 +201,8 @@ applications::exahype2::exaskred::landslide::getFluxEigenvalue(
 
 /**
  * Returns the larger of the flux eigenvalue and the friction stiffness times the cell size. The
- * Voellmy-Salm drag stiffens as the layer thins, so the flux eigenvalue alone can allow an unstable
- * friction update.
+ * Voellmy-Salm drag stiffens as the layer thins. The flux eigenvalue alone can then allow an
+ * unstable friction update.
  */
 template <class Shortcuts, typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -324,7 +324,7 @@ applications::exahype2::exaskred::landslide::nonconservativeProduct(
 
 /**
  * Writes the Voellmy-Salm friction and, under water, the friction and pressure drag of Kim et al.
- * (2019) as a source. The resistance never exceeds the momentum divided by dt, so one time step
+ * (2019) as a source. The resistance never exceeds the momentum divided by dt. One time step then
  * cannot reverse the momentum.
  */
 template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>

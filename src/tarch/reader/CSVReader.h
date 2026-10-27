@@ -13,7 +13,6 @@ public:
   explicit CSVReader(const std::string& filepath, int skipFirstNLines = 0);
 
   [[nodiscard]] const std::string& getRow(int rowIndex) const;
-
   [[nodiscard]] int getNumberOfRows() const;
 
   template <class T>

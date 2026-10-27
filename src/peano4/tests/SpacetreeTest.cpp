@@ -256,9 +256,6 @@ peano4::tests::SpacetreeTest::testTheSpawnLevelOffersEnoughOwnershipUnits() {
   }
 }
 
-/**
- * The spawn level stays strictly above the cells.
- */
 void
 peano4::tests::SpacetreeTest::testTheSpawnLevelStaysAboveTheCells() {
   for (int targetLevel = 0; targetLevel <= 10; targetLevel++) {
@@ -335,10 +332,10 @@ void
 peano4::tests::SpacetreeTest::testARankWithoutCellsReportsNoLevel() {
   peano4::tests::buildRegularGrid(0);
   const auto& statistics = peano4::Spacetree::getInstance().getStatistics();
-  const bool  holdsCells = not peano4::Spacetree::getInstance().getCellConnectivity().getCells().isEmpty();
+  const bool  ownsCells  = not peano4::Spacetree::getInstance().getCellConnectivity().getCells().isEmpty();
 
   validateEquals(peano4::tests::getGlobalSumOf(statistics.numberOfCells), 1);
-  validateEquals(statistics.minimumLevel, holdsCells ? 0 : std::numeric_limits<int>::max());
+  validateEquals(statistics.minimumLevel, ownsCells ? 0 : std::numeric_limits<int>::max());
   validateEquals(statistics.maximumLevel, 0);
 }
 
@@ -382,9 +379,6 @@ peano4::tests::SpacetreeTest::testTheCellLookupFindsEveryCellAndNothingElse() {
   validateEquals(spacetree.getCellAt(-1, tarch::la::Vector<DIMENSIONS, int>(0)), -1);
 }
 
-/**
- * The spacetree returns the periodic boundaries of its init().
- */
 void
 peano4::tests::SpacetreeTest::testThePeriodicBoundariesReturnTheInitialisedValue() {
   std::bitset<DIMENSIONS> periodic;

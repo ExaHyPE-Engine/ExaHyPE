@@ -5,8 +5,6 @@
 
 namespace tarch::accelerator {
   TARGET_DECLARE
-  constexpr int MaxThreadsPerTeam = 1024;
-
   /**
    * The value of a custom reduction padded to whole eight-byte words. A device reduction over a
    * value of another size reads it at misaligned addresses.
@@ -28,8 +26,8 @@ namespace tarch::accelerator {
   ) {
     using ValueType = typename Reducer::ValueType;
     static_assert(
-      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The scratch memory of a team must hold one reduction value per thread."
+      sizeof(ValueType) * OmptThreadsPerTeam <= TeamScratchBytes,
+      "The scratch memory of a team needs room for one reduction value per thread."
     );
     ValueType* const partials      = reinterpret_cast<ValueType*>(team.scratch);
     partials[omp_get_thread_num()] = threadValue;
@@ -109,8 +107,8 @@ namespace tarch::accelerator {
   ) {
     using ValueType = typename Op::ValueType;
     static_assert(
-      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The scratch memory of a team must hold one reduction value per thread."
+      sizeof(ValueType) * OmptThreadsPerTeam <= TeamScratchBytes,
+      "The scratch memory of a team needs room for one reduction value per thread."
     );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for nowait
@@ -201,8 +199,8 @@ namespace tarch::accelerator {
   ) {
     using ValueType = typename Op::ValueType;
     static_assert(
-      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The scratch memory of a team must hold one reduction value per thread."
+      sizeof(ValueType) * OmptThreadsPerTeam <= TeamScratchBytes,
+      "The scratch memory of a team needs room for one reduction value per thread."
     );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for collapse(2) nowait
@@ -301,8 +299,8 @@ namespace tarch::accelerator {
   ) {
     using ValueType = typename Op::ValueType;
     static_assert(
-      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The scratch memory of a team must hold one reduction value per thread."
+      sizeof(ValueType) * OmptThreadsPerTeam <= TeamScratchBytes,
+      "The scratch memory of a team needs room for one reduction value per thread."
     );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for collapse(3) nowait
@@ -577,17 +575,18 @@ namespace tarch::accelerator {
 #pragma omp parallel num_threads(threads)
     {
       // A static of a class type with default member initialisers needs an initialisation at run
-      // time. teamAccumulatorBytes therefore holds the accumulator of the team as raw storage.
+      // time. teamAccumulatorBytes therefore stores the accumulator of the team as raw bytes.
       alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
+      static int                                         teamVotes[OmptThreadsPerTeam];
       alignas(ValueType) static unsigned char            teamAccumulatorBytes[sizeof(ValueType)];
-#pragma omp allocate(teamScratch, teamAccumulatorBytes) allocator(omp_pteam_mem_alloc)
+#pragma omp allocate(teamScratch, teamVotes, teamAccumulatorBytes) allocator(omp_pteam_mem_alloc)
       ValueType& teamAccumulator = *std::launder(reinterpret_cast<ValueType*>(teamAccumulatorBytes));
       for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
         if (omp_get_thread_num() == 0) {
           teamAccumulator = Reducer::identity();
         }
 #pragma omp barrier
-        functor(team, tarch::accelerator::OmptTeam{teamScratch}, teamAccumulator);
+        functor(team, tarch::accelerator::OmptTeam{teamScratch, teamVotes}, teamAccumulator);
 #pragma omp barrier
         if (omp_get_thread_num() == 0) {
           teamResults[team] = teamAccumulator;

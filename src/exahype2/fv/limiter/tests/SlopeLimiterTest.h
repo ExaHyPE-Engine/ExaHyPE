@@ -11,11 +11,11 @@ namespace exahype2::fv::limiter::tests {
 class exahype2::fv::limiter::tests::SlopeLimiterTest final : public tarch::tests::TestCase {
 public:
   SlopeLimiterTest();
-  SlopeLimiterTest(const SlopeLimiterTest&)            = delete;
-  SlopeLimiterTest(SlopeLimiterTest&&)                 = delete;
-  SlopeLimiterTest& operator=(const SlopeLimiterTest&) = delete;
-  SlopeLimiterTest& operator=(SlopeLimiterTest&&)      = delete;
-  ~SlopeLimiterTest() override                         = default;
+  SlopeLimiterTest(const SlopeLimiterTest& other)            = delete;
+  SlopeLimiterTest(SlopeLimiterTest&& other)                 = delete;
+  SlopeLimiterTest& operator=(const SlopeLimiterTest& other) = delete;
+  SlopeLimiterTest& operator=(SlopeLimiterTest&& other)      = delete;
+  ~SlopeLimiterTest() override                               = default;
 
   void run() override;
 
@@ -28,4 +28,8 @@ private:
   void testMinmodCentral();
   void testTotalVariationBounds();
   void testSinglePrecision();
+  void testMirroredDifferencesReturnNegatedBits();
+
+  template <typename Limiter, typename ComputePrecision>
+  void validateMirroredDifferences();
 };

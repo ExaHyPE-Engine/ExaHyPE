@@ -6,10 +6,9 @@
 
 #include "tarch/accelerator/CompileTarget.h"
 
-// Every declare-target constant that the host pass instantiates needs an instance in the device
-// pass. A static constexpr member of a class template that only host code reads leaves its
-// offloading entry without a device address. Such an entry stops the compilation of the translation
-// unit or the loading of the device image.
+// A static constexpr member of a class template that only host code reads leaves its offloading
+// entry without a device address. Such an entry stops the compilation of the translation unit or
+// the loading of the device image.
 namespace tarch::accelerator {
   TARGET_DECLARE
   // A team launch provides at most TeamScratchBytes of team scratch and asks for at most
@@ -21,11 +20,12 @@ namespace tarch::accelerator {
   constexpr int DefaultThreadsPerTeam = OmptThreadsPerTeam;
 
   /**
-   * Holds the team scratch of the running team. The threads of a team read their indices from the
-   * OpenMP runtime.
+   * Points to the team scratch and one vote per thread of the running team. The threads of a team
+   * read their indices from the OpenMP runtime.
    */
   struct OmptTeam final {
     unsigned char* scratch{nullptr};
+    int*           votes{nullptr};
   };
   using TeamHandle = OmptTeam;
   TARGET_DECLARE_END

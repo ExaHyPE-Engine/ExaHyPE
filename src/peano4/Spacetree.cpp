@@ -18,8 +18,8 @@
 
 namespace {
   /**
-   * Returns whether two refinement plans flag the same cells. The flags of every level are sorted
-   * by lattice key, and a level that only one plan has counts as empty in the other.
+   * Returns whether two refinement plans flag the same cells. Every level lists its flags sorted by
+   * lattice key. A level that only one plan has counts as empty in the other.
    */
   bool refinementPlansMatch(
     const peano4::topology::Tree::RefinementPlan& left,
@@ -79,7 +79,7 @@ namespace {
 
   /**
    * Returns whether the cell is refined in the structure the plan describes. The plan tables
-   * start at the tree's base depth, and every cell above the base depth is refined.
+   * start at the base depth of the tree. Every cell above the base depth is refined.
    */
   bool isRefinedIn(
     const peano4::topology::Tree&             tree,
@@ -382,7 +382,7 @@ peano4::Spacetree::votePersistentDataLive() {
 /**
  * Applies the requests to the grid and returns whether the cell connectivity changed. The first call
  * builds the scheduled base grid. Once the pools store live data, the surviving cells keep their
- * slots and the argument regrid receives the slot moves. A caller applies them before finishRegrid().
+ * slots and regrid receives the slot moves that a caller applies before finishRegrid().
  */
 bool
 peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid& regrid) {
@@ -451,7 +451,7 @@ peano4::Spacetree::finishRegrid() {
 /**
  * Derives the statistics of this rank from the cell connectivity and the tree. Only the rank that
  * owns a refined cell counts it. A rank without cells reports the largest int and double as its
- * minimum level and cell width. A minimum over the ranks skips these values.
+ * minimum level and cell width for the minimum over the ranks.
  */
 void
 peano4::Spacetree::deriveStatistics() {
@@ -523,8 +523,8 @@ peano4::Spacetree::buildCellConnectivity() {
 
 /**
  * Rebuilds the cell connectivity of the changed tree and derives the slot moves. The old lookup
- * tables live until the moves exist. A new cell finds the old slot of its parent or children in
- * them. finishRegrid() releases the freed slots.
+ * tables live until the moves exist and give a new cell the old slot of its parent or children.
+ * finishRegrid() releases the freed slots.
  */
 void
 peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previousTree, Regrid& regrid) {
@@ -809,7 +809,7 @@ peano4::Spacetree::getCellConnectivityBytes() const noexcept {
 
 /**
  * Records every leaf this rank owns in curve order. The walk descends serially until it has enough
- * subtree roots for the threads, then one task per root walks its subtree.
+ * subtree roots for the threads. One task per root then walks its subtree.
  */
 void
 peano4::Spacetree::collectCells(std::vector<CellRecord>& records) const {
@@ -1035,8 +1035,8 @@ peano4::Spacetree::addExchangedFace(const int rank, const int face, const int si
 
 /**
  * Derives every face of the local cells with its kind and registers one level jump per level
- * between a hanging face and its coarse face. A face this rank and a neighbour rank both hold enters
- * the exchange list with the side this rank owns.
+ * between a hanging face and its coarse face. A face that this rank and a neighbour rank both store
+ * enters the exchange list with the side this rank owns.
  */
 void
 peano4::Spacetree::deriveFaces(const std::vector<CellRecord>& records) {
@@ -1150,9 +1150,9 @@ peano4::Spacetree::deriveFaces(const std::vector<CellRecord>& records) {
 }
 
 /**
- * Sorts the lists by adjacency and then by level or kind. Every group a caller loops over is
- * therefore one span. The exchanged faces of a neighbour are sorted by level, normal and lattice position. A fine
- * face of a remote coarse face is remote, and so is a cell with a remote face.
+ * Sorts the lists by adjacency and then by level or kind and the exchanged faces of a neighbour by
+ * level, normal and lattice position. Every group a caller loops over is therefore one span. A fine
+ * face of a remote coarse face and a cell with a remote face are remote.
  */
 void
 peano4::Spacetree::orderLists(const std::vector<CellRecord>& records) {
@@ -1276,8 +1276,8 @@ peano4::Spacetree::orderLists(const std::vector<CellRecord>& records) {
 
 /**
  * Numbers the cells along the space-filling curve over all ranks. Every rank calls this function.
- * The walk records the cells of this rank in curve order, and the ranks own consecutive sections of
- * the curve in rank order. The cells of the lower ranks therefore precede the cells of this rank.
+ * The ranks own consecutive sections of the curve in rank order and the cells of the lower ranks
+ * precede the cells of this rank.
  */
 void
 peano4::Spacetree::numberCellsAlongCurve(const std::vector<CellRecord>& records) {
@@ -1302,8 +1302,8 @@ peano4::Spacetree::numberCellsAlongCurve(const std::vector<CellRecord>& records)
 
 /**
  * Points the cell connectivity to the host arrays. With a GPU backend, it also copies every array a
- * kernel reads to the device and points the device twin to the copies. Only the host reads the range
- * arrays, the neighbours and the curve indices, and they stay in host memory.
+ * kernel reads to the device and points the device twin to the copies. The range arrays, the
+ * neighbours and the curve indices stay in host memory.
  */
 void
 peano4::Spacetree::assembleCellConnectivities() {
@@ -1323,6 +1323,7 @@ peano4::Spacetree::assembleCellConnectivities() {
     cellConnectivity._cellCurveIndex     = _arrays.cellCurveIndex.data();
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       cellConnectivity._domainOffset[axis] = _domainOffset(axis);
+      cellConnectivity._domainCentre[axis] = _domainOffset(axis) + 0.5 * _domainWidth(axis);
     }
     cellConnectivity._deviceTwin = nullptr;
   };

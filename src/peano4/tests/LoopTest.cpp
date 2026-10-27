@@ -127,7 +127,7 @@ peano4::tests::LoopTest::testDDelinearisedExclusiveKeepsFixedDimensionAtZero() {
 
 /**
  * dLinearisedExclusive(counter,max,dim) returns the index that dDelinearisedExclusive maps onto
- * counter, whatever entry dim holds.
+ * counter for every value of dim.
  */
 void
 peano4::tests::LoopTest::testDLinearisedExclusiveInvertsDDelinearisedExclusive() {

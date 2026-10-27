@@ -52,11 +52,42 @@ namespace tarch::accelerator {
   INLINE_METHOD void teamBarrier([[maybe_unused]] const OmptTeam& team) {
 #pragma omp barrier
   }
+
+  /**
+   * Returns whether condition is true in every thread of the team. Every thread receives the same
+   * value.
+   */
+  INLINE_METHOD bool isTrueInEveryThreadOfTeam(const OmptTeam& team, const bool condition) {
+    team.votes[omp_get_thread_num()] = condition ? 1 : 0;
+#pragma omp barrier
+    bool isTrueInEveryThread = true;
+    for (int thread = 0; thread < omp_get_num_threads(); thread++) {
+      isTrueInEveryThread = isTrueInEveryThread and team.votes[thread] != 0;
+    }
+#pragma omp barrier
+    return isTrueInEveryThread;
+  }
+
+  /**
+   * Returns whether condition is true in any thread of the team. Every thread receives the same
+   * value.
+   */
+  INLINE_METHOD bool isTrueInAnyThreadOfTeam(const OmptTeam& team, const bool condition) {
+    team.votes[omp_get_thread_num()] = condition ? 1 : 0;
+#pragma omp barrier
+    bool isTrueInAnyThread = false;
+    for (int thread = 0; thread < omp_get_num_threads(); thread++) {
+      isTrueInAnyThread = isTrueInAnyThread or team.votes[thread] != 0;
+    }
+#pragma omp barrier
+    return isTrueInAnyThread;
+  }
   TARGET_DECLARE_END
 
   /**
-   * Returns the threads per team a launch asks for when it requests requested threads: Whole
-   * warps up to OmptThreadsPerTeam, or OmptThreadsPerTeam for TeamRange::BackendDefault.
+   * Returns the threads per team of a launch that asks for requested threads. The count rounds
+   * requested up to whole warps and stops at OmptThreadsPerTeam. TeamRange::BackendDefault asks
+   * for OmptThreadsPerTeam threads.
    */
   INLINE_METHOD int getTeamThreads(const int requested) {
     if (requested == tarch::accelerator::TeamRange::BackendDefault) {
@@ -68,7 +99,7 @@ namespace tarch::accelerator {
   }
 
   /**
-   * Returns the team scratch bytes of a launch that asks for requested bytes: Every team provides
+   * Returns the team scratch bytes of a launch that asks for requested bytes. Every team provides
    * TeamScratchBytes.
    */
   INLINE_METHOD int getTeamScratchBytes(const int requested) {
@@ -147,9 +178,10 @@ namespace tarch::accelerator {
 #pragma omp parallel num_threads(threads)
     {
       alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
-#pragma omp allocate(teamScratch) allocator(omp_pteam_mem_alloc)
+      static int                                         teamVotes[OmptThreadsPerTeam];
+#pragma omp allocate(teamScratch, teamVotes) allocator(omp_pteam_mem_alloc)
       for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
-        functor(team, tarch::accelerator::OmptTeam{teamScratch});
+        functor(team, tarch::accelerator::OmptTeam{teamScratch, teamVotes});
 #pragma omp barrier
       }
     }

@@ -25,7 +25,7 @@ tarch::instrumentation::CommandLineSink::~CommandLineSink() { close(); }
 
 tarch::instrumentation::CommandLineSink&
 tarch::instrumentation::CommandLineSink::getInstance() {
-  // The sink is never destroyed, so logging works during static destruction.
+  // The sink lives until the process ends. Logging works during static destruction.
   static CommandLineSink& singleton = *new CommandLineSink();
   return singleton;
 }

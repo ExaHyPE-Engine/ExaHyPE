@@ -7,11 +7,10 @@
 
 TARGET_DECLARE
 /**
- * Advances one volume of inputPatch into the NumberOfData values of updatedState and returns the
- * largest wave speed of the update. updatedState lies outside inputPatch, and inputPatch holds
- * the states of the time step until the call returns. volume is the linearised index of the
- * volume with the first axis fastest. Bit f of boundaryFaces is set when face f of the patch lies
- * on the domain boundary. terms is the ring of the reconstruction or a NoTermRing.
+ * Advances one volume of inputPatch into the NumberOfData values of updatedState outside
+ * inputPatch and returns the largest wave speed of the update. volume is the linearised index of
+ * the volume with the first axis fastest and bit f of boundaryFaces marks face f of the patch on
+ * the domain boundary. terms is the ring of the reconstruction or a NoTermRing.
  */
 template <
   typename Reconstruction,

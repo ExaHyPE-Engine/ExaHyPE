@@ -95,7 +95,7 @@ peano4::communication::CommunicationManager::reserveTag() {
 
 /**
  * Pushes one posted transfer onto the lock-free stack of new transfers. Several threads may push at
- * the same time, and the poller takes the whole stack in one exchange.
+ * the same time. The poller takes the whole stack in one exchange.
  */
 void
 peano4::communication::CommunicationManager::registerInFlightTransfer(std::function<bool()> pollTransfer) {

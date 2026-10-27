@@ -3,6 +3,7 @@
 #include "ScratchTest.h"
 
 #include "tarch/accelerator/Buffer.h"
+#include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
@@ -61,6 +62,7 @@ void
 tarch::accelerator::tests::ScratchTest::run() {
   testMethod(testEveryWorkItemNamesAChunkOfTheDispatch);
   testMethod(testTheChunksCoverTheTeamOfTheEnclosingRegion);
+  testMethod(testPersistentTeamsFitTheWorkItemsAndTheDevice);
 }
 
 /**
@@ -96,4 +98,24 @@ tarch::accelerator::tests::ScratchTest::testTheChunksCoverTheTeamOfTheEnclosingR
   tarch::accelerator::Buffer<int> scratch{tarch::MemoryLocation::Device};
   scratch.allocate(static_cast<std::size_t>(chunks) * ChunkSize);
   validateEquals(getNumberOfScratchViolations(WorkItems, chunks, scratch.getData()), 0);
+}
+
+/**
+ * A dispatch runs at least one team, at most one team per work item and on a device at most the
+ * teams that the device keeps resident at once.
+ */
+void
+tarch::accelerator::tests::ScratchTest::testPersistentTeamsFitTheWorkItemsAndTheDevice() {
+  const int teamThreads     = tarch::accelerator::getTeamThreads(tarch::accelerator::TeamRange::BackendDefault);
+  const int concurrentTeams = tarch::accelerator::Device::getInstance().getNumberOfConcurrentThreads() / teamThreads;
+  const int workItems       = 2 * std::max(1, concurrentTeams);
+  const int teams           = tarch::accelerator::getNumberOfPersistentTeams(workItems, teamThreads);
+  validateWithParams2(teams >= 1 and teams <= workItems, teams, workItems);
+  validateEquals(tarch::accelerator::getNumberOfPersistentTeams(0, teamThreads), 1);
+  validateEquals(tarch::accelerator::getNumberOfPersistentTeams(1, teamThreads), 1);
+#if defined(PEANO_WITH_GPU_BACKEND)
+  validateWithParams2(teams <= std::max(1, concurrentTeams), teams, concurrentTeams);
+#else
+  validateEquals(teams, workItems);
+#endif
 }

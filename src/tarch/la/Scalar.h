@@ -12,9 +12,7 @@ namespace tarch::la {
   constexpr double NUMERICAL_ZERO_DIFFERENCE = 1.0e-8;
 
   INLINE_METHOD GPU_CALLABLE_METHOD double max(double a, double b, double c);
-
   INLINE_METHOD GPU_CALLABLE_METHOD double min(double a, double b, double c);
-
   INLINE_METHOD GPU_CALLABLE_METHOD double pow(double base, double exponent);
 } // namespace tarch::la
 TARGET_DECLARE_END

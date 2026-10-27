@@ -2,10 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 #include "tarch/Assertions.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
 
 TARGET_DECLARE
 /**
- * Adds the L1 error, the squared L2 error and the largest error of one cell.
+ * Adds the L1 error, the squared L2 error and the largest error of one cell. The bounds of the sums
+ * cover the errors of every cell of all ranks.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::ErrorSums::add(const double* const errors) {
@@ -25,11 +30,32 @@ exahype2::ErrorSums::merge(const ErrorSums& other) {
   maxError = maxError < other.maxError ? other.maxError : maxError;
 }
 
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::LargestErrors
+exahype2::LargestErrors::identity() {
+  return LargestErrors{};
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::LargestErrors
+exahype2::LargestErrors::combine(const LargestErrors left, const LargestErrors right) {
+  LargestErrors result;
+  result.error        = left.error < right.error ? right.error : left.error;
+  result.squaredError = left.squaredError < right.squaredError ? right.squaredError : left.squaredError;
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::FindLargestErrorsOfCells::operator()(const int cell, LargestErrors& largestErrors) const {
+  constexpr int NumberOfNorms = ErrorSums::NumberOfNorms;
+  const double* errors        = errorsPerCell + static_cast<std::ptrdiff_t>(cell) * NumberOfNorms;
+  largestErrors.error         = largestErrors.error < errors[0] ? errors[0] : largestErrors.error;
+  largestErrors.squaredError  = largestErrors.squaredError < errors[1] ? errors[1] : largestErrors.squaredError;
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::SumErrorsOfCells::operator()(const int partialSum) const {
   assertion(partialSum >= 0 and partialSum < numberOfPartialSums, partialSum, numberOfPartialSums);
   constexpr int NumberOfNorms = ErrorSums::NumberOfNorms;
-  ErrorSums     sums;
+  ErrorSums     sums          = emptySums;
   for (int cell = partialSum; cell < numberOfCells; cell += numberOfPartialSums) {
     sums.add(errorsPerCell + static_cast<std::ptrdiff_t>(cell) * NumberOfNorms);
   }
@@ -70,7 +96,8 @@ template <
   int         NumberOfUnknowns,
   int         NumberOfAuxiliaryVariables,
   std::size_t NumberOfMeasuredUnknowns,
-  typename Precision>
+  typename Precision
+>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::accumulateSolutionError(
   const std::array<int, NumberOfMeasuredUnknowns>& measuredUnknowns,
@@ -98,3 +125,81 @@ exahype2::accumulateSolutionError(
   accumulateError(measuredUnknowns, value, solution, weight, errors);
 }
 TARGET_DECLARE_END
+
+/**
+ * Returns the largest L1 error and the largest squared L2 error of numberOfCells cells in
+ * errorsPerCell.
+ */
+INLINE_METHOD exahype2::LargestErrors
+exahype2::ErrorMeasurement::getLargestErrorsOfCells(const double* const errorsPerCell, const int numberOfCells) {
+  assertion(numberOfCells >= 0, numberOfCells);
+  assertion(errorsPerCell != nullptr or numberOfCells == 0);
+  LargestErrors largestErrors;
+  if (numberOfCells > 0) {
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(numberOfCells),
+      FindLargestErrorsOfCells{errorsPerCell},
+      tarch::accelerator::Custom<LargestErrors>{largestErrors}
+    );
+  }
+  return largestErrors;
+}
+
+/**
+ * Returns the error sums of numberOfCells cells in errorsPerCell on the grid of emptySums. The
+ * partial sums merge pairwise on the device. Only the total reaches the host.
+ */
+INLINE_METHOD exahype2::ErrorSums
+exahype2::ErrorMeasurement::sumErrorsOfCells(
+  const double* const                    errorsPerCell,
+  const int                              numberOfCells,
+  const ErrorSums&                       emptySums,
+  tarch::accelerator::Buffer<ErrorSums>& partialSums
+) {
+  assertion(numberOfCells >= 0, numberOfCells);
+  assertion(errorsPerCell != nullptr or numberOfCells == 0);
+  constexpr int MaximumNumberOfPartialSums = 1024;
+  const int     numberOfPartialSums        = std::clamp(numberOfCells, 1, MaximumNumberOfPartialSums);
+  if (partialSums.getSize() < static_cast<std::size_t>(numberOfPartialSums)) {
+    partialSums.allocate(static_cast<std::size_t>(numberOfPartialSums));
+  }
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(numberOfPartialSums),
+    SumErrorsOfCells{errorsPerCell, numberOfCells, numberOfPartialSums, emptySums, partialSums.getData()}
+  );
+  for (int stride = 1; stride < numberOfPartialSums; stride *= 2) {
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(numberOfPartialSums),
+      MergeErrorSums{partialSums.getData(), stride, numberOfPartialSums}
+    );
+  }
+  ErrorSums result;
+  partialSums.copyToHost(&result, 1);
+  return result;
+}
+
+/**
+ * Records the norms of the first numberOfCells cells in getErrorsPerCell(). Every rank calls this
+ * function collectively. The device loops compile in the translation unit of the caller.
+ */
+INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
+exahype2::ErrorMeasurement::record(const int numberOfCells, const double timeStamp) {
+  assertion(
+    _errorsPerCell.getSize() >= static_cast<std::size_t>(numberOfCells) * NumberOfNorms,
+    _errorsPerCell.getSize(),
+    numberOfCells
+  );
+  const ErrorSums emptySums = getEmptySumsOfAllRanks(getLargestErrorsOfCells(_errorsPerCell.getData(), numberOfCells));
+  return record(sumErrorsOfCells(_errorsPerCell.getData(), numberOfCells, emptySums, _partialSums), timeStamp);
+}
+
+/**
+ * Records the norms of the NumberOfNorms errors per cell in errorsPerCell. Every rank calls this
+ * function collectively.
+ */
+INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
+exahype2::ErrorMeasurement::record(const std::vector<double>& errorsPerCell, const double timeStamp) {
+  assertion(errorsPerCell.size() % NumberOfNorms == 0, errorsPerCell.size());
+  _errorsPerCell.setValues(errorsPerCell);
+  return record(static_cast<int>(errorsPerCell.size() / NumberOfNorms), timeStamp);
+}

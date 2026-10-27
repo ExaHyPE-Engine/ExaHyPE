@@ -149,8 +149,8 @@ peano4::sfc::SpaceFillingCurve<CurveGrammar>::getPositions(const int state) {
 
 /**
  * Returns for every state the limit point of the curve within the given child, in cell widths.
- * Child 0 yields the entry points and the last child the exit points. The points are the fixed point
- * of a contraction, which the loop reaches by iteration.
+ * Child 0 yields the entry points and the last child the exit points. The loop iterates to the
+ * fixed point of a contraction.
  */
 template <class CurveGrammar>
 INLINE_METHOD constexpr std::array<

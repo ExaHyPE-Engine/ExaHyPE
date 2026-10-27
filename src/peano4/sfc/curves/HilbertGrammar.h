@@ -34,7 +34,6 @@ struct peano4::sfc::HilbertGrammar final : peano4::sfc::Grammar {
     production(C, B, Down, C, Left, C, Up, A)
   };
 #elif DIMENSIONS == 3
-  // An uppercase letter is a negated axis, a barred letter in the book.
   enum NonTerminal : std::uint8_t {
     xyz,
     xYZ,

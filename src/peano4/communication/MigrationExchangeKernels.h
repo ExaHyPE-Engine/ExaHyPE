@@ -13,6 +13,15 @@ namespace peano4 {
 } // namespace peano4
 
 namespace peano4::communication {
+  template <typename Transfer>
+  struct PrepareProlongations;
+
+  template <typename Transfer>
+  struct PrepareRestrictions;
+
+  template <typename Transfer>
+  struct PrepareSentCells;
+
   template <typename T, typename Transfer>
   struct ProlongChunks;
 
@@ -28,31 +37,84 @@ namespace peano4::communication {
 
 TARGET_DECLARE
 /**
- * Fills the chunk of one child from the chunk of its parent.
+ * Writes the values that the transfer prepares from the parents of the prolongations. Work item w
+ * writes the item w % Transfer::PreparationItemsPerChunk of the prolongation
+ * e = w / Transfer::PreparationItemsPerChunk at prepared + e * Transfer::PreparedValuesPerChunk.
+ */
+template <typename Transfer>
+struct peano4::communication::PrepareProlongations final {
+  const peano4::Prolongation* prolongations{nullptr};
+  Transfer                    transfer{};
+  double*                     prepared{nullptr};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int workItem) const;
+};
+
+/**
+ * Writes the values that the transfer prepares from the children of the restrictions. Work item w
+ * writes the item w % Transfer::PreparationItemsPerChunk of the restriction
+ * e = w / Transfer::PreparationItemsPerChunk at prepared + e * Transfer::PreparedValuesPerChunk.
+ */
+template <typename Transfer>
+struct peano4::communication::PrepareRestrictions final {
+  const peano4::Restriction* restrictions{nullptr};
+  Transfer                   transfer{};
+  double*                    prepared{nullptr};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int workItem) const;
+};
+
+/**
+ * Writes the values that the transfer prepares from the parent or the children of the sent cells.
+ * Work item w writes the item w % Transfer::PreparationItemsPerChunk of the sent cell
+ * e = w / Transfer::PreparationItemsPerChunk at prepared + e * Transfer::PreparedValuesPerChunk.
+ * Only the work items of sent cells write values.
+ */
+template <typename Transfer>
+struct peano4::communication::PrepareSentCells final {
+  const peano4::TransferredCell* cells{nullptr};
+  Transfer                       transfer{};
+  double*                        prepared{nullptr};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int workItem) const;
+};
+
+/**
+ * Fills the chunks of the children from the chunks of their parents. Work item w fills the item
+ * w % Transfer::WorkItemsPerChunk of the child of the prolongation
+ * e = w / Transfer::WorkItemsPerChunk. The transfer reads the prepared values of e at
+ * prepared + e * Transfer::PreparedValuesPerChunk.
  */
 template <typename T, typename Transfer>
 struct peano4::communication::ProlongChunks final {
   const peano4::Prolongation*                             prolongations{nullptr};
   typename tarch::accelerator::ChunkedMemoryPool<T>::View pool{};
   Transfer                                                transfer{};
+  const double*                                           prepared{nullptr};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int workItem) const;
 };
 
 /**
- * Fills the chunk of one parent from the chunks of its children.
+ * Fills the chunks of the parents from the chunks of their children. Work item w fills the item
+ * w % Transfer::WorkItemsPerChunk of the parent of the restriction
+ * e = w / Transfer::WorkItemsPerChunk. The transfer reads the prepared values of e at
+ * prepared + e * Transfer::PreparedValuesPerChunk.
  */
 template <typename T, typename Transfer>
 struct peano4::communication::RestrictChunks final {
   const peano4::Restriction*                              restrictions{nullptr};
   typename tarch::accelerator::ChunkedMemoryPool<T>::View pool{};
   Transfer                                                transfer{};
+  const double*                                           prepared{nullptr};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int workItem) const;
 };
 
 /**
- * Writes the chunk of one sent cell into the send buffer.
+ * Writes the chunks of the sent cells into the send buffer. Work item w writes the item
+ * w % Transfer::WorkItemsPerChunk of the sent cell e = w / Transfer::WorkItemsPerChunk. The
+ * transfer reads the prepared values of e at prepared + e * Transfer::PreparedValuesPerChunk.
  */
 template <typename T, typename Transfer>
 struct peano4::communication::GatherChunks final {
@@ -60,8 +122,9 @@ struct peano4::communication::GatherChunks final {
   T*                             send{nullptr};
   Transfer                       transfer{};
   int                            chunkSize{0};
+  const double*                  prepared{nullptr};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int workItem) const;
 };
 
 /**

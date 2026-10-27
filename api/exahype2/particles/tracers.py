@@ -163,8 +163,8 @@ class Tracers:
     ):
         """Appends a snapshot of a particle to a CSV file after a trace once the particle moved
         further than the position delta or the time delta passed since its last snapshot. The
-        database records only between ``initial_record_time`` and ``last_record_time``, both
-        included."""
+        last time stamp of a run always gets a snapshot. The database records only between
+        ``initial_record_time`` and ``last_record_time``, both included."""
         self._database = {
             "FILENAME": str(filename),
             "POSITION_DELTA": repr(float(position_delta_between_two_snapshots)),

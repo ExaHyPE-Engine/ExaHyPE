@@ -24,7 +24,6 @@ public:
   ~NetCDFFileWriter() override                               = default;
 
   void write(const Mesh& mesh, const std::string& outputDirectory, const std::string& filename, double time) override;
-
   [[nodiscard]] Format getFormat() const override;
 
 private:

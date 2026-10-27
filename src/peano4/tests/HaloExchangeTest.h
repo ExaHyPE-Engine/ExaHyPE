@@ -15,17 +15,17 @@ namespace peano4::tests {
 class peano4::tests::HaloExchangeTest final : public tarch::tests::TestCase {
 public:
   HaloExchangeTest();
-  HaloExchangeTest(const HaloExchangeTest&)            = delete;
-  HaloExchangeTest(HaloExchangeTest&&)                 = delete;
-  HaloExchangeTest& operator=(const HaloExchangeTest&) = delete;
-  HaloExchangeTest& operator=(HaloExchangeTest&&)      = delete;
-  ~HaloExchangeTest() override                         = default;
+  HaloExchangeTest(const HaloExchangeTest& other)            = delete;
+  HaloExchangeTest(HaloExchangeTest&& other)                 = delete;
+  HaloExchangeTest& operator=(const HaloExchangeTest& other) = delete;
+  HaloExchangeTest& operator=(HaloExchangeTest&& other)      = delete;
+  ~HaloExchangeTest() override                               = default;
 
   void run() override;
 
 private:
   void testExchangeFillsTheRemoteHalves();
   void testCoarseExchangeFillsTheRemoteHalvesOfCoarseFacesOnly();
-  void testExchangesHoldDistinctTags();
+  void testTwoExchangesOfOnePoolGetDistinctTags();
   void testReleaseFreesTheBuffersAndKeepsTheTag();
 };

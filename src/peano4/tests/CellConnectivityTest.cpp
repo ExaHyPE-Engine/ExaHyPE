@@ -8,6 +8,7 @@
 #include "peano4/Spacetree.h"
 #include "peano4/tests/TestGrids.h"
 #include "peano4/topology/Tree.h"
+#include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/Buffer.h"
 #include "tarch/accelerator/MemoryLocation.h"
@@ -131,8 +132,10 @@ peano4::tests::CellConnectivityTest::CellConnectivityTest() :
 void
 peano4::tests::CellConnectivityTest::run() {
   testMethod(testTheRegularGridLinksEveryFaceToItsCells);
+  testMethod(testTheCentresOfMirrorCellsAndFacesAreNegated);
   testMethod(testEveryFaceOfThePeriodicGridIsInterior);
   testMethod(testTheRefinedBlockBuildsOneLevelJumpPerCoarseFace);
+  testMethod(testTheCellCentreBesideEveryFaceMatchesItsCellBitwise);
   testMethod(testTheListsGroupByAdjacencyLevelAndKind);
   testMethod(testARegridKeepsTheSlotsOfSurvivingCellsAndReusesFreedOnes);
   testMethod(testTheExchangedFacesMatchAcrossRanks);
@@ -234,6 +237,45 @@ peano4::tests::CellConnectivityTest::testTheRegularGridLinksEveryFaceToItsCells(
         cell,
         faceNumber
       );
+    }
+  }
+}
+
+/**
+ * On a domain centred at the origin, the centres of two cells that mirror along an axis are exact
+ * negatives along that axis, and so are the centres of their two mirror faces.
+ */
+void
+peano4::tests::CellConnectivityTest::testTheCentresOfMirrorCellsAndFacesAreNegated() {
+  auto& spacetree = peano4::Spacetree::getInstance();
+  spacetree.shutdown();
+  spacetree.init(tarch::la::Vector<DIMENSIONS, double>(-1.0), tarch::la::Vector<DIMENSIONS, double>(2.0));
+  spacetree.scheduleRegularGridConstruction(Depth);
+  peano4::Regrid regrid;
+  validateTrue(spacetree.regrid({}, regrid));
+  const auto& cellConnectivity = spacetree.getCellConnectivity();
+  const int   cellsPerAxis     = peano4::topology::getCellsPerAxis(Depth);
+
+  // A mirror cell can lie on another rank. The maximum over the ranks gathers the centres of all
+  // cells and faces of one axis.
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    std::vector<double> centresOfCells(cellsPerAxis, std::numeric_limits<double>::lowest());
+    std::vector<double> centresOfFaces(cellsPerAxis + 1, std::numeric_limits<double>::lowest());
+    for (const int cell : cellConnectivity.getCells()) {
+      const int index = cellConnectivity.getCellLattice(cell)(axis);
+      assertion(index >= 0 and index < cellsPerAxis, index, cellsPerAxis);
+      centresOfCells[index] = cellConnectivity.getCellCentre(cell, axis);
+      centresOfFaces[index] = cellConnectivity.getFaceCentre(cellConnectivity.getCellFace(cell, axis), axis);
+      centresOfFaces[index + 1] =
+        cellConnectivity.getFaceCentre(cellConnectivity.getCellFace(cell, axis + DIMENSIONS), axis);
+    }
+    centresOfCells = peano4::tests::getGlobalMaximaOf(centresOfCells);
+    centresOfFaces = peano4::tests::getGlobalMaximaOf(centresOfFaces);
+    for (int index = 0; index < cellsPerAxis; index++) {
+      validateEqualsWithParams2(centresOfCells[index], -centresOfCells[cellsPerAxis - 1 - index], axis, index);
+    }
+    for (int index = 0; index <= cellsPerAxis; index++) {
+      validateEqualsWithParams2(centresOfFaces[index], -centresOfFaces[cellsPerAxis - index], axis, index);
     }
   }
 }
@@ -352,7 +394,30 @@ peano4::tests::CellConnectivityTest::testTheRefinedBlockBuildsOneLevelJumpPerCoa
 }
 
 /**
- * Every span contains only entries of its adjacency and its level or kind, and the spans together
+ * On a grid with level jumps, the cell centre beside a face returns the bits of getCellCentre() of
+ * the cell on that side.
+ */
+void
+peano4::tests::CellConnectivityTest::testTheCellCentreBesideEveryFaceMatchesItsCellBitwise() {
+  peano4::tests::buildRegularGrid(Depth);
+  peano4::tests::refineGrid({peano4::tests::getRefinementOfCentreCell(Depth)});
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+
+  for (int face = 0; face < cellConnectivity.getNumberOfFaces(); face++) {
+    for (int side = 0; side < 2; side++) {
+      const int cell = cellConnectivity.getFaceCell(face, side);
+      if (cell >= 0) {
+        const tarch::la::Vector<DIMENSIONS, double> centre = cellConnectivity.getCellCentreBesideFace(face, side);
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          validateEqualsWithParams3(centre(axis), cellConnectivity.getCellCentre(cell, axis), face, side, axis);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Every span contains only entries of its adjacency and its level or kind. The spans together
  * cover every list.
  */
 void
@@ -406,7 +471,7 @@ peano4::tests::CellConnectivityTest::testTheListsGroupByAdjacencyLevelAndKind() 
     }
   }
   validateEquals(cellsInLevelSpans, cellConnectivity.getCells().size);
-  // An exchanged face is a coarse face or holds a cell on its own side.
+  // An exchanged face is a coarse face or touches a cell on its own side.
   for (const auto& neighbour : cellConnectivity.getNeighbours()) {
     for (const auto& entry : cellConnectivity.getExchangedFaces(neighbour)) {
       const bool ownSideFilled = cellConnectivity.getFaceCell(entry.face, entry.side) >= 0
@@ -604,8 +669,8 @@ peano4::tests::CellConnectivityTest::testTheExchangedFacesMatchAcrossRanks() {
 
 /**
  * The curve indices number the cells of all ranks once each, those of a rank consecutively behind
- * those of the lower ranks, and two cells with consecutive indices touch along a face. This holds on
- * the regular grid, on the refined grid and after a regrid that keeps the slots of live data.
+ * those of the lower ranks. Two cells with consecutive indices touch along a face, on the regular
+ * grid, on the refined grid and after a regrid that keeps the slots of live data.
  */
 void
 peano4::tests::CellConnectivityTest::testTheCurveIndicesNumberTheCellsAlongTheCurve() {

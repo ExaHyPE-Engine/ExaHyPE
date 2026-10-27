@@ -14,8 +14,8 @@
 /**
  * Writes one snapshot of the cells with one plot cell per finite volume and the interior
  * volume corners of the patches before the corners on the patch faces. Every rank calls this at
- * the same time. The chunk of a slot in values holds the volumes of its patch in linearised order
- * with ValuesPerVolume values each. With volumeStatuses, the cell field statusName holds the
+ * the same time. The chunk of a slot in values stores the volumes of its patch in linearised order
+ * with ValuesPerVolume values each. With volumeStatuses, the cell field statusName stores the
  * status of each volume from its chunk.
  */
 template <int VolumesPerAxis, int ValuesPerVolume, typename Precision>
@@ -119,7 +119,7 @@ exahype2::plotter::PatchPlotter::plotVolumes(
 
 /**
  * Writes a snapshot of the nodal values. Each chunk in values stores ValuesPerNode values per node.
- * The array nodePositions holds the NodesPerAxis node coordinates within the unit interval.
+ * The array nodePositions stores the NodesPerAxis node coordinates within the unit interval.
  */
 template <int NodesPerAxis, int ValuesPerNode, typename Precision>
 INLINE_METHOD void
@@ -150,7 +150,8 @@ exahype2::plotter::PatchPlotter::plotNodes(
 /**
  * Writes nodal values at their node positions or repeats a single node at the patch corners.
  * A patch with status at least subcellStatus reads each node from its containing subcell. The
- * cell field statusName holds the statuses. A null statuses omits the status field.
+ * cell field statusName stores the statuses. The function writes the status field only if
+ * statuses is non-null.
  */
 template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
 INLINE_METHOD void
@@ -478,7 +479,7 @@ exahype2::plotter::PatchPlotter::numberFaceCorners(
     }
   );
 
-  // A slot holds the smallest face corner of one lattice key.
+  // A slot stores the smallest face corner of one lattice key.
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
     for (int faceIndex = 0; faceIndex < FaceCornersPerPatch; faceIndex++) {
       const std::int32_t faceCorner = patch * FaceCornersPerPatch + faceIndex;
@@ -577,7 +578,7 @@ exahype2::plotter::PatchPlotter::connectPatch(
 
 /**
  * Copies the data fields of one state with valuesPerState values into entity of fields. The vector
- * fields holds the data fields first and in their order.
+ * fields lists the data fields first and in their order.
  */
 template <typename Precision>
 INLINE_METHOD void

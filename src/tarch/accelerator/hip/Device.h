@@ -12,7 +12,7 @@ namespace tarch::accelerator {
   void setDeviceStream(hipStream_t stream);
   hipStream_t getDeviceStream();
 
-  // The team overloads read threadIdx and blockDim; the scratch is the shared memory of the block.
+  // The team overloads read threadIdx and blockDim. The scratch is the shared memory of the block.
   struct HipTeam final {
     unsigned char* scratch{nullptr};
   };

@@ -44,6 +44,9 @@
 // intrinsics. LLVM cannot vectorise a constrained intrinsic.
 #if defined(PEANO_WITH_FPE)
 #define SIMD(...)
+// #elif defined(__clang__) and not defined(PEANO_WITH_GPU_BACKEND)
+// TODO: Is faster sometimes but Clang warns.
+// #define SIMD(...) _PRAGMA(omp simd __VA_ARGS__ simdlen(PEANO_WITH_SIMDLEN)) _PRAGMA(unroll 1)
 #else
 #define SIMD(...) _PRAGMA(omp simd __VA_ARGS__ simdlen(PEANO_WITH_SIMDLEN))
 #endif

@@ -88,6 +88,7 @@ public:
     tarch::plotter::Format          format,
     const std::string&              outputDirectory
   );
+  INLINE_METHOD void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void release();
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);

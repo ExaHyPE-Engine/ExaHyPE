@@ -7,8 +7,9 @@
 namespace exahype2::terms {
   /**
    * solveRiemannProblem() writes the fluxes of both sides of a face into FL and FR and returns the
-   * largest wave speed. A finite-volume solver passes one point of the face, a DG solver every face
-   * node. On a domain boundary faceIndex is the face number of the inner cell, elsewhere it equals normal.
+   * largest wave speed. A finite-volume solver passes one point of the face and a DG solver passes
+   * every face node. faceIndex is the face number of the inner cell on a domain boundary and equals
+   * normal elsewhere.
    */
   template <typename SolverType, typename Precision>
   concept HasRiemannSolver = requires(

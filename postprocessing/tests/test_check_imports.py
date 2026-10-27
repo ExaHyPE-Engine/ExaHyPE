@@ -18,7 +18,7 @@ from postprocessing.tests.repository_fixture import TemporaryRepository
 
 
 class StaleImportTest(unittest.TestCase):
-    def test_attribute_chains_hold_the_full_dotted_names(self):
+    def test_attribute_chains_contain_the_full_dotted_names(self):
         tree = ast.parse("import os.path\nos.path.join('a', 'b')\nvalue = name\n")
         self.assertEqual(attribute_chains(tree), {"os.path.join", "value", "name"})
 
@@ -50,7 +50,7 @@ class PackageTest(unittest.TestCase):
         self.repository.write(
             "api/solver/family/__init__.py", "from ..terms import VALUE\n"
         )
-        # A script in a plain subdirectory writes a file when it runs, so an import would show.
+        # A script in a plain subdirectory writes a file when it runs. The file shows an import.
         marker = os.path.join(self.repository.root, "script-ran")
         self.repository.write(
             "api/solver/tests/generate.py", f"open({marker!r}, 'w').close()\n"

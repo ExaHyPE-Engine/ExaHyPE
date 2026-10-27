@@ -25,7 +25,7 @@ peano4::communication::tests::CommunicationManagerTest::run() {
 }
 
 /**
- * Consecutive reservations return rising tags, and every rank derives the same sequence.
+ * Consecutive reservations return rising tags. Every rank derives the same sequence.
  */
 void
 peano4::communication::tests::CommunicationManagerTest::testTagsAreDistinctAndEveryRankAgrees() {

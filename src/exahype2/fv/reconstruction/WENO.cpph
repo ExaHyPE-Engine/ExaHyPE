@@ -526,7 +526,7 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPatch(
       }
     }
   }
-  exahype2::dg::ader::synchronise(workers);
+  exahype2::dg::ader::teamBarrier(workers);
 
   bool cornerIsAvailable[peano4::VerticesPerCell];
   for (int corner = 0; corner < peano4::VerticesPerCell; corner++) {
@@ -536,7 +536,7 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructPatch(
     const ComputePrecision* const input  = buffers[sweptAxis];
     ComputePrecision* const       output = sweptAxis == DIMENSIONS - 1 ? nodalStates : buffers[sweptAxis + 1];
     sweepPatch<NumberOfVolumesPerAxis, NumberOfData, WeightSource>(sweptAxis, input, output, workers, cornerIsAvailable);
-    exahype2::dg::ader::synchronise(workers);
+    exahype2::dg::ader::teamBarrier(workers);
   }
 }
 TARGET_DECLARE_END

@@ -3,6 +3,7 @@
 #include "TrajectoryDatabaseTest.h"
 
 #include "exahype2/particles/TrajectoryDatabase.h"
+#include "tarch/database/SnapshotDatabase.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
@@ -60,6 +61,7 @@ exahype2::particles::tests::TrajectoryDatabaseTest::run() {
   testMethod(testAppendsChronologicallyWithoutDuplication);
   testMethod(testClearRewritesFileFromScratch);
   testMethod(testASnapshotIsDueForANewParticleAfterTheDeltasAndOnAMove);
+  testMethod(testEveryLaterTimestampIsDueForAParticleAtRest);
 }
 
 void
@@ -153,6 +155,33 @@ exahype2::particles::tests::TrajectoryDatabaseTest::testASnapshotIsDueForANewPar
 
     database.addParticleSnapshot(particle, 0.5, position);
     database.addParticleSnapshot(particle, 1.0, position);
+    validateEqualsWithParams1(static_cast<int>(readNonEmptyLines(fileName).size()), 3, fileName);
+  }
+  std::filesystem::remove(fileName);
+}
+
+/**
+ * Under SnapshotRule::EveryLaterTimestamp a particle at rest gets a snapshot at every later time stamp.
+ */
+void
+exahype2::particles::tests::TrajectoryDatabaseTest::testEveryLaterTimestampIsDueForAParticleAtRest() {
+  const std::string         baseName = getTestFileBaseName("TrajectoryDatabaseTest_later");
+  const std::string         fileName = getOutputFileName(baseName);
+  const std::pair<int, int> particle(3, 0);
+  std::filesystem::remove(fileName);
+  {
+    exahype2::particles::TrajectoryDatabase database(1e-8, 1.0);
+    database.setOutputFileName(baseName);
+    const tarch::la::Vector<DIMENSIONS, double> position(0.5);
+
+    database.addParticleSnapshot(particle, 0.0, position);
+    validate(not database.isSnapshotDue(particle, position, 0.5));
+
+    database.setSnapshotRule(tarch::database::SnapshotRule::EveryLaterTimestamp);
+    validate(database.isSnapshotDue(particle, position, 0.5));
+    validate(not database.isSnapshotDue(particle, position, 0.0));
+    database.addParticleSnapshot(particle, 0.5, position);
+    validate(not database.isSnapshotDue(particle, position, 0.5));
     validateEqualsWithParams1(static_cast<int>(readNonEmptyLines(fileName).size()), 3, fileName);
   }
   std::filesystem::remove(fileName);

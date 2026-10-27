@@ -11,11 +11,8 @@ namespace tarch::reader {
 class tarch::reader::NetCDFFileReader final {
 public:
   int open(const std::string& filename);
-
   int close(int ncid);
-
   std::size_t getDimension(int ncid, const char* key);
-
   int readVariable(int ncid, const char* key, double* values);
 };
 

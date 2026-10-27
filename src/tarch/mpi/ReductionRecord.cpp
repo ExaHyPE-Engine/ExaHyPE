@@ -10,7 +10,7 @@ namespace {
   constexpr std::uint64_t SignBit = std::uint64_t{1} << 63;
 
   /**
-   * Number of leading entries of a packed record. They hold the sizes of the three segments.
+   * Number of leading entries of a packed record. They store the sizes of the three segments.
    */
   constexpr int HeaderSize = 3;
 
@@ -28,7 +28,7 @@ namespace {
 
   /**
    * Sums, minimises and maximises the three segments of one packed record. The header of the record
-   * holds the segment sizes. The parameter types follow MPI_User_function.
+   * stores the segment sizes. The parameter types follow MPI_User_function.
    */
   void reducePackedRecords(
     void*                          incoming,
@@ -132,8 +132,8 @@ tarch::mpi::ReductionRecord::allreduce(MPI_Comm communicator) {
   packed.insert(packed.end(), _maxima.begin(), _maxima.end());
   assertion(packed.size() <= static_cast<std::size_t>(std::numeric_limits<int>::max()), packed.size());
 
-  // One element of the record type spans the whole record. A pipelined reduction never splits an
-  // element. The operation sees the header in every call.
+  // One element of the record type spans the whole record. The operation then sees the header in
+  // every call of a pipelined reduction.
   MPI_Datatype recordType = MPI_DATATYPE_NULL;
   MPI_Op       operation  = MPI_OP_NULL;
   tarch::mpi::createContiguousType(static_cast<int>(packed.size()), MPI_UINT64_T, &recordType);

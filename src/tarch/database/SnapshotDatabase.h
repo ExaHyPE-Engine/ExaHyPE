@@ -3,8 +3,11 @@
 #pragma once
 
 namespace tarch::database {
+  enum class SnapshotRule;
   class SnapshotDatabase;
 } // namespace tarch::database
+
+enum class tarch::database::SnapshotRule { Deltas, EveryLaterTimestamp };
 
 class tarch::database::SnapshotDatabase {
 public:
@@ -20,11 +23,13 @@ public:
   void setOutputFileName(const std::string& filename);
   void setOutputPrecision(int precision);
   void setTimeDeltaBetweenTwoSnapshots(double value);
+  void setSnapshotRule(tarch::database::SnapshotRule rule);
 
 protected:
   std::string _fileName{};
 
-  double _timeDelta{0.0};
+  double                        _timeDelta{0.0};
+  tarch::database::SnapshotRule _snapshotRule{tarch::database::SnapshotRule::Deltas};
 
   int  _precision{0};
   bool _csvHeaderWritten{false};

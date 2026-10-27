@@ -70,6 +70,9 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The drag force tracer test runs in 2D only.")
+
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
@@ -132,7 +135,9 @@ fv_solver = exahype2.fv.singlestep.Solver(
     patch_size=args.degrees_of_freedom,
     unknowns=3,
     auxiliary_variables=0,
-    time_stepping=exahype2.TimeStepping.Fixed(0.001 / (args.degrees_of_freedom**0.5)),
+    # The time step stays below the drag relaxation time of the lightest
+    # particle on grid level 1 with the default patch size.
+    time_stepping=exahype2.TimeStepping.Adaptive(0.1),
     scheme=exahype2.fv.Godunov(),
 )
 

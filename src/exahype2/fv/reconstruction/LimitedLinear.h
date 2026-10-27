@@ -18,18 +18,14 @@ namespace exahype2::fv::reconstruction {
 TARGET_DECLARE
 /**
  * MUSCL-Hancock reconstruction with the slope limiter Limiter. The half-step predictor reads
- * neighbours along one axis only. The faces store no diagonal halo volumes. Both volumes at a face
- * pass the same face centre to the solver: The centre of the lower volume plus half a volume width
- * along the normal.
+ * neighbours along one axis only and the faces store no diagonal halo volumes. Both volumes at a
+ * face pass the centre of the lower volume plus half a volume width along the normal to the solver
+ * as the face centre.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 struct exahype2::fv::reconstruction::LimitedLinear final {
   static constexpr int HaloSize = 2;
 
-  /**
-   * The terms of one face: The Rusanov flux and the non-conservative product over the face
-   * jump, or both fluxes and the wave speed of the Riemann solver of the solver class.
-   */
   template <
     int  NumberOfUnknowns,
     bool EvaluateNonconservativeProduct,
@@ -45,11 +41,6 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     ComputePrecision maxWaveSpeed{0};
   };
 
-  /**
-   * The evolved face states of one state along every axis and the terms of the face above the
-   * state along every axis. The update of a volume reads the evolved states of the volume and of
-   * its two neighbours along every axis and the terms of its two faces.
-   */
   template <
     typename SolverType,
     int  NumberOfVolumesPerAxis,
@@ -83,10 +74,6 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     );
   };
 
-  /**
-   * The ring of StateTerms a sweep over a patch fills. A neighbour along the last axis lies one
-   * layer of volumes away, so the ring covers one layer before and behind the current volume.
-   */
   template <
     typename SolverType,
     int  NumberOfVolumesPerAxis,
@@ -116,6 +103,22 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     >,
     peano4::power(NumberOfVolumesPerAxis, DIMENSIONS - 1)
   >;
+
+  template <
+    typename SolverType,
+    int  NumberOfVolumesPerAxis,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateDiffusiveSource,
+    bool EvaluateCustomRiemann,
+    bool EvaluateMaxEigenvalue,
+    typename StoragePrecision,
+    typename ComputePrecision
+  >
+  using TeamTerms = exahype2::fv::NoTermRing;
 
   template <
     typename SolverType,

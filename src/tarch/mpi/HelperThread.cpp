@@ -5,6 +5,7 @@
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/instrumentation/Warning.h"
+#include "tarch/mpi/Rank.h"
 
 #include <omp.h>
 
@@ -61,6 +62,30 @@ namespace {
     }
 #endif
   }
+
+  /**
+   * Ends the rank when exit() runs on the thread of this object. A call of exit() destroys the
+   * thread-local objects of its thread before every static object. The other threads of the rank
+   * still read the static objects at that time.
+   */
+  class RankEndAtExit final {
+  public:
+    RankEndAtExit()                                = default;
+    RankEndAtExit(const RankEndAtExit&)            = delete;
+    RankEndAtExit(RankEndAtExit&&)                 = delete;
+    RankEndAtExit& operator=(const RankEndAtExit&) = delete;
+    RankEndAtExit& operator=(RankEndAtExit&&)      = delete;
+    ~RankEndAtExit() {
+      if (not _loopHasEnded) {
+        tarch::mpi::endRankWithErrorCodeOfAbort();
+      }
+    }
+
+    void setLoopHasEnded() { _loopHasEnded = true; }
+
+  private:
+    bool _loopHasEnded{false};
+  };
 } // namespace
 
 tarch::mpi::HelperThread::HelperThread(std::function<bool()> pollFunction) :
@@ -70,8 +95,8 @@ tarch::mpi::HelperThread::~HelperThread() { stop(); }
 
 /**
  * Starts the thread on the logical processors that the OpenMP team leaves free. The thread calls
- * the polling function until the function returns true or stop() runs. The loop never pauses
- * between two calls. A back-off belongs to the polling function.
+ * the polling function until the function returns true or stop() runs. A back-off belongs to the
+ * polling function.
  */
 void
 tarch::mpi::HelperThread::start() {
@@ -81,9 +106,11 @@ tarch::mpi::HelperThread::start() {
   _hasFinished.store(false, std::memory_order_relaxed);
 
   _thread = std::thread([this]() {
+    thread_local RankEndAtExit rankEndAtExit;
     while (not _stopRequested.load(std::memory_order_relaxed) and not _hasFinished.load(std::memory_order_relaxed)) {
       _hasFinished.store(_pollFunction(), std::memory_order_release);
     }
+    rankEndAtExit.setLoopHasEnded();
   });
   bindToUnoccupiedPlaces(_thread);
 }

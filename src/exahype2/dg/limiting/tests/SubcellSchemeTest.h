@@ -11,11 +11,11 @@ namespace exahype2::dg::limiting::tests {
 class exahype2::dg::limiting::tests::SubcellSchemeTest final : public tarch::tests::TestCase {
 public:
   SubcellSchemeTest();
-  SubcellSchemeTest(const SubcellSchemeTest&)            = delete;
-  SubcellSchemeTest(SubcellSchemeTest&&)                 = delete;
-  SubcellSchemeTest& operator=(const SubcellSchemeTest&) = delete;
-  SubcellSchemeTest& operator=(SubcellSchemeTest&&)      = delete;
-  ~SubcellSchemeTest() override                          = default;
+  SubcellSchemeTest(const SubcellSchemeTest& other)            = delete;
+  SubcellSchemeTest(SubcellSchemeTest&& other)                 = delete;
+  SubcellSchemeTest& operator=(const SubcellSchemeTest& other) = delete;
+  SubcellSchemeTest& operator=(SubcellSchemeTest&& other)      = delete;
+  ~SubcellSchemeTest() override                                = default;
 
   void run() override;
 
@@ -30,5 +30,8 @@ private:
   void testAFixedRuleReportsNoWaveSpeeds();
   void testAGalerkinCellProjectsItsPreviousSolutionOntoTheSubgridAndTheFaces();
   void testEveryCellOfADeviceRangeRecomputesLikeTheHost();
-  void testEveryNodeProjectsLikeTheWholeCell();
+  void testEverySplitOfTheStagesProjectsLikeTheWholeCell();
+  void testEverySplitOfTheStagesProjectsTheNodesLikeTheWholeCell();
+  void testEveryTeamOfADeviceProjectsTheSubgridOntoTheFacesLikeTheHost();
+  void testListedGalerkinCellsProjectTheirNodesOntoTheirSubgrids();
 };

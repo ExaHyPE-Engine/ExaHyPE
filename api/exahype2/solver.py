@@ -110,8 +110,9 @@ class Solver:
     def measure_error(self, file="Error", every=0.0, unknowns=None):
         """Records the L1, L2 and Linf errors against the ``analytical_solution`` PDE term.
 
-        ``every`` is the time between two records, zero for every time step. ``unknowns``
-        selects the compared unknowns by index or name.
+        ``every`` is the time between two records, zero for every time step. The last time
+        stamp of a run always gets a record. ``unknowns`` selects the compared unknowns by index
+        or name.
         """
         if self._error_measurement is not None:
             raise ValueError(
@@ -231,6 +232,11 @@ class Solver:
         if any(tracers.error_measurement for tracers in self._tracers):
             headers.append("exahype2/ErrorMeasurement.h")
             headers.append("exahype2/particles/ParticleErrorMeasurement.h")
+        if any(
+            tracers.records_a_database or tracers.error_measurement
+            for tracers in self._tracers
+        ):
+            headers.append("tarch/database/SnapshotDatabase.h")
         headers += self._solver_family_includes() + list(self._includes)
         return sorted(set(headers))
 

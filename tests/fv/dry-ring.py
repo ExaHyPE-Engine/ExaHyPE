@@ -53,7 +53,9 @@ args = parse_arguments()
 
 
 initial_conditions = """
-  const double radius = std::sqrt(x(0) * x(0) + x(1) * x(1));
+  const double squareOfX0 = tarch::la::productRoundedOnce(x(0), x(0));
+  const double squareOfX1 = tarch::la::productRoundedOnce(x(1), x(1));
+  const double radius     = std::sqrt(squareOfX0 + squareOfX1);
   const double bathymetry = 0.3 * std::exp(-radius * radius / 0.0625);
   const bool wet = radius > 0.35 and radius < 0.65;
 
@@ -118,6 +120,9 @@ project = exahype2.Project(
     min_grid_levels=args.grid_levels,
     max_grid_levels=args.grid_levels,
 )
+
+if project.dimensions != 2:
+    raise ValueError("The dry ring test runs in 2D only.")
 
 solver_arguments = dict(
     name="SWESolver",

@@ -52,7 +52,7 @@ class SWE_W_Bathymetry(Equation):
   for (int xy = 0; xy < DGOrder + 1; xy++) {
     FL[xy*4+Shortcuts::h] = 0.5*(
         FL[xy*4+Shortcuts::h]+FR[xy*4+Shortcuts::h]
-      + smax*(QL[xy*4+Shortcuts::h]+QL[xy*4+Shortcuts::b]-QR[xy*4+Shortcuts::h]-QR[xy*4+Shortcuts::b])
+      + smax*((QL[xy*4+Shortcuts::h]+QL[xy*4+Shortcuts::b])-(QR[xy*4+Shortcuts::h]+QR[xy*4+Shortcuts::b]))
     );
     FL[xy*4+Shortcuts::hv+0] = 0.5*(
         FL[xy*4+Shortcuts::hv+0]+FR[xy*4+Shortcuts::hv+0]
@@ -71,7 +71,7 @@ class SWE_W_Bathymetry(Equation):
 
     const auto ncp = 0.5*Gravity*0.5
       *(QL[xy*4+Shortcuts::h]+QR[xy*4+Shortcuts::h])
-      *(QR[xy*4+Shortcuts::b]+QR[xy*4+Shortcuts::h]-QL[xy*4+Shortcuts::b]-QL[xy*4+Shortcuts::h]);
+      *((QR[xy*4+Shortcuts::b]+QR[xy*4+Shortcuts::h])-(QL[xy*4+Shortcuts::b]+QL[xy*4+Shortcuts::h]));
     FL[xy*4+Shortcuts::hv+normal] += ncp;
     FR[xy*4+Shortcuts::hv+normal] -= ncp;
   }

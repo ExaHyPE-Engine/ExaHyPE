@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "exahype2/dg/Basis.h"
 #include "exahype2/dg/Kernels.h"
 #include "exahype2/dg/limiting/SubcellScheme.h"
 #include "peano4/CellConnectivity.h"
@@ -10,6 +11,8 @@
 #include "tarch/Span.h"
 #include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/CompileTarget.h"
+#include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/ParallelFor.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::limiting {
@@ -87,14 +90,26 @@ public:
   static constexpr int  NumberOfObservables  = Derived::NumberOfObservables;
   static constexpr bool UsesMaximumPrinciple = NumberOfObservables > 0;
   static constexpr int  ExtremaPerCell       = UsesMaximumPrinciple ? 2 * NumberOfObservables : 2;
-  /**
-   * The first set of a face half holds the extrema of the cell. Each next set holds the extrema
-   * widened along one other axis. In 3D the last set holds the extrema widened along both other
-   * axes.
-   */
-  static constexpr int ExtremaSetsPerHalf   = DIMENSIONS == 2 ? 2 : 4;
-  static constexpr int ExtremaValuesPerFace = 2 * ExtremaSetsPerHalf * ExtremaPerCell;
-  static constexpr int StatusValuesPerFace  = 2;
+  static constexpr int  ExtremaSetsPerHalf   = DIMENSIONS == 2 ? 2 : 4;
+  static constexpr int  ExtremaValuesPerFace = 2 * ExtremaSetsPerHalf * ExtremaPerCell;
+  static constexpr int  StatusValuesPerFace  = 2;
+  static constexpr int  SamplesPerAxis =
+    Scheme::SubcellsPerAxis > Scheme::NodesPerAxis ? Scheme::SubcellsPerAxis : Scheme::NodesPerAxis;
+  static constexpr int SampleValues            = peano4::power(SamplesPerAxis, DIMENSIONS) * Scheme::NumberOfData;
+  static constexpr int ProjectionScratchValues = SampleValues
+    + exahype2::dg::getScratchValuesOfTensorProduct<
+                                                   DIMENSIONS,
+                                                   Scheme::NodesPerAxis,
+                                                   SamplesPerAxis,
+                                                   Scheme::NumberOfData
+    >();
+  static constexpr int CellsPerBatch = tarch::accelerator::ThreadsPerWarp;
+
+  [[nodiscard]] static INLINE_METHOD int getTeamThreads();
+  [[nodiscard]] static INLINE_METHOD int getNumberOfTeams(int workItems);
+  [[nodiscard]] static INLINE_METHOD int getTeamScratchBytes();
+  [[nodiscard]] static INLINE_METHOD int getScratchValuesPerTeam(int teamThreads);
+  [[nodiscard]] static INLINE_METHOD int getExtremaScratchValuesPerTeam(int teamThreads);
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatus(
@@ -105,6 +120,19 @@ public:
     const StoragePrecision* NOALIAS nodesToSubcells,
     StoragePrecision                relaxationParameter,
     StoragePrecision                differencesScaling
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatusInTeam(
+    tarch::accelerator::TeamHandle  team,
+    int* NOALIAS                    status,
+    const StoragePrecision* NOALIAS nodes,
+    const StoragePrecision* NOALIAS sampledExtrema,
+    const StoragePrecision* NOALIAS nodesToLobatto,
+    const StoragePrecision* NOALIAS nodesToSubcells,
+    StoragePrecision                relaxationParameter,
+    StoragePrecision                differencesScaling,
+    StoragePrecision* NOALIAS       scratch
   );
 
   template <typename StoragePrecision>
@@ -155,6 +183,56 @@ public:
     StoragePrecision* NOALIAS                    candidateExtrema
   );
 
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void reduceExtremaInTeam(
+    tarch::accelerator::TeamHandle  team,
+    StoragePrecision* NOALIAS       extrema,
+    const StoragePrecision* NOALIAS nodes,
+    const StoragePrecision* NOALIAS nodesToLobatto,
+    const StoragePrecision* NOALIAS nodesToSubcells,
+    StoragePrecision* NOALIAS       scratch
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics judgeCandidateInTeam(
+    tarch::accelerator::TeamHandle               team,
+    int* NOALIAS                                 status,
+    int* const                                   ownStatusHalves[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS              candidate,
+    int                                          cellOfBatch,
+    const StoragePrecision* NOALIAS              referenceExtrema,
+    const StoragePrecision* NOALIAS              nodesToLobatto,
+    const StoragePrecision* NOALIAS              nodesToSubcells,
+    const StoragePrecision* NOALIAS              quadraturePoints,
+    StoragePrecision                             relaxationParameter,
+    StoragePrecision                             differencesScaling,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    StoragePrecision* NOALIAS                    candidateExtrema,
+    StoragePrecision* NOALIAS                    scratch
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectCandidateOfBatchInTeam(
+    tarch::accelerator::TeamHandle  team,
+    const StoragePrecision* NOALIAS candidate,
+    const StoragePrecision* NOALIAS nodesToSubcells,
+    int                             cellOfBatch,
+    StoragePrecision* NOALIAS       scratch
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void admitCandidateOfBatch(
+    tarch::accelerator::TeamHandle               team,
+    const StoragePrecision* NOALIAS              candidate,
+    int                                          cellOfBatch,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    const StoragePrecision* NOALIAS              scratch
+  );
+
   static INLINE_METHOD GPU_CALLABLE_METHOD void spreadStatus(
     int* NOALIAS     status,
     const int* const neighbourStatusHalves[peano4::FacesPerCell]
@@ -162,6 +240,51 @@ public:
 
 private:
   friend class exahype2::dg::limiting::tests::DetectorTest;
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatusWithThreadsOfTeam(
+    tarch::accelerator::TeamHandle  team,
+    int* NOALIAS                    status,
+    const StoragePrecision* NOALIAS nodes,
+    const StoragePrecision* NOALIAS sampledExtrema,
+    const StoragePrecision* NOALIAS nodesToLobatto,
+    const StoragePrecision* NOALIAS nodesToSubcells,
+    StoragePrecision                relaxationParameter,
+    StoragePrecision                differencesScaling,
+    StoragePrecision* NOALIAS       scratch
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void reduceExtremaWithThreadsOfTeam(
+    tarch::accelerator::TeamHandle  team,
+    StoragePrecision* NOALIAS       extrema,
+    const StoragePrecision* NOALIAS nodes,
+    const StoragePrecision* NOALIAS nodesToLobatto,
+    const StoragePrecision* NOALIAS nodesToSubcells,
+    StoragePrecision* NOALIAS       scratch
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics judgeCandidateWithThreadsOfTeam(
+    tarch::accelerator::TeamHandle               team,
+    int* NOALIAS                                 status,
+    int* const                                   ownStatusHalves[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS              candidate,
+    int                                          cellOfBatch,
+    const StoragePrecision* NOALIAS              referenceExtrema,
+    const StoragePrecision* NOALIAS              nodesToLobatto,
+    const StoragePrecision* NOALIAS              quadraturePoints,
+    StoragePrecision                             relaxationParameter,
+    StoragePrecision                             differencesScaling,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    StoragePrecision* NOALIAS                    candidateExtrema,
+    StoragePrecision* NOALIAS                    scratch
+  );
+
+  static INLINE_METHOD GPU_CALLABLE_METHOD void writeInitialStatus(int* NOALIAS status, bool wasTroubled);
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool interpolantOscillates(
@@ -194,6 +317,29 @@ private:
     const Visitor&                  visitor
   );
 
+  template <int OutputsPerAxis, typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void project(
+    const StoragePrecision* NOALIAS nodes,
+    const StoragePrecision* NOALIAS samplingMatrix,
+    StoragePrecision* NOALIAS       samples
+  );
+
+  template <int OutputsPerAxis, typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void projectInTeam(
+    tarch::accelerator::TeamHandle  team,
+    const StoragePrecision* NOALIAS nodes,
+    const StoragePrecision* NOALIAS samplingMatrix,
+    StoragePrecision* NOALIAS       samples,
+    StoragePrecision* NOALIAS       scratch
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void mergeExtremaOfTeam(
+    tarch::accelerator::TeamHandle team,
+    StoragePrecision* NOALIAS      extrema,
+    StoragePrecision* NOALIAS      teamExtrema
+  );
+
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision mergeMinimum(
     StoragePrecision left,
@@ -210,7 +356,15 @@ private:
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissible(
     const StoragePrecision* NOALIAS              nodes,
     const StoragePrecision* NOALIAS              subcells,
-    const StoragePrecision* NOALIAS              nodesToLobatto,
+    const StoragePrecision* NOALIAS              lobattoSamples,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  );
+
+  template <typename StoragePrecision>
+  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissibleOnNodesAndSubcells(
+    const StoragePrecision* NOALIAS              nodes,
+    const StoragePrecision* NOALIAS              subcells,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize
   );
@@ -220,7 +374,7 @@ private:
     const StoragePrecision* NOALIAS candidate,
     const StoragePrecision* NOALIAS candidateSubcells,
     const StoragePrecision* NOALIAS referenceExtrema,
-    const StoragePrecision* NOALIAS nodesToLobatto,
+    const StoragePrecision* NOALIAS lobattoSamples,
     StoragePrecision                relaxationParameter,
     StoragePrecision                differencesScaling,
     StoragePrecision* NOALIAS       candidateExtrema
@@ -284,7 +438,8 @@ struct exahype2::dg::limiting::ReduceSampledExtrema final {
 /**
  * Opens every cell on the Galerkin scheme. With a discrete maximum principle a cell marks itself
  * troubled when its nodal interpolant leaves the sampled extrema of the cell and its neighbours
- * (Dumbser, Zanotti, Loubère and Diot, J. Comput. Phys. 278 (2014) 47-75).
+ * (Dumbser, Zanotti, Loubère and Diot, J. Comput. Phys. 278 (2014) 47-75). Team entry opens the
+ * cells entry, entry + numberOfTeams and so on.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::OpenInitialStatuses final {
@@ -293,6 +448,7 @@ struct exahype2::dg::limiting::OpenInitialStatuses final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
   peano4::CellConnectivity     cellConnectivity{};
+  int                          numberOfTeams{1};
   typename CellPool::ConstView nodes{};
   typename CellPool::ConstView sampledExtrema{};
   typename StatusPool::View    statuses{};
@@ -300,8 +456,10 @@ struct exahype2::dg::limiting::OpenInitialStatuses final {
   const StoragePrecision*      nodesToSubcells{nullptr};
   StoragePrecision             relaxationParameter{0};
   StoragePrecision             differencesScaling{0};
+  StoragePrecision*            scratch{nullptr};
+  int                          scratchValuesPerTeam{0};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, tarch::accelerator::TeamHandle team) const;
 };
 
 /**
@@ -359,6 +517,8 @@ struct exahype2::dg::limiting::OpenStep final {
 
 /**
  * Writes the observable extrema of the solution of every listed cell into its reference extrema.
+ * Team entry reduces the cells entry, entry + numberOfTeams and so on in the scratch chunk of the
+ * entry.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::ReduceReferenceExtrema final {
@@ -366,19 +526,22 @@ struct exahype2::dg::limiting::ReduceReferenceExtrema final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
   tarch::Span<const int>       cells{};
+  int                          numberOfTeams{1};
   typename CellPool::ConstView solution{};
   typename CellPool::View      referenceExtrema{};
   const StoragePrecision*      nodesToLobatto{nullptr};
   const StoragePrecision*      nodesToSubcells{nullptr};
+  StoragePrecision*            scratch{nullptr};
+  int                          scratchValuesPerTeam{0};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, tarch::accelerator::TeamHandle team) const;
 };
 
 /**
  * Runs one of the DIMENSIONS merge rounds on every listed cell. Round r widens the sets that round
- * r - 1 wrote onto the faces by the face neighbours along every axis at once. It writes the sets of
- * the next round. Every axis order gives the same result at a level jump too. After the last round
- * the reference extrema of a cell cover every cell it touches at a vertex.
+ * r - 1 wrote onto the faces by the face neighbours along every axis at once and writes the sets of
+ * the next round. After the last round the reference extrema of a cell cover every cell it touches
+ * at a vertex.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::MergeNeighbourExtrema final {
@@ -409,8 +572,8 @@ struct exahype2::dg::limiting::MergeNeighbourExtrema final {
 };
 
 /**
- * JudgedCells holds the wave speeds of the accepted candidates, the number of cells that recompute
- * and the number of troubled cells.
+ * JudgedCells reduces the wave speeds of the accepted candidates, the number of cells that
+ * recompute and the number of troubled cells.
  */
 struct exahype2::dg::limiting::JudgedCells final {
   using ValueType = exahype2::dg::limiting::JudgedCells;
@@ -424,9 +587,10 @@ struct exahype2::dg::limiting::JudgedCells final {
 };
 
 /**
- * Runs the last merge round on the reference extrema of every cell. Judges the candidate of the
- * cell against these extrema. Writes the verdict into the status and onto the faces. Writes the
- * extrema of the candidate into the reference extrema of the cell.
+ * Team entry judges the batches entry, entry + numberOfTeams and so on of Detector::CellsPerBatch
+ * consecutive cells. It runs the last merge round on the reference extrema of every cell and
+ * judges its candidate against these extrema. Writes the verdict into the status and onto the
+ * faces. Writes the extrema of the candidate into the reference extrema of the cell.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::JudgeCandidates final {
@@ -435,6 +599,7 @@ struct exahype2::dg::limiting::JudgeCandidates final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
   peano4::CellConnectivity     cellConnectivity{};
+  int                          numberOfTeams{1};
   typename CellPool::ConstView candidates{};
   typename StatusPool::View    statuses{};
   typename StatusPool::View    faceStatuses{};
@@ -447,12 +612,33 @@ struct exahype2::dg::limiting::JudgeCandidates final {
   StoragePrecision             differencesScaling{0};
   double                       timeStamp{0.0};
   double                       timeStepSize{0.0};
+  StoragePrecision*            scratch{nullptr};
+  int                          scratchValuesPerTeam{0};
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, exahype2::dg::limiting::JudgedCells& accumulator) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+    int                                  entry,
+    tarch::accelerator::TeamHandle       team,
+    exahype2::dg::limiting::JudgedCells& accumulator
+  ) const;
+
+private:
+  INLINE_METHOD GPU_CALLABLE_METHOD void admitBatchWithThreadsOfTeam(
+    tarch::accelerator::TeamHandle team,
+    int                            first,
+    int                            cellsOfBatch,
+    StoragePrecision*              chunk
+  ) const;
+
+  INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::limiting::JudgedCells judgeCell(
+    tarch::accelerator::TeamHandle team,
+    int                            slot,
+    int                            cellOfBatch,
+    StoragePrecision*              chunk
+  ) const;
 };
 
 /**
- * Raises the status of every listed cell by the statuses of its face neighbours. The faces hold
+ * Raises the status of every listed cell by the statuses of its face neighbours. The faces store
  * the statuses of the previous ring.
  */
 template <typename Derived, typename ComputePrecision>
@@ -482,8 +668,8 @@ struct exahype2::dg::limiting::WriteStatusesOntoFaces final {
 };
 
 /**
- * SubcellSchemeCounts holds the numbers of cells whose status is not Regular, of recomputed cells,
- * of recomputed local cells and of troubled cells.
+ * SubcellSchemeCounts counts the cells whose status is not Regular, the recomputed cells, the
+ * recomputed local cells and the troubled cells.
  */
 struct exahype2::dg::limiting::SubcellSchemeCounts final {
   int cellsOnScheme{0};
@@ -524,8 +710,8 @@ struct exahype2::dg::limiting::CountCellsOnSubcellScheme final {
 /**
  * Writes the slots of the cells of one block that are not Regular into cellsOnScheme. Writes the
  * slots of the cells of the block that recompute into recomputedCells. Both lists append these
- * slots behind the entries of the earlier blocks. Both lists keep the order of the cell
- * connectivity with the local cells first.
+ * slots behind the entries of the earlier blocks and keep the order of the cell connectivity with
+ * the local cells first.
  */
 struct exahype2::dg::limiting::ListCellsOnSubcellScheme final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
@@ -589,17 +775,32 @@ struct exahype2::dg::limiting::RestrictExtremaHalves final {
 };
 
 /**
- * Fills the status of a new cell of a regrid. A child copies the status of its parent. A parent
- * takes the entry-wise maximum of its children.
+ * Fills statuses of the new grid from source, the pool of the old grid, during a regrid. Every work
+ * item fills one entry of a status. A child copies the status of its parent. A parent takes the
+ * entry-wise maximum of its children.
  */
 struct exahype2::dg::limiting::StatusTransfer final {
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  StatusPool::ConstView statuses{};
+  static constexpr int WorkItemsPerChunk      = exahype2::dg::limiting::NumberOfStatusEntries;
+  static constexpr int PreparedValuesPerChunk = 0;
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void copy(int slot, int* target) const;
-  INLINE_METHOD GPU_CALLABLE_METHOD void interpolateFromParent(int parentSlot, int* target, int childPosition) const;
-  INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(const int* childSlots, int* target) const;
+  StatusPool::ConstView source{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void copy(int slot, int* target, int itemOfChunk) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void interpolateFromParent(
+    int           parentSlot,
+    int*          target,
+    int           childPosition,
+    int           itemOfChunk,
+    const double* prepared
+  ) const;
+  INLINE_METHOD GPU_CALLABLE_METHOD void restrictFromChildren(
+    const int*    childSlots,
+    int*          target,
+    int           itemOfChunk,
+    const double* prepared
+  ) const;
 };
 TARGET_DECLARE_END
 

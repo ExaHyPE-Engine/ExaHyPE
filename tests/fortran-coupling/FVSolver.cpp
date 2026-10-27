@@ -41,16 +41,31 @@ tests::exahype2::fortran::FVSolver::solveRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  // The Fortran solver writes the Clawpack fluctuations A^-dQ into FL and A^+dQ into FR. The Godunov
-  // kernel adds dt/h * FR to the right cell, but the right cell needs -dt/h * A^+dQ, so FR changes its
-  // sign.
-  const double smax = rpn2_augmented_wrapper(QL, QR, FL, FR, &normal);
+  // The Fortran solver rounds a reflected problem differently. Each Clawpack fluctuation averages the
+  // solutions of the problem and of the reflected problem. A reflected face then receives the
+  // reflected fluctuations bitwise.
+  double reflectedLeftState[4]    = {QR[0], QR[1], QR[2], QR[3]};
+  double reflectedRightState[4]   = {QL[0], QL[1], QL[2], QL[3]};
+  reflectedLeftState[1 + normal]  = -reflectedLeftState[1 + normal];
+  reflectedRightState[1 + normal] = -reflectedRightState[1 + normal];
 
-  FR[0] = -FR[0];
-  FR[1] = -FR[1];
-  FR[2] = -FR[2];
+  double       leftGoing[3];
+  double       rightGoing[3];
+  double       reflectedLeftGoing[3];
+  double       reflectedRightGoing[3];
+  const double maxWaveSpeed = rpn2_augmented_wrapper(QL, QR, leftGoing, rightGoing, &normal);
+  const double reflectedMaxWaveSpeed =
+    rpn2_augmented_wrapper(reflectedLeftState, reflectedRightState, reflectedLeftGoing, reflectedRightGoing, &normal);
+
+  // The Godunov kernel adds dt/h * FR to the right cell. The right cell needs -dt/h * A^+dQ. FR
+  // therefore receives the negated right-going fluctuation.
+  for (int unknown = 0; unknown < 3; unknown++) {
+    const double reflection = unknown == 1 + normal ? -1.0 : 1.0;
+    FL[unknown]             = 0.5 * (leftGoing[unknown] + reflection * reflectedRightGoing[unknown]);
+    FR[unknown]             = -0.5 * (rightGoing[unknown] + reflection * reflectedLeftGoing[unknown]);
+  }
   FL[3] = 0.0;
   FR[3] = 0.0;
 
-  return smax;
+  return std::max(maxWaveSpeed, reflectedMaxWaveSpeed);
 }

@@ -64,10 +64,8 @@ namespace {
 } // namespace
 
 /**
- * Submits a task and transfers ownership to the tasking backend.
- *
- * Null and duplicate tokens are ignored. A token listed as both input and
- * output remains an output dependency because the task produces its value.
+ * Submits a task and transfers ownership to the tasking backend. The function ignores null and
+ * duplicate tokens. A token listed as input and output counts as an output dependency.
  */
 void
 tarch::tasking::spawnTask(
@@ -120,9 +118,8 @@ tarch::tasking::spawnTask(
   [[maybe_unused]] char* const* const inTokenData                = filteredInDependencies.getData();
   [[maybe_unused]] char* const* const outTokenData               = filteredOutDependencies.getData();
 
-  // Each task clause lists the task pointer in firstprivate. A compiler following OpenMP 4.5 defaults
-  // a const variable to the copy of the enclosing frame, which the deferred task would read after this
-  // call has returned.
+  // Each task clause lists the task pointer in firstprivate. A compiler that follows OpenMP 4.5
+  // would otherwise let the deferred task read the variable of this frame after the call returns.
   if (numberOfInputDependencies == 0 and numberOfOutputDependencies == 0) {
 #pragma omp task firstprivate(task)
     runAndDelete(task);
@@ -252,10 +249,9 @@ tarch::tasking::waitForDependency(void* const dependency) {
 }
 
 /**
- * Waits until every task producing one of the listed tokens has completed.
- * The wait is a task scheduling point, so the calling thread may execute any
- * spawned task meanwhile, listed or not. Without compiler support for
- * dependent task waits, the function waits for every child task of the caller.
+ * Waits until every task producing one of the listed tokens has completed. The wait is a task
+ * scheduling point and the calling thread may execute any spawned task meanwhile. Without compiler
+ * support for dependent task waits, the function waits for every child task of the caller.
  */
 void
 tarch::tasking::waitForDependencies(const std::span<void* const> dependencies) {

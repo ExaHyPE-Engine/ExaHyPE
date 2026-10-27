@@ -19,14 +19,11 @@ namespace peano4 {
  * The adaptive Cartesian grid of the whole domain and the cell connectivity of the cells this rank
  * owns. Every rank applies the refinement requests of all ranks to one refinement plan, balances the
  * ranks along the space-filling curve and rebuilds the tree and the cell connectivity from the plan.
- * A regrid with live data returns the slot moves. A caller applies them to its pools before
+ * A regrid with live data returns the slot moves that a caller applies to its pools before
  * finishRegrid().
  */
 class peano4::Spacetree final {
 public:
-  /**
-   * Counts of the rank's part of the grid after the last regrid.
-   */
   struct Statistics final {
     int minimumLevel{std::numeric_limits<int>::max()};
     int maximumLevel{0};
@@ -78,26 +75,16 @@ public:
   static constexpr int RepartitionTolerancePercent = 2;
 
 private:
-  /**
-   * One local cell that the walk along the curve finds: Its index in the tree and its slot in the
-   * cell connectivity.
-   */
   struct CellRecord final {
     int treeCell{-1};
     int slot{-1};
   };
 
-  /**
-   * The faces one neighbour rank and this rank hold, as the walk over the cells finds them.
-   */
   struct NeighbourFaces final {
     int                        rank{-1};
     std::vector<ExchangedFace> faces{};
   };
 
-  /**
-   * The arrays of the cell connectivity and the tables that build them, in host memory.
-   */
   struct CellConnectivityArrays final {
     int numberOfSlots{0};
     int numberOfFaces{0};
@@ -111,10 +98,6 @@ private:
     std::vector<int> cellLevel{};
     std::vector<int> cellLattice{};
     std::vector<int> facesOfCell{};
-    /**
-     * The index of every slot's cell along the space-filling curve over all ranks. The index of a
-     * free slot is -1.
-     */
     std::vector<int> cellCurveIndex{};
 
     std::vector<int>       faces{};
@@ -133,27 +116,14 @@ private:
     std::vector<ExchangedFace>  exchangedFaces{};
     std::vector<NeighbourFaces> neighbourFaces{};
 
-    /**
-     * Maps the index of every tree face of this rank to its face in the cell connectivity during a
-     * build.
-     */
-    std::vector<int> faceOfTreeFace{};
-    /**
-     * Maps a coarse face to its level jump during a build.
-     */
-    std::vector<int> levelJumpOfCoarseFace{};
-    /**
-     * Maps a lattice key to the slot of its cell, one map per level.
-     */
+    std::vector<int>                           faceOfTreeFace{};
+    std::vector<int>                           levelJumpOfCoarseFace{};
     std::vector<peano4::grid::LatticeIndexMap> cellSlotOfLattice{};
 
     std::vector<int> freeSlots{};
     std::vector<int> slotsFreedByRegrid{};
   };
 
-  /**
-   * The arrays a kernel reads, in device memory. A build without a GPU backend leaves them empty.
-   */
   struct DeviceArrays final {
     tarch::accelerator::Buffer<int>       cells{tarch::MemoryLocation::Device};
     tarch::accelerator::Buffer<int>       cellLevel{tarch::MemoryLocation::Device};

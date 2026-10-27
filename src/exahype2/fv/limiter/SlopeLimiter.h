@@ -19,7 +19,7 @@ namespace exahype2::fv::limiter {
 
 TARGET_DECLARE
 /**
- * Zero slope, which gives the first-order piecewise-constant scheme.
+ * Zero slope. The scheme becomes first-order piecewise constant.
  */
 struct exahype2::fv::limiter::Zero final {
   template <typename ComputePrecision>
@@ -30,7 +30,7 @@ struct exahype2::fv::limiter::Zero final {
 };
 
 /**
- * Unlimited central difference, which is not monotone.
+ * Unlimited central difference. The scheme is not monotone.
  */
 struct exahype2::fv::limiter::Average final {
   template <typename ComputePrecision>
@@ -63,7 +63,7 @@ struct exahype2::fv::limiter::VanAlbada final {
 };
 
 /**
- * Most compressive second-order limiter, which also steepens smooth profiles.
+ * Most compressive second-order limiter. The limiter also steepens smooth profiles.
  */
 struct exahype2::fv::limiter::Superbee final {
   template <typename ComputePrecision>

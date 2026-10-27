@@ -57,9 +57,6 @@ tarch::accelerator::tests::DeviceCopiesTest::run() {
   testMethod(testHostCodeAndAKernelReadTheSameConstants);
 }
 
-/**
- * The kernels of two translation units read the host value of the last upload.
- */
 void
 tarch::accelerator::tests::DeviceCopiesTest::testTheKernelsOfTwoTranslationUnitsReadTheLastUpload() {
   validate(deviceValueIsAdded);

@@ -20,16 +20,18 @@ tests::exahype2::aderdg::grmhd::evaluateKerrSchildMetric(
   const double z2          = x[2] * x[2];
   const double spinSquared = SpinParameter * SpinParameter;
 
-  const double halfDifference = 0.5 * (x[0] * x[0] + x[1] * x[1] + x[2] * x[2] - spinSquared);
+  const double halfDifference = 0.5 * (tarch::la::norm2Squared(x) - spinSquared);
   const double r  = std::sqrt(halfDifference + std::sqrt(halfDifference * halfDifference + z2 * spinSquared));
   const double r2 = r * r;
 
   const double kerrSchildFunction = BlackHoleMass * r2 * r / (r2 * r2 + spinSquared * z2);
   const double determinant        = 1.0 + 2.0 * kerrSchildFunction;
 
+  // Without spin, the three components of l round alike. A permutation of the axes then permutes
+  // the metric bitwise.
   const double lx = (r * x[0] + SpinParameter * x[1]) / (r2 + spinSquared);
   const double ly = (r * x[1] - SpinParameter * x[0]) / (r2 + spinSquared);
-  const double lz = x[2] / r;
+  const double lz = r * x[2] / r2;
 
   lapse[0] = 1.0 / std::sqrt(determinant);
   shift[0] = 2.0 * kerrSchildFunction / determinant * lx;
@@ -37,15 +39,15 @@ tests::exahype2::aderdg::grmhd::evaluateKerrSchildMetric(
   shift[2] = 2.0 * kerrSchildFunction / determinant * lz;
 
   gCov[0][0] = 1.0 + 2.0 * kerrSchildFunction * lx * lx;
-  gCov[0][1] = 2.0 * kerrSchildFunction * lx * ly;
-  gCov[0][2] = 2.0 * kerrSchildFunction * lx * lz;
+  gCov[0][1] = 2.0 * kerrSchildFunction * (lx * ly);
+  gCov[0][2] = 2.0 * kerrSchildFunction * (lx * lz);
 
-  gCov[1][0] = 2.0 * kerrSchildFunction * lx * ly;
+  gCov[1][0] = 2.0 * kerrSchildFunction * (lx * ly);
   gCov[1][1] = 1.0 + 2.0 * kerrSchildFunction * ly * ly;
-  gCov[1][2] = 2.0 * kerrSchildFunction * ly * lz;
+  gCov[1][2] = 2.0 * kerrSchildFunction * (ly * lz);
 
-  gCov[2][0] = 2.0 * kerrSchildFunction * lx * lz;
-  gCov[2][1] = 2.0 * kerrSchildFunction * ly * lz;
+  gCov[2][0] = 2.0 * kerrSchildFunction * (lx * lz);
+  gCov[2][1] = 2.0 * kerrSchildFunction * (ly * lz);
   gCov[2][2] = 1.0 + 2.0 * kerrSchildFunction * lz * lz;
 
   rootDeterminant[0] = std::sqrt(determinant);
@@ -74,7 +76,7 @@ tests::exahype2::aderdg::grmhd::setMichelAccretionState(
   double gCov[3][3];
   evaluateKerrSchildMetric(x, &lapse, &rootDeterminant, shift, gCov);
 
-  const double r = std::sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
+  const double r = tarch::la::norm2(x);
 
   double V[NumberOfVariables];
   if (r < 0.8) {
@@ -105,8 +107,6 @@ tests::exahype2::aderdg::grmhd::setMichelAccretionState(
     return;
   }
 
-  const double theta              = std::acos(x[2] / r);
-  const double phi                = std::atan2(x[1], x[0]);
   const double schwarzschildRatio = 2.0 / r;
   const double radialShift        = schwarzschildRatio / (1.0 + schwarzschildRatio);
 
@@ -146,10 +146,11 @@ tests::exahype2::aderdg::grmhd::setMichelAccretionState(
   const double lorentzFactor          = lapse * timeComponent;
   const double eulerianRadialVelocity = (radialVelocity / lorentzFactor + radialShift / lapse);
 
+  // The velocity points along x / r. A permutation of the axes then permutes the velocity bitwise.
   const double vContr[3] = {
-    std::sin(theta) * std::cos(phi) * eulerianRadialVelocity,
-    std::sin(theta) * std::sin(phi) * eulerianRadialVelocity,
-    std::cos(theta) * eulerianRadialVelocity
+    x[0] / r * eulerianRadialVelocity,
+    x[1] / r * eulerianRadialVelocity,
+    x[2] / r * eulerianRadialVelocity
   };
 
   double vCov[3];

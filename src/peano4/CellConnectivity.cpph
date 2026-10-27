@@ -155,8 +155,11 @@ peano4::CellConnectivity::getCellLattice(const int cell) const noexcept {
 INLINE_METHOD GPU_CALLABLE_METHOD double
 peano4::CellConnectivity::getCellCentre(const int cell, const int axis) const noexcept {
   assertion(cell >= 0 and cell < _numberOfSlots, cell, _numberOfSlots);
-  return _domainOffset[axis]
-    + (static_cast<double>(_cellLattice[cell * DIMENSIONS + axis]) + 0.5) * getCellWidth(cell, axis);
+  return getPositionOfLatticeCoordinate(
+    static_cast<double>(_cellLattice[cell * DIMENSIONS + axis]) + 0.5,
+    getCellLevel(cell),
+    axis
+  );
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
@@ -236,8 +239,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD double
 peano4::CellConnectivity::getFaceCentre(const int face, const int axis) const noexcept {
   assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
   const double shift = axis == _faceNormal[face] ? 0.0 : 0.5;
-  return _domainOffset[axis]
-    + (static_cast<double>(_faceLattice[face * DIMENSIONS + axis]) + shift) * getFaceWidth(face, axis);
+  return getPositionOfLatticeCoordinate(
+    static_cast<double>(_faceLattice[face * DIMENSIONS + axis]) + shift,
+    getFaceLevel(face),
+    axis
+  );
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
@@ -274,11 +280,54 @@ peano4::CellConnectivity::getFaceCell(const int face, const int side) const noex
   return _cellsOfFace[face * 2 + side];
 }
 
+/**
+ * Returns the centre of a cell beside face at the level of face. side 0 selects the cell below face
+ * along its normal and side 1 the cell above it. getCellCentre() returns the same bits for that
+ * cell on every rank that stores it.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
+peano4::CellConnectivity::getCellCentreBesideFace(const int face, const int side) const noexcept {
+  assertion(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
+  assertion(side == 0 or side == 1, side);
+  tarch::la::Vector<DIMENSIONS, double> result(0.0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double shift = (axis == _faceNormal[face] and side == 0) ? -0.5 : 0.5;
+    result(axis)       = getPositionOfLatticeCoordinate(
+      static_cast<double>(_faceLattice[face * DIMENSIONS + axis]) + shift,
+      getFaceLevel(face),
+      axis
+    );
+  }
+  return result;
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 peano4::CellConnectivity::getWidthOfLevel(const int level, const int axis) const noexcept {
   assertion(level >= 0 and level <= _maximumLevel, level, _maximumLevel);
   assertion(axis >= 0 and axis < DIMENSIONS, axis);
   return _widthOfLevel[level * DIMENSIONS + axis];
+}
+
+/**
+ * Returns the position of latticeCoordinate, counted in cell widths of level from the lower domain
+ * boundary along axis. The difference between latticeCoordinate and the lattice centre of the level
+ * is exact. Two lattice coordinates that mirror at the domain centre therefore return exactly negated
+ * offsets from the domain centre. Their positions mirror bitwise when the domain centre is zero.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD double
+peano4::CellConnectivity::getPositionOfLatticeCoordinate(
+  const double latticeCoordinate,
+  const int    level,
+  const int    axis
+) const noexcept {
+  const double latticeCentre = 0.5 * static_cast<double>(peano4::power(peano4::SubdivisionFactor, level));
+  assertion(
+    latticeCoordinate >= 0.0 and latticeCoordinate <= 2.0 * latticeCentre,
+    latticeCoordinate,
+    latticeCentre,
+    level
+  );
+  return _domainCentre[axis] + (latticeCoordinate - latticeCentre) * getWidthOfLevel(level, axis);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>

@@ -16,7 +16,7 @@
   };
 
 /**
- * Is true when lhs and rhs differ by at most eps, so a NaN on either side compares unequal.
+ * Is true when lhs and rhs differ by at most eps. A NaN on either side compares unequal.
  */
 #define testNumericalEqualsWithEps(lhs, rhs, eps) (std::abs((rhs) - (lhs)) <= (eps))
 #define testNumericalEquals(lhs, rhs) testNumericalEqualsWithEps(lhs, rhs, 1.0e-10)

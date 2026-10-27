@@ -8,6 +8,15 @@
 namespace tests::exahype2::aderdg::grmhd {
   using Shortcuts = tests::exahype2::aderdg::ADERDGSolverVariableShortcuts;
 
+  INLINE_METHOD GPU_CALLABLE_METHOD double dotProduct(const double* first, const double* second);
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void crossProduct(
+    const double* first,
+    const double* second,
+    double        scale,
+    double*       result
+  );
+
   INLINE_METHOD GPU_CALLABLE_METHOD void multiplyMatrixVector(
     const double (&matrix)[3][3],
     const double* vector,

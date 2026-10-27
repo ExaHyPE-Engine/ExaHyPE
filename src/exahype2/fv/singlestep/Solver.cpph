@@ -56,10 +56,15 @@ exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::u
   const peano4::Adjacency  adjacency,
   const double             timeStepSize
 ) {
+  using Kernel             = exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>;
   const auto cells         = cellConnectivity.onDevice().getCells(adjacency);
   double     maxEigenvalue = 0.0;
   tarch::accelerator::parallelReduce(
-    tarch::accelerator::TeamRange(cells.size),
+    tarch::accelerator::TeamRange(
+      cells.size,
+      Kernel::getTeamThreads(),
+      Kernel::template getTeamScratchBytes<StoragePrecision>()
+    ),
     exahype2::fv::singlestep::UpdatePatches<Derived, StoragePrecision, ComputePrecision>{
       cellConnectivity.onDevice(),
       cells,

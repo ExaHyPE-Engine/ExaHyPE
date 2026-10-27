@@ -12,7 +12,7 @@ namespace tarch::accelerator {
   void setDeviceStream(cudaStream_t stream);
   cudaStream_t getDeviceStream();
 
-  // The team overloads read threadIdx and blockDim; the scratch is the shared memory of the block.
+  // The team overloads read threadIdx and blockDim. The scratch is the shared memory of the block.
   struct CudaTeam final {
     unsigned char* scratch{nullptr};
   };

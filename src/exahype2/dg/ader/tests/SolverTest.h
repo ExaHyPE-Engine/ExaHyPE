@@ -11,20 +11,23 @@ namespace exahype2::dg::ader::tests {
 class exahype2::dg::ader::tests::SolverTest final : public tarch::tests::TestCase {
 public:
   SolverTest();
-  SolverTest(const SolverTest&)            = delete;
-  SolverTest(SolverTest&&)                 = delete;
-  SolverTest& operator=(const SolverTest&) = delete;
-  SolverTest& operator=(SolverTest&&)      = delete;
-  ~SolverTest() override                   = default;
+  SolverTest(const SolverTest& other)            = delete;
+  SolverTest(SolverTest&& other)                 = delete;
+  SolverTest& operator=(const SolverTest& other) = delete;
+  SolverTest& operator=(SolverTest&& other)      = delete;
+  ~SolverTest() override                         = default;
 
   void run() override;
 
 private:
   void testInitialisationWritesTheInitialConditionIntoEveryNode();
   void testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp();
+  void testThePostprocessingRunsOnceForEveryCellOfATimeStep();
   void testARefinementAndTheEraseBackKeepTheSolution();
+  void testALinearTimeStepReadsNoFaceFluxAcrossALevelJump();
   void testRefinementReducesTheNextAdaptiveTimeStep();
   void testTwoCoupledSolversExchangeTheirTracesAndAdvanceTogether();
+  void testACoupledSolverInterpolatesAndRestrictsOnlyTheLevelJumpsOfItsCells();
   void testTheCellAndFaceGroupsSplitAtTheRankBoundary();
   void testTheProjectionWritesTheTracesOfTheSolutionIntoBothHalvesOfEveryInteriorFace();
   void testTheProjectionOntoAPlaneWritesTheTracesOfTheSolutionIntoItsFaces();

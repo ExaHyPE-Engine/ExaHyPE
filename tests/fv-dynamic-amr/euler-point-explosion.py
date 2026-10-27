@@ -47,12 +47,7 @@ primitives = """
   const double density        = std::max(Q[Shortcuts::rho], 1.0e-12);
   const double inverseDensity = 1.0 / density;
   const double normalVelocity = Q[Shortcuts::rhoU + normal] * inverseDensity;
-  double momentumSquared = 0.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    const double momentum = Q[Shortcuts::rhoU + d];
-    const double square   = momentum * momentum;
-    momentumSquared += square;
-  }
+  const double momentumSquared = tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(Q + Shortcuts::rhoU));
   const double pressure =
     std::max((GAMMA - 1.0) * (Q[Shortcuts::rhoE] - 0.5 * momentumSquared * inverseDensity), 1.0e-12);
 """
@@ -102,12 +97,8 @@ refinement_criterion = """
     ::exahype2::DefaultCoarsenSafetyFactor,
     [](const double* const values) { return values[Shortcuts::rho]; },
     [](const double* const values) {
-      double momentumSquared = 0.0;
-      for (int d = 0; d < DIMENSIONS; d++) {
-        const double momentum = values[Shortcuts::rhoU + d];
-        const double square   = momentum * momentum;
-        momentumSquared += square;
-      }
+      const double momentumSquared =
+        tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(values + Shortcuts::rhoU));
       const double density = std::max(values[Shortcuts::rho], 1.0e-12);
       return std::max(
         (GAMMA - 1.0) * (values[Shortcuts::rhoE] - 0.5 * momentumSquared / density),

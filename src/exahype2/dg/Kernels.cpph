@@ -12,6 +12,7 @@
 #include "exahype2/terms/RiemannSolver.h"
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
+#include "tarch/la/ScalarOperations.h"
 
 TARGET_DECLARE
 /**
@@ -37,8 +38,8 @@ exahype2::dg::getCorrectionHalf(
 }
 
 /**
- * Returns the face number of a boundary face in the cell that holds it and -1 for every other
- * face. The cell on the lower side of a boundary face holds it as its upper face.
+ * Returns the face number of a boundary face in the cell that owns it and -1 for every other
+ * face. The cell on the lower side of a boundary face owns it as its upper face.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 exahype2::dg::getBoundaryFaceNumber(const peano4::CellConnectivity& cellConnectivity, const int face) {
@@ -51,7 +52,7 @@ exahype2::dg::getBoundaryFaceNumber(const peano4::CellConnectivity& cellConnecti
 
 /**
  * Writes the initial condition of Derived into the nodes of one cell on the host. The arrays
- * quadraturePoints and quadratureWeights hold the tables in host memory.
+ * quadraturePoints and quadratureWeights point to the tables in host memory.
  */
 template <typename Derived, typename StoragePrecision, typename QuadraturePrecision>
 INLINE_METHOD void
@@ -97,35 +98,27 @@ exahype2::dg::extrapolateStateToFaces(
   constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
 
   assertion(cellState != nullptr and leftFaceCoefficients != nullptr and rightFaceCoefficients != nullptr);
-  UNROLL(DIMENSIONS)
-  for (int direction = 0; direction < DIMENSIONS; direction++) {
-    exahype2::dg::extrapolateNodalFieldToFacePair<
-      NodesPerAxis,
-      NumberOfData,
-      NumberOfData,
-      CellPrecision,
-      FacePrecision,
-      FacePrecision
-    >(faceStates[direction],
-      faceStates[direction + DIMENSIONS],
-      cellState,
-      leftFaceCoefficients,
-      rightFaceCoefficients,
-      direction);
-  }
+  exahype2::dg::extrapolateNodalFieldToFaces<
+    NodesPerAxis,
+    NumberOfData,
+    NumberOfData,
+    0,
+    CellPrecision,
+    FacePrecision,
+    FacePrecision
+  >(faceStates, cellState, leftFaceCoefficients, rightFaceCoefficients, 0, 1);
 }
 
 /**
- * Evaluates the flux of Derived at every node and extrapolates it to the faces of the cell. A
- * solver without a flux writes zeros.
+ * Writes the flux of Derived at every node into nodalFluxes, one block of NodesPerCell times
+ * NumberOfUnknowns values per axis. A diffusive flux reads the nodal gradients of cellState. A
+ * solver without a flux leaves nodalFluxes as it is.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::extrapolateFluxToFaces(
-  ComputePrecision* const NOALIAS              faceFluxes[peano4::FacesPerCell],
+exahype2::dg::evaluateNodalFluxes(
+  ComputePrecision* NOALIAS const              nodalFluxes,
   const ComputePrecision* NOALIAS const        cellState,
-  const ComputePrecision* NOALIAS const        leftFaceCoefficients,
-  const ComputePrecision* NOALIAS const        rightFaceCoefficients,
   const ComputePrecision* NOALIAS const        quadratureNodes,
   const ComputePrecision* NOALIAS const        derivativeOperator,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
@@ -138,12 +131,13 @@ exahype2::dg::extrapolateFluxToFaces(
   constexpr int  NodesPerAxis           = Derived::DGOrder + 1;
   constexpr int  NumberOfUnknowns       = Derived::NumberOfUnknowns;
   constexpr int  NumberOfData           = NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
-  constexpr int  NodesPerFace           = exahype2::dg::getNodesPerFace(NodesPerAxis);
   constexpr int  NodesPerCell           = exahype2::dg::getNodesPerCell(NodesPerAxis);
   constexpr int  AxisStride             = NumberOfUnknowns * NodesPerCell;
   constexpr int  GradientEntriesPerAxis = NodesPerCell * NumberOfData;
 
   if constexpr (EvaluateFlux) {
+    assertion(nodalFluxes != nullptr);
+    assertion(cellState != nullptr);
     [[maybe_unused]] ComputePrecision nodalGradients[EvaluateDiffusiveFlux ? DIMENSIONS * GradientEntriesPerAxis : 1];
     if constexpr (EvaluateDiffusiveFlux) {
       exahype2::dg::computeNodalGradients<NodesPerAxis, NumberOfData, ComputePrecision, ComputePrecision>(
@@ -154,7 +148,6 @@ exahype2::dg::extrapolateFluxToFaces(
       );
     }
 
-    ComputePrecision cellFlux[DIMENSIONS * AxisStride] = {};
     peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
       const int                             cellNode  = peano4::dLinearised(nodeIndex, NodesPerAxis);
       const ComputePrecision* NOALIAS const nodeState = cellState + cellNode * NumberOfData;
@@ -168,7 +161,7 @@ exahype2::dg::extrapolateFluxToFaces(
 
       UNROLL(DIMENSIONS)
       for (int direction = 0; direction < DIMENSIONS; direction++) {
-        ComputePrecision flux[NumberOfUnknowns] = {};
+        ComputePrecision* NOALIAS const nodeFlux = nodalFluxes + direction * AxisStride + cellNode * NumberOfUnknowns;
         if constexpr (EvaluateDiffusiveFlux) {
           Derived::flux(
             nodeState,
@@ -178,7 +171,7 @@ exahype2::dg::extrapolateFluxToFaces(
             timeStamp,
             timeStepSize,
             direction,
-            flux
+            nodeFlux
           );
         } else {
           Derived::flux(
@@ -188,32 +181,45 @@ exahype2::dg::extrapolateFluxToFaces(
             timeStamp,
             timeStepSize,
             direction,
-            flux
+            nodeFlux
           );
-        }
-        SIMD()
-        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-          cellFlux[direction * AxisStride + cellNode * NumberOfUnknowns + unknown] = flux[unknown];
         }
       }
     });
+  }
+}
 
-    UNROLL(DIMENSIONS)
-    for (int direction = 0; direction < DIMENSIONS; direction++) {
-      exahype2::dg::extrapolateNodalFieldToFacePair<
-        NodesPerAxis,
-        NumberOfUnknowns,
-        NumberOfUnknowns,
-        ComputePrecision,
-        ComputePrecision,
-        ComputePrecision
-      >(faceFluxes[direction],
-        faceFluxes[direction + DIMENSIONS],
-        cellFlux + direction * AxisStride,
-        leftFaceCoefficients,
-        rightFaceCoefficients,
-        direction);
-    }
+/**
+ * Extrapolates the nodal fluxes of evaluateNodalFluxes() onto the faces of the cell. A solver
+ * without a flux writes zeros.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::extrapolateFluxToFaces(
+  ComputePrecision* const NOALIAS       faceFluxes[peano4::FacesPerCell],
+  const ComputePrecision* NOALIAS const nodalFluxes,
+  const ComputePrecision* NOALIAS const leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const rightFaceCoefficients
+) {
+  constexpr bool EvaluateFlux =
+    exahype2::terms::HasFlux<Derived, ComputePrecision> or exahype2::terms::HasDiffusiveFlux<Derived, ComputePrecision>;
+  constexpr int NodesPerAxis     = Derived::DGOrder + 1;
+  constexpr int NumberOfUnknowns = Derived::NumberOfUnknowns;
+  constexpr int NodesPerFace     = exahype2::dg::getNodesPerFace(NodesPerAxis);
+  constexpr int NodesPerCell     = exahype2::dg::getNodesPerCell(NodesPerAxis);
+  constexpr int AxisStride       = NumberOfUnknowns * NodesPerCell;
+
+  if constexpr (EvaluateFlux) {
+    assertion(nodalFluxes != nullptr);
+    exahype2::dg::extrapolateNodalFieldToFaces<
+      NodesPerAxis,
+      NumberOfUnknowns,
+      NumberOfUnknowns,
+      AxisStride,
+      ComputePrecision,
+      ComputePrecision,
+      ComputePrecision
+    >(faceFluxes, nodalFluxes, leftFaceCoefficients, rightFaceCoefficients, 0, 1);
   } else {
     for (int face = 0; face < peano4::FacesPerCell; face++) {
       for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
@@ -331,17 +337,12 @@ exahype2::dg::applyBoundaryConditions(
   if constexpr (not exahype2::terms::HasBoundaryConditions<Derived, ComputePrecision>) {
     assertion(false, "A solver without boundary conditions needs a domain periodic along every axis.", faceNumber);
   } else {
-    const int  direction  = faceNumber % DIMENSIONS;
-    const auto faceOffset = faceCentre - 0.5 * cellSize;
+    const int direction = faceNumber % DIMENSIONS;
 
     for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
-      const auto nodeIndex = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
-
-      tarch::la::Vector<DIMENSIONS, double> nodePosition;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        nodePosition(axis) = faceOffset(axis)
-          + ((axis == direction) ? 0.5 : static_cast<double>(quadratureNodes[nodeIndex(axis)])) * cellSize(axis);
-      }
+      const auto nodeIndex    = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
+      auto       nodePosition = exahype2::dg::getQuadraturePoint(faceCentre, cellSize, nodeIndex, quadratureNodes);
+      nodePosition(direction) = faceCentre(direction);
 
       const int insideSide    = faceNumber < DIMENSIONS ? 1 : 0;
       const int outsideSide   = 1 - insideSide;
@@ -391,8 +392,7 @@ exahype2::dg::evaluateFluxOnFace(
   assertion(cellSize(direction) > 0.0, cellSize, direction);
 
   if constexpr (EvaluateFlux) {
-    const ComputePrecision* NOALIAS const faceState  = side == 0 ? leftState : rightState;
-    const auto                            faceOffset = faceCentre - 0.5 * cellSize;
+    const ComputePrecision* NOALIAS const faceState = side == 0 ? leftState : rightState;
 
     [[maybe_unused]] ComputePrecision                normalGradient[NumberOfData];
     [[maybe_unused]] const ComputePrecision          zeroGradient[NumberOfData] = {};
@@ -405,13 +405,9 @@ exahype2::dg::evaluateFluxOnFace(
     }
 
     for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
-      const auto nodeIndex = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
-
-      tarch::la::Vector<DIMENSIONS, double> nodePosition;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        nodePosition(axis) = faceOffset(axis)
-          + ((axis == direction) ? 0.5 : static_cast<double>(quadratureNodes[nodeIndex(axis)])) * cellSize(axis);
-      }
+      const auto nodeIndex    = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, direction);
+      auto       nodePosition = exahype2::dg::getQuadraturePoint(faceCentre, cellSize, nodeIndex, quadratureNodes);
+      nodePosition(direction) = faceCentre(direction);
 
       const ComputePrecision* NOALIAS const nodeState = faceState + faceNode * NumberOfData;
 
@@ -439,15 +435,138 @@ exahype2::dg::evaluateFluxOnFace(
 }
 
 /**
- * Overwrites both flux halves with the Rusanov flux minus the half's own flux, times the sign of
- * the side's outward normal. Two equal sides return zeros bitwise. Each side takes its wave speed at
- * its quadrature-weighted mean state.
+ * Adds the weighted values of the face nodes firstNode, firstNode + nodeStride and so on to sum.
+ * weightedValues stores Lanes values per face node. The values of two mirrored nodes add first. The
+ * pairs add from the outer nodes inwards before the centre node. A reflection of the line returns
+ * the same bits. A reflection that negates every value returns the negated bits.
+ */
+template <int NodesPerAxis, int Lanes, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::addWeightedValuesOfLine(
+  ComputePrecision* NOALIAS const       sum,
+  const ComputePrecision* NOALIAS const weightedValues,
+  const int                             firstNode,
+  const int                             nodeStride
+) {
+  assertion(sum != nullptr);
+  assertion(weightedValues != nullptr);
+  assertion(firstNode >= 0 and nodeStride > 0, firstNode, nodeStride);
+  assertion(
+    firstNode + (NodesPerAxis - 1) * nodeStride < exahype2::dg::getNodesPerFace(NodesPerAxis),
+    firstNode,
+    nodeStride
+  );
+  for (int pair = 0; pair < NodesPerAxis / 2; pair++) {
+    const ComputePrecision* NOALIAS const lower = weightedValues + (firstNode + pair * nodeStride) * Lanes;
+    const ComputePrecision* NOALIAS const upper =
+      weightedValues + (firstNode + (NodesPerAxis - 1 - pair) * nodeStride) * Lanes;
+    SIMD()
+    for (int lane = 0; lane < Lanes; lane++) {
+      sum[lane] += lower[lane] + upper[lane];
+    }
+  }
+  if constexpr (NodesPerAxis % 2 == 1) {
+    const ComputePrecision* NOALIAS const centre = weightedValues + (firstNode + NodesPerAxis / 2 * nodeStride) * Lanes;
+    SIMD()
+    for (int lane = 0; lane < Lanes; lane++) {
+      sum[lane] += centre[lane];
+    }
+  }
+}
+
+/**
+ * Writes the quadrature-weighted mean of every value over the nodes of one face into the
+ * getPaddedCountOf(NumberOfData) values of mean. Every weighted value rounds on its own. The nodes
+ * of a line through the face add with addWeightedValuesOfLine(). In 3D the mean is half the sum of
+ * both orders of the two tangential axes. A reflection or a swap of the tangential axes returns the
+ * same bits. A mirror that negates a value returns its negated mean.
+ */
+template <int NodesPerAxis, int NumberOfData, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::computeMeanOfFace(
+  ComputePrecision* NOALIAS const       mean,
+  const ComputePrecision* NOALIAS const state,
+  const ComputePrecision* NOALIAS const faceQuadratureWeights
+) {
+  constexpr int Lanes        = exahype2::dg::getPaddedCountOf(NumberOfData);
+  constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
+
+  assertion(mean != nullptr);
+  assertion(state != nullptr);
+  assertion(faceQuadratureWeights != nullptr);
+
+  // The weighted values of a node fill whole vectors. The lanes from NumberOfData on stay zero.
+  ComputePrecision weightedValues[NodesPerFace * Lanes];
+  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    for (int value = 0; value < NumberOfData; value++) {
+      weightedValues[faceNode * Lanes + value] =
+        tarch::la::productRoundedOnce(faceQuadratureWeights[faceNode], state[faceNode * NumberOfData + value]);
+    }
+    for (int lane = NumberOfData; lane < Lanes; lane++) {
+      weightedValues[faceNode * Lanes + lane] = static_cast<ComputePrecision>(0);
+    }
+  }
+
+  if constexpr (DIMENSIONS == 2) {
+    for (int lane = 0; lane < Lanes; lane++) {
+      mean[lane] = static_cast<ComputePrecision>(0);
+    }
+    exahype2::dg::addWeightedValuesOfLine<NodesPerAxis, Lanes>(mean, weightedValues, 0, 1);
+  } else {
+    ComputePrecision rowsFirst[Lanes]    = {};
+    ComputePrecision columnsFirst[Lanes] = {};
+    // The line sums add in mirrored pairs as well. The pair NodesPerAxis / 2 of an odd node count
+    // adds the centre line alone.
+    for (int pair = 0; pair < (NodesPerAxis + 1) / 2; pair++) {
+      const int        mirroredPair       = NodesPerAxis - 1 - pair;
+      ComputePrecision lowerRow[Lanes]    = {};
+      ComputePrecision lowerColumn[Lanes] = {};
+      exahype2::dg::addWeightedValuesOfLine<NodesPerAxis, Lanes>(lowerRow, weightedValues, pair * NodesPerAxis, 1);
+      exahype2::dg::addWeightedValuesOfLine<NodesPerAxis, Lanes>(lowerColumn, weightedValues, pair, NodesPerAxis);
+      if (pair == mirroredPair) {
+        SIMD()
+        for (int lane = 0; lane < Lanes; lane++) {
+          rowsFirst[lane] += lowerRow[lane];
+          columnsFirst[lane] += lowerColumn[lane];
+        }
+      } else {
+        ComputePrecision upperRow[Lanes]    = {};
+        ComputePrecision upperColumn[Lanes] = {};
+        exahype2::dg::addWeightedValuesOfLine<NodesPerAxis, Lanes>(
+          upperRow,
+          weightedValues,
+          mirroredPair * NodesPerAxis,
+          1
+        );
+        exahype2::dg::addWeightedValuesOfLine<NodesPerAxis, Lanes>(
+          upperColumn,
+          weightedValues,
+          mirroredPair,
+          NodesPerAxis
+        );
+        SIMD()
+        for (int lane = 0; lane < Lanes; lane++) {
+          rowsFirst[lane] += lowerRow[lane] + upperRow[lane];
+          columnsFirst[lane] += lowerColumn[lane] + upperColumn[lane];
+        }
+      }
+    }
+    SIMD()
+    for (int lane = 0; lane < Lanes; lane++) {
+      mean[lane] = static_cast<ComputePrecision>(0.5) * (rowsFirst[lane] + columnsFirst[lane]);
+    }
+  }
+}
+
+/**
+ * Writes the Riemann summary of one face. Entry 0 receives the larger wave speed of the two sides
+ * at their quadrature-weighted mean states from computeMeanOfFace(). The entries from 1 on receive
+ * the mean of these two mean states in PaddedNumberOfData values.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::solveRiemannProblem(
-  ComputePrecision* NOALIAS const              leftFlux,
-  ComputePrecision* NOALIAS const              rightFlux,
+exahype2::dg::summariseRiemannFace(
+  ComputePrecision* NOALIAS const              faceSummary,
   const ComputePrecision* NOALIAS const        leftState,
   const ComputePrecision* NOALIAS const        rightState,
   const ComputePrecision* NOALIAS const        faceQuadratureWeights,
@@ -457,28 +576,18 @@ exahype2::dg::solveRiemannProblem(
   const double                                 timeStepSize,
   const int                                    direction
 ) {
-  constexpr bool EvaluateNonconservativeProduct = exahype2::terms::HasNonconservativeProduct<Derived, ComputePrecision>;
-  constexpr int  NodesPerAxis                   = Derived::DGOrder + 1;
-  constexpr int  NumberOfUnknowns               = Derived::NumberOfUnknowns;
-  constexpr int  NumberOfData                   = NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
-  constexpr int  NodesPerFace                   = exahype2::dg::getNodesPerFace(NodesPerAxis);
-  constexpr int  PaddedNumberOfUnknowns =
-    ((NumberOfUnknowns + PEANO_WITH_SIMDLEN - 1) / PEANO_WITH_SIMDLEN) * PEANO_WITH_SIMDLEN;
-  constexpr int PaddedNumberOfData =
-    ((NumberOfData + PEANO_WITH_SIMDLEN - 1) / PEANO_WITH_SIMDLEN) * PEANO_WITH_SIMDLEN;
-  constexpr auto Half = static_cast<ComputePrecision>(0.5);
+  constexpr int  NodesPerAxis       = Derived::DGOrder + 1;
+  constexpr int  NumberOfData       = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+  constexpr int  PaddedNumberOfData = exahype2::dg::PaddedLayout<Derived>::PaddedNumberOfData;
+  constexpr auto Half               = static_cast<ComputePrecision>(0.5);
 
+  assertion(faceSummary != nullptr);
   assertion(direction >= 0 and direction < DIMENSIONS, direction);
 
   ComputePrecision averageLeftState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)))  = {};
   ComputePrecision averageRightState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
-    SIMD(aligned(averageLeftState, averageRightState : PEANO_WITH_ALIGNMENT))
-    for (int value = 0; value < NumberOfData; value++) {
-      averageLeftState[value] += faceQuadratureWeights[faceNode] * leftState[faceNode * NumberOfData + value];
-      averageRightState[value] += faceQuadratureWeights[faceNode] * rightState[faceNode * NumberOfData + value];
-    }
-  }
+  exahype2::dg::computeMeanOfFace<NodesPerAxis, NumberOfData>(averageLeftState, leftState, faceQuadratureWeights);
+  exahype2::dg::computeMeanOfFace<NodesPerAxis, NumberOfData>(averageRightState, rightState, faceQuadratureWeights);
 
   const auto leftMaxEigenvalue = static_cast<ComputePrecision>(
     Derived::maxEigenvalue(averageLeftState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
@@ -486,72 +595,27 @@ exahype2::dg::solveRiemannProblem(
   const auto rightMaxEigenvalue = static_cast<ComputePrecision>(
     Derived::maxEigenvalue(averageRightState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
   );
-  const ComputePrecision maxEigenvalue = std::fmax(leftMaxEigenvalue, rightMaxEigenvalue);
-
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
-    SIMD()
-    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      const int              entry         = faceNode * NumberOfUnknowns + unknown;
-      const ComputePrecision leftSideFlux  = leftFlux[entry];
-      const ComputePrecision rightSideFlux = rightFlux[entry];
-      const ComputePrecision jumpTerm =
-        maxEigenvalue * (leftState[faceNode * NumberOfData + unknown] - rightState[faceNode * NumberOfData + unknown]);
-      const ComputePrecision numericalFlux = Half * (leftSideFlux + rightSideFlux + jumpTerm);
-      leftFlux[entry]                      = numericalFlux - leftSideFlux;
-      rightFlux[entry]                     = rightSideFlux - numericalFlux;
-    }
-  }
-
-  if constexpr (EvaluateNonconservativeProduct) {
-    ComputePrecision averageState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
-    ComputePrecision stateJump[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)))    = {};
-    ComputePrecision productValues[PaddedNumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
-      SIMD(aligned(averageState, stateJump : PEANO_WITH_ALIGNMENT))
-      for (int value = 0; value < NumberOfData; value++) {
-        averageState[value] =
-          Half * (leftState[faceNode * NumberOfData + value] + rightState[faceNode * NumberOfData + value]);
-        stateJump[value] = rightState[faceNode * NumberOfData + value] - leftState[faceNode * NumberOfData + value];
-      }
-      SIMD(aligned(productValues : PEANO_WITH_ALIGNMENT))
-      for (int unknown = 0; unknown < PaddedNumberOfUnknowns; unknown++) {
-        productValues[unknown] = static_cast<ComputePrecision>(0);
-      }
-      Derived::nonconservativeProduct(
-        averageState,
-        stateJump,
-        faceCentre,
-        cellSize,
-        timeStamp,
-        timeStepSize,
-        direction,
-        productValues
-      );
-      SIMD(aligned(productValues : PEANO_WITH_ALIGNMENT))
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        const ComputePrecision halfProduct = Half * productValues[unknown];
-        const int              entry       = faceNode * NumberOfUnknowns + unknown;
-        leftFlux[entry]                    = leftFlux[entry] + halfProduct;
-        rightFlux[entry]                   = rightFlux[entry] + halfProduct;
-      }
-    }
+  faceSummary[0] = std::fmax(leftMaxEigenvalue, rightMaxEigenvalue);
+  SIMD(aligned(averageLeftState, averageRightState : PEANO_WITH_ALIGNMENT))
+  for (int value = 0; value < PaddedNumberOfData; value++) {
+    faceSummary[1 + value] = Half * (averageRightState[value] + averageLeftState[value]);
   }
 }
 
 /**
- * Writes the difference between the linear Rusanov flux and each side's own flux with the sign of
- * the outward normal of that side from the state jump alone. Two equal sides leave zeros bitwise.
- * The material parameters of Derived multiply every term at the quadrature-weighted mean of both
- * sides.
+ * Overwrites the flux halves of one face node with the numerical flux minus the half's own flux,
+ * times the sign of the side's outward normal. Linear selects the linear Rusanov flux at the mean
+ * state of faceSummary. The call writes zeros bitwise for two equal sides.
  */
-template <typename Derived, typename ComputePrecision>
+template <typename Derived, bool Linear, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::solveLinearRiemannProblem(
+exahype2::dg::solveRiemannProblemAtNode(
+  const int                                    faceNode,
+  const ComputePrecision* NOALIAS const        faceSummary,
   ComputePrecision* NOALIAS const              leftFlux,
   ComputePrecision* NOALIAS const              rightFlux,
   const ComputePrecision* NOALIAS const        leftState,
   const ComputePrecision* NOALIAS const        rightState,
-  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
@@ -562,64 +626,40 @@ exahype2::dg::solveLinearRiemannProblem(
     exahype2::terms::HasFlux<Derived, ComputePrecision> or exahype2::terms::HasDiffusiveFlux<Derived, ComputePrecision>;
   constexpr bool EvaluateNonconservativeProduct = exahype2::terms::HasNonconservativeProduct<Derived, ComputePrecision>;
   constexpr bool EvaluateMaterialParameters     = exahype2::terms::HasMaterialParameters<Derived, ComputePrecision>;
-  constexpr int  NodesPerAxis                   = Derived::DGOrder + 1;
   constexpr int  NumberOfUnknowns               = Derived::NumberOfUnknowns;
   constexpr int  NumberOfAuxiliaryVariables     = Derived::NumberOfAuxiliaryVariables;
   constexpr int  NumberOfData                   = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  constexpr int  NodesPerFace                   = exahype2::dg::getNodesPerFace(NodesPerAxis);
-  constexpr int  PaddedNumberOfUnknowns =
-    ((NumberOfUnknowns + PEANO_WITH_SIMDLEN - 1) / PEANO_WITH_SIMDLEN) * PEANO_WITH_SIMDLEN;
-  constexpr int PaddedNumberOfData =
-    ((NumberOfData + PEANO_WITH_SIMDLEN - 1) / PEANO_WITH_SIMDLEN) * PEANO_WITH_SIMDLEN;
-  constexpr auto Half = static_cast<ComputePrecision>(0.5);
+  constexpr int  PaddedNumberOfUnknowns         = exahype2::dg::PaddedLayout<Derived>::PaddedNumberOfUnknowns;
+  constexpr int  PaddedNumberOfData             = exahype2::dg::PaddedLayout<Derived>::PaddedNumberOfData;
+  constexpr auto Half                           = static_cast<ComputePrecision>(0.5);
 
+  assertion(faceNode >= 0 and faceNode < exahype2::dg::getNodesPerFace(Derived::DGOrder + 1), faceNode);
+  assertion(faceSummary != nullptr);
   assertion(direction >= 0 and direction < DIMENSIONS, direction);
 
-  ComputePrecision averageLeftState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)))  = {};
-  ComputePrecision averageRightState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
-    SIMD(aligned(averageLeftState, averageRightState : PEANO_WITH_ALIGNMENT))
-    for (int value = 0; value < NumberOfData; value++) {
-      averageLeftState[value] += faceQuadratureWeights[faceNode] * leftState[faceNode * NumberOfData + value];
-      averageRightState[value] += faceQuadratureWeights[faceNode] * rightState[faceNode * NumberOfData + value];
+  const ComputePrecision                maxEigenvalue = faceSummary[0];
+  const ComputePrecision* NOALIAS const averageState  = faceSummary + 1;
+  const ComputePrecision* NOALIAS const leftNode      = leftState + faceNode * NumberOfData;
+  const ComputePrecision* NOALIAS const rightNode     = rightState + faceNode * NumberOfData;
+  ComputePrecision* NOALIAS const       leftNodeFlux  = leftFlux + faceNode * NumberOfUnknowns;
+  ComputePrecision* NOALIAS const       rightNodeFlux = rightFlux + faceNode * NumberOfUnknowns;
+
+  if constexpr (Linear) {
+    ComputePrecision halfStateJump[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
+    if constexpr (NumberOfAuxiliaryVariables > 0) {
+      for (int value = NumberOfUnknowns; value < PaddedNumberOfData; value++) {
+        halfStateJump[value] = averageState[value];
+      }
     }
-  }
-
-  const auto leftMaxEigenvalue = static_cast<ComputePrecision>(
-    Derived::maxEigenvalue(averageLeftState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
-  );
-  const auto rightMaxEigenvalue = static_cast<ComputePrecision>(
-    Derived::maxEigenvalue(averageRightState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
-  );
-  const ComputePrecision maxEigenvalue = std::fmax(leftMaxEigenvalue, rightMaxEigenvalue);
-
-  [[maybe_unused]] ComputePrecision averageState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-  SIMD(aligned(averageState, averageLeftState, averageRightState : PEANO_WITH_ALIGNMENT))
-  for (int value = 0; value < PaddedNumberOfData; value++) {
-    averageState[value] = Half * (averageRightState[value] + averageLeftState[value]);
-  }
-
-  ComputePrecision halfStateJump[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
-  if constexpr (NumberOfAuxiliaryVariables > 0) {
-    for (int value = NumberOfUnknowns; value < PaddedNumberOfData; value++) {
-      halfStateJump[value] = averageState[value];
-    }
-  }
-
-  [[maybe_unused]] ComputePrecision productValues[PaddedNumberOfUnknowns]
-    __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-  [[maybe_unused]] ComputePrecision fluxValues[PaddedNumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
     SIMD(aligned(halfStateJump : PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      halfStateJump[unknown] =
-        Half * (rightState[faceNode * NumberOfData + unknown] - leftState[faceNode * NumberOfData + unknown]);
+      halfStateJump[unknown] = Half * (rightNode[unknown] - leftNode[unknown]);
     }
 
     ComputePrecision centralFlux[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
 
     if constexpr (EvaluateNonconservativeProduct) {
+      ComputePrecision productValues[PaddedNumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       SIMD(aligned(productValues : PEANO_WITH_ALIGNMENT))
       for (int unknown = 0; unknown < PaddedNumberOfUnknowns; unknown++) {
         productValues[unknown] = static_cast<ComputePrecision>(0);
@@ -652,6 +692,7 @@ exahype2::dg::solveLinearRiemannProblem(
     }
 
     if constexpr (EvaluateFlux) {
+      ComputePrecision fluxValues[PaddedNumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       SIMD(aligned(fluxValues : PEANO_WITH_ALIGNMENT))
       for (int unknown = 0; unknown < PaddedNumberOfUnknowns; unknown++) {
         fluxValues[unknown] = static_cast<ComputePrecision>(0);
@@ -674,12 +715,153 @@ exahype2::dg::solveLinearRiemannProblem(
       }
     }
 
-    SIMD(aligned(halfStateJump, centralFlux : PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      const ComputePrecision dissipation               = maxEigenvalue * halfStateJump[unknown];
-      rightFlux[faceNode * NumberOfUnknowns + unknown] = centralFlux[unknown] + dissipation;
-      leftFlux[faceNode * NumberOfUnknowns + unknown]  = centralFlux[unknown] - dissipation;
+      const ComputePrecision dissipation = maxEigenvalue * halfStateJump[unknown];
+      rightNodeFlux[unknown]             = centralFlux[unknown] + dissipation;
+      leftNodeFlux[unknown]              = centralFlux[unknown] - dissipation;
     }
+  } else {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const ComputePrecision leftSideFlux  = leftNodeFlux[unknown];
+      const ComputePrecision rightSideFlux = rightNodeFlux[unknown];
+      const ComputePrecision jumpTerm      = maxEigenvalue * (leftNode[unknown] - rightNode[unknown]);
+      const ComputePrecision numericalFlux = Half * (leftSideFlux + rightSideFlux + jumpTerm);
+      leftNodeFlux[unknown]                = numericalFlux - leftSideFlux;
+      rightNodeFlux[unknown]               = rightSideFlux - numericalFlux;
+    }
+
+    if constexpr (EvaluateNonconservativeProduct) {
+      ComputePrecision nodeAverageState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
+      ComputePrecision stateJump[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)))        = {};
+      ComputePrecision productValues[PaddedNumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      SIMD(aligned(nodeAverageState, stateJump : PEANO_WITH_ALIGNMENT))
+      for (int value = 0; value < NumberOfData; value++) {
+        nodeAverageState[value] = Half * (leftNode[value] + rightNode[value]);
+        stateJump[value]        = rightNode[value] - leftNode[value];
+      }
+      SIMD(aligned(productValues : PEANO_WITH_ALIGNMENT))
+      for (int unknown = 0; unknown < PaddedNumberOfUnknowns; unknown++) {
+        productValues[unknown] = static_cast<ComputePrecision>(0);
+      }
+      Derived::nonconservativeProduct(
+        nodeAverageState,
+        stateJump,
+        faceCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize,
+        direction,
+        productValues
+      );
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        const ComputePrecision halfProduct = Half * productValues[unknown];
+        leftNodeFlux[unknown]              = leftNodeFlux[unknown] + halfProduct;
+        rightNodeFlux[unknown]             = rightNodeFlux[unknown] + halfProduct;
+      }
+    }
+  }
+}
+
+/**
+ * Overwrites both flux halves with the Rusanov flux minus the half's own flux, times the sign of
+ * the side's outward normal. Two equal sides return zeros bitwise. Each side takes its wave speed at
+ * its quadrature-weighted mean state.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::solveRiemannProblem(
+  ComputePrecision* NOALIAS const              leftFlux,
+  ComputePrecision* NOALIAS const              rightFlux,
+  const ComputePrecision* NOALIAS const        leftState,
+  const ComputePrecision* NOALIAS const        rightState,
+  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    direction
+) {
+  constexpr int NodesPerFace  = exahype2::dg::getNodesPerFace(Derived::DGOrder + 1);
+  constexpr int SummaryValues = 1 + exahype2::dg::PaddedLayout<Derived>::PaddedNumberOfData;
+
+  ComputePrecision faceSummary[SummaryValues];
+  exahype2::dg::summariseRiemannFace<Derived>(
+    faceSummary,
+    leftState,
+    rightState,
+    faceQuadratureWeights,
+    faceCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize,
+    direction
+  );
+  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    exahype2::dg::solveRiemannProblemAtNode<Derived, false>(
+      faceNode,
+      faceSummary,
+      leftFlux,
+      rightFlux,
+      leftState,
+      rightState,
+      faceCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      direction
+    );
+  }
+}
+
+/**
+ * Writes the difference between the linear Rusanov flux and each side's own flux with the sign of
+ * the outward normal of that side from the state jump alone. Two equal sides leave zeros bitwise.
+ * The material parameters of Derived multiply every term at the quadrature-weighted mean of both
+ * sides.
+ */
+template <typename Derived, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::solveLinearRiemannProblem(
+  ComputePrecision* NOALIAS const              leftFlux,
+  ComputePrecision* NOALIAS const              rightFlux,
+  const ComputePrecision* NOALIAS const        leftState,
+  const ComputePrecision* NOALIAS const        rightState,
+  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    direction
+) {
+  constexpr int NodesPerFace  = exahype2::dg::getNodesPerFace(Derived::DGOrder + 1);
+  constexpr int SummaryValues = 1 + exahype2::dg::PaddedLayout<Derived>::PaddedNumberOfData;
+
+  ComputePrecision faceSummary[SummaryValues];
+  exahype2::dg::summariseRiemannFace<Derived>(
+    faceSummary,
+    leftState,
+    rightState,
+    faceQuadratureWeights,
+    faceCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize,
+    direction
+  );
+  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    exahype2::dg::solveRiemannProblemAtNode<Derived, true>(
+      faceNode,
+      faceSummary,
+      leftFlux,
+      rightFlux,
+      leftState,
+      rightState,
+      faceCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      direction
+    );
   }
 }
 
@@ -771,7 +953,7 @@ exahype2::dg::solveRiemannProblemOnHalves(
 /**
  * Solves the Riemann problem of one face and overwrites both halves of faceFlux.
  * boundaryFaceNumber is negative for an inner face. For a boundary face, it is the face number in
- * the cell inside the domain, and the outer halves follow from the boundary conditions.
+ * the cell inside the domain and the outer halves follow from the boundary conditions.
  */
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -952,6 +1134,19 @@ exahype2::dg::ForLevelJumpOnPlane<Operation>::operator()(const peano4::LevelJump
   }
 }
 
+template <typename Operation>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::ForOwnedLevelJump<Operation>::operator()(const peano4::LevelJump& levelJump) const {
+  assertion(
+    levelJump.coarseFace >= 0 and levelJump.coarseFace < ownsCoarseSideOfFace.size,
+    levelJump.coarseFace,
+    ownsCoarseSideOfFace.size
+  );
+  if (ownsCoarseSideOfFace[levelJump.coarseFace] != 0) {
+    operation(levelJump);
+  }
+}
+
 /**
  * Subtracts the integral over one face from the update of cellNode. faceFlux stores the signed
  * flux differences of the Riemann solver. The lower face (orientation zero) and the upper face
@@ -980,12 +1175,9 @@ exahype2::dg::addFaceIntegral(
   assertion(orientation == 0 or orientation == 1, orientation);
   assertion(inverseCellSizeAlongNormal > 0.0, inverseCellSizeAlongNormal);
 
-  int lowerAxesStride = 1;
-  for (int dimension = 0; dimension < direction; dimension++) {
-    lowerAxesStride *= NodesPerAxis;
-  }
-  const int normalIndex = (cellNode / lowerAxesStride) % NodesPerAxis;
-  const int faceNode    = cellNode / (lowerAxesStride * NodesPerAxis) * lowerAxesStride + cellNode % lowerAxesStride;
+  const int nodeStride  = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, direction);
+  const int normalIndex = (cellNode / nodeStride) % NodesPerAxis;
+  const int faceNode    = cellNode / (nodeStride * NodesPerAxis) * nodeStride + cellNode % nodeStride;
 
   const ComputePrecision* NOALIAS const faceCoefficients =
     (orientation == 0) ? leftFaceCoefficients : rightFaceCoefficients;
@@ -997,10 +1189,14 @@ exahype2::dg::addFaceIntegral(
     static_cast<WeightPrecision>(inverseCellSizeAlongNormal) * static_cast<WeightPrecision>(timeStepSize)
     * static_cast<WeightPrecision>(faceQuadratureWeights[faceNode])
   );
+  const ComputePrecision nodeWeight =
+    inverseCellQuadratureWeights[cellNode] * scaledWeight * faceCoefficients[normalIndex];
   SIMD()
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    const ComputePrecision contribution = inverseCellQuadratureWeights[cellNode] * scaledWeight
-      * faceCoefficients[normalIndex] * faceFlux[faceNode * NumberOfUnknowns + unknown];
+    // productRoundedOnce() rounds the contribution of every face on its own. The two faces of an axis
+    // then add alike with and without fused multiply-adds.
+    const ComputePrecision contribution =
+      tarch::la::productRoundedOnce(nodeWeight, faceFlux[faceNode * NumberOfUnknowns + unknown]);
     nodeUpdate[unknown] = static_cast<StoragePrecision>(
       static_cast<UpdatePrecision>(nodeUpdate[unknown]) - static_cast<UpdatePrecision>(contribution)
     );
@@ -1008,9 +1204,75 @@ exahype2::dg::addFaceIntegral(
 }
 
 /**
- * Subtracts the integrals over all faces of the cell from the unknowns of cellValues. The two
- * faces of an axis add into one buffer per axis first. Two mirror-image cells then receive bitwise
- * mirrored updates.
+ * Subtracts the integrals over all faces of the cell from the unknowns of one node of cellValues.
+ * The two faces of an axis add into one buffer per axis first. Two mirror-image cells then receive
+ * bitwise mirrored updates. inverseCellSize is the reciprocal of the cell extent along every axis.
+ */
+template <typename Derived, int NumberOfValuesPerNode, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::addFaceIntegralsOfNode(
+  StoragePrecision* NOALIAS const       cellValues,
+  const int                             node,
+  const ComputePrecision* const         faceFluxes[peano4::FacesPerCell],
+  const ComputePrecision* NOALIAS const faceQuadratureWeights,
+  const ComputePrecision* NOALIAS const inverseCellQuadratureWeights,
+  const ComputePrecision* NOALIAS const leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const rightFaceCoefficients,
+  const double                          inverseCellSize[DIMENSIONS],
+  const double                          timeStepSize
+) {
+  constexpr int NumberOfUnknowns = Derived::NumberOfUnknowns;
+  static_assert(NumberOfUnknowns > 0 and NumberOfValuesPerNode >= NumberOfUnknowns);
+
+  assertion(cellValues != nullptr);
+  assertion(node >= 0 and node < exahype2::dg::getNodesPerCell(Derived::DGOrder + 1), node);
+  assertion(faceQuadratureWeights != nullptr);
+  assertion(inverseCellQuadratureWeights != nullptr);
+  assertion(leftFaceCoefficients != nullptr);
+  assertion(rightFaceCoefficients != nullptr);
+  assertion(timeStepSize >= 0.0, timeStepSize);
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    assertion(faceFluxes[face] != nullptr, face);
+  }
+
+  StoragePrecision directionUpdates[DIMENSIONS][NumberOfUnknowns];
+  UNROLL(DIMENSIONS)
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    assertion(inverseCellSize[direction] > 0.0, inverseCellSize[direction], direction);
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      directionUpdates[direction][unknown] = static_cast<StoragePrecision>(0);
+    }
+    for (int orientation = 0; orientation < 2; orientation++) {
+      exahype2::dg::addFaceIntegral<Derived>(
+        directionUpdates[direction],
+        node,
+        faceFluxes[direction + orientation * DIMENSIONS],
+        faceQuadratureWeights,
+        inverseCellQuadratureWeights,
+        leftFaceCoefficients,
+        rightFaceCoefficients,
+        direction,
+        orientation,
+        inverseCellSize[direction],
+        timeStepSize
+      );
+    }
+  }
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+#if DIMENSIONS == 2
+    cellValues[node * NumberOfValuesPerNode + unknown] += directionUpdates[0][unknown] + directionUpdates[1][unknown];
+#else
+    cellValues[node * NumberOfValuesPerNode + unknown] += tarch::la::sumInOrderOfValue(
+      directionUpdates[0][unknown],
+      directionUpdates[1][unknown],
+      directionUpdates[2][unknown]
+    );
+#endif
+  }
+}
+
+/**
+ * Subtracts the integrals over all faces of the cell from the unknowns of every node of cellValues.
  */
 template <typename Derived, int NumberOfValuesPerNode, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -1024,51 +1286,26 @@ exahype2::dg::addFaceIntegrals(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStepSize
 ) {
-  constexpr int NumberOfUnknowns = Derived::NumberOfUnknowns;
-  constexpr int NodesPerCell     = exahype2::dg::getNodesPerCell(Derived::DGOrder + 1);
-  static_assert(NumberOfUnknowns > 0 and NumberOfValuesPerNode >= NumberOfUnknowns);
+  constexpr int NodesPerCell = exahype2::dg::getNodesPerCell(Derived::DGOrder + 1);
 
-  assertion(cellValues != nullptr);
-  assertion(faceQuadratureWeights != nullptr);
-  assertion(inverseCellQuadratureWeights != nullptr);
-  assertion(leftFaceCoefficients != nullptr);
-  assertion(rightFaceCoefficients != nullptr);
-  assertion(timeStepSize >= 0.0, timeStepSize);
-  for (int face = 0; face < peano4::FacesPerCell; face++) {
-    assertion(faceFluxes[face] != nullptr, face);
+  double inverseCellSize[DIMENSIONS];
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    assertion(cellSize(direction) > 0.0, cellSize, direction);
+    inverseCellSize[direction] = 1.0 / cellSize(direction);
   }
 
   for (int node = 0; node < NodesPerCell; node++) {
-    StoragePrecision directionUpdates[DIMENSIONS][NumberOfUnknowns];
-    for (int direction = 0; direction < DIMENSIONS; direction++) {
-      assertion(cellSize(direction) > 0.0, cellSize, direction);
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        directionUpdates[direction][unknown] = static_cast<StoragePrecision>(0);
-      }
-      for (int orientation = 0; orientation < 2; orientation++) {
-        exahype2::dg::addFaceIntegral<Derived>(
-          directionUpdates[direction],
-          node,
-          faceFluxes[direction + orientation * DIMENSIONS],
-          faceQuadratureWeights,
-          inverseCellQuadratureWeights,
-          leftFaceCoefficients,
-          rightFaceCoefficients,
-          direction,
-          orientation,
-          1.0 / cellSize(direction),
-          timeStepSize
-        );
-      }
-    }
-    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-#if DIMENSIONS == 2
-      cellValues[node * NumberOfValuesPerNode + unknown] += directionUpdates[0][unknown] + directionUpdates[1][unknown];
-#else
-      cellValues[node * NumberOfValuesPerNode + unknown] +=
-        directionUpdates[0][unknown] + directionUpdates[1][unknown] + directionUpdates[2][unknown];
-#endif
-    }
+    exahype2::dg::addFaceIntegralsOfNode<Derived, NumberOfValuesPerNode>(
+      cellValues,
+      node,
+      faceFluxes,
+      faceQuadratureWeights,
+      inverseCellQuadratureWeights,
+      leftFaceCoefficients,
+      rightFaceCoefficients,
+      inverseCellSize,
+      timeStepSize
+    );
   }
 }
 
@@ -1120,6 +1357,34 @@ exahype2::dg::MaxEigenvalueStatistics::accumulate(
 }
 
 /**
+ * Returns the physical and the scaled wave-speed maxima of Derived at one quadrature node of a cell.
+ */
+template <typename Derived, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics
+exahype2::dg::getMaxEigenvaluesOfNode(
+  const int                                    cellNode,
+  const Precision* NOALIAS const               cellState,
+  const Precision* NOALIAS const               quadratureNodes,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  constexpr int NodesPerAxis = Derived::DGOrder + 1;
+  constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+
+  assertion(cellNode >= 0 and cellNode < exahype2::dg::getNodesPerCell(NodesPerAxis), cellNode);
+  const auto nodeIndex    = peano4::dDelinearised(cellNode, NodesPerAxis);
+  const auto nodePosition = exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes);
+  const Precision* NOALIAS const nodeState = cellState + cellNode * NumberOfData;
+  MaxEigenvalueStatistics        result;
+  result.accumulate(cellSize, [&](const int direction) {
+    return Derived::maxEigenvalue(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction);
+  });
+  return result;
+}
+
+/**
  * Returns the physical and the scaled wave-speed maxima of Derived over the quadrature nodes of one cell.
  */
 template <typename Derived, typename Precision>
@@ -1132,18 +1397,22 @@ exahype2::dg::reduceMaxEigenvalues(
   const double                                 timeStamp,
   const double                                 timeStepSize
 ) {
-  constexpr int           NodesPerAxis = Derived::DGOrder + 1;
-  constexpr int           NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
+  constexpr int           NodesPerCell = exahype2::dg::getNodesPerCell(Derived::DGOrder + 1);
   MaxEigenvalueStatistics result;
-
-  peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
-    const int  cellNode     = peano4::dLinearised(nodeIndex, NodesPerAxis);
-    const auto nodePosition = exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes);
-    const Precision* NOALIAS const nodeState = cellState + cellNode * NumberOfData;
-    result.accumulate(cellSize, [&](const int direction) {
-      return Derived::maxEigenvalue(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction);
-    });
-  });
+  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    result = MaxEigenvalueStatistics::combine(
+      result,
+      exahype2::dg::getMaxEigenvaluesOfNode<Derived>(
+        cellNode,
+        cellState,
+        quadratureNodes,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize
+      )
+    );
+  }
   return result;
 }
 
@@ -1235,39 +1504,84 @@ exahype2::dg::MeasureNodeErrors<Derived, StoragePrecision>::operator()(const int
 
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::RegridCells<Derived, StoragePrecision>::copy(const int slot, StoragePrecision* const target) const {
+exahype2::dg::CellTransfer<Derived, StoragePrecision>::prepareInterpolation(
+  const int     parentSlot,
+  double* const prepared,
+  const int     itemOfChunk
+) const {
+  exahype2::dg::computeReferenceAndBoundOfParent<NodesPerAxis, NumberOfData>(
+    source.getChunk(parentSlot),
+    prolongationMatrix,
+    itemOfChunk,
+    prepared
+  );
+}
+
+template <typename Derived, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::CellTransfer<Derived, StoragePrecision>::prepareRestriction(
+  const int* const childSlots,
+  double* const    prepared,
+  const int        itemOfChunk
+) const {
+  const StoragePrecision* children[peano4::ChildrenPerCell];
+  for (int child = 0; child < peano4::ChildrenPerCell; child++) {
+    children[child] = source.getChunk(childSlots[child]);
+  }
+  exahype2::dg::computeReferenceAndBoundOfChildren<NodesPerAxis, NumberOfData>(
+    children,
+    restrictionMatrix,
+    itemOfChunk,
+    prepared
+  );
+}
+
+template <typename Derived, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::dg::CellTransfer<Derived, StoragePrecision>::copy(
+  const int               slot,
+  StoragePrecision* const target,
+  const int               itemOfChunk
+) const {
+  assertion(itemOfChunk >= 0 and itemOfChunk < WorkItemsPerChunk, itemOfChunk);
   const StoragePrecision* const kept = source.getChunk(slot);
-  for (int value = 0; value < ValuesPerCell; value++) {
+  for (int value = itemOfChunk * NumberOfData; value < (itemOfChunk + 1) * NumberOfData; value++) {
     target[value] = kept[value];
   }
 }
 
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::RegridCells<Derived, StoragePrecision>::interpolateFromParent(
+exahype2::dg::CellTransfer<Derived, StoragePrecision>::interpolateFromParent(
   const int               parentSlot,
   StoragePrecision* const target,
-  const int               childPosition
+  const int               childPosition,
+  const int               itemOfChunk,
+  const double* const     prepared
 ) const {
-  exahype2::dg::interpolateCell<NodesPerAxis, NumberOfData>(
+  exahype2::dg::interpolateNode<NodesPerAxis, NumberOfData>(
     source.getChunk(parentSlot),
     target,
     prolongationMatrix,
-    childPosition
+    prepared,
+    childPosition,
+    itemOfChunk
   );
 }
 
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-exahype2::dg::RegridCells<Derived, StoragePrecision>::restrictFromChildren(
+exahype2::dg::CellTransfer<Derived, StoragePrecision>::restrictFromChildren(
   const int* const        childSlots,
-  StoragePrecision* const target
+  StoragePrecision* const target,
+  const int               itemOfChunk,
+  const double* const     prepared
 ) const {
   const StoragePrecision* children[peano4::ChildrenPerCell];
   for (int child = 0; child < peano4::ChildrenPerCell; child++) {
     children[child] = source.getChunk(childSlots[child]);
   }
-  exahype2::dg::restrictCell<NodesPerAxis, NumberOfData>(children, target, restrictionMatrix);
+  exahype2::dg::restrictNode<NodesPerAxis, NumberOfData>(children, target, restrictionMatrix, prepared, itemOfChunk);
 }
 
 template <typename Derived, typename PartnerDerived, typename PartnerPrecision, typename ComputePrecision>
@@ -1289,11 +1603,13 @@ exahype2::dg::CopyPartnerFaceHalves<Derived, PartnerDerived, PartnerPrecision, C
   for (int element = 0; element < PartnerStateElementsPerFace; element++) {
     partnerState[element] = static_cast<ComputePrecision>(partnerStateHalf[element]);
   }
-  exahype2::dg::projectTensorProduct<DIMENSIONS - 1, PartnerNodesPerAxis, NodesPerAxis, NumberOfData>(
-    partnerState,
-    states.getChunk(face) + partnerHalf * StateElementsPerFace,
-    matrix
-  );
+  exahype2::dg::projectTensorProduct<
+    DIMENSIONS - 1,
+    PartnerNodesPerAxis,
+    NodesPerAxis,
+    NumberOfData,
+    exahype2::dg::ProjectionRule::PairedProducts
+  >(partnerState, states.getChunk(face) + partnerHalf * StateElementsPerFace, matrix);
 
   ComputePrecision              partnerFlux[PartnerFluxElementsPerFace];
   const PartnerPrecision* const partnerFluxHalf =
@@ -1301,10 +1617,12 @@ exahype2::dg::CopyPartnerFaceHalves<Derived, PartnerDerived, PartnerPrecision, C
   for (int element = 0; element < PartnerFluxElementsPerFace; element++) {
     partnerFlux[element] = static_cast<ComputePrecision>(partnerFluxHalf[element]);
   }
-  exahype2::dg::projectTensorProduct<DIMENSIONS - 1, PartnerNodesPerAxis, NodesPerAxis, NumberOfUnknowns>(
-    partnerFlux,
-    fluxes.getChunk(face) + partnerHalf * FluxElementsPerFace,
-    matrix
-  );
+  exahype2::dg::projectTensorProduct<
+    DIMENSIONS - 1,
+    PartnerNodesPerAxis,
+    NodesPerAxis,
+    NumberOfUnknowns,
+    exahype2::dg::ProjectionRule::PairedProducts
+  >(partnerFlux, fluxes.getChunk(face) + partnerHalf * FluxElementsPerFace, matrix);
 }
 TARGET_DECLARE_END

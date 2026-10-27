@@ -31,7 +31,7 @@ set. Unsetting the environment variable reverts to the automatic search.
   Intel, switching from -fast to -O3 does work in some cases.
 
 - ***My C++ version is too old***
-  Peano requires C++20, which CMake enforces automatically. If your compiler
+  Peano requires C++20. CMake enforces this standard. If your compiler
   defaults to an older standard, you can force the flag through
   ~~~~~~~~~~~~~~~~~~~
 cmake .. -DPEANO_EXTRA_CXX_FLAGS="-std=c++20"
@@ -95,12 +95,12 @@ error: name followed by "::" must be a class or namespace name
   Use a compiler with OpenMP 5.0 support, such as GCC 9.x.
 
 - ***I configured Peano with HDF5, but my application (experiment or benchmark) will not compile***
-  HDF5 support is enabled through the CMake option `PEANO_WITH_HDF5` (on by
-  default). Peano links only the HDF5 C component (`find_package(HDF5 COMPONENTS C)`);
-  there is no dependency on the HDF5 C++ binding. The resulting include and link
-  flags are attached to the `PeanoOptions` interface target and written into
-  `PeanoConfig.cmake`, which the Python API reads to generate the makefile for
-  your application. If HDF5 is not picked up, reconfigure your build with
+  The CMake option `PEANO_WITH_HDF5` (on by default) enables HDF5 support. Peano
+  links only the HDF5 C component (`find_package(HDF5 COMPONENTS C)`). CMake
+  attaches the resulting include and link flags to the `PeanoOptions` interface
+  target and writes them into `PeanoConfig.cmake`. The Python API reads this file
+  to generate the makefile for your application. If CMake misses HDF5,
+  reconfigure your build with
   ~~~~~~~~~~~~~~~~~~~
 cmake .. -DPEANO_WITH_HDF5=ON
   ~~~~~~~~~~~~~~~~~~~
@@ -212,7 +212,7 @@ undefined reference to for_write_seq_list
 
              pip3 install --user numpy
 
-    Similar arguments hold for jinja2. Peano's API and all extensions can work without
+    The same arguments apply to jinja2. Peano's API and all extensions can work without
     numpy in principle. However, not all features (solvers in ExaHyPE, e.g.)
     might be available without numpy.
 

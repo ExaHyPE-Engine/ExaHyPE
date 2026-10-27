@@ -6,7 +6,6 @@ namespace peano4::topology {
   constexpr int DefaultMinimumItemsPerChunk = 4096;
 
   int getMaximumNumberOfChunks();
-
   int getNumberOfChunks(int numberOfItems, int minimumItemsPerChunk = DefaultMinimumItemsPerChunk);
 
   void runChunkedTasks(

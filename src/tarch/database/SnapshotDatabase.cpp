@@ -21,9 +21,8 @@ tarch::database::SnapshotDatabase::getOutputFileName() const {
 }
 
 /**
- * Writes the snapshots not yet on disk. The first flush truncates the file and writes the header,
- * and later flushes append. A failed write marks every snapshot unwritten, so the next call
- * rewrites the whole file.
+ * Writes the snapshots not yet on disk. The first flush truncates the file and writes the header.
+ * A failed write marks every snapshot unwritten for the next call.
  */
 void
 tarch::database::SnapshotDatabase::dumpCSVFile() {
@@ -106,4 +105,15 @@ tarch::database::SnapshotDatabase::setTimeDeltaBetweenTwoSnapshots(double value)
   assertion(value >= 0.0);
   const std::scoped_lock lock(_mutex);
   _timeDelta = value;
+}
+
+/**
+ * Selects the snapshots the database stores. Under Deltas the database stores a snapshot once its
+ * deltas have passed since the newest one. Under EveryLaterTimestamp it stores every snapshot with
+ * a later time stamp than the newest one.
+ */
+void
+tarch::database::SnapshotDatabase::setSnapshotRule(const tarch::database::SnapshotRule rule) {
+  const std::scoped_lock lock(_mutex);
+  _snapshotRule = rule;
 }

@@ -56,7 +56,8 @@ def main() -> None:
         Finding(match.group("path"), 0, "black changes this file")
         for match in WOULD_REFORMAT.finditer(result.stderr)
     ]
-    # Black also leaves with status one when it crashes, so only the listed files count.
+    # Black also exits with status one when it crashes. A check counts as a finding only with listed
+    # files.
     if result.returncode != 0 and not (
         args.check and result.returncode == 1 and findings
     ):

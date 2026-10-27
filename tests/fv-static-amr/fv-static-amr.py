@@ -77,9 +77,9 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
-  // The refined disc lies at the domain corner. With periodic boundaries it overlaps every wrap, so
-  // the refinement appears on the far side of each axis too. With reflecting walls it stays in the
-  // corner as the control case.
+  // The refined disc lies at the domain corner. With periodic boundaries the refinement also covers
+  // the far side of every axis. With reflecting walls the refinement stays in the corner as the
+  // control case.
   tarch::la::Vector<DIMENSIONS, double> circleCentre(0.0);
 
   if (tarch::la::equals(t, 0.0)) {
@@ -100,14 +100,11 @@ compute_primitive_variables = r"""
 #endif
 
 #if DIMENSIONS == 3
-  const auto squareOfU0 = u0 * u0;
-  const auto squareOfU1 = u1 * u1;
-  const auto squareOfU2 = u2 * u2;
-  const auto uSq        = squareOfU0 + squareOfU1 + squareOfU2;
+  const auto uSq = tarch::la::sumOfSquaresInOrderOfMagnitude(u0, u1, u2);
   const auto u_n = (normal == 0) ? u0 : (normal == 1) ? u1 : u2;
 #else
-  const auto squareOfU0 = u0 * u0;
-  const auto squareOfU1 = u1 * u1;
+  const auto squareOfU0 = tarch::la::productRoundedOnce(u0, u0);
+  const auto squareOfU1 = tarch::la::productRoundedOnce(u1, u1);
   const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 #endif

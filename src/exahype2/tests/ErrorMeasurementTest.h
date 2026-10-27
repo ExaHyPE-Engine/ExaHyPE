@@ -26,5 +26,6 @@ private:
   void testAccumulationWeightsTheMeasuredUnknownsOnly();
   void testSolutionErrorComparesAgainstTheAnalyticalSolutionAtTheDegreeOfFreedom();
   void testEveryRankFindsASnapshotDueForTheNewestTimeStampAndAfterTheTimeDelta();
+  void testEveryLaterTimeStampIsDueBeforeTheTimeDelta();
   void testTheOwnedBufferSumsTheErrorsOfEveryCell();
 };

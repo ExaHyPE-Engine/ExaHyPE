@@ -44,11 +44,15 @@ project = exahype2.Project(
 
 initial_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Q[i] = std::sin(x(0) * tarch::la::PI) * std::sin(x(1) * tarch::la::PI)
 #if DIMENSIONS == 3
-      * std::sin(x(2) * tarch::la::PI)
+    Q[i] = tarch::la::productInOrderOfMagnitude(
+      std::sin(x(0) * tarch::la::PI),
+      std::sin(x(1) * tarch::la::PI),
+      std::sin(x(2) * tarch::la::PI)
+    );
+#else
+    Q[i] = std::sin(x(0) * tarch::la::PI) * std::sin(x(1) * tarch::la::PI);
 #endif
-    ;
   }
 """
 

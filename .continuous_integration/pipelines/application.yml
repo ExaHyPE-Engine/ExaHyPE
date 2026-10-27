@@ -78,10 +78,17 @@ ExaSeis:
   stage: Application
   parallel:
     matrix:
-    - scenario: [cartesian, curvilinear, dynamic-rupture, pml, pml-dynamic-rupture]
+    - scenario: [cartesian]
+      build_type: [Release, Asserts, Debug]
+    - scenario: [curvilinear, pml]
+      exaseis_scenario: [LOH1, Zugspitze]
+      build_type: [Release, Asserts, Debug]
+    - scenario: [dynamic-rupture, pml-dynamic-rupture]
+      exaseis_scenario: [TPV5, TPV6, TPV16, TPV26, TPV28, TPV29, TPV34, Husavik]
       build_type: [Release, Asserts, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
+    - if [ -n "${exaseis_scenario:-}" ]; then git lfs pull --include="applications/exaseis/Scenario/specs/$exaseis_scenario/**"; fi
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py ${exaseis_scenario:+-s $exaseis_scenario} --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario && $PARALLEL_LAUNCH ./ExaSeis -ns 0 -l ${MIN_GRID_LEVELS} -et 0.1"
   allow_failure: false
   extends:

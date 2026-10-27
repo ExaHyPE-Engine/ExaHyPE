@@ -73,7 +73,6 @@ set(SOURCES
 )
 
 set(GPU_SOURCES
-  ErrorMeasurement.cpp
   fv/ader/tests/SolverTest.cpp
   fv/tests/WENOTest.cpp
   dg/ader/tests/LinearPredictorTest.cpp

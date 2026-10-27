@@ -10,10 +10,10 @@ describes the grid metrics.
 
 # Data access
 
-Solver data resides in rank-local pools indexed by the cell and face slots of
-the cell connectivity, and every dispatch reads the pools directly. A time step is a fixed
-sequence of dispatches, so the traffic per step is the pools it reads and
-writes plus the halo buffers.
+Rank-local pools store the solver data in the cell and face slots of the cell
+connectivity. Every dispatch reads the pools directly. A time step runs a fixed
+sequence of dispatches. The traffic per step is the pools it reads and writes
+plus the halo buffers.
 
 # Kernel cost
 
@@ -23,7 +23,7 @@ apply the vectorisation and accelerator guidance on @ref page_exahype_gpu.
 The CPU and the GPU evaluate the same kernel.
 
 If memory movement dominates, inspect the patch size or the polynomial order,
-the number of pools a family holds and the plot frequency before tuning the
+the number of pools of a solver family and the plot frequency before tuning the
 kernel itself.
 
 # Rank balance

@@ -640,8 +640,8 @@ namespace {
     }
     armedExceptions = tarch::FloatingPointExceptions::None;
 
-    // The handler does async-signal-safe work only, so execution resumes in
-    // terminateAfterFloatingPointSignal(), which writes the report.
+    // The handler does async-signal-safe work only. The report follows in
+    // terminateAfterFloatingPointSignal().
     auto* const machineContext = static_cast<ucontext_t*>(signalContext);
 #if defined(__x86_64__)
     machineContext->uc_mcontext.gregs[REG_RIP] =

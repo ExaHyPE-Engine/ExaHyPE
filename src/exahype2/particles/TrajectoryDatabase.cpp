@@ -29,8 +29,8 @@ exahype2::particles::TrajectoryDatabase::TrajectoryDatabase(
 exahype2::particles::TrajectoryDatabase::~TrajectoryDatabase() { clear(); }
 
 /**
- * Every rank writes its own file, so the file name contains the rank number when more than one
- * rank runs.
+ * Every rank writes its own file. The file name contains the rank number when more than one rank
+ * runs.
  */
 std::string
 exahype2::particles::TrajectoryDatabase::getOutputFileName() const {
@@ -96,7 +96,7 @@ exahype2::particles::TrajectoryDatabase::writeUnwrittenSnapshots(std::ostream& f
     int&      writtenSnapshots     = _writtenSnapshotsPerParticle[particleEntry.first];
     const int numberOfNewSnapshots = totalSnapshots - writtenSnapshots;
     if (numberOfNewSnapshots > 0) {
-      // The list stores the newest snapshot first, so the loop writes the new snapshots in reverse.
+      // The list stores the newest snapshot first. The loop writes the new snapshots in reverse.
       std::vector<const Entry*> unwrittenSnapshots;
       unwrittenSnapshots.reserve(numberOfNewSnapshots);
       auto snapshotIterator = particleEntry.second.begin();
@@ -124,7 +124,7 @@ exahype2::particles::TrajectoryDatabase::resetWriteTracking() {
 
 /**
  * Returns the action for a snapshot of particle number at x and timestamp: Append, Replace or
- * Ignore. The caller holds _mutex.
+ * Ignore. The caller locks _mutex.
  */
 exahype2::particles::TrajectoryDatabase::AddSnapshotAction
 exahype2::particles::TrajectoryDatabase::getAction(
@@ -143,6 +143,9 @@ exahype2::particles::TrajectoryDatabase::getAction(
   if (tarch::la::equals(newest.timestamp, timestamp)) {
     return tarch::la::equals(newest.x, x) ? AddSnapshotAction::Ignore : AddSnapshotAction::Replace;
   }
+  if (_snapshotRule == tarch::database::SnapshotRule::EveryLaterTimestamp) {
+    return timestamp > newest.timestamp ? AddSnapshotAction::Append : AddSnapshotAction::Ignore;
+  }
   if (
     _deltasAreRelative and maxPositionDelta >= DeltaCutoffThreshold
     and positionDelta / maxPositionDelta >= _positionDelta
@@ -160,7 +163,7 @@ exahype2::particles::TrajectoryDatabase::getAction(
 
 /**
  * Returns the action of getAction(), raises _maxPositionDelta to the position delta of the particle
- * and inserts an empty list for a new particle. The caller holds _mutex.
+ * and inserts an empty list for a new particle. The caller locks _mutex.
  */
 exahype2::particles::TrajectoryDatabase::AddSnapshotAction
 exahype2::particles::TrajectoryDatabase::prepareSnapshot(

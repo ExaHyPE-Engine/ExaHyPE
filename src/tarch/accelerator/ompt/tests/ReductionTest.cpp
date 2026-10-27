@@ -23,7 +23,7 @@ tarch::accelerator::ompt::tests::ReductionTest::testParallelReduction() {
   const int              expectedSum = ElementCount;
   const int              device      = tarch::accelerator::getCurrentDevice();
 
-  // allocateMemory() calls omp_target_alloc(), so the target region takes the device pointer with
+  // allocateMemory() calls omp_target_alloc(). The target region takes the device pointer with
   // is_device_ptr.
   int* deviceInput = tarch::allocateMemory<int>(ElementCount, tarch::MemoryLocation::Device, device);
   tarch::copyTo(deviceInput, host.data(), ElementCount, tarch::MemoryLocation::Device, device);

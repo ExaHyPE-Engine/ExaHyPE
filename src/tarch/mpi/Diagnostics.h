@@ -8,7 +8,6 @@ namespace tarch::mpi {
   class Diagnostics;
 
   std::string mpiReturnValueToString(int result);
-
   void checkReturnValue(int result, const char* operation, const std::source_location& location);
 } // namespace tarch::mpi
 
@@ -29,17 +28,11 @@ public:
   Diagnostics& operator=(Diagnostics&&)      = delete;
 
   void setTimeoutWarning(double valueInSeconds);
-
   void setDeadlockTimeout(double valueInSeconds);
-
   [[nodiscard]] std::chrono::duration<double> getTimeoutWarning() const;
-
   [[nodiscard]] std::chrono::duration<double> getDeadlockTimeout() const;
-
   void setRequestTracking(bool enabled);
-
   [[nodiscard]] bool isRequestTrackingEnabled() const;
-
   [[nodiscard]] bool useTimeoutChecks() const;
 
   void plotMessageQueues();
@@ -53,16 +46,11 @@ public:
   );
 
   void clearRequest(const MPI_Request* request);
-
   bool reportRequest(const MPI_Request* request, const char* waitOperation, const std::source_location& waitLocation);
 
 private:
   using TimeoutPoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double>>;
 
-  /**
-   * An odd sequence marks a slot a writer holds, and an even one a stable slot. A stable slot with
-   * a null key is free. The sequence orders every access to the non-atomic payload fields.
-   */
   struct Slot {
     std::atomic<std::uint32_t>      sequence{0};
     std::atomic<const MPI_Request*> key{nullptr};
@@ -75,9 +63,6 @@ private:
     TimeoutPoint                    nextWarningAt{};
   };
 
-  /**
-   * Power of two, so the probe sequence wraps by masking.
-   */
   static constexpr std::size_t TableSize = 1024;
 
   static Diagnostics _singleton;
@@ -94,14 +79,7 @@ private:
 
   std::array<Slot, TableSize> _slots{};
 
-  /**
-   * Lets a completion skip the table walk while nothing is tracked.
-   */
   std::atomic<int> _pendingCount{0};
 
-  /**
-   * Longest displacement any registration needed. A lookup stops after this
-   * many probes, so a deletion may leave a hole behind.
-   */
   std::atomic<std::size_t> _maxProbeDisplacement{0};
 };

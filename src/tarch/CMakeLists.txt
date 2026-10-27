@@ -20,7 +20,6 @@ set(SOURCES
   tests/CPUFeatureDetectionTest.cpp
   tests/MemoryUsageTest.cpp
   tests/NonCriticalAssertionsTest.cpp
-  tests/SortTest.cpp
   tests/SpanTest.cpp
   tests/TestCaseTest.cpp
 
@@ -58,7 +57,7 @@ set(SOURCES
   accelerator/sycl/accelerator.cpp
   accelerator/sycl/Device.cpp
 
-  la/tests/ExactAccumulatorTest.cpp
+  la/tests/FixedPointSumTest.cpp
   la/tests/MatrixTest.cpp
   la/tests/MatrixVectorTest.cpp
   la/tests/ScalarTest.cpp
@@ -133,7 +132,7 @@ set(GPU_SOURCES
   accelerator/tests/DeviceCopiesTestData.cpp
   accelerator/tests/ParallelConstructsTest.cpp
   accelerator/tests/ScratchTest.cpp
-  la/tests/ExactAccumulatorTest.cpp
+  la/tests/FixedPointSumTest.cpp
 )
 if(_peano_gpu_backend STREQUAL "cuda")
   list(APPEND SOURCES accelerator/cuda/tests/ReductionTest.cpp)

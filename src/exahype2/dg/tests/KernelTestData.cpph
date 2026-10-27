@@ -110,9 +110,6 @@ exahype2::dg::tests::StubSolver::multiplyMaterialParameterMatrix(
   }
 }
 
-/**
- * Returns the centre of the face faceNumber of cell.
- */
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
 exahype2::dg::tests::getFaceCentreOf(
   const int     cell,

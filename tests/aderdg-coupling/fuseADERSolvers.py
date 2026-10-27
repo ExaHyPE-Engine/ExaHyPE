@@ -88,8 +88,7 @@ project = exahype2.Project(
 
 if project.dimensions != scenario._dimensions:
     raise ValueError(
-        f"Scenario {args.scenario} is {scenario._dimensions}D, but the project "
-        f"was configured for {project.dimensions}D."
+        f"The scenario {args.scenario} runs in {scenario._dimensions}D only."
     )
 
 # The plane between the two solvers is a cell boundary of the coarsest level and therefore of

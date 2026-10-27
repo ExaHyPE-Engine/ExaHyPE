@@ -10,7 +10,7 @@
 bool tarch::mpi::AbstractCommunicationManager::_dedicatedThreadIsUsed = false;
 
 /**
- * Returns the implementation the process runs with. Both implementations exist in every binary, and
+ * Returns the implementation the process runs with. Both implementations exist in every binary.
  * configure() selects one at run time.
  */
 tarch::mpi::AbstractCommunicationManager&
@@ -25,7 +25,7 @@ tarch::mpi::AbstractCommunicationManager::getInstance() {
 
 /**
  * Sets whether this process dedicates a thread to communication. A single-rank run never dedicates
- * a thread. The setting holds for the whole run.
+ * a thread. The setting applies to the whole run.
  */
 void
 tarch::mpi::AbstractCommunicationManager::configure(const bool communicationThreadEnabled) {

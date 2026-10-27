@@ -25,7 +25,6 @@ namespace exahype2 {
 /**
  * Runs every phase on every solver. Every solver outlives the repository. A phase that votes
  * merges the votes of all solvers into one list of refinement requests.
- * readValuesFromGlobalReduction() gathers the requests of all ranks after the reduction of the step.
  */
 template <typename... Solvers>
 class exahype2::SolverRepository final {
@@ -58,6 +57,7 @@ public:
     tarch::plotter::Format          format,
     const std::string&              outputDirectory
   );
+  INLINE_METHOD void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
 
@@ -71,6 +71,7 @@ private:
   INLINE_METHOD void forEachSolver(const Operation& operation) const;
 
   INLINE_METHOD void commitRefinementRequests(const peano4::CellConnectivity& cellConnectivity);
+  INLINE_METHOD void deleteEraseRequestsOfRepeatedRefinements();
 
   template <typename Solver>
   [[nodiscard]] static INLINE_METHOD int getNumberOfCellsOf(
@@ -83,10 +84,8 @@ private:
   RefinementRequests _refinementRequests{};
 
   std::vector<peano4::RefinementRequest> _requestsOfTheRun{};
+  std::vector<peano4::RefinementRequest> _refinementsOfTheRegrid{};
 
-  /**
-   * The requests of this rank that the next addLocalValuesToGlobalReduction() counts.
-   */
   std::vector<peano4::RefinementRequest> _localRequests{};
   bool                                   _localRequestsPending{false};
   int                                    _numberOfRequestsSlot{0};

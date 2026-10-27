@@ -7,8 +7,8 @@
 #endif
 
 // clang-format off
-// The Microsoft compiler reports the language level in _MSVC_LANG, because its __cplusplus stays at
-// 199711L without /Zc:__cplusplus.
+// The Microsoft compiler reports the language level in _MSVC_LANG. Its __cplusplus stays at 199711L
+// without /Zc:__cplusplus.
 #if defined(_MSVC_LANG)
 #define PEANO_CPLUSPLUS _MSVC_LANG
 #else
@@ -33,8 +33,7 @@
 #error "Peano requires libstdc++ >= 12 (as shipped with GCC >= 12). When building with Clang or Intel, load a GCC >= 12 toolchain so a recent libstdc++ is used."
 #endif
 
-// On Apple, the <filesystem> headers exist below a macOS 10.15 deployment target, but their symbols
-// do not.
+// Below a macOS 10.15 deployment target the <filesystem> headers exist without their symbols.
 #if defined(__APPLE__) and defined(__MAC_OS_X_VERSION_MIN_REQUIRED) and __MAC_OS_X_VERSION_MIN_REQUIRED < 101500
 #error "Peano needs a macOS 10.15+ deployment target for std::filesystem (set CMAKE_OSX_DEPLOYMENT_TARGET)."
 #endif

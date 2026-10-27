@@ -196,6 +196,22 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
         dictionary["ORDER"] = self.order
 
     @property
+    def rounded_quadrature_points(self):
+        """Returns the quadrature points as doubles that mirror exactly at one half.
+
+        Every point at or above one half rounds to the nearest double. Its mirror point is one minus
+        that double without a rounding error. A point minus one half then is the exact negative of
+        its mirror point minus one half.
+        """
+        points = [float(point) for point in self.quadrature_points]
+        last = len(points) - 1
+        for node in range(len(points) // 2):
+            points[node] = 1.0 - points[last - node]
+        if len(points) % 2 == 1:
+            points[len(points) // 2] = 0.5
+        return points
+
+    @property
     @abstractmethod
     def quadrature_points(self):
         assert False, "A DG basis must provide its quadrature points."

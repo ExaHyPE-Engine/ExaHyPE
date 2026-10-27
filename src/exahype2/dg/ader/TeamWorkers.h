@@ -13,11 +13,8 @@ namespace exahype2::dg::ader {
 TARGET_DECLARE
 /**
  * The threads that run the predictor of one cell. A team of teamThreads threads runs groups
- * cells at once, threads threads per cell. thread is the index of the calling thread within the
- * threads of its cell, teamThread its index within the team, group the cell of the team it works
- * on, team the handle of the team and scratch the team scratch of the launch. hasCell is false on
- * a thread whose group received no cell. Such a thread takes part in every barrier and computes
- * nothing. A TeamWorkers without a team runs one cell on one thread.
+ * cells at once, threads threads per cell. hasCell is false on a thread whose group received no
+ * cell and that thread takes part in every barrier and computes nothing.
  */
 struct exahype2::dg::ader::TeamWorkers final {
   int                                   thread{0};
@@ -37,7 +34,17 @@ namespace exahype2::dg::ader {
     int                                   threadsPerCell
   );
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void synchronise(const TeamWorkers& workers);
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD TeamWorkers getWorkersWithThreadsOfTeam(
+    const tarch::accelerator::TeamHandle& team,
+    int                                   threadsPerCell
+  );
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier(const TeamWorkers& workers);
+
+  [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInAnyThreadOfTeam(
+    const TeamWorkers& workers,
+    bool               condition
+  );
 } // namespace exahype2::dg::ader
 TARGET_DECLARE_END
 

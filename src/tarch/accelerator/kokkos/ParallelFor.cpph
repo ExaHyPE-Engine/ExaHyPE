@@ -91,6 +91,26 @@ namespace tarch::accelerator {
   INLINE_METHOD GPU_CALLABLE_METHOD void teamBarrier(const KokkosTeam& team) { team.member.team_barrier(); }
 
   /**
+   * Returns whether condition is true in every thread of the team. Every thread receives the same
+   * value.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInEveryThreadOfTeam(const KokkosTeam& team, const bool condition) {
+    int isTrueInEveryThread = condition ? 1 : 0;
+    team.member.team_reduce(Kokkos::LAnd<int>(isTrueInEveryThread));
+    return isTrueInEveryThread != 0;
+  }
+
+  /**
+   * Returns whether condition is true in any thread of the team. Every thread receives the same
+   * value.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isTrueInAnyThreadOfTeam(const KokkosTeam& team, const bool condition) {
+    int isTrueInAnyThread = condition ? 1 : 0;
+    team.member.team_reduce(Kokkos::LOr<int>(isTrueInAnyThread));
+    return isTrueInAnyThread != 0;
+  }
+
+  /**
    * Returns the threads per team of a launch that asks for requested threads. The count rounds
    * requested up to whole warps and stops at KokkosThreadsPerTeam. TeamRange::BackendDefault asks
    * for KokkosThreadsPerTeam threads.
@@ -170,8 +190,8 @@ namespace tarch::accelerator {
       return;
     }
     const int scratchBytes = tarch::accelerator::getTeamScratchBytes(range.scratchBytes);
-    const Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy =
-      Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>(range.n, tarch::accelerator::getTeamThreads(range.threads))
+    const tarch::accelerator::KokkosTeamPolicy policy =
+      tarch::accelerator::KokkosTeamPolicy(range.n, tarch::accelerator::getTeamThreads(range.threads))
         .set_scratch_size(0, Kokkos::PerTeam(scratchBytes));
     Kokkos::parallel_for(policy, LeagueFor<Functor>{functor, scratchBytes});
     Kokkos::fence();

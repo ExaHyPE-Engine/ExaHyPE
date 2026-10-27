@@ -208,7 +208,7 @@ For Python, the comment has to be put directly ***after*** the function or class
 
 Furthermore, a fully qualified name such as exahype2.Project.add_solver()
 appears in the finished html page only if the .py file that contains the class being referenced
-sits in the same directory as a `__init__.py` file, which can be empty. You then reference it like:
+sits in the same directory as a `__init__.py` file. That file can be empty. You then reference it like:
 
 \verbatim
 exahype2.Project.add_solver()
@@ -230,7 +230,7 @@ that this mainly affects the Python code, but not the C++ documentation.
 # Tutorials
 
 
-We hold tutorials parallel to the actual source code and tests.
+The tutorials lie next to the source code and the tests.
 It is up to the author of a tutorial how to structure the tutorial.
 However, we found it very useful if tutorials refer to tests wherever
 possible.

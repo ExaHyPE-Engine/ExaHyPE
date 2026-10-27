@@ -20,6 +20,14 @@ exahype2::fv::TermRing<Entry, LookaheadOfRing>::at(const int state) const {
 }
 
 TARGET_DECLARE
+template <typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision&
+exahype2::fv::WaveSpeedsOfTeam<ComputePrecision>::at(const int volume, const int normal) const {
+  assertion(volume >= 0 and volume < volumes, volume, volumes);
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  return waveSpeeds[normal * volumes + volume];
+}
+
 /**
  * Solves the Riemann problem on the lower (side 0) or upper (side 1) face of volume along normal
  * and returns the largest wave speed. Bit f of boundaryFaces marks patch face f as a domain

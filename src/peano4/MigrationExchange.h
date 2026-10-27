@@ -16,9 +16,9 @@ namespace peano4 {
 } // namespace peano4
 
 /**
- * Fills the slots of the cells a regrid creates: From the parent or the children on this rank,
- * or from the chunks another rank sends. The buffers use the memory location of the pool, so with
- * a GPU backend MPI reads and writes device memory.
+ * Fills the slots of the cells a regrid creates from the parent or the children on this rank, or
+ * from the chunks another rank sends. The buffers use the memory location of the pool. With a GPU
+ * backend MPI reads and writes device memory.
  */
 template <typename T>
 class peano4::MigrationExchange final {
@@ -44,9 +44,14 @@ private:
   INLINE_METHOD void postTransfers(
     const Pool&                              pool,
     const std::vector<peano4::RankTransfer>& transfers,
-    const Transfer&                          transfer
+    const Transfer&                          transfer,
+    double*                                  prepared
   );
   INLINE_METHOD void receiveTransfers(Pool& pool);
+
+  [[nodiscard]] static INLINE_METHOD int getNumberOfWorkItems(std::size_t chunks, int workItemsPerChunk);
+  template <typename Transfer, typename Preparation>
+  static INLINE_METHOD void prepareChunks(std::size_t chunks, const Preparation& preparation);
 
   static constexpr int NoTag = -1;
 

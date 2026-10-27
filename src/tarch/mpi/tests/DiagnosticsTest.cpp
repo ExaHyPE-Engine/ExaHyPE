@@ -7,8 +7,7 @@
 namespace {
   /**
    * Switches the pending-request table on for one test and restores the previous configuration in
-   * its destructor. Both thresholds lie beyond the run time of the test, so the test neither warns
-   * nor aborts.
+   * its destructor. Both thresholds lie beyond the run time of the test.
    */
   class ScopedTracking {
   public:

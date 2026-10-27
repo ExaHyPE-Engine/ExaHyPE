@@ -7,18 +7,11 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 /**
- * Owns the progress of a rank's outstanding communication.
- *
- * Deferred tasks carry no progress guarantee: A blocking MPI call is no task
- * scheduling point, so work that a remote rank waits for must never sit in a
- * task queue alone. Communication concerns therefore register a poller here,
- * and the manager keeps every registered poller running: The threaded
- * implementation drives them on a thread of its own, the serial one runs them
- * inline whenever progress() is invoked.
+ * Runs the pollers that complete the outstanding communication of a rank. A blocking MPI call is
+ * no task scheduling point. Work that a remote rank waits for registers a poller here.
  */
 class tarch::mpi::AbstractCommunicationManager {
 public:
-  /** One progress pass over a communication concern. Returns true when the concern has nothing outstanding. */
   using Poller = std::function<bool()>;
 
   AbstractCommunicationManager(const AbstractCommunicationManager&)            = delete;
@@ -45,7 +38,6 @@ protected:
   bool runPollersOnce();
 
 private:
-  /** Off until configure() has run, so an early reader never reserves a core. */
   static bool _dedicatedThreadIsUsed;
 
   std::vector<Poller> _pollers{};

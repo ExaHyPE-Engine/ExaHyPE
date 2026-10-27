@@ -9,7 +9,7 @@
 
 namespace tarch::accelerator {
   int getNumberOfScratchChunks(int workItems);
-
+  int getNumberOfPersistentTeams(int workItems, int teamThreads);
   INLINE_METHOD GPU_CALLABLE_METHOD int getScratchChunk(int workItem);
 } // namespace tarch::accelerator
 

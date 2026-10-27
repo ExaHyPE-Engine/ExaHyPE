@@ -11,8 +11,8 @@ namespace {
   using Rule      = exahype2::TimeStepping::Rule;
   using Stability = exahype2::TimeStepping::Stability;
 
-  // Every ordered comparison against a NaN raises the invalid-operation exception. The test runner
-  // traps this exception. The faults below are a negative and an infinite wave speed.
+  // The test runner traps the invalid-operation exception of every ordered comparison against a
+  // NaN. The faults below are a negative and an infinite wave speed.
   constexpr double NegativeWaveSpeed = -1.25;
   constexpr double InfiniteWaveSpeed = std::numeric_limits<double>::infinity();
 
@@ -31,9 +31,6 @@ namespace {
     timeStepping.advanceTimeStamp(1.0);
   }
 
-  /**
-   * Reduces the values of timeStepping over all ranks in one reduction record.
-   */
   void reduceOverTheRanks(exahype2::TimeStepping& timeStepping) {
     tarch::mpi::ReductionRecord record;
     timeStepping.addLocalValuesToGlobalReduction(record);

@@ -77,7 +77,7 @@ tarch::accelerator::tests::BufferTest::testHeapBufferIsAddressable() {
 }
 
 /**
- * A device buffer is written by a kernel and read through the host copy.
+ * A kernel writes a device buffer and the host reads it through the host copy.
  */
 void
 tarch::accelerator::tests::BufferTest::testDeviceRoundTrip() {
@@ -167,8 +167,8 @@ tarch::accelerator::tests::BufferTest::testPinnedCopiesEndBeforeTheyReturn() {
 }
 
 /**
- * Heap and pinned buffers count as host bytes, and a device buffer counts as device bytes in a
- * GPU build only.
+ * Heap and pinned buffers count as host bytes. A device buffer counts as device bytes in a GPU
+ * build only.
  */
 void
 tarch::accelerator::tests::BufferTest::testAllocatedBytesFollowTheLocation() {

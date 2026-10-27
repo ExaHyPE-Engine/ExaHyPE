@@ -39,9 +39,9 @@ def patch_centres_along_curve(
 ) -> np.ndarray:
     """Returns the centre of every patch in the order the curve visits the patches.
 
-    Every cell of one patch carries the curve index of its grid cell, so the distinct indices
-    enumerate the patches and sorting them follows the curve over all ranks, whatever order the
-    snapshot stores the cells in.
+    Every cell of one patch stores the curve index of its grid cell. The distinct indices
+    enumerate the patches. Their sort follows the curve over all ranks for every order of the
+    cells in the snapshot.
     """
     indices = np.asarray(snapshot.cell_data[CURVE_INDEX_FIELD]).reshape(
         len(polygons), -1

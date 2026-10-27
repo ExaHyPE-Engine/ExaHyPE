@@ -14,11 +14,11 @@ namespace exahype2::dg::ader::tests {
 class exahype2::dg::ader::tests::NonlinearPredictorTest final : public tarch::tests::TestCase {
 public:
   NonlinearPredictorTest();
-  NonlinearPredictorTest(const NonlinearPredictorTest&)            = delete;
-  NonlinearPredictorTest(NonlinearPredictorTest&&)                 = delete;
-  NonlinearPredictorTest& operator=(const NonlinearPredictorTest&) = delete;
-  NonlinearPredictorTest& operator=(NonlinearPredictorTest&&)      = delete;
-  ~NonlinearPredictorTest() override                               = default;
+  NonlinearPredictorTest(const NonlinearPredictorTest& other)            = delete;
+  NonlinearPredictorTest(NonlinearPredictorTest&& other)                 = delete;
+  NonlinearPredictorTest& operator=(const NonlinearPredictorTest& other) = delete;
+  NonlinearPredictorTest& operator=(NonlinearPredictorTest&& other)      = delete;
+  ~NonlinearPredictorTest() override                                     = default;
 
   void run() override;
 
@@ -28,9 +28,11 @@ private:
   void testAConstantFluxHasNoDivergence();
   void testALinearFluxSubtractsItsExactDivergence();
   void testAPicardSystemWithoutTermsReproducesTheInitialState();
-  void testTheResidualIsTheSquaredDistanceOfTheIterates();
+  void testTheResidualCountsTheSquaredDistanceOfTheIterates();
+  void testEveryThreadSplitSumsTheSameResidual();
   void testAnUnboundedIterateReportsDivergence();
-  void testAToleranceWithoutAFiniteScaleCountsEveryChange();
+  void testAnIterateAboveTheFloatRangeReportsDivergence();
+  void testATinyToleranceComparesTheSquaredDistance();
   void testTheGradientOfAConstantVanishes();
   void testALinearStateHasTheExactGradient();
   void testTheFluxIsAskedForOncePerNodeAndAxis();

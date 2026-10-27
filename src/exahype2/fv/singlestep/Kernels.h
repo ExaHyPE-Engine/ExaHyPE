@@ -32,7 +32,7 @@ struct exahype2::fv::singlestep::UpdatePatches final {
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::CellConnectivity            cellConnectivity{};
+  peano4::CellConnectivity     cellConnectivity{};
   tarch::Span<const int>       cells{};
   typename CellPool::View      solution{};
   typename FacePool::ConstView halo{};
@@ -46,16 +46,16 @@ struct exahype2::fv::singlestep::UpdatePatches final {
   ) const;
 
 private:
-  [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double updatePatchOnDevice(
+  INLINE_METHOD GPU_CALLABLE_METHOD void reduceWaveSpeedsWithThreadsOfTeam(
     tarch::accelerator::TeamHandle               team,
+    double                                       partial,
     StoragePrecision*                            patch,
-    const StoragePrecision* const                faces[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          boundaryFaces
-  );
+    double                                       stepStart,
+    double                                       stepSize,
+    double&                                      accumulator
+  ) const;
 };
 TARGET_DECLARE_END
 

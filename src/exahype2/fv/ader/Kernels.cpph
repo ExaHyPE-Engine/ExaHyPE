@@ -162,7 +162,7 @@ exahype2::fv::ader::PredictPatches<Derived, StoragePrecision, ComputePrecision>:
       );
     }
     // The next cell reuses the scratch chunk once every thread is done with this one.
-    exahype2::dg::ader::synchronise(workers);
+    exahype2::dg::ader::teamBarrier(workers);
   }
   COMPILE_IF_ON_HOST(accumulator = PredictionStatistics::combine(accumulator, statistics);)
   COMPILE_IF_ON_DEVICE(

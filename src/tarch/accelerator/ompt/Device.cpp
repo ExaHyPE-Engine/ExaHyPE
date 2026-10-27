@@ -37,8 +37,8 @@ tarch::accelerator::Device::getNumberOfDevices() const {
 }
 
 /**
- * Returns the threads the current device runs at once: The teams of a launch without a team
- * count times their threads. The OpenMP runtime picks that team count from the device.
+ * Returns the threads the current device runs at once. These are the teams of a launch without a
+ * team count times their threads. The OpenMP runtime picks that team count from the device.
  */
 int
 tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
@@ -57,8 +57,8 @@ tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
 }
 
 /**
- * Returns std::nullopt. The host pass of an OpenMP target build tells no device vendor that an MPI
- * query names.
+ * Returns std::nullopt. The MPI query is vendor-specific and OpenMP does not name the vendor of
+ * the device.
  */
 std::optional<bool>
 tarch::accelerator::Device::isMPIGPUAware() const {
@@ -66,7 +66,7 @@ tarch::accelerator::Device::isMPIGPUAware() const {
 }
 
 /**
- * Returns an empty string. OpenMP has no physical address of a device.
+ * Returns an empty string. OpenMP does not report the physical address of a device.
  */
 std::string
 tarch::accelerator::Device::getIdOfCurrentDevice() const {

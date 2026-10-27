@@ -139,19 +139,19 @@ exahype2::dg::ader::Solver::predict():
 4. For a nonlinear `Derived`, exahype2::dg::ader::NonlinearPredictor::predict() repeats Picard sweeps until the residual falls below `Derived::PicardResidualTolerance` or the sweeps reach their limit:
    1. exahype2::dg::ader::NonlinearPredictor::evaluateSpaceTimeFlux() calls `Derived::flux()`.
    2. exahype2::dg::ader::NonlinearPredictor::evaluateSpaceTimeSource() calls `Derived::sourceTerm()`, `Derived::diffusiveSourceTerm()` and `Derived::nonconservativeProduct()`.
-   3. exahype2::dg::ader::NonlinearPredictor::solvePicardSystem() returns the residual of the sweep.
+   3. exahype2::dg::ader::NonlinearPredictor::solvePicardSystem() writes the residual of every node of the sweep.
    4. exahype2::dg::ader::NonlinearPredictor::averageStateOverTime() averages the space-time state over the time step after the last sweep.
-5. Both predictors write the time-averaged face states and face fluxes into the own face halves with exahype2::dg::extrapolateNodalFieldToFacePair().
+5. Both predictors write the time-averaged face states and face fluxes into the own face halves with exahype2::dg::extrapolateNodalFieldToFaces().
 6. exahype2::dg::ader::Predictor::subtractTimeAveragedVolumeIntegral() applies the time-averaged flux divergence and source to the solution.
 7. exahype2::dg::ader::PredictCells marks the limiter status of a cell whose Picard iteration diverged.
 8. Without a limiter, exahype2::dg::ader::Solver::predict() calls tarch::terminateWithError() on a diverged cell.
 
 exahype2::dg::ader::Solver::correct():
 
-1. exahype2::dg::ader::CorrectCells calls exahype2::dg::ader::Corrector::correct() on every cell of the list.
-2. exahype2::dg::addFaceIntegrals() adds the numerical fluxes of the faces to the solution.
+1. exahype2::dg::ader::CorrectCells calls exahype2::dg::ader::Corrector::correctNode() on every node of the cells of the list.
+2. exahype2::dg::addFaceIntegralsOfNode() adds the numerical fluxes of the faces to the node.
 3. `Derived::postprocessUpdatedPatch()` runs on the updated cell.
-4. exahype2::dg::reduceMaxEigenvalues() calls `Derived::maxEigenvalue()` under an adaptive rule without a limiter.
+4. exahype2::dg::getMaxEigenvaluesOfNode() calls `Derived::maxEigenvalue()` under an adaptive rule without a limiter.
 5. tarch::accelerator::parallelReduce() reduces the wave speeds with exahype2::dg::MaxEigenvalueStatistics.
 
 # Subcell limiter
@@ -225,7 +225,7 @@ exahype2::dg::rk::Solver::performTimeStep():
 
 # Time step size
 
-Every solver holds its own exahype2::TimeStepping.
+Every solver owns its own exahype2::TimeStepping.
 Every solver advances by its own time step size.
 exahype2::TimeStepping starts with a time step size of zero.
 The first time step of a run sets the size of the later ones.
@@ -259,12 +259,13 @@ exahype2::runner::Runner::runTimeLoop() calls exahype2::runner::Runner::applyMes
 8. The generated `regrid()` calls exahype2::SolverRepository::regrid().
 9. exahype2::SolverRepository::regrid() calls `regrid()` of every solver.
 10. exahype2::SolverRepository::commitRefinementRequests() gathers the votes of the created cells for the next sweep.
-11. exahype2::runner::Runner::regrid() calls peano4::Spacetree::finishRegrid().
-12. peano4::Spacetree::finishRegrid() adds the freed slots to the free list.
+11. exahype2::SolverRepository::deleteEraseRequestsOfRepeatedRefinements() deletes the erase request of every cell that the regrid refines for the second time.
+12. exahype2::runner::Runner::regrid() calls peano4::Spacetree::finishRegrid().
+13. peano4::Spacetree::finishRegrid() adds the freed slots to the free list.
 
 exahype2::fv::Solver::regrid():
 
-1. peano4::MigrationExchange::migrate() fills the new slots from the parent, the children or another rank.
+1. peano4::MigrationExchange::migrate() fills the new slots with exahype2::fv::PatchTransfer from the parent, the children or another rank.
 2. peano4::HaloExchange::rebuild() lists the exchanged faces of the new cell connectivity.
 3. exahype2::fv::Solver::projectOntoFaces() and exahype2::restrictFineFaces() fill the new faces.
 4. exahype2::fv::Solver::measureMeshWidths() passes the mesh widths of the new grid to the time stepping.
@@ -273,7 +274,7 @@ exahype2::fv::Solver::regrid():
 
 exahype2::dg::Solver::regrid():
 
-1. peano4::MigrationExchange::migrate() runs exahype2::dg::RegridCells.
+1. peano4::MigrationExchange::migrate() fills the new slots with exahype2::dg::CellTransfer from the parent, the children or another rank.
 2. peano4::HaloExchange::rebuild() lists the exchanged faces of the face states and of the face fluxes.
 3. exahype2::dg::Solver::measureMeshWidths() passes the mesh widths of the new grid to the time stepping.
 4. Under an adaptive rule, exahype2::dg::MeasureNodeEigenvalues measures the wave speeds of the new grid when the next time step size is positive and the time stamp lies before the terminal time.

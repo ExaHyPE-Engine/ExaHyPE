@@ -22,7 +22,7 @@ def write_database(directory, lines):
 
 
 class PlotErrorNormsTest(unittest.TestCase):
-    def test_every_plotted_series_names_a_column_the_database_holds(self):
+    def test_every_plotted_series_names_a_column_of_the_database(self):
         for column, _label, _colour in SERIES_STYLES:
             self.assertIn(column, COLUMNS)
 

@@ -54,9 +54,6 @@ namespace {
 
   void appendNothing([[maybe_unused]] const std::vector<exahype2::runner::SolverStatistic>& statistics) {}
 
-  /**
-   * Reduces the values of timeStepping over all ranks in one reduction record.
-   */
   void reduceOverTheRanks(exahype2::TimeStepping& timeStepping) {
     tarch::mpi::ReductionRecord record;
     timeStepping.addLocalValuesToGlobalReduction(record);
@@ -111,8 +108,7 @@ struct exahype2::runner::tests::StatisticsTest::LimitedSolver final {
 };
 
 /**
- * A solver with an adaptive rule and without a limiter. It returns a troubled cell count all the
- * same.
+ * A solver with an adaptive rule and without a limiter that still returns a troubled cell count.
  */
 struct exahype2::runner::tests::StatisticsTest::UnlimitedSolver final {
   static constexpr bool HasLimiter = false;

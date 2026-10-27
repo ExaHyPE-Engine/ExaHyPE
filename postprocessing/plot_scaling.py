@@ -73,7 +73,7 @@ def _build_argument_parser() -> argparse.ArgumentParser:
 def _read_run(text: str) -> Run | None:
     """
     Returns the node count, the grid and the averages of a log, or None if the run ended early.
-    The last cell count of the log holds for a grid that changes during the run.
+    The last cell count of the log applies to a grid that changes during the run.
     """
     nodes = NODES.search(text)
     dimensions = DIMENSIONS.search(text)

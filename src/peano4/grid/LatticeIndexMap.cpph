@@ -4,8 +4,8 @@
 #include "tarch/Assertions.h"
 
 /**
- * Returns the slot a key probes first. Neighbouring lattice positions differ in their low bits only,
- * so a multiply-shift finaliser spreads these bits over the word before the mask.
+ * Returns the slot a key probes first. Neighbouring lattice positions differ in their low bits only.
+ * A multiply-shift finaliser spreads these bits over the word before the mask.
  */
 INLINE_METHOD std::size_t
 peano4::grid::LatticeIndexMap::getFirstSlot(const std::int64_t key) const {
@@ -51,7 +51,7 @@ peano4::grid::LatticeIndexMap::find(const std::int64_t key) const {
 INLINE_METHOD std::pair<int, bool>
 peano4::grid::LatticeIndexMap::insert(const std::int64_t key, const int value) {
   assertion(key >= 0, key);
-  // Half the slots stay free, so a probe run stays short.
+  // Half the slots stay free and keep a probe run short.
   if (2 * (_size + _numberOfTombstones + 1) > _keys.size()) {
     grow();
   }
@@ -81,7 +81,7 @@ peano4::grid::LatticeIndexMap::insert(const std::int64_t key, const int value) {
 }
 
 /**
- * Removes a key and returns whether the map had it. The slot becomes a tombstone, so probe chains
+ * Removes a key and returns whether the map had it. The slot becomes a tombstone. Probe chains
  * across it stay intact until the next growth.
  */
 INLINE_METHOD bool
@@ -119,7 +119,7 @@ peano4::grid::LatticeIndexMap::getAllocatedBytes() const {
 
 /**
  * Calls callback(key, value) for every entry in slot order. The slot order depends on the hash and
- * on the insertion order, so a caller relies on no order.
+ * on the insertion order.
  */
 template <typename Callback>
 INLINE_METHOD void

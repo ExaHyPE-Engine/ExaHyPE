@@ -38,7 +38,7 @@ tutorials::exahype2::euler::FVSolver::refinementCriterion(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time
 ) {
-  // Q is a null pointer during grid construction, so the criterion reads only cellCentre.
+  // Q is a null pointer during grid construction. The criterion reads cellCentre only.
   constexpr double RefinementMargin = 3.0;
   constexpr double LeadingEdge      = 0.0;
   constexpr double TrailingEdge     = 100.0;

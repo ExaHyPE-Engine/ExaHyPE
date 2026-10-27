@@ -34,8 +34,9 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
     Q[variable] = 0.0;
   }
 
+  constexpr double EdgeTolerance    = 1e-8;
   constexpr double WaterHeightOfDam = 0.9;
-  Q[Shortcuts::h]                   = x[0] <= 5.0 ? WaterHeightOfDam : 0.0;
+  Q[Shortcuts::h]                   = x[0] <= 5.0 + EdgeTolerance ? WaterHeightOfDam : 0.0;
   Q[Shortcuts::b]                   = applications::exahype2::exaskred::getBathymetryOfChannel(x);
 }
 

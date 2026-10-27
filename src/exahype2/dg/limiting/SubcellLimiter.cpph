@@ -84,14 +84,17 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   _extremaFaces.release();
   _cellsOnSubcellScheme.release();
   _recomputedCells.release();
+  _freedCells.release();
   _cellCountsOfBlocks.release();
+  _recomputeScratch.release();
+  _detectorScratch.release();
   _family.release();
   _statusesOnHost.release();
   _subcellsOnHost.release();
-  _cellCounts             = exahype2::dg::limiting::SubcellSchemeCounts{};
-  _localTroubledCells     = 0;
-  _globalTroubledCells    = 0;
-  _holdsExtremaOfSolution = false;
+  _cellCounts                  = exahype2::dg::limiting::SubcellSchemeCounts{};
+  _localTroubledCells          = 0;
+  _globalTroubledCells         = 0;
+  _extremaOfSolutionAreReduced = false;
   SubcellProjection<double>::deallocate();
   if constexpr (not std::is_same_v<StoragePrecision, double>) {
     SubcellProjection<StoragePrecision>::deallocate();
@@ -109,9 +112,10 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
     + _appliedFluxes.getAllocatedBytes()
     + _statuses.getAllocatedBytes() + _faceStatuses.getAllocatedBytes() + _referenceExtrema.getAllocatedBytes()
     + _extremaFaces.getAllocatedBytes() + _cellsOnSubcellScheme.getAllocatedBytes()
-    + _recomputedCells.getAllocatedBytes() + _cellCountsOfBlocks.getAllocatedBytes()
-    + _family.getAllocatedBytes() + _haloExchange.getAllocatedBytes() + _statusExchange.getAllocatedBytes()
-    + _extremaExchange.getAllocatedBytes() + _subcellMigration.getAllocatedBytes()
+    + _recomputedCells.getAllocatedBytes() + _freedCells.getAllocatedBytes() + _cellCountsOfBlocks.getAllocatedBytes()
+    + _recomputeScratch.getAllocatedBytes() + _detectorScratch.getAllocatedBytes() + _family.getAllocatedBytes()
+    + _haloExchange.getAllocatedBytes() + _statusExchange.getAllocatedBytes() + _extremaExchange.getAllocatedBytes()
+    + _subcellMigration.getAllocatedBytes()
     + _statusMigration.getAllocatedBytes() + _statusesOnHost.getAllocatedBytes() + _subcellsOnHost.getAllocatedBytes();
 }
 
@@ -150,20 +154,27 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
     );
     mergeNeighbourExtrema(cellConnectivity, true);
   }
+  const int numberOfTeams        = Detector::getNumberOfTeams(cellConnectivity.getCells().size);
+  const int teamThreads          = Detector::getTeamThreads();
+  const int scratchValuesPerTeam = Detector::getExtremaScratchValuesPerTeam(teamThreads);
+  reserveDetectorScratch(numberOfTeams, scratchValuesPerTeam);
   tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(cellConnectivity.getCells().size),
+    tarch::accelerator::TeamRange(numberOfTeams, teamThreads, 0),
     exahype2::dg::limiting::OpenInitialStatuses<Derived, StoragePrecision, ComputePrecision>{
       cellConnectivity.onDevice(),
+      numberOfTeams,
       solution.getView(),
       std::as_const(_referenceExtrema).getView(),
       _statuses.getView(),
       SubcellProjection<StoragePrecision>::NodesToLobatto1D,
       SubcellProjection<StoragePrecision>::NodesToSubcells1D,
       static_cast<StoragePrecision>(_relaxationParameter),
-      static_cast<StoragePrecision>(_differencesScaling)
+      static_cast<StoragePrecision>(_differencesScaling),
+      _detectorScratch.getData(),
+      scratchValuesPerTeam
     }
   );
-  _holdsExtremaOfSolution = false;
+  _extremaOfSolutionAreReduced = false;
 }
 
 /**
@@ -208,9 +219,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   const CellPool&          solution
 ) {
   if constexpr (Detector::UsesMaximumPrinciple) {
-    if (not _holdsExtremaOfSolution) {
+    if (not _extremaOfSolutionAreReduced) {
       reduceExtrema(cellConnectivity.onDevice().getCells(), solution);
-      _holdsExtremaOfSolution = true;
+      _extremaOfSolutionAreReduced = true;
     }
   }
   openStep(cellConnectivity, solution);
@@ -220,8 +231,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 }
 
 /**
- * Checks every candidate. The rejected cells and their neighbours recompute on the subcell scheme.
- * Every rank spreads the statuses and exchanges the subgrid halo in every step. Returns the wave
+ * Checks every candidate and recomputes the rejected cells and their neighbours on the subcell
+ * scheme. Every rank spreads the statuses and exchanges the subgrid halo in every step. Returns the wave
  * speeds of the accepted candidates and of the recomputed subgrids.
  */
 template <
@@ -259,8 +270,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 }
 
 /**
- * Moves the statuses and the subgrids through the regrid. The next time step fills the previous
- * solution and the faces.
+ * Moves the statuses and the subgrids through the regrid. A regrid reads the old cells from its
+ * freed slots only. Every freed cell on the Galerkin scheme first writes the projection of its
+ * nodes into its subgrid. The next time step fills the previous solution and the faces.
  */
 template <
   typename Derived,
@@ -280,21 +292,57 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
     _referenceExtrema.reserve(regrid.newNumberOfSlots);
   }
 
+  projectNodesOfFreedCells(regrid.freedSlots, solution);
   _subcellMigration.migrate(
     _subcells,
     regrid,
-    exahype2::dg::limiting::SubgridTransfer<Derived, StoragePrecision, ComputePrecision>{
-      solution.getView(),
-      std::as_const(_subcells).getView(),
-      std::as_const(_statuses).getView(),
-      SubcellProjection<StoragePrecision>::NodesToSubcells1D
-    }
+    exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>{std::as_const(_subcells).getView()}
   );
   _statusMigration
     .migrate(_statuses, regrid, exahype2::dg::limiting::StatusTransfer{std::as_const(_statuses).getView()});
 
   rebuild(cellConnectivity);
-  _holdsExtremaOfSolution = false;
+  _extremaOfSolutionAreReduced = false;
+}
+
+/**
+ * Writes the projection of the nodes of every cell in freedSlots that runs the Galerkin scheme into
+ * its subgrid.
+ */
+template <
+  typename Derived,
+  typename StoragePrecision,
+  typename ComputePrecision,
+  template <typename, typename, typename> class SubcellFamily>
+INLINE_METHOD void
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::projectNodesOfFreedCells(
+  const std::vector<int>& freedSlots,
+  const CellPool&         solution
+) {
+  if (freedSlots.empty()) {
+    return;
+  }
+  const int  cells         = static_cast<int>(freedSlots.size());
+  const int  teamThreads   = SubcellScheme::getTeamThreads();
+  const int  numberOfTeams = tarch::accelerator::getNumberOfPersistentTeams(cells, teamThreads);
+  const auto scratchValues = static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(numberOfTeams))
+    * SubcellScheme::SubcellProjectionScratchValues;
+  if (_recomputeScratch.getSize() < scratchValues) {
+    _recomputeScratch.allocate(scratchValues);
+  }
+  _freedCells.setValues(freedSlots);
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::TeamRange(numberOfTeams, teamThreads, 0),
+    exahype2::dg::limiting::ProjectNodesOntoSubgrids<Derived, StoragePrecision, ComputePrecision>{
+      tarch::Span<const int>{_freedCells.getData(), cells},
+      numberOfTeams,
+      solution.getView(),
+      _subcells.getView(),
+      std::as_const(_statuses).getView(),
+      SubcellProjection<StoragePrecision>::NodesToSubcells1D,
+      _recomputeScratch.getData()
+    }
+  );
 }
 
 template <
@@ -539,22 +587,55 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   const tarch::Span<const int> cells,
   const CellPool&              solution
 ) {
+  if (cells.isEmpty()) {
+    return;
+  }
+  const int numberOfTeams        = Detector::getNumberOfTeams(cells.size);
+  const int teamThreads          = Detector::getTeamThreads();
+  const int scratchValuesPerTeam = Detector::getExtremaScratchValuesPerTeam(teamThreads);
+  reserveDetectorScratch(numberOfTeams, scratchValuesPerTeam);
   tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(cells.size),
+    tarch::accelerator::TeamRange(numberOfTeams, teamThreads, 0),
     exahype2::dg::limiting::ReduceReferenceExtrema<Derived, StoragePrecision, ComputePrecision>{
       cells,
+      numberOfTeams,
       solution.getView(),
       _referenceExtrema.getView(),
       SubcellProjection<StoragePrecision>::NodesToLobatto1D,
-      SubcellProjection<StoragePrecision>::NodesToSubcells1D
+      SubcellProjection<StoragePrecision>::NodesToSubcells1D,
+      _detectorScratch.getData(),
+      scratchValuesPerTeam
     }
   );
 }
 
 /**
- * Runs the DIMENSIONS merge rounds of exahype2::dg::limiting::MergeNeighbourExtrema. The faces
- * hold the extrema of their cells before the call. Without mergeLastRound, no cell runs the last
- * round. Minima and maxima are exact and do not depend on the rank layout.
+ * Grows the detector scratch to one chunk of scratchValuesPerTeam values per team of a launch with
+ * numberOfTeams teams.
+ */
+template <
+  typename Derived,
+  typename StoragePrecision,
+  typename ComputePrecision,
+  template <typename, typename, typename> class SubcellFamily>
+INLINE_METHOD void
+exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision, SubcellFamily>::reserveDetectorScratch(
+  const int numberOfTeams,
+  const int scratchValuesPerTeam
+) {
+  assertion(numberOfTeams > 0, numberOfTeams);
+  assertion(scratchValuesPerTeam >= 0, scratchValuesPerTeam);
+  const auto values = static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(numberOfTeams))
+    * static_cast<std::size_t>(scratchValuesPerTeam);
+  if (_detectorScratch.getSize() < values) {
+    _detectorScratch.allocate(values);
+  }
+}
+
+/**
+ * Runs the DIMENSIONS merge rounds of exahype2::dg::limiting::MergeNeighbourExtrema on faces that
+ * store the extrema of their cells. Without mergeLastRound, no cell runs the last round. Minima and
+ * maxima are exact and do not depend on the rank layout.
  */
 template <
   typename Derived,
@@ -614,10 +695,19 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   const double             timeStepSize
 ) {
   exahype2::dg::limiting::JudgedCells judged;
+  const int                           cells = cellConnectivity.getCells().size;
+  if (cells == 0) {
+    return judged;
+  }
+  const int numberOfTeams = Detector::getNumberOfTeams((cells + Detector::CellsPerBatch - 1) / Detector::CellsPerBatch);
+  const int teamThreads   = Detector::getTeamThreads();
+  const int scratchValuesPerTeam = Detector::getScratchValuesPerTeam(teamThreads);
+  reserveDetectorScratch(numberOfTeams, scratchValuesPerTeam);
   tarch::accelerator::parallelReduce(
-    tarch::accelerator::Range(cellConnectivity.getCells().size),
+    tarch::accelerator::TeamRange(numberOfTeams, teamThreads, Detector::getTeamScratchBytes()),
     exahype2::dg::limiting::JudgeCandidates<Derived, StoragePrecision, ComputePrecision>{
       cellConnectivity.onDevice(),
+      numberOfTeams,
       solution.getView(),
       _statuses.getView(),
       _faceStatuses.getView(),
@@ -629,7 +719,9 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       static_cast<StoragePrecision>(_relaxationParameter),
       static_cast<StoragePrecision>(_differencesScaling),
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      _detectorScratch.getData(),
+      scratchValuesPerTeam
     },
     tarch::accelerator::Custom<exahype2::dg::limiting::JudgedCells>{judged}
   );
@@ -762,8 +854,16 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   const double             timeStamp,
   const double             timeStepSize
 ) {
+  // The projections onto the faces and onto the nodes take their chunks from this scratch. Every
+  // recomputing cell lies on the subcell scheme.
+  const auto scratchValues =
+    static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(_cellCounts.cellsOnScheme))
+    * SubcellScheme::ProjectionScratchValues;
+  if (_recomputeScratch.getSize() < scratchValues) {
+    _recomputeScratch.allocate(scratchValues);
+  }
   tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(_cellCounts.cellsOnScheme),
+    tarch::accelerator::TeamRange(_cellCounts.cellsOnScheme, SubcellScheme::getTeamThreads(), 0),
     exahype2::dg::limiting::ProjectSubgridsOntoFaces<Derived, StoragePrecision, ComputePrecision>{
       cellConnectivity.onDevice(),
       tarch::Span<const int>{_cellsOnSubcellScheme.getData(), _cellCounts.cellsOnScheme},
@@ -772,12 +872,13 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       _subcellHalo.getView(),
       std::as_const(_statuses).getView(),
       SubcellProjection<StoragePrecision>::NodesToSubcells1D,
-      timeStamp <= 0.0
+      timeStamp <= 0.0,
+      _recomputeScratch.getData()
     }
   );
   const auto boundaryFaces = cellConnectivity.onDevice().getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary);
   tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(boundaryFaces.size),
+    tarch::accelerator::Range(boundaryFaces.size * SubcellScheme::Subgrid::VolumesPerLayer),
     exahype2::dg::limiting::ApplySubgridBoundaryConditions<Derived, StoragePrecision, ComputePrecision>{
       {cellConnectivity.onDevice(), boundaryFaces, _subcellHalo.getView(), timeStamp},
       std::as_const(_statuses).getView()
@@ -832,7 +933,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 
   exahype2::dg::MaxEigenvalueStatistics statistics;
   tarch::accelerator::parallelReduce(
-    tarch::accelerator::TeamRange(recomputedCells.size),
+    tarch::accelerator::TeamRange(recomputedCells.size, SubcellScheme::getTeamThreads(), 0),
     exahype2::dg::limiting::ProjectRecomputedSubgrids<Derived, StoragePrecision, ComputePrecision>{
       cellConnectivity.onDevice(),
       recomputedCells,
@@ -840,7 +941,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       std::as_const(_subcells).getView(),
       SubcellProjection<StoragePrecision>::SubcellsToNodes1D,
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      _recomputeScratch.getData()
     },
     tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{statistics}
   );

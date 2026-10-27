@@ -34,5 +34,5 @@ private:
   void testSpecialisedVectorMembers();
   void testNaNComparesUnequal();
   void testSmallerComparisonsHonourTheTolerance();
-  void testNorm2SquaredHoldsASwapOfTheFirstTwoComponents();
+  void testEveryOrderOfTheComponentsKeepsNorm2Squared();
 };

@@ -16,17 +16,17 @@ namespace tarch::mpi::tests {
 class tarch::mpi::tests::HandlesTest final : public tarch::tests::TestCase {
 public:
   HandlesTest();
-  HandlesTest(const HandlesTest&)            = delete;
-  HandlesTest(HandlesTest&&)                 = delete;
-  HandlesTest& operator=(const HandlesTest&) = delete;
-  HandlesTest& operator=(HandlesTest&&)      = delete;
-  ~HandlesTest() override                    = default;
+  HandlesTest(const HandlesTest& other)            = delete;
+  HandlesTest(HandlesTest&& other)                 = delete;
+  HandlesTest& operator=(const HandlesTest& other) = delete;
+  HandlesTest& operator=(HandlesTest&& other)      = delete;
+  ~HandlesTest() override                          = default;
 
   void run() override;
 
 private:
   void testASplitByParityNumbersTheRanksOfEachHalf();
-  void testADuplicateHoldsTheSameRanksAndCommunicates();
+  void testADuplicateContainsTheSameRanksAndCommunicates();
   void testTheTagUpperBoundIsAnAttribute();
   void testAnInfoObjectIsCreatedAndFreed();
   void testARecordTypeAndOperationReduceRecords();

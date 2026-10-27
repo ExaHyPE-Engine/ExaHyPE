@@ -12,6 +12,7 @@
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/database/SnapshotDatabase.h"
 #include "tarch/la/Vector.h"
 
 /**
@@ -82,7 +83,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(
   _stateExchange.rebuild(cellConnectivity);
   _fluxExchange.rebuild(cellConnectivity);
   _restrictedFluxExchange.rebuild(cellConnectivity);
-  rebuildOwnedLists(cellConnectivity);
+  rebuildOwnership(cellConnectivity);
   measureMeshWidths(cellConnectivity);
 }
 
@@ -133,7 +134,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   _migration.migrate(
     _solution,
     regrid,
-    exahype2::dg::RegridCells<Derived, StoragePrecision>{
+    exahype2::dg::CellTransfer<Derived, StoragePrecision>{
       std::as_const(_solution).getView(),
       DGMatrices<double>::ProlongationMatrix1D,
       DGMatrices<double>::WeightedRestrictionMatrix1D
@@ -145,7 +146,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   _stateExchange.rebuild(cellConnectivity);
   _fluxExchange.rebuild(cellConnectivity);
   _restrictedFluxExchange.rebuild(cellConnectivity);
-  rebuildOwnedLists(cellConnectivity);
+  rebuildOwnership(cellConnectivity);
   measureMeshWidths(cellConnectivity);
   _meshChangedSinceLastTimeStep = true;
   if constexpr (UsesAdaptiveTimeStepping) {
@@ -297,6 +298,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
   _numberOfLocalOwnedCells = 0;
   _ownedRiemannFaces.release();
   _numberOfLocalOwnedRiemannFaces = 0;
+  _ownsCoarseSideOfFace.release();
   _errorMeasurement.release();
   _solutionOnHost.release();
   _faceStatesOnHost.release();
@@ -336,6 +338,19 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::openErrorMeas
   _errorMeasurement.open(fileName, timeDeltaBetweenSnapshots);
 }
 
+/**
+ * Records the error norms at the last time stamp of a run. The time loop calls it once after its
+ * last time step.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::recordLastTimeStamp(
+  const peano4::CellConnectivity& cellConnectivity
+) {
+  _errorMeasurement.setSnapshotRule(tarch::database::SnapshotRule::EveryLaterTimestamp);
+  measureError(cellConnectivity);
+}
+
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD const exahype2::TimeStepping&
 exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getTimeStepping() const {
@@ -366,7 +381,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedB
   return _solution.getAllocatedBytes() + _faceStates.getAllocatedBytes() + _faceFluxes.getAllocatedBytes()
     + _stateExchange.getAllocatedBytes() + _fluxExchange.getAllocatedBytes()
     + _restrictedFluxExchange.getAllocatedBytes() + _migration.getAllocatedBytes() + _votes.getAllocatedBytes()
-    + _ownedCells.getAllocatedBytes() + _ownedRiemannFaces.getAllocatedBytes() + _errorMeasurement.getAllocatedBytes()
+    + _ownedCells.getAllocatedBytes() + _ownedRiemannFaces.getAllocatedBytes()
+    + _ownsCoarseSideOfFace.getAllocatedBytes() + _errorMeasurement.getAllocatedBytes()
     + _solutionOnHost.getAllocatedBytes() + _faceStatesOnHost.getAllocatedBytes()
     + tarch::AllocatedBytes::onHost(
            tarch::getAllocatedBytesOf(_ownedCellsOnHost) + tarch::getAllocatedBytesOf(_nodePositionsOnHost)
@@ -470,6 +486,58 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::getRiemannFac
 }
 
 /**
+ * Runs operation on the local or the remote level jumps from the coarsest level down. A solver with
+ * a cell predicate runs it only on the level jumps whose coarse side the predicate owns.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename Operation>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::interpolateCoarseFaces(
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const Operation&                operation
+) const {
+  if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+    exahype2::interpolateCoarseFaces(
+      cellConnectivity,
+      adjacency,
+      exahype2::dg::ForOwnedLevelJump<Operation>{
+        {_ownsCoarseSideOfFace.getData(), static_cast<int>(_ownsCoarseSideOfFace.getSize())},
+        operation
+      }
+    );
+  } else {
+    exahype2::interpolateCoarseFaces(cellConnectivity, adjacency, operation);
+  }
+}
+
+/**
+ * Runs operation on the local or the remote level jumps from the finest level up. A solver with a
+ * cell predicate runs it only on the level jumps whose coarse side the predicate owns.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename Operation>
+INLINE_METHOD void
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::restrictFineFaces(
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Adjacency         adjacency,
+  const Operation&                operation
+) const {
+  if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
+    exahype2::restrictFineFaces(
+      cellConnectivity,
+      adjacency,
+      exahype2::dg::ForOwnedLevelJump<Operation>{
+        {_ownsCoarseSideOfFace.getData(), static_cast<int>(_ownsCoarseSideOfFace.getSize())},
+        operation
+      }
+    );
+  } else {
+    exahype2::restrictFineFaces(cellConnectivity, adjacency, operation);
+  }
+}
+
+/**
  * Returns the solution pool if host code reads it. Otherwise returns its copy in _solutionOnHost.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -515,9 +583,9 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::projectSoluti
   project(peano4::Adjacency::Remote);
   _stateExchange.post();
   project(peano4::Adjacency::Local);
-  exahype2::interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Local, interpolate);
+  interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Local, interpolate);
   _stateExchange.wait();
-  exahype2::interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Remote, interpolate);
+  interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Remote, interpolate);
 
   const auto riemannFaces = getRiemannFaces(cellConnectivity, peano4::Adjacency::Local);
   tarch::accelerator::parallelFor(
@@ -576,12 +644,12 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::projectSoluti
   project(peano4::Adjacency::Remote);
   _stateExchange.post();
   project(peano4::Adjacency::Local);
-  exahype2::interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Local, interpolate);
+  interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Local, interpolate);
   _stateExchange.wait();
-  exahype2::interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Remote, interpolate);
-  exahype2::restrictFineFaces(cellConnectivity, peano4::Adjacency::Remote, restrictStates);
+  interpolateCoarseFaces(cellConnectivity, peano4::Adjacency::Remote, interpolate);
+  restrictFineFaces(cellConnectivity, peano4::Adjacency::Remote, restrictStates);
   _stateExchange.post();
-  exahype2::restrictFineFaces(cellConnectivity, peano4::Adjacency::Local, restrictStates);
+  restrictFineFaces(cellConnectivity, peano4::Adjacency::Local, restrictStates);
   _stateExchange.wait();
 }
 
@@ -616,9 +684,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::solveRiemannP
 }
 
 /**
- * Advances the time stamp. An adaptive rule raises the wave speeds of this rank.
- * readValuesFromGlobalReduction() then sets the time step size of the next step. A fixed rule sets
- * this size at once.
+ * Advances the time stamp. An adaptive rule raises the wave speeds of this rank and
+ * readValuesFromGlobalReduction() sets the next time step size. A fixed rule sets this size at once.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -766,11 +833,12 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::plotFaces(
 
 /**
  * Lists the cells the cell predicate owns and the Riemann faces beside them, the local entries
- * first. A solver without a cell predicate lists nothing.
+ * first. Marks the coarse face of every level jump whose coarse side the predicate owns. Only a solver
+ * with a cell predicate lists cells and marks faces.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwnedLists(
+exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwnership(
   [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity
 ) {
   if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
@@ -778,6 +846,7 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwnedL
     std::vector<int>  cells;
     for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
       for (const int slot : cellConnectivity.getCells(adjacency)) {
+        assertion(slot >= 0 and slot < cellConnectivity.getNumberOfSlots(), slot, cellConnectivity.getNumberOfSlots());
         if (Derived::ownsCell(cellConnectivity.getCellCentre(slot), cellConnectivity.getCellWidth(slot))) {
           owned[static_cast<std::size_t>(slot)] = 1;
           cells.push_back(slot);
@@ -797,7 +866,8 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwnedL
         bool advanced = false;
         for (int side = 0; side < 2; side++) {
           const int slot = cellConnectivity.getFaceCell(face, side);
-          advanced       = advanced or (slot >= 0 and owned[static_cast<std::size_t>(slot)] != 0);
+          assertion(slot < cellConnectivity.getNumberOfSlots(), slot, cellConnectivity.getNumberOfSlots());
+          advanced = advanced or (slot >= 0 and owned[static_cast<std::size_t>(slot)] != 0);
         }
         if (advanced) {
           riemannFaces.push_back(face);
@@ -808,6 +878,21 @@ exahype2::dg::Solver<Derived, StoragePrecision, ComputePrecision>::rebuildOwnedL
       }
     }
     _ownedRiemannFaces.setValues(riemannFaces);
+
+    std::vector<char> ownsCoarseSideOfFace(static_cast<std::size_t>(cellConnectivity.getNumberOfFaces()), 0);
+    for (const auto adjacency : {peano4::Adjacency::Local, peano4::Adjacency::Remote}) {
+      for (const peano4::LevelJump& levelJump : cellConnectivity.getLevelJumps(adjacency)) {
+        const int face = levelJump.coarseFace;
+        assertion(face >= 0 and face < cellConnectivity.getNumberOfFaces(), face, cellConnectivity.getNumberOfFaces());
+        assertion(levelJump.coarseSide == 0 or levelJump.coarseSide == 1, levelJump.coarseSide);
+        const tarch::la::Vector<DIMENSIONS, double> centre =
+          cellConnectivity.getCellCentreBesideFace(face, levelJump.coarseSide);
+        if (Derived::ownsCell(centre, cellConnectivity.getFaceWidth(face))) {
+          ownsCoarseSideOfFace[static_cast<std::size_t>(face)] = 1;
+        }
+      }
+    }
+    _ownsCoarseSideOfFace.setValues(ownsCoarseSideOfFace);
   }
 }
 

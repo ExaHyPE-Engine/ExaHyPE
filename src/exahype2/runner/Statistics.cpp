@@ -158,9 +158,9 @@ exahype2::runner::GlobalStatistics::setLocalCellUpdates(const std::uint64_t solv
 }
 
 /**
- * Adds the local statistics of this rank to record. Only the node master adds the node memory.
- * Every node then counts once. A non-negative cell width and a stationary counter with a sign bias
- * keep their order under an unsigned minimum.
+ * Adds the local statistics of this rank to record. Only the node master adds the node memory and
+ * every node counts once. A non-negative cell width and a stationary counter with a sign bias keep
+ * their order under an unsigned minimum.
  */
 void
 exahype2::runner::GlobalStatistics::addLocalValuesToGlobalReduction(
@@ -246,7 +246,7 @@ exahype2::runner::GlobalStatistics::readValuesFromGlobalReduction(const tarch::m
 
   _globalNumberOfInnerUnrefinedCells = getSum(SumOfCells);
   _globalNumberOfInnerRefinedCells   = getSum(SumOfRefinedCells);
-  // The ranks on both sides of a rank boundary face count it. The grid holds half of their sum.
+  // The ranks on both sides of a rank boundary face count it. The grid contains half of their sum.
   assertion(getSum(SumOfRankBoundaryFaces) % 2 == 0, getSum(SumOfRankBoundaryFaces));
   assertion(
     getSum(SumOfRankBoundaryFaces) / 2 <= getSum(SumOfFaces),
@@ -306,9 +306,6 @@ exahype2::runner::GlobalStatistics::getGlobalMaxRankBoundaryFaces() const {
   return _globalMaxRankBoundaryFaces;
 }
 
-/**
- * Returns the percentage of the faces of the grid that lie on a rank boundary.
- */
 double
 exahype2::runner::GlobalStatistics::getGlobalRankBoundaryFacePercentage() const {
   return _globalNumberOfFaces > 0
@@ -378,7 +375,7 @@ exahype2::runner::GlobalStatistics::getGlobalAvailableMemoryInBytes() const {
 
 /**
  * Returns the percentage of the ideal speed-up that the domain decomposition allows. The mean rank
- * load is the even load, and the heaviest rank sets the makespan.
+ * load is the even load. The heaviest rank sets the makespan.
  */
 double
 exahype2::runner::GlobalStatistics::getGlobalInterRankBalance() const {
@@ -411,8 +408,8 @@ exahype2::runner::GlobalStatistics::getGlobalNumberOfStationaryRegrids() const {
 }
 
 /**
- * Reads the global grid statistics into one snapshot. The MPI rows stay empty on a single rank,
- * and the GPU rows stay empty in a build without a GPU backend.
+ * Reads the global grid statistics into one snapshot. The MPI rows stay empty on a single rank.
+ * The GPU rows stay empty in a build without a GPU backend.
  */
 exahype2::runner::GridSnapshot
 exahype2::runner::collectGridSnapshot() {

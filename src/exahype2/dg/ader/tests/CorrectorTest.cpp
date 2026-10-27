@@ -37,14 +37,15 @@ namespace {
     }
   };
 
-  using CellLayout = exahype2::dg::PaddedLayout<WaveSpeedSolver>;
+  using CellLayout                 = exahype2::dg::PaddedLayout<WaveSpeedSolver>;
+  using CorrectorOfWaveSpeedSolver = exahype2::dg::ader::Corrector<WaveSpeedSolver, double, double>;
 
   constexpr int NodesPerAxis        = CellLayout::NodesPerAxis;
   constexpr int FluxElementsPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
   constexpr int CellStateSize       = CellLayout::NodesPerCell * CellLayout::NumberOfData;
 
   /**
-   * The nodes lie at the two ends of the reference interval, so a face integral changes only the
+   * The nodes lie at the two ends of the reference interval. A face integral then changes only the
    * nodes on that face.
    */
   struct Tables final {
@@ -66,9 +67,6 @@ namespace {
     return tables;
   }
 
-  /**
-   * Returns the cell node of face node faceNode at position normalIndex along direction.
-   */
   int getCellNodeOnFace(const int direction, const int faceNode, const int normalIndex) {
     int lowerAxesStride = 1;
     for (int axis = 0; axis < direction; axis++) {
@@ -118,7 +116,7 @@ namespace {
   }
 
   /**
-   * Writes the expected cell state after the correction: Every face subtracts its flux difference
+   * Writes the expected cell state after the correction. Every face subtracts its flux difference
    * times the time step size over the cell extent from the nodes on that face.
    */
   void setExpectedCellState(double (&expected)[CellStateSize]) {
@@ -136,22 +134,47 @@ namespace {
     }
   }
 
+  /**
+   * Corrects every node of cell as a corrector team does: The face integrals of the node and, with
+   * ReportEigenvalues, the wave speeds of the node at the end of the time step.
+   */
   template <bool ReportEigenvalues>
-  exahype2::dg::MaxEigenvalueStatistics correct(Cell& cell, const Tables& tables, int& postprocessingCalls) {
-    return exahype2::dg::ader::Corrector<WaveSpeedSolver, double>::correct<ReportEigenvalues>(
-      getCellCentre(),
-      getCellSize(),
-      cell.fluxHalves,
-      cell.cellState,
-      tables.faceQuadratureWeights,
-      tables.inverseCellQuadratureWeights,
-      tables.leftFaceCoefficients,
-      tables.rightFaceCoefficients,
-      tables.quadraturePoints,
-      TimeStamp,
-      TimeStepSize,
-      [&]() { postprocessingCalls++; }
-    );
+  exahype2::dg::MaxEigenvalueStatistics correct(Cell& cell, const Tables& tables) {
+    double inverseCellSize[DIMENSIONS];
+    for (int direction = 0; direction < DIMENSIONS; direction++) {
+      inverseCellSize[direction] = 1.0 / CellExtent;
+    }
+    exahype2::dg::MaxEigenvalueStatistics statistics;
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      CorrectorOfWaveSpeedSolver::correctNode(
+        cell.cellState,
+        cellNode,
+        cell.fluxHalves,
+        tables.faceQuadratureWeights,
+        tables.inverseCellQuadratureWeights,
+        tables.leftFaceCoefficients,
+        tables.rightFaceCoefficients,
+        inverseCellSize,
+        TimeStepSize
+      );
+    }
+    if constexpr (ReportEigenvalues) {
+      for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+        statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+          statistics,
+          exahype2::dg::getMaxEigenvaluesOfNode<WaveSpeedSolver>(
+            cellNode,
+            cell.cellState,
+            tables.quadraturePoints,
+            getCellCentre(),
+            getCellSize(),
+            TimeStamp + TimeStepSize,
+            TimeStepSize
+          )
+        );
+      }
+    }
+    return statistics;
   }
 } // namespace
 
@@ -163,6 +186,7 @@ exahype2::dg::ader::tests::CorrectorTest::run() {
   testMethod(testTheFaceIntegralsReachTheCellState);
   testMethod(testZeroFluxDifferencesLeaveTheCellStateBitwise);
   testMethod(testTheCorrectionReportsTheWaveSpeedsOfTheUpdatedState);
+  testMethod(testALaunchRunsBetweenOneTeamAndOneTeamPerCell);
 }
 
 /**
@@ -177,9 +201,7 @@ exahype2::dg::ader::tests::CorrectorTest::testTheFaceIntegralsReachTheCellState(
   double expected[CellStateSize] = {};
   setExpectedCellState(expected);
 
-  int        postprocessingCalls = 0;
-  const auto statistics          = correct<false>(cell, tables, postprocessingCalls);
-  validateEquals(postprocessingCalls, 1);
+  const auto statistics = correct<false>(cell, tables);
   validateNumericalEquals(statistics.maxPhysicalEigenvalue, 0.0);
   validateNumericalEquals(statistics.maxScaledEigenvalue, 0.0);
 
@@ -192,9 +214,6 @@ exahype2::dg::ader::tests::CorrectorTest::testTheFaceIntegralsReachTheCellState(
   }
 }
 
-/**
- * Zero flux differences leave the cell state unchanged bitwise.
- */
 void
 exahype2::dg::ader::tests::CorrectorTest::testZeroFluxDifferencesLeaveTheCellStateBitwise() {
   const Tables tables = getTables();
@@ -209,8 +228,7 @@ exahype2::dg::ader::tests::CorrectorTest::testZeroFluxDifferencesLeaveTheCellSta
     cell.cellState[getStateIndexOf(cellNode)] = 1.0 / 3.0 + 0.1 * cellNode;
   }
 
-  int postprocessingCalls = 0;
-  correct<false>(cell, tables, postprocessingCalls);
+  correct<false>(cell, tables);
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     validateEqualsWithParams1(cell.cellState[getStateIndexOf(cellNode)], 1.0 / 3.0 + 0.1 * cellNode, cellNode);
@@ -226,10 +244,28 @@ exahype2::dg::ader::tests::CorrectorTest::testTheCorrectionReportsTheWaveSpeedsO
   Cell         cell;
   fill(cell);
 
-  int        postprocessingCalls = 0;
-  const auto statistics          = correct<true>(cell, tables, postprocessingCalls);
+  const auto statistics = correct<true>(cell, tables);
 
-  validateEquals(postprocessingCalls, 1);
   validateNumericalEquals(statistics.maxPhysicalEigenvalue, WaveSpeed);
   validateNumericalEquals(statistics.maxScaledEigenvalue, DIMENSIONS * WaveSpeed / CellExtent);
+}
+
+/**
+ * A corrector launch over cells runs at least one team, at most one team per cell and at most one
+ * team per getTeamThreads() nodes.
+ */
+void
+exahype2::dg::ader::tests::CorrectorTest::testALaunchRunsBetweenOneTeamAndOneTeamPerCell() {
+  const int threads = CorrectorOfWaveSpeedSolver::getTeamThreads();
+  validate(threads >= 1);
+  for (const int cells : {1, 7, 4096}) {
+    const int teams = CorrectorOfWaveSpeedSolver::getNumberOfTeams(cells);
+    validateWithParams2(teams >= 1 and teams <= cells, teams, cells);
+    validateWithParams3(
+      teams == 1 or teams <= (cells * CellLayout::NodesPerCell + threads - 1) / threads,
+      teams,
+      cells,
+      threads
+    );
+  }
 }

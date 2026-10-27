@@ -10,8 +10,8 @@ namespace tarch::mpi {
 
 /**
  * Collects values that one allreduce sums, minimises or maximises over all ranks. Every rank adds
- * its values in the same order. Each add function returns the slot of its value. After allreduce(),
- * the getter of that slot returns the reduced value.
+ * its values in the same order. Each add function returns the slot whose getter returns the reduced
+ * value after allreduce().
  */
 class tarch::mpi::ReductionRecord final {
 public:

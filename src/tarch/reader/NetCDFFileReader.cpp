@@ -43,8 +43,8 @@ tarch::reader::NetCDFFileReader::getDimension(const int ncid, const char* const 
 }
 
 /**
- * Copies every value of the variable key into values, which has room for all of them. Returns 0, or
- * -1 on failure.
+ * Copies every value of the variable key into values. The caller provides room for all of them.
+ * Returns 0, or -1 on failure.
  */
 int
 tarch::reader::NetCDFFileReader::readVariable(const int ncid, const char* const key, double* const values) {

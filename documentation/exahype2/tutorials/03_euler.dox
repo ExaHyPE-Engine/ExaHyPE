@@ -37,14 +37,13 @@ For an ideal gas the pressure is
 \f$\gamma = 1.4\f$ (dry air), and the sound speed is \f$c = \sqrt{\gamma p/\rho}\f$.
 The eigenvalues in normal direction \f$n\f$ are \f$u_n - c\f$, \f$u_n\f$ and
 \f$u_n + c\f$. In code the conserved state stores density, the two momenta and
-the energy - **not** the velocities - so divide by \f$\rho\f$ wherever
-the formulae use \f$u\f$.
+the energy. Divide a momentum by \f$\rho\f$ wherever the formulae use \f$u\f$.
 
 # The Configuration
 
-The airfoil sits in a wide \f$120 \times 120\f$ channel. Where the mesh is refined
-is chosen at **run time**: we pass `-lmin 2 -lmax 4`, so the domain is covered by
-a coarse level-2 grid and ExaHyPE may refine down to level 4 around the airfoil.
+The airfoil sits in a wide \f$120 \times 120\f$ channel. We choose the refinement
+at **run time** and pass `-lmin 2 -lmax 4`. A coarse level-2 grid then covers the
+domain. ExaHyPE may refine down to level 4 around the airfoil.
 Each refinement splits a cell into \f$k \times k\f$ cells, with k the subdivision
 factor of the active curve (3 on the Peano curve, 2 on the Hilbert curve). Level 4
 is \f$k^2\f$ times finer per direction than level 2. As with the refinement of Part 2,
@@ -91,32 +90,32 @@ The project is built exactly as before, registering `FVSolver.cpp`.
 
 # The Implementation File
 
-`FVSolver.cpp` holds the PDE terms. The conserved variables
+`FVSolver.cpp` contains the PDE terms. The conserved variables
 \f$(\rho, \rho u_1, \rho u_2, E)\f$ are addressed through the generated `Shortcuts`
 enum (`Shortcuts::rho`, `Shortcuts::j + 0/1`, `Shortcuts::E`). The `boundaryConditions` impose
 a fixed inflow state on the left face and outflow (copy the inside state)
 elsewhere. The `initialCondition` places a dense gas blob (\f$\rho = 1000\f$)
 inside the symmetric NACA 0012 contour \f$y_t(x)\f$ (`airfoilSymmetric`) against
 a uniform low-density free stream (\f$\rho = 1\f$). The `refinementCriterion`
-drives the static AMR: it inspects only a patch's position (never `Q`, which is
-invalid during grid construction) and returns `Refine` within `RefinementMargin`
-of the NACA contour, so the refined band is fixed for the whole run. This is a
-deliberately simplified setup that produces a recognisable bow-shock picture; it
-is not a validated aerodynamics benchmark.
+drives the static AMR. It reads the position of a patch alone and returns
+`Refine` within `RefinementMargin` of the NACA contour. The grid construction
+passes a null `Q`. The refined band then stays fixed for the whole run. This
+deliberately simplified setup produces a recognisable bow-shock picture. It is
+no validated aerodynamics benchmark.
 
 @include tutorials/03_euler/FVSolver.cpp
 
 # Running and Visualising
 
-Finite Volumes are explicit, so this airfoil run is the heaviest of these
-tutorials. We pass `-lmin 2 -lmax 4` so the background grid is level 2 and the
+Finite Volumes are explicit. This airfoil run is the heaviest of these
+tutorials. We pass `-lmin 2 -lmax 4`. The background grid is then level 2 and the
 solver refines to level 4 around the airfoil:
 
     export OMP_NUM_THREADS=4
     ./Airfoil -et 10.0 -ns 20 -lmin 2 -lmax 4
 
 and plot the density. The dense blob inside the contour saturates the colour
-scale, so pass `clim=(1, 2)` to bring out the surrounding flow:
+scale. Pass `clim=(1, 2)` to bring out the surrounding flow:
 
     from postprocessing import render_solution
     render_solution.show_solution("FVSolver", field="rho", clim=(1, 2))
@@ -125,11 +124,11 @@ The initial conditions should look like this:
 
 @image html documentation/exahype2/tutorials/Euler_airfoil_start.png
 
-Plotting the `RefinementLevel` field shows the static mesh refinement: a fine
-level-4 band hugging the airfoil (and a short wake) against the coarse level-2
-far field, with a level-3 transition in between (ExaHyPE keeps neighbouring
-resolutions one level apart, so their mesh widths differ by the subdivision
-factor of the active curve):
+The plot of the `RefinementLevel` field shows the static mesh refinement: a fine
+level-4 band along the airfoil (and a short wake) against the coarse level-2 far
+field, with a level-3 transition in between. ExaHyPE keeps neighbouring
+resolutions one level apart. Their mesh widths differ by the subdivision factor
+of the active curve:
 
 @image html documentation/exahype2/tutorials/Euler_airfoil_refinement.png
 

@@ -11,8 +11,8 @@ exahype2::dg::limiting::runsSubcellScheme(const LimiterStatus status) {
 }
 
 /**
- * Returns the more limited of two statuses, so a face half merged across threads or ranks does
- * not depend on the order of the merges.
+ * Returns the more limited of two statuses. A face half merged across threads or ranks does not
+ * depend on the order of the merges.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD constexpr exahype2::dg::limiting::LimiterStatus
 exahype2::dg::limiting::mergeLimiterStatus(const LimiterStatus left, const LimiterStatus right) {

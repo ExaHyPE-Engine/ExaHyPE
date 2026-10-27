@@ -2,9 +2,9 @@
 
 @page page_installation_with_spack Installation with Spack
 
-Spack installs everything from sources and it is the main feature of Spack,
-in contrast to other package managers. In other words, Spack downloads
-source files, compiles them and locates binaries inside of your system.
+Spack installs everything from sources. This sets Spack apart from other
+package managers. Spack downloads the source files, compiles them and places
+the binaries inside of your system.
 You don’t need to have *super-user’s* rights to install packages and
 you can try different versions and flavours of them.
 
@@ -25,7 +25,7 @@ cd $HOME/Peano/utilities/spack
 spack repo add .
 ```
 
-To make sure that everything went well, query available packages in Spack.
+To check the installation, query the available packages in Spack.
 
 ```shell
 spack list exahype2

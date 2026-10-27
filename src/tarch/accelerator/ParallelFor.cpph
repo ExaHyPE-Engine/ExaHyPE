@@ -9,7 +9,7 @@ namespace tarch::accelerator {
   INLINE_METHOD unsigned char* getTeamScratch(const CpuTeam& team) { return team.scratch; }
 
   /**
-   * Returns the threads per team of a launch that asks for requested threads: One host thread
+   * Returns the threads per team of a launch that asks for requested threads. One host thread
    * runs a whole team.
    */
   INLINE_METHOD int getTeamThreads(const int requested) {
@@ -18,7 +18,7 @@ namespace tarch::accelerator {
   }
 
   /**
-   * Returns the team scratch bytes of a launch that asks for requested bytes: Every host thread
+   * Returns the team scratch bytes of a launch that asks for requested bytes. Every host thread
    * provides TeamScratchBytes.
    */
   INLINE_METHOD int getTeamScratchBytes(const int requested) {
@@ -30,9 +30,6 @@ namespace tarch::accelerator {
     return tarch::accelerator::TeamScratchBytes;
   }
 
-  /**
-   * Returns the team scratch of the calling host thread.
-   */
   INLINE_METHOD unsigned char* getTeamScratchOfThread() {
     alignas(PEANO_WITH_ALIGNMENT) thread_local unsigned char teamScratch[TeamScratchBytes];
     return teamScratch;
@@ -69,8 +66,16 @@ namespace tarch::accelerator {
     }
   }
 
-  // A team runs its range serially on the host, so the barrier does nothing.
+  // A team runs its range serially on the host. The barrier does nothing.
   INLINE_METHOD void teamBarrier([[maybe_unused]] const CpuTeam& team) {}
+
+  INLINE_METHOD bool isTrueInEveryThreadOfTeam([[maybe_unused]] const CpuTeam& team, const bool condition) {
+    return condition;
+  }
+
+  INLINE_METHOD bool isTrueInAnyThreadOfTeam([[maybe_unused]] const CpuTeam& team, const bool condition) {
+    return condition;
+  }
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
@@ -108,8 +113,8 @@ namespace tarch::accelerator {
     });
   }
 
-  // The host threads run across the teams only: The CpuTeam overloads above run a team's
-  // range serially.
+  // The host threads run across the teams only. The CpuTeam overloads above run the range of a
+  // team serially.
   template <typename Functor>
   INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);

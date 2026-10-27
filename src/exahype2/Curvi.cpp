@@ -36,11 +36,11 @@ exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
 
   reserveAxis(normal);
 
-  // No earlier transformation moves points along normal, so the cartesian bounds stay valid.
+  // No earlier transformation moves points along normal. The cartesian bounds stay valid.
   const double lowerBound = _domainOffset[normal];
   const double upperBound = _domainOffset[normal] + _domainSize[normal];
 
-  // Both maps evaluate perturbation on the face, so they read the same offset.
+  // Both maps evaluate perturbation on the face and read the same offset.
   const double measurementPosition = isUpperFace ? upperBound : lowerBound;
 
   const Mapping oldPositionFunction = _positionFunction;
@@ -102,7 +102,7 @@ double
 exahype2::Curvi::split(int normal, int index, double position, Perturbation perturbation) {
   reserveAxis(normal);
 
-  // No earlier transformation moves points along normal, so the cartesian bounds stay valid.
+  // No earlier transformation moves points along normal. The cartesian bounds stay valid.
   const double lowerBound    = _domainOffset[normal];
   const double upperBound    = _domainOffset[normal] + _domainSize[normal];
   const double splitPosition = lowerBound + _minCellSize[normal] * index;
@@ -122,7 +122,7 @@ exahype2::Curvi::split(int normal, int index, double position, Perturbation pert
     [normal, position, splitPosition, lowerBound, upperBound, oldPositionFunction, perturbation](const Point& x) {
       Point solution = oldPositionFunction(x);
 
-      // Both maps evaluate perturbation on the interface, so they read the same offset.
+      // Both maps evaluate perturbation on the interface and read the same offset.
       Point measurementPoint   = solution;
       measurementPoint[normal] = splitPosition;
       const double target      = position + perturbation(measurementPoint);

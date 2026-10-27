@@ -38,9 +38,9 @@ follows from adding up the turtle steps that precede it.
 
 # The grammar as C++
 
-A curve is declared as a struct derived from peano4::sfc::Grammar. The base
-struct contributes the turtle alphabet and the production() builder, so the
-declaration reads like the textbook:
+A struct derived from peano4::sfc::Grammar declares a curve. The base struct
+contributes the turtle alphabet and the production() builder. The declaration
+then reads like the textbook:
 
 @code
 struct peano4::sfc::HilbertGrammar final : peano4::sfc::Grammar {
@@ -71,8 +71,8 @@ peano4::sfc::SpaceFillingCurve takes a grammar and derives the child-order
 table from it while the compiler instantiates the class. For every
 non-terminal, the turtle walk of its production yields the child positions and
 the production's right-hand side yields the child states. The derivation runs
-in constexpr functions, so the table is a constant of the program and the
-mesh build reads it with one indexed load per refined cell.
+in constexpr functions. The table is a constant of the program. The mesh build
+reads it with one indexed load per refined cell.
 
 Three static assertions reject a faulty grammar before any code runs:
 
@@ -94,9 +94,8 @@ level and geometry. peano4::grid::AutomatonState::refineState() reads the
 children of that state from the active curve and derives every child's
 geometry and curve state from its table entry. The cell connectivity build in
 peano4::Spacetree and the rank partition in peano4::topology::Tree loop over
-the same child sequence. The active curve is
-the alias peano4::sfc::ActiveCurve, which CMake configures from
-PEANO_WITH_SPACE_FILLING_CURVE:
+the same child sequence. The alias peano4::sfc::ActiveCurve names the active
+curve. CMake configures it from PEANO_WITH_SPACE_FILLING_CURVE:
 
     cmake .. -DPEANO_WITH_SPACE_FILLING_CURVE=Hilbert
 
@@ -104,17 +103,17 @@ The subdivision factor of the active curve decides how many children a
 refined cell has along each axis. The grid, the block-structured interpolation
 and restriction, the particle lifts and drops and the generated solver code
 read peano4::sfc::ActiveCurve::SubdivisionFactor and
-peano4::sfc::ActiveCurve::ChildrenPerCell, so a Hilbert build bisects every
-cell and a Peano build splits it in three. The Discontinuous Galerkin solvers
-derive their interpolation and restriction matrices between a cell and its
-children in C++ (exahype2/dg/Basis.h) from the quadrature nodes and the
-subdivision factor, so every table of the Python code generator is independent
-of the curve. The 3^d neighbourhood of a cell is a property of the lattice,
-not of the curve; peano4::CellsPerNeighbourhood names it.
+peano4::sfc::ActiveCurve::ChildrenPerCell. A Hilbert build bisects every cell.
+A Peano build splits it in three. The Discontinuous Galerkin solvers derive
+their interpolation and restriction matrices between a cell and its children
+in C++ (exahype2/dg/Basis.h) from the quadrature nodes and the subdivision
+factor. Every table of the Python code generator then serves every curve. The
+3^d neighbourhood of a cell follows from the lattice alone.
+peano4::CellsPerNeighbourhood names it.
 
 # Adding a curve
 
-Add a header under src/peano4/sfc/curves that holds the grammar and name its
+Add a header under src/peano4/sfc/curves that defines the grammar and name its
 non-terminals as textbook readers know them. peano4::sfc::ActiveCurve builds
 both the header name and the struct name from the curve name and the suffix
 Grammar. Add the curve name to the PEANO_WITH_SPACE_FILLING_CURVE option in

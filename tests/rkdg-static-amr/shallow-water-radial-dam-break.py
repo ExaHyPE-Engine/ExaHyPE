@@ -46,10 +46,7 @@ project = exahype2.Project(
 )
 
 if project.dimensions != 2:
-    raise ValueError(
-        f"RKDG static AMR is a 2D testcase, but the project was configured "
-        f"for {project.dimensions}D."
-    )
+    raise ValueError("The RKDG static AMR dam break test runs in 2D only.")
 
 solver = exahype2.dg.rk.Solver(
     name="RKDGSolver",

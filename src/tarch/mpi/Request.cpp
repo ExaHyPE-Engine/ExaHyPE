@@ -100,7 +100,7 @@ tarch::mpi::test(MPI_Request* request, int* flag, MPI_Status* status, std::sourc
 }
 
 /**
- * Waits for one request in a loop of MPI_Test() calls, so a wait that never finishes reports its
+ * Waits for one request in a loop of MPI_Test() calls. A wait that never finishes reports its
  * operation and its partner. The reports need a timeout that a caller has configured.
  */
 int
@@ -113,7 +113,7 @@ tarch::mpi::wait(MPI_Request* request, MPI_Status* status, std::source_location 
   while (not flag) {
     tarch::mpi::test(request, &flag, status, location);
     if (not flag) {
-      // The timeout check costs more than the request test, so it runs on the stride of the pacing.
+      // The timeout check costs more than the request test and runs on the stride of the pacing.
       if (pacing.reportProgressNow()) {
         if (not tarch::mpi::Diagnostics::getInstance().reportRequest(request, "MPI_Wait", location)) {
           reportUntrackedWait("MPI_Wait", location, startedWaiting, nextWarning, waitingStarted);

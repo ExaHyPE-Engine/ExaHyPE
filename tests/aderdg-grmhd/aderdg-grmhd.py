@@ -101,10 +101,7 @@ project = exahype2.Project(
 )
 
 if project.dimensions != dimensions:
-    raise ValueError(
-        f"Scenario {args.scenario} is {dimensions}D, but the project was configured "
-        f"for {project.dimensions}D."
-    )
+    raise ValueError(f"The scenario {args.scenario} runs in {dimensions}D only.")
 
 solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",

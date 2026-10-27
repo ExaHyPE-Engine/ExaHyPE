@@ -12,7 +12,7 @@ project = exahype2.Project(
     project_name=f"EulerRayleighTaylor-{arguments.limiter_solver}",
     dimensions=2,
     size=[1.0, 2.0, 1.0],
-    offset=[0.0, 0.0, 0.0],
+    offset=[-0.5, 0.0, -0.5],
     periodic_bc=[True, False, True],
     min_end_time=arguments.end_time,
     max_end_time=arguments.end_time,
@@ -30,10 +30,10 @@ initial_conditions = f"""
   constexpr double Gravity = 1.0;
   constexpr int Vertical = 1;
   const double interfaceHeight = 1.0;
-  const double horizontalPhase = 2.0 * tarch::la::PI * (x[0] - 0.5);
+  const double horizontalPhase = 2.0 * tarch::la::PI * x[0];
   double horizontalShape = std::cos(horizontalPhase);
   if constexpr (DIMENSIONS == 3) {{
-    const double depthPhase = 2.0 * tarch::la::PI * (x[2] - 0.5);
+    const double depthPhase = 2.0 * tarch::la::PI * x[2];
     horizontalShape *= std::cos(depthPhase);
   }}
   const double perturbedInterface =

@@ -154,7 +154,7 @@ exahype2::tests::CurviTest::testTransverselyVaryingPerturbation() {
 }
 
 /**
- * A lower-face perturbation moves the face by its offset, and the round trip returns every point.
+ * A lower-face perturbation moves the face by its offset and the round trip returns every point.
  */
 void
 exahype2::tests::CurviTest::testLowerFacePerturbation() {
@@ -193,7 +193,7 @@ exahype2::tests::CurviTest::testLowerFacePerturbation() {
         };
         const tarch::la::Vector<DIMENSIONS, double> curvilinearPoint = curvi(pointPos);
 
-        // The lower face moves to Lift, and the cells divide the remaining extent evenly.
+        // The lower face moves to Lift and the cells divide the remaining extent evenly.
         const double stretchedCellSize = (domainSize[0] - Lift) / numElements;
         validateNumericalEquals(curvilinearPoint[0], (domainOffset[0] + Lift + i * stretchedCellSize));
 

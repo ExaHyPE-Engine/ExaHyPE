@@ -2,13 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
+#if defined(__HIPCC__)
   // Every kernel that calls this routine runs at most HipBlockSize threads per block. The barrier
   // after the read of entry zero keeps a thread that calls the routine again from overwriting the
   // entry while another thread still reads it.
   template <typename Reducer, typename T>
   INLINE_METHOD __device__ T blockReduce(const T threadValue) {
-    // A __shared__ declaration takes no initialiser. Raw bytes hold a type with default member
-    // initialisers.
+    // The hipcc compiler rejects the initialiser of a __shared__ declaration. Raw bytes store a type with
+    // default member initialisers.
     alignas(T) __shared__ unsigned char blockStorage[HipBlockSize * sizeof(T)];
     T* const                            blockValues = reinterpret_cast<T*>(blockStorage);
     const int                           threadIndex = threadIdx.x;
@@ -31,6 +32,19 @@ namespace tarch::accelerator {
   }
 
   /**
+   * Combines the partial value of every thread of the block into the target of the reducer.
+   * Thread 0 writes the target.
+   */
+  template <typename Reducer>
+  INLINE_METHOD __device__ void reduceOverBlock(const typename Reducer::ValueType threadValue, const Reducer reducer) {
+    const typename Reducer::ValueType blockResult = tarch::accelerator::blockReduce<Reducer>(threadValue);
+    if (threadIdx.x == 0) {
+      reducer.target = Reducer::combine(reducer.target, blockResult);
+    }
+  }
+#endif
+
+  /**
    * Combines the partial value of every thread of the team into the target of the reducer. One
    * host thread runs a whole team. Its partial value is the result of the team.
    */
@@ -40,17 +54,17 @@ namespace tarch::accelerator {
     const typename Reducer::ValueType threadValue,
     const Reducer                     reducer
   ) {
-    COMPILE_IF_ON_DEVICE(
-      const typename Reducer::ValueType blockResult = tarch::accelerator::blockReduce<Reducer>(threadValue);
-      if (threadIdx.x == 0) { reducer.target = Reducer::combine(reducer.target, blockResult); }
-    )
+    COMPILE_IF_ON_DEVICE(tarch::accelerator::reduceOverBlock<Reducer>(threadValue, reducer);)
     COMPILE_IF_ON_HOST(reducer.target = Reducer::combine(reducer.target, threadValue);)
   }
 
-  // The parameter reducer deduces Reducer for the non-deduced type of blockResults. Its target is a
-  // host reference that no device thread dereferences.
+#if defined(__HIPCC__)
+  // Every launch runs at most HipBlockSize threads per block. The AMD compiler limits the registers
+  // of a kernel without launch bounds to those of a block of 1024 threads. The parameter reducer
+  // deduces Reducer for the non-deduced type of blockResults. Its target is a host reference that no
+  // device thread dereferences.
   template <typename Reducer, typename Functor>
-  __global__ void teamReduceKernel(
+  __global__ void __launch_bounds__(tarch::accelerator::HipBlockSize) teamReduceKernel(
     const Functor                      functor,
     [[maybe_unused]] const Reducer     reducer,
     typename Reducer::ValueType* const blockResults
@@ -73,7 +87,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  __global__ void flatReduceKernel1D(
+  __global__ void __launch_bounds__(tarch::accelerator::HipBlockSize) flatReduceKernel1D(
     const Functor                      functor,
     [[maybe_unused]] const Reducer     reducer,
     const int                          numberOfItems,
@@ -114,9 +128,8 @@ namespace tarch::accelerator {
     }
   };
 
-  // The block results lie in the scratch, followed by room for the second-stage results. The copy
-  // into pinned host memory runs on the stream. The host waits for the stream once and combines the
-  // copied results in order.
+  // The block results lie in the scratch before the room for the second-stage results. The host
+  // waits once for the stream copy into pinned memory and combines the results in order.
   template <typename Reducer>
   INLINE_METHOD void finaliseReduction(
     const Reducer                      reducer,
@@ -151,6 +164,7 @@ namespace tarch::accelerator {
     reducer.target = Reducer::combine(reducer.target, result);
     tarch::accelerator::unlockReductionScratch();
   }
+#endif
 
   template <typename Reducer, typename Functor>
   INLINE_METHOD GPU_CALLABLE_METHOD void parallelReduce(
@@ -200,6 +214,7 @@ namespace tarch::accelerator {
     tarch::accelerator::reduceOverTeam<Reducer>(team, threadAccumulator, reducer);
   }
 
+#if defined(__HIPCC__)
   template <typename Reducer, typename Functor>
   INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
@@ -280,4 +295,5 @@ namespace tarch::accelerator {
       reducer
     );
   }
+#endif
 } // namespace tarch::accelerator

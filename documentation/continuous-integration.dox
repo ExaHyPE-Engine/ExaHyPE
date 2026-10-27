@@ -10,8 +10,8 @@ For a full overview of how continuous integration works in gitlab, please consul
 We detail here some useful info about how we use it within Peano. A few basic things to note:
 
 \li When a developer pushes to any remote branch, the gitlab website "runs a pipeline". This consists of running any steps in the `.gitlab-ci.yml` file.
-\li Our ```.gitlab-ci.yml``` doesn't contain much actual stuff. It includes `.continuous_integration/gitlab-toolchains.yml`, which defines one job per compiler toolchain. Each of those jobs triggers a child pipeline described by `.continuous_integration/gitlab-pipeline.yml`, which in turn pulls in the reusable templates in `.continuous_integration/templates` and the per-stage job definitions in `.continuous_integration/pipelines`.
-\li We use containers to make sure we have a dependable software environment.
+\li Our ```.gitlab-ci.yml``` includes `.continuous_integration/gitlab-toolchains.yml`. That file defines one job per compiler toolchain. Each of those jobs triggers a child pipeline that `.continuous_integration/gitlab-pipeline.yml` describes. This file pulls in the reusable templates in `.continuous_integration/templates` and the per-stage job definitions in `.continuous_integration/pipelines`.
+\li Every job runs in a container. The container provides the same software environment on every runner.
 
 ## How do I run the pipeline?
 
@@ -53,9 +53,8 @@ subsequent line must be indented with two spaces, python style.
 
 Next, you need to give the job a stage. `Test` is a fine name.
 
-Next, you need to make sure that this job depends on the build job. That way, it will run strictly after the job that checks it still compiles, and only
-if that succeeded. What's more, you won't have to wait for the whole of Peano to recompile; it will just fetch the compiled libraries that were cooked up
-a short while beforehand.
+Next, the job needs the build job. It then runs after the build job and only if the build succeeded. It links
+against the libraries that the build job compiled.
 
 Finally, the script. This is very ugly. The first part `apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash` just transforms
 the standard bash terminal into one that runs under the container. The names of the environment variables are set for you. Then we need to pipe in our instructions
@@ -68,7 +67,7 @@ need to be and run whichever scripts you need to run. Note the separation with s
 Having more runners online at once means more jobs can be run at once. Only the project owner can do these steps:
 
 \li Heading to Settings > CI/CD > Runners
-\li Add a new project runner. Make sure the tag is set to `peano-dine-runner` (no other tags have been written into the repo yet), make sure the project is locked to the current project and click create.
+\li Add a new project runner with the tag `peano-dine-runner`, the only tag that the repository uses. Lock the runner to the current project and click create.
 
 It will then show you a token. Write it down.
 

@@ -27,7 +27,7 @@ exahype2::particles::measurePositionErrors(
     return entries;
   }();
   particles.download();
-  ErrorSums sums;
+  std::vector<double> errorsPerParticle(static_cast<std::size_t>(particles.getSize()) * NumberOfNorms, 0.0);
   for (int index = 0; index < particles.getSize(); index++) {
     const auto position = particles.getPosition(index);
     double     values[DIMENSIONS + NumberOfData]{};
@@ -40,7 +40,7 @@ exahype2::particles::measurePositionErrors(
     SolverType::analyticalSolution(&particle, timeStamp, timeStepSize, solution);
     double errors[NumberOfNorms]{0.0, 0.0, 0.0};
     accumulateError(PositionEntries, values, solution, 1.0, errors);
-    sums.add(errors);
+    std::copy_n(errors, NumberOfNorms, errorsPerParticle.data() + static_cast<std::ptrdiff_t>(index) * NumberOfNorms);
   }
-  return measurement.record(sums, timeStamp);
+  return measurement.record(errorsPerParticle, timeStamp);
 }

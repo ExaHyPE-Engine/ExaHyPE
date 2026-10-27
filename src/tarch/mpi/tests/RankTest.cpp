@@ -14,7 +14,7 @@ tarch::mpi::tests::RankTest::RankTest() :
 void
 tarch::mpi::tests::RankTest::run() {
   testMethod(testRankOnNodeMatchesTheSharedMemorySplit);
-  testMethod(testNodeMasterHoldsNodeRankZero);
+  testMethod(testTheNodeMasterHasNodeRankZero);
 }
 
 void
@@ -40,14 +40,14 @@ tarch::mpi::tests::RankTest::testRankOnNodeMatchesTheSharedMemorySplit() {
 }
 
 /**
- * The node master has node rank zero, and every node rank lies below the number of ranks on the node.
+ * The node master has node rank zero. Every node rank lies below the number of ranks on the node.
  */
 void
-tarch::mpi::tests::RankTest::testNodeMasterHoldsNodeRankZero() {
+tarch::mpi::tests::RankTest::testTheNodeMasterHasNodeRankZero() {
   const auto& rank = tarch::mpi::Rank::getInstance();
 
-  const bool holdsTheFirstRankOfItsNode = rank.getRankOnNode() == 0;
-  validateEquals(rank.isNodeMaster(), holdsTheFirstRankOfItsNode);
+  const bool isTheFirstRankOfItsNode = rank.getRankOnNode() == 0;
+  validateEquals(rank.isNodeMaster(), isTheFirstRankOfItsNode);
   validateWithParams1(rank.getRankOnNode() >= 0, rank.getRankOnNode());
   validateWithParams2(
     rank.getRankOnNode() < rank.getNumberOfRanksOnNode(),

@@ -17,7 +17,7 @@ exahype2::Curvi::split(int normal, double position, Perturbation perturbation) {
 }
 
 /**
- * @return The curvilinear position of the cartesian point x.
+ * Returns the curvilinear position of the cartesian point x.
  */
 INLINE_METHOD exahype2::Curvi::Point
 exahype2::Curvi::operator()(const Point& x) const {
@@ -25,7 +25,7 @@ exahype2::Curvi::operator()(const Point& x) const {
 }
 
 /**
- * @return The cartesian point which operator() maps onto the curvilinear point x.
+ * Returns the cartesian point that operator() maps onto the curvilinear point x.
  */
 INLINE_METHOD exahype2::Curvi::Point
 exahype2::Curvi::invertProjection(const Point& x) const {

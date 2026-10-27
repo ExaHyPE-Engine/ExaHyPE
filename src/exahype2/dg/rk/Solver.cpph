@@ -55,9 +55,9 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getAlloca
 }
 
 /**
- * Advances every cell by the time step size that the previous time step proposed. The ranks
- * exchange the face halves of every stage while the local faces solve their Riemann problems and
- * the restricted fluxes while the local cells add their face integrals.
+ * Advances every cell by the time step size that the previous time step proposed. The open of a
+ * stage and the final combination add the face integrals of the stage before. Both read the
+ * restricted fluxes that the ranks exchange in that stage.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -82,23 +82,24 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTi
   };
   for (int stage = 0; stage < NumberOfRungeKuttaStages; stage++) {
     const double stageTimeStamp = this->_timeStepping.getTimeStamp() + Tableau::Nodes[stage] * timeStepSize;
+    if (stage > 0) {
+      this->_restrictedFluxExchange.wait();
+    }
     openStage(cellConnectivity, Remote, stage, timeStepSize);
     this->_stateExchange.post();
     this->_fluxExchange.post();
     openStage(cellConnectivity, Local, stage, timeStepSize);
-    exahype2::interpolateCoarseFaces(cellConnectivity, Local, interpolateHalves);
+    this->interpolateCoarseFaces(cellConnectivity, Local, interpolateHalves);
     this->solveRiemannProblems(cellConnectivity, Local, stageTimeStamp, timeStepSize);
     this->_stateExchange.wait();
     this->_fluxExchange.wait();
-    exahype2::interpolateCoarseFaces(cellConnectivity, Remote, interpolateHalves);
+    this->interpolateCoarseFaces(cellConnectivity, Remote, interpolateHalves);
     this->solveRiemannProblems(cellConnectivity, Remote, stageTimeStamp, timeStepSize);
-    exahype2::restrictFineFaces(cellConnectivity, Remote, restrictFluxes);
+    this->restrictFineFaces(cellConnectivity, Remote, restrictFluxes);
     this->_restrictedFluxExchange.post();
-    exahype2::restrictFineFaces(cellConnectivity, Local, restrictFluxes);
-    addFaceIntegrals(cellConnectivity, Local, stage, timeStepSize);
-    this->_restrictedFluxExchange.wait();
-    addFaceIntegrals(cellConnectivity, Remote, stage, timeStepSize);
+    this->restrictFineFaces(cellConnectivity, Local, restrictFluxes);
   }
+  this->_restrictedFluxExchange.wait();
 
   const auto statistics = combineFinalState(cellConnectivity, timeStepSize);
   this->closeTimeStep(timeStepSize, statistics);
@@ -158,8 +159,9 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getEstima
 }
 
 /**
- * Writes the volume terms of the stage state of every local or remote cell into its estimate and
- * the face states and fluxes of that state into its own face halves.
+ * Adds the face integrals of the stage before to the estimate of every local or remote cell. Writes
+ * the volume terms of the stage state into the estimate of the stage and the face states and fluxes
+ * of that state into the own face halves of the cell.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -171,6 +173,7 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage
 ) {
   using Tableau    = typename Stage::Tableau;
   const auto cells = this->getCells(cellConnectivity, adjacency);
+  assertion(stage >= 0 and stage < NumberOfRungeKuttaStages, stage);
   assertion(
     _stageScratch.getSize()
     >= static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(cells.size)) * Stage::StateValuesPerCell
@@ -188,48 +191,21 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage
       Tableau::Matrix[stageIndex],
       Quadrature<ComputePrecision>::QuadraturePoints1D,
       DGMatrices<ComputePrecision>::DerivativeOperator1D,
-      DGMatrices<ComputePrecision>::BasisFunctionValuesLeft1D,
-      DGMatrices<ComputePrecision>::BasisFunctionValuesRight1D,
-      _stageScratch.getData(),
-      stage,
-      this->_timeStepping.getTimeStamp() + Tableau::Nodes[stageIndex] * timeStepSize,
-      timeStepSize
-    }
-  );
-}
-
-/**
- * Adds the face integrals of the local or the remote cells to the estimate of the stage.
- */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD void
-exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::addFaceIntegrals(
-  const peano4::CellConnectivity& cellConnectivity,
-  const peano4::Adjacency         adjacency,
-  const int                       stage,
-  const double                    timeStepSize
-) {
-  const auto cells = this->getCells(cellConnectivity, adjacency);
-  tarch::accelerator::parallelFor(
-    tarch::accelerator::Range(cells.size),
-    exahype2::dg::rk::AddStageFaceIntegrals<Derived, ComputePrecision>{
-      cellConnectivity.onDevice(),
-      cells,
-      _estimates.getView(),
-      std::as_const(this->_faceFluxes).getView(),
       Quadrature<ComputePrecision>::QuadratureWeightsOnFace,
       Quadrature<ComputePrecision>::InverseQuadratureWeightsInCell,
       DGMatrices<ComputePrecision>::BasisFunctionValuesLeft1D,
       DGMatrices<ComputePrecision>::BasisFunctionValuesRight1D,
       stage,
-      timeStepSize
+      this->_timeStepping.getTimeStamp() + Tableau::Nodes[stageIndex] * timeStepSize,
+      timeStepSize,
+      _stageScratch.getData()
     }
   );
 }
 
 /**
- * Adds the weighted estimates to the solution of every cell and returns the wave-speed maxima of
- * the new solution.
+ * Adds the face integrals of the last stage to its estimate and the weighted estimates to the
+ * solution of every cell. Returns the wave-speed maxima of the new solution.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
@@ -246,8 +222,13 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::combineFi
       cellConnectivity.onDevice(),
       cells,
       this->_solution.getView(),
-      std::as_const(_estimates).getView(),
+      _estimates.getView(),
+      std::as_const(this->_faceFluxes).getView(),
       Tableau::Weights,
+      Quadrature<ComputePrecision>::QuadratureWeightsOnFace,
+      Quadrature<ComputePrecision>::InverseQuadratureWeightsInCell,
+      DGMatrices<ComputePrecision>::BasisFunctionValuesLeft1D,
+      DGMatrices<ComputePrecision>::BasisFunctionValuesRight1D,
       Quadrature<StoragePrecision>::QuadraturePoints1D,
       this->_timeStepping.getTimeStamp(),
       timeStepSize

@@ -29,13 +29,13 @@ args = parse_arguments()
 
 initial_conditions = """
 #if DIMENSIONS == 2
-  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.3};
+  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.0, -0.2};
 #else
-  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.18, 0.3, 0.6};
+  const tarch::la::Vector<DIMENSIONS, double> circleCentre = {-0.32, -0.2, 0.1};
 #endif
 
-  // The standard deviation of the Gaussian is the largest admissible patch size, so the coarsest
-  // grid resolves the Gaussian smoothly.
+  // The standard deviation of the Gaussian is the largest admissible patch size. The coarsest grid
+  // then resolves the Gaussian smoothly.
   const double peakDeviation = RuntimeParameters::getMaxAdmissiblePatchSize();
   const double distance = tarch::la::norm2(x - circleCentre);
   const double exponent = -(distance * distance) / 2.0 / peakDeviation / peakDeviation;
@@ -64,7 +64,7 @@ project = exahype2.Project(
     project_name="GaussianExplosion",
     dimensions=2,
     size=[1.0, 1.0, 1.0],
-    offset=[0.0, 0.0, 0.0],
+    offset=[-0.5, -0.5, -0.5],
     periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,

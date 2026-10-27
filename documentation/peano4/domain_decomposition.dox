@@ -10,19 +10,19 @@ dispatches over the cell connectivity of each rank. MPI is optional.
 # Structural model
 
 Every rank hosts one peano4::Spacetree whose tree identifier equals the rank.
-The spacetree holds the refinement plan, and its ownership table assigns each
+The spacetree stores the refinement plan, and its ownership table assigns each
 cell to one rank.
 
-A rank materialises the levels above the spawn level in full, because that
-spine stores the ownership decisions every rank needs. Below the spawn level
-it materialises only its own blocks plus one ring of neighbours; a query about
-any other region is answered from the refinement plan by lattice arithmetic.
-The memory a rank holds therefore grows with its own block count, not with the
+A rank materialises the levels above the spawn level in full. That spine stores
+the ownership decisions every rank needs. Below the spawn level it materialises
+only its own blocks plus one ring of neighbours. The refinement plan answers a
+query about any other region by lattice arithmetic.
+The memory of a rank therefore grows with its own block count, not with the
 global grid.
 
 The plan makes geometry, adjacency and communication order deterministic.
-Every rank derives them from the same domain, refinement plan and rank count,
-so the two ranks that hold one boundary face agree on the face sequence
+Every rank derives them from the same domain, refinement plan and rank count.
+The two ranks that store one boundary face then agree on the face sequence
 without exchanging it.
 
 @image html domain-decomposition/domain-decomposition.png
@@ -36,10 +36,10 @@ cell with any unrefined child remains indivisible, preserving
 resolution-transition faces and coarsening families. Every rank derives the
 same packed ownership table without communication.
 
-Cells have one owning rank. A face that cells of two ranks touch exists in the
-cell connectivity of both ranks with the local cell on one side;
+One rank owns each cell. A face that cells of two ranks touch exists in the
+cell connectivity of both ranks with the local cell on one side.
 peano4::CellConnectivity lists these faces per neighbour rank in canonical order (level, normal,
-lattice), so neither the tree indices nor the slots have to match.
+lattice). The two ranks then match their faces by this order alone.
 
 # Intra-rank parallelism
 
@@ -52,13 +52,13 @@ block through tarch::tasking.
 
 # Boundary exchange
 
-peano4::HaloExchange exchanges the halves of the faces two ranks hold of one
-pool: `post()` gathers the half of the local side of every such face into one
-send buffer per neighbour rank in the pool's memory location and starts the
-non-blocking messages, `wait()` scatters the received halves into the other
-side. The local cells of the cell connectivity run between the two calls, so
-the messages travel while the rank computes. No rank exchanges cell data,
-because each cell has one owner.
+peano4::HaloExchange exchanges the halves of the faces two ranks store of one
+pool. Its `post()` gathers the half of the local side of every such face into
+one send buffer per neighbour rank in the pool's memory location and starts the
+non-blocking messages. Its `wait()` scatters the received halves into the other
+side. The local cells of the cell connectivity run between the two calls. The
+messages then travel while the rank computes. Each cell has one owner. Ranks
+exchange face data alone.
 
 @image html domain-decomposition/replicated-boundary-data.png
 
@@ -86,7 +86,7 @@ same pattern after each phase.
 # Analysis
 
 The Grid Snapshot reports the cells, the faces, the levels, the MPI load
-balance and the faces two ranks hold. @ref page_peano_runtime_analysis
+balance and the faces two ranks store. @ref page_peano_runtime_analysis
 explains these fields.
 
 */

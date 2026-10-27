@@ -100,8 +100,8 @@ class Exahype2(CMakePackage, CudaPackage):
             ),
         )
         # The JupyterLab server reads its frontend extensions and kernels from the
-        # directories on JUPYTER_PATH and JUPYTER_CONFIG_PATH, so both point into
-        # the package prefix that install() pip-installs them into.
+        # directories on JUPYTER_PATH and JUPYTER_CONFIG_PATH. Both point into the
+        # package prefix that install() pip-installs them into.
         env.prepend_path("PATH", join_path(self.spec.prefix, "bin"))
         env.prepend_path(
             "JUPYTER_PATH", join_path(self.spec.prefix, "share", "jupyter")

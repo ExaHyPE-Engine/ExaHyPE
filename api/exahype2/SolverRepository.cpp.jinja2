@@ -59,6 +59,8 @@ void {{ NAMESPACE | join("::") }}::plot() {
   );
 }
 
+void {{ NAMESPACE | join("::") }}::recordLastTimeStamp() { solverRepository.recordLastTimeStamp(getCellConnectivity()); }
+
 void {{ NAMESPACE | join("::") }}::addLocalValuesToGlobalReduction(::tarch::mpi::ReductionRecord& record) {
   solverRepository.addLocalValuesToGlobalReduction(record);
 }

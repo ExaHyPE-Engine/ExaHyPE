@@ -12,9 +12,6 @@ tarch::plotter::tests::FileWriterTest::run() {
   testMethod(testTheTimeStampReadsBackExactly);
 }
 
-/**
- * Every time stamp reads back as the same double.
- */
 void
 tarch::plotter::tests::FileWriterTest::testTheTimeStampReadsBackExactly() {
   const double times[] = {0.0, 0.1, 1.0 / 3.0, 1000000.25, 1000000.5, 1.0e-300, 12345.678901234567};

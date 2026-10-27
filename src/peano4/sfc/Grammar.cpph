@@ -12,8 +12,8 @@ peano4::sfc::Grammar::getDirection(const Step step) {
 }
 
 /**
- * Builds one production from the left-hand side and the right-hand side, in which child
- * non-terminals and turtle steps alternate. A step at a child position or a child at a step
+ * Builds one production from the left-hand side and the right-hand side. Child non-terminals and
+ * turtle steps alternate on the right-hand side. A step at a child position or a child at a step
  * position does not compile.
  */
 template <class NonTerminal, class... Symbols>

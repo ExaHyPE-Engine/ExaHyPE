@@ -18,10 +18,6 @@ namespace tarch::plotter {
  */
 class tarch::plotter::FileWriter {
 public:
-  /**
-   * Counts the entries of one range of forEachRangeInParallel(). The range with index r starts at
-   * the entry r * EntriesPerRange.
-   */
   static constexpr std::size_t EntriesPerRange{4096};
 
   FileWriter()                                   = default;
@@ -49,9 +45,6 @@ protected:
   struct FieldLayout final {
     FieldKind kind{FieldKind::Scalar};
 
-    /**
-     * A writer pads the components beyond the source components with zero.
-     */
     int writtenComponents{1};
   };
 

@@ -41,10 +41,6 @@ public:
   void setSharedMemBytes(std::size_t bytes);
   void setStream(hipStream_t stream);
 
-  /**
-   * Asks the HIP occupancy interface for the block size and the grid size that the caller has not
-   * set.
-   */
   template <class KernelFunc>
   hipError_t configureGrid(KernelFunc kernel) {
     const int configurationState = getConfigState();

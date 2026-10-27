@@ -17,6 +17,7 @@ exahype2::fv::limiter::tests::SlopeLimiterTest::run() {
   testMethod(testMinmodCentral);
   testMethod(testTotalVariationBounds);
   testMethod(testSinglePrecision);
+  testMethod(testMirroredDifferencesReturnNegatedBits);
 }
 
 void
@@ -52,8 +53,8 @@ exahype2::fv::limiter::tests::SlopeLimiterTest::testVanAlbada() {
   validateNumericalEquals(exahype2::fv::limiter::VanAlbada::limitedDifference(1.0, 0.0), 0.0);
   validateNumericalEquals(exahype2::fv::limiter::VanAlbada::limitedDifference(1.0, 1.0), 1.0);
   validateNumericalEquals(exahype2::fv::limiter::VanAlbada::limitedDifference(2.0, 1.0), 1.2);
-  // The smooth rational formula has no positivity clamp, so opposite-sign
-  // differences yield a small counter-slope.
+  // The smooth rational formula does not clamp at zero. Opposite-sign differences yield a small
+  // counter-slope.
   validateNumericalEquals(exahype2::fv::limiter::VanAlbada::limitedDifference(-1.0, 2.0), -0.4);
   validateNumericalEquals(
     exahype2::fv::limiter::VanAlbada::limitedDifference(1.0, 3.0),
@@ -112,6 +113,45 @@ exahype2::fv::limiter::tests::SlopeLimiterTest::testTotalVariationBounds() {
           );
         }
       }
+    }
+  }
+}
+
+/**
+ * Every limiter returns the negated bits for the negated differences in swapped order.
+ */
+void
+exahype2::fv::limiter::tests::SlopeLimiterTest::testMirroredDifferencesReturnNegatedBits() {
+  validateMirroredDifferences<exahype2::fv::limiter::Average, double>();
+  validateMirroredDifferences<exahype2::fv::limiter::Minmod, double>();
+  validateMirroredDifferences<exahype2::fv::limiter::VanAlbada, double>();
+  validateMirroredDifferences<exahype2::fv::limiter::Superbee, double>();
+  validateMirroredDifferences<exahype2::fv::limiter::MinmodCentral, double>();
+  validateMirroredDifferences<exahype2::fv::limiter::VanAlbada, float>();
+  validateMirroredDifferences<exahype2::fv::limiter::Superbee, float>();
+  validateMirroredDifferences<exahype2::fv::limiter::MinmodCentral, float>();
+}
+
+template <typename Limiter, typename ComputePrecision>
+void
+exahype2::fv::limiter::tests::SlopeLimiterTest::validateMirroredDifferences() {
+  constexpr ComputePrecision Samples[] = {
+    ComputePrecision(-3.7e5),
+    ComputePrecision(-2.5),
+    ComputePrecision(-0.3),
+    ComputePrecision(-1.0e-7),
+    ComputePrecision(0),
+    ComputePrecision(1.0e-7),
+    ComputePrecision(0.1),
+    ComputePrecision(0.7),
+    ComputePrecision(1.7),
+    ComputePrecision(2.2e5),
+  };
+  for (const ComputePrecision forwardDifference : Samples) {
+    for (const ComputePrecision backwardDifference : Samples) {
+      const ComputePrecision limitedDifference  = Limiter::limitedDifference(forwardDifference, backwardDifference);
+      const ComputePrecision mirroredDifference = Limiter::limitedDifference(-backwardDifference, -forwardDifference);
+      validateEqualsWithParams2(mirroredDifference, -limitedDifference, forwardDifference, backwardDifference);
     }
   }
 }

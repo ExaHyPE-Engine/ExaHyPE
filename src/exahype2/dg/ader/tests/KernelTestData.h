@@ -10,6 +10,7 @@
 
 namespace exahype2::dg::ader::tests {
   struct StubLayout;
+  struct RiemannSolverTerm;
   struct KernelTestSetup;
   struct StubSolver;
 } // namespace exahype2::dg::ader::tests
@@ -22,6 +23,30 @@ struct exahype2::dg::ader::tests::StubLayout {
   static constexpr int DGOrder                    = 2;
   static constexpr int NumberOfUnknowns           = 2;
   static constexpr int NumberOfAuxiliaryVariables = 1;
+};
+TARGET_DECLARE_END
+
+TARGET_DECLARE
+/**
+ * A Riemann solver that leaves both flux halves as they are. The linear predictor of a solver with
+ * it writes the face fluxes.
+ */
+struct exahype2::dg::ader::tests::RiemannSolverTerm {
+  static INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblem(
+    [[maybe_unused]] const double* const                          QL,
+    [[maybe_unused]] const double* const                          QR,
+    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+    [[maybe_unused]] const double                                 t,
+    [[maybe_unused]] const double                                 dt,
+    [[maybe_unused]] const int                                    normal,
+    [[maybe_unused]] const bool                                   isBoundaryFace,
+    [[maybe_unused]] const int                                    faceIndex,
+    [[maybe_unused]] double* const                                FL,
+    [[maybe_unused]] double* const                                FR
+  ) {
+    return 0.0;
+  }
 };
 TARGET_DECLARE_END
 
@@ -59,7 +84,7 @@ TARGET_DECLARE_END
 TARGET_DECLARE
 /**
  * A solver with every term of both predictors. The terms depend on the state, the position and the
- * direction, so a wrong offset changes the result.
+ * direction. A wrong offset then changes the result.
  */
 struct exahype2::dg::ader::tests::StubSolver final : exahype2::dg::ader::tests::StubLayout {
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(

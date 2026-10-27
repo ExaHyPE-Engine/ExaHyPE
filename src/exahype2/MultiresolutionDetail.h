@@ -11,9 +11,8 @@
 TARGET_DECLARE
 namespace exahype2 {
   /**
-   * Hysteresis ratio between the refine and the erase threshold of the detail
-   * criterion: The detail of an affine fit shrinks by this factor from one
-   * level to the next.
+   * Hysteresis ratio between the refine and the erase threshold of the detail criterion. The
+   * detail of an affine fit shrinks by this factor from one level to the next.
    */
   constexpr double DefaultCoarsenSafetyFactor{peano4::power(peano4::SubdivisionFactor, 2)};
 
