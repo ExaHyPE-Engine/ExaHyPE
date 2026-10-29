@@ -61,15 +61,14 @@ struct exahype2::fv::ader::PredictionStatistics final {
 };
 
 /**
- * The largest wave speed of the corrected volumes, the number of patches that repeat their step
- * with the fallback scheme, and the number of these patches that the fallback leaves troubled.
+ * The largest wave speed of the corrected volumes and the number of patches, or of volumes with a
+ * fallback per volume, that repeat their step with the fallback scheme.
  */
 struct exahype2::fv::ader::CorrectionStatistics final {
   using ValueType = exahype2::fv::ader::CorrectionStatistics;
 
   double maxEigenvalue{0.0};
   int    fallbackCells{0};
-  int    troubledFallbackCells{0};
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType identity();
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType combine(ValueType left, ValueType right);

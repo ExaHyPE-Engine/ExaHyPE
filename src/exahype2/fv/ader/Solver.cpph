@@ -1,7 +1,8 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include <chrono>
+#include <cstdint>
+#include <limits>
 #include <string>
 #include <utility>
 
@@ -12,7 +13,6 @@
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
-#include "tarch/instrumentation/Info.h"
 #include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/ReductionRecord.h"
@@ -182,10 +182,9 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::release
   _volumeStatuses.release();
   _interiorUpdates.release();
   _volumeStatusesOnHost.release();
-  _unconvergedPredictions  = 0;
-  _fallbackCells           = 0;
-  _troubledFallbackCells = 0;
-  _divergedPredictions     = 0;
+  _unconvergedPredictions = 0;
+  _fallbackCells          = 0;
+  _globalFallbackCells    = 0;
 }
 
 /**
@@ -202,18 +201,14 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::addLoca
   _unconvergedPredictionsSlot = record.addSum(static_cast<std::uint64_t>(_unconvergedPredictions));
   _unconvergedPredictions     = 0;
   if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
-    _fallbackCellsSlot           = record.addSum(static_cast<std::uint64_t>(_fallbackCells));
-    _troubledFallbackCellsSlot = record.addSum(static_cast<std::uint64_t>(_troubledFallbackCells));
-    _divergedPredictionsSlot     = record.addSum(static_cast<std::uint64_t>(_divergedPredictions));
-    _fallbackCells               = 0;
-    _troubledFallbackCells     = 0;
-    _divergedPredictions         = 0;
+    _fallbackCellsSlot = record.addSum(static_cast<std::uint64_t>(_fallbackCells));
+    _fallbackCells     = 0;
   }
 }
 
 /**
- * Reads the reduced values of the base solver. The global master warns when the Picard iteration of
- * any volume stopped at its sweep limit since the last reduction.
+ * Reads the reduced values of the base solver. Without a fallback, the global master warns when the
+ * Picard iteration of any volume stopped at its sweep limit since the last reduction.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -221,40 +216,33 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::readVal
   const tarch::mpi::ReductionRecord& record
 ) {
   Base::readValuesFromGlobalReduction(record);
-  const auto globalPredictions = record.getSum(_unconvergedPredictionsSlot);
-  if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logWarning(
-      "The Picard iteration of " << globalPredictions
-                                 << " volumes reaches its sweep limit at t = " << this->_timeStepping.getTimeStamp()
-                                 << " before it converges. "
-                                 << (exahype2::fv::ader::fallsBack<Derived>() ? "Their patches fall back."
-                                                                              : "The volumes continue with the last iterate.")
-    );
-  }
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
-    _reportedFallbackCells += record.getSum(_fallbackCellsSlot);
-    _reportedTroubledFallbackCells += record.getSum(_troubledFallbackCellsSlot);
-    _reportedDivergedPredictions += record.getSum(_divergedPredictionsSlot);
-    constexpr double ReportInterval = 10.0;
-    const auto       now            = std::chrono::steady_clock::now();
-    if (
-      _reportedFallbackCells > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()
-      and std::chrono::duration<double>(now - _lastFallbackReport).count() >= ReportInterval
-    ) {
-      logInfo(
-        "Since the last report, " << _reportedFallbackCells
-                                  << (exahype2::fv::ader::fallsBackPerVolume<Derived>() ? " volumes" : " patches")
-                                  << " repeated their step with the fallback scheme"
-                                  << " up to t = " << this->_timeStepping.getTimeStamp() << ", "
-                                  << _reportedTroubledFallbackCells << " of them stayed troubled and "
-                                  << _reportedDivergedPredictions << " predictions diverged."
+  if constexpr (not exahype2::fv::ader::fallsBack<Derived>()) {
+    const auto globalPredictions = record.getSum(_unconvergedPredictionsSlot);
+    if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      logWarning(
+        "The Picard iteration of " << globalPredictions
+                                   << " volumes reaches its sweep limit at t = " << this->_timeStepping.getTimeStamp()
+                                   << " before it converges. The volumes continue with the last iterate."
       );
-      _reportedFallbackCells           = 0;
-      _reportedTroubledFallbackCells   = 0;
-      _reportedDivergedPredictions     = 0;
-      _lastFallbackReport              = now;
     }
   }
+  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+    const auto globalFallbackCells = record.getSum(_fallbackCellsSlot);
+    assertion(globalFallbackCells <= static_cast<std::uint64_t>(std::numeric_limits<int>::max()), globalFallbackCells);
+    _globalFallbackCells = static_cast<int>(globalFallbackCells);
+  }
+}
+
+/**
+ * Returns the number of patches, or of volumes with a fallback per volume, on all ranks that
+ * repeated their step with the fallback scheme in the time step of the last read reduction.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD int
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getNumberOfFallbackCells() const
+  requires(exahype2::fv::ader::fallsBack<Derived>())
+{
+  return _globalFallbackCells;
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -270,7 +258,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getAllo
 
 /**
  * Writes one snapshot of the reconstruction: the limited polynomial of every volume at
- * max(2 NodesPerAxis - 1, 2) equidistant points per axis from face to face, with a fallback the
+ * max(NodesPerAxis, 2) equidistant points per axis from face to face, with a fallback the
  * status of every volume after its last step as LimiterStatus.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -282,7 +270,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
 ) {
   using Basis                      = typename Scheme::Basis;
   constexpr int NodesPerAxis       = Scheme::NodesPerAxis;
-  constexpr int PointsPerAxis      = std::max(2 * NodesPerAxis - 1, 2);
+  constexpr int PointsPerAxis      = std::max(NodesPerAxis, 2);
   constexpr int NumberOfData       = Scheme::NumberOfData;
   constexpr int PointsPerVolume    = peano4::power(PointsPerAxis, DIMENSIONS);
   std::array<double, PointsPerAxis * NodesPerAxis> matrix1D{};
@@ -357,12 +345,12 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::predict
     exahype2::fv::ader::fallsBack<Derived>() ? _statuses.getView() : decltype(_statuses.getView()){},
     exahype2::fv::ader::fallsBackPerVolume<Derived>() ? _interiorUpdates.getView() : decltype(_interiorUpdates.getView()){}
   );
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
-    _divergedPredictions += statistics.counts.divergedCells;
-  } else if (statistics.counts.divergedCells > 0) {
-    tarch::terminateWithError(
-      "The space-time predictor diverges in " + std::to_string(statistics.counts.divergedCells) + " volumes."
-    );
+  if constexpr (not exahype2::fv::ader::fallsBack<Derived>()) {
+    if (statistics.counts.divergedCells > 0) {
+      tarch::terminateWithError(
+        "The space-time predictor diverges in " + std::to_string(statistics.counts.divergedCells) + " volumes."
+      );
+    }
   }
   assertion(statistics.counts.unconvergedCells >= 0, statistics.counts.unconvergedCells);
   _unconvergedPredictions += statistics.counts.unconvergedCells;
@@ -445,7 +433,6 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::correct
     tarch::accelerator::Custom<exahype2::fv::ader::CorrectionStatistics>{statistics}
   );
   _fallbackCells += statistics.fallbackCells;
-  _troubledFallbackCells += statistics.troubledFallbackCells;
   return statistics.maxEigenvalue;
 }
 

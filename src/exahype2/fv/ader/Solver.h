@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <chrono>
-#include <cstdint>
 #include <type_traits>
 
 #include "exahype2/fv/Solver.h"
@@ -75,6 +73,8 @@ public:
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
+  [[nodiscard]] INLINE_METHOD int getNumberOfFallbackCells() const
+    requires(exahype2::fv::ader::fallsBack<Derived>());
 
 private:
   INLINE_METHOD void reserveFaces(const peano4::CellConnectivity& cellConnectivity);
@@ -130,23 +130,12 @@ private:
   StatusPool                _volumeStatusesOnHost{Scheme::VolumesPerPatch, tarch::MemoryLocation::Heap};
 
   /**
-   * The patches of this rank that repeated their step with the fallback scheme since the last
-   * reduction, the patches the fallback left troubled and the volumes whose prediction diverged.
+   * The patches or volumes of this rank that repeated their step with the fallback scheme since the
+   * last reduction, and those of all ranks in the time step of the last read reduction.
    */
   int _fallbackCells{0};
-  int _troubledFallbackCells{0};
-  int _divergedPredictions{0};
   int _fallbackCellsSlot{0};
-  int _troubledFallbackCellsSlot{0};
-  int _divergedPredictionsSlot{0};
-
-  /**
-   * The global sums of the reductions since the last report of the global master.
-   */
-  std::uint64_t                         _reportedFallbackCells{0};
-  std::uint64_t                         _reportedTroubledFallbackCells{0};
-  std::uint64_t                         _reportedDivergedPredictions{0};
-  std::chrono::steady_clock::time_point _lastFallbackReport{};
+  int _globalFallbackCells{0};
 };
 
 #include "exahype2/fv/ader/Solver.cpph"

@@ -42,5 +42,8 @@ exahype2::runner::makeSolverStatistics(
                 }) {
     statistics.push_back(makeCountStatistic("Troubled", solver.getNumberOfTroubledCells()));
   }
+  if constexpr (requires { solver.getNumberOfFallbackCells(); }) {
+    statistics.push_back(makeCountStatistic("Fallback", solver.getNumberOfFallbackCells()));
+  }
   return {solverName, statistics};
 }

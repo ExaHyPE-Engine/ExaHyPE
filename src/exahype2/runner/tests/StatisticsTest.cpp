@@ -127,6 +127,25 @@ struct exahype2::runner::tests::StatisticsTest::UnlimitedSolver final {
   };
 };
 
+/**
+ * A solver with a fixed rule and a fallback scheme.
+ */
+struct exahype2::runner::tests::StatisticsTest::FallbackSolver final {
+  FallbackSolver() {
+    timeStepping.advanceTimeStamp(0.25);
+    timeStepping.setLocalMeshWidths(0.5, 1.5);
+    reduceOverTheRanks(timeStepping);
+  }
+  [[nodiscard]] const exahype2::TimeStepping& getTimeStepping() const { return timeStepping; }
+  [[nodiscard]] long getNumberOfFallbackCells() const { return fallbackCells; }
+  exahype2::TimeStepping timeStepping{
+    exahype2::TimeStepping::Rule::Fixed,
+    1.0,
+    exahype2::TimeStepping::Stability::PhysicalEigenvalue
+  };
+  long fallbackCells{0};
+};
+
 exahype2::runner::tests::StatisticsTest::StatisticsTest() :
   tarch::tests::TestCase("exahype2::runner::tests::StatisticsTest") {}
 
@@ -141,6 +160,7 @@ exahype2::runner::tests::StatisticsTest::run() {
   testMethod(testASolverWithoutEigenvalueReportsStepAndMeshWidth);
   testMethod(testASolverWithEigenvalueAndTroubledCellsAppendsBoth);
   testMethod(testASolverWithoutLimiterReportsNoTroubledCells);
+  testMethod(testASolverWithFallbackAppendsFallbackCells);
   testMethod(testAdditionalStatisticsFollowTheMeshWidth);
 }
 
@@ -344,6 +364,20 @@ exahype2::runner::tests::StatisticsTest::testASolverWithoutLimiterReportsNoTroub
   const auto            statistics = exahype2::runner::makeSolverStatistics("Unlimited", solver, appendNothing);
   validateEquals(statistics.second.size(), 3U);
   validateEquals(statistics.second[2].label, std::string("λ_max"));
+}
+
+void
+exahype2::runner::tests::StatisticsTest::testASolverWithFallbackAppendsFallbackCells() {
+  FallbackSolver solver;
+  const auto     calm = exahype2::runner::makeSolverStatistics("Fallback", solver, appendNothing);
+  validateEquals(calm.second.size(), 3U);
+  validateEquals(calm.second[2].label, std::string("Fallback"));
+  validateEquals(calm.second[2].count, 0L);
+
+  solver.fallbackCells = 21;
+  const auto fallingBack = exahype2::runner::makeSolverStatistics("Fallback", solver, appendNothing);
+  validateEquals(fallingBack.second.size(), 3U);
+  validateEquals(fallingBack.second[2].count, 21L);
 }
 
 void

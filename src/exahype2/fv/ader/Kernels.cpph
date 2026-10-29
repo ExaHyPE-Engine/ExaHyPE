@@ -27,15 +27,14 @@ exahype2::fv::ader::PredictionStatistics::combine(const ValueType left, const Va
 
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::fv::ader::CorrectionStatistics
 exahype2::fv::ader::CorrectionStatistics::identity() {
-  return ValueType{exahype2::MaxEigenvalueReduction::identity(), 0, 0};
+  return ValueType{exahype2::MaxEigenvalueReduction::identity(), 0};
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::fv::ader::CorrectionStatistics
 exahype2::fv::ader::CorrectionStatistics::combine(const ValueType left, const ValueType right) {
   return ValueType{
     exahype2::MaxEigenvalueReduction::combine(left.maxEigenvalue, right.maxEigenvalue),
-    left.fallbackCells + right.fallbackCells,
-    left.troubledFallbackCells + right.troubledFallbackCells
+    left.fallbackCells + right.fallbackCells
   };
 }
 
@@ -378,14 +377,6 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
       }
       if (anyFallsBack) {
         Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
-        for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
-          if (
-            volumeStatusesOfCell[volume] != static_cast<int>(VolumeStatus::Accepted)
-            and getVolumeStatus(volume) != VolumeStatus::Accepted
-          ) {
-            accumulator.troubledFallbackCells++;
-          }
-        }
       }
       for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
         writeVolumeStatusOnFaces(volume);
@@ -409,9 +400,6 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
         }
         Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
         accumulator.fallbackCells++;
-        if (isTroubled()) {
-          accumulator.troubledFallbackCells++;
-        }
         for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
           if (volumeStatusesOfCell[volume] == static_cast<int>(VolumeStatus::Accepted)) {
             volumeStatusesOfCell[volume] = static_cast<int>(VolumeStatus::Patch);
@@ -478,14 +466,6 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
       const bool anyFallsBack = isAnyMarked(fallsBackHere);
       if (anyFallsBack) {
         postprocess();
-        for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
-          if (
-            volumeStatusesOfCell[volume] != static_cast<int>(VolumeStatus::Accepted)
-            and getVolumeStatus(volume) != VolumeStatus::Accepted
-          ) {
-            partial.troubledFallbackCells++;
-          }
-        }
       }
       for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
         writeVolumeStatusOnFaces(volume);
@@ -519,10 +499,6 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
           recomputeVolume(volume);
         }
         postprocess();
-        const bool staysTroubled = isTroubled();
-        if (thread == 0 and staysTroubled) {
-          partial.troubledFallbackCells = 1;
-        }
         for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
           if (volumeStatusesOfCell[volume] == static_cast<int>(VolumeStatus::Accepted)) {
             volumeStatusesOfCell[volume] = static_cast<int>(VolumeStatus::Patch);
