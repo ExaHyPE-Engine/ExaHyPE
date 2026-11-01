@@ -267,7 +267,7 @@ UNIT_TEST(
     constexpr int Values = PreparedSumTransfer::PreparedValuesPerChunk;
     // The blocks of prepared belong to the prolongation, the restriction, kept, fromParent and
     // fromChildren in this order. Slot -1 marks the block of kept that the preparation skips.
-    constexpr std::array<int, 5>                     SlotOfBlock{1, 0, -1, 2, 0};
+    static constexpr std::array<int, 5>              SlotOfBlock{1, 0, -1, 2, 0};
     Pool                                             pool = getFilledPool();
     const PreparedSumTransfer                        transfer{std::as_const(pool).getView()};
     tarch::accelerator::Buffer<peano4::Prolongation> prolongations(tarch::MemoryLocation::Device);

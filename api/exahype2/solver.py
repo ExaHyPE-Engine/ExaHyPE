@@ -6,8 +6,7 @@ import os
 import exahype2.codegen
 
 from . import time_stepping
-from .codegen.helper import KeepUndefined
-from .codegen.helper import render_jinja2_template
+from .codegen.helper import substitute_placeholders
 from .log import log
 from .pde_terms import PDETerms
 from .pde_terms import get_inline_attributes
@@ -316,7 +315,7 @@ class Solver:
 
     def _fill_dictionary(self, d):
         def render_template(template):
-            return render_jinja2_template(template, d, KeepUndefined)
+            return substitute_placeholders(template, d)
 
         d["DIMENSIONS"] = self._dimensions
         d["NAMESPACE"] = self._namespace
@@ -342,6 +341,8 @@ class Solver:
 
         d.update(self.pde_terms.flags())
         d["USER_TERMS_INLINE"] = self._user_terms_inline()
+        measured = [tracers for tracers in self._tracers if tracers.error_measurement]
+        d["NUMBER_OF_UNKNOWNS_PARTICLE"] = measured[0].number_of_data if measured else 0
         d["SOLVER_PDE_TERM_DECLARATIONS"] = self.pde_terms.render_declarations(
             d, d["USER_TERMS_INLINE"], True
         )
@@ -358,8 +359,6 @@ class Solver:
         d["TRACERS"] = [
             tracers.dictionary(self._dimensions) for tracers in self._tracers
         ]
-        measured = [tracers for tracers in self._tracers if tracers.error_measurement]
-        d["NUMBER_OF_UNKNOWNS_PARTICLE"] = measured[0].number_of_data if measured else 0
         for tracer in d["TRACERS"]:
             tracer["UPDATE_CALL"] = self._render_tracer_update(tracer, d)
         d["TRACERS_RECORD"] = any(
@@ -558,7 +557,6 @@ class Solver:
                 self._namespace,
                 "",
                 dictionary,
-                True,
             )
         )
         solver_templates = ["Solver.h.jinja2"]
@@ -580,7 +578,6 @@ class Solver:
                     self._namespace,
                     "",
                     dictionary,
-                    True,
                 )
             )
         output.add(
@@ -591,7 +588,6 @@ class Solver:
                 self._namespace,
                 "",
                 dictionary,
-                True,
             )
         )
         output.makefile.add_h_file(self._name + ".h", generated=True)

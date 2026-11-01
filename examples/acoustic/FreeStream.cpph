@@ -2,6 +2,20 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/acoustic/Acoustic.h"
 
+namespace examples::acoustic {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeFreeStream(Precision* NOALIAS Q);
+} // namespace examples::acoustic
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::acoustic::writeFreeStream(Precision* const NOALIAS Q) {
+  Q[Shortcuts::p] = 1.0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::u + d] = 0.0;
+  }
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::acoustic::FreeStream::maxEigenvalue(
   [[maybe_unused]] const ComputePrecision* const NOALIAS        Q,

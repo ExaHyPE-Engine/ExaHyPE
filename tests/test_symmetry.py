@@ -26,6 +26,13 @@ STATIC_REFINEMENT = ["--staticRefinement", "true"]
 SCENARIOS = [
     {
         "script": "examples/acoustic/planar_waves.py",
+        "options": ["--solver", "fv"],
+        "arguments": REGULAR_2D,
+        "mirrors": ["xy"],
+        "check": [],
+    },
+    {
+        "script": "examples/acoustic/planar_waves.py",
         "options": ["--solver", "aderdg"],
         "arguments": REGULAR_2D,
         "mirrors": ["xy"],
@@ -40,6 +47,13 @@ SCENARIOS = [
     },
     {
         "script": "examples/advection/linear.py",
+        "options": ["--solver", "fv"],
+        "arguments": REGULAR_2D,
+        "mirrors": ["xy"],
+        "check": [],
+    },
+    {
+        "script": "examples/advection/linear.py",
         "options": ["--solver", "aderdg"],
         "arguments": REGULAR_2D,
         "mirrors": ["xy"],
@@ -54,6 +68,13 @@ SCENARIOS = [
     },
     {
         "script": "examples/elastic/planar_waves.py",
+        "options": ["--solver", "fv"],
+        "arguments": REGULAR_2D,
+        "mirrors": ["xy"],
+        "check": [],
+    },
+    {
+        "script": "examples/elastic/planar_waves.py",
         "options": ["--solver", "aderdg"],
         "arguments": REGULAR_2D,
         "mirrors": ["xy"],
@@ -65,6 +86,13 @@ SCENARIOS = [
         "arguments": REGULAR_2D,
         "mirrors": ["xy"],
         "check": [],
+    },
+    {
+        "script": "examples/elastic/ricker_pulse.py",
+        "options": ["--solver", "fv"],
+        "arguments": REGULAR_2D,
+        "mirrors": ["y"],
+        "check": ["--symmetric-tensor-fields", "sigma:xx,yy,xy"],
     },
     {
         "script": "examples/elastic/ricker_pulse.py",
@@ -148,6 +176,13 @@ SCENARIOS = [
         "options": ["--solver", "rkdg"],
         "arguments": REGULAR_2D,
         "mirrors": ["x", "y"],
+        "check": [],
+    },
+    {
+        "script": "examples/shallow-water/resting_lake.py",
+        "options": ["--solver", "fv"],
+        "arguments": REGULAR_2D,
+        "mirrors": ["xy"],
         "check": [],
     },
     {
@@ -207,6 +242,20 @@ SCENARIOS = [
         "check": [],
     },
     {
+        "script": "examples/shallow-water/radial_step.py",
+        "options": ["--solver", "aderdg"],
+        "arguments": STATIC_REFINEMENT,
+        "mirrors": ALL_MIRRORS_2D,
+        "check": [],
+    },
+    {
+        "script": "examples/shallow-water/radial_step.py",
+        "options": ["--solver", "rkdg"],
+        "arguments": STATIC_REFINEMENT,
+        "mirrors": ALL_MIRRORS_2D,
+        "check": [],
+    },
+    {
         "script": "examples/acoustic/free_stream.py",
         "options": ["--solver", "fv"],
         "arguments": ADAPTIVE_2D,
@@ -372,6 +421,13 @@ SCENARIOS = [
         "options": ["--solver", "rkdg", "--dimensions", "3"],
         "arguments": ADAPTIVE_3D,
         "mirrors": ALL_MIRRORS_3D,
+        "check": [],
+    },
+    {
+        "script": "examples/shallow-water/radial_dam_break.py",
+        "options": ["--solver", "fv"],
+        "arguments": ADAPTIVE_2D,
+        "mirrors": ALL_MIRRORS_2D,
         "check": [],
     },
     {
@@ -431,6 +487,34 @@ SCENARIOS = [
         "check": [],
     },
     {
+        "script": "examples/euler/isentropic_cross.py",
+        "options": ["--solver", "fv", "--scheme", "godunov"],
+        "arguments": ADAPTIVE_2D,
+        "mirrors": ALL_MIRRORS_2D,
+        "check": [],
+    },
+    {
+        "script": "examples/euler/isentropic_cross.py",
+        "options": ["--solver", "fv", "--scheme", "muscl-hancock"],
+        "arguments": ADAPTIVE_2D,
+        "mirrors": ALL_MIRRORS_2D,
+        "check": [],
+    },
+    {
+        "script": "examples/euler/isentropic_cross.py",
+        "options": ["--solver", "aderdg"],
+        "arguments": ADAPTIVE_2D,
+        "mirrors": ALL_MIRRORS_2D,
+        "check": [],
+    },
+    {
+        "script": "examples/euler/isentropic_cross.py",
+        "options": ["--solver", "rkdg"],
+        "arguments": ADAPTIVE_2D,
+        "mirrors": ALL_MIRRORS_2D,
+        "check": [],
+    },
+    {
         "script": "examples/shallow-water/dry_ring.py",
         "options": [],
         "arguments": REGULAR_2D,
@@ -439,7 +523,21 @@ SCENARIOS = [
     },
     {
         "script": "examples/grmhd/michel_spherical_accretion.py",
+        "options": ["--solver", "fv"],
+        "arguments": [],
+        "mirrors": AXIS_SWAPS_3D,
+        "check": ["--symmetric-tensor-fields", "gij"],
+    },
+    {
+        "script": "examples/grmhd/michel_spherical_accretion.py",
         "options": [],
+        "arguments": [],
+        "mirrors": AXIS_SWAPS_3D,
+        "check": ["--symmetric-tensor-fields", "gij"],
+    },
+    {
+        "script": "examples/grmhd/michel_spherical_accretion.py",
+        "options": ["--solver", "rkdg"],
         "arguments": [],
         "mirrors": AXIS_SWAPS_3D,
         "check": ["--symmetric-tensor-fields", "gij"],

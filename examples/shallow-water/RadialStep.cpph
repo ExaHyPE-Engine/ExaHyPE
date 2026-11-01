@@ -1,6 +1,27 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/shallow-water/ShallowWater.h"
+#include "tarch/la/ScalarOperations.h"
+
+namespace examples::shallowwater {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeRadialStep(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::shallowwater
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::writeRadialStep(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* const NOALIAS Q) {
+  const double firstSquare  = tarch::la::productRoundedOnce(x[0] - 0.5, x[0] - 0.5);
+  const double secondSquare = tarch::la::productRoundedOnce(x[1] - 0.5, x[1] - 0.5);
+  const double radius       = std::sqrt(firstSquare + secondSquare);
+  Q[Shortcuts::h]           = 1.;
+  Q[Shortcuts::hv + 0]      = 0.;
+  Q[Shortcuts::hv + 1]      = 0.;
+  Q[Shortcuts::b]           = radius < 0.1 ? 0.0 : 0.05;
+}
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::shallowwater::RadialStep::maxEigenvalue(

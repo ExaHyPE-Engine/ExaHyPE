@@ -3,6 +3,7 @@
 #include "exahype2/MultiresolutionDetail.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/ScalarOperations.h"
+#include "tarch/la/Vector.h"
 
 template <class Shortcuts, typename Precision>
 INLINE_METHOD GPU_CALLABLE_METHOD double
@@ -17,8 +18,11 @@ examples::euler::getMomentumSquared(const Precision* const NOALIAS Q) {
 template <class Shortcuts, typename Precision>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::euler::getPressure(const Precision* const NOALIAS Q, const double gamma) {
-  const double inverseDensity = 1 / std::max<double>(Q[Shortcuts::rho], 1.0e-12);
-  return (gamma - 1) * (Q[Shortcuts::rhoE] - 0.5 * inverseDensity * examples::euler::getMomentumSquared<Shortcuts>(Q));
+  const double inverseDensity  = 1 / std::max<double>(Q[Shortcuts::rho], 1.0e-12);
+  const double momentumSquared = examples::euler::getMomentumSquared<Shortcuts>(Q);
+  const double internalEnergy =
+    std::fma(-0.5 * inverseDensity, momentumSquared, static_cast<double>(Q[Shortcuts::rhoE]));
+  return (gamma - 1) * internalEnergy;
 }
 
 template <class Shortcuts, typename Precision>
@@ -44,9 +48,7 @@ examples::euler::computeFlux(
   const double inverseDensity = 1 / std::max<double>(Q[Shortcuts::rho], 1.0e-12);
   const double pressure       = examples::euler::getPressure<Shortcuts>(Q, gamma);
   const double normalMomentum = Q[Shortcuts::rhoU + normal];
-  // Every flux component rounds on its own. A sum of the fluxes of two states then adds the same
-  // rounded values for mirrored faces with and without fused multiply-adds.
-  F[Shortcuts::rho] = normalMomentum;
+  F[Shortcuts::rho]           = normalMomentum;
   for (int d = 0; d < DIMENSIONS; d++) {
     F[Shortcuts::rhoU + d] = tarch::la::productRoundedOnce(normalMomentum * Q[Shortcuts::rhoU + d], inverseDensity);
   }
@@ -77,6 +79,35 @@ examples::euler::getRefinementCommand(
       return std::max((gamma - 1.0) * (values[Shortcuts::rhoE] - 0.5 * momentumSquared / density), 1.0e-12);
     }
   );
+}
+
+template <typename Precision, typename Deviation>
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::euler::getRefinementCommandOfDeviation(
+  const Precision* const NOALIAS Q,
+  const int                      numberOfStates,
+  const int                      numberOfValues,
+  const double                   refineTolerance,
+  const double                   eraseTolerance,
+  const Deviation&               deviationOfState
+) {
+  ASSERTION(numberOfStates > 0, numberOfStates);
+  ASSERTION(numberOfValues > 0, numberOfValues);
+  ASSERTION(eraseTolerance >= 0.0 and eraseTolerance < refineTolerance, eraseTolerance, refineTolerance);
+  if (Q == nullptr) {
+    return ::exahype2::RefinementCommand::Keep;
+  }
+  double largestDeviation = 0.0;
+  for (int state = 0; state < numberOfStates; state++) {
+    largestDeviation = std::max(largestDeviation, deviationOfState(Q + state * numberOfValues));
+  }
+  if (largestDeviation > refineTolerance) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  if (largestDeviation < eraseTolerance) {
+    return ::exahype2::RefinementCommand::Erase;
+  }
+  return ::exahype2::RefinementCommand::Keep;
 }
 
 template <class Shortcuts, typename Precision>
@@ -128,93 +159,6 @@ examples::euler::mapDmpObservables(
     observables[1 + d] = Q[Shortcuts::rhoU + d] * inverseDensity;
   }
   observables[1 + DIMENSIONS] = (gamma - 1.0) * (Q[Shortcuts::rhoE] - 0.5 * inverseDensity * momentumSquared);
-}
-
-/**
- * Writes the Gaussian density bell at the time t into Q. The bell starts at the origin and moves
- * with unit velocity along every axis of the periodic domain [-0.5, 0.5] at constant pressure
- * (Ioratti, Dumbser and Loubère, https://doi.org/10.1007/s10915-020-01209-w).
- */
-template <class Shortcuts, typename Precision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-examples::euler::writeGaussianBell(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const double                                 t,
-  const double                                 gamma,
-  Precision* const NOALIAS                     Q
-) {
-  constexpr double                      Pressure = 1.0;
-  tarch::la::Vector<DIMENSIONS, double> position;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    position[d] = (x[d] - t) + static_cast<int>(t + .5 - x[d]);
-  }
-  Q[Shortcuts::rho] = 0.02 * (1.0 + std::exp(-0.5 * tarch::la::norm2(position) * tarch::la::norm2(position) / 0.01));
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::rhoU + d] = Q[Shortcuts::rho];
-  }
-  Q[Shortcuts::rhoE] =
-    Pressure / (gamma - 1.0) + 0.5 * examples::euler::getMomentumSquared<Shortcuts>(Q) / Q[Shortcuts::rho];
-}
-
-/**
- * Writes the isentropic vortex at the time t into Q. The vortex starts at the origin, rotates in
- * the plane of the axes 0 and 1 and moves with unit velocity along the diagonal of the periodic
- * domain [-5, 5] (Ioratti, Dumbser and Loubère, https://doi.org/10.1007/s10915-020-01209-w).
- */
-template <class Shortcuts, typename Precision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-examples::euler::writeIsentropicVortex(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const double                                 t,
-  const double                                 gamma,
-  Precision* const NOALIAS                     Q
-) {
-  constexpr double                      Epsilon     = 5.0;
-  constexpr double                      Pi          = std::numbers::pi;
-  constexpr double                      FarDensity  = 1.0;
-  constexpr double                      FarPressure = 1.0;
-  constexpr double                      FarVelocity = 1.0;
-  const double                          cappedTime  = std::fmod(t, 10.);
-  tarch::la::Vector<DIMENSIONS, double> position(x);
-  for (int d = 0; d < 2; d++) {
-    position[d] = (x[d] - FarVelocity * cappedTime) < -5.0 ? (x[d] - FarVelocity * cappedTime) + 10.
-                                                           : (x[d] - FarVelocity * cappedTime);
-  }
-  const tarch::la::Vector<2, double> planarPosition = {position[0], position[1]};
-  const double                       radius         = tarch::la::norm2(planarPosition);
-  const double velocityDisturbanceX = 0.5 * Epsilon / Pi * std::exp(0.5 * (1. - radius * radius)) * (-position[1]);
-  const double velocityDisturbanceY = 0.5 * Epsilon / Pi * std::exp(0.5 * (1. - radius * radius)) * (position[0]);
-  const double temperatureDisturbance =
-    -(gamma - 1.) * Epsilon * Epsilon / 8. / gamma / Pi / Pi * std::exp(1. - radius * radius);
-  const double densityDisturbance  = std::pow(1. + temperatureDisturbance, 1. / (gamma - 1.)) - 1.;
-  const double pressureDisturbance = std::pow(1. + temperatureDisturbance, gamma / (gamma - 1.)) - 1.;
-
-  Q[Shortcuts::rho]      = FarDensity + densityDisturbance;
-  Q[Shortcuts::rhoU + 0] = Q[Shortcuts::rho] * (FarVelocity + velocityDisturbanceX);
-  Q[Shortcuts::rhoU + 1] = Q[Shortcuts::rho] * (FarVelocity + velocityDisturbanceY);
-  for (int d = 2; d < DIMENSIONS; d++) {
-    Q[Shortcuts::rhoU + d] = 0.0;
-  }
-  Q[Shortcuts::rhoE] = (FarPressure + pressureDisturbance) / (gamma - 1)
-    + 0.5 * Q[Shortcuts::rho]
-      * ((FarVelocity + velocityDisturbanceX) * (FarVelocity + velocityDisturbanceX) + (FarVelocity + velocityDisturbanceY) * (FarVelocity + velocityDisturbanceY));
-}
-
-template <class Shortcuts, typename Precision>
-INLINE_METHOD void
-examples::euler::writePointExplosion(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const double                                 gamma,
-  Precision* const NOALIAS                     Q
-) {
-  constexpr double                            Radius = 0.15;
-  const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
-  Q[Shortcuts::rho] = 1.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::rhoU + d] = 0.0;
-  }
-  const double pressure = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 5.0 : 1.0;
-  Q[Shortcuts::rhoE]    = pressure / (gamma - 1.0);
 }
 
 template <class Shortcuts, typename Precision>

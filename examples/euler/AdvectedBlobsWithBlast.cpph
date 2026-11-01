@@ -1,0 +1,105 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/euler/Euler.h"
+
+namespace examples::euler {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD void writeAdvectedBlobsWithBlast(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       gamma,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::euler
+
+/**
+ * Writes three dense blobs and a pressure blast at the origin into Q. A background flow with the
+ * velocity (1, 0.5) advects the blobs through the periodic domain [-0.5, 0.5].
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD void
+examples::euler::writeAdvectedBlobsWithBlast(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 gamma,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr double        Radius                           = 0.08;
+  constexpr int           NumberOfBlobs                    = 3;
+  static constexpr double CentresOfBlobs[NumberOfBlobs][2] = {{-0.3, -0.2}, {0.1, 0.3}, {0.3, -0.3}};
+  double                  density                          = 1.0;
+  for (const auto& centre : CentresOfBlobs) {
+    tarch::la::Vector<DIMENSIONS, double> position(x);
+    position[0] -= centre[0];
+    position[1] -= centre[1];
+    if (tarch::la::norm2Squared(position) < Radius * Radius) {
+      density = 2.0;
+    }
+  }
+  const double                          pressure = tarch::la::norm2Squared(x) < Radius * Radius ? 10.0 : 1.0;
+  tarch::la::Vector<DIMENSIONS, double> velocity(0.0);
+  velocity[0]       = 1.0;
+  velocity[1]       = 0.5;
+  Q[Shortcuts::rho] = density;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::rhoU + d] = density * velocity[d];
+  }
+  Q[Shortcuts::rhoE] = pressure / (gamma - 1.0) + 0.5 * density * tarch::la::norm2Squared(velocity);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::euler::AdvectedBlobsWithBlast::maxEigenvalue(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::euler::getMaxEigenvalue<Shortcuts>(Q, normal, parameters.gamma);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::AdvectedBlobsWithBlast::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::euler::computeFlux<Shortcuts>(Q, normal, parameters.gamma, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::euler::AdvectedBlobsWithBlast::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  const double gamma = parameters.gamma;
+  return examples::euler::getRefinementCommandOfDeviation(
+    Q,
+    PointsPerCell,
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.refineTolerance,
+    parameters.eraseTolerance,
+    [gamma](const StoragePrecision* const values) {
+      const double pressure = examples::euler::getPressure<Shortcuts>(values, gamma);
+      return std::max(std::abs(values[Shortcuts::rho] - 1.0), std::abs(pressure - 1.0));
+    }
+  );
+}
+
+INLINE_METHOD void
+examples::euler::AdvectedBlobsWithBlast::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::euler::writeAdvectedBlobsWithBlast<Shortcuts>(x, parameters.gamma, Q);
+}

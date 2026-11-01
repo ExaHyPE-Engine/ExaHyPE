@@ -160,10 +160,10 @@ UNIT_TEST(
   "on the face through the centre to the cell below that face"
 ) {
   GIVEN("Lattices of three and of four cells of width 0.25 and shifts of half the numerical zero difference") {
-    constexpr double Width       = 0.25;
-    constexpr double Band        = 0.5 * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
-    constexpr int    Lattices[2] = {3, 4};
-    constexpr double Shifts[3]   = {-Band, 0.0, Band};
+    constexpr double        Width       = 0.25;
+    constexpr double        Band        = 0.5 * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
+    static constexpr int    Lattices[2] = {3, 4};
+    static constexpr double Shifts[3]   = {-Band, 0.0, Band};
 
     WHEN("Every face coordinate, its shifts, its mirror and every cell centre map to a lattice index") {
       struct Lookup final {

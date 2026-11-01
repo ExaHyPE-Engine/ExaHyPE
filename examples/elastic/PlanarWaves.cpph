@@ -2,6 +2,56 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/elastic/Elastic.h"
 
+namespace examples::elastic {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writePlanarWaves(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::elastic
+
+/**
+ * Writes the plane P-waves along every axis of the periodic domain [-1, 1] at the time t into Q
+ * (Dumbser and Käser, https://doi.org/10.1111/j.1365-246X.2006.03120.x, chapter 5).
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::elastic::writePlanarWaves(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr auto   ShearModulus       = 1;
+  constexpr auto   FirstLameParameter = 2;
+  constexpr auto   PWaveSpeed         = 2;
+  constexpr double AngularFrequency   = -2 * std::numbers::pi;
+
+  const double valueX = std::cos(AngularFrequency * t - std::numbers::pi * x[0]);
+  const double valueY = std::cos(AngularFrequency * t - std::numbers::pi * x[1]);
+  if constexpr (DIMENSIONS == 2) {
+    Q[Shortcuts::sigma + 0] = valueX * (FirstLameParameter + 2 * ShearModulus) + valueY * FirstLameParameter;
+    Q[Shortcuts::sigma + 1] = valueX * FirstLameParameter + valueY * (FirstLameParameter + 2 * ShearModulus);
+    Q[Shortcuts::sigma + 2] = 0;
+    Q[Shortcuts::v + 0]     = valueX * PWaveSpeed;
+    Q[Shortcuts::v + 1]     = valueY * PWaveSpeed;
+  } else {
+    const double valueZ = std::cos(AngularFrequency * t - std::numbers::pi * x[2]);
+    Q[Shortcuts::sigma + 0] =
+      valueX * (FirstLameParameter + 2 * ShearModulus) + valueY * FirstLameParameter + valueZ * FirstLameParameter;
+    Q[Shortcuts::sigma + 1] =
+      valueX * FirstLameParameter + valueY * (FirstLameParameter + 2 * ShearModulus) + valueZ * FirstLameParameter;
+    Q[Shortcuts::sigma + 2] =
+      valueX * FirstLameParameter + valueY * FirstLameParameter + valueZ * (FirstLameParameter + 2 * ShearModulus);
+    Q[Shortcuts::sigma + 3] = 0;
+    Q[Shortcuts::sigma + 4] = 0;
+    Q[Shortcuts::sigma + 5] = 0;
+    Q[Shortcuts::v + 0]     = valueX * PWaveSpeed;
+    Q[Shortcuts::v + 1]     = valueY * PWaveSpeed;
+    Q[Shortcuts::v + 2]     = valueZ * PWaveSpeed;
+  }
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::elastic::PlanarWaves::maxEigenvalue(
   const ComputePrecision* const NOALIAS                         Q,

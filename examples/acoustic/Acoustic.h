@@ -47,27 +47,6 @@ namespace examples::acoustic {
   );
 
   template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeFreeStream(Precision* NOALIAS Q);
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD void writeRest(Precision* NOALIAS Q);
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeSourceForce(double t, Precision* NOALIAS forceVector);
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writePlanarWave(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       density,
-    double                                       waveSpeed,
-    Precision* NOALIAS                           Q
-  );
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD void writePulse(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* NOALIAS Q);
-
-  template <class Shortcuts, typename Precision>
   INLINE_METHOD GPU_CALLABLE_METHOD void reflectAtWall(
     const Precision* NOALIAS Qinside,
     Precision* NOALIAS       Qoutside,

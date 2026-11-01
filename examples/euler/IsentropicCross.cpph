@@ -1,0 +1,100 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "examples/euler/Euler.h"
+
+namespace examples::euler {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD void writeIsentropicCross(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       gamma,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::euler
+
+/**
+ * Writes gas at rest with one isentropic Gaussian pressure pulse across every coordinate plane
+ * through the origin into Q. Each pulse splits into two plane waves.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD void
+examples::euler::writeIsentropicCross(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 gamma,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr double               Amplitude = 0.3;
+  constexpr double               Width     = 0.03;
+  std::array<double, DIMENSIONS> pulses{};
+  for (int d = 0; d < DIMENSIONS; d++) {
+    pulses[d] = Amplitude * std::exp(-x[d] * x[d] / (2.0 * Width * Width));
+  }
+  // The sum of the sorted pulses rounds the same for every permutation of the axes.
+  std::sort(pulses.begin(), pulses.end());
+  double pressure = 1.0;
+  for (const double pulse : pulses) {
+    pressure += pulse;
+  }
+  Q[Shortcuts::rho] = std::pow(pressure, 1.0 / gamma);
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::rhoU + d] = 0.0;
+  }
+  Q[Shortcuts::rhoE] = pressure / (gamma - 1.0);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+examples::euler::IsentropicCross::maxEigenvalue(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  const RuntimeParameters&                                      parameters
+) {
+  return examples::euler::getMaxEigenvalue<Shortcuts>(Q, normal, parameters.gamma);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::IsentropicCross::flux(
+  const ComputePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const double                                 dt,
+  const int                                                     normal,
+  ComputePrecision* const NOALIAS                               F,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::euler::computeFlux<Shortcuts>(Q, normal, parameters.gamma, F);
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+examples::euler::IsentropicCross::refinementCriterion(
+  const StoragePrecision* const NOALIAS                         Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const RuntimeParameters&                                      parameters
+) {
+  const double gamma = parameters.gamma;
+  return examples::euler::getRefinementCommandOfDeviation(
+    Q,
+    PointsPerCell,
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    parameters.refineTolerance,
+    parameters.eraseTolerance,
+    [gamma](const StoragePrecision* const values) {
+      return std::abs(examples::euler::getPressure<Shortcuts>(values, gamma) - 1.0);
+    }
+  );
+}
+
+INLINE_METHOD void
+examples::euler::IsentropicCross::initialCondition(
+  StoragePrecision* const NOALIAS                               Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
+) {
+  examples::euler::writeIsentropicCross<Shortcuts>(x, parameters.gamma, Q);
+}

@@ -28,7 +28,7 @@ namespace {
    */
   template <typename Limiter, typename Precision>
   int countMirroringMismatchesOf() {
-    constexpr Precision Samples[] = {
+    static constexpr Precision Samples[] = {
       Precision(-3.7e5),
       Precision(-2.5),
       Precision(-0.3),
@@ -56,9 +56,9 @@ namespace {
 
 UNIT_TEST("The zero limiter gives the slope zero") {
   GIVEN("The difference pairs three and one, minus two and five and zero and zero") {
-    constexpr DifferencePair<double> SameSigns{3.0, 1.0};
-    constexpr DifferencePair<double> OppositeSigns{-2.0, 5.0};
-    constexpr DifferencePair<double> Zeros{0.0, 0.0};
+    static constexpr DifferencePair<double> SameSigns{3.0, 1.0};
+    static constexpr DifferencePair<double> OppositeSigns{-2.0, 5.0};
+    static constexpr DifferencePair<double> Zeros{0.0, 0.0};
 
     WHEN("The zero limiter limits every pair") {
       const double limitedSameSigns     = getLimitedDifferenceOf<exahype2::fv::limiter::Zero>(SameSigns);
@@ -76,9 +76,9 @@ UNIT_TEST("The zero limiter gives the slope zero") {
 
 UNIT_TEST("The average limiter takes the mean of both differences whatever their signs") {
   GIVEN("The difference pairs three and one, minus one and two and zero and zero") {
-    constexpr DifferencePair<double> SameSigns{3.0, 1.0};
-    constexpr DifferencePair<double> OppositeSigns{-1.0, 2.0};
-    constexpr DifferencePair<double> Zeros{0.0, 0.0};
+    static constexpr DifferencePair<double> SameSigns{3.0, 1.0};
+    static constexpr DifferencePair<double> OppositeSigns{-1.0, 2.0};
+    static constexpr DifferencePair<double> Zeros{0.0, 0.0};
 
     WHEN("The average limiter limits every pair") {
       const double limitedSameSigns     = getLimitedDifferenceOf<exahype2::fv::limiter::Average>(SameSigns);
@@ -96,12 +96,12 @@ UNIT_TEST("The average limiter takes the mean of both differences whatever their
 
 UNIT_TEST("Minmod takes the difference of smaller magnitude if both signs agree and zero otherwise") {
   GIVEN("Pairs of the same sign with the smaller difference forward or backward, of opposite signs and with a zero") {
-    constexpr DifferencePair<double> SmallerBackward{2.0, 1.0};
-    constexpr DifferencePair<double> SmallerForward{1.0, 2.0};
-    constexpr DifferencePair<double> BothNegative{-1.0, -3.0};
-    constexpr DifferencePair<double> OppositeSigns{-1.0, 2.0};
-    constexpr DifferencePair<double> ZeroBackward{2.0, 0.0};
-    constexpr DifferencePair<double> ZeroForward{0.0, 1.0};
+    static constexpr DifferencePair<double> SmallerBackward{2.0, 1.0};
+    static constexpr DifferencePair<double> SmallerForward{1.0, 2.0};
+    static constexpr DifferencePair<double> BothNegative{-1.0, -3.0};
+    static constexpr DifferencePair<double> OppositeSigns{-1.0, 2.0};
+    static constexpr DifferencePair<double> ZeroBackward{2.0, 0.0};
+    static constexpr DifferencePair<double> ZeroForward{0.0, 1.0};
 
     WHEN("Minmod limits every pair") {
       const double limitedSmallerBackward = getLimitedDifferenceOf<exahype2::fv::limiter::Minmod>(SmallerBackward);
@@ -123,8 +123,8 @@ UNIT_TEST("Minmod takes the difference of smaller magnitude if both signs agree 
   }
 
   GIVEN("The differences 0.3 and 0.7 in both orders") {
-    constexpr DifferencePair<double> Ascending{0.3, 0.7};
-    constexpr DifferencePair<double> Descending{0.7, 0.3};
+    static constexpr DifferencePair<double> Ascending{0.3, 0.7};
+    static constexpr DifferencePair<double> Descending{0.7, 0.3};
 
     WHEN("Minmod limits both pairs") {
       const double limitedAscending  = getLimitedDifferenceOf<exahype2::fv::limiter::Minmod>(Ascending);
@@ -139,10 +139,10 @@ UNIT_TEST("Minmod takes the difference of smaller magnitude if both signs agree 
 
 UNIT_TEST("Van Albada limits without a positivity clamp and differences of opposite signs give a small counter-slope") {
   GIVEN("A zero backward difference, the pairs one and one and two and one and differences of opposite signs") {
-    constexpr DifferencePair<double> ZeroBackward{1.0, 0.0};
-    constexpr DifferencePair<double> Equal{1.0, 1.0};
-    constexpr DifferencePair<double> SmallerBackward{2.0, 1.0};
-    constexpr DifferencePair<double> OppositeSigns{-1.0, 2.0};
+    static constexpr DifferencePair<double> ZeroBackward{1.0, 0.0};
+    static constexpr DifferencePair<double> Equal{1.0, 1.0};
+    static constexpr DifferencePair<double> SmallerBackward{2.0, 1.0};
+    static constexpr DifferencePair<double> OppositeSigns{-1.0, 2.0};
 
     WHEN("Van Albada limits every pair") {
       const double limitedZeroBackward    = getLimitedDifferenceOf<exahype2::fv::limiter::VanAlbada>(ZeroBackward);
@@ -160,8 +160,8 @@ UNIT_TEST("Van Albada limits without a positivity clamp and differences of oppos
   }
 
   GIVEN("The differences one and three in both orders") {
-    constexpr DifferencePair<double> Ascending{1.0, 3.0};
-    constexpr DifferencePair<double> Descending{3.0, 1.0};
+    static constexpr DifferencePair<double> Ascending{1.0, 3.0};
+    static constexpr DifferencePair<double> Descending{3.0, 1.0};
 
     WHEN("Van Albada limits both pairs") {
       const double limitedAscending  = getLimitedDifferenceOf<exahype2::fv::limiter::VanAlbada>(Ascending);
@@ -176,12 +176,12 @@ UNIT_TEST("Van Albada limits without a positivity clamp and differences of oppos
 
 UNIT_TEST("Superbee takes the larger difference up to twice the smaller one and gives opposite signs the slope zero") {
   GIVEN("A zero backward difference, the forward differences one, two, 0.5 and 0.25 over one and opposite signs") {
-    constexpr DifferencePair<double> ZeroBackward{1.0, 0.0};
-    constexpr DifferencePair<double> Equal{1.0, 1.0};
-    constexpr DifferencePair<double> LargerForward{2.0, 1.0};
-    constexpr DifferencePair<double> HalfForward{0.5, 1.0};
-    constexpr DifferencePair<double> QuarterForward{0.25, 1.0};
-    constexpr DifferencePair<double> OppositeSigns{-1.0, 1.0};
+    static constexpr DifferencePair<double> ZeroBackward{1.0, 0.0};
+    static constexpr DifferencePair<double> Equal{1.0, 1.0};
+    static constexpr DifferencePair<double> LargerForward{2.0, 1.0};
+    static constexpr DifferencePair<double> HalfForward{0.5, 1.0};
+    static constexpr DifferencePair<double> QuarterForward{0.25, 1.0};
+    static constexpr DifferencePair<double> OppositeSigns{-1.0, 1.0};
 
     WHEN("Superbee limits every pair") {
       const double limitedZeroBackward   = getLimitedDifferenceOf<exahype2::fv::limiter::Superbee>(ZeroBackward);
@@ -205,11 +205,11 @@ UNIT_TEST("Superbee takes the larger difference up to twice the smaller one and 
 
 UNIT_TEST("The monotonised central limiter caps the mean at twice the smaller difference and zeroes opposite signs") {
   GIVEN("A zero backward difference, the forward differences one, four and 0.2 over one and opposite signs") {
-    constexpr DifferencePair<double> ZeroBackward{1.0, 0.0};
-    constexpr DifferencePair<double> Equal{1.0, 1.0};
-    constexpr DifferencePair<double> LargerForward{4.0, 1.0};
-    constexpr DifferencePair<double> SmallerForward{0.2, 1.0};
-    constexpr DifferencePair<double> OppositeSigns{-1.0, 1.0};
+    static constexpr DifferencePair<double> ZeroBackward{1.0, 0.0};
+    static constexpr DifferencePair<double> Equal{1.0, 1.0};
+    static constexpr DifferencePair<double> LargerForward{4.0, 1.0};
+    static constexpr DifferencePair<double> SmallerForward{0.2, 1.0};
+    static constexpr DifferencePair<double> OppositeSigns{-1.0, 1.0};
 
     WHEN("The monotonised central limiter limits every pair") {
       const double limitedZeroBackward   = getLimitedDifferenceOf<exahype2::fv::limiter::MinmodCentral>(ZeroBackward);
@@ -231,13 +231,13 @@ UNIT_TEST("The monotonised central limiter caps the mean at twice the smaller di
 
 UNIT_TEST("A monotone limiter stays within the total variation bounds") {
   GIVEN("Minmod, Superbee and the monotonised central limiter and eight sample differences from -2.5 to three") {
-    using ScalarLimiter                        = double (*)(double forwardDifference, double backwardDifference);
-    constexpr ScalarLimiter MonotoneLimiters[] = {
+    using ScalarLimiter                               = double (*)(double forwardDifference, double backwardDifference);
+    static constexpr ScalarLimiter MonotoneLimiters[] = {
       static_cast<ScalarLimiter>(&exahype2::fv::limiter::Minmod::limitedDifference<double>),
       static_cast<ScalarLimiter>(&exahype2::fv::limiter::Superbee::limitedDifference<double>),
       static_cast<ScalarLimiter>(&exahype2::fv::limiter::MinmodCentral::limitedDifference<double>),
     };
-    constexpr double Samples[] = {-2.5, -1.0, -0.3, 0.0, 0.4, 1.0, 1.7, 3.0};
+    static constexpr double Samples[] = {-2.5, -1.0, -0.3, 0.0, 0.4, 1.0, 1.7, 3.0};
 
     WHEN("Every limiter limits every pair of samples") {
       std::vector<DifferencePair<double>> limitedPairs;
@@ -281,10 +281,10 @@ UNIT_TEST("A monotone limiter stays within the total variation bounds") {
 
 UNIT_TEST("Every limiter limits single-precision differences in single precision") {
   GIVEN("The single-precision difference pairs three and two, three and one, two and one and four and one") {
-    constexpr DifferencePair<float> ThreeAndTwo{3.0F, 2.0F};
-    constexpr DifferencePair<float> ThreeAndOne{3.0F, 1.0F};
-    constexpr DifferencePair<float> TwoAndOne{2.0F, 1.0F};
-    constexpr DifferencePair<float> FourAndOne{4.0F, 1.0F};
+    static constexpr DifferencePair<float> ThreeAndTwo{3.0F, 2.0F};
+    static constexpr DifferencePair<float> ThreeAndOne{3.0F, 1.0F};
+    static constexpr DifferencePair<float> TwoAndOne{2.0F, 1.0F};
+    static constexpr DifferencePair<float> FourAndOne{4.0F, 1.0F};
 
     WHEN("Every limiter limits one of the pairs") {
       const float zero          = getLimitedDifferenceOf<exahype2::fv::limiter::Zero>(ThreeAndTwo);

@@ -11,22 +11,60 @@ API:
     - !reference [".RunOnAnyBranch", "rules"]
   needs: [Build and Unit Tests]
 
-Tests:
+.Test:
   stage: Test
+  script:
+    - in_image "PARALLEL_LAUNCH=\"$PARALLEL_LAUNCH\" PYTHONPATH=$CI_PROJECT_DIR/api python3 tests/$test.py --scenario $scenario --build-mode $BUILD_MODE"
+  rules:
+    - if: '$RUN_SIMULATIONS != "true"'
+      when: never
+    - !reference [".RunOnAnyBranch", "rules"]
+  needs: [Build and Unit Tests]
+
+Convergence:
+  extends: .Test
+  variables:
+    test: test_convergence
   parallel:
     matrix:
-      - test: [test_convergence]
-        scenario: [examples/acoustic/planar_waves.py, examples/euler/gaussian_bell.py]
-      - test: [test_free_stream]
-        scenario: [examples/acoustic/free_stream.py]
-      - test: [test_physics]
-        scenario:
+      - scenario: [examples/acoustic/planar_waves.py, examples/euler/gaussian_bell.py]
+
+Free Stream:
+  extends: .Test
+  variables:
+    test: test_free_stream
+    scenario: examples/acoustic/free_stream.py
+
+Mass Conservation:
+  extends: .Test
+  variables:
+    test: test_mass_conservation
+  parallel:
+    matrix:
+      - scenario:
+          - examples/advection/periodic_bump.py
+          - examples/euler/advected_blobs_with_blast.py
+          - examples/euler/isentropic_cross.py
+
+Physics:
+  extends: .Test
+  variables:
+    test: test_physics
+  parallel:
+    matrix:
+      - scenario:
           - examples/euler/airfoil.py
           - examples/euler/point_explosion.py
           - examples/euler/rayleigh_taylor.py
           - examples/shallow-water/dry_ring.py
-      - test: [test_symmetry]
-        scenario:
+
+Symmetry:
+  extends: .Test
+  variables:
+    test: test_symmetry
+  parallel:
+    matrix:
+      - scenario:
           - examples/acoustic/free_stream.py
           - examples/acoustic/planar_waves.py
           - examples/acoustic/point_explosion.py
@@ -38,6 +76,7 @@ Tests:
           - examples/elastic/ricker_pulse.py
           - examples/euler/airfoil.py
           - examples/euler/gaussian_bell.py
+          - examples/euler/isentropic_cross.py
           - examples/euler/point_explosion.py
           - examples/euler/rayleigh_taylor.py
           - examples/grmhd/michel_spherical_accretion.py
@@ -47,10 +86,3 @@ Tests:
           - examples/shallow-water/radial_dam_break.py
           - examples/shallow-water/radial_step.py
           - examples/shallow-water/resting_lake.py
-  script:
-    - in_image "PARALLEL_LAUNCH=\"$PARALLEL_LAUNCH\" PYTHONPATH=$CI_PROJECT_DIR/api python3 tests/$test.py --scenario $scenario --build-mode $BUILD_MODE"
-  rules:
-    - if: '$RUN_SIMULATIONS != "true"'
-      when: never
-    - !reference [".RunOnAnyBranch", "rules"]
-  needs: [Build and Unit Tests]

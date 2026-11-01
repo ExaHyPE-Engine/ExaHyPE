@@ -2,6 +2,23 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/acoustic/Acoustic.h"
 
+namespace examples::acoustic {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD void writePulse(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* NOALIAS Q);
+} // namespace examples::acoustic
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD void
+examples::acoustic::writePulse(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* const NOALIAS Q) {
+  constexpr double                            Sigma = 0.1;
+  const tarch::la::Vector<DIMENSIONS, double> centre(-0.7);
+  const double                                distanceSquared = tarch::la::norm2Squared(x - centre);
+  Q[Shortcuts::p]                                             = std::exp(-distanceSquared / (2.0 * Sigma * Sigma));
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::u + d] = 0.0;
+  }
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::acoustic::PointExplosion::maxEigenvalue(
   [[maybe_unused]] const ComputePrecision* const NOALIAS        Q,

@@ -93,7 +93,7 @@ applications::exahype2::exagrype::nonconservativeProduct(
   dTraceK[normal] = deltaQ[Shortcuts::K];
   dTheta[normal]  = deltaQ[Shortcuts::theta];
 
-  constexpr int SymmetricEntry[3][3] = {{0, 1, 2}, {1, 3, 4}, {2, 4, 5}};
+  static constexpr int SymmetricEntry[3][3] = {{0, 1, 2}, {1, 3, 4}, {2, 4, 5}};
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       const int entry      = SymmetricEntry[i][j];

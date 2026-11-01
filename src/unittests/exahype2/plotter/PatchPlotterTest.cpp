@@ -158,15 +158,15 @@ UNIT_TEST("A nodal snapshot writes a point per node, the data as point fields an
     const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
     const auto  cells            = cellConnectivity.getCells();
 
-    constexpr int                   SubcellsPerAxis      = 3;
-    constexpr int                   StatusEntries        = 4;
-    constexpr int                   SubcellStatus        = 2;
-    constexpr int                   SubcellValuesPerCell = peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerVolume;
-    constexpr std::array<double, 2> Nodes{0.25, 0.75};
-    const auto                      values = getFilledPool(cellConnectivity, VolumesPerPatch * ValuesPerVolume, 1.0);
-    const auto                      subcellValues = getFilledPool(cellConnectivity, SubcellValuesPerCell, 2.0);
-    const auto                      statuses      = getFilledPool(cellConnectivity, StatusEntries, SubcellStatus);
-    const std::string               outputDirectory =
+    constexpr int SubcellsPerAxis      = 3;
+    constexpr int StatusEntries        = 4;
+    constexpr int SubcellStatus        = 2;
+    constexpr int SubcellValuesPerCell = peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerVolume;
+    static constexpr std::array<double, 2> Nodes{0.25, 0.75};
+    const auto        values        = getFilledPool(cellConnectivity, VolumesPerPatch * ValuesPerVolume, 1.0);
+    const auto        subcellValues = getFilledPool(cellConnectivity, SubcellValuesPerCell, 2.0);
+    const auto        statuses      = getFilledPool(cellConnectivity, StatusEntries, SubcellStatus);
+    const std::string outputDirectory =
       (tarch::testing::getWritableTestDirectory() / "PatchPlotterNodalTest").string() + "/";
     std::filesystem::create_directories(outputDirectory + "patch/");
     exahype2::plotter::PatchPlotter plotter("PatchPlotterNodalTest", {{"scalar", 1}, {"pair", 2}});
@@ -215,11 +215,11 @@ UNIT_TEST("A nodal snapshot with one node per patch writes one cell per patch an
   GIVEN("A regular grid over every rank, the values of one node in every patch and a patch plotter") {
     const int rank = tarch::mpi::Rank::getInstance().getRank();
     peano4::unittests::buildRegularGrid(Depth);
-    const auto&                     cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
-    const auto                      cells            = cellConnectivity.getCells();
-    const auto                      values           = getFilledPool(cellConnectivity, ValuesPerVolume, 1.0);
-    constexpr std::array<double, 1> Nodes{0.5};
-    const std::string               outputDirectory =
+    const auto&                            cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+    const auto                             cells            = cellConnectivity.getCells();
+    const auto                             values           = getFilledPool(cellConnectivity, ValuesPerVolume, 1.0);
+    static constexpr std::array<double, 1> Nodes{0.5};
+    const std::string                      outputDirectory =
       (tarch::testing::getWritableTestDirectory() / "PatchPlotterSingleNodeTest").string() + "/";
     std::filesystem::create_directories(outputDirectory + "patch/");
     exahype2::plotter::PatchPlotter plotter("PatchPlotterSingleNodeTest", {{"scalar", 1}, {"pair", 2}});
@@ -266,15 +266,15 @@ UNIT_TEST("A file without cells writes the limiter status field whenever the sol
     peano4::unittests::buildRegularGrid(Depth);
     const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
-    constexpr int                   SubcellsPerAxis      = 3;
-    constexpr int                   StatusEntries        = 4;
-    constexpr int                   SubcellStatus        = 2;
-    constexpr int                   SubcellValuesPerCell = peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerVolume;
-    constexpr std::array<double, 2> Nodes{0.25, 0.75};
-    const auto                      values = getFilledPool(cellConnectivity, VolumesPerPatch * ValuesPerVolume, 1.0);
-    const auto                      subcellValues = getFilledPool(cellConnectivity, SubcellValuesPerCell, 2.0);
-    const auto                      statuses      = getFilledPool(cellConnectivity, StatusEntries, SubcellStatus);
-    const std::string               outputDirectory =
+    constexpr int SubcellsPerAxis      = 3;
+    constexpr int StatusEntries        = 4;
+    constexpr int SubcellStatus        = 2;
+    constexpr int SubcellValuesPerCell = peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerVolume;
+    static constexpr std::array<double, 2> Nodes{0.25, 0.75};
+    const auto        values        = getFilledPool(cellConnectivity, VolumesPerPatch * ValuesPerVolume, 1.0);
+    const auto        subcellValues = getFilledPool(cellConnectivity, SubcellValuesPerCell, 2.0);
+    const auto        statuses      = getFilledPool(cellConnectivity, StatusEntries, SubcellStatus);
+    const std::string outputDirectory =
       (tarch::testing::getWritableTestDirectory() / "PatchPlotterEmptyTest").string() + "/";
     std::filesystem::create_directories(outputDirectory + "patch/");
     exahype2::plotter::PatchPlotter plotter("PatchPlotterEmptyTest", {{"scalar", 1}, {"pair", 2}});
@@ -312,15 +312,15 @@ UNIT_TEST("A troubled patch plots every node with its containing subcell and a b
     const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
     const auto  cells            = cellConnectivity.getCells();
 
-    constexpr int                   NodesPerAxis    = 3;
-    constexpr int                   SubcellsPerAxis = 5;
-    constexpr int                   NodesPerPatch   = peano4::power(NodesPerAxis, DIMENSIONS);
-    constexpr int                   Subcells        = peano4::power(SubcellsPerAxis, DIMENSIONS);
-    constexpr int                   StatusEntries   = 4;
-    constexpr int                   SubcellStatus   = 2;
-    constexpr std::array<double, 3> GaussLegendreNodes{0.1127016653792583, 0.5, 0.8872983346207417};
-    constexpr std::array<double, 3> BoundaryNodes{0.0, 0.4, 1.0};
-    constexpr std::array<int, 3>    SubcellsAlongAxis{0, 2, 4};
+    constexpr int                          NodesPerAxis    = 3;
+    constexpr int                          SubcellsPerAxis = 5;
+    constexpr int                          NodesPerPatch   = peano4::power(NodesPerAxis, DIMENSIONS);
+    constexpr int                          Subcells        = peano4::power(SubcellsPerAxis, DIMENSIONS);
+    constexpr int                          StatusEntries   = 4;
+    constexpr int                          SubcellStatus   = 2;
+    static constexpr std::array<double, 3> GaussLegendreNodes{0.1127016653792583, 0.5, 0.8872983346207417};
+    static constexpr std::array<double, 3> BoundaryNodes{0.0, 0.4, 1.0};
+    static constexpr std::array<int, 3>    SubcellsAlongAxis{0, 2, 4};
 
     std::array<int, NodesPerPatch> expectedSubcellOfNode{};
     for (int node = 0; node < NodesPerPatch; node++) {

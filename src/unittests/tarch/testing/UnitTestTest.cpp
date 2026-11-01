@@ -46,7 +46,7 @@ UNIT_TEST("Integers of different signedness compare by value and -1 differs from
     constexpr int          MinusOne        = -1;
     constexpr unsigned int LargestUnsigned = std::numeric_limits<unsigned int>::max();
     const std::string      name("peano");
-    constexpr char         OtherName[] = "peano4";
+    static constexpr char  OtherName[] = "peano4";
     constexpr double       Value       = 2.5;
 
     WHEN("The test compares the threes, -1 with the largest unsigned integer, the two strings and 2.5 with itself") {

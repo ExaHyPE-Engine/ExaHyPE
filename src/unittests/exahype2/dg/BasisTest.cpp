@@ -1483,12 +1483,13 @@ UNIT_TEST("A derivative that overwrites or accumulates into its own line returns
 
 UNIT_TEST("The derivative of a reflected line is the reflected derivative with the opposite sign change bitwise") {
   GIVEN("Derivative operators of two to five nodes that the reflection of their rows and columns negates") {
-    constexpr double TwoNodeOperator[4]   = {-1.1, 1.1, -1.1, 1.1};
-    constexpr double ThreeNodeOperator[9] = {-1.7, 2.3, -0.6, -0.45, 0.0, 0.45, 0.6, -2.3, 1.7};
-    constexpr double FourNodeOperator[16] =
+    static constexpr double TwoNodeOperator[4]   = {-1.1, 1.1, -1.1, 1.1};
+    static constexpr double ThreeNodeOperator[9] = {-1.7, 2.3, -0.6, -0.45, 0.0, 0.45, 0.6, -2.3, 1.7};
+    static constexpr double FourNodeOperator[16] =
       {-2.7, 3.9, -1.7, 0.5, -0.8, -0.3, 1.4, -0.3, 0.3, -1.4, 0.3, 0.8, -0.5, 1.7, -3.9, 2.7};
-    constexpr double FiveNodeOperator[25] = {-5.1, 6.9,  -2.9, 1.3, -0.2, -1.2, -0.6, 2.4, -0.8, 0.2, 0.4,  -1.3, 0.0,
-                                             1.3,  -0.4, -0.2, 0.8, -2.4, 0.6,  1.2,  0.2, -1.3, 2.9, -6.9, 5.1};
+    static constexpr double FiveNodeOperator[25] = {-5.1, 6.9, -2.9, 1.3,  -0.2, -1.2, -0.6, 2.4, -0.8,
+                                                    0.2,  0.4, -1.3, 0.0,  1.3,  -0.4, -0.2, 0.8, -2.4,
+                                                    0.6,  1.2, 0.2,  -1.3, 2.9,  -6.9, 5.1};
 
     WHEN("Every operator differentiates a line and the line reflected with and without its sign swapped") {
       const int twoNodeMismatches   = countReflectedDerivativeMismatches<2>(TwoNodeOperator);
@@ -1939,14 +1940,14 @@ UNIT_TEST("The lower and the upper face use their own coefficients") {
 
 UNIT_TEST("The faces of a reflected field are the swapped faces of the field with the same sign change bitwise") {
   GIVEN("Coefficients of two to five nodes whose right ones are the reflected left ones and sum to one") {
-    constexpr double TwoNodeLeft[2]    = {0.7, 0.3};
-    constexpr double TwoNodeRight[2]   = {0.3, 0.7};
-    constexpr double ThreeNodeLeft[3]  = {0.77, 0.46, -0.23};
-    constexpr double ThreeNodeRight[3] = {-0.23, 0.46, 0.77};
-    constexpr double FourNodeLeft[4]   = {1.1, -0.3, 0.27, -0.07};
-    constexpr double FourNodeRight[4]  = {-0.07, 0.27, -0.3, 1.1};
-    constexpr double FiveNodeLeft[5]   = {1.3, -0.6, 0.45, -0.2, 0.05};
-    constexpr double FiveNodeRight[5]  = {0.05, -0.2, 0.45, -0.6, 1.3};
+    static constexpr double TwoNodeLeft[2]    = {0.7, 0.3};
+    static constexpr double TwoNodeRight[2]   = {0.3, 0.7};
+    static constexpr double ThreeNodeLeft[3]  = {0.77, 0.46, -0.23};
+    static constexpr double ThreeNodeRight[3] = {-0.23, 0.46, 0.77};
+    static constexpr double FourNodeLeft[4]   = {1.1, -0.3, 0.27, -0.07};
+    static constexpr double FourNodeRight[4]  = {-0.07, 0.27, -0.3, 1.1};
+    static constexpr double FiveNodeLeft[5]   = {1.3, -0.6, 0.45, -0.2, 0.05};
+    static constexpr double FiveNodeRight[5]  = {0.05, -0.2, 0.45, -0.6, 1.3};
 
     WHEN("Every pair of coefficients extrapolates a field and the field reflected with and without its sign swapped") {
       const int twoNodeMismatches   = countReflectedFaceMismatches<2>(TwoNodeLeft, TwoNodeRight);

@@ -845,4 +845,125 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
     ASSERTION(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }
 }
+
+/**
+ * Writes the flux through the volume faceVolume of face that accumulateFluxDivergence() subtracts
+ * from the volume below the face into lowerFlux and the flux it adds to the volume above into
+ * upperFlux. faceCentre is the centre of the face of the volume.
+ */
+template <exahype2::fv::limiter::SlopeLimiter Limiter>
+template <
+  typename SolverType,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateDiffusiveSource,
+  bool EvaluateCustomRiemann,
+  bool EvaluateMaxEigenvalue,
+  typename StoragePrecision,
+  typename ComputePrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::LimitedLinear<Limiter>::computeFluxesOfFaceVolume(
+  const StoragePrecision* NOALIAS const         face,
+  const int                                     faceVolume,
+  const int                                     normal,
+  const tarch::la::Vector<DIMENSIONS, double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  ComputePrecision* NOALIAS const               lowerFlux,
+  ComputePrecision* NOALIAS const               upperFlux,
+  const typename SolverType::RuntimeParameters& parameters
+) {
+  constexpr int NumberOfData    = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr int VolumesPerLayer = peano4::power(NumberOfVolumesPerAxis, DIMENSIONS - 1);
+  using Face = FaceTerms<NumberOfUnknowns, EvaluateNonconservativeProduct, EvaluateCustomRiemann, ComputePrecision>;
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(faceVolume >= 0 and faceVolume < VolumesPerLayer, faceVolume, normal);
+
+  const auto stateOfLayer = [face, faceVolume](const int layer) {
+    return face + static_cast<std::ptrdiff_t>(layer * VolumesPerLayer + faceVolume) * NumberOfData;
+  };
+  auto lowerVolumeCentre(faceCentre);
+  auto upperVolumeCentre(faceCentre);
+  lowerVolumeCentre(normal) -= 0.5 * volumeSize(normal);
+  upperVolumeCentre(normal) += 0.5 * volumeSize(normal);
+
+  ComputePrecision lowerMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  ComputePrecision lowerPlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  ComputePrecision upperMinus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  ComputePrecision upperPlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  evolveFaceStates<
+    SolverType,
+    NumberOfUnknowns,
+    NumberOfData,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource
+  >(stateOfLayer(0),
+    stateOfLayer(1),
+    stateOfLayer(2),
+    lowerVolumeCentre,
+    volumeSize,
+    normal,
+    timeStamp,
+    timeStepSize,
+    lowerMinus,
+    lowerPlus,
+    parameters);
+  evolveFaceStates<
+    SolverType,
+    NumberOfUnknowns,
+    NumberOfData,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource
+  >(stateOfLayer(1),
+    stateOfLayer(2),
+    stateOfLayer(3),
+    upperVolumeCentre,
+    volumeSize,
+    normal,
+    timeStamp,
+    timeStepSize,
+    upperMinus,
+    upperPlus,
+    parameters);
+
+  Face                                     terms;
+  const tarch::la::Vector<DIMENSIONS, int> volume(0);
+  evaluateFaceTerms<
+    SolverType,
+    NumberOfVolumesPerAxis,
+    NumberOfUnknowns,
+    NumberOfData,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateCustomRiemann
+  >(lowerPlus,
+    upperMinus,
+    faceCentre,
+    volumeSize,
+    timeStamp + 0.5 * timeStepSize,
+    timeStepSize,
+    normal,
+    volume,
+    0,
+    0,
+    terms,
+    parameters);
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    if constexpr (EvaluateCustomRiemann) {
+      lowerFlux[unknown] = terms.leftGoingFlux[unknown];
+      upperFlux[unknown] = terms.rightGoingFlux[unknown];
+    } else {
+      lowerFlux[unknown] = terms.flux[unknown];
+      upperFlux[unknown] = terms.flux[unknown];
+    }
+  }
+}
 TARGET_DECLARE_END

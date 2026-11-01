@@ -3,6 +3,94 @@
 #include "Constants.h"
 
 #include "examples/elastic/Elastic.h"
+#include "peano4/CellConnectivity.h"
+
+namespace examples::elastic {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD void writeRickerPulse(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    double                                       domainWidth,
+    int                                          numberOfUnknowns,
+    Precision* NOALIAS                           Q
+  );
+
+  template <class Shortcuts>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeRickerPulseSolution(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t,
+    const double*                                Q,
+    double                                       domainWidth,
+    int                                          maxGridLevels,
+    int                                          numberOfUnknowns,
+    double*                                      solution
+  );
+} // namespace examples::elastic
+
+/**
+ * Writes a Ricker pulse of the P-wave at the left edge of the periodic domain of width domainWidth
+ * into the numberOfUnknowns unknowns of Q (Käser, Herrmann and de la Puente,
+ * https://doi.org/10.1111/j.1365-246X.2008.03781.x, section 2.2). The centre of the pulse lies in
+ * the leftmost cell of width h. The periodic boundary places part of the pulse on the right edge.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD void
+examples::elastic::writeRickerPulse(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 domainWidth,
+  const int                                    numberOfUnknowns,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr auto ShearModulus       = 1;
+  constexpr auto FirstLameParameter = 2;
+  constexpr auto PWaveSpeed         = 2;
+
+  const auto tau        = 1.25 * std::numbers::pi * (x[0] - h[0] / 2);
+  const auto tau2       = 1.25 * std::numbers::pi * (x[0] - domainWidth - h[0] / 2);
+  const auto amplitudeX = (1 - 2 * tau * tau) * std::exp(-tau * tau) + (1 - 2 * tau2 * tau2) * std::exp(-tau2 * tau2);
+  constexpr auto AmplitudeY = 0.;
+
+  for (int unknown = 0; unknown < numberOfUnknowns; unknown++) {
+    Q[unknown] = 0.0;
+  }
+  Q[Shortcuts::sigma + 0] = -amplitudeX * (FirstLameParameter + 2 * ShearModulus) + AmplitudeY * FirstLameParameter;
+  Q[Shortcuts::sigma + 1] = -amplitudeX * FirstLameParameter + AmplitudeY * (FirstLameParameter + 2 * ShearModulus);
+  if constexpr (DIMENSIONS == 3) {
+    Q[Shortcuts::sigma + 2] = -amplitudeX * FirstLameParameter + AmplitudeY * FirstLameParameter;
+  }
+  Q[Shortcuts::v + 0] = amplitudeX * PWaveSpeed;
+  Q[Shortcuts::v + 1] = AmplitudeY * PWaveSpeed;
+}
+
+template <class Shortcuts>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::elastic::writeRickerPulseSolution(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const double* const                          Q,
+  const double                                 domainWidth,
+  const int                                    maxGridLevels,
+  const int                                    numberOfUnknowns,
+  double* const                                solution
+) {
+  constexpr auto PWaveSpeed = 2;
+
+  double finestCellWidth = domainWidth;
+  for (int level = 0; level < maxGridLevels; level++) {
+    finestCellWidth /= peano4::SubdivisionFactor;
+  }
+
+  auto distance = x[0] - PWaveSpeed * t - finestCellWidth / 2;
+  distance -= domainWidth * std::round(distance / domainWidth);
+  const auto tau        = 1.25 * std::numbers::pi * (distance);
+  const auto amplitudeX = (1 - 2 * tau * tau) * std::exp(-tau * tau);
+
+  for (int unknown = 0; unknown < numberOfUnknowns; unknown++) {
+    solution[unknown] = Q[unknown];
+  }
+  solution[Shortcuts::v + 0] = amplitudeX * PWaveSpeed;
+}
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::elastic::RickerPulse::maxEigenvalue(

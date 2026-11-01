@@ -24,7 +24,10 @@ follows:
 \li The child pipeline includes the templates in `templates.yml` and the jobs of the stages `Build`, `Test`, `Example`,
     `Tutorial` and `Application` in `build.yml`, `test.yml`, `example.yml`, `tutorial.yml` and `application.yml`.
 \li The runners run without a GPU. `.GPU` sets `RUN_UNIT_TESTS` and `RUN_SIMULATIONS` to `false`. A GPU child pipeline builds
-    the libraries, the unit tests, the examples and the applications for `sm_75`. It skips their runs and the tests.
+    the libraries, the unit tests, the examples and the applications for the architecture `GPU_ARCH` of its job. It skips their
+    runs and the tests.
+\li `Intel SYCL` and `Intel OpenMP Target` extend `.CPUDevice`. Their kernels run on the OpenCL CPU device of oneAPI.
+    `.CPUDevice` sets both variables to `true` in their `Release` child pipelines.
 \li A GPU child pipeline skips the API test, the Fortran example and the tutorials. Their PDE terms run on the host only. A GPU
     build rejects such terms. The CPU child pipelines build them with the same compilers.
 \li A GPU child pipeline runs everything that a CPU child pipeline runs once `.GPU` sets both variables to `true`.
@@ -64,9 +67,21 @@ restarts the pipeline on the pipelines page.
 A script `tests/test_<property>.py` builds and runs every scenario of its list `SCENARIOS` and checks the property on their
 output. An entry of `SCENARIOS` stores the path of a script relative to the repository, its options and every value that is
 specific to the scenario. The argument `--scenario examples/euler/airfoil.py` restricts a run to the entries of this script.
-A new case is a new entry of `SCENARIOS`. Every pair of a test script and a scenario script is one job of the matrix of the
-job `Tests` in `.gitlab/test.yml`. A new test script or a new scenario script of a test gets an entry there. The job passes
-the build mode of its child pipeline to the script and `PARALLEL_LAUNCH` to its runs.
+A new case is a new entry of `SCENARIOS`. Every test script has one job in `.gitlab/test.yml`. The matrix of the job lists the
+scenario scripts of the test. Every scenario script runs in a job of its own. A new scenario script of a test gets an entry in
+this matrix. A new test script adds a job that extends `.Test`:
+
+```
+My Property:
+  extends: .Test
+  variables:
+    test: test_my_property
+  parallel:
+    matrix:
+      - scenario: [examples/euler/airfoil.py, examples/euler/gaussian_bell.py]
+```
+
+The job passes the build mode of its child pipeline to the script and `PARALLEL_LAUNCH` to its runs.
 
 Every scenario of an example has a script of its own. Every example folder has one job in `.gitlab/example.yml`. A new
 scenario gets an entry in the matrix of the job of its folder. The job builds every script in double and in single precision.

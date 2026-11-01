@@ -2,6 +2,31 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/navier-stokes/NavierStokes.h"
 
+namespace examples::navierstokes {
+  INLINE_METHOD double getTwoBubblesPerturbation(const tarch::la::Vector<DIMENSIONS, double>& x);
+} // namespace examples::navierstokes
+
+INLINE_METHOD double
+examples::navierstokes::getTwoBubblesPerturbation(const tarch::la::Vector<DIMENSIONS, double>& x) {
+  constexpr double                      DecayLength               = 50.;
+  constexpr double                      HotBubbleRadius           = 150;
+  constexpr double                      ColdBubbleRadius          = 0;
+  constexpr double                      HotTemperatureDifference  = 0.5;
+  constexpr double                      ColdTemperatureDifference = -0.15;
+  tarch::la::Vector<DIMENSIONS, double> hotBubbleCentre(-200);
+  tarch::la::Vector<DIMENSIONS, double> coldBubbleCentre(140);
+  hotBubbleCentre[0]            = 0;
+  coldBubbleCentre[0]           = 60;
+  const auto hotBubbleDistance  = tarch::la::norm2(x - hotBubbleCentre) - HotBubbleRadius;
+  auto       perturbation       = hotBubbleDistance <= 0
+    ? HotTemperatureDifference
+    : HotTemperatureDifference * std::exp(-(hotBubbleDistance * hotBubbleDistance) / (DecayLength * DecayLength));
+  const auto coldBubbleDistance = tarch::la::norm2(x - coldBubbleCentre) - ColdBubbleRadius;
+  perturbation +=
+    ColdTemperatureDifference * std::exp(-(coldBubbleDistance * coldBubbleDistance) / (DecayLength * DecayLength));
+  return perturbation;
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::navierstokes::TwoBubbles::maxEigenvalue(
   const ComputePrecision* const NOALIAS                         Q,

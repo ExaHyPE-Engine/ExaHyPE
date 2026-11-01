@@ -1,6 +1,33 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/euler/Euler.h"
+#include "tarch/la/ScalarOperations.h"
+
+namespace examples::euler {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD void writePointExplosion(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       gamma,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::euler
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD void
+examples::euler::writePointExplosion(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 gamma,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr double                            Radius = 0.15;
+  const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
+  Q[Shortcuts::rho] = 1.0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::rhoU + d] = 0.0;
+  }
+  const double pressure = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 5.0 : 1.0;
+  Q[Shortcuts::rhoE]    = pressure / (gamma - 1.0);
+}
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::euler::PointExplosion::maxEigenvalue(

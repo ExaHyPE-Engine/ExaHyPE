@@ -180,7 +180,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::insertTracers(const peano4::Cell
       for (const auto& position : reader.getParticlesWithinVoxel(domainCentre, DomainSize, false)) {
         std::array<double, {{tracer.NUMBER_OF_DATA}}> data{};
 {%- if file.SAVE_INITIAL_POSITION %}
-        constexpr std::array<int, DIMENSIONS> InitialPositionIndex{ {{file.INITIAL_POSITION_INDEX | join(", ")}} };
+        static constexpr std::array<int, DIMENSIONS> InitialPositionIndex{ {{file.INITIAL_POSITION_INDEX | join(", ")}} };
         for (int axis = 0; axis < DIMENSIONS; axis++) {
           data[static_cast<std::size_t>(InitialPositionIndex[static_cast<std::size_t>(axis)])] = position(axis);
         }

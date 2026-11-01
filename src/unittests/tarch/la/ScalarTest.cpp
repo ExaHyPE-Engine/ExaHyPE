@@ -238,7 +238,7 @@ UNIT_TEST(
   "Every order of three arguments returns the bits of the sum and the product in the order of ascending magnitude"
 ) {
   GIVEN("Summands whose sum and factors whose product depend on the order and three values of distinct magnitude") {
-    constexpr int Permutations[6][3] = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
+    static constexpr int Permutations[6][3] = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
     // The two ones add up before the large summand. The opposite summands of equal magnitude add
     // first and cancel exactly.
     const double summands[3]           = {1.0e16, 1.0, 1.0};
@@ -303,9 +303,9 @@ UNIT_TEST(
 
 UNIT_TEST("The sum of three squares adds the two small squares first and keeps its bits for every order and sign") {
   GIVEN("The arguments 1e8, 1 and -1 and the arguments 0.3, -0.7 and 0.7 with two largest of equal magnitude") {
-    constexpr int Permutations[6][3] = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
-    constexpr int SignPatterns       = 8;
-    const double  argumentSets[2][3] = {{1.0e8, 1.0, -1.0}, {0.3, -0.7, 0.7}};
+    static constexpr int Permutations[6][3] = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
+    constexpr int        SignPatterns       = 8;
+    const double         argumentSets[2][3] = {{1.0e8, 1.0, -1.0}, {0.3, -0.7, 0.7}};
 
     THEN("Every order and every sign pattern returns the sum of the squares in the given order bitwise") {
       for (const auto& arguments : argumentSets) {
@@ -375,9 +375,9 @@ UNIT_TEST("The sum of squares in order of magnitude is more exact than the sum o
 
 UNIT_TEST("Every order of three arguments returns the bits of the sum and of the mean in the order of value") {
   GIVEN("The values 0.1, 0.7 and 0.3, whose sum depends on the order, and a value just above 1.5") {
-    constexpr int Permutations[6][3] = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
-    const double  values[3]          = {0.1, 0.7, 0.3};
-    const double  equalValue         = 1.5 + 2.0 * std::numeric_limits<double>::epsilon();
+    static constexpr int Permutations[6][3] = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
+    const double         values[3]          = {0.1, 0.7, 0.3};
+    const double         equalValue         = 1.5 + 2.0 * std::numeric_limits<double>::epsilon();
 
     THEN("Every order returns the sum in the order of value and negated values return the negated sum") {
       const double expectedSum = (values[0] + values[1]) + values[2];

@@ -69,7 +69,7 @@ namespace {
   }
 
   void validateFieldNames(const std::vector<tarch::plotter::Mesh::Field>& fields) {
-    constexpr std::string_view IllegalCharacters = " \t\n\r\"'<>&/\\";
+    static constexpr std::string_view IllegalCharacters = " \t\n\r\"'<>&/\\";
     for (std::size_t field = 0; field < fields.size(); field++) {
       const std::string& name = fields[field].name;
       if (name.empty()) {

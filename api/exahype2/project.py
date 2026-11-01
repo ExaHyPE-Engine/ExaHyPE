@@ -80,7 +80,6 @@ class Project:
         self._constants = {}
         self._makefile_configured = False
         self.is_built = False
-        self.build_was_successful = False
 
     @staticmethod
     def _parse_arguments():
@@ -596,10 +595,8 @@ class Project:
             )
             log.info("Compile completed successfully")
             self.is_built = True
-            self.build_was_successful = True
         except Exception as error:
             self.is_built = False
-            self.build_was_successful = False
             log.error("%s", error)
             log.error("The build of the project fails.")
             raise
@@ -616,51 +613,3 @@ class Project:
         self._generate()
         if not arguments.generate_only:
             self._build()
-
-    def run(
-        self, executable, args=(), prefix=None, pipefile=None, rebuild_if_required=True
-    ):
-        """Runs the executable in the project directory with live terminal output.
-
-        ``prefix`` supplies launcher arguments, such as an MPI command.
-        Returns True on a zero exit code.
-        """
-        if rebuild_if_required and not (self.is_built and self.build_was_successful):
-            self.generate_and_build()
-        if rebuild_if_required and not (self.is_built and self.build_was_successful):
-            log.error("The project cannot run without a successful build.")
-            return False
-
-        invocation = list(prefix) if prefix else []
-        invocation += ["./" + executable] + list(args)
-        log.info("Run %s", " ".join(invocation))
-
-        sink = None
-        try:
-            if pipefile:
-                sink = open(pipefile, "w")
-            with subprocess.Popen(
-                invocation,
-                cwd=self.directory,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-            ) as process:
-                for line in process.stdout:
-                    sys.stdout.write(line)
-                    if sink:
-                        sink.write(line)
-            if process.returncode != 0:
-                log.error("The run ends with the exit code %s.", process.returncode)
-                return False
-            log.info(
-                "Run completed without error code, but check for warnings and numerical assertions/errors"
-            )
-            return True
-        except Exception as error:
-            log.error("The run fails: %s", error)
-            log.error("The run uses the command line %s.", invocation)
-            return False
-        finally:
-            if sink:
-                sink.close()

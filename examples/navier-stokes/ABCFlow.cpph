@@ -2,6 +2,43 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/navier-stokes/NavierStokes.h"
 
+namespace examples::navierstokes {
+  template <class Solver, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeABCFlow(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t,
+    const typename Solver::RuntimeParameters&    parameters,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::navierstokes
+
+/**
+ * Writes the Arnold-Beltrami-Childress flow at the time t into Q (Fehn, Wall and Kronbichler,
+ * https://doi.org/10.1016/j.jcp.2016.05.009). The viscosity damps the flow.
+ */
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::writeABCFlow(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const typename Solver::RuntimeParameters&    parameters,
+  Precision* const NOALIAS                     Q
+) {
+  using Shortcuts = typename Solver::Shortcuts;
+  static_assert(DIMENSIONS == 3, "The ABC flow runs in 3D only.");
+  const auto meanPressure = 100 / parameters.gamma;
+  const auto decayFactor  = std::exp(-1 * parameters.referenceViscosity * t);
+  const auto pressure     = meanPressure
+    - (std::sin(x[1]) * std::cos(x[0]) + std::sin(x[0]) * std::cos(x[2]) + std::sin(x[2]) * std::cos(x[1]))
+      * decayFactor * decayFactor;
+  const double rho    = 1;
+  Q[Shortcuts::rho]   = rho;
+  Q[Shortcuts::j + 0] = (std::sin(x[2]) + std::cos(x[1])) * decayFactor;
+  Q[Shortcuts::j + 1] = (std::sin(x[0]) + std::cos(x[2])) * decayFactor;
+  Q[Shortcuts::j + 2] = (std::sin(x[1]) + std::cos(x[0])) * decayFactor;
+  Q[Shortcuts::E]     = examples::navierstokes::getEnergy<Solver>(pressure, rho, &Q[Shortcuts::j], 0.0, parameters);
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::navierstokes::ABCFlow::maxEigenvalue(
   const ComputePrecision* const NOALIAS                         Q,

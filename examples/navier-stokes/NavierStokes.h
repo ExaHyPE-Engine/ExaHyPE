@@ -115,26 +115,6 @@ namespace examples::navierstokes {
     double                                    pressure,
     const typename Solver::RuntimeParameters& parameters
   );
-
-  INLINE_METHOD double getCosineBubblePerturbation(const tarch::la::Vector<DIMENSIONS, double>& x);
-
-  INLINE_METHOD double getTwoBubblesPerturbation(const tarch::la::Vector<DIMENSIONS, double>& x);
-
-  template <class Solver, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeABCFlow(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    const typename Solver::RuntimeParameters&    parameters,
-    Precision* NOALIAS                           Q
-  );
-
-  template <class Solver, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeTaylorGreenVortex(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    const typename Solver::RuntimeParameters&    parameters,
-    Precision* NOALIAS                           Q
-  );
 } // namespace examples::navierstokes
 
 #include "examples/navier-stokes/NavierStokes.cpph"

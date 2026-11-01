@@ -358,9 +358,9 @@ namespace {
    * Returns the path of the file of location below its unittests directory without the extension.
    */
   std::string getTestFile(const std::source_location& location) {
-    constexpr std::string_view Directory = "/unittests/";
-    std::string_view           path      = location.file_name();
-    const std::size_t          position  = path.rfind(Directory);
+    static constexpr std::string_view Directory = "/unittests/";
+    std::string_view                  path      = location.file_name();
+    const std::size_t                 position  = path.rfind(Directory);
     if (position != std::string_view::npos) {
       path.remove_prefix(position + Directory.size());
     }

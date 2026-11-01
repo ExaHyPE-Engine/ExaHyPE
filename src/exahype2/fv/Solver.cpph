@@ -66,6 +66,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(
   _solution.reserve(cellConnectivity.getNumberOfSlots());
   _halo.reserve(cellConnectivity.getNumberOfFaces());
   _haloExchange.rebuild(cellConnectivity);
+  _fluxCorrectionExchange.rebuild(cellConnectivity);
   measureMeshWidths(cellConnectivity);
 }
 
@@ -144,6 +145,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeSt
     maxEigenvalue,
     updatePatches(cellConnectivity, peano4::Adjacency::Remote, timeStepSize, parameters)
   );
+  correctFluxesAtLevelJumps(cellConnectivity, timeStepSize, parameters);
 
   projectOntoFaces(cellConnectivity);
   exahype2::restrictFineFaces(
@@ -195,6 +197,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
 
   _halo.reserve(cellConnectivity.getNumberOfFaces());
   _haloExchange.rebuild(cellConnectivity);
+  _fluxCorrectionExchange.rebuild(cellConnectivity);
   projectOntoFaces(cellConnectivity);
   exahype2::restrictFineFaces(
     cellConnectivity,
@@ -254,6 +257,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::release() {
   _solution.release();
   _halo.release();
   _haloExchange.release();
+  _fluxCorrectionExchange.release();
   _migration.release();
   _votes.release();
   _errorMeasurement.release();
@@ -314,8 +318,8 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD tarch::AllocatedBytes
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getAllocatedBytes() const {
   return _solution.getAllocatedBytes() + _halo.getAllocatedBytes() + _haloExchange.getAllocatedBytes()
-    + _migration.getAllocatedBytes() + _votes.getAllocatedBytes() + _errorMeasurement.getAllocatedBytes()
-    + _solutionOnHost.getAllocatedBytes();
+    + _fluxCorrectionExchange.getAllocatedBytes() + _migration.getAllocatedBytes() + _votes.getAllocatedBytes()
+    + _errorMeasurement.getAllocatedBytes() + _solutionOnHost.getAllocatedBytes();
 }
 
 /**
@@ -400,6 +404,45 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::updatePatches
     tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
   );
   return maxEigenvalue;
+}
+
+/**
+ * Replaces the flux of every coarse cell through a level jump by the flux of the finer cells. The
+ * rank of the fine cells writes the flux difference into the fine-side half of the coarse face and
+ * sends it to the rank of the coarse cell. The coarse cell then adds it to its patch. Every rank
+ * calls this after the update of every patch and before the projection of the patches onto their
+ * faces.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
+INLINE_METHOD void
+exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::correctFluxesAtLevelJumps(
+  const peano4::CellConnectivity& cellConnectivity,
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
+) {
+  const exahype2::fv::RestrictFluxHalves<Derived, StoragePrecision, ComputePrecision> restrictFluxes{
+    cellConnectivity.onDevice(),
+    _halo.getView(),
+    _timeStepping.getTimeStamp(),
+    timeStepSize,
+    parameters
+  };
+  exahype2::restrictFineFaces(cellConnectivity, peano4::Adjacency::Remote, restrictFluxes);
+  _fluxCorrectionExchange.post();
+  exahype2::restrictFineFaces(cellConnectivity, peano4::Adjacency::Local, restrictFluxes);
+  _fluxCorrectionExchange.wait();
+  const auto cells = cellConnectivity.onDevice().getCells();
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(cells.size),
+    exahype2::fv::CorrectFluxesAtCoarseFaces<Derived, StoragePrecision, ComputePrecision>{
+      cellConnectivity.onDevice(),
+      cells,
+      _solution.getView(),
+      std::as_const(_halo).getView(),
+      timeStepSize
+    }
+  );
 }
 
 /**

@@ -75,33 +75,3 @@ examples::advection::getBump(
   return result;
 }
 TARGET_DECLARE_END
-
-template <class Shortcuts, typename Precision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-examples::advection::writePeriodicBump(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const double                                 t,
-  const double                                 radius,
-  const bool                                   smooth,
-  Precision* const NOALIAS                     Q
-) {
-  ASSERTION(t >= 0.0, t);
-  tarch::la::Vector<DIMENSIONS, double> offsetFromCentre;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    const double travelled = x[d] - t;
-    offsetFromCentre[d]    = travelled - std::floor(travelled) - 0.5;
-  }
-  Q[Shortcuts::q] = examples::advection::getBump(offsetFromCentre, radius, smooth);
-}
-
-template <class Shortcuts, typename Precision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-examples::advection::writeLinear(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const double                                 t,
-  Precision* const NOALIAS                     Q
-) {
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::q + d] = x[d] - t;
-  }
-}

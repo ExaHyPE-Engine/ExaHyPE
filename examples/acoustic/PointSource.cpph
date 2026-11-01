@@ -2,6 +2,35 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/acoustic/Acoustic.h"
 
+namespace examples::acoustic {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD void writeRest(Precision* NOALIAS Q);
+
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeSourceForce(double t, Precision* NOALIAS forceVector);
+} // namespace examples::acoustic
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD void
+examples::acoustic::writeRest(Precision* const NOALIAS Q) {
+  Q[Shortcuts::p] = 0.0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::u + d] = 0.0;
+  }
+}
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::acoustic::writeSourceForce(const double t, Precision* const NOALIAS forceVector) {
+  constexpr double SourcePeakTime   = 0.1;
+  constexpr double SourcePulseWidth = 0.03;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    forceVector[Shortcuts::u + d] = 0.0;
+  }
+  forceVector[Shortcuts::p] =
+    std::exp(-(t - SourcePeakTime) * (t - SourcePeakTime) / (2.0 * SourcePulseWidth * SourcePulseWidth));
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::acoustic::PointSource::maxEigenvalue(
   [[maybe_unused]] const ComputePrecision* const NOALIAS        Q,

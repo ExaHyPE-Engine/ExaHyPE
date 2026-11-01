@@ -23,7 +23,7 @@
  */
 INLINE_METHOD constexpr double
 exahype2::dg::ader::getCFLFactor(const int order) {
-  constexpr double Factors[] = {
+  /*static*/ constexpr double Factors[] = {
     1.0,
     0.33,
     0.17,

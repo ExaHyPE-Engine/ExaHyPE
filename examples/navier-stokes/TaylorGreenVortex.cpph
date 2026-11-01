@@ -2,6 +2,43 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/navier-stokes/NavierStokes.h"
 
+namespace examples::navierstokes {
+  template <class Solver, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeTaylorGreenVortex(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t,
+    const typename Solver::RuntimeParameters&    parameters,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::navierstokes
+
+/**
+ * Writes the Taylor-Green vortex at the time t into Q (Taylor and Green,
+ * https://doi.org/10.1098/rspa.1937.0036). The viscosity damps the vortex.
+ */
+template <class Solver, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::navierstokes::writeTaylorGreenVortex(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const typename Solver::RuntimeParameters&    parameters,
+  Precision* const NOALIAS                     Q
+) {
+  using Shortcuts          = typename Solver::Shortcuts;
+  const double decayFactor = std::exp(-2 * parameters.referenceViscosity * t);
+  const double rho         = 1;
+  Q[Shortcuts::rho]        = rho;
+  Q[Shortcuts::j + 0]      = std::sin(x[0]) * std::cos(x[1]) * decayFactor;
+  Q[Shortcuts::j + 1]      = -1 * std::cos(x[0]) * std::sin(x[1]) * decayFactor;
+  for (int d = 2; d < DIMENSIONS; d++) {
+    Q[Shortcuts::j + d] = 0.0;
+  }
+  const double meanPressure = 100. / parameters.gamma;
+  const double pressure =
+    meanPressure + ((rho * decayFactor * decayFactor) / 4) * (std::cos(2 * x[0]) + std::cos(2 * x[1]));
+  Q[Shortcuts::E] = examples::navierstokes::getEnergy<Solver>(pressure, rho, &Q[Shortcuts::j], 0.0, parameters);
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::navierstokes::TaylorGreenVortex::maxEigenvalue(
   const ComputePrecision* const NOALIAS                         Q,

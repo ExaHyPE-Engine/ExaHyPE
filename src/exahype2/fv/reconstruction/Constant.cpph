@@ -559,4 +559,110 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
     ASSERTION(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }
 }
+
+/**
+ * Writes the flux through the volume faceVolume of face that accumulateFluxDivergence() subtracts
+ * from the volume below the face into lowerFlux and the flux it adds to the volume above into
+ * upperFlux. faceCentre is the centre of the face of the volume.
+ */
+template <
+  typename SolverType,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateDiffusiveSource,
+  bool EvaluateCustomRiemann,
+  bool EvaluateMaxEigenvalue,
+  typename StoragePrecision,
+  typename ComputePrecision
+>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::reconstruction::Constant::computeFluxesOfFaceVolume(
+  const StoragePrecision* NOALIAS const         face,
+  const int                                     faceVolume,
+  const int                                     normal,
+  const tarch::la::Vector<DIMENSIONS, double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  ComputePrecision* NOALIAS const               lowerFlux,
+  ComputePrecision* NOALIAS const               upperFlux,
+  const typename SolverType::RuntimeParameters& parameters
+) {
+  constexpr int NumberOfData    = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr int VolumesPerLayer = peano4::power(NumberOfVolumesPerAxis, DIMENSIONS - 1);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(faceVolume >= 0 and faceVolume < VolumesPerLayer, faceVolume, normal);
+
+  ComputePrecision lowerState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  ComputePrecision upperState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  for (int value = 0; value < NumberOfData; value++) {
+    lowerState[value] = static_cast<ComputePrecision>(face[faceVolume * NumberOfData + value]);
+    upperState[value] = static_cast<ComputePrecision>(face[(VolumesPerLayer + faceVolume) * NumberOfData + value]);
+  }
+
+  if constexpr (EvaluateCustomRiemann) {
+    const tarch::la::Vector<DIMENSIONS, int> volume(0);
+    exahype2::fv::solveRiemannProblemOnVolumeFace<SolverType, NumberOfVolumesPerAxis>(
+      lowerState,
+      upperState,
+      faceCentre,
+      volumeSize,
+      timeStamp,
+      timeStepSize,
+      normal,
+      volume,
+      0,
+      0,
+      lowerFlux,
+      upperFlux,
+      parameters
+    );
+  } else {
+    auto lowerVolumeCentre(faceCentre);
+    auto upperVolumeCentre(faceCentre);
+    lowerVolumeCentre(normal) -= 0.5 * volumeSize(normal);
+    upperVolumeCentre(normal) += 0.5 * volumeSize(normal);
+    const ComputePrecision lowerMaxEigenvalue =
+      SolverType::maxEigenvalue(lowerState, lowerVolumeCentre, volumeSize, timeStamp, timeStepSize, normal, parameters);
+    const ComputePrecision upperMaxEigenvalue =
+      SolverType::maxEigenvalue(upperState, upperVolumeCentre, volumeSize, timeStamp, timeStepSize, normal, parameters);
+    const ComputePrecision maxEigenvalue =
+      upperMaxEigenvalue > lowerMaxEigenvalue ? upperMaxEigenvalue : lowerMaxEigenvalue;
+    ComputePrecision lowerFluxOfState[NumberOfUnknowns]{};
+    ComputePrecision upperFluxOfState[NumberOfUnknowns]{};
+    if constexpr (EvaluateFlux) {
+      SolverType::flux(
+        lowerState,
+        lowerVolumeCentre,
+        volumeSize,
+        timeStamp,
+        timeStepSize,
+        normal,
+        lowerFluxOfState,
+        parameters
+      );
+      SolverType::flux(
+        upperState,
+        upperVolumeCentre,
+        volumeSize,
+        timeStamp,
+        timeStepSize,
+        normal,
+        upperFluxOfState,
+        parameters
+      );
+    }
+    const ComputePrecision diffusionFactor = -static_cast<ComputePrecision>(0.5) * maxEigenvalue;
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const ComputePrecision averageFlux = static_cast<ComputePrecision>(0.5) * lowerFluxOfState[unknown]
+        + static_cast<ComputePrecision>(0.5) * upperFluxOfState[unknown];
+      lowerFlux[unknown] = std::fma(diffusionFactor, upperState[unknown] - lowerState[unknown], averageFlux);
+      upperFlux[unknown] = lowerFlux[unknown];
+    }
+  }
+}
 TARGET_DECLARE_END

@@ -21,7 +21,9 @@ project.add_runtime_parameter("label", "string", "terms")
 nothing = "\n"
 keep = "return ::exahype2::RefinementCommand::Keep;"
 one = "return 1.0;"
-zero = "return 0.0;"
+zero = """// The generator copies the {# and {% of this comment and the braces {} unchanged.
+static constexpr std::array<{{COMPUTE_PRECISION}}, 1> Zero{{0.0}};
+return Zero[0];"""
 
 fv_solver = exahype2.fv.Solver(
     name="AllPDETermsFV",

@@ -301,9 +301,12 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::subtractTimeAveragedVo
       if constexpr (AccumulatesSource) {
         update -= nodeSource[unknown];
       }
-      cellState[cellNode * CellLayout::NumberOfData + unknown] -= static_cast<StoragePrecision>(
-        static_cast<UpdatePrecision>(timeStepSize) * static_cast<UpdatePrecision>(update)
-      );
+      const int stateEntry  = cellNode * CellLayout::NumberOfData + unknown;
+      cellState[stateEntry] = static_cast<StoragePrecision>(std::fma(
+        -static_cast<UpdatePrecision>(timeStepSize),
+        static_cast<UpdatePrecision>(update),
+        static_cast<UpdatePrecision>(cellState[stateEntry])
+      ));
     }
   }
 }

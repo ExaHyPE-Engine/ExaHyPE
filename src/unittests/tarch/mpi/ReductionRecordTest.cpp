@@ -65,7 +65,7 @@ UNIT_TEST("Every slot returns the sum, the minimum or the maximum of the values 
 
 UNIT_TEST("A double that every rank adds keeps its bits through the reduction, signed zeros and infinities included") {
   GIVEN("Eight doubles from minus infinity over both zeros and the smallest subnormal number to infinity") {
-    constexpr std::array<double, 8> Values{
+    static constexpr std::array<double, 8> Values{
       -std::numeric_limits<double>::infinity(),
       -3.5,
       -0.0,

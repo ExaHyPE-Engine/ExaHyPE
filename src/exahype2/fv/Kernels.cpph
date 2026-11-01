@@ -83,6 +83,75 @@ exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>::o
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::RestrictFluxHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const peano4::LevelJump& levelJump
+) const {
+  const int                             normal    = cellConnectivity.getFaceNormal(levelJump.coarseFace);
+  const int                             fineLevel = cellConnectivity.getFaceLevel(levelJump.fineFaces[0]);
+  const StoragePrecision*               fine[peano4::SubfacesPerFace];
+  bool                                  fineFaceIsHanging[peano4::SubfacesPerFace];
+  tarch::la::Vector<DIMENSIONS, double> fineFaceCentres[peano4::SubfacesPerFace];
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    const int fineFace = levelJump.fineFaces[subface];
+    ASSERTION(cellConnectivity.getFaceLevel(fineFace) == fineLevel, fineFace, fineLevel);
+    fine[subface]              = halo.getChunk(fineFace);
+    fineFaceIsHanging[subface] = cellConnectivity.getFaceKind(fineFace) == peano4::FaceKind::Hanging;
+    fineFaceCentres[subface]   = cellConnectivity.getFaceCentre(fineFace);
+  }
+  const int                             coarseLevel = cellConnectivity.getFaceLevel(levelJump.coarseFace);
+  tarch::la::Vector<DIMENSIONS, double> fineCellSize;
+  tarch::la::Vector<DIMENSIONS, double> coarseCellSize;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    fineCellSize(axis)   = cellConnectivity.getWidthOfLevel(fineLevel, axis);
+    coarseCellSize(axis) = cellConnectivity.getWidthOfLevel(coarseLevel, axis);
+  }
+  Kernel::restrictFluxes(
+    fine,
+    fineFaceIsHanging,
+    fineFaceCentres,
+    fineCellSize,
+    halo.getChunk(levelJump.coarseFace),
+    cellConnectivity.getFaceKind(levelJump.coarseFace) == peano4::FaceKind::Coarse,
+    cellConnectivity.getFaceCentre(levelJump.coarseFace),
+    coarseCellSize,
+    levelJump.coarseSide,
+    normal,
+    timeStamp,
+    timeStepSize,
+    parameters
+  );
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::CorrectFluxesAtCoarseFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int entry
+) const {
+  const int               slot = cells[entry];
+  const StoragePrecision* corrections[peano4::FacesPerCell];
+  bool                    corrected = false;
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    const int face          = cellConnectivity.getCellFace(slot, faceNumber);
+    corrections[faceNumber] = nullptr;
+    if (cellConnectivity.getFaceKind(face) == peano4::FaceKind::Coarse) {
+      // A cell writes the upper half of its lower faces. The finer cells write the other half.
+      const int fineSide      = faceNumber < DIMENSIONS ? 0 : 1;
+      corrections[faceNumber] = halo.getChunk(face) + static_cast<std::ptrdiff_t>(fineSide) * Kernel::ValuesPerHalfFace;
+      corrected               = true;
+    }
+  }
+  if (corrected) {
+    Kernel::correctFluxesAtCoarseFaces(
+      solution.getChunk(slot),
+      corrections,
+      cellConnectivity.getCellWidth(slot),
+      timeStepSize
+    );
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::ProjectPatchesOntoFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
   const int                            entry,
   const tarch::accelerator::TeamHandle team

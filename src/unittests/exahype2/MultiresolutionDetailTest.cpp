@@ -117,7 +117,7 @@ UNIT_TEST("The volume centres of the unit interval lie at odd multiples of half 
     constexpr std::size_t NumberOfVolumesPerAxis = NumberOfDofsPerAxis;
 
     WHEN("The function getVolumeCentresInUnitInterval() returns the centres of the volumes") {
-      constexpr auto Centres = exahype2::getVolumeCentresInUnitInterval<NumberOfVolumesPerAxis>();
+      static constexpr auto Centres = exahype2::getVolumeCentresInUnitInterval<NumberOfVolumesPerAxis>();
 
       THEN("Every centre lies at an odd multiple of half the volume width") {
         for (std::size_t volume = 0; volume < NumberOfVolumesPerAxis; volume++) {
@@ -193,8 +193,8 @@ UNIT_TEST("A jump between two halves of the patch has a detail far above the one
 
 UNIT_TEST("Every reflection and axis swap of a patch yields the bitwise-identical detail for both node layouts") {
   GIVEN("A patch without symmetry and two node layouts, the volume centres and the Lobatto nodes") {
-    const std::vector<double> patch = getAsymmetricPatch();
-    constexpr std::array      NodeLayouts{VolumeCentres, LobattoNodes};
+    const std::vector<double>   patch = getAsymmetricPatch();
+    static constexpr std::array NodeLayouts{VolumeCentres, LobattoNodes};
 
     WHEN("The test computes the details of the patch and of its reflections and axis swaps in both node layouts") {
       std::vector<double>              patchDetails;

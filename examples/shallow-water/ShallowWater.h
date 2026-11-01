@@ -62,23 +62,6 @@ namespace examples::shallowwater {
   INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand getRefinementCommandOfStep(
     const tarch::la::Vector<DIMENSIONS, double>& x
   );
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeRadialStep(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    Precision* NOALIAS                           Q
-  );
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void
-  writeRestingLake(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* NOALIAS Q);
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeSteadyVortex(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       gravity,
-    Precision* NOALIAS                           Q
-  );
 } // namespace examples::shallowwater
 
 #include "examples/shallow-water/ShallowWater.cpph"

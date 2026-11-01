@@ -158,7 +158,6 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::combineEstimates(
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       const int stateEntry = cellNode * NumberOfData + unknown;
       auto      value      = static_cast<AccumulatePrecision>(cellState[stateEntry]);
-      // std::fma gives every inlined copy of this function the same rounding.
       for (int stage = 0; stage < Tableau::Stages; stage++) {
         if (weights[stage] != 0.0) {
           value = std::fma(
@@ -301,8 +300,12 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
             );
             SIMD()
             for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-              lineUpdate[normalIndex * UnknownStride + unknown] -=
-                static_cast<ComputePrecision>(timeStepSize) * nonconservativeProduct[unknown];
+              const int lineEntry   = normalIndex * UnknownStride + unknown;
+              lineUpdate[lineEntry] = std::fma(
+                -static_cast<ComputePrecision>(timeStepSize),
+                nonconservativeProduct[unknown],
+                lineUpdate[lineEntry]
+              );
             }
           }
         }
@@ -348,8 +351,9 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
       );
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        estimate[cellNode * NumberOfUnknowns + unknown] +=
-          static_cast<ComputePrecision>(timeStepSize) * sourceValues[unknown];
+        const int estimateEntry = cellNode * NumberOfUnknowns + unknown;
+        estimate[estimateEntry] =
+          std::fma(static_cast<ComputePrecision>(timeStepSize), sourceValues[unknown], estimate[estimateEntry]);
       }
     });
   }

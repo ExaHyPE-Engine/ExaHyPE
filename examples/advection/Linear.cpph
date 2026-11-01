@@ -2,6 +2,27 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/advection/Advection.h"
 
+namespace examples::advection {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeLinear(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::advection
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::advection::writeLinear(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  Precision* const NOALIAS                     Q
+) {
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::q + d] = x[d] - t;
+  }
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::advection::Linear::maxEigenvalue(
   [[maybe_unused]] const ComputePrecision* const NOALIAS        Q,

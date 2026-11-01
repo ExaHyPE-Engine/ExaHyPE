@@ -2,6 +2,60 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/euler/Euler.h"
 
+namespace examples::euler {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeIsentropicVortex(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t,
+    double                                       gamma,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::euler
+
+/**
+ * Writes the isentropic vortex at the time t into Q. The vortex starts at the origin, rotates in
+ * the plane of the axes 0 and 1 and moves with unit velocity along the diagonal of the periodic
+ * domain [-5, 5] (Ioratti, Dumbser and Loubère, https://doi.org/10.1007/s10915-020-01209-w).
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::writeIsentropicVortex(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const double                                 gamma,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr double                      Epsilon     = 5.0;
+  constexpr double                      Pi          = std::numbers::pi;
+  constexpr double                      FarDensity  = 1.0;
+  constexpr double                      FarPressure = 1.0;
+  constexpr double                      FarVelocity = 1.0;
+  const double                          cappedTime  = std::fmod(t, 10.);
+  tarch::la::Vector<DIMENSIONS, double> position(x);
+  for (int d = 0; d < 2; d++) {
+    position[d] = (x[d] - FarVelocity * cappedTime) < -5.0 ? (x[d] - FarVelocity * cappedTime) + 10.
+                                                           : (x[d] - FarVelocity * cappedTime);
+  }
+  const tarch::la::Vector<2, double> planarPosition = {position[0], position[1]};
+  const double                       radius         = tarch::la::norm2(planarPosition);
+  const double velocityDisturbanceX = 0.5 * Epsilon / Pi * std::exp(0.5 * (1. - radius * radius)) * (-position[1]);
+  const double velocityDisturbanceY = 0.5 * Epsilon / Pi * std::exp(0.5 * (1. - radius * radius)) * (position[0]);
+  const double temperatureDisturbance =
+    -(gamma - 1.) * Epsilon * Epsilon / 8. / gamma / Pi / Pi * std::exp(1. - radius * radius);
+  const double densityDisturbance  = std::pow(1. + temperatureDisturbance, 1. / (gamma - 1.)) - 1.;
+  const double pressureDisturbance = std::pow(1. + temperatureDisturbance, gamma / (gamma - 1.)) - 1.;
+
+  Q[Shortcuts::rho]      = FarDensity + densityDisturbance;
+  Q[Shortcuts::rhoU + 0] = Q[Shortcuts::rho] * (FarVelocity + velocityDisturbanceX);
+  Q[Shortcuts::rhoU + 1] = Q[Shortcuts::rho] * (FarVelocity + velocityDisturbanceY);
+  for (int d = 2; d < DIMENSIONS; d++) {
+    Q[Shortcuts::rhoU + d] = 0.0;
+  }
+  Q[Shortcuts::rhoE] = (FarPressure + pressureDisturbance) / (gamma - 1)
+    + 0.5 * Q[Shortcuts::rho]
+      * ((FarVelocity + velocityDisturbanceX) * (FarVelocity + velocityDisturbanceX) + (FarVelocity + velocityDisturbanceY) * (FarVelocity + velocityDisturbanceY));
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::euler::IsentropicVortex::maxEigenvalue(
   const ComputePrecision* const NOALIAS                         Q,

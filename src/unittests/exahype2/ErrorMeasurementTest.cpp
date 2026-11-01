@@ -149,8 +149,8 @@ UNIT_TEST("Redistributing contributions below one rounding unit over the ranks p
 
 UNIT_TEST("The solution error compares against the analytical solution at the degree of freedom") {
   GIVEN("A state of two unknowns and one auxiliary variable at the coordinate four along the first axis") {
-    constexpr std::array<int, 2> MeasuredUnknowns{0, 1};
-    const double                 value[] = {1.0, 2.0, 99.0};
+    static constexpr std::array<int, 2> MeasuredUnknowns{0, 1};
+    const double                        value[] = {1.0, 2.0, 99.0};
 
     tarch::la::Vector<DIMENSIONS, double> x(0.0);
     x(0) = 4.0;
@@ -180,10 +180,10 @@ UNIT_TEST("The solution error compares against the analytical solution at the de
 
 UNIT_TEST("The error accumulation weights the measured unknowns and skips every other one") {
   GIVEN("A single-precision state of three values, its exact solution and accumulated errors") {
-    constexpr std::array<int, 2> MeasuredUnknowns{0, 2};
-    const float                  value[]         = {1.0F, 100.0F, 4.0F};
-    const double                 exactSolution[] = {3.0, 0.0, 3.0};
-    double                       errors[3]       = {0.5, 0.25, 1.5};
+    static constexpr std::array<int, 2> MeasuredUnknowns{0, 2};
+    const float                         value[]         = {1.0F, 100.0F, 4.0F};
+    const double                        exactSolution[] = {3.0, 0.0, 3.0};
+    double                              errors[3]       = {0.5, 0.25, 1.5};
 
     WHEN("The errors of the unknowns zero and two accumulate with the weight one half") {
       exahype2::accumulateError(MeasuredUnknowns, value, exactSolution, 0.5, errors);

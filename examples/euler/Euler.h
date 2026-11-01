@@ -5,7 +5,6 @@
 #include "exahype2/RefinementCommand.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
-#include "tarch/la/Vector.h"
 
 namespace examples::euler {
   template <class Shortcuts, typename Precision>
@@ -34,6 +33,16 @@ namespace examples::euler {
     double                   detailTolerance
   );
 
+  template <typename Precision, typename Deviation>
+  INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand getRefinementCommandOfDeviation(
+    const Precision* NOALIAS Q,
+    int                      numberOfStates,
+    int                      numberOfValues,
+    double                   refineTolerance,
+    double                   eraseTolerance,
+    const Deviation&         deviationOfState
+  );
+
   template <class Shortcuts, typename Precision>
   INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissible(
     const Precision* NOALIAS Q,
@@ -47,29 +56,6 @@ namespace examples::euler {
     Precision* NOALIAS       observables,
     const Precision* NOALIAS Q,
     double                   gamma
-  );
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeGaussianBell(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       gamma,
-    Precision* NOALIAS                           Q
-  );
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeIsentropicVortex(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       gamma,
-    Precision* NOALIAS                           Q
-  );
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD void writePointExplosion(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       gamma,
-    Precision* NOALIAS                           Q
   );
 
   template <class Shortcuts, typename Precision>

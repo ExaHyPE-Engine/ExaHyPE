@@ -42,7 +42,7 @@ Euler:
     folder: euler
   parallel:
     matrix:
-      - script: [airfoil.py, gaussian_bell.py, isentropic_vortex.py, point_explosion.py, rayleigh_taylor.py]
+      - script: [advected_blobs_with_blast.py, airfoil.py, gaussian_bell.py, isentropic_cross.py, isentropic_vortex.py, point_explosion.py, rayleigh_taylor.py]
         dimensions: [2, 3]
         precision: [double, float]
 

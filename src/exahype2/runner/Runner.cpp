@@ -570,9 +570,9 @@ exahype2::runner::Runner::reportConfiguration() {
     domain << (dimension == 0 ? "" : " x ") << "[" << _domainOffset[dimension] << ", "
            << (_domainOffset[dimension] + _domainSize[dimension]) << "]";
   }
-  std::ostringstream periodic;
-  constexpr char     AxisNames[]         = "XYZ";
-  bool               hasPeriodicBoundary = false;
+  std::ostringstream    periodic;
+  static constexpr char AxisNames[]         = "XYZ";
+  bool                  hasPeriodicBoundary = false;
   for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
     if (_periodicBoundaries[dimension]) {
       periodic << (hasPeriodicBoundary ? ", " : "") << AxisNames[dimension];
@@ -1204,7 +1204,7 @@ exahype2::runner::Runner::reportSummary() {
   openSection(Section::Summary);
   exahype2::runner::writeGridSnapshot(_report);
 
-  constexpr std::array<const char*, 6> StepOrder = {
+  static constexpr std::array<const char*, 6> StepOrder = {
     PhaseName::GridConstruction,
     PhaseName::AllocateMemory,
     PhaseName::GridInitialisation,
@@ -1212,7 +1212,7 @@ exahype2::runner::Runner::reportSummary() {
     PhaseName::DynamicAMR,
     PhaseName::TimeStep
   };
-  const auto stepPosition = [&StepOrder](const std::string& name) {
+  const auto stepPosition = [](const std::string& name) {
     const auto* const position = std::find(StepOrder.begin(), StepOrder.end(), name);
     return std::distance(StepOrder.begin(), position);
   };

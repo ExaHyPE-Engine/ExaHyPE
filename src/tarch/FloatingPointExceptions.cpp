@@ -515,7 +515,7 @@ namespace {
     try {
       reportFloatingPointEvent(trappedEvent);
     } catch (...) {
-      constexpr char FailureMessage[] = "Fatal floating-point exception reporting failure.\n";
+      static constexpr char FailureMessage[] = "Fatal floating-point exception reporting failure.\n";
       writeSignalMessage(FailureMessage, sizeof(FailureMessage) - 1);
     }
     tarch::mpi::abort(128 + SIGFPE);
@@ -619,7 +619,7 @@ namespace {
     }
 
     if (getpid() != signalHandlerProcessId) {
-      constexpr char ForkedProcessMessage[] = "Fatal floating-point exception in a forked process.\n";
+      static constexpr char ForkedProcessMessage[] = "Fatal floating-point exception in a forked process.\n";
       writeSignalMessage(ForkedProcessMessage, sizeof(ForkedProcessMessage) - 1);
       std::_Exit(128 + SIGFPE);
     }
@@ -634,7 +634,7 @@ namespace {
       .stackReturnAddress = stackPointer == 0 ? 0 : *reinterpret_cast<const std::uintptr_t*>(stackPointer),
     };
     if (not maskExceptionTrapsInSignalContext(signalContext)) {
-      constexpr char ContextFailureMessage[] = "Fatal floating-point exception context failure.\n";
+      static constexpr char ContextFailureMessage[] = "Fatal floating-point exception context failure.\n";
       writeSignalMessage(ContextFailureMessage, sizeof(ContextFailureMessage) - 1);
       std::_Exit(128 + SIGFPE);
     }

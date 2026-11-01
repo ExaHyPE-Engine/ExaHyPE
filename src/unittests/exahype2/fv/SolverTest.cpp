@@ -7,7 +7,9 @@
 #include "exahype2/RefinementRequests.h"
 #include "exahype2/TimeStepping.h"
 #include "exahype2/fv/FiniteVolumeScheme.h"
+#include "exahype2/fv/limiter/SlopeLimiter.h"
 #include "exahype2/fv/reconstruction/Constant.h"
+#include "exahype2/fv/reconstruction/LimitedLinear.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
 #include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
@@ -142,6 +144,89 @@ namespace {
   };
 
   using LinearSolver = LinearSolverFor<exahype2::TimeStepping::Rule::Fixed>;
+
+  /**
+   * DiffusionSolverFor evolves a quadratic positive profile without flux under the adaptive rule
+   * with the solution as its wave speed. The nonlinear Rusanov diffusion of ReconstructionScheme
+   * then moves the solution across every level jump with a gradient that differs from the gradient
+   * at the opposite level jump.
+   */
+  template <typename ReconstructionScheme>
+  struct DiffusionSolverFor final : exahype2::fv::Solver<DiffusionSolverFor<ReconstructionScheme>, double, double> {
+    using Base = exahype2::fv::Solver<DiffusionSolverFor<ReconstructionScheme>, double, double>;
+
+    static constexpr int PatchSize                  = ::PatchSize;
+    static constexpr int NumberOfUnknowns           = 1;
+    static constexpr int NumberOfAuxiliaryVariables = 0;
+
+    using RuntimeParameters = ::RuntimeParameters;
+    using Reconstruction    = ReconstructionScheme;
+    using TimeIntegration   = exahype2::fv::timestepping::SingleStep;
+
+    static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Adaptive;
+
+    DiffusionSolverFor() :
+      Base(TimeStepFactor, "DiffusionSolver", {{"q", 1}}) {}
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
+      double* const                                                 Q,
+      const tarch::la::Vector<DIMENSIONS, double>&                  x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
+    ) {
+      Q[0] = 1.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        Q[0] += (axis + 2.0) * x(axis) * x(axis);
+      }
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void boundaryConditions(
+      const double* const                                           inside,
+      double* const                                                 outside,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
+    ) {
+      outside[0] = inside[0];
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand refinementCriterion(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
+    ) {
+      return exahype2::RefinementCommand::Keep;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
+      const double* const                                           Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
+    ) {
+      return Q[0];
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const int                                    normal,
+      double* const                                                 F,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
+    ) {
+      F[0] = 0.0;
+    }
+  };
 
   TARGET_DECLARE
   constexpr double PostprocessedValue     = 20.0;
@@ -346,6 +431,25 @@ namespace {
   };
 
   /**
+   * Adds the integral of the solution over one cell to the accumulator.
+   */
+  struct IntegrateSolution final {
+    peano4::CellConnectivity         cellConnectivity{};
+    LinearSolver::Patches::ConstView solution{};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, double& accumulator) const {
+      const int cell         = cellConnectivity.getCells()[entry];
+      double    volumeWeight = 1.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        volumeWeight *= cellConnectivity.getCellWidth(cell, axis) / PatchSize;
+      }
+      for (int value = 0; value < ValuesPerPatch; value++) {
+        accumulator += solution.getChunk(cell)[value] * volumeWeight;
+      }
+    }
+  };
+
+  /**
    * Adds one to the accumulator for every value of one cell that differs from PostprocessedValue.
    */
   struct CountValuesWithoutPostprocessing final {
@@ -383,6 +487,65 @@ namespace {
   }
 
   /**
+   * Returns the integral of the solution over the domain on every rank.
+   */
+  template <typename SolverType>
+  double getIntegralOfSolution(const SolverType& solver, const peano4::CellConnectivity& cellConnectivity) {
+    double localIntegral = 0.0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
+      IntegrateSolution{cellConnectivity.onDevice(), solver.getSolution().getView()},
+      tarch::accelerator::Sum<double>{localIntegral}
+    );
+    double integral = 0.0;
+    tarch::mpi::allreduce(
+      &localIntegral,
+      &integral,
+      1,
+      MPI_DOUBLE,
+      MPI_SUM,
+      tarch::mpi::Rank::getInstance().getCommunicator()
+    );
+    return integral;
+  }
+
+  struct IntegralsOfTimeSteps final {
+    double initialIntegral{0.0};
+    double finalIntegral{0.0};
+  };
+
+  /**
+   * Refines the centre cell of the grid under SolverType after one time step and returns the
+   * integral of the solution before and after numberOfTimeSteps further steps.
+   */
+  template <typename SolverType>
+  IntegralsOfTimeSteps runTimeStepsAcrossLevelJumps(const int numberOfTimeSteps) {
+    const auto& cellConnectivity = buildGrid();
+    SolverType  solver;
+    solver.setLimits(getLimitsOfTheDomain());
+    solver.allocate(cellConnectivity, RuntimeParameters{});
+    exahype2::RefinementRequests requests;
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
+    finishStep(solver);
+    solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
+    finishStep(solver);
+    peano4::Spacetree::getInstance().markPersistentDataLive();
+    regridWithLiveData(solver, {peano4::unittests::getRefinementOfCentreCell(Depth)}, requests);
+
+    IntegralsOfTimeSteps result;
+    result.initialIntegral = getIntegralOfSolution(solver, cellConnectivity);
+    for (int timeStep = 0; timeStep < numberOfTimeSteps; timeStep++) {
+      requests.clear(cellConnectivity.getNumberOfSlots());
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
+      finishStep(solver);
+    }
+    result.finalIntegral = getIntegralOfSolution(solver, cellConnectivity);
+    solver.release();
+    return result;
+  }
+
+  /**
    * Counts the values of every cell that the patch postprocessing has not overwritten.
    */
   int getNumberOfValuesWithoutPostprocessing(
@@ -402,7 +565,7 @@ namespace {
 UNIT_TEST("The nodes in the unit interval are the centres of the volumes of a patch") {
   GIVEN("A solver with two volumes per axis") {
     WHEN("The solver returns its nodes in the unit interval") {
-      constexpr auto Nodes = LinearSolver::getNodesInUnitInterval();
+      static constexpr auto Nodes = LinearSolver::getNodesInUnitInterval();
 
       THEN("The nodes lie at a quarter and at three quarters") {
         VALIDATE_EQUALS(Nodes.size(), static_cast<std::size_t>(PatchSize));
@@ -640,6 +803,22 @@ UNIT_TEST("A refinement reduces the next adaptive time step to the bound of the 
       }
     }
     solver.release();
+  }
+}
+
+UNIT_TEST("Time steps across level jumps keep the integral of the solution of both reconstructions") {
+  GIVEN("Solvers with the Rusanov diffusion of the constant and the limited linear reconstruction") {
+    WHEN("The centre cell refines and each solver performs three time steps") {
+      const auto constant = runTimeStepsAcrossLevelJumps<DiffusionSolverFor<exahype2::fv::reconstruction::Constant>>(3);
+      const auto limitedLinear = runTimeStepsAcrossLevelJumps<
+        DiffusionSolverFor<exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>>
+      >(3);
+
+      THEN("The integral of the solution stays the same") {
+        VALIDATE_NUMERICAL_EQUALS(constant.finalIntegral, constant.initialIntegral);
+        VALIDATE_NUMERICAL_EQUALS(limitedLinear.finalIntegral, limitedLinear.initialIntegral);
+      }
+    }
   }
 }
 

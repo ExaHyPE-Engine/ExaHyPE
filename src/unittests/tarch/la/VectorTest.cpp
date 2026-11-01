@@ -48,11 +48,11 @@ UNIT_TEST("A vector stores the value, the list or the vector that its constructo
 
 UNIT_TEST("A vector of every size built from a brace list is a constant expression that stores the list") {
   GIVEN("Constant vectors of one to five entries built from brace lists") {
-    constexpr tarch::la::Vector<1, double> Vector1{1.5};
-    constexpr tarch::la::Vector<2, double> Vector2{1.5, 2.5};
-    constexpr tarch::la::Vector<3, int>    Vector3{1, 2, 3};
-    constexpr tarch::la::Vector<4, bool>   Vector4{true, false, true, false};
-    constexpr tarch::la::Vector<5, double> Vector5{1.5, 2.5, 3.5, 4.5, 5.5};
+    static constexpr tarch::la::Vector<1, double> Vector1{1.5};
+    static constexpr tarch::la::Vector<2, double> Vector2{1.5, 2.5};
+    static constexpr tarch::la::Vector<3, int>    Vector3{1, 2, 3};
+    static constexpr tarch::la::Vector<4, bool>   Vector4{true, false, true, false};
+    static constexpr tarch::la::Vector<5, double> Vector5{1.5, 2.5, 3.5, 4.5, 5.5};
 
     THEN("Every vector stores its list") {
       VALIDATE_NUMERICAL_EQUALS(Vector1[0], 1.5);
@@ -75,11 +75,11 @@ UNIT_TEST("A vector of every size built from a brace list is a constant expressi
 
 UNIT_TEST("A default-constructed vector of every size is a constant expression that stores zeros") {
   GIVEN("Default-constructed constant vectors of one to five entries") {
-    constexpr tarch::la::Vector<1, int>    Vector1{};
-    constexpr tarch::la::Vector<2, int>    Vector2{};
-    constexpr tarch::la::Vector<3, double> Vector3{};
-    constexpr tarch::la::Vector<4, int>    Vector4{};
-    constexpr tarch::la::Vector<5, double> Vector5{};
+    static constexpr tarch::la::Vector<1, int>    Vector1{};
+    static constexpr tarch::la::Vector<2, int>    Vector2{};
+    static constexpr tarch::la::Vector<3, double> Vector3{};
+    static constexpr tarch::la::Vector<4, int>    Vector4{};
+    static constexpr tarch::la::Vector<5, double> Vector5{};
 
     THEN("Every entry of every vector is zero") {
       VALIDATE_EQUALS(Vector1[0], 0);
@@ -1133,8 +1133,8 @@ UNIT_TEST("An entry below a value by less than the tolerance is smaller or equal
 
 UNIT_TEST("Every order of the components of a 2D or a 3D vector keeps its squared norm to the last bit") {
   GIVEN("Two thousand steps along a line of planar vectors and along a line of spatial vectors") {
-    constexpr int NumberOfSteps      = 2000;
-    constexpr int Permutations[6][3] = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
+    constexpr int        NumberOfSteps      = 2000;
+    static constexpr int Permutations[6][3] = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
 
     WHEN("The test takes the squared norm of every vector and of every order of its components") {
       std::vector<double> planeNorms;

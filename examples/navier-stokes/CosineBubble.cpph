@@ -2,6 +2,22 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/navier-stokes/NavierStokes.h"
 
+namespace examples::navierstokes {
+  INLINE_METHOD double getCosineBubblePerturbation(const tarch::la::Vector<DIMENSIONS, double>& x);
+} // namespace examples::navierstokes
+
+INLINE_METHOD double
+examples::navierstokes::getCosineBubblePerturbation(const tarch::la::Vector<DIMENSIONS, double>& x) {
+  constexpr double                      BubbleRadius          = 250;
+  constexpr auto                        TemperatureDifference = 0.5;
+  tarch::la::Vector<DIMENSIONS, double> bubbleCentre(-150);
+  bubbleCentre[0]     = 0;
+  const auto distance = tarch::la::norm2(x - bubbleCentre);
+  return distance <= BubbleRadius
+    ? TemperatureDifference / 2 * (1 + std::cos((std::numbers::pi * distance) / BubbleRadius))
+    : 0;
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::navierstokes::CosineBubble::maxEigenvalue(
   const ComputePrecision* const NOALIAS                         Q,

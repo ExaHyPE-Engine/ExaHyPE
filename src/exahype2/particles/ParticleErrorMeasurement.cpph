@@ -19,8 +19,8 @@ exahype2::particles::measurePositionErrors(
   const typename SolverType::RuntimeParameters& parameters
 ) {
   ASSERTION(measurement.isSnapshotDue(timeStamp), timeStamp);
-  constexpr int  NumberOfNorms   = ErrorMeasurement::NumberOfNorms;
-  constexpr auto PositionEntries = []() {
+  constexpr int         NumberOfNorms   = ErrorMeasurement::NumberOfNorms;
+  static constexpr auto PositionEntries = []() {
     std::array<int, DIMENSIONS> entries{};
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       entries[static_cast<std::size_t>(axis)] = axis;

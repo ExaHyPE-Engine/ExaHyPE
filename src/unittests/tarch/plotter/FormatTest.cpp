@@ -7,7 +7,7 @@
 
 UNIT_TEST("Every format name parses to its format and the name of every format parses back to the format") {
   GIVEN("The four formats VTU, HDF5, NetCDF and VTKHDF") {
-    constexpr std::array Formats{
+    static constexpr std::array Formats{
       tarch::plotter::Format::VTU,
       tarch::plotter::Format::HDF5,
       tarch::plotter::Format::NetCDF,
@@ -55,7 +55,7 @@ UNIT_TEST("The default format and VTU are available and VTKHDF is the default wh
 
 UNIT_TEST("For every available format, createFileWriter() returns a writer of this format") {
   GIVEN("The four formats VTU, HDF5, NetCDF and VTKHDF") {
-    constexpr std::array Formats{
+    static constexpr std::array Formats{
       tarch::plotter::Format::VTU,
       tarch::plotter::Format::HDF5,
       tarch::plotter::Format::NetCDF,

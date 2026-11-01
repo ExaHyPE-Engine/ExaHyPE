@@ -37,6 +37,12 @@ namespace exahype2::fv {
   struct RestrictHaloHalves;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct RestrictFluxHalves;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+  struct CorrectFluxesAtCoarseFaces;
+
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct ProjectPatchesOntoFaces;
 
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -110,6 +116,43 @@ struct exahype2::fv::RestrictHaloHalves final {
   typename FacePool::View  halo{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
+/**
+ * Overwrites the first layer of the fine-side half of the coarse face of a level jump with the
+ * flux of its fine faces after the update of every patch. A coarse face of the kind Coarse
+ * receives the flux correction of the coarse cell.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::fv::RestrictFluxHalves final {
+  using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+
+  peano4::CellConnectivity            cellConnectivity{};
+  typename FacePool::View             halo{};
+  double                              timeStamp{0.0};
+  double                              timeStepSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const peano4::LevelJump& levelJump) const;
+};
+
+/**
+ * Adds the flux corrections of the coarse faces of every listed cell to its patch.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+struct exahype2::fv::CorrectFluxesAtCoarseFaces final {
+  using Kernel   = exahype2::fv::FiniteVolumeScheme<Derived, ComputePrecision>;
+  using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+  using FacePool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
+
+  peano4::CellConnectivity     cellConnectivity{};
+  tarch::Span<const int>       cells{};
+  typename CellPool::View      solution{};
+  typename FacePool::ConstView halo{};
+  double                       timeStepSize{0.0};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
 
 /**

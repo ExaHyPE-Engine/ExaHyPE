@@ -2,6 +2,42 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/euler/Euler.h"
 
+namespace examples::euler {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeGaussianBell(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t,
+    double                                       gamma,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::euler
+
+/**
+ * Writes the Gaussian density bell at the time t into Q. The bell starts at the origin and moves
+ * with unit velocity along every axis of the periodic domain [-0.5, 0.5] at constant pressure
+ * (Ioratti, Dumbser and Loubère, https://doi.org/10.1007/s10915-020-01209-w).
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::euler::writeGaussianBell(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const double                                 gamma,
+  Precision* const NOALIAS                     Q
+) {
+  constexpr double                      Pressure = 1.0;
+  tarch::la::Vector<DIMENSIONS, double> position;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    position[d] = (x[d] - t) + static_cast<int>(t + .5 - x[d]);
+  }
+  Q[Shortcuts::rho] = 0.02 * (1.0 + std::exp(-0.5 * tarch::la::norm2(position) * tarch::la::norm2(position) / 0.01));
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::rhoU + d] = Q[Shortcuts::rho];
+  }
+  Q[Shortcuts::rhoE] =
+    Pressure / (gamma - 1.0) + 0.5 * examples::euler::getMomentumSquared<Shortcuts>(Q) / Q[Shortcuts::rho];
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::euler::GaussianBell::maxEigenvalue(
   const ComputePrecision* const NOALIAS                         Q,

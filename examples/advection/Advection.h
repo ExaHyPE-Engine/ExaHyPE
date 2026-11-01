@@ -39,22 +39,6 @@ namespace examples::advection {
     double                                       radius,
     bool                                         smooth
   );
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writePeriodicBump(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       radius,
-    bool                                         smooth,
-    Precision* NOALIAS                           Q
-  );
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeLinear(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    Precision* NOALIAS                           Q
-  );
 } // namespace examples::advection
 
 #include "examples/advection/Advection.cpph"

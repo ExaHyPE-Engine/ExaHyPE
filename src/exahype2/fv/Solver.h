@@ -145,6 +145,13 @@ private:
   );
 
   template <typename RuntimeParameters>
+  INLINE_METHOD void correctFluxesAtLevelJumps(
+    const peano4::CellConnectivity& cellConnectivity,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
+  );
+
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD double measureMaxEigenvalue(
     const peano4::CellConnectivity& cellConnectivity,
     const RuntimeParameters&        parameters
@@ -165,6 +172,7 @@ private:
   Faces   _halo{FiniteVolumeScheme::ValuesPerFace};
 
   peano4::HaloExchange<StoragePrecision>      _haloExchange{_halo};
+  peano4::HaloExchange<StoragePrecision>      _fluxCorrectionExchange{_halo, peano4::FaceKind::Coarse};
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};
 
   exahype2::TimeStepping    _timeStepping;

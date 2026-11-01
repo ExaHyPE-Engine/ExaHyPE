@@ -234,6 +234,31 @@ public:
   );
 
   template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void restrictFluxes(
+    const StoragePrecision* const NOALIAS        fineFaces[peano4::SubfacesPerFace],
+    const bool                                   fineFaceIsHanging[peano4::SubfacesPerFace],
+    const tarch::la::Vector<DIMENSIONS, double>  fineFaceCentres[peano4::SubfacesPerFace],
+    const tarch::la::Vector<DIMENSIONS, double>& fineCellSize,
+    StoragePrecision* NOALIAS                    coarseFace,
+    bool                                         coarseFaceIsCoarse,
+    const tarch::la::Vector<DIMENSIONS, double>& coarseFaceCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& coarseCellSize,
+    int                                          coarseSide,
+    int                                          normal,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    const RuntimeParameters&                     parameters
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void correctFluxesAtCoarseFaces(
+    StoragePrecision* NOALIAS                    patch,
+    const StoragePrecision* NOALIAS const        corrections[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStepSize
+  );
+
+  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void interpolateVolume(
     const StoragePrecision* NOALIAS parent,
     StoragePrecision* NOALIAS       child,
@@ -448,6 +473,20 @@ private:
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getPatchVolumeOfHalfFaceVolume(
     int faceNumber,
     int halfFaceVolume
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void computeFluxesOfFaceVolume(
+    const StoragePrecision* NOALIAS              face,
+    int                                          faceVolume,
+    int                                          normal,
+    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    ComputePrecision* NOALIAS                    lowerFlux,
+    ComputePrecision* NOALIAS                    upperFlux,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>

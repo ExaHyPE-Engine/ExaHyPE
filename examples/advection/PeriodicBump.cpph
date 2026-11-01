@@ -1,6 +1,36 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/advection/Advection.h"
+#include "tarch/Assertions.h"
+
+namespace examples::advection {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writePeriodicBump(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t,
+    double                                       radius,
+    bool                                         smooth,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::advection
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::advection::writePeriodicBump(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const double                                 radius,
+  const bool                                   smooth,
+  Precision* const NOALIAS                     Q
+) {
+  ASSERTION(t >= 0.0, t);
+  tarch::la::Vector<DIMENSIONS, double> offsetFromCentre;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    const double travelled = x[d] - t;
+    offsetFromCentre[d]    = travelled - std::floor(travelled) - 0.5;
+  }
+  Q[Shortcuts::q] = examples::advection::getBump(offsetFromCentre, radius, smooth);
+}
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::advection::PeriodicBump::maxEigenvalue(

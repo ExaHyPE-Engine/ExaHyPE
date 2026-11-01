@@ -6,7 +6,8 @@
 
 UNIT_TEST("Every time stamp reads back as the same double") {
   GIVEN("Seven times from zero to a million, among them a third, two times a quarter apart and 1e-300") {
-    constexpr std::array<double, 7> Times{0.0, 0.1, 1.0 / 3.0, 1000000.25, 1000000.5, 1.0e-300, 12345.678901234567};
+    static constexpr std::array<double, 7>
+      Times{0.0, 0.1, 1.0 / 3.0, 1000000.25, 1000000.5, 1.0e-300, 12345.678901234567};
 
     WHEN("getExactTimeStamp() writes every time as a time stamp") {
       std::vector<std::string> timeStamps;

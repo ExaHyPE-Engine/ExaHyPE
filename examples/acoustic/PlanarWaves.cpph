@@ -1,6 +1,46 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/acoustic/Acoustic.h"
+#include "tarch/la/ScalarOperations.h"
+
+namespace examples::acoustic {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writePlanarWave(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t,
+    double                                       density,
+    double                                       waveSpeed,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::acoustic
+
+/**
+ * Writes the plane wave at the time t into Q. The wave travels along the diagonal of the periodic
+ * domain [-1, 1] (Dumbser and Käser, https://doi.org/10.1111/j.1365-246X.2006.03120.x, chapter 5).
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::acoustic::writePlanarWave(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 t,
+  const double                                 density,
+  const double                                 waveSpeed,
+  Precision* const NOALIAS                     Q
+) {
+  // tarch::la::sumInOrderOfMagnitude() returns the same bits for every order of the coordinates.
+  double coordinateSum = x[0] + x[1];
+  if constexpr (DIMENSIONS == 3) {
+    coordinateSum = tarch::la::sumInOrderOfMagnitude(x[0], x[1], x[2]);
+  }
+  const double angularFrequency  = waveSpeed * std::sqrt(DIMENSIONS) * std::numbers::pi;
+  const double amplitude         = std::cos(angularFrequency * t - std::numbers::pi * coordinateSum);
+  const double bulkModulus       = density * waveSpeed * waveSpeed;
+  const double pressureAmplitude = std::sqrt(DIMENSIONS * density * bulkModulus);
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::u + d] = amplitude;
+  }
+  Q[Shortcuts::p] = pressureAmplitude * amplitude;
+}
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::acoustic::PlanarWaves::maxEigenvalue(

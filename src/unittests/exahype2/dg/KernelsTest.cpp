@@ -2696,8 +2696,8 @@ UNIT_TEST("The statistics keep the largest eigenvalue and the largest sum of the
   GIVEN("Cell extents and two eigenvalue tables that differ per axis and statistics that start from zero") {
     // The largest entry of each table lies on one of the first two axes. The physical maxima are
     // the same in 2D and in 3D.
-    constexpr double FirstTable[]  = {3.0, 5.0, 2.0};
-    constexpr double SecondTable[] = {7.0, 1.0, 4.0};
+    static constexpr double FirstTable[]  = {3.0, 5.0, 2.0};
+    static constexpr double SecondTable[] = {7.0, 1.0, 4.0};
 
     tarch::la::Vector<DIMENSIONS, double> cellSize;
     std::array<double, DIMENSIONS>        firstPhysicalEigenvalues{};
@@ -2875,11 +2875,12 @@ UNIT_TEST("The finish of a cell postprocesses every node once and reports the wa
 
 UNIT_TEST("The mean of a face keeps its bits under the reflection of a tangential axis and in 3D under an axis swap") {
   GIVEN("Face weights of four Gauss nodes per axis, a state of two values and its reflected and swapped copies") {
-    constexpr int    NodesPerAxis   = 4;
-    constexpr int    NodesPerFace   = exahype2::dg::getNodesPerFace(NodesPerAxis);
-    constexpr int    Data           = 2;
-    constexpr double AxisWeights[4] = {0.173927422568727, 0.326072577431273, 0.326072577431273, 0.173927422568727};
-    constexpr int    LinesOfTheFace = DIMENSIONS == 3 ? NodesPerAxis : 1;
+    constexpr int           NodesPerAxis = 4;
+    constexpr int           NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
+    constexpr int           Data         = 2;
+    static constexpr double AxisWeights[4] =
+      {0.173927422568727, 0.326072577431273, 0.326072577431273, 0.173927422568727};
+    constexpr int LinesOfTheFace = DIMENSIONS == 3 ? NodesPerAxis : 1;
 
     double weights[NodesPerFace];
     double state[NodesPerFace * Data];

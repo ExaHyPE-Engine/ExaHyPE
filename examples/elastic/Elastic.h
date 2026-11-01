@@ -5,7 +5,6 @@
 #include "exahype2/RefinementCommand.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/CompileTarget.h"
-#include "tarch/la/Vector.h"
 
 namespace examples::elastic {
   template <class Shortcuts, typename Precision>
@@ -24,30 +23,6 @@ namespace examples::elastic {
 
   template <class Shortcuts, typename Precision>
   INLINE_METHOD void writeMedium(Precision* NOALIAS Q);
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void
-  writePlanarWaves(const tarch::la::Vector<DIMENSIONS, double>& x, double t, Precision* NOALIAS Q);
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD void writeRickerPulse(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    double                                       domainWidth,
-    int                                          numberOfUnknowns,
-    Precision* NOALIAS                           Q
-  );
-
-  template <class Shortcuts>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeRickerPulseSolution(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    const double*                                Q,
-    double                                       domainWidth,
-    int                                          maxGridLevels,
-    int                                          numberOfUnknowns,
-    double*                                      solution
-  );
 } // namespace examples::elastic
 
 #include "examples/elastic/Elastic.cpph"

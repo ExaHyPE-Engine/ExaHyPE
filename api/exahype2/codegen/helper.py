@@ -1,6 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os
+import re
 
 from functools import lru_cache
 
@@ -22,13 +23,6 @@ def write_file(directory, protected_files, fully_qualified_filename):
         log.debug("Preserve user-provided file %s", relative_filename)
         return False
     return True
-
-
-class KeepUndefined(jinja2.Undefined):
-    """Re-emits an unresolved marker as ``{{NAME}}``, so a later render pass resolves it."""
-
-    def __str__(self):
-        return "{{" + self._undefined_name + "}}"
 
 
 def _environment_arguments(undefined):
@@ -55,3 +49,14 @@ def _get_jinja2_string_template(template, undefined=None):
 
 def render_jinja2_template(template, context, undefined=None):
     return _get_jinja2_string_template(template, undefined).render(**context)
+
+
+PLACEHOLDER = re.compile(r"\{\{\s*([A-Z][A-Z0-9_]*)\s*\}\}")
+
+
+def substitute_placeholders(code, context):
+    """Returns the C++ code of a script with every ``{{NAME}}`` whose NAME is a key of context
+    replaced by its value."""
+    return PLACEHOLDER.sub(
+        lambda match: str(context.get(match.group(1), match.group(0))), code
+    )

@@ -2,6 +2,35 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/shallow-water/ShallowWater.h"
 
+namespace examples::shallowwater {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeSteadyVortex(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       gravity,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::shallowwater
+
+/**
+ * Writes a steady vortex over a varying bathymetry into Q (Clain and Figueiredo,
+ * https://doi.org/10.1016/j.compfluid.2016.11.013, section 4.4). The height reads the stored
+ * bathymetry. The momentum reads the stored height.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::writeSteadyVortex(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 gravity,
+  Precision* const NOALIAS                     Q
+) {
+  const double inverseOfFourGravities = 1 / (4 * gravity);
+  const double radiusTerm             = (1 - x[0] * x[0] - x[1] * x[1]);
+  Q[Shortcuts::b]                     = std::exp(radiusTerm / 2) / 5;
+  Q[Shortcuts::h]                     = 1 - inverseOfFourGravities * std::exp(2 * radiusTerm) - Q[Shortcuts::b];
+  Q[Shortcuts::hv + 0]                = x[1] * std::exp(radiusTerm) * Q[Shortcuts::h];
+  Q[Shortcuts::hv + 1]                = -x[0] * std::exp(radiusTerm) * Q[Shortcuts::h];
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::shallowwater::SteadyVortex::maxEigenvalue(
   const ComputePrecision* const NOALIAS                         Q,

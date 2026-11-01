@@ -2,6 +2,23 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/shallow-water/ShallowWater.h"
 
+namespace examples::shallowwater {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeRestingLake(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::shallowwater
+
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::shallowwater::writeRestingLake(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* const NOALIAS Q) {
+  Q[Shortcuts::hv + 0] = 0;
+  Q[Shortcuts::hv + 1] = 0;
+  Q[Shortcuts::b]      = std::sin(2 * std::numbers::pi * (x[0] + x[1]));
+  Q[Shortcuts::h]      = 2 - Q[Shortcuts::b];
+}
+
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::shallowwater::RestingLake::maxEigenvalue(
   const ComputePrecision* const NOALIAS                         Q,

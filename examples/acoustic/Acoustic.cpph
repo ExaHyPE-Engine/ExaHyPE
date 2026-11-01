@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "exahype2/MultiresolutionDetail.h"
 #include "tarch/Assertions.h"
-#include "tarch/la/ScalarOperations.h"
 
 template <class Shortcuts, typename Precision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -109,76 +108,6 @@ examples::acoustic::isNearFiringSource(
     and tarch::la::norm2(x - sourceLocation) < 0.2 + tarch::la::norm2(h);
 }
 TARGET_DECLARE_END
-
-template <class Shortcuts, typename Precision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-examples::acoustic::writeFreeStream(Precision* const NOALIAS Q) {
-  Q[Shortcuts::p] = 1.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::u + d] = 0.0;
-  }
-}
-
-template <class Shortcuts, typename Precision>
-INLINE_METHOD void
-examples::acoustic::writeRest(Precision* const NOALIAS Q) {
-  Q[Shortcuts::p] = 0.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::u + d] = 0.0;
-  }
-}
-
-template <class Shortcuts, typename Precision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-examples::acoustic::writeSourceForce(const double t, Precision* const NOALIAS forceVector) {
-  constexpr double SourcePeakTime   = 0.1;
-  constexpr double SourcePulseWidth = 0.03;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    forceVector[Shortcuts::u + d] = 0.0;
-  }
-  forceVector[Shortcuts::p] =
-    std::exp(-(t - SourcePeakTime) * (t - SourcePeakTime) / (2.0 * SourcePulseWidth * SourcePulseWidth));
-}
-
-/**
- * Writes the plane wave at the time t into Q. The wave travels along the diagonal of the periodic
- * domain [-1, 1] (Dumbser and Käser, https://doi.org/10.1111/j.1365-246X.2006.03120.x, chapter 5).
- */
-template <class Shortcuts, typename Precision>
-INLINE_METHOD GPU_CALLABLE_METHOD void
-examples::acoustic::writePlanarWave(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const double                                 t,
-  const double                                 density,
-  const double                                 waveSpeed,
-  Precision* const NOALIAS                     Q
-) {
-  // tarch::la::sumInOrderOfMagnitude() returns the same bits for every order of the coordinates.
-  double coordinateSum = x[0] + x[1];
-  if constexpr (DIMENSIONS == 3) {
-    coordinateSum = tarch::la::sumInOrderOfMagnitude(x[0], x[1], x[2]);
-  }
-  const double angularFrequency  = waveSpeed * std::sqrt(DIMENSIONS) * std::numbers::pi;
-  const double amplitude         = std::cos(angularFrequency * t - std::numbers::pi * coordinateSum);
-  const double bulkModulus       = density * waveSpeed * waveSpeed;
-  const double pressureAmplitude = std::sqrt(DIMENSIONS * density * bulkModulus);
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::u + d] = amplitude;
-  }
-  Q[Shortcuts::p] = pressureAmplitude * amplitude;
-}
-
-template <class Shortcuts, typename Precision>
-INLINE_METHOD void
-examples::acoustic::writePulse(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* const NOALIAS Q) {
-  constexpr double                            Sigma = 0.1;
-  const tarch::la::Vector<DIMENSIONS, double> centre(-0.7);
-  const double                                distanceSquared = tarch::la::norm2Squared(x - centre);
-  Q[Shortcuts::p]                                             = std::exp(-distanceSquared / (2.0 * Sigma * Sigma));
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::u + d] = 0.0;
-  }
-}
 
 template <class Shortcuts, typename Precision>
 INLINE_METHOD GPU_CALLABLE_METHOD void

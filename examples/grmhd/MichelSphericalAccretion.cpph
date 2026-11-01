@@ -1,6 +1,152 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "examples/grmhd/GRMHD.h"
+#include "tarch/Assertions.h"
+
+namespace examples::grmhd {
+  template <class Shortcuts, typename Precision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void writeMichelAccretion(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    Precision* NOALIAS                           Q
+  );
+} // namespace examples::grmhd
+
+/**
+ * Writes the stationary spherical accretion of an ideal gas onto a black hole of unit mass in
+ * Kerr-Schild coordinates into Q (https://doi.org/10.1016/j.cpc.2020.107251,
+ * http://dx.doi.org/10.1007/BF00649949). The domain has to exclude the black hole.
+ */
+template <class Shortcuts, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+examples::grmhd::writeMichelAccretion(const tarch::la::Vector<DIMENSIONS, double>& x, Precision* const NOALIAS Q) {
+  constexpr double AdiabaticIndex          = 4.0 / 3.0;
+  constexpr int    MaximumNewtonIterations = 50;
+  constexpr int    NumberOfValues          = Shortcuts::gij + 6;
+  constexpr double CriticalDensity         = 0.0625;
+  constexpr double CriticalRadius          = 8.0;
+  constexpr double PolytropicIndex         = 1.0 / (AdiabaticIndex - 1.0);
+
+  double lapse           = 0.0;
+  double rootDeterminant = 0.0;
+  double shift[3];
+  double gCov[3][3];
+  examples::grmhd::evaluateKerrSchildMetric(x, &lapse, &rootDeterminant, shift, gCov);
+
+  const double r = tarch::la::norm2(x);
+
+  double V[NumberOfValues];
+  if (r < 0.8) {
+    // A placeholder state near the centre avoids a division by zero. The evolution and the boundary
+    // conditions never read it.
+    V[Shortcuts::rho]       = 1;
+    V[Shortcuts::vel + 0]   = 0.;
+    V[Shortcuts::vel + 1]   = 0.;
+    V[Shortcuts::vel + 2]   = 0.;
+    V[Shortcuts::E]         = 1.;
+    V[Shortcuts::B + 0]     = 0.;
+    V[Shortcuts::B + 1]     = 0.;
+    V[Shortcuts::B + 2]     = 0.;
+    V[Shortcuts::psi]       = 0.;
+    V[Shortcuts::lapse]     = 1.;
+    V[Shortcuts::shift + 0] = 0.;
+    V[Shortcuts::shift + 1] = 0.;
+    V[Shortcuts::shift + 2] = 0.;
+    V[Shortcuts::gij + 0]   = 1.;
+    V[Shortcuts::gij + 1]   = 0.;
+    V[Shortcuts::gij + 2]   = 0.;
+    V[Shortcuts::gij + 3]   = 1.;
+    V[Shortcuts::gij + 4]   = 0.;
+    V[Shortcuts::gij + 5]   = 1.;
+    examples::grmhd::convertPrimitiveToConserved<Shortcuts>(Q, V);
+    return;
+  }
+
+  const double schwarzschildRatio = 2.0 / r;
+  const double radialShift        = schwarzschildRatio / (1.0 + schwarzschildRatio);
+
+  const double criticalRadialVelocity = std::sqrt(1.0 / (2.0 * CriticalRadius));
+  const double criticalSoundSpeedSquared =
+    criticalRadialVelocity * criticalRadialVelocity / (1.0 - 3.0 * criticalRadialVelocity * criticalRadialVelocity);
+  const double criticalTemperature = PolytropicIndex * criticalSoundSpeedSquared
+    / ((1.0 + PolytropicIndex) * (1.0 - PolytropicIndex * criticalSoundSpeedSquared));
+
+  const double c1 =
+    criticalRadialVelocity * std::pow(criticalTemperature, PolytropicIndex) * (CriticalRadius * CriticalRadius);
+  const double c2 = (1.0 + (1.0 + PolytropicIndex) * criticalTemperature)
+    * (1.0 + (1.0 + PolytropicIndex) * criticalTemperature)
+    * (1.0 - 2.0 / CriticalRadius + criticalRadialVelocity * criticalRadialVelocity);
+
+  double temperature    = criticalTemperature;
+  double radialVelocity = 0.0;
+  for (int iteration = 0; iteration < MaximumNewtonIterations; iteration++) {
+    radialVelocity                  = c1 / (r * r * std::pow(temperature, PolytropicIndex));
+    const double enthalpyFactor     = std::fma(1.0 + PolytropicIndex, temperature, 1.0);
+    const double metricFactor       = std::fma(radialVelocity, radialVelocity, 1.0 - 2.0 / r);
+    const double residual           = std::fma(enthalpyFactor * enthalpyFactor, metricFactor, -c2);
+    const double residualDerivative = std::fma(
+      2.0 * (1.0 + PolytropicIndex) * enthalpyFactor,
+      metricFactor,
+      -(2.0 * PolytropicIndex * radialVelocity * radialVelocity / temperature * enthalpyFactor * enthalpyFactor)
+    );
+    const double temperatureStep = -residual / residualDerivative;
+    if (std::abs(temperatureStep) < 1.e-10) {
+      break;
+    }
+    temperature = temperature + temperatureStep;
+  }
+  ASSERTION(temperature > 0.0, temperature);
+
+  const double discriminantRoot = std::sqrt(std::fma(radialVelocity, radialVelocity, -schwarzschildRatio) + 1.0);
+  const double timeComponent =
+    std::fma(-schwarzschildRatio, radialVelocity, discriminantRoot) / (schwarzschildRatio - 1.0);
+  const double lorentzFactor          = lapse * timeComponent;
+  const double eulerianRadialVelocity = (radialVelocity / lorentzFactor + radialShift / lapse);
+
+  // The velocity points along x / r. A permutation of the axes then permutes the velocity bitwise.
+  const double vContr[3] = {
+    x[0] / r * eulerianRadialVelocity,
+    x[1] / r * eulerianRadialVelocity,
+    x[2] / r * eulerianRadialVelocity
+  };
+
+  double vCov[3];
+  examples::grmhd::multiplyMatrixVector(gCov, vContr, vCov);
+
+  const double rho = CriticalDensity * std::pow(temperature / criticalTemperature, PolytropicIndex);
+  const double p   = rho * temperature;
+
+  const double spatialMetric[6] = {gCov[0][0], gCov[0][1], gCov[0][2], gCov[1][1], gCov[1][2], gCov[2][2]};
+
+  // A magnetic field strength B0 of zero gives the hydrodynamic Michel accretion.
+  constexpr double B0        = 0;
+  const double     bContr[3] = {
+    B0 * x[0] / (std::sqrt(rootDeterminant) * r * r * r),
+    B0 * x[1] / (std::sqrt(rootDeterminant) * r * r * r),
+    B0 * x[2] / (std::sqrt(rootDeterminant) * r * r * r)
+  };
+
+  V[Shortcuts::rho]       = rho;
+  V[Shortcuts::vel + 0]   = vCov[0];
+  V[Shortcuts::vel + 1]   = vCov[1];
+  V[Shortcuts::vel + 2]   = vCov[2];
+  V[Shortcuts::E]         = p;
+  V[Shortcuts::B + 0]     = bContr[0];
+  V[Shortcuts::B + 1]     = bContr[1];
+  V[Shortcuts::B + 2]     = bContr[2];
+  V[Shortcuts::psi]       = 0.;
+  V[Shortcuts::lapse]     = lapse;
+  V[Shortcuts::shift + 0] = shift[0];
+  V[Shortcuts::shift + 1] = shift[1];
+  V[Shortcuts::shift + 2] = shift[2];
+  V[Shortcuts::gij + 0]   = spatialMetric[0];
+  V[Shortcuts::gij + 1]   = spatialMetric[1];
+  V[Shortcuts::gij + 2]   = spatialMetric[2];
+  V[Shortcuts::gij + 3]   = spatialMetric[3];
+  V[Shortcuts::gij + 4]   = spatialMetric[4];
+  V[Shortcuts::gij + 5]   = spatialMetric[5];
+
+  examples::grmhd::convertPrimitiveToConserved<Shortcuts>(Q, V);
+}
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 examples::grmhd::MichelSphericalAccretion::maxEigenvalue(

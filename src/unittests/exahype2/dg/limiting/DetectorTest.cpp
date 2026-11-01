@@ -1558,9 +1558,9 @@ UNIT_TEST(
   "The block kernels count and list the cells on the subcell scheme in cell connectivity order, local cells first"
 ) {
   GIVEN("A regular grid of depth one whose cells take the statuses regular, halo, troubled and limited in turn") {
-    constexpr int                Depth          = 1;
-    constexpr int                NumberOfBlocks = 2;
-    constexpr std::array<int, 4> StatusPattern{Regular, Halo, Troubled, Limited};
+    constexpr int                       Depth          = 1;
+    constexpr int                       NumberOfBlocks = 2;
+    static constexpr std::array<int, 4> StatusPattern{Regular, Halo, Troubled, Limited};
     peano4::unittests::buildRegularGrid(Depth);
     const auto& cellConnectivity   = peano4::Spacetree::getInstance().getCellConnectivity();
     const auto  cells              = cellConnectivity.getCells();

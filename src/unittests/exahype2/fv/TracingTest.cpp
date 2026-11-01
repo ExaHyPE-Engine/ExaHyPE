@@ -310,10 +310,10 @@ UNIT_TEST(
     };
 
     WHEN("The interpolation runs at 49 positions in the patch and at their mirrors and swaps in the other patches") {
-      constexpr double    Samples[] = {-0.13, -0.071, -0.02, 0.0, 0.033, 0.09, 0.149};
-      std::vector<double> values;
-      std::vector<double> mirroredValues;
-      std::vector<double> swappedValues;
+      static constexpr double Samples[] = {-0.13, -0.071, -0.02, 0.0, 0.033, 0.09, 0.149};
+      std::vector<double>     values;
+      std::vector<double>     mirroredValues;
+      std::vector<double>     swappedValues;
       for (const double first : Samples) {
         for (const double second : Samples) {
           tarch::la::Vector<DIMENSIONS, double> position(0.01);

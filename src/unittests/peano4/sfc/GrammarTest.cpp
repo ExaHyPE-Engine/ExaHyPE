@@ -56,12 +56,12 @@ UNIT_TEST("A production separates its child non-terminals from the turtle steps 
   GIVEN("The left-hand side Third, the children First, Second and Third and the turtle steps Up and Right") {
     using Step = peano4::sfc::Grammar::Step;
 
-    constexpr NonTerminal                LeftHandSide = Third;
-    constexpr std::array<NonTerminal, 3> Children{First, Second, Third};
-    constexpr std::array<Step, 2>        Steps{Step::Up, Step::Right};
+    constexpr NonTerminal                       LeftHandSide = Third;
+    static constexpr std::array<NonTerminal, 3> Children{First, Second, Third};
+    static constexpr std::array<Step, 2>        Steps{Step::Up, Step::Right};
 
     WHEN("The grammar builds the production from the left-hand side and the children with the steps between them") {
-      constexpr auto TestProduction =
+      static constexpr auto TestProduction =
         peano4::sfc::Grammar::production(LeftHandSide, Children[0], Steps[0], Children[1], Steps[1], Children[2]);
       static_assert(TestProduction.children.size() == 3);
       static_assert(TestProduction.steps.size() == 2);

@@ -184,7 +184,7 @@ UNIT_TEST("The explicit Euler scheme moves with the old velocity, the semi-impli
 
 UNIT_TEST("Every scheme of second or higher order advances exactly under a constant acceleration") {
   GIVEN("The constant gravity two and, for every scheme of second or higher order, a particle that leaves the centre") {
-    constexpr std::array<exahype2::particles::IntegrationScheme, 4> Schemes{
+    static constexpr std::array<exahype2::particles::IntegrationScheme, 4> Schemes{
       exahype2::particles::IntegrationScheme::VelocityVerlet,
       exahype2::particles::IntegrationScheme::Midpoint,
       exahype2::particles::IntegrationScheme::RungeKutta3,
@@ -242,12 +242,12 @@ UNIT_TEST("The velocity of the midpoint and the Runge-Kutta schemes converges wi
     const double     decayRate     = 3.0 * tarch::la::PI * forces.dynamicViscosity + 1e-12;
     const double     exactVelocity = std::exp(-decayRate * EndTime);
 
-    constexpr std::array<exahype2::particles::IntegrationScheme, 3> Schemes{
+    static constexpr std::array<exahype2::particles::IntegrationScheme, 3> Schemes{
       exahype2::particles::IntegrationScheme::Midpoint,
       exahype2::particles::IntegrationScheme::RungeKutta3,
       exahype2::particles::IntegrationScheme::RungeKutta4
     };
-    constexpr std::array<int, 3> Orders{2, 3, 4};
+    static constexpr std::array<int, 3> Orders{2, 3, 4};
 
     WHEN("Every scheme integrates a particle of velocity one up to the end time in four and in eight steps") {
       const auto getVelocityError = [&](const int steps) {

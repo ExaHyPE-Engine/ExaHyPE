@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import jinja2
 
-from .codegen.helper import render_jinja2_template
+from .codegen.helper import render_jinja2_template, substitute_placeholders
 
 COORDINATES = "const tarch::la::Vector<DIMENSIONS, double>&"
 RUNTIME_PARAMETERS = "const RuntimeParameters& parameters"
@@ -564,7 +564,7 @@ class PDETerms:
         instantiation as ``COMPUTE_PRECISION``."""
         context = dict(dictionary)
         context["COMPUTE_PRECISION"] = precision
-        return render_jinja2_template(self.body(name), context, jinja2.DebugUndefined)
+        return substitute_placeholders(self.body(name), context)
 
     def _precisions_of(self, term, dictionary):
         if term.precision == "storage":

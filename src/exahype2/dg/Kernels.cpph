@@ -1501,10 +1501,10 @@ exahype2::dg::MeasureNodeEigenvalues<Derived, StoragePrecision>::operator()(
 template <typename Derived, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::MeasureNodeErrors<Derived, StoragePrecision>::operator()(const int entry) const {
-  // The static member is in host memory. The kernel reads a constexpr copy.
-  constexpr auto MeasuredUnknowns = Derived::MeasuredUnknowns;
-  const int      slot             = cells[entry];
-  double         errors[NumberOfNorms]{0.0, 0.0, 0.0};
+  // The static member lives in host memory. The kernel reads a constant copy.
+  static constexpr auto MeasuredUnknowns = Derived::MeasuredUnknowns;
+  const int             slot             = cells[entry];
+  double                errors[NumberOfNorms]{0.0, 0.0, 0.0};
   exahype2::dg::forEachNode<NodesPerAxis, NumberOfData>(
     cellConnectivity.getCellCentre(slot),
     cellConnectivity.getCellWidth(slot),

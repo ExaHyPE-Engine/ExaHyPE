@@ -39,7 +39,7 @@ namespace {
 
 UNIT_TEST("The reduction of two physical wave speeds returns the bits of their maximum, signed zeroes included") {
   GIVEN("The physical wave speeds minus zero, zero, the smallest subnormal number, one half, one and two") {
-    constexpr std::array PhysicalWaveSpeeds{-0.0, 0.0, std::numeric_limits<double>::denorm_min(), 0.5, 1.0, 2.0};
+    static constexpr std::array PhysicalWaveSpeeds{-0.0, 0.0, std::numeric_limits<double>::denorm_min(), 0.5, 1.0, 2.0};
 
     WHEN("The reduction returns its identity and combines every ordered pair of the wave speeds") {
       const double                     identity = exahype2::MaxEigenvalueReduction::identity();
@@ -73,7 +73,7 @@ UNIT_TEST("The reduction of two physical wave speeds returns the bits of their m
 
 UNIT_TEST("A faulty wave speed survives the reduction in either operand position and in every later reduction") {
   GIVEN("A negative and an infinite wave speed") {
-    constexpr std::array FaultyWaveSpeeds{NegativeWaveSpeed, InfiniteWaveSpeed};
+    static constexpr std::array FaultyWaveSpeeds{NegativeWaveSpeed, InfiniteWaveSpeed};
 
     WHEN("Every fault combines with one in both operand positions and with the identity and one result with two") {
       std::vector<double> combinedAsRightOperand;

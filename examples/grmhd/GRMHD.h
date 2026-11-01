@@ -40,19 +40,6 @@ namespace examples::grmhd {
     double (&gContr)[3][3]
   );
 
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeAlfvenWave(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    Precision* NOALIAS                           Q
-  );
-
-  template <class Shortcuts, typename Precision>
-  INLINE_METHOD GPU_CALLABLE_METHOD void writeMichelAccretion(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    Precision* NOALIAS                           Q
-  );
-
   INLINE_METHOD GPU_CALLABLE_METHOD double dotProduct(const double* first, const double* second);
 
   INLINE_METHOD GPU_CALLABLE_METHOD void crossProduct(
