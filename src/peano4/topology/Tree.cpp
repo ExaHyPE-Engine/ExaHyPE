@@ -230,7 +230,7 @@ peano4::topology::Tree::buildRegularGrid(
         childrenBlock == -1 or (childrenBlock > nodeIndex and childrenBlock <= numberOfTopologyNodes - ChildrenPerCell);
       if (firstOwner < 0 or firstOwner > lastOwner or lastOwner >= numberOfRanks or not childrenAreValid) {
         tarch::terminateWithError(
-          "Each node of the rank ownership plan must name an ordered range of existing ranks and list its children "
+          "Each node of the rank ownership plan must cover an ordered range of existing ranks and list its children "
           "after itself."
         );
       }
@@ -1314,8 +1314,8 @@ peano4::topology::Tree::updateRefinementPlan(
   }
 
   if (hasEraseRequests) {
-    // A caller promotes an erase request to the parent cell it coarsens. The request names the cell
-    // whose corner flags go.
+    // A caller promotes an erase request to the parent cell it coarsens. The lattice index of the
+    // request selects the cell whose corner vertices lose their flags.
     FlaggedKeysPerLevel erasingCells(numberOfFlagLevels);
     for (const auto& request : requests) {
       if (request.getRefinementControl() != peano4::RefinementRequest::RefinementControl::Erase) {
@@ -1691,7 +1691,7 @@ peano4::topology::Tree::deriveRankLoads(
     const int  lastOwner     = ownershipPlan[planOffset + 1];
     const int  childrenBlock = ownershipPlan[planOffset + 2];
     if (firstOwner < 0 or firstOwner > lastOwner or lastOwner >= numberOfRanks) {
-      tarch::terminateWithError("Each node of the rank ownership plan must name an ordered range of existing ranks.");
+      tarch::terminateWithError("Each node of the rank ownership plan must cover an ordered range of existing ranks.");
     }
     // An ownership plan of a deeper refinement plan may split a leaf of this plan. The first rank of
     // the split owns the leaf.

@@ -28,7 +28,8 @@ namespace peano4 {
 
 /**
  * What lies on the two sides of a face: Cells on both sides, a cell and the domain boundary, a cell
- * and a coarser cell, a cell and finer cells, or no cell inside a level jump of more than one level.
+ * and a coarser cell, a cell and finer cells, or the levels strictly between the coarse and the fine
+ * level of a level jump of more than one level.
  */
 enum class peano4::FaceKind : std::uint8_t { Interior, Boundary, Hanging, Coarse, Intermediate };
 
@@ -85,34 +86,44 @@ public:
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(Adjacency adjacency) const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(Adjacency adjacency, int level) const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getFaces(Adjacency adjacency, FaceKind kind) const noexcept;
+
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getFaces(
     Adjacency adjacency,
     FaceKind  firstKind,
     FaceKind  lastKind
   ) const noexcept;
+
   [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(Adjacency adjacency) const noexcept;
   [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(Adjacency adjacency, int level) const noexcept;
+
   [[nodiscard]] INLINE_METHOD tarch::Span<const LevelJump> getLevelJumps(
     Adjacency adjacency,
     int       firstLevel,
     int       lastLevel
   ) const noexcept;
+
   [[nodiscard]] INLINE_METHOD tarch::Span<const Neighbour> getNeighbours() const noexcept;
+
   [[nodiscard]] INLINE_METHOD tarch::Span<const ExchangedFace> getExchangedFaces(
     const Neighbour& neighbour
   ) const noexcept;
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getCellLevel(int cell) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> getCellLattice(
     int cell
   ) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getCellCentre(
     int cell
   ) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getCellCentre(int cell, int axis) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getCellWidth(
     int cell
   ) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getCellWidth(int cell, int axis) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getCellFace(int cell, int faceNumber) const noexcept;
   [[nodiscard]] INLINE_METHOD int getCellCurveIndex(int cell) const noexcept;
@@ -120,16 +131,21 @@ public:
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD FaceKind getFaceKind(int face) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getFaceNormal(int face) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getFaceLevel(int face) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> getFaceLattice(
     int face
   ) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getFaceCentre(
     int face
   ) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getFaceCentre(int face, int axis) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getFaceWidth(
     int face
   ) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getFaceWidth(int face, int axis) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getFaceCell(int face, int side) const noexcept;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> getCellCentreBesideFace(
@@ -138,6 +154,7 @@ public:
   ) const noexcept;
 
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD double getWidthOfLevel(int level, int axis) const noexcept;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
   getDomainOffset() const noexcept;
 

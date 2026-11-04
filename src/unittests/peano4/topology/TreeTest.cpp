@@ -516,7 +516,7 @@ UNIT_TEST("Erase requests around a flagged vertex remove its flag unless a fine 
     plan[0].emplace_back(RequestedCell);
     tree.buildRegularGrid(Depth, 0, 1, plan);
 
-    // Each request names a base-depth cell. A caller promotes an erase request to the parent cell.
+    // Each request selects a base-depth cell. A caller promotes an erase request to the parent cell.
     std::vector<peano4::RefinementRequest> eraseRequests;
     for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
       peano4::RefinementRequest eraseRequest;
@@ -823,7 +823,7 @@ UNIT_TEST("The ownership plan is the same on every tree, nests the rank ranges o
         VALIDATE(loads == replicaLoads);
       }
 
-      THEN("Every topology node names a rank range inside the rank count and a node with children covers theirs") {
+      THEN("Every topology node stores a rank range inside the rank count and a node with children covers theirs") {
         VALIDATE(static_cast<int>(ownershipPlan.size()) > OwnershipPlanHeaderSize);
         VALIDATE_EQUALS(ownershipPlan[0], peano4::topology::Tree::OwnershipPlanMarker);
         const auto numberOfTopologyNodes = ownershipPlan[1];

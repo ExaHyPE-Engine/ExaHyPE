@@ -56,7 +56,7 @@ More specifically:
 
 - Types and the values of an enum class use PascalCase. Functions, methods and local variables use
   camelCase. Private and protected members start with an underscore.
-- Indentation uses two spaces and no tabs.
+- Indentation uses two spaces, never a tab.
 - Every body of an if, an else and a loop stands in braces. The opening brace stays on the line of
   the statement:
 ~~~~~~~~~~~~~~~~~~~~~~~

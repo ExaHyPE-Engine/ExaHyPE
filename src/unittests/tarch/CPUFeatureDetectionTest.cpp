@@ -24,7 +24,7 @@ UNIT_TEST("The detected instruction sets belong to the architecture the test run
   }
 }
 
-UNIT_TEST("The report names every detected instruction set once, in a fixed order and separated by commas") {
+UNIT_TEST("The report lists every detected instruction set once, in a fixed order and separated by commas") {
   GIVEN("The instruction sets of this processor and their names in the order of the report") {
     const tarch::CPUFeatures features = tarch::CPUFeatures::detect();
     std::vector<std::string> names;

@@ -36,6 +36,8 @@ namespace {
   using RelaxedJudge = exahype2::dg::limiting::Detector<exahype2::dg::limiting::unittests::RelaxedStubSolver, double>;
   using Extrema      = std::array<double, Layout::ExtremaPerCell>;
 
+  using RuntimeParameters = exahype2::dg::limiting::unittests::RuntimeParameters;
+
   TARGET_DECLARE
   constexpr int Regular  = static_cast<int>(exahype2::dg::limiting::LimiterStatus::Regular);
   constexpr int Halo     = static_cast<int>(exahype2::dg::limiting::LimiterStatus::Halo);
@@ -201,7 +203,8 @@ namespace {
             Layout::TimeStamp,
             Layout::TimeStepSize,
             candidateExtrema + static_cast<std::ptrdiff_t>(cell) * Layout::ExtremaPerCell,
-            chunk
+            chunk,
+            RuntimeParameters{}
           )
         );
       }
@@ -245,7 +248,8 @@ namespace {
           cellOfBatch,
           Coordinates(cellCentres + cell * DIMENSIONS),
           Coordinates(cellSizes + cell * DIMENSIONS),
-          chunk
+          chunk,
+          RuntimeParameters{}
         );
       }
       tarch::accelerator::teamBarrier(team);
@@ -267,7 +271,8 @@ namespace {
         nodes + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
         nodesToLobatto,
         nodesToSubcells,
-        scratch + static_cast<std::ptrdiff_t>(cell) * scratchValuesPerTeam
+        scratch + static_cast<std::ptrdiff_t>(cell) * scratchValuesPerTeam,
+        RuntimeParameters{}
       );
     }
   };
@@ -296,7 +301,8 @@ namespace {
         nodesToSubcells,
         relaxationParameter,
         differencesScaling,
-        scratch
+        scratch,
+        RuntimeParameters{}
       );
     }
   };
@@ -524,7 +530,7 @@ namespace {
     ASSERTION(nodes.size() == static_cast<std::size_t>(Layout::ValuesPerCell), nodes.size());
     ASSERTION(subcells.size() == static_cast<std::size_t>(Layout::SubcellValuesPerCell), subcells.size());
     Extrema sampledExtrema{};
-    Judge::reduceSampledExtrema(sampledExtrema.data(), subcells.data());
+    Judge::reduceSampledExtrema(sampledExtrema.data(), subcells.data(), RuntimeParameters{});
     const std::vector<int> status = openInitialStatusOnDevice(
       tables,
       std::vector<int>{Regular, Regular, 0, 0},
@@ -1096,7 +1102,7 @@ UNIT_TEST("Opening the initial status marks a cell whose interpolant leaves the 
     const std::vector<double> constantNodes = getConstantNodes(2.0, 0.0);
     const std::vector<int>    troubledStatus{Troubled, Troubled, 1, 1};
     Extrema                   sampledExtrema{};
-    Judge::reduceSampledExtrema(sampledExtrema.data(), subcells.data());
+    Judge::reduceSampledExtrema(sampledExtrema.data(), subcells.data(), RuntimeParameters{});
 
     WHEN("The status opens with the nodes that rise from one to three") {
       const std::vector<int> status = openInitialStatusOnDevice(
@@ -1619,7 +1625,7 @@ UNIT_TEST(
       const std::vector<int> listedCellsOnScheme   = cellsOnScheme.getValues();
       const std::vector<int> listedRecomputedCells = recomputedCells.getValues();
 
-      THEN("The counts match the statuses and both lists name the cells in the order of the cell connectivity") {
+      THEN("The counts match the statuses and both lists contain the cells in the order of the cell connectivity") {
         VALIDATE_EQUALS(counts.cellsOnScheme, expected.cellsOnScheme);
         VALIDATE_EQUALS(counts.recomputedCells, expected.recomputedCells);
         VALIDATE_EQUALS(counts.localRecomputedCells, expected.localRecomputedCells);
@@ -1746,7 +1752,7 @@ UNIT_TEST("The teams of a launch open the initial status of every cell like a te
     const std::vector<double> constantNodes = getConstantNodes(2.0, 0.0);
     const std::vector<double> subcells      = getConstantSubgrid(2.0, 0.0);
     Extrema                   sampled{};
-    Judge::reduceSampledExtrema(sampled.data(), subcells.data());
+    Judge::reduceSampledExtrema(sampled.data(), subcells.data(), RuntimeParameters{});
     const auto paddedNodes   = static_cast<std::size_t>(nodes.getPaddedChunkSize());
     const auto paddedExtrema = static_cast<std::size_t>(sampledExtrema.getPaddedChunkSize());
     const auto paddedStatus  = static_cast<std::size_t>(statuses.getPaddedChunkSize());
@@ -1803,7 +1809,8 @@ UNIT_TEST("The teams of a launch open the initial status of every cell like a te
           NoRelaxation,
           NoScaling,
           deviceScratch.getData(),
-          scratchValuesPerTeam
+          scratchValuesPerTeam,
+          RuntimeParameters{}
         }
       );
       const std::vector<int> openedStatuses = tarch::accelerator::unittests::getChunksOf(statuses);

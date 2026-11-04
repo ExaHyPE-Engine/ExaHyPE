@@ -269,9 +269,7 @@ class Solver(exahype2.solver.Solver, SubcellLimiting):
         d["INITIALISE_PATCHES"] = self._initialise_patches
         d["TABLE_PRECISIONS"] = self._table_precisions()
         d["LIMITER_ARGUMENTS"] = self._subcell_limiter_arguments()
-        d["MAX_ADMISSIBLE_MESH_WIDTH"] = (
-            "parameters.getMaxAdmissiblePatchSize(DomainSize)"
-        )
+        d["MAX_ADMISSIBLE_MESH_WIDTH"] = "parameters.maxAdmissiblePatchSize"
 
     def _hooks(self):
         def predicate_body(predicate):

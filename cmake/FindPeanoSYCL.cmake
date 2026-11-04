@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 find_package(IntelSYCL REQUIRED)
-set(SYCL_FOUND "${IntelSYCL_FOUND}")
+set(PeanoSYCL_FOUND "${IntelSYCL_FOUND}")
 
 if(TARGET PeanoOptions)
   set(_peano_sycl_flags -fsycl -fsycl-targets=spir64)

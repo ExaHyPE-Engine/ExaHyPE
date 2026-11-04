@@ -4,44 +4,36 @@
 
 \tableofcontents
 
-
 ## HDF5
 
-Peano does not need HDF5. There's no generic input file format, and it can write
-its own mesh files without HDF5. Things are different if you want to dump HDF5,
-or if you use an extension which requires HDF5. HDF5 support is controlled
-by the CMake option PEANO_WITH_HDF5, which is enabled by default:
+Peano writes its own mesh files without HDF5 and reads only input formats that work without it. An
+application needs HDF5 to write HDF5 files or to use an extension that requires HDF5. The CMake
+option PEANO_WITH_HDF5 switches the HDF5 support on. It is ON by default:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 cmake .. -DPEANO_WITH_HDF5=ON
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You do not have to specify any paths or libraries manually. CMake locates HDF5 via
-find_package(HDF5 COMPONENTS C) and links the resulting HDF5::HDF5 target, so the
-correct include directories and libraries are picked up automatically. If your HDF5
-installation lives in a non-standard location, point CMake at it through the usual
-HDF5_ROOT environment variable or CMake hint.
+CMake finds HDF5 with find_package(HDF5 COMPONENTS C) and links the target HDF5::HDF5. This target
+provides the include directories and the libraries. For an HDF5 installation in a non-standard
+location, set the environment variable or the CMake hint HDF5_ROOT.
 
-Only the C component of HDF5 is required; Peano does not use the HDF5 C++ binding.
-If PEANO_WITH_HDF5 is on but no HDF5 installation can be found, the build emits a
-warning and continues with HDF5 support disabled. The HDF5 installation must
-support parallel I/O.
-
+Peano uses the C interface of HDF5 only. If PEANO_WITH_HDF5 is ON and CMake cannot find an HDF5
+installation, the build prints a warning and continues without HDF5 support. The HDF5 installation
+must support parallel I/O.
 
 ## NetCDF
 
-NetCDF might be required by some applications. As with HDF5, support is enabled
-through a CMake option, PEANO_WITH_NETCDF, which is on by default:
+Some applications need NetCDF. The CMake option PEANO_WITH_NETCDF switches the NetCDF support on.
+It is ON by default:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 cmake .. -DPEANO_WITH_NETCDF=ON
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-NetCDF is located by cmake/FindNetCDF.cmake. This helper queries pkg-config (when
-available) and also honours a number of environment hints, so in most cases no
-further configuration is needed. If NetCDF lives in a non-standard location, point
-the build at it via one of the following environment variables before invoking
-CMake:
+cmake/FindPeanoNetCDF.cmake searches the paths of the pkg-config module netcdf and the paths in the
+environment variables below. For a NetCDF installation in a non-standard location, set these
+variables before CMake runs:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export NETCDF_DIR=/path/to/netcdf            # prefix containing include/ and lib/
@@ -50,9 +42,8 @@ export NETCDF_INCLUDE_DIR=/path/to/netcdf/include
 export NETCDF_LIB_DIR=/path/to/netcdf/lib
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If PEANO_WITH_NETCDF is on but no NetCDF installation can be found, the build emits
-a warning and continues with NetCDF support disabled. The NetCDF installation must
-provide NetCDF-4 (HDF5 backend) support and parallel I/O.
-
+If PEANO_WITH_NETCDF is ON and CMake cannot find a NetCDF installation, the build prints a warning and
+continues without NetCDF support. The NetCDF installation must write NetCDF-4 files through HDF5
+and support parallel I/O.
 
 */

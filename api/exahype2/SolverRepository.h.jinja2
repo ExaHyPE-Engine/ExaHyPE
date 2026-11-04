@@ -18,11 +18,16 @@ namespace tarch::mpi {
   class ReductionRecord;
 } // namespace tarch::mpi
 
+namespace tarch::reader {
+  class JSONReader;
+} // namespace tarch::reader
+
 namespace {{ NAMESPACE | join("::") }} {
 {%- for item in SOLVERS %}
   extern {{ NAMESPACE | join("::") }}::{{ item[0] }} {{ item[1] }};
 {%- endfor %}
 
+  void loadRuntimeParameters(tarch::reader::JSONReader* reader, int& argc, char** argv);
   void startSimulation();
   void finishSimulation();
 

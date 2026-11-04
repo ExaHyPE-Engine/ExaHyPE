@@ -10,7 +10,8 @@ exahype2::dg::ader::unittests::StubSolver::flux(
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
   const int                                                     direction,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = KernelTestSetup::FluxSpeed * (1.0 + direction) * state[unknown] + 0.01 * position(0);
@@ -26,7 +27,8 @@ exahype2::dg::ader::unittests::StubSolver::flux(
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
   const int                                                     direction,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = KernelTestSetup::FluxSpeed * (1.0 + direction) * state[unknown] + 0.01 * position(0)
@@ -43,7 +45,8 @@ exahype2::dg::ader::unittests::StubSolver::nonconservativeProduct(
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
   const int                                                     direction,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] =
@@ -58,7 +61,8 @@ exahype2::dg::ader::unittests::StubSolver::sourceTerm(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = KernelTestSetup::SourceStrength + 0.1 * state[unknown] - 0.01 * position(0);
@@ -73,7 +77,8 @@ exahype2::dg::ader::unittests::StubSolver::diffusiveSourceTerm(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     double sumOverAxes = 0.0;
@@ -92,7 +97,8 @@ exahype2::dg::ader::unittests::StubSolver::multiplyMaterialParameterMatrix(
   [[maybe_unused]] const double                                 timeStamp,
   [[maybe_unused]] const double                                 timeStepSize,
   const int                                                     direction,
-  double* NOALIAS const                                         values
+  double* NOALIAS const                                         values,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     values[unknown] *= 1.0 + 0.25 * state[0] + 0.125 * direction;
@@ -106,7 +112,8 @@ exahype2::dg::ader::unittests::StubSolver::pointSource(
   const double                                 timeStamp,
   [[maybe_unused]] const double                timeStepSize,
   double* NOALIAS const                        forceVector,
-  const int                                    pointSource
+  const int                                    pointSource,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   for (int unknown = 0; unknown < KernelTestSetup::NumberOfUnknowns; unknown++) {
     forceVector[unknown] = 1.0 + unknown + pointSource + timeStamp + state[unknown];

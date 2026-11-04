@@ -116,7 +116,7 @@ UNIT_TEST("The output path always ends in a separator") {
       const std::string emptyPath         = getOutputPathOf("");
       const std::string defaultPath       = getOutputPathOf("output");
 
-      THEN("Every path ends in one separator and the empty path names the working directory") {
+      THEN("Every path ends in one separator and the empty path becomes the working directory") {
         VALIDATE_EQUALS(relativePath, std::string("solutions/"));
         VALIDATE_EQUALS(pathWithSeparator, std::string("solutions/"));
         VALIDATE_EQUALS(absolutePath, std::string("/tmp/a/b/"));

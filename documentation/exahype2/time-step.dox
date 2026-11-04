@@ -4,7 +4,7 @@
 
 \tableofcontents
 
-`Derived` names the generated solver class of `Solver.h.jinja2`.
+`Derived` is the generated solver class of `Solver.h.jinja2`.
 The solver families call the static methods of `Derived` as the PDE terms.
 A solver family calls a PDE term only when `Derived` defines it.
 The concepts of exahype2::terms, such as exahype2::terms::HasFlux, test which PDE terms `Derived` defines.

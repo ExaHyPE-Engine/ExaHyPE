@@ -125,7 +125,9 @@ def _validate_base_columns(
 ) -> tuple[list[str], list[str]]:
     data_columns = [column for column in header if column.startswith("data(")]
     if not data_columns:
-        raise SystemExit(f"ERROR: CSV file contains no data(*) columns: {path}")
+        raise SystemExit(
+            f"ERROR: The CSV file {path} needs at least one data(*) column."
+        )
 
     if header[: len(BASE_COLUMNS_3D)] == list(BASE_COLUMNS_3D):
         return list(BASE_COLUMNS_3D), data_columns
@@ -159,7 +161,7 @@ def _load_csv(path: Path) -> tuple[pd.DataFrame, list[str], list[str]]:
 
     frame = frame.dropna(how="all")
     if frame.empty:
-        raise SystemExit(f"ERROR: CSV file contains no data rows: {path}")
+        raise SystemExit(f"ERROR: The CSV file {path} needs at least one data row.")
 
     numeric_columns = expected_columns
     try:
@@ -316,7 +318,7 @@ def _configure_pgf():
             return
 
     raise SystemExit(
-        "ERROR: PGF export requested, but no supported TeX engine was found. "
+        "ERROR: The PGF export needs a supported TeX engine. "
         "Install one of xelatex, lualatex, or pdflatex."
     )
 

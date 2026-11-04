@@ -75,7 +75,7 @@ Running the tests
 | `--junit file` | writes a JUnit report. GitLab shows the report in a merge request. |
 
 Rank 0 prints one line per test file with its number of unit tests, checks and run time. It prints the
-failures of all ranks with the reporting ranks and the open blocks. It names the unit tests without a
+failures of all ranks with the reporting ranks and the open blocks. It lists the unit tests without a
 check in a file with checks and closes with a summary.
 
 */

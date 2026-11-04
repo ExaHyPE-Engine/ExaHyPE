@@ -8,7 +8,7 @@ namespace {
   enum NonTerminal : std::uint8_t { First, Second, Third };
 } // namespace
 
-UNIT_TEST("Every turtle step names the axis it moves along and the direction of the move") {
+UNIT_TEST("Every turtle step returns the axis it moves along and the direction of the move") {
   GIVEN("The turtle steps left, right, down, up, back and front") {
     constexpr auto Left  = peano4::sfc::Grammar::Step::Left;
     constexpr auto Right = peano4::sfc::Grammar::Step::Right;

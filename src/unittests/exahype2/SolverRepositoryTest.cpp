@@ -20,9 +20,14 @@
 namespace {
   constexpr int Depth = 2;
 
+  struct RuntimeParameters final {
+    int value{0};
+  };
+
   /**
    * With OwnsCells, the solver reports its own number of cells. Without it, the repository counts
-   * every cell of the cell connectivity.
+   * every cell of the cell connectivity. The initialisation adds parameterIncrement to the runtime
+   * parameter value.
    */
   template <bool OwnsCells>
   struct RecordingSolver final {
@@ -40,6 +45,10 @@ namespace {
     std::uint64_t               reducedValue{0};
     exahype2::RefinementCommand timeStepCommand{exahype2::RefinementCommand::Keep};
     exahype2::RefinementCommand regridCommand{exahype2::RefinementCommand::Keep};
+    int                         parameterIncrement{0};
+    int                         parameterValueOfStart{-1};
+    int                         parameterValueOfInitialisation{-1};
+    int                         parameterValueOfTimeStep{-1};
 
     [[nodiscard]] const exahype2::TimeStepping& getTimeStepping() const { return timeStepping; }
     [[nodiscard]] int getNumberOfDoFs() const { return numberOfDoFs; }
@@ -50,30 +59,48 @@ namespace {
     }
     [[nodiscard]] tarch::AllocatedBytes getAllocatedBytes() const { return allocatedBytes; }
 
-    void startSimulation() { phaseCalls++; }
-    void finishSimulation() { phaseCalls++; }
-    void allocate([[maybe_unused]] const peano4::CellConnectivity& cellConnectivity) { phaseCalls++; }
+    void startSimulation(const RuntimeParameters& parameters) {
+      phaseCalls++;
+      parameterValueOfStart = parameters.value;
+    }
+    void finishSimulation([[maybe_unused]] const RuntimeParameters& parameters) { phaseCalls++; }
+    void allocate(
+      [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
+      [[maybe_unused]] const RuntimeParameters&        parameters
+    ) {
+      phaseCalls++;
+    }
     void release() { phaseCalls++; }
     void requestRefinementForGridConstruction(
       [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
-      [[maybe_unused]] exahype2::RefinementRequests&   requests
+      [[maybe_unused]] exahype2::RefinementRequests&   requests,
+      [[maybe_unused]] const RuntimeParameters&        parameters
     ) {
       phaseCalls++;
     }
     void initialise(
       [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
-      [[maybe_unused]] exahype2::RefinementRequests&   requests
+      [[maybe_unused]] exahype2::RefinementRequests&   requests,
+      RuntimeParameters&                               parameters
     ) {
       phaseCalls++;
+      parameters.value += parameterIncrement;
+      parameterValueOfInitialisation = parameters.value;
     }
-    void performTimeStep(const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests) {
+    void performTimeStep(
+      const peano4::CellConnectivity& cellConnectivity,
+      exahype2::RefinementRequests&   requests,
+      const RuntimeParameters&        parameters
+    ) {
       phaseCalls++;
+      parameterValueOfTimeStep = parameters.value;
       requests.merge(timeStepCommand, cellConnectivity.getCells());
     }
     void regrid(
-      const peano4::CellConnectivity&        cellConnectivity,
-      [[maybe_unused]] const peano4::Regrid& regrid,
-      exahype2::RefinementRequests&          requests
+      const peano4::CellConnectivity&           cellConnectivity,
+      [[maybe_unused]] const peano4::Regrid&    regrid,
+      exahype2::RefinementRequests&             requests,
+      [[maybe_unused]] const RuntimeParameters& parameters
     ) {
       phaseCalls++;
       requests.merge(regridCommand, cellConnectivity.getCells());
@@ -81,11 +108,17 @@ namespace {
     void plot(
       [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
       [[maybe_unused]] const tarch::plotter::Format    format,
-      [[maybe_unused]] const std::string&              outputDirectory
+      [[maybe_unused]] const std::string&              outputDirectory,
+      [[maybe_unused]] const RuntimeParameters&        parameters
     ) {
       phaseCalls++;
     }
-    void recordLastTimeStamp([[maybe_unused]] const peano4::CellConnectivity& cellConnectivity) { phaseCalls++; }
+    void recordLastTimeStamp(
+      [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
+      [[maybe_unused]] const RuntimeParameters&        parameters
+    ) {
+      phaseCalls++;
+    }
     void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record) {
       phaseCalls++;
       slot = record.addSum(1);
@@ -95,12 +128,19 @@ namespace {
       reducedValue = record.getSum(slot);
     }
   };
+
+  using CountingSolver = RecordingSolver<true>;
+  using PlainSolver    = RecordingSolver<false>;
+
+  using RepositoryOfOneSolver              = exahype2::SolverRepository<RuntimeParameters, PlainSolver>;
+  using RepositoryOfTwoSolvers             = exahype2::SolverRepository<RuntimeParameters, PlainSolver, PlainSolver>;
+  using RepositoryOfCountingAndPlainSolver = exahype2::SolverRepository<RuntimeParameters, CountingSolver, PlainSolver>;
 } // namespace
 
 UNIT_TEST("The repository reduces the values of every solver and counts every cell for a solver without a cell count") {
   GIVEN("Two solvers with time stamps, degrees of freedom and bytes, the first with a cell count and a regular grid") {
-    RecordingSolver<true>  coarse;
-    RecordingSolver<false> fine;
+    CountingSolver coarse;
+    PlainSolver    fine;
     coarse.timeStepping.advanceTimeStamp(0.5);
     fine.timeStepping.advanceTimeStamp(0.125);
     fine.timeStepping.advanceTimeStamp(0.125);
@@ -114,12 +154,12 @@ UNIT_TEST("The repository reduces the values of every solver and counts every ce
     const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
 
     WHEN("A repository over both solvers reduces their values") {
-      const exahype2::SolverRepository repository{coarse, fine};
-      const double                     minTimeStamp        = repository.getMinTimeStamp();
-      const double                     maxTimeStamp        = repository.getMaxTimeStamp();
-      const std::uint64_t              numberOfSolverCells = repository.getNumberOfSolverCells(cellConnectivity);
-      const std::uint64_t              numberOfCellDoFs    = repository.getNumberOfCellDoFs(cellConnectivity);
-      const tarch::AllocatedBytes      allocatedBytes      = repository.getAllocatedBytes();
+      const RepositoryOfCountingAndPlainSolver repository{coarse, fine};
+      const double                             minTimeStamp = repository.getMinTimeStamp();
+      const double                             maxTimeStamp = repository.getMaxTimeStamp();
+      const std::uint64_t         numberOfSolverCells       = repository.getNumberOfSolverCells(cellConnectivity);
+      const std::uint64_t         numberOfCellDoFs          = repository.getNumberOfCellDoFs(cellConnectivity);
+      const tarch::AllocatedBytes allocatedBytes            = repository.getAllocatedBytes();
 
       THEN("The time stamps range from one quarter to one half and the cells, degrees of freedom and bytes add up") {
         VALIDATE_NUMERICAL_EQUALS(minTimeStamp, 0.25);
@@ -141,9 +181,9 @@ UNIT_TEST("The repository reduces the values of every solver and counts every ce
 
 UNIT_TEST("Every phase call reaches every solver once and the requests of an empty cell connectivity stay empty") {
   GIVEN("A repository over two solvers, an empty cell connectivity and an empty regrid") {
-    RecordingSolver<false>         first;
-    RecordingSolver<false>         second;
-    exahype2::SolverRepository     repository{first, second};
+    PlainSolver                    first;
+    PlainSolver                    second;
+    RepositoryOfTwoSolvers         repository{first, second};
     const peano4::CellConnectivity cellConnectivity{};
     const peano4::Regrid           regrid{};
 
@@ -175,13 +215,39 @@ UNIT_TEST("Every phase call reaches every solver once and the requests of an emp
   }
 }
 
+UNIT_TEST("A solver that overwrites the runtime parameters in its initialisation passes them to every later call") {
+  GIVEN("A repository with the runtime parameter value three over two solvers, the first of which adds four to it") {
+    PlainSolver first;
+    PlainSolver second;
+    first.parameterIncrement = 4;
+    RepositoryOfTwoSolvers repository{first, second};
+    repository.setParameters(RuntimeParameters{.value = 3});
+    const peano4::CellConnectivity cellConnectivity{};
+
+    WHEN("The repository starts the simulation, initialises both solvers and runs one time step") {
+      repository.startSimulation();
+      repository.initialise(cellConnectivity);
+      repository.performTimeStep(cellConnectivity);
+
+      THEN("Both solvers start with three and the second solver and every time step read seven") {
+        VALIDATE_EQUALS(first.parameterValueOfStart, 3);
+        VALIDATE_EQUALS(second.parameterValueOfStart, 3);
+        VALIDATE_EQUALS(first.parameterValueOfInitialisation, 7);
+        VALIDATE_EQUALS(second.parameterValueOfInitialisation, 7);
+        VALIDATE_EQUALS(first.parameterValueOfTimeStep, 7);
+        VALIDATE_EQUALS(second.parameterValueOfTimeStep, 7);
+      }
+    }
+  }
+}
+
 UNIT_TEST("Every reduction gathers the refinement requests of the step that filled it") {
   GIVEN("A regular grid and a repository over one solver whose time step votes with a command that the test sets") {
     peano4::unittests::buildRegularGrid(Depth);
-    const auto&                cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
-    RecordingSolver<false>     solver;
-    exahype2::SolverRepository repository{solver};
-    const MPI_Comm             communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+    const auto&           cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+    PlainSolver           solver;
+    RepositoryOfOneSolver repository{solver};
+    const MPI_Comm        communicator = tarch::mpi::Rank::getInstance().getCommunicator();
 
     WHEN("A time step votes for refinement on every cell and the ranks reduce the step") {
       solver.timeStepCommand = exahype2::RefinementCommand::Refine;
@@ -211,11 +277,11 @@ UNIT_TEST("Every reduction gathers the refinement requests of the step that fill
 
 UNIT_TEST("A regrid deletes the erase request of every cell that it refines for the second time") {
   GIVEN("A repository over one solver whose time step and regrid vote with commands that the test sets") {
-    const MPI_Comm             communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
-    const int                  numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-    const peano4::Regrid       regrid{};
-    RecordingSolver<false>     solver;
-    exahype2::SolverRepository repository{solver};
+    const MPI_Comm        communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
+    const int             numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+    const peano4::Regrid  regrid{};
+    PlainSolver           solver;
+    RepositoryOfOneSolver repository{solver};
 
     const auto finishStep = [&repository, communicator] {
       tarch::mpi::ReductionRecord record;

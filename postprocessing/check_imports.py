@@ -44,7 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def attribute_chains(tree: ast.AST) -> set[str]:
-    """Returns the dotted names a module reads, each at its full length."""
+    """Returns the dotted names that a module reads, each at its full length."""
     inner = {
         id(node.value) for node in ast.walk(tree) if isinstance(node, ast.Attribute)
     }
@@ -91,7 +91,7 @@ def stale_submodule_imports(path: str, text: str) -> list[Finding]:
 
 
 def top_level_packages(root: str, files: list[str]) -> list[str]:
-    """Returns the sorted package directories whose parent directory is no package."""
+    """Returns the sorted package directories whose parent directory is not a package."""
     packages = {
         os.path.dirname(path)
         for path in files
@@ -109,7 +109,7 @@ def package_modules(package: str, files: list[str]) -> list[tuple[str, str]]:
     """Returns the dotted module names and the files of a package, the package itself first.
 
     A file counts only when every directory from the package down to the file contains an
-    ``__init__.py``. No script of a plain subdirectory then runs.
+    ``__init__.py``. The check then skips the scripts of a plain subdirectory.
     """
     initialised = {
         os.path.dirname(path)

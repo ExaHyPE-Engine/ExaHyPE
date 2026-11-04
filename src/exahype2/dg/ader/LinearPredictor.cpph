@@ -59,6 +59,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters,
   const TeamWorkers&                           workers
 ) {
   constexpr int NodesPerAxis     = CellLayout::NodesPerAxis;
@@ -92,6 +93,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
           cellSize,
           timeStamp,
           timeStepSize,
+          parameters,
           workers
         );
         addPointSourcesToState(state, pointSourceValues, tables.quadratureWeights, timeStepSize, workers);
@@ -126,7 +128,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
 
     if constexpr (EvaluateFlux) {
       if (workers.hasCell) {
-        evaluateFlux(flux, values, cellCentre, cellSize, timeStamp, timeStepSize, workers);
+        evaluateFlux(flux, values, cellCentre, cellSize, timeStamp, timeStepSize, parameters, workers);
       }
       exahype2::dg::ader::teamBarrier(workers);
       if (WritesFaceFluxes and isLastPass) {
@@ -172,6 +174,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
           cellSize,
           timeStamp,
           timeStepSize,
+          parameters,
           workers
         );
       }
@@ -180,7 +183,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
 
     if constexpr (EvaluateMaterialParameters) {
       if (workers.hasCell) {
-        applyMaterialParameterMatrix(flux, values, cellCentre, cellSize, timeStamp, timeStepSize, workers);
+        applyMaterialParameterMatrix(flux, values, cellCentre, cellSize, timeStamp, timeStepSize, parameters, workers);
       }
     }
 
@@ -190,7 +193,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
 
     if (workers.hasCell) {
       if constexpr (EvaluateSource) {
-        overwriteStateWithLinearSource(state, cellCentre, cellSize, timeStamp, timeStepSize, workers);
+        overwriteStateWithLinearSource(state, cellCentre, cellSize, timeStamp, timeStepSize, parameters, workers);
       }
       addFluxesToTimeDerivative(state, flux, workers);
       if constexpr (EvaluatePointSources) {
@@ -294,6 +297,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
   const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
   const double                                           timeStamp,
   const double                                           timeStepSize,
+  const typename Derived::RuntimeParameters&             parameters,
   const TeamWorkers&                                     workers
 ) {
   constexpr int NodesPerAxis = CellLayout::NodesPerAxis;
@@ -353,7 +357,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
           static_cast<double>(timePosition),
           timeStepSize,
           forceVector,
-          pointSource
+          pointSource,
+          parameters
         );
 
         const double* const location = pointSourceLocations + static_cast<std::ptrdiff_t>(pointSource) * DIMENSIONS;
@@ -469,6 +474,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateFlux(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters,
   const TeamWorkers&                           workers
 ) {
   constexpr int FluxStride = CellLayout::PaddedNumberOfUnknowns;
@@ -484,7 +490,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateFlux(
         timeStamp,
         timeStepSize,
         axis,
-        flux + cellNode * FluxStride + axis * AxisStride
+        flux + cellNode * FluxStride + axis * AxisStride,
+        parameters
       );
     }
   }
@@ -505,6 +512,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
   const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
   const double                                           timeStamp,
   const double                                           timeStepSize,
+  const typename Derived::RuntimeParameters&             parameters,
   const TeamWorkers&                                     workers
 ) {
   constexpr int NodesPerAxis = CellLayout::NodesPerAxis;
@@ -534,7 +542,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
         timeStamp,
         timeStepSize,
         axis,
-        productValues
+        productValues,
+        parameters
       );
       SIMD(aligned(productValues : PEANO_WITH_ALIGNMENT))
       for (int unknown = 0; unknown < FluxStride; unknown++) {
@@ -571,6 +580,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::applyMaterialPar
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters,
   const TeamWorkers&                           workers
 ) {
   constexpr int AxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
@@ -585,7 +595,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::applyMaterialPar
         timeStamp,
         timeStepSize,
         axis,
-        flux + cellNode * CellLayout::PaddedNumberOfUnknowns + axis * AxisStride
+        flux + cellNode * CellLayout::PaddedNumberOfUnknowns + axis * AxisStride,
+        parameters
       );
     }
   }
@@ -603,6 +614,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::overwriteStateWi
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters,
   const TeamWorkers&                           workers
 ) {
   ComputePrecision sourceValues[CellLayout::PaddedNumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -617,7 +629,8 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::overwriteStateWi
       cellSize,
       timeStamp,
       timeStepSize,
-      sourceValues
+      sourceValues,
+      parameters
     );
     for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
       state[cellNode * CellLayout::PaddedNumberOfData + unknown] = sourceValues[unknown];

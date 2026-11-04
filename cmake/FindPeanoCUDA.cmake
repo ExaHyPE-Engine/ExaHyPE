@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 find_package(CUDAToolkit REQUIRED)
-set(CUDA_FOUND "${CUDAToolkit_FOUND}")
+set(PeanoCUDA_FOUND "${CUDAToolkit_FOUND}")
 
 if(TARGET PeanoOptions)
   target_link_libraries(PeanoOptions INTERFACE

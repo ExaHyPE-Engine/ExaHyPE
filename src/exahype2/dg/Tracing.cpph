@@ -31,20 +31,24 @@ exahype2::dg::interpolateFields(
   if (scheme == exahype2::particles::InterpolationScheme::None) {
     return;
   }
-  [[maybe_unused]] const auto interpolateUnknown = [&](const int unknown) {
-    return static_cast<double>(exahype2::dg::evaluatePolynomial(
-      centre,
-      width,
-      NodesPerAxis - 1,
-      quadratureNodes,
-      NumberOfData,
-      Q,
-      position,
-      unknown
-    ));
-  };
-  [[maybe_unused]] int unknown = 0;
-  (particle.setData(FieldIndices, interpolateUnknown(unknown++)), ...);
+  if constexpr (sizeof...(FieldIndices) > 0) {
+    constexpr int FieldIndexList[] = {FieldIndices...};
+    for (int unknown = 0; unknown < static_cast<int>(sizeof...(FieldIndices)); unknown++) {
+      particle.setData(
+        FieldIndexList[unknown],
+        static_cast<double>(exahype2::dg::evaluatePolynomial(
+          centre,
+          width,
+          NodesPerAxis - 1,
+          quadratureNodes,
+          NumberOfData,
+          Q,
+          position,
+          unknown
+        ))
+      );
+    }
+  }
 }
 
 template <int NodesPerAxis, int NumberOfData, typename Storage, int... FieldIndices>

@@ -55,7 +55,7 @@ if project.dimensions != 3:
 # solver owns the slab of one finest cell below the upper domain boundary.
 solver_interface_plane = (
     "(DomainOffset(1) + DomainSize(1) - DomainSize(1)"
-    " / std::pow(peano4::sfc::ActiveCurve::SubdivisionFactor, RuntimeParameters::getGridLevels()))"
+    " / std::pow(peano4::sfc::ActiveCurve::SubdivisionFactor, parameters.gridLevels))"
 )
 
 hpSolver = exahype2.dg.ader.Solver(

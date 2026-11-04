@@ -3,13 +3,21 @@ FROM peanoframework/spack:latest AS builder
 WORKDIR /opt/spack-environment
 
 COPY utilities/spack/compilers/llvm/spack.yaml spack.yaml
+COPY utilities/spack/repo.yaml /opt/spack-peano/repo.yaml
+COPY utilities/spack/packages /opt/spack-peano/packages
 
+# Clang 22 embeds PTX only with --cuda-include-ptx. The CUDA driver compiles the PTX for every GPU newer than sm_75.
 RUN . /opt/spack/share/spack/setup-env.sh && \
-    spack compiler find && \
     spack env activate . && \
+    spack compiler find && \
+    spack repo add /opt/spack-peano && \
     spack external find curl cmake ccache git ninja && \
     spack concretize && \
-    spack install --fail-fast && \
+    spack install --fail-fast --concurrent-packages 1 llvm@22.1.8 && \
+    llvmBin=$(dirname "$(readlink -f /opt/views/view/bin/clang++)") && \
+    echo "--cuda-include-ptx=all" >> "${llvmBin}/clang.cfg" && \
+    echo "--cuda-include-ptx=all" >> "${llvmBin}/clang++.cfg" && \
+    spack install --fail-fast --concurrent-packages 1 && \
     spack gc -y && \
     spack clean -a
 

@@ -19,7 +19,6 @@ set(SOURCES
 
   accelerator/accelerator.cpp
   accelerator/Device.cpp
-  accelerator/DeviceCopies.cpp
   accelerator/MemoryBlocks.cpp
   accelerator/MemoryLocation.cpp
   accelerator/Scratch.cpp

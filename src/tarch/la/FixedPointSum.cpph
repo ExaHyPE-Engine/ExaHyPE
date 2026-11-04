@@ -13,9 +13,11 @@ template <std::int64_t MaximumNumberOfTerms>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tarch::la::FixedPointSum<MaximumNumberOfTerms>::clear(const double bound) {
   ASSERTION(std::isfinite(bound) and bound >= 0.0, bound);
+  int exponent = 0;
+  static_cast<void>(std::frexp(bound, &exponent));
   _bound         = bound;
   _numberOfTerms = 0;
-  _unitExponent  = bound > 0.0 ? std::ilogb(bound) + 2 + TermBits - 126 : -1074;
+  _unitExponent  = bound > 0.0 ? exponent + 1 + TermBits - 126 : -1074;
   _high          = 0;
   _low           = 0;
 }

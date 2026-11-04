@@ -9,17 +9,22 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::ader::unittests {
+  struct RuntimeParameters;
   struct StubLayout;
   struct RiemannSolverTerm;
   struct KernelTestSetup;
   struct StubSolver;
 } // namespace exahype2::dg::ader::unittests
 
+struct exahype2::dg::ader::unittests::RuntimeParameters final {};
+
 TARGET_DECLARE
 /**
  * The layout constants the stub solvers of the ADER-DG tests derive from.
  */
 struct exahype2::dg::ader::unittests::StubLayout {
+  using RuntimeParameters = exahype2::dg::ader::unittests::RuntimeParameters;
+
   static constexpr int DGOrder                    = 2;
   static constexpr int NumberOfUnknowns           = 2;
   static constexpr int NumberOfAuxiliaryVariables = 1;
@@ -33,17 +38,18 @@ TARGET_DECLARE
  */
 struct exahype2::dg::ader::unittests::RiemannSolverTerm {
   static INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblem(
-    [[maybe_unused]] const double* const                          QL,
-    [[maybe_unused]] const double* const                          QR,
-    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-    [[maybe_unused]] const double                                 t,
-    [[maybe_unused]] const double                                 dt,
-    [[maybe_unused]] const int                                    normal,
-    [[maybe_unused]] const bool                                   isBoundaryFace,
-    [[maybe_unused]] const int                                    faceIndex,
-    [[maybe_unused]] double* const                                FL,
-    [[maybe_unused]] double* const                                FR
+    [[maybe_unused]] const double* const                                     QL,
+    [[maybe_unused]] const double* const                                     QR,
+    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&            x,
+    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&            h,
+    [[maybe_unused]] const double                                            t,
+    [[maybe_unused]] const double                                            dt,
+    [[maybe_unused]] const int                                               normal,
+    [[maybe_unused]] const bool                                              isBoundaryFace,
+    [[maybe_unused]] const int                                               faceIndex,
+    [[maybe_unused]] double* const                                           FL,
+    [[maybe_unused]] double* const                                           FR,
+    [[maybe_unused]] const exahype2::dg::ader::unittests::RuntimeParameters& parameters
   ) {
     return 0.0;
   }
@@ -94,7 +100,8 @@ struct exahype2::dg::ader::unittests::StubSolver final : exahype2::dg::ader::uni
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          direction,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
@@ -105,7 +112,8 @@ struct exahype2::dg::ader::unittests::StubSolver final : exahype2::dg::ader::uni
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          direction,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
@@ -116,7 +124,8 @@ struct exahype2::dg::ader::unittests::StubSolver final : exahype2::dg::ader::uni
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          direction,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void sourceTerm(
@@ -125,7 +134,8 @@ struct exahype2::dg::ader::unittests::StubSolver final : exahype2::dg::ader::uni
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void diffusiveSourceTerm(
@@ -135,7 +145,8 @@ struct exahype2::dg::ader::unittests::StubSolver final : exahype2::dg::ader::uni
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void multiplyMaterialParameterMatrix(
@@ -145,16 +156,18 @@ struct exahype2::dg::ader::unittests::StubSolver final : exahype2::dg::ader::uni
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          direction,
-    double* NOALIAS                              values
+    double* NOALIAS                              values,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void pointSource(
-    const double* NOALIAS state,
-    const double* NOALIAS nodePosition,
-    double                timeStamp,
-    double                timeStepSize,
-    double* NOALIAS       forceVector,
-    int                   pointSource
+    const double* NOALIAS    state,
+    const double* NOALIAS    nodePosition,
+    double                   timeStamp,
+    double                   timeStepSize,
+    double* NOALIAS          forceVector,
+    int                      pointSource,
+    const RuntimeParameters& parameters
   );
 };
 TARGET_DECLARE_END

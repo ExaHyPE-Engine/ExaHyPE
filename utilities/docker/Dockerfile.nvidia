@@ -5,11 +5,12 @@ WORKDIR /opt/spack-environment
 COPY utilities/spack/compilers/nvidia/spack.yaml spack.yaml
 
 RUN . /opt/spack/share/spack/setup-env.sh && \
-    spack compiler find && \
     spack env activate . && \
+    spack compiler find && \
     spack external find curl cmake ccache git ninja && \
     spack concretize && \
-    spack install --fail-fast && \
+    spack install --fail-fast nvhpc && \
+    spack install --fail-fast --concurrent-packages 1 && \
     spack gc -y && \
     spack clean -a
 
@@ -29,6 +30,9 @@ COPY --from=builder /opt/spack-environment /opt/spack-environment
 COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/views /opt/views
 COPY --from=builder /entrypoint.sh /entrypoint.sh
+
+# The MPI launcher prterun of the NVIDIA SDK links libnl-route-3.
+RUN apt-get update && apt-get install -y --no-install-recommends libnl-route-3-200 && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt requirements.txt
 RUN . /entrypoint.sh && pip install -r requirements.txt && rm requirements.txt

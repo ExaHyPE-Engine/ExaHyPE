@@ -7,7 +7,8 @@ max_eigenvalue = r"""
   constexpr double AdiabaticIndex = 4.0 / 3.0;
 
   double primitives[NumberOfUnknowns];
-  tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives);
+  double gContr[3][3];
+  tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives, gContr);
 
   const double rho       = primitives[Shortcuts::rho];
   const double vCov[3]   = {primitives[Shortcuts::vel + 0], primitives[Shortcuts::vel + 1], primitives[Shortcuts::vel + 2]};
@@ -21,9 +22,6 @@ max_eigenvalue = r"""
     {primitives[Shortcuts::gij + 1], primitives[Shortcuts::gij + 3], primitives[Shortcuts::gij + 4]},
     {primitives[Shortcuts::gij + 2], primitives[Shortcuts::gij + 4], primitives[Shortcuts::gij + 5]}
   };
-
-  double gContr[3][3];
-  tests::exahype2::aderdg::grmhd::invertMatrix3x3(gCov, gContr);
 
   double vContr[3];
   tests::exahype2::aderdg::grmhd::multiplyMatrixVector(gContr, vCov, vContr);
@@ -72,8 +70,9 @@ flux = r"""
 
   std::fill_n(F, NumberOfUnknowns, 0.0);
 
-  double primitives[NumberOfUnknowns];
-  tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives);
+  double       primitives[NumberOfUnknowns];
+  double       gContr[3][3];
+  const double determinant = tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives, gContr);
 
   const double rho                 = primitives[Shortcuts::rho];
   const double vCov[3]             = {primitives[Shortcuts::vel + 0], primitives[Shortcuts::vel + 1], primitives[Shortcuts::vel + 2]};
@@ -89,8 +88,7 @@ flux = r"""
     {primitives[Shortcuts::gij + 2], primitives[Shortcuts::gij + 4], primitives[Shortcuts::gij + 5]}
   };
 
-  double       gContr[3][3];
-  const double rootDeterminant        = std::sqrt(tests::exahype2::aderdg::grmhd::invertMatrix3x3(gCov, gContr));
+  const double rootDeterminant        = std::sqrt(determinant);
   const double inverseRootDeterminant = 1. / rootDeterminant;
 
   double vContr[3];
@@ -187,12 +185,12 @@ ncp = r"""
     {Q[Shortcuts::gij + 2], Q[Shortcuts::gij + 4], Q[Shortcuts::gij + 5]}
   };
 
+  double       primitives[NumberOfUnknowns];
   double       gContr[3][3];
-  const double rootDeterminant        = std::sqrt(tests::exahype2::aderdg::grmhd::invertMatrix3x3(gCov, gContr));
-  const double inverseRootDeterminant = 1. / rootDeterminant;
+  const double determinant = tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives, gContr);
 
-  double primitives[NumberOfUnknowns];
-  tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives);
+  const double rootDeterminant        = std::sqrt(determinant);
+  const double inverseRootDeterminant = 1. / rootDeterminant;
 
   const double enthalpyFactor = AdiabaticIndex / (AdiabaticIndex - 1.);
 

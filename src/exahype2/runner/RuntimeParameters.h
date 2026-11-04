@@ -71,6 +71,7 @@ public:
     int                maxGridLevels,
     const std::string& projectName
   );
+
   void configure(int& argc, char** argv);
   void printUsage(const std::string& executableName) const;
 
@@ -102,10 +103,6 @@ public:
 
   [[nodiscard]] double getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
   [[nodiscard]] double getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
-  [[nodiscard]] double getMaxAdmissibleCellSize(
-    const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-    int                                          cellsPerPatchPerAxis
-  ) const;
 
 private:
   static std::string normaliseOutputPath(const std::string& path);

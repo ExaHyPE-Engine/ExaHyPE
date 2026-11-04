@@ -85,6 +85,7 @@ public:
     const std::string&                               name,
     const std::vector<exahype2::plotter::DataField>& plottedFields
   );
+
   INLINE_METHOD Solver(
     double                                           timeStepFactor,
     const std::string&                               name,
@@ -93,25 +94,39 @@ public:
     double                                           differencesScaling
   );
 
-  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
+  template <typename RuntimeParameters>
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity, const RuntimeParameters& parameters);
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void initialise(
     const peano4::CellConnectivity& cellConnectivity,
-    exahype2::RefinementRequests&   requests
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void performTimeStep(
     const peano4::CellConnectivity& cellConnectivity,
-    exahype2::RefinementRequests&   requests
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void regrid(
     const peano4::CellConnectivity& cellConnectivity,
     const peano4::Regrid&           regrid,
-    exahype2::RefinementRequests&   requests
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void plot(
     const peano4::CellConnectivity& cellConnectivity,
     tarch::plotter::Format          format,
-    const std::string&              outputDirectory
+    const std::string&              outputDirectory,
+    const RuntimeParameters&        parameters
   );
+
   INLINE_METHOD void release();
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
@@ -143,37 +158,54 @@ private:
 
   [[nodiscard]] static INLINE_METHOD exahype2::dg::BasisTables<ComputePrecision> getBasisTables();
 
+  struct CoupledTimeStep;
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void predict(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
-  template <typename DivergenceMarks>
+
+  template <typename DivergenceMarks, typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD exahype2::dg::ader::PredictionCounts predictCells(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
     double                          timeStepSize,
-    const DivergenceMarks&          divergenceMarks
+    const DivergenceMarks&          divergenceMarks,
+    const RuntimeParameters&        parameters
   );
+
   INLINE_METHOD void interpolatePredictedHalves(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency
   );
+
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics correct(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
 
   INLINE_METHOD void setCouplingMatrix(const std::vector<double>& fromPartnerMatrix);
   INLINE_METHOD void leaveTimeStepsToPartner();
+
   template <typename Partner>
   INLINE_METHOD void copyFaceHalvesFromPartner(
     const peano4::CellConnectivity& cellConnectivity,
     const Partner&                  partner,
     peano4::Adjacency               adjacency
   );
-  INLINE_METHOD void rebuildCouplingFaces(const peano4::CellConnectivity& cellConnectivity);
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void rebuildCouplingFaces(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
+
   INLINE_METHOD void reservePredictorScratch(const peano4::CellConnectivity& cellConnectivity);
 
   tarch::accelerator::Buffer<double> _pointSourceLocations{tarch::MemoryLocation::Device};
@@ -185,14 +217,26 @@ private:
 
   LimiterSlot _limiter{};
 
-  std::function<void(const peano4::CellConnectivity&, exahype2::RefinementRequests&)> _coupledTimeStep{};
-  bool                                                                                _drivenByPartner{false};
+  std::unique_ptr<CoupledTimeStep> _coupledTimeStep{};
+  bool                             _drivenByPartner{false};
 
   tarch::accelerator::Buffer<int> _couplingFaces{tarch::MemoryLocation::Device};
   int                             _numberOfCouplingFaces{0};
   int                             _numberOfLocalCouplingFaces{0};
 
   tarch::accelerator::Buffer<ComputePrecision> _couplingMatrix{tarch::MemoryLocation::Device};
+};
+
+/**
+ * Runs one time step of a solver and of its coupling partner. Only the member functions of Solver
+ * instantiate this type. Derived is complete in these functions.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+struct exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::CoupledTimeStep final {
+  std::function<
+    void(const peano4::CellConnectivity&, exahype2::RefinementRequests&, const typename Derived::RuntimeParameters&)
+  >
+    run{};
 };
 TARGET_DECLARE_END
 

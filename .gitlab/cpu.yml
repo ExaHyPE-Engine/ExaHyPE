@@ -40,7 +40,7 @@ LLVM:
     TOOLCHAIN: "LLVM"
     CC: "clang"
     CXX: "clang++"
-    FC: "gfortran" # TODO: flang
+    FC: "gfortran"
     IMAGE_TAG: "${IMAGE_LLVM}"
 
 NVIDIA:

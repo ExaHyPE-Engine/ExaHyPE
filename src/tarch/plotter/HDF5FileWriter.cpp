@@ -33,7 +33,7 @@ namespace {
   }
 
   /**
-   * Returns whether xdmfType names a polyvertex, a polyline or a polygon. A mixed XDMF topology lists
+   * Returns whether xdmfType is the XDMF code of a polyvertex, a polyline or a polygon. A mixed XDMF topology lists
    * the node count of such a cell.
    */
   bool xdmfTypeNeedsNodeCount(const int xdmfType) { return xdmfType >= 1 and xdmfType <= 3; }

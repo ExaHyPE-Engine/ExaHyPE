@@ -152,9 +152,9 @@ namespace {
   }
 } // namespace
 
-UNIT_TEST("The children of every curve state name a valid state and lie at their linearised position") {
+UNIT_TEST("Every child of every curve state has a valid state and lies at its linearised position") {
   GIVEN("The Peano curve and the Hilbert curve") {
-    THEN("Every child names a valid state and its position within the parent agrees with its linearised form") {
+    THEN("Every child has a valid state and its position within the parent agrees with its linearised form") {
       validateChildrenOfEveryState<PeanoCurve>();
       validateChildrenOfEveryState<HilbertCurve>();
     }

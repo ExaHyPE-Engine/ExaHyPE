@@ -8,11 +8,12 @@
 namespace exahype2::terms {
   template <typename SolverType, typename Precision>
   concept HasRefinementCriterion = requires(
-    const Precision* const                       Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t
+    const Precision* const                        Q,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const double                                  t,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
-    { SolverType::refinementCriterion(Q, x, h, t) } -> std::same_as<exahype2::RefinementCommand>;
+    { SolverType::refinementCriterion(Q, x, h, t, parameters) } -> std::same_as<exahype2::RefinementCommand>;
   };
 } // namespace exahype2::terms

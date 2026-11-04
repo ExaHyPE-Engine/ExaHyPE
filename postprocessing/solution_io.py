@@ -52,7 +52,9 @@ class MeshSnapshot:
             return self.node_data[name], "node"
         if name in self.cell_data:
             return self.cell_data[name], "cell"
-        raise KeyError(f"No field named {name!r} in {self.name}")
+        raise KeyError(
+            f"The solution reader cannot find the field {name!r} in {self.name}."
+        )
 
 
 @dataclass
@@ -257,7 +259,7 @@ def _scan_xdmf(path: Path) -> tuple[str, list[SnapshotRef]]:
 
     grid = root.find(".//Grid")
     if grid is None:
-        raise ValueError(f"No Grid element found in {path}")
+        raise ValueError(f"The solution reader cannot find a Grid element in {path}.")
     payload = _grid_to_payload(index_dir, grid)
     return path.stem, [
         SnapshotRef("xdmf", str(path), _time_from_name(path), path.stem, payload)
@@ -730,7 +732,7 @@ class SolutionSource:
         self, name: str, refs: list[SnapshotRef], path: str | Path | None = None
     ):
         if not refs:
-            raise ValueError(f"No snapshots found for {name!r}")
+            raise ValueError(f"The solution reader cannot find a snapshot of {name!r}.")
         self.name = name
         self.refs = refs
         self.path = path  # The opened file, index or directory, for messages.
@@ -793,7 +795,7 @@ class SolutionSource:
         if path.is_dir():
             return cls.open(_index_in_directory(path))
         if not path.exists():
-            raise FileNotFoundError(f"No such file: {path}")
+            raise FileNotFoundError(f"The solution reader cannot find the file {path}.")
         name, refs = _scan_path(path)
         refs = [ref for ref in refs if Path(ref.path).exists()]
         return cls(name, refs, path)
@@ -821,7 +823,7 @@ class SolutionSource:
             str(directory) for directory in _candidate_directories(directory)
         )
         raise FileNotFoundError(
-            f"No plotter output found for {name!r}. Looked in: {searched}. "
+            f"The solution reader cannot find the plotter output of {name!r} in {searched}. "
             "Run the cells that build and execute the solver first."
         )
 
@@ -829,7 +831,7 @@ class SolutionSource:
     def locate(cls, spec, directory: str | Path | None = None) -> "SolutionSource":
         """Returns the source at the path ``spec``, or the one discovered for the solver name ``spec``.
 
-        An object that is no path, such as a SolutionSource, is returned unchanged.
+        Returns an object that is not a path, such as a SolutionSource, unchanged.
         """
         if not isinstance(spec, (str, os.PathLike)):
             return spec
@@ -837,7 +839,9 @@ class SolutionSource:
         if path.exists():
             return cls.open(path)
         if path.is_absolute():
-            raise FileNotFoundError(f"No such file or directory: {path}")
+            raise FileNotFoundError(
+                f"The solution reader cannot find the file or directory {path}."
+            )
         return cls.discover(str(spec), directory)
 
 
@@ -852,7 +856,9 @@ def _index_in_directory(directory: Path) -> Path:
             candidates.extend(sorted(base.glob(pattern)))
         candidates.extend(sorted(_temporal_xmf_files(base)))
     if not candidates:
-        raise FileNotFoundError(f"No plotter index found under {directory}")
+        raise FileNotFoundError(
+            f"The solution reader cannot find a plotter index under {directory}."
+        )
     if len({path.name for path in candidates}) > 1:
         listing = ", ".join(str(path) for path in candidates)
         raise ValueError(f"Several solver outputs found; point at one of: {listing}")

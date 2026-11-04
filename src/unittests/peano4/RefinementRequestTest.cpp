@@ -147,7 +147,7 @@ UNIT_TEST("The sorted form of a request set without duplicates is independent of
   }
 }
 
-UNIT_TEST("The description of a request names its control, its level and its lattice position") {
+UNIT_TEST("The description of a request contains its control, its level and its lattice position") {
   GIVEN("A refine request and an erase request on level three at the lattice position five plus the axis") {
     const auto refineRequest = getRequest(peano4::RefinementRequest::RefinementControl::Refine, 3, 5);
     const auto eraseRequest  = getRequest(peano4::RefinementRequest::RefinementControl::Erase, 3, 5);
@@ -156,7 +156,7 @@ UNIT_TEST("The description of a request names its control, its level and its lat
       const std::string refineDescription = refineRequest.toString();
       const std::string eraseDescription  = eraseRequest.toString();
 
-      THEN("The descriptions name the control of their request, the level three and the position five") {
+      THEN("The descriptions contain the control of their request, the level three and the position five") {
         VALIDATE(refineDescription.find("Refine") != std::string::npos);
         VALIDATE(refineDescription.find("Level=3") != std::string::npos);
         VALIDATE(refineDescription.find("5") != std::string::npos);
@@ -238,7 +238,7 @@ UNIT_TEST("A request travels between the ranks as raw bytes and arrives unchange
         }
       }
 
-      THEN("The received request equals the request of the previous rank and the status names that rank") {
+      THEN("The received request equals the request of the previous rank and the status reports that rank as source") {
         VALIDATE(receivedRequest == expectedRequest);
         VALIDATE_EQUALS(status.MPI_SOURCE, expectedSenderRank);
       }

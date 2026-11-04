@@ -81,13 +81,14 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::openInitialStatus(
-  int* NOALIAS const                    status,
-  const StoragePrecision* NOALIAS const nodes,
-  const StoragePrecision* NOALIAS const sampledExtrema,
-  const StoragePrecision* NOALIAS const nodesToLobatto,
-  const StoragePrecision* NOALIAS const nodesToSubcells,
-  const StoragePrecision                relaxationParameter,
-  const StoragePrecision                differencesScaling
+  int* NOALIAS const                         status,
+  const StoragePrecision* NOALIAS const      nodes,
+  const StoragePrecision* NOALIAS const      sampledExtrema,
+  const StoragePrecision* NOALIAS const      nodesToLobatto,
+  const StoragePrecision* NOALIAS const      nodesToSubcells,
+  const StoragePrecision                     relaxationParameter,
+  const StoragePrecision                     differencesScaling,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   writeInitialStatus(
     status,
@@ -97,7 +98,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::openInitialStatus(
       nodesToLobatto,
       nodesToSubcells,
       relaxationParameter,
-      differencesScaling
+      differencesScaling,
+      parameters
     )
   );
 }
@@ -117,7 +119,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::openInitialStatusIn
   const StoragePrecision* NOALIAS const                 nodesToSubcells,
   const StoragePrecision                                relaxationParameter,
   const StoragePrecision                                differencesScaling,
-  [[maybe_unused]] StoragePrecision* NOALIAS const      scratch
+  [[maybe_unused]] StoragePrecision* NOALIAS const      scratch,
+  const typename Derived::RuntimeParameters&            parameters
 ) {
   COMPILE_IF_ON_HOST(openInitialStatus(
                        status,
@@ -126,7 +129,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::openInitialStatusIn
                        nodesToLobatto,
                        nodesToSubcells,
                        relaxationParameter,
-                       differencesScaling
+                       differencesScaling,
+                       parameters
   );)
   COMPILE_IF_ON_DEVICE(openInitialStatusWithThreadsOfTeam(
                          team,
@@ -137,7 +141,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::openInitialStatusIn
                          nodesToSubcells,
                          relaxationParameter,
                          differencesScaling,
-                         scratch
+                         scratch,
+                         parameters
   );)
 }
 
@@ -149,27 +154,29 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::openInitialStatusWithThreadsOfTeam(
-  const tarch::accelerator::TeamHandle                   team,
-  int* NOALIAS const                                     status,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const nodes,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const sampledExtrema,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const nodesToLobatto,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const nodesToSubcells,
-  [[maybe_unused]] const StoragePrecision                relaxationParameter,
-  [[maybe_unused]] const StoragePrecision                differencesScaling,
-  [[maybe_unused]] StoragePrecision* NOALIAS const       scratch
+  const tarch::accelerator::TeamHandle                        team,
+  int* NOALIAS const                                          status,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      nodes,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      sampledExtrema,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      nodesToLobatto,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      nodesToSubcells,
+  [[maybe_unused]] const StoragePrecision                     relaxationParameter,
+  [[maybe_unused]] const StoragePrecision                     differencesScaling,
+  [[maybe_unused]] StoragePrecision* NOALIAS const            scratch,
+  [[maybe_unused]] const typename Derived::RuntimeParameters& parameters
 ) {
   const bool writesStatus = tarch::accelerator::getThreadOfTeam(team) == 0;
   bool       wasTroubled  = false;
   if constexpr (UsesMaximumPrinciple) {
     StoragePrecision interpolantExtrema[ExtremaPerCell];
-    reduceExtremaInTeam(team, interpolantExtrema, nodes, nodesToLobatto, nodesToSubcells, scratch);
+    reduceExtremaInTeam(team, interpolantExtrema, nodes, nodesToLobatto, nodesToSubcells, scratch, parameters);
     wasTroubled = writesStatus
       and not satisfiesRelaxedMaximumPrinciple(
                     interpolantExtrema,
                     sampledExtrema,
                     relaxationParameter,
-                    differencesScaling
+                    differencesScaling,
+                    parameters
       );
   }
   if (writesStatus) {
@@ -202,14 +209,15 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceSampledExtrema(
-  StoragePrecision* NOALIAS const       extrema,
-  const StoragePrecision* NOALIAS const subcells
+  StoragePrecision* NOALIAS const            extrema,
+  const StoragePrecision* NOALIAS const      subcells,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   static_assert(UsesMaximumPrinciple, "The discrete maximum principle of the limiter expects at least one observable.");
   ASSERTION(extrema != nullptr);
   ASSERTION(subcells != nullptr);
   clearExtrema(extrema);
-  reduceObservableExtrema(extrema, subcells, Scheme::SubcellsPerCell);
+  reduceObservableExtrema(extrema, subcells, Scheme::SubcellsPerCell, parameters);
 }
 
 /**
@@ -244,10 +252,11 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceExtrema(
-  StoragePrecision* NOALIAS const       extrema,
-  const StoragePrecision* NOALIAS const nodes,
-  const StoragePrecision* NOALIAS const nodesToLobatto,
-  const StoragePrecision* NOALIAS const nodesToSubcells
+  StoragePrecision* NOALIAS const            extrema,
+  const StoragePrecision* NOALIAS const      nodes,
+  const StoragePrecision* NOALIAS const      nodesToLobatto,
+  const StoragePrecision* NOALIAS const      nodesToSubcells,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   static_assert(UsesMaximumPrinciple, "The discrete maximum principle of the limiter expects at least one observable.");
   ASSERTION(extrema != nullptr);
@@ -255,9 +264,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceExtrema(
   ASSERTION(nodesToLobatto != nullptr);
   ASSERTION(nodesToSubcells != nullptr);
   clearExtrema(extrema);
-  reduceObservableExtrema(extrema, nodes, Scheme::NodesPerCell);
-  reduceProjectedObservableExtrema<Scheme::NodesPerAxis>(extrema, nodes, nodesToLobatto);
-  reduceProjectedObservableExtrema<Scheme::SubcellsPerAxis>(extrema, nodes, nodesToSubcells);
+  reduceObservableExtrema(extrema, nodes, Scheme::NodesPerCell, parameters);
+  reduceProjectedObservableExtrema<Scheme::NodesPerAxis>(extrema, nodes, nodesToLobatto, parameters);
+  reduceProjectedObservableExtrema<Scheme::SubcellsPerAxis>(extrema, nodes, nodesToSubcells, parameters);
 }
 
 /**
@@ -272,13 +281,16 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceExtremaInTeam
   const StoragePrecision* NOALIAS const                 nodes,
   const StoragePrecision* NOALIAS const                 nodesToLobatto,
   const StoragePrecision* NOALIAS const                 nodesToSubcells,
-  [[maybe_unused]] StoragePrecision* NOALIAS const      scratch
+  [[maybe_unused]] StoragePrecision* NOALIAS const      scratch,
+  const typename Derived::RuntimeParameters&            parameters
 ) {
   static_assert(UsesMaximumPrinciple, "The discrete maximum principle of the limiter expects at least one observable.");
   ASSERTION(extrema != nullptr);
   ASSERTION(nodes != nullptr);
-  COMPILE_IF_ON_HOST(reduceExtrema(extrema, nodes, nodesToLobatto, nodesToSubcells);)
-  COMPILE_IF_ON_DEVICE(reduceExtremaWithThreadsOfTeam(team, extrema, nodes, nodesToLobatto, nodesToSubcells, scratch);)
+  COMPILE_IF_ON_HOST(reduceExtrema(extrema, nodes, nodesToLobatto, nodesToSubcells, parameters);)
+  COMPILE_IF_ON_DEVICE(
+    reduceExtremaWithThreadsOfTeam(team, extrema, nodes, nodesToLobatto, nodesToSubcells, scratch, parameters);
+  )
 }
 
 /**
@@ -290,12 +302,13 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceExtremaWithThreadsOfTeam(
-  const tarch::accelerator::TeamHandle  team,
-  StoragePrecision* NOALIAS const       extrema,
-  const StoragePrecision* NOALIAS const nodes,
-  const StoragePrecision* NOALIAS const nodesToLobatto,
-  const StoragePrecision* NOALIAS const nodesToSubcells,
-  StoragePrecision* NOALIAS const       scratch
+  const tarch::accelerator::TeamHandle       team,
+  StoragePrecision* NOALIAS const            extrema,
+  const StoragePrecision* NOALIAS const      nodes,
+  const StoragePrecision* NOALIAS const      nodesToLobatto,
+  const StoragePrecision* NOALIAS const      nodesToSubcells,
+  StoragePrecision* NOALIAS const            scratch,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   ASSERTION(scratch != nullptr);
   const int        thread  = tarch::accelerator::getThreadOfTeam(team);
@@ -303,16 +316,16 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceExtremaWithTh
   StoragePrecision threadExtrema[ExtremaPerCell];
   clearExtrema(threadExtrema);
   for (int node = thread; node < Scheme::NodesPerCell; node += threads) {
-    reduceObservableExtrema(threadExtrema, nodes + node * Scheme::NumberOfData, 1);
+    reduceObservableExtrema(threadExtrema, nodes + node * Scheme::NumberOfData, 1, parameters);
   }
   projectInTeam<Scheme::NodesPerAxis>(team, nodes, nodesToLobatto, scratch, scratch + SampleValues);
   for (int sample = thread; sample < Scheme::NodesPerCell; sample += threads) {
-    reduceObservableExtrema(threadExtrema, scratch + sample * Scheme::NumberOfData, 1);
+    reduceObservableExtrema(threadExtrema, scratch + sample * Scheme::NumberOfData, 1, parameters);
   }
   tarch::accelerator::teamBarrier(team);
   projectInTeam<Scheme::SubcellsPerAxis>(team, nodes, nodesToSubcells, scratch, scratch + SampleValues);
   for (int sample = thread; sample < Scheme::SubcellsPerCell; sample += threads) {
-    reduceObservableExtrema(threadExtrema, scratch + sample * Scheme::NumberOfData, 1);
+    reduceObservableExtrema(threadExtrema, scratch + sample * Scheme::NumberOfData, 1, parameters);
   }
   mergeExtremaOfTeam(team, threadExtrema, scratch + ProjectionScratchValues);
   if (thread == 0) {
@@ -377,7 +390,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidate(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  StoragePrecision* NOALIAS const              candidateExtrema
+  StoragePrecision* NOALIAS const              candidateExtrema,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int StatusIndex            = static_cast<int>(exahype2::dg::limiting::StatusEntry::Status);
   constexpr int WasTroubledIndex       = static_cast<int>(exahype2::dg::limiting::StatusEntry::WasTroubled);
@@ -392,8 +406,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidate(
   bool admissible                = status[PredictorDivergedIndex] == 0;
   status[PredictorDivergedIndex] = 0;
   if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>) {
-    admissible =
-      admissible and isPhysicallyAdmissible(candidate, candidateSubcells, lobattoSamples, cellCentre, cellSize);
+    admissible = admissible
+      and isPhysicallyAdmissible(candidate, candidateSubcells, lobattoSamples, cellCentre, cellSize, parameters);
   }
   admissible = admissible
     and satisfiesMaximumPrinciple(
@@ -403,7 +417,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidate(
                  lobattoSamples,
                  relaxationParameter,
                  differencesScaling,
-                 candidateExtrema
+                 candidateExtrema,
+                 parameters
     );
 
   exahype2::dg::MaxEigenvalueStatistics statistics;
@@ -413,7 +428,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidate(
   } else if (remains) {
     status[StatusIndex] = static_cast<int>(exahype2::dg::limiting::LimiterStatus::Limited);
   } else {
-    statistics = candidateEigenvalues(candidate, quadraturePoints, cellCentre, cellSize, timeStamp, timeStepSize);
+    statistics =
+      candidateEigenvalues(candidate, quadraturePoints, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
   }
   for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     *ownStatusHalves[faceNumber] = status[StatusIndex];
@@ -444,49 +460,54 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidateInTea
   const double                                           timeStamp,
   const double                                           timeStepSize,
   StoragePrecision* NOALIAS const                        candidateExtrema,
-  [[maybe_unused]] StoragePrecision* NOALIAS const       scratch
+  [[maybe_unused]] StoragePrecision* NOALIAS const       scratch,
+  const typename Derived::RuntimeParameters&             parameters
 ) {
   ASSERTION(status != nullptr);
   ASSERTION(candidate != nullptr);
   ASSERTION(not UsesMaximumPrinciple or (referenceExtrema != nullptr and candidateExtrema != nullptr));
+  exahype2::dg::MaxEigenvalueStatistics statistics;
   COMPILE_IF_ON_HOST(
-    return judgeCandidate(
-             status,
-             ownStatusHalves,
-             candidate,
-             referenceExtrema,
-             nodesToLobatto,
-             nodesToSubcells,
-             quadraturePoints,
-             relaxationParameter,
-             differencesScaling,
-             cellCentre,
-             cellSize,
-             timeStamp,
-             timeStepSize,
-             candidateExtrema
+    statistics = judgeCandidate(
+      status,
+      ownStatusHalves,
+      candidate,
+      referenceExtrema,
+      nodesToLobatto,
+      nodesToSubcells,
+      quadraturePoints,
+      relaxationParameter,
+      differencesScaling,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      candidateExtrema,
+      parameters
     );
   )
   COMPILE_IF_ON_DEVICE(
-    return judgeCandidateWithThreadsOfTeam(
-             team,
-             status,
-             ownStatusHalves,
-             candidate,
-             cellOfBatch,
-             referenceExtrema,
-             nodesToLobatto,
-             quadraturePoints,
-             relaxationParameter,
-             differencesScaling,
-             cellCentre,
-             cellSize,
-             timeStamp,
-             timeStepSize,
-             candidateExtrema,
-             scratch
+    statistics = judgeCandidateWithThreadsOfTeam(
+      team,
+      status,
+      ownStatusHalves,
+      candidate,
+      cellOfBatch,
+      referenceExtrema,
+      nodesToLobatto,
+      quadraturePoints,
+      relaxationParameter,
+      differencesScaling,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      candidateExtrema,
+      scratch,
+      parameters
     );
   )
+  return statistics;
 }
 
 /**
@@ -513,7 +534,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidateWithT
   const double                                 timeStamp,
   const double                                 timeStepSize,
   StoragePrecision* NOALIAS const              candidateExtrema,
-  StoragePrecision* NOALIAS const              scratch
+  StoragePrecision* NOALIAS const              scratch,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   ASSERTION(scratch != nullptr);
   ASSERTION(cellOfBatch >= 0 and cellOfBatch < CellsPerBatch, cellOfBatch);
@@ -532,20 +554,20 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidateWithT
   clearExtrema(threadExtrema);
   if constexpr (UsesMaximumPrinciple) {
     for (int node = thread; node < Scheme::NodesPerCell; node += threads) {
-      reduceObservableExtrema(threadExtrema, candidate + node * Scheme::NumberOfData, 1);
+      reduceObservableExtrema(threadExtrema, candidate + node * Scheme::NumberOfData, 1, parameters);
     }
     for (int subcell = thread; subcell < Scheme::SubcellsPerCell; subcell += threads) {
-      reduceObservableExtrema(threadExtrema, candidateSubcells + subcell * Scheme::NumberOfData, 1);
+      reduceObservableExtrema(threadExtrema, candidateSubcells + subcell * Scheme::NumberOfData, 1, parameters);
     }
   }
   projectInTeam<Scheme::NodesPerAxis>(team, candidate, nodesToLobatto, cellScratch, cellScratch + SampleValues);
   for (int sample = thread; sample < Scheme::NodesPerCell; sample += threads) {
     const StoragePrecision* const state = cellScratch + sample * Scheme::NumberOfData;
     if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>) {
-      admissible = admissible and Derived::isPhysicallyAdmissible(state, 1, cellCentre, cellSize);
+      admissible = admissible and Derived::isPhysicallyAdmissible(state, 1, cellCentre, cellSize, parameters);
     }
     if constexpr (UsesMaximumPrinciple) {
-      reduceObservableExtrema(threadExtrema, state, 1);
+      reduceObservableExtrema(threadExtrema, state, 1, parameters);
     }
   }
   admissible    = tarch::accelerator::isTrueInEveryThreadOfTeam(team, admissible);
@@ -553,7 +575,13 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidateWithT
   if constexpr (UsesMaximumPrinciple) {
     mergeExtremaOfTeam(team, threadExtrema, cellScratch + ProjectionScratchValues);
     accepted = admissible
-      and satisfiesRelaxedMaximumPrinciple(threadExtrema, referenceExtrema, relaxationParameter, differencesScaling);
+      and satisfiesRelaxedMaximumPrinciple(
+                 threadExtrema,
+                 referenceExtrema,
+                 relaxationParameter,
+                 differencesScaling,
+                 parameters
+      );
   }
   exahype2::dg::MaxEigenvalueStatistics statistics;
   if constexpr (Scheme::ReportEigenvalues) {
@@ -568,7 +596,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::judgeCandidateWithT
             cellCentre,
             cellSize,
             timeStamp + timeStepSize,
-            timeStepSize
+            timeStepSize,
+            parameters
           )
         );
       }
@@ -632,21 +661,23 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::interpolantOscillates(
-  [[maybe_unused]] const StoragePrecision* NOALIAS const nodes,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const sampledExtrema,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const nodesToLobatto,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const nodesToSubcells,
-  [[maybe_unused]] const StoragePrecision                relaxationParameter,
-  [[maybe_unused]] const StoragePrecision                differencesScaling
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      nodes,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      sampledExtrema,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      nodesToLobatto,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      nodesToSubcells,
+  [[maybe_unused]] const StoragePrecision                     relaxationParameter,
+  [[maybe_unused]] const StoragePrecision                     differencesScaling,
+  [[maybe_unused]] const typename Derived::RuntimeParameters& parameters
 ) {
   if constexpr (UsesMaximumPrinciple) {
     StoragePrecision interpolantExtrema[ExtremaPerCell];
-    reduceExtrema(interpolantExtrema, nodes, nodesToLobatto, nodesToSubcells);
+    reduceExtrema(interpolantExtrema, nodes, nodesToLobatto, nodesToSubcells, parameters);
     return not satisfiesRelaxedMaximumPrinciple(
       interpolantExtrema,
       sampledExtrema,
       relaxationParameter,
-      differencesScaling
+      differencesScaling,
+      parameters
     );
   } else {
     return false;
@@ -661,14 +692,19 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceObservableExtrema(
-  StoragePrecision* NOALIAS const       extrema,
-  const StoragePrecision* NOALIAS const states,
-  const int                             numberOfStates
+  StoragePrecision* NOALIAS const            extrema,
+  const StoragePrecision* NOALIAS const      states,
+  const int                                  numberOfStates,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   static_assert(UsesMaximumPrinciple, "The discrete maximum principle of the limiter expects at least one observable.");
   StoragePrecision observables[NumberOfObservables];
   for (int state = 0; state < numberOfStates; state++) {
-    Derived::mapDmpObservables(observables, states + static_cast<std::ptrdiff_t>(state) * Scheme::NumberOfData);
+    Derived::mapDmpObservables(
+      observables,
+      states + static_cast<std::ptrdiff_t>(state) * Scheme::NumberOfData,
+      parameters
+    );
     for (int observable = 0; observable < NumberOfObservables; observable++) {
       extrema[observable] = mergeMinimum(extrema[observable], observables[observable]);
       extrema[NumberOfObservables + observable] =
@@ -684,14 +720,19 @@ template <typename Derived, typename ComputePrecision>
 template <int SamplesPerAxis, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::reduceProjectedObservableExtrema(
-  StoragePrecision* NOALIAS const       extrema,
-  const StoragePrecision* NOALIAS const nodes,
-  const StoragePrecision* NOALIAS const samplingMatrix
+  StoragePrecision* NOALIAS const            extrema,
+  const StoragePrecision* NOALIAS const      nodes,
+  const StoragePrecision* NOALIAS const      samplingMatrix,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   ASSERTION(extrema != nullptr);
-  forEachProjectedState<SamplesPerAxis>(nodes, samplingMatrix, [extrema](const StoragePrecision* const sample) {
-    reduceObservableExtrema(extrema, sample, 1);
-  });
+  forEachProjectedState<SamplesPerAxis>(
+    nodes,
+    samplingMatrix,
+    [extrema, &parameters](const StoragePrecision* const sample) {
+      reduceObservableExtrema(extrema, sample, 1, parameters);
+    }
+  );
 }
 
 /**
@@ -820,7 +861,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::admitCandidateOfBat
   const int                                    cellOfBatch,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const StoragePrecision* NOALIAS const        scratch
+  const StoragePrecision* NOALIAS const        scratch,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   ASSERTION(candidate != nullptr);
   ASSERTION(scratch != nullptr);
@@ -830,7 +872,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::admitCandidateOfBat
                                    candidate,
                                    scratch + cellOfBatch * Scheme::SubcellValuesPerCell,
                                    cellCentre,
-                                   cellSize
+                                   cellSize,
+                                   parameters
                                  )
     ? 1
     : 0;
@@ -946,13 +989,20 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::isPhysicallyAdmissi
   const StoragePrecision* NOALIAS const        subcells,
   const StoragePrecision* NOALIAS const        lobattoSamples,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   ASSERTION(lobattoSamples != nullptr);
-  bool admissible = isPhysicallyAdmissibleOnNodesAndSubcells(nodes, subcells, cellCentre, cellSize);
+  bool admissible = isPhysicallyAdmissibleOnNodesAndSubcells(nodes, subcells, cellCentre, cellSize, parameters);
   for (int sample = 0; sample < Scheme::NodesPerCell; sample++) {
     admissible = admissible
-      and Derived::isPhysicallyAdmissible(lobattoSamples + sample * Scheme::NumberOfData, 1, cellCentre, cellSize);
+      and Derived::isPhysicallyAdmissible(
+                   lobattoSamples + sample * Scheme::NumberOfData,
+                   1,
+                   cellCentre,
+                   cellSize,
+                   parameters
+      );
   }
   return admissible;
 }
@@ -968,13 +1018,14 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::isPhysicallyAdmissi
   [[maybe_unused]] const StoragePrecision* NOALIAS const        nodes,
   [[maybe_unused]] const StoragePrecision* NOALIAS const        subcells,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  [[maybe_unused]] const typename Derived::RuntimeParameters&   parameters
 ) {
   ASSERTION(nodes != nullptr);
   ASSERTION(subcells != nullptr);
   if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>) {
-    return Derived::isPhysicallyAdmissible(nodes, Scheme::NodesPerCell, cellCentre, cellSize)
-      and Derived::isPhysicallyAdmissible(subcells, Scheme::SubcellsPerCell, cellCentre, cellSize);
+    return Derived::isPhysicallyAdmissible(nodes, Scheme::NodesPerCell, cellCentre, cellSize, parameters)
+      and Derived::isPhysicallyAdmissible(subcells, Scheme::SubcellsPerCell, cellCentre, cellSize, parameters);
   } else {
     return true;
   }
@@ -989,25 +1040,27 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesMaximumPrinciple(
-  [[maybe_unused]] const StoragePrecision* NOALIAS const candidate,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const candidateSubcells,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const referenceExtrema,
-  [[maybe_unused]] const StoragePrecision* NOALIAS const lobattoSamples,
-  [[maybe_unused]] const StoragePrecision                relaxationParameter,
-  [[maybe_unused]] const StoragePrecision                differencesScaling,
-  [[maybe_unused]] StoragePrecision* NOALIAS const       candidateExtrema
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      candidate,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      candidateSubcells,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      referenceExtrema,
+  [[maybe_unused]] const StoragePrecision* NOALIAS const      lobattoSamples,
+  [[maybe_unused]] const StoragePrecision                     relaxationParameter,
+  [[maybe_unused]] const StoragePrecision                     differencesScaling,
+  [[maybe_unused]] StoragePrecision* NOALIAS const            candidateExtrema,
+  [[maybe_unused]] const typename Derived::RuntimeParameters& parameters
 ) {
   if constexpr (UsesMaximumPrinciple) {
     ASSERTION(candidateExtrema != nullptr);
     clearExtrema(candidateExtrema);
-    reduceObservableExtrema(candidateExtrema, candidate, Scheme::NodesPerCell);
-    reduceObservableExtrema(candidateExtrema, lobattoSamples, Scheme::NodesPerCell);
-    reduceObservableExtrema(candidateExtrema, candidateSubcells, Scheme::SubcellsPerCell);
+    reduceObservableExtrema(candidateExtrema, candidate, Scheme::NodesPerCell, parameters);
+    reduceObservableExtrema(candidateExtrema, lobattoSamples, Scheme::NodesPerCell, parameters);
+    reduceObservableExtrema(candidateExtrema, candidateSubcells, Scheme::SubcellsPerCell, parameters);
     return satisfiesRelaxedMaximumPrinciple(
       candidateExtrema,
       referenceExtrema,
       relaxationParameter,
-      differencesScaling
+      differencesScaling,
+      parameters
     );
   } else {
     return true;
@@ -1021,10 +1074,11 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesRelaxedMaximumPrinciple(
-  const StoragePrecision* NOALIAS const candidateExtrema,
-  const StoragePrecision* NOALIAS const referenceExtrema,
-  const StoragePrecision                relaxationParameter,
-  const StoragePrecision                differencesScaling
+  const StoragePrecision* NOALIAS const      candidateExtrema,
+  const StoragePrecision* NOALIAS const      referenceExtrema,
+  const StoragePrecision                     relaxationParameter,
+  const StoragePrecision                     differencesScaling,
+  const typename Derived::RuntimeParameters& parameters
 ) {
   static_assert(UsesMaximumPrinciple, "The discrete maximum principle of the limiter expects at least one observable.");
   ASSERTION(candidateExtrema != nullptr);
@@ -1034,7 +1088,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::satisfiesRelaxedMax
 
   bool satisfied = true;
   for (int observable = 0; observable < NumberOfObservables; observable++) {
-    const StoragePrecision observableRelaxation = getRelaxationParameterOfObservable(observable, relaxationParameter);
+    const StoragePrecision observableRelaxation =
+      getRelaxationParameterOfObservable(observable, relaxationParameter, parameters);
     ASSERTION(observableRelaxation >= static_cast<StoragePrecision>(0), observable, observableRelaxation);
     const bool observableInRange = satisfiesDiscreteMaximumPrinciple(
       candidateExtrema[observable],
@@ -1057,11 +1112,12 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision
 exahype2::dg::limiting::Detector<Derived, ComputePrecision>::getRelaxationParameterOfObservable(
-  [[maybe_unused]] const int observable,
-  const StoragePrecision     relaxationParameter
+  [[maybe_unused]] const int                                  observable,
+  const StoragePrecision                                      relaxationParameter,
+  [[maybe_unused]] const typename Derived::RuntimeParameters& parameters
 ) {
   if constexpr (exahype2::terms::HasDmpRelaxationParameter<Derived, StoragePrecision>) {
-    return Derived::dmpRelaxationParameter(observable, relaxationParameter);
+    return Derived::dmpRelaxationParameter(observable, relaxationParameter, parameters);
   } else {
     return relaxationParameter;
   }
@@ -1121,8 +1177,9 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::quantiseObservableE
   if (extremum == static_cast<StoragePrecision>(0)) {
     return extremum;
   }
-  const int roundingStepExponent =
-    std::ilogb(extremum) - (std::numeric_limits<StoragePrecision>::digits - 1 - DiscardedMantissaBits);
+  int exponent = 0;
+  static_cast<void>(std::frexp(extremum, &exponent));
+  const int roundingStepExponent = exponent - (std::numeric_limits<StoragePrecision>::digits - DiscardedMantissaBits);
   // Close to the smallest normal number, the rounding step would be subnormal.
   if (roundingStepExponent < std::numeric_limits<StoragePrecision>::min_exponent - 1) {
     return extremum;
@@ -1144,7 +1201,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::candidateEigenvalue
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   [[maybe_unused]] const double                                 timeStamp,
-  [[maybe_unused]] const double                                 timeStepSize
+  [[maybe_unused]] const double                                 timeStepSize,
+  [[maybe_unused]] const typename Derived::RuntimeParameters&   parameters
 ) {
   if constexpr (Scheme::ReportEigenvalues) {
     return exahype2::dg::reduceMaxEigenvalues<Derived>(
@@ -1153,7 +1211,8 @@ exahype2::dg::limiting::Detector<Derived, ComputePrecision>::candidateEigenvalue
       cellCentre,
       cellSize,
       timeStamp + timeStepSize,
-      timeStepSize
+      timeStepSize,
+      parameters
     );
   } else {
     return exahype2::dg::MaxEigenvalueStatistics{};
@@ -1185,7 +1244,8 @@ exahype2::dg::limiting::OpenInitialStatuses<Derived, StoragePrecision, ComputePr
       nodesToSubcells,
       relaxationParameter,
       differencesScaling,
-      chunk
+      chunk,
+      parameters
     );
   }
 }
@@ -1196,7 +1256,7 @@ exahype2::dg::limiting::ReduceSampledExtrema<Derived, StoragePrecision, ComputeP
   const int entry
 ) const {
   const int slot = cellConnectivity.getCells()[entry];
-  Kernel::reduceSampledExtrema(referenceExtrema.getChunk(slot), subcells.getChunk(slot));
+  Kernel::reduceSampledExtrema(referenceExtrema.getChunk(slot), subcells.getChunk(slot), parameters);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -1250,7 +1310,8 @@ exahype2::dg::limiting::ReduceReferenceExtrema<Derived, StoragePrecision, Comput
       solution.getChunk(slot),
       nodesToLobatto,
       nodesToSubcells,
-      chunk
+      chunk,
+      parameters
     );
   }
 }
@@ -1463,7 +1524,8 @@ exahype2::dg::limiting::JudgeCandidates<Derived, StoragePrecision, ComputePrecis
       cell,
       cellConnectivity.getCellCentre(slot),
       cellConnectivity.getCellWidth(slot),
-      chunk
+      chunk,
+      parameters
     );
   }
   tarch::accelerator::teamBarrier(team);
@@ -1523,7 +1585,8 @@ exahype2::dg::limiting::JudgeCandidates<Derived, StoragePrecision, ComputePrecis
     timeStamp,
     timeStepSize,
     extrema,
-    chunk
+    chunk,
+    parameters
   );
   if (tarch::accelerator::getThreadOfTeam(team) == 0) {
     const auto verdict     = static_cast<exahype2::dg::limiting::LimiterStatus>(status[StatusIndex]);

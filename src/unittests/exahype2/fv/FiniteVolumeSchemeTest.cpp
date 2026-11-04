@@ -31,6 +31,8 @@ namespace {
   template <typename Limiter>
   using LimitedLinear = exahype2::fv::reconstruction::LimitedLinear<Limiter>;
 
+  struct RuntimeParameters final {};
+
   TARGET_DECLARE
   constexpr int NoBoundaryFaces = 0;
 
@@ -51,8 +53,9 @@ namespace {
     static constexpr int NumberOfUnknowns           = Unknowns;
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
-    using Reconstruction  = Reconstruct;
-    using TimeIntegration = exahype2::fv::timestepping::SingleStep;
+    using RuntimeParameters = ::RuntimeParameters;
+    using Reconstruction    = Reconstruct;
+    using TimeIntegration   = exahype2::fv::timestepping::SingleStep;
   };
 
   template <int PatchSizeOfLayout, int Unknowns, typename Reconstruct, Rule RuleOfScheme>
@@ -74,7 +77,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       [[maybe_unused]] const int                                    normal,
-      ComputePrecision* NOALIAS const                               fluxes
+      ComputePrecision* NOALIAS const                               fluxes,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < Unknowns; unknown++) {
         fluxes[unknown] = AdvectionSpeed * state[unknown];
@@ -88,7 +92,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return AdvectionSpeed + NcpAdvectionSpeed;
     }
@@ -105,7 +110,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       [[maybe_unused]] const int                                    normal,
-      ComputePrecision* NOALIAS const                               result
+      ComputePrecision* NOALIAS const                               result,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < Unknowns; unknown++) {
         result[unknown] = static_cast<ComputePrecision>(NcpAdvectionSpeed) * stateJump[unknown];
@@ -122,7 +128,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      ComputePrecision* NOALIAS const                               sources
+      ComputePrecision* NOALIAS const                               sources,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < Unknowns; unknown++) {
         sources[unknown] = static_cast<ComputePrecision>(SourceRate) * state[unknown];
@@ -140,7 +147,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      ComputePrecision* NOALIAS const                               result
+      ComputePrecision* NOALIAS const                               result,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < Unknowns; unknown++) {
         auto directionalSum = static_cast<ComputePrecision>(0);
@@ -169,7 +177,8 @@ namespace {
       [[maybe_unused]] const bool                                   isBoundaryFace,
       [[maybe_unused]] const int                                    faceIndex,
       ComputePrecision* NOALIAS const                               leftGoingFlux,
-      ComputePrecision* NOALIAS const                               rightGoingFlux
+      ComputePrecision* NOALIAS const                               rightGoingFlux,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       constexpr double WaveSpeed = AdvectionSpeed + NcpAdvectionSpeed;
       for (int unknown = 0; unknown < Unknowns; unknown++) {
@@ -197,7 +206,8 @@ namespace {
       [[maybe_unused]] const int                                    normal,
       const int                                                     unknown,
       ComputePrecision&                                             reconstructedMinus,
-      ComputePrecision&                                             reconstructedPlus
+      ComputePrecision&                                             reconstructedPlus,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       reconstructedMinus = centreState[unknown] - static_cast<ComputePrecision>(0.5) * limitedDifferences[unknown];
       reconstructedPlus  = centreState[unknown] + static_cast<ComputePrecision>(0.5) * limitedDifferences[unknown];
@@ -213,7 +223,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const int                                    normal,
-      const int                                                     unknown
+      const int                                                     unknown,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return exahype2::fv::limiter::Minmod::limitedDifference(
         rightState[unknown] - centreState[unknown],
@@ -233,7 +244,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const double                                 timeStamp,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int entry = 0; entry < Unknowns; entry++) {
         outsideState[entry] = insideState[entry];
@@ -252,7 +264,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const double                                 timeStamp,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int entry = 0; entry < Unknowns; entry++) {
         outsideState[entry] = insideState[entry] + 1.0;
@@ -328,7 +341,8 @@ namespace {
       const double                                                  timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     normal,
-      ComputePrecision* NOALIAS const                               fluxes
+      ComputePrecision* NOALIAS const                               fluxes,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       const auto speed = static_cast<ComputePrecision>(normal == 0 ? 1.0 + timeStamp : 0.0);
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -343,7 +357,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       const double                                                  timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      const int                                                     normal
+      const int                                                     normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return normal == 0 ? 1.0 + timeStamp : 0.0;
     }
@@ -363,7 +378,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     normal,
-      ComputePrecision* NOALIAS const                               fluxes
+      ComputePrecision* NOALIAS const                               fluxes,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < AcousticUnknowns; unknown++) {
         fluxes[unknown] = static_cast<ComputePrecision>(0);
@@ -379,7 +395,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return 1.0;
     }
@@ -398,7 +415,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     normal,
-      ComputePrecision* NOALIAS const                               fluxes
+      ComputePrecision* NOALIAS const                               fluxes,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       fluxes[0] = static_cast<ComputePrecision>(position(normal)) * state[0];
     }
@@ -410,7 +428,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      const int                                                     normal
+      const int                                                     normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return std::abs(position(normal));
     }
@@ -442,7 +461,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     normal,
-      ComputePrecision* NOALIAS const                               fluxes
+      ComputePrecision* NOALIAS const                               fluxes,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       const ComputePrecision normalVelocity = state[1 + normal] / state[0];
       const ComputePrecision pressure       = getPressureOf(state);
@@ -461,7 +481,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      const int                                                     normal
+      const int                                                     normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       const double soundSpeed = std::sqrt(SodGamma * getPressureOf(state) / state[0]);
       return std::abs(state[1 + normal] / state[0]) + soundSpeed;
@@ -476,7 +497,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      const int                                                     normal
+      const int                                                     normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return static_cast<double>(state[0]) + normal;
     }
@@ -486,7 +508,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const double                                 dt
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int volume = 0; volume < peano4::power(PatchSize, DIMENSIONS); volume++) {
         Q[static_cast<std::ptrdiff_t>(volume) * NumberOfUnknowns] = PostprocessedValue;
@@ -498,7 +521,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&    parameters
     ) {
       Q[0] = x(0);
       Q[1] = h(0);
@@ -514,7 +538,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&    parameters
     ) {
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         Q[axis]              = x(axis);
@@ -532,7 +557,8 @@ namespace {
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const double* const                          Q,
-      double* const                                                 solution
+      double* const                                                 solution,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         solution[unknown] = ExactSolutionValue;
@@ -549,6 +575,8 @@ namespace {
   }
 
   struct FaceRecordingSolver final {
+    using RuntimeParameters = ::RuntimeParameters;
+
     static INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblem(
       [[maybe_unused]] const double* const                          QL,
       [[maybe_unused]] const double* const                          QR,
@@ -560,7 +588,8 @@ namespace {
       const bool                                                    isBoundaryFace,
       const int                                                     faceIndex,
       [[maybe_unused]] double* const                                FL,
-      [[maybe_unused]] double* const                                FR
+      [[maybe_unused]] double* const                                FR,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return encodeRiemannFace(normal, isBoundaryFace, faceIndex);
     }
@@ -610,7 +639,8 @@ namespace {
               TimeStamp,
               TimeStepSize,
               boundaryFaces,
-              updatedPatch + static_cast<std::ptrdiff_t>(volume) * DeviceKernel::NumberOfData
+              updatedPatch + static_cast<std::ptrdiff_t>(volume) * DeviceKernel::NumberOfData,
+              RuntimeParameters{}
             )
           );
           partial = exahype2::MaxEigenvalueReduction::combine(
@@ -621,7 +651,8 @@ namespace {
               cellCentre,
               cellSize,
               TimeStamp + TimeStepSize,
-              TimeStepSize
+              TimeStepSize,
+              RuntimeParameters{}
             )
           );
         },
@@ -663,7 +694,8 @@ namespace {
         cellSize,
         exahype2::dg::unittests::KernelTestSetup::TimeStamp,
         timeStepSize,
-        cell % 2 == 0 ? NoBoundaryFaces : 1
+        cell % 2 == 0 ? NoBoundaryFaces : 1,
+        RuntimeParameters{}
       );
       const tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction> reducer{accumulator};
       tarch::accelerator::reduceOverTeam(team, partial, reducer);
@@ -690,7 +722,8 @@ namespace {
         tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
         exahype2::dg::unittests::KernelTestSetup::TimeStamp,
         face % peano4::FacesPerCell,
-        entry % Kernel::VolumesPerLayer
+        entry % Kernel::VolumesPerLayer,
+        RuntimeParameters{}
       );
     }
   };
@@ -737,7 +770,15 @@ namespace {
     const int                                    faceNumber
   ) {
     for (int tangentialVolume = 0; tangentialVolume < Kernel::VolumesPerLayer; tangentialVolume++) {
-      Kernel::applyBoundaryConditions(face, cellCentre, cellSize, timeStamp, faceNumber, tangentialVolume);
+      Kernel::applyBoundaryConditions(
+        face,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        faceNumber,
+        tangentialVolume,
+        RuntimeParameters{}
+      );
     }
   }
 
@@ -910,7 +951,8 @@ namespace {
       patchExtent,
       TimeStamp,
       TimeStepSize,
-      NoBoundaryFaces
+      NoBoundaryFaces,
+      RuntimeParameters{}
     );
 
     std::vector<double> perVolume(Kernel::ValuesPerPatch, 0.0);
@@ -927,7 +969,8 @@ namespace {
           TimeStamp,
           TimeStepSize,
           NoBoundaryFaces,
-          perVolume.data() + static_cast<std::ptrdiff_t>(volume) * Kernel::NumberOfData
+          perVolume.data() + static_cast<std::ptrdiff_t>(volume) * Kernel::NumberOfData,
+          RuntimeParameters{}
         )
       );
     }
@@ -940,7 +983,8 @@ namespace {
           patchCentre,
           patchExtent,
           TimeStamp + TimeStepSize,
-          TimeStepSize
+          TimeStepSize,
+          RuntimeParameters{}
         )
       );
     }
@@ -981,7 +1025,8 @@ namespace {
       patchExtent,
       TimeStamp,
       TimeStepSize,
-      NoBoundaryFaces
+      NoBoundaryFaces,
+      RuntimeParameters{}
     );
     inPlaceEigenvalue = Kernel::update(
       q.data(),
@@ -991,7 +1036,8 @@ namespace {
       patchExtent,
       TimeStamp,
       TimeStepSize,
-      NoBoundaryFaces
+      NoBoundaryFaces,
+      RuntimeParameters{}
     );
 
     int mismatches = 0;
@@ -1038,7 +1084,8 @@ namespace {
         patchExtent,
         timeStamp,
         timeStepSize,
-        NoBoundaryFaces
+        NoBoundaryFaces,
+        RuntimeParameters{}
       ));
       q.swap(qNext);
     }
@@ -1117,7 +1164,8 @@ namespace {
       patchExtent,
       0.0,
       timeStepSize,
-      NoBoundaryFaces
+      NoBoundaryFaces,
+      RuntimeParameters{}
     );
     const double eigenvalueZeroSlope = ZeroSlopeKernel::update(
       qIn.data(),
@@ -1127,7 +1175,8 @@ namespace {
       patchExtent,
       0.0,
       timeStepSize,
-      NoBoundaryFaces
+      NoBoundaryFaces,
+      RuntimeParameters{}
     );
 
     double maxDifference = std::abs(eigenvalueConstant - eigenvalueZeroSlope);
@@ -1166,7 +1215,8 @@ namespace {
         patchExtent,
         step * timeStepSize,
         timeStepSize,
-        NoBoundaryFaces
+        NoBoundaryFaces,
+        RuntimeParameters{}
       ));
       q.swap(qNext);
     }
@@ -1233,7 +1283,8 @@ namespace {
         patchExtent,
         step * timeStepSize,
         timeStepSize,
-        NoBoundaryFaces
+        NoBoundaryFaces,
+        RuntimeParameters{}
       ));
       q.swap(qNext);
     }
@@ -1262,7 +1313,8 @@ namespace {
       side,
       boundaryFaces,
       leftFlux,
-      rightFlux
+      rightFlux,
+      RuntimeParameters{}
     );
   }
 
@@ -1284,7 +1336,8 @@ namespace {
       patchExtent,
       0.0,
       timeStepSize,
-      NoBoundaryFaces
+      NoBoundaryFaces,
+      RuntimeParameters{}
     );
   }
 
@@ -1454,7 +1507,8 @@ namespace {
           cellSize,
           exahype2::dg::unittests::KernelTestSetup::TimeStamp,
           timeStepSize,
-          cell % 2 == 0 ? NoBoundaryFaces : 1
+          cell % 2 == 0 ? NoBoundaryFaces : 1,
+          RuntimeParameters{}
         )
       );
     }
@@ -1624,7 +1678,8 @@ namespace {
       patchExtent,
       0.0,
       0.5,
-      NoBoundaryFaces
+      NoBoundaryFaces,
+      RuntimeParameters{}
     ));
     return qOut;
   }
@@ -1731,7 +1786,7 @@ UNIT_TEST("The kernels hand every volume its own entries, its centre, its size a
     std::vector<double>                         values(Kernel::ValuesPerPatch, 0.0);
 
     WHEN("The kernel initialises the patch") {
-      Kernel::initialise(values.data(), cellCentre, cellSize);
+      Kernel::initialise(values.data(), cellCentre, cellSize, RuntimeParameters{});
 
       THEN("The entries of every volume store its centre and its size along every axis and one call") {
         for (int volume = 0; volume < Kernel::VolumesPerPatch; volume++) {
@@ -1765,7 +1820,7 @@ UNIT_TEST("The kernels hand every volume its own entries, its centre, its size a
         std::vector<double> patch(Kernel::ValuesPerPatch, ExactSolutionValue);
         patch[static_cast<std::size_t>(volume) * Kernel::NumberOfData] += Error;
         double errors[exahype2::ErrorMeasurement::NumberOfNorms]{};
-        Kernel::measureErrors(patch.data(), cellCentre, cellSize, 0.0, 0.0, errors);
+        Kernel::measureErrors(patch.data(), cellCentre, cellSize, 0.0, 0.0, errors, RuntimeParameters{});
         weightedErrorOfVolume.push_back(errors[0]);
       }
 
@@ -1837,7 +1892,7 @@ UNIT_TEST("The initialisation writes the initial condition at every volume centr
     std::vector<double>                         patch(Kernel::ValuesPerPatch, 0.0);
 
     WHEN("The kernel initialises the patch") {
-      Kernel::initialise(patch.data(), cellCentre, cellSize);
+      Kernel::initialise(patch.data(), cellCentre, cellSize, RuntimeParameters{});
 
       THEN("Every volume stores the first coordinate of its centre, its width and the last coordinate of its centre") {
         peano4::dForEach(Kernel::PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
@@ -2455,7 +2510,8 @@ UNIT_TEST("A time step of size zero leaves the patch unchanged") {
         patchExtent,
         0.0,
         0.0,
-        NoBoundaryFaces
+        NoBoundaryFaces,
+        RuntimeParameters{}
       ));
 
       THEN("Every entry keeps its value") {
@@ -2773,7 +2829,8 @@ UNIT_TEST("Periodic face fluxes conserve the total mass of the patch") {
           patchExtent,
           step * timeStepSize,
           timeStepSize,
-          NoBoundaryFaces
+          NoBoundaryFaces,
+          RuntimeParameters{}
         ));
         q.swap(qNext);
       }
@@ -2889,7 +2946,8 @@ UNIT_TEST("A patch whose state a swap of the first two axes maps onto itself kee
         patchExtent,
         0.0,
         0.01,
-        NoBoundaryFaces
+        NoBoundaryFaces,
+        RuntimeParameters{}
       ));
 
       THEN("Every volume equals the swapped state of its mirror bitwise, as every axis adds in a mirrored order") {
@@ -3008,9 +3066,11 @@ UNIT_TEST("The reduction over the volumes takes the largest first value plus the
     const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
 
     WHEN("The kernels of an adaptive and of a fixed time step rule reduce the wave speeds of the patch") {
-      using FixedKernel                  = exahype2::fv::FiniteVolumeScheme<FixedRuleAdvectionSolver, double>;
-      const double adaptiveMaxEigenvalue = Kernel::reduceMaxEigenvalue(patch.data(), cellCentre, cellSize, 0.0);
-      const double fixedMaxEigenvalue    = FixedKernel::reduceMaxEigenvalue(patch.data(), cellCentre, cellSize, 0.0);
+      using FixedKernel = exahype2::fv::FiniteVolumeScheme<FixedRuleAdvectionSolver, double>;
+      const double adaptiveMaxEigenvalue =
+        Kernel::reduceMaxEigenvalue(patch.data(), cellCentre, cellSize, 0.0, RuntimeParameters{});
+      const double fixedMaxEigenvalue =
+        FixedKernel::reduceMaxEigenvalue(patch.data(), cellCentre, cellSize, 0.0, RuntimeParameters{});
 
       THEN("The adaptive rule gives the largest first value plus the largest axis and the fixed rule zero") {
         VALIDATE_NUMERICAL_EQUALS(adaptiveMaxEigenvalue, 0.5 * (Kernel::VolumesPerPatch - 1) + (DIMENSIONS - 1));
@@ -3030,7 +3090,7 @@ UNIT_TEST("The error measurement sums the weighted norms of a constant error ove
     double                                      errors[exahype2::ErrorMeasurement::NumberOfNorms]{-1.0, -1.0, -1.0};
 
     WHEN("The kernel measures the errors of the patch") {
-      Kernel::measureErrors(patch.data(), cellCentre, cellSize, 0.0, 0.0, errors);
+      Kernel::measureErrors(patch.data(), cellCentre, cellSize, 0.0, 0.0, errors, RuntimeParameters{});
 
       THEN("The L1 error is one half, the squared L2 error one quarter and the largest error one half") {
         VALIDATE_NUMERICAL_EQUALS(errors[0], Error);
@@ -3076,7 +3136,8 @@ UNIT_TEST("Every cell of a device range receives the update and the wave speed o
           cellSize,
           exahype2::dg::unittests::KernelTestSetup::TimeStamp,
           exahype2::dg::unittests::KernelTestSetup::TimeStepSize,
-          cell % 2 == 0 ? NoBoundaryFaces : 1
+          cell % 2 == 0 ? NoBoundaryFaces : 1,
+          RuntimeParameters{}
         );
       }
 

@@ -71,7 +71,8 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
   ComputePrecision* NOALIAS const              scratch,
   const Tables&                                tables,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   return predictInTeam(
     TeamWorkers{},
@@ -84,7 +85,8 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
     scratch,
     tables,
     timeStamp,
-    timeStepSize
+    timeStepSize,
+    parameters
   );
 }
 
@@ -108,7 +110,8 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
   ComputePrecision* NOALIAS const              scratch,
   const Tables&                                tables,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   ASSERTION(timeStamp >= 0.0, timeStamp, cellCentre);
   ASSERTION(timeStepSize >= 0.0, timeStepSize, cellCentre);
@@ -142,6 +145,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
         cellSize,
         timeStamp,
         timeStepSize,
+        parameters,
         workers
       );
     } else {
@@ -159,6 +163,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
         cellSize,
         timeStamp,
         timeStepSize,
+        parameters,
         workers
       );
     }
@@ -183,7 +188,8 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
             cellSize,
             timeStamp,
             timeStepSize,
-            values
+            values,
+            parameters
           );
         }
       },
@@ -205,6 +211,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
       timeStamp,
       timeStepSize,
       Derived::PicardResidualTolerance,
+      parameters,
       workers
     );
     if (not workers.hasCell) {
@@ -343,7 +350,8 @@ exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, Di
       scratch + static_cast<std::ptrdiff_t>(chunk) * Kernel::ScratchSize,
       tables,
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      parameters
     );
     // The threads of a cell see the same outcome. The first thread of the cell records it once.
     if (workers.hasCell and workers.thread == 0) {

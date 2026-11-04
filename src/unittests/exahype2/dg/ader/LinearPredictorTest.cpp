@@ -20,6 +20,7 @@ namespace {
   using Tables            = exahype2::dg::unittests::BasisTableSet;
   using StubLayout        = exahype2::dg::ader::unittests::StubLayout;
   using RiemannSolverTerm = exahype2::dg::ader::unittests::RiemannSolverTerm;
+  using RuntimeParameters = exahype2::dg::ader::unittests::RuntimeParameters;
   using CellLayout        = Setup::CellLayout;
 
   template <typename Solver>
@@ -55,7 +56,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = (1.0 + direction) * state[unknown];
@@ -74,7 +76,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = (1.0 + direction) * state[NumberOfUnknowns];
@@ -91,7 +94,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         productValues
+      double* NOALIAS const                                         productValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         productValues[unknown] += (1.0 + direction) * stateGradient[unknown];
@@ -107,7 +111,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] *= 2.0 + direction;
@@ -122,7 +127,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         sourceValues
+      double* NOALIAS const                                         sourceValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         sourceValues[unknown] += SourceRate * state[unknown];
@@ -146,7 +152,8 @@ namespace {
       const double                                 timeStamp,
       [[maybe_unused]] const double                timeStepSize,
       double* NOALIAS const                        forceVector,
-      const int                                    pointSource
+      const int                                    pointSource,
+      [[maybe_unused]] const RuntimeParameters&    parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         forceVector[unknown] = getPointSourceForce(unknown, pointSource, timeStamp, state[unknown]);
@@ -177,7 +184,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] = LinearFluxSpeed * (1.0 + direction) * state[unknown];
@@ -192,7 +200,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += LinearProductSpeed * (1.0 + direction) * stateGradient[unknown];
@@ -205,7 +214,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += LinearSourceRate * state[unknown];
@@ -461,7 +471,8 @@ namespace {
       getCellCentre(),
       getCellSize(),
       TimeStamp,
-      TimeStepSize
+      TimeStepSize,
+      RuntimeParameters{}
     );
   }
 
@@ -486,7 +497,8 @@ namespace {
             TimeStamp,
             TimeStepSize,
             axis,
-            terms.data() + axis * AxisStride + cellNode * UnknownStride
+            terms.data() + axis * AxisStride + cellNode * UnknownStride,
+            RuntimeParameters{}
           );
         }
       }
@@ -518,7 +530,8 @@ namespace {
             TimeStamp,
             TimeStepSize,
             axis,
-            productValues
+            productValues,
+            RuntimeParameters{}
           );
           for (int lane = 0; lane < UnknownStride; lane++) {
             terms[axis * AxisStride + cellNode * UnknownStride + lane] += productValues[lane];
@@ -536,7 +549,8 @@ namespace {
             TimeStamp,
             TimeStepSize,
             axis,
-            terms.data() + axis * AxisStride + cellNode * UnknownStride
+            terms.data() + axis * AxisStride + cellNode * UnknownStride,
+            RuntimeParameters{}
           );
         }
       }
@@ -709,6 +723,7 @@ namespace {
         cellSize,
         Setup::TimeStamp,
         Setup::TimeStepSize,
+        RuntimeParameters{},
         workers
       );
     }
@@ -823,7 +838,8 @@ namespace {
         cellCentre,
         cellSize,
         Setup::TimeStamp,
-        Setup::TimeStepSize
+        Setup::TimeStepSize,
+        RuntimeParameters{}
       );
     }
   }

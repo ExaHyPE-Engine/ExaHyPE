@@ -11,6 +11,7 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::limiting::unittests {
+  struct RuntimeParameters;
   struct StubLayout;
   template <exahype2::TimeStepping::Rule Rule>
   struct StubSolverOf;
@@ -20,6 +21,8 @@ namespace exahype2::dg::limiting::unittests {
   using StubSolver          = StubSolverOf<exahype2::TimeStepping::Rule::Adaptive>;
   using FixedStepStubSolver = StubSolverOf<exahype2::TimeStepping::Rule::Fixed>;
 } // namespace exahype2::dg::limiting::unittests
+
+struct exahype2::dg::limiting::unittests::RuntimeParameters final {};
 
 TARGET_DECLARE
 /**
@@ -55,6 +58,7 @@ struct exahype2::dg::limiting::unittests::StubSolverOf {
 
   static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = Rule;
 
+  using RuntimeParameters      = exahype2::dg::limiting::unittests::RuntimeParameters;
   using Reconstruction         = exahype2::fv::reconstruction::Constant;
   using FallbackReconstruction = void;
   using TimeIntegration        = exahype2::fv::timestepping::SingleStep;
@@ -62,16 +66,22 @@ struct exahype2::dg::limiting::unittests::StubSolverOf {
   static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
     double*                                      Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const RuntimeParameters&                     parameters
   );
 
-  static INLINE_METHOD GPU_CALLABLE_METHOD void mapDmpObservables(double* observables, const double* Q);
+  static INLINE_METHOD GPU_CALLABLE_METHOD void mapDmpObservables(
+    double*                  observables,
+    const double*            Q,
+    const RuntimeParameters& parameters
+  );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissible(
     const double*                                Q,
     int                                          numberOfStates,
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
@@ -80,7 +90,8 @@ struct exahype2::dg::limiting::unittests::StubSolverOf {
     const tarch::la::Vector<DIMENSIONS, double>& h,
     double                                       t,
     double                                       dt,
-    int                                          normal
+    int                                          normal,
+    const RuntimeParameters&                     parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
@@ -90,7 +101,8 @@ struct exahype2::dg::limiting::unittests::StubSolverOf {
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double*                                      F
+    double*                                      F,
+    const RuntimeParameters&                     parameters
   );
 };
 
@@ -99,8 +111,9 @@ struct exahype2::dg::limiting::unittests::StubSolverOf {
  */
 struct exahype2::dg::limiting::unittests::RelaxedStubSolver final : exahype2::dg::limiting::unittests::StubSolver {
   static INLINE_METHOD GPU_CALLABLE_METHOD double dmpRelaxationParameter(
-    int    observable,
-    double specifiedRelaxationParameter
+    int                      observable,
+    double                   specifiedRelaxationParameter,
+    const RuntimeParameters& parameters
   );
 };
 TARGET_DECLARE_END

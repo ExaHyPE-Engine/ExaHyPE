@@ -18,11 +18,13 @@ INLINE_METHOD exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecisi
   Base(timeStepFactor, name, plottedFields) {}
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(
-  const peano4::CellConnectivity& cellConnectivity
+  const peano4::CellConnectivity& cellConnectivity,
+  const RuntimeParameters&        parameters
 ) {
-  Base::allocate(cellConnectivity);
+  Base::allocate(cellConnectivity, parameters);
   _estimates.reserve(cellConnectivity.getNumberOfSlots());
   reserveStageScratch(cellConnectivity);
 }
@@ -60,10 +62,12 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getAlloca
  * restricted fluxes that the ranks exchange in that stage.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeStep(
   const peano4::CellConnectivity& cellConnectivity,
-  exahype2::RefinementRequests&   requests
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
   using Tableau               = typename Stage::Tableau;
   constexpr auto Local        = peano4::Adjacency::Local;
@@ -85,39 +89,41 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::performTi
     if (stage > 0) {
       this->_restrictedFluxExchange.wait();
     }
-    openStage(cellConnectivity, Remote, stage, timeStepSize);
+    openStage(cellConnectivity, Remote, stage, timeStepSize, parameters);
     this->_stateExchange.post();
     this->_fluxExchange.post();
-    openStage(cellConnectivity, Local, stage, timeStepSize);
+    openStage(cellConnectivity, Local, stage, timeStepSize, parameters);
     this->interpolateCoarseFaces(cellConnectivity, Local, interpolateHalves);
-    this->solveRiemannProblems(cellConnectivity, Local, stageTimeStamp, timeStepSize);
+    this->solveRiemannProblems(cellConnectivity, Local, stageTimeStamp, timeStepSize, parameters);
     this->_stateExchange.wait();
     this->_fluxExchange.wait();
     this->interpolateCoarseFaces(cellConnectivity, Remote, interpolateHalves);
-    this->solveRiemannProblems(cellConnectivity, Remote, stageTimeStamp, timeStepSize);
+    this->solveRiemannProblems(cellConnectivity, Remote, stageTimeStamp, timeStepSize, parameters);
     this->restrictFineFaces(cellConnectivity, Remote, restrictFluxes);
     this->_restrictedFluxExchange.post();
     this->restrictFineFaces(cellConnectivity, Local, restrictFluxes);
   }
   this->_restrictedFluxExchange.wait();
 
-  const auto statistics = combineFinalState(cellConnectivity, timeStepSize);
+  const auto statistics = combineFinalState(cellConnectivity, timeStepSize, parameters);
   this->closeTimeStep(timeStepSize, statistics);
-  this->measureError(cellConnectivity);
-  this->voteOnRefinement(cellConnectivity, requests);
+  this->measureError(cellConnectivity, parameters);
+  this->voteOnRefinement(cellConnectivity, requests, parameters);
 }
 
 /**
  * Moves the solution through the regrid and grows the estimate pool with the slot range.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Regrid&           regrid,
-  exahype2::RefinementRequests&   requests
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
-  Base::regrid(cellConnectivity, regrid, requests);
+  Base::regrid(cellConnectivity, regrid, requests, parameters);
   _estimates.reserve(regrid.newNumberOfSlots);
   reserveStageScratch(cellConnectivity);
 }
@@ -164,12 +170,14 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getEstima
  * of that state into the own face halves of the cell.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Adjacency         adjacency,
   const int                       stage,
-  const double                    timeStepSize
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
 ) {
   using Tableau    = typename Stage::Tableau;
   const auto cells = this->getCells(cellConnectivity, adjacency);
@@ -198,7 +206,8 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage
       stage,
       this->_timeStepping.getTimeStamp() + Tableau::Nodes[stageIndex] * timeStepSize,
       timeStepSize,
-      _stageScratch.getData()
+      _stageScratch.getData(),
+      parameters
     }
   );
 }
@@ -208,10 +217,12 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage
  * solution of every cell. Returns the wave-speed maxima of the new solution.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::combineFinalState(
   const peano4::CellConnectivity& cellConnectivity,
-  const double                    timeStepSize
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
 ) {
   using Tableau                               = typename Stage::Tableau;
   const auto                            cells = this->getCells(cellConnectivity);
@@ -231,7 +242,8 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::combineFi
       DGMatrices<ComputePrecision>::BasisFunctionValuesRight1D,
       Quadrature<StoragePrecision>::QuadraturePoints1D,
       this->_timeStepping.getTimeStamp(),
-      timeStepSize
+      timeStepSize,
+      parameters
     },
     tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{statistics}
   );

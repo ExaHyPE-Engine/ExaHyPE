@@ -358,7 +358,7 @@ UNIT_TEST("A solver without an eigenvalue reports the time step size and the mes
     WHEN("The test makes the statistics of the solver") {
       const auto statistics = exahype2::runner::makeSolverStatistics("Plain", solver, appendNothing);
 
-      THEN("The statistics name the solver and list the time step size and the mesh width range") {
+      THEN("The statistics start with the name of the solver and list the time step size and the mesh width range") {
         VALIDATE_EQUALS(statistics.first, std::string("Plain"));
         VALIDATE_EQUALS(statistics.second.size(), 2U);
         VALIDATE_EQUALS(statistics.second[0].label, std::string("dt"));

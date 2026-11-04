@@ -19,10 +19,11 @@
 #include "unittests/exahype2/dg/ader/KernelTestData.h"
 
 namespace {
-  using Setup      = exahype2::dg::ader::unittests::KernelTestSetup;
-  using Tables     = exahype2::dg::unittests::BasisTableSet;
-  using StubLayout = exahype2::dg::ader::unittests::StubLayout;
-  using CellLayout = Setup::CellLayout;
+  using Setup             = exahype2::dg::ader::unittests::KernelTestSetup;
+  using Tables            = exahype2::dg::unittests::BasisTableSet;
+  using StubLayout        = exahype2::dg::ader::unittests::StubLayout;
+  using RuntimeParameters = exahype2::dg::ader::unittests::RuntimeParameters;
+  using CellLayout        = Setup::CellLayout;
 
   template <typename Solver>
   using Predictor = exahype2::dg::ader::NonlinearPredictor<Solver, double>;
@@ -61,7 +62,8 @@ namespace {
       const double                                                  timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = (1.0 + direction) * state[unknown] + position(direction) + timeStamp;
@@ -78,7 +80,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = (1.0 + direction) * state[unknown];
@@ -100,7 +103,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = (1.0 + unknown) * (1.0 + direction) * state[NumberOfUnknowns];
@@ -115,7 +119,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                                  timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         sourceValues
+      double* NOALIAS const                                         sourceValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         sourceValues[unknown] = 2.0 * state[unknown] + timeStamp;
@@ -133,7 +138,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         sourceValues
+      double* NOALIAS const                                         sourceValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         sourceValues[unknown] = (1.0 + unknown) * state[NumberOfUnknowns];
@@ -148,7 +154,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      float* NOALIAS const                                          sourceValues
+      float* NOALIAS const                                          sourceValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         sourceValues[unknown] = (1.0F + static_cast<float>(unknown)) * state[NumberOfUnknowns];
@@ -164,7 +171,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         sourceValues
+      double* NOALIAS const                                         sourceValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         sourceValues[unknown] = 0.0;
@@ -184,7 +192,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         productValues
+      double* NOALIAS const                                         productValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         productValues[unknown] = (1.0 + 0.25 * direction) * stateGradient[unknown];
@@ -219,7 +228,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] =
@@ -233,7 +243,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += SourceStrength;
@@ -247,7 +258,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         double sumOverAxes = 0.0;
@@ -266,7 +278,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += ProductSpeed * (1.0 + direction) * stateGradient[unknown];
@@ -680,7 +693,8 @@ namespace {
       getCellSize(),
       TimeStamp,
       timeStepSize,
-      picardTolerance
+      picardTolerance,
+      RuntimeParameters{}
     );
   }
 
@@ -831,6 +845,7 @@ namespace {
         Setup::TimeStamp,
         Setup::TimeStepSize,
         Setup::PicardTolerance,
+        RuntimeParameters{},
         workers
       );
       if (workers.hasCell and workers.thread == 0) {
@@ -920,7 +935,8 @@ namespace {
         cellSize,
         Setup::TimeStamp,
         Setup::TimeStepSize,
-        Setup::PicardTolerance
+        Setup::PicardTolerance,
+        RuntimeParameters{}
       );
     }
     return sweeps;
@@ -1334,7 +1350,8 @@ UNIT_TEST("An iterate whose squared change lies between the largest float and 1e
         getCellSize(),
         TimeStamp,
         TimeStepSize,
-        PicardTolerance
+        PicardTolerance,
+        RuntimeParameters{}
       );
 
       THEN("Only the single-precision predictor reports a diverged Picard iteration") {
@@ -1848,7 +1865,8 @@ UNIT_TEST("The predictor writes the time averages into the scratch and onto the 
         cellSize,
         TimeStamp,
         TimeStepSize,
-        PicardTolerance
+        PicardTolerance,
+        RuntimeParameters{}
       );
 
       THEN("The first sweep reaches the solution and the second sweep confirms it") {

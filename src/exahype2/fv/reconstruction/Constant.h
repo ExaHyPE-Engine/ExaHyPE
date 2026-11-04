@@ -32,16 +32,17 @@ struct exahype2::fv::reconstruction::Constant final {
     ComputePrecision maxEigenvalue[DIMENSIONS]{};
 
     INLINE_METHOD void evaluate(
-      const StoragePrecision* NOALIAS              patch,
-      const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
-      const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-      int                                          centreOffset,
-      const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-      double                                       timeStamp,
-      double                                       timeStepSize
+      const StoragePrecision* NOALIAS               patch,
+      const StoragePrecision* NOALIAS const         faces[peano4::FacesPerCell],
+      const tarch::la::Vector<DIMENSIONS, int>&     volumeIndex,
+      int                                           centreOffset,
+      const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+      const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+      const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+      double                                        timeStamp,
+      double                                        timeStepSize,
+      const typename SolverType::RuntimeParameters& parameters
     );
   };
 
@@ -111,48 +112,51 @@ struct exahype2::fv::reconstruction::Constant final {
     typename Terms
   >
   INLINE_METHOD GPU_CALLABLE_METHOD static void accumulateFluxDivergence(
-    const StoragePrecision* NOALIAS              inputPatch,
-    const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
-    const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-    int                                          centreOffset,
-    const StoragePrecision* NOALIAS              centreState,
-    const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          boundaryFaces,
-    StoragePrecision* NOALIAS                    outputState,
-    double&                                      maxEigenvalueAfterTimeStep,
-    const Terms&                                 terms
+    const StoragePrecision* NOALIAS               inputPatch,
+    const StoragePrecision* NOALIAS const         faceInputPatches[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, int>&     volumeIndex,
+    int                                           centreOffset,
+    const StoragePrecision* NOALIAS               centreState,
+    const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    int                                           boundaryFaces,
+    StoragePrecision* NOALIAS                     outputState,
+    double&                                       maxEigenvalueAfterTimeStep,
+    const Terms&                                  terms,
+    const typename SolverType::RuntimeParameters& parameters
   );
 
   template <typename SolverType, typename Terms, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision getMaxEigenvalue(
-    const Terms&                                 terms,
-    int                                          volume,
-    const ComputePrecision* NOALIAS              state,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          normal
+    const Terms&                                  terms,
+    int                                           volume,
+    const ComputePrecision* NOALIAS               state,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    int                                           normal,
+    const typename SolverType::RuntimeParameters& parameters
   );
 
 private:
   template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename Terms, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static const ComputePrecision* getFluxAndMaxEigenvalue(
-    const Terms&                                 terms,
-    int                                          volume,
-    const ComputePrecision* NOALIAS              state,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          normal,
-    ComputePrecision* NOALIAS                    fluxBuffer,
-    ComputePrecision&                            maxEigenvalue
+    const Terms&                                  terms,
+    int                                           volume,
+    const ComputePrecision* NOALIAS               state,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    int                                           normal,
+    ComputePrecision* NOALIAS                     fluxBuffer,
+    ComputePrecision&                             maxEigenvalue,
+    const typename SolverType::RuntimeParameters& parameters
   );
 };
 TARGET_DECLARE_END

@@ -53,6 +53,7 @@ namespace tarch::la {
     const Matrix<Rows, Cols, Scalar>& matrix,
     int                               whichColumn
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<2, Scalar> getColumn(const Matrix<2, 2, Scalar>& matrix, int whichColumn);
   template <typename Scalar>

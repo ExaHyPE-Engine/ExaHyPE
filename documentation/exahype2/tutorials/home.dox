@@ -40,7 +40,7 @@ runs on M-series Macs through Docker Desktop's emulation. Add
 `--platform linux/amd64`:
 `docker run --platform linux/amd64 -p 8888:8888 peanoframework/exahype2-tutorials`.
 
-## Option B: Build from Source (No Docker)
+## Option B: Build from Source (Without Docker)
 
 If Docker does not work for you, build ExaHyPE 2 yourself and launch JupyterLab
 locally. You need a C++20 compiler, CMake 3.27+, Python 3.11+ and HDF5 (the

@@ -19,8 +19,12 @@
 #include "unittests/exahype2/dg/TransferTestData.h"
 
 namespace {
+  using RuntimeParameters = exahype2::dg::unittests::RuntimeParameters;
+
   TARGET_DECLARE
   struct Order2Layout {
+    using RuntimeParameters = exahype2::dg::unittests::RuntimeParameters;
+
     static constexpr int DGOrder                    = 2;
     static constexpr int NumberOfUnknowns           = 2;
     static constexpr int NumberOfAuxiliaryVariables = 1;
@@ -45,7 +49,8 @@ namespace {
       [[maybe_unused]] double                                       timeStamp,
       [[maybe_unused]] double                                       timeStepSize,
       int                                                           direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = (direction + 1.0) * state[unknown];
@@ -62,7 +67,8 @@ namespace {
       [[maybe_unused]] double                                       timeStamp,
       [[maybe_unused]] double                                       timeStepSize,
       [[maybe_unused]] int                                          direction,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxValues[unknown] = 0.0;
@@ -83,7 +89,8 @@ namespace {
       const tarch::la::Vector<DIMENSIONS, double>&                  position,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                                  timeStamp,
-      const int                                                     direction
+      const int                                                     direction,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int value = 0; value < NumberOfData; value++) {
         outsideState[value] =
@@ -231,6 +238,8 @@ namespace {
   TARGET_DECLARE
   template <int Auxiliary>
   struct Order1Layout {
+    using RuntimeParameters = exahype2::dg::unittests::RuntimeParameters;
+
     static constexpr int DGOrder                    = 1;
     static constexpr int NumberOfUnknowns           = 2;
     static constexpr int NumberOfAuxiliaryVariables = Auxiliary;
@@ -252,7 +261,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] double                                       t,
       [[maybe_unused]] double                                       dt,
-      [[maybe_unused]] int                                          normal
+      [[maybe_unused]] int                                          normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return state[0];
     }
@@ -269,7 +279,8 @@ namespace {
       [[maybe_unused]] double                                       t,
       [[maybe_unused]] double                                       dt,
       [[maybe_unused]] int                                          normal,
-      double* NOALIAS const                                         fluxValues
+      double* NOALIAS const                                         fluxValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < RiemannUnknowns; unknown++) {
         fluxValues[unknown] += state[unknown];
@@ -286,7 +297,8 @@ namespace {
       [[maybe_unused]] double                                       t,
       [[maybe_unused]] double                                       dt,
       [[maybe_unused]] int                                          normal,
-      double* NOALIAS const                                         productValues
+      double* NOALIAS const                                         productValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < RiemannUnknowns; unknown++) {
         productValues[unknown] += stateJump[unknown];
@@ -306,7 +318,8 @@ namespace {
       [[maybe_unused]] double                                       t,
       [[maybe_unused]] double                                       dt,
       [[maybe_unused]] int                                          normal,
-      double* NOALIAS const                                         productValues
+      double* NOALIAS const                                         productValues,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < RiemannUnknowns; unknown++) {
         productValues[unknown] += (1.0 + unknown) * stateJump[RiemannUnknowns];
@@ -325,7 +338,8 @@ namespace {
       [[maybe_unused]] double                                       t,
       [[maybe_unused]] double                                       dt,
       [[maybe_unused]] int                                          normal,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < RiemannUnknowns; unknown++) {
         values[unknown] *= 2.0;
@@ -370,6 +384,8 @@ namespace {
    */
   template <bool Linear>
   struct FaceLayout {
+    using RuntimeParameters = exahype2::dg::unittests::RuntimeParameters;
+
     static constexpr int  DGOrder                    = 1;
     static constexpr int  NumberOfUnknowns           = FaceUnknowns;
     static constexpr int  NumberOfAuxiliaryVariables = 0;
@@ -401,7 +417,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                                  timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      [[maybe_unused]] const int                                    direction
+      [[maybe_unused]] const int                                    direction,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return timeStamp == TimeStamp ? WaveSpeed : 0.0;
     }
@@ -412,7 +429,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
-      [[maybe_unused]] const int                                    direction
+      [[maybe_unused]] const int                                    direction,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int value = 0; value < FaceData; value++) {
         outsideState[value] = OutsideValue;
@@ -438,7 +456,8 @@ namespace {
       const bool                                                    isBoundaryFace,
       const int                                                     faceIndex,
       double* NOALIAS const                                         leftFlux,
-      double* NOALIAS const                                         rightFlux
+      double* NOALIAS const                                         rightFlux,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       const double increment = encodeFaceArguments(timeStamp, timeStepSize, normal, isBoundaryFace, faceIndex);
       for (int entry = 0; entry < FaceFluxSize; entry++) {
@@ -481,7 +500,8 @@ namespace {
       TimeStamp,
       TimeStepSize,
       direction,
-      boundaryFaceNumber
+      boundaryFaceNumber,
+      RuntimeParameters{}
     );
   }
 
@@ -552,6 +572,8 @@ namespace {
    * A solver whose wave speed depends on the state, the direction and the node position.
    */
   struct EigenvalueStubSolver final {
+    using RuntimeParameters = exahype2::dg::unittests::RuntimeParameters;
+
     static constexpr int DGOrder                    = 1;
     static constexpr int NumberOfUnknowns           = 1;
     static constexpr int NumberOfAuxiliaryVariables = 1;
@@ -562,7 +584,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] double                                       timeStamp,
       [[maybe_unused]] double                                       timeStepSize,
-      const int                                                     direction
+      const int                                                     direction,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return state[0] + direction + 0.25 * position(0);
     }
@@ -573,6 +596,8 @@ namespace {
    * unknown of every node.
    */
   struct PostprocessingStubSolver final {
+    using RuntimeParameters = exahype2::dg::unittests::RuntimeParameters;
+
     static constexpr int DGOrder                    = 1;
     static constexpr int NumberOfUnknowns           = 1;
     static constexpr int NumberOfAuxiliaryVariables = 1;
@@ -583,7 +608,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      [[maybe_unused]] const int                                    direction
+      [[maybe_unused]] const int                                    direction,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return state[0];
     }
@@ -593,7 +619,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const double                                 dt
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int cellNode = 0; cellNode < EigenvalueCellNodes; cellNode++) {
         Q[cellNode * (NumberOfUnknowns + NumberOfAuxiliaryVariables)] += 1.0;
@@ -714,7 +741,8 @@ namespace {
         tarch::la::Vector<DIMENSIONS, double>(cellCentres + coordinateOffset),
         tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
         Setup::TimeStamp,
-        Setup::TimeStepSize
+        Setup::TimeStepSize,
+        RuntimeParameters{}
       );
       exahype2::dg::extrapolateFluxToFaces<Stub>(facesOfCell, nodalFluxes, leftFaceCoefficients, rightFaceCoefficients);
     }
@@ -790,7 +818,8 @@ namespace {
         tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
         Setup::TimeStamp,
         Setup::TimeStepSize,
-        faceNumber % DIMENSIONS
+        faceNumber % DIMENSIONS,
+        RuntimeParameters{}
       );
     }
   };
@@ -853,7 +882,8 @@ namespace {
         exahype2::dg::unittests::getFaceCentreOf(cell, faceNumber, cellCentres, cellSizes),
         tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
         Setup::TimeStamp,
-        faceNumber
+        faceNumber,
+        RuntimeParameters{}
       );
     }
   };
@@ -917,7 +947,8 @@ namespace {
         tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
         Setup::TimeStamp,
         Setup::TimeStepSize,
-        faceNumber % DIMENSIONS
+        faceNumber % DIMENSIONS,
+        RuntimeParameters{}
       );
     }
   };
@@ -984,7 +1015,8 @@ namespace {
         tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
         Setup::TimeStamp,
         Setup::TimeStepSize,
-        faceNumber % DIMENSIONS
+        faceNumber % DIMENSIONS,
+        RuntimeParameters{}
       );
     }
   };
@@ -1138,7 +1170,8 @@ namespace {
           tarch::la::Vector<DIMENSIONS, double>(cellCentres + coordinateOffset),
           tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
           Setup::TimeStamp,
-          Setup::TimeStepSize
+          Setup::TimeStepSize,
+          RuntimeParameters{}
         )
       );
     }
@@ -1203,7 +1236,8 @@ UNIT_TEST("The projection clears the face buffers before it writes the state and
         cellCentre,
         cellSize,
         0.0,
-        0.0
+        0.0,
+        RuntimeParameters{}
       );
       exahype2::dg::extrapolateFluxToFaces<FluxSolver>(flux, nodalFluxes, coefficients, coefficients);
 
@@ -1428,7 +1462,8 @@ UNIT_TEST("The projection evaluates the flux at the cell nodes before the extrap
         cellCentre,
         cellSize,
         0.0,
-        0.0
+        0.0,
+        RuntimeParameters{}
       );
       exahype2::dg::extrapolateFluxToFaces<FluxSolver>(flux, nodalFluxes, coefficients, coefficients);
 
@@ -1477,7 +1512,8 @@ UNIT_TEST("A system without flux leaves zeros on every face") {
         cellCentre,
         cellSize,
         0.0,
-        0.0
+        0.0,
+        RuntimeParameters{}
       );
       exahype2::dg::extrapolateFluxToFaces<Order2Layout>(flux, nodalFluxes, coefficients, coefficients);
 
@@ -1540,7 +1576,8 @@ UNIT_TEST("The projection extrapolates a diffusive flux with the nodal gradients
         cellCentre,
         cellSize,
         0.0,
-        0.0
+        0.0,
+        RuntimeParameters{}
       );
       exahype2::dg::extrapolateFluxToFaces<DiffusiveFluxSolver>(flux, nodalFluxes, coefficients, coefficients);
 
@@ -1594,7 +1631,8 @@ UNIT_TEST("The boundary conditions fill the outer half of a boundary face from t
           getFaceCentre(faceNumber),
           getCellSize(),
           BoundaryTimeStamp,
-          faceNumber
+          faceNumber,
+          RuntimeParameters{}
         );
       }
 
@@ -1636,7 +1674,8 @@ UNIT_TEST("The boundary conditions receive the position of every node of a bound
           getFaceCentre(faceNumber),
           getCellSize(),
           0.0,
-          faceNumber
+          faceNumber,
+          RuntimeParameters{}
         );
       }
 
@@ -1697,7 +1736,8 @@ UNIT_TEST("The flux on a face reads the face state of the selected side") {
             cellSize,
             0.0,
             0.0,
-            direction
+            direction,
+            RuntimeParameters{}
           );
         }
       }
@@ -1734,7 +1774,8 @@ UNIT_TEST("The flux on a face reads the face state of the selected side") {
               cellSize,
               0.0,
               0.0,
-              direction
+              direction,
+              RuntimeParameters{}
             );
           }
         }
@@ -1783,7 +1824,8 @@ UNIT_TEST("A diffusive flux on a face reads the jump along the normal") {
             cellSize,
             0.0,
             0.0,
-            direction
+            direction,
+            RuntimeParameters{}
           );
         }
       }
@@ -1849,7 +1891,8 @@ UNIT_TEST("With two equal states the Riemann solver averages the two fluxes and 
         cellSize,
         0.0,
         1.0,
-        0
+        0,
+        RuntimeParameters{}
       );
 
       THEN("Both sides equal one, half the flux jump") {
@@ -1901,7 +1944,8 @@ UNIT_TEST("Two sides with equal states and fluxes leave zeros bitwise with a non
         cellSize,
         0.0,
         1.0,
-        0
+        0,
+        RuntimeParameters{}
       );
 
       THEN("Every flux entry of both sides is zero") {
@@ -1948,7 +1992,8 @@ UNIT_TEST("The jump term scales with the larger wave speed of the two sides") {
         cellSize,
         0.0,
         1.0,
-        0
+        0,
+        RuntimeParameters{}
       );
 
       THEN("The left side is half the larger wave speed five times the state jump and the right side its negative") {
@@ -2002,7 +2047,8 @@ UNIT_TEST("Without a nonconservative product the two stored differences add up t
         cellSize,
         0.0,
         1.0,
-        0
+        0,
+        RuntimeParameters{}
       );
 
       THEN("The two differences of every entry add up to the right own flux minus the left own flux") {
@@ -2054,7 +2100,8 @@ UNIT_TEST("The nonconservative jump term adds to both stored differences with th
         cellSize,
         0.0,
         1.0,
-        0
+        0,
+        RuntimeParameters{}
       );
 
       THEN("The two differences of every unknown add up to its state jump") {
@@ -2108,7 +2155,8 @@ UNIT_TEST("The nonconservative product reads the jump of every auxiliary variabl
         cellSize,
         0.0,
         1.0,
-        0
+        0,
+        RuntimeParameters{}
       );
 
       THEN("Both sides of every unknown equal half of one plus the unknown index times the auxiliary jump") {
@@ -2162,7 +2210,8 @@ UNIT_TEST("The linear form builds the flux from the state jump") {
         cellSize,
         0.0,
         1.0,
-        0
+        0,
+        RuntimeParameters{}
       );
 
       THEN("The central flux is one and the dissipation of wave speed three adds to the sides with opposite signs") {
@@ -2211,7 +2260,8 @@ UNIT_TEST("The linear form adds the nonconservative product") {
         cellSize,
         0.0,
         1.0,
-        0
+        0,
+        RuntimeParameters{}
       );
 
       THEN("The central flux doubles to two and the dissipation of wave speed three keeps its opposite signs") {
@@ -2266,7 +2316,8 @@ UNIT_TEST("The linear form applies the material parameter matrix") {
         cellSize,
         0.0,
         1.0,
-        0
+        0,
+        RuntimeParameters{}
       );
 
       THEN("The material matrix doubles the central flux to two and the dissipation keeps its opposite signs") {
@@ -2749,7 +2800,8 @@ UNIT_TEST("The eigenvalue reduction of a cell takes both maxima over its nodes, 
         cellCentre,
         cellSize,
         0.0,
-        0.0
+        0.0,
+        RuntimeParameters{}
       );
 
       THEN("Both maxima come from the last node with the largest state and the largest first coordinate") {
@@ -2786,7 +2838,8 @@ UNIT_TEST("The finish of a cell postprocesses every node once and reports the wa
         cellCentre,
         cellSize,
         0.0,
-        0.0
+        0.0,
+        RuntimeParameters{}
       );
       const std::vector<double> stateAfterTheFirstFinish(cellState, cellState + EigenvalueCellNodes * Data);
       const auto                unreportedStatistics = exahype2::dg::finishCell<PostprocessingStubSolver, false>(
@@ -2795,7 +2848,8 @@ UNIT_TEST("The finish of a cell postprocesses every node once and reports the wa
         cellCentre,
         cellSize,
         0.0,
-        0.0
+        0.0,
+        RuntimeParameters{}
       );
 
       THEN("Each finish adds one to every unknown and keeps every auxiliary variable") {
@@ -3181,7 +3235,8 @@ UNIT_TEST("The flux extrapolation of a chain of cells writes the same faces on t
           tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),
           tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
           Setup::TimeStamp,
-          Setup::TimeStepSize
+          Setup::TimeStepSize,
+          RuntimeParameters{}
         );
         exahype2::dg::extrapolateFluxToFaces<Stub>(
           facesOfCell,
@@ -3233,7 +3288,8 @@ UNIT_TEST("The flux evaluation on the faces of a chain of cells gives the same f
             tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
             Setup::TimeStamp,
             Setup::TimeStepSize,
-            faceNumber % DIMENSIONS
+            faceNumber % DIMENSIONS,
+            RuntimeParameters{}
           );
         }
       }
@@ -3271,7 +3327,8 @@ UNIT_TEST("The boundary conditions of a chain of cells give the same face states
           ),
           tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
           Setup::TimeStamp,
-          faceNumber
+          faceNumber,
+          RuntimeParameters{}
         );
       }
 
@@ -3316,7 +3373,8 @@ UNIT_TEST("The Riemann solve on the faces of a chain of cells gives the same flu
           tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
           Setup::TimeStamp,
           Setup::TimeStepSize,
-          faceNumber % DIMENSIONS
+          faceNumber % DIMENSIONS,
+          RuntimeParameters{}
         );
       }
 
@@ -3360,7 +3418,8 @@ UNIT_TEST("The linear Riemann solve on a chain of cells gives the same fluxes on
           tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
           Setup::TimeStamp,
           Setup::TimeStepSize,
-          faceNumber % DIMENSIONS
+          faceNumber % DIMENSIONS,
+          RuntimeParameters{}
         );
       }
 
@@ -3458,7 +3517,8 @@ UNIT_TEST("The parallel reduction of the largest eigenvalues on the device equal
             tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),
             tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
             Setup::TimeStamp,
-            Setup::TimeStepSize
+            Setup::TimeStepSize,
+            RuntimeParameters{}
           )
         );
       }

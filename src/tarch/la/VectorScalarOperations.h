@@ -14,16 +14,19 @@ namespace tarch::la {
     tarch::la::Vector<Size, Scalar>& vector,
     const Scalar&                    scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>& operator*=(
     tarch::la::Vector<2, Scalar>& vector,
     const Scalar&                 scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>& operator*=(
     tarch::la::Vector<3, Scalar>& vector,
     const Scalar&                 scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>& operator*=(
     tarch::la::Vector<4, Scalar>& vector,
@@ -35,16 +38,19 @@ namespace tarch::la {
     tarch::la::Vector<Size, Scalar>& vector,
     const Scalar&                    scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>& operator/=(
     tarch::la::Vector<2, Scalar>& vector,
     const Scalar&                 scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>& operator/=(
     tarch::la::Vector<3, Scalar>& vector,
     const Scalar&                 scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>& operator/=(
     tarch::la::Vector<4, Scalar>& vector,
@@ -56,16 +62,19 @@ namespace tarch::la {
     tarch::la::Vector<Size, Scalar>& vector,
     const Scalar&                    scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>& operator+=(
     tarch::la::Vector<2, Scalar>& vector,
     const Scalar&                 scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>& operator+=(
     tarch::la::Vector<3, Scalar>& vector,
     const Scalar&                 scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>& operator+=(
     tarch::la::Vector<4, Scalar>& vector,
@@ -77,16 +86,19 @@ namespace tarch::la {
     tarch::la::Vector<Size, Scalar>& vector,
     const Scalar&                    scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>& operator-=(
     tarch::la::Vector<2, Scalar>& vector,
     const Scalar&                 scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>& operator-=(
     tarch::la::Vector<3, Scalar>& vector,
     const Scalar&                 scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>& operator-=(
     tarch::la::Vector<4, Scalar>& vector,
@@ -98,16 +110,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& vector,
     const Scalar&                          scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> operator*(
     const tarch::la::Vector<2, Scalar>& vector,
     const Scalar&                       scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> operator*(
     const tarch::la::Vector<3, Scalar>& vector,
     const Scalar&                       scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> operator*(
     const tarch::la::Vector<4, Scalar>& vector,
@@ -125,16 +140,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& vector,
     const Scalar&                          scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> operator/(
     const tarch::la::Vector<2, Scalar>& vector,
     const Scalar&                       scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> operator/(
     const tarch::la::Vector<3, Scalar>& vector,
     const Scalar&                       scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> operator/(
     const tarch::la::Vector<4, Scalar>& vector,
@@ -146,16 +164,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& vector,
     const Scalar&                          scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> operator+(
     const tarch::la::Vector<2, Scalar>& vector,
     const Scalar&                       scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> operator+(
     const tarch::la::Vector<3, Scalar>& vector,
     const Scalar&                       scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> operator+(
     const tarch::la::Vector<4, Scalar>& vector,
@@ -173,16 +194,19 @@ namespace tarch::la {
     const tarch::la::Vector<Size, Scalar>& vector,
     const Scalar&                          scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> operator-(
     const tarch::la::Vector<2, Scalar>& vector,
     const Scalar&                       scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> operator-(
     const tarch::la::Vector<3, Scalar>& vector,
     const Scalar&                       scalar
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> operator-(
     const tarch::la::Vector<4, Scalar>& vector,
@@ -195,18 +219,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool equals(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool equals(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool equals(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -220,18 +247,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneEquals(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneEquals(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneEquals(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -245,18 +275,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneGreater(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneGreater(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneGreater(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -270,18 +303,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneGreaterEquals(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneGreaterEquals(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneGreaterEquals(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -295,18 +331,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allGreater(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allGreater(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allGreater(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -320,18 +359,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allGreaterEquals(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allGreaterEquals(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allGreaterEquals(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -345,18 +387,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneSmaller(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneSmaller(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneSmaller(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -370,18 +415,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneSmallerEquals(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneSmallerEquals(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneSmallerEquals(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -395,18 +443,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allSmaller(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allSmaller(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allSmaller(
     const tarch::la::Vector<4, Scalar>& lhs,
@@ -420,18 +471,21 @@ namespace tarch::la {
     const Scalar&                          cmp,
     Scalar                                 tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allSmallerEquals(
     const tarch::la::Vector<2, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allSmallerEquals(
     const tarch::la::Vector<3, Scalar>& lhs,
     const Scalar&                       cmp,
     Scalar                              tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allSmallerEquals(
     const tarch::la::Vector<4, Scalar>& lhs,

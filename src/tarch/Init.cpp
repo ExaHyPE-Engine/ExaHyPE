@@ -4,7 +4,6 @@
 
 #include "tarch/Termination.h"
 #include "tarch/accelerator/Device.h"
-#include "tarch/accelerator/DeviceCopies.h"
 #include "tarch/accelerator/MemoryBlocks.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/instrumentation/Log.h"
@@ -39,7 +38,6 @@ tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
   if (numberOfDevices > 0) {
     tarch::accelerator::setCurrentDevice(tarch::mpi::Rank::getInstance().getRankOnNode() % numberOfDevices);
   }
-  tarch::accelerator::uploadDeviceCopies();
 }
 
 void

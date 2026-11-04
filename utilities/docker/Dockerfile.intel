@@ -3,21 +3,27 @@ FROM peanoframework/spack:latest AS builder
 WORKDIR /opt/spack-environment
 
 COPY utilities/spack/compilers/intel/spack.yaml spack.yaml
+COPY utilities/spack/repo.yaml /opt/spack-peano/repo.yaml
+COPY utilities/spack/packages /opt/spack-peano/packages
 
 RUN . /opt/spack/share/spack/setup-env.sh && \
-    spack compiler find && \
     spack env activate . && \
+    spack compiler find && \
+    spack repo add /opt/spack-peano && \
     spack external find curl cmake ccache git ninja && \
     spack concretize && \
-    spack install --fail-fast && \
+    spack install --fail-fast --concurrent-packages 1 && \
     spack gc -y && \
     spack clean -a
 
 RUN . /opt/spack/share/spack/setup-env.sh && spack env activate --sh -d . > activate.sh
 
+# The SYCL and OpenMP offload runtimes of oneAPI load libhwloc.so.15 from the first folder. Programs that the
+# clang of AdaptiveCpp links load libomp.so from the second folder.
 RUN { \
       echo '#!/bin/sh' \
       && echo '.' /opt/spack-environment/activate.sh \
+      && echo export LD_LIBRARY_PATH='$LD_LIBRARY_PATH':/opt/views/view/tcm/latest/lib:/opt/views/acpp/lib/x86_64-unknown-linux-gnu \
       && echo 'exec "$@"'; \
     } > /entrypoint.sh \
 && chmod a+x /entrypoint.sh \

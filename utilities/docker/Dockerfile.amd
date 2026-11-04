@@ -3,13 +3,16 @@ FROM peanoframework/spack:latest AS builder
 WORKDIR /opt/spack-environment
 
 COPY utilities/spack/compilers/amd/spack.yaml spack.yaml
+COPY utilities/spack/repo.yaml /opt/spack-peano/repo.yaml
+COPY utilities/spack/packages /opt/spack-peano/packages
 
 RUN . /opt/spack/share/spack/setup-env.sh && \
-    spack compiler find && \
     spack env activate . && \
+    spack compiler find && \
+    spack repo add /opt/spack-peano && \
     spack external find curl cmake ccache git ninja && \
     spack concretize && \
-    spack install --fail-fast && \
+    spack install --fail-fast --concurrent-packages 1 && \
     spack gc -y && \
     spack clean -a
 

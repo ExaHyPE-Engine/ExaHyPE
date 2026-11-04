@@ -28,7 +28,9 @@ public:
     double                                       timestamp,
     const tarch::la::Vector<DIMENSIONS, double>& x
   );
+
   void addParticleSnapshot(int number0, int number1, double timestamp, const tarch::la::Vector<DIMENSIONS, double>& x);
+
   void addParticleSnapshot(
     const std::pair<int, int>&                   number,
     double                                       timestamp,
@@ -36,6 +38,7 @@ public:
     int                                          numberOfDataEntries,
     const double*                                data
   );
+
   void addParticleSnapshot(
     int                                          number0,
     int                                          number1,
@@ -44,6 +47,7 @@ public:
     int                                          numberOfDataEntries,
     const double*                                data
   );
+
   [[nodiscard]] bool isSnapshotDue(
     const std::pair<int, int>&                   number,
     const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -85,6 +89,7 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& x,
     double                                       timestamp
   ) const;
+
   AddSnapshotAction prepareSnapshot(
     const std::pair<int, int>&                   number,
     const tarch::la::Vector<DIMENSIONS, double>& x,

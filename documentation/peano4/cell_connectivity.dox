@@ -38,7 +38,7 @@ The figure shows from left to right:
   `Intermediate` (a face of a chain of level jumps without a cell on either side).
   peano4::CellConnectivity::getFaceCell() returns the cell on the lower or the
   upper side of the face. It returns -1 for a side without a cell of this rank.
-- A peano4::LevelJump names a coarse face, the side of its coarse cell and
+- A peano4::LevelJump stores a coarse face, the side of its coarse cell and
   its fine faces in subface order.
 - A face that two ranks store appears in the cell connectivity of both ranks, each
   with its own cell on one side. peano4::CellConnectivity::getNeighbours()
@@ -52,8 +52,8 @@ position. An application finds the cell that contains a position with it.
 # Spans
 
 The cell connectivity orders every list so that a group an application loops over is
-one contiguous span. peano4::Adjacency::Local names a cell, face or level jump
-that reads the data of this rank only. peano4::Adjacency::Remote names one
+one contiguous span. peano4::Adjacency::Local selects a cell, face or level jump
+that reads the data of this rank only. peano4::Adjacency::Remote selects one
 that reads a face half a neighbour rank sends.
 
 - peano4::CellConnectivity::getCells() returns every cell. `getCells(adjacency)`
@@ -71,7 +71,7 @@ after peano4::HaloExchange::wait().
 
 # One step
 
-The pseudocode names every call an application needs. `n` runs over the faces
+The pseudocode lists every call an application needs. `n` runs over the faces
 of a cell. `solution` and `halo` are pools with one chunk per cell slot and per
 face.
 

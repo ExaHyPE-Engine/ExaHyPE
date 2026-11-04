@@ -167,8 +167,12 @@ namespace {
    * Returns whether the MPI library sends and receives the device buffers of the GPU backend.
    */
   std::string getGPUAwareMPILabel() {
+#if defined(PEANO_WITH_GPU_BACKEND)
     const auto isGPUAware = tarch::accelerator::Device::getInstance().isMPIGPUAware();
     return isGPUAware.has_value() ? getOnOff(*isGPUAware) : "Unknown";
+#else
+    return "Not Used";
+#endif
   }
 
   std::string renderStatistics(const std::vector<exahype2::runner::SolverStatistic>& statistics) {
@@ -355,8 +359,7 @@ exahype2::runner::Runner::launch(
     // enables its own trap.
     const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
 #pragma omp barrier
-#pragma omp master
-    {
+    if (tarch::tasking::Runtime::getInstance().getThreadNumber() == 0) {
       returnCode = runner.run();
     }
 #pragma omp barrier

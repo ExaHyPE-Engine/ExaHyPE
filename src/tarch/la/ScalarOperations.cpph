@@ -91,9 +91,8 @@ template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::BitPatternOf<Value>
 tarch::la::getMagnitudeKeyOf(const Value value) {
   static_assert(std::is_floating_point_v<Value>, "The magnitude keys support floating-point values only.");
-  using Bits                   = tarch::la::BitPatternOf<Value>;
-  constexpr Bits MagnitudeMask = ~(Bits{1} << (8 * sizeof(Value) - 1));
-  return std::bit_cast<Bits>(value) & MagnitudeMask;
+  using Bits = tarch::la::BitPatternOf<Value>;
+  return std::bit_cast<Bits>(value) & ~(Bits{1} << (8 * sizeof(Value) - 1));
 }
 
 /**
@@ -105,8 +104,10 @@ template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 tarch::la::isBelow(const Value lhs, const Value rhs) {
   if constexpr (std::is_floating_point_v<Value>) {
-    COMPILE_IF_ON_HOST(return lhs < rhs;)
-    COMPILE_IF_ON_DEVICE(return tarch::la::getOrderKeyOf(lhs) < tarch::la::getOrderKeyOf(rhs);)
+    bool below = false;
+    COMPILE_IF_ON_HOST(below = lhs < rhs;)
+    COMPILE_IF_ON_DEVICE(below = tarch::la::getOrderKeyOf(lhs) < tarch::la::getOrderKeyOf(rhs);)
+    return below;
   } else {
     return lhs < rhs;
   }
@@ -121,8 +122,10 @@ template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 tarch::la::isBelowInMagnitude(const Value lhs, const Value rhs) {
   if constexpr (std::is_floating_point_v<Value>) {
-    COMPILE_IF_ON_HOST(return std::abs(lhs) < std::abs(rhs);)
-    COMPILE_IF_ON_DEVICE(return tarch::la::getMagnitudeKeyOf(lhs) < tarch::la::getMagnitudeKeyOf(rhs);)
+    bool below = false;
+    COMPILE_IF_ON_HOST(below = std::abs(lhs) < std::abs(rhs);)
+    COMPILE_IF_ON_DEVICE(below = tarch::la::getMagnitudeKeyOf(lhs) < tarch::la::getMagnitudeKeyOf(rhs);)
+    return below;
   } else {
     return std::abs(lhs) < std::abs(rhs);
   }
@@ -137,8 +140,10 @@ template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 tarch::la::isEqualInMagnitude(const Value lhs, const Value rhs) {
   if constexpr (std::is_floating_point_v<Value>) {
-    COMPILE_IF_ON_HOST(return std::abs(lhs) == std::abs(rhs);)
-    COMPILE_IF_ON_DEVICE(return tarch::la::getMagnitudeKeyOf(lhs) == tarch::la::getMagnitudeKeyOf(rhs);)
+    bool equal = false;
+    COMPILE_IF_ON_HOST(equal = std::abs(lhs) == std::abs(rhs);)
+    COMPILE_IF_ON_DEVICE(equal = tarch::la::getMagnitudeKeyOf(lhs) == tarch::la::getMagnitudeKeyOf(rhs);)
+    return equal;
   } else {
     return std::abs(lhs) == std::abs(rhs);
   }
@@ -306,8 +311,10 @@ tarch::la::sumInFixedPoint(const double* const values, const int size) {
   while ((1 << sizeBits) < size) {
     sizeBits++;
   }
-  // The largest magnitude lies below 2^(ilogb + 1). Two factors apply the shift without overflow.
-  const int    shift      = 60 - sizeBits - std::ilogb(largestMagnitude);
+  int exponent = 0;
+  static_cast<void>(std::frexp(largestMagnitude, &exponent));
+  // The largest magnitude lies below 2^exponent. Two factors apply the shift without overflow.
+  const int    shift      = 61 - sizeBits - exponent;
   const double lowerScale = std::ldexp(1.0, shift / 2);
   const double upperScale = std::ldexp(1.0, shift - shift / 2);
   std::int64_t sum        = 0;

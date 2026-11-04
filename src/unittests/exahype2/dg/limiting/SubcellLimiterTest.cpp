@@ -253,10 +253,13 @@ namespace {
    * The PDE terms of every test solver. A constant state stays constant under these terms.
    */
   struct CommonTerms {
+    struct RuntimeParameters final {};
+
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                                 Q,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       Q[0] = ConstantState;
     }
@@ -267,7 +270,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       outside[0] = inside[0];
     }
@@ -276,7 +280,8 @@ namespace {
       [[maybe_unused]] const double* const                          Q,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const double                                 t
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return exahype2::RefinementCommand::Keep;
     }
@@ -287,7 +292,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return 0.0;
     }
@@ -299,11 +305,14 @@ namespace {
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      double* const                                                 F
+      double* const                                                 F,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       F[0] = 0.0;
     }
   };
+
+  using RuntimeParameters = CommonTerms::RuntimeParameters;
 
   struct AcceptingSolver final : SolverOf<AcceptingSolver>, CommonTerms {
     static constexpr int  DGOrder                    = ::Order;
@@ -334,7 +343,8 @@ namespace {
       [[maybe_unused]] const double* const                          Q,
       [[maybe_unused]] const int                                    numberOfStates,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return true;
     }
@@ -369,7 +379,8 @@ namespace {
       [[maybe_unused]] const double* const                          Q,
       [[maybe_unused]] const int                                    numberOfStates,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return false;
     }
@@ -407,7 +418,8 @@ namespace {
       [[maybe_unused]] const double* const                          Q,
       [[maybe_unused]] const int                                    numberOfStates,
       const tarch::la::Vector<DIMENSIONS, double>&                  x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         if (x(axis) > CoarseWidth) {
@@ -496,14 +508,14 @@ namespace {
   const peano4::CellConnectivity& advance(Solver& solver, const int steps) {
     const auto& cellConnectivity = buildGrid();
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     for (int step = 0; step < steps; step++) {
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.performTimeStep(cellConnectivity, requests);
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
     }
     return cellConnectivity;
@@ -661,7 +673,7 @@ UNIT_TEST("A plot of cells on the subcell scheme writes every file and allocates
 
     WHEN("The solver plots its cells and every rank looks for its file") {
       const tarch::AllocatedBytes bytesBeforeThePlot = solver.getAllocatedBytes();
-      solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory);
+      solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory, RuntimeParameters{});
       const tarch::AllocatedBytes bytesAfterThePlot = solver.getAllocatedBytes();
       const bool                  fileExists        = std::filesystem::exists(vtuPath);
       tarch::mpi::barrier(rank.getCommunicator());
@@ -693,7 +705,7 @@ UNIT_TEST("A release frees every pool that the allocation reserved, the pools of
     const std::size_t bytesBeforeTheAllocation = solver.getAllocatedBytes().getTotal();
 
     WHEN("The solver allocates its pools on the grid and releases them") {
-      solver.allocate(cellConnectivity);
+      solver.allocate(cellConnectivity, RuntimeParameters{});
       const std::size_t bytesAfterTheAllocation        = solver.getAllocatedBytes().getTotal();
       const std::size_t limiterBytesAfterTheAllocation = solver.getLimiter().getAllocatedBytes().getTotal();
       solver.release();
