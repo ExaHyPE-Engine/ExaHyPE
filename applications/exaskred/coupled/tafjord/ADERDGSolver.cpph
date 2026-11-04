@@ -95,7 +95,7 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   [[maybe_unused]] const double                                 t,
   const int                                                     normal
 ) {
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];
   }
@@ -121,8 +121,8 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
 
 /**
  * Refines a cell that overlaps the region of the displacement file or reaches below shoreHeight.
- * Every other cell keeps its level. No cell receives interpolated bathymetry or water after the
- * initialisation.
+ * Every other cell keeps its level. The initial condition writes the bathymetry and the water of
+ * every cell.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
@@ -131,7 +131,7 @@ applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                t
 ) {
-  assertion(h(0) > 0.0 and h(1) > 0.0, h);
+  ASSERTION(h(0) > 0.0 and h(1) > 0.0, h);
   if (Q == nullptr) {
     return ::exahype2::RefinementCommand::Keep;
   }
@@ -141,7 +141,7 @@ applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   const auto displacementPosition = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
   bool       overlapsDisplacement = true;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(displacementSize(axis) >= 0.0, axis, displacementSize(axis));
+    ASSERTION(displacementSize(axis) >= 0.0, axis, displacementSize(axis));
     const double lower   = displacementOffset(axis) + displacementPosition(axis);
     const double upper   = lower + displacementSize(axis);
     overlapsDisplacement = overlapsDisplacement and x(axis) + 0.5 * h(axis) > lower and x(axis) - 0.5 * h(axis) < upper;

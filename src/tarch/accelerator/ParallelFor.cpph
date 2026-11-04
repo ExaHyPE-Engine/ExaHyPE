@@ -13,7 +13,7 @@ namespace tarch::accelerator {
    * runs a whole team.
    */
   INLINE_METHOD int getTeamThreads(const int requested) {
-    assertion(requested == tarch::accelerator::TeamRange::BackendDefault or requested > 0, requested);
+    ASSERTION(requested == tarch::accelerator::TeamRange::BackendDefault or requested > 0, requested);
     return 1;
   }
 
@@ -22,7 +22,7 @@ namespace tarch::accelerator {
    * provides TeamScratchBytes.
    */
   INLINE_METHOD int getTeamScratchBytes(const int requested) {
-    assertion(
+    ASSERTION(
       requested == tarch::accelerator::TeamRange::BackendDefault
         or (requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes),
       requested
@@ -37,15 +37,15 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor([[maybe_unused]] const CpuTeam& team, const Range& range, const Functor functor) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     for (int i = 0; i < range.n; ++i) {
       functor(i);
     }
   }
   template <typename Functor>
   INLINE_METHOD void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<2>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
         functor(x, y);
@@ -54,9 +54,9 @@ namespace tarch::accelerator {
   }
   template <typename Functor>
   INLINE_METHOD void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<3>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
         for (int z = 0; z < range.n[2]; ++z) {
@@ -66,7 +66,7 @@ namespace tarch::accelerator {
     }
   }
 
-  // A team runs its range serially on the host. The barrier does nothing.
+  // A team runs its range serially on the host. The barrier returns at once.
   INLINE_METHOD void teamBarrier([[maybe_unused]] const CpuTeam& team) {}
 
   INLINE_METHOD bool isTrueInEveryThreadOfTeam([[maybe_unused]] const CpuTeam& team, const bool condition) {
@@ -84,8 +84,8 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     tarch::accelerator::runInParallelRegion([&]() {
 #pragma omp for collapse(2) schedule(static)
       for (int x = 0; x < range.n[0]; ++x) {
@@ -98,9 +98,9 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     tarch::accelerator::runInParallelRegion([&]() {
 #pragma omp for collapse(3) schedule(static)
       for (int x = 0; x < range.n[0]; ++x) {
@@ -117,7 +117,7 @@ namespace tarch::accelerator {
   // team serially.
   template <typename Functor>
   INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(range.n), [&functor](const int team) {
       functor(team, tarch::accelerator::CpuTeam{tarch::accelerator::getTeamScratchOfThread()});
     });

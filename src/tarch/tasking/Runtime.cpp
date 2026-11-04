@@ -104,7 +104,7 @@ tarch::tasking::Runtime::init() {
   // A large top padding moves the arena growth of glibc and its serialised mprotect calls out of the
   // first parallel sweep. A sanitizer or a replaced allocator rejects every mallopt() option.
   if (mallopt(M_TOP_PAD, 128 * 1024 * 1024) == 0) {
-    logDebug("The allocator rejected the requested top padding.");
+    LOG_DEBUG("The allocator rejected the requested top padding.");
   }
 #endif
   // On an oversubscribed node a team thread that spins at a barrier takes the core of another rank.
@@ -123,12 +123,12 @@ tarch::tasking::Runtime::init() {
   _numberOfThreads = omp_get_max_threads();
 
   if (_numberOfThreads > tarch::tasking::getNumberOfUnmaskedThreads()) {
-    logDebug(
+    LOG_DEBUG(
       "The number of configured threads (" << _numberOfThreads
                                            << ") is greater than the number of available unmasked threads ("
                                            << tarch::tasking::getNumberOfUnmaskedThreads() << ")."
     );
-    logDebug("Unmasked threads: " << tarch::tasking::printUnmaskedThreads() << ".");
+    LOG_DEBUG("Unmasked threads: " << tarch::tasking::printUnmaskedThreads() << ".");
   }
 
   return tarch::tasking::Runtime::isInitialised();

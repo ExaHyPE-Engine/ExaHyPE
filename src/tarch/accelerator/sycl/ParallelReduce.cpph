@@ -110,7 +110,7 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename Functor>
   INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -136,8 +136,8 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     const int extentY = range.n[1];
     tarch::accelerator::parallelReduce(
       Range(range.n[0] * range.n[1]),
@@ -149,9 +149,9 @@ namespace tarch::accelerator {
   }
   template <typename Reducer, typename Functor>
   INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     const int extentY = range.n[1];
     const int extentZ = range.n[2];
     tarch::accelerator::parallelReduce(
@@ -165,7 +165,7 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename Functor>
   INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }

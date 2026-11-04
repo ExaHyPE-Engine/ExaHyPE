@@ -69,7 +69,8 @@ namespace {
   }
 
   /**
-   * Returns the index of a child face among the subfaces of its parent face, ordered along the tangential axes.
+   * Returns the index of a child face among the subfaces of its parent face in the order of the
+   * tangential axes.
    */
   int getSubfaceIndexOf(const tarch::la::Vector<DIMENSIONS, int>& childPosition, const int normal) {
     return peano4::dLinearisedExclusive(childPosition, peano4::SubdivisionFactor, normal);
@@ -111,7 +112,8 @@ namespace {
   };
 
   /**
-   * Turns the counts per key into the offsets of the ranges, with one end entry after the last key.
+   * Turns the counts per key into the offsets of the ranges. The end entry after the last key receives
+   * the sum of all counts.
    */
   void turnCountsIntoOffsets(std::vector<int>& ranges) {
     int offset = 0;
@@ -200,17 +202,12 @@ peano4::Spacetree::enableDynamicLoadBalancing(const bool enable) {
  * Returns the coarsest level whose blocks give every rank at least one block.
  */
 int
-peano4::Spacetree::deriveSpawnLevel(const int targetLevel, const int numberOfRanks) {
-  return peano4::topology::Tree::deriveSpawnLevel(targetLevel, numberOfRanks);
-}
-
-int
 peano4::Spacetree::deriveSpawnLevel() const {
-  return deriveSpawnLevel(_targetLevel, tarch::mpi::Rank::getInstance().getNumberOfRanks());
+  return peano4::topology::Tree::deriveSpawnLevel(_targetLevel, tarch::mpi::Rank::getInstance().getNumberOfRanks());
 }
 
 /**
- * Returns a spare tree to rebuild into, or a new one when no spare is left.
+ * Returns a spare tree to rebuild into while one remains and a new tree otherwise.
  */
 std::unique_ptr<peano4::topology::Tree>
 peano4::Spacetree::acquireTree() {
@@ -261,7 +258,7 @@ peano4::Spacetree::derivePlanUpdate(
   const std::vector<RefinementRequest>&   requests,
   peano4::topology::Tree::RefinementPlan& updatedPlan
 ) {
-  assertion(_tree != nullptr);
+  ASSERTION(_tree != nullptr);
   if (requests.empty()) {
     return false;
   }
@@ -286,7 +283,7 @@ peano4::Spacetree::derivePlanUpdate(
 void
 peano4::Spacetree::buildTree(const peano4::topology::Tree::RefinementPlan& refinementPlan) {
   const auto numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  assertion(_targetLevel >= 0);
+  ASSERTION(_targetLevel >= 0);
   const int spawnLevel = deriveSpawnLevel();
   auto      tree       = acquireTree();
 
@@ -316,9 +313,9 @@ peano4::Spacetree::buildTree(const peano4::topology::Tree::RefinementPlan& refin
 }
 
 /**
- * Returns the block owners for the updated plan, or an empty list to keep the current owners. The
- * current owners stay while they split no sibling leaves and their largest rank load stays within
- * the tolerance of the balanced owners.
+ * Returns the block owners for the updated plan or an empty list to keep the current owners. The
+ * current owners stay while they keep every parent of a leaf on one rank and their largest rank load
+ * stays within the tolerance of the balanced owners.
  */
 std::vector<int>
 peano4::Spacetree::deriveOwnersForPlan(const peano4::topology::Tree::RefinementPlan& updatedPlan) const {
@@ -327,18 +324,18 @@ peano4::Spacetree::deriveOwnersForPlan(const peano4::topology::Tree::RefinementP
     return {};
   }
   const int spawnLevel = deriveSpawnLevel();
-  // Current owners that split a cell with a leaf child would separate the children of one parent
-  // that coarsen together or restrict to one coarse face. The balanced owners replace such owners.
-  const bool standingOwnersSplitSiblingCells =
-    _tree->ownershipPlanSplitsCellWithLeafChild(_targetLevel, spawnLevel, updatedPlan, _blockOwners);
-  if (not _dynamicLoadBalancing and not standingOwnersSplitSiblingCells) {
+  // Current owners that split a parent of a leaf would separate the children of one parent that
+  // coarsen together or restrict to one coarse face. The balanced owners replace such owners.
+  const bool standingOwnersSplitParentOfLeaf =
+    _tree->ownershipPlanSplitsParentOfLeaf(_targetLevel, spawnLevel, updatedPlan, _blockOwners);
+  if (not _dynamicLoadBalancing and not standingOwnersSplitParentOfLeaf) {
     return {};
   }
   auto balancedOwners = _tree->deriveBalancedBlockOwners(_targetLevel, numberOfRanks, updatedPlan);
   if (balancedOwners == _blockOwners) {
     return {};
   }
-  if (standingOwnersSplitSiblingCells) {
+  if (standingOwnersSplitParentOfLeaf) {
     return balancedOwners;
   }
   const auto largestLoadOf = [](const std::vector<std::int64_t>& loads) {
@@ -386,7 +383,7 @@ peano4::Spacetree::votePersistentDataLive() {
  */
 bool
 peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid& regrid) {
-  assertion(not _regridPending, "A regrid starts only after the previous regrid finishes.");
+  ASSERTION(not _regridPending, "A regrid starts only after the previous regrid finishes.");
   votePersistentDataLive();
 
   if (_tree == nullptr) {
@@ -440,7 +437,7 @@ peano4::Spacetree::regrid(const std::vector<RefinementRequest>& requests, Regrid
  */
 void
 peano4::Spacetree::finishRegrid() {
-  assertion(_regridPending);
+  ASSERTION(_regridPending);
   _arrays.freeSlots
     .insert(_arrays.freeSlots.end(), _arrays.slotsFreedByRegrid.begin(), _arrays.slotsFreedByRegrid.end());
   _arrays.slotsFreedByRegrid.clear();
@@ -484,12 +481,12 @@ peano4::Spacetree::getLatticeKey(
   [[maybe_unused]] const int                level,
   const tarch::la::Vector<DIMENSIONS, int>& lattice
 ) const {
-  assertion(level >= 0, level, lattice);
+  ASSERTION(level >= 0, level, lattice);
   return peano4::topology::Tree::serialiseLatticeKey(lattice);
 }
 
 /**
- * Returns the slot of the cell at the level and lattice position, or -1 for a cell that another rank
+ * Returns the slot of the cell at the level and lattice position or -1 for a cell that another rank
  * owns or that the grid lacks.
  */
 int
@@ -502,12 +499,11 @@ peano4::Spacetree::getCellAt(const int level, const tarch::la::Vector<DIMENSIONS
 }
 
 /**
- * Builds the cell connectivity of the tree with new slot numbers, independent of any earlier cell
- * connectivity.
+ * Builds the cell connectivity of the tree and assigns every cell a new slot.
  */
 void
 peano4::Spacetree::buildCellConnectivity() {
-  assertion(_arrays.slotsFreedByRegrid.empty());
+  ASSERTION(_arrays.slotsFreedByRegrid.empty());
   _arrays.numberOfSlots = 0;
   _arrays.freeSlots.clear();
   _arrays.cellSlotOfLattice.clear();
@@ -528,8 +524,8 @@ peano4::Spacetree::buildCellConnectivity() {
  */
 void
 peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previousTree, Regrid& regrid) {
-  assertion(_arrays.slotsFreedByRegrid.empty());
-  assertion(_periodicBoundaries == _tree->getPeriodicBoundaries());
+  ASSERTION(_arrays.slotsFreedByRegrid.empty());
+  ASSERTION(_periodicBoundaries == _tree->getPeriodicBoundaries());
   const int rank = tarch::mpi::Rank::getInstance().getRank();
 
   const auto oldCells         = _arrays.cells;
@@ -560,7 +556,8 @@ peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previou
     }
   }
 
-  // _cellConnectivity still points to the arrays of the old grid. The new lattices come from _arrays.
+  // _cellConnectivity still points to the arrays of the old grid. newLatticeOf() reads the new lattices
+  // from _arrays.
   const auto newLatticeOf = [this](const int slot) {
     tarch::la::Vector<DIMENSIONS, int> result(0);
     for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -630,7 +627,7 @@ peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previou
       const int owner = previousTree.getOwnerOfCellAt(parentLevel, parentLattice);
       if (owner == rank) {
         const int parentSlot = lookupOld(parentLevel, parentLattice);
-        assertion(parentSlot >= 0, level, lattice);
+        ASSERTION(parentSlot >= 0, level, lattice);
         regrid.prolongations.push_back({parentSlot, slot, getChildPositionOf(lattice)});
       } else {
         received[owner].emplace_back(TransferKey{level, getLatticeKey(level, lattice)}, slot);
@@ -644,13 +641,13 @@ peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previou
           beyondOneLevel();
         }
         regrid.createdSlots.push_back(slot);
-        // The ownership plans never split a cell with a leaf child. Every child has the owner of the
+        // The ownership plans never split a parent of a leaf. Every child has the owner of the
         // first one.
         const int owner = previousTree.getOwnerOfCellAt(level + 1, firstChild);
         for (int child = 1; child < peano4::ChildrenPerCell; child++) {
           [[maybe_unused]] const auto childLattice =
             getChildLatticeOf(lattice, peano4::dDelinearised(child, peano4::SubdivisionFactor));
-          assertion(previousTree.getOwnerOfCellAt(level + 1, childLattice) == owner, level, lattice, child, owner);
+          ASSERTION(previousTree.getOwnerOfCellAt(level + 1, childLattice) == owner, level, lattice, child, owner);
         }
         if (owner == rank) {
           Restriction restriction;
@@ -658,7 +655,7 @@ peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previou
           for (int child = 0; child < peano4::ChildrenPerCell; child++) {
             const int childSlot =
               lookupOld(level + 1, getChildLatticeOf(lattice, peano4::dDelinearised(child, peano4::SubdivisionFactor)));
-            assertion(childSlot >= 0, level, lattice, child);
+            ASSERTION(childSlot >= 0, level, lattice, child);
             restriction.childSlots[child] = childSlot;
           }
           regrid.restrictions.push_back(restriction);
@@ -667,7 +664,7 @@ peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previou
         }
       } else {
         const int owner = previousTree.getOwnerOfCellAt(level, lattice);
-        assertion(owner != rank, level, lattice);
+        ASSERTION(owner != rank, level, lattice);
         received[owner].emplace_back(TransferKey{level, getLatticeKey(level, lattice)}, slot);
       }
       continue;
@@ -698,7 +695,7 @@ peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previou
         }
       } else {
         const int owner = _tree->getOwnerOfCellAt(level, lattice);
-        assertion(owner != rank, level, lattice);
+        ASSERTION(owner != rank, level, lattice);
         TransferredCell cell;
         cell.keptSlot = oldSlot;
         sent[owner].emplace_back(TransferKey{level, getLatticeKey(level, lattice)}, cell);
@@ -715,7 +712,7 @@ peano4::Spacetree::rebuildCellConnectivity(const peano4::topology::Tree& previou
       for (int child = 0; child < peano4::ChildrenPerCell; child++) {
         const int childSlot =
           lookupOld(level, getChildLatticeOf(parentLattice, peano4::dDelinearised(child, peano4::SubdivisionFactor)));
-        assertion(childSlot >= 0, level, lattice, child);
+        ASSERTION(childSlot >= 0, level, lattice, child);
         cell.childSlots[child] = childSlot;
       }
       sent[owner].emplace_back(TransferKey{level - 1, getLatticeKey(level - 1, parentLattice)}, cell);
@@ -888,7 +885,7 @@ peano4::Spacetree::collectCells(std::vector<CellRecord>& records) const {
 
 /**
  * Assigns every cell a slot. With preserveSlots, a cell the lookup tables list keeps its slot. Every
- * other cell takes a free slot or, without one, the next slot beyond the range.
+ * other cell takes a free slot while one remains and the next slot beyond the range otherwise.
  */
 void
 peano4::Spacetree::assignSlots(std::vector<CellRecord>& records, const bool preserveSlots) {
@@ -962,10 +959,10 @@ int
 peano4::Spacetree::registerFace(const int treeCell, const int faceNumber, const FaceKind kind) {
   const auto& cell     = _tree->getCell(treeCell);
   const int   treeFace = cell.faceIndices[static_cast<std::size_t>(faceNumber)];
-  assertion(treeFace >= 0 and treeFace < static_cast<int>(_arrays.faceOfTreeFace.size()), treeFace);
+  ASSERTION(treeFace >= 0 and treeFace < static_cast<int>(_arrays.faceOfTreeFace.size()), treeFace);
   int face = _arrays.faceOfTreeFace[static_cast<std::size_t>(treeFace)];
   if (face >= 0) {
-    assertion(_arrays.faceKind[static_cast<std::size_t>(face)] == kind, face, static_cast<int>(kind));
+    ASSERTION(_arrays.faceKind[static_cast<std::size_t>(face)] == kind, face, static_cast<int>(kind));
     return face;
   }
   face                                                       = _arrays.numberOfFaces++;
@@ -992,7 +989,7 @@ peano4::Spacetree::registerFace(const int treeCell, const int faceNumber, const 
 
 /**
  * Registers the level jump at the face faceNumber of a refined cell once and returns its index. The
- * fine faces are the faces of its children on that side, ordered along the tangential axes.
+ * fine faces are the faces of its children on that side in the order of the tangential axes.
  */
 int
 peano4::Spacetree::registerLevelJump(const int refinedTreeCell, const int faceNumber, const int coarseFace) {
@@ -1000,7 +997,7 @@ peano4::Spacetree::registerLevelJump(const int refinedTreeCell, const int faceNu
     return _arrays.levelJumpOfCoarseFace[static_cast<std::size_t>(coarseFace)];
   }
   const auto& tree = *_tree;
-  assertion(tree.isRefined(refinedTreeCell), refinedTreeCell);
+  ASSERTION(tree.isRefined(refinedTreeCell), refinedTreeCell);
   const int normal         = faceNumber % DIMENSIONS;
   const int positionOnAxis = faceNumber < DIMENSIONS ? 0 : peano4::SubdivisionFactor - 1;
   LevelJump levelJump;
@@ -1093,7 +1090,7 @@ peano4::Spacetree::deriveFaces(const std::vector<CellRecord>& records) {
             addExchangedFace(childOwner, face, ownSide);
           } else {
             const int neighbourCell = tree.getCellAt(cell.level, neighbour);
-            assertion(neighbourCell >= 0, cell.level, neighbour);
+            ASSERTION(neighbourCell >= 0, cell.level, neighbour);
             registerLevelJump(neighbourCell, getOppositeFaceNumber(faceNumber), face);
           }
         }
@@ -1109,7 +1106,7 @@ peano4::Spacetree::deriveFaces(const std::vector<CellRecord>& records) {
       int  currentLevel   = cell.level;
       while (true) {
         const int parentCell = tree.getCell(currentCell).parent;
-        assertion(parentCell >= 0, currentCell, currentLevel);
+        ASSERTION(parentCell >= 0, currentCell, currentLevel);
         const auto parentLattice   = getParentLatticeOf(currentLattice);
         const int  parentLevel     = currentLevel - 1;
         const int  parentTreeFace  = tree.getCell(parentCell).faceIndices[static_cast<std::size_t>(faceNumber)];
@@ -1120,7 +1117,7 @@ peano4::Spacetree::deriveFaces(const std::vector<CellRecord>& records) {
         if (_periodicBoundaries[normal]) {
           parentNeighbour(normal) = (parentNeighbour(normal) + parentCellsPerAxis) % parentCellsPerAxis;
         }
-        assertion(
+        ASSERTION(
           parentNeighbour(normal) >= 0 and parentNeighbour(normal) < parentCellsPerAxis,
           parentLevel,
           parentNeighbour

@@ -21,10 +21,6 @@ namespace exahype2::dg::ader {
   class NonlinearPredictor;
 } // namespace exahype2::dg::ader
 
-namespace exahype2::dg::ader::tests {
-  class NonlinearPredictorTest;
-} // namespace exahype2::dg::ader::tests
-
 TARGET_DECLARE
 /**
  * The space-time predictor of one cell of a nonlinear ADER-DG solver Derived. predict() iterates
@@ -98,8 +94,6 @@ public:
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getTeamScratchBytes(int teamThreads);
 
 private:
-  friend class exahype2::dg::ader::tests::NonlinearPredictorTest;
-
   static constexpr int ValuesPerNodeResidual = CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns;
 
   /**

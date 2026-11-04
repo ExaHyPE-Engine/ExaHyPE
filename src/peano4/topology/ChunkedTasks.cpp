@@ -21,8 +21,8 @@ peano4::topology::getMaximumNumberOfChunks() {
  */
 int
 peano4::topology::getNumberOfChunks(const int numberOfItems, const int minimumItemsPerChunk) {
-  assertion(numberOfItems >= 0, numberOfItems);
-  assertion(minimumItemsPerChunk > 0, minimumItemsPerChunk);
+  ASSERTION(numberOfItems >= 0, numberOfItems);
+  ASSERTION(minimumItemsPerChunk > 0, minimumItemsPerChunk);
   const int numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   if (numberOfThreads <= 1) {
     return 1;
@@ -42,7 +42,7 @@ peano4::topology::runChunkedTasks(
   const int                                 minimumItemsPerChunk
 ) {
   const int numberOfChunks = peano4::topology::getNumberOfChunks(numberOfItems, minimumItemsPerChunk);
-  assertion(numberOfChunks >= 1 and numberOfChunks < peano4::topology::getMaximumNumberOfChunks(), numberOfChunks);
+  ASSERTION(numberOfChunks >= 1 and numberOfChunks < peano4::topology::getMaximumNumberOfChunks(), numberOfChunks);
   if (numberOfChunks <= 1) {
     processRange(0, 0, numberOfItems);
     return;

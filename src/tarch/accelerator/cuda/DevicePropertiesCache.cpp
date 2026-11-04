@@ -13,7 +13,7 @@ tarch::accelerator::cuda::DevicePropertiesCache::getProperties() {
 
   int deviceId = -1;
   CHECK_CUDA_ERROR(cudaGetDevice(&deviceId));
-  assertion(deviceId >= 0);
+  ASSERTION(deviceId >= 0);
 
   std::lock_guard<std::mutex> guard(instance._mtx);
 

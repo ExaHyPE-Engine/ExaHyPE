@@ -12,7 +12,7 @@ exahype2::dg::ader::getWorkers(
   [[maybe_unused]] const tarch::accelerator::TeamHandle& team,
   [[maybe_unused]] const int                             threadsPerCell
 ) {
-  assertion(threadsPerCell > 0, threadsPerCell);
+  ASSERTION(threadsPerCell > 0, threadsPerCell);
   TeamWorkers workers;
   COMPILE_IF_ON_DEVICE(workers = getWorkersWithThreadsOfTeam(team, threadsPerCell);)
   return workers;
@@ -44,7 +44,7 @@ exahype2::dg::ader::getWorkersWithThreadsOfTeam(const tarch::accelerator::TeamHa
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ader::teamBarrier(const TeamWorkers& workers) {
   if (workers.teamThreads > 1) {
-    assertion(workers.team != nullptr, workers.teamThread, workers.teamThreads);
+    ASSERTION(workers.team != nullptr, workers.teamThread, workers.teamThreads);
     tarch::accelerator::teamBarrier(*workers.team);
   }
 }
@@ -58,7 +58,7 @@ exahype2::dg::ader::isTrueInAnyThreadOfTeam(const TeamWorkers& workers, const bo
   if (workers.teamThreads == 1) {
     return condition;
   }
-  assertion(workers.team != nullptr, workers.teamThread, workers.teamThreads);
+  ASSERTION(workers.team != nullptr, workers.teamThread, workers.teamThreads);
   return tarch::accelerator::isTrueInAnyThreadOfTeam(*workers.team, condition);
 }
 TARGET_DECLARE_END

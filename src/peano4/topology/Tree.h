@@ -25,7 +25,7 @@ namespace peano4::topology {
  * cells that start at childrenBlock. Two adjacent cells point to the same vertex or face index for
  * the entity between them.
  */
-struct peano4::topology::TreeCell {
+struct peano4::topology::TreeCell final {
   int parent{-1};
   int childrenBlock{-1};
   int level{0};
@@ -41,7 +41,7 @@ struct peano4::topology::TreeCell {
  * One node of the ownership table for one cell. The ranks from firstOwner to lastOwner own the
  * leaves below the cell. childrenBlock is the index of the first child node or -1.
  */
-struct peano4::topology::TopologyNode {
+struct peano4::topology::TopologyNode final {
   int firstOwner{-1};
   int lastOwner{-1};
   int childrenBlock{-1};
@@ -49,12 +49,16 @@ struct peano4::topology::TopologyNode {
 
 /**
  * Spacetree over flat cell, vertex and face arrays that reference each other by index. A caller
- * visits the cells in any order. Concurrent descents into disjoint subtrees write no common state.
+ * visits the cells in any order. Concurrent descents into disjoint subtrees write disjoint state.
  */
 class peano4::topology::Tree final {
 public:
   static constexpr int RootCell{0};
 
+  /**
+   * Lists the flagged vertices of every level from the base depth down in ascending order of
+   * serialiseLatticeKey().
+   */
   using RefinementPlan = std::vector<std::vector<tarch::la::Vector<DIMENSIONS, int>>>;
 
   Tree(
@@ -64,11 +68,11 @@ public:
     const std::bitset<DIMENSIONS>&               periodicBoundaries = std::bitset<DIMENSIONS>()
   );
 
-  Tree(const Tree&)            = delete;
-  Tree(Tree&&)                 = delete;
-  Tree& operator=(const Tree&) = delete;
-  Tree& operator=(Tree&&)      = delete;
-  ~Tree()                      = default;
+  Tree(const Tree& other)            = delete;
+  Tree(Tree&& other)                 = delete;
+  Tree& operator=(const Tree& other) = delete;
+  Tree& operator=(Tree&& other)      = delete;
+  ~Tree()                            = default;
 
   void buildRegularGrid(
     int                     depth,
@@ -89,7 +93,7 @@ public:
     const std::vector<int>& ownershipPlan
   ) const;
 
-  bool ownershipPlanSplitsCellWithLeafChild(
+  bool ownershipPlanSplitsParentOfLeaf(
     int                     depth,
     int                     spawnLevel,
     const RefinementPlan&   refinementPlan,
@@ -101,28 +105,15 @@ public:
     RefinementPlan&                               refinementPlan
   ) const;
 
-  INLINE_METHOD static bool latticeKeyPrecedes(
-    const tarch::la::Vector<DIMENSIONS, int>& left,
-    const tarch::la::Vector<DIMENSIONS, int>& right
-  );
-
   static constexpr int OwnershipPlanMarker{-2};
 
   INLINE_METHOD int getCellsPerAxisOfLevel(int level) const;
   INLINE_METHOD int getOwnerOfCellAt(int level, const tarch::la::Vector<DIMENSIONS, int>& latticeIndex) const;
 
-  INLINE_METHOD bool isVertexRefinedInPlan(int level, const tarch::la::Vector<DIMENSIONS, int>& vertexLattice) const;
   bool cellExistsInPlan(int level, const tarch::la::Vector<DIMENSIONS, int>& cellLattice) const;
   bool isCellRefinedInPlan(int level, const tarch::la::Vector<DIMENSIONS, int>& cellLattice) const;
-  bool isVertexPersistentInPlan(int level, const tarch::la::Vector<DIMENSIONS, int>& vertexLattice) const;
 
   INLINE_METHOD bool subtreeTouchesRank(int cellIndex, int rank) const;
-  INLINE_METHOD bool subtreeTouchesRankAt(
-    int                                       level,
-    const tarch::la::Vector<DIMENSIONS, int>& latticeIndex,
-    int                                       rank
-  ) const;
-  INLINE_METHOD bool isSplitBlockAt(const tarch::la::Vector<DIMENSIONS, int>& blockLattice) const;
 
   INLINE_METHOD const peano4::topology::TreeCell& getCell(int cellIndex) const;
   INLINE_METHOD const peano4::grid::GridVertex& getVertex(int vertexIndex) const;
@@ -142,16 +133,6 @@ public:
   INLINE_METHOD const std::bitset<DIMENSIONS>& getPeriodicBoundaries() const;
 
   INLINE_METHOD static std::int64_t serialiseLatticeKey(const tarch::la::Vector<DIMENSIONS, int>& latticeIndex);
-
-  INLINE_METHOD int getAdjacentCellOwnerAt(
-    int                                       level,
-    const tarch::la::Vector<DIMENSIONS, int>& vertexLattice,
-    int                                       adjacencyEntry
-  ) const;
-  INLINE_METHOD int getNumberOfLocalAdjacentCellsOfVertexAt(
-    int                                       level,
-    const tarch::la::Vector<DIMENSIONS, int>& vertexLattice
-  ) const;
 
 private:
   const int _rank;
@@ -217,7 +198,9 @@ private:
   INLINE_METHOD int getBlockSlotAt(const tarch::la::Vector<DIMENSIONS, int>& blockLattice) const;
   INLINE_METHOD int getInterleavedIndex(int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const;
   INLINE_METHOD bool isLocalBlockOfCell(int level, const tarch::la::Vector<DIMENSIONS, int>& cellLattice) const;
+  INLINE_METHOD bool isSplitBlockAt(const tarch::la::Vector<DIMENSIONS, int>& blockLattice) const;
 
+  INLINE_METHOD bool isVertexRefinedInPlan(int level, const tarch::la::Vector<DIMENSIONS, int>& vertexLattice) const;
   bool hasRefinedGoverningVertex(int level, const tarch::la::Vector<DIMENSIONS, int>& vertexLattice) const;
 
   static std::vector<peano4::grid::LatticeIndexMap> deriveRefinedCellKeyTables(
@@ -231,7 +214,7 @@ private:
 
   static int validateAndGetMaximumLevel(int depth, const RefinementPlan& refinementPlan);
 
-  struct PlanLeafWeights {
+  struct PlanLeafWeights final {
     std::vector<peano4::grid::LatticeIndexMap>                  refinedCellKeys{};
     std::vector<std::unordered_map<std::int64_t, std::int64_t>> adaptiveLeafDeltas{};
     std::vector<std::int64_t>                                   regularLeafWeights{};

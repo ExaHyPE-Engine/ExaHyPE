@@ -1,0 +1,33 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Writes the linear profile at the nodes of block. setTransferCoordinatesOf() places the nodes.
+ */
+template <int Nodes>
+INLINE_METHOD void
+exahype2::dg::unittests::fillLinearTransferProfile(double* const values, const int axes, const int block) {
+  ASSERTION(values != nullptr);
+  ASSERTION(axes >= 0 and axes <= DIMENSIONS, axes);
+  for (int node = 0; node < Nodes; node++) {
+    double coordinates[DIMENSIONS]{};
+    setTransferCoordinatesOf(coordinates, axes, node, block);
+    for (int value = 0; value < TransferSetup::ValuesPerNode; value++) {
+      values[node * TransferSetup::ValuesPerNode + value] = getLinearTransferProfile(coordinates, axes, value);
+    }
+  }
+}
+
+/**
+ * Writes the constant of every value into every node.
+ */
+template <int Nodes>
+INLINE_METHOD void
+exahype2::dg::unittests::fillTransferConstant(double* const values) {
+  ASSERTION(values != nullptr);
+  for (int node = 0; node < Nodes; node++) {
+    for (int value = 0; value < TransferSetup::ValuesPerNode; value++) {
+      values[node * TransferSetup::ValuesPerNode + value] = getTransferConstantOf(value);
+    }
+  }
+}

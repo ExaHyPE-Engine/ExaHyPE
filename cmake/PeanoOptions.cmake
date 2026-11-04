@@ -18,7 +18,7 @@ set_property(CACHE PEANO_WITH_SANITIZER PROPERTY STRINGS none address undefined 
 
 set(SUPPORTED_ACCELERATOR_ARCHITECTURES
   none
-  sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_89 sm_90 sm_100 sm_103 sm_120 sm_121
+  sm_75 sm_80 sm_86 sm_87 sm_89 sm_90 sm_100 sm_103 sm_120 sm_121
   gfx906 gfx908 gfx90a gfx942 gfx950
   spir64
   CACHE STRING "Editable list of supported accelerator architectures"

@@ -64,12 +64,12 @@ public:
 
   INLINE_METHOD void release();
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
+
+private:
   [[nodiscard]] static INLINE_METHOD bool canRefineOrErase(
     const peano4::CellConnectivity& cellConnectivity,
     const exahype2::Limits&         limits
   );
-
-private:
   INLINE_METHOD void reserve(int numberOfSlots);
   INLINE_METHOD void merge(
     const peano4::CellConnectivity& cellConnectivity,

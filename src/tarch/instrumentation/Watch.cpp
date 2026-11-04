@@ -23,7 +23,7 @@ tarch::instrumentation::Watch::~Watch() {
   }
 
   if (_plotResultInDestructor) {
-    logInfo(
+    LOG_INFO(
       (_operationName.empty() ? std::string("Block") : "Operation " + _operationName)
       << ": CPU time " << getCPUTime() << " s, calendar time " << getCalendarTime() << " s."
     );

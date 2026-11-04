@@ -1,0 +1,59 @@
+.GPU:
+  extends: [.ChildPipeline, .Peano]
+  stage: GPU
+  needs: []
+  variables:
+    GPU_ARCH: "sm_75"
+    RUN_UNIT_TESTS: "false"
+    RUN_SIMULATIONS: "false"
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_FPE=OFF"
+
+CUDA LLVM:
+  extends: .GPU
+  variables:
+    TOOLCHAIN: "CUDA LLVM"
+    CC: "clang"
+    CXX: "clang++"
+    FC: "gfortran"
+    IMAGE_TAG: "${IMAGE_LLVM}"
+    GPU_BACKEND: "native"
+
+CUDA GCC:
+  extends: .GPU
+  variables:
+    TOOLCHAIN: "CUDA GCC"
+    CC: "gcc"
+    CXX: "g++"
+    FC: "gfortran"
+    IMAGE_TAG: "${IMAGE_GCC}"
+    GPU_BACKEND: "native"
+
+OpenMP Target:
+  extends: .GPU
+  variables:
+    TOOLCHAIN: "OMPT"
+    CC: "clang"
+    CXX: "clang++"
+    FC: "gfortran"
+    IMAGE_TAG: "${IMAGE_LLVM}"
+    GPU_BACKEND: "ompt"
+
+# Kokkos:
+#   extends: .GPU
+#   variables:
+#     TOOLCHAIN: "Kokkos"
+#     CC: "clang"
+#     CXX: "clang++"
+#     FC: "gfortran"
+#     IMAGE_TAG: "${IMAGE_LLVM}"
+#     GPU_BACKEND: "kokkos"
+
+# AdaptiveCpp:
+#   extends: .GPU
+#   variables:
+#     TOOLCHAIN: "AdaptiveCpp"
+#     CC: "clang"
+#     CXX: "clang++"
+#     FC: "gfortran"
+#     IMAGE_TAG: "${IMAGE_LLVM}"
+#     GPU_BACKEND: "acpp"

@@ -14,10 +14,6 @@ namespace exahype2::runner {
   class RuntimeParameters;
 } // namespace exahype2::runner
 
-namespace exahype2::runner::tests {
-  class RuntimeParametersTest;
-} // namespace exahype2::runner::tests
-
 /**
  * Runtime parameters of an application, stored in variables the caller owns. load() reads the
  * configuration file first and the command line second. It removes the consumed arguments from
@@ -89,6 +85,7 @@ public:
   [[nodiscard]] double getTimeStepLogInterval() const;
   [[nodiscard]] double getMinTerminalTime() const;
   [[nodiscard]] double getMaxTerminalTime() const;
+  [[nodiscard]] double getSolverTerminalTime() const;
   [[nodiscard]] int getNumberOfTimeSteps() const;
   [[nodiscard]] double getFirstPlotTimeStamp() const;
   [[nodiscard]] int getNumberOfSnapshots() const;
@@ -101,15 +98,7 @@ public:
   [[nodiscard]] const std::string& getProjectName() const;
   [[nodiscard]] const std::string& getExecutableName() const;
 
-  static std::string formatDefault(double value);
-  static std::string formatDefault(int value);
-  static std::string formatDefault(const std::string& value);
   static std::string formatTerminalTime(double value);
-  static double divideBySubdivisionFactorPower(double value, int exponent);
-  static int parseInteger(const std::string& value, const std::string& key);
-  static double parseDouble(const std::string& value, const std::string& key);
-  static std::string normaliseOutputPath(const std::string& path);
-  static std::string consumeValue(int& index, int argc, char** argv, const std::string& argument);
 
   [[nodiscard]] double getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
   [[nodiscard]] double getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
@@ -119,7 +108,7 @@ public:
   ) const;
 
 private:
-  friend class exahype2::runner::tests::RuntimeParametersTest;
+  static std::string normaliseOutputPath(const std::string& path);
 
   double _MPITimeoutWarning{120.0};
   double _MPIDeadlockTimeout{600.0};

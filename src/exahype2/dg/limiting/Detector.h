@@ -73,10 +73,6 @@ namespace exahype2::dg::limiting {
   struct StatusTransfer;
 } // namespace exahype2::dg::limiting
 
-namespace exahype2::dg::limiting::tests {
-  class DetectorTest;
-} // namespace exahype2::dg::limiting::tests
-
 TARGET_DECLARE
 /**
  * Detector judges whether the candidate of one cell of Derived is troubled. The extrema of a cell
@@ -112,17 +108,6 @@ public:
   [[nodiscard]] static INLINE_METHOD int getExtremaScratchValuesPerTeam(int teamThreads);
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatus(
-    int* NOALIAS                    status,
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS sampledExtrema,
-    const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells,
-    StoragePrecision                relaxationParameter,
-    StoragePrecision                differencesScaling
-  );
-
-  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatusInTeam(
     tarch::accelerator::TeamHandle  team,
     int* NOALIAS                    status,
@@ -149,38 +134,12 @@ public:
   );
 
   template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void reduceExtrema(
-    StoragePrecision* NOALIAS       extrema,
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells
-  );
-
-  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void clearExtrema(StoragePrecision* NOALIAS extrema);
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void widenExtrema(
     StoragePrecision* NOALIAS       extrema,
     const StoragePrecision* NOALIAS other
-  );
-
-  template <typename StoragePrecision>
-  static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics judgeCandidate(
-    int* NOALIAS                                 status,
-    int* const                                   ownStatusHalves[peano4::FacesPerCell],
-    const StoragePrecision* NOALIAS              candidate,
-    const StoragePrecision* NOALIAS              referenceExtrema,
-    const StoragePrecision* NOALIAS              nodesToLobatto,
-    const StoragePrecision* NOALIAS              nodesToSubcells,
-    const StoragePrecision* NOALIAS              quadraturePoints,
-    StoragePrecision                             relaxationParameter,
-    StoragePrecision                             differencesScaling,
-    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    StoragePrecision* NOALIAS                    candidateExtrema
   );
 
   template <typename StoragePrecision>
@@ -239,7 +198,16 @@ public:
   );
 
 private:
-  friend class exahype2::dg::limiting::tests::DetectorTest;
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatus(
+    int* NOALIAS                    status,
+    const StoragePrecision* NOALIAS nodes,
+    const StoragePrecision* NOALIAS sampledExtrema,
+    const StoragePrecision* NOALIAS nodesToLobatto,
+    const StoragePrecision* NOALIAS nodesToSubcells,
+    StoragePrecision                relaxationParameter,
+    StoragePrecision                differencesScaling
+  );
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatusWithThreadsOfTeam(
@@ -255,6 +223,14 @@ private:
   );
 
   template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD void reduceExtrema(
+    StoragePrecision* NOALIAS       extrema,
+    const StoragePrecision* NOALIAS nodes,
+    const StoragePrecision* NOALIAS nodesToLobatto,
+    const StoragePrecision* NOALIAS nodesToSubcells
+  );
+
+  template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void reduceExtremaWithThreadsOfTeam(
     tarch::accelerator::TeamHandle  team,
     StoragePrecision* NOALIAS       extrema,
@@ -262,6 +238,24 @@ private:
     const StoragePrecision* NOALIAS nodesToLobatto,
     const StoragePrecision* NOALIAS nodesToSubcells,
     StoragePrecision* NOALIAS       scratch
+  );
+
+  template <typename StoragePrecision>
+  static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics judgeCandidate(
+    int* NOALIAS                                 status,
+    int* const                                   ownStatusHalves[peano4::FacesPerCell],
+    const StoragePrecision* NOALIAS              candidate,
+    const StoragePrecision* NOALIAS              referenceExtrema,
+    const StoragePrecision* NOALIAS              nodesToLobatto,
+    const StoragePrecision* NOALIAS              nodesToSubcells,
+    const StoragePrecision* NOALIAS              quadraturePoints,
+    StoragePrecision                             relaxationParameter,
+    StoragePrecision                             differencesScaling,
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    StoragePrecision* NOALIAS                    candidateExtrema
   );
 
   template <typename StoragePrecision>
@@ -463,8 +457,8 @@ struct exahype2::dg::limiting::OpenInitialStatuses final {
 };
 
 /**
- * Resets both halves of every face to the status Regular and empty extrema. The outer half of a
- * boundary face then adds nothing. The subcell halo of the face becomes zero.
+ * Resets both halves of every face to the status Regular, empty extrema and a zero subcell halo. A
+ * boundary cell reads the neutral status and extrema from the outer half of its boundary faces.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::limiting::ClearFaces final {
@@ -556,6 +550,7 @@ struct exahype2::dg::limiting::MergeNeighbourExtrema final {
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 
+private:
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision* getSet(
     int  slot,
     int  faceNumber,

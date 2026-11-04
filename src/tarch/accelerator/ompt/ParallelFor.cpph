@@ -93,7 +93,7 @@ namespace tarch::accelerator {
     if (requested == tarch::accelerator::TeamRange::BackendDefault) {
       return tarch::accelerator::OmptThreadsPerTeam;
     }
-    assertion(requested > 0, requested);
+    ASSERTION(requested > 0, requested);
     const int warps = (requested + tarch::accelerator::ThreadsPerWarp - 1) / tarch::accelerator::ThreadsPerWarp;
     return std::min(tarch::accelerator::OmptThreadsPerTeam, warps * tarch::accelerator::ThreadsPerWarp);
   }
@@ -103,7 +103,7 @@ namespace tarch::accelerator {
    * TeamScratchBytes.
    */
   INLINE_METHOD int getTeamScratchBytes(const int requested) {
-    assertion(
+    ASSERTION(
       requested == tarch::accelerator::TeamRange::BackendDefault
         or (requested >= 0 and requested <= tarch::accelerator::TeamScratchBytes),
       requested
@@ -113,7 +113,7 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const Range& range, const Functor functor) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -127,8 +127,8 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const RangeMD<2>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
@@ -145,9 +145,9 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const RangeMD<3>& range, const Functor functor) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
@@ -167,7 +167,7 @@ namespace tarch::accelerator {
 
   template <typename Functor>
   INLINE_METHOD void parallelFor(const TeamRange& range, const Functor functor) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }

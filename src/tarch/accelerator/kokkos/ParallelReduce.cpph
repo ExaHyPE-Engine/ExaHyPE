@@ -106,7 +106,7 @@ namespace tarch::accelerator {
     const Functor     functor,
     const Reducer     reducer
   ) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     typename Reducer::ValueType partialResult = Reducer::identity();
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(team.member, range.n),
@@ -125,8 +125,8 @@ namespace tarch::accelerator {
     const Functor     functor,
     const Reducer     reducer
   ) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     typename Reducer::ValueType partialResult = Reducer::identity();
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(team.member, range.n[0] * range.n[1]),
@@ -145,9 +145,9 @@ namespace tarch::accelerator {
     const Functor     functor,
     const Reducer     reducer
   ) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     typename Reducer::ValueType partialResult = Reducer::identity();
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(team.member, range.n[0] * range.n[1] * range.n[2]),
@@ -165,7 +165,7 @@ namespace tarch::accelerator {
   // ParallelReduce.h declares use plain inline.
   template <typename Reducer, typename Functor>
   inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -182,8 +182,8 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename Functor>
   inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
@@ -200,9 +200,9 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename Functor>
   inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
@@ -222,7 +222,7 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename Functor>
   inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }

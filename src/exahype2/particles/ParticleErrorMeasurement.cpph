@@ -17,7 +17,7 @@ exahype2::particles::measurePositionErrors(
   const double               timeStepSize,
   ErrorMeasurement&          measurement
 ) {
-  assertion(measurement.isSnapshotDue(timeStamp), timeStamp);
+  ASSERTION(measurement.isSnapshotDue(timeStamp), timeStamp);
   constexpr int  NumberOfNorms   = ErrorMeasurement::NumberOfNorms;
   constexpr auto PositionEntries = []() {
     std::array<int, DIMENSIONS> entries{};

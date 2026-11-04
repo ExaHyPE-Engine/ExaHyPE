@@ -59,6 +59,6 @@ if(TARGET PeanoOptions)
     $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_COMPILE_FLAGS}>
   )
   target_link_options(PeanoOptions INTERFACE ${OFFLOADING_FLAGS} ${OpenMP_CXX_FLAGS})
-  message(STATUS "Using OMPT offloading flags: ${OFFLOADING_FLAGS} ${OFFLOADING_COMPILE_FLAGS}")
+  message(STATUS "Using OpenMP offloading flags: ${OFFLOADING_FLAGS} ${OFFLOADING_COMPILE_FLAGS}")
   target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_OMPT PEANO_WITH_GPU_BACKEND)
 endif()

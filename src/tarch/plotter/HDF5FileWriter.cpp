@@ -24,7 +24,7 @@ namespace {
     case tarch::plotter::CellType::Hexahedron:
       return 9;
     }
-    assertion(
+    ASSERTION(
       false,
       "The HDF5 plotter writes vertices, lines, quadrangles and hexahedra only.",
       static_cast<int>(vtkType)
@@ -181,7 +181,7 @@ tarch::plotter::HDF5FileWriter::write(
     const hsize_t     chunkDimensions[2] = {std::max<hsize_t>(1, std::min(globalDimensions[0], targetRows)), columns};
     const hid_t       datasetCreationProperties = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_chunk(datasetCreationProperties, numberOfDimensions, chunkDimensions);
-    // The slabs of the ranks write every element of the dataset. HDF5 writes no fill value into its
+    // The slabs of the ranks write every element of the dataset. HDF5 skips the fill value of its
     // chunks.
     H5Pset_fill_time(datasetCreationProperties, H5D_FILL_TIME_NEVER);
     H5Pset_shuffle(datasetCreationProperties);
@@ -222,7 +222,7 @@ tarch::plotter::HDF5FileWriter::write(
                                  const int           copiedComponents,
                                  const int           targetStride
                                ) {
-    assertion(tuples * static_cast<std::size_t>(targetStride) * realBytes <= scratch.size(), tuples, scratch.size());
+    ASSERTION(tuples * static_cast<std::size_t>(targetStride) * realBytes <= scratch.size(), tuples, scratch.size());
     if (writeDouble) {
       copyTuples(
         source,
@@ -286,7 +286,7 @@ tarch::plotter::HDF5FileWriter::write(
           entry++;
         }
       }
-      assertion(entry == topologyEntriesBeforeRange[firstCell / EntriesPerRange + 1], entry, firstCell);
+      ASSERTION(entry == topologyEntriesBeforeRange[firstCell / EntriesPerRange + 1], entry, firstCell);
     });
     const hsize_t globalTopologyDimensions[1] = {totalTopology};
     const hsize_t localTopologyDimensions[1]  = {localTopologySize};

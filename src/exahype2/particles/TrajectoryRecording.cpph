@@ -20,7 +20,7 @@ exahype2::particles::isSnapshotDue(
   const double               lastRecordTime,
   TrajectoryDatabase&        database
 ) {
-  assertion(initialRecordTime <= lastRecordTime, initialRecordTime, lastRecordTime);
+  ASSERTION(initialRecordTime <= lastRecordTime, initialRecordTime, lastRecordTime);
   if (timeStamp < initialRecordTime or timeStamp > lastRecordTime) {
     return false;
   }
@@ -51,7 +51,7 @@ exahype2::particles::isSnapshotDueOnSomeRank(
   if (rank.getNumberOfRanks() > 1) {
     tarch::mpi::allreduce(&dueOnThisRank, &dueOnSomeRank, 1, MPI_INT, MPI_MAX, rank.getCommunicator());
   }
-  assertion(dueOnSomeRank >= dueOnThisRank, dueOnSomeRank, dueOnThisRank);
+  ASSERTION(dueOnSomeRank >= dueOnThisRank, dueOnSomeRank, dueOnThisRank);
   return dueOnSomeRank > 0;
 }
 

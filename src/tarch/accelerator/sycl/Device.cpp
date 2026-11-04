@@ -30,7 +30,7 @@ tarch::accelerator::Device::init() {
       std::string deviceName = device.get_info<sycl::info::device::name>();
 
       if (device.get_info<sycl::info::device::device_type>() != sycl::info::device_type::gpu) {
-        logInfo(
+        LOG_INFO(
           "Skipping physical device #" + std::to_string(physicalDeviceIndex) + " (" + platformName + " / " + deviceName
           + ") because it is not an accelerator"
         );
@@ -38,7 +38,7 @@ tarch::accelerator::Device::init() {
         continue;
       }
 
-      logInfo(
+      LOG_INFO(
         "Initialising physical device #" + std::to_string(physicalDeviceIndex) + " (" + platformName + " / "
         + deviceName + ") as logical device #" + std::to_string(logicalDeviceIndex)
       );
@@ -109,7 +109,7 @@ tarch::accelerator::Device::getIdOfCurrentDevice() const {
  */
 void*
 tarch::accelerator::getSYCLQueue(int number) {
-  assertion(syclQueues.count(number) == 1, number);
+  ASSERTION(syclQueues.count(number) == 1, number);
   return &syclQueues[number];
 }
 
