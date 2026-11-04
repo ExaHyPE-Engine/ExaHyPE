@@ -1,0 +1,292 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "{{CLASSNAME}}.h"
+{% for include in [SOLVER_NAME ~ ".h", "Constants.h"] | sort(case_sensitive=true) %}
+#include "{{include}}"
+{%- endfor %}
+
+#include "exahype2/runner/RuntimeParameters.h"
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() :
+  SolverFamily({{TIME_STEPPING_FACTOR}}, "{{SOLVER_NAME}}", { {{PLOTTED_FIELDS}} }{% if LIMITER_ARGUMENTS %}, {{LIMITER_ARGUMENTS}}{% endif %}) {}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
+  const auto&               parameters = ::exahype2::runner::RuntimeParameters::getInstance();
+  ::exahype2::Limits limits;
+  limits.terminalTime           = parameters.getMinTerminalTime();
+  limits.minAdmissiblePatchSize = parameters.getMinAdmissiblePatchSize(DomainSize);
+  limits.maxAdmissiblePatchSize = parameters.getMaxAdmissiblePatchSize(DomainSize);
+  limits.maxAdmissibleMeshWidth = {{MAX_ADMISSIBLE_MESH_WIDTH}};
+  setLimits(limits);
+{%- if ERROR_MEASUREMENT %}
+  openErrorMeasurement(parameters.getOutputPath() + "{{ERROR_MEASUREMENT_FILE}}", {{ERROR_MEASUREMENT_TIME_DELTA}});
+{%- endif %}
+{%- for tracer in TRACERS %}
+{%- if tracer.DATABASE %}
+  _{{tracer.NAME}}Database.setOutputFileName(parameters.getOutputPath() + "{{tracer.DATABASE.FILENAME}}");
+  _{{tracer.NAME}}Database.setOutputPrecision({{tracer.DATABASE.OUTPUT_PRECISION}});
+{%- endif %}
+{%- if tracer.ERROR %}
+  _{{tracer.NAME}}ErrorMeasurement.open(parameters.getOutputPath() + "{{tracer.ERROR.FILE}}", {{tracer.ERROR.EVERY}});
+{%- endif %}
+{%- endfor %}
+{%- if START_SIMULATION_IMPLEMENTATION.strip() %}
+  {{START_SIMULATION_IMPLEMENTATION.strip()}}
+{%- endif %}
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
+{%- if FINISH_SIMULATION_IMPLEMENTATION.strip() %}
+  {{FINISH_SIMULATION_IMPLEMENTATION.strip()}}
+{%- endif %}
+}
+{%- if START_TIME_STEP_IMPLEMENTATION.strip() or FINISH_TIME_STEP_IMPLEMENTATION.strip() or TRACERS %}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::performTimeStep(
+  const peano4::CellConnectivity& cellConnectivity,
+  ::exahype2::RefinementRequests& requests
+) {
+{%- if START_TIME_STEP_IMPLEMENTATION.strip() %}
+  {{START_TIME_STEP_IMPLEMENTATION.strip()}}
+{%- endif %}
+  SolverFamily::performTimeStep(cellConnectivity, requests);
+{%- if TRACERS %}
+  // A solver that a coupling partner drives advances inside the step of that partner.
+  if (getTimeStepping().getTimeStamp() > _timeStampOfLastTracing) {
+    traceTracers(cellConnectivity, getTimeStepping().getTimeStepSizeOfLastStep(), false);
+  }
+{%- endif %}
+{%- if FINISH_TIME_STEP_IMPLEMENTATION.strip() %}
+  {{FINISH_TIME_STEP_IMPLEMENTATION.strip()}}
+{%- endif %}
+}
+{%- endif %}
+{%- if START_GRID_INITIALISATION_IMPLEMENTATION.strip() or TRACERS %}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialise(
+  const peano4::CellConnectivity& cellConnectivity,
+  ::exahype2::RefinementRequests& requests
+) {
+{%- if START_GRID_INITIALISATION_IMPLEMENTATION.strip() %}
+  {{START_GRID_INITIALISATION_IMPLEMENTATION.strip()}}
+{%- endif %}
+  SolverFamily::initialise(cellConnectivity, requests);
+{%- if TRACERS %}
+  insertTracers(cellConnectivity);
+  traceTracers(cellConnectivity, 0.0, true);
+{%- endif %}
+}
+{%- endif %}
+{%- if TRACERS %}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::regrid(
+  const peano4::CellConnectivity& cellConnectivity,
+  const peano4::Regrid&           regrid,
+  ::exahype2::RefinementRequests& requests
+) {
+  SolverFamily::regrid(cellConnectivity, regrid, requests);
+{%- for tracer in TRACERS %}
+  _{{tracer.NAME}}.relocate(cellConnectivity);
+{%- endfor %}
+}
+
+/**
+ * Writes a snapshot of the solver data and of every tracer set. Every rank calls this function at
+ * the same time.
+ */
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::plot(
+  const peano4::CellConnectivity& cellConnectivity,
+  const ::tarch::plotter::Format  format,
+  const std::string&              outputDirectory
+) {
+  SolverFamily::plot(cellConnectivity, format, outputDirectory);
+{%- for tracer in TRACERS %}
+  _{{tracer.NAME}}Plotter.plot(_{{tracer.NAME}}, getTimeStepping().getTimeStamp(), format, outputDirectory);
+{%- endfor %}
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::release() {
+  SolverFamily::release();
+{%- for tracer in TRACERS %}
+  _{{tracer.NAME}}.release();
+{%- if tracer.ERROR %}
+  _{{tracer.NAME}}ErrorMeasurement.release();
+{%- endif %}
+{%- endfor %}
+}
+
+::tarch::AllocatedBytes {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getAllocatedBytes() const {
+  return SolverFamily::getAllocatedBytes()
+{%- for tracer in TRACERS %}
+    + _{{tracer.NAME}}.getAllocatedBytes()
+{%- endfor %};
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::appendTracerStatistics(
+  std::vector<::exahype2::runner::SolverStatistic>& statistics
+) const {
+{%- for tracer in TRACERS %}
+  statistics.push_back(
+    ::exahype2::runner::makeCountStatistic("{{tracer.NAME}}", _{{tracer.NAME}}.getGlobalNumberOfParticles())
+  );
+{%- endfor %}
+}
+
+/**
+ * Inserts every tracer set once. Each rank keeps the candidates that lie in its own cells.
+ */
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::insertTracers(const peano4::CellConnectivity& cellConnectivity) {
+{%- for tracer in TRACERS %}
+  if (not _{{tracer.NAME}}Inserted) {
+    std::vector<double> candidates;
+{%- for coordinate in tracer.COORDINATES %}
+{%- if tracer.COORDINATE_TRANSFORM %}
+    {
+      const tarch::la::Vector<DIMENSIONS, double> position = {{tracer.COORDINATE_TRANSFORM}}(
+        tarch::la::Vector<DIMENSIONS, double>{ {{coordinate | join(", ")}} }
+      );
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        candidates.push_back(position(axis));
+      }
+      candidates.resize(candidates.size() + {{tracer.NUMBER_OF_DATA}}, 0.0);
+    }
+{%- else %}
+    candidates.insert(candidates.end(), { {{coordinate | join(", ")}}{% for entry in range(tracer.NUMBER_OF_DATA) %}, 0.0{% endfor %} });
+{%- endif %}
+{%- endfor %}
+{%- if tracer.DATA %}
+    const std::vector<double> particlesWithData{{tracer.DATA}};
+    candidates.insert(candidates.end(), particlesWithData.begin(), particlesWithData.end());
+{%- endif %}
+{%- for file in tracer.FILES %}
+    {
+      ::exahype2::particles::FileReader reader;
+      reader.readDatFile("{{file.FILENAME}}", {{file.SCALE}});
+      tarch::la::Vector<DIMENSIONS, double> domainCentre;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        domainCentre(axis) = DomainOffset(axis) + 0.5 * DomainSize(axis);
+      }
+      for (const auto& position : reader.getParticlesWithinVoxel(domainCentre, DomainSize, false)) {
+        std::array<double, {{tracer.NUMBER_OF_DATA}}> data{};
+{%- if file.SAVE_INITIAL_POSITION %}
+        constexpr std::array<int, DIMENSIONS> InitialPositionIndex{ {{file.INITIAL_POSITION_INDEX | join(", ")}} };
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          data[static_cast<std::size_t>(InitialPositionIndex[static_cast<std::size_t>(axis)])] = position(axis);
+        }
+{%- endif %}
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          candidates.push_back(position(axis));
+        }
+        candidates.insert(candidates.end(), data.begin(), data.end());
+      }
+    }
+{%- endfor %}
+    _{{tracer.NAME}}.insert(cellConnectivity, candidates);
+    _{{tracer.NAME}}Inserted = true;
+  }
+{%- endfor %}
+}
+
+/**
+ * Moves the tracer sets that update in this phase and records the snapshots and the position errors
+ * of every set.
+ */
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
+  const peano4::CellConnectivity& cellConnectivity,
+  const double                    timeStepSize,
+  const bool                      initialisation
+) {
+  _timeStampOfLastTracing = getTimeStepping().getTimeStamp();
+{%- if TRACERS_RECORD %}
+  const double timeStamp = _timeStampOfLastTracing;
+{%- endif %}
+{%- for tracer in TRACERS %}
+{%- if tracer.INITIALISATION and tracer.TIME_STEPS %}
+  {{tracer.UPDATE_CALL | indent(2)}}
+{%- elif tracer.INITIALISATION %}
+  if (initialisation) {
+    {{tracer.UPDATE_CALL | indent(4)}}
+  }
+{%- elif tracer.TIME_STEPS %}
+  if (not initialisation) {
+    {{tracer.UPDATE_CALL | indent(4)}}
+  }
+{%- endif %}
+{%- if tracer.DATABASE and tracer.INITIALISATION %}
+  ::exahype2::particles::recordSnapshots(
+    _{{tracer.NAME}},
+    timeStamp,
+    {{tracer.DATABASE.INITIAL_RECORD_TIME}},
+    {{tracer.DATABASE.LAST_RECORD_TIME}},
+    _{{tracer.NAME}}Database
+  );
+{%- elif tracer.DATABASE %}
+  // Only the time steps write the data of this set. The initialisation records nothing.
+  if (not initialisation) {
+    ::exahype2::particles::recordSnapshots(
+      _{{tracer.NAME}},
+      timeStamp,
+      {{tracer.DATABASE.INITIAL_RECORD_TIME}},
+      {{tracer.DATABASE.LAST_RECORD_TIME}},
+      _{{tracer.NAME}}Database
+    );
+  }
+{%- endif %}
+{%- if tracer.ERROR %}
+  if (_{{tracer.NAME}}ErrorMeasurement.isSnapshotDue(timeStamp)) {
+    ::exahype2::particles::measurePositionErrors<{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}>(
+      _{{tracer.NAME}},
+      timeStamp,
+      timeStepSize,
+      _{{tracer.NAME}}ErrorMeasurement
+    );
+  }
+{%- endif %}
+{%- endfor %}
+}
+
+/**
+ * Records the last time stamp of a run in the error file of the solver and in the trajectory and
+ * error files of every tracer set. A set of face traces samples its faces first.
+ */
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity) {
+  SolverFamily::recordLastTimeStamp(cellConnectivity);
+{%- if TRACERS_RECORD %}
+  const double timeStamp = getTimeStepping().getTimeStamp();
+{%- endif %}
+{%- for tracer in TRACERS %}
+{%- if tracer.DATABASE %}
+  _{{tracer.NAME}}Database.setSnapshotRule(::tarch::database::SnapshotRule::EveryLaterTimestamp);
+{%- endif %}
+{%- if tracer.ERROR %}
+  _{{tracer.NAME}}ErrorMeasurement.setSnapshotRule(::tarch::database::SnapshotRule::EveryLaterTimestamp);
+{%- endif %}
+{%- if tracer.FACE_TRACES and tracer.TIME_STEPS and (tracer.DATABASE or tracer.ERROR) %}
+  {{tracer.UPDATE_CALL | indent(2)}}
+{%- endif %}
+{%- if tracer.DATABASE %}
+  ::exahype2::particles::recordSnapshots(
+    _{{tracer.NAME}},
+    timeStamp,
+    {{tracer.DATABASE.INITIAL_RECORD_TIME}},
+    {{tracer.DATABASE.LAST_RECORD_TIME}},
+    _{{tracer.NAME}}Database
+  );
+{%- endif %}
+{%- if tracer.ERROR %}
+  if (_{{tracer.NAME}}ErrorMeasurement.isSnapshotDue(timeStamp)) {
+    ::exahype2::particles::measurePositionErrors<{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}>(
+      _{{tracer.NAME}},
+      timeStamp,
+      getTimeStepping().getTimeStepSizeOfLastStep(),
+      _{{tracer.NAME}}ErrorMeasurement
+    );
+  }
+{%- endif %}
+{%- endfor %}
+}
+{%- endif %}
+{%- if SOLVER_BASE_USER_DEFINITIONS.strip() %}
+
+{{SOLVER_BASE_USER_DEFINITIONS.strip()}}
+{%- endif %}

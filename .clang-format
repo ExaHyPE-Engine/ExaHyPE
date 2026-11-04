@@ -7,9 +7,11 @@ TabWidth: 2
 UseTab: Never
 AccessModifierOffset: -2
 IndentAccessModifiers: false
+EmptyLineBeforeAccessModifier: Always
 IndentCaseLabels: false
 IndentPPDirectives: None
 NamespaceIndentation: All
+WrapNamespaceBodyWithEmptyLines: Never
 ColumnLimit: 120
 Standard: Latest
 DerivePointerAlignment: false
@@ -28,6 +30,7 @@ AlignConsecutiveDeclarations:
   Enabled: true
   AcrossEmptyLines: false
   AcrossComments: false
+  AlignFunctionDeclarations: false
   AlignFunctionPointers: false
 AlignConsecutiveMacros: None
 AlignEscapedNewlines: DontAlign
@@ -44,15 +47,18 @@ AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortEnumsOnASingleLine: true
+EnumTrailingComma: Remove
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakBeforeMultilineStrings: false
-BreakAfterReturnType: None
+BreakAfterAttributes: Never
+BreakAfterReturnType: TopLevelDefinitions
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Attach
 BreakBeforeConceptDeclarations: Always
+BreakBeforeTemplateCloser: true
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
@@ -64,29 +70,31 @@ PenaltyBreakAssignment: 2
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 100
 PenaltyBreakOpenParenthesis: 0
+PenaltyBreakScopeResolution: 2000
 PenaltyBreakString: 100
 PenaltyBreakTemplateDeclaration: 100
-PenaltyExcessCharacter: 1000
+PenaltyExcessCharacter: 10000
 PenaltyIndentedWhitespace: 0
 Cpp11BracedListStyle: true
 FixNamespaceComments: true
-ForEachMacros:
-  - foreach
-  - Q_FOREACH
-  - BOOST_FOREACH
-IfMacros:
-  - KJ_IF_MAYBE
 LambdaBodyIndentation: Signature
-MacroBlockBegin: ''
-MacroBlockEnd: ''
 MaxEmptyLinesToKeep: 1
 KeepEmptyLines:
   AtEndOfFile: false
   AtStartOfBlock: false
   AtStartOfFile: false
+InsertBraces: true
 InsertNewlineAtEOF: true
+LineEnding: LF
+NumericLiteralCase:
+  ExponentLetter: Lower
+  HexDigit: Upper
+  Prefix: Lower
+  Suffix: Upper
 ReflowComments: true
 RemoveBracesLLVM: false
+RemoveEmptyLinesInUnwrappedLines: true
+RemoveSemicolon: true
 SeparateDefinitionBlocks: Leave
 IncludeBlocks: Regroup
 IncludeCategories:
@@ -130,13 +138,5 @@ SpacesInLineCommentPrefix:
 SpacesInParens: Never
 SpacesInSquareBrackets: false
 StatementAttributeLikeMacros:
-  - Q_EMIT
-StatementMacros:
-  - Q_UNUSED
-  - QT_REQUIRE_VERSION
-WhitespaceSensitiveMacros:
-  - STRINGIZE
-  - PP_STRINGIZE
-  - BOOST_PP_STRINGIZE
-  - NS_SWIFT_NAME
-  - CF_SWIFT_NAME
+  - INLINE_METHOD
+  - GPU_CALLABLE_METHOD

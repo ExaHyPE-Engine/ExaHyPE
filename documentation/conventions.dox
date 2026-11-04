@@ -4,54 +4,40 @@
 
 \tableofcontents
 
- We follow the convention that the header files only hold the declarations, while
- the cpp files hold the actual implementations. We kind of gave up on this convention
- in few particular places for speed, i.e. whenever a compiler should do inlining,
- i.e. remove function calls, but doesn't. If we found such places and suffered
- significantly in terms of performance, then we moved the implementation into the
- headers. We also use header-based implementations for template (the header
- implementation files then have the extension .cpph), but as soon as compilers do
- widely support templates that are not headers or we have moved functions over to
- the new C++ auto keyword, we'll move all into the implementation files.
+ A header file declares the classes and the functions of its namespace. The matching cpp file
+ defines them. The matching file with the extension .cpph defines the inline functions and the
+ templates. The header includes this file at its end.
 
+ The Doxygen block of a function stands at its definition. The declaration in the header stays
+ bare. A function whose body needs comments to explain it needs a simpler structure or a split
+ into smaller functions.
 
- I decided a while ago that all documentation should be in the headers if
- possible. Most documentation focuses on what a function does not how it does
- it. Therefore, the docu belongs to the declaration. If an implementation is so
- complicated or long that you need documentation within the source code to
- understand it, then the function needs to be simplified or split up.
-
- Further to that, I try to make any source code, documentation, ... stick to a
- "80 characters per line" policy. Such files can be easily read with vi or less
- on the terminal on any computer.
+ clang-format formats every C++ file with the style file .clang-format of the repository root. A
+ line ends at 120 characters.
 
 
  Syntax Conventions
  ==================
 
- We mainly follow mainstream Java syntax conventions in Peano for historic reasons and
- as this is a real OO/C++ project. Some important principles are:
-
  - One file per class
- - Consistent naming conventions
- - Long, self-explaining names (no acronyms)
  - One subdirectory per namespace
+ - Descriptive names, with acronyms in uppercase (getCFLFactor())
 
 
 # Python Conventions / Style Guide
 
-Most users will interact with Peano through the Python API, which acts as glue to stick
-together various C++ snippets in a way that can be modified for each experiment.
+Most users interact with Peano through the Python API. It assembles the C++ snippets of an
+application. Each experiment can modify them.
 
-We aim for our Python to look something like the [PEP-8 style guide for Python](https://peps.python.org/pep-0008/).
-In particular, methods should be named all in lowercase, with words separated by underscores, such as:
+Our Python code follows the [PEP-8 style guide for Python](https://peps.python.org/pep-0008/).
+A method name uses lowercase words joined by underscores:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-def my_method_for_calulcating_residuals(*args):
+def my_method_for_calculating_residuals(*args):
   # code goes here
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Moreover, class names should be in camel case:
+A class name uses CamelCase:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 class MyClassForStoringData:
@@ -60,23 +46,21 @@ class MyClassForStoringData:
 
 More specifically:
 
-- Modules should have short, all-lowercase names. Underscores can be used in the module name if it
-  improves readability. Python packages should also have short, all-lowercase names, although the
-  use of underscores is discouraged.
-- Class names should normally use the CapWords (CamelCase) convention.
-- Function names should be lowercase, with words separated by underscores as necessary to improve
-  readability.
-- Variable names follow the same convention as function names.
+- A module has a short, all-lowercase name. An underscore in a module name separates words where it
+  improves readability. A package has a short, all-lowercase name without underscores.
+- A class name uses the CapWords (CamelCase) convention.
+- A function name uses lowercase words joined by underscores.
+- A variable name follows the convention of function names.
 
 # C++ conventions / Style Guide
 
-We use fairly standard conventions when writing C++. This includes, but isn't limited to:
-
-- CamelCase for methods, variables and classes
-- Indentation with tabs (two spaces wide)
-- Opening brace for ```if``` statements or ```for``` loops should be on same line, eg:
+- Types and the values of an enum class use PascalCase. Functions, methods and local variables use
+  camelCase. Private and protected members start with an underscore.
+- Indentation uses two spaces and no tabs.
+- Every body of an if, an else and a loop stands in braces. The opening brace stays on the line of
+  the statement:
 ~~~~~~~~~~~~~~~~~~~~~~~
-for (int i=0; i<10; i++){
+for (int i = 0; i < 10; i++) {
   // code goes here
 }
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,7 +72,7 @@ source file of the repository.
 Code Formatting and Static Analysis
 ===================================
 
-The package ``postprocessing`` holds one script per tool. Each script walks every source
+The package ``postprocessing`` contains one script per tool. Each script walks every source
 file below the repository root and skips build directories, generated code and virtual
 environments. Run them from the repository root, after ``pip install -r requirements.txt``
 installed the tools:

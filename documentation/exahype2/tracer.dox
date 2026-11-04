@@ -4,108 +4,115 @@
 
 \tableofcontents
 
-ExaHyPE tracers use Peano particle sets. A project declares the particle type,
-inserts tracer coordinates, projects solver fields onto the particles, and can
-write their histories to CSV files.
+ExaHyPE tracers are particle sets one solver moves through its solution. A
+project declares the set, inserts its particles, hands the set to a solver
+and can write the particle histories to CSV files.
 
-# Adding a tracer
+# Adding a tracer set
 
-The project creates a generated particle type with four data entries per
-particle:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-tracerParticles = project.add_tracer(name="MyTracer", particle_attributes=4)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The argument `solver` hands the tracers to one solver: Its sweeps sort them
-after its own action sets, its plots write them, and its statistics count them.
-
-An insertion action set adds initial coordinates during grid initialisation:
+The project creates a set with four data entries per particle:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.add_action_set_to_initialisation(
-  exahype2.particles.InsertTracersByCoordinates(
-    particle_set=tracerParticles,
-    coordinates=[[x0, y0], [x1, y1]],
-  )
-)
+tracers = project.add_tracer(name="MyTracer", particle_attributes=4)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The coordinate dimension matches the generated project. Other insertion action
-sets create Cartesian seeds, randomised seeds, or read coordinates from a
-file.
+The insertions run once at the start of the grid initialisation on the rank
+whose mesh contains the position:
 
-# Projecting solver data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tracers.insert_by_coordinates([[x0, y0], [x1, y1]])
+tracers.insert_with_data([[x0, y0, q0, q1, q2, q3]])
+tracers.insert_from_file("particles.dat", scale_factor=1.0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A tracing action set samples the solution at each particle. A finite-volume
-configuration can use:
+A coordinate lists at least one component per axis of the build. The
+argument `transform` of `insert_by_coordinates` names a C++ callable of the
+solver that maps every coordinate onto the position the particle takes; the
+curvilinear ExaSeis applications pass `invertProjection` to place a tracer at
+the mesh position of a physical coordinate.
+
+# Moving the tracers
+
+A solver moves a set after the grid initialisation and after every time step
+the two flags select, with the forces of the set:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 solver.trace(
-  tracerParticles,
-  kernel="::exahype2::fv::projectAllValuesOntoParticlePiecewiseLinear",
+  tracers,
+  exahype2.particles.Forces(
+    interpolation_scheme=2,
+    integration_scheme=0,
+    force_method=0,
+    fields_to_interpolate="0,1,2,3",
+  ),
+  initialisation=False,
 )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The solver adds the tracing to its initialisation sweep, which populates the tracer fields
-before the first plot or database record, and to its time step; the arguments
-`initialisation` and `time_steps` of `solver.trace` select these sweeps. DG solvers use
-the projection routines under `exahype2/dg/Tracer.h`; finite-volume solvers use
-`exahype2/fv/Tracer.h`.
+`fields_to_interpolate` lists the data entries that receive the first
+unknowns of the solver in this order. The interpolation scheme 0 reads no
+solver value. Scheme 1 reads the volume that contains the position. Scheme 2
+interpolates between the volumes. A DG solver family evaluates its nodal
+polynomial for every scheme other than 0. The integration scheme 0 keeps the
+particle in place. The schemes 1 to 6 advance it with the interpolated velocity
+and the forces of `force_method`. A finite-volume time step moves the tracers
+through the solution it read. The tracers and the fluid then advance from the
+same state.
+
+The set lives in exahype2::particles::ParticleSet: the position and the data
+of every particle in one array, the two-integer number of the particle and
+the slot of the cell that contains it. A particle that left its rank travels to
+the rank whose cells contain its new position after every trace.
+
+# Sampling the traces of a plane
+
+A set can record the face traces of a DG solver family on one plane, such as
+the fault of a dynamic rupture application:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+fault = project.add_tracer(name="FaultTracer", particle_attributes=12)
+fault.insert_by_coordinates(coordinates, transform="invertProjection")
+fault.sample_face_traces(
+  normal="faultNormal", position="faultPosition", difference_fields=["u", "v"]
+)
+solver.trace(fault, initialisation=False)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every particle on the plane takes the mean of the two traces of every stored
+unknown, and for the unknowns of `difference_fields` the trace of the upper
+cell minus the trace of the lower cell. `normal` and `position` are C++
+expressions the generated solver evaluates.
 
 # Writing trajectories
 
-exahype2.particles.DumpTracerIntoDatabase collects particle samples and writes
-rank-local CSV snapshots below the runtime output path:
+`dump_into_database` appends a snapshot of every particle to a CSV file after
+every trace, once the particle moved further than the position delta or more
+time than the time delta passed, within the closed record window. The last time
+stamp of a run always gets a snapshot:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.add_action_set_to_timestepping(
-  exahype2.particles.DumpTracerIntoDatabase(
-    particle_set=tracerParticles,
-    solver=solver,
-    filename="Tracer",
-    position_delta_between_two_snapshots=1.0e16,
-    time_delta_between_two_snapshots=0.01,
-    output_precision=10,
-  )
+tracers.dump_into_database(
+  filename="Tracer",
+  position_delta_between_two_snapshots=1.0e16,
+  time_delta_between_two_snapshots=0.01,
+  output_precision=10,
 )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Each row contains the stable particle number, time stamp, coordinates, and
-tracked values. The particle number combines the spacetree number with a
-tree-local counter, so insertion requires no global numbering collective. A
-particle keeps this identity after it migrates.
+Each row contains the particle number, the time stamp, the coordinates and
+the data entries. The particle number combines the rank of insertion with a
+rank-local counter. A particle keeps this number after it migrates. An MPI run
+appends the records of each rank to `<filename>-rank-<rank>.csv`. A serial run
+writes `<filename>.csv`. `postprocessing/plot_probe_data.py` reads one CSV file
+and groups its rows by particle number.
 
-An MPI run appends each rank's records to `<filename>-rank-<rank>.csv`; a
-serial run writes `<filename>.csv`. Postprocessing combines rank files by
-particle number and time stamp.
+# Measuring the position error
 
-# Moving tracers
+A solver with the `particle_analytical_solution` PDE term records the L1, L2
+and Linf errors of the particle positions against it:
 
-The projection kernel can update the particle position as well as its sampled
-properties. A custom kernel is supplied through
-the `kernel` argument of `solver.trace`; `arguments` adds
-solver values such as a cell time-step size when required.
-
-The tracing kernels update only `Local` records and use `MoveState` to prevent
-a second update during the same rank traversal. The particle sorting action
-sets then restore the vertex and level association. @ref
-page_peano4_particles_mesh_consistency describes the required follow-up
-sweeps, rank-boundary transfer, and sieve redistribution.
-
-# Parallel behaviour
-
-Particle-bearing traversal steps run in the subtree tasks of a rank like every
-other step: A task's copy of a vertex holds the particles of the task's own
-cells, a neighbouring task's copy carries them as halo copies, and a lift out of
-the task's top level goes through the sieve set. MPI rank-boundary exchange
-maintains local and virtual copies with one sweep of lag.
-
-The generic boundary exchange aliases wrapped periodic vertices but does not
-mirror particle coordinates. The sieve applies periodic wrapping to particles
-that it redistributes globally.
-
-Trajectory files remain rank-local even after particles migrate. The stable
-particle number is the key for joining their records.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver.measure_particle_error(tracers, file="ParticleError", every=0.01)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 */

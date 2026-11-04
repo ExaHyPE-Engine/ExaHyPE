@@ -142,6 +142,26 @@ parallelism. The domain decomposition provides the baseline performance,
 and the tasking adds flexibility and scalability on top.
 """
 
+_SUBCELL_LIMITER = """
+
+## A-posteriori subcell limiting
+
+The ADER-DG solver of this project recomputes troubled cells on a finite-volume
+subgrid. The limiter follows
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       @article{Dumbser:2014:SubcellLimiting,
+         title = {A posteriori subcell limiting of the discontinuous {Galerkin} finite element method for hyperbolic conservation laws},
+         journal = {Journal of Computational Physics},
+         volume = {278},
+         pages = {47--75},
+         year = {2014},
+         doi = {10.1016/j.jcp.2014.08.009},
+         author = {Michael Dumbser and Olindo Zanotti and Rapha{\\"e}l Loub{\\`e}re and Steven Diot},
+       }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""
+
 _FOOTER = """
 
 ## Summary
@@ -159,7 +179,12 @@ www.peano-framework.org
 class Readme:
     """Writes the README of a generated project: The citations and the generating command."""
 
+    def __init__(self):
+        self.cites_subcell_limiter = False
+
     def generate(self, directory):
         with open(directory + "/README.md", "w") as readme:
             readme.write(_HEADER)
+            if self.cites_subcell_limiter:
+                readme.write(_SUBCELL_LIMITER)
             readme.write(_FOOTER.format(" ".join(sys.argv)))

@@ -43,8 +43,8 @@ EXCLUDED_DIRECTORIES = frozenset(
 )
 GENERATED_DIRECTORY = re.compile(r"^(build|install)(-.+)?$|\.(build|generated|output)$")
 
-# A compilation database entry reads the precompiled header of the build compiler, which
-# a clang-tidy of another version cannot load.
+# A compilation database entry reads the precompiled header of the build compiler. A
+# clang-tidy of another version cannot load this header.
 PRECOMPILED_HEADER_ARGUMENTS = ("-Winvalid-pch", "-Werror")
 
 
@@ -54,7 +54,7 @@ class ToolError(RuntimeError):
 
 @dataclasses.dataclass(frozen=True, order=True)
 class Finding:
-    """One diagnostic of a check at a line of a file; line zero addresses the whole file."""
+    """One diagnostic of a check at a line of a file. Line zero addresses the whole file."""
 
     path: str
     line: int
@@ -70,20 +70,20 @@ class Finding:
 
 
 def find_repository_root(start: str) -> str:
-    """Returns the closest directory at or above start that holds the clang-format style file."""
+    """Returns the closest directory at or above start that contains the clang-format style file."""
     directory = os.path.abspath(start)
     while not os.path.isfile(os.path.join(directory, STYLE_FILE)):
         parent = os.path.dirname(directory)
         if parent == directory:
             raise FileNotFoundError(
-                f"No directory at or above {start} holds {STYLE_FILE}."
+                f"A directory at or above {start} must contain {STYLE_FILE}."
             )
         directory = parent
     return directory
 
 
 def is_excluded_directory(path: str) -> bool:
-    """Returns whether a directory holds build trees, generated code, caches or a virtual environment."""
+    """Returns whether a directory contains build trees, generated code, caches or a virtual environment."""
     name = os.path.basename(os.path.normpath(path))
     return (
         name in EXCLUDED_DIRECTORIES
@@ -150,7 +150,7 @@ def run_commands(
 ) -> list[subprocess.CompletedProcess]:
     """Runs the commands on up to jobs threads and returns the results in the order of the commands.
 
-    The commands run without forced colour, so the parsers of their output see plain text.
+    The commands run without forced colour. The parsers of their output then read plain text.
     """
     plain_environment = dict(os.environ if environment is None else environment)
     plain_environment.pop("FORCE_COLOR", None)
@@ -177,7 +177,7 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     """Adds the repository root and the number of parallel jobs to a parser."""
     parser.add_argument(
         "--root",
-        help=f"Repository to analyse (default: the closest directory above the working directory that holds {STYLE_FILE})",
+        help=f"Repository to analyse (default: the closest directory above the working directory that contains {STYLE_FILE})",
     )
     parser.add_argument(
         "-j",
@@ -288,7 +288,7 @@ def ruff_check(
     fix: bool,
     files: list[str],
 ) -> list[Finding]:
-    """Returns the findings of a ruff check of the files; a failing ruff raises a ToolError."""
+    """Returns the findings of a ruff check of the files. A failing ruff raises a ToolError."""
     [result] = run_commands([ruff_command(executable, rules, ignored, fix, files)], 1)
     if result.returncode not in (0, 1):
         raise ToolError(result.stderr.strip())

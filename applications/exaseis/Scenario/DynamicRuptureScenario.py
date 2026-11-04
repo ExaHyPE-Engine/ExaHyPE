@@ -13,6 +13,9 @@ class DynamicRuptureScenario(Scenario):
 
     requiredKeys = ["f_wy", "f_wz"]
 
+    # The initial condition writes these fault parameters into the auxiliary variables of every node.
+    auxiliary_variables = {}
+
     dynamicRuptureDictionary = {
         "initialStresses": """
       sxx = 0;
@@ -34,8 +37,7 @@ class DynamicRuptureScenario(Scenario):
     }
 
     def generate_required_files(self):
-        # f_wy and f_wz are the half-widths of the boxcar in tauStrength(). A width of zero adds
-        # 1e10 cohesion over the whole fault and locks it, so no default exists.
+        # A zero half-width of the cohesion box locks the whole fault.
         missing = [
             key for key in self.requiredKeys if key not in self.dynamicRuptureDictionary
         ]
@@ -44,12 +46,15 @@ class DynamicRuptureScenario(Scenario):
                 type(self).__name__
                 + " does not set "
                 + ", ".join(missing)
-                + " in dynamicRuptureDictionary; the cohesion boxcar half-widths have no default."
+                + " in dynamicRuptureDictionary; set both cohesion boxcar half-widths."
             )
 
-        self.generate_file_from_template(
-            os.path.dirname(os.path.realpath(__file__))
-            + "/specs/DynamicRuptureParameters.h.jinja2",
-            "DynamicRuptureParameters.h",
-            self.dynamicRuptureDictionary,
-        )
+        for suffix in (".h", ".cpph"):
+            self.generate_file_from_template(
+                os.path.dirname(os.path.realpath(__file__))
+                + "/specs/DynamicRuptureParameters"
+                + suffix
+                + ".jinja2",
+                "DynamicRuptureParameters" + suffix,
+                self.dynamicRuptureDictionary,
+            )

@@ -108,6 +108,9 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The volcanic plume tracer test runs in 2D only.")
+
 initial_conditions = """
   const double plumeCentreX = DomainSize[0] * 0.5;
   const double plumeWidth   = DomainSize[0] * 0.1;
@@ -122,27 +125,23 @@ initial_conditions = """
                        (x(1) >= plumeBaseY) and
                        (x(1) <= plumeTopY);
 
-  // Compute piecewise hydrostatic pressure
+  // The hydrostatic pressure at x is P0 plus the weight of the fluid column above x.
   double localPressure = 0.0;
 
   if (inPlumeColumn) {
     if (x(1) >= plumeTopY) {
-      // Above plume -> full cold column
       localPressure = P0 + GRAVITY * (DomainSize[1] - x(1)) * RHO_AMBIENT;
     } else if (x(1) < plumeBaseY) {
-      // Below plume -> lighter column above
       localPressure = P0 +
-              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT + // Cold part above plume
-              GRAVITY * (plumeTopY - plumeBaseY) * RHO_HOT +        // Plume region
-              GRAVITY * (plumeBaseY - x(1)) * RHO_AMBIENT;          // Local segment below plume
+              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT +
+              GRAVITY * (plumeTopY - plumeBaseY) * RHO_HOT +
+              GRAVITY * (plumeBaseY - x(1)) * RHO_AMBIENT;
     } else {
-      // Inside plume -> partial light column
       localPressure = P0 +
-              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT + // Cold part above plume
-              GRAVITY * (plumeTopY - x(1)) * RHO_HOT;               // Current plume slice
+              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT +
+              GRAVITY * (plumeTopY - x(1)) * RHO_HOT;
     }
   } else {
-    // Outside plume column -> pure cold fluid
     localPressure = P0 + GRAVITY * (DomainSize[1] - x(1)) * RHO_AMBIENT;
   }
 
@@ -156,19 +155,16 @@ initial_conditions = """
 
 boundary_conditions = """
   if (x(1) >= DomainSize[1] - 0.001) {
-    // Top boundary (outflow - zero gradient)
     Qoutside[0] = RHO_AMBIENT;
     Qoutside[1] = 0.0;
     Qoutside[2] = 0.0;
     Qoutside[3] = P0 / (GAMMA - 1.0);
   } else if (x(1) <= DomainOffset[1] + 0.001) {
-    // Bottom boundary (reflective)
     Qoutside[0] = Qinside[0];
     Qoutside[1] = Qinside[1];
     Qoutside[2] = -Qinside[2];
     Qoutside[3] = Qinside[3];
   } else if (x(0) <= DomainOffset[0] + 0.001 or x(0) >= DomainSize[0] - 0.001) {
-    // Left and right boundaries (outflow - zero gradient)
     Qoutside[0] = Qinside[0];
     Qoutside[1] = Qinside[1];
     Qoutside[2] = Qinside[2];
@@ -181,7 +177,9 @@ compute_primitive_variables = r"""
   const auto u0 = Q[Shortcuts::rhoU] * irho;
   const auto u1 = Q[Shortcuts::rhoV] * irho;
 
-  const auto uSq = u0 * u0 + u1 * u1;
+  const auto squareOfU0 = tarch::la::productRoundedOnce(u0, u0);
+  const auto squareOfU1 = tarch::la::productRoundedOnce(u1, u1);
+  const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 
   const auto internalE = Q[Shortcuts::rhoE] - 0.5 * Q[Shortcuts::rho] * uSq;
@@ -249,7 +247,7 @@ tracer_attributes = {
 }
 
 tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
+    name="Tracers", particle_attributes=tracer_attributes
 )
 
 generate_particles_in_plume(
@@ -261,14 +259,7 @@ generate_particles_in_plume(
     y_min=0.11,
     y_max=0.29,
 )
-init_tracers = exahype2.particles.InsertParticlesFromFile(
-    particle_set=tracer_particles,
-    filename="InitTracers.dat",
-    scale_factor=1.0,
-)
-
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
+tracer_particles.insert_from_file("InitTracers.dat", scale_factor=1.0)
 
 fv_solver.trace(
     tracer_particles,

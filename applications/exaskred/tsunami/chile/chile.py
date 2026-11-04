@@ -82,5 +82,5 @@ project.add_constant("g", 9.81)
 project.add_constant("hThreshold", 10.0)
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
+project.output.makefile.add_h_file("ADERDGSolver.cpph")
 project.generate_and_build()

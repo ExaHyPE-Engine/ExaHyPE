@@ -25,7 +25,8 @@ namespace {
   }
 } // namespace
 
-tarch::StackSizeLimit tarch::StackSizeLimit::detect() {
+tarch::StackSizeLimit
+tarch::StackSizeLimit::detect() {
   StackSizeLimit result;
 
 #if defined(_WIN32)
@@ -45,17 +46,18 @@ tarch::StackSizeLimit tarch::StackSizeLimit::detect() {
 #endif
 }
 
-std::string tarch::detectStackSizeLimit() {
+std::string
+tarch::detectStackSizeLimit() {
   const auto& stackSizeLimit = getCachedStackSizeLimit();
 #if defined(_WIN32)
-  logWarning("Stack size limit detection is not implemented on Windows");
+  logWarning("The stack size check cannot read the limit on Windows.");
   return "unknown";
 #else
   constexpr unsigned long long RecommendedMinimumStackLimitInKiB = 0x200'000ULL;
   constexpr unsigned long long RecommendedMinimumStackLimit      = RecommendedMinimumStackLimitInKiB * KiB;
 
   if (not stackSizeLimit.detected) {
-    logError("Stack size cannot be determined because getrlimit() failed");
+    logError("The stack size check cannot read the limit.");
     return "unknown";
   }
 

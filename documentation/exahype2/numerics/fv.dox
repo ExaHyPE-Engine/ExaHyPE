@@ -21,7 +21,7 @@ We can write this down as integral over each volume @f$ V @f$:
  \int _V Q_k(t+\Delta t) dx = \int _V Q_k(t) dx + \Delta t \cdot \int _V \partial _t Q_k(t) dx
 \f]
 
-Note that we have already used an explicit Euler time integrator here.
+The formula already applies an explicit Euler time integrator.
 Next, we make the formula a little bit simpler, exploiting the fact that a volume shall have the volume length @f$ h @f$ and each volume is a square or cube, respectively.
 Once again, it helps that the solution is constant per volume.
 
@@ -31,7 +31,7 @@ Once again, it helps that the solution is constant per volume.
  h^d Q_k(t+\Delta t)  =  h^d Q_k(t) dx + \Delta t \cdot \int _V \nabla F(Q_k(t)) + S(Q_k)  dx
 \f]
 
-In the last line, we now insert our PDE written as
+The last line inserts the PDE in the form
 
 \f[
  \partial _t Q(t) = \nabla F(Q(t)) + S(Q)
@@ -55,19 +55,21 @@ we introduce the numerical flux. One cheap and stable way is to use Rusanov flux
 \f]
 
 The flux on a face @f$ {F}_{n}(Q) @f$ is the average of the flux within the left adjacent cell and the right adjacent cell.
-This average is denoted by a red circle in the sketch above.
-If we only used the average, we would get a solution where shocks smear out quickly.
-In the sketch above, the wave/shock travels from left to right, so it makes sense to assume that actually way more flow goes left-right than right-to-left.
-Averaging is not a good idea.
-So we take the difference @f$ Q^+ - Q^- @f$, we know how to correct the numerical flux.
-Take into account that the "remaining" eigenvalues are all positive for a strictly hyperbolic system.
-Globally, there is one negative eigenvalue but that one corresponds to the time dimension and is already taken care of.
+A red circle marks this average in the sketch above.
+The average alone smears shocks out quickly.
+In the sketch above, the wave travels from left to right.
+More flow then crosses the face from left to right than from right to left.
+The difference @f$ Q^+ - Q^- @f$ corrects the average.
+The "remaining" eigenvalues of a strictly hyperbolic system are all positive.
+Globally, one negative eigenvalue belongs to the time dimension.
+The time stepping treats it.
 
-Yet, the speed matters: If the flow is very slow, then we should only correct the average by a tiny amount.
-If the wave travels very fast, we should significantly take this solution gradient into account.
-The wave speed is approximated/bounded by the maximum eigenvalue along the direction of interest.
-Again, we cannot evaluate the maximum eigenvalue on the face directly, but we only are interested in the maximum eigenvalue.
-Therefore, we can evaluate the directional eigenvalue in the left and right volumes and again take the maximum of those.
+The correction grows with the wave speed.
+A slow flow corrects the average by a tiny amount.
+A fast wave corrects it by a large part of the solution gradient.
+The maximum eigenvalue along the normal bounds the wave speed.
+The scheme cannot evaluate this eigenvalue on the face.
+It evaluates the directional eigenvalue in the left and the right volume and takes the maximum of the two.
 
 
 

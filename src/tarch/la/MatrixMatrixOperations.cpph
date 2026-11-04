@@ -1,12 +1,13 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/la/ScalarOperations.h"
+
+TARGET_DECLARE
 template <int Rows, int Cols, int X, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::multiply(
-  const Matrix<Rows, X, Scalar>& lhs,
-  const Matrix<X, Cols, Scalar>& rhs
-) {
-  Matrix<Rows, Cols, Scalar> result(0);
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>
+tarch::la::multiply(const tarch::la::Matrix<Rows, X, Scalar>& lhs, const tarch::la::Matrix<X, Cols, Scalar>& rhs) {
+  tarch::la::Matrix<Rows, Cols, Scalar> result(0);
 
   for (int i = 0; i < Rows; i++) {
     for (int j = 0; j < Cols; j++) {
@@ -20,11 +21,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::l
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::multiply(
-  const Matrix<2, 2, Scalar>& lhs,
-  const Matrix<2, 2, Scalar>& rhs
-) {
-  Matrix<2, 2, Scalar> result;
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>
+tarch::la::multiply(const tarch::la::Matrix<2, 2, Scalar>& lhs, const tarch::la::Matrix<2, 2, Scalar>& rhs) {
+  tarch::la::Matrix<2, 2, Scalar> result;
   result(0, 0) = lhs(0, 0) * rhs(0, 0) + lhs(0, 1) * rhs(1, 0);
   result(0, 1) = lhs(0, 0) * rhs(0, 1) + lhs(0, 1) * rhs(1, 1);
   result(1, 0) = lhs(1, 0) * rhs(0, 0) + lhs(1, 1) * rhs(1, 0);
@@ -33,11 +32,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::mul
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::multiply(
-  const Matrix<3, 3, Scalar>& lhs,
-  const Matrix<3, 3, Scalar>& rhs
-) {
-  Matrix<3, 3, Scalar> result;
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>
+tarch::la::multiply(const tarch::la::Matrix<3, 3, Scalar>& lhs, const tarch::la::Matrix<3, 3, Scalar>& rhs) {
+  tarch::la::Matrix<3, 3, Scalar> result;
   for (int i = 0; i < 3; i++) {
     const Scalar li0 = lhs(i, 0);
     const Scalar li1 = lhs(i, 1);
@@ -50,11 +47,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::mul
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::multiply(
-  const Matrix<4, 4, Scalar>& lhs,
-  const Matrix<4, 4, Scalar>& rhs
-) {
-  Matrix<4, 4, Scalar> result;
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>
+tarch::la::multiply(const tarch::la::Matrix<4, 4, Scalar>& lhs, const tarch::la::Matrix<4, 4, Scalar>& rhs) {
+  tarch::la::Matrix<4, 4, Scalar> result;
   for (int i = 0; i < 4; i++) {
     const Scalar li0 = lhs(i, 0);
     const Scalar li1 = lhs(i, 1);
@@ -68,12 +63,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::mul
   return result;
 }
 
-template <int Rows, int Cols, int X, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::multiplyComponents(
-  const Matrix<Rows, X, Scalar>& lhs,
-  const Matrix<X, Cols, Scalar>& rhs
+template <int Rows, int Cols, typename Scalar>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>
+tarch::la::multiplyComponents(
+  const tarch::la::Matrix<Rows, Cols, Scalar>& lhs,
+  const tarch::la::Matrix<Rows, Cols, Scalar>& rhs
 ) {
-  Matrix<Rows, Cols, Scalar> result;
+  tarch::la::Matrix<Rows, Cols, Scalar> result;
 
   for (int i = 0; i < Rows; i++) {
     for (int j = 0; j < Cols; j++) {
@@ -85,13 +81,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::l
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::multiplyComponents(
-  const Matrix<2, 2, Scalar>& lhs,
-  const Matrix<2, 2, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return Matrix<2, 2, Scalar>{
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>
+tarch::la::multiplyComponents(const tarch::la::Matrix<2, 2, Scalar>& lhs, const tarch::la::Matrix<2, 2, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::Matrix<2, 2, Scalar>{
     lhsValues[0] * rhsValues[0],
     lhsValues[1] * rhsValues[1],
     lhsValues[2] * rhsValues[2],
@@ -100,13 +94,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::mul
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::multiplyComponents(
-  const Matrix<3, 3, Scalar>& lhs,
-  const Matrix<3, 3, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return Matrix<3, 3, Scalar>{
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>
+tarch::la::multiplyComponents(const tarch::la::Matrix<3, 3, Scalar>& lhs, const tarch::la::Matrix<3, 3, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::Matrix<3, 3, Scalar>{
     lhsValues[0] * rhsValues[0],
     lhsValues[1] * rhsValues[1],
     lhsValues[2] * rhsValues[2],
@@ -120,13 +112,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::mul
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::multiplyComponents(
-  const Matrix<4, 4, Scalar>& lhs,
-  const Matrix<4, 4, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return Matrix<4, 4, Scalar>{
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>
+tarch::la::multiplyComponents(const tarch::la::Matrix<4, 4, Scalar>& lhs, const tarch::la::Matrix<4, 4, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::Matrix<4, 4, Scalar>{
     lhsValues[0] * rhsValues[0],
     lhsValues[1] * rhsValues[1],
     lhsValues[2] * rhsValues[2],
@@ -147,41 +137,37 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::mul
 }
 
 template <int Rows, int Cols, int X, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::operator*(
-  const Matrix<Rows, X, Scalar>& lhs,
-  const Matrix<X, Cols, Scalar>& rhs
-) {
-  return multiply(lhs, rhs);
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>
+tarch::la::operator*(const tarch::la::Matrix<Rows, X, Scalar>& lhs, const tarch::la::Matrix<X, Cols, Scalar>& rhs) {
+  return tarch::la::multiply(lhs, rhs);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::operator*(
-  const Matrix<2, 2, Scalar>& lhs,
-  const Matrix<2, 2, Scalar>& rhs
-) {
-  return multiply(lhs, rhs);
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>
+tarch::la::operator*(const tarch::la::Matrix<2, 2, Scalar>& lhs, const tarch::la::Matrix<2, 2, Scalar>& rhs) {
+  return tarch::la::multiply(lhs, rhs);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::operator*(
-  const Matrix<3, 3, Scalar>& lhs,
-  const Matrix<3, 3, Scalar>& rhs
-) {
-  return multiply(lhs, rhs);
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>
+tarch::la::operator*(const tarch::la::Matrix<3, 3, Scalar>& lhs, const tarch::la::Matrix<3, 3, Scalar>& rhs) {
+  return tarch::la::multiply(lhs, rhs);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::operator*(
-  const Matrix<4, 4, Scalar>& lhs,
-  const Matrix<4, 4, Scalar>& rhs
-) {
-  return multiply(lhs, rhs);
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>
+tarch::la::operator*(const tarch::la::Matrix<4, 4, Scalar>& lhs, const tarch::la::Matrix<4, 4, Scalar>& rhs) {
+  return tarch::la::multiply(lhs, rhs);
 }
 
+/**
+ * Compares the entries exactly. A floating-point matrix compares within a tolerance through equals().
+ */
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::operator==(
-  const Matrix<Rows, Cols, Scalar>& lhs,
-  const Matrix<Rows, Cols, Scalar>& rhs
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::operator==(
+  const tarch::la::Matrix<Rows, Cols, Scalar>& lhs,
+  const tarch::la::Matrix<Rows, Cols, Scalar>& rhs
 ) {
   for (int i = 0; i < Rows; i++) {
     for (int j = 0; j < Cols; j++) {
@@ -194,23 +180,19 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::operator==(
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::operator==(
-  const Matrix<2, 2, Scalar>& lhs,
-  const Matrix<2, 2, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return lhsValues[0] == rhsValues[0] && lhsValues[1] == rhsValues[1] && lhsValues[2] == rhsValues[2]
-    && lhsValues[3] == rhsValues[3];
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::operator==(const tarch::la::Matrix<2, 2, Scalar>& lhs, const tarch::la::Matrix<2, 2, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return lhsValues[0] == rhsValues[0] and lhsValues[1] == rhsValues[1] and lhsValues[2] == rhsValues[2]
+    and lhsValues[3] == rhsValues[3];
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::operator==(
-  const Matrix<3, 3, Scalar>& lhs,
-  const Matrix<3, 3, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::operator==(const tarch::la::Matrix<3, 3, Scalar>& lhs, const tarch::la::Matrix<3, 3, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
   for (int i = 0; i < 9; i++) {
     if (lhsValues[i] != rhsValues[i]) {
       return false;
@@ -220,12 +202,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::operator==(
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::operator==(
-  const Matrix<4, 4, Scalar>& lhs,
-  const Matrix<4, 4, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::operator==(const tarch::la::Matrix<4, 4, Scalar>& lhs, const tarch::la::Matrix<4, 4, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
   for (int i = 0; i < 16; i++) {
     if (lhsValues[i] != rhsValues[i]) {
       return false;
@@ -234,15 +214,19 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::operator==(
   return true;
 }
 
+/**
+ * Returns whether every entry of lhs lies within tolerance of its entry of rhs. A NaN entry never does.
+ */
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
-  const Matrix<Rows, Cols, Scalar>& lhs,
-  const Matrix<Rows, Cols, Scalar>& rhs,
-  const Scalar&                     tolerance
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::equals(
+  const tarch::la::Matrix<Rows, Cols, Scalar>& lhs,
+  const tarch::la::Matrix<Rows, Cols, Scalar>& rhs,
+  const Scalar&                                tolerance
 ) {
   for (int i = 0; i < Rows; i++) {
     for (int j = 0; j < Cols; j++) {
-      if (!equals(lhs(i, j), rhs(i, j), tolerance)) {
+      if (not tarch::la::equals(lhs(i, j), rhs(i, j), tolerance)) {
         return false;
       }
     }
@@ -251,27 +235,31 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
-  const Matrix<2, 2, Scalar>& lhs,
-  const Matrix<2, 2, Scalar>& rhs,
-  const Scalar&               tolerance
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::equals(
+  const tarch::la::Matrix<2, 2, Scalar>& lhs,
+  const tarch::la::Matrix<2, 2, Scalar>& rhs,
+  const Scalar&                          tolerance
 ) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return equals(lhsValues[0], rhsValues[0], tolerance) && equals(lhsValues[1], rhsValues[1], tolerance)
-    && equals(lhsValues[2], rhsValues[2], tolerance) && equals(lhsValues[3], rhsValues[3], tolerance);
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::equals(lhsValues[0], rhsValues[0], tolerance)
+    and tarch::la::equals(lhsValues[1], rhsValues[1], tolerance)
+    and tarch::la::equals(lhsValues[2], rhsValues[2], tolerance)
+    and tarch::la::equals(lhsValues[3], rhsValues[3], tolerance);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
-  const Matrix<3, 3, Scalar>& lhs,
-  const Matrix<3, 3, Scalar>& rhs,
-  const Scalar&               tolerance
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::equals(
+  const tarch::la::Matrix<3, 3, Scalar>& lhs,
+  const tarch::la::Matrix<3, 3, Scalar>& rhs,
+  const Scalar&                          tolerance
 ) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
   for (int i = 0; i < 9; i++) {
-    if (!equals(lhsValues[i], rhsValues[i], tolerance)) {
+    if (not tarch::la::equals(lhsValues[i], rhsValues[i], tolerance)) {
       return false;
     }
   }
@@ -279,15 +267,16 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
-  const Matrix<4, 4, Scalar>& lhs,
-  const Matrix<4, 4, Scalar>& rhs,
-  const Scalar&               tolerance
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+tarch::la::equals(
+  const tarch::la::Matrix<4, 4, Scalar>& lhs,
+  const tarch::la::Matrix<4, 4, Scalar>& rhs,
+  const Scalar&                          tolerance
 ) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
   for (int i = 0; i < 16; i++) {
-    if (!equals(lhsValues[i], rhsValues[i], tolerance)) {
+    if (not tarch::la::equals(lhsValues[i], rhsValues[i], tolerance)) {
       return false;
     }
   }
@@ -295,9 +284,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::operator+(
-  const Matrix<Rows, Cols, Scalar>& lhs,
-  const Matrix<Rows, Cols, Scalar>& rhs
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>
+tarch::la::operator+(
+  const tarch::la::Matrix<Rows, Cols, Scalar>& lhs,
+  const tarch::la::Matrix<Rows, Cols, Scalar>& rhs
 ) {
   tarch::la::Matrix<Rows, Cols, Scalar> result;
   for (int i = 0; i < Rows; i++) {
@@ -309,13 +299,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::l
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::operator+(
-  const Matrix<2, 2, Scalar>& lhs,
-  const Matrix<2, 2, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return Matrix<2, 2, Scalar>{
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>
+tarch::la::operator+(const tarch::la::Matrix<2, 2, Scalar>& lhs, const tarch::la::Matrix<2, 2, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::Matrix<2, 2, Scalar>{
     lhsValues[0] + rhsValues[0],
     lhsValues[1] + rhsValues[1],
     lhsValues[2] + rhsValues[2],
@@ -324,13 +312,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::ope
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::operator+(
-  const Matrix<3, 3, Scalar>& lhs,
-  const Matrix<3, 3, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return Matrix<3, 3, Scalar>{
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>
+tarch::la::operator+(const tarch::la::Matrix<3, 3, Scalar>& lhs, const tarch::la::Matrix<3, 3, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::Matrix<3, 3, Scalar>{
     lhsValues[0] + rhsValues[0],
     lhsValues[1] + rhsValues[1],
     lhsValues[2] + rhsValues[2],
@@ -344,13 +330,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::ope
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::operator+(
-  const Matrix<4, 4, Scalar>& lhs,
-  const Matrix<4, 4, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return Matrix<4, 4, Scalar>{
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>
+tarch::la::operator+(const tarch::la::Matrix<4, 4, Scalar>& lhs, const tarch::la::Matrix<4, 4, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::Matrix<4, 4, Scalar>{
     lhsValues[0] + rhsValues[0],
     lhsValues[1] + rhsValues[1],
     lhsValues[2] + rhsValues[2],
@@ -371,9 +355,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::ope
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::operator-(
-  const Matrix<Rows, Cols, Scalar>& lhs,
-  const Matrix<Rows, Cols, Scalar>& rhs
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>
+tarch::la::operator-(
+  const tarch::la::Matrix<Rows, Cols, Scalar>& lhs,
+  const tarch::la::Matrix<Rows, Cols, Scalar>& rhs
 ) {
   tarch::la::Matrix<Rows, Cols, Scalar> result;
   for (int i = 0; i < Rows; i++) {
@@ -385,13 +370,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::l
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::operator-(
-  const Matrix<2, 2, Scalar>& lhs,
-  const Matrix<2, 2, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return Matrix<2, 2, Scalar>{
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>
+tarch::la::operator-(const tarch::la::Matrix<2, 2, Scalar>& lhs, const tarch::la::Matrix<2, 2, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::Matrix<2, 2, Scalar>{
     lhsValues[0] - rhsValues[0],
     lhsValues[1] - rhsValues[1],
     lhsValues[2] - rhsValues[2],
@@ -400,13 +383,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::ope
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::operator-(
-  const Matrix<3, 3, Scalar>& lhs,
-  const Matrix<3, 3, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return Matrix<3, 3, Scalar>{
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>
+tarch::la::operator-(const tarch::la::Matrix<3, 3, Scalar>& lhs, const tarch::la::Matrix<3, 3, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::Matrix<3, 3, Scalar>{
     lhsValues[0] - rhsValues[0],
     lhsValues[1] - rhsValues[1],
     lhsValues[2] - rhsValues[2],
@@ -420,13 +401,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::ope
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::operator-(
-  const Matrix<4, 4, Scalar>& lhs,
-  const Matrix<4, 4, Scalar>& rhs
-) {
-  const Scalar* lhsValues = lhs.data();
-  const Scalar* rhsValues = rhs.data();
-  return Matrix<4, 4, Scalar>{
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>
+tarch::la::operator-(const tarch::la::Matrix<4, 4, Scalar>& lhs, const tarch::la::Matrix<4, 4, Scalar>& rhs) {
+  const Scalar* const lhsValues = lhs.getData();
+  const Scalar* const rhsValues = rhs.getData();
+  return tarch::la::Matrix<4, 4, Scalar>{
     lhsValues[0] - rhsValues[0],
     lhsValues[1] - rhsValues[1],
     lhsValues[2] - rhsValues[2],
@@ -446,17 +425,25 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::ope
   };
 }
 
+/**
+ * Returns the row and column of the first entry pair that differs by more than tolerance, or (-1, -1).
+ * A NaN entry always differs.
+ */
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD std::pair<int, int> tarch::la::equalsReturnIndex(
-  const Matrix<Rows, Cols, Scalar>& lhs,
-  const Matrix<Rows, Cols, Scalar>& rhs,
-  const Scalar&                     tolerance
+INLINE_METHOD GPU_CALLABLE_METHOD std::pair<int, int>
+tarch::la::equalsReturnIndex(
+  const tarch::la::Matrix<Rows, Cols, Scalar>& lhs,
+  const tarch::la::Matrix<Rows, Cols, Scalar>& rhs,
+  const Scalar&                                tolerance
 ) {
   for (int i = 0; i < Rows; i++) {
     for (int j = 0; j < Cols; j++) {
-      if (std::abs(lhs(i, j) - rhs(i, j)) > tolerance)
+      const bool withinTolerance = std::abs(lhs(i, j) - rhs(i, j)) <= tolerance;
+      if (not withinTolerance) {
         return std::pair<int, int>(i, j);
+      }
     }
   }
   return std::pair<int, int>(-1, -1);
 }
+TARGET_DECLARE_END

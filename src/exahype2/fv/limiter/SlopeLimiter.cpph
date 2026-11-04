@@ -1,9 +1,12 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/la/ScalarOperations.h"
+
 TARGET_DECLARE
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Zero::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::Zero::limitedDifference(
   [[maybe_unused]] const ComputePrecision forwardDifference,
   [[maybe_unused]] const ComputePrecision backwardDifference
 ) {
@@ -11,7 +14,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Zero::
 }
 
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Average::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::Average::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {
@@ -19,7 +23,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Averag
 }
 
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Minmod::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::Minmod::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {
@@ -33,50 +38,83 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Minmod
   return forwardMagnitude < backwardMagnitude ? forwardDifference : backwardDifference;
 }
 
+/**
+ * Returns forwardDifference * backwardDifference * (forwardDifference + backwardDifference)
+ * divided by the sum of their squares. Both differences scale by their larger magnitude. The
+ * squares then neither overflow nor underflow.
+ */
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::VanAlbada::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::VanAlbada::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {
-  if (backwardDifference == ComputePrecision(0)) {
+  const ComputePrecision forwardMagnitude =
+    forwardDifference < ComputePrecision(0) ? -forwardDifference : forwardDifference;
+  const ComputePrecision backwardMagnitude =
+    backwardDifference < ComputePrecision(0) ? -backwardDifference : backwardDifference;
+  const ComputePrecision largerMagnitude = forwardMagnitude > backwardMagnitude ? forwardMagnitude : backwardMagnitude;
+  if (largerMagnitude == ComputePrecision(0)) {
     return ComputePrecision(0);
   }
-  const ComputePrecision ratio        = forwardDifference / backwardDifference;
-  const ComputePrecision ratioSquared = ratio * ratio;
-  return (ratioSquared + ratio) / (ratioSquared + ComputePrecision(1)) * backwardDifference;
+  const ComputePrecision scale          = ComputePrecision(1) / largerMagnitude;
+  const ComputePrecision scaledForward  = forwardDifference * scale;
+  const ComputePrecision scaledBackward = backwardDifference * scale;
+  // productRoundedOnce() rounds each square once. Swapped differences then add the same rounded
+  // squares.
+  const ComputePrecision sumOfSquares = tarch::la::productRoundedOnce(scaledForward, scaledForward)
+    + tarch::la::productRoundedOnce(scaledBackward, scaledBackward);
+  return largerMagnitude * (scaledForward * scaledBackward) * (scaledForward + scaledBackward) / sumOfSquares;
 }
 
+/**
+ * Returns the larger of min(2 |forwardDifference|, |backwardDifference|) and
+ * min(|forwardDifference|, 2 |backwardDifference|). The result takes the common sign of both
+ * differences. Differences without a common sign return zero.
+ */
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Superbee::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::Superbee::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {
-  if (backwardDifference == ComputePrecision(0)) {
+  const bool bothPositive = forwardDifference > ComputePrecision(0) and backwardDifference > ComputePrecision(0);
+  const bool bothNegative = forwardDifference < ComputePrecision(0) and backwardDifference < ComputePrecision(0);
+  if (not bothPositive and not bothNegative) {
     return ComputePrecision(0);
   }
-  const ComputePrecision ratio = forwardDifference / backwardDifference;
-  const ComputePrecision steepBranch =
-    ComputePrecision(2) * ratio < ComputePrecision(1) ? ComputePrecision(2) * ratio : ComputePrecision(1);
-  const ComputePrecision flatBranch = ratio < ComputePrecision(2) ? ratio : ComputePrecision(2);
-  const ComputePrecision larger     = steepBranch > flatBranch ? steepBranch : flatBranch;
-  const ComputePrecision phi        = larger > ComputePrecision(0) ? larger : ComputePrecision(0);
-  return phi * backwardDifference;
+  const ComputePrecision forwardMagnitude  = bothNegative ? -forwardDifference : forwardDifference;
+  const ComputePrecision backwardMagnitude = bothNegative ? -backwardDifference : backwardDifference;
+  const ComputePrecision doubleForward     = ComputePrecision(2) * forwardMagnitude;
+  const ComputePrecision doubleBackward    = ComputePrecision(2) * backwardMagnitude;
+  const ComputePrecision steepBranch       = doubleForward < backwardMagnitude ? doubleForward : backwardMagnitude;
+  const ComputePrecision flatBranch        = forwardMagnitude < doubleBackward ? forwardMagnitude : doubleBackward;
+  const ComputePrecision magnitude         = steepBranch > flatBranch ? steepBranch : flatBranch;
+  return bothNegative ? -magnitude : magnitude;
 }
 
+/**
+ * Returns the smaller of the average magnitude and twice the smaller magnitude of both
+ * differences. The result takes the common sign of both differences. Differences without a common
+ * sign return zero.
+ */
 template <typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::MinmodCentral::limitedDifference(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::MinmodCentral::limitedDifference(
   const ComputePrecision forwardDifference,
   const ComputePrecision backwardDifference
 ) {
-  if (backwardDifference == ComputePrecision(0)) {
+  const bool bothPositive = forwardDifference > ComputePrecision(0) and backwardDifference > ComputePrecision(0);
+  const bool bothNegative = forwardDifference < ComputePrecision(0) and backwardDifference < ComputePrecision(0);
+  if (not bothPositive and not bothNegative) {
     return ComputePrecision(0);
   }
-  const ComputePrecision ratio        = forwardDifference / backwardDifference;
-  const ComputePrecision centred      = (ComputePrecision(1) + ratio) / ComputePrecision(2);
-  const ComputePrecision centredOrTwo = centred < ComputePrecision(2) ? centred : ComputePrecision(2);
-  const ComputePrecision clamped =
-    centredOrTwo < ComputePrecision(2) * ratio ? centredOrTwo : ComputePrecision(2) * ratio;
-  const ComputePrecision phi = clamped > ComputePrecision(0) ? clamped : ComputePrecision(0);
-  return phi * backwardDifference;
+  const ComputePrecision forwardMagnitude  = bothNegative ? -forwardDifference : forwardDifference;
+  const ComputePrecision backwardMagnitude = bothNegative ? -backwardDifference : backwardDifference;
+  const ComputePrecision averageMagnitude  = (forwardMagnitude + backwardMagnitude) / ComputePrecision(2);
+  const ComputePrecision smallerMagnitude = forwardMagnitude < backwardMagnitude ? forwardMagnitude : backwardMagnitude;
+  const ComputePrecision doubleSmaller    = ComputePrecision(2) * smallerMagnitude;
+  const ComputePrecision magnitude        = averageMagnitude < doubleSmaller ? averageMagnitude : doubleSmaller;
+  return bothNegative ? -magnitude : magnitude;
 }
 TARGET_DECLARE_END

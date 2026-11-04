@@ -110,7 +110,8 @@ namespace {
 tarch::tasking::tests::TaskGraphTest::TaskGraphTest() :
   tarch::tests::TestCase("tarch::tasking::tests::TaskGraphTest") {}
 
-void tarch::tasking::tests::TaskGraphTest::run() {
+void
+tarch::tasking::tests::TaskGraphTest::run() {
   testMethod([this]() { testSpawnIndependentTask(); });
   testMethod([this]() { testSpawnFunctorTask(); });
   testMethod([this]() { testSpawnTaskWithOutDependency(); });
@@ -126,10 +127,10 @@ void tarch::tasking::tests::TaskGraphTest::run() {
 }
 
 /**
- * Checks that sweeps which hand the runtime the same dependency addresses over
- * and over keep the order between producer and consumer in every sweep.
+ * Producer and consumer keep their order in every sweep that reuses the same dependency addresses.
  */
-void tarch::tasking::tests::TaskGraphTest::testRepeatedSweepsReuseTheSameTokens() {
+void
+tarch::tasking::tests::TaskGraphTest::testRepeatedSweepsReuseTheSameTokens() {
   constexpr int NumberOfSweeps        = 400;
   constexpr int NumberOfTasksPerSweep = 8;
 
@@ -137,8 +138,6 @@ void tarch::tasking::tests::TaskGraphTest::testRepeatedSweepsReuseTheSameTokens(
   std::atomic<int> consumerRunCount{0};
   std::atomic<int> dependencyViolationCount{0};
 
-  // The token addresses stay constant across the loop, so every sweep hands
-  // the runtime the same dependency addresses again.
   std::vector<char>              producerTokens(NumberOfTasksPerSweep);
   char                           consumerToken{0};
   std::vector<std::atomic<bool>> produced(NumberOfTasksPerSweep);
@@ -176,10 +175,10 @@ void tarch::tasking::tests::TaskGraphTest::testRepeatedSweepsReuseTheSameTokens(
 }
 
 /**
- * Checks that a task spawns tasks of its own and waits for them before it
- * returns.
+ * A task waits for the tasks it spawns before it returns.
  */
-void tarch::tasking::tests::TaskGraphTest::testTasksMaySpawnDependentTasks() {
+void
+tarch::tasking::tests::TaskGraphTest::testTasksMaySpawnDependentTasks() {
   constexpr int NumberOfOuterTasks = 8;
   constexpr int NumberOfInnerTasks = 4;
 
@@ -222,7 +221,8 @@ void tarch::tasking::tests::TaskGraphTest::testTasksMaySpawnDependentTasks() {
   validateEquals(innerRunCount.load(), NumberOfOuterTasks * NumberOfInnerTasks);
 }
 
-void tarch::tasking::tests::TaskGraphTest::testSpawnIndependentTask() {
+void
+tarch::tasking::tests::TaskGraphTest::testSpawnIndependentTask() {
   std::atomic<int>   executionCount{0};
   std::vector<char>  completionTokens(NumberOfTasksToExecute);
   std::vector<void*> completionDependencies(NumberOfTasksToExecute);
@@ -234,7 +234,8 @@ void tarch::tasking::tests::TaskGraphTest::testSpawnIndependentTask() {
   validateEquals(executionCount.load(), NumberOfTasksToExecute);
 }
 
-void tarch::tasking::tests::TaskGraphTest::testSpawnFunctorTask() {
+void
+tarch::tasking::tests::TaskGraphTest::testSpawnFunctorTask() {
   std::atomic<int>   executionCount{0};
   std::vector<char>  completionTokens(NumberOfTasksToExecute);
   std::vector<void*> completionDependencies(NumberOfTasksToExecute);
@@ -252,7 +253,8 @@ void tarch::tasking::tests::TaskGraphTest::testSpawnFunctorTask() {
   validateEquals(executionCount.load(), NumberOfTasksToExecute);
 }
 
-void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithOutDependency() {
+void
+tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithOutDependency() {
   std::atomic<int>  executionCount{0};
   std::vector<char> completionTokens(NumberOfTasksToExecute);
 
@@ -267,7 +269,8 @@ void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithOutDependency() {
   validateEquals(executionCount.load(), NumberOfTasksToExecute);
 }
 
-void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithInAndOutDependency() {
+void
+tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithInAndOutDependency() {
   std::atomic<int> producerRunCount{0};
   std::atomic<int> consumerRunCount{0};
   std::atomic<int> dependencyViolationCount{0};
@@ -301,7 +304,8 @@ void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithInAndOutDependency()
   validateEquals(dependencyViolationCount.load(), 0);
 }
 
-void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithMultipleInAndOutDependencies() {
+void
+tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithMultipleInAndOutDependencies() {
   std::atomic<int> producerRunCount{0};
   std::atomic<int> joinRunCount{0};
   std::atomic<int> sinkRunCount{0};
@@ -359,7 +363,8 @@ void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithMultipleInAndOutDepe
   validateEquals(dependencyViolationCount.load(), 0);
 }
 
-void tarch::tasking::tests::TaskGraphTest::testSpawnTaskIgnoresNullAndDuplicateDependencies() {
+void
+tarch::tasking::tests::TaskGraphTest::testSpawnTaskIgnoresNullAndDuplicateDependencies() {
   std::atomic<int> producerRunCount{0};
   std::atomic<int> consumerRunCount{0};
   std::atomic<int> dependencyViolationCount{0};
@@ -388,7 +393,8 @@ void tarch::tasking::tests::TaskGraphTest::testSpawnTaskIgnoresNullAndDuplicateD
   validateEquals(dependencyViolationCount.load(), 0);
 }
 
-void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithManyOutDependencies() {
+void
+tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithManyOutDependencies() {
   std::atomic<int>  producerRunCount{0};
   std::atomic<int>  consumerRunCount{0};
   std::atomic<int>  dependencyViolationCount{0};
@@ -435,7 +441,8 @@ void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithManyOutDependencies(
   validateEquals(dependencyViolationCount.load(), 0);
 }
 
-void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithManyInDependencies() {
+void
+tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithManyInDependencies() {
   for (int delayedProducerIndex = 0; delayedProducerIndex < ManyDependencies; ++delayedProducerIndex) {
     std::atomic<int> producerRunCount{0};
     std::atomic<int> consumerRunCount{0};
@@ -477,7 +484,8 @@ void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithManyInDependencies()
   }
 }
 
-void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithManyInAndOutDependencies() {
+void
+tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithManyInAndOutDependencies() {
   std::atomic<int> producerRunCount{0};
   std::atomic<int> joinRunCount{0};
   std::atomic<int> sinkRunCount{0};
@@ -544,7 +552,8 @@ void tarch::tasking::tests::TaskGraphTest::testSpawnTaskWithManyInAndOutDependen
   validateEquals(dependencyViolationCount.load(), 0);
 }
 
-void tarch::tasking::tests::TaskGraphTest::testWaitForDependencies() {
+void
+tarch::tasking::tests::TaskGraphTest::testWaitForDependencies() {
   constexpr int NumberOfProducers = 8;
 
   std::array<std::atomic<bool>, NumberOfProducers> produced{};

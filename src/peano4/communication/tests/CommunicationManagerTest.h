@@ -8,6 +8,10 @@ namespace peano4::communication::tests {
   class CommunicationManagerTest;
 } // namespace peano4::communication::tests
 
+/**
+ * Checks that the manager reserves the same distinct tags on every rank and completes the transfers
+ * it polls.
+ */
 class peano4::communication::tests::CommunicationManagerTest final : public tarch::tests::TestCase {
 public:
   CommunicationManagerTest();
@@ -20,13 +24,7 @@ public:
   void run() override;
 
 private:
-  void testTagsAreDistinctPerContainerAndMessage();
-  void testTagsAreStableAcrossQueries();
-  void testEveryRankAgreesOnTheTags();
-  void testAnUnchangedRankSetKeepsTheVersion();
-  void testEveryChangedRankSetBumpsTheVersion();
-  void testTheRankSetIsHandedBackUnchanged();
-  void testATopologyWithoutTransfersReportsItselfIdle();
-  void testSweepsAndPollingLeaveTheTopologyAlone();
-  void testATransferReachesTheReceivingSlots();
+  void testTagsAreDistinctAndEveryRankAgrees();
+  void testTheExchangeCommunicatorIsSeparate();
+  void testAPolledTransferCompletes();
 };

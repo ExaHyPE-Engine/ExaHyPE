@@ -1,0 +1,94 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "peano4/Regrid.h"
+
+TARGET_DECLARE
+template <typename Transfer>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::PrepareProlongations<Transfer>::operator()(const int workItem) const {
+  const int entry = workItem / Transfer::PreparationItemsPerChunk;
+  transfer.prepareInterpolation(
+    prolongations[entry].parentSlot,
+    prepared + static_cast<std::ptrdiff_t>(entry) * Transfer::PreparedValuesPerChunk,
+    workItem % Transfer::PreparationItemsPerChunk
+  );
+}
+
+template <typename Transfer>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::PrepareRestrictions<Transfer>::operator()(const int workItem) const {
+  const int entry = workItem / Transfer::PreparationItemsPerChunk;
+  transfer.prepareRestriction(
+    restrictions[entry].childSlots,
+    prepared + static_cast<std::ptrdiff_t>(entry) * Transfer::PreparedValuesPerChunk,
+    workItem % Transfer::PreparationItemsPerChunk
+  );
+}
+
+template <typename Transfer>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::PrepareSentCells<Transfer>::operator()(const int workItem) const {
+  const int                      entry       = workItem / Transfer::PreparationItemsPerChunk;
+  const int                      itemOfChunk = workItem % Transfer::PreparationItemsPerChunk;
+  const peano4::TransferredCell& cell        = cells[entry];
+  double* const target = prepared + static_cast<std::ptrdiff_t>(entry) * Transfer::PreparedValuesPerChunk;
+  if (cell.keptSlot < 0 and cell.parentSlot >= 0) {
+    transfer.prepareInterpolation(cell.parentSlot, target, itemOfChunk);
+  } else if (cell.keptSlot < 0) {
+    transfer.prepareRestriction(cell.childSlots, target, itemOfChunk);
+  }
+}
+
+template <typename T, typename Transfer>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::ProlongChunks<T, Transfer>::operator()(const int workItem) const {
+  const int                   entry        = workItem / Transfer::WorkItemsPerChunk;
+  const peano4::Prolongation& prolongation = prolongations[entry];
+  transfer.interpolateFromParent(
+    prolongation.parentSlot,
+    pool.getChunk(prolongation.childSlot),
+    prolongation.childPosition,
+    workItem % Transfer::WorkItemsPerChunk,
+    prepared + static_cast<std::ptrdiff_t>(entry) * Transfer::PreparedValuesPerChunk
+  );
+}
+
+template <typename T, typename Transfer>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::RestrictChunks<T, Transfer>::operator()(const int workItem) const {
+  const int                  entry       = workItem / Transfer::WorkItemsPerChunk;
+  const peano4::Restriction& restriction = restrictions[entry];
+  transfer.restrictFromChildren(
+    restriction.childSlots,
+    pool.getChunk(restriction.parentSlot),
+    workItem % Transfer::WorkItemsPerChunk,
+    prepared + static_cast<std::ptrdiff_t>(entry) * Transfer::PreparedValuesPerChunk
+  );
+}
+
+template <typename T, typename Transfer>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::GatherChunks<T, Transfer>::operator()(const int workItem) const {
+  const int                      entry       = workItem / Transfer::WorkItemsPerChunk;
+  const int                      itemOfChunk = workItem % Transfer::WorkItemsPerChunk;
+  const peano4::TransferredCell& cell        = cells[entry];
+  T* const                       target      = send + static_cast<std::ptrdiff_t>(entry) * chunkSize;
+  const double* const preparedOfCell = prepared + static_cast<std::ptrdiff_t>(entry) * Transfer::PreparedValuesPerChunk;
+  if (cell.keptSlot >= 0) {
+    transfer.copy(cell.keptSlot, target, itemOfChunk);
+  } else if (cell.parentSlot >= 0) {
+    transfer.interpolateFromParent(cell.parentSlot, target, cell.childPosition, itemOfChunk, preparedOfCell);
+  } else {
+    transfer.restrictFromChildren(cell.childSlots, target, itemOfChunk, preparedOfCell);
+  }
+}
+
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::communication::ScatterChunks<T>::operator()(const int index) const {
+  const int entry                      = index / chunkSize;
+  const int element                    = index - entry * chunkSize;
+  pool.getChunk(slots[entry])[element] = received[index];
+}
+TARGET_DECLARE_END

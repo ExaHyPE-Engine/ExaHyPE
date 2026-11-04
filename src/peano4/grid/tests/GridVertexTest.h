@@ -21,7 +21,6 @@ public:
 
 private:
   void testState();
-  void testRefinedVertices();
   void testTheByteRepresentationCarriesEveryField();
   void testSendAndReceiveInARing();
 };

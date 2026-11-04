@@ -11,11 +11,18 @@ namespace tarch::la::tests {
 class tarch::la::tests::VectorTest final : public tarch::tests::TestCase {
 public:
   VectorTest();
-  ~VectorTest() override = default;
+  VectorTest(const VectorTest& other)            = delete;
+  VectorTest(VectorTest&& other)                 = delete;
+  VectorTest& operator=(const VectorTest& other) = delete;
+  VectorTest& operator=(VectorTest&& other)      = delete;
+  ~VectorTest() override                         = default;
+
   void run() override;
 
 private:
   void testConstruction();
+  void testListConstructionIsAConstantExpression();
+  void testDefaultConstructionZeroesEveryEntry();
   void testAssignment();
   void testVectorOperations();
   void testVectorScalarOperations();
@@ -25,4 +32,7 @@ private:
   void testSpecialisedVectorLayouts();
   void testAdditionalVectorOperations();
   void testSpecialisedVectorMembers();
+  void testNaNComparesUnequal();
+  void testSmallerComparisonsHonourTheTolerance();
+  void testEveryOrderOfTheComponentsKeepsNorm2Squared();
 };

@@ -10,12 +10,13 @@ postprocessing workflows where opening a GUI is inconvenient.
 
 /**
 
-@page documentation_tarch_visualisation_offline-conversion Offline conversion
+@page documentation_tarch_visualisation_formats Snapshot formats
 
-Peano's native block output can be converted after a run into formats that are
-easier to inspect with standard visualisation tools. This workflow is useful
-when a simulation writes compact internal data first and a postprocessing stage
-creates VTU/PVD or related files later.
+VTU writes `.vtu` rank files, a `.pvtu` descriptor per snapshot and a `.pvd`
+time-series index. VTKHDF appends snapshots to one `.vtkhdf` file. HDF5 writes
+`.h5` snapshots with `.xmf` metadata, and NetCDF writes `.nc` snapshots with
+a JSON time-series index. `postprocessing/solution_io.py` reads these files
+directly.
 
 */
 
@@ -23,19 +24,8 @@ creates VTU/PVD or related files later.
 
 @page documentation_tarch_visualisation_paraview ParaView
 
-ParaView is the standard interactive tool for inspecting Peano and ExaHyPE
-outputs. Open the generated `.pvd`, `.vtu`, `.xmf`, or converted output file
-matching the solver's plotting configuration.
-
-*/
-
-/**
-
-@page tarch_patch_file_format Patch file format
-
-Peano's patch output represents Cartesian patches by their offset, size,
-dimension, and associated cell or vertex data. Conversion tools can map this
-patch-oriented data into common VTK formats for visualisation.
+ParaView reads the generated `.pvd`, `.vtu`, `.vtkhdf` or `.xmf` file for
+interactive inspection of the mesh and its fields.
 
 */
 
@@ -43,8 +33,7 @@ patch-oriented data into common VTK formats for visualisation.
 
 @page documentation_tarch_visualisation_probing-data Probing data
 
-Point probes and history outputs are typically written as tabular data. They are
-best inspected with plotting or data-analysis tools rather than volume
-visualisation software.
+Point probes and history outputs are typically written as tabular data. Plotting
+or data-analysis tools read them; volume visualisation software does not.
 
 */

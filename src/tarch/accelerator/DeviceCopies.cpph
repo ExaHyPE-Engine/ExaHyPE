@@ -1,0 +1,36 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/Range.h"
+
+/**
+ * Adds an upload that launches WriteDeviceCopy with hostValue at every call of uploadDeviceCopies().
+ * WriteDeviceCopy writes into getDeviceCopy(). hostValue has to outlive the last call.
+ */
+template <typename WriteDeviceCopy, typename Value>
+INLINE_METHOD bool
+tarch::accelerator::addDeviceCopy([[maybe_unused]] const Value& hostValue) {
+  static_assert(std::is_trivially_copyable_v<Value>, "A copy to the device moves trivially copyable values only.");
+#if (defined(PEANO_WITH_GPU_BACKEND_CUDA) and not defined(__CUDACC__)) \
+  or (defined(PEANO_WITH_GPU_BACKEND_HIP) and not defined(__HIPCC__))
+  return false;
+#else
+  return addDeviceCopyUpload([&hostValue]() {
+    tarch::accelerator::parallelFor(tarch::accelerator::Range(1), WriteDeviceCopy{hostValue});
+  });
+#endif
+}
+
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL) and defined(SYCL_EXT_ONEAPI_DEVICE_GLOBAL)
+#include "tarch/accelerator/sycl/DeviceCopies.cpph"
+#else
+TARGET_DECLARE
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value&
+tarch::accelerator::getDeviceCopy() {
+  static Value deviceCopy{};
+  return deviceCopy;
+}
+TARGET_DECLARE_END
+#endif

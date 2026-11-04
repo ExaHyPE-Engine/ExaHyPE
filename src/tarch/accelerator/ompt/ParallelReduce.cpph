@@ -5,12 +5,46 @@
 
 namespace tarch::accelerator {
   TARGET_DECLARE
-  constexpr int MaxThreadsPerTeam = 1024;
-  // Iterations one team takes of a custom reduction over a flat range.
-  constexpr int CustomTeamChunk = 256;
+  /**
+   * The value of a custom reduction padded to whole eight-byte words. A device reduction over a
+   * value of another size reads it at misaligned addresses.
+   */
+  template <typename Op>
+  struct alignas(8) PaddedReductionValue final {
+    typename Op::ValueType value{};
+  };
+
+  /**
+   * Combines the partial value of every thread of the team into the target of the reducer. The
+   * partial values pass through the team scratch and merge in thread order.
+   */
+  template <typename Reducer>
+  INLINE_METHOD void reduceOverTeam(
+    const OmptTeam&                   team,
+    const typename Reducer::ValueType threadValue,
+    const Reducer                     reducer
+  ) {
+    using ValueType = typename Reducer::ValueType;
+    static_assert(
+      sizeof(ValueType) * OmptThreadsPerTeam <= TeamScratchBytes,
+      "The scratch memory of a team needs room for one reduction value per thread."
+    );
+    ValueType* const partials      = reinterpret_cast<ValueType*>(team.scratch);
+    partials[omp_get_thread_num()] = threadValue;
+#pragma omp barrier
+#pragma omp master
+    {
+      ValueType teamValue = Reducer::identity();
+      for (int thread = 0; thread < omp_get_num_threads(); thread++) {
+        teamValue = Reducer::combine(teamValue, partials[thread]);
+      }
+      reducer.target = Reducer::combine(reducer.target, teamValue);
+    }
+#pragma omp barrier
+  }
 
   template <typename T, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
     const Range&                     range,
     const Functor                    functor,
@@ -29,7 +63,7 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
     const Range&                     range,
     const Functor                    functor,
@@ -48,7 +82,7 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
     const Range&                     range,
     const Functor                    functor,
@@ -65,7 +99,7 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   template <typename Op, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     const OmptTeam&  team,
     const Range&     range,
     const Functor    functor,
@@ -73,8 +107,8 @@ namespace tarch::accelerator {
   ) {
     using ValueType = typename Op::ValueType;
     static_assert(
-      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The custom value exceeds the team scratch."
+      sizeof(ValueType) * OmptThreadsPerTeam <= TeamScratchBytes,
+      "The scratch memory of a team needs room for one reduction value per thread."
     );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for nowait
@@ -96,7 +130,7 @@ namespace tarch::accelerator {
   }
 
   template <typename T, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
     const RangeMD<2>&                range,
     const Functor                    functor,
@@ -117,7 +151,7 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
     const RangeMD<2>&                range,
     const Functor                    functor,
@@ -138,7 +172,7 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
     const RangeMD<2>&                range,
     const Functor                    functor,
@@ -157,7 +191,7 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   template <typename Op, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     const OmptTeam&   team,
     const RangeMD<2>& range,
     const Functor     functor,
@@ -165,8 +199,8 @@ namespace tarch::accelerator {
   ) {
     using ValueType = typename Op::ValueType;
     static_assert(
-      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The custom value exceeds the team scratch."
+      sizeof(ValueType) * OmptThreadsPerTeam <= TeamScratchBytes,
+      "The scratch memory of a team needs room for one reduction value per thread."
     );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for collapse(2) nowait
@@ -190,7 +224,7 @@ namespace tarch::accelerator {
   }
 
   template <typename T, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
     const RangeMD<3>&                range,
     const Functor                    functor,
@@ -213,7 +247,7 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
     const RangeMD<3>&                range,
     const Functor                    functor,
@@ -236,7 +270,7 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const OmptTeam& team,
     const RangeMD<3>&                range,
     const Functor                    functor,
@@ -257,7 +291,7 @@ namespace tarch::accelerator {
 #pragma omp barrier
   }
   template <typename Op, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     const OmptTeam&   team,
     const RangeMD<3>& range,
     const Functor     functor,
@@ -265,8 +299,8 @@ namespace tarch::accelerator {
   ) {
     using ValueType = typename Op::ValueType;
     static_assert(
-      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
-      "The custom value exceeds the team scratch."
+      sizeof(ValueType) * OmptThreadsPerTeam <= TeamScratchBytes,
+      "The scratch memory of a team needs room for one reduction value per thread."
     );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for collapse(3) nowait
@@ -293,74 +327,71 @@ namespace tarch::accelerator {
   TARGET_DECLARE_END
 
   template <typename T, typename Functor>
-  inline void parallelReduce(const Range& range, const Functor functor, const Max<T> reducer) {
+  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Max<T> reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
-    T         accumulator = Max<T>::identity();
-    const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for reduction(max : accumulator) device(device)
-    for (int i = 0; i < range.n; ++i) {
+    T         accumulator   = Max<T>::identity();
+    const int device        = tarch::accelerator::getCurrentDevice();
+    const int numberOfItems = range.n;
+#pragma omp target teams distribute parallel for reduction(max : accumulator) firstprivate(functor) device(device)
+    for (int i = 0; i < numberOfItems; ++i) {
       functor(i, accumulator);
     }
     reducer.target = Max<T>::combine(reducer.target, accumulator);
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(const Range& range, const Functor functor, const Min<T> reducer) {
+  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Min<T> reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
-    T         accumulator = Min<T>::identity();
-    const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for reduction(min : accumulator) device(device)
-    for (int i = 0; i < range.n; ++i) {
+    T         accumulator   = Min<T>::identity();
+    const int device        = tarch::accelerator::getCurrentDevice();
+    const int numberOfItems = range.n;
+#pragma omp target teams distribute parallel for reduction(min : accumulator) firstprivate(functor) device(device)
+    for (int i = 0; i < numberOfItems; ++i) {
       functor(i, accumulator);
     }
     reducer.target = Min<T>::combine(reducer.target, accumulator);
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(const Range& range, const Functor functor, const Sum<T> reducer) {
+  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Sum<T> reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
-    T         accumulator = Sum<T>::identity();
-    const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for reduction(+ : accumulator) device(device)
-    for (int i = 0; i < range.n; ++i) {
+    T         accumulator   = Sum<T>::identity();
+    const int device        = tarch::accelerator::getCurrentDevice();
+    const int numberOfItems = range.n;
+#pragma omp target teams distribute parallel for reduction(+ : accumulator) firstprivate(functor) device(device)
+    for (int i = 0; i < numberOfItems; ++i) {
       functor(i, accumulator);
     }
     reducer.target = Sum<T>::combine(reducer.target, accumulator);
   }
   template <typename Op, typename Functor>
-  inline void parallelReduce(const Range& range, const Functor functor, const Custom<Op> reducer) {
+  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Custom<Op> reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
-    using ValueType         = typename Op::ValueType;
-    const int numberOfTeams = (range.n + CustomTeamChunk - 1) / CustomTeamChunk;
-    const int count         = range.n;
-    parallelReduce(
-      TeamRange(numberOfTeams),
-      [=](const int team, const OmptTeam handle, ValueType& teamAccumulator) {
-        const int first = team * CustomTeamChunk;
-        const int last  = (count - first < CustomTeamChunk) ? count : first + CustomTeamChunk;
-        parallelReduce(
-          handle,
-          Range(last - first),
-          [=](const int i, ValueType& accumulator) { functor(first + i, accumulator); },
-          Custom<Op>{teamAccumulator}
-        );
-      },
-      reducer
-    );
+    using PaddedValue = PaddedReductionValue<Op>;
+#pragma omp declare reduction(custom:PaddedValue : omp_out.value = Custom<Op>::combine(omp_out.value, omp_in.value)) \
+  initializer(omp_priv = PaddedValue{Custom<Op>::identity()})
+    PaddedValue accumulator{Custom<Op>::identity()};
+    const int   device        = tarch::accelerator::getCurrentDevice();
+    const int   numberOfItems = range.n;
+#pragma omp target teams distribute parallel for reduction(custom : accumulator) firstprivate(functor) device(device)
+    for (int i = 0; i < numberOfItems; ++i) {
+      functor(i, accumulator.value);
+    }
+    reducer.target = Custom<Op>::combine(reducer.target, accumulator.value);
   }
 
   template <typename T, typename Functor>
-  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Max<T> reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Max<T> reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
@@ -368,16 +399,19 @@ namespace tarch::accelerator {
     }
     T         accumulator = Max<T>::identity();
     const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(2) reduction(max : accumulator) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
+    const int extentX     = range.n[0];
+    const int extentY     = range.n[1];
+#pragma omp target teams distribute parallel for collapse(2) reduction(max : accumulator) firstprivate(functor) \
+  device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
         functor(x, y, accumulator);
       }
     }
     reducer.target = Max<T>::combine(reducer.target, accumulator);
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Min<T> reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Min<T> reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
@@ -385,16 +419,19 @@ namespace tarch::accelerator {
     }
     T         accumulator = Min<T>::identity();
     const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(2) reduction(min : accumulator) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
+    const int extentX     = range.n[0];
+    const int extentY     = range.n[1];
+#pragma omp target teams distribute parallel for collapse(2) reduction(min : accumulator) firstprivate(functor) \
+  device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
         functor(x, y, accumulator);
       }
     }
     reducer.target = Min<T>::combine(reducer.target, accumulator);
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Sum<T> reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Sum<T> reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
@@ -402,16 +439,19 @@ namespace tarch::accelerator {
     }
     T         accumulator = Sum<T>::identity();
     const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(2) reduction(+ : accumulator) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
+    const int extentX     = range.n[0];
+    const int extentY     = range.n[1];
+#pragma omp target teams distribute parallel for collapse(2) reduction(+ : accumulator) firstprivate(functor) \
+  device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
         functor(x, y, accumulator);
       }
     }
     reducer.target = Sum<T>::combine(reducer.target, accumulator);
   }
   template <typename Op, typename Functor>
-  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Custom<Op> reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Custom<Op> reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
@@ -428,7 +468,7 @@ namespace tarch::accelerator {
   }
 
   template <typename T, typename Functor>
-  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Max<T> reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Max<T> reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -437,10 +477,14 @@ namespace tarch::accelerator {
     }
     T         accumulator = Max<T>::identity();
     const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(3) reduction(max : accumulator) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
-        for (int z = 0; z < range.n[2]; ++z) {
+    const int extentX     = range.n[0];
+    const int extentY     = range.n[1];
+    const int extentZ     = range.n[2];
+#pragma omp target teams distribute parallel for collapse(3) reduction(max : accumulator) firstprivate(functor) \
+  device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
+        for (int z = 0; z < extentZ; ++z) {
           functor(x, y, z, accumulator);
         }
       }
@@ -448,7 +492,7 @@ namespace tarch::accelerator {
     reducer.target = Max<T>::combine(reducer.target, accumulator);
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Min<T> reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Min<T> reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -457,10 +501,14 @@ namespace tarch::accelerator {
     }
     T         accumulator = Min<T>::identity();
     const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(3) reduction(min : accumulator) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
-        for (int z = 0; z < range.n[2]; ++z) {
+    const int extentX     = range.n[0];
+    const int extentY     = range.n[1];
+    const int extentZ     = range.n[2];
+#pragma omp target teams distribute parallel for collapse(3) reduction(min : accumulator) firstprivate(functor) \
+  device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
+        for (int z = 0; z < extentZ; ++z) {
           functor(x, y, z, accumulator);
         }
       }
@@ -468,7 +516,7 @@ namespace tarch::accelerator {
     reducer.target = Min<T>::combine(reducer.target, accumulator);
   }
   template <typename T, typename Functor>
-  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Sum<T> reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Sum<T> reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -477,10 +525,14 @@ namespace tarch::accelerator {
     }
     T         accumulator = Sum<T>::identity();
     const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute parallel for collapse(3) reduction(+ : accumulator) device(device)
-    for (int x = 0; x < range.n[0]; ++x) {
-      for (int y = 0; y < range.n[1]; ++y) {
-        for (int z = 0; z < range.n[2]; ++z) {
+    const int extentX     = range.n[0];
+    const int extentY     = range.n[1];
+    const int extentZ     = range.n[2];
+#pragma omp target teams distribute parallel for collapse(3) reduction(+ : accumulator) firstprivate(functor) \
+  device(device)
+    for (int x = 0; x < extentX; ++x) {
+      for (int y = 0; y < extentY; ++y) {
+        for (int z = 0; z < extentZ; ++z) {
           functor(x, y, z, accumulator);
         }
       }
@@ -488,7 +540,7 @@ namespace tarch::accelerator {
     reducer.target = Sum<T>::combine(reducer.target, accumulator);
   }
   template <typename Op, typename Functor>
-  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Custom<Op> reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Custom<Op> reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -506,91 +558,47 @@ namespace tarch::accelerator {
     );
   }
 
-  template <typename T, typename Functor>
-  inline void parallelReduce(const TeamRange& range, const Functor functor, const Max<T> reducer) {
+  template <typename Reducer, typename Functor>
+  INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
-    T         accumulator = Max<T>::identity();
-    const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute reduction(max : accumulator) device(device)
-    for (int i = 0; i < range.n; ++i) {
-      T                                           teamAccumulator = Max<T>::identity();
-      alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp                         parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
-      {
-        functor(i, tarch::accelerator::OmptTeam{teamScratch}, teamAccumulator);
+    using ValueType                = typename Reducer::ValueType;
+    const int        device        = tarch::accelerator::getCurrentDevice();
+    const int        numberOfTeams = range.n;
+    const int        threads       = tarch::accelerator::getTeamThreads(range.threads);
+    const auto       resultBytes   = static_cast<std::size_t>(range.n) * sizeof(ValueType);
+    ValueType* const teamResults   = static_cast<ValueType*>(tarch::accelerator::lockReductionScratch(resultBytes));
+#pragma omp target teams num_teams(numberOfTeams) thread_limit(threads) is_device_ptr(teamResults) \
+  firstprivate(functor) device(device)
+#pragma omp parallel num_threads(threads)
+    {
+      // A static of a class type with default member initialisers needs an initialisation at run
+      // time. teamAccumulatorBytes therefore stores the accumulator of the team as raw bytes.
+      alignas(PEANO_WITH_ALIGNMENT) static unsigned char teamScratch[TeamScratchBytes];
+      static int                                         teamVotes[OmptThreadsPerTeam];
+      alignas(ValueType) static unsigned char            teamAccumulatorBytes[sizeof(ValueType)];
+#pragma omp allocate(teamScratch, teamVotes, teamAccumulatorBytes) allocator(omp_pteam_mem_alloc)
+      ValueType& teamAccumulator = *std::launder(reinterpret_cast<ValueType*>(teamAccumulatorBytes));
+      for (int team = omp_get_team_num(); team < numberOfTeams; team += omp_get_num_teams()) {
+        if (omp_get_thread_num() == 0) {
+          teamAccumulator = Reducer::identity();
+        }
+#pragma omp barrier
+        functor(team, tarch::accelerator::OmptTeam{teamScratch, teamVotes}, teamAccumulator);
+#pragma omp barrier
+        if (omp_get_thread_num() == 0) {
+          teamResults[team] = teamAccumulator;
+        }
       }
-      accumulator = Max<T>::combine(accumulator, teamAccumulator);
     }
-    reducer.target = Max<T>::combine(reducer.target, accumulator);
-  }
-  template <typename T, typename Functor>
-  inline void parallelReduce(const TeamRange& range, const Functor functor, const Min<T> reducer) {
-    assertion(range.n >= 0, range.n);
-    if (range.n <= 0) {
-      return;
+    auto* const hostResults = static_cast<ValueType*>(tarch::accelerator::getReductionStaging(resultBytes));
+    tarch::copyFrom(teamResults, hostResults, range.n, tarch::MemoryLocation::Device, device);
+    for (int team = 0; team < range.n; team++) {
+      reducer.target = Reducer::combine(reducer.target, hostResults[team]);
     }
-    T         accumulator = Min<T>::identity();
-    const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute reduction(min : accumulator) device(device)
-    for (int i = 0; i < range.n; ++i) {
-      T                                           teamAccumulator = Min<T>::identity();
-      alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp                         parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
-      {
-        functor(i, tarch::accelerator::OmptTeam{teamScratch}, teamAccumulator);
-      }
-      accumulator = Min<T>::combine(accumulator, teamAccumulator);
-    }
-    reducer.target = Min<T>::combine(reducer.target, accumulator);
-  }
-  template <typename T, typename Functor>
-  inline void parallelReduce(const TeamRange& range, const Functor functor, const Sum<T> reducer) {
-    assertion(range.n >= 0, range.n);
-    if (range.n <= 0) {
-      return;
-    }
-    T         accumulator = Sum<T>::identity();
-    const int device      = tarch::accelerator::getCurrentDevice();
-#pragma omp target teams distribute reduction(+ : accumulator) device(device)
-    for (int i = 0; i < range.n; ++i) {
-      T                                           teamAccumulator = Sum<T>::identity();
-      alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp                         parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
-      {
-        functor(i, tarch::accelerator::OmptTeam{teamScratch}, teamAccumulator);
-      }
-      accumulator = Sum<T>::combine(accumulator, teamAccumulator);
-    }
-    reducer.target = Sum<T>::combine(reducer.target, accumulator);
-  }
-  template <typename Op, typename Functor>
-  inline void parallelReduce(const TeamRange& range, const Functor functor, const Custom<Op> reducer) {
-    assertion(range.n >= 0, range.n);
-    if (range.n <= 0) {
-      return;
-    }
-    using ValueType              = typename Op::ValueType;
-    const int        device      = tarch::accelerator::getCurrentDevice();
-    ValueType* const teamResults = tarch::allocateMemory<ValueType>(range.n, tarch::MemoryLocation::Device, device);
-#pragma omp target teams distribute device(device) is_device_ptr(teamResults)
-    for (int i = 0; i < range.n; ++i) {
-      ValueType                                   teamAccumulator = Custom<Op>::identity();
-      alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp                         parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
-      {
-        functor(i, tarch::accelerator::OmptTeam{teamScratch}, teamAccumulator);
-      }
-      teamResults[i] = teamAccumulator;
-    }
-    std::vector<ValueType> hostResults(range.n);
-    tarch::copyFrom(teamResults, hostResults.data(), range.n, tarch::MemoryLocation::Device, device);
-    for (const ValueType& teamResult : hostResults) {
-      reducer.target = Custom<Op>::combine(reducer.target, teamResult);
-    }
-    tarch::freeMemory(teamResults, tarch::MemoryLocation::Device, device);
+    tarch::accelerator::unlockReductionScratch();
   }
 } // namespace tarch::accelerator
 

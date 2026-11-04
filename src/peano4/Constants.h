@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 TARGET_DECLARE
 namespace peano4 {

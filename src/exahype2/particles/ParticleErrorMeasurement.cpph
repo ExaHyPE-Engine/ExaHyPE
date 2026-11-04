@@ -1,0 +1,46 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+
+/**
+ * Records and returns the norms of the position errors of the particles against
+ * SolverType::analyticalSolution(). Every rank calls this function collectively when a snapshot of
+ * measurement is due. The analytical solution writes the exact position into the first DIMENSIONS
+ * entries of its buffer.
+ */
+template <typename SolverType, int NumberOfData>
+INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
+exahype2::particles::measurePositionErrors(
+  ParticleSet<NumberOfData>& particles,
+  const double               timeStamp,
+  const double               timeStepSize,
+  ErrorMeasurement&          measurement
+) {
+  assertion(measurement.isSnapshotDue(timeStamp), timeStamp);
+  constexpr int  NumberOfNorms   = ErrorMeasurement::NumberOfNorms;
+  constexpr auto PositionEntries = []() {
+    std::array<int, DIMENSIONS> entries{};
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      entries[static_cast<std::size_t>(axis)] = axis;
+    }
+    return entries;
+  }();
+  particles.download();
+  std::vector<double> errorsPerParticle(static_cast<std::size_t>(particles.getSize()) * NumberOfNorms, 0.0);
+  for (int index = 0; index < particles.getSize(); index++) {
+    const auto position = particles.getPosition(index);
+    double     values[DIMENSIONS + NumberOfData]{};
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      values[axis] = position(axis);
+    }
+    std::copy_n(particles.getData(index), NumberOfData, values + DIMENSIONS);
+    const Particle particle{values, NumberOfData};
+    double         solution[DIMENSIONS + NumberOfData]{};
+    SolverType::analyticalSolution(&particle, timeStamp, timeStepSize, solution);
+    double errors[NumberOfNorms]{0.0, 0.0, 0.0};
+    accumulateError(PositionEntries, values, solution, 1.0, errors);
+    std::copy_n(errors, NumberOfNorms, errorsPerParticle.data() + static_cast<std::ptrdiff_t>(index) * NumberOfNorms);
+  }
+  return measurement.record(errorsPerParticle, timeStamp);
+}

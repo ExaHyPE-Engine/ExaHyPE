@@ -1,0 +1,305 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "applications/exaskred/AugmentedState.h"
+#include "applications/exaskred/Forcing.h"
+#include "applications/exaskred/Limiting.h"
+#include "applications/exaskred/ShallowWater.h"
+#include "applications/exaskred/WellBalancedRusanov.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
+
+TARGET_DECLARE
+INLINE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::initialCondition(
+  double* const NOALIAS                                         Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+) {
+  static const tarch::reader::NetCDFFieldSampler<2> bathymetrySampler(
+    {{"bathymetry", RuntimeParameters::bathymetryFile()}}
+  );
+
+  // The raster covers the channel only. The mesh covers the enclosing square. The clamped position
+  // continues the depth up to the mesh boundary.
+  const auto                            offset = RuntimeParameters::bathymetryOffset();
+  const auto                            size   = RuntimeParameters::bathymetrySize();
+  tarch::la::Vector<DIMENSIONS, double> rasterPosition;
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    rasterPosition(dimension) = std::clamp(x(dimension), offset(dimension), offset(dimension) + size(dimension));
+  }
+  const double bathymetry = bathymetrySampler.sampleBilinear("bathymetry", rasterPosition);
+
+  Q[Shortcuts::h]      = -std::min(bathymetry, 0.0);
+  Q[Shortcuts::hu]     = 0.0;
+  Q[Shortcuts::hu + 1] = 0.0;
+  Q[Shortcuts::b]      = bathymetry;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
+  const double* const NOALIAS                                   Qinside,
+  double* const NOALIAS                                         Qoutside,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t,
+  const int                                                     normal
+) {
+  for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+    Qoutside[unknown] = Qinside[unknown];
+  }
+  // The channel walls close the domain across its width. The domain stays open along the direction
+  // the disturbance travels. Only the transverse momentum reflects.
+  if (normal != 0) {
+    Qoutside[Shortcuts::hu + 1] = -Qinside[Shortcuts::hu + 1];
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
+applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
+  [[maybe_unused]] const double* const NOALIAS                  Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 t
+) {
+  return ::exahype2::RefinementCommand::Keep;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::flux(
+  const double* const NOALIAS                  Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const NOALIAS                        F
+) {
+  applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
+    Q,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    RuntimeParameters::minimumWaterHeight(),
+    F
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
+  const double* const NOALIAS                  Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal
+) {
+  return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+    Q,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    g,
+    RuntimeParameters::minimumWaterHeight()
+  );
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
+  const double* const NOALIAS                  Q,
+  const double* const NOALIAS                  deltaQ,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  double* const NOALIAS                        BTimesDeltaQ
+) {
+  applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+    Q,
+    deltaQ,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    g,
+    RuntimeParameters::minimumWaterHeight(),
+    BTimesDeltaQ
+  );
+}
+
+/**
+ * Writes the rotation, the bed drag and the atmospheric pressure gradient into S.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
+  const double* const NOALIAS                                   Q,
+  const tarch::la::Vector<DIMENSIONS, double>&                  x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                                  t,
+  [[maybe_unused]] const double                                 dt,
+  double* const NOALIAS                                         S
+) {
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    S[unknown] = 0.0;
+  }
+  const double minimumWaterHeight = RuntimeParameters::minimumWaterHeight();
+  if (not std::isfinite(Q[Shortcuts::h]) or Q[Shortcuts::h] <= minimumWaterHeight) {
+    return;
+  }
+
+  const double coriolis = RuntimeParameters::coriolisParameter();
+  const double friction = applications::exahype2::exaskred::forcing::getManningFriction(
+    Q[Shortcuts::h],
+    Q[Shortcuts::hu],
+    Q[Shortcuts::hu + 1],
+    g,
+    RuntimeParameters::manningCoefficient(),
+    minimumWaterHeight
+  );
+
+  // The pressure disturbance is a sine of one period with a two-step damping. It moves along the
+  // first axis at a fixed speed. The step envelope is constant between its two levels. It adds
+  // nothing to the gradient away from the point where it jumps.
+  const double                          amplitude = RuntimeParameters::pressureAmplitude();
+  const double                          speed     = RuntimeParameters::pressureSpeed();
+  const double                          period    = RuntimeParameters::pressurePeriod();
+  const double                          phase     = (x(0) - 0.75 * speed * period) / speed - t;
+  const double                          envelope  = std::round(2.0 * phase / period);
+  tarch::la::Vector<DIMENSIONS, double> pressureGradient(0.0);
+  if (envelope >= 0.0 and envelope <= 1.0) {
+    const double angularFrequency = 2.0 * std::numbers::pi_v<double> / period;
+    pressureGradient(0) =
+      -amplitude * std::exp(-5.0 * envelope) * std::cos(angularFrequency * phase) * angularFrequency / speed;
+  }
+  const double waterDensity = RuntimeParameters::waterDensity();
+
+  S[Shortcuts::hu] = coriolis * Q[Shortcuts::hu + 1] + friction * Q[Shortcuts::hu]
+    - Q[Shortcuts::h] * pressureGradient(0) / waterDensity;
+  S[Shortcuts::hu + 1] = -coriolis * Q[Shortcuts::hu] + friction * Q[Shortcuts::hu + 1]
+    - Q[Shortcuts::h] * pressureGradient(1) / waterDensity;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
+  const double* const NOALIAS                  QL,
+  const double* const NOALIAS                  QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  [[maybe_unused]] const bool                  isBoundaryFace,
+  [[maybe_unused]] const int                   faceIndex,
+  double* const NOALIAS                        FL,
+  double* const NOALIAS                        FR
+) {
+  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
+    QL,
+    QR,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    g,
+    RuntimeParameters::minimumWaterHeight(),
+    FL,
+    FR
+  );
+}
+
+/**
+ * Returns false where the water is too shallow for the polynomial. A film below the dry threshold
+ * keeps a finite momentum whose velocity grows until the admissible time step underflows. A cell
+ * over ground shallower than the coastal depth switches to the subcell scheme before it dries.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD bool
+applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
+  const double* const NOALIAS                                   Q,
+  const int                                                     numberOfStates,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+) {
+  const double minimumWaterHeight = RuntimeParameters::minimumWaterHeight();
+  if (numberOfStates == 1) {
+    return applications::exahype2::exaskred::limiting::isAdmissibleState<
+      Shortcuts,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables
+    >(Q, minimumWaterHeight);
+  }
+
+  const auto statistics = applications::exahype2::exaskred::limiting::collectCellStatistics<
+    Shortcuts,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  >(Q, numberOfStates);
+  return statistics.finite and statistics.minHeight > minimumWaterHeight
+    and statistics.maxBathymetry <= -RuntimeParameters::coastalDepth();
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
+  double* const NOALIAS       observables,
+  const double* const NOALIAS Q
+) {
+  static_assert(
+    NumberOfObservables <= NumberOfUnknowns,
+    "ExaSkred supports a number_of_dmp_observables up to the number of unknowns only."
+  );
+  for (int observable = 0; observable < NumberOfObservables; observable++) {
+    observables[observable] = Q[observable];
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
+  const double* const NOALIAS                  QL,
+  const double* const NOALIAS                  QR,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    normal,
+  [[maybe_unused]] const bool                  isBoundaryFace,
+  [[maybe_unused]] const int                   faceIndex,
+  double* const NOALIAS                        FL,
+  double* const NOALIAS                        FR
+) {
+  const auto maxEigenvalueOfState = [](
+                                      const double* const NOALIAS                  state,
+                                      const tarch::la::Vector<DIMENSIONS, double>& facePosition,
+                                      const tarch::la::Vector<DIMENSIONS, double>& faceSize,
+                                      const double                                 time,
+                                      const double                                 timeStepSize,
+                                      const int                                    normal
+                                    ) {
+    return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+      state,
+      facePosition,
+      faceSize,
+      time,
+      timeStepSize,
+      normal,
+      g,
+      RuntimeParameters::minimumWaterHeight()
+    );
+  };
+  const auto interfaceGravity =
+    []([[maybe_unused]] const double* const NOALIAS QLeft, [[maybe_unused]] const double* const NOALIAS QRight) {
+      return g;
+    };
+
+  return applications::exahype2::exaskred::riemann::wellBalancedRusanov<
+    Shortcuts,
+    Shortcuts::b,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    DGOrder
+  >(QL, QR, x, h, t, dt, normal, maxEigenvalueOfState, interfaceGravity, FL, FR);
+}
+TARGET_DECLARE_END

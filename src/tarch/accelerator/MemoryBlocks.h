@@ -16,10 +16,10 @@ public:
 
   static MemoryBlocks& getInstance();
 
-  void        clear();
-  void        checkForMemoryLeaks();
-  void        bookmarkMemoryBlock(void* memoryBlock, std::size_t size);
-  void        removeMemoryBlock(void* memoryBlock);
+  void clear();
+  void checkForMemoryLeaks();
+  void bookmarkMemoryBlock(void* memoryBlock, std::size_t size);
+  void removeMemoryBlock(void* memoryBlock);
   std::size_t getSizeOfMemoryBlock(void* memoryBlock) const;
 
 private:

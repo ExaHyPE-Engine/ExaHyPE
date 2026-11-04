@@ -63,11 +63,10 @@ initial_conditions = """
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
-    DGOrder + 1,
+    Quadrature<double>::getQuadraturePoints1D(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    kernels::ADERDGSolver::Quadrature<double>::QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::q]; }
   );
 """
@@ -87,7 +86,6 @@ solver = exahype2.dg.ader.Solver(
 
 solver.set_pde_terms(
     initial_condition=initial_conditions,
-    boundary_conditions=True,
     refinement_criterion=refinement_criterion,
     max_eigenvalue="return 1.0;",
     flux=flux,

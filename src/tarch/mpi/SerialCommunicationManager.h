@@ -9,10 +9,8 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 /**
- * Runs the registered pollers inline whenever progress() is invoked.
- *
- * Nothing progresses between two progress() calls, so a caller that waits for
- * communication has to keep invoking progress() while it waits.
+ * Runs the registered pollers inside progress(). A caller that waits for communication keeps
+ * calling progress().
  */
 class tarch::mpi::SerialCommunicationManager final : public tarch::mpi::AbstractCommunicationManager {
 public:

@@ -98,8 +98,7 @@ project = exahype2.Project(
 
 if project.dimensions != scenario._dimensions:
     raise ValueError(
-        f"Scenario {scenario_name} is {scenario._dimensions}D, but the project "
-        f"was configured for {project.dimensions}D."
+        f"The scenario {scenario_name} runs in {scenario._dimensions}D only."
     )
 
 equation = scenario._equation

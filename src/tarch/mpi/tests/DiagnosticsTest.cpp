@@ -6,9 +6,8 @@
 
 namespace {
   /**
-   * Turns the pending-request table on for one test case and puts the previous
-   * diagnostics configuration back afterwards. Both thresholds are raised beyond
-   * the test case's runtime, so exercising the table neither reports nor aborts.
+   * Switches the pending-request table on for one test and restores the previous configuration in
+   * its destructor. Both thresholds lie beyond the run time of the test.
    */
   class ScopedTracking {
   public:
@@ -39,11 +38,11 @@ namespace {
   };
 
   /**
-   * The table keys on the request handle's address and never hands the handle
-   * to MPI, so a fabricated non-null handle value suffices for the test.
+   * Returns a handle other than MPI_REQUEST_NULL. The table keys on the address of the handle and
+   * never passes the handle to MPI.
    */
   template <typename Request>
-  Request fabricatedHandle() {
+  Request getFabricatedHandle() {
     if constexpr (std::is_pointer_v<Request>) {
       return reinterpret_cast<Request>(static_cast<std::uintptr_t>(0x1));
     } else {
@@ -55,17 +54,21 @@ namespace {
 tarch::mpi::tests::DiagnosticsTest::DiagnosticsTest() :
   tarch::tests::TestCase("tarch::mpi::tests::DiagnosticsTest") {}
 
-void tarch::mpi::tests::DiagnosticsTest::run() {
+void
+tarch::mpi::tests::DiagnosticsTest::run() {
   testMethod(testRegisterReportClear);
   testMethod(testTableSurvivesConcurrentChurn);
 }
 
-/** A registered request is found and named, and a cleared one is gone. */
-void tarch::mpi::tests::DiagnosticsTest::testRegisterReportClear() {
+/**
+ * The table reports a registered request and forgets a cleared one.
+ */
+void
+tarch::mpi::tests::DiagnosticsTest::testRegisterReportClear() {
   const ScopedTracking tracking;
   auto&                diagnostics = tarch::mpi::Diagnostics::getInstance();
 
-  const MPI_Request registeredRequest = fabricatedHandle<MPI_Request>();
+  const MPI_Request registeredRequest = getFabricatedHandle<MPI_Request>();
   diagnostics.registerRequest(&registeredRequest, "MPI_Isend", 3, 7, std::source_location::current());
   validate(diagnostics.reportRequest(&registeredRequest, "MPI_Wait", std::source_location::current()));
 
@@ -74,10 +77,10 @@ void tarch::mpi::tests::DiagnosticsTest::testRegisterReportClear() {
 }
 
 /**
- * Two threads register, report and clear disjoint request sets concurrently,
- * and the lock-free slot protocol loses, duplicates or strands no entry.
+ * Two threads that register, report and clear disjoint requests leave no stale entry behind.
  */
-void tarch::mpi::tests::DiagnosticsTest::testTableSurvivesConcurrentChurn() {
+void
+tarch::mpi::tests::DiagnosticsTest::testTableSurvivesConcurrentChurn() {
   const ScopedTracking tracking;
   auto&                diagnostics = tarch::mpi::Diagnostics::getInstance();
 
@@ -100,8 +103,8 @@ void tarch::mpi::tests::DiagnosticsTest::testTableSurvivesConcurrentChurn() {
 
   std::array<MPI_Request, RequestsPerThread> mainThreadRequests;
   std::array<MPI_Request, RequestsPerThread> partnerThreadRequests;
-  mainThreadRequests.fill(fabricatedHandle<MPI_Request>());
-  partnerThreadRequests.fill(fabricatedHandle<MPI_Request>());
+  mainThreadRequests.fill(getFabricatedHandle<MPI_Request>());
+  partnerThreadRequests.fill(getFabricatedHandle<MPI_Request>());
 
   std::thread partnerThread(exerciseRequestTable, std::ref(partnerThreadRequests));
   exerciseRequestTable(mainThreadRequests);

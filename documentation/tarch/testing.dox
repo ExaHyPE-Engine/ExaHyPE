@@ -3,11 +3,9 @@
 \page tarch_tests Unit tests
 
 
-Peano introduces its own lightweight test concept with picks up best
-practices from the JUnit world. While it is simple and has no external
-dependencies (all test routines are collected within the `tarch`
-subdirectory), it provides a few macros to handle numeric data---which
-might be convenient for AMR applications; so there's some added value.
+Peano introduces its own lightweight test concept that picks up best
+practices from the JUnit world. The `tarch` subdirectory contains all
+test routines. The test concept provides macros for numeric data.
 It also provides test routines for vectors.
 
 
@@ -25,24 +23,20 @@ arguments that run the individual tests. A minimalistic test thus looks
 as follows:
 
 ~~~~~~~~~~~~~~~~~
-namespace myproject {
-  namespace tests {
-    class TestCase;
-  }
+namespace myproject::tests {
+  class TestCase;
 }
 
-class myproject::tests::TestCase : public tarch::tests::TestCase {
-  private:
-    /**
-     * These operations implement the real tests.
-     */
-    void test1();
-    void test2();
-  public:
-    TestCase();
-    virtual ~TestCase();
+class myproject::tests::TestCase final : public tarch::tests::TestCase {
+public:
+  TestCase();
+  ~TestCase() override = default;
 
-    void run() override;
+  void run() override;
+
+private:
+  void test1();
+  void test2();
 };
 ~~~~~~~~~~~~~~~~~
 
@@ -50,7 +44,7 @@ The test's `run` operation has to register the individual void routines
 running the actual tests:
 
 ~~~~~~~~~~~~~~~~~
-void exahype::tests::TestCase::run() {
+void myproject::tests::TestCase::run() {
   testMethod(test1);
   testMethod(test2);
 }
@@ -84,21 +78,7 @@ unitTestsErrors += tests->getNumberOfErrors();
 delete tests;
 ~~~~~~~~~~~~~~~~~
 
-one per component (tarch, peano4, exahype2 and runner). It returns
-an output similar to
-
-~~~~~~~~~~~~~~~~~
-Running test case collection "exahype2.tests.c" ...... ok
-Running test case collection "exahype2.tests.solvers" .. ok
-Running test case collection "exahype2.tests" .... ok
-Running test case collection "peano4.grid.tests" ............... ok
-Running test case collection "peano4.grid" ok
-Running test case collection "peano4.heap.tests" .. ok
-Running test case collection "peano4.heap" ok
-Running test case collection "peano4" ok
-Running test case collection "tarch" ok
-Running global test case collection ok
-~~~~~~~~~~~~~~~~~
+for each library's suite.
 
 The output returns a hierarchical overview over all tests ran. The
 number of dots per package identifies the number of actual test

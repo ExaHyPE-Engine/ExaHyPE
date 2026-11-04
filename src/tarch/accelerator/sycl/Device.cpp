@@ -16,7 +16,8 @@ namespace {
   std::map<int, sycl::queue> syclQueues;
 } // namespace
 
-bool tarch::accelerator::Device::init() {
+bool
+tarch::accelerator::Device::init() {
   auto         platforms           = sycl::platform::get_platforms();
   unsigned int physicalDeviceIndex = 0;
   unsigned int logicalDeviceIndex  = 0;
@@ -48,24 +49,66 @@ bool tarch::accelerator::Device::init() {
   }
 
   if (syclQueues.empty()) {
-    tarch::terminateWithError("No accelerator devices found. Please check your driver installation.");
+    tarch::terminateWithError("The SYCL runtime needs an accelerator device with a working driver.");
   }
 
   return isInitialised();
 }
 
-void tarch::accelerator::Device::shutdown() {
+void
+tarch::accelerator::Device::shutdown() {
   for (auto& queue : syclQueues) {
     queue.second.wait();
   }
+  tarch::accelerator::releaseReductionScratch();
   syclQueues.clear();
 }
 
-bool tarch::accelerator::Device::isInitialised() const { return not syclQueues.empty(); }
+bool
+tarch::accelerator::Device::isInitialised() const {
+  return not syclQueues.empty();
+}
 
-int tarch::accelerator::Device::getNumberOfDevices() const { return static_cast<int>(syclQueues.size()); }
+int
+tarch::accelerator::Device::getNumberOfDevices() const {
+  return static_cast<int>(syclQueues.size());
+}
 
-void* tarch::accelerator::getSYCLQueue(int number) {
+/**
+ * Returns the work items the current device runs at once. These are its compute units times the
+ * largest work group of one compute unit.
+ */
+int
+tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
+  const sycl::device device = syclQueues[tarch::accelerator::getCurrentDevice()].get_device();
+  const auto         units  = static_cast<int>(device.get_info<sycl::info::device::max_compute_units>());
+  const auto         items  = static_cast<int>(device.get_info<sycl::info::device::max_work_group_size>());
+  return std::max(1, units * items);
+}
+
+/**
+ * Returns std::nullopt. The MPI query is vendor-specific and SYCL does not name the vendor of the
+ * device.
+ */
+std::optional<bool>
+tarch::accelerator::Device::isMPIGPUAware() const {
+  return std::nullopt;
+}
+
+/**
+ * Returns an empty string. SYCL does not report the physical address of a device.
+ */
+std::string
+tarch::accelerator::Device::getIdOfCurrentDevice() const {
+  return {};
+}
+
+/**
+ * Returns the queue of a logical device number. The logical number counts the GPUs only and
+ * differs from the physical device number.
+ */
+void*
+tarch::accelerator::getSYCLQueue(int number) {
   assertion(syclQueues.count(number) == 1, number);
   return &syclQueues[number];
 }

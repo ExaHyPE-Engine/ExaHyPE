@@ -4,31 +4,26 @@
 
 \tableofcontents
 
-The generated main is a small adapter between an application's repositories
-and runner::launch(). It registers the algorithmic steps and lets the runner
-own initialisation, phase ordering, rank coordination, reporting, and
-shutdown.
+The generated main is a small adapter between the generated solver repository
+and exahype2::runner::Runner::launch(). The runner owns initialisation, the
+phase order, the rank coordination, the reporting and the shutdown.
 
-# Registered steps
+# Repository callbacks
 
-Each generated observer becomes one `runner::Step`. Its body follows this
-lifecycle:
+The generated `SolverRepository` contains one instance of every solver of the
+project. Its free functions forward every phase to every solver, and the main
+collects them in an exahype2::runner::SolverRepositoryCallbacks record:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-observers::TimeStep::prepareTraversal();
-observers::TimeStep observer;
-peano4::topology::TopologyManager::getInstance().traverse(observer);
-observers::TimeStep::unprepareTraversal();
+result.allocate        = ::project::allocate;
+result.initialise      = ::project::initialise;
+result.performTimeStep = ::project::performTimeStep;
+result.migrate         = ::project::migrate;
+result.plot            = ::project::plot;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-`prepareTraversal()` and `unprepareTraversal()` run once per rank and step.
-The topology manager creates the observer clones required by the rank traversal
-and its subtree tasks. The call returns after all clones finish and the
-rank-boundary payloads for that sweep have been submitted.
-
-The generated StepRepository maps each generated step enumeration to the
-integer program-step identifier distributed by runner::RunControl.
-Every rank registers the same ordered step list.
+The record also names the parameter loading, the help text, the memory
+accounting, the refinement votes and the statistics getters of the solvers.
 
 # Launch
 
@@ -36,7 +31,7 @@ The generated entry point has the following shape:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 int main(int argc, char** argv) {
-  runner::RuntimeParameters::getInstance().setGeneratedDefaults(
+  ::exahype2::runner::RuntimeParameters::getInstance().setGeneratedDefaults(
     minimumTerminalTime,
     maximumTerminalTime,
     gridLevels,
@@ -44,42 +39,32 @@ int main(int argc, char** argv) {
     projectName
   );
 
-  return runner::launch(
+  return ::exahype2::runner::Runner::launch(
     DomainOffset,
     DomainSize,
     PeriodicBoundaries,
     createRepositoryCallbacks(),
-    createSteps(),
     argc,
     argv
   );
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-runner::launch() configures the runtime parameters, initialises tarch and
-Peano, constructs runner::Engine, and performs the matching shutdown sequence.
-The repository callbacks connect application-specific parameter loading,
-memory accounting, help text, and repository shutdown to this lifecycle.
+`launch()` reads the runtime parameters, initialises tarch and Peano, builds
+the grid, runs the phases and performs the matching shutdown sequence.
 
 # SPMD control flow
 
-runner::Engine gives the global master to runner::Orchestrator. The
-orchestrator runs configuration, grid construction, grid initialisation, time
-loop, dynamic AMR, and final reporting phases as required by the registered
-steps. Before each step, the master publishes its program-step identifier.
-Worker ranks receive the identifier through
-runner::RunControl::continueToRun() and execute the same registered
-body. The terminate identifier ends every worker loop.
-
-A step therefore has one collective ordering across the MPI ranks. Custom
-work outside the registered body must preserve that ordering whenever it uses
-MPI or mesh-bound data.
+Every rank runs the same phase. The global master decides the next step and
+exahype2::runner::Runner::exchangeStep() distributes it with one allreduce, so
+a phase has one collective order across the MPI ranks. Application code that
+uses MPI or mesh data runs inside a solver phase and keeps that order.
 
 # Python API
 
-The Python API builds the step list from the project's solver steps. It emits
-the observers and repositories and assigns stable enumerators through
-StepRepository. Application code normally adds action sets and callbacks to
-these generated steps.
+The Python API emits the solver classes, the solver repository, the runtime
+parameters and the main routine from the project description. Application
+code adds PDE terms, hooks and tracers to the solvers; there is no generated
+step list to extend.
 
 */

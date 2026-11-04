@@ -3,8 +3,11 @@
 #pragma once
 
 namespace tarch::database {
+  enum class SnapshotRule;
   class SnapshotDatabase;
 } // namespace tarch::database
+
+enum class tarch::database::SnapshotRule { Deltas, EveryLaterTimestamp };
 
 class tarch::database::SnapshotDatabase {
 public:
@@ -20,17 +23,16 @@ public:
   void setOutputFileName(const std::string& filename);
   void setOutputPrecision(int precision);
   void setTimeDeltaBetweenTwoSnapshots(double value);
+  void setSnapshotRule(tarch::database::SnapshotRule rule);
 
 protected:
   std::string _fileName{};
 
-  double _timeDelta{0.0};
+  double                        _timeDelta{0.0};
+  tarch::database::SnapshotRule _snapshotRule{tarch::database::SnapshotRule::Deltas};
 
   int  _precision{0};
-  bool _deltasAreRelative{false};
   bool _csvHeaderWritten{false};
-
-  static constexpr double DeltaCutoffThreshold = 1e-6;
 
   enum class AddSnapshotAction { Ignore, Append, Replace };
 
@@ -41,13 +43,11 @@ protected:
     Snapshot(double timestamp, int numberOfDataEntries);
   };
 
-  int _rank{-1};
-
   std::mutex _mutex{};
 
-  SnapshotDatabase(double timeDelta, bool deltasAreRelative);
+  explicit SnapshotDatabase(double timeDelta);
 
-  virtual std::string outputFileName() const;
+  virtual std::string getOutputFileName() const;
 
   virtual void prepareOutputStream(std::ostream& file) const = 0;
   virtual void writeHeader(std::ostream& file) const         = 0;

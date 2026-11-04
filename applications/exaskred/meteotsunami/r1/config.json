@@ -5,6 +5,5 @@
   "numberOfSnapshots": 0,
   "outputPath": "solutions",
   "timeStepLogInterval": 10.0,
-  "targetDevice": 0,
   "bathymetryFile": "bathymetry/R1BathymetryDepth50m.nc"
 }

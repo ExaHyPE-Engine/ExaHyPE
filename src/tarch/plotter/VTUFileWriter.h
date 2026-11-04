@@ -8,20 +8,31 @@ namespace tarch::plotter {
   class VTUFileWriter;
 } // namespace tarch::plotter
 
+/**
+ * Writes one .vtu file per rank and one .pvtu file per snapshot. The .pvd file lists the snapshots
+ * of the series.
+ */
 class tarch::plotter::VTUFileWriter final : public tarch::plotter::FileWriter {
 public:
-  explicit VTUFileWriter(const std::string& outputDirectory);
-  VTUFileWriter(const VTUFileWriter&)            = delete;
-  VTUFileWriter(VTUFileWriter&&)                 = delete;
-  VTUFileWriter& operator=(const VTUFileWriter&) = delete;
-  VTUFileWriter& operator=(VTUFileWriter&&)      = delete;
-  ~VTUFileWriter() override                      = default;
+  VTUFileWriter()                                      = default;
+  VTUFileWriter(const VTUFileWriter& other)            = delete;
+  VTUFileWriter(VTUFileWriter&& other)                 = delete;
+  VTUFileWriter& operator=(const VTUFileWriter& other) = delete;
+  VTUFileWriter& operator=(VTUFileWriter&& other)      = delete;
+  ~VTUFileWriter() override                            = default;
 
-  bool writeToFile(const std::string& filename, const double time) override;
-
-  std::string getFileExtension() const override;
+  void write(const Mesh& mesh, const std::string& outputDirectory, const std::string& filename, double time) override;
+  [[nodiscard]] Format getFormat() const override;
 
 private:
-  void writeVTU(const std::string& filename) const;
-  void writePVTU(const std::string& filename) const;
+  struct Snapshot final {
+    double      time{0.0};
+    std::string file{};
+  };
+
+  static void writeVTU(const Mesh& mesh, const std::filesystem::path& filePath);
+  static void writePVTU(const Mesh& mesh, const std::filesystem::path& filePath, const std::string& snapshotName);
+  void writePVD(const std::filesystem::path& filePath) const;
+
+  std::vector<Snapshot> _snapshots{};
 };

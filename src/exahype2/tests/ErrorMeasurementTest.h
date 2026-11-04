@@ -11,17 +11,21 @@ namespace exahype2::tests {
 class exahype2::tests::ErrorMeasurementTest final : public tarch::tests::TestCase {
 public:
   ErrorMeasurementTest();
-  ErrorMeasurementTest(const ErrorMeasurementTest&)            = delete;
-  ErrorMeasurementTest(ErrorMeasurementTest&&)                 = delete;
-  ErrorMeasurementTest& operator=(const ErrorMeasurementTest&) = delete;
-  ErrorMeasurementTest& operator=(ErrorMeasurementTest&&)      = delete;
-  ~ErrorMeasurementTest() override                             = default;
+  ErrorMeasurementTest(const ErrorMeasurementTest& other)            = delete;
+  ErrorMeasurementTest(ErrorMeasurementTest&& other)                 = delete;
+  ErrorMeasurementTest& operator=(const ErrorMeasurementTest& other) = delete;
+  ErrorMeasurementTest& operator=(ErrorMeasurementTest&& other)      = delete;
+  ~ErrorMeasurementTest() override                                   = default;
 
   void run() override;
 
 private:
-  void testReductionSumsTheIntegralNormsAndTakesTheMaximumAcrossRanks();
+  void testRecordSumsTheIntegralNormsAndTakesTheMaximumAcrossRanks();
+  void testDeviceSumsMatchTheHostSumsWhateverTheCellOrder();
+  void testRecordIsExactAcrossRankPartitions();
   void testAccumulationWeightsTheMeasuredUnknownsOnly();
   void testSolutionErrorComparesAgainstTheAnalyticalSolutionAtTheDegreeOfFreedom();
-  void testRecordedSolutionErrorReachesTheMeasurement();
+  void testEveryRankFindsASnapshotDueForTheNewestTimeStampAndAfterTheTimeDelta();
+  void testEveryLaterTimeStampIsDueBeforeTheTimeDelta();
+  void testTheOwnedBufferSumsTheErrorsOfEveryCell();
 };

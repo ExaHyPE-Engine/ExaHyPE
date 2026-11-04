@@ -3,15 +3,16 @@
 #include "ADERDGSolver.h"
 
 namespace {
-  constexpr double Rho        = 1.0;                      // density
-  constexpr double Cp         = 2.0;                      // P-wave (compressional) speed
-  constexpr double Cs         = 1.0;                      // S-wave (shear) speed
+  constexpr double Rho        = 1.0;
+  constexpr double Cp         = 2.0;                      // Compressional wave speed
+  constexpr double Cs         = 1.0;                      // Shear wave speed
   constexpr double Mu         = Rho * Cs * Cs;            // Lamé parameter mu
   constexpr double Lambda     = Rho * Cp * Cp - 2.0 * Mu; // Lamé parameter lambda
   constexpr double InverseRho = 1.0 / Rho;
 } // namespace
 
-void tutorials::exahype2::elastic::ADERDGSolver::initialCondition(
+void
+tutorials::exahype2::elastic::ADERDGSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize
@@ -27,7 +28,8 @@ void tutorials::exahype2::elastic::ADERDGSolver::initialCondition(
   Q[Shortcuts::sigma + 2] = bump; // sigma_zz
 }
 
-void tutorials::exahype2::elastic::ADERDGSolver::boundaryConditions(
+void
+tutorials::exahype2::elastic::ADERDGSolver::boundaryConditions(
   const double* const NOALIAS                  Qinside,
   double* const NOALIAS                        Qoutside,
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
@@ -40,7 +42,8 @@ void tutorials::exahype2::elastic::ADERDGSolver::boundaryConditions(
   }
 }
 
-double tutorials::exahype2::elastic::ADERDGSolver::maxEigenvalue(
+double
+tutorials::exahype2::elastic::ADERDGSolver::maxEigenvalue(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
@@ -51,7 +54,8 @@ double tutorials::exahype2::elastic::ADERDGSolver::maxEigenvalue(
   return Cp;
 }
 
-void tutorials::exahype2::elastic::ADERDGSolver::flux(
+void
+tutorials::exahype2::elastic::ADERDGSolver::flux(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,

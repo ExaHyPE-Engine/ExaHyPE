@@ -4,36 +4,46 @@
 
 #include "tarch/Termination.h"
 #include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/DeviceCopies.h"
 #include "tarch/accelerator/MemoryBlocks.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/AbstractCommunicationManager.h"
 #include "tarch/mpi/Diagnostics.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/tasking/Runtime.h"
 
-void tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
+void
+tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
   if (tarch::mpi::Rank::getInstance().init(argc, argv)) {
     tarch::mpi::Diagnostics::getInstance().setTimeoutWarning(configuration.mpiTimeoutWarning);
     tarch::mpi::Diagnostics::getInstance().setDeadlockTimeout(configuration.mpiDeadlockTimeout);
     tarch::mpi::Diagnostics::getInstance().setRequestTracking(configuration.mpiRequestTrackingEnabled);
   } else {
-    tarch::terminateWithError("Cannot initialise parallel environment.");
+    tarch::terminateWithError("The MPI library cannot start.");
   }
 
-  // The communication thread reserves one core, so this call runs before the task runtime sizes
-  // its team.
+  // The communication thread reserves one core before the task runtime sizes its team.
   tarch::mpi::AbstractCommunicationManager::configure(configuration.communicationThreadEnabled);
 
   if (not tarch::tasking::Runtime::getInstance().init()) {
-    tarch::terminateWithError("Cannot initialise multithreading environment.");
+    tarch::terminateWithError("The task runtime cannot start.");
   }
 
   if (not tarch::accelerator::Device::getInstance().init()) {
-    tarch::terminateWithError("Cannot initialise accelerator environment.");
+    tarch::terminateWithError("The accelerator runtime cannot start.");
   }
+  // The ranks of a node take its devices in turn. Every later buffer allocates on the device that
+  // is current.
+  const int numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
+  if (numberOfDevices > 0) {
+    tarch::accelerator::setCurrentDevice(tarch::mpi::Rank::getInstance().getRankOnNode() % numberOfDevices);
+  }
+  tarch::accelerator::uploadDeviceCopies();
 }
 
-void tarch::shutdown() {
+void
+tarch::shutdown() {
   tarch::accelerator::Device::getInstance().shutdown();
 #if PEANO_DEBUG
   tarch::accelerator::MemoryBlocks::getInstance().checkForMemoryLeaks();

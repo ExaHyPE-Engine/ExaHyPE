@@ -28,11 +28,11 @@ public:
   ExecutionPolicy(int gridSize, int blockSize, std::size_t sharedMemBytes, cudaStream_t stream);
   ~ExecutionPolicy() = default;
 
-  int          getConfigState() const;
-  int          getGridSize() const;
-  int          getBlockSize() const;
-  int          getMaxBlockSize() const;
-  std::size_t  getSharedMemBytes() const;
+  int getConfigState() const;
+  int getGridSize() const;
+  int getBlockSize() const;
+  int getMaxBlockSize() const;
+  std::size_t getSharedMemBytes() const;
   cudaStream_t getStream() const;
 
   void setGridSize(int size);
@@ -41,7 +41,7 @@ public:
   void setSharedMemBytes(std::size_t bytes);
   void setStream(cudaStream_t stream);
 
-  static std::size_t availableSharedBytesPerBlock(
+  static std::size_t getAvailableSharedBytesPerBlock(
     std::size_t sharedMemPerMultiprocessor,
     std::size_t sharedSizeBytesStatic,
     int         blocksPerSM,
@@ -56,7 +56,7 @@ public:
       return cudaSuccess;
     }
 
-    const cudaDeviceProp* properties = &DevicePropertiesCache::get();
+    const cudaDeviceProp* properties = &DevicePropertiesCache::getProperties();
 
     cudaFuncAttributes attributes;
     cudaOccDeviceProp  occupancyProperties(*properties);
@@ -113,7 +113,7 @@ public:
       if (granularityOccupancy != CUDA_OCC_SUCCESS) {
         return cudaErrorInvalidConfiguration;
       }
-      const std::size_t bytesPerBlock = availableSharedBytesPerBlock(
+      const std::size_t bytesPerBlock = getAvailableSharedBytesPerBlock(
         properties->sharedMemPerBlock,
         attributes.sharedSizeBytes,
         __occDivideRoundUp(getGridSize(), numberOfMultiprocessors),

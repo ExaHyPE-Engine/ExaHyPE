@@ -2,54 +2,39 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/plotter/Piece.h"
-#include "peano4/dataview/VertexMarker.h"
-#include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/la/ScalarOperations.h"
-#include "tarch/la/Vector.h"
+#include "tarch/plotter/FileWriter.h"
+#include "tarch/plotter/Format.h"
 
 namespace exahype2::plotter {
   class ParticlePlotter;
-
-  INLINE_METHOD bool isAtUpperPeriodicBoundary(
-    const peano4::dataview::VertexMarker&        marker,
-    const std::bitset<DIMENSIONS>&               periodicBoundaries,
-    const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-    const tarch::la::Vector<DIMENSIONS, double>& domainWidth
-  );
 } // namespace exahype2::plotter
 
 /**
- * Writes one plot point per particle of a vertex. Each attribute of a particle becomes one cell
- * field, and the caller writes its values through the plotter the attribute's index names.
+ * Writes the particles of a rank into the snapshots of a plot series, one plot point per particle.
  */
 class exahype2::plotter::ParticlePlotter final {
 public:
-  ParticlePlotter()                                  = default;
-  ParticlePlotter(const ParticlePlotter&)            = delete;
-  ParticlePlotter(ParticlePlotter&&)                 = delete;
-  ParticlePlotter& operator=(const ParticlePlotter&) = delete;
-  ParticlePlotter& operator=(ParticlePlotter&&)      = delete;
-  ~ParticlePlotter()                                 = default;
+  INLINE_METHOD explicit ParticlePlotter(std::string filename);
+  ParticlePlotter(const ParticlePlotter& other)            = delete;
+  ParticlePlotter(ParticlePlotter&& other)                 = delete;
+  ParticlePlotter& operator=(const ParticlePlotter& other) = delete;
+  ParticlePlotter& operator=(ParticlePlotter&& other)      = delete;
+  ~ParticlePlotter()                                       = default;
 
-  void open(Snapshot& snapshot, int treeId, const std::vector<DataField>& attributes);
-
-  [[nodiscard]] INLINE_METHOD tarch::plotter::FileWriter::CellDataPlotter& getAttributePlotter(int index);
-
-  template <typename ParticleSet, typename AttributePlots>
-  INLINE_METHOD void plotParticles(
-    const peano4::dataview::VertexMarker&        marker,
-    ParticleSet&                                 particles,
-    const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-    const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
-    const std::bitset<DIMENSIONS>&               periodicBoundaries,
-    AttributePlots                               attributePlots
+  template <typename Particles>
+  INLINE_METHOD void plot(
+    Particles&             particles,
+    double                 timeStamp,
+    tarch::plotter::Format format,
+    const std::string&     outputDirectory
   );
 
 private:
-  Piece                                                                     _piece{};
-  std::vector<std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter>> _attributePlotters{};
+  static constexpr const char* OutputSubdirectory = "particle/";
+
+  std::string                                 _filename;
+  std::unique_ptr<tarch::plotter::FileWriter> _fileWriter{};
 };
 
 #include "exahype2/plotter/ParticlePlotter.cpph"

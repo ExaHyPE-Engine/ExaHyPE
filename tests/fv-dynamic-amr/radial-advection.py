@@ -35,7 +35,7 @@ project = exahype2.Project(
     project_name="RadialAdvection",
     dimensions=2,
     size=[2.0, 2.0, 2.0],
-    offset=[0.0, 0.0, 0.0],
+    offset=[-1.0, -1.0, -1.0],
     periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
@@ -44,7 +44,7 @@ project = exahype2.Project(
 )
 
 initial_conditions = """
-  const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> centre(0.0);
   constexpr double Radius = 0.15;
   Q[Shortcuts::rho] = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 1.0 : 0.0;
 """
@@ -56,21 +56,20 @@ boundary_conditions = """
 """
 
 flux = """
-  const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> centre(0.0);
   const tarch::la::Vector<DIMENSIONS, double> radialOffset = x - centre;
   const double radius = tarch::la::norm2(radialOffset);
   F[Shortcuts::rho] = (radius > 0.0 ? radialOffset(normal) / radius : 0.0) * Q[Shortcuts::rho];
 """
 
-# The unit offset keeps relative detail bounded where density is zero.
+# The unit offset bounds the relative detail where the density is zero.
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
-    NumberOfFiniteVolumesPerAxisPerPatch,
+    ::exahype2::getVolumeCentresInUnitInterval<PatchSize>(),
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    nullptr,
     [](const double* const values) { return 1.0 + values[Shortcuts::rho]; }
   );
 """

@@ -34,7 +34,7 @@ def inverse(matrix):
             augmented[largest_row],
         )
         if augmented[pivot_row][pivot_row] == 0.0:
-            raise ValueError("The matrix is singular.")
+            raise ValueError("The DG basis cannot invert a singular matrix.")
         pivot = 1.0 / augmented[pivot_row][pivot_row]
         for column in range(2 * size):
             augmented[pivot_row][column] *= pivot

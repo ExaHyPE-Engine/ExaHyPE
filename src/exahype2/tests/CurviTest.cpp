@@ -3,17 +3,20 @@
 #include "CurviTest.h"
 
 #include "exahype2/Curvi.h"
+#include "tarch/la/Vector.h"
 
 exahype2::tests::CurviTest::CurviTest() :
   tarch::tests::TestCase("exahype2::tests::CurviTest") {}
 
-void exahype2::tests::CurviTest::run() {
+void
+exahype2::tests::CurviTest::run() {
   testMethod(testCreateBlock);
   testMethod(testTransverselyVaryingPerturbation);
   testMethod(testLowerFacePerturbation);
 }
 
-void exahype2::tests::CurviTest::testCreateBlock() {
+void
+exahype2::tests::CurviTest::testCreateBlock() {
   const tarch::la::Vector<DIMENSIONS, double> domainOffset = {-1., 0., 1.};
   const tarch::la::Vector<DIMENSIONS, double> domainSize   = {1., 10., 100.};
   const tarch::la::Vector<DIMENSIONS, int>    numElements  = {5, 7, 9};
@@ -78,12 +81,11 @@ void exahype2::tests::CurviTest::testCreateBlock() {
           );
         }
 
-        // In y, the domain size has been increased by 10%
+        // The upper face along y moves by a tenth of the domain size.
         validateNumericalEquals(blockstructuredPoint[1], (domainOffset[1] + 1.1 * j * cellSize[1]));
 
 #if DIMENSIONS == 3
-        // The interface carries a perturbation of a tenth of the sum of the two transverse
-        // coordinates, evaluated where the interface sits.
+        // The interface moves by a tenth of the sum of the two transverse coordinates.
         const double perturbation = 0.1 * (blockstructuredPoint[0] + blockstructuredPoint[1]);
         if (k <= backElements) {
           const double backCellSize = (0.5 * domainSize[2] + perturbation) / backElements;
@@ -104,11 +106,11 @@ void exahype2::tests::CurviTest::testCreateBlock() {
 }
 
 /**
- * A face perturbation varying along a direction that an earlier transformation has already
- * stretched, so the round trip reproduces the point it started from only when the forward and the
- * inverse map sample the perturbation in the same space.
+ * The round trip returns every point for a face perturbation that varies along an axis an earlier
+ * transformation stretched.
  */
-void exahype2::tests::CurviTest::testTransverselyVaryingPerturbation() {
+void
+exahype2::tests::CurviTest::testTransverselyVaryingPerturbation() {
   const tarch::la::Vector<DIMENSIONS, double> domainOffset = {0., 0., 0.};
   const tarch::la::Vector<DIMENSIONS, double> domainSize   = {10., 10., 10.};
   const int                                   numElements  = 5;
@@ -123,11 +125,10 @@ void exahype2::tests::CurviTest::testTransverselyVaryingPerturbation() {
 
   exahype2::Curvi curvi(domainOffset, domainSize, cellSize);
 
-  // Stretches the first coordinate direction, so a point's first coordinate differs between the
-  // cartesian and the curvilinear space from here on.
+  // The split makes the first coordinate differ between the cartesian and the curvilinear point.
   curvi.split(0, 4.0, []([[maybe_unused]] tarch::la::Vector<DIMENSIONS, double> x) { return 1.0; });
 
-  // Lifts the upper face of the second direction by an amount which depends on the first one.
+  // The upper face along the second axis moves by an amount that depends on the first coordinate.
   curvi.applyPerturbation(1 + DIMENSIONS, [](tarch::la::Vector<DIMENSIONS, double> x) { return 0.05 * x[0]; });
 
 #if DIMENSIONS == 3
@@ -153,10 +154,10 @@ void exahype2::tests::CurviTest::testTransverselyVaryingPerturbation() {
 }
 
 /**
- * A perturbation of a lower face, which moves the domain's own origin along the face normal. The
- * face has to land where the perturbation puts it, and the round trip has to come back.
+ * A lower-face perturbation moves the face by its offset and the round trip returns every point.
  */
-void exahype2::tests::CurviTest::testLowerFacePerturbation() {
+void
+exahype2::tests::CurviTest::testLowerFacePerturbation() {
   const tarch::la::Vector<DIMENSIONS, double> domainOffset = {0., 0., 0.};
   const tarch::la::Vector<DIMENSIONS, double> domainSize   = {10., 10., 10.};
   const int                                   numElements  = 5;
@@ -192,11 +193,11 @@ void exahype2::tests::CurviTest::testLowerFacePerturbation() {
         };
         const tarch::la::Vector<DIMENSIONS, double> curvilinearPoint = curvi(pointPos);
 
-        // The lower face sits at Lift, and the elements divide the remaining extent evenly
+        // The lower face moves to Lift and the cells divide the remaining extent evenly.
         const double stretchedCellSize = (domainSize[0] - Lift) / numElements;
         validateNumericalEquals(curvilinearPoint[0], (domainOffset[0] + Lift + i * stretchedCellSize));
 
-        // The transverse directions carry no transformation
+        // The transverse coordinates stay unchanged.
         validateNumericalEquals(curvilinearPoint[1], pointPos[1]);
 
         validateNumericalVectorEquals(curvi.invertProjection(curvilinearPoint), pointPos);

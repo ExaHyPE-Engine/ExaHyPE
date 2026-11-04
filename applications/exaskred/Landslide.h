@@ -7,9 +7,8 @@
 
 namespace applications::exahype2::exaskred::landslide {
   /**
-   * The landslide layer's material and coupling constants gathered into one
-   * aggregate, so every kernel receives the complete parameter set through a
-   * single argument built from a scenario's generated constants.
+   * Material and coupling constants of the landslide layer, built from the generated constants of a
+   * scenario.
    */
   struct Physics {
     double gravity;
@@ -30,30 +29,30 @@ namespace applications::exahype2::exaskred::landslide {
     const Physics&         physics
   );
 
-  INLINE_METHOD GPU_CALLABLE_METHOD double submergedGravity(const Physics& physics);
+  INLINE_METHOD GPU_CALLABLE_METHOD double getSubmergedGravity(const Physics& physics);
 
   template <class Shortcuts, typename T>
   INLINE_METHOD GPU_CALLABLE_METHOD bool isSubmergedByBathymetry(const T* const NOALIAS Q, const Physics& physics);
 
   template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double effectiveGravity(const T* const NOALIAS Q, const Physics& physics);
+  INLINE_METHOD GPU_CALLABLE_METHOD double getEffectiveGravity(const T* const NOALIAS Q, const Physics& physics);
 
   template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double interfaceEffectiveGravity(
+  INLINE_METHOD GPU_CALLABLE_METHOD double getInterfaceEffectiveGravity(
     const T* const NOALIAS QL,
     const T* const NOALIAS QR,
     const Physics&         physics
   );
 
   template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double waterFrictionDragSourceSpeed(
+  INLINE_METHOD GPU_CALLABLE_METHOD double getWaterFrictionDragSourceSpeed(
     const T* const NOALIAS Q,
     const Physics&         physics,
     const bool             submerged
   );
 
   template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double waterFrictionDragSourceSpeed(
+  INLINE_METHOD GPU_CALLABLE_METHOD double getWaterFrictionDragSourceSpeed(
     const T* const NOALIAS Q,
     const Physics&         physics
   );
@@ -84,7 +83,7 @@ namespace applications::exahype2::exaskred::landslide {
   );
 
   template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double fluxEigenvalue(
+  INLINE_METHOD GPU_CALLABLE_METHOD double getFluxEigenvalue(
     const T* const NOALIAS                       Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -96,7 +95,7 @@ namespace applications::exahype2::exaskred::landslide {
   );
 
   template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double fluxEigenvalue(
+  INLINE_METHOD GPU_CALLABLE_METHOD double getFluxEigenvalue(
     const T* const NOALIAS                       Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -107,7 +106,7 @@ namespace applications::exahype2::exaskred::landslide {
   );
 
   template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double effectiveMaxEigenvalue(
+  INLINE_METHOD GPU_CALLABLE_METHOD double getEffectiveMaxEigenvalue(
     const T* const NOALIAS                       Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -121,7 +120,7 @@ namespace applications::exahype2::exaskred::landslide {
   );
 
   template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD double effectiveMaxEigenvalue(
+  INLINE_METHOD GPU_CALLABLE_METHOD double getEffectiveMaxEigenvalue(
     const T* const NOALIAS                       Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,

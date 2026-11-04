@@ -1,11 +1,12 @@
 .Variables:
   variables:
     CI_DEBUG_TRACE: "false"
-    # https://docs.gitlab.com/ee/user/project/repository/monorepos/
-    # https://docs.gitlab.com/ee/ci/runners/configure_runners.html#git-fetch-extra-flags
     GIT_DEPTH: 1
     GIT_STRATEGY: clone
     GIT_FETCH_EXTRA_FLAGS: "--no-tags"
+    GIT_LFS_SKIP_SMUDGE: "1"
+    # CMake reads the branch name from this variable in the image.
+    APPTAINERENV_CI_COMMIT_REF_NAME: "$CI_COMMIT_REF_NAME"
     GET_SOURCES_ATTEMPTS: "3"
     ARTIFACT_DOWNLOAD_ATTEMPTS: "3"
     RESTORE_CACHE_ATTEMPTS: "3"
@@ -15,8 +16,6 @@
     IMAGE_LLVM: "llvm.sif"
     IMAGE_NVIDIA: "nvidia.sif"
     IMAGE_AMD: "amd.sif"
-    APPTAINER_BINDDIR: "/dine/data/do009/peano"
-    APPTAINER_IMAGEDIR: "/dine/data/do009/peano/images"
     MPI_RANKS: "4"
     OMP_THREADS: "4"
     MIN_GRID_LEVELS_PEANO: "2"

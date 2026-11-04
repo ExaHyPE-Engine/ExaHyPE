@@ -5,7 +5,14 @@ import unittest
 
 import numpy as np
 
-from postprocessing.render_solution import _global_clim, build_parser
+from postprocessing.render_solution import (
+    _global_clim,
+    build_parser,
+    clim_of_field,
+    default_field,
+    ordered_field_options,
+    render_slice_figure,
+)
 from postprocessing.solution_io import MeshSnapshot
 
 UNIT_QUAD_POINTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
@@ -22,6 +29,32 @@ def make_snapshot(node_values, points=None, cells=None):
         node_data={"q": np.asarray(node_values, dtype=float)},
         cell_data={},
         field_order=[("q", "node")],
+    )
+
+
+def make_cube_snapshot():
+    """Returns 2 x 2 x 2 hexahedra with the node field q and the cell field CurveIndex."""
+    axis = np.array([0.0, 0.5, 1.0])
+    points = np.array([[x, y, z] for z in axis for y in axis for x in axis])
+    cells = [
+        [
+            (z + dz) * 9 + (y + dy) * 3 + (x + dx)
+            for dz in (0, 1)
+            for dy in (0, 1)
+            for dx in (0, 1)
+        ]
+        for z in (0, 1)
+        for y in (0, 1)
+        for x in (0, 1)
+    ]
+    return MeshSnapshot(
+        name="test",
+        time=0.0,
+        points=points,
+        cells=np.asarray(cells),
+        node_data={"q": points[:, 0]},
+        cell_data={"CurveIndex": np.arange(8.0)},
+        field_order=[("q", "node"), ("CurveIndex", "cell")],
     )
 
 
@@ -64,8 +97,8 @@ class RenderSolutionTest(unittest.TestCase):
                 ),
             ]
         )
-        # The nodal values are averaged onto their cell first, so the second snapshot
-        # contributes the cell means 3 and 6.
+        # A cell value is the mean of its nodal values. The second snapshot has the cell
+        # means 3 and 6.
         self.assertEqual(_global_clim(source, "q", None), (1.0, 6.0))
 
     def test_global_clim_widens_a_constant_field(self):
@@ -92,6 +125,30 @@ class RenderSolutionTest(unittest.TestCase):
         )
         self.assertAlmostEqual(arguments.vmin, 0.0)
         self.assertAlmostEqual(arguments.vmax, 2.0)
+
+    def test_the_colour_limits_of_one_field_leave_the_other_fields_free(self):
+        self.assertEqual(clim_of_field("rho", "rho", (1.0, 2.0)), (1.0, 2.0))
+        self.assertIsNone(clim_of_field("RefinementLevel", "rho", (1.0, 2.0)))
+        self.assertIsNone(clim_of_field("CurveIndex", "rho", (1.0, 2.0)))
+        self.assertIsNone(clim_of_field("rho", "rho", None))
+
+    def test_a_slice_draws_a_cell_field_without_interpolation(self):
+        snapshot = make_cube_snapshot()
+        cell_figure = render_slice_figure(snapshot, "CurveIndex", "z", 0)
+        node_figure = render_slice_figure(snapshot, "q", "z", 0)
+        cell_image = cell_figure.axes[0].images[0]
+        node_image = node_figure.axes[0].images[0]
+        self.assertEqual(cell_image.get_interpolation(), "nearest")
+        self.assertEqual(node_image.get_interpolation(), "bicubic")
+        np.testing.assert_array_equal(cell_image.get_array(), [[0.0, 1.0], [2.0, 3.0]])
+
+    def test_the_grid_fields_come_last_and_are_never_the_default(self):
+        variables = ["CurveIndex", "E", "RefinementLevel", "Subdomain", "j", "rho"]
+        self.assertEqual(default_field(variables), "E")
+        self.assertEqual(
+            ordered_field_options(variables),
+            ["E", "j", "rho", "CurveIndex", "RefinementLevel", "Subdomain"],
+        )
 
 
 if __name__ == "__main__":

@@ -6,29 +6,14 @@ import exahype2.codegen
 
 
 class Main:
-    """Writes ``<project>-main.{h,cpp}``."""
+    """Writes ``<project>-main.{h,cpp}``, whose main function passes the domain and the
+    solver repository callbacks to the runner."""
 
     def __init__(self, project):
         self.project = project
         self.template_dictionary = {}
 
-    def _step_dictionaries(self):
-        """Every step carries the C++ hooks the runner calls before and after its traversal."""
-        result = []
-        for step in self.project.solversteps._steps:
-            result.append(
-                {
-                    "name": step.name,
-                    "start_hooks": getattr(step, "runner_start_hook", "").splitlines(),
-                    "finish_hooks": getattr(
-                        step, "runner_finish_hook", ""
-                    ).splitlines(),
-                }
-            )
-        return result
-
     def _configure_template_dictionary(self):
-        self.template_dictionary["MAIN_STEPS"] = self._step_dictionaries()
         self.template_dictionary["DOMAIN_OFFSET"] = (
             self.project.domain_offset_initialiser
         )
@@ -44,7 +29,8 @@ class Main:
         self.template_dictionary.setdefault("DEFAULT_MAX_TERMINAL_TIME", "-1.0")
 
     def construct_output(self, output, main_name):
-        """Adds the main files under ``main_name`` without a file extension."""
+        """Adds the header and the source file of the main function to ``output``.
+        ``main_name`` is their path without a file extension."""
         output.makefile.add_h_file(main_name + ".h", generated=True)
         output.makefile.add_cpp_file(main_name + ".cpp", generated=True)
         self._configure_template_dictionary()

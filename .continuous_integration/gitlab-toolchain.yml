@@ -4,7 +4,7 @@ variables:
   UPSTREAM_MR_SOURCE_BRANCH: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
   UPSTREAM_COMMIT_BRANCH: "$CI_COMMIT_BRANCH"
 
-GCC:
+GCC Hilbert:
   extends: .Variables
   stage: Toolchain
   variables:
@@ -24,7 +24,7 @@ GCC:
       pipeline_variables: true
       yaml_variables: true
 
-Intel:
+Intel Peano:
   extends: .Variables
   stage: Toolchain
   variables:
@@ -44,7 +44,7 @@ Intel:
       pipeline_variables: true
       yaml_variables: true
 
-LLVM:
+LLVM Peano:
   extends: .Variables
   stage: Toolchain
   variables:
@@ -58,8 +58,8 @@ LLVM:
     APPTAINERENV_OMPI_MCA_pml: "ob1"
     APPTAINERENV_OMPI_MCA_osc: "^ucx"
     APPTAINERENV_OMPI_MCA_btl: "self,sm,tcp"
-    # Open MPI's binary memory patcher rewrites allocator entry points that the address
-    # sanitizer has already interposed, which segfaults inside MPI_Init_thread.
+    # The binary memory patcher of Open MPI rewrites the allocator entry points that the address
+    # sanitizer interposes. MPI_Init_thread then raises a segmentation fault.
     APPTAINERENV_OMPI_MCA_memory: "^patcher"
     APPTAINERENV_UCX_TLS: "tcp,sm"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_SPACE_FILLING_CURVE=Peano -DPEANO_WITH_SANITIZER=address+undefined"
@@ -73,7 +73,36 @@ LLVM:
       pipeline_variables: true
       yaml_variables: true
 
-NVIDIA:
+LLVM Hilbert:
+  extends: .Variables
+  stage: Toolchain
+  variables:
+    CC: "clang"
+    CXX: "clang++"
+    FC: "gfortran"
+    IMAGE_TAG: "${IMAGE_LLVM}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
+    APPTAINERENV_ASAN_OPTIONS: "detect_leaks=0"
+    APPTAINERENV_UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1"
+    APPTAINERENV_OMPI_MCA_pml: "ob1"
+    APPTAINERENV_OMPI_MCA_osc: "^ucx"
+    APPTAINERENV_OMPI_MCA_btl: "self,sm,tcp"
+    # The binary memory patcher of Open MPI rewrites the allocator entry points that the address
+    # sanitizer interposes. MPI_Init_thread then raises a segmentation fault.
+    APPTAINERENV_OMPI_MCA_memory: "^patcher"
+    APPTAINERENV_UCX_TLS: "tcp,sm"
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_SPACE_FILLING_CURVE=Hilbert -DPEANO_WITH_SANITIZER=address+undefined"
+    MIN_GRID_LEVELS: "${MIN_GRID_LEVELS_HILBERT}"
+    MAX_GRID_LEVELS: "${MAX_GRID_LEVELS_HILBERT}"
+  trigger:
+    include:
+      - .continuous_integration/gitlab-pipeline.yml
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
+
+NVIDIA Peano:
   extends: .Variables
   stage: Toolchain
   variables:
@@ -93,7 +122,7 @@ NVIDIA:
       pipeline_variables: true
       yaml_variables: true
 
-AMD:
+AMD Peano:
   extends: .Variables
   stage: Toolchain
   variables:

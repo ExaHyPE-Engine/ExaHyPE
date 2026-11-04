@@ -2,60 +2,119 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ErrorMeasurement.h"
 
-#include "tarch/accelerator/Atomic.h"
+#include "tarch/Assertions.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 
+#include <mpi.h>
+
 /**
- * Names the output file and the interval between two recorded snapshots; only the global
- * master writes the series.
+ * Sets the output file name on the global master only. Only the global master writes the file.
  */
-void exahype2::ErrorMeasurement::open(const std::string& fileName, const double timeDeltaBetweenSnapshots) {
+void
+exahype2::ErrorMeasurement::open(const std::string& fileName, const double timeDeltaBetweenSnapshots) {
+  assertion(std::isfinite(timeDeltaBetweenSnapshots) and timeDeltaBetweenSnapshots >= 0.0, timeDeltaBetweenSnapshots);
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _database.setOutputFileName(fileName);
-    _database.setDataName("l1-error, l2-error, linf-error");
-    _database.setTimeDeltaBetweenTwoSnapshots(timeDeltaBetweenSnapshots);
   }
-  std::fill_n(_errors, NumberOfNorms, 0.0);
+  _database.setDataName("l1-error, l2-error, linf-error");
+  _database.setTimeDeltaBetweenTwoSnapshots(timeDeltaBetweenSnapshots);
+  _open = true;
+}
+
+void
+exahype2::ErrorMeasurement::setSnapshotRule(const tarch::database::SnapshotRule rule) {
+  _database.setSnapshotRule(rule);
 }
 
 /**
- * Adds one cell's L1 error, squared L2 error and Linf error; every traversal task may report
- * concurrently.
+ * Returns whether record() adds or replaces a snapshot at timeStamp. Every rank returns the same
+ * answer.
  */
-void exahype2::ErrorMeasurement::add(const double* const error) {
-  assertion(error != nullptr);
-  for (int norm = 0; norm < NumberOfNorms; norm++) {
-    assertion(std::isfinite(error[norm]) and error[norm] >= 0.0, norm, error[norm]);
-  }
-  tarch::accelerator::addAtomic(_errors[0], error[0]);
-  tarch::accelerator::addAtomic(_errors[1], error[1]);
-  tarch::accelerator::updateAtomicMax(_errors[2], error[2]);
+bool
+exahype2::ErrorMeasurement::isSnapshotDue(const double timeStamp) {
+  return _open and _database.isSnapshotDue(timeStamp);
 }
 
 /**
- * Reduces the accumulated errors over all ranks, records the three norms at timeStamp and
- * clears the accumulators. Returns the norms.
+ * Returns a device buffer with room for NumberOfNorms errors per cell.
  */
-std::array<double, exahype2::ErrorMeasurement::NumberOfNorms> exahype2::ErrorMeasurement::reduceAndRecord(
-  const double timeStamp
-) {
-  const double   localSummedErrors[2]  = {_errors[0], _errors[1]};
-  double         globalSummedErrors[2] = {0.0, 0.0};
-  const double   localMaxError[1]      = {_errors[2]};
-  double         globalMaxError[1]     = {0.0};
-  const MPI_Comm communicator          = tarch::mpi::Rank::getInstance().getCommunicator();
-  tarch::mpi::allreduce(localSummedErrors, globalSummedErrors, 2, MPI_DOUBLE, MPI_SUM, communicator);
-  tarch::mpi::allreduce(localMaxError, globalMaxError, 1, MPI_DOUBLE, MPI_MAX, communicator);
+double*
+exahype2::ErrorMeasurement::getErrorsPerCell(const int numberOfCells) {
+  assertion(numberOfCells >= 0, numberOfCells);
+  const auto numberOfErrors = static_cast<std::size_t>(numberOfCells) * NumberOfNorms;
+  if (_errorsPerCell.getSize() < numberOfErrors) {
+    _errorsPerCell.allocate(numberOfErrors);
+  }
+  return _errorsPerCell.getData();
+}
+
+/**
+ * Merges the error sums of all ranks, records the L1, L2 and Linf norms at timeStamp and returns
+ * them. Every rank calls this function collectively.
+ */
+std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
+exahype2::ErrorMeasurement::record(const ErrorSums& localSums, const double timeStamp) {
+  assertion(_open);
+  static_assert(std::is_trivially_copyable_v<ErrorSums>);
+
+  const auto&            rank          = tarch::mpi::Rank::getInstance();
+  const int              numberOfRanks = rank.getNumberOfRanks();
+  constexpr int          BytesPerRank  = sizeof(ErrorSums);
+  std::vector<ErrorSums> sumsOfRanks(static_cast<std::size_t>(numberOfRanks));
+  tarch::mpi::allgather(
+    &localSums,
+    BytesPerRank,
+    MPI_BYTE,
+    sumsOfRanks.data(),
+    BytesPerRank,
+    MPI_BYTE,
+    rank.getCommunicator()
+  );
+
+  ErrorSums globalSums = sumsOfRanks.front();
+  for (std::size_t sumsOfRank = 1; sumsOfRank < sumsOfRanks.size(); sumsOfRank++) {
+    globalSums.merge(sumsOfRanks[sumsOfRank]);
+  }
 
   const std::array<double, NumberOfNorms> norms{
-    globalSummedErrors[0],
-    std::sqrt(globalSummedErrors[1]),
-    globalMaxError[0]
+    globalSums.summedError.round(),
+    std::sqrt(globalSums.summedSquaredError.round()),
+    globalSums.maxError
   };
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    _database.addGlobalSnapshot(timeStamp, NumberOfNorms, norms.data());
-  }
-  std::fill_n(_errors, NumberOfNorms, 0.0);
+  _database.addGlobalSnapshot(timeStamp, NumberOfNorms, norms.data());
   return norms;
+}
+
+/**
+ * Returns sums without terms whose bounds are the largest errors over all ranks. Every rank calls
+ * this function collectively and receives the same bounds.
+ */
+exahype2::ErrorSums
+exahype2::ErrorMeasurement::getEmptySumsOfAllRanks(const LargestErrors& largestErrors) {
+  const double localLargest[2]  = {largestErrors.error, largestErrors.squaredError};
+  double       globalLargest[2] = {0.0, 0.0};
+  tarch::mpi::allreduce(
+    localLargest,
+    globalLargest,
+    2,
+    MPI_DOUBLE,
+    MPI_MAX,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  ErrorSums sums;
+  sums.summedError.clear(globalLargest[0]);
+  sums.summedSquaredError.clear(globalLargest[1]);
+  return sums;
+}
+
+void
+exahype2::ErrorMeasurement::release() {
+  _errorsPerCell.release();
+  _partialSums.release();
+}
+
+tarch::AllocatedBytes
+exahype2::ErrorMeasurement::getAllocatedBytes() const {
+  return _errorsPerCell.getAllocatedBytes() + _partialSums.getAllocatedBytes();
 }

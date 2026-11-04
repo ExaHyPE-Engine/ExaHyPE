@@ -4,13 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import sys
+from collections.abc import Collection
 
 import numpy as np
 from scipy.spatial import cKDTree
 
-# The dual import works both as a package and when this script is
-# run directly from the postprocessing/ directory (see render_solution.py).
+# The first import works in the package. The second one works in a direct run from the
+# postprocessing/ directory.
 try:
     from postprocessing.solution_io import MeshSnapshot, SolutionSource
 except ImportError:
@@ -19,10 +21,15 @@ except ImportError:
 
 MIRRORS = ("x", "y", "z", "xy", "xz", "yz")
 
+SYMMETRIC_TENSOR_COMPONENTS = ("xx", "xy", "xz", "yy", "yz", "zz")
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Check a solution output (any plotter format) for mirror symmetry."
+        description="Check a solution output (any plotter format) for mirror symmetry.",
+        epilog="Cell centres and node positions mirror bitwise about a domain centre at the "
+        "origin. A PDE term that subtracts a point from a position stays bitwise symmetric "
+        "only in such a domain.",
     )
     parser.add_argument(
         "input", help="A solver name, an index/snapshot file, or an output directory"
@@ -43,14 +50,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rtol", type=float, default=0.0, help="Relative tolerance (default: 0)"
     )
-    # Mirrored cells sum their kernel terms in a different node order, so one rounding
-    # error per evaluation is admissible; a few hundred time steps stay well below this
-    # multiple of the machine epsilon. Pass 0 to demand exact symmetry.
     parser.add_argument(
         "--atol",
         type=float,
-        default=100.0 * sys.float_info.epsilon,
-        help="Absolute tolerance (default: one hundred machine epsilons)",
+        default=0.0,
+        help="Absolute tolerance (default: 0, bitwise symmetry)",
     )
     parser.add_argument(
         "--frame", type=int, help="Check only this snapshot index (default: all)"
@@ -58,15 +62,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--skip-fields",
         nargs="+",
-        default=["Subdomain", "Subtree", "CurvePosition"],
-        help="Fields to ignore (default: Subdomain, Subtree and CurvePosition, which depend on "
-        "the domain decomposition and on the curve order)",
+        default=["Subdomain", "CurveIndex", "Number"],
+        help="Fields to ignore (default: the decomposition fields Subdomain and CurveIndex and the "
+        "particle identifier Number)",
     )
     parser.add_argument(
         "--vector-fields",
         nargs="+",
         default=[],
-        help="Fields to transform as geometric vectors (default: every 3-component field)",
+        help="Fields to transform as geometric vectors (default: every field with two or three "
+        "components)",
     )
     parser.add_argument(
         "--tensor-fields",
@@ -75,12 +80,49 @@ def build_parser() -> argparse.ArgumentParser:
         help="Fields to transform as rank-2 tensors (default: every 9-component field)",
     )
     parser.add_argument(
+        "--symmetric-tensor-fields",
+        nargs="+",
+        default=[],
+        help="Fields to transform as symmetric rank-2 tensors, written as FIELD for the six "
+        "components xx, xy, xz, yy, yz and zz or as FIELD:COMPONENT,COMPONENT,... for another "
+        "order, e.g. sigma:xx,yy,xy",
+    )
+    parser.add_argument(
         "--scalar-fields",
         nargs="+",
         default=[],
         help="Fields to treat as per-component scalars, e.g. packed state vectors",
     )
+    parser.add_argument(
+        "--vector-parts",
+        nargs="+",
+        default=[],
+        help="Packed fields whose components FIRST to LAST form a geometric vector, written as "
+        "FIELD:FIRST:LAST. A field takes several parts. Every component outside the parts of a "
+        "field becomes a scalar field",
+    )
+    parser.add_argument(
+        "--vector-groups",
+        nargs="+",
+        default=[],
+        help="Scalar fields that form one geometric vector together, written as FIELD,FIELD or "
+        "FIELD,FIELD,FIELD",
+    )
     return parser
+
+
+def symmetric_tensor_components(
+    specifications: list[str],
+) -> dict[str, tuple[str, ...]]:
+    """Returns the component names of each symmetric tensor field, read from FIELD or from
+    FIELD:COMPONENT,COMPONENT,..."""
+    result = {}
+    for specification in specifications:
+        name, _, components = specification.partition(":")
+        result[name] = (
+            tuple(components.split(",")) if components else SYMMETRIC_TENSOR_COMPONENTS
+        )
+    return result
 
 
 def field_kind(
@@ -89,11 +131,14 @@ def field_kind(
     vector_fields: list[str],
     tensor_fields: list[str],
     scalar_fields: list[str],
+    symmetric_tensor_fields: Collection[str] | None = None,
 ) -> str:
     if name in vector_fields:
         return "vector"
     if name in tensor_fields:
         return "tensor"
+    if name in (symmetric_tensor_fields or []):
+        return "symmetric tensor"
     if name in scalar_fields:
         return "scalar"
     if components in (2, 3):
@@ -119,9 +164,25 @@ def mirror_transform(
     return result
 
 
-def mirror_values(values: np.ndarray, mirror: str, kind: str) -> np.ndarray:
+def mirror_values(
+    values: np.ndarray,
+    mirror: str,
+    kind: str,
+    components: tuple[str, ...] = SYMMETRIC_TENSOR_COMPONENTS,
+) -> np.ndarray:
     if kind == "scalar" or values.ndim == 1 or values.shape[-1] == 1:
         return values
+    if kind == "symmetric tensor":
+        # The letters of a component name such as xy index the row and the column of its entry.
+        rows = ["xyz".index(component[0]) for component in components]
+        columns = ["xyz".index(component[1]) for component in components]
+        tensor = np.zeros(values.shape[:-1] + (3, 3))
+        tensor[..., rows, columns] = values
+        tensor[..., columns, rows] = values
+        mirrored = mirror_values(
+            tensor.reshape(values.shape[:-1] + (9,)), mirror, "tensor"
+        )
+        return mirrored.reshape(values.shape[:-1] + (3, 3))[..., rows, columns]
     if kind == "tensor":
         tensor = values.reshape(values.shape[:-1] + (3, 3)).copy()
         if len(mirror) == 1:
@@ -152,7 +213,7 @@ def mirror_values(values: np.ndarray, mirror: str, kind: str) -> np.ndarray:
 
 
 def cell_geometry(snapshot: MeshSnapshot) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Per-cell corner coordinates, centres and sizes in float64."""
+    """Returns the corner coordinates, the centres and the sizes of the cells in float64."""
     points = np.asarray(snapshot.points, dtype=np.float64)
     cells = snapshot.cells
     if not isinstance(cells, np.ndarray):
@@ -161,6 +222,57 @@ def cell_geometry(snapshot: MeshSnapshot) -> tuple[np.ndarray, np.ndarray, np.nd
     centres = corners.mean(axis=1)
     sizes = corners.max(axis=1) - corners.min(axis=1)
     return corners, centres, sizes
+
+
+def regroup_fields(
+    snapshot: MeshSnapshot, vector_parts: list[str], vector_groups: list[str]
+) -> MeshSnapshot:
+    """Returns the snapshot with packed fields split and scalar fields grouped into vectors.
+
+    A vector part FIELD:FIRST:LAST turns the components FIRST to LAST of FIELD into one vector
+    field. Every component of FIELD outside its vector parts becomes a scalar field. A vector group
+    FIELD,FIELD[,FIELD] turns its scalar fields into one vector field.
+    """
+    node_data = dict(snapshot.node_data)
+    cell_data = dict(snapshot.cell_data)
+    field_order = list(snapshot.field_order)
+
+    def replace(names: list[str], fields: list[tuple[str, np.ndarray]]) -> None:
+        position = [name for name, _ in field_order].index(names[0])
+        centering = field_order[position][1]
+        data = node_data if centering == "node" else cell_data
+        for name in names:
+            del data[name]
+        kept = [entry for entry in field_order[:position] if entry[0] not in names]
+        later = [entry for entry in field_order[position:] if entry[0] not in names]
+        field_order[:] = kept + [(name, centering) for name, _ in fields] + later
+        for name, values in fields:
+            data[name] = values
+
+    parts_of_field: dict[str, list[tuple[int, int]]] = {}
+    for part in vector_parts:
+        name, first, last = part.split(":")
+        parts_of_field.setdefault(name, []).append((int(first), int(last)))
+    for name, parts in parts_of_field.items():
+        values = np.asarray(snapshot.field(name)[0])
+        fields = [
+            (f"{name}[{component}]", values[..., component])
+            for component in range(values.shape[-1])
+            if not any(first <= component <= last for first, last in parts)
+        ]
+        fields += [
+            (f"{name}[{first}:{last}]", values[..., first : last + 1])
+            for first, last in parts
+        ]
+        replace([name], fields)
+    for group in vector_groups:
+        names = group.split(",")
+        columns = [np.asarray((node_data | cell_data)[name]) for name in names]
+        values = np.stack([column.reshape(len(column)) for column in columns], axis=-1)
+        replace(names, [(group, values)])
+    return dataclasses.replace(
+        snapshot, node_data=node_data, cell_data=cell_data, field_order=field_order
+    )
 
 
 def check_snapshot(
@@ -173,8 +285,12 @@ def check_snapshot(
     vector_fields: list[str] | None = None,
     tensor_fields: list[str] | None = None,
     scalar_fields: list[str] | None = None,
+    symmetric_tensor_fields: dict[str, tuple[str, ...]] | None = None,
 ) -> str | None:
-    """Returns None if the snapshot is symmetric under the mirror, else a message."""
+    """Returns None if the snapshot is symmetric under the mirror, else a message.
+
+    The symmetric tensor fields map each field to the names of its components.
+    """
     corners, centres, sizes = cell_geometry(snapshot)
     dimension = centres.shape[1]
     mirrored_centres = mirror_transform(centres, centre, mirror)
@@ -186,17 +302,15 @@ def check_snapshot(
             :, [second_axis, first_axis]
         ]
 
-    # Pair every mirrored cell with its nearest original cell. Sorting signature
-    # rows instead mispairs cells whose stored coordinates sit across a rounding
-    # boundary under the mirror arithmetic.
+    # The mirror arithmetic rounds the coordinates. Every mirrored cell pairs with its nearest
+    # original cell.
     tree = cKDTree(np.column_stack([centres, sizes]))
     distances, partners = tree.query(
         np.column_stack([mirrored_centres, mirrored_sizes])
     )
 
-    # Geometry tolerance per pair: Far above the float32 storage rounding of the
-    # coordinates and far below the cell's own width, so a cell displaced by a
-    # fraction of its size never passes, however small the cell.
+    # The tolerance lies far above the float32 rounding of the coordinates and far
+    # below the cell width.
     per_cell_tolerance = 1.0e-3 * sizes.min(axis=1)
     if bool((distances > per_cell_tolerance).any()) or len(np.unique(partners)) != len(
         partners
@@ -214,12 +328,18 @@ def check_snapshot(
                 vector_fields or [],
                 tensor_fields or [],
                 scalar_fields or [],
+                symmetric_tensor_fields,
             )
-            values = mirror_values(values, mirror, kind)
+            values = mirror_values(
+                values,
+                mirror,
+                kind,
+                (symmetric_tensor_fields or {}).get(name, SYMMETRIC_TENSOR_COMPONENTS),
+            )
         if centering == "cell":
             return values.reshape(len(centres), -1)
-        # Nodal data: Bring each cell's nodes into a canonical order through the node
-        # offsets from the cell centre, quantised well below the node spacing.
+        # Nodal values sort by the offsets of their nodes from the cell centre. The quantisation of
+        # the offsets lies well below the node spacing.
         base = mirrored_centres if transformed else centres
         offsets = (
             mirror_transform(corners, centre, mirror) if transformed else corners
@@ -264,10 +384,13 @@ def main(argv: list[str] | None = None) -> None:
     else:
         mirrors = ["xyz"[d] for d in range(dimension)] + ["xy"]
 
+    tensor_components = symmetric_tensor_components(args.symmetric_tensor_fields)
     frames = [args.frame] if args.frame is not None else range(source.count)
     failed = False
     for index in frames:
-        snapshot = source.snapshot(index)
+        snapshot = regroup_fields(
+            source.snapshot(index), args.vector_parts, args.vector_groups
+        )
         verdicts = []
         for mirror in mirrors:
             message = check_snapshot(
@@ -280,6 +403,7 @@ def main(argv: list[str] | None = None) -> None:
                 args.vector_fields,
                 args.tensor_fields,
                 args.scalar_fields,
+                tensor_components,
             )
             if message is not None:
                 failed = True

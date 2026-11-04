@@ -16,7 +16,12 @@ set(SOURCES
   UnitTests.cpp
   tests/TestCase.cpp
   tests/TreeTestCaseCollection.cpp
+  tests/AssertionsTest.cpp
+  tests/CPUFeatureDetectionTest.cpp
+  tests/MemoryUsageTest.cpp
   tests/NonCriticalAssertionsTest.cpp
+  tests/SpanTest.cpp
+  tests/TestCaseTest.cpp
 
   database/SnapshotDatabase.cpp
   database/GlobalTimeSeriesDatabase.cpp
@@ -24,12 +29,17 @@ set(SOURCES
 
   accelerator/accelerator.cpp
   accelerator/Device.cpp
+  accelerator/DeviceCopies.cpp
   accelerator/MemoryBlocks.cpp
   accelerator/MemoryLocation.cpp
-  accelerator/tests/AtomicTest.cpp
+  accelerator/Scratch.cpp
+  accelerator/tests/BufferTest.cpp
   accelerator/tests/ChunkedMemoryPoolTest.cpp
+  accelerator/tests/DeviceCopiesTest.cpp
+  accelerator/tests/DeviceCopiesTestData.cpp
   accelerator/tests/MemoryAllocationTest.cpp
   accelerator/tests/ParallelConstructsTest.cpp
+  accelerator/tests/ScratchTest.cpp
   accelerator/cuda/accelerator.cpp
   accelerator/cuda/Device.cpp
   accelerator/cuda/DevicePropertiesCache.cpp
@@ -47,9 +57,7 @@ set(SOURCES
   accelerator/sycl/accelerator.cpp
   accelerator/sycl/Device.cpp
 
-  la/ExactAccumulator.cpp
-  la/Scalar.cpp
-  la/tests/ExactAccumulatorTest.cpp
+  la/tests/FixedPointSumTest.cpp
   la/tests/MatrixTest.cpp
   la/tests/MatrixVectorTest.cpp
   la/tests/ScalarTest.cpp
@@ -66,20 +74,21 @@ set(SOURCES
   mpi/AbstractCommunicationManager.cpp
   mpi/Collectives.cpp
   mpi/Diagnostics.cpp
+  mpi/Handles.cpp
   mpi/HelperThread.cpp
-  mpi/PersistentChannel.cpp
   mpi/Rank.cpp
+  mpi/ReductionRecord.cpp
   mpi/Request.cpp
-  mpi/RequestGroup.cpp
   mpi/SerialCommunicationManager.cpp
   mpi/ThreadedCommunicationManager.cpp
   mpi/tests/CommunicationManagerTest.cpp
   mpi/tests/DiagnosticsTest.cpp
+  mpi/tests/HandlesTest.cpp
   mpi/tests/HelperThreadTest.cpp
-  mpi/tests/PersistentChannelTest.cpp
   mpi/tests/PingPongTest.cpp
   mpi/tests/PollPacingTest.cpp
-  mpi/tests/RequestGroupTest.cpp
+  mpi/tests/RankTest.cpp
+  mpi/tests/ReductionRecordTest.cpp
 
   tasking/Runtime.cpp
   tasking/FunctorTask.cpp
@@ -87,21 +96,16 @@ set(SOURCES
   tasking/tests/RuntimeTest.cpp
   tasking/tests/TaskGraphTest.cpp
 
-  plotter/CellDataPlotter.cpp
-  plotter/CellPlotter.cpp
   plotter/FileWriter.cpp
+  plotter/Format.cpp
   plotter/HDF5FileWriter.cpp
-  plotter/JSONTimeSeriesWriter.cpp
   plotter/NetCDFFileWriter.cpp
-  plotter/PVDTimeSeriesWriter.cpp
-  plotter/TimeSeriesWriter.cpp
-  plotter/VertexDataPlotter.cpp
-  plotter/VertexPlotter.cpp
   plotter/VTKHDFFileWriter.cpp
-  plotter/VTKHDFTimeSeriesWriter.cpp
   plotter/VTUFileWriter.cpp
-  plotter/XDMFTimeSeriesWriter.cpp
+  plotter/tests/FileWriterTest.cpp
+  plotter/tests/FormatTest.cpp
   plotter/tests/HDF5FileWriterTest.cpp
+  plotter/tests/Meshes.cpp
   plotter/tests/NetCDFFileWriterTest.cpp
   plotter/tests/VTKHDFFileWriterTest.cpp
   plotter/tests/VTUFileWriterTest.cpp
@@ -110,24 +114,32 @@ set(SOURCES
   reader/JSONReader.cpp
   reader/NetCDFFieldSampler.cpp
   reader/NetCDFFileReader.cpp
+  reader/tests/CSVReaderTest.cpp
   reader/tests/NetCDFFieldSamplerTest.cpp
   reader/tests/NetCDFFileReaderTest.cpp
   reader/tests/JSONReaderTest.cpp
 
   instrumentation/Measurement.cpp
   instrumentation/Watch.cpp
+  instrumentation/tests/CommandLineSinkTest.cpp
+  instrumentation/tests/WatchTest.cpp
 )
 
+set(GPU_SOURCES
+  accelerator/tests/BufferTest.cpp
+  accelerator/tests/ChunkedMemoryPoolTest.cpp
+  accelerator/tests/DeviceCopiesTest.cpp
+  accelerator/tests/DeviceCopiesTestData.cpp
+  accelerator/tests/ParallelConstructsTest.cpp
+  accelerator/tests/ScratchTest.cpp
+  la/tests/FixedPointSumTest.cpp
+)
 if(_peano_gpu_backend STREQUAL "cuda")
   list(APPEND SOURCES accelerator/cuda/tests/ReductionTest.cpp)
-  set_source_files_properties(accelerator/cuda/tests/ReductionTest.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(accelerator/tests/AtomicTest.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(accelerator/cuda/tests/ReductionTest.cpp ${GPU_SOURCES} PROPERTIES LANGUAGE CUDA)
 elseif(_peano_gpu_backend STREQUAL "hip")
   list(APPEND SOURCES accelerator/hip/tests/ReductionTest.cpp)
-  set_source_files_properties(accelerator/hip/tests/ReductionTest.cpp PROPERTIES LANGUAGE HIP)
-  set_source_files_properties(accelerator/tests/AtomicTest.cpp PROPERTIES LANGUAGE HIP)
-  set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE HIP)
+  set_source_files_properties(accelerator/hip/tests/ReductionTest.cpp ${GPU_SOURCES} PROPERTIES LANGUAGE HIP)
 elseif(_peano_gpu_backend STREQUAL "sycl")
   list(APPEND SOURCES accelerator/sycl/tests/ReductionTest.cpp)
 elseif(_peano_gpu_backend STREQUAL "kokkos")

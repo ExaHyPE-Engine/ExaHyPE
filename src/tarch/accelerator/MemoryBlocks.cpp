@@ -8,24 +8,27 @@
 #include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Rank.h"
 
-tarch::accelerator::MemoryBlocks& tarch::accelerator::MemoryBlocks::getInstance() {
+tarch::accelerator::MemoryBlocks&
+tarch::accelerator::MemoryBlocks::getInstance() {
   static MemoryBlocks instance;
   return instance;
 }
 
-void tarch::accelerator::MemoryBlocks::clear() {
+void
+tarch::accelerator::MemoryBlocks::clear() {
   const std::scoped_lock lock(_memoryBlockMutex);
   _memoryBlockTable.clear();
 }
 
-void tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
+void
+tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
 #if PEANO_DEBUG
   const std::scoped_lock lock(_memoryBlockMutex);
 
   if (not _memoryBlockTable.empty()) {
     logWarning(
-      "Detected " << _memoryBlockTable.size() << " memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank()
-                  << "."
+      "Rank " << tarch::mpi::Rank::getInstance().getRank() << " ends with " << _memoryBlockTable.size()
+              << " unfreed memory blocks."
     );
   } else {
     logInfo("Did not detect any memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank() << ".");
@@ -37,7 +40,8 @@ void tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
 #endif
 }
 
-void tarch::accelerator::MemoryBlocks::bookmarkMemoryBlock(void* memoryBlock, std::size_t size) {
+void
+tarch::accelerator::MemoryBlocks::bookmarkMemoryBlock(void* memoryBlock, std::size_t size) {
 #if PEANO_DEBUG
   logDebug("Bookmarked memory block at " << memoryBlock << " with " << size << " bytes.");
   const std::scoped_lock lock(_memoryBlockMutex);
@@ -45,12 +49,13 @@ void tarch::accelerator::MemoryBlocks::bookmarkMemoryBlock(void* memoryBlock, st
 #endif
 }
 
-void tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
+void
+tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
 #if PEANO_DEBUG
   const std::scoped_lock lock(_memoryBlockMutex);
   const auto             memoryBlockEntry = _memoryBlockTable.find(memoryBlock);
   if (memoryBlockEntry == _memoryBlockTable.end()) {
-    tarch::terminateWithError("Attempt to remove an invalid memory block. It may have been removed already.");
+    tarch::terminateWithError("The memory block table removes each registered block once only.");
   }
   logDebug("Removed memory block at " << memoryBlock << ".");
   _memoryBlockTable.erase(memoryBlockEntry);
@@ -58,15 +63,16 @@ void tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
 }
 
 /**
- * Returns the tracked allocation size while holding the registry lock.
- * An unknown block terminates in debug builds.
+ * Returns the size of a bookmarked memory block, or zero outside a debug build. An unknown block
+ * terminates a debug build.
  */
-std::size_t tarch::accelerator::MemoryBlocks::getSizeOfMemoryBlock(void* memoryBlock) const {
+std::size_t
+tarch::accelerator::MemoryBlocks::getSizeOfMemoryBlock(void* memoryBlock) const {
 #if PEANO_DEBUG
   const std::scoped_lock lock(_memoryBlockMutex);
   const auto             memoryBlockEntry = _memoryBlockTable.find(memoryBlock);
   if (memoryBlockEntry == _memoryBlockTable.end()) {
-    tarch::terminateWithError("Cannot query the size of an unregistered memory block.");
+    tarch::terminateWithError("The memory block table reports the size of registered blocks only.");
   }
   return memoryBlockEntry->second;
 #else

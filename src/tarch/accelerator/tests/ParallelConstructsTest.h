@@ -11,16 +11,15 @@ namespace tarch::accelerator::tests {
 class tarch::accelerator::tests::ParallelConstructsTest final : public tarch::tests::TestCase {
 public:
   ParallelConstructsTest();
-  ParallelConstructsTest(const ParallelConstructsTest&)            = delete;
-  ParallelConstructsTest(ParallelConstructsTest&&)                 = delete;
-  ParallelConstructsTest& operator=(const ParallelConstructsTest&) = delete;
-  ParallelConstructsTest& operator=(ParallelConstructsTest&&)      = delete;
-  ~ParallelConstructsTest() override                               = default;
+  ParallelConstructsTest(const ParallelConstructsTest& other)            = delete;
+  ParallelConstructsTest(ParallelConstructsTest&& other)                 = delete;
+  ParallelConstructsTest& operator=(const ParallelConstructsTest& other) = delete;
+  ParallelConstructsTest& operator=(ParallelConstructsTest&& other)      = delete;
+  ~ParallelConstructsTest() override                                     = default;
 
   void run() override;
 
-  // The test bodies launch extended __device__ lambdas, which nvcc forbids
-  // inside private or protected member functions.
+private:
   void testParallelForOnHost();
   void testParallelFor();
   void testParallelForRangeMD2();
@@ -29,6 +28,7 @@ public:
   void testParallelForTeamRangeMD2();
   void testParallelForTeamRangeMD3();
   void testTeamBarrier();
+  void testEveryThreadOfATeamReceivesTheVotesOfTheTeam();
   void testParallelReduceSum();
   void testParallelReduceMin();
   void testParallelReduceMax();
@@ -40,4 +40,18 @@ public:
   void testParallelReduceTeamRangeMD3();
   void testParallelReduceCustom();
   void testParallelReduceCustomRange();
+  void testReductionScratchKeepsAnAddressThatFits();
+  void testWaitForDeviceCompletesTheLaunchedLoop();
+  void testAReductionOverManyTeamsSumsEveryTeam();
+  void testAReductionOverTeamsOfThreeWarpsSumsEveryTeam();
+  void testReduceOverTeamCombinesEveryThread();
+  void testEveryTeamRunsTheDefaultNumberOfThreads();
+  void testATeamLaunchRunsTheRequestedThreads();
+  void testATeamLaunchStopsAtTheDefaultNumberOfThreads();
+  void testTeamScratchMirrorsWithinTheTeam();
+  void testTheDeviceRunsADefaultTeamAtOnce();
+  void testTheNumberOfHostTasksFollowsTheTimePerItem();
+#if not defined(PEANO_WITH_GPU_BACKEND)
+  void testAHostReductionMergesItsBlocksInOrder();
+#endif
 };

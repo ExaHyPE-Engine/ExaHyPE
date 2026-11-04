@@ -11,8 +11,7 @@ namespace {
   using TimeoutPoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::duration<double>>;
 
   /**
-   * Generic timeout bookkeeping for a wait on a request the table does not
-   * name, so a hang still warns and eventually aborts even without tracking.
+   * Warns about and aborts a wait on a request that the pending-request table does not track.
    */
   void reportUntrackedWait(
     const char*                 operation,
@@ -54,7 +53,8 @@ namespace {
   }
 } // namespace
 
-int tarch::mpi::isend(
+int
+tarch::mpi::isend(
   const void*          buffer,
   int                  count,
   MPI_Datatype         datatype,
@@ -70,7 +70,8 @@ int tarch::mpi::isend(
   return result;
 }
 
-int tarch::mpi::irecv(
+int
+tarch::mpi::irecv(
   void*                buffer,
   int                  count,
   MPI_Datatype         datatype,
@@ -86,7 +87,8 @@ int tarch::mpi::irecv(
   return result;
 }
 
-int tarch::mpi::test(MPI_Request* request, int* flag, MPI_Status* status, std::source_location location) {
+int
+tarch::mpi::test(MPI_Request* request, int* flag, MPI_Status* status, std::source_location location) {
   const int result = MPI_Test(request, flag, status);
   tarch::mpi::checkReturnValue(result, "MPI_Test", location);
 
@@ -98,13 +100,11 @@ int tarch::mpi::test(MPI_Request* request, int* flag, MPI_Status* status, std::s
 }
 
 /**
- * Waits for one request through a test loop rather than MPI_Wait
- *
- * The loop is what gives the warnings and the deadlock abort a chance to run, so a wait that never
- * finishes says which operation and which partner it hangs on. Both only report once the caller has
- * configured a timeout.
+ * Waits for one request in a loop of MPI_Test() calls. A wait that never finishes reports its
+ * operation and its partner. The reports need a timeout that a caller has configured.
  */
-int tarch::mpi::wait(MPI_Request* request, MPI_Status* status, std::source_location location) {
+int
+tarch::mpi::wait(MPI_Request* request, MPI_Status* status, std::source_location location) {
   int                    flag           = 0;
   bool                   waitingStarted = false;
   TimeoutPoint           startedWaiting;
@@ -113,9 +113,7 @@ int tarch::mpi::wait(MPI_Request* request, MPI_Status* status, std::source_locat
   while (not flag) {
     tarch::mpi::test(request, &flag, status, location);
     if (not flag) {
-      // The timeout bookkeeping is paced because it reads the clock and walks the pending-request
-      // table, which costs more than the request test itself and which nobody outside this rank
-      // waits for.
+      // The timeout check costs more than the request test and runs on the stride of the pacing.
       if (pacing.reportProgressNow()) {
         if (not tarch::mpi::Diagnostics::getInstance().reportRequest(request, "MPI_Wait", location)) {
           reportUntrackedWait("MPI_Wait", location, startedWaiting, nextWarning, waitingStarted);
@@ -128,7 +126,8 @@ int tarch::mpi::wait(MPI_Request* request, MPI_Status* status, std::source_locat
   return MPI_SUCCESS;
 }
 
-int tarch::mpi::send(
+int
+tarch::mpi::send(
   const void*          buffer,
   int                  count,
   MPI_Datatype         datatype,
@@ -142,7 +141,8 @@ int tarch::mpi::send(
   return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location);
 }
 
-int tarch::mpi::receive(
+int
+tarch::mpi::receive(
   void*                buffer,
   int                  count,
   MPI_Datatype         datatype,
@@ -157,7 +157,8 @@ int tarch::mpi::receive(
   return tarch::mpi::wait(&request, status, location);
 }
 
-int tarch::mpi::sendrecv(
+int
+tarch::mpi::sendrecv(
   const void*          sendBuffer,
   int                  sendCount,
   MPI_Datatype         sendDatatype,
@@ -189,23 +190,4 @@ int tarch::mpi::sendrecv(
 
   tarch::mpi::wait(&sendRequest, MPI_STATUS_IGNORE, location);
   return tarch::mpi::wait(&receiveRequest, status, location);
-}
-
-int tarch::mpi::cancel(MPI_Request* request, std::source_location location) {
-  const int result = MPI_Cancel(request);
-  tarch::mpi::checkReturnValue(result, "MPI_Cancel", location);
-  return result;
-}
-
-int tarch::mpi::iprobe(
-  int                  source,
-  int                  tag,
-  MPI_Comm             communicator,
-  int*                 flag,
-  MPI_Status*          status,
-  std::source_location location
-) {
-  const int result = MPI_Iprobe(source, tag, communicator, flag, status);
-  tarch::mpi::checkReturnValue(result, "MPI_Iprobe", location);
-  return result;
 }

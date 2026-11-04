@@ -5,7 +5,7 @@
 \tableofcontents
 
 In numerical analysis, the Runge–Kutta methods are a family of implicit and explicit iterative methods, which includes the Euler method.
-Unlike the Euler method, it not only takes the left and right boundaries of the interval, but can also consider points within the interval in each timestep, which increases
+Unlike the Euler method, it takes the left and right boundaries of the interval and points within the interval in each timestep, which increases
 the order of the method.
 
 For simplicity, we first consider the initial value problem:
@@ -13,7 +13,7 @@ For simplicity, we first consider the initial value problem:
  y'(t) = f(t, y), y(t_0) = y_0
 \f]
 
-where \f$ y \f$ is an unknown function of time \f$ t \f$, which we want to approximate. We now pick a step-size \f$ h > 0\f$
+where \f$ y \f$ is an unknown function of time \f$ t \f$, which we want to approximate. We pick a step-size \f$ h > 0\f$
 
 By the fundamental theorem of calculus,
 \f[
@@ -34,5 +34,5 @@ Then we choose the internal stages \f$ Y_i \approx y(t_0 + c_i h) \f$ by
 If the weights satisfy \f$ a_{ij} = 0 \f$ for \f$ j\geq i \f$, then the method is explicit. In particular, \f$ Y_1 = y_0 \f$
 
 In our ExaHype solver, we use the Runge-Kutta method together with the Discrete Galerkin method or the Finite Difference method, where the
-Runge-Kutta method is used for high-order temporal discretization. Runge–Kutta time stepping requires \f$ n \f$ traversals per time step, since each of the \f$ n \f$ stages must be followed by a synchronization of the grid state (including halo/MPI exchanges) before the next stage can start.
+Runge-Kutta method is used for high-order temporal discretization. Runge–Kutta time stepping requires \f$ n \f$ stage dispatches per time step, since each of the \f$ n \f$ stages must be followed by a synchronization of the face traces (including the halo exchange between the ranks) before the next stage can start.
 */

@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MemoryLocation.h"
 
-std::string tarch::toString(MemoryLocation value) {
+std::string
+tarch::toString(MemoryLocation value) {
   switch (value) {
   case MemoryLocation::Heap:
     return "Heap";

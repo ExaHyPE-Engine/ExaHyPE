@@ -8,8 +8,8 @@ from sympy.integrals.quadrature import gauss_legendre
 from sympy.integrals.quadrature import gauss_lobatto
 
 PREC_DIGITS = 256
-mp.dps = PREC_DIGITS
-mp.pretty = False
+mp.mp.dps = PREC_DIGITS
+mp.mp.pretty = False
 
 
 class LagrangeBasis:
@@ -26,7 +26,7 @@ class LagrangeBasis:
 
     @abstractmethod
     def init_dictionary_with_default_parameters(self, dictionary):
-        assert False, "A subclass implements init_dictionary_with_default_parameters."
+        assert False, "A DG basis must provide its default parameters."
 
 
 class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
@@ -83,6 +83,29 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     def __compute_mass_matrix_diagonal(self):
         return list(self.quadrature_weights)
 
+    def __average_with_negated_mirror_entries(self, operator):
+        """Returns the operator with every entry averaged with its negated mirror entry.
+
+        The nodes mirror at the centre of the unit interval and a derivative operator changes its
+        sign under that mirror. The average makes the two entries of a pair exact negatives and
+        the centre entry zero.
+        """
+        dofs_per_axis = self.dofs_per_axis
+        quadrature_points = self.quadrature_points
+        for node in range(dofs_per_axis):
+            assert mp.almosteq(
+                quadrature_points[node] + quadrature_points[dofs_per_axis - 1 - node],
+                1,
+            ), "The nodes of a DG basis must mirror at the centre of the unit interval."
+        last = dofs_per_axis - 1
+        return [
+            [
+                (operator[row][col] - operator[last - row][last - col]) / 2
+                for col in range(dofs_per_axis)
+            ]
+            for row in range(dofs_per_axis)
+        ]
+
     def __compute_stiffness_operator(self):
         dofs_per_axis = self.dofs_per_axis
         quadrature_points = self.quadrature_points
@@ -97,7 +120,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
                     col
                 ] * self.derivative1D(quadrature_points[col], row)
 
-        return stiffness_matrix
+        return self.__average_with_negated_mirror_entries(stiffness_matrix)
 
     def __compute_derivative_operator(self):
         dofs_per_axis = self.dofs_per_axis
@@ -108,7 +131,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
             for col in range(dofs_per_axis):
                 dQdx[row][col] = self.derivative1D(quadrature_points[row], col)
 
-        return dQdx
+        return self.__average_with_negated_mirror_entries(dQdx)
 
     def __compute_basis_function_values_left(self):
         return [self.value1D(0.0, number) for number in range(self.dofs_per_axis)]
@@ -173,14 +196,30 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
         dictionary["ORDER"] = self.order
 
     @property
+    def rounded_quadrature_points(self):
+        """Returns the quadrature points as doubles that mirror exactly at one half.
+
+        Every point at or above one half rounds to the nearest double. Its mirror point is one minus
+        that double without a rounding error. A point minus one half then is the exact negative of
+        its mirror point minus one half.
+        """
+        points = [float(point) for point in self.quadrature_points]
+        last = len(points) - 1
+        for node in range(len(points) // 2):
+            points[node] = 1.0 - points[last - node]
+        if len(points) % 2 == 1:
+            points[len(points) // 2] = 0.5
+        return points
+
+    @property
     @abstractmethod
     def quadrature_points(self):
-        assert False, "A subclass implements this property."
+        assert False, "A DG basis must provide its quadrature points."
 
     @property
     @abstractmethod
     def quadrature_weights(self):
-        assert False, "A subclass implements this property."
+        assert False, "A DG basis must provide its quadrature weights."
 
     def value1D(self, x, number):
         """Returns the value of shape function ``number`` at x."""

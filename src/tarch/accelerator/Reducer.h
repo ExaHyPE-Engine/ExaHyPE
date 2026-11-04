@@ -6,11 +6,9 @@
 
 namespace tarch::accelerator {
   /**
-   * Reducers for tarch::accelerator::parallelReduce.
-   *
-   * A reducer binds a reference to the caller's target variable, and every backend merges its
-   * reduction result into that target. identity() seeds every thread-local accumulator and
-   * combine() merges two accumulators in the order a backend chooses.
+   * Reducers for tarch::accelerator::parallelReduce(). Every backend merges its result into the
+   * target variable that the reducer references. identity() seeds an accumulator and combine()
+   * merges two accumulators in the order a backend chooses.
    */
   template <typename T>
   struct Max final {
@@ -40,11 +38,9 @@ namespace tarch::accelerator {
   };
 
   /**
-   * Reducer for a caller-defined operation, such as a componentwise maximum over a struct of
-   * several quantities. Op provides the type ValueType and the static methods identity() and
-   * combine(ValueType, ValueType), both marked GPU_CALLABLE_METHOD. Op::combine has to be
-   * associative and commutative, and ValueType has to be trivially copyable, as the GPU backends
-   * copy it through block memory and device buffers.
+   * Reducer for a caller-defined operation such as a componentwise maximum. Op provides ValueType
+   * and the static GPU_CALLABLE_METHOD functions identity() and combine(). Op::combine() is
+   * associative and commutative and ValueType is trivially copyable.
    */
   template <typename Op>
   struct Custom final {

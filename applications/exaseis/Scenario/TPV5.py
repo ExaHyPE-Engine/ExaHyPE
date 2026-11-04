@@ -83,14 +83,15 @@ class TPV5(DynamicRuptureScenario):
     syz = 0;
     """,
         "n_yz": """
-    if ((6 <= x[1]) && (x[1] <= 9)) {
-      if ((11 <= x[2]) && (x[2] <= 14)) {
+    constexpr double EdgeTolerance = 1e-8;
+    if ((6 - EdgeTolerance <= x[1]) and (x[1] <= 9 + EdgeTolerance)) {
+      if ((11 - EdgeTolerance <= x[2]) and (x[2] <= 14 + EdgeTolerance)) {
         return 8;
       }
-      if ((18.5 <= x[2]) && (x[2] <= 21.5)) {
+      if ((18.5 - EdgeTolerance <= x[2]) and (x[2] <= 21.5 + EdgeTolerance)) {
         return 11.6;
       }
-      if ((26 <= x[2]) && (x[2] <= 29)) {
+      if ((26 - EdgeTolerance <= x[2]) and (x[2] <= 29 + EdgeTolerance)) {
         return -8;
       }
     }

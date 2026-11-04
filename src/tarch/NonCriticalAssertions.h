@@ -9,15 +9,8 @@
  * rank can read and adopt the rank that raised the first one.
  */
 namespace tarch {
-  void triggerNonCriticalAssertion(
-    const std::string& file,
-    int                line,
-    const std::string& expression,
-    const std::string& parameterValuePairs
-  );
+  void triggerNonCriticalAssertion(const std::string& requirement, const std::string& values);
   bool hasNonCriticalAssertionBeenViolated();
-
   int getNonCriticalAssertionRank();
-
   void adoptNonCriticalAssertionRank(int rank);
 } // namespace tarch

@@ -40,7 +40,7 @@ periodic = args.periodic_bc == "on"
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
-    project_name=".",
+    project_name="EulerCircularDisc",
     dimensions=2,
     size=[1.0, 1.0, 1.0],
     offset=[0.0, 0.0, 0.0],
@@ -64,7 +64,7 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions; only invoked with --periodic-bc off.
+  // The solver calls these reflecting walls only with --periodic-bc off.
   Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
   Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
@@ -77,10 +77,9 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
-  // The refined disc is centred on the domain corner: With periodic boundary
-  // conditions it overlaps every wrap, so the refinement has to mirror onto
-  // the far sides of each axis; with reflective boundaries the same disc
-  // stays confined to the corner and serves as the control.
+  // The refined disc lies at the domain corner. With periodic boundaries the refinement also covers
+  // the far side of every axis. With reflecting walls the refinement stays in the corner as the
+  // control case.
   tarch::la::Vector<DIMENSIONS, double> circleCentre(0.0);
 
   if (tarch::la::equals(t, 0.0)) {
@@ -101,10 +100,12 @@ compute_primitive_variables = r"""
 #endif
 
 #if DIMENSIONS == 3
-  const auto uSq = u0 * u0 + u1 * u1 + u2 * u2;
+  const auto uSq = tarch::la::sumOfSquaresInOrderOfMagnitude(u0, u1, u2);
   const auto u_n = (normal == 0) ? u0 : (normal == 1) ? u1 : u2;
 #else
-  const auto uSq = u0 * u0 + u1 * u1;
+  const auto squareOfU0 = tarch::la::productRoundedOnce(u0, u0);
+  const auto squareOfU1 = tarch::la::productRoundedOnce(u1, u1);
+  const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 #endif
 

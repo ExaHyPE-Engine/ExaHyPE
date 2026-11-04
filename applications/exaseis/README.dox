@@ -7,9 +7,9 @@ It targets the scattering of linear elastic waves in heterogeneous, isotropic an
 with complex free-surface topography, while avoiding traditional mesh-generation pipelines.
 
 The key idea of ExaSeis is a curvilinear formulation of the elastic wave equation.
-Instead of solving directly in Cartesian coordinates \f$(x,y,z)\f$, ExaSeis introduces computational coordinates
-\f$(q, r, s) \in \tilde{Omega} = [0,1] \times [0,1] \times [0,1] \f$, and stores a smooth mapping between the
-computational and the physical domain.
+ExaSeis solves in computational coordinates
+\f$(q, r, s) \in \tilde{Omega} = [0,1] \times [0,1] \times [0,1] \f$ and stores a smooth mapping between the
+computational and the physical domain with the Cartesian coordinates \f$(x,y,z)\f$.
 
 \f[
     (x (q, r, s) , y (q, r, s) , z (q, r, s)) \leftrightarrow (q (x, y, z) , r (x, y, z) , s (x, y, z))
@@ -30,7 +30,7 @@ While the ExaHyPE engine provides a Rusanov flux as a default numerical flux, Ex
 Beyond the curvilinear geometry, ExaSeis provides two major building blocks for computational seismology:
 
 - Dynamic rupture: faults are placed accurately in the physical domain via the same curvilinear mapping and are aligned between elements so that they can be resolved by specialised Riemann solvers. These solvers incorporate complex friction laws, cohesion, and stress build-up and release to model earthquake source dynamics.
-- Perfectly matched layers (PML): to mimic an effectively infinite Earth, ExaSeis augments the outer region of the mesh with PMLs that damp outgoing waves. This reduces artificial reflections from the domain boundaries and approximates wave radiation into an unbounded medium.
+- Perfectly matched layers (PML): To model an unbounded Earth, ExaSeis augments the outer region of the mesh with PMLs that damp outgoing waves. This reduces artificial reflections from the domain boundaries and approximates wave radiation into an unbounded medium.
 
 \li \subpage applications_exahype2_exaseis_cartesian
 

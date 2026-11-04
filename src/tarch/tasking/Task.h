@@ -19,8 +19,5 @@ public:
   Task& operator=(Task&&)      = delete;
   virtual ~Task()              = default;
 
-  /**
-   * A task that cannot proceed expresses that as a dependency of its spawn.
-   */
   virtual void run() = 0;
 };

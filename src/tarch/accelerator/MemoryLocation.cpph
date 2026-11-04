@@ -1,0 +1,44 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Returns whether location places data in the memory of a GPU in this build.
+ */
+INLINE_METHOD bool
+tarch::isGPUMemory([[maybe_unused]] const MemoryLocation location) {
+#if defined(PEANO_WITH_GPU_BACKEND)
+  return location == MemoryLocation::Device;
+#else
+  return false;
+#endif
+}
+
+/**
+ * Returns the bytes as device bytes if the location is a GPU in this build, else as host bytes.
+ */
+INLINE_METHOD tarch::AllocatedBytes
+tarch::AllocatedBytes::in(const MemoryLocation location, const std::size_t bytes) {
+  return isGPUMemory(location) ? AllocatedBytes{0, bytes} : AllocatedBytes{bytes, 0};
+}
+
+INLINE_METHOD tarch::AllocatedBytes
+tarch::AllocatedBytes::onHost(const std::size_t bytes) {
+  return {bytes, 0};
+}
+
+INLINE_METHOD std::size_t
+tarch::AllocatedBytes::getTotal() const {
+  return host + device;
+}
+
+INLINE_METHOD tarch::AllocatedBytes&
+tarch::AllocatedBytes::operator+=(const AllocatedBytes& other) {
+  host += other.host;
+  device += other.device;
+  return *this;
+}
+
+INLINE_METHOD tarch::AllocatedBytes
+tarch::operator+(const AllocatedBytes& left, const AllocatedBytes& right) {
+  return {left.host + right.host, left.device + right.device};
+}

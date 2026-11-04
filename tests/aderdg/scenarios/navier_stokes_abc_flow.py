@@ -2,7 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .scenario import Scenario
 
-import os, sys
+import os
+import sys
 
 sys.path.insert(0, os.path.abspath("../equations"))
 from equations import NavierStokes
@@ -12,9 +13,8 @@ import math
 
 class NavierStokesABCFlow(Scenario):
     """
-    Arnold-Beltrami-Childress flow, described e.g. in doi.org/10.1016/j.jcp.2016.05.009.
-
-    Somewhat analogous to Taylor-Green vortex, but in 3D.
+    The Arnold-Beltrami-Childress flow, the 3D counterpart of the Taylor-Green vortex, described in
+    doi.org/10.1016/j.jcp.2016.05.009.
     """
 
     _dimensions = 3
@@ -28,12 +28,11 @@ class NavierStokesABCFlow(Scenario):
         use_advection=False,
         use_background_state=False,
         use_gravity=False,
-        use_viscosity=True,
         gamma=1.4,
         cv=1.0,
         gas_constant=0.4,
         reference_viscosity=0.01,
-        Pr=0.7,
+        prandtl_number=0.7,
     )
 
     def __init__(self):
@@ -42,25 +41,25 @@ class NavierStokesABCFlow(Scenario):
     def analytical_solution(self):
         return (
             """
-    constexpr auto gamma = 1.4;
-    constexpr auto q0 = 0;
-    constexpr auto referenceViscosity = 0.01;
+    constexpr auto AdiabaticIndex = 1.4;
+    constexpr auto HeatRelease = 0;
+    constexpr auto ReferenceViscosity = 0.01;
 
-    const auto c = 100 / gamma;
-    const auto Ft = std::exp(-1 * referenceViscosity * t);
-    const auto pressure = c -
+    const auto meanPressure = 100 / AdiabaticIndex;
+    const auto decayFactor = std::exp(-1 * ReferenceViscosity * t);
+    const auto pressure = meanPressure -
         (std::sin(x[1]) * std::cos(x[0]) + std::sin(x[0]) * std::cos(x[2]) +
         std::sin(x[2]) * std::cos(x[1])) *
-            Ft * Ft;
+            decayFactor * decayFactor;
 
     const double rho = 1;
     solution[Shortcuts::rho] = rho;
-    solution[Shortcuts::j+0] = (std::sin(x[2]) + std::cos(x[1])) * Ft;
-    solution[Shortcuts::j+1] = (std::sin(x[0]) + std::cos(x[2])) * Ft;
-    solution[Shortcuts::j+2] = (std::sin(x[1]) + std::cos(x[0])) * Ft;
+    solution[Shortcuts::j+0] = (std::sin(x[2]) + std::cos(x[1])) * decayFactor;
+    solution[Shortcuts::j+1] = (std::sin(x[0]) + std::cos(x[2])) * decayFactor;
+    solution[Shortcuts::j+2] = (std::sin(x[1]) + std::cos(x[0])) * decayFactor;
 
-    auto j = &solution[Shortcuts::j];
-    auto Z = 0;
+    const auto* const j = &solution[Shortcuts::j];
+    const auto Z = 0;
     """
             + self._equation.evaluate_energy()
             + """
@@ -70,6 +69,6 @@ class NavierStokesABCFlow(Scenario):
 
     def initial_conditions(self):
         return """
-    double t = 0.;
-    auto solution = Q;
+    const double t = 0.;
+    auto* const solution = Q;
 """ + self.analytical_solution()

@@ -1,52 +1,50 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
-{% for item in SOLVERS %}
-#include "{{ item[0] }}.h"
-#include "PDETerms{{ item[0] }}.h"
+{% for header in SOLVER_HEADERS %}
+#include "{{ header }}"
 {%- endfor %}
 
-#include "exahype2/RefinementControl.h"
-#include "runner/RepositoryCallbacks.h"
+#include "exahype2/runner/Runner.h"
+#include "exahype2/runner/Statistics.h"
+#include "peano4/RefinementRequest.h"
+#include "tarch/accelerator/MemoryLocation.h"
+
+namespace peano4 {
+  struct Regrid;
+} // namespace peano4
+
+namespace tarch::mpi {
+  class ReductionRecord;
+} // namespace tarch::mpi
 
 namespace {{ NAMESPACE | join("::") }} {
 {%- for item in SOLVERS %}
-  extern {{ item[0] }} {{ item[1] }};
+  extern {{ NAMESPACE | join("::") }}::{{ item[0] }} {{ item[1] }};
 {%- endfor %}
-
-  double getMinTimeStamp();
-  double getMaxTimeStamp();
-  double getMinTimeStepSize();
-  double getMaxTimeStepSize();
-
-  void startGridConstructionStep();
-  void startGridInitialisationStep();
-  void startDynamicMeshRefinementStep();
-
-  void startTimeStep();
-  void startPlottingStep();
-
-  void finishGridConstructionStep();
-  void finishGridInitialisationStep();
-  void finishDynamicMeshRefinementStep();
-
-  void finishTimeStep();
-  void finishPlottingStep();
 
   void startSimulation();
   void finishSimulation();
 
-  bool mayPlot();
+  void                    allocate();
+  ::tarch::AllocatedBytes getAllocatedBytes();
 
-  bool isFirstGridSweepOfTimeStep();
-  bool isLastGridSweepOfTimeStep();
+  void requestRefinementForGridConstruction();
+  void initialise();
+  void performTimeStep();
+  void regrid(const peano4::Regrid& regrid);
+  void plot();
+  void recordLastTimeStamp();
+  void addLocalValuesToGlobalReduction(::tarch::mpi::ReductionRecord& record);
+  void readValuesFromGlobalReduction(const ::tarch::mpi::ReductionRecord& record);
 
-  void suspendSolversForOneGridSweep();
+  const std::vector<peano4::RefinementRequest>& getRefinementRequests();
 
-  int getNumberOfDoFs();
+  double        getMinTimeStamp();
+  double        getMaxTimeStamp();
+  std::uint64_t getNumberOfSolverCells();
+  std::uint64_t getNumberOfCellDoFs();
 
-  ::runner::SolverStatistics getSolverStatistics();
-  ::runner::SolverStatistics getParticleStatistics();
-
-  ::runner::ConfigurationSummary getConfigurationSummary();
+  ::exahype2::runner::SolverStatistics     getSolverStatistics();
+  ::exahype2::runner::ConfigurationSummary getConfigurationSummary();
 } // namespace {{ NAMESPACE | join("::") }}

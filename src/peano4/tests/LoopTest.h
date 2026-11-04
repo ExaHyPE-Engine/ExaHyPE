@@ -18,13 +18,9 @@ public:
 private:
   void testDForEachVisitsAllPointsInLinearOrder();
   void testDForEachWithPerAxisRange();
-  void testDStartVector();
-  void testDIncrementOverloadConsistency();
-  void testDIncrementExclusive();
   void testDLinearised();
-  void testDForEachExclusiveKeepsFixedDimensionAndIsComplete();
-  void testDCompare();
-  void testDCompareExclusive();
+  void testDDelinearisedInvertsDLinearised();
+  void testDDelinearisedExclusiveKeepsFixedDimensionAtZero();
+  void testDLinearisedExclusiveInvertsDDelinearisedExclusive();
   void testDForEachCornerEnumeratesCornersInLinearisedOrder();
-  void testDForEachStencilEnumeratesStencil();
 };

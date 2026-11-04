@@ -1,0 +1,23 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Returns the heap bytes a vector allocates, its unused capacity included.
+ */
+template <typename Element>
+INLINE_METHOD std::size_t
+tarch::getAllocatedBytesOf(const std::vector<Element>& elements) {
+  // Element may be a pointer type. Open MPI defines an MPI handle as a pointer.
+  return elements.capacity() * sizeof(Element); // NOLINT(bugprone-sizeof-expression)
+}
+
+INLINE_METHOD constexpr tarch::MemoryUsageFormat
+tarch::chooseMemoryUsageFormat(const unsigned long long bytes) noexcept {
+  if (bytes < MiB) {
+    return MemoryUsageFormat::KiB;
+  } else if (bytes < GiB) {
+    return MemoryUsageFormat::MiB;
+  } else {
+    return MemoryUsageFormat::GiB;
+  }
+}
