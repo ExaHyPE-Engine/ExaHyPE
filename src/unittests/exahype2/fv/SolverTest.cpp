@@ -41,6 +41,8 @@ namespace {
   constexpr double TimeStepFactor = 0.5;
   TARGET_DECLARE_END
 
+  struct RuntimeParameters final {};
+
   /**
    * LinearSolverFor evolves one unknown on constant subcells from a linear initial condition without
    * flux. Under the fixed rule it reports the wave speed zero.
@@ -53,8 +55,9 @@ namespace {
     static constexpr int NumberOfUnknowns           = 1;
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
-    using Reconstruction  = exahype2::fv::reconstruction::Constant;
-    using TimeIntegration = exahype2::fv::timestepping::SingleStep;
+    using RuntimeParameters = ::RuntimeParameters;
+    using Reconstruction    = exahype2::fv::reconstruction::Constant;
+    using TimeIntegration   = exahype2::fv::timestepping::SingleStep;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = Rule;
     static constexpr std::array<int, 1>           MeasuredUnknowns{0};
@@ -73,7 +76,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                                 Q,
       const tarch::la::Vector<DIMENSIONS, double>&                  x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       Q[0] = getProfile(x);
     }
@@ -83,7 +87,8 @@ namespace {
       [[maybe_unused]] const double                t,
       [[maybe_unused]] const double                dt,
       [[maybe_unused]] const double* const         Q,
-      double* const                                solution
+      double* const                                solution,
+      [[maybe_unused]] const RuntimeParameters&    parameters
     ) {
       solution[0] = getProfile(x);
     }
@@ -94,7 +99,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       outside[0] = inside[0];
     }
@@ -103,7 +109,8 @@ namespace {
       [[maybe_unused]] const double* const                          Q,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const double                                 t
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return exahype2::RefinementCommand::Keep;
     }
@@ -114,7 +121,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return Rule == exahype2::TimeStepping::Rule::Adaptive ? 1.0 : 0.0;
     }
@@ -126,7 +134,8 @@ namespace {
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      double* const                                                 F
+      double* const                                                 F,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       F[0] = 0.0;
     }
@@ -150,8 +159,9 @@ namespace {
     static constexpr int NumberOfUnknowns           = 1;
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
-    using Reconstruction  = exahype2::fv::reconstruction::Constant;
-    using TimeIntegration = exahype2::fv::timestepping::SingleStep;
+    using RuntimeParameters = ::RuntimeParameters;
+    using Reconstruction    = exahype2::fv::reconstruction::Constant;
+    using TimeIntegration   = exahype2::fv::timestepping::SingleStep;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Adaptive;
 
@@ -161,7 +171,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                                 Q,
       const tarch::la::Vector<DIMENSIONS, double>&                  x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       Q[0] = LinearSolver::getProfile(x);
     }
@@ -172,7 +183,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       outside[0] = inside[0];
     }
@@ -181,7 +193,8 @@ namespace {
       [[maybe_unused]] const double* const                          Q,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const double                                 t
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return exahype2::RefinementCommand::Keep;
     }
@@ -192,7 +205,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return Q[0] == PostprocessedValue ? PostprocessedWaveSpeed : 1.0;
     }
@@ -204,7 +218,8 @@ namespace {
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      double* const                                                 F
+      double* const                                                 F,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       F[0] = 0.0;
     }
@@ -214,7 +229,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const double                                 dt
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int value = 0; value < ValuesPerPatch; value++) {
         Q[value] = PostprocessedValue;
@@ -255,7 +271,7 @@ namespace {
     }
     const auto& cellConnectivity = spacetree.getCellConnectivity();
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.regrid(cellConnectivity, regrid, requests);
+    solver.regrid(cellConnectivity, regrid, requests, RuntimeParameters{});
     spacetree.finishRegrid();
     finishStep(solver);
   }
@@ -388,13 +404,13 @@ UNIT_TEST("The initialisation writes the initial condition into every volume") {
     const auto&  cellConnectivity = buildGrid();
     LinearSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
 
     WHEN("The solver initialises every cell with an erase request") {
       exahype2::RefinementRequests requests;
       requests.clear(cellConnectivity.getNumberOfSlots());
       requests.merge(exahype2::RefinementCommand::Erase, cellConnectivity.getCells());
-      solver.initialise(cellConnectivity, requests);
+      solver.initialise(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
       const int cells      = peano4::unittests::getGlobalSumOf(cellConnectivity.getCells().size);
       const int mismatches = peano4::unittests::getGlobalSumOf(
@@ -421,10 +437,10 @@ UNIT_TEST("A time step without flux keeps the solution and advances the time sta
     const auto&  cellConnectivity = buildGrid();
     LinearSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
 
     WHEN("The solver performs three time steps") {
@@ -435,7 +451,7 @@ UNIT_TEST("A time step without flux keeps the solution and advances the time sta
       std::vector<double> sizeOfNextStep;
       for (int step = 0; step < 3; step++) {
         requests.clear(cellConnectivity.getNumberOfSlots());
-        solver.performTimeStep(cellConnectivity, requests);
+        solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
         finishStep(solver);
         mismatchesOfStep.push_back(
           peano4::unittests::getGlobalSumOf(
@@ -477,22 +493,22 @@ UNIT_TEST("Recording the last time stamp appends the row of that time stamp to t
     LinearSolver      solver;
     solver.setLimits(getLimitsOfTheDomain());
     solver.openErrorMeasurement(fileName, TimeBetweenTwoRecords);
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     for (int step = 0; step < 3; step++) {
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.performTimeStep(cellConnectivity, requests);
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
     }
     // Only the global master writes the error file.
     const std::size_t linesBeforeTheRecord = isGlobalMaster ? readLinesOf(fileName + ".csv").size() : 0;
 
     WHEN("The solver records the last time stamp twice") {
-      solver.recordLastTimeStamp(cellConnectivity);
-      solver.recordLastTimeStamp(cellConnectivity);
+      solver.recordLastTimeStamp(cellConnectivity, RuntimeParameters{});
+      solver.recordLastTimeStamp(cellConnectivity, RuntimeParameters{});
       const auto lines = isGlobalMaster ? readLinesOf(fileName + ".csv") : std::vector<std::string>{};
       if (isGlobalMaster) {
         std::filesystem::remove(fileName + ".csv");
@@ -515,12 +531,12 @@ UNIT_TEST("A refinement and the erase back keep the solution") {
     const auto&  cellConnectivity = buildGrid();
     LinearSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
-    solver.performTimeStep(cellConnectivity, requests);
+    solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
     peano4::Spacetree::getInstance().markPersistentDataLive();
@@ -548,7 +564,7 @@ UNIT_TEST("A refinement and the erase back keep the solution") {
 
       AND_WHEN("The solver performs a time step") {
         requests.clear(cellConnectivity.getNumberOfSlots());
-        solver.performTimeStep(cellConnectivity, requests);
+        solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
         finishStep(solver);
         const int mismatchesAfterTheTimeStep = peano4::unittests::getGlobalSumOf(
           getNumberOfMismatchesAgainstTheProfileOfLevel(solver, cellConnectivity, Depth)
@@ -587,19 +603,19 @@ UNIT_TEST("A refinement reduces the next adaptive time step to the bound of the 
     const auto&                                             cellConnectivity = buildGrid();
     LinearSolverFor<exahype2::TimeStepping::Rule::Adaptive> solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
-    solver.performTimeStep(cellConnectivity, requests);
+    solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     peano4::Spacetree::getInstance().markPersistentDataLive();
 
     WHEN("The cell in the centre refines and the solver performs the next time step") {
       regridWithLiveData(solver, {peano4::unittests::getRefinementOfCentreCell(Depth)}, requests);
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.performTimeStep(cellConnectivity, requests);
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
 
       THEN("The step size is the time step factor times the fine volume width over the number of dimensions") {
@@ -618,17 +634,17 @@ UNIT_TEST("The postprocessing of the updated patch writes every volume and sets 
     const auto&          cellConnectivity = buildGrid();
     PostprocessingSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const int initialValuesWithoutPostprocessing =
       peano4::unittests::getGlobalSumOf(getNumberOfValuesWithoutPostprocessing(solver, cellConnectivity));
 
     WHEN("The solver performs one time step") {
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.performTimeStep(cellConnectivity, requests);
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
       const int valuesWithoutPostprocessing =
         peano4::unittests::getGlobalSumOf(getNumberOfValuesWithoutPostprocessing(solver, cellConnectivity));
@@ -652,10 +668,10 @@ UNIT_TEST("A plot writes the file of every rank and allocates a host copy of the
     const auto&  rank             = tarch::mpi::Rank::getInstance();
     LinearSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const std::string outputDirectory =
       (tarch::testing::getWritableTestDirectory() / "FiniteVolumeSolverPlotTest").string() + "/";
@@ -665,7 +681,7 @@ UNIT_TEST("A plot writes the file of every rank and allocates a host copy of the
 
     WHEN("The solver plots its patches and every rank downloads its solution and looks for its file") {
       const tarch::AllocatedBytes bytesBeforeThePlot = solver.getAllocatedBytes();
-      solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory);
+      solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory, RuntimeParameters{});
       const tarch::AllocatedBytes bytesAfterThePlot = solver.getAllocatedBytes();
       const auto&                 solution          = solver.getSolution();
       LinearSolver::Patches       solutionCopy(solution.getChunkSize(), tarch::MemoryLocation::Heap);
@@ -694,7 +710,7 @@ UNIT_TEST("A release frees every pool that the allocation reserved") {
     const std::size_t bytesBeforeTheAllocation = solver.getAllocatedBytes().getTotal();
 
     WHEN("The solver allocates its pools on the grid and releases them") {
-      solver.allocate(cellConnectivity);
+      solver.allocate(cellConnectivity, RuntimeParameters{});
       const tarch::AllocatedBytes bytesAfterTheAllocation = solver.getAllocatedBytes();
       const tarch::AllocatedBytes solutionBytes           = solver.getSolution().getAllocatedBytes();
       solver.release();

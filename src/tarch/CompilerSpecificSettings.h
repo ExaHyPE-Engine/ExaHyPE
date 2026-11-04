@@ -41,8 +41,9 @@
 #define _PRAGMA(...) _Pragma(STR(__VA_ARGS__))
 
 // Clang compiles the floating-point operations of a build with PEANO_WITH_FPE as constrained
-// intrinsics. LLVM cannot vectorise a constrained intrinsic.
-#if defined(PEANO_WITH_FPE)
+// intrinsics. LLVM cannot vectorise a constrained intrinsic. The spir64 device pass of icpx rejects
+// the simdlen clause.
+#if defined(PEANO_WITH_FPE) or defined(__SPIR__) or defined(__SPIRV__)
 #define SIMD(...)
 // #elif defined(__clang__) and not defined(PEANO_WITH_GPU_BACKEND)
 // TODO: Is faster sometimes but Clang warns.
@@ -55,13 +56,13 @@
   or defined(__NVCOMPILER) or defined(__PGI)
 #define UNROLL(numberOfIterations) _PRAGMA(unroll numberOfIterations)
 #elif defined(__CUDACC__)
-#define UNROLL(numberOfIterations) /* No operation. */
+#define UNROLL(numberOfIterations)
 #elif defined(__GNUC__) and (__GNUC__ >= 8)
 #define UNROLL(numberOfIterations) _PRAGMA(GCC unroll numberOfIterations)
 #elif defined(_MSC_VER)
 #define UNROLL(numberOfIterations) __pragma(loop(unroll(numberOfIterations)))
 #else
-#define UNROLL(numberOfIterations) /* No operation. */
+#define UNROLL(numberOfIterations)
 #endif
 
 #if defined(__has_attribute)

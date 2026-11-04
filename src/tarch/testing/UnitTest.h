@@ -91,7 +91,7 @@ private:
 
 /**
  * Defines a unit test of the unit test executable with the block that follows as its body. The
- * report names the unit test by the path of its file below src/unittests and by description.
+ * report lists the unit test with the path of its file below src/unittests and its description.
  */
 #define UNIT_TEST(description) \
   namespace { \

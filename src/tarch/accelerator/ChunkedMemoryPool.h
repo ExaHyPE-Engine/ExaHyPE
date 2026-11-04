@@ -69,9 +69,11 @@ public:
   [[nodiscard]] INLINE_METHOD const tarch::accelerator::ChunkedMemoryPool<T>& download(
     tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost
   ) const;
+
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>& download(
     tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost
   );
+
   INLINE_METHOD void upload(const tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost);
 
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::View getView() noexcept;

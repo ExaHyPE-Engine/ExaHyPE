@@ -137,7 +137,7 @@ UNIT_TEST("The function createInfo() returns an info object that takes a key and
       tarch::mpi::setInfo(info, "cb_nodes", "1");
       tarch::mpi::freeInfo(&info);
 
-      THEN("The handle names an object until freeInfo() resets it to MPI_INFO_NULL") {
+      THEN("The handle differs from MPI_INFO_NULL until freeInfo() resets it to MPI_INFO_NULL") {
         VALIDATE(isCreated);
         VALIDATE(info == MPI_INFO_NULL);
       }

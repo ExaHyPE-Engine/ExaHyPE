@@ -61,7 +61,8 @@ public:
     ComputePrecision* NOALIAS                    scratch,
     const Tables&                                tables,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -76,7 +77,8 @@ public:
     ComputePrecision* NOALIAS                    scratch,
     const Tables&                                tables,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
 private:
@@ -136,6 +138,7 @@ struct exahype2::dg::ader::PredictCells final {
   double                                      timeStamp{0.0};
   double                                      timeStepSize{0.0};
   ComputePrecision*                           scratch{nullptr};
+  typename Derived::RuntimeParameters         parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,

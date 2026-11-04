@@ -4,16 +4,24 @@ Stage: build
 
 %files
   utilities/spack/compilers/llvm/spack.yaml /spack.yaml
+  utilities/spack/repo.yaml /opt/spack-peano/repo.yaml
+  utilities/spack/packages /opt/spack-peano/packages
 
 %post
   mkdir /opt/spack-environment && cd /opt/spack-environment
   cp /spack.yaml .
 
   . /opt/spack/share/spack/setup-env.sh
-  spack compiler find
+  spack -e . compiler find
+  spack -e . repo add /opt/spack-peano
   spack -e . external find curl cmake ccache git ninja
   spack -e . concretize
-  spack -e . install --fail-fast
+  spack -e . install --fail-fast --concurrent-packages 1 llvm@22.1.8
+  # Clang 22 embeds PTX only with this option. The CUDA driver compiles the PTX for every GPU newer than sm_75.
+  llvmBin=$(dirname "$(readlink -f /opt/views/view/bin/clang++)")
+  echo "--cuda-include-ptx=all" >> "${llvmBin}/clang.cfg"
+  echo "--cuda-include-ptx=all" >> "${llvmBin}/clang++.cfg"
+  spack -e . install --fail-fast --concurrent-packages 1
   spack gc -y
   spack clean
   spack env activate --sh -d . >> /opt/spack-environment/environment_modifications.sh

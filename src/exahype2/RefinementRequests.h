@@ -28,6 +28,7 @@ public:
   [[nodiscard]] std::vector<peano4::RefinementRequest> getRefinementRequests(
     const peano4::CellConnectivity& cellConnectivity
   ) const;
+
   [[nodiscard]] std::vector<peano4::RefinementRequest> getLocalRefinementRequests(
     const peano4::CellConnectivity& cellConnectivity
   ) const;

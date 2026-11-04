@@ -50,7 +50,7 @@ A hanging face couples cells on different levels. The coarse trace is
 interpolated onto the fine faces before the Riemann dispatch, the fine faces
 solve their Riemann problems, and the numerical fluxes of the fine faces
 restrict onto the coarse face before the corrector of the coarse cell reads
-it. No predictor runs twice.
+it. Every predictor runs once.
 
 # Coupling two solvers
 

@@ -9,14 +9,14 @@
 
 #include <mpi.h>
 
-UNIT_TEST("A default automaton state starts in the root state of the curve and names itself and its curve state") {
+UNIT_TEST("A default automaton state starts in the root state of the curve and describes its type and curve state") {
   GIVEN("A default automaton state") {
     const peano4::grid::AutomatonState state;
 
     WHEN("The state writes its description") {
       const std::string description = state.toString();
 
-      THEN("The state starts in the root state of the curve and the description names the state and its curve state") {
+      THEN("The state starts in the root state of the curve and the description contains its type and curve state") {
         VALIDATE_EQUALS(state.curveState, peano4::sfc::ActiveCurve::RootState);
         VALIDATE(description.find("AutomatonState") != std::string::npos);
         VALIDATE(description.find("CurveState") != std::string::npos);

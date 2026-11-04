@@ -483,7 +483,7 @@ namespace {
   };
 
   /**
-   * Returns how the report names a unit test.
+   * Returns the label of a unit test in the report.
    */
   std::string getUnitTestName(const UnitTestResult& unitTest) { return "Unit test \"" + unitTest.description + "\""; }
 

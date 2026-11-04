@@ -32,7 +32,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::open(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 stageTimeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   ASSERTION(stage >= 0 and stage < Tableau::Stages, stage);
   ASSERTION(cellState != nullptr);
@@ -51,7 +52,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::open(
       cellCentre,
       cellSize,
       stageTimeStamp,
-      timeStepSize
+      timeStepSize,
+      parameters
     );
   }
   projectOntoFaces(stageState, nodalFluxes, faceStates, faceFluxes, leftFaceCoefficients, rightFaceCoefficients);
@@ -64,7 +66,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::open(
     cellCentre,
     cellSize,
     stageTimeStamp,
-    timeStepSize
+    timeStepSize,
+    parameters
   );
 }
 
@@ -115,7 +118,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::close(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   combineEstimates(weights, cellState, estimates, cellState);
   return exahype2::dg::finishCell<Derived, ReportEigenvalues>(
@@ -124,7 +128,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::close(
     cellCentre,
     cellSize,
     timeStamp,
-    timeStepSize
+    timeStepSize,
+    parameters
   );
 }
 
@@ -192,7 +197,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int NodesPerAxis     = CellLayout::NodesPerAxis;
   constexpr int NumberOfUnknowns = CellLayout::NumberOfUnknowns;
@@ -290,7 +296,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
               timeStamp,
               timeStepSize,
               direction,
-              nonconservativeProduct
+              nonconservativeProduct,
+              parameters
             );
             SIMD()
             for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -336,7 +343,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
         cellSize,
         timeStamp,
         timeStepSize,
-        sourceValues
+        sourceValues,
+        parameters
       );
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -415,7 +423,8 @@ exahype2::dg::rk::OpenStage<Derived, StoragePrecision, ComputePrecision>::operat
     cellConnectivity.getCellCentre(slot),
     cellConnectivity.getCellWidth(slot),
     stageTimeStamp,
-    timeStepSize
+    timeStepSize,
+    parameters
   );
 }
 
@@ -456,7 +465,8 @@ exahype2::dg::rk::CombineStages<Derived, StoragePrecision, ComputePrecision>::op
       cellConnectivity.getCellCentre(slot),
       cellConnectivity.getCellWidth(slot),
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      parameters
     )
   );
 }

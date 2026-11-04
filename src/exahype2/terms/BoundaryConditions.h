@@ -7,14 +7,15 @@
 namespace exahype2::terms {
   template <typename SolverType, typename Precision>
   concept HasBoundaryConditions = requires(
-    const Precision* const                       inside,
-    Precision* const                             outside,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const int                                    normal
+    const Precision* const                        inside,
+    Precision* const                              outside,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const double                                  t,
+    const int                                     normal,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
-    { SolverType::boundaryConditions(inside, outside, x, h, t, normal) } -> std::same_as<void>;
+    { SolverType::boundaryConditions(inside, outside, x, h, t, normal, parameters) } -> std::same_as<void>;
   };
 
   template <typename SolverType>

@@ -240,6 +240,8 @@ namespace {
    * The PDE terms of a linear profile without flux and wave speed. A time step keeps the profile.
    */
   struct LinearTerms {
+    struct RuntimeParameters final {};
+
     static INLINE_METHOD GPU_CALLABLE_METHOD double getProfile(const tarch::la::Vector<DIMENSIONS, double>& x) {
       double value = 1.0;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -251,7 +253,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                                 Q,
       const tarch::la::Vector<DIMENSIONS, double>&                  x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       Q[0] = getProfile(x);
     }
@@ -262,7 +265,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       outside[0] = inside[0];
     }
@@ -271,7 +275,8 @@ namespace {
       [[maybe_unused]] const double* const                          Q,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const double                                 t
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return exahype2::RefinementCommand::Keep;
     }
@@ -282,7 +287,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return 0.0;
     }
@@ -294,11 +300,14 @@ namespace {
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      double* const                                                 F
+      double* const                                                 F,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       F[0] = 0.0;
     }
   };
+
+  using RuntimeParameters = LinearTerms::RuntimeParameters;
 
   /**
    * A solver with the linear profile of LinearTerms and a fixed time step rule.
@@ -348,7 +357,8 @@ namespace {
     static bool plotsFace(
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return true;
     }
@@ -378,8 +388,12 @@ namespace {
       Solver(TimeStepFactor, "FaceTracingFixedRuleADERDGSolver", {{"q", 1}}),
       _planePosition(planePosition) {}
 
-    void initialise(const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests) {
-      Solver::initialise(cellConnectivity, requests);
+    void initialise(
+      const peano4::CellConnectivity& cellConnectivity,
+      exahype2::RefinementRequests&   requests,
+      const RuntimeParameters&        parameters
+    ) {
+      Solver::initialise(cellConnectivity, requests, parameters);
       projectSolutionOntoPlane(cellConnectivity, 0, _planePosition);
     }
 
@@ -448,7 +462,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& width,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return 1.0;
     }
@@ -481,7 +496,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                                 Q,
       const tarch::la::Vector<DIMENSIONS, double>&                  x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       Q[0] = getProfile(x) - Increment;
     }
@@ -491,7 +507,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const double                                 dt
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int node = 0; node < NodesInCell; node++) {
         Q[node] += Increment;
@@ -528,7 +545,8 @@ namespace {
 
     static bool ownsCell(
       const tarch::la::Vector<DIMENSIONS, double>&                  x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return Side == 0 ? x(0) < Interface : x(0) > Interface;
     }
@@ -608,7 +626,7 @@ namespace {
     }
     const auto& cellConnectivity = spacetree.getCellConnectivity();
     requests.clear(cellConnectivity.getNumberOfSlots());
-    (solvers.regrid(cellConnectivity, regrid, requests), ...);
+    (solvers.regrid(cellConnectivity, regrid, requests, RuntimeParameters{}), ...);
     spacetree.finishRegrid();
     finishStep(solvers...);
   }
@@ -999,18 +1017,18 @@ UNIT_TEST("The initialisation writes the initial condition into every node") {
 
     WHEN("The solver votes on the grid construction under these limits") {
       solver.setLimits(constructionLimits);
-      solver.requestRefinementForGridConstruction(cellConnectivity, requests);
+      solver.requestRefinementForGridConstruction(cellConnectivity, requests, RuntimeParameters{});
       const int refinementRequests = static_cast<int>(requests.getRefinementRequests(cellConnectivity).size());
 
       THEN("Every cell requests a refinement") { VALIDATE_EQUALS(refinementRequests, RegularCells); }
 
       AND_WHEN("The solver sets the domain limits, allocates its pools and initialises the cells with erase requests") {
         solver.setLimits(getLimitsOfTheDomain());
-        solver.allocate(cellConnectivity);
+        solver.allocate(cellConnectivity, RuntimeParameters{});
         const ReleaseOnReturn release(solver);
         requests.clear(cellConnectivity.getNumberOfSlots());
         requests.merge(exahype2::RefinementCommand::Erase, cellConnectivity.getCells());
-        solver.initialise(cellConnectivity, requests);
+        solver.initialise(cellConnectivity, requests, RuntimeParameters{});
         finishStep(solver);
         const int  cells            = peano4::unittests::getGlobalSumOf(cellConnectivity.getCells().size);
         const bool noRequestRemains = requests.getRefinementRequests(cellConnectivity).empty();
@@ -1037,11 +1055,11 @@ UNIT_TEST("A time step without flux keeps the solution and advances the time sta
 
     FixedRuleADERDGSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn        release(solver);
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
 
     WHEN("The solver performs three time steps") {
@@ -1052,7 +1070,7 @@ UNIT_TEST("A time step without flux keeps the solution and advances the time sta
       std::vector<double> sizeOfNextStep;
       for (int step = 0; step < 3; step++) {
         requests.clear(cellConnectivity.getNumberOfSlots());
-        solver.performTimeStep(cellConnectivity, requests);
+        solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
         finishStep(solver);
         mismatchesOfStep.push_back(
           peano4::unittests::getGlobalSumOf(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity))
@@ -1088,18 +1106,18 @@ UNIT_TEST("The corrector runs the postprocessing once for every cell of a time s
 
     PostprocessingSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn        release(solver);
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const int nodes                   = cellConnectivity.getCells().size * NodesInCell;
     const int mismatchesBeforeTheStep = getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity);
 
     WHEN("The solver performs one time step") {
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.performTimeStep(cellConnectivity, requests);
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
       const int mismatchesAfterTheStep = getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity);
 
@@ -1117,13 +1135,13 @@ UNIT_TEST("A refinement and the erase back keep the solution") {
 
     FixedRuleADERDGSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn        release(solver);
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
-    solver.performTimeStep(cellConnectivity, requests);
+    solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
     peano4::Spacetree::getInstance().markPersistentDataLive();
@@ -1144,7 +1162,7 @@ UNIT_TEST("A refinement and the erase back keep the solution") {
 
       AND_WHEN("The solver performs a time step") {
         requests.clear(cellConnectivity.getNumberOfSlots());
-        solver.performTimeStep(cellConnectivity, requests);
+        solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
         finishStep(solver);
         const int mismatchesAfterTheTimeStep =
           peano4::unittests::getGlobalSumOf(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity));
@@ -1181,11 +1199,11 @@ UNIT_TEST("A linear time step reads every face flux across a level jump after th
 
     LinearFixedRuleADERDGSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn        release(solver);
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     peano4::Spacetree::getInstance().markPersistentDataLive();
     regridWithLiveData({peano4::unittests::getRefinementOfCentreCell(Depth)}, requests, solver);
@@ -1196,7 +1214,7 @@ UNIT_TEST("A linear time step reads every face flux across a level jump after th
 
     WHEN("The solver performs one time step") {
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.performTimeStep(cellConnectivity, requests);
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
       const int mismatches = getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity);
 
@@ -1213,16 +1231,16 @@ UNIT_TEST("A refinement reduces the next adaptive time step to the stability bou
     const auto&          cellConnectivity = buildGrid();
     AdaptiveADERDGSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn        release(solver);
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
-    solver.performTimeStep(cellConnectivity, requests);
+    solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.performTimeStep(cellConnectivity, requests);
+    solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
     peano4::Spacetree::getInstance().markPersistentDataLive();
@@ -1230,7 +1248,7 @@ UNIT_TEST("A refinement reduces the next adaptive time step to the stability bou
     WHEN("The cell in the centre refines and the solver performs the next time step") {
       regridWithLiveData({peano4::unittests::getRefinementOfCentreCell(Depth)}, requests, solver);
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.performTimeStep(cellConnectivity, requests);
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
 
       THEN("The step size is the coarse step size over the subdivision factor") {
@@ -1253,13 +1271,13 @@ UNIT_TEST("Two coupled solvers split the cells, exchange their traces and advanc
     exahype2::RefinementRequests requests;
     left.setLimits(getLimitsOfTheDomain());
     right.setLimits(getLimitsOfTheDomain());
-    left.allocate(cellConnectivity);
-    right.allocate(cellConnectivity);
+    left.allocate(cellConnectivity, RuntimeParameters{});
+    right.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn releaseLeft(left);
     const ReleaseOnReturn releaseRight(right);
     requests.clear(cellConnectivity.getNumberOfSlots());
-    left.initialise(cellConnectivity, requests);
-    right.initialise(cellConnectivity, requests);
+    left.initialise(cellConnectivity, requests, RuntimeParameters{});
+    right.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(left, right);
 
     WHEN("Both solvers perform three time steps and the left solver drives them") {
@@ -1272,8 +1290,8 @@ UNIT_TEST("Two coupled solvers split the cells, exchange their traces and advanc
       std::vector<int>    couplingFacesOfStep;
       for (int step = 0; step < 3; step++) {
         requests.clear(cellConnectivity.getNumberOfSlots());
-        left.performTimeStep(cellConnectivity, requests);
-        right.performTimeStep(cellConnectivity, requests);
+        left.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
+        right.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
         finishStep(left, right);
         leftMismatchesOfStep.push_back(
           peano4::unittests::getGlobalSumOf(getNumberOfMismatchesAgainstTheProfile(left, cellConnectivity))
@@ -1319,13 +1337,13 @@ UNIT_TEST("A coupled solver interpolates and restricts only the level jumps whos
     exahype2::RefinementRequests requests;
     left.setLimits(getLimitsOfTheDomain());
     right.setLimits(getLimitsOfTheDomain());
-    left.allocate(cellConnectivity);
-    right.allocate(cellConnectivity);
+    left.allocate(cellConnectivity, RuntimeParameters{});
+    right.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn releaseLeft(left);
     const ReleaseOnReturn releaseRight(right);
     requests.clear(cellConnectivity.getNumberOfSlots());
-    left.initialise(cellConnectivity, requests);
-    right.initialise(cellConnectivity, requests);
+    left.initialise(cellConnectivity, requests, RuntimeParameters{});
+    right.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(left, right);
     peano4::Spacetree::getInstance().markPersistentDataLive();
     regridWithLiveData({peano4::unittests::getRefinementOfCentreCell(Depth)}, requests, left, right);
@@ -1335,8 +1353,8 @@ UNIT_TEST("A coupled solver interpolates and restricts only the level jumps whos
 
     WHEN("Both solvers perform one time step") {
       requests.clear(cellConnectivity.getNumberOfSlots());
-      left.performTimeStep(cellConnectivity, requests);
-      right.performTimeStep(cellConnectivity, requests);
+      left.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
+      right.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(left, right);
       const int leftMismatches            = getNumberOfMismatchesAgainstTheProfile(left, cellConnectivity);
       const int rightMismatches           = getNumberOfMismatchesAgainstTheProfile(right, cellConnectivity);
@@ -1362,11 +1380,11 @@ UNIT_TEST("A plot of every face writes the traces of the solution into both halv
 
     FacePlottingFixedRuleADERDGSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn        release(solver);
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const std::string outputDirectory =
       (tarch::testing::getWritableTestDirectory() / "ADERDGSolverPlotTest").string() + "/";
@@ -1374,7 +1392,7 @@ UNIT_TEST("A plot of every face writes the traces of the solution into both halv
     std::filesystem::create_directories(outputDirectory + "face/");
 
     WHEN("The solver plots its nodes and faces") {
-      solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory);
+      solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory, RuntimeParameters{});
       tarch::mpi::barrier(rank.getCommunicator());
       if (rank.isGlobalMaster()) {
         std::filesystem::remove_all(outputDirectory);
@@ -1398,13 +1416,13 @@ UNIT_TEST("The projection onto a plane writes the traces of the solution into it
 
     FaceTracingFixedRuleADERDGSolver solver(Interface);
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn        release(solver);
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
 
     WHEN("The initialisation of the solver projects its solution onto the interface plane") {
-      solver.initialise(cellConnectivity, requests);
+      solver.initialise(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
       const auto [interfaceFacesOfThisRank, mismatchesOfThisRank] =
         getTraceMismatchesAgainstTheProfile(solver, cellConnectivity, true);
@@ -1429,13 +1447,13 @@ UNIT_TEST("The projection onto a plane writes both halves of the coarse faces of
 
     FaceTracingFixedRuleADERDGSolver solver(blockBoundary);
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     const ReleaseOnReturn        release(solver);
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
 
     WHEN("The initialisation of the solver projects its solution onto the plane") {
-      solver.initialise(cellConnectivity, requests);
+      solver.initialise(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
       const auto [coarseFacesOfThisRank, mismatchesOfThisRank] =
         getCoarseFaceMismatchesOnPlane(solver, cellConnectivity, blockBoundary);
@@ -1459,7 +1477,7 @@ UNIT_TEST("A release frees every pool that the allocation reserved") {
     const std::size_t bytesBeforeTheAllocation = solver.getAllocatedBytes().getTotal();
 
     WHEN("The solver allocates its pools on the grid and releases them") {
-      solver.allocate(cellConnectivity);
+      solver.allocate(cellConnectivity, RuntimeParameters{});
       const std::size_t bytesAfterTheAllocation = solver.getAllocatedBytes().getTotal();
       solver.release();
 

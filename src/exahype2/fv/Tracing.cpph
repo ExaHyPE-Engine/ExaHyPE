@@ -150,7 +150,7 @@ exahype2::fv::clampIntoPatch(
 }
 
 /**
- * Interpolates the fields the list names as a type.
+ * Interpolates the fields that FieldIndices lists.
  */
 template <int PatchSize, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void

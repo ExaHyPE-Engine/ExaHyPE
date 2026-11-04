@@ -90,7 +90,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDe
   }
   if (_fields.find(fieldDescription.name) != _fields.end()) {
     tarch::terminateWithError(
-      "The configuration may name the NetCDF field \"" + fieldDescription.name + "\" once only."
+      "The configuration may list the NetCDF field \"" + fieldDescription.name + "\" once only."
     );
   }
   for (int i = 0; i < FieldDimensions; i++) {

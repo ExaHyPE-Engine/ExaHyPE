@@ -109,21 +109,23 @@ public:
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatusInTeam(
-    tarch::accelerator::TeamHandle  team,
-    int* NOALIAS                    status,
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS sampledExtrema,
-    const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells,
-    StoragePrecision                relaxationParameter,
-    StoragePrecision                differencesScaling,
-    StoragePrecision* NOALIAS       scratch
+    tarch::accelerator::TeamHandle             team,
+    int* NOALIAS                               status,
+    const StoragePrecision* NOALIAS            nodes,
+    const StoragePrecision* NOALIAS            sampledExtrema,
+    const StoragePrecision* NOALIAS            nodesToLobatto,
+    const StoragePrecision* NOALIAS            nodesToSubcells,
+    StoragePrecision                           relaxationParameter,
+    StoragePrecision                           differencesScaling,
+    StoragePrecision* NOALIAS                  scratch,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void reduceSampledExtrema(
-    StoragePrecision* NOALIAS       extrema,
-    const StoragePrecision* NOALIAS subcells
+    StoragePrecision* NOALIAS                  extrema,
+    const StoragePrecision* NOALIAS            subcells,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
@@ -144,12 +146,13 @@ public:
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void reduceExtremaInTeam(
-    tarch::accelerator::TeamHandle  team,
-    StoragePrecision* NOALIAS       extrema,
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells,
-    StoragePrecision* NOALIAS       scratch
+    tarch::accelerator::TeamHandle             team,
+    StoragePrecision* NOALIAS                  extrema,
+    const StoragePrecision* NOALIAS            nodes,
+    const StoragePrecision* NOALIAS            nodesToLobatto,
+    const StoragePrecision* NOALIAS            nodesToSubcells,
+    StoragePrecision* NOALIAS                  scratch,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
@@ -170,7 +173,8 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     StoragePrecision* NOALIAS                    candidateExtrema,
-    StoragePrecision* NOALIAS                    scratch
+    StoragePrecision* NOALIAS                    scratch,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -189,7 +193,8 @@ public:
     int                                          cellOfBatch,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    const StoragePrecision* NOALIAS              scratch
+    const StoragePrecision* NOALIAS              scratch,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void spreadStatus(
@@ -200,44 +205,48 @@ public:
 private:
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatus(
-    int* NOALIAS                    status,
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS sampledExtrema,
-    const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells,
-    StoragePrecision                relaxationParameter,
-    StoragePrecision                differencesScaling
+    int* NOALIAS                               status,
+    const StoragePrecision* NOALIAS            nodes,
+    const StoragePrecision* NOALIAS            sampledExtrema,
+    const StoragePrecision* NOALIAS            nodesToLobatto,
+    const StoragePrecision* NOALIAS            nodesToSubcells,
+    StoragePrecision                           relaxationParameter,
+    StoragePrecision                           differencesScaling,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void openInitialStatusWithThreadsOfTeam(
-    tarch::accelerator::TeamHandle  team,
-    int* NOALIAS                    status,
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS sampledExtrema,
-    const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells,
-    StoragePrecision                relaxationParameter,
-    StoragePrecision                differencesScaling,
-    StoragePrecision* NOALIAS       scratch
+    tarch::accelerator::TeamHandle             team,
+    int* NOALIAS                               status,
+    const StoragePrecision* NOALIAS            nodes,
+    const StoragePrecision* NOALIAS            sampledExtrema,
+    const StoragePrecision* NOALIAS            nodesToLobatto,
+    const StoragePrecision* NOALIAS            nodesToSubcells,
+    StoragePrecision                           relaxationParameter,
+    StoragePrecision                           differencesScaling,
+    StoragePrecision* NOALIAS                  scratch,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void reduceExtrema(
-    StoragePrecision* NOALIAS       extrema,
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells
+    StoragePrecision* NOALIAS                  extrema,
+    const StoragePrecision* NOALIAS            nodes,
+    const StoragePrecision* NOALIAS            nodesToLobatto,
+    const StoragePrecision* NOALIAS            nodesToSubcells,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void reduceExtremaWithThreadsOfTeam(
-    tarch::accelerator::TeamHandle  team,
-    StoragePrecision* NOALIAS       extrema,
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells,
-    StoragePrecision* NOALIAS       scratch
+    tarch::accelerator::TeamHandle             team,
+    StoragePrecision* NOALIAS                  extrema,
+    const StoragePrecision* NOALIAS            nodes,
+    const StoragePrecision* NOALIAS            nodesToLobatto,
+    const StoragePrecision* NOALIAS            nodesToSubcells,
+    StoragePrecision* NOALIAS                  scratch,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
@@ -255,7 +264,8 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    StoragePrecision* NOALIAS                    candidateExtrema
+    StoragePrecision* NOALIAS                    candidateExtrema,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -275,33 +285,37 @@ private:
     double                                       timeStamp,
     double                                       timeStepSize,
     StoragePrecision* NOALIAS                    candidateExtrema,
-    StoragePrecision* NOALIAS                    scratch
+    StoragePrecision* NOALIAS                    scratch,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void writeInitialStatus(int* NOALIAS status, bool wasTroubled);
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool interpolantOscillates(
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS sampledExtrema,
-    const StoragePrecision* NOALIAS nodesToLobatto,
-    const StoragePrecision* NOALIAS nodesToSubcells,
-    StoragePrecision                relaxationParameter,
-    StoragePrecision                differencesScaling
+    const StoragePrecision* NOALIAS            nodes,
+    const StoragePrecision* NOALIAS            sampledExtrema,
+    const StoragePrecision* NOALIAS            nodesToLobatto,
+    const StoragePrecision* NOALIAS            nodesToSubcells,
+    StoragePrecision                           relaxationParameter,
+    StoragePrecision                           differencesScaling,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void reduceObservableExtrema(
-    StoragePrecision* NOALIAS       extrema,
-    const StoragePrecision* NOALIAS states,
-    int                             numberOfStates
+    StoragePrecision* NOALIAS                  extrema,
+    const StoragePrecision* NOALIAS            states,
+    int                                        numberOfStates,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <int SamplesPerAxis, typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void reduceProjectedObservableExtrema(
-    StoragePrecision* NOALIAS       extrema,
-    const StoragePrecision* NOALIAS nodes,
-    const StoragePrecision* NOALIAS samplingMatrix
+    StoragePrecision* NOALIAS                  extrema,
+    const StoragePrecision* NOALIAS            nodes,
+    const StoragePrecision* NOALIAS            samplingMatrix,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <int SamplesPerAxis, typename StoragePrecision, typename Visitor>
@@ -352,7 +366,8 @@ private:
     const StoragePrecision* NOALIAS              subcells,
     const StoragePrecision* NOALIAS              lobattoSamples,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -360,32 +375,36 @@ private:
     const StoragePrecision* NOALIAS              nodes,
     const StoragePrecision* NOALIAS              subcells,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool satisfiesMaximumPrinciple(
-    const StoragePrecision* NOALIAS candidate,
-    const StoragePrecision* NOALIAS candidateSubcells,
-    const StoragePrecision* NOALIAS referenceExtrema,
-    const StoragePrecision* NOALIAS lobattoSamples,
-    StoragePrecision                relaxationParameter,
-    StoragePrecision                differencesScaling,
-    StoragePrecision* NOALIAS       candidateExtrema
+    const StoragePrecision* NOALIAS            candidate,
+    const StoragePrecision* NOALIAS            candidateSubcells,
+    const StoragePrecision* NOALIAS            referenceExtrema,
+    const StoragePrecision* NOALIAS            lobattoSamples,
+    StoragePrecision                           relaxationParameter,
+    StoragePrecision                           differencesScaling,
+    StoragePrecision* NOALIAS                  candidateExtrema,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool satisfiesRelaxedMaximumPrinciple(
-    const StoragePrecision* NOALIAS candidateExtrema,
-    const StoragePrecision* NOALIAS referenceExtrema,
-    StoragePrecision                relaxationParameter,
-    StoragePrecision                differencesScaling
+    const StoragePrecision* NOALIAS            candidateExtrema,
+    const StoragePrecision* NOALIAS            referenceExtrema,
+    StoragePrecision                           relaxationParameter,
+    StoragePrecision                           differencesScaling,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD StoragePrecision getRelaxationParameterOfObservable(
-    int              observable,
-    StoragePrecision relaxationParameter
+    int                                        observable,
+    StoragePrecision                           relaxationParameter,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename StoragePrecision>
@@ -410,7 +429,8 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 };
 
@@ -422,9 +442,10 @@ struct exahype2::dg::limiting::ReduceSampledExtrema final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  typename CellPool::ConstView subcells{};
-  typename CellPool::View      referenceExtrema{};
+  peano4::CellConnectivity            cellConnectivity{};
+  typename CellPool::ConstView        subcells{};
+  typename CellPool::View             referenceExtrema{};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
@@ -441,17 +462,18 @@ struct exahype2::dg::limiting::OpenInitialStatuses final {
   using CellPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  int                          numberOfTeams{1};
-  typename CellPool::ConstView nodes{};
-  typename CellPool::ConstView sampledExtrema{};
-  typename StatusPool::View    statuses{};
-  const StoragePrecision*      nodesToLobatto{nullptr};
-  const StoragePrecision*      nodesToSubcells{nullptr};
-  StoragePrecision             relaxationParameter{0};
-  StoragePrecision             differencesScaling{0};
-  StoragePrecision*            scratch{nullptr};
-  int                          scratchValuesPerTeam{0};
+  peano4::CellConnectivity            cellConnectivity{};
+  int                                 numberOfTeams{1};
+  typename CellPool::ConstView        nodes{};
+  typename CellPool::ConstView        sampledExtrema{};
+  typename StatusPool::View           statuses{};
+  const StoragePrecision*             nodesToLobatto{nullptr};
+  const StoragePrecision*             nodesToSubcells{nullptr};
+  StoragePrecision                    relaxationParameter{0};
+  StoragePrecision                    differencesScaling{0};
+  StoragePrecision*                   scratch{nullptr};
+  int                                 scratchValuesPerTeam{0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, tarch::accelerator::TeamHandle team) const;
 };
@@ -519,14 +541,15 @@ struct exahype2::dg::limiting::ReduceReferenceExtrema final {
   using Kernel   = exahype2::dg::limiting::Detector<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  tarch::Span<const int>       cells{};
-  int                          numberOfTeams{1};
-  typename CellPool::ConstView solution{};
-  typename CellPool::View      referenceExtrema{};
-  const StoragePrecision*      nodesToLobatto{nullptr};
-  const StoragePrecision*      nodesToSubcells{nullptr};
-  StoragePrecision*            scratch{nullptr};
-  int                          scratchValuesPerTeam{0};
+  tarch::Span<const int>              cells{};
+  int                                 numberOfTeams{1};
+  typename CellPool::ConstView        solution{};
+  typename CellPool::View             referenceExtrema{};
+  const StoragePrecision*             nodesToLobatto{nullptr};
+  const StoragePrecision*             nodesToSubcells{nullptr};
+  StoragePrecision*                   scratch{nullptr};
+  int                                 scratchValuesPerTeam{0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, tarch::accelerator::TeamHandle team) const;
 };
@@ -557,7 +580,9 @@ private:
     bool ownHalf,
     int  set
   ) const;
+
   INLINE_METHOD GPU_CALLABLE_METHOD void widenAlongAxis(StoragePrecision* extrema, int slot, int axis, int set) const;
+
   INLINE_METHOD GPU_CALLABLE_METHOD void writeAlongAxis(
     const StoragePrecision* extrema,
     int                     slot,
@@ -593,22 +618,23 @@ struct exahype2::dg::limiting::JudgeCandidates final {
   using CellPool   = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  int                          numberOfTeams{1};
-  typename CellPool::ConstView candidates{};
-  typename StatusPool::View    statuses{};
-  typename StatusPool::View    faceStatuses{};
-  typename CellPool::View      referenceExtrema{};
-  typename CellPool::ConstView extremaFaces{};
-  const StoragePrecision*      nodesToLobatto{nullptr};
-  const StoragePrecision*      nodesToSubcells{nullptr};
-  const StoragePrecision*      quadraturePoints{nullptr};
-  StoragePrecision             relaxationParameter{0};
-  StoragePrecision             differencesScaling{0};
-  double                       timeStamp{0.0};
-  double                       timeStepSize{0.0};
-  StoragePrecision*            scratch{nullptr};
-  int                          scratchValuesPerTeam{0};
+  peano4::CellConnectivity            cellConnectivity{};
+  int                                 numberOfTeams{1};
+  typename CellPool::ConstView        candidates{};
+  typename StatusPool::View           statuses{};
+  typename StatusPool::View           faceStatuses{};
+  typename CellPool::View             referenceExtrema{};
+  typename CellPool::ConstView        extremaFaces{};
+  const StoragePrecision*             nodesToLobatto{nullptr};
+  const StoragePrecision*             nodesToSubcells{nullptr};
+  const StoragePrecision*             quadraturePoints{nullptr};
+  StoragePrecision                    relaxationParameter{0};
+  StoragePrecision                    differencesScaling{0};
+  double                              timeStamp{0.0};
+  double                              timeStepSize{0.0};
+  StoragePrecision*                   scratch{nullptr};
+  int                                 scratchValuesPerTeam{0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                                  entry,

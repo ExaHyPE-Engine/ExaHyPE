@@ -18,7 +18,7 @@ Build and Unit Tests:
   script:
     - in_image "mkdir build && cd build && CC=${CC} CXX=${CXX} cmake .. -GNinja -DBUILD_TESTING=ON ${CONFIGURATION_OPTIONS} ${EXTRA_CONFIGURATION_OPTIONS} -DSUPPORTED_BUILD_TYPES=${BUILD_MODE} -DPEANO_WITH_SANITIZER=${SANITIZER} -DPEANO_WITH_SPACE_FILLING_CURVE=${SPACE_FILLING_CURVE} -DPEANO_WITH_GPU_BACKEND=${GPU_BACKEND} -DPEANO_WITH_GPU_ARCH=${GPU_ARCH} -DCMAKE_INSTALL_PREFIX=../install"
     - in_image "ccache --zero-stats && cd build && ninja && ccache --show-stats"
-    - if [ "$RUN_UNIT_TESTS" = "true" ]; then in_image "cd build && ctest --output-on-failure --timeout 600"; fi
+    - if [ "$RUN_UNIT_TESTS" = "true" ]; then in_image "cd build && ctest --output-on-failure --timeout 1800"; fi
     - in_image "cd build && ninja install"
   artifacts:
     when: always

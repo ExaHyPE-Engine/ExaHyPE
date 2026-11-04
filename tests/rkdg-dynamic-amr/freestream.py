@@ -65,7 +65,7 @@ refinement_criterion = """
   constexpr double MaxRadius = 5.0;
 #endif
 
-  const double     startRadius = RuntimeParameters::getMaxAdmissiblePatchSize();
+  const double     startRadius = parameters.maxAdmissiblePatchSize;
   constexpr double GrowthRate  = 1.5;
   constexpr double BandWidth   = 0.05;
 

@@ -252,7 +252,7 @@ UNIT_TEST("The interpolation writes unknown k into the k-th named entry and leav
       }
     }
 
-    WHEN("An interpolation without scheme names the entry zero") {
+    WHEN("The test calls interpolateFields() for the entry zero with the scheme None") {
       exahype2::dg::interpolateFields<NodesPerAxis, NumberOfData, double, 0>(
         exahype2::particles::InterpolationScheme::None,
         centre,
@@ -264,6 +264,24 @@ UNIT_TEST("The interpolation writes unknown k into the k-th named entry and leav
       );
 
       THEN("The entry zero stays zero") { VALIDATE_NUMERICAL_EQUALS(data[0], 0.0); }
+    }
+
+    WHEN("The test calls interpolateFields() with an empty field list and the piecewise linear scheme") {
+      exahype2::dg::interpolateFields<NodesPerAxis, NumberOfData, double>(
+        exahype2::particles::InterpolationScheme::PiecewiseLinear,
+        centre,
+        width,
+        QuadratureNodes1D,
+        Q.data(),
+        position,
+        particle
+      );
+
+      THEN("Every entry of the particle data equals zero") {
+        for (int entry = 0; entry < NumberOfParticleData; entry++) {
+          VALIDATE_NUMERICAL_EQUALS(data[entry], 0.0);
+        }
+      }
     }
   }
 }

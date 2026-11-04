@@ -34,7 +34,7 @@ UNIT_TEST("The rank on the node and the number of ranks on the node match a spli
   }
 }
 
-UNIT_TEST("The node master is the rank with node rank zero and every node rank names one of the ranks on the node") {
+UNIT_TEST("The node master is the rank with node rank zero and every node rank lies below the ranks on the node") {
   GIVEN("The rank of this process") {
     const auto& rank = tarch::mpi::Rank::getInstance();
 

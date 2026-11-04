@@ -101,7 +101,7 @@ drives the static AMR. It reads the position of a patch alone and returns
 `Refine` within `RefinementMargin` of the NACA contour. The grid construction
 passes a null `Q`. The refined band then stays fixed for the whole run. This
 deliberately simplified setup produces a recognisable bow-shock picture. It is
-no validated aerodynamics benchmark.
+not a validated aerodynamics benchmark.
 
 @include tutorials/03_euler/FVSolver.cpp
 

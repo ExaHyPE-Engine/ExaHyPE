@@ -9,7 +9,8 @@ tests::exahype2::fortran::FVSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  const int                                    normal
+  const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   static constexpr double Gravity    = 9.81;
   const double            velocity   = Q[0] > 1e-5 ? Q[1 + normal] / Q[0] : 0.0;
@@ -39,7 +40,8 @@ tests::exahype2::fortran::FVSolver::solveRiemannProblem(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   // The Fortran solver rounds a reflected problem differently. Each Clawpack fluctuation averages the
   // solutions of the problem and of the reflected problem. A reflected face then receives the

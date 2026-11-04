@@ -90,6 +90,7 @@ public:
     std::bitset<DIMENSIONS>               periodicBoundaries,
     SolverRepositoryCallbacks             callbacks
   );
+
   Runner(const Runner&)            = delete;
   Runner(Runner&&)                 = delete;
   Runner& operator=(const Runner&) = delete;
@@ -174,6 +175,7 @@ private:
     unsigned long completedSteps,
     int           maximumSteps
   );
+
   void logPlot(int snapshot, int numberOfSnapshots, double timeStamp, double wallClockSeconds);
   void openSection(Section section);
   [[nodiscard]] std::string formatETA(double fraction) const;

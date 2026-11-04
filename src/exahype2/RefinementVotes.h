@@ -38,28 +38,31 @@ public:
 
   template <typename Derived, typename StoragePrecision>
   INLINE_METHOD void voteOnGridConstruction(
-    const peano4::CellConnectivity& cellConnectivity,
-    const exahype2::Limits&         limits,
-    exahype2::RefinementRequests&   requests
+    const peano4::CellConnectivity&            cellConnectivity,
+    const exahype2::Limits&                    limits,
+    exahype2::RefinementRequests&              requests,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename Derived, typename SolutionView>
   INLINE_METHOD void voteOnEveryCell(
-    const peano4::CellConnectivity& cellConnectivity,
-    const SolutionView&             solution,
-    const exahype2::Limits&         limits,
-    double                          timeStamp,
-    exahype2::RefinementRequests&   requests
+    const peano4::CellConnectivity&            cellConnectivity,
+    const SolutionView&                        solution,
+    const exahype2::Limits&                    limits,
+    double                                     timeStamp,
+    exahype2::RefinementRequests&              requests,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   template <typename Derived, typename SolutionView>
   INLINE_METHOD void voteOnCells(
-    const peano4::CellConnectivity& cellConnectivity,
-    const std::vector<int>&         cells,
-    const SolutionView&             solution,
-    const exahype2::Limits&         limits,
-    double                          timeStamp,
-    exahype2::RefinementRequests&   requests
+    const peano4::CellConnectivity&            cellConnectivity,
+    const std::vector<int>&                    cells,
+    const SolutionView&                        solution,
+    const exahype2::Limits&                    limits,
+    double                                     timeStamp,
+    exahype2::RefinementRequests&              requests,
+    const typename Derived::RuntimeParameters& parameters
   );
 
   INLINE_METHOD void release();
@@ -70,7 +73,9 @@ private:
     const peano4::CellConnectivity& cellConnectivity,
     const exahype2::Limits&         limits
   );
+
   INLINE_METHOD void reserve(int numberOfSlots);
+
   INLINE_METHOD void merge(
     const peano4::CellConnectivity& cellConnectivity,
     int                             votes,
@@ -92,7 +97,8 @@ namespace exahype2 {
     const tarch::la::Vector<DIMENSIONS, double>& width,
     double                                       maxAdmissibleSize,
     double                                       minAdmissibleSize,
-    double                                       timeStamp
+    double                                       timeStamp,
+    const typename Derived::RuntimeParameters&   parameters
   );
 } // namespace exahype2
 
@@ -102,10 +108,11 @@ namespace exahype2 {
  */
 template <typename Derived, typename StoragePrecision>
 struct exahype2::VoteOnGridConstruction final {
-  peano4::CellConnectivity     cellConnectivity{};
-  exahype2::RefinementCommand* commands{nullptr};
-  double                       maxAdmissibleSize{0.0};
-  double                       minAdmissibleSize{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  exahype2::RefinementCommand*        commands{nullptr};
+  double                              maxAdmissibleSize{0.0};
+  double                              minAdmissibleSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, int& accumulator) const;
 };
@@ -116,13 +123,14 @@ struct exahype2::VoteOnGridConstruction final {
  */
 template <typename Derived, typename SolutionView>
 struct exahype2::VoteOnRefinement final {
-  peano4::CellConnectivity     cellConnectivity{};
-  tarch::Span<const int>       cells{};
-  SolutionView                 solution{};
-  exahype2::RefinementCommand* commands{nullptr};
-  double                       maxAdmissibleSize{0.0};
-  double                       minAdmissibleSize{0.0};
-  double                       timeStamp{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              cells{};
+  SolutionView                        solution{};
+  exahype2::RefinementCommand*        commands{nullptr};
+  double                              maxAdmissibleSize{0.0};
+  double                              minAdmissibleSize{0.0};
+  double                              timeStamp{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, int& accumulator) const;
 };

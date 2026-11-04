@@ -18,7 +18,7 @@ Runge-Kutta DG and the ADER-DG solvers assemble their kernels from them.
   of a patch onto its faces, interpolates and restricts the halo halves across a
   level jump, interpolates and restricts a patch across a regrid and advances a
   patch by one time step. The free functions exahype2::fv::getFaceVolumeIndex()
-  name the volumes of a face. The function exahype2::fv::getVolumeCentre()
+  return the indices of the volumes of a face. The function exahype2::fv::getVolumeCentre()
   returns the centre of a volume. The header `exahype2/dg/Basis.h` derives the
   operators of the DG solver families from the quadrature nodes.
 \li `exahype2/MultiresolutionDetail.h` Computes the relative representation

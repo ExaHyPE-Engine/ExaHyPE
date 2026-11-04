@@ -15,7 +15,9 @@ FV:
   stage: Test
   parallel:
     matrix:
-      - scenario: [breaking-dam, channel-flow, dry-ring, gaussian-bell, gaussian-explosion, isothermal-stratification, point-explosion, smooth-convergence, taylor-green-vortex]
+      - scenario: [breaking-dam, channel-flow, gaussian-bell, gaussian-explosion, point-explosion, smooth-convergence, taylor-green-vortex]
+        dimensions: [2, 3]
+      - scenario: [dry-ring, isothermal-stratification]
         dimensions: [2]
   script:
     - generate tests/fv "$scenario.py --dimensions $dimensions --build-mode $BUILD_MODE"
@@ -41,7 +43,7 @@ FV Static AMR:
   parallel:
     matrix:
       - periodic: ["on", "off"]
-        dimensions: [2]
+        dimensions: [2, 3]
   script:
     - generate tests/fv-static-amr "fv-static-amr.py --periodic-bc $periodic --dimensions $dimensions --build-mode $BUILD_MODE"
     - launch tests/fv-static-amr "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
@@ -54,10 +56,10 @@ Dynamic AMR:
     matrix:
       - solver: [fv]
         test: [acoustic-point-explosion, euler-point-explosion, freestream, periodic-advection, radial-advection]
-        dimensions: [2]
+        dimensions: [2, 3]
       - solver: [aderdg, rkdg]
         test: [acoustic-point-explosion, freestream, periodic-advection, radial-advection]
-        dimensions: [2]
+        dimensions: [2, 3]
   script:
     - generate tests/$solver-dynamic-amr "$test.py --dimensions $dimensions --build-mode $BUILD_MODE"
     - launch tests/$solver-dynamic-amr "./ExaHyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"

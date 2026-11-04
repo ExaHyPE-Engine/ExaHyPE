@@ -106,7 +106,8 @@ exahype2::accumulateSolutionError(
   const double                                     timeStamp,
   const double                                     timeStepSize,
   const double                                     weight,
-  double (&errors)[ErrorMeasurement::NumberOfNorms]
+  double (&errors)[ErrorMeasurement::NumberOfNorms],
+  const typename SolverType::RuntimeParameters& parameters
 ) {
   static_assert(NumberOfUnknowns > 0);
   static_assert(NumberOfAuxiliaryVariables >= 0);
@@ -121,7 +122,7 @@ exahype2::accumulateSolutionError(
     state[entry] = static_cast<double>(value[entry]);
   }
   double solution[NumberOfUnknowns];
-  SolverType::analyticalSolution(x, timeStamp, timeStepSize, state, solution);
+  SolverType::analyticalSolution(x, timeStamp, timeStepSize, state, solution, parameters);
   accumulateError(measuredUnknowns, value, solution, weight, errors);
 }
 TARGET_DECLARE_END

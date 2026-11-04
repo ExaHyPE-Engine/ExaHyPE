@@ -39,7 +39,7 @@ tarch::accelerator::Device::getNumberOfConcurrentThreads() const {
 }
 
 /**
- * Returns std::nullopt. A build without a GPU backend sends no device buffers.
+ * Returns std::nullopt. A build without a GPU backend sends host buffers only.
  */
 std::optional<bool>
 tarch::accelerator::Device::isMPIGPUAware() const {

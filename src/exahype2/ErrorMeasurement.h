@@ -149,7 +149,8 @@ namespace exahype2 {
     double                                           timeStamp,
     double                                           timeStepSize,
     double                                           weight,
-    double (&errors)[ErrorMeasurement::NumberOfNorms]
+    double (&errors)[ErrorMeasurement::NumberOfNorms],
+    const typename SolverType::RuntimeParameters& parameters
   );
 } // namespace exahype2
 TARGET_DECLARE_END

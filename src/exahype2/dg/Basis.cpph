@@ -401,8 +401,8 @@ exahype2::dg::differentiateAlongAxis(
   );
 
   // The vector loop keeps every node of the line in registers. A compiler vectorises the innermost
-  // loop only. UNROLL() unrolls the loops over the nodes up to the node count of the highest ADER-DG
-  // order. A reflection of the axis maps the centre node onto itself. An even node count has two
+  // loop only. The unroll hints unroll the loops over the nodes up to the node count of the highest
+  // ADER-DG order. A reflection of the axis maps the centre node onto itself. An even node count has two
   // centre nodes that swap under the reflection. Their mean swaps its sign with the values. The
   // difference of the centre node of an odd node count is zero.
   constexpr int CentreNode = NumberOfNodes / 2;
@@ -1171,7 +1171,7 @@ exahype2::dg::differentiateFluxInPlace(
       fluxLine,
       nodeStride,
       derivativeWeights,
-      inverseCellSize(axis)
+      inverseCellSize.getData()[axis]
     );
   };
 

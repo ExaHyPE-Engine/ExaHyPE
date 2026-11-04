@@ -7,10 +7,11 @@
 namespace exahype2::terms {
   template <typename SolverType, typename Precision>
   concept HasInitialCondition = requires(
-    Precision* const                             Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h
+    Precision* const                              Q,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
-    { SolverType::initialCondition(Q, x, h) } -> std::same_as<void>;
+    { SolverType::initialCondition(Q, x, h, parameters) } -> std::same_as<void>;
   };
 } // namespace exahype2::terms

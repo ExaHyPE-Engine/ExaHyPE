@@ -34,11 +34,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} :
   public {{SOLVER_FAMILY_CLASS}}{% if SOLVER_FAMILY_CONSTANTS %},
   public {{CLASSNAME}}Constants{% endif %} {
 public:
-  using SolverFamily = {{SOLVER_FAMILY_CLASS}};
+  using SolverFamily      = {{SOLVER_FAMILY_CLASS}};
+  using RuntimeParameters = ::{{NAMESPACE | join("::")}}::RuntimeParameters;
 {%- if USE_VARIABLE_SHORTCUTS %}
 
   /**
-   * Names the variable indices. The expression Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first
+   * Maps the variables to their indices. The expression Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first
    * variable.
    */
   using Shortcuts = ::{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}VariableShortcuts;
@@ -70,34 +71,55 @@ public:
   {{CLASSNAME}}& operator=({{CLASSNAME}}&& other)      = delete;
   ~{{CLASSNAME}}()                                     = default;
 
-  void startSimulation();
-  void finishSimulation();
+  void startSimulation(RuntimeParameters& parameters);
+  void finishSimulation(const RuntimeParameters& parameters);
 {%- if START_TIME_STEP_IMPLEMENTATION.strip() or FINISH_TIME_STEP_IMPLEMENTATION.strip() or TRACERS %}
-  void performTimeStep(const peano4::CellConnectivity& cellConnectivity, ::exahype2::RefinementRequests& requests);
+
+  void performTimeStep(
+    const peano4::CellConnectivity& cellConnectivity,
+    ::exahype2::RefinementRequests& requests,
+    const RuntimeParameters&        parameters
+  );
 {%- endif %}
 {%- if START_GRID_INITIALISATION_IMPLEMENTATION.strip() or TRACERS %}
-  void initialise(const peano4::CellConnectivity& cellConnectivity, ::exahype2::RefinementRequests& requests);
+
+  void initialise(
+    const peano4::CellConnectivity& cellConnectivity,
+    ::exahype2::RefinementRequests& requests,
+    RuntimeParameters&              parameters
+  );
 {%- endif %}
 {%- if TRACERS %}
-  void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity);
+
+  void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity, const RuntimeParameters& parameters);
+
   void regrid(
     const peano4::CellConnectivity& cellConnectivity,
     const peano4::Regrid&           regrid,
-    ::exahype2::RefinementRequests& requests
+    ::exahype2::RefinementRequests& requests,
+    const RuntimeParameters&        parameters
   );
+
   void plot(
     const peano4::CellConnectivity& cellConnectivity,
     ::tarch::plotter::Format        format,
-    const std::string&              outputDirectory
+    const std::string&              outputDirectory,
+    const RuntimeParameters&        parameters
   );
+
   void                                  release();
   [[nodiscard]] ::tarch::AllocatedBytes getAllocatedBytes() const;
-  void                                  appendTracerStatistics(
-    std::vector<::exahype2::runner::SolverStatistic>& statistics
-  ) const;
+
+  void appendTracerStatistics(std::vector<::exahype2::runner::SolverStatistic>& statistics) const;
 {%- endif %}
 {%- if TRACERS %}
-  void traceTracers(const peano4::CellConnectivity& cellConnectivity, double timeStepSize, bool initialisation);
+
+  void traceTracers(
+    const peano4::CellConnectivity& cellConnectivity,
+    double                          timeStepSize,
+    bool                            initialisation,
+    const RuntimeParameters&        parameters
+  );
 {%- endif %}
 {%- if SOLVER_BASE_USER_DECLARATIONS.strip() %}
 

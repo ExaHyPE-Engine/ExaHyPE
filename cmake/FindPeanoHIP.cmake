@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 find_package(hip CONFIG REQUIRED)
-set(HIP_FOUND "${hip_FOUND}")
+set(PeanoHIP_FOUND "${hip_FOUND}")
 
 if(TARGET PeanoOptions)
   target_link_libraries(PeanoOptions INTERFACE hip::host)

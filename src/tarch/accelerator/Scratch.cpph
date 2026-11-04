@@ -8,6 +8,7 @@
  */
 INLINE_METHOD GPU_CALLABLE_METHOD int
 tarch::accelerator::getScratchChunk([[maybe_unused]] const int workItem) {
-  COMPILE_IF_ON_DEVICE(return workItem;)
-  COMPILE_IF_ON_HOST(return omp_get_thread_num();)
+  int chunk = workItem;
+  COMPILE_IF_ON_HOST(chunk = omp_get_thread_num();)
+  return chunk;
 }

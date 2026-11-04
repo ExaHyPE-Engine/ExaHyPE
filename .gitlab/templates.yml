@@ -51,10 +51,10 @@
     - launch() { if [ "$RUN_SIMULATIONS" = "true" ]; then in_image "cd $1 && $PARALLEL_LAUNCH $2"; else echo "The pipeline builds $1 without running it."; fi; }
     - check_error_norms() { if [ "$RUN_SIMULATIONS" = "true" ]; then in_image "cd $1 && PYTHONPATH=$CI_PROJECT_DIR python3 -m postprocessing.check_error_norms $2 $3"; fi; }
     - if [ "$BUILD_MODE" != "Asserts" ]; then SANITIZER="none"; fi
+    - export APPTAINERENV_OMPI_MCA_btl_sm_backing_directory="$CI_PROJECT_DIR"
     - echo -e "\e[0Ksection_start:$(date +%s):environment[collapsed=true]\r\e[0KEnvironment"
     - echo "Running CI with $(nproc) cores"
     - git --version
-    - export APPTAINERENV_OMPI_MCA_btl_sm_backing_directory="$CI_PROJECT_DIR"
     - echo "PROJECT=$CI_PROJECT_DIR COMMIT=$CI_COMMIT_SHA BRANCH=$CI_COMMIT_BRANCH"
     - echo "CONTAINER_BIND=$APPTAINER_BINDDIR CONTAINER_IMAGE_DIR=$APPTAINER_IMAGEDIR"
     - echo "CC=$CC CXX=$CXX"

@@ -14,16 +14,21 @@ namespace {
   constexpr int NumberOfData = 2;
 
   struct ShiftedSolver final {
+    struct RuntimeParameters final {
+      double shiftAlongFirstAxis{};
+    };
+
     static void analyticalSolution(
       const exahype2::particles::Particle* const particle,
       [[maybe_unused]] const double              t,
       [[maybe_unused]] const double              dt,
-      double* const                              solution
+      double* const                              solution,
+      const RuntimeParameters&                   parameters
     ) {
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         solution[axis] = particle->getX(axis);
       }
-      solution[0] += 0.5;
+      solution[0] += parameters.shiftAlongFirstAxis;
       for (int entry = 0; entry < NumberOfData; entry++) {
         solution[DIMENSIONS + entry] = particle->getData(entry);
       }
@@ -62,7 +67,9 @@ UNIT_TEST("The norms sum the position errors of every particle of every rank") {
     measurement.open(fileName, 0.0);
 
     WHEN("The measurement records the position errors against the exact position half a unit along the first axis") {
-      const auto norms = exahype2::particles::measurePositionErrors<ShiftedSolver>(particles, 0.25, 0.1, measurement);
+      const ShiftedSolver::RuntimeParameters parameters{.shiftAlongFirstAxis = 0.5};
+      const auto                             norms =
+        exahype2::particles::measurePositionErrors<ShiftedSolver>(particles, 0.25, 0.1, measurement, parameters);
 
       THEN("The L1 norm adds one half and the squared L2 norm one quarter per particle, the Linf norm is one half") {
         VALIDATE_NUMERICAL_EQUALS(norms[0], 0.5 * globalNumberOfParticles);

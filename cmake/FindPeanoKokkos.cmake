@@ -1,7 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-set(KOKKOS_VERSION "5.0.1" CACHE STRING "")
+set(KOKKOS_VERSION "5.2.2" CACHE STRING "")
 
 function(_kokkos_build_user_args out_var)
   if(NOT DEFINED PEANO_WITH_GPU_ARCH OR "${PEANO_WITH_GPU_ARCH}" STREQUAL "none")
@@ -132,6 +132,7 @@ if(NOT Kokkos_FOUND)
 endif()
 
 message(STATUS "Found Kokkos: ${Kokkos_DIR}")
+set(PeanoKokkos_FOUND "${Kokkos_FOUND}")
 
 if(TARGET PeanoOptions)
   target_link_libraries(PeanoOptions INTERFACE Kokkos::kokkos)

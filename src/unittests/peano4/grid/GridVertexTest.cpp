@@ -8,7 +8,7 @@
 
 #include <mpi.h>
 
-UNIT_TEST("A vertex returns its last state and names this state in its description") {
+UNIT_TEST("A vertex returns its last state and its description contains this state") {
   GIVEN("A default vertex and the states unrefined, refined and hanging") {
     constexpr auto Unrefined     = peano4::grid::GridVertex::State::Unrefined;
     constexpr auto Refined       = peano4::grid::GridVertex::State::Refined;
@@ -16,7 +16,7 @@ UNIT_TEST("A vertex returns its last state and names this state in its descripti
 
     peano4::grid::GridVertex vertex{};
 
-    THEN("The default vertex is unrefined on level zero and its description names the state") {
+    THEN("The default vertex is unrefined on level zero and its description contains the state") {
       VALIDATE_EQUALS(static_cast<int>(vertex.getState()), static_cast<int>(Unrefined));
       VALIDATE_EQUALS(vertex.level, 0);
       VALIDATE(vertex.toString().find("Unrefined") != std::string::npos);
@@ -27,7 +27,7 @@ UNIT_TEST("A vertex returns its last state and names this state in its descripti
       const auto        stateAfterTheRefinement       = vertex.getState();
       const std::string descriptionAfterTheRefinement = vertex.toString();
 
-      THEN("The vertex is refined and its description names the state") {
+      THEN("The vertex is refined and its description contains the state") {
         VALIDATE_EQUALS(static_cast<int>(stateAfterTheRefinement), static_cast<int>(Refined));
         VALIDATE(descriptionAfterTheRefinement.find("Refined") != std::string::npos);
       }
@@ -39,7 +39,7 @@ UNIT_TEST("A vertex returns its last state and names this state in its descripti
         std::ostringstream stream;
         stream << vertex;
 
-        THEN("The vertex hangs, the description names the vertex and the state and the stream receives it") {
+        THEN("The vertex hangs, the description contains its type and the state and the stream receives it") {
           VALIDATE_EQUALS(static_cast<int>(state), static_cast<int>(HangingVertex));
           VALIDATE(description.find("GridVertex") != std::string::npos);
           VALIDATE(description.find("HangingVertex") != std::string::npos);

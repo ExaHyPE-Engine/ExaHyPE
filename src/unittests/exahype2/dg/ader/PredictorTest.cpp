@@ -12,8 +12,9 @@
 #include "unittests/exahype2/dg/ader/KernelTestData.h"
 
 namespace {
-  using Tables     = exahype2::dg::unittests::BasisTableSet;
-  using CellLayout = exahype2::dg::ader::unittests::KernelTestSetup::CellLayout;
+  using Tables            = exahype2::dg::unittests::BasisTableSet;
+  using CellLayout        = exahype2::dg::ader::unittests::KernelTestSetup::CellLayout;
+  using RuntimeParameters = exahype2::dg::ader::unittests::RuntimeParameters;
 
   constexpr int    NodesPerAxis       = CellLayout::NodesPerAxis;
   constexpr int    NumberOfUnknowns   = CellLayout::NumberOfUnknowns;
@@ -59,7 +60,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] +=
@@ -73,7 +75,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += SourceStrength;
@@ -87,7 +90,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         double sumOverAxes = 0.0;
@@ -106,7 +110,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += ProductSpeed * (1.0 + direction) * stateGradient[unknown];
@@ -122,7 +127,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       [[maybe_unused]] const int                                    direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] = DivergingSpeed * state[unknown];
@@ -142,7 +148,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += (1.0 + direction) * position(direction);
@@ -160,7 +167,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += ConstantSourceValue;
@@ -185,7 +193,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] = LinearFluxSpeed * (1.0 + direction) * state[unknown];
@@ -200,7 +209,8 @@ namespace {
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
       const int                                                     direction,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += LinearProductSpeed * (1.0 + direction) * stateGradient[unknown];
@@ -217,7 +227,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         values
+      double* NOALIAS const                                         values,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         values[unknown] += LinearSourceRate * state[unknown];
@@ -341,7 +352,8 @@ namespace {
       scratch,
       tables.getView(),
       TimeStamp,
-      TimeStepSize
+      TimeStepSize,
+      RuntimeParameters{}
     );
   }
 
@@ -552,7 +564,7 @@ UNIT_TEST(
   WHEN("The test takes the identity of the prediction counts") {
     const Counts identity = Counts::identity();
 
-    THEN("The identity counts zero diverged and zero unconverged cells and names the slot -1") {
+    THEN("The identity counts zero diverged and zero unconverged cells and stores the slot -1") {
       VALIDATE_EQUALS(identity.divergedCells, 0);
       VALIDATE_EQUALS(identity.unconvergedCells, 0);
       VALIDATE_EQUALS(identity.firstDivergedCell, -1);
@@ -584,7 +596,7 @@ UNIT_TEST(
       const int divergedSecond  = Counts::combine(withoutDivergence, diverged).firstDivergedCell;
       const int neitherDiverged = Counts::combine(unconverged, unconverged).firstDivergedCell;
 
-      THEN("A combination with the diverged cell names slot 9 and a combination without it names the slot -1") {
+      THEN("A combination with the diverged cell returns the slot 9 and a combination without it the slot -1") {
         VALIDATE_EQUALS(divergedFirst, 9);
         VALIDATE_EQUALS(divergedSecond, 9);
         VALIDATE_EQUALS(neitherDiverged, -1);

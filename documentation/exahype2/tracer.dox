@@ -26,7 +26,7 @@ tracers.insert_from_file("particles.dat", scale_factor=1.0)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A coordinate lists at least one component per axis of the build. The
-argument `transform` of `insert_by_coordinates` names a C++ callable of the
+argument `transform` of `insert_by_coordinates` selects a C++ callable of the
 solver that maps every coordinate onto the position the particle takes; the
 curvilinear ExaSeis applications pass `invertProjection` to place a tracer at
 the mesh position of a physical coordinate.
@@ -50,8 +50,8 @@ solver.trace(
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 `fields_to_interpolate` lists the data entries that receive the first
-unknowns of the solver in this order. The interpolation scheme 0 reads no
-solver value. Scheme 1 reads the volume that contains the position. Scheme 2
+unknowns of the solver in this order. The interpolation scheme 0 skips the
+solver values. Scheme 1 reads the volume that contains the position. Scheme 2
 interpolates between the volumes. A DG solver family evaluates its nodal
 polynomial for every scheme other than 0. The integration scheme 0 keeps the
 particle in place. The schemes 1 to 6 advance it with the interpolated velocity

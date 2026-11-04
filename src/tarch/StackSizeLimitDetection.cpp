@@ -51,18 +51,18 @@ tarch::detectStackSizeLimit() {
   const auto& stackSizeLimit = getCachedStackSizeLimit();
 #if defined(_WIN32)
   LOG_WARNING("The stack size check cannot read the limit on Windows.");
-  return "unknown";
+  return "Unknown";
 #else
   constexpr unsigned long long RecommendedMinimumStackLimitInKiB = 0x200'000ULL;
   constexpr unsigned long long RecommendedMinimumStackLimit      = RecommendedMinimumStackLimitInKiB * KiB;
 
   if (not stackSizeLimit.detected) {
     LOG_ERROR("The stack size check cannot read the limit.");
-    return "unknown";
+    return "Unknown";
   }
 
   if (stackSizeLimit.unlimited) {
-    return "unlimited";
+    return "Unlimited";
   }
 
   const auto currentLimitInKiB = stackSizeLimit.bytes / KiB;

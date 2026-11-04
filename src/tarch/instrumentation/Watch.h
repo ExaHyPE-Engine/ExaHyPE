@@ -18,6 +18,7 @@ public:
     bool                                plotResultInDestructor,
     bool                                startToTickImmediately = true
   );
+
   Watch(const Watch&)            = delete;
   Watch(Watch&&)                 = delete;
   Watch& operator=(const Watch&) = delete;

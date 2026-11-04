@@ -71,6 +71,7 @@ struct exahype2::particles::ParticleSetView final {
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD int getSlot(int index) const;
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool hasMovedOutOfCell(int index) const;
   INLINE_METHOD GPU_CALLABLE_METHOD void markAsMovedOutOfCell(int index) const;
+
   [[nodiscard]] INLINE_METHOD GPU_CALLABLE_METHOD bool isInsideCell(
     const peano4::CellConnectivity&              cellConnectivity,
     int                                          index,
@@ -114,10 +115,12 @@ public:
 
   INLINE_METHOD void insert(const peano4::CellConnectivity& cellConnectivity, const std::vector<double>& candidates);
   INLINE_METHOD void relocate(const peano4::CellConnectivity& cellConnectivity);
+
   INLINE_METHOD void relocateParticlesMovedOutOfCells(
     const peano4::CellConnectivity& cellConnectivity,
     int                             numberOfMovedParticles
   );
+
   INLINE_METHOD void upload();
   INLINE_METHOD void download();
   INLINE_METHOD void release();
@@ -161,16 +164,19 @@ private:
     std::vector<double>& values,
     std::vector<int>&    numbers
   );
+
   INLINE_METHOD void placeParticles(
     const peano4::CellConnectivity& cellConnectivity,
     const std::vector<double>&      values,
     const std::vector<int>&         numbers
   );
+
   INLINE_METHOD void appendArrivals(
     const std::vector<double>& values,
     const std::vector<int>&    numbers,
     const std::vector<int>&    slots
   );
+
   INLINE_METHOD void append(const double* values, int number0, int number1, int slot);
 };
 

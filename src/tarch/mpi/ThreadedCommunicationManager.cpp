@@ -21,8 +21,8 @@ void
 tarch::mpi::ThreadedCommunicationManager::progress() {}
 
 /**
- * Waits until two passes over the pollers have completed idle, while a caller re-arms no poller.
- * The first pass may have begun before the call. After stop(), the pollers run on the calling
+ * Waits until two passes over the pollers have completed idle. A caller re-arms its pollers only
+ * after the call returns. The first pass may have begun before the call. After stop(), the pollers run on the calling
  * thread.
  */
 void

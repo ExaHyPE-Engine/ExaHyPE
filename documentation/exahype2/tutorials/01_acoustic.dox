@@ -113,7 +113,7 @@ the Gaussian point source and place it near the bottom-left corner.
 # Running and Visualising
 
 The build produces an executable that is configured entirely through command-line
-flags - no recompilation is needed to change the run:
+flags - a different run needs different flags only:
 
     export OMP_NUM_THREADS=4
     ./Acoustic -et 2.2 -ns 22 -l 3
@@ -138,7 +138,7 @@ Drag the slider to watch the wave expand from the source and reflect off the wal
 # Experiment
 
 - Plot a velocity component: pass `field="v"` to `show_solution`.
-- Refine the mesh: raise `-l` to 4 and re-run (no rebuild needed).
+- Refine the mesh: raise `-l` to 4 and re-run the same executable.
 - Run a little longer: raise `-et` (and `-ns`) to follow the wave reflecting off
   the far walls.
 - Move the source in `ADERDGSolver.cpp` and rebuild.

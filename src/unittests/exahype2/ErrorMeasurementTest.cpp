@@ -14,15 +14,20 @@
 
 namespace {
   struct LinearSolver final {
+    struct RuntimeParameters final {
+      double offsetOfSecondUnknown{};
+    };
+
     static INLINE_METHOD GPU_CALLABLE_METHOD void analyticalSolution(
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const double                                 timeStamp,
       const double                                 timeStepSize,
       const double* const                          state,
-      double* const                                solution
+      double* const                                solution,
+      const RuntimeParameters&                     parameters
     ) {
       solution[0] = state[0] + timeStamp + timeStepSize;
-      solution[1] = x(0);
+      solution[1] = x(0) + parameters.offsetOfSecondUnknown;
     }
   };
 
@@ -150,14 +155,24 @@ UNIT_TEST("The solution error compares against the analytical solution at the de
     tarch::la::Vector<DIMENSIONS, double> x(0.0);
     x(0) = 4.0;
 
-    WHEN("The error against the analytical solution at the time 0.4 and the step 0.1 accumulates with weight two") {
-      double errors[3]{};
-      exahype2::accumulateSolutionError<LinearSolver, 2, 1>(MeasuredUnknowns, value, x, 0.4, 0.1, 2.0, errors);
+    WHEN("The error at the time 0.4, the step 0.1 and the second unknown offset by one accumulates with weight two") {
+      const LinearSolver::RuntimeParameters parameters{.offsetOfSecondUnknown = 1.0};
+      double                                errors[3]{};
+      exahype2::accumulateSolutionError<LinearSolver, 2, 1>(
+        MeasuredUnknowns,
+        value,
+        x,
+        0.4,
+        0.1,
+        2.0,
+        errors,
+        parameters
+      );
 
       THEN("The weighted L1 and squared L2 errors and the largest error of both unknowns reach the accumulator") {
-        VALIDATE_NUMERICAL_EQUALS(errors[0], 2.0 * 0.5 + 2.0 * 2.0);
-        VALIDATE_NUMERICAL_EQUALS(errors[1], 2.0 * 0.25 + 2.0 * 4.0);
-        VALIDATE_NUMERICAL_EQUALS(errors[2], 2.0);
+        VALIDATE_NUMERICAL_EQUALS(errors[0], 2.0 * 0.5 + 2.0 * 3.0);
+        VALIDATE_NUMERICAL_EQUALS(errors[1], 2.0 * 0.25 + 2.0 * 9.0);
+        VALIDATE_NUMERICAL_EQUALS(errors[2], 3.0);
       }
     }
   }

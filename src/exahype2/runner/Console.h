@@ -14,11 +14,13 @@ namespace exahype2::runner {
   std::size_t getDisplayWidth(const std::string& text);
   std::string truncateToDisplayWidth(const std::string& text, std::size_t columns);
   std::string padToWidth(const std::string& text, std::size_t columns);
+
   std::vector<std::string> wrapToDisplayWidth(
     const std::string& text,
     std::size_t        columns,
     std::size_t        continuationColumn
   );
+
   void writeToLog(const std::string& line);
 } // namespace exahype2::runner
 

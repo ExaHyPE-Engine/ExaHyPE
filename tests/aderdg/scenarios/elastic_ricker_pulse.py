@@ -63,7 +63,7 @@ class ElasticRickerPulse(Scenario):
 
   // Width of a cell on the finest level. The pulse starts centred in the leftmost cell.
   double h = DomainSize[0];
-  for (int level = 0; level < RuntimeParameters::getMaxGridLevels(); level++) {
+  for (int level = 0; level < parameters.maxGridLevels; level++) {
     h /= peano4::SubdivisionFactor;
   }
 

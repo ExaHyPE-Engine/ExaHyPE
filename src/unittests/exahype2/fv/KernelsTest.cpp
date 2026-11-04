@@ -17,6 +17,8 @@ namespace {
    * A solver stand-in with the patch layout that the transfer reads.
    */
   struct PatchLayout final {
+    struct RuntimeParameters final {};
+
     static constexpr int PatchSize                  = Setup::DofsPerAxis;
     static constexpr int NumberOfUnknowns           = Setup::NumberOfData;
     static constexpr int NumberOfAuxiliaryVariables = 0;

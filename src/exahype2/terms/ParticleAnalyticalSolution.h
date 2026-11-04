@@ -4,8 +4,13 @@
 
 namespace exahype2::terms {
   template <typename SolverType, typename Particle>
-  concept HasParticleAnalyticalSolution =
-    requires(Particle* const particle, const double t, const double dt, double* const solution) {
-      { SolverType::analyticalSolution(particle, t, dt, solution) } -> std::same_as<void>;
-    };
+  concept HasParticleAnalyticalSolution = requires(
+    Particle* const                               particle,
+    const double                                  t,
+    const double                                  dt,
+    double* const                                 solution,
+    const typename SolverType::RuntimeParameters& parameters
+  ) {
+    { SolverType::analyticalSolution(particle, t, dt, solution, parameters) } -> std::same_as<void>;
+  };
 } // namespace exahype2::terms

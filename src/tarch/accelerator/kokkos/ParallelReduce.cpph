@@ -22,17 +22,17 @@ namespace tarch::accelerator {
     using value_type       = typename Op::ValueType;
     using result_view_type = Kokkos::View<value_type, Kokkos::HostSpace, Kokkos::MemoryUnmanaged>;
 
-    value_type& target;
+    result_view_type result{};
 
     INLINE_METHOD GPU_CALLABLE_METHOD explicit KokkosCustomReducer(value_type& boundTarget) :
-      target(boundTarget) {}
+      result(&boundTarget) {}
 
     INLINE_METHOD GPU_CALLABLE_METHOD void join(value_type& destination, const value_type& source) const {
       destination = Op::combine(destination, source);
     }
     INLINE_METHOD GPU_CALLABLE_METHOD void init(value_type& value) const { value = Op::identity(); }
-    INLINE_METHOD GPU_CALLABLE_METHOD value_type& reference() const { return target; }
-    INLINE_METHOD GPU_CALLABLE_METHOD result_view_type view() const { return result_view_type(&target); }
+    INLINE_METHOD GPU_CALLABLE_METHOD value_type& reference() const { return *result.data(); }
+    INLINE_METHOD GPU_CALLABLE_METHOD result_view_type view() const { return result; }
     INLINE_METHOD GPU_CALLABLE_METHOD bool references_scalar() const { return true; }
   };
 

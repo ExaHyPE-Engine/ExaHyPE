@@ -182,18 +182,23 @@ namespace {
     inline static Precision* WeightedRestrictionMatrix1D = nullptr;
   };
 
+  struct RuntimeParameters final {};
+
   /**
    * The PDE terms of every test solver without flux and wave speed.
    */
   template <typename Solver>
   struct CommonTerms {
+    using RuntimeParameters = ::RuntimeParameters;
+
     static INLINE_METHOD GPU_CALLABLE_METHOD void boundaryConditions(
       const double* const                                           inside,
       double* const                                                 outside,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       outside[0] = inside[0];
     }
@@ -202,7 +207,8 @@ namespace {
       [[maybe_unused]] const double* const                          Q,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const double                                 t
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return exahype2::RefinementCommand::Keep;
     }
@@ -213,7 +219,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return 0.0;
     }
@@ -225,7 +232,8 @@ namespace {
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
       [[maybe_unused]] const int                                    normal,
-      double* const                                                 F
+      double* const                                                 F,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       F[0] = 0.0;
     }
@@ -236,11 +244,11 @@ namespace {
    * with these terms alone keeps its state.
    */
   struct FixedRuleTerms {
-    static constexpr int  DGOrder                    = ::Order;
-    static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
-    static constexpr int  NumberOfUnknowns           = 1;
-    static constexpr int  NumberOfAuxiliaryVariables = 0;
-    static constexpr bool IsLinear                   = false;
+    static constexpr int                   DGOrder                    = ::Order;
+    static constexpr int                   RungeKuttaOrder            = ::RungeKuttaOrder;
+    static constexpr int                   NumberOfUnknowns           = 1;
+    static constexpr int                   NumberOfAuxiliaryVariables = 0;
+    [[maybe_unused]] static constexpr bool IsLinear                   = false;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
     static constexpr std::array<int, 1>           MeasuredUnknowns{0};
@@ -256,7 +264,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                                 Q,
       const tarch::la::Vector<DIMENSIONS, double>&                  x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       Q[0] = getProfile(x);
     }
@@ -266,7 +275,8 @@ namespace {
       [[maybe_unused]] const double                t,
       [[maybe_unused]] const double                dt,
       [[maybe_unused]] const double* const         Q,
-      double* const                                solution
+      double* const                                solution,
+      [[maybe_unused]] const RuntimeParameters&    parameters
     ) {
       solution[0] = getProfile(x);
     }
@@ -304,7 +314,8 @@ namespace {
     static bool plotsFace(
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return true;
     }
@@ -314,11 +325,11 @@ namespace {
    * A solver with a constant state, an adaptive rule and a unit wave speed.
    */
   struct AdaptiveSolver final : exahype2::dg::rk::Solver<AdaptiveSolver, double, double>, CommonTerms<AdaptiveSolver> {
-    static constexpr int  DGOrder                    = ::Order;
-    static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
-    static constexpr int  NumberOfUnknowns           = 1;
-    static constexpr int  NumberOfAuxiliaryVariables = 0;
-    static constexpr bool IsLinear                   = false;
+    static constexpr int                   DGOrder                    = ::Order;
+    static constexpr int                   RungeKuttaOrder            = ::RungeKuttaOrder;
+    static constexpr int                   NumberOfUnknowns           = 1;
+    static constexpr int                   NumberOfAuxiliaryVariables = 0;
+    [[maybe_unused]] static constexpr bool IsLinear                   = false;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Adaptive;
 
@@ -333,7 +344,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                                 values,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& width
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& width,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       values[0] = 1.0;
     }
@@ -344,7 +356,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& width,
       [[maybe_unused]] const double                                 timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      [[maybe_unused]] const int                                    normal
+      [[maybe_unused]] const int                                    normal,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return 1.0;
     }
@@ -354,11 +367,11 @@ namespace {
    * A solver with a constant initial condition and a unit source. A step adds the time step size.
    */
   struct SourceSolver final : exahype2::dg::rk::Solver<SourceSolver, double, double>, CommonTerms<SourceSolver> {
-    static constexpr int  DGOrder                    = ::Order;
-    static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
-    static constexpr int  NumberOfUnknowns           = 1;
-    static constexpr int  NumberOfAuxiliaryVariables = 0;
-    static constexpr bool IsLinear                   = false;
+    static constexpr int                   DGOrder                    = ::Order;
+    static constexpr int                   RungeKuttaOrder            = ::RungeKuttaOrder;
+    static constexpr int                   NumberOfUnknowns           = 1;
+    static constexpr int                   NumberOfAuxiliaryVariables = 0;
+    [[maybe_unused]] static constexpr bool IsLinear                   = false;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
 
@@ -375,7 +388,8 @@ namespace {
     static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
       double* const                                                 Q,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       Q[0] = InitialValue;
     }
@@ -386,7 +400,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t,
       [[maybe_unused]] const double                                 dt,
-      double* const                                                 S
+      double* const                                                 S,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       S[0] = 1.0;
     }
@@ -421,7 +436,7 @@ namespace {
     }
     const auto& cellConnectivity = spacetree.getCellConnectivity();
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.regrid(cellConnectivity, regrid, requests);
+    solver.regrid(cellConnectivity, regrid, requests, RuntimeParameters{});
     spacetree.finishRegrid();
     finishStep(solver);
   }
@@ -542,7 +557,7 @@ UNIT_TEST("The initialisation writes the initial condition into every node") {
       constructionLimits.maxAdmissiblePatchSize = CoarseWidth / SubdivisionFactor;
       solver.setLimits(constructionLimits);
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.requestRefinementForGridConstruction(cellConnectivity, requests);
+      solver.requestRefinementForGridConstruction(cellConnectivity, requests, RuntimeParameters{});
       const auto constructionRequests = requests.getRefinementRequests(cellConnectivity);
 
       THEN("Every cell requests its refinement") {
@@ -551,10 +566,10 @@ UNIT_TEST("The initialisation writes the initial condition into every node") {
 
       AND_WHEN("The solver allocates with the domain limits and initialises every cell with an erase request") {
         solver.setLimits(getLimitsOfTheDomain());
-        solver.allocate(cellConnectivity);
+        solver.allocate(cellConnectivity, RuntimeParameters{});
         requests.clear(cellConnectivity.getNumberOfSlots());
         requests.merge(exahype2::RefinementCommand::Erase, cellConnectivity.getCells());
-        solver.initialise(cellConnectivity, requests);
+        solver.initialise(cellConnectivity, requests, RuntimeParameters{});
         finishStep(solver);
         const int  cells              = peano4::unittests::getGlobalSumOf(cellConnectivity.getCells().size);
         const auto refinementRequests = requests.getRefinementRequests(cellConnectivity);
@@ -582,10 +597,10 @@ UNIT_TEST("A time step without flux keeps the solution and advances the time sta
     const auto&     cellConnectivity = buildGrid();
     FixedRuleSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
 
     WHEN("The solver performs three time steps") {
@@ -596,7 +611,7 @@ UNIT_TEST("A time step without flux keeps the solution and advances the time sta
       std::vector<double> sizeOfNextStep;
       for (int step = 0; step < 3; step++) {
         requests.clear(cellConnectivity.getNumberOfSlots());
-        solver.performTimeStep(cellConnectivity, requests);
+        solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
         finishStep(solver);
         mismatchesOfStep.push_back(
           peano4::unittests::getGlobalSumOf(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity))
@@ -636,22 +651,22 @@ UNIT_TEST("Recording the last time stamp appends the row of that time stamp to t
     FixedRuleSolver   solver;
     solver.setLimits(getLimitsOfTheDomain());
     solver.openErrorMeasurement(fileName, TimeBetweenTwoRecords);
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     for (int step = 0; step < 3; step++) {
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.performTimeStep(cellConnectivity, requests);
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
     }
     // Only the global master writes the error file.
     const std::size_t linesBeforeTheRecord = isGlobalMaster ? readLinesOf(fileName + ".csv").size() : 0;
 
     WHEN("The solver records the last time stamp twice") {
-      solver.recordLastTimeStamp(cellConnectivity);
-      solver.recordLastTimeStamp(cellConnectivity);
+      solver.recordLastTimeStamp(cellConnectivity, RuntimeParameters{});
+      solver.recordLastTimeStamp(cellConnectivity, RuntimeParameters{});
       const auto lines = isGlobalMaster ? readLinesOf(fileName + ".csv") : std::vector<std::string>{};
       if (isGlobalMaster) {
         std::filesystem::remove(fileName + ".csv");
@@ -674,17 +689,17 @@ UNIT_TEST("A unit source advances every node by the time step size") {
     const auto&  cellConnectivity = buildGrid();
     SourceSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
 
     WHEN("The solver performs three time steps") {
       std::vector<int> mismatchesOfStep;
       for (int step = 0; step < 3; step++) {
         requests.clear(cellConnectivity.getNumberOfSlots());
-        solver.performTimeStep(cellConnectivity, requests);
+        solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
         finishStep(solver);
         const double expectedValue = SourceSolver::InitialValue + solver.getTimeStepping().getTimeStamp();
         mismatchesOfStep.push_back(
@@ -710,12 +725,12 @@ UNIT_TEST("The prolongation reproduces the linear profile on every child and the
     const auto&     cellConnectivity = buildGrid();
     FixedRuleSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
-    solver.performTimeStep(cellConnectivity, requests);
+    solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
     peano4::Spacetree::getInstance().markPersistentDataLive();
@@ -737,7 +752,7 @@ UNIT_TEST("The prolongation reproduces the linear profile on every child and the
 
       AND_WHEN("The solver performs a time step") {
         requests.clear(cellConnectivity.getNumberOfSlots());
-        solver.performTimeStep(cellConnectivity, requests);
+        solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
         finishStep(solver);
         const int mismatchesAfterTheTimeStep =
           peano4::unittests::getGlobalSumOf(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity));
@@ -774,15 +789,15 @@ UNIT_TEST("The first time step after a refinement takes the stability bound of t
     const auto&    cellConnectivity = buildGrid();
     AdaptiveSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
-    solver.performTimeStep(cellConnectivity, requests);
+    solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.performTimeStep(cellConnectivity, requests);
+    solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
     peano4::Spacetree::getInstance().markPersistentDataLive();
@@ -790,7 +805,7 @@ UNIT_TEST("The first time step after a refinement takes the stability bound of t
     WHEN("The cell in the centre refines and the solver performs the next time step") {
       regridWithLiveData(solver, {peano4::unittests::getRefinementOfCentreCell(Depth)}, requests);
       requests.clear(cellConnectivity.getNumberOfSlots());
-      solver.performTimeStep(cellConnectivity, requests);
+      solver.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
       finishStep(solver);
 
       THEN("The step size shrinks by the subdivision factor") {
@@ -810,10 +825,10 @@ UNIT_TEST("A plot writes the node and the face file and allocates host copies on
     const auto&                 rank             = tarch::mpi::Rank::getInstance();
     FacePlottingFixedRuleSolver solver;
     solver.setLimits(getLimitsOfTheDomain());
-    solver.allocate(cellConnectivity);
+    solver.allocate(cellConnectivity, RuntimeParameters{});
     exahype2::RefinementRequests requests;
     requests.clear(cellConnectivity.getNumberOfSlots());
-    solver.initialise(cellConnectivity, requests);
+    solver.initialise(cellConnectivity, requests, RuntimeParameters{});
     finishStep(solver);
     const std::string outputDirectory =
       (tarch::testing::getWritableTestDirectory() / "DiscontinuousGalerkinSolverPlotTest").string() + "/";
@@ -822,7 +837,7 @@ UNIT_TEST("A plot writes the node and the face file and allocates host copies on
 
     WHEN("The solver plots its nodes and faces and every rank downloads the solution and the face states") {
       const tarch::AllocatedBytes bytesBeforeThePlot = solver.getAllocatedBytes();
-      solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory);
+      solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory, RuntimeParameters{});
       const tarch::AllocatedBytes bytesAfterThePlot = solver.getAllocatedBytes();
 
       const auto&                            solution   = solver.getSolution();
@@ -872,7 +887,7 @@ UNIT_TEST("A release frees every pool that the allocation reserved") {
     const std::size_t bytesBeforeTheAllocation = solver.getAllocatedBytes().getTotal();
 
     WHEN("The solver allocates its pools on the grid and releases them") {
-      solver.allocate(cellConnectivity);
+      solver.allocate(cellConnectivity, RuntimeParameters{});
       const std::size_t bytesAfterTheAllocation = solver.getAllocatedBytes().getTotal();
       solver.release();
 

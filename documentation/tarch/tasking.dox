@@ -11,7 +11,7 @@ Callers work against the classes and functions in tarch::tasking.
 
 tarch::tasking::Runtime owns the backend's process-wide state. init() caps the
 OpenMP thread count to the processors available to the process and records the
-result. shutdown() is a lifecycle hook; OpenMP requires no explicit teardown.
+result. shutdown() is a lifecycle hook. OpenMP tears itself down.
 
 # Tasks
 

@@ -21,6 +21,8 @@ namespace {
    * A solver whose wave speed is nonzero only at the end of the time step of the tests.
    */
   struct WaveSpeedSolver final {
+    struct RuntimeParameters final {};
+
     static constexpr int DGOrder                    = 1;
     static constexpr int NumberOfUnknowns           = 1;
     static constexpr int NumberOfAuxiliaryVariables = 0;
@@ -31,7 +33,8 @@ namespace {
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                                  timeStamp,
       [[maybe_unused]] const double                                 timeStepSize,
-      [[maybe_unused]] const int                                    direction
+      [[maybe_unused]] const int                                    direction,
+      [[maybe_unused]] const RuntimeParameters&                     parameters
     ) {
       return timeStamp == TimeStamp + TimeStepSize ? WaveSpeed : 0.0;
     }
@@ -169,7 +172,8 @@ namespace {
             getCellCentre(),
             getCellSize(),
             TimeStamp + TimeStepSize,
-            TimeStepSize
+            TimeStepSize,
+            WaveSpeedSolver::RuntimeParameters{}
           )
         );
       }

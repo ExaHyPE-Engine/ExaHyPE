@@ -61,10 +61,11 @@ exahype2::dg::initialiseNodes(
   const tarch::la::Vector<DIMENSIONS, double>&      width,
   [[maybe_unused]] const QuadraturePrecision* const quadraturePoints,
   [[maybe_unused]] const QuadraturePrecision* const quadratureWeights,
-  StoragePrecision* const                           nodes
+  StoragePrecision* const                           nodes,
+  const typename Derived::RuntimeParameters&        parameters
 ) {
   if constexpr (exahype2::terms::InitialisesPatches<Derived>) {
-    Derived::initialCondition(nodes, centre, width);
+    Derived::initialCondition(nodes, centre, width, parameters);
   } else {
     exahype2::dg::forEachNode<Derived::DGOrder + 1, Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables>(
       centre,
@@ -72,13 +73,13 @@ exahype2::dg::initialiseNodes(
       quadraturePoints,
       quadratureWeights,
       nodes,
-      [](
+      [&parameters](
         StoragePrecision* const                      value,
         const tarch::la::Vector<DIMENSIONS, double>& x,
         const tarch::la::Vector<DIMENSIONS, double>& h,
         [[maybe_unused]] const double                weight,
         [[maybe_unused]] const int                   index
-      ) { Derived::initialCondition(value, x, h); }
+      ) { Derived::initialCondition(value, x, h, parameters); }
     );
   }
 }
@@ -124,7 +125,8 @@ exahype2::dg::evaluateNodalFluxes(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr bool EvaluateDiffusiveFlux  = exahype2::terms::HasDiffusiveFlux<Derived, ComputePrecision>;
   constexpr bool EvaluateFlux           = exahype2::terms::HasFlux<Derived, ComputePrecision> or EvaluateDiffusiveFlux;
@@ -171,7 +173,8 @@ exahype2::dg::evaluateNodalFluxes(
             timeStamp,
             timeStepSize,
             direction,
-            nodeFlux
+            nodeFlux,
+            parameters
           );
         } else {
           Derived::flux(
@@ -181,7 +184,8 @@ exahype2::dg::evaluateNodalFluxes(
             timeStamp,
             timeStepSize,
             direction,
-            nodeFlux
+            nodeFlux,
+            parameters
           );
         }
       }
@@ -326,7 +330,8 @@ exahype2::dg::applyBoundaryConditions(
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const int                                    faceNumber
+  const int                                    faceNumber,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int NodesPerAxis = Derived::DGOrder + 1;
   constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
@@ -355,7 +360,8 @@ exahype2::dg::applyBoundaryConditions(
         nodePosition,
         cellSize,
         timeStamp,
-        direction
+        direction,
+        parameters
       );
     }
   }
@@ -378,7 +384,8 @@ exahype2::dg::evaluateFluxOnFace(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    direction
+  const int                                    direction,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr bool EvaluateDiffusiveFlux = exahype2::terms::HasDiffusiveFlux<Derived, ComputePrecision>;
   constexpr bool EvaluateFlux          = exahype2::terms::HasFlux<Derived, ComputePrecision> or EvaluateDiffusiveFlux;
@@ -419,9 +426,19 @@ exahype2::dg::evaluateFluxOnFace(
             / cellSize(direction)
           );
         }
-        Derived::flux(nodeState, nodeGradients, nodePosition, cellSize, timeStamp, timeStepSize, direction, flux);
+        Derived::flux(
+          nodeState,
+          nodeGradients,
+          nodePosition,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          direction,
+          flux,
+          parameters
+        );
       } else {
-        Derived::flux(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction, flux);
+        Derived::flux(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction, flux, parameters);
       }
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         faceFlux[faceNode * NumberOfUnknowns + unknown] = flux[unknown];
@@ -574,7 +591,8 @@ exahype2::dg::summariseRiemannFace(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    direction
+  const int                                    direction,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int  NodesPerAxis       = Derived::DGOrder + 1;
   constexpr int  NumberOfData       = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
@@ -584,18 +602,22 @@ exahype2::dg::summariseRiemannFace(
   ASSERTION(faceSummary != nullptr);
   ASSERTION(direction >= 0 and direction < DIMENSIONS, direction);
 
-  ComputePrecision averageLeftState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)))  = {};
-  ComputePrecision averageRightState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
-  exahype2::dg::computeMeanOfFace<NodesPerAxis, NumberOfData>(averageLeftState, leftState, faceQuadratureWeights);
-  exahype2::dg::computeMeanOfFace<NodesPerAxis, NumberOfData>(averageRightState, rightState, faceQuadratureWeights);
-
-  const auto leftMaxEigenvalue = static_cast<ComputePrecision>(
-    Derived::maxEigenvalue(averageLeftState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
-  );
-  const auto rightMaxEigenvalue = static_cast<ComputePrecision>(
-    Derived::maxEigenvalue(averageRightState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
-  );
-  faceSummary[0] = std::fmax(leftMaxEigenvalue, rightMaxEigenvalue);
+  ComputePrecision averageStates[2][PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
+  ComputePrecision maxEigenvalues[2];
+  const ComputePrecision* const sideStates[2] = {leftState, rightState};
+  for (int side = 0; side < 2; side++) {
+    exahype2::dg::computeMeanOfFace<NodesPerAxis, NumberOfData>(
+      averageStates[side],
+      sideStates[side],
+      faceQuadratureWeights
+    );
+    maxEigenvalues[side] = static_cast<ComputePrecision>(
+      Derived::maxEigenvalue(averageStates[side], faceCentre, cellSize, timeStamp, timeStepSize, direction, parameters)
+    );
+  }
+  faceSummary[0]                                  = std::fmax(maxEigenvalues[0], maxEigenvalues[1]);
+  const ComputePrecision* const averageLeftState  = averageStates[0];
+  const ComputePrecision* const averageRightState = averageStates[1];
   SIMD(aligned(averageLeftState, averageRightState : PEANO_WITH_ALIGNMENT))
   for (int value = 0; value < PaddedNumberOfData; value++) {
     faceSummary[1 + value] = Half * (averageRightState[value] + averageLeftState[value]);
@@ -620,7 +642,8 @@ exahype2::dg::solveRiemannProblemAtNode(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    direction
+  const int                                    direction,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr bool EvaluateFlux =
     exahype2::terms::HasFlux<Derived, ComputePrecision> or exahype2::terms::HasDiffusiveFlux<Derived, ComputePrecision>;
@@ -672,7 +695,8 @@ exahype2::dg::solveRiemannProblemAtNode(
         timeStamp,
         timeStepSize,
         direction,
-        productValues
+        productValues,
+        parameters
       );
       if constexpr (EvaluateMaterialParameters) {
         Derived::multiplyMaterialParameterMatrix(
@@ -682,7 +706,8 @@ exahype2::dg::solveRiemannProblemAtNode(
           timeStamp,
           timeStepSize,
           direction,
-          productValues
+          productValues,
+          parameters
         );
       }
       SIMD(aligned(productValues, centralFlux : PEANO_WITH_ALIGNMENT))
@@ -697,7 +722,7 @@ exahype2::dg::solveRiemannProblemAtNode(
       for (int unknown = 0; unknown < PaddedNumberOfUnknowns; unknown++) {
         fluxValues[unknown] = static_cast<ComputePrecision>(0);
       }
-      Derived::flux(halfStateJump, faceCentre, cellSize, timeStamp, timeStepSize, direction, fluxValues);
+      Derived::flux(halfStateJump, faceCentre, cellSize, timeStamp, timeStepSize, direction, fluxValues, parameters);
       if constexpr (EvaluateMaterialParameters) {
         Derived::multiplyMaterialParameterMatrix(
           averageState,
@@ -706,7 +731,8 @@ exahype2::dg::solveRiemannProblemAtNode(
           timeStamp,
           timeStepSize,
           direction,
-          fluxValues
+          fluxValues,
+          parameters
         );
       }
       SIMD(aligned(fluxValues, centralFlux : PEANO_WITH_ALIGNMENT))
@@ -751,7 +777,8 @@ exahype2::dg::solveRiemannProblemAtNode(
         timeStamp,
         timeStepSize,
         direction,
-        productValues
+        productValues,
+        parameters
       );
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         const ComputePrecision halfProduct = Half * productValues[unknown];
@@ -779,7 +806,8 @@ exahype2::dg::solveRiemannProblem(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    direction
+  const int                                    direction,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int NodesPerFace  = exahype2::dg::getNodesPerFace(Derived::DGOrder + 1);
   constexpr int SummaryValues = 1 + exahype2::dg::PaddedLayout<Derived>::PaddedNumberOfData;
@@ -794,7 +822,8 @@ exahype2::dg::solveRiemannProblem(
     cellSize,
     timeStamp,
     timeStepSize,
-    direction
+    direction,
+    parameters
   );
   for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
     exahype2::dg::solveRiemannProblemAtNode<Derived, false>(
@@ -808,7 +837,8 @@ exahype2::dg::solveRiemannProblem(
       cellSize,
       timeStamp,
       timeStepSize,
-      direction
+      direction,
+      parameters
     );
   }
 }
@@ -831,7 +861,8 @@ exahype2::dg::solveLinearRiemannProblem(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    direction
+  const int                                    direction,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int NodesPerFace  = exahype2::dg::getNodesPerFace(Derived::DGOrder + 1);
   constexpr int SummaryValues = 1 + exahype2::dg::PaddedLayout<Derived>::PaddedNumberOfData;
@@ -846,7 +877,8 @@ exahype2::dg::solveLinearRiemannProblem(
     cellSize,
     timeStamp,
     timeStepSize,
-    direction
+    direction,
+    parameters
   );
   for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
     exahype2::dg::solveRiemannProblemAtNode<Derived, true>(
@@ -860,7 +892,8 @@ exahype2::dg::solveLinearRiemannProblem(
       cellSize,
       timeStamp,
       timeStepSize,
-      direction
+      direction,
+      parameters
     );
   }
 }
@@ -883,7 +916,8 @@ exahype2::dg::solveRiemannProblemOnHalves(
   const double                                 timeStepSize,
   const int                                    direction,
   const bool                                   isBoundary,
-  const int                                    faceNumber
+  const int                                    faceNumber,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int FluxElementsPerFace = exahype2::dg::getNodesPerFace(Derived::DGOrder + 1) * Derived::NumberOfUnknowns;
 
@@ -915,7 +949,8 @@ exahype2::dg::solveRiemannProblemOnHalves(
       isBoundary,
       faceNumber,
       leftFlux,
-      rightFlux
+      rightFlux,
+      parameters
     ));
     for (int entry = 0; entry < FluxElementsPerFace; entry++) {
       leftFlux[entry]  = leftFlux[entry] - leftSideFlux[entry];
@@ -932,7 +967,8 @@ exahype2::dg::solveRiemannProblemOnHalves(
       cellSize,
       timeStamp,
       timeStepSize,
-      direction
+      direction,
+      parameters
     );
   } else {
     exahype2::dg::solveRiemannProblem<Derived>(
@@ -945,7 +981,8 @@ exahype2::dg::solveRiemannProblemOnHalves(
       cellSize,
       timeStamp,
       timeStepSize,
-      direction
+      direction,
+      parameters
     );
   }
 }
@@ -967,7 +1004,8 @@ exahype2::dg::solveRiemannProblemOnFace(
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const int                                    direction,
-  const int                                    boundaryFaceNumber
+  const int                                    boundaryFaceNumber,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int NodesPerFace         = exahype2::dg::getNodesPerFace(Derived::DGOrder + 1);
   constexpr int StateElementsPerFace = NodesPerFace * (Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables);
@@ -997,7 +1035,8 @@ exahype2::dg::solveRiemannProblemOnFace(
       faceCentre,
       cellSize,
       timeStamp,
-      boundaryFaceNumber
+      boundaryFaceNumber,
+      parameters
     );
     const int outsideSide = boundaryFaceNumber < DIMENSIONS ? 0 : 1;
     exahype2::dg::evaluateFluxOnFace<Derived>(
@@ -1010,7 +1049,8 @@ exahype2::dg::solveRiemannProblemOnFace(
       cellSize,
       timeStamp,
       timeStepSize,
-      direction
+      direction,
+      parameters
     );
   }
 
@@ -1026,7 +1066,8 @@ exahype2::dg::solveRiemannProblemOnFace(
     timeStepSize,
     direction,
     isBoundary,
-    faceNumber
+    faceNumber,
+    parameters
   );
 }
 
@@ -1044,7 +1085,8 @@ exahype2::dg::SolveRiemannProblems<Derived, ComputePrecision>::operator()(const 
     timeStamp,
     timeStepSize,
     cellConnectivity.getFaceNormal(face),
-    exahype2::dg::getBoundaryFaceNumber(cellConnectivity, face)
+    exahype2::dg::getBoundaryFaceNumber(cellConnectivity, face),
+    parameters
   );
 }
 
@@ -1060,7 +1102,8 @@ exahype2::dg::ApplyBoundaryConditions<Derived, ComputePrecision>::operator()(con
       cellConnectivity.getFaceCentre(face),
       cellConnectivity.getFaceWidth(face),
       timeStamp,
-      faceNumber
+      faceNumber,
+      parameters
     );
   }
 }
@@ -1351,7 +1394,8 @@ exahype2::dg::getMaxEigenvaluesOfNode(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int NodesPerAxis = Derived::DGOrder + 1;
   constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
@@ -1362,7 +1406,7 @@ exahype2::dg::getMaxEigenvaluesOfNode(
   const Precision* NOALIAS const nodeState = cellState + cellNode * NumberOfData;
   MaxEigenvalueStatistics        result;
   result.accumulate(cellSize, [&](const int direction) {
-    return Derived::maxEigenvalue(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction);
+    return Derived::maxEigenvalue(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction, parameters);
   });
   return result;
 }
@@ -1378,7 +1422,8 @@ exahype2::dg::reduceMaxEigenvalues(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr int           NodesPerCell = exahype2::dg::getNodesPerCell(Derived::DGOrder + 1);
   MaxEigenvalueStatistics result;
@@ -1392,7 +1437,8 @@ exahype2::dg::reduceMaxEigenvalues(
         cellCentre,
         cellSize,
         timeStamp,
-        timeStepSize
+        timeStepSize,
+        parameters
       )
     );
   }
@@ -1411,10 +1457,11 @@ exahype2::dg::finishCell(
   const tarch::la::Vector<DIMENSIONS, double>&   centre,
   const tarch::la::Vector<DIMENSIONS, double>&   width,
   const double                                   timeStamp,
-  const double                                   timeStepSize
+  const double                                   timeStepSize,
+  const typename Derived::RuntimeParameters&     parameters
 ) {
   if constexpr (exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>) {
-    Derived::postprocessUpdatedPatch(updated, centre, width, timeStamp, timeStepSize);
+    Derived::postprocessUpdatedPatch(updated, centre, width, timeStamp, timeStepSize, parameters);
   }
   if constexpr (ReportEigenvalues) {
     return exahype2::dg::reduceMaxEigenvalues<Derived>(
@@ -1423,7 +1470,8 @@ exahype2::dg::finishCell(
       centre,
       width,
       timeStamp + timeStepSize,
-      timeStepSize
+      timeStepSize,
+      parameters
     );
   } else {
     return exahype2::dg::MaxEigenvalueStatistics{};
@@ -1444,7 +1492,8 @@ exahype2::dg::MeasureNodeEigenvalues<Derived, StoragePrecision>::operator()(
     cellConnectivity.getCellCentre(slot),
     cellConnectivity.getCellWidth(slot),
     timeStamp,
-    0.0
+    0.0,
+    parameters
   );
   accumulator = exahype2::dg::MaxEigenvalueStatistics::combine(accumulator, statistics);
 }
@@ -1476,7 +1525,8 @@ exahype2::dg::MeasureNodeErrors<Derived, StoragePrecision>::operator()(const int
         timeStamp,
         timeStepSize,
         weight,
-        errors
+        errors,
+        parameters
       );
     }
   );

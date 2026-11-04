@@ -78,26 +78,45 @@ public:
     const std::vector<exahype2::plotter::DataField>& plottedFields
   );
 
+  template <typename RuntimeParameters>
   INLINE_METHOD void requestRefinementForGridConstruction(
     const peano4::CellConnectivity& cellConnectivity,
-    exahype2::RefinementRequests&   requests
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
-  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity, const RuntimeParameters& parameters);
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void initialise(
     const peano4::CellConnectivity& cellConnectivity,
-    exahype2::RefinementRequests&   requests
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void regrid(
     const peano4::CellConnectivity& cellConnectivity,
     const peano4::Regrid&           regrid,
-    exahype2::RefinementRequests&   requests
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void plot(
     const peano4::CellConnectivity& cellConnectivity,
     tarch::plotter::Format          format,
-    const std::string&              outputDirectory
+    const std::string&              outputDirectory,
+    const RuntimeParameters&        parameters
   );
-  INLINE_METHOD void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity);
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void recordLastTimeStamp(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
+
   INLINE_METHOD void release();
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
@@ -127,53 +146,80 @@ protected:
   using RestrictStates         = exahype2::dg::RestrictStateHalves<Derived, ComputePrecision>;
 
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(const peano4::CellConnectivity& cellConnectivity) const;
+
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCells(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency
   ) const;
+
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getCellsOnHost(
     const peano4::CellConnectivity& cellConnectivity
   ) const;
+
   [[nodiscard]] INLINE_METHOD tarch::Span<const int> getRiemannFaces(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency
   ) const;
+
   template <typename Operation>
   INLINE_METHOD void interpolateCoarseFaces(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
     const Operation&                operation
   ) const;
+
   template <typename Operation>
   INLINE_METHOD void restrictFineFaces(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
     const Operation&                operation
   ) const;
+
   [[nodiscard]] INLINE_METHOD const CellPool& downloadSolution();
   [[nodiscard]] INLINE_METHOD const StatePool& downloadFaceStates();
-  INLINE_METHOD void projectSolutionOntoFaces(const peano4::CellConnectivity& cellConnectivity);
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void projectSolutionOntoFaces(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
+
   INLINE_METHOD void projectSolutionOntoPlane(
     const peano4::CellConnectivity& cellConnectivity,
     int                             normal,
     double                          position
   );
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void solveRiemannProblems(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency               adjacency,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+
   INLINE_METHOD void closeTimeStep(double timeStepSize, const exahype2::dg::MaxEigenvalueStatistics& statistics);
-  INLINE_METHOD void measureError(const peano4::CellConnectivity& cellConnectivity);
+
+  template <typename RuntimeParameters>
+  INLINE_METHOD void measureError(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void voteOnRefinement(
     const peano4::CellConnectivity& cellConnectivity,
-    exahype2::RefinementRequests&   requests
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
+
+  template <typename RuntimeParameters>
   INLINE_METHOD void plotFaces(
     const peano4::CellConnectivity& cellConnectivity,
     tarch::plotter::Format          format,
-    const std::string&              outputDirectory
+    const std::string&              outputDirectory,
+    const RuntimeParameters&        parameters
   );
 
   exahype2::TimeStepping _timeStepping;
@@ -192,7 +238,12 @@ protected:
   std::vector<double> _nodeWeightsOnHost{};
 
 private:
-  INLINE_METHOD void rebuildOwnership(const peano4::CellConnectivity& cellConnectivity);
+  template <typename RuntimeParameters>
+  INLINE_METHOD void rebuildOwnership(
+    const peano4::CellConnectivity& cellConnectivity,
+    const RuntimeParameters&        parameters
+  );
+
   INLINE_METHOD void measureMeshWidths(const peano4::CellConnectivity& cellConnectivity);
 
   peano4::MigrationExchange<StoragePrecision> _migration{_solution.getLocation()};

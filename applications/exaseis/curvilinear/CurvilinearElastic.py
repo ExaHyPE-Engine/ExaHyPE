@@ -247,8 +247,7 @@ def init_grid_step_implementation(scenario_perturbations):
   // Curvi pins every interface to a face of a cell on the coarsest grid level. Every finer grid
   // level keeps these faces.
   tarch::la::Vector<DIMENSIONS, double> coarsestCellSize = DomainSize;
-  const double maxAdmissiblePatchSize = RuntimeParameters::getMaxAdmissiblePatchSize();
-  while (max(coarsestCellSize) > maxAdmissiblePatchSize) {
+  while (max(coarsestCellSize) > parameters.maxAdmissiblePatchSize) {
     coarsestCellSize /= static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor);
   }
 
