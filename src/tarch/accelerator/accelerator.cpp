@@ -40,7 +40,7 @@ namespace {
    * address is then invalid.
    */
   void* grow(GrowingAllocation& allocation, const std::size_t sizeInBytes) {
-    assertion(sizeInBytes > 0, sizeInBytes);
+    ASSERTION(sizeInBytes > 0, sizeInBytes);
     const int device = tarch::accelerator::getCurrentDevice();
     if (sizeInBytes > allocation.capacity or device != allocation.device) {
       release(allocation);
@@ -60,7 +60,7 @@ namespace {
 void*
 tarch::accelerator::lockReductionScratch(const std::size_t sizeInBytes) {
   [[maybe_unused]] const bool wasLocked = reductionScratchLocked.exchange(true, std::memory_order_acquire);
-  assertion(not wasLocked, sizeInBytes);
+  ASSERTION(not wasLocked, sizeInBytes);
   return grow(reductionScratch, sizeInBytes);
 }
 
@@ -70,7 +70,7 @@ tarch::accelerator::lockReductionScratch(const std::size_t sizeInBytes) {
  */
 void*
 tarch::accelerator::getReductionStaging(const std::size_t sizeInBytes) {
-  assertion(reductionScratchLocked.load(std::memory_order_relaxed), sizeInBytes);
+  ASSERTION(reductionScratchLocked.load(std::memory_order_relaxed), sizeInBytes);
   return grow(reductionStaging, sizeInBytes);
 }
 
@@ -80,16 +80,16 @@ tarch::accelerator::getReductionStaging(const std::size_t sizeInBytes) {
 void
 tarch::accelerator::unlockReductionScratch() {
   [[maybe_unused]] const bool wasLocked = reductionScratchLocked.exchange(false, std::memory_order_release);
-  assertion(wasLocked);
+  ASSERTION(wasLocked);
 }
 
 /**
  * Frees the memory of both reduction buffers. The device shutdown calls this before it destroys
- * the device context. No reduction owns the lock then.
+ * the device context and after the last reduction releases the lock.
  */
 void
 tarch::accelerator::releaseReductionScratch() {
-  assertion(not reductionScratchLocked.load(std::memory_order_relaxed));
+  ASSERTION(not reductionScratchLocked.load(std::memory_order_relaxed));
   release(reductionScratch);
   release(reductionStaging);
 }
@@ -106,9 +106,9 @@ tarch::accelerator::getNumberOfHostTasks(
   const int    numberOfThreads,
   const double secondsPerItem
 ) {
-  assertion(numberOfItems >= 0, numberOfItems);
-  assertion(numberOfThreads > 0, numberOfThreads);
-  assertion(std::isfinite(secondsPerItem) and secondsPerItem >= 0.0, secondsPerItem);
+  ASSERTION(numberOfItems >= 0, numberOfItems);
+  ASSERTION(numberOfThreads > 0, numberOfThreads);
+  ASSERTION(std::isfinite(secondsPerItem) and secondsPerItem >= 0.0, secondsPerItem);
   const int    fewestTasks = std::max(1, std::min(numberOfItems, numberOfThreads));
   const int    mostTasks   = std::max(1, std::min(numberOfItems, MaximumHostTasksPerThread * numberOfThreads));
   const double tasksOfMinimumWork =
@@ -119,7 +119,7 @@ tarch::accelerator::getNumberOfHostTasks(
 void
 tarch::accelerator::reportMissingTaskloopSupportOnce() {
   if (not loggedMissingTaskloopSupport.exchange(true, std::memory_order_relaxed)) {
-    logWarning("The compiler does not support OpenMP taskloops. The parallel loops run slower.");
+    LOG_WARNING("The compiler does not support OpenMP taskloops. The parallel loops run slower.");
   }
 }
 
@@ -150,7 +150,7 @@ tarch::freeMemory(void* const memoryPtr, const MemoryLocation location, const in
 
 void*
 tarch::accelerator::allocateRawData(const std::size_t sizeInBytes, const MemoryLocation location, const int device) {
-  assertion(sizeInBytes > 0, sizeInBytes, toString(location));
+  ASSERTION(sizeInBytes > 0, sizeInBytes, toString(location));
 
   void* data = nullptr;
   switch (location) {
@@ -164,7 +164,7 @@ tarch::accelerator::allocateRawData(const std::size_t sizeInBytes, const MemoryL
     data = allocateDeviceMemory(sizeInBytes, device);
     break;
   }
-  assertion(data);
+  ASSERTION(data);
 
   MemoryBlocks::getInstance().bookmarkMemoryBlock(data, sizeInBytes);
   return data;
@@ -199,21 +199,21 @@ tarch::accelerator::copyTo(
   const MemoryLocation location,
   const int            device
 ) {
-  assertion(target, sizeInBytes, toString(location));
-  assertion(source, sizeInBytes, toString(location));
-  assertion(sizeInBytes > 0, sizeInBytes, toString(location));
+  ASSERTION(target, sizeInBytes, toString(location));
+  ASSERTION(source, sizeInBytes, toString(location));
+  ASSERTION(sizeInBytes > 0, sizeInBytes, toString(location));
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("Copy " << sizeInBytes << " bytes from host to host");
+    LOG_DEBUG("Copy " << sizeInBytes << " bytes from host to host");
     copyToHeapMemory(target, source, sizeInBytes);
     break;
   case MemoryLocation::Device:
-    logDebug("Copy " << sizeInBytes << " bytes from host to device");
+    LOG_DEBUG("Copy " << sizeInBytes << " bytes from host to device");
     copyToDeviceMemory(target, source, sizeInBytes, device);
     break;
   case MemoryLocation::Pinned:
-    logDebug("Copy " << sizeInBytes << " bytes from host to pinned host memory");
+    LOG_DEBUG("Copy " << sizeInBytes << " bytes from host to pinned host memory");
     copyToPinnedMemory(target, source, sizeInBytes, device);
     break;
   }
@@ -227,21 +227,21 @@ tarch::accelerator::copyFrom(
   const MemoryLocation location,
   const int            device
 ) {
-  assertion(target, sizeInBytes, toString(location));
-  assertion(source, sizeInBytes, toString(location));
-  assertion(sizeInBytes > 0, sizeInBytes, toString(location));
+  ASSERTION(target, sizeInBytes, toString(location));
+  ASSERTION(source, sizeInBytes, toString(location));
+  ASSERTION(sizeInBytes > 0, sizeInBytes, toString(location));
 
   switch (location) {
   case MemoryLocation::Heap:
-    logDebug("Copy " << sizeInBytes << " bytes from host to host");
+    LOG_DEBUG("Copy " << sizeInBytes << " bytes from host to host");
     copyFromHeapMemory(source, target, sizeInBytes);
     break;
   case MemoryLocation::Device:
-    logDebug("Copy " << sizeInBytes << " bytes from device to host");
+    LOG_DEBUG("Copy " << sizeInBytes << " bytes from device to host");
     copyFromDeviceMemory(source, target, sizeInBytes, device);
     break;
   case MemoryLocation::Pinned:
-    logDebug("Copy " << sizeInBytes << " bytes from pinned host memory to host");
+    LOG_DEBUG("Copy " << sizeInBytes << " bytes from pinned host memory to host");
     copyFromPinnedMemory(source, target, sizeInBytes, device);
     break;
   }
@@ -257,7 +257,7 @@ namespace {
  */
 void
 tarch::accelerator::setCurrentDevice(const int device) {
-  assertion(device >= 0, device);
+  ASSERTION(device >= 0, device);
   currentDevice = device;
 }
 

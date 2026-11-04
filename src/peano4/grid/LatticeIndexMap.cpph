@@ -27,7 +27,7 @@ peano4::grid::LatticeIndexMap::getFirstSlot(const std::int64_t key) const {
  */
 INLINE_METHOD int
 peano4::grid::LatticeIndexMap::find(const std::int64_t key) const {
-  assertion(key >= 0, key);
+  ASSERTION(key >= 0, key);
   if (_keys.empty()) {
     return NoEntry;
   }
@@ -50,7 +50,7 @@ peano4::grid::LatticeIndexMap::find(const std::int64_t key) const {
  */
 INLINE_METHOD std::pair<int, bool>
 peano4::grid::LatticeIndexMap::insert(const std::int64_t key, const int value) {
-  assertion(key >= 0, key);
+  ASSERTION(key >= 0, key);
   // Half the slots stay free and keep a probe run short.
   if (2 * (_size + _numberOfTombstones + 1) > _keys.size()) {
     grow();
@@ -86,7 +86,7 @@ peano4::grid::LatticeIndexMap::insert(const std::int64_t key, const int value) {
  */
 INLINE_METHOD bool
 peano4::grid::LatticeIndexMap::erase(const std::int64_t key) {
-  assertion(key >= 0, key);
+  ASSERTION(key >= 0, key);
   if (_keys.empty()) {
     return false;
   }

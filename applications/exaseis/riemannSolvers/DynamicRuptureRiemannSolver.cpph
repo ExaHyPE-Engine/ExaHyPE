@@ -15,7 +15,7 @@ applications::exahype2::exaseis::FaultPlane::containsFace(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const int                                    faceNormal
 ) const {
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
   return faceNormal == normal and std::abs(faceCentre[normal] - position) < 0.5 * cellSize[normal];
 }
 
@@ -70,7 +70,7 @@ applications::exahype2::exaseis::getFrictionalStrength(
     forcedWeakening = 1;
   }
 
-  assertion(criticalSlipDistance > 0, criticalSlipDistance);
+  ASSERTION(criticalSlipDistance > 0, criticalSlipDistance);
   const Value frictionCoefficient = static_cast<Value>(StaticFrictionCoefficient)
     - static_cast<Value>(StaticFrictionCoefficient - DynamicFrictionCoefficient)
       * std::max<Value>(forcedWeakening, std::min<Value>(slip, criticalSlipDistance) / criticalSlipDistance);

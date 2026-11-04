@@ -17,9 +17,9 @@ namespace exahype2::fv::reconstruction {
 TARGET_DECLARE
 /**
  * MUSCL-Hancock reconstruction with the slope limiter Limiter. The half-step predictor reads
- * neighbours along one axis only and the faces store no diagonal halo volumes. Both volumes at a
- * face pass the centre of the lower volume plus half a volume width along the normal to the solver
- * as the face centre.
+ * neighbours along one axis only. A face stores the halo volumes along its normal only. Both volumes
+ * at a face pass the centre of the lower volume plus half a volume width along the normal to the
+ * solver as the face centre.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 struct exahype2::fv::reconstruction::LimitedLinear final {
@@ -152,6 +152,7 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     Terms&                                       terms
   );
 
+private:
   template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static const StoragePrecision* getNeighbourAlongNormal(
     const StoragePrecision* NOALIAS           inputPatch,

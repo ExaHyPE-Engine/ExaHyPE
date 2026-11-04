@@ -253,7 +253,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     "Each coupled solver expects its cells through restrict_to_cells."
   );
   static_assert(Partner::NumberOfData == NumberOfData, "Coupled solvers store the same number of values per node.");
-  assertion(not _drivenByPartner and not _coupledTimeStep);
+  ASSERTION(not _drivenByPartner and not _coupledTimeStep);
   setCouplingMatrix(fromPartnerMatrix);
   partner.setCouplingMatrix(toPartnerMatrix);
   partner.leaveTimeStepsToPartner();
@@ -355,7 +355,7 @@ INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::setCouplingMatrix(
   const std::vector<double>& fromPartnerMatrix
 ) {
-  assertion(fromPartnerMatrix.size() % static_cast<std::size_t>(NodesPerAxis) == 0, fromPartnerMatrix.size());
+  ASSERTION(fromPartnerMatrix.size() % static_cast<std::size_t>(NodesPerAxis) == 0, fromPartnerMatrix.size());
   std::vector<ComputePrecision> matrix(fromPartnerMatrix.size());
   for (std::size_t entry = 0; entry < matrix.size(); entry++) {
     matrix[entry] = static_cast<ComputePrecision>(fromPartnerMatrix[entry]);
@@ -366,7 +366,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::leaveTimeStepsToPartner() {
-  assertion(not _coupledTimeStep);
+  ASSERTION(not _coupledTimeStep);
   _drivenByPartner = true;
 }
 
@@ -382,11 +382,11 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   const Partner&                                   partner,
   const peano4::Adjacency                          adjacency
 ) {
-  assertion(
+  ASSERTION(
     _couplingMatrix.getSize() == static_cast<std::size_t>(Partner::NodesPerAxis * NodesPerAxis),
     _couplingMatrix.getSize()
   );
-  assertion(
+  ASSERTION(
     cellConnectivity.getNumberOfFaces() <= partner.getFaceStates().getCapacity(),
     cellConnectivity.getNumberOfFaces()
   );
@@ -535,7 +535,7 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD double
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getFixedTimeStepSize() const {
   const double maxAdmissibleMeshWidth = this->_timeStepping.getLimits().maxAdmissibleMeshWidth;
-  assertion(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
+  ASSERTION(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
   return this->_timeStepping.getFactor() * this->_timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth;
 }
 
@@ -585,7 +585,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   const peano4::Adjacency         adjacency,
   const double                    timeStepSize
 ) {
-  assertion(
+  ASSERTION(
     _predictorScratch.getSize()
     >= static_cast<std::size_t>(Predictor::getNumberOfScratchChunks(this->getNumberOfCells(cellConnectivity)))
       * Predictor::ScratchSize
@@ -596,7 +596,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   } else {
     counts = predictCells(cellConnectivity, adjacency, timeStepSize, exahype2::dg::ader::NoLimiter{});
     if (counts.divergedCells > 0) {
-      assertion(counts.firstDivergedCell >= 0, counts.firstDivergedCell, counts.divergedCells);
+      ASSERTION(counts.firstDivergedCell >= 0, counts.firstDivergedCell, counts.divergedCells);
       std::ostringstream message;
       message << "The space-time predictor diverges at t = " << this->_timeStepping.getTimeStamp()
               << " in the cell with the centre " << toString(cellConnectivity.getCellCentre(counts.firstDivergedCell))
@@ -605,7 +605,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
       tarch::terminateWithError(message.str());
     }
   }
-  assertion(counts.unconvergedCells >= 0, counts.unconvergedCells);
+  ASSERTION(counts.unconvergedCells >= 0, counts.unconvergedCells);
   _unconvergedPredictions += counts.unconvergedCells;
 }
 
@@ -623,7 +623,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     _limiter->addLocalValuesToGlobalReduction(record);
   }
   if constexpr (not Derived::IsLinear) {
-    assertion(_unconvergedPredictions >= 0, _unconvergedPredictions);
+    ASSERTION(_unconvergedPredictions >= 0, _unconvergedPredictions);
     _unconvergedPredictionsSlot = record.addSum(static_cast<std::uint64_t>(_unconvergedPredictions));
     _unconvergedPredictions     = 0;
   }
@@ -632,7 +632,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 /**
  * Reads the reduced values of the base solver and of the limiter. The global master warns when the
  * Picard iteration of any cell stopped at its sweep limit since the last reduction. With a limiter,
- * no iteration stops there.
+ * the predictor marks these cells in divergenceMarks and counts zero cells.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
@@ -646,7 +646,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   if constexpr (not Derived::IsLinear) {
     const auto globalPredictions = record.getSum(_unconvergedPredictionsSlot);
     if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logWarning(
+      LOG_WARNING(
         "The Picard iteration of " << globalPredictions
                                    << " cells reaches its sweep limit at t = " << this->_timeStepping.getTimeStamp()
                                    << " before it converges. The cells continue with the last iterate."

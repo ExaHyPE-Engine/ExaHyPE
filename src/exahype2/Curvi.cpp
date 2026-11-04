@@ -7,13 +7,13 @@
 
 void
 exahype2::Curvi::reserveAxis(int normal) {
-  assertion(
+  ASSERTION(
     normal >= 0 and normal < DIMENSIONS,
     "A curvilinear transformation acts on the axes of the domain only.",
     normal,
     DIMENSIONS
   );
-  assertion(not _axisIsTransformed[normal], "Each axis takes one curvilinear transformation only.", normal);
+  ASSERTION(not _axisIsTransformed[normal], "Each axis takes one curvilinear transformation only.", normal);
   _axisIsTransformed[normal] = true;
 }
 
@@ -24,7 +24,7 @@ exahype2::Curvi::reserveAxis(int normal) {
  */
 void
 exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
-  assertion(
+  ASSERTION(
     faceIndex >= 0 and faceIndex < 2 * DIMENSIONS,
     "A perturbation acts on the faces of the domain only.",
     faceIndex,
@@ -36,7 +36,7 @@ exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
 
   reserveAxis(normal);
 
-  // No earlier transformation moves points along normal. The cartesian bounds stay valid.
+  // reserveAxis() makes this transformation the only one along normal. The cartesian bounds stay valid.
   const double lowerBound = _domainOffset[normal];
   const double upperBound = _domainOffset[normal] + _domainSize[normal];
 
@@ -57,7 +57,7 @@ exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
 
       const double a = isUpperFace ? (upperBound + perturb - lowerBound) / (upperBound - lowerBound)
                                    : (upperBound - lowerBound - perturb) / (upperBound - lowerBound);
-      assertion(tarch::la::greater(a, 0.0), "A perturbation must keep the domain width positive.", a, perturb, normal);
+      ASSERTION(tarch::la::greater(a, 0.0), "A perturbation must keep the domain width positive.", a, perturb, normal);
 
       if (isUpperFace) {
         solution[normal] = lowerBound + (solution[normal] - lowerBound) * a;
@@ -82,7 +82,7 @@ exahype2::Curvi::applyPerturbation(int faceIndex, Perturbation perturbation) {
 
       const double a = isUpperFace ? (upperBound + perturb - lowerBound) / (upperBound - lowerBound)
                                    : (upperBound - lowerBound - perturb) / (upperBound - lowerBound);
-      assertion(tarch::la::greater(a, 0.0), "A perturbation must keep the domain width positive.", a, perturb, normal);
+      ASSERTION(tarch::la::greater(a, 0.0), "A perturbation must keep the domain width positive.", a, perturb, normal);
 
       if (isUpperFace) {
         solution[normal] = (solution[normal] - lowerBound) / a + lowerBound;
@@ -102,13 +102,13 @@ double
 exahype2::Curvi::split(int normal, int index, double position, Perturbation perturbation) {
   reserveAxis(normal);
 
-  // No earlier transformation moves points along normal. The cartesian bounds stay valid.
+  // reserveAxis() makes this transformation the only one along normal. The cartesian bounds stay valid.
   const double lowerBound    = _domainOffset[normal];
   const double upperBound    = _domainOffset[normal] + _domainSize[normal];
-  const double splitPosition = lowerBound + _minCellSize[normal] * index;
+  const double splitPosition = lowerBound + _cellSize[normal] * index;
 
-  assertion(index >= 1, "An interface must lie strictly inside the domain.", index, normal);
-  assertion(
+  ASSERTION(index >= 1, "An interface must lie strictly inside the domain.", index, normal);
+  ASSERTION(
     tarch::la::smaller(splitPosition, upperBound),
     "An interface must lie strictly inside the domain.",
     splitPosition,

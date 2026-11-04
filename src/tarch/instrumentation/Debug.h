@@ -5,7 +5,7 @@
 #include "tarch/instrumentation/Log.h"
 
 #if PEANO_DEBUG
-#define logDebug(logMacroMessageStream) \
+#define LOG_DEBUG(logMacroMessageStream) \
   do { \
     tarch::instrumentation::Log::debugIfEnabled( \
       TARCH_LOGGING_FUNCTION_SIGNATURE, \
@@ -19,7 +19,7 @@
     ); \
   } while (false)
 #else
-#define logDebug(logMacroMessageStream) \
+#define LOG_DEBUG(logMacroMessageStream) \
   do { \
   } while (false)
 #endif

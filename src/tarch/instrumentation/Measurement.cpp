@@ -15,7 +15,7 @@ tarch::instrumentation::Measurement::getAccumulatedValue() const {
 double
 tarch::instrumentation::Measurement::getAverageValue() const {
   if (_numberOfMeasurements == 0) {
-    assertion((_accumulatedValue) == (0.0), _accumulatedValue, 0.0);
+    ASSERTION((_accumulatedValue) == (0.0), _accumulatedValue, 0.0);
     return 0.0;
   } else {
     return _accumulatedValue / static_cast<double>(_numberOfMeasurements);

@@ -4,7 +4,7 @@
 
 #include "tarch/instrumentation/Log.h"
 
-#define logInfo(logMacroMessageStream) \
+#define LOG_INFO(logMacroMessageStream) \
   do { \
     if (tarch::instrumentation::Log::isInfoOutputEnabled()) { \
       std::ostringstream conv; \

@@ -39,7 +39,7 @@ tarch::database::SnapshotDatabase::dumpCSVFile() {
     std::error_code directoryError;
     std::filesystem::create_directories(outputPath.parent_path(), directoryError);
     if (directoryError) {
-      logError(
+      LOG_ERROR(
         "The snapshot database cannot create the directory " << outputPath.parent_path() << " ("
                                                              << directoryError.message() << ")."
       );
@@ -49,7 +49,7 @@ tarch::database::SnapshotDatabase::dumpCSVFile() {
 
   std::ofstream file(fileName, writeHeaderNow ? std::ios::trunc : std::ios::app);
   if (not file.is_open()) {
-    logError("The snapshot database cannot open the file '" << fileName << "'.");
+    LOG_ERROR("The snapshot database cannot open the file '" << fileName << "'.");
     return;
   }
 
@@ -63,7 +63,7 @@ tarch::database::SnapshotDatabase::dumpCSVFile() {
   if (file.good()) {
     _csvHeaderWritten = true;
   } else {
-    logError("The snapshot database cannot write the file '" << fileName << "'.");
+    LOG_ERROR("The snapshot database cannot write the file '" << fileName << "'.");
     resetWriteTracking();
     _csvHeaderWritten = false;
   }
@@ -102,7 +102,7 @@ tarch::database::SnapshotDatabase::setOutputPrecision(int precision) {
 
 void
 tarch::database::SnapshotDatabase::setTimeDeltaBetweenTwoSnapshots(double value) {
-  assertion(value >= 0.0);
+  ASSERTION(value >= 0.0);
   const std::scoped_lock lock(_mutex);
   _timeDelta = value;
 }

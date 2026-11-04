@@ -50,14 +50,14 @@ std::string
 tarch::detectStackSizeLimit() {
   const auto& stackSizeLimit = getCachedStackSizeLimit();
 #if defined(_WIN32)
-  logWarning("The stack size check cannot read the limit on Windows.");
+  LOG_WARNING("The stack size check cannot read the limit on Windows.");
   return "unknown";
 #else
   constexpr unsigned long long RecommendedMinimumStackLimitInKiB = 0x200'000ULL;
   constexpr unsigned long long RecommendedMinimumStackLimit      = RecommendedMinimumStackLimitInKiB * KiB;
 
   if (not stackSizeLimit.detected) {
-    logError("The stack size check cannot read the limit.");
+    LOG_ERROR("The stack size check cannot read the limit.");
     return "unknown";
   }
 
@@ -67,7 +67,7 @@ tarch::detectStackSizeLimit() {
 
   const auto currentLimitInKiB = stackSizeLimit.bytes / KiB;
   if (stackSizeLimit.bytes < RecommendedMinimumStackLimit) {
-    logDebug(
+    LOG_DEBUG(
       "Stack size of " << currentLimitInKiB << " KiB (=" << formatMemorySize(stackSizeLimit.bytes)
                        << ") is lower than recommended minimum of " << RecommendedMinimumStackLimitInKiB
                        << " KiB (=" << formatMemorySize(RecommendedMinimumStackLimit)

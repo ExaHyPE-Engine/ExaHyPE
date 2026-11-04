@@ -50,16 +50,16 @@ tarch::la::Vector<4, Scalar>::getSize() const {
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD const Scalar&
 tarch::la::Vector<4, Scalar>::operator[](const int index) const {
-  assertion(index >= 0, index, 4, ::toString(*this));
-  assertion(index < 4, index, 4, ::toString(*this));
+  ASSERTION(index >= 0, index, 4, ::toString(*this));
+  ASSERTION(index < 4, index, 4, ::toString(*this));
   return _values[index];
 }
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar&
 tarch::la::Vector<4, Scalar>::operator[](const int index) {
-  assertion(index >= 0, index, 4, ::toString(*this));
-  assertion(index < 4, index, 4, ::toString(*this));
+  ASSERTION(index >= 0, index, 4, ::toString(*this));
+  ASSERTION(index < 4, index, 4, ::toString(*this));
   return _values[index];
 }
 

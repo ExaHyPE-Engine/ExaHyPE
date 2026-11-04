@@ -98,7 +98,7 @@ namespace {
     for (std::size_t vote = 0; vote < eraseVotes.size();) {
       std::size_t next = vote + 1;
       while (next < eraseVotes.size() and eraseVotes[next].hasTheSameParentAs(eraseVotes[vote])) {
-        assertion(
+        ASSERTION(
           eraseVotes[next].child > eraseVotes[next - 1].child,
           eraseVotes[next].child,
           eraseVotes[next - 1].child
@@ -115,7 +115,7 @@ namespace {
 
 void
 exahype2::RefinementRequests::clear(const int numberOfSlots) {
-  assertion(numberOfSlots >= 0, numberOfSlots);
+  ASSERTION(numberOfSlots >= 0, numberOfSlots);
   _votes.assign(static_cast<std::size_t>(numberOfSlots), NoVote);
 }
 
@@ -125,9 +125,9 @@ exahype2::RefinementRequests::merge(
   const tarch::Span<const int>                    cells
 ) {
   for (const int slot : cells) {
-    assertion(slot >= 0 and static_cast<std::size_t>(slot) < commands.size(), slot, commands.size());
+    ASSERTION(slot >= 0 and static_cast<std::size_t>(slot) < commands.size(), slot, commands.size());
     const auto index = static_cast<std::size_t>(slot);
-    assertion(index < _votes.size(), index, _votes.size());
+    ASSERTION(index < _votes.size(), index, _votes.size());
     _votes[index] = combine(_votes[index], commands[index]);
   }
 }
@@ -135,7 +135,7 @@ exahype2::RefinementRequests::merge(
 void
 exahype2::RefinementRequests::merge(const exahype2::RefinementCommand command, const tarch::Span<const int> cells) {
   for (const int slot : cells) {
-    assertion(slot >= 0 and static_cast<std::size_t>(slot) < _votes.size(), slot, _votes.size());
+    ASSERTION(slot >= 0 and static_cast<std::size_t>(slot) < _votes.size(), slot, _votes.size());
     const auto index = static_cast<std::size_t>(slot);
     _votes[index]    = combine(_votes[index], command);
   }

@@ -70,8 +70,6 @@ public:
   [[nodiscard]] const Statistics& getStatistics() const noexcept;
   [[nodiscard]] const std::bitset<DIMENSIONS>& getPeriodicBoundaries() const noexcept;
 
-  static int deriveSpawnLevel(int targetLevel, int numberOfRanks);
-
   static constexpr int RepartitionTolerancePercent = 2;
 
 private:

@@ -1,0 +1,26 @@
+Python:
+  stage: Python
+  needs: []
+  variables:
+    IMAGE_TAG: "${IMAGE_BASE}"
+  script:
+    - in_image "python3 -m compileall -f ./"
+    - in_image "python3 api/exahype2/tests/import_layers.py"
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnAnyBranch
+    - .BeforeScript
+
+# Postprocessing:
+#   stage: Python
+#   needs: []
+#   variables:
+#     IMAGE_TAG: "${IMAGE_GCC}"
+#   script:
+#     - in_image "python3 -m venv --system-site-packages .venv && . .venv/bin/activate && pip install --quiet -r requirements.txt && python3 -m unittest discover -s postprocessing/tests -t ."
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnAnyBranch
+#     - .BeforeScript

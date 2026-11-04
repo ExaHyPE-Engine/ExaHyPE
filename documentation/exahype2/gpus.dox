@@ -81,12 +81,12 @@ host only. `src/tarch/accelerator/CompileTarget.h` defines the macros:
 
 - `GPU_CALLABLE_METHOD` expands to the appropriate per-backend annotation
   (`__host__ __device__` for CUDA/HIP, `KOKKOS_FUNCTION` for Kokkos,
-  `ACPP_UNIVERSAL_TARGET` for AdaptiveCpp, nothing for DPC++).
+  `ACPP_UNIVERSAL_TARGET` for AdaptiveCpp and an empty expansion for DPC++).
 - `TARGET_DECLARE` and `TARGET_DECLARE_END` wrap a block of free functions in an
   `omp declare target` region of the OpenMP target (OMPT) backend. Every other
   backend defines them as empty macros.
 
-An `assertion` in a term on the device aborts the run of a build with
+An `ASSERTION` in a term on the device aborts the run of a build with
 assertions. Each lowering into Peano writes a README.md file. It lists the
 papers that have an influence on the chosen solver configuration.
 

@@ -25,7 +25,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::selectPointSourc
     const double* const location = pointSourceLocations + static_cast<std::ptrdiff_t>(pointSource) * DIMENSIONS;
     bool                isInside = true;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      assertion(cellSize(axis) > 0.0, cellSize, axis);
+      ASSERTION(cellSize(axis) > 0.0, cellSize, axis);
       isInside = isInside and cellCentre(axis) - 0.5 * cellSize(axis) <= location[axis]
         and location[axis] <= cellCentre(axis) + 0.5 * cellSize(axis);
     }
@@ -64,9 +64,9 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::predict(
   constexpr int NodesPerAxis     = CellLayout::NodesPerAxis;
   constexpr int NumberOfUnknowns = CellLayout::NumberOfUnknowns;
 
-  assertion(timeStepSize >= 0.0, timeStepSize);
-  assertion(numberOfPointSources >= 0, numberOfPointSources);
-  assertion(workers.thread >= 0 and workers.thread < workers.threads, workers.thread, workers.threads);
+  ASSERTION(timeStepSize >= 0.0, timeStepSize);
+  ASSERTION(numberOfPointSources >= 0, numberOfPointSources);
+  ASSERTION(workers.thread >= 0 and workers.thread < workers.threads, workers.thread, workers.threads);
 
   ComputePrecision* NOALIAS const state             = scratch + Scratch::StateOffset;
   ComputePrecision* NOALIAS const timeAveragedState = scratch + Scratch::TimeAveragedStateOffset;
@@ -301,7 +301,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
 
   using TimePrecision = std::common_type_t<ComputePrecision, double>;
 
-  assertion(numberOfPointSources >= 0, numberOfPointSources);
+  ASSERTION(numberOfPointSources >= 0, numberOfPointSources);
 
   for (int timeSample = 0; timeSample < NodesPerAxis + 1; timeSample++) {
     for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
@@ -314,7 +314,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluatePointSou
 
   double cellVolume = 1.0;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(cellSize(axis) > 0.0, cellSize, axis);
+    ASSERTION(cellSize(axis) > 0.0, cellSize, axis);
     cellVolume *= cellSize(axis);
   }
   const auto inverseCellVolume = static_cast<ComputePrecision>(1.0 / cellVolume);
@@ -513,7 +513,7 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::addNonconservati
   constexpr int AxisStride   = CellLayout::NodesPerCell * FluxStride;
 
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(cellSize(axis) > 0.0, cellSize, axis);
+    ASSERTION(cellSize(axis) > 0.0, cellSize, axis);
   }
 
   ComputePrecision lineGradient[NodesPerAxis * FluxStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));

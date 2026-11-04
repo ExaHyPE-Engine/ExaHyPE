@@ -1,0 +1,75 @@
+ExaSkred Tsunami:
+  stage: Application
+  parallel:
+    matrix:
+      - scenario: [artificial, chile, oscillating-lake, solitary-wave, three-mounds-channel, tohoku]
+  script:
+    - git lfs pull --include="applications/exaskred/tsunami/$scenario/**"
+    - generate applications/exaskred/tsunami/$scenario "$scenario.py --build-mode $BUILD_MODE"
+    - launch applications/exaskred/tsunami/$scenario "./ExaSkred-Tsunami -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  extends: .RunOnlyOnMainBranch
+  needs: [Build and Unit Tests]
+
+ExaSkred Meteotsunami:
+  stage: Application
+  parallel:
+    matrix:
+      - scenario: [gulf-of-mexico, r1]
+  script:
+    - git lfs pull --include="applications/exaskred/meteotsunami/$scenario/**"
+    - generate applications/exaskred/meteotsunami/$scenario "$scenario.py --build-mode $BUILD_MODE"
+    - launch applications/exaskred/meteotsunami/$scenario "./ExaSkred-Meteotsunami -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  extends: .RunOnlyOnMainBranch
+  needs: [Build and Unit Tests]
+
+ExaSkred Landslide:
+  stage: Application
+  parallel:
+    matrix:
+      - scenario: [tafjord]
+  script:
+    - git lfs pull --include="applications/exaskred/landslide/$scenario/**"
+    - generate applications/exaskred/landslide/$scenario "$scenario.py --build-mode $BUILD_MODE"
+    - launch applications/exaskred/landslide/$scenario "./ExaSkred-Landslide -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  extends: .RunOnlyOnMainBranch
+  needs: [Build and Unit Tests]
+
+ExaSkred Coupled:
+  stage: Application
+  parallel:
+    matrix:
+      - scenario: [impulse-wave, tafjord]
+  script:
+    - git lfs pull --include="applications/exaskred/*/$scenario/**"
+    - generate applications/exaskred/coupled/$scenario "$scenario.py --build-mode $BUILD_MODE"
+    - launch applications/exaskred/coupled/$scenario "./ExaSkred-Coupled -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  extends: .RunOnlyOnMainBranch
+  needs: [Build and Unit Tests]
+
+ExaSeis:
+  stage: Application
+  parallel:
+    matrix:
+      - scenario: [cartesian]
+      - scenario: [curvilinear, pml]
+        exaseis_scenario: [LOH1, Zugspitze]
+      - scenario: [dynamic-rupture, pml-dynamic-rupture]
+        exaseis_scenario: [TPV5, TPV6, TPV16, TPV26, TPV28, TPV29, TPV34, Husavik]
+  script:
+    - if [ -n "${exaseis_scenario:-}" ]; then git lfs pull --include="applications/exaseis/Scenario/specs/$exaseis_scenario/**"; fi
+    - generate applications/exaseis/$scenario "$scenario.py ${exaseis_scenario:+-s $exaseis_scenario} --build-mode $BUILD_MODE"
+    - launch applications/exaseis/$scenario "./ExaSeis -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  extends: .RunOnlyOnMainBranch
+  needs: [Build and Unit Tests]
+
+ExaGRyPE:
+  stage: Application
+  parallel:
+    matrix:
+      - scenario: [gauge-wave]
+        solver: [fv]
+  script:
+    - generate applications/exagrype/$scenario "$scenario.py --solver $solver --build-mode $BUILD_MODE"
+    - launch applications/exagrype/$scenario "./ExaGRyPE -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -l 1"
+  extends: .RunOnlyOnMainBranch
+  needs: [Build and Unit Tests]

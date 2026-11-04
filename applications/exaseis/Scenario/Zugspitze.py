@@ -8,7 +8,7 @@ import os
 class Zugspitze(Scenario):
     """
     An area of 80 km by 80 km around the Zugspitze, whose topography scatters the waves at the
-    surface. The scenario defines no analytical solution. Duru et al. use it in "A stable discontinuous
+    surface. Duru et al. use it in "A stable discontinuous
     Galerkin method for linear elastodynamics in 3D geometrically complex elastic solids using
     physics based numerical fluxes" (https://doi.org/10.1016/j.cma.2021.114386).
     """
@@ -62,7 +62,7 @@ class Zugspitze(Scenario):
 
   const auto jacobian = Q[Shortcuts::jacobian];
 
-  assertion(n == 0, n);
+  ASSERTION(n == 0, n);
 
   constexpr double t0 = 0.1;
   constexpr double M0 = 1000.0;

@@ -97,7 +97,7 @@ exahype2::dg::extrapolateStateToFaces(
   constexpr int NodesPerAxis = Derived::DGOrder + 1;
   constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
 
-  assertion(cellState != nullptr and leftFaceCoefficients != nullptr and rightFaceCoefficients != nullptr);
+  ASSERTION(cellState != nullptr and leftFaceCoefficients != nullptr and rightFaceCoefficients != nullptr);
   exahype2::dg::extrapolateNodalFieldToFaces<
     NodesPerAxis,
     NumberOfData,
@@ -136,8 +136,8 @@ exahype2::dg::evaluateNodalFluxes(
   constexpr int  GradientEntriesPerAxis = NodesPerCell * NumberOfData;
 
   if constexpr (EvaluateFlux) {
-    assertion(nodalFluxes != nullptr);
-    assertion(cellState != nullptr);
+    ASSERTION(nodalFluxes != nullptr);
+    ASSERTION(cellState != nullptr);
     [[maybe_unused]] ComputePrecision nodalGradients[EvaluateDiffusiveFlux ? DIMENSIONS * GradientEntriesPerAxis : 1];
     if constexpr (EvaluateDiffusiveFlux) {
       exahype2::dg::computeNodalGradients<NodesPerAxis, NumberOfData, ComputePrecision, ComputePrecision>(
@@ -210,7 +210,7 @@ exahype2::dg::extrapolateFluxToFaces(
   constexpr int AxisStride       = NumberOfUnknowns * NodesPerCell;
 
   if constexpr (EvaluateFlux) {
-    assertion(nodalFluxes != nullptr);
+    ASSERTION(nodalFluxes != nullptr);
     exahype2::dg::extrapolateNodalFieldToFaces<
       NodesPerAxis,
       NumberOfUnknowns,
@@ -252,7 +252,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ProjectSolutionOntoPlane<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
   constexpr int    StateElementsPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis) * NumberOfData;
   constexpr double PlaneTolerance       = 1.0e-8;
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
   const int    slot      = cells[entry];
   const double width     = cellConnectivity.getCellWidth(slot, normal);
   const double lowerFace = cellConnectivity.getCellCentre(slot, normal) - 0.5 * width;
@@ -332,10 +332,10 @@ exahype2::dg::applyBoundaryConditions(
   constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
   constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
 
-  assertion(faceNumber >= 0 and faceNumber < 2 * DIMENSIONS, faceNumber);
+  ASSERTION(faceNumber >= 0 and faceNumber < 2 * DIMENSIONS, faceNumber);
 
   if constexpr (not exahype2::terms::HasBoundaryConditions<Derived, ComputePrecision>) {
-    assertion(false, "A solver without boundary conditions needs a domain periodic along every axis.", faceNumber);
+    ASSERTION(false, "A solver without boundary conditions needs a domain periodic along every axis.", faceNumber);
   } else {
     const int direction = faceNumber % DIMENSIONS;
 
@@ -387,9 +387,9 @@ exahype2::dg::evaluateFluxOnFace(
   constexpr int  NumberOfData          = NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
   constexpr int  NodesPerFace          = exahype2::dg::getNodesPerFace(NodesPerAxis);
 
-  assertion(side == 0 or side == 1, side);
-  assertion(direction >= 0 and direction < DIMENSIONS, direction);
-  assertion(cellSize(direction) > 0.0, cellSize, direction);
+  ASSERTION(side == 0 or side == 1, side);
+  ASSERTION(direction >= 0 and direction < DIMENSIONS, direction);
+  ASSERTION(cellSize(direction) > 0.0, cellSize, direction);
 
   if constexpr (EvaluateFlux) {
     const ComputePrecision* NOALIAS const faceState = side == 0 ? leftState : rightState;
@@ -448,10 +448,10 @@ exahype2::dg::addWeightedValuesOfLine(
   const int                             firstNode,
   const int                             nodeStride
 ) {
-  assertion(sum != nullptr);
-  assertion(weightedValues != nullptr);
-  assertion(firstNode >= 0 and nodeStride > 0, firstNode, nodeStride);
-  assertion(
+  ASSERTION(sum != nullptr);
+  ASSERTION(weightedValues != nullptr);
+  ASSERTION(firstNode >= 0 and nodeStride > 0, firstNode, nodeStride);
+  ASSERTION(
     firstNode + (NodesPerAxis - 1) * nodeStride < exahype2::dg::getNodesPerFace(NodesPerAxis),
     firstNode,
     nodeStride
@@ -491,9 +491,9 @@ exahype2::dg::computeMeanOfFace(
   constexpr int Lanes        = exahype2::dg::getPaddedCountOf(NumberOfData);
   constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
 
-  assertion(mean != nullptr);
-  assertion(state != nullptr);
-  assertion(faceQuadratureWeights != nullptr);
+  ASSERTION(mean != nullptr);
+  ASSERTION(state != nullptr);
+  ASSERTION(faceQuadratureWeights != nullptr);
 
   // The weighted values of a node fill whole vectors. The lanes from NumberOfData on stay zero.
   ComputePrecision weightedValues[NodesPerFace * Lanes];
@@ -581,8 +581,8 @@ exahype2::dg::summariseRiemannFace(
   constexpr int  PaddedNumberOfData = exahype2::dg::PaddedLayout<Derived>::PaddedNumberOfData;
   constexpr auto Half               = static_cast<ComputePrecision>(0.5);
 
-  assertion(faceSummary != nullptr);
-  assertion(direction >= 0 and direction < DIMENSIONS, direction);
+  ASSERTION(faceSummary != nullptr);
+  ASSERTION(direction >= 0 and direction < DIMENSIONS, direction);
 
   ComputePrecision averageLeftState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)))  = {};
   ComputePrecision averageRightState[PaddedNumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {};
@@ -633,9 +633,9 @@ exahype2::dg::solveRiemannProblemAtNode(
   constexpr int  PaddedNumberOfData             = exahype2::dg::PaddedLayout<Derived>::PaddedNumberOfData;
   constexpr auto Half                           = static_cast<ComputePrecision>(0.5);
 
-  assertion(faceNode >= 0 and faceNode < exahype2::dg::getNodesPerFace(Derived::DGOrder + 1), faceNode);
-  assertion(faceSummary != nullptr);
-  assertion(direction >= 0 and direction < DIMENSIONS, direction);
+  ASSERTION(faceNode >= 0 and faceNode < exahype2::dg::getNodesPerFace(Derived::DGOrder + 1), faceNode);
+  ASSERTION(faceSummary != nullptr);
+  ASSERTION(direction >= 0 and direction < DIMENSIONS, direction);
 
   const ComputePrecision                maxEigenvalue = faceSummary[0];
   const ComputePrecision* NOALIAS const averageState  = faceSummary + 1;
@@ -887,14 +887,14 @@ exahype2::dg::solveRiemannProblemOnHalves(
 ) {
   constexpr int FluxElementsPerFace = exahype2::dg::getNodesPerFace(Derived::DGOrder + 1) * Derived::NumberOfUnknowns;
 
-  assertion(leftFlux != nullptr);
-  assertion(rightFlux != nullptr);
-  assertion(leftState != nullptr);
-  assertion(rightState != nullptr);
-  assertion(faceQuadratureWeights != nullptr);
-  assertion(direction >= 0 and direction < DIMENSIONS, direction);
-  assertion(faceNumber >= 0 and faceNumber < peano4::FacesPerCell, faceNumber);
-  assertion(faceNumber % DIMENSIONS == direction, faceNumber, direction);
+  ASSERTION(leftFlux != nullptr);
+  ASSERTION(rightFlux != nullptr);
+  ASSERTION(leftState != nullptr);
+  ASSERTION(rightState != nullptr);
+  ASSERTION(faceQuadratureWeights != nullptr);
+  ASSERTION(direction >= 0 and direction < DIMENSIONS, direction);
+  ASSERTION(faceNumber >= 0 and faceNumber < peano4::FacesPerCell, faceNumber);
+  ASSERTION(faceNumber % DIMENSIONS == direction, faceNumber, direction);
 
   if constexpr (exahype2::terms::HasRiemannSolver<Derived, ComputePrecision>) {
     ComputePrecision leftSideFlux[FluxElementsPerFace];
@@ -973,14 +973,14 @@ exahype2::dg::solveRiemannProblemOnFace(
   constexpr int StateElementsPerFace = NodesPerFace * (Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables);
   constexpr int FluxElementsPerFace  = NodesPerFace * Derived::NumberOfUnknowns;
 
-  assertion(faceState != nullptr);
-  assertion(faceFlux != nullptr);
-  assertion(quadraturePoints != nullptr);
-  assertion(faceQuadratureWeights != nullptr);
-  assertion(timeStepSize >= 0.0, timeStepSize, faceCentre);
-  assertion(direction >= 0 and direction < DIMENSIONS, direction);
-  assertion(boundaryFaceNumber < peano4::FacesPerCell, boundaryFaceNumber);
-  assertion(boundaryFaceNumber < 0 or boundaryFaceNumber % DIMENSIONS == direction, boundaryFaceNumber, direction);
+  ASSERTION(faceState != nullptr);
+  ASSERTION(faceFlux != nullptr);
+  ASSERTION(quadraturePoints != nullptr);
+  ASSERTION(faceQuadratureWeights != nullptr);
+  ASSERTION(timeStepSize >= 0.0, timeStepSize, faceCentre);
+  ASSERTION(direction >= 0 and direction < DIMENSIONS, direction);
+  ASSERTION(boundaryFaceNumber < peano4::FacesPerCell, boundaryFaceNumber);
+  ASSERTION(boundaryFaceNumber < 0 or boundaryFaceNumber % DIMENSIONS == direction, boundaryFaceNumber, direction);
 
   const bool isBoundary = boundaryFaceNumber >= 0;
   const int  faceNumber = isBoundary ? boundaryFaceNumber : direction;
@@ -1088,8 +1088,8 @@ template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::RestrictStateHalves<Derived, ComputePrecision>::operator()(const peano4::LevelJump& levelJump) const {
   constexpr int StateElementsPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis) * NumberOfData;
-  assertion(levelJump.coarseSide == 0 or levelJump.coarseSide == 1, levelJump.coarseSide);
-  assertion(restrictionMatrix != nullptr);
+  ASSERTION(levelJump.coarseSide == 0 or levelJump.coarseSide == 1, levelJump.coarseSide);
+  ASSERTION(restrictionMatrix != nullptr);
   const int               fineSide = 1 - levelJump.coarseSide;
   const ComputePrecision* fine[peano4::SubfacesPerFace];
   for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
@@ -1106,7 +1106,7 @@ template <typename Operation>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ForLevelJumpOnPlane<Operation>::operator()(const peano4::LevelJump& levelJump) const {
   constexpr double PlaneTolerance = 1.0e-8;
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
   const int face = levelJump.coarseFace;
   if (
     cellConnectivity.getFaceNormal(face) == normal
@@ -1120,7 +1120,7 @@ exahype2::dg::ForLevelJumpOnPlane<Operation>::operator()(const peano4::LevelJump
 template <typename Operation>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::ForOwnedLevelJump<Operation>::operator()(const peano4::LevelJump& levelJump) const {
-  assertion(
+  ASSERTION(
     levelJump.coarseFace >= 0 and levelJump.coarseFace < ownsCoarseSideOfFace.size,
     levelJump.coarseFace,
     ownsCoarseSideOfFace.size
@@ -1153,10 +1153,10 @@ exahype2::dg::addFaceIntegral(
   constexpr int NodesPerAxis     = Derived::DGOrder + 1;
   constexpr int NumberOfUnknowns = Derived::NumberOfUnknowns;
 
-  assertion(cellNode >= 0 and cellNode < exahype2::dg::getNodesPerCell(NodesPerAxis), cellNode);
-  assertion(direction >= 0 and direction < DIMENSIONS, direction);
-  assertion(orientation == 0 or orientation == 1, orientation);
-  assertion(inverseCellSizeAlongNormal > 0.0, inverseCellSizeAlongNormal);
+  ASSERTION(cellNode >= 0 and cellNode < exahype2::dg::getNodesPerCell(NodesPerAxis), cellNode);
+  ASSERTION(direction >= 0 and direction < DIMENSIONS, direction);
+  ASSERTION(orientation == 0 or orientation == 1, orientation);
+  ASSERTION(inverseCellSizeAlongNormal > 0.0, inverseCellSizeAlongNormal);
 
   const int nodeStride  = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, direction);
   const int normalIndex = (cellNode / nodeStride) % NodesPerAxis;
@@ -1207,21 +1207,21 @@ exahype2::dg::addFaceIntegralsOfNode(
   constexpr int NumberOfUnknowns = Derived::NumberOfUnknowns;
   static_assert(NumberOfUnknowns > 0 and NumberOfValuesPerNode >= NumberOfUnknowns);
 
-  assertion(cellValues != nullptr);
-  assertion(node >= 0 and node < exahype2::dg::getNodesPerCell(Derived::DGOrder + 1), node);
-  assertion(faceQuadratureWeights != nullptr);
-  assertion(inverseCellQuadratureWeights != nullptr);
-  assertion(leftFaceCoefficients != nullptr);
-  assertion(rightFaceCoefficients != nullptr);
-  assertion(timeStepSize >= 0.0, timeStepSize);
+  ASSERTION(cellValues != nullptr);
+  ASSERTION(node >= 0 and node < exahype2::dg::getNodesPerCell(Derived::DGOrder + 1), node);
+  ASSERTION(faceQuadratureWeights != nullptr);
+  ASSERTION(inverseCellQuadratureWeights != nullptr);
+  ASSERTION(leftFaceCoefficients != nullptr);
+  ASSERTION(rightFaceCoefficients != nullptr);
+  ASSERTION(timeStepSize >= 0.0, timeStepSize);
   for (int face = 0; face < peano4::FacesPerCell; face++) {
-    assertion(faceFluxes[face] != nullptr, face);
+    ASSERTION(faceFluxes[face] != nullptr, face);
   }
 
   StoragePrecision directionUpdates[DIMENSIONS][NumberOfUnknowns];
   UNROLL(DIMENSIONS)
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    assertion(inverseCellSize[direction] > 0.0, inverseCellSize[direction], direction);
+    ASSERTION(inverseCellSize[direction] > 0.0, inverseCellSize[direction], direction);
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       directionUpdates[direction][unknown] = static_cast<StoragePrecision>(0);
     }
@@ -1273,7 +1273,7 @@ exahype2::dg::addFaceIntegrals(
 
   double inverseCellSize[DIMENSIONS];
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    assertion(cellSize(direction) > 0.0, cellSize, direction);
+    ASSERTION(cellSize(direction) > 0.0, cellSize, direction);
     inverseCellSize[direction] = 1.0 / cellSize(direction);
   }
 
@@ -1321,10 +1321,10 @@ exahype2::dg::MaxEigenvalueStatistics::accumulate(
   for (int dimension = 0; dimension < Dimensions; dimension++) {
     const double                extent         = cellSize(dimension);
     [[maybe_unused]] const bool extentIsFinite = std::isfinite(extent);
-    assertion(extentIsFinite and extent > 0.0, cellSize, dimension);
+    ASSERTION(extentIsFinite and extent > 0.0, cellSize, dimension);
     const auto                  physicalEigenvalue         = static_cast<double>(evaluateEigenvalue(dimension));
     [[maybe_unused]] const bool physicalEigenvalueIsFinite = std::isfinite(physicalEigenvalue);
-    assertion(physicalEigenvalueIsFinite and physicalEigenvalue >= 0.0, physicalEigenvalue, dimension);
+    ASSERTION(physicalEigenvalueIsFinite and physicalEigenvalue >= 0.0, physicalEigenvalue, dimension);
     maxPhysicalEigenvalue = exahype2::MaxEigenvalueReduction::combine(maxPhysicalEigenvalue, physicalEigenvalue);
     // A wave speed that is negative or not finite replaces the sum. Both maxima then report the fault.
     const double contribution = physicalEigenvalue / extent;
@@ -1335,7 +1335,7 @@ exahype2::dg::MaxEigenvalueStatistics::accumulate(
     }
   }
   [[maybe_unused]] const bool scaledEigenvalueIsFinite = std::isfinite(scaledEigenvalue);
-  assertion(scaledEigenvalueIsFinite and scaledEigenvalue >= 0.0, scaledEigenvalue, cellSize);
+  ASSERTION(scaledEigenvalueIsFinite and scaledEigenvalue >= 0.0, scaledEigenvalue, cellSize);
   maxScaledEigenvalue = exahype2::MaxEigenvalueReduction::combine(maxScaledEigenvalue, scaledEigenvalue);
 }
 
@@ -1356,7 +1356,7 @@ exahype2::dg::getMaxEigenvaluesOfNode(
   constexpr int NodesPerAxis = Derived::DGOrder + 1;
   constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
 
-  assertion(cellNode >= 0 and cellNode < exahype2::dg::getNodesPerCell(NodesPerAxis), cellNode);
+  ASSERTION(cellNode >= 0 and cellNode < exahype2::dg::getNodesPerCell(NodesPerAxis), cellNode);
   const auto nodeIndex    = peano4::dDelinearised(cellNode, NodesPerAxis);
   const auto nodePosition = exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes);
   const Precision* NOALIAS const nodeState = cellState + cellNode * NumberOfData;
@@ -1436,7 +1436,7 @@ exahype2::dg::MeasureNodeEigenvalues<Derived, StoragePrecision>::operator()(
   const int                              entry,
   exahype2::dg::MaxEigenvalueStatistics& accumulator
 ) const {
-  assertion(quadraturePoints != nullptr, entry);
+  ASSERTION(quadraturePoints != nullptr, entry);
   const int  slot       = cells[entry];
   const auto statistics = exahype2::dg::reduceMaxEigenvalues<Derived>(
     solution.getChunk(slot),
@@ -1526,7 +1526,7 @@ exahype2::dg::CellTransfer<Derived, StoragePrecision>::copy(
   StoragePrecision* const target,
   const int               itemOfChunk
 ) const {
-  assertion(itemOfChunk >= 0 and itemOfChunk < WorkItemsPerChunk, itemOfChunk);
+  ASSERTION(itemOfChunk >= 0 and itemOfChunk < WorkItemsPerChunk, itemOfChunk);
   const StoragePrecision* const kept = source.getChunk(slot);
   for (int value = itemOfChunk * NumberOfData; value < (itemOfChunk + 1) * NumberOfData; value++) {
     target[value] = kept[value];

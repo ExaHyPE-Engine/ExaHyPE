@@ -147,7 +147,7 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD double
 exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::getFixedTimeStepSize() const {
   const double maxAdmissibleMeshWidth = this->_timeStepping.getLimits().maxAdmissibleMeshWidth;
-  assertion(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
+  ASSERTION(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
   return this->_timeStepping.getFactor() * this->_timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth
     / (Derived::RungeKuttaOrder * Derived::RungeKuttaOrder);
 }
@@ -173,8 +173,8 @@ exahype2::dg::rk::Solver<Derived, StoragePrecision, ComputePrecision>::openStage
 ) {
   using Tableau    = typename Stage::Tableau;
   const auto cells = this->getCells(cellConnectivity, adjacency);
-  assertion(stage >= 0 and stage < NumberOfRungeKuttaStages, stage);
-  assertion(
+  ASSERTION(stage >= 0 and stage < NumberOfRungeKuttaStages, stage);
+  ASSERTION(
     _stageScratch.getSize()
     >= static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(cells.size)) * Stage::StateValuesPerCell
   );

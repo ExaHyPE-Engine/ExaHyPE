@@ -21,10 +21,6 @@ namespace exahype2::dg::ader {
   class LinearPredictor;
 } // namespace exahype2::dg::ader
 
-namespace exahype2::dg::ader::tests {
-  class LinearPredictorTest;
-} // namespace exahype2::dg::ader::tests
-
 TARGET_DECLARE
 /**
  * The Cauchy-Kovalewski space-time predictor of a linear system. The threads of one cell split its
@@ -91,8 +87,6 @@ public:
   );
 
 private:
-  friend class exahype2::dg::ader::tests::LinearPredictorTest;
-
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void initialiseState(
     ComputePrecision* NOALIAS       state,

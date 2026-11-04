@@ -12,8 +12,8 @@
  */
 void
 exahype2::particles::FileReader::readDatFile(const std::string& filename, const double scale) {
-  assertion(not filename.empty());
-  assertion(std::isfinite(scale), scale);
+  ASSERTION(not filename.empty());
+  ASSERTION(std::isfinite(scale), scale);
   std::fstream input(filename, std::ios::in);
   if (not input) {
     tarch::terminateWithError("The particle reader cannot open the file '" + filename + "'.");
@@ -36,7 +36,7 @@ exahype2::particles::FileReader::readDatFile(const std::string& filename, const 
         );
       }
       newEntry(dimension) *= scale;
-      assertion(std::isfinite(newEntry(dimension)), lineNumber, dimension, newEntry(dimension));
+      ASSERTION(std::isfinite(newEntry(dimension)), lineNumber, dimension, newEntry(dimension));
     }
     std::string trailingValue;
     if (currentLine >> trailingValue) {
@@ -47,7 +47,7 @@ exahype2::particles::FileReader::readDatFile(const std::string& filename, const 
     }
     _data.push_back(newEntry);
   }
-  logInfo("Read " << _data.size() << " particle positions from file " << filename);
+  LOG_INFO("Read " << _data.size() << " particle positions from file " << filename);
 }
 
 bool
@@ -66,9 +66,9 @@ exahype2::particles::FileReader::getParticlesWithinVoxel(
   const bool                                   remove
 ) {
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    assertion(std::isfinite(x(dimension)), dimension, x);
-    assertion(std::isfinite(h(dimension)), dimension, h);
-    assertion(h(dimension) > 0.0, dimension, h);
+    ASSERTION(std::isfinite(x(dimension)), dimension, x);
+    ASSERTION(std::isfinite(h(dimension)), dimension, h);
+    ASSERTION(h(dimension) > 0.0, dimension, h);
   }
   std::list<tarch::la::Vector<DIMENSIONS, double>> result;
 

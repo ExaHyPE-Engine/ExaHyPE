@@ -100,10 +100,6 @@ namespace exahype2::fv {
   TARGET_DECLARE_END
 } // namespace exahype2::fv
 
-namespace exahype2::fv::tests {
-  class FiniteVolumeSchemeTest;
-} // namespace exahype2::fv::tests
-
 /**
  * A sweep over a patch updates the volumes in linearised order and reads the terms of the states
  * at most Lookahead states before and behind the current volume. The ring stores one Entry for
@@ -341,8 +337,6 @@ public:
   );
 
 private:
-  friend class exahype2::fv::tests::FiniteVolumeSchemeTest;
-
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD double sweep(
     const StoragePrecision*                      patch,

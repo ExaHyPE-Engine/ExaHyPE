@@ -42,8 +42,8 @@ exahype2::fv::timestepping::SingleStep::applyToVolume(
   StoragePrecision* NOALIAS const              updatedState
 ) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  assertion(inputPatch != nullptr);
-  assertion(updatedState != nullptr);
+  ASSERTION(inputPatch != nullptr);
+  ASSERTION(updatedState != nullptr);
 
   double maxEigenvalueAfterTimeStep = 0.0;
 

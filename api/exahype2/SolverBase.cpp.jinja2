@@ -13,7 +13,7 @@
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   const auto&               parameters = ::exahype2::runner::RuntimeParameters::getInstance();
   ::exahype2::Limits limits;
-  limits.terminalTime           = parameters.getMinTerminalTime();
+  limits.terminalTime           = parameters.getSolverTerminalTime();
   limits.minAdmissiblePatchSize = parameters.getMinAdmissiblePatchSize(DomainSize);
   limits.maxAdmissiblePatchSize = parameters.getMaxAdmissiblePatchSize(DomainSize);
   limits.maxAdmissibleMeshWidth = {{MAX_ADMISSIBLE_MESH_WIDTH}};
@@ -221,7 +221,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
     _{{tracer.NAME}}Database
   );
 {%- elif tracer.DATABASE %}
-  // Only the time steps write the data of this set. The initialisation records nothing.
+  // Only the time steps write the data of this set.
   if (not initialisation) {
     ::exahype2::particles::recordSnapshots(
       _{{tracer.NAME}},

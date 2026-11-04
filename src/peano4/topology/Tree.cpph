@@ -28,20 +28,20 @@ peano4::topology::getCellsPerAxis(const int level) {
 
 INLINE_METHOD const peano4::topology::TreeCell&
 peano4::topology::Tree::getCell(const int cellIndex) const {
-  assertion(cellIndex >= 0 and cellIndex < static_cast<int>(_cells.size()), cellIndex, _cells.size());
+  ASSERTION(cellIndex >= 0 and cellIndex < static_cast<int>(_cells.size()), cellIndex, _cells.size());
   return _cells[cellIndex];
 }
 
 INLINE_METHOD const peano4::grid::GridVertex&
 peano4::topology::Tree::getVertex(const int vertexIndex) const {
-  assertion(vertexIndex >= 0 and vertexIndex < static_cast<int>(_vertices.size()), vertexIndex, _vertices.size());
+  ASSERTION(vertexIndex >= 0 and vertexIndex < static_cast<int>(_vertices.size()), vertexIndex, _vertices.size());
   return _vertices[vertexIndex];
 }
 
 INLINE_METHOD int
 peano4::topology::Tree::getChild(const int cellIndex, const int linearisedChildPosition) const {
-  assertion(isRefined(cellIndex), cellIndex);
-  assertion(
+  ASSERTION(isRefined(cellIndex), cellIndex);
+  ASSERTION(
     linearisedChildPosition >= 0 and linearisedChildPosition < peano4::sfc::ActiveCurve::ChildrenPerCell,
     linearisedChildPosition
   );
@@ -56,14 +56,14 @@ INLINE_METHOD std::int64_t
 peano4::topology::Tree::serialiseLatticeKey(const tarch::la::Vector<DIMENSIONS, int>& latticeIndex) {
   std::int64_t key = 0;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(latticeIndex(axis) >= 0 and latticeIndex(axis) < (1 << LatticeKeyBitsPerAxis), latticeIndex(axis));
+    ASSERTION(latticeIndex(axis) >= 0 and latticeIndex(axis) < (1 << LatticeKeyBitsPerAxis), latticeIndex(axis));
     key |= static_cast<std::int64_t>(latticeIndex(axis)) << (LatticeKeyBitsPerAxis * axis);
   }
   return key;
 }
 
 /**
- * Recovers the lattice position a key was serialised from.
+ * Returns the lattice position that serialiseLatticeKey() packs into latticeKey.
  */
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, int>
 peano4::topology::Tree::deserialiseLatticeKey(const std::int64_t latticeKey) {
@@ -76,25 +76,13 @@ peano4::topology::Tree::deserialiseLatticeKey(const std::int64_t latticeKey) {
 }
 
 /**
- * Returns whether left precedes right in the order of their serialised keys. Every level of a
- * refinement plan keeps this order.
- */
-INLINE_METHOD bool
-peano4::topology::Tree::latticeKeyPrecedes(
-  const tarch::la::Vector<DIMENSIONS, int>& left,
-  const tarch::la::Vector<DIMENSIONS, int>& right
-) {
-  return serialiseLatticeKey(left) < serialiseLatticeKey(right);
-}
-
-/**
- * Returns the index of the cell at the level and lattice position, or -1 when no cell exists there.
+ * Returns the index of the cell at the level and lattice position or -1 for an empty position.
  * The dense levels compute the index in closed form. The finer levels look it up in their lattice
  * map.
  */
 INLINE_METHOD int
 peano4::topology::Tree::getCellAt(const int level, const tarch::la::Vector<DIMENSIONS, int>& latticeIndex) const {
-  assertion(level >= 0, level);
+  ASSERTION(level >= 0, level);
   if (level > _denseBoundaryLevel) {
     const int mapLevelIndex = level - _denseBoundaryLevel - 1;
     if (mapLevelIndex >= static_cast<int>(_sparseCellIndexOfLattice.size())) {
@@ -103,7 +91,7 @@ peano4::topology::Tree::getCellAt(const int level, const tarch::la::Vector<DIMEN
     return _sparseCellIndexOfLattice[mapLevelIndex].find(serialiseLatticeKey(latticeIndex));
   }
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(
+    ASSERTION(
       latticeIndex(axis) >= 0 and latticeIndex(axis) < getCellsPerAxisOfLevel(level),
       level,
       axis,
@@ -143,17 +131,17 @@ peano4::topology::Tree::usesBlockLayout(const int level) const {
  */
 INLINE_METHOD int
 peano4::topology::Tree::getCellsPerAxisOfBlock(const int level) const {
-  assertion(usesBlockLayout(level), level);
+  ASSERTION(usesBlockLayout(level), level);
   return getCellsPerAxisOfLevel(level) / getCellsPerAxisOfLevel(_spawnLevel);
 }
 
 /**
- * Returns the slot of the materialised block at a spawn-level lattice position, or -1.
+ * Returns the slot of the materialised block at a spawn-level lattice position or -1.
  */
 INLINE_METHOD int
 peano4::topology::Tree::getBlockSlotAt(const tarch::la::Vector<DIMENSIONS, int>& blockLattice) const {
   const auto spawnCellIndex = static_cast<std::size_t>(getInterleavedIndex(_spawnLevel, blockLattice));
-  assertion(spawnCellIndex < _blockSlotOfSpawnCell.size(), spawnCellIndex, _blockSlotOfSpawnCell.size());
+  ASSERTION(spawnCellIndex < _blockSlotOfSpawnCell.size(), spawnCellIndex, _blockSlotOfSpawnCell.size());
   return _blockSlotOfSpawnCell[spawnCellIndex];
 }
 
@@ -163,7 +151,7 @@ peano4::topology::Tree::getBlockSlotAt(const tarch::la::Vector<DIMENSIONS, int>&
  */
 INLINE_METHOD int
 peano4::topology::Tree::getInterleavedIndex(const int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const {
-  assertion(
+  ASSERTION(
     level >= 0 and level < static_cast<int>(_levelLocalIndexOfCoordinate.size()),
     level,
     _levelLocalIndexOfCoordinate.size()
@@ -172,7 +160,7 @@ peano4::topology::Tree::getInterleavedIndex(const int level, const tarch::la::Ve
   const auto  entriesPerAxis    = indexOfCoordinate.size() / DIMENSIONS;
   int         interleavedIndex  = 0;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(
+    ASSERTION(
       lattice(axis) >= 0 and static_cast<std::size_t>(lattice(axis)) < entriesPerAxis,
       level,
       axis,
@@ -185,12 +173,12 @@ peano4::topology::Tree::getInterleavedIndex(const int level, const tarch::la::Ve
 }
 
 /**
- * Returns the index of the vertex at the given level and canonical lattice
- * position, or -1 when no vertex exists there.
+ * Returns the index of the vertex at the given level and canonical lattice position or -1 for an
+ * empty position.
  */
 INLINE_METHOD int
 peano4::topology::Tree::getVertexAt(const int level, const tarch::la::Vector<DIMENSIONS, int>& latticeIndex) const {
-  assertion(level >= 0, level);
+  ASSERTION(level >= 0, level);
   if (level > _denseBoundaryLevel) {
     const int mapLevelIndex = level - _denseBoundaryLevel - 1;
     if (mapLevelIndex >= static_cast<int>(_sparseVertexIndexOfLattice.size())) {
@@ -202,7 +190,7 @@ peano4::topology::Tree::getVertexAt(const int level, const tarch::la::Vector<DIM
   // The build stores a periodic vertex at its canonical position only. The query wraps too.
   tarch::la::Vector<DIMENSIONS, int> canonicalLattice(0);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(latticeIndex(axis) >= 0 and latticeIndex(axis) <= cellsPerAxisOnLevel, level, axis, latticeIndex(axis));
+    ASSERTION(latticeIndex(axis) >= 0 and latticeIndex(axis) <= cellsPerAxisOnLevel, level, axis, latticeIndex(axis));
     canonicalLattice(axis) =
       (_periodicBoundaries[axis] and latticeIndex(axis) == cellsPerAxisOnLevel) ? 0 : latticeIndex(axis);
   }
@@ -248,7 +236,7 @@ peano4::topology::Tree::getVertexAt(const int level, const tarch::la::Vector<DIM
         if (blockLocalCoordinate < 0) {
           blockLocalCoordinate += blocksPerAxis * cellsPerAxisOfBlock;
         }
-        assertion(
+        ASSERTION(
           blockLocalCoordinate >= 0 and blockLocalCoordinate <= cellsPerAxisOfBlock,
           level,
           axis,
@@ -271,8 +259,8 @@ peano4::topology::Tree::getVertexAt(const int level, const tarch::la::Vector<DIM
 }
 
 /**
- * Returns the index of the face with the given normal at the given level and
- * canonical face lattice position, or -1 when no face exists there.
+ * Returns the index of the face with the given normal at the given level and canonical face lattice
+ * position or -1 for an empty position.
  */
 INLINE_METHOD int
 peano4::topology::Tree::getFaceAt(
@@ -280,8 +268,8 @@ peano4::topology::Tree::getFaceAt(
   const int                                 normal,
   const tarch::la::Vector<DIMENSIONS, int>& faceLattice
 ) const {
-  assertion(level >= 0, level);
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(level >= 0, level);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
   if (level > _denseBoundaryLevel) {
     const int mapLevelIndex = level - _denseBoundaryLevel - 1;
     if (mapLevelIndex >= static_cast<int>(_sparseFaceIndexOfLattice.size())) {
@@ -293,7 +281,7 @@ peano4::topology::Tree::getFaceAt(
   // The build stores a periodic face at its canonical position only. The query wraps too.
   tarch::la::Vector<DIMENSIONS, int> canonicalLattice(0);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(
+    ASSERTION(
       faceLattice(axis) >= 0 and faceLattice(axis) < cellsPerAxisOnLevel + (axis == normal ? 1 : 0),
       level,
       normal,
@@ -340,7 +328,7 @@ peano4::topology::Tree::getFaceAt(
         blockLocalCoordinate += blocksPerAxis * cellsPerAxisOfBlock;
       }
       const int radix = axis == normal ? cellsPerAxisOfBlock + 1 : cellsPerAxisOfBlock;
-      assertion(blockLocalCoordinate >= 0 and blockLocalCoordinate < radix, level, normal, axis, blockLocalCoordinate);
+      ASSERTION(blockLocalCoordinate >= 0 and blockLocalCoordinate < radix, level, normal, axis, blockLocalCoordinate);
       rowMajorIndex += blockLocalCoordinate * rowStride;
       rowStride *= radix;
       if (axis > 0) {
@@ -390,81 +378,9 @@ peano4::topology::Tree::getPeriodicBoundaries() const {
   return _periodicBoundaries;
 }
 
-/**
- * Returns the rank that owns the cell at an adjacency entry of a vertex, or -1 where no cell exists.
- * A hanging vertex inherits every entry from the nearest coarser vertex. The loop climbs the levels
- * until it reaches a persistent vertex.
- */
-INLINE_METHOD int
-peano4::topology::Tree::getAdjacentCellOwnerAt(
-  const int                                 level,
-  const tarch::la::Vector<DIMENSIONS, int>& vertexLattice,
-  const int                                 adjacencyEntry
-) const {
-  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
-  auto          currentLattice    = vertexLattice;
-  auto          currentEntry      = adjacencyEntry;
-  auto          currentLevel      = level;
-  while (currentLevel > _depth and not isVertexPersistentInPlan(currentLevel, currentLattice)) {
-    const int                          coarseCellsPerAxis = getCellsPerAxisOfLevel(currentLevel - 1);
-    tarch::la::Vector<DIMENSIONS, int> coarseLattice(0);
-    int                                coarseEntry = 0;
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      const int  quotient         = currentLattice(axis) / SubdivisionFactor;
-      const int  remainder        = currentLattice(axis) % SubdivisionFactor;
-      const bool isOnCoarseVertex = remainder == 0;
-      // A vertex inside a coarse cell maps to the nearest coarse vertex, with the entry pointing back
-      // into the coarse cell.
-      const bool nearestIsUpper = 2 * remainder > SubdivisionFactor;
-      coarseLattice(axis)       = quotient + (nearestIsUpper ? 1 : 0);
-      if (_periodicBoundaries[axis] and coarseLattice(axis) == coarseCellsPerAxis) {
-        coarseLattice(axis) = 0;
-      }
-      const int bitTowardsCoarseCell = nearestIsUpper ? 0 : 1;
-      const int inheritedBit         = isOnCoarseVertex ? ((currentEntry >> axis) & 1) : bitTowardsCoarseCell;
-      coarseEntry |= inheritedBit << axis;
-    }
-    currentLattice = coarseLattice;
-    currentEntry   = coarseEntry;
-    currentLevel--;
-  }
-  const int                          cellsPerAxisOnLevel = getCellsPerAxisOfLevel(currentLevel);
-  bool                               isInsideDomain      = true;
-  tarch::la::Vector<DIMENSIONS, int> adjacentCellLattice(0);
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    int adjacentCellCoordinate = currentLattice(axis) - 1 + ((currentEntry >> axis) & 1);
-    if (_periodicBoundaries[axis]) {
-      adjacentCellCoordinate = (adjacentCellCoordinate + cellsPerAxisOnLevel) % cellsPerAxisOnLevel;
-    }
-    isInsideDomain = isInsideDomain and adjacentCellCoordinate >= 0 and adjacentCellCoordinate < cellsPerAxisOnLevel;
-    adjacentCellLattice(axis) = adjacentCellCoordinate;
-  }
-  if (not isInsideDomain or not cellExistsInPlan(currentLevel, adjacentCellLattice)) {
-    return -1;
-  }
-  return getOwnerOfCellAt(currentLevel, adjacentCellLattice);
-}
-
-/**
- * Returns how many cells around the vertex the local rank owns.
- */
-INLINE_METHOD int
-peano4::topology::Tree::getNumberOfLocalAdjacentCellsOfVertexAt(
-  const int                                 level,
-  const tarch::la::Vector<DIMENSIONS, int>& vertexLattice
-) const {
-  int numberOfLocalAdjacentCells = 0;
-  for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
-    if (getAdjacentCellOwnerAt(level, vertexLattice, adjacencyEntry) == _rank) {
-      numberOfLocalAdjacentCells++;
-    }
-  }
-  return numberOfLocalAdjacentCells;
-}
-
 INLINE_METHOD int
 peano4::topology::Tree::getCellsPerAxisOfLevel(const int level) const {
-  assertion(level >= 0 and level < static_cast<int>(_cellsPerAxisOfLevel.size()), level, _cellsPerAxisOfLevel.size());
+  ASSERTION(level >= 0 and level < static_cast<int>(_cellsPerAxisOfLevel.size()), level, _cellsPerAxisOfLevel.size());
   return _cellsPerAxisOfLevel[level];
 }
 
@@ -473,9 +389,9 @@ peano4::topology::Tree::getTopologyNodeAt(
   const int                                 level,
   const tarch::la::Vector<DIMENSIONS, int>& latticeIndex
 ) const {
-  assertion(level >= 0, level);
+  ASSERTION(level >= 0, level);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(
+    ASSERTION(
       latticeIndex(axis) >= 0 and latticeIndex(axis) < getCellsPerAxisOfLevel(level),
       level,
       axis,
@@ -535,23 +451,6 @@ peano4::topology::Tree::subtreeTouchesRank(const int cellIndex, const int rank) 
     return true;
   }
   const auto topologyNode = getTopologyNodeAt(cell.level, cell.latticeIndex);
-  return rank >= _topologyNodes[topologyNode].firstOwner and rank <= _topologyNodes[topologyNode].lastOwner;
-}
-
-/**
- * Returns whether the rank owns any leaf below the cell at the given level
- * and lattice position, from the topology nodes alone.
- */
-INLINE_METHOD bool
-peano4::topology::Tree::subtreeTouchesRankAt(
-  const int                                 level,
-  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex,
-  const int                                 rank
-) const {
-  if (_topologyNodes.empty()) {
-    return true;
-  }
-  const auto topologyNode = getTopologyNodeAt(level, latticeIndex);
   return rank >= _topologyNodes[topologyNode].firstOwner and rank <= _topologyNodes[topologyNode].lastOwner;
 }
 

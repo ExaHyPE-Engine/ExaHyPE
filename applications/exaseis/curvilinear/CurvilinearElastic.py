@@ -101,7 +101,7 @@ def initial(pointwise_initial_conditions):
     const auto jacobian = curveXDerivativeQ * (curveYDerivativeR * curveZDerivativeS - curveYDerivativeS * curveZDerivativeR)
                         - curveXDerivativeR * (curveYDerivativeQ * curveZDerivativeS - curveYDerivativeS * curveZDerivativeQ)
                         + curveXDerivativeS * (curveYDerivativeQ * curveZDerivativeR - curveYDerivativeR * curveZDerivativeQ);
-    assertion(jacobian != 0, jacobian);
+    ASSERTION(jacobian != 0, jacobian);
 
     Q[nodeOffset + Shortcuts::jacobian] = jacobian;
     metric[0] = (1 / jacobian) * (curveYDerivativeR * curveZDerivativeS - curveZDerivativeR * curveYDerivativeS);
@@ -130,7 +130,7 @@ def boundary():
 
 def eigenvalue():
     return """
-  assertion(
+  ASSERTION(
     not (std::isnan(Q[Shortcuts::v + 0]) or std::isnan(Q[Shortcuts::v + 1]) or std::isnan(Q[Shortcuts::v + 2])),
     Q[Shortcuts::v + 0],
     Q[Shortcuts::v + 1],
@@ -244,13 +244,15 @@ protected:
 
 def init_grid_step_implementation(scenario_perturbations):
     return """
-  tarch::la::Vector<DIMENSIONS, double> minCellSize = DomainSize;
-  const double minAdmissiblePatchSize = RuntimeParameters::getMinAdmissiblePatchSize();
-  while (min(minCellSize) > minAdmissiblePatchSize) {
-    minCellSize /= static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor);
+  // Curvi pins every interface to a face of a cell on the coarsest grid level. Every finer grid
+  // level keeps these faces.
+  tarch::la::Vector<DIMENSIONS, double> coarsestCellSize = DomainSize;
+  const double maxAdmissiblePatchSize = RuntimeParameters::getMaxAdmissiblePatchSize();
+  while (max(coarsestCellSize) > maxAdmissiblePatchSize) {
+    coarsestCellSize /= static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor);
   }
 
   // The grid initialisation runs once per refinement round and rebuilds the curvilinear mapping
   // every time.
-  _curvi = std::make_unique<::exahype2::Curvi>(DomainOffset, DomainSize, minCellSize);
+  _curvi = std::make_unique<::exahype2::Curvi>(DomainOffset, DomainSize, coarsestCellSize);
 """ + scenario_perturbations

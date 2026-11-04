@@ -24,8 +24,8 @@ INLINE_METHOD exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, 
 ) :
   _relaxationParameter{relaxationParameter},
   _differencesScaling{differencesScaling} {
-  assertion(std::isfinite(relaxationParameter) and relaxationParameter >= 0.0, relaxationParameter);
-  assertion(std::isfinite(differencesScaling) and differencesScaling >= 0.0, differencesScaling);
+  ASSERTION(std::isfinite(relaxationParameter) and relaxationParameter >= 0.0, relaxationParameter);
+  ASSERTION(std::isfinite(differencesScaling) and differencesScaling >= 0.0, differencesScaling);
   static_assert(
     SubcellScheme::HaloSize <= SubcellScheme::SubcellsPerAxis,
     "The halo of the subcell scheme must fit into the subgrid of a cell."
@@ -223,7 +223,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   if constexpr (Detector::UsesMaximumPrinciple) {
     reduceExtrema(tarch::Span<const int>{_recomputedCells.getData(), _cellCounts.recomputedCells}, solution);
   }
-  assertion(
+  ASSERTION(
     _cellCounts.troubledCells == judged.troubledCells and _cellCounts.recomputedCells >= judged.recomputedCells,
     _cellCounts.troubledCells,
     judged.troubledCells,
@@ -384,7 +384,7 @@ INLINE_METHOD void
 exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecision>::addLocalValuesToGlobalReduction(
   tarch::mpi::ReductionRecord& record
 ) {
-  assertion(_localTroubledCells >= 0, _localTroubledCells);
+  ASSERTION(_localTroubledCells >= 0, _localTroubledCells);
   _troubledCellsSlot = record.addSum(static_cast<std::uint64_t>(_localTroubledCells));
 }
 
@@ -397,7 +397,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   const tarch::mpi::ReductionRecord& record
 ) {
   const auto globalTroubledCells = record.getSum(_troubledCellsSlot);
-  assertion(globalTroubledCells <= static_cast<std::uint64_t>(std::numeric_limits<int>::max()), globalTroubledCells);
+  ASSERTION(globalTroubledCells <= static_cast<std::uint64_t>(std::numeric_limits<int>::max()), globalTroubledCells);
   _globalTroubledCells = static_cast<int>(globalTroubledCells);
 }
 
@@ -424,7 +424,7 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 
 /**
  * Resets every face to the status Regular and empty extrema. The subcell halo becomes zero. The
- * level jumps and the rank boundaries then move finite values in the halves no cell writes.
+ * halves that the level jumps and the rank boundaries move contain finite values.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -505,8 +505,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   const int numberOfTeams,
   const int scratchValuesPerTeam
 ) {
-  assertion(numberOfTeams > 0, numberOfTeams);
-  assertion(scratchValuesPerTeam >= 0, scratchValuesPerTeam);
+  ASSERTION(numberOfTeams > 0, numberOfTeams);
+  ASSERTION(scratchValuesPerTeam >= 0, scratchValuesPerTeam);
   const auto values = static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(numberOfTeams))
     * static_cast<std::size_t>(scratchValuesPerTeam);
   if (_detectorScratch.getSize() < values) {
@@ -516,8 +516,8 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
 
 /**
  * Runs the DIMENSIONS merge rounds of exahype2::dg::limiting::MergeNeighbourExtrema on faces that
- * store the extrema of their cells. Without mergeLastRound, no cell runs the last round. Minima and
- * maxima are exact and do not depend on the rank layout.
+ * store the extrema of their cells. The cells run the last round only with mergeLastRound. Minima
+ * and maxima are exact and do not depend on the rank layout.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -653,12 +653,12 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
   const peano4::CellConnectivity& cellConnectivity
 ) {
   const int numberOfCells = cellConnectivity.getCells().size;
-  assertion(
+  ASSERTION(
     _cellsOnSubcellScheme.getSize() == static_cast<std::size_t>(numberOfCells),
     _cellsOnSubcellScheme.getSize(),
     numberOfCells
   );
-  assertion(
+  ASSERTION(
     _recomputedCells.getSize() == static_cast<std::size_t>(numberOfCells),
     _recomputedCells.getSize(),
     numberOfCells
@@ -691,12 +691,12 @@ exahype2::dg::limiting::SubcellLimiter<Derived, StoragePrecision, ComputePrecisi
       _recomputedCells.getData()
     }
   );
-  assertion(
+  ASSERTION(
     _cellCounts.recomputedCells <= _cellCounts.cellsOnScheme,
     _cellCounts.recomputedCells,
     _cellCounts.cellsOnScheme
   );
-  assertion(
+  ASSERTION(
     _cellCounts.troubledCells <= _cellCounts.recomputedCells,
     _cellCounts.troubledCells,
     _cellCounts.recomputedCells

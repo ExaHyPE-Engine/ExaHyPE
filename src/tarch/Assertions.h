@@ -9,8 +9,13 @@
 #include "tarch/accelerator/accelerator.h"
 
 namespace tarch {
+#if defined(__INTEL_LLVM_COMPILER) or defined(__NVCOMPILER)
   // The compiler icpx crashes at -O0 when an OpenMP task body inlines a [[noreturn]] assertion.
-  /*[[noreturn]]*/ void triggerAssertion(const std::string& assertionMessage);
+  // The compiler nvc++ 26.9 at -O2 reads a wrong array entry when a loop body inlines several [[noreturn]] assertions.
+  void triggerAssertion(const std::string& assertionMessage);
+#else
+  [[noreturn]] void triggerAssertion(const std::string& assertionMessage);
+#endif
 } // namespace tarch
 
 #define TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x) #x
@@ -19,10 +24,10 @@ namespace tarch {
 /**
  * Terminates the program when `expr` is false and prints the file, the line, `expr` and the
  * parameters after `expr`. The device branch prints the names of these parameters only. The host
- * branch builds its message in a lambda to permit `assertion` in a constexpr function.
+ * branch builds its message in a lambda to permit this macro in a constexpr function.
  */
 // clang-format off
-#define assertion(expr, ...) \
+#define ASSERTION(expr, ...) \
   if (not static_cast<bool>(expr)) { \
     COMPILE_IF_ON_HOST( \
       tarch::triggerAssertion([&]() { \
@@ -56,5 +61,5 @@ namespace tarch {
   }
 // clang-format on
 #else
-#define assertion(...)
+#define ASSERTION(...)
 #endif

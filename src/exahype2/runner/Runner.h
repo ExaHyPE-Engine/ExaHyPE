@@ -29,10 +29,6 @@ namespace exahype2::runner {
   using ConfigurationSummary = std::vector<std::pair<std::string, ConfigurationEntries>>;
 } // namespace exahype2::runner
 
-namespace exahype2::runner::tests {
-  class RunnerTest;
-} // namespace exahype2::runner::tests
-
 /**
  * Entry points of the generated solver repository. Every rank calls every phase callback
  * collectively. Each callback reads the cell connectivity of the spacetree.
@@ -103,8 +99,6 @@ public:
   int run();
 
 private:
-  friend class exahype2::runner::tests::RunnerTest;
-
   static constexpr double SecondsBetweenMeshUpdateReports = 5.0;
   static constexpr int    MaximumMeshUpdateSteps          = 1024;
   static constexpr int    MaximumInitialisationRounds     = 16;

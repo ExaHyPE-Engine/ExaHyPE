@@ -65,8 +65,9 @@ exahype2::RefinementVotes::canRefineOrErase(
 }
 
 /**
- * Votes on every cell of cellConnectivity from its patch in solution and merges the votes. If the
- * limits let no cell refine or erase, the function launches no kernel and merges Keep for every cell.
+ * Votes on every cell of cellConnectivity from its patch in solution and merges the votes. The
+ * function launches the vote kernel only if the limits let a cell refine or erase. Otherwise it
+ * merges Keep for every cell.
  */
 template <typename Derived, typename SolutionView>
 INLINE_METHOD void
@@ -143,7 +144,7 @@ exahype2::RefinementVotes::getAllocatedBytes() const {
 
 INLINE_METHOD void
 exahype2::RefinementVotes::reserve(const int numberOfSlots) {
-  assertion(numberOfSlots >= 0, numberOfSlots);
+  ASSERTION(numberOfSlots >= 0, numberOfSlots);
   if (_commands.getSize() < static_cast<std::size_t>(numberOfSlots)) {
     _commands.allocate(static_cast<std::size_t>(numberOfSlots));
   }
@@ -160,12 +161,12 @@ exahype2::RefinementVotes::merge(
   const tarch::Span<const int>    cellsOnHost,
   exahype2::RefinementRequests&   requests
 ) {
-  assertion(
+  ASSERTION(
     _commands.getSize() >= static_cast<std::size_t>(cellConnectivity.getNumberOfSlots()),
     _commands.getSize(),
     cellConnectivity.getNumberOfSlots()
   );
-  assertion(votes >= 0 and votes <= cellsOnHost.size, votes, cellsOnHost.size);
+  ASSERTION(votes >= 0 and votes <= cellsOnHost.size, votes, cellsOnHost.size);
   if (votes == 0) {
     requests.merge(exahype2::RefinementCommand::Keep, cellsOnHost);
     return;

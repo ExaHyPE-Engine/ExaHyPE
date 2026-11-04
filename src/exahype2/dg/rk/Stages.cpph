@@ -34,10 +34,10 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::open(
   const double                                 stageTimeStamp,
   const double                                 timeStepSize
 ) {
-  assertion(stage >= 0 and stage < Tableau::Stages, stage);
-  assertion(cellState != nullptr);
-  assertion(estimates != nullptr);
-  assertion(stageState != nullptr);
+  ASSERTION(stage >= 0 and stage < Tableau::Stages, stage);
+  ASSERTION(cellState != nullptr);
+  ASSERTION(estimates != nullptr);
+  ASSERTION(stageState != nullptr);
 
   combineEstimates(weights, cellState, estimates, stageState);
   [[maybe_unused]] ComputePrecision
@@ -85,8 +85,8 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::addFaceIntegrals(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStepSize
 ) {
-  assertion(stage >= 0 and stage < Tableau::Stages, stage);
-  assertion(estimates != nullptr);
+  ASSERTION(stage >= 0 and stage < Tableau::Stages, stage);
+  ASSERTION(estimates != nullptr);
 
   exahype2::dg::addFaceIntegrals<Derived, CellLayout::NumberOfUnknowns>(
     estimates + stage * UnknownsPerStage,
@@ -145,9 +145,9 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::combineEstimates(
   constexpr int NumberOfData     = CellLayout::NumberOfData;
   using AccumulatePrecision      = std::common_type_t<StoragePrecision, ComputePrecision, double>;
 
-  assertion(cellState != nullptr);
-  assertion(estimates != nullptr);
-  assertion(target != nullptr);
+  ASSERTION(cellState != nullptr);
+  ASSERTION(estimates != nullptr);
+  ASSERTION(target != nullptr);
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -200,11 +200,11 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
   constexpr int UnknownStride    = CellLayout::PaddedNumberOfUnknowns;
   constexpr int DataStride       = CellLayout::PaddedNumberOfData;
 
-  assertion(stageState != nullptr);
-  assertion(estimate != nullptr);
-  assertion(quadratureNodes != nullptr);
-  assertion(derivativeOperator != nullptr);
-  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, cellCentre);
+  ASSERTION(stageState != nullptr);
+  ASSERTION(estimate != nullptr);
+  ASSERTION(quadratureNodes != nullptr);
+  ASSERTION(derivativeOperator != nullptr);
+  ASSERTION(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, cellCentre);
 
   if constexpr (not EvaluateFlux and not EvaluateNonconservativeProduct) {
     for (int entry = 0; entry < UnknownsPerStage; entry++) {
@@ -230,7 +230,7 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
 
     const auto derivativeWeights = exahype2::dg::getDerivativeWeightsOfNodePairs<NodesPerAxis>(derivativeOperator);
     for (int direction = 0; direction < DIMENSIONS; direction++) {
-      assertion(cellSize(direction) > 0.0, cellSize, direction);
+      ASSERTION(cellSize(direction) > 0.0, cellSize, direction);
       const int nodeStride = exahype2::dg::getNodeStrideOfAxis(NodesPerAxis, direction);
       for (int line = 0; line < CellLayout::NodesPerFace; line++) {
         const int firstCellNode = exahype2::dg::getFirstNodeOfLine(NodesPerAxis, direction, line);
@@ -238,7 +238,7 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::volumeIntegral(
         ComputePrecision lineUpdate[NodesPerAxis * UnknownStride];
 
         if constexpr (EvaluateFlux) {
-          assertion(nodalFluxes != nullptr);
+          ASSERTION(nodalFluxes != nullptr);
           const ComputePrecision* NOALIAS const axisFluxes = nodalFluxes + direction * UnknownsPerStage;
           for (int normalIndex = 0; normalIndex < NodesPerAxis; normalIndex++) {
             const int cellNode = firstCellNode + normalIndex * nodeStride;
@@ -360,7 +360,7 @@ exahype2::dg::rk::Stage<Derived, ComputePrecision>::projectOntoFaces(
   const ComputePrecision* NOALIAS const leftFaceCoefficients,
   const ComputePrecision* NOALIAS const rightFaceCoefficients
 ) {
-  assertion(stageState != nullptr);
+  ASSERTION(stageState != nullptr);
   exahype2::dg::extrapolateStateToFaces<Derived>(faceStates, stageState, leftFaceCoefficients, rightFaceCoefficients);
   exahype2::dg::extrapolateFluxToFaces<Derived>(faceFluxes, nodalFluxes, leftFaceCoefficients, rightFaceCoefficients);
 }
@@ -370,7 +370,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::dg::rk::OpenStage<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
   constexpr int StateValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
   constexpr int FluxValuesPerFace  = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
-  assertion(entry >= 0 and entry < cells.size, entry, cells.size);
+  ASSERTION(entry >= 0 and entry < cells.size, entry, cells.size);
 
   const int               slot = cells[entry];
   ComputePrecision*       ownStateHalves[peano4::FacesPerCell];
@@ -426,7 +426,7 @@ exahype2::dg::rk::CombineStages<Derived, StoragePrecision, ComputePrecision>::op
   exahype2::dg::MaxEigenvalueStatistics& accumulator
 ) const {
   constexpr int FluxValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
-  assertion(entry >= 0 and entry < cells.size, entry, cells.size);
+  ASSERTION(entry >= 0 and entry < cells.size, entry, cells.size);
 
   const int               slot = cells[entry];
   const ComputePrecision* fluxes[peano4::FacesPerCell];

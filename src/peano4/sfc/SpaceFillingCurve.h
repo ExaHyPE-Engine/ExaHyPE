@@ -44,11 +44,12 @@ public:
   using ChildOrder    = std::array<ChildSequence, NumberOfStates>;
 
   INLINE_METHOD static const ChildSequence& getChildren(int state);
-  INLINE_METHOD static constexpr ChildOrder deriveChildOrder();
 
 private:
   using Position = std::array<int, DIMENSIONS>;
   using Point    = std::array<double, DIMENSIONS>;
+
+  INLINE_METHOD static constexpr ChildOrder deriveChildOrder();
 
   INLINE_METHOD static constexpr bool productionsAreInSymbolOrder();
   INLINE_METHOD static constexpr bool everyProductionTilesTheCell();

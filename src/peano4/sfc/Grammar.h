@@ -33,6 +33,7 @@ struct peano4::sfc::Grammar {
     Symbols... symbols
   );
 
+private:
   template <std::size_t Position, class NonTerminal, int NumberOfChildren>
   INLINE_METHOD static constexpr void placeSymbols(peano4::sfc::Production<NonTerminal, NumberOfChildren>& result);
 

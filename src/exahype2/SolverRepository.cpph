@@ -50,7 +50,7 @@ exahype2::SolverRepository<Solvers...>::getNumberOfCellsOf(
   if constexpr (requires { solver.getNumberOfCells(cellConnectivity); }) {
     numberOfCells = solver.getNumberOfCells(cellConnectivity);
   }
-  assertion(numberOfCells >= 0, numberOfCells);
+  ASSERTION(numberOfCells >= 0, numberOfCells);
   return numberOfCells;
 }
 
@@ -73,7 +73,7 @@ exahype2::SolverRepository<Solvers...>::getNumberOfCellDoFs(const peano4::CellCo
   std::uint64_t result = 0;
   forEachSolver([&result, &cellConnectivity](const auto& solver) {
     const int numberOfDoFs = solver.getNumberOfDoFs();
-    assertion(numberOfDoFs >= 0, numberOfDoFs);
+    ASSERTION(numberOfDoFs >= 0, numberOfDoFs);
     result += static_cast<std::uint64_t>(getNumberOfCellsOf(solver, cellConnectivity))
       * static_cast<std::uint64_t>(numberOfDoFs);
   });
@@ -204,9 +204,9 @@ template <typename... Solvers>
 INLINE_METHOD void
 exahype2::SolverRepository<Solvers...>::deleteEraseRequestsOfRepeatedRefinements() {
   using Control = peano4::RefinementRequest::RefinementControl;
-  assertion(_localRequestsPending);
-  assertion(std::is_sorted(_requestsOfTheRun.begin(), _requestsOfTheRun.end()));
-  assertion(std::is_sorted(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end()));
+  ASSERTION(_localRequestsPending);
+  ASSERTION(std::is_sorted(_requestsOfTheRun.begin(), _requestsOfTheRun.end()));
+  ASSERTION(std::is_sorted(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end()));
   std::erase_if(_localRequests, [this](const peano4::RefinementRequest& request) {
     if (request.getRefinementControl() != Control::Erase) {
       return false;
@@ -214,7 +214,7 @@ exahype2::SolverRepository<Solvers...>::deleteEraseRequestsOfRepeatedRefinements
     peano4::RefinementRequest refinement = request;
     refinement.setRefinementControl(Control::Refine);
     return std::binary_search(_requestsOfTheRun.begin(), _requestsOfTheRun.end(), refinement)
-       and std::binary_search(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end(), refinement);
+      and std::binary_search(_refinementsOfTheRegrid.begin(), _refinementsOfTheRegrid.end(), refinement);
   });
 
   const auto firstErase = std::partition_point(
@@ -223,7 +223,9 @@ exahype2::SolverRepository<Solvers...>::deleteEraseRequestsOfRepeatedRefinements
     [](const peano4::RefinementRequest& request) { return request.getRefinementControl() == Control::Refine; }
   );
   std::vector<peano4::RefinementRequest> refinements;
-  refinements.reserve(_refinementsOfTheRegrid.size() + static_cast<std::size_t>(firstErase - _requestsOfTheRun.begin()));
+  refinements.reserve(
+    _refinementsOfTheRegrid.size() + static_cast<std::size_t>(firstErase - _requestsOfTheRun.begin())
+  );
   std::set_union(
     _refinementsOfTheRegrid.begin(),
     _refinementsOfTheRegrid.end(),

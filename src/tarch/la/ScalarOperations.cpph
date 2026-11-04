@@ -145,17 +145,21 @@ tarch::la::isEqualInMagnitude(const Value lhs, const Value rhs) {
 }
 
 /**
- * Swaps the three values into the order of ascending magnitude without a branch.
+ * Swaps the three values into the order of ascending magnitude without a branch. The selects read
+ * copies of the three values. A select between two references loads through a selected address.
  */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tarch::la::orderByMagnitude(Value& first, Value& second, Value& third) {
-  const bool  firstPairSwaps   = tarch::la::isBelowInMagnitude(second, first);
-  const Value lowerOfFirstPair = firstPairSwaps ? second : first;
-  const Value upperOfFirstPair = firstPairSwaps ? first : second;
-  const bool  thirdIsBelow     = tarch::la::isBelowInMagnitude(third, upperOfFirstPair);
-  const Value lowerOfRest      = thirdIsBelow ? third : upperOfFirstPair;
-  third                        = thirdIsBelow ? upperOfFirstPair : third;
+  const Value firstValue       = first;
+  const Value secondValue      = second;
+  const Value thirdValue       = third;
+  const bool  firstPairSwaps   = tarch::la::isBelowInMagnitude(secondValue, firstValue);
+  const Value lowerOfFirstPair = firstPairSwaps ? secondValue : firstValue;
+  const Value upperOfFirstPair = firstPairSwaps ? firstValue : secondValue;
+  const bool  thirdIsBelow     = tarch::la::isBelowInMagnitude(thirdValue, upperOfFirstPair);
+  const Value lowerOfRest      = thirdIsBelow ? thirdValue : upperOfFirstPair;
+  third                        = thirdIsBelow ? upperOfFirstPair : thirdValue;
   const bool restIsBelow       = tarch::la::isBelowInMagnitude(lowerOfRest, lowerOfFirstPair);
   first                        = restIsBelow ? lowerOfRest : lowerOfFirstPair;
   second                       = restIsBelow ? lowerOfFirstPair : lowerOfRest;
@@ -196,7 +200,7 @@ tarch::la::sumOfSquaresInOrderOfMagnitude(const Value first, const Value second,
 
 /**
  * Returns the product of the two values rounded once. A floating-point product rounds through a
- * fused multiply-add with a zero addend. No compiler then fuses the product into a later addition.
+ * fused multiply-add with a zero addend. Every compiler rounds the product before a later addition.
  * A zero factor returns positive zero.
  */
 template <typename Value>
@@ -224,17 +228,21 @@ tarch::la::productInOrderOfMagnitude(const Value first, const Value second, cons
 }
 
 /**
- * Swaps the three values into ascending order without a branch.
+ * Swaps the three values into ascending order without a branch. The selects read copies of the
+ * three values. A select between two references loads through a selected address.
  */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tarch::la::orderByValue(Value& first, Value& second, Value& third) {
-  const bool  firstPairSwaps   = tarch::la::isBelow(second, first);
-  const Value lowerOfFirstPair = firstPairSwaps ? second : first;
-  const Value upperOfFirstPair = firstPairSwaps ? first : second;
-  const bool  thirdIsBelow     = tarch::la::isBelow(third, upperOfFirstPair);
-  const Value lowerOfRest      = thirdIsBelow ? third : upperOfFirstPair;
-  third                        = thirdIsBelow ? upperOfFirstPair : third;
+  const Value firstValue       = first;
+  const Value secondValue      = second;
+  const Value thirdValue       = third;
+  const bool  firstPairSwaps   = tarch::la::isBelow(secondValue, firstValue);
+  const Value lowerOfFirstPair = firstPairSwaps ? secondValue : firstValue;
+  const Value upperOfFirstPair = firstPairSwaps ? firstValue : secondValue;
+  const bool  thirdIsBelow     = tarch::la::isBelow(thirdValue, upperOfFirstPair);
+  const Value lowerOfRest      = thirdIsBelow ? thirdValue : upperOfFirstPair;
+  third                        = thirdIsBelow ? upperOfFirstPair : thirdValue;
   const bool restIsBelow       = tarch::la::isBelow(lowerOfRest, lowerOfFirstPair);
   first                        = restIsBelow ? lowerOfRest : lowerOfFirstPair;
   second                       = restIsBelow ? lowerOfFirstPair : lowerOfRest;
@@ -276,8 +284,8 @@ tarch::la::meanInOrderOfValue(const Value first, const Value second, const Value
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 tarch::la::sumInFixedPoint(const double* const values, const int size) {
-  assertion(size >= 0, size);
-  assertion(size == 0 or values != nullptr, size);
+  ASSERTION(size >= 0, size);
+  ASSERTION(size == 0 or values != nullptr, size);
   double largestMagnitude = 0.0;
   bool   entriesAreFinite = true;
   for (int entry = 0; entry < size; entry++) {
@@ -320,7 +328,7 @@ tarch::la::meanInFixedPoint(const double (&values)[Count]) {
   static_assert(Count > 0);
   double largestMagnitude = 0.0;
   for (const double value : values) {
-    assertion(std::isfinite(value), value);
+    ASSERTION(std::isfinite(value), value);
     largestMagnitude = std::max(largestMagnitude, std::abs(value));
   }
   tarch::la::FixedPointSum<Count> sum;

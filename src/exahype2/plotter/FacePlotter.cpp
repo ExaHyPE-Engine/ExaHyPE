@@ -5,12 +5,12 @@
 exahype2::plotter::FacePlotter::FacePlotter(std::string filename, std::vector<DataField> fields) :
   _filename(std::move(filename)),
   _fields(std::move(fields)) {
-  assertion(not _filename.empty());
+  ASSERTION(not _filename.empty());
 }
 
 /**
  * Returns the sorted faces this rank writes. The rank of the lower cell writes a face. The rank of
- * the upper cell writes a face only if no other rank owns the lower cell.
+ * the upper cell writes every face except an interior face at a rank boundary.
  */
 std::vector<int>
 exahype2::plotter::FacePlotter::getPlottedFaces(const peano4::CellConnectivity& cellConnectivity) {

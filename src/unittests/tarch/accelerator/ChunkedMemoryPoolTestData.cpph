@@ -1,0 +1,53 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "tarch/Assertions.h"
+#include "tarch/accelerator/MemoryLocation.h"
+
+/**
+ * Returns the padded chunks of every slot of pool in slot order.
+ */
+template <typename T>
+INLINE_METHOD std::vector<T>
+tarch::accelerator::unittests::getChunksOf(const tarch::accelerator::ChunkedMemoryPool<T>& pool) {
+  tarch::accelerator::ChunkedMemoryPool<T>        copyOnHost(pool.getChunkSize(), tarch::MemoryLocation::Heap);
+  const tarch::accelerator::ChunkedMemoryPool<T>& poolOnHost      = pool.download(copyOnHost);
+  const auto                                      paddedChunkSize = static_cast<std::size_t>(pool.getPaddedChunkSize());
+  std::vector<T> values(static_cast<std::size_t>(pool.getCapacity()) * paddedChunkSize);
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    std::copy_n(
+      poolOnHost.getChunk(slot),
+      paddedChunkSize,
+      values.data() + static_cast<std::size_t>(slot) * paddedChunkSize
+    );
+  }
+  return values;
+}
+
+/**
+ * Overwrites the padded chunks of every slot of pool with values in the layout of getChunksOf().
+ */
+template <typename T>
+INLINE_METHOD void
+tarch::accelerator::unittests::setChunksOf(
+  tarch::accelerator::ChunkedMemoryPool<T>& pool,
+  const std::vector<T>&                     values
+) {
+  const auto paddedChunkSize = static_cast<std::size_t>(pool.getPaddedChunkSize());
+  ASSERTION(
+    values.size() == static_cast<std::size_t>(pool.getCapacity()) * paddedChunkSize,
+    values.size(),
+    pool.getCapacity(),
+    paddedChunkSize
+  );
+  tarch::accelerator::ChunkedMemoryPool<T>  copyOnHost(pool.getChunkSize(), tarch::MemoryLocation::Heap);
+  tarch::accelerator::ChunkedMemoryPool<T>& poolOnHost = pool.download(copyOnHost);
+  for (int slot = 0; slot < pool.getCapacity(); slot++) {
+    std::copy_n(
+      values.data() + static_cast<std::size_t>(slot) * paddedChunkSize,
+      paddedChunkSize,
+      poolOnHost.getChunk(slot)
+    );
+  }
+  pool.upload(poolOnHost);
+}

@@ -13,7 +13,7 @@
 TARGET_DECLARE
 /**
  * Writes unknown k of the cell polynomial at position into the particle data entry that is the
- * k-th index of FieldIndices. The scheme None writes nothing.
+ * k-th index of FieldIndices. The scheme None leaves the particle data unchanged.
  */
 template <int NodesPerAxis, int NumberOfData, typename Storage, int... FieldIndices>
 INLINE_METHOD GPU_CALLABLE_METHOD void
@@ -93,8 +93,8 @@ exahype2::dg::evaluateFacePolynomial(
   const int                                    value
 ) {
   constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
-  assertion(value >= 0 and value < valuesPerNode, value, valuesPerNode);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(value >= 0 and value < valuesPerNode, value, valuesPerNode);
   double result = 0.0;
   for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
     const auto faceNodeIndex = peano4::dDelinearisedExclusive(faceNode, NodesPerAxis, normal);
@@ -136,8 +136,8 @@ exahype2::dg::traceFaceValues(
     ((DifferenceFields >= 0 and DifferenceFields < NumberOfData) and ...),
     "A face trace takes its difference fields from the values of the solver only."
   );
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
-  assertion(quadratureNodes != nullptr);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(quadratureNodes != nullptr);
   if (particles.getSize() == 0) {
     return;
   }
@@ -227,8 +227,8 @@ exahype2::dg::traceParticles(
   const tarch::la::Vector<DIMENSIONS, double>&            domainWidth,
   const int                                               periodicAxes
 ) {
-  assertion(timeStepSize >= 0.0, timeStepSize);
-  assertion(quadratureNodes != nullptr);
+  ASSERTION(timeStepSize >= 0.0, timeStepSize);
+  ASSERTION(quadratureNodes != nullptr);
   int numberOfMovedParticles = 0;
   if (particles.getSize() > 0) {
     particles.upload();
@@ -282,7 +282,7 @@ exahype2::dg::traceParticles(
         true},
       tarch::accelerator::Sum<int>{movedParticlesAfterSampling}
     );
-    assertion(movedParticlesAfterSampling == 0, movedParticlesAfterSampling);
+    ASSERTION(movedParticlesAfterSampling == 0, movedParticlesAfterSampling);
   }
 }
 
@@ -298,7 +298,7 @@ exahype2::dg::TraceParticles<NodesPerAxis, NumberOfData, NumberOfParticleData, F
   constexpr double              WallDamping = 0.8;
   exahype2::particles::Particle particle    = particles.getParticle(index);
   const int                     slot        = particles.getSlot(index);
-  assertion(slot >= 0, slot, index);
+  ASSERTION(slot >= 0, slot, index);
   tarch::la::Vector<DIMENSIONS, double> centre;
   tarch::la::Vector<DIMENSIONS, double> width;
   for (int axis = 0; axis < DIMENSIONS; axis++) {

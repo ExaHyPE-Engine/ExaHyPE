@@ -19,7 +19,7 @@ namespace {
  */
 bool
 tarch::accelerator::addDeviceCopyUpload(const std::function<void()> upload) {
-  assertion(static_cast<bool>(upload));
+  ASSERTION(static_cast<bool>(upload));
   getUploads().push_back(upload);
   return true;
 }

@@ -79,7 +79,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::NetCDFFieldSampler(
 template <int FieldDimensions>
 void
 tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDescription& fieldDescription) {
-  logDebug(
+  LOG_DEBUG(
     "The NetCDF reader parses the field " << fieldDescription.name << " from " << fieldDescription.filePath
                                           << " with the keys (" << fieldDescription.valueKey << ", "
                                           << coordinateKeysToString(fieldDescription) << ")."
@@ -169,7 +169,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConstant(
 
   tarch::la::Vector<FieldDimensions, double> positionInCDFRange;
   for (int i = 0; i < FieldDimensions; i++) {
-    assertion(std::isfinite(position[i]), fieldName, i, position[i]);
+    ASSERTION(std::isfinite(position[i]), fieldName, i, position[i]);
     positionInCDFRange[i] = transformSimulationCoordinateToCDFRange(
       position[i],
       field.lengthOfSimulationDomain[i],
@@ -203,7 +203,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::sampleBilinear(
   tarch::la::Vector<FieldDimensions, double> fraction(0.0);
 
   for (int i = 0; i < FieldDimensions; i++) {
-    assertion(std::isfinite(position[i]), fieldName, i, position[i]);
+    ASSERTION(std::isfinite(position[i]), fieldName, i, position[i]);
     const double coordinate = transformSimulationCoordinateToCDFRange(
       position[i],
       field.lengthOfSimulationDomain[i],
@@ -258,7 +258,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::covers(
 ) const {
   const Field& field = getField(fieldName);
   for (int i = 0; i < FieldDimensions; i++) {
-    assertion(std::isfinite(position[i]), fieldName, i, position[i]);
+    ASSERTION(std::isfinite(position[i]), fieldName, i, position[i]);
     const double coordinate = transformSimulationCoordinateToCDFRange(
       position[i],
       field.lengthOfSimulationDomain[i],
@@ -300,7 +300,7 @@ tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCoordinat
   const double offsetOfSimulationDomain
 ) {
   const double endOfSimulationDomain = lengthOfSimulationDomain + offsetOfSimulationDomain;
-  assertion(endOfSimulationDomain != offsetOfSimulationDomain, lengthOfSimulationDomain, offsetOfSimulationDomain);
+  ASSERTION(endOfSimulationDomain != offsetOfSimulationDomain, lengthOfSimulationDomain, offsetOfSimulationDomain);
 
   const double slope     = ((lastElement - firstElement) / (endOfSimulationDomain - offsetOfSimulationDomain));
   const double intercept = firstElement - slope * offsetOfSimulationDomain;
