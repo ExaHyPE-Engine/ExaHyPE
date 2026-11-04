@@ -1,41 +1,86 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#include "tarch/Assertions.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+
+#include <mpi.h>
+
 /**
- * Adds one snapshot of every local particle the cell of marker owns to the database.
- *
- * A time stamp outside the closed window between initialRecordTime and lastRecordTime records
- * nothing.
+ * Returns whether database stores a snapshot of some particle of this rank at timeStamp within
+ * [initialRecordTime, lastRecordTime]. The particle values leave the device only inside that window.
  */
-template <typename Particle, typename Vertices, typename Database>
-INLINE_METHOD void exahype2::particles::recordParticleSnapshots(
-  const peano4::dataview::CellMarker&          marker,
-  const Vertices&                              fineGridVertices,
-  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-  const double                                 timeStamp,
-  const double                                 initialRecordTime,
-  const double                                 lastRecordTime,
-  Database&                                    database
+template <int NumberOfData>
+INLINE_METHOD bool
+exahype2::particles::isSnapshotDue(
+  ParticleSet<NumberOfData>& particles,
+  const double               timeStamp,
+  const double               initialRecordTime,
+  const double               lastRecordTime,
+  TrajectoryDatabase&        database
 ) {
   assertion(initialRecordTime <= lastRecordTime, initialRecordTime, lastRecordTime);
+  if (timeStamp < initialRecordTime or timeStamp > lastRecordTime) {
+    return false;
+  }
+  particles.download();
+  bool someSnapshotIsDue = false;
+  for (int index = 0; index < particles.getSize() and not someSnapshotIsDue; index++) {
+    someSnapshotIsDue = database.isSnapshotDue(particles.getNumber(index), particles.getPosition(index), timeStamp);
+  }
+  return someSnapshotIsDue;
+}
 
-  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
-    for (const Particle* const particle : fineGridVertices(vertexNumber)) {
-      assertion(particle != nullptr, vertexNumber);
-      if (
-        particle->getParallelState() == Particle::ParallelState::Local
-        and exahype2::particles::ownsCoordinate(marker, particle->getX(), domainOffset)
-        and timeStamp >= initialRecordTime and timeStamp <= lastRecordTime
-      ) {
-        database.addParticleSnapshot(
-          particle->getNumber(0),
-          particle->getNumber(1),
-          timeStamp,
-          particle->getX(),
-          particle->getData().size(),
-          particle->getData().data()
-        );
-      }
-    }
+/**
+ * Returns on every rank whether isSnapshotDue() is true on some rank. Every rank calls this function
+ * collectively.
+ */
+template <int NumberOfData>
+INLINE_METHOD bool
+exahype2::particles::isSnapshotDueOnSomeRank(
+  ParticleSet<NumberOfData>& particles,
+  const double               timeStamp,
+  const double               initialRecordTime,
+  const double               lastRecordTime,
+  TrajectoryDatabase&        database
+) {
+  const auto& rank          = tarch::mpi::Rank::getInstance();
+  const int   dueOnThisRank = isSnapshotDue(particles, timeStamp, initialRecordTime, lastRecordTime, database) ? 1 : 0;
+  int         dueOnSomeRank = dueOnThisRank;
+  if (rank.getNumberOfRanks() > 1) {
+    tarch::mpi::allreduce(&dueOnThisRank, &dueOnSomeRank, 1, MPI_INT, MPI_MAX, rank.getCommunicator());
+  }
+  assertion(dueOnSomeRank >= dueOnThisRank, dueOnSomeRank, dueOnThisRank);
+  return dueOnSomeRank > 0;
+}
+
+/**
+ * Downloads the particle data and adds a snapshot of every particle of this rank to database if
+ * isSnapshotDue() is true.
+ */
+template <int NumberOfData>
+INLINE_METHOD void
+exahype2::particles::recordSnapshots(
+  ParticleSet<NumberOfData>& particles,
+  const double               timeStamp,
+  const double               initialRecordTime,
+  const double               lastRecordTime,
+  TrajectoryDatabase&        database
+) {
+  if (not isSnapshotDue(particles, timeStamp, initialRecordTime, lastRecordTime, database)) {
+    return;
+  }
+  particles.download();
+  for (int index = 0; index < particles.getSize(); index++) {
+    const auto number = particles.getNumber(index);
+    database.addParticleSnapshot(
+      number.first,
+      number.second,
+      timeStamp,
+      particles.getPosition(index),
+      NumberOfData,
+      particles.getData(index)
+    );
   }
 }

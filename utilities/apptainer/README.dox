@@ -15,7 +15,7 @@ In our experience this only works for simple images.
 There is no guarantee that this will work with our Docker images.
 Therefore, we do not recommend it.
 
-To build the Apptainer containers, make sure to execute the following commands in the Peano root directory
+To build the Apptainer containers, execute the following commands in the Peano root directory.
 
 ```shell
 apptainer build utilities/apptainer/gcc.sif utilities/apptainer/Apptainer.gcc

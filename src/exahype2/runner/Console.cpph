@@ -1,0 +1,10 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename T>
+INLINE_METHOD std::string
+exahype2::runner::Format::getNumber(const T& value) {
+  std::ostringstream result;
+  result << value;
+  return result.str();
+}

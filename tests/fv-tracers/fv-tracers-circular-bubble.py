@@ -96,6 +96,9 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The circular bubble tracer test runs in 2D only.")
+
 initial_conditions = """
   Q[Shortcuts::rho]  = 1.0;
   Q[Shortcuts::rhoU] = 0.0;
@@ -104,7 +107,6 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions
   Qoutside[Shortcuts::rho]  = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU] = -Qinside[Shortcuts::rhoU];
   Qoutside[Shortcuts::rhoV] = -Qinside[Shortcuts::rhoV];
@@ -116,7 +118,9 @@ compute_primitive_variables = r"""
   const auto u0 = Q[Shortcuts::rhoU] * irho;
   const auto u1 = Q[Shortcuts::rhoV] * irho;
 
-  const auto uSq = u0 * u0 + u1 * u1;
+  const auto squareOfU0 = tarch::la::productRoundedOnce(u0, u0);
+  const auto squareOfU1 = tarch::la::productRoundedOnce(u1, u1);
+  const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 
   const auto internalE = Q[Shortcuts::rhoE] - 0.5 * Q[Shortcuts::rho] * uSq;
@@ -149,7 +153,7 @@ fv_solver = exahype2.fv.Solver(
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1},
     auxiliary_variables=0,
-    time_stepping=exahype2.TimeStepping.Fixed(0.00064 / (args.degrees_of_freedom**0.5)),
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
     scheme=exahype2.fv.Godunov(),
 )
 
@@ -176,20 +180,13 @@ tracer_attributes = {
 }
 
 tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
+    name="Tracers", particle_attributes=tracer_attributes
 )
 
 generate_random_particles(
     "InitTracers.dat", num_particles=100, domain_min=0.1, domain_max=0.9
 )
-init_tracers = exahype2.particles.InsertParticlesFromFile(
-    particle_set=tracer_particles,
-    filename="InitTracers.dat",
-    scale_factor=1.0,
-)
-
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
+tracer_particles.insert_from_file("InitTracers.dat", scale_factor=1.0)
 
 fv_solver.trace(
     tracer_particles,

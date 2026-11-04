@@ -1,0 +1,241 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/TimeStepping.h"
+#include "exahype2/terms/PostprocessUpdatedPatch.h"
+#include "peano4/Constants.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+
+TARGET_DECLARE
+/**
+ * Returns the mask whose bit f is set when face f of the cell lies on the domain boundary.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD int
+exahype2::fv::getBoundaryFaceMask(const peano4::CellConnectivity& cellConnectivity, const int cell) {
+  int mask = 0;
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    if (cellConnectivity.getFaceKind(cellConnectivity.getCellFace(cell, faceNumber)) == peano4::FaceKind::Boundary) {
+      mask |= 1 << faceNumber;
+    }
+  }
+  return mask;
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
+  assertion(entry >= 0 and entry < boundaryFaces.size * Kernel::VolumesPerLayer, entry, boundaryFaces.size);
+  const int face      = boundaryFaces[entry / Kernel::VolumesPerLayer];
+  const int lowerCell = cellConnectivity.getFaceCell(face, 0);
+  const int slot      = lowerCell >= 0 ? lowerCell : cellConnectivity.getFaceCell(face, 1);
+  const int normal    = cellConnectivity.getFaceNormal(face);
+  // The face is the upper face of the cell on its lower side.
+  const int faceNumber = lowerCell >= 0 ? normal + DIMENSIONS : normal;
+  Kernel::applyBoundaryConditions(
+    halo.getChunk(face),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
+    timeStamp,
+    faceNumber,
+    entry % Kernel::VolumesPerLayer
+  );
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::InterpolateHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const peano4::LevelJump& levelJump
+) const {
+  const int                     normal = cellConnectivity.getFaceNormal(levelJump.coarseFace);
+  const StoragePrecision* const coarse = halo.getChunk(levelJump.coarseFace);
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    Kernel::interpolateHalo(coarse, halo.getChunk(levelJump.fineFaces[subface]), levelJump.coarseSide, normal, subface);
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::InjectHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const peano4::LevelJump& levelJump
+) const {
+  const int                     normal = cellConnectivity.getFaceNormal(levelJump.coarseFace);
+  const StoragePrecision* const coarse = halo.getChunk(levelJump.coarseFace);
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    Kernel::injectHalo(coarse, halo.getChunk(levelJump.fineFaces[subface]), levelJump.coarseSide, normal, subface);
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::RestrictHaloHalves<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const peano4::LevelJump& levelJump
+) const {
+  const int               normal = cellConnectivity.getFaceNormal(levelJump.coarseFace);
+  const StoragePrecision* fine[peano4::SubfacesPerFace];
+  for (int subface = 0; subface < peano4::SubfacesPerFace; subface++) {
+    fine[subface] = halo.getChunk(levelJump.fineFaces[subface]);
+  }
+  Kernel::restrictHalo(fine, halo.getChunk(levelJump.coarseFace), 1 - levelJump.coarseSide, normal);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::ProjectPatchesOntoFaces<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int                            entry,
+  const tarch::accelerator::TeamHandle team
+) const {
+  const int         slot = cellConnectivity.getCells()[entry];
+  StoragePrecision* faces[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    faces[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
+  }
+  Kernel::projectOntoFacesInTeam(team, solution.getChunk(slot), faces);
+}
+
+/**
+ * Advances the patch of one cell in place and reduces the wave speeds of the update and of the
+ * updated volumes into the accumulator. On the host one thread sweeps the patch. On a device the
+ * team updates the volumes in rounds of one volume per thread and runs the patch postprocessing
+ * of Derived before it reads the wave speeds of the updated volumes.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int                            entry,
+  const tarch::accelerator::TeamHandle team,
+  double&                              accumulator
+) const {
+  const int               slot = cells[entry];
+  const StoragePrecision* faces[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    faces[faceNumber] = halo.getChunk(cellConnectivity.getCellFace(slot, faceNumber));
+  }
+  StoragePrecision* const                     patch         = solution.getChunk(slot);
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre    = cellConnectivity.getCellCentre(slot);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize      = cellConnectivity.getCellWidth(slot);
+  const int                                   boundaryFaces = exahype2::fv::getBoundaryFaceMask(cellConnectivity, slot);
+  const double                                stepStart     = timeStamp;
+  const double                                stepSize      = timeStepSize;
+
+  const double partial =
+    Kernel::updateInTeam(team, patch, faces, cellCentre, cellSize, stepStart, stepSize, boundaryFaces);
+  COMPILE_IF_ON_HOST(accumulator = exahype2::MaxEigenvalueReduction::combine(accumulator, partial);)
+  COMPILE_IF_ON_DEVICE(
+    reduceWaveSpeedsWithThreadsOfTeam(team, partial, patch, cellCentre, cellSize, stepStart, stepSize, accumulator);
+  )
+}
+
+/**
+ * Reduces partial over team into accumulator. One thread then runs the patch postprocessing of
+ * Derived on patch if Derived defines one. The team then reduces the wave speeds of the
+ * postprocessed volumes into accumulator.
+ */
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::UpdatePatches<Derived, StoragePrecision, ComputePrecision>::reduceWaveSpeedsWithThreadsOfTeam(
+  const tarch::accelerator::TeamHandle         team,
+  const double                                 partial,
+  StoragePrecision* const                      patch,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 stepStart,
+  const double                                 stepSize,
+  double&                                      accumulator
+) const {
+  const tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction> reducer{accumulator};
+  tarch::accelerator::reduceOverTeam(team, partial, reducer);
+  if constexpr (exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>) {
+    tarch::accelerator::teamBarrier(team);
+    tarch::accelerator::parallelFor(team, tarch::accelerator::Range(1), [=]([[maybe_unused]] const int single) {
+      Kernel::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
+    });
+    tarch::accelerator::teamBarrier(team);
+    tarch::accelerator::parallelReduce(
+      team,
+      tarch::accelerator::Range(Kernel::VolumesPerPatch),
+      [=](const int volume, double& eigenvalue) {
+        eigenvalue = exahype2::MaxEigenvalueReduction::combine(
+          eigenvalue,
+          Kernel::getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, stepStart + stepSize, stepSize)
+        );
+      },
+      reducer
+    );
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::MeasurePatchEigenvalues<Derived, StoragePrecision, ComputePrecision>::operator()(
+  const int entry,
+  double&   accumulator
+) const {
+  const int slot = cellConnectivity.getCells()[entry];
+  accumulator    = exahype2::MaxEigenvalueReduction::combine(
+    accumulator,
+    Kernel::reduceMaxEigenvalue(
+      solution.getChunk(slot),
+      cellConnectivity.getCellCentre(slot),
+      cellConnectivity.getCellWidth(slot),
+      timeStamp
+    )
+  );
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::MeasurePatchErrors<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
+  const int slot = cellConnectivity.getCells()[entry];
+  Kernel::measureErrors(
+    solution.getChunk(slot),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
+    timeStamp,
+    timeStepSize,
+    errorsPerCell + static_cast<std::ptrdiff_t>(entry) * NumberOfNorms
+  );
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>::copy(
+  const int               slot,
+  StoragePrecision* const target,
+  const int               itemOfChunk
+) const {
+  assertion(itemOfChunk >= 0 and itemOfChunk < WorkItemsPerChunk, itemOfChunk);
+  const StoragePrecision* const kept = source.getChunk(slot);
+  for (int value = itemOfChunk * Kernel::NumberOfData; value < (itemOfChunk + 1) * Kernel::NumberOfData; value++) {
+    target[value] = kept[value];
+  }
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>::interpolateFromParent(
+  const int                            parentSlot,
+  StoragePrecision* const              target,
+  const int                            childPosition,
+  const int                            itemOfChunk,
+  [[maybe_unused]] const double* const prepared
+) const {
+  Kernel::interpolateVolume(source.getChunk(parentSlot), target, childPosition, itemOfChunk);
+}
+
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>::restrictFromChildren(
+  const int* const                     childSlots,
+  StoragePrecision* const              target,
+  const int                            itemOfChunk,
+  [[maybe_unused]] const double* const prepared
+) const {
+  const StoragePrecision* children[peano4::ChildrenPerCell];
+  for (int child = 0; child < peano4::ChildrenPerCell; child++) {
+    children[child] = source.getChunk(childSlots[child]);
+  }
+  Kernel::restrictVolume(children, target, itemOfChunk);
+}
+TARGET_DECLARE_END

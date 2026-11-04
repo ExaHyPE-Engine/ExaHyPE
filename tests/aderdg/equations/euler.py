@@ -10,6 +10,13 @@ class Euler(Equation):
         self.num_auxiliary_variables = 0
         self.gamma = gamma
 
+    def _momentum_squared(self):
+        """Returns the squared momentum with equal bits for every order of the axes."""
+        components = ", ".join(
+            f"Q[Shortcuts::v+{axis}]" for axis in range(self.dimensions)
+        )
+        return f"tarch::la::norm2Squared(tarch::la::makeVector({components}))"
+
     def eigenvalues(self):
         return (
             """
@@ -18,12 +25,8 @@ class Euler(Equation):
             + str(self.gamma)
             + """;
   const auto p = (Gamma - 1) * (Q[Shortcuts::E] - 0.5 * irho * """
-            + (
-                """(Q[Shortcuts::v+0]*Q[Shortcuts::v+0]+Q[Shortcuts::v+1]*Q[Shortcuts::v+1]+Q[Shortcuts::v+2]*Q[Shortcuts::v+2]));"""
-                if self.dimensions == 3
-                else """ (Q[Shortcuts::v+0]*Q[Shortcuts::v+0]+Q[Shortcuts::v+1]*Q[Shortcuts::v+1]));"""
-            )
-            + """
+            + self._momentum_squared()
+            + """);
 
   const auto c = std::sqrt(Gamma * p * irho);
   const auto u = Q[Shortcuts::v + normal] * irho;
@@ -40,12 +43,8 @@ class Euler(Equation):
             + str(self.gamma)
             + """;
   const auto p = (Gamma - 1) * (Q[Shortcuts::E] - 0.5 * irho * """
-            + (
-                """(Q[Shortcuts::v+0]*Q[Shortcuts::v+0]+Q[Shortcuts::v+1]*Q[Shortcuts::v+1]+Q[Shortcuts::v+2]*Q[Shortcuts::v+2]));"""
-                if self.dimensions == 3
-                else """ (Q[Shortcuts::v+0]*Q[Shortcuts::v+0]+Q[Shortcuts::v+1]*Q[Shortcuts::v+1]));"""
-            )
-            + """
+            + self._momentum_squared()
+            + """);
 
   F[Shortcuts::rho] = Q[Shortcuts::v + normal];
   F[Shortcuts::v+0] = Q[Shortcuts::v + normal] * Q[Shortcuts::v+0] * irho;

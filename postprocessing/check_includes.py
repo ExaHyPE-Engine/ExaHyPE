@@ -66,10 +66,6 @@ def include_findings(root: str, path: str, text: str) -> list[Finding]:
         if spelling in seen:
             findings.append(Finding(path, number, f"includes {spelling} a second time"))
         seen.add(spelling)
-        if suffix == INLINE_DEFINITION_SUFFIX:
-            findings.append(
-                Finding(path, number, "an inline definition file includes a header")
-            )
         if quoted is not None and quoted.split("/")[0] == os.pardir:
             findings.append(
                 Finding(path, number, f"includes {spelling} through a parent directory")
@@ -101,10 +97,10 @@ def include_findings(root: str, path: str, text: str) -> list[Finding]:
             )
     has_pragma_once = PRAGMA_ONCE.search(text) is not None
     if suffix in HEADER_SUFFIXES and not has_pragma_once:
-        findings.append(Finding(path, 0, "a header holds no #pragma once"))
+        findings.append(Finding(path, 0, "a header needs a #pragma once"))
     if suffix == INLINE_DEFINITION_SUFFIX and has_pragma_once:
         findings.append(
-            Finding(path, 0, "an inline definition file holds a #pragma once")
+            Finding(path, 0, "an inline definition file must not contain #pragma once")
         )
     return findings
 
@@ -134,7 +130,7 @@ def main() -> None:
     parser.add_argument(
         "--conventions-only",
         action="store_true",
-        help="Skips the clang-tidy analysis, which needs the compilation database of a build",
+        help="Skips the clang-tidy analysis. Only that analysis reads the compilation database",
     )
     args = parser.parse_args()
     try:
@@ -155,7 +151,8 @@ def main() -> None:
     database = os.path.join(build_directory, "compile_commands.json")
     if not args.conventions_only and not os.path.isfile(database):
         print(
-            f"{database} does not exist, so only the include conventions are checked."
+            f"The clang-tidy analysis reads the compilation database {database}. "
+            "This run checks the include conventions only."
         )
     elif not args.conventions_only:
         try:

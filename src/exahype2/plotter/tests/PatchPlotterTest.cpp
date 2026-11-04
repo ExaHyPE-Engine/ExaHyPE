@@ -3,296 +3,250 @@
 #include "PatchPlotterTest.h"
 
 #include "exahype2/plotter/PatchPlotter.h"
-#include "exahype2/plotter/tests/RecordingFileWriter.h"
-#include "tarch/la/Vector.h"
+#include "peano4/CellConnectivity.h"
+#include "peano4/Constants.h"
+#include "peano4/Loop.h"
+#include "peano4/Spacetree.h"
+#include "peano4/tests/TestGrids.h"
+#include "tarch/accelerator/ChunkedMemoryPool.h"
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/plotter/Format.h"
 
 namespace {
-  constexpr int PointsPerAxis    = 3;
-  constexpr int VolumesPerAxis   = 2;
-  constexpr int NumberOfUnknowns = 2;
-  constexpr int PatchLevel       = 3;
+  constexpr int Depth           = 1;
+  constexpr int VolumesPerAxis  = 2;
+  constexpr int ValuesPerVolume = 3;
+  constexpr int VolumesPerPatch = peano4::power(VolumesPerAxis, DIMENSIONS);
 
-  constexpr std::array<double, PointsPerAxis> Mapping{0.0, 0.5, 1.0};
-
-  peano4::dataview::CellMarker createUnitCell() {
-    peano4::dataview::CellMarker marker{};
-    marker.level = PatchLevel;
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      marker.h[axis]      = 1.0;
-      marker.centre[axis] = 0.5;
-    }
-    return marker;
+  std::string getFileContent(const std::filesystem::path& path) {
+    const std::ifstream stream(path);
+    std::stringstream   buffer;
+    buffer << stream.rdbuf();
+    return buffer.str();
   }
 
-  tarch::la::Vector<DIMENSIONS, double> unitDomainOffset() { return tarch::la::Vector<DIMENSIONS, double>(0.0); }
-
-  tarch::la::Vector<DIMENSIONS, double> unitDomainSize() { return tarch::la::Vector<DIMENSIONS, double>(1.0); }
-
-  std::vector<double> createPatch(const int values) {
-    std::vector<double> patch(static_cast<std::size_t>(values * NumberOfUnknowns));
-    for (int value = 0; value < values; value++) {
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        patch[static_cast<std::size_t>(value * NumberOfUnknowns + unknown)] = value * 100.0 + unknown;
-      }
+  /**
+   * Deletes the output directory on the global master once every rank has read its file back.
+   */
+  void deleteOutputDirectory(const std::string& outputDirectory) {
+    tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
+    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      std::filesystem::remove_all(outputDirectory);
     }
-    return patch;
+  }
+
+  /**
+   * Returns a pool in host memory with one chunk of chunkSize entries per slot of cellConnectivity
+   * and value in every entry.
+   */
+  template <typename T>
+  tarch::accelerator::ChunkedMemoryPool<T> getFilledPool(
+    const peano4::CellConnectivity& cellConnectivity,
+    const int                       chunkSize,
+    const T                         value
+  ) {
+    tarch::accelerator::ChunkedMemoryPool<T> pool(chunkSize, tarch::MemoryLocation::Heap);
+    pool.reserve(cellConnectivity.getNumberOfSlots());
+    for (int slot = 0; slot < pool.getCapacity(); slot++) {
+      std::fill_n(pool.getChunk(slot), chunkSize, value);
+    }
+    return pool;
   }
 } // namespace
 
 exahype2::plotter::tests::PatchPlotterTest::PatchPlotterTest() :
   tarch::tests::TestCase("exahype2::plotter::tests::PatchPlotterTest") {}
 
-void exahype2::plotter::tests::PatchPlotterTest::run() {
-  testMethod(testNodalPatchPlotsOnePointPerNode);
-  testMethod(testNodalPatchReadsTheAlternativePatch);
-  testMethod(testCellPatchPlotsOneCellPerVolume);
-  testMethod(testCellPatchRunsTheCellDataPlotsOfTheCaller);
-  testMethod(testNodalPatchRunsTheCellDataPlotsOfTheCaller);
+void
+exahype2::plotter::tests::PatchPlotterTest::run() {
+  testMethod(testEveryVolumeOfEveryPatchBecomesOneCell);
+  testMethod(testEveryNodeOfEveryPatchBecomesOnePoint);
+  testMethod(testOneNodePerPatchBecomesOneCell);
+  testMethod(testEveryNodeReadsTheSubcellThatContainsIt);
 }
 
 /**
- * Checks that a nodal patch plots one point per node at the mapped position, writes the values
- * of that node, and connects the neighbouring nodes to one element each.
+ * A node on a subcell boundary reads the upper subcell.
  */
-void exahype2::plotter::tests::PatchPlotterTest::testNodalPatchPlotsOnePointPerNode() {
-  const int totalPoints = peano4::power(PointsPerAxis, DIMENSIONS);
-  const int totalCells  = peano4::power(PointsPerAxis - 1, DIMENSIONS);
-
-  Snapshot snapshot;
-  openRecordingSnapshot(snapshot);
-
-  NodalPatchPlotter plotter;
-  plotter.open(snapshot, 2, {{"rho", 1}, {"e", 1}}, []() {});
-
-  const std::vector<double> patch = createPatch(totalPoints);
-  plotter.plotCell<PointsPerAxis, NumberOfUnknowns, 1>(
-    createUnitCell(),
-    unitDomainOffset(),
-    unitDomainSize(),
-    Mapping,
-    patch.data(),
-    false,
-    nullptr,
-    []([[maybe_unused]] const int cellIndex) {}
-  );
-
-  const auto& writer = getRecordingFileWriter(snapshot);
-  validateEquals(writer.getNumberOfPoints(0), totalPoints);
-  validateEquals(writer.getNumberOfCells(0), totalCells);
-
-  for (int point = 0; point < totalPoints; point++) {
+void
+exahype2::plotter::tests::PatchPlotterTest::testEveryNodeReadsTheSubcellThatContainsIt() {
+  constexpr int                   NodesPerAxis    = 3;
+  constexpr int                   SubcellsPerAxis = 5;
+  constexpr std::array<double, 3> GaussLegendreNodes{0.1127016653792583, 0.5, 0.8872983346207417};
+  constexpr std::array<double, 3> BoundaryNodes{0.0, 0.4, 1.0};
+  constexpr std::array<int, 3>    SubcellsAlongAxis{0, 2, 4};
+  const auto                      gaussLegendre =
+    exahype2::plotter::PatchPlotter::containingSubcells<NodesPerAxis, SubcellsPerAxis>(GaussLegendreNodes.data());
+  const auto boundary =
+    exahype2::plotter::PatchPlotter::containingSubcells<NodesPerAxis, SubcellsPerAxis>(BoundaryNodes.data());
+  for (int node = 0; node < peano4::power(NodesPerAxis, DIMENSIONS); node++) {
+    const auto nodeIndex = peano4::dDelinearised(node, NodesPerAxis);
+    int        stride    = 1;
+    int        expected  = 0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      validateNumericalEquals(
-        writer.getPointCoordinate(0, point, axis),
-        Mapping[digitAlongAxis(point, axis, PointsPerAxis)]
-      );
+      expected += SubcellsAlongAxis[static_cast<std::size_t>(nodeIndex(axis))] * stride;
+      stride *= SubcellsPerAxis;
     }
-  }
-
-  const std::vector<double> density = writer.getPointField(0, "rho");
-  const std::vector<double> energy  = writer.getPointField(0, "e");
-  validateEquals(static_cast<int>(density.size()), totalPoints);
-  validateEquals(static_cast<int>(energy.size()), totalPoints);
-  for (int point = 0; point < totalPoints; point++) {
-    validateNumericalEquals(density[static_cast<std::size_t>(point)], point * 100.0);
-    validateNumericalEquals(energy[static_cast<std::size_t>(point)], point * 100.0 + 1.0);
-  }
-
-#if DIMENSIONS == 2
-  const std::vector<std::int32_t> expectedFirstCell{0, 1, 4, 3};
-#else
-  const std::vector<std::int32_t> expectedFirstCell{0, 1, 4, 3, 9, 10, 13, 12};
-#endif
-  const std::vector<std::int32_t> connectivity = writer.getConnectivity(0);
-  for (int corner = 0; corner < peano4::VerticesPerCell; corner++) {
-    validateEquals(connectivity[static_cast<std::size_t>(corner)], expectedFirstCell[static_cast<std::size_t>(corner)]);
-  }
-
-  const std::vector<std::string> expectedCellFields{"Subdomain", "Subtree", "RefinementLevel", "CurvePosition"};
-  validateTrue(writer.getCellFieldNames(0) == expectedCellFields);
-  const std::vector<double> levels = writer.getCellField(0, "RefinementLevel");
-  validateEquals(static_cast<int>(levels.size()), totalCells);
-  for (const double level : levels) {
-    validateNumericalEquals(level, static_cast<double>(PatchLevel));
+    validateEqualsWithParams1(gaussLegendre[static_cast<std::size_t>(node)], expected, node);
+    validateEqualsWithParams1(boundary[static_cast<std::size_t>(node)], expected, node);
   }
 }
 
-/**
- * Checks that every plot point of a nodal patch reads the degree of freedom of the alternative
- * patch that lies closest to it.
- */
-void exahype2::plotter::tests::PatchPlotterTest::testNodalPatchReadsTheAlternativePatch() {
-  constexpr int                            AlternativePointsPerAxis = 2;
-  constexpr std::array<int, PointsPerAxis> ExpectedIndexAlongAxis{0, 1, 1};
+void
+exahype2::plotter::tests::PatchPlotterTest::testEveryNodeOfEveryPatchBecomesOnePoint() {
+  const int rank = tarch::mpi::Rank::getInstance().getRank();
+  peano4::tests::buildRegularGrid(Depth);
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto  cells            = cellConnectivity.getCells();
 
-  const int totalPoints            = peano4::power(PointsPerAxis, DIMENSIONS);
-  const int alternativeTotalPoints = peano4::power(AlternativePointsPerAxis, DIMENSIONS);
-
-  Snapshot snapshot;
-  openRecordingSnapshot(snapshot);
-
-  NodalPatchPlotter plotter;
-  plotter.open(snapshot, 0, {{"rho", 1}, {"e", 1}}, []() {});
-
-  const std::vector<double> patch            = createPatch(totalPoints);
-  const std::vector<double> alternativePatch = createPatch(alternativeTotalPoints);
-  plotter.plotCell<PointsPerAxis, NumberOfUnknowns, AlternativePointsPerAxis>(
-    createUnitCell(),
-    unitDomainOffset(),
-    unitDomainSize(),
-    Mapping,
-    patch.data(),
-    true,
-    alternativePatch.data(),
-    []([[maybe_unused]] const int cellIndex) {}
+  constexpr int                   SubcellsPerAxis = 3;
+  constexpr int                   StatusEntries   = 4;
+  constexpr int                   SubcellStatus   = 2;
+  constexpr std::array<double, 2> Nodes{0.25, 0.75};
+  constexpr int                   SubcellValuesPerCell = peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerVolume;
+  const auto                      values = getFilledPool(cellConnectivity, VolumesPerPatch * ValuesPerVolume, 1.0);
+  const auto                      subcellValues = getFilledPool(cellConnectivity, SubcellValuesPerCell, 2.0);
+  const auto                      statuses      = getFilledPool(cellConnectivity, StatusEntries, SubcellStatus);
+  const std::string               outputDirectory =
+    (tarch::tests::getWritableTestDirectory() / "PatchPlotterNodalTest").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "patch/");
+  exahype2::plotter::PatchPlotter plotter("PatchPlotterNodalTest", {{"scalar", 1}, {"pair", 2}});
+  plotter.plotNodes<VolumesPerAxis, ValuesPerVolume, SubcellsPerAxis, double>(
+    cellConnectivity,
+    cells,
+    values,
+    Nodes.data(),
+    &subcellValues,
+    &statuses,
+    SubcellStatus,
+    0.5,
+    tarch::plotter::Format::VTU,
+    outputDirectory
   );
 
-  const std::vector<double> density = getRecordingFileWriter(snapshot).getPointField(0, "rho");
-  validateEquals(static_cast<int>(density.size()), totalPoints);
-  for (int point = 0; point < totalPoints; point++) {
-    int alternativePoint = 0;
-    int stride           = 1;
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      alternativePoint +=
-        ExpectedIndexAlongAxis[static_cast<std::size_t>(digitAlongAxis(point, axis, PointsPerAxis))] * stride;
-      stride *= AlternativePointsPerAxis;
-    }
-    validateNumericalEquals(density[static_cast<std::size_t>(point)], alternativePoint * 100.0);
-  }
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch"
+    / ("PatchPlotterNodalTest-0_500000-rank-" + std::to_string(rank) + ".vtu");
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  const std::string content        = getFileContent(vtuPath);
+  const int         numberOfCells  = cells.size * peano4::power(VolumesPerAxis - 1, DIMENSIONS);
+  const int         numberOfPoints = cells.size * VolumesPerPatch;
+  validateWithParams1(
+    content.find("NumberOfCells=\"" + std::to_string(numberOfCells) + "\"") != std::string::npos,
+    vtuPath.string()
+  );
+  validateWithParams1(
+    content.find("NumberOfPoints=\"" + std::to_string(numberOfPoints) + "\"") != std::string::npos,
+    vtuPath.string()
+  );
+  validate(content.find("<PointData") != std::string::npos);
+  validate(content.find("Name=\"pair\"") != std::string::npos);
+  validate(content.find("Name=\"CurveIndex\"") != std::string::npos);
+  validate(content.find("Name=\"LimiterStatus\"") != std::string::npos);
+  deleteOutputDirectory(outputDirectory);
 }
 
-/**
- * Checks that a cell patch plots one element per volume, spanning the volume, and writes the
- * values of that volume.
- */
-void exahype2::plotter::tests::PatchPlotterTest::testCellPatchPlotsOneCellPerVolume() {
-  const int totalVolumes = peano4::power(VolumesPerAxis, DIMENSIONS);
-  const int totalPoints  = peano4::power(VolumesPerAxis + 1, DIMENSIONS);
-
-  Snapshot snapshot;
-  openRecordingSnapshot(snapshot);
-
-  CellPatchPlotter plotter;
-  plotter.open(snapshot, 4, {{"rho", 1}, {"e", 1}}, []() {});
-
-  const std::vector<double> patch = createPatch(totalVolumes);
-  plotter.plotCell<VolumesPerAxis, NumberOfUnknowns>(
-    createUnitCell(),
-    unitDomainOffset(),
-    unitDomainSize(),
-    patch.data(),
-    []([[maybe_unused]] const int cellIndex) {}
+void
+exahype2::plotter::tests::PatchPlotterTest::testOneNodePerPatchBecomesOneCell() {
+  const int rank = tarch::mpi::Rank::getInstance().getRank();
+  peano4::tests::buildRegularGrid(Depth);
+  const auto&                     cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto                      cells            = cellConnectivity.getCells();
+  const auto                      values           = getFilledPool(cellConnectivity, ValuesPerVolume, 1.0);
+  constexpr std::array<double, 1> Nodes{0.5};
+  const std::string               outputDirectory =
+    (tarch::tests::getWritableTestDirectory() / "PatchPlotterSingleNodeTest").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "patch/");
+  exahype2::plotter::PatchPlotter plotter("PatchPlotterSingleNodeTest", {{"scalar", 1}, {"pair", 2}});
+  plotter.plotNodes<1, ValuesPerVolume>(
+    cellConnectivity,
+    cells,
+    values,
+    Nodes.data(),
+    0.5,
+    tarch::plotter::Format::VTU,
+    outputDirectory
   );
 
-  const auto& writer = getRecordingFileWriter(snapshot);
-  validateEquals(writer.getNumberOfCells(0), totalVolumes);
-  validateEquals(writer.getNumberOfPoints(0), totalPoints);
-
-  const std::vector<std::int32_t> connectivity = writer.getConnectivity(0);
-  for (int corner = 0; corner < peano4::VerticesPerCell; corner++) {
-    validateEquals(connectivity[static_cast<std::size_t>(corner)], corner);
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      validateNumericalEquals(
-        writer.getPointCoordinate(0, corner, axis),
-        0.5 * exahype2::plotter::CellCorners[corner][axis]
-      );
-    }
-  }
-
-  const std::vector<double> density = writer.getCellField(0, "rho");
-  const std::vector<double> energy  = writer.getCellField(0, "e");
-  validateEquals(static_cast<int>(density.size()), totalVolumes);
-  for (int volume = 0; volume < totalVolumes; volume++) {
-    validateNumericalEquals(density[static_cast<std::size_t>(volume)], volume * 100.0);
-    validateNumericalEquals(energy[static_cast<std::size_t>(volume)], volume * 100.0 + 1.0);
-  }
-  validateNumericalEquals(writer.getCellField(0, "Subtree")[0], 4.0);
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch"
+    / ("PatchPlotterSingleNodeTest-0_500000-rank-" + std::to_string(rank) + ".vtu");
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  const std::string content = getFileContent(vtuPath);
+  validateWithParams1(
+    content.find("NumberOfCells=\"" + std::to_string(cells.size) + "\"") != std::string::npos,
+    vtuPath.string()
+  );
+  validateWithParams1(
+    content.find("NumberOfPoints=\"" + std::to_string(cells.size * peano4::VerticesPerCell) + "\"")
+      != std::string::npos,
+    vtuPath.string()
+  );
+  validate(content.find("<PointData") != std::string::npos);
+  validate(content.find("Name=\"pair\"") != std::string::npos);
+  validate(content.find("Name=\"RefinementLevel\"") != std::string::npos);
+  validate(content.find("Name=\"CurveIndex\"") != std::string::npos);
+  deleteOutputDirectory(outputDirectory);
 }
 
-/**
- * Checks that the cell plots of the caller run once per plotted element and reach the field the
- * caller created after the plotter opened.
- */
-void exahype2::plotter::tests::PatchPlotterTest::testCellPatchRunsTheCellDataPlotsOfTheCaller() {
-  const int totalVolumes = peano4::power(VolumesPerAxis, DIMENSIONS);
+void
+exahype2::plotter::tests::PatchPlotterTest::testEveryVolumeOfEveryPatchBecomesOneCell() {
+  const int rank          = tarch::mpi::Rank::getInstance().getRank();
+  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  peano4::tests::buildRegularGrid(Depth);
+  const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+  const auto  cells            = cellConnectivity.getCells();
 
-  Snapshot snapshot;
-  openRecordingSnapshot(snapshot);
-
-  CellPatchPlotter                                             plotter;
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> statusPlotter;
-  plotter.open(snapshot, 0, {{"rho", 1}, {"e", 1}}, [&]() {
-    statusPlotter = plotter.createCellDataPlotter("Status", 1);
-  });
-
-  int                       plots = 0;
-  const std::vector<double> patch = createPatch(totalVolumes);
-  plotter.plotCell<VolumesPerAxis, NumberOfUnknowns>(
-    createUnitCell(),
-    unitDomainOffset(),
-    unitDomainSize(),
-    patch.data(),
-    [&](const int cellIndex) {
-      statusPlotter->plotCellData(cellIndex, 7.0);
-      plots++;
+  auto values = getFilledPool(cellConnectivity, VolumesPerPatch * ValuesPerVolume, 0.0);
+  for (const int cell : cells) {
+    double* const volumes = values.getChunk(cell);
+    for (int volume = 0; volume < VolumesPerPatch; volume++) {
+      for (int value = 0; value < ValuesPerVolume; value++) {
+        volumes[volume * ValuesPerVolume + value] = 100.0 * cell + 10.0 * volume + value;
+      }
     }
+  }
+
+  const std::string outputDirectory = (tarch::tests::getWritableTestDirectory() / "PatchPlotterTest").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "patch/");
+  exahype2::plotter::PatchPlotter plotter("PatchPlotterTest", {{"scalar", 1}, {"pair", 2}});
+  plotter.plotVolumes<VolumesPerAxis, ValuesPerVolume, double>(
+    cellConnectivity,
+    cells,
+    values,
+    0.25,
+    tarch::plotter::Format::VTU,
+    outputDirectory
   );
 
-  validateEquals(plots, totalVolumes);
-
-  const auto& writer = getRecordingFileWriter(snapshot);
-  const std::vector<std::string>
-    expectedCellFields{"Subdomain", "Subtree", "RefinementLevel", "Status", "CurvePosition", "rho", "e"};
-  validateTrue(writer.getCellFieldNames(0) == expectedCellFields);
-  const std::vector<double> status = writer.getCellField(0, "Status");
-  validateEquals(static_cast<int>(status.size()), totalVolumes);
-  for (const double value : status) {
-    validateNumericalEquals(value, 7.0);
-  }
-}
-
-/**
- * Checks that the cell plots of the caller of a nodal patch run once per plotted element and
- * that the field the caller creates precedes the curve position.
- */
-void exahype2::plotter::tests::PatchPlotterTest::testNodalPatchRunsTheCellDataPlotsOfTheCaller() {
-  const int totalPoints = peano4::power(PointsPerAxis, DIMENSIONS);
-  const int totalCells  = peano4::power(PointsPerAxis - 1, DIMENSIONS);
-
-  Snapshot snapshot;
-  openRecordingSnapshot(snapshot);
-
-  NodalPatchPlotter                                            plotter;
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> statusPlotter;
-  plotter.open(snapshot, 0, {{"rho", 1}, {"e", 1}}, [&]() {
-    statusPlotter = plotter.createCellDataPlotter("Status", 1);
-  });
-
-  int                       plots = 0;
-  const std::vector<double> patch = createPatch(totalPoints);
-  plotter.plotCell<PointsPerAxis, NumberOfUnknowns, 1>(
-    createUnitCell(),
-    unitDomainOffset(),
-    unitDomainSize(),
-    Mapping,
-    patch.data(),
-    false,
-    nullptr,
-    [&](const int cellIndex) {
-      statusPlotter->plotCellData(cellIndex, 7.0);
-      plots++;
-    }
+  const std::filesystem::path vtuPath = std::filesystem::path(outputDirectory) / "patch"
+    / ("PatchPlotterTest-0_250000-rank-" + std::to_string(rank) + ".vtu");
+  validateWithParams1(std::filesystem::exists(vtuPath), vtuPath.string());
+  const std::string content       = getFileContent(vtuPath);
+  const int         numberOfCells = cells.size * VolumesPerPatch;
+  validateWithParams1(
+    content.find("NumberOfCells=\"" + std::to_string(numberOfCells) + "\"") != std::string::npos,
+    vtuPath.string()
   );
-
-  validateEquals(plots, totalCells);
-
-  const auto& writer = getRecordingFileWriter(snapshot);
-  const std::vector<std::string>
-    expectedCellFields{"Subdomain", "Subtree", "RefinementLevel", "Status", "CurvePosition"};
-  validateTrue(writer.getCellFieldNames(0) == expectedCellFields);
-  const std::vector<double> status = writer.getCellField(0, "Status");
-  validateEquals(static_cast<int>(status.size()), totalCells);
-  for (const double value : status) {
-    validateNumericalEquals(value, 7.0);
+  if (numberOfRanks == 1) {
+    const int volumesPerDomainAxis = peano4::power(peano4::SubdivisionFactor, Depth) * VolumesPerAxis;
+    const int numberOfPoints       = peano4::power(volumesPerDomainAxis + 1, DIMENSIONS);
+    validateWithParams1(
+      content.find("NumberOfPoints=\"" + std::to_string(numberOfPoints) + "\"") != std::string::npos,
+      vtuPath.string()
+    );
   }
+  validate(content.find("Name=\"scalar\"") != std::string::npos);
+  validate(content.find("Name=\"pair\"") != std::string::npos);
+  validate(content.find("Name=\"RefinementLevel\"") != std::string::npos);
+  validate(content.find("Name=\"Subdomain\"") != std::string::npos);
+  validate(content.find("Name=\"CurveIndex\"") != std::string::npos);
+
+  // The global master writes the time series file and reads it back.
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    const std::filesystem::path series = std::filesystem::path(outputDirectory) / "patch" / "PatchPlotterTest.pvd";
+    validateWithParams1(std::filesystem::exists(series), series.string());
+    validate(getFileContent(series).find("PatchPlotterTest-0_250000") != std::string::npos);
+  }
+  deleteOutputDirectory(outputDirectory);
 }

@@ -1,0 +1,136 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+{% for include in SOLVER_INCLUDES_WITHOUT_PATH %}
+#include "{{include}}"
+{%- endfor %}
+{% for include in SOLVER_INCLUDES_WITH_PATH %}
+#include "{{include}}"
+{%- endfor %}
+#include "tarch/accelerator/CompileTarget.h"
+
+namespace {{NAMESPACE | join("::")}} {
+  class {{SOLVER_NAME}};
+  class {{CLASSNAME}};
+{%- if SOLVER_FAMILY_CONSTANTS %}
+  struct {{CLASSNAME}}Constants;
+{%- endif %}
+} // namespace {{NAMESPACE | join("::")}}
+{%- if SOLVER_FAMILY_CONSTANTS %}
+
+TARGET_DECLARE
+/**
+ * The kernels read these constants of the solver family on the host and on the device.
+ */
+struct {{NAMESPACE | join("::")}}::{{CLASSNAME}}Constants {
+{%- for line in SOLVER_FAMILY_CONSTANTS %}
+  {{line}}
+{%- endfor %}
+};
+TARGET_DECLARE_END
+{%- endif %}
+
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} :
+  public {{SOLVER_FAMILY_CLASS}}{% if SOLVER_FAMILY_CONSTANTS %},
+  public {{CLASSNAME}}Constants{% endif %} {
+public:
+  using SolverFamily = {{SOLVER_FAMILY_CLASS}};
+{%- if USE_VARIABLE_SHORTCUTS %}
+
+  /**
+   * Names the variable indices. The expression Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first
+   * variable.
+   */
+  using Shortcuts = ::{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}VariableShortcuts;
+{%- endif %}
+{%- for table_class in OPERATOR_TABLES | default([]) %}
+
+  template <typename Precision>
+  using {{table_class.name}} = ::{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}{{table_class.name}}<Precision>;
+{%- endfor %}
+
+  static constexpr std::bitset<DIMENSIONS> PeriodicBoundaries{ {{PERIODIC_BOUNDARIES}}ULL };
+{%- if INITIALISE_PATCHES is defined %}
+
+  /**
+   * initialiseNodes() passes every node of a cell to initialCondition() in one call if
+   * InitialisesPatches is true.
+   */
+  static constexpr bool InitialisesPatches = {{ "true" if INITIALISE_PATCHES else "false" }};
+{%- endif %}
+{%- if ERROR_MEASUREMENT %}
+
+  static constexpr std::array<int, {{MEASURED_UNKNOWNS | length}}> MeasuredUnknowns{ {{MEASURED_UNKNOWNS | join(", ")}} };
+{%- endif %}
+
+  {{CLASSNAME}}();
+  {{CLASSNAME}}(const {{CLASSNAME}}& other)            = delete;
+  {{CLASSNAME}}({{CLASSNAME}}&& other)                 = delete;
+  {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
+  {{CLASSNAME}}& operator=({{CLASSNAME}}&& other)      = delete;
+  ~{{CLASSNAME}}()                                     = default;
+
+  void startSimulation();
+  void finishSimulation();
+{%- if START_TIME_STEP_IMPLEMENTATION.strip() or FINISH_TIME_STEP_IMPLEMENTATION.strip() or TRACERS %}
+  void performTimeStep(const peano4::CellConnectivity& cellConnectivity, ::exahype2::RefinementRequests& requests);
+{%- endif %}
+{%- if START_GRID_INITIALISATION_IMPLEMENTATION.strip() or TRACERS %}
+  void initialise(const peano4::CellConnectivity& cellConnectivity, ::exahype2::RefinementRequests& requests);
+{%- endif %}
+{%- if TRACERS %}
+  void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity);
+  void regrid(
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    ::exahype2::RefinementRequests& requests
+  );
+  void plot(
+    const peano4::CellConnectivity& cellConnectivity,
+    ::tarch::plotter::Format        format,
+    const std::string&              outputDirectory
+  );
+  void                                  release();
+  [[nodiscard]] ::tarch::AllocatedBytes getAllocatedBytes() const;
+  void                                  appendTracerStatistics(
+    std::vector<::exahype2::runner::SolverStatistic>& statistics
+  ) const;
+{%- endif %}
+{%- if TRACERS %}
+  void traceTracers(const peano4::CellConnectivity& cellConnectivity, double timeStepSize, bool initialisation);
+{%- endif %}
+{%- if SOLVER_BASE_USER_DECLARATIONS.strip() %}
+
+  {{SOLVER_BASE_USER_DECLARATIONS.strip()}}
+{%- endif %}
+{%- if TRACERS %}
+
+private:
+{%- for tracer in TRACERS %}
+  ::exahype2::particles::ParticleSet<{{tracer.NUMBER_OF_DATA}}> _{{tracer.NAME}}{};
+  ::exahype2::particles::Forces _{{tracer.NAME}}Forces{
+    ::exahype2::particles::InterpolationScheme::{{tracer.FORCES.INTERPOLATION}},
+    ::exahype2::particles::IntegrationScheme::{{tracer.FORCES.INTEGRATION}},
+    {{tracer.FORCES.FORCE_METHOD}},
+    {{tracer.FORCES.GRAVITATIONAL_PARAMETER}},
+    {{tracer.FORCES.GRAVITY_MAGNITUDE}},
+    {{tracer.FORCES.DYNAMIC_VISCOSITY}}
+  };
+  bool _{{tracer.NAME}}Inserted{false};
+  ::exahype2::plotter::ParticlePlotter _{{tracer.NAME}}Plotter{"{{tracer.NAME}}"};
+{%- if tracer.DATABASE %}
+  ::exahype2::particles::TrajectoryDatabase _{{tracer.NAME}}Database{
+    {{tracer.DATABASE.POSITION_DELTA}},
+    {{tracer.DATABASE.TIME_DELTA}},
+    {{tracer.DATABASE.USE_RELATIVE_DELTAS}}
+  };
+{%- endif %}
+{%- if tracer.ERROR %}
+  ::exahype2::ErrorMeasurement _{{tracer.NAME}}ErrorMeasurement{};
+{%- endif %}
+{%- endfor %}
+  double _timeStampOfLastTracing{0.0};
+
+  void insertTracers(const peano4::CellConnectivity& cellConnectivity);
+{%- endif %}
+};

@@ -2,278 +2,801 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SolverTest.h"
 
+#include "exahype2/Limits.h"
+#include "exahype2/RefinementCommand.h"
+#include "exahype2/RefinementRequests.h"
+#include "exahype2/dg/Basis.h"
 #include "exahype2/dg/rk/Solver.h"
-#include "peano4/dataview/CellMarker.h"
-#include "peano4/dataview/FaceMarker.h"
+#include "peano4/CellConnectivity.h"
+#include "peano4/Constants.h"
+#include "peano4/Loop.h"
+#include "peano4/RefinementRequest.h"
+#include "peano4/Regrid.h"
+#include "peano4/Spacetree.h"
+#include "peano4/tests/TestGrids.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/Termination.h"
+#include "tarch/accelerator/CompileTarget.h"
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/ReductionRecord.h"
+#include "tarch/plotter/Format.h"
 
 namespace {
-  constexpr int DgOrder          = 3;
-  constexpr int RkOrder          = 2;
-  constexpr int RkStages         = 2;
-  constexpr int NumberOfUnknowns = 2;
+  TARGET_DECLARE
+  constexpr int    SubdivisionFactor = peano4::SubdivisionFactor;
+  constexpr int    Depth             = peano4::tests::DepthWithCoarseCellsBesideTheCentreBlock;
+  constexpr int    CellsPerAxis      = peano4::power(SubdivisionFactor, Depth);
+  constexpr int    RegularCells      = peano4::power(CellsPerAxis, DIMENSIONS);
+  constexpr double CoarseWidth       = 1.0 / CellsPerAxis;
+  constexpr int    Order             = 1;
+  constexpr int    RungeKuttaOrder   = 2;
+  constexpr int    NodesPerAxis      = Order + 1;
+  constexpr int    NodesInCell       = exahype2::dg::getNodesPerCell(NodesPerAxis);
+  constexpr double TimeStepFactor    = 0.5;
+  constexpr double FixedTimeStepSize = TimeStepFactor / (RungeKuttaOrder * RungeKuttaOrder);
+  constexpr double Tolerance         = 1.0e-12;
+  TARGET_DECLARE_END
 
-  constexpr double CflFactor             = 0.5;
-  constexpr double FixedFactor           = 0.25;
-  constexpr double TerminalTime          = 10.0;
-  constexpr double ReportedTimeStepSize  = 0.1;
-  constexpr double ReportedEigenvalue    = 1.0;
-  constexpr double ScaledEigenvalue      = 4.0;
-  constexpr double CoarseCellSize        = 1.0;
-  constexpr double FineCellSize          = 0.5;
-  constexpr double FirstSolverTimeStamp  = 5.0;
-  constexpr double SecondSolverTimeStamp = 2.0;
+  const double QuadratureNodes[NodesPerAxis]   = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
+  const double QuadratureWeights[NodesPerAxis] = {0.5, 0.5};
 
-  class Adaptive final
-    : public exahype2::dg::rk::
-        Solver<Adaptive, DgOrder, RkOrder, RkStages, NumberOfUnknowns, 0, exahype2::AdaptiveTimeStepping> {
-  public:
-    Adaptive() :
-      Solver(CflFactor) {}
-
-    void startSimulation() override {}
-    void finishSimulation() override {}
-
-  protected:
-    [[nodiscard]] double minTerminalTime() const override { return TerminalTime; }
-  };
-
-  class SecondAdaptive final
-    : public exahype2::dg::rk::
-        Solver<SecondAdaptive, DgOrder, RkOrder, RkStages, NumberOfUnknowns, 0, exahype2::AdaptiveTimeStepping> {
-  public:
-    SecondAdaptive() :
-      Solver(CflFactor) {}
-
-    void startSimulation() override {}
-    void finishSimulation() override {}
-
-  protected:
-    [[nodiscard]] double minTerminalTime() const override { return TerminalTime; }
-  };
-
-  class Fixed final : public exahype2::dg::rk::
-                        Solver<Fixed, DgOrder, RkOrder, RkStages, NumberOfUnknowns, 0, exahype2::FixedTimeStepping> {
-  public:
-    Fixed() :
-      Solver(FixedFactor) {}
-
-    void startSimulation() override {}
-    void finishSimulation() override {}
-  };
-
-  std::string state(const Adaptive& solver) { return Adaptive::toString(solver.getSolverState()); }
-
-  template <typename SolverType>
-  void enterTimeStepping(SolverType& solver) {
-    solver.startGridInitialisationStep();
-    solver.finishGridInitialisationStep();
-    solver.startTimeStep();
-  }
-
-  template <typename SolverType>
-  void addOneCell(SolverType& solver, const double timeStamp, const double cellSize) {
-    solver.update(ReportedTimeStepSize, timeStamp, cellSize);
-    if constexpr (SolverType::UsesAdaptiveTimeStepping) {
-      solver.setMaxEigenvalue(ReportedEigenvalue);
-      solver.setMaxScaledEigenvalue(ScaledEigenvalue);
+  double getBasisValue(const double x, const int node) {
+    double result = 1.0;
+    for (int other = 0; other < NodesPerAxis; other++) {
+      if (other != node) {
+        result *= (x - QuadratureNodes[other]) / (QuadratureNodes[node] - QuadratureNodes[other]);
+      }
     }
+    return result;
   }
 
-  template <typename SolverType>
-  void reportOneCell(SolverType& solver, const double cellSize) {
-    addOneCell(solver, 0.0, cellSize);
-    solver.reduceLocalUpdates();
+  double getBasisDerivative(const int node) {
+    const int other = 1 - node;
+    return 1.0 / (QuadratureNodes[node] - QuadratureNodes[other]);
+  }
+
+  /**
+   * Returns a new device table with the values converted to Precision.
+   */
+  template <typename Precision>
+  Precision* getTableOf(const std::vector<double>& values) {
+    std::vector<Precision> converted(values.size());
+    for (std::size_t entry = 0; entry < values.size(); entry++) {
+      converted[entry] = static_cast<Precision>(values[entry]);
+    }
+    auto* const table = tarch::allocateMemory<Precision>(values.size(), tarch::MemoryLocation::Device);
+    tarch::copyTo(table, converted.data(), converted.size(), tarch::MemoryLocation::Device);
+    return table;
+  }
+
+  template <typename Precision>
+  void dropTable(Precision*& table) {
+    tarch::freeMemory(table, tarch::MemoryLocation::Device);
+    table = nullptr;
+  }
+
+  std::vector<double> getTensorProduct(const std::vector<double>& entries, const int dimensions) {
+    std::vector<double> result{1.0};
+    for (int dimension = 0; dimension < dimensions; dimension++) {
+      std::vector<double> next;
+      for (const double left : result) {
+        for (const double right : entries) {
+          next.push_back(left * right);
+        }
+      }
+      result = next;
+    }
+    return result;
+  }
+
+  /**
+   * The Gauss-Legendre quadrature tables of order one in the layout of the generated tables.
+   */
+  template <typename Precision>
+  class Quadrature final {
+  public:
+    static void initialise() {
+      const std::vector<double> weights(QuadratureWeights, QuadratureWeights + NodesPerAxis);
+      std::vector<double>       inverseWeights;
+      inverseWeights.reserve(weights.size());
+      for (const double weight : weights) {
+        inverseWeights.push_back(1.0 / weight);
+      }
+      std::vector<double> inverseCellWeights;
+      for (const double weight : getTensorProduct(weights, DIMENSIONS)) {
+        inverseCellWeights.push_back(1.0 / weight);
+      }
+      QuadraturePoints1D             = getTableOf<Precision>({QuadratureNodes, QuadratureNodes + NodesPerAxis});
+      QuadratureWeights1D            = getTableOf<Precision>(weights);
+      InverseQuadratureWeights1D     = getTableOf<Precision>(inverseWeights);
+      QuadratureWeightsOnFace        = getTableOf<Precision>(getTensorProduct(weights, DIMENSIONS - 1));
+      QuadratureWeightsInCell        = getTableOf<Precision>(getTensorProduct(weights, DIMENSIONS));
+      InverseQuadratureWeightsInCell = getTableOf<Precision>(inverseCellWeights);
+    }
+
+    static void deallocate() {
+      dropTable(QuadraturePoints1D);
+      dropTable(QuadratureWeights1D);
+      dropTable(InverseQuadratureWeights1D);
+      dropTable(QuadratureWeightsOnFace);
+      dropTable(QuadratureWeightsInCell);
+      dropTable(InverseQuadratureWeightsInCell);
+    }
+
+    inline static Precision* QuadraturePoints1D             = nullptr;
+    inline static Precision* QuadratureWeights1D            = nullptr;
+    inline static Precision* InverseQuadratureWeights1D     = nullptr;
+    inline static Precision* QuadratureWeightsOnFace        = nullptr;
+    inline static Precision* QuadratureWeightsInCell        = nullptr;
+    inline static Precision* InverseQuadratureWeightsInCell = nullptr;
+  };
+
+  /**
+   * The Gauss-Legendre operators of order one in the layout of the generated tables.
+   */
+  template <typename Precision>
+  class DGMatrices final {
+  public:
+    static void initialise() {
+      std::vector<double> derivative(static_cast<std::size_t>(NodesPerAxis) * NodesPerAxis);
+      std::vector<double> left(NodesPerAxis);
+      std::vector<double> right(NodesPerAxis);
+      for (int row = 0; row < NodesPerAxis; row++) {
+        left[static_cast<std::size_t>(row)]  = getBasisValue(0.0, row);
+        right[static_cast<std::size_t>(row)] = getBasisValue(1.0, row);
+        for (int column = 0; column < NodesPerAxis; column++) {
+          derivative[static_cast<std::size_t>(row) * NodesPerAxis + column] = getBasisDerivative(column);
+        }
+      }
+      const auto prolongation = exahype2::dg::transposePerChild<NodesPerAxis>(
+        exahype2::dg::getInterpolationMatrix1D<NodesPerAxis>(QuadratureNodes)
+      );
+      const auto restriction = exahype2::dg::transposePerChild<NodesPerAxis>(
+        exahype2::dg::getWeightedRestrictionMatrix1D<NodesPerAxis>(QuadratureNodes, QuadratureWeights)
+      );
+      DerivativeOperator1D        = getTableOf<Precision>(derivative);
+      BasisFunctionValuesLeft1D   = getTableOf<Precision>(left);
+      BasisFunctionValuesRight1D  = getTableOf<Precision>(right);
+      ProlongationMatrix1D        = getTableOf<Precision>({prolongation.begin(), prolongation.end()});
+      WeightedRestrictionMatrix1D = getTableOf<Precision>({restriction.begin(), restriction.end()});
+    }
+
+    static void deallocate() {
+      dropTable(DerivativeOperator1D);
+      dropTable(BasisFunctionValuesLeft1D);
+      dropTable(BasisFunctionValuesRight1D);
+      dropTable(ProlongationMatrix1D);
+      dropTable(WeightedRestrictionMatrix1D);
+    }
+
+    inline static Precision* DerivativeOperator1D        = nullptr;
+    inline static Precision* BasisFunctionValuesLeft1D   = nullptr;
+    inline static Precision* BasisFunctionValuesRight1D  = nullptr;
+    inline static Precision* ProlongationMatrix1D        = nullptr;
+    inline static Precision* WeightedRestrictionMatrix1D = nullptr;
+  };
+
+  /**
+   * The PDE terms of every test solver without flux and wave speed.
+   */
+  template <typename Solver>
+  struct CommonTerms {
+    static INLINE_METHOD GPU_CALLABLE_METHOD void boundaryConditions(
+      const double* const                                           inside,
+      double* const                                                 outside,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const int                                    normal
+    ) {
+      outside[0] = inside[0];
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand refinementCriterion(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t
+    ) {
+      return exahype2::RefinementCommand::Keep;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const int                                    normal
+    ) {
+      return 0.0;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      [[maybe_unused]] const int                                    normal,
+      double* const                                                 F
+    ) {
+      F[0] = 0.0;
+    }
+  };
+
+  /**
+   * The layout and the linear initial condition of the fixed-rule test solvers. Without flux and
+   * wave speed a step changes nothing.
+   */
+  struct FixedRuleTerms {
+    static constexpr int  DGOrder                    = ::Order;
+    static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
+    static constexpr int  NumberOfUnknowns           = 1;
+    static constexpr int  NumberOfAuxiliaryVariables = 0;
+    static constexpr bool IsLinear                   = false;
+
+    static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
+    static constexpr std::array<int, 1>           MeasuredUnknowns{0};
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD double getProfile(const tarch::la::Vector<DIMENSIONS, double>& x) {
+      double value = 1.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        value += (axis + 2.0) * x(axis);
+      }
+      return value;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
+      double* const                                                 Q,
+      const tarch::la::Vector<DIMENSIONS, double>&                  x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+    ) {
+      Q[0] = getProfile(x);
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void analyticalSolution(
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const double                t,
+      [[maybe_unused]] const double                dt,
+      [[maybe_unused]] const double* const         Q,
+      double* const                                solution
+    ) {
+      solution[0] = getProfile(x);
+    }
+  };
+
+  /**
+   * A solver with the linear initial condition.
+   */
+  struct FixedRuleSolver final : exahype2::dg::rk::Solver<FixedRuleSolver, double, double>,
+                                 CommonTerms<FixedRuleSolver>,
+                                 FixedRuleTerms {
+    template <typename Precision>
+    using Quadrature = ::Quadrature<Precision>;
+    template <typename Precision>
+    using DGMatrices = ::DGMatrices<Precision>;
+
+    FixedRuleSolver() :
+      Solver(TimeStepFactor, "FixedRuleSolver", {{"q", 1}}) {}
+  };
+
+  /**
+   * A solver with the linear initial condition whose plots write every face.
+   */
+  struct FacePlottingFixedRuleSolver final : exahype2::dg::rk::Solver<FacePlottingFixedRuleSolver, double, double>,
+                                             CommonTerms<FacePlottingFixedRuleSolver>,
+                                             FixedRuleTerms {
+    template <typename Precision>
+    using Quadrature = ::Quadrature<Precision>;
+    template <typename Precision>
+    using DGMatrices = ::DGMatrices<Precision>;
+
+    FacePlottingFixedRuleSolver() :
+      Solver(TimeStepFactor, "FixedRuleSolver", {{"q", 1}}) {}
+
+    static bool plotsFace(
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const int                                    normal
+    ) {
+      return true;
+    }
+  };
+
+  /**
+   * A solver with a constant state, an adaptive rule and a unit wave speed.
+   */
+  struct AdaptiveSolver final : exahype2::dg::rk::Solver<AdaptiveSolver, double, double>, CommonTerms<AdaptiveSolver> {
+    static constexpr int  DGOrder                    = ::Order;
+    static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
+    static constexpr int  NumberOfUnknowns           = 1;
+    static constexpr int  NumberOfAuxiliaryVariables = 0;
+    static constexpr bool IsLinear                   = false;
+
+    static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Adaptive;
+
+    template <typename Precision>
+    using Quadrature = ::Quadrature<Precision>;
+    template <typename Precision>
+    using DGMatrices = ::DGMatrices<Precision>;
+
+    AdaptiveSolver() :
+      Solver(TimeStepFactor, "AdaptiveSolver", {{"q", 1}}) {}
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
+      double* const                                                 values,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& width
+    ) {
+      values[0] = 1.0;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
+      [[maybe_unused]] const double* const                          values,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& position,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& width,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      [[maybe_unused]] const int                                    normal
+    ) {
+      return 1.0;
+    }
+  };
+
+  /**
+   * A solver with a constant initial condition and a unit source. A step adds the time step size.
+   */
+  struct SourceSolver final : exahype2::dg::rk::Solver<SourceSolver, double, double>, CommonTerms<SourceSolver> {
+    static constexpr int  DGOrder                    = ::Order;
+    static constexpr int  RungeKuttaOrder            = ::RungeKuttaOrder;
+    static constexpr int  NumberOfUnknowns           = 1;
+    static constexpr int  NumberOfAuxiliaryVariables = 0;
+    static constexpr bool IsLinear                   = false;
+
+    static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
+
+    template <typename Precision>
+    using Quadrature = ::Quadrature<Precision>;
+    template <typename Precision>
+    using DGMatrices = ::DGMatrices<Precision>;
+
+    static constexpr double InitialValue = 1.0;
+
+    SourceSolver() :
+      Solver(TimeStepFactor, "SourceSolver", {{"q", 1}}) {}
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void initialCondition(
+      double* const                                                 Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+    ) {
+      Q[0] = InitialValue;
+    }
+
+    static INLINE_METHOD GPU_CALLABLE_METHOD void sourceTerm(
+      [[maybe_unused]] const double* const                          Q,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] const double                                 t,
+      [[maybe_unused]] const double                                 dt,
+      double* const                                                 S
+    ) {
+      S[0] = 1.0;
+    }
+  };
+
+  const peano4::CellConnectivity& buildGrid() {
+    peano4::tests::buildRegularGrid(Depth);
+    return peano4::Spacetree::getInstance().getCellConnectivity();
+  }
+
+  /**
+   * Reduces the values of solver over all ranks in the one allreduce that ends a step of a run.
+   */
+  template <typename Solver>
+  void finishStep(Solver& solver) {
+    tarch::mpi::ReductionRecord record;
+    solver.addLocalValuesToGlobalReduction(record);
+    record.allreduce(tarch::mpi::Rank::getInstance().getCommunicator());
+    solver.readValuesFromGlobalReduction(record);
+  }
+
+  template <typename Solver>
+  void regridWithLiveData(
+    Solver&                                       solver,
+    const std::vector<peano4::RefinementRequest>& refinementRequests,
+    exahype2::RefinementRequests&                 requests
+  ) {
+    auto&          spacetree = peano4::Spacetree::getInstance();
+    peano4::Regrid regrid;
+    if (not spacetree.regrid(refinementRequests, regrid)) {
+      tarch::terminateWithError("The regrid of the test grid must change the grid.");
+    }
+    const auto& cellConnectivity = spacetree.getCellConnectivity();
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.regrid(cellConnectivity, regrid, requests);
+    spacetree.finishRegrid();
+    finishStep(solver);
+  }
+
+  int getNumberOfCellsOfLevel(const peano4::CellConnectivity& cellConnectivity, const int level) {
+    return cellConnectivity.getCells(peano4::Adjacency::Local, level).size
+      + cellConnectivity.getCells(peano4::Adjacency::Remote, level).size;
+  }
+
+  exahype2::Limits getLimitsOfTheDomain() {
+    exahype2::Limits limits;
+    limits.terminalTime           = 1.0;
+    limits.minAdmissiblePatchSize = 0.0;
+    limits.maxAdmissiblePatchSize = 1.0;
+    limits.maxAdmissibleMeshWidth = CoarseWidth;
+    return limits;
+  }
+
+  std::vector<std::string> readLinesOf(const std::string& fileName) {
+    std::vector<std::string> lines;
+    std::ifstream            file(fileName);
+    std::string              line;
+    while (std::getline(file, line)) {
+      lines.push_back(line);
+    }
+    return lines;
+  }
+
+  TARGET_DECLARE
+  /**
+   * Increments the accumulator for every node of one cell whose value differs from the expected
+   * value there.
+   */
+  template <typename Pool, typename Expected>
+  struct CountMismatchesAgainstExpected final {
+    peano4::CellConnectivity cellConnectivity{};
+    typename Pool::ConstView solution{};
+    const double*            quadraturePoints{nullptr};
+    Expected                 expected{};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int entry, int& accumulator) const {
+      const int                             cell = cellConnectivity.getCells()[entry];
+      tarch::la::Vector<DIMENSIONS, double> centre;
+      tarch::la::Vector<DIMENSIONS, double> width;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        centre(axis) = cellConnectivity.getCellCentre(cell, axis);
+        width(axis)  = cellConnectivity.getCellWidth(cell, axis);
+      }
+      const double* const values = solution.getChunk(cell);
+      peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
+        const auto position = exahype2::dg::getQuadraturePoint(centre, width, node, quadraturePoints);
+        if (std::abs(values[peano4::dLinearised(node, NodesPerAxis)] - expected(position)) > Tolerance) {
+          accumulator++;
+        }
+      });
+    }
+  };
+  TARGET_DECLARE_END
+
+  template <typename Solver, typename Expected>
+  int getNumberOfMismatches(const Solver& solver, const peano4::CellConnectivity& cellConnectivity, Expected expected) {
+    int result = 0;
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
+      CountMismatchesAgainstExpected<typename Solver::CellPool, Expected>{
+        cellConnectivity.onDevice(),
+        solver.getSolution().getView(),
+        Quadrature<double>::QuadraturePoints1D,
+        expected
+      },
+      tarch::accelerator::Sum<int>{result}
+    );
+    return result;
+  }
+
+  struct LinearProfile final {
+    GPU_CALLABLE_METHOD double operator()(const tarch::la::Vector<DIMENSIONS, double>& x) const {
+      return FixedRuleSolver::getProfile(x);
+    }
+  };
+
+  struct ConstantProfile final {
+    double value{0.0};
+
+    GPU_CALLABLE_METHOD double operator()([[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x) const {
+      return value;
+    }
+  };
+
+  int getNumberOfMismatchesAgainstTheProfile(
+    const FixedRuleSolver&          solver,
+    const peano4::CellConnectivity& cellConnectivity
+  ) {
+    return getNumberOfMismatches(solver, cellConnectivity, LinearProfile{});
   }
 } // namespace
 
 exahype2::dg::rk::tests::SolverTest::SolverTest() :
   tarch::tests::TestCase("exahype2::dg::rk::tests::SolverTest") {}
 
-void exahype2::dg::rk::tests::SolverTest::run() {
-  testMethod(testStagesAlternateAfterInitialisation);
-  testMethod(testMeshRefinementSweepPrecedesTheStage);
-  testMethod(testPlotAfterInitialisationReturnsToTheFirstTimeStep);
-  testMethod(testSuspendedSweepSchedulesTheFirstStage);
-  testMethod(testAdaptiveTimeStepFollowsTheDampedEigenvalue);
-  testMethod(testFixedTimeStepFollowsTheSmallestCell);
-  testMethod(testSolversOfEqualParametersKeepSeparateStatistics);
-  testMethod(testSweepPredicatesFollowTheMarkerAndTheSweep);
+void
+exahype2::dg::rk::tests::SolverTest::run() {
+  testMethod(testInitialisationWritesTheInitialConditionIntoEveryNode);
+  testMethod(testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp);
+  testMethod(testRecordLastTimeStampAppendsOneRowToTheErrorFile);
+  testMethod(testASourceTermAdvancesEveryNodeByTheTimeStep);
+  testMethod(testARefinementAndTheEraseBackKeepTheSolution);
+  testMethod(testRefinementReducesTheNextAdaptiveTimeStep);
+  testMethod(testAPlotAllocatesHostCopiesOnlyWithAGPUBackend);
+  testMethod(testReleaseFreesEveryPool);
 }
 
-/** The grid initialisation takes the place of stage zero, so stage one follows it. */
-void exahype2::dg::rk::tests::SolverTest::testStagesAlternateAfterInitialisation() {
-  Adaptive solver;
-  validateEquals(state(solver), std::string("grid-construction"));
-  enterTimeStepping(solver);
-  validateEquals(state(solver), std::string("time-step-after-grid-initialisation"));
-  validateEquals(solver.getRkStage(), -1);
-  reportOneCell(solver, CoarseCellSize);
-  solver.finishTimeStep();
-
-  solver.startTimeStep();
-  validateEquals(solver.isRungeKuttaStage(1), true);
-  validateEquals(solver.isLastGridSweepOfTimeStep(), true);
-  validateEquals(solver.isFirstGridSweepOfTimeStep(), false);
-  reportOneCell(solver, CoarseCellSize);
-  solver.finishTimeStep();
-
-  solver.startTimeStep();
-  validateEquals(solver.getRkStage(), 0);
-  validateEquals(solver.isFirstGridSweepOfTimeStep(), true);
-  validateEquals(solver.getNumberOfDoFs(), peano4::power(DgOrder + 1, DIMENSIONS) * NumberOfUnknowns);
-  validateEquals(state(solver), std::string("runge-kutta-step"));
+/**
+ * The first time step after a refinement uses the stability bound of the finer grid.
+ */
+void
+exahype2::dg::rk::tests::SolverTest::testRefinementReducesTheNextAdaptiveTimeStep() {
+  const auto&    cellConnectivity = buildGrid();
+  AdaptiveSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
+  solver.performTimeStep(cellConnectivity, requests);
+  finishStep(solver);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
+  finishStep(solver);
+  const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
+  peano4::Spacetree::getInstance().markPersistentDataLive();
+  regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
+  finishStep(solver);
+  validateNumericalEquals(solver.getTimeStepping().getTimeStepSizeOfLastStep(), coarseTimeStepSize / SubdivisionFactor);
+  solver.release();
 }
 
-/** A dynamic mesh refinement inserts its sweep before the next Runge-Kutta stage. */
-void exahype2::dg::rk::tests::SolverTest::testMeshRefinementSweepPrecedesTheStage() {
-  Adaptive solver;
-  enterTimeStepping(solver);
-  reportOneCell(solver, CoarseCellSize);
-  solver.finishTimeStep();
-  solver.startTimeStep();
-  reportOneCell(solver, CoarseCellSize);
-  solver.finishTimeStep();
-  validateEquals(solver.usesDynamicMeshRefinementSweeps(), false);
+void
+exahype2::dg::rk::tests::SolverTest::testInitialisationWritesTheInitialConditionIntoEveryNode() {
+  const auto& cellConnectivity = buildGrid();
 
-  solver.startDynamicMeshRefinementStep();
-  solver.finishDynamicMeshRefinementStep();
-  solver.startTimeStep();
-  validateEquals(state(solver), std::string("dynamic-mesh-refinement"));
-  validateEquals(solver.usesDynamicMeshRefinementSweeps(), true);
-  validateEquals(solver.getRkStage(), -1);
-  validateEquals(solver.getRkStageAfterDynamicMeshRefinement(), 0);
+  FixedRuleSolver solver;
+  auto            constructionLimits        = getLimitsOfTheDomain();
+  constructionLimits.maxAdmissiblePatchSize = CoarseWidth / SubdivisionFactor;
+  solver.setLimits(constructionLimits);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.requestRefinementForGridConstruction(cellConnectivity, requests);
+  validateEquals(static_cast<int>(requests.getRefinementRequests(cellConnectivity).size()), RegularCells);
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(cellConnectivity);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  requests.merge(exahype2::RefinementCommand::Erase, cellConnectivity.getCells());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
 
-  solver.startTimeStep();
-  validateEquals(solver.getRkStage(), 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
+  validateEquals(solver.getNumberOfDoFs(), NodesInCell);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
+  validateNumericalEquals(solver.getTimeStepping().getMinMeshWidth(), CoarseWidth);
+  validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth);
+  validate(solver.getEstimates().getCapacity() >= cellConnectivity.getNumberOfSlots());
+  validate(solver.getAllocatedBytes().getTotal() > 0);
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
+  solver.release();
 }
 
-/** A plot after the grid initialisation returns the solver to the first time step. */
-void exahype2::dg::rk::tests::SolverTest::testPlotAfterInitialisationReturnsToTheFirstTimeStep() {
-  Adaptive solver;
-  solver.startGridInitialisationStep();
-  validateEquals(solver.mayPlot(), true);
-  solver.startPlottingStep();
-  validateEquals(state(solver), std::string("plotting-after-grid-initialisation"));
-  validateEquals(solver.mayPlot(), true);
-  solver.finishPlottingStep();
-  solver.startTimeStep();
-  validateEquals(state(solver), std::string("time-step-after-grid-initialisation"));
+/**
+ * A time step without flux keeps the solution and the time stamp advances by the fixed step size
+ * after a first step of size zero.
+ */
+void
+exahype2::dg::rk::tests::SolverTest::testATimeStepWithoutFluxKeepsTheSolutionAndAdvancesTheTimeStamp() {
+  const auto& cellConnectivity = buildGrid();
+
+  FixedRuleSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
+  validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), 0.0);
+
+  for (int step = 0; step < 3; step++) {
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.performTimeStep(cellConnectivity, requests);
+    finishStep(solver);
+    const double expectedStepSize = step == 0 ? 0.0 : FixedTimeStepSize;
+    validateEqualsWithParams1(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0, step);
+    validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStamp(), step * FixedTimeStepSize, step);
+    validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSizeOfLastStep(), expectedStepSize, step);
+    validateNumericalEqualsWithParams1(solver.getTimeStepping().getTimeStepSize(), FixedTimeStepSize, step);
+  }
+  validate(requests.getRefinementRequests(cellConnectivity).empty());
+  solver.release();
 }
 
-/** A sweep the solver sits out is followed by the first stage of a time step. */
-void exahype2::dg::rk::tests::SolverTest::testSuspendedSweepSchedulesTheFirstStage() {
-  Adaptive solver;
-  enterTimeStepping(solver);
-  solver.suspendSolversForOneGridSweep();
-  validateEquals(state(solver), std::string("suspended"));
-  validateEquals(solver.getRkStage(), -1);
+/**
+ * The error file contains the initial row until recordLastTimeStamp() appends the row of the last time stamp once.
+ */
+void
+exahype2::dg::rk::tests::SolverTest::testRecordLastTimeStampAppendsOneRowToTheErrorFile() {
+  constexpr double  TimeBetweenTwoRecords = 100.0;
+  const auto&       cellConnectivity      = buildGrid();
+  const std::string fileName              = (tarch::tests::getWritableTestDirectory() / "RKDGSolverTestError").string();
 
-  solver.startTimeStep();
-  validateEquals(state(solver), std::string("runge-kutta-step"));
-  validateEquals(solver.getRkStage(), 0);
-  validateEquals(solver.isFirstGridSweepOfTimeStep(), true);
-}
-
-/** The admissible time step size follows the maximum eigenvalue damped by the Runge-Kutta and Galerkin orders. */
-void exahype2::dg::rk::tests::SolverTest::testAdaptiveTimeStepFollowsTheDampedEigenvalue() {
-  Adaptive solver;
-  enterTimeStepping(solver);
-  reportOneCell(solver, CoarseCellSize);
-  solver.finishTimeStep();
-  solver.startTimeStep();
-  reportOneCell(solver, CoarseCellSize);
-  solver.finishTimeStep();
-  validateNumericalEquals(solver.getMaxEigenvalue(), ReportedEigenvalue);
-
-  solver.startTimeStep();
-  validateNumericalEquals(solver.getPreviousStageTimeStepSize(), ReportedTimeStepSize);
-  const double expected =
-    CflFactor * (1.0 / ScaledEigenvalue) * (1.0 / (2.0 * RkOrder - 1.0)) * (1.0 / (DgOrder * DgOrder));
-  validateNumericalEquals(solver.getTimeStepSize(), expected);
-}
-
-/** The time step size of a solver without a CFL condition follows the width of its smallest cell. */
-void exahype2::dg::rk::tests::SolverTest::testFixedTimeStepFollowsTheSmallestCell() {
-  Fixed solver;
-  enterTimeStepping(solver);
-  reportOneCell(solver, CoarseCellSize);
-  reportOneCell(solver, FineCellSize);
-  solver.finishTimeStep();
-
-  // The two cell sizes make the mesh adaptive, so a mesh-refinement sweep runs before the stage
-  // that closes the time step.
-  solver.startTimeStep();
-  validateEquals(solver.usesDynamicMeshRefinementSweeps(), true);
-  solver.finishTimeStep();
-
-  solver.startTimeStep();
-  validateEquals(solver.isLastGridSweepOfTimeStep(), true);
-  reportOneCell(solver, CoarseCellSize);
-  solver.finishTimeStep();
-
-  const double expected = FixedFactor * FineCellSize / RkOrder / RkOrder;
-  validateNumericalEquals(solver.getTimeStepSize(), expected);
-  validateNumericalEquals(solver.getMinCellSize(), FineCellSize);
-}
-
-/** Two solvers that reach the same class template collect their cells in records of their own. */
-void exahype2::dg::rk::tests::SolverTest::testSolversOfEqualParametersKeepSeparateStatistics() {
-  Adaptive       first;
-  SecondAdaptive second;
-  enterTimeStepping(first);
-  enterTimeStepping(second);
-
-  for (int sweep = 0; sweep < 2; sweep++) {
-    addOneCell(first, FirstSolverTimeStamp, CoarseCellSize);
-    addOneCell(second, SecondSolverTimeStamp, FineCellSize);
-    first.reduceLocalUpdates();
-    second.reduceLocalUpdates();
-    first.finishTimeStep();
-    second.finishTimeStep();
-    first.startTimeStep();
-    second.startTimeStep();
+  FixedRuleSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.openErrorMeasurement(fileName, TimeBetweenTwoRecords);
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
+  for (int step = 0; step < 3; step++) {
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.performTimeStep(cellConnectivity, requests);
+    finishStep(solver);
+  }
+  // Only the global master writes the error file.
+  const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster();
+  if (isGlobalMaster) {
+    validateEquals(static_cast<int>(readLinesOf(fileName + ".csv").size()), 2);
   }
 
-  validateNumericalEquals(first.getMinTimeStamp(), FirstSolverTimeStamp);
-  validateNumericalEquals(first.getMinCellSize(), CoarseCellSize);
-  validateNumericalEquals(second.getMinTimeStamp(), SecondSolverTimeStamp);
-  validateNumericalEquals(second.getMinCellSize(), FineCellSize);
+  solver.recordLastTimeStamp(cellConnectivity);
+  solver.recordLastTimeStamp(cellConnectivity);
+  if (isGlobalMaster) {
+    const auto lines = readLinesOf(fileName + ".csv");
+    validateEquals(static_cast<int>(lines.size()), 3);
+    validateNumericalEquals(lines.empty() ? -1.0 : std::stod(lines.back()), solver.getTimeStepping().getTimeStamp());
+    std::filesystem::remove(fileName + ".csv");
+  }
+  solver.release();
 }
 
-/** Which cells and faces hold their nodes in each sweep, and that a refined one holds none. */
-void exahype2::dg::rk::tests::SolverTest::testSweepPredicatesFollowTheMarkerAndTheSweep() {
-  peano4::dataview::CellMarker cell;
-  peano4::dataview::FaceMarker face;
-  face.select(0);
+void
+exahype2::dg::rk::tests::SolverTest::testASourceTermAdvancesEveryNodeByTheTimeStep() {
+  const auto& cellConnectivity = buildGrid();
 
-  Adaptive solver;
-  validateEquals(solver.storesCellData(cell), false);
-  validateEquals(solver.storesFaceData(face), false);
-  validateEquals(solver.loadsCellData(cell), false);
-  validateEquals(solver.loadsFaceData(face), false);
+  SourceSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
 
-  solver.startGridInitialisationStep();
-  validateEquals(solver.storesCellData(cell), true);
-  validateEquals(solver.providesCellDataToKernels(cell), true);
-  validateEquals(solver.storesFaceData(face), true);
-  validateEquals(solver.loadsCellData(cell), false);
-  validateEquals(solver.loadsFaceData(face), false);
-  solver.finishGridInitialisationStep();
+  for (int step = 0; step < 3; step++) {
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    solver.performTimeStep(cellConnectivity, requests);
+    finishStep(solver);
+    const double expectedValue = SourceSolver::InitialValue + solver.getTimeStepping().getTimeStamp();
+    validateEqualsWithParams1(getNumberOfMismatches(solver, cellConnectivity, ConstantProfile{expectedValue}), 0, step);
+  }
+  validateNumericalEquals(solver.getTimeStepping().getTimeStamp(), 2 * FixedTimeStepSize);
+  solver.release();
+}
 
-  solver.startTimeStep();
-  validateEquals(solver.loadsCellData(cell), true);
-  validateEquals(solver.loadsFaceData(face), true);
+/**
+ * The prolongation reproduces the linear profile on every child and the restriction of the
+ * children returns it on the coarse cell within rounding.
+ */
+void
+exahype2::dg::rk::tests::SolverTest::testARefinementAndTheEraseBackKeepTheSolution() {
+  const auto& cellConnectivity = buildGrid();
 
-  cell.flags = peano4::dataview::CellMarker::WillBeRefined;
-  validateEquals(solver.storesCellData(cell), false);
-  validateEquals(solver.providesCellDataToKernels(cell), false);
+  FixedRuleSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
+  solver.performTimeStep(cellConnectivity, requests);
+  finishStep(solver);
+  const double coarseTimeStepSize = solver.getTimeStepping().getTimeStepSize();
+  peano4::Spacetree::getInstance().markPersistentDataLive();
 
-  cell.flags = peano4::dataview::CellMarker::HasBeenRefined;
-  validateEquals(solver.loadsCellData(cell), false);
+  regridWithLiveData(solver, {peano4::tests::getRefinementOfCentreCell(Depth)}, requests);
+  validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize / SubdivisionFactor);
+  validate(peano4::tests::getGlobalSumOf(getNumberOfCellsOfLevel(cellConnectivity, Depth + 1)) > 0);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
+  validate(solver.getEstimates().getCapacity() >= cellConnectivity.getNumberOfSlots());
+  validateNumericalEquals(solver.getTimeStepping().getMinMeshWidth(), CoarseWidth / SubdivisionFactor);
+  validateNumericalEquals(solver.getTimeStepping().getMaxMeshWidth(), CoarseWidth);
 
-  face.willBeRefinedMask = 1;
-  validateEquals(solver.storesFaceData(face), false);
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.performTimeStep(cellConnectivity, requests);
+  finishStep(solver);
+  validateNumericalEquals(solver.getTimeStepping().getTimeStepSizeOfLastStep(), coarseTimeStepSize / SubdivisionFactor);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
 
-  face.hasBeenRefinedMask = 1;
-  validateEquals(solver.loadsFaceData(face), false);
+  regridWithLiveData(solver, peano4::tests::getErasureOfEveryCell(Depth), requests);
+  validateNumericalEquals(solver.getTimeStepping().getTimeStepSize(), coarseTimeStepSize);
+  validateEquals(cellConnectivity.getMaximumLevel(), Depth);
+  validateEquals(getNumberOfMismatchesAgainstTheProfile(solver, cellConnectivity), 0);
+  validateEquals(peano4::tests::getGlobalSumOf(cellConnectivity.getCells().size), RegularCells);
+  solver.release();
+}
+
+/**
+ * A plot writes the node file and the face file of every rank with the boundary state in the outer
+ * half of every boundary face and allocates host copies only in a build with a GPU backend.
+ */
+void
+exahype2::dg::rk::tests::SolverTest::testAPlotAllocatesHostCopiesOnlyWithAGPUBackend() {
+  const auto& cellConnectivity = buildGrid();
+  const auto& rank             = tarch::mpi::Rank::getInstance();
+
+  FacePlottingFixedRuleSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  solver.allocate(cellConnectivity);
+  exahype2::RefinementRequests requests;
+  requests.clear(cellConnectivity.getNumberOfSlots());
+  solver.initialise(cellConnectivity, requests);
+  finishStep(solver);
+
+  const std::string outputDirectory =
+    (tarch::tests::getWritableTestDirectory() / "DiscontinuousGalerkinSolverPlotTest").string() + "/";
+  std::filesystem::create_directories(outputDirectory + "patch/");
+  std::filesystem::create_directories(outputDirectory + "face/");
+  const tarch::AllocatedBytes bytesBeforePlot = solver.getAllocatedBytes();
+  solver.plot(cellConnectivity, tarch::plotter::Format::VTU, outputDirectory);
+  const tarch::AllocatedBytes bytesAfterPlot = solver.getAllocatedBytes();
+
+  const auto&                            solution   = solver.getSolution();
+  const auto&                            faceStates = solver.getFaceStates();
+  FacePlottingFixedRuleSolver::CellPool  solutionCopy(solution.getChunkSize(), tarch::MemoryLocation::Heap);
+  FacePlottingFixedRuleSolver::StatePool faceStatesCopy(faceStates.getChunkSize(), tarch::MemoryLocation::Heap);
+  static_cast<void>(solution.download(solutionCopy));
+  const auto& faceStatesOnHost = faceStates.download(faceStatesCopy);
+  validateEquals(
+    bytesAfterPlot.host,
+    bytesBeforePlot.host + solutionCopy.getAllocatedBytes().host + faceStatesCopy.getAllocatedBytes().host
+  );
+  validateEquals(bytesAfterPlot.device, bytesBeforePlot.device);
+  const std::string           vtuSuffix = "-0_000000-rank-" + std::to_string(rank.getRank()) + ".vtu";
+  const std::filesystem::path nodeVtuPath =
+    std::filesystem::path(outputDirectory) / "patch" / ("FixedRuleSolver" + vtuSuffix);
+  const std::filesystem::path faceVtuPath =
+    std::filesystem::path(outputDirectory) / "face" / ("FixedRuleSolver-face" + vtuSuffix);
+  validateWithParams1(std::filesystem::exists(nodeVtuPath), nodeVtuPath.string());
+  validateWithParams1(std::filesystem::exists(faceVtuPath), faceVtuPath.string());
+
+  constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
+  for (const int face : cellConnectivity.getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary)) {
+    const double* const halves = faceStatesOnHost.getChunk(face);
+    for (int node = 0; node < NodesPerFace; node++) {
+      validateEqualsWithParams2(halves[node], halves[NodesPerFace + node], face, node);
+    }
+  }
+  solver.release();
+
+  tarch::mpi::barrier(rank.getCommunicator());
+  if (rank.isGlobalMaster()) {
+    std::filesystem::remove_all(outputDirectory);
+  }
+}
+
+void
+exahype2::dg::rk::tests::SolverTest::testReleaseFreesEveryPool() {
+  const auto& cellConnectivity = buildGrid();
+
+  FixedRuleSolver solver;
+  solver.setLimits(getLimitsOfTheDomain());
+  validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
+  solver.allocate(cellConnectivity);
+  validate(solver.getAllocatedBytes().getTotal() > 0);
+  solver.release();
+  validateEquals(solver.getAllocatedBytes().getTotal(), std::size_t{0});
+  validateEquals(solver.getEstimates().getCapacity(), 0);
 }

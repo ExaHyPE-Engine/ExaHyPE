@@ -4,7 +4,6 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/instrumentation/Warning.h"
-#include "tarch/tasking/Runtime.h"
 #include "tarch/tasking/Task.h"
 
 namespace {
@@ -16,7 +15,6 @@ namespace {
   std::atomic<bool> loggedConservativeDependencyWaitFallback{false};
 #endif
 
-  // Longer dependency lists use vector storage, so this buffer does not limit graph width.
   constexpr int StaticDependencyBufferSize = 16;
 
   bool containsRaw(char* const* const values, const int numberOfValues, const char* const candidate) {
@@ -37,7 +35,7 @@ namespace {
       }
     }
 
-    bool contains(const char* const candidate) const { return containsRaw(data(), size(), candidate); }
+    bool contains(const char* const candidate) const { return containsRaw(getData(), getSize(), candidate); }
 
     void pushBack(char* const token) {
       if (_useDynamicStorage) {
@@ -48,9 +46,9 @@ namespace {
       }
     }
 
-    char* const* data() const { return _useDynamicStorage ? _dynamicStorage.data() : _staticStorage.data(); }
+    char* const* getData() const { return _useDynamicStorage ? _dynamicStorage.data() : _staticStorage.data(); }
 
-    int size() const { return _useDynamicStorage ? static_cast<int>(_dynamicStorage.size()) : _size; }
+    int getSize() const { return _useDynamicStorage ? static_cast<int>(_dynamicStorage.size()) : _size; }
 
   private:
     const bool                                    _useDynamicStorage;
@@ -66,12 +64,11 @@ namespace {
 } // namespace
 
 /**
- * Submits a task and transfers ownership to the tasking backend.
- *
- * Null and duplicate tokens are ignored. A token listed as both input and
- * output remains an output dependency because the task produces its value.
+ * Submits a task and transfers ownership to the tasking backend. The function ignores null and
+ * duplicate tokens. A token listed as input and output counts as an output dependency.
  */
-void tarch::tasking::spawnTask(
+void
+tarch::tasking::spawnTask(
   tarch::tasking::Task* const     task,
   const std::span<void* const>    inDependencies,
   const std::span<void* const>    outDependencies,
@@ -116,14 +113,13 @@ void tarch::tasking::spawnTask(
   }
 
 #if defined(PEANO_OPENMP_DEPEND_ITERATOR_SUPPORTED)
-  const int                           numberOfInputDependencies  = filteredInDependencies.size();
-  const int                           numberOfOutputDependencies = filteredOutDependencies.size();
-  [[maybe_unused]] char* const* const inTokenData                = filteredInDependencies.data();
-  [[maybe_unused]] char* const* const outTokenData               = filteredOutDependencies.data();
+  const int                           numberOfInputDependencies  = filteredInDependencies.getSize();
+  const int                           numberOfOutputDependencies = filteredOutDependencies.getSize();
+  [[maybe_unused]] char* const* const inTokenData                = filteredInDependencies.getData();
+  [[maybe_unused]] char* const* const outTokenData               = filteredOutDependencies.getData();
 
-  // Each task clause names the task pointer in firstprivate. A compiler
-  // following OpenMP 4.5 defaults a const variable to the enclosing frame's
-  // copy, which the deferred task would read after this call has returned.
+  // Each task clause lists the task pointer in firstprivate. A compiler that follows OpenMP 4.5
+  // would otherwise let the deferred task read the variable of this frame after the call returns.
   if (numberOfInputDependencies == 0 and numberOfOutputDependencies == 0) {
 #pragma omp task firstprivate(task)
     runAndDelete(task);
@@ -222,22 +218,20 @@ void tarch::tasking::spawnTask(
     runAndDelete(task);
   }
 #else
-  if (filteredInDependencies.size() == 0 and filteredOutDependencies.size() == 0) {
+  if (filteredInDependencies.getSize() == 0 and filteredOutDependencies.getSize() == 0) {
 #pragma omp task firstprivate(task)
     runAndDelete(task);
   } else {
     if (not loggedConservativeSpawnTaskFallback.exchange(true, std::memory_order_relaxed)) {
-      logWarning(
-        "OpenMP iterator dependencies are unavailable on this toolchain. A task with dependencies waits for each of them and then runs inline, so tasks cannot overlap. Expect degraded performance."
-      );
+      logWarning("The compiler does not support OpenMP iterator dependencies. The tasks with dependencies run slower.");
     }
 
-    for (int dependencyIndex = 0; dependencyIndex < filteredInDependencies.size(); dependencyIndex++) {
-      tarch::tasking::waitForDependency(filteredInDependencies.data()[dependencyIndex]);
+    for (int dependencyIndex = 0; dependencyIndex < filteredInDependencies.getSize(); dependencyIndex++) {
+      tarch::tasking::waitForDependency(filteredInDependencies.getData()[dependencyIndex]);
     }
 
-    for (int dependencyIndex = 0; dependencyIndex < filteredOutDependencies.size(); dependencyIndex++) {
-      tarch::tasking::waitForDependency(filteredOutDependencies.data()[dependencyIndex]);
+    for (int dependencyIndex = 0; dependencyIndex < filteredOutDependencies.getSize(); dependencyIndex++) {
+      tarch::tasking::waitForDependency(filteredOutDependencies.getData()[dependencyIndex]);
     }
 
     runAndDelete(task);
@@ -248,19 +242,19 @@ void tarch::tasking::spawnTask(
 /**
  * Waits until the task that produces the dependency token has completed.
  */
-void tarch::tasking::waitForDependency(void* const dependency) {
+void
+tarch::tasking::waitForDependency(void* const dependency) {
   assertion(dependency);
   tarch::tasking::waitForDependencies({&dependency, 1});
 }
 
 /**
- * Waits until every task producing one of the listed tokens has completed.
- * The wait is a task scheduling point, so the calling thread may execute any
- * spawned task meanwhile, listed or not. Without compiler support for
- * dependent task waits this degenerates to a wait for all tasks, which is
- * correct but forfeits any overlap.
+ * Waits until every task producing one of the listed tokens has completed. The wait is a task
+ * scheduling point and the calling thread may execute any spawned task meanwhile. Without compiler
+ * support for dependent task waits, the function waits for every child task of the caller.
  */
-void tarch::tasking::waitForDependencies(const std::span<void* const> dependencies) {
+void
+tarch::tasking::waitForDependencies(const std::span<void* const> dependencies) {
 #if defined(PEANO_OPENMP_TASKWAIT_DEPEND_SUPPORTED)
   DependencyList filteredDependencies(dependencies.size());
   for (void* const dependency : dependencies) {
@@ -273,14 +267,11 @@ void tarch::tasking::waitForDependencies(const std::span<void* const> dependenci
     }
   }
 
-  [[maybe_unused]] const int          numberOfDependencies = filteredDependencies.size();
-  [[maybe_unused]] char* const* const tokenData            = filteredDependencies.data();
+  [[maybe_unused]] const int          numberOfDependencies = filteredDependencies.getSize();
+  [[maybe_unused]] char* const* const tokenData            = filteredDependencies.getData();
   if (numberOfDependencies == 0) {
     return;
   }
-  // One wait covers the whole list. A wait per token registers the caller
-  // against that address again and again, and a sweep hands the runtime the
-  // same addresses every time it runs.
 #pragma omp taskwait depend(iterator(dependencyIndex = 0 : numberOfDependencies), in : tokenData[dependencyIndex][0])
 #else
   if (dependencies.empty()) {
@@ -288,9 +279,7 @@ void tarch::tasking::waitForDependencies(const std::span<void* const> dependenci
   }
 
   if (not loggedConservativeDependencyWaitFallback.exchange(true, std::memory_order_relaxed)) {
-    logWarning(
-      "OpenMP dependent task waits are unavailable on this toolchain. A dependency wait waits for every spawned task, so tasks cannot overlap. Expect degraded performance."
-    );
+    logWarning("The compiler does not support OpenMP task waits with dependencies. The task waits run slower.");
   }
 
 #pragma omp taskwait

@@ -6,10 +6,8 @@
  * The conformal metric must be positive definite.
  */
 template <class Shortcuts>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::sourceTerm(
-  const double* const NOALIAS Q,
-  double* const NOALIAS       S
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exagrype::sourceTerm(const double* const NOALIAS Q, double* const NOALIAS S) {
   assertion(Q != nullptr and S != nullptr);
   const double alpha = std::fmax(1e-4, Q[Shortcuts::alpha]);
 
@@ -302,7 +300,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::sourceT
     }
   }
 
-  // K1 enters as K1/alpha, so the damping stays finite where the lapse collapses.
+  // K1 enters as K1/alpha. The damping then stays finite where the lapse collapses.
   double dtTraceK = -nablanablaalphaSrc + alpha * (rPlusTwoNablaZSrc + traceK * traceK - 2.0 * CCZ4C * theta * traceK)
     - 3.0 * alpha * CCZ4K1 * (1. + CCZ4K2) * theta / alpha;
 

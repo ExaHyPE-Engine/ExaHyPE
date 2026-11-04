@@ -1,8 +1,10 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+TARGET_DECLARE
 template <int Rows, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Rows, Scalar> tarch::la::identity() {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Rows, Scalar>
+tarch::la::identity() {
   tarch::la::Matrix<Rows, Rows, Scalar> result(0.0);
 
   for (int i = 0; i < Rows; i++) {
@@ -13,26 +15,30 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Rows, Scalar> tarch::l
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::frobeniusNorm(const Matrix<Rows, Cols, Scalar>& matrix) {
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::frobeniusNorm(const Matrix<Rows, Cols, Scalar>& matrix) {
   Scalar result(0);
 
-  for (int row = 0; row < Rows; row++)
+  for (int row = 0; row < Rows; row++) {
     for (int col = 0; col < Cols; col++) {
       result += matrix(row, col) * matrix(row, col);
     }
+  }
 
   return std::sqrt(result);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::frobeniusNorm(const Matrix<2, 2, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::frobeniusNorm(const Matrix<2, 2, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return std::sqrt(values[0] * values[0] + values[1] * values[1] + values[2] * values[2] + values[3] * values[3]);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::frobeniusNorm(const Matrix<3, 3, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::frobeniusNorm(const Matrix<3, 3, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   Scalar        result = 0;
   for (int i = 0; i < 9; i++) {
     result += values[i] * values[i];
@@ -41,8 +47,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::frobeniusNorm(const Matrix<3
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::frobeniusNorm(const Matrix<4, 4, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::frobeniusNorm(const Matrix<4, 4, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   Scalar        result = 0;
   for (int i = 0; i < 16; i++) {
     result += values[i] * values[i];
@@ -50,21 +57,27 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::frobeniusNorm(const Matrix<4
   return std::sqrt(result);
 }
 
+/**
+ * Returns the largest absolute entry of the matrix.
+ */
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::elementMax(const Matrix<Rows, Cols, Scalar>& matrix) {
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::elementMax(const Matrix<Rows, Cols, Scalar>& matrix) {
   Scalar result(0);
 
-  for (int row = 0; row < Rows; row++)
+  for (int row = 0; row < Rows; row++) {
     for (int col = 0; col < Cols; col++) {
       result = std::max(result, std::abs(matrix(row, col)));
     }
+  }
 
   return result;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::elementMax(const Matrix<2, 2, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::elementMax(const Matrix<2, 2, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return std::max(
     std::max(std::abs(values[0]), std::abs(values[1])),
     std::max(std::abs(values[2]), std::abs(values[3]))
@@ -72,8 +85,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::elementMax(const Matrix<2, 2
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::elementMax(const Matrix<3, 3, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::elementMax(const Matrix<3, 3, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   Scalar        result = 0;
   for (int i = 0; i < 9; i++) {
     result = std::max(result, std::abs(values[i]));
@@ -82,8 +96,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::elementMax(const Matrix<3, 3
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::elementMax(const Matrix<4, 4, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::elementMax(const Matrix<4, 4, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   Scalar        result = 0;
   for (int i = 0; i < 16; i++) {
     result = std::max(result, std::abs(values[i]));
@@ -92,22 +107,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::elementMax(const Matrix<4, 4
 }
 
 /**
- * Inverts each individual entry
- *
- * Works only when the matrix does not contain any zeroes, as this routine
- * yields
- *
- * @f$ A_{ij} \gets A_{ij}^{-1} @f$
- *
- * which is not @f$ A^{-1} @f$. Use tarch::la::invert() to obtain the matrix
- * inverse.
- *
- * @see tarch::la::invert()
+ * Returns the entry-wise reciprocals @f$ A_{ij}^{-1} @f$ of a matrix without zero entries.
  */
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::invertEntries(
-  const tarch::la::Matrix<Rows, Cols, Scalar>& matrix
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>
+tarch::la::invertEntries(const tarch::la::Matrix<Rows, Cols, Scalar>& matrix) {
   tarch::la::Matrix<Rows, Cols, Scalar> result(0.0);
 
   for (int i = 0; i < Rows; i++) {
@@ -120,18 +124,16 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::l
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::invertEntries(
-  const tarch::la::Matrix<2, 2, Scalar>& matrix
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>
+tarch::la::invertEntries(const tarch::la::Matrix<2, 2, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Matrix<2, 2, Scalar>{1.0 / values[0], 1.0 / values[1], 1.0 / values[2], 1.0 / values[3]};
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::invertEntries(
-  const tarch::la::Matrix<3, 3, Scalar>& matrix
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>
+tarch::la::invertEntries(const tarch::la::Matrix<3, 3, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Matrix<3, 3, Scalar>{
     1.0 / values[0],
     1.0 / values[1],
@@ -146,10 +148,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::inv
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::invertEntries(
-  const tarch::la::Matrix<4, 4, Scalar>& matrix
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>
+tarch::la::invertEntries(const tarch::la::Matrix<4, 4, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Matrix<4, 4, Scalar>{
     1.0 / values[0],
     1.0 / values[1],
@@ -171,10 +172,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::inv
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Cols, Scalar> tarch::la::row(
-  const Matrix<Rows, Cols, Scalar>& matrix,
-  int                               whichRow
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Cols, Scalar>
+tarch::la::getRow(const Matrix<Rows, Cols, Scalar>& matrix, int whichRow) {
   tarch::la::Vector<Cols, Scalar> result;
 
   for (int i = 0; i < Cols; i++) {
@@ -185,38 +184,30 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Cols, Scalar> tarch::la::row
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::row(
-  const Matrix<2, 2, Scalar>& matrix,
-  int                         whichRow
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>
+tarch::la::getRow(const Matrix<2, 2, Scalar>& matrix, int whichRow) {
+  const Scalar* values = matrix.getData();
   return whichRow == 0 ? tarch::la::Vector<2, Scalar>{values[0], values[1]}
                        : tarch::la::Vector<2, Scalar>{values[2], values[3]};
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::row(
-  const Matrix<3, 3, Scalar>& matrix,
-  int                         whichRow
-) {
-  const Scalar* values = matrix.data() + whichRow * 3;
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>
+tarch::la::getRow(const Matrix<3, 3, Scalar>& matrix, int whichRow) {
+  const Scalar* values = matrix.getData() + whichRow * 3;
   return tarch::la::Vector<3, Scalar>{values[0], values[1], values[2]};
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::row(
-  const Matrix<4, 4, Scalar>& matrix,
-  int                         whichRow
-) {
-  const Scalar* values = matrix.data() + whichRow * 4;
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>
+tarch::la::getRow(const Matrix<4, 4, Scalar>& matrix, int whichRow) {
+  const Scalar* values = matrix.getData() + whichRow * 4;
   return tarch::la::Vector<4, Scalar>{values[0], values[1], values[2], values[3]};
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Rows, Scalar> tarch::la::col(
-  const Matrix<Rows, Cols, Scalar>& matrix,
-  int                               whichColumn
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Rows, Scalar>
+tarch::la::getColumn(const Matrix<Rows, Cols, Scalar>& matrix, int whichColumn) {
   tarch::la::Vector<Rows, Scalar> result;
 
   for (int i = 0; i < Rows; i++) {
@@ -227,29 +218,23 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Rows, Scalar> tarch::la::col
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::col(
-  const Matrix<2, 2, Scalar>& matrix,
-  int                         whichColumn
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>
+tarch::la::getColumn(const Matrix<2, 2, Scalar>& matrix, int whichColumn) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Vector<2, Scalar>{values[whichColumn], values[2 + whichColumn]};
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::col(
-  const Matrix<3, 3, Scalar>& matrix,
-  int                         whichColumn
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>
+tarch::la::getColumn(const Matrix<3, 3, Scalar>& matrix, int whichColumn) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Vector<3, Scalar>{values[whichColumn], values[3 + whichColumn], values[6 + whichColumn]};
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::col(
-  const Matrix<4, 4, Scalar>& matrix,
-  int                         whichColumn
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>
+tarch::la::getColumn(const Matrix<4, 4, Scalar>& matrix, int whichColumn) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Vector<4, Scalar>{
     values[whichColumn],
     values[4 + whichColumn],
@@ -259,9 +244,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::col(
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Cols, Rows, Scalar> tarch::la::transpose(
-  const tarch::la::Matrix<Rows, Cols, Scalar>& matrix
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Cols, Rows, Scalar>
+tarch::la::transpose(const tarch::la::Matrix<Rows, Cols, Scalar>& matrix) {
   tarch::la::Matrix<Cols, Rows, Scalar> result;
   for (int i = 0; i < Rows; i++) {
     for (int j = 0; j < Cols; j++) {
@@ -272,18 +256,16 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Cols, Rows, Scalar> tarch::l
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar> tarch::la::transpose(
-  const tarch::la::Matrix<2, 2, Scalar>& matrix
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<2, 2, Scalar>
+tarch::la::transpose(const tarch::la::Matrix<2, 2, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Matrix<2, 2, Scalar>{values[0], values[2], values[1], values[3]};
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::transpose(
-  const tarch::la::Matrix<3, 3, Scalar>& matrix
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar>
+tarch::la::transpose(const tarch::la::Matrix<3, 3, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Matrix<3, 3, Scalar>{
     values[0],
     values[3],
@@ -298,10 +280,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::tra
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::transpose(
-  const tarch::la::Matrix<4, 4, Scalar>& matrix
-) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar>
+tarch::la::transpose(const tarch::la::Matrix<4, 4, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Matrix<4, 4, Scalar>{
     values[0],
     values[4],
@@ -323,7 +304,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<4, 4, Scalar> tarch::la::tra
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::sum(const tarch::la::Matrix<Rows, Cols, Scalar>& matrix) {
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::sum(const tarch::la::Matrix<Rows, Cols, Scalar>& matrix) {
   Scalar result = 0;
   for (int i = 0; i < Rows; i++) {
     for (int j = 0; j < Cols; j++) {
@@ -334,14 +316,16 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::sum(const tarch::la::Matrix<
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::sum(const tarch::la::Matrix<2, 2, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::sum(const tarch::la::Matrix<2, 2, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return values[0] + values[1] + values[2] + values[3];
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::sum(const tarch::la::Matrix<3, 3, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::sum(const tarch::la::Matrix<3, 3, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   Scalar        result = 0;
   for (int i = 0; i < 9; i++) {
     result += values[i];
@@ -350,8 +334,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::sum(const tarch::la::Matrix<
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::sum(const tarch::la::Matrix<4, 4, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD Scalar
+tarch::la::sum(const tarch::la::Matrix<4, 4, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   Scalar        result = 0;
   for (int i = 0; i < 16; i++) {
     result += values[i];
@@ -360,15 +345,15 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::sum(const tarch::la::Matrix<
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD std::ostream& operator<<(std::ostream& os, const tarch::la::Matrix<Rows, Cols, Scalar>& matrix) {
+INLINE_METHOD std::ostream&
+operator<<(std::ostream& os, const tarch::la::Matrix<Rows, Cols, Scalar>& matrix) {
   os << matrix.toString();
   return os;
 }
 
 template <int Rows, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Rows, Scalar> tarch::la::diag(
-  const Matrix<Rows, Rows, Scalar>& matrix
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Rows, Scalar>
+tarch::la::getDiagonal(const Matrix<Rows, Rows, Scalar>& matrix) {
   tarch::la::Vector<Rows, Scalar> result;
   for (int i = 0; i < Rows; i++) {
     result(i) = matrix(i, i);
@@ -377,19 +362,23 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Rows, Scalar> tarch::la::dia
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::diag(const Matrix<2, 2, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar>
+tarch::la::getDiagonal(const Matrix<2, 2, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Vector<2, Scalar>{values[0], values[3]};
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::diag(const Matrix<3, 3, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar>
+tarch::la::getDiagonal(const Matrix<3, 3, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Vector<3, Scalar>{values[0], values[4], values[8]};
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::diag(const Matrix<4, 4, Scalar>& matrix) {
-  const Scalar* values = matrix.data();
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>
+tarch::la::getDiagonal(const Matrix<4, 4, Scalar>& matrix) {
+  const Scalar* values = matrix.getData();
   return tarch::la::Vector<4, Scalar>{values[0], values[5], values[10], values[15]};
 }
+TARGET_DECLARE_END

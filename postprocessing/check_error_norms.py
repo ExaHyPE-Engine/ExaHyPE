@@ -13,7 +13,7 @@ DEFAULT_COLUMN = "linf-error"
 
 
 def parse_threshold(value: str) -> float:
-    """Returns a non-negative threshold; an infinite one admits any finite value."""
+    """Returns a non-negative threshold. An infinite threshold admits any finite value."""
     threshold = float(value)
     if math.isnan(threshold) or threshold < 0.0:
         raise argparse.ArgumentTypeError("The threshold has to be non-negative.")
@@ -48,7 +48,7 @@ def worst_measurement(
 ) -> tuple[float, float]:
     """Returns the time and the value of the row whose column is largest.
 
-    A norm that is not a number wins, so a diverged run reports the snapshot
+    A norm that is not a number wins. A diverged run then reports the snapshot
     that diverged.
     """
     index = header.index(column)
@@ -68,12 +68,12 @@ def main() -> None:
         print(f"Cannot read {args.database}: {error}")
         sys.exit(2)
     if not rows:
-        print(f"{args.database} holds no measurement.")
+        print(f"The database {args.database} must contain a measurement.")
         sys.exit(2)
     if args.column not in header:
         print(
-            f"{args.database} has no column {args.column}; "
-            f"it holds {', '.join(header)}."
+            f"The column {args.column} must be one of the columns "
+            f"{', '.join(header)} of {args.database}."
         )
         sys.exit(2)
 

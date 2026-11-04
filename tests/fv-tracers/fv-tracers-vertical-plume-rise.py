@@ -1,13 +1,13 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+"""
+A convergence test of the particle tracing in a linearly rising plume.
+"""
+
 import argparse
 from pathlib import Path
 
 import exahype2
-
-"""
-This is a particle tracing convergence test for linear plume rise.
-"""
 
 
 def generate_particles_on_vertical_line(
@@ -27,7 +27,7 @@ def generate_particles_on_vertical_line(
             file.write(f"{x_fixed:.4f} {y:.4f}\n")
 
     print(
-        f"Generated {num_particles} particles along vertical line at x = {x_fixed} and saved to {file_path}"
+        f"Generated {num_particles} particles along a vertical line at x = {x_fixed} and saved to {file_path}"
     )
 
 
@@ -53,7 +53,7 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
     parser.add_argument(
         "-interp",
@@ -92,15 +92,17 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
+if project.dimensions != 2:
+    raise ValueError("The vertical plume tracer test runs in 2D only.")
+
 initial_conditions = """
   Q[Shortcuts::rho]       = 1.0;
-  Q[Shortcuts::rhoU + 0]  = 0.0;        // rho * u_x
-  Q[Shortcuts::rhoU + 1]  = 0.5 * x(1); // rho * u_y
-  Q[Shortcuts::rhoE]      = 1.0;        // Simple energy (rho*e)
+  Q[Shortcuts::rhoU + 0]  = 0.0;
+  Q[Shortcuts::rhoU + 1]  = 0.5 * x(1);
+  Q[Shortcuts::rhoE]      = 1.0;
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions
   Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
   Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
@@ -118,31 +120,24 @@ max_eigenvalue = """
 """
 
 analytical_solution = """
-  // Analytical solution for linear plume rise with exponential velocity growth in y-direction
+  // The tracers move in the fluid velocity field (0, VelocityGradient * y). The entries of solution
+  // are the position and the tracer data of tracer_attributes, with zero mass and acceleration for
+  // a tracer.
   constexpr double VelocityGradient = 0.5;
 
-  // Initial particle position (x0, y0)
-  const double x0 = particle->getData(1); // x doesn't change
-  const double y0 = particle->getData(2); // The analytical y(t) grows from y0
+  const double initialX = particle->getData(1);
+  const double initialY = particle->getData(2);
 
-  // Time-dependent solution
-  solution[0] = x0;                                                // x(t) = x0 (no x motion)
-  solution[1] = y0 * exp(VelocityGradient * t);                    // y(t)
-
-  // Fluid velocity field at particle position
-  solution[3] = 0.0;                                               // fluid_u (x-direction)
-  solution[4] = VelocityGradient * solution[1];                    // fluid_v
-
-  // Particle velocity (matches fluid)
-  solution[5] = 0.0;                                               // u = dx/dt
-  solution[6] = VelocityGradient * solution[1];                    // v = dy/dt
-
-  // Particle acceleration
-  solution[7] = 0.0;                                               // a_x
-  solution[8] = VelocityGradient * VelocityGradient * solution[1]; // a_y = d^2y/dt^2
-
-  solution[2] = 1.0; // rho
-  solution[9] = 1.0; // mass
+  solution[0] = initialX;
+  solution[1] = initialY * std::exp(VelocityGradient * t);
+  solution[2] = 1.0;
+  solution[3] = initialX;
+  solution[4] = initialY;
+  solution[5] = 0.0;
+  solution[6] = VelocityGradient * solution[1];
+  solution[7] = 0.0;
+  solution[8] = 0.0;
+  solution[9] = 0.0;
 """
 
 fv_solver = exahype2.fv.Solver(
@@ -150,7 +145,7 @@ fv_solver = exahype2.fv.Solver(
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 2, "rhoE": 1},
     auxiliary_variables=0,
-    time_stepping=exahype2.TimeStepping.Fixed(0.01 / (args.degrees_of_freedom**0.5)),
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
     scheme=exahype2.fv.Godunov(),
 )
 
@@ -169,29 +164,23 @@ tracer_attributes = {
         "init_x": 1,
         "init_y": 1,
         "u": 1,
-        "v": 1,  # Particle's own velocity
+        "v": 1,
         "a_x": 1,
         "a_y": 1,
-        "d": 1,
+        "mass": 1,
     }
 }
 
 tracer_particles = project.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
+    name="Tracers", particle_attributes=tracer_attributes
 )
 
 generate_particles_on_vertical_line(
     "InitTracers.dat", num_particles=1000, x_fixed=1.5, y_min=0.1, y_max=0.7
 )
-init_tracers = exahype2.particles.InsertParticlesFromFile(
-    particle_set=tracer_particles,
-    filename="InitTracers.dat",
-    scale_factor=1.0,
-    save_initialpos=True,
+tracer_particles.insert_from_file(
+    "InitTracers.dat", scale_factor=1.0, save_initial_position=True
 )
-
-init_tracers.descend_invocation_order = 0
-project.add_action_set_to_initialisation(init_tracers)
 
 fv_solver.trace(
     tracer_particles,
@@ -203,10 +192,6 @@ fv_solver.trace(
 )
 
 fv_solver.set_pde_terms(particle_analytical_solution=analytical_solution)
-fv_solver.measure_particle_error(
-    tracer_particles,
-    file="Error_" + Path(__file__).name,
-    descend_invocation_order=65536,  # After all other action sets
-)
+fv_solver.measure_particle_error(tracer_particles, file="Error_" + Path(__file__).name)
 
 project.generate_and_build()

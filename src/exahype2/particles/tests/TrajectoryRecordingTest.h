@@ -20,6 +20,6 @@ public:
   void run() override;
 
 private:
-  void testRecordsEveryLocalParticleTheCellOwns();
-  void testTimeStampOutsideTheRecordWindowAddsNoSnapshot();
+  void testEveryParticleOfTheRankBecomesOneRow();
+  void testASnapshotDueOnTheRankOfTheParticleIsDueOnEveryRank();
 };

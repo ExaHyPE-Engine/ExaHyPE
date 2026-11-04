@@ -1,155 +1,14 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-/**
- * Returns a vector whose entries are all zero.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dStartVector() {
-  tarch::la::Vector<DIMENSIONS, int> result(0);
-  return result;
-}
+#include "peano4/Constants.h"
+#include "tarch/Assertions.h"
 
 /**
- * Returns a vector whose entries are all zero besides the dim-th one, which
- * holds value.
+ * Returns the sum of counter(k) times max^k over all entries k. Entry 0 runs fastest.
  */
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dStartVector(int dim, int value) {
-  tarch::la::Vector<DIMENSIONS, int> result(0);
-  assertion(dim >= 0, dim, value);
-  assertion(dim < DIMENSIONS, dim, value);
-  assertion(value >= 0, dim, value);
-  result(dim) = value;
-  return result;
-}
-
-/**
- * Increments the first entry of counter, and carries over into the next entry
- * once an entry passes max-1.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dIncrement(tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
-  counter(0)++;
-  for (int i = 0; i < DIMENSIONS - 1; i++) {
-    if (counter(i) >= max) {
-      counter(i) = 0;
-      counter(i + 1)++;
-    } else {
-      break;
-    }
-  }
-}
-
-/**
- * Increments the first entry of counter, and carries over into the next entry
- * once an entry passes that entry's own max-1.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dIncrement(
-  tarch::la::Vector<DIMENSIONS, int>&       counter,
-  const tarch::la::Vector<DIMENSIONS, int>& max
-) {
-  counter(0)++;
-  for (int i = 0; i < DIMENSIONS - 1; i++) {
-    if (counter(i) >= max(i)) {
-      counter(i) = 0;
-      counter(i + 1)++;
-    } else {
-      break;
-    }
-  }
-}
-
-/**
- * Increments counter like dIncrement(counter, max) and leaves the entry
- * doNotExamine untouched.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dIncrement(
-  tarch::la::Vector<DIMENSIONS, int>& counter,
-  int                                 max,
-  int                                 doNotExamine
-) {
-  assertion(doNotExamine < DIMENSIONS);
-  assertion(doNotExamine >= -1);
-
-  if (doNotExamine != 0) {
-    counter(0)++;
-  } else {
-    counter(1)++;
-  }
-  for (int i = 0; i < DIMENSIONS - 1; i++) {
-    // The pinned dimension counter(doNotExamine) stays at its start value (< max)
-    // throughout, so it never triggers this carry.
-    if (counter(i) >= max) {
-      counter(i) = 0;
-      if (doNotExamine != i + 1) {
-        counter(i + 1)++;
-      } else {
-        // Entry i + 2 lies outside counter once doNotExamine is the last entry,
-        // so the loop ends by setting counter(i) to max.
-        if (doNotExamine != DIMENSIONS - 1) {
-          counter(i + 2)++;
-        } else {
-          counter(i) = max;
-        }
-      }
-    }
-  }
-}
-
-/**
- * Returns whether all entries of counter are smaller than their corresponding
- * entries in max.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCompare(
-  const tarch::la::Vector<DIMENSIONS, int>& counter,
-  const tarch::la::Vector<DIMENSIONS, int>& max
-) {
-  int result = 1;
-  for (int i = 0; i < DIMENSIONS; i++) {
-    assertion(counter(i) <= max(i), counter, max);
-    assertion(counter(i) >= 0, counter, max);
-    result &= static_cast<int>(counter(i) < max(i));
-  }
-  return result;
-}
-
-/**
- * Returns whether all entries of counter are smaller than max.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCompare(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
-  int result = 1;
-  for (int i = 0; i < DIMENSIONS; i++) {
-    assertion(counter(i) <= max, counter, max);
-    assertion(counter(i) >= 0, counter, max);
-    result &= static_cast<int>(counter(i) < max);
-  }
-  return result;
-}
-
-/**
- * Returns whether all entries of counter besides the dim-th one are smaller
- * than max.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCompareExclusive(
-  const tarch::la::Vector<DIMENSIONS, int>& counter,
-  int                                       max,
-  int                                       dim
-) {
-  int result = 1;
-  for (int i = 0; i < DIMENSIONS; i++) {
-    if (i == dim) {
-      continue;
-    }
-    assertion(counter(i) <= max, counter, max);
-    assertion(counter(i) >= 0, counter, max);
-    result &= static_cast<int>(counter(i) < max);
-  }
-  return result;
-}
-
-/**
- * Returns the linearisation of counter, where entry k is multiplied by max^k
- * and the products are accumulated. Entry 0 runs fastest.
- */
-INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dLinearised(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::dLinearised(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
   int result = counter(DIMENSIONS - 1);
   assertion(counter(DIMENSIONS - 1) >= 0, counter, max);
   assertion(counter(DIMENSIONS - 1) < max, counter, max);
@@ -162,48 +21,107 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dLinearised(const tarch::la::Vecto
 }
 
 /**
- * Invokes body(counter) for every point of [0,max)^d, entry 0 running
- * fastest.
+ * Returns the linearisation of the entries of counter other than dim, the lowest
+ * of those entries running fastest.
  */
-template <typename Functor>
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEach(int max, const Functor& body) {
-  for (tarch::la::Vector<DIMENSIONS, int> counter = dStartVector(); dCompare(counter, max); dIncrement(counter, max)) {
-    body(counter);
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::dLinearisedExclusive(const tarch::la::Vector<DIMENSIONS, int>& counter, const int max, const int dim) {
+  assertion(max > 0, counter, max);
+  assertion(dim >= 0 and dim < DIMENSIONS, counter, dim);
+  int result = 0;
+  int stride = 1;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    if (d != dim) {
+      assertion(counter(d) >= 0, counter, max);
+      assertion(counter(d) < max, counter, max);
+      result += counter(d) * stride;
+      stride *= max;
+    }
   }
+  return result;
 }
 
 /**
- * Invokes body(counter) for every point of the box whose axis d runs over
- * [0,max(d)), entry 0 running fastest.
+ * Returns the counter that dLinearised() maps to index.
  */
-template <typename Functor>
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEach(
-  const tarch::la::Vector<DIMENSIONS, int>& max,
-  const Functor&                            body
-) {
-  for (tarch::la::Vector<DIMENSIONS, int> counter = dStartVector(); dCompare(counter, max); dIncrement(counter, max)) {
-    body(counter);
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int>
+peano4::dDelinearised(const int index, const int max) {
+  assertion(index >= 0, index, max);
+  assertion(max > 0, index, max);
+  tarch::la::Vector<DIMENSIONS, int> counter;
+  int                                rest = index;
+  for (int d = 0; d < DIMENSIONS - 1; d++) {
+    counter(d) = rest % max;
+    rest /= max;
   }
+  counter(DIMENSIONS - 1) = rest;
+  assertion(counter(DIMENSIONS - 1) < max, index, max);
+  return counter;
 }
 
 /**
- * Invokes body(counter) for every point of [0,max)^d whose dimension dim holds
- * value.
+ * Returns the counter that dLinearisedExclusive() maps to index, with entry dim set to zero.
  */
-template <typename Functor>
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEachExclusive(int max, int dim, int value, const Functor& body) {
-  for (tarch::la::Vector<DIMENSIONS, int> counter = dStartVector(dim, value); dCompareExclusive(counter, max, dim);
-       dIncrement(counter, max, dim)) {
-    body(counter);
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int>
+peano4::dDelinearisedExclusive(const int index, const int max, const int dim) {
+  assertion(index >= 0, index, max);
+  assertion(max > 0, index, max);
+  assertion(dim >= 0 and dim < DIMENSIONS, index, dim);
+  tarch::la::Vector<DIMENSIONS, int> counter(0);
+  int                                rest = index;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    if (d != dim) {
+      counter(d) = rest % max;
+      rest /= max;
+    }
   }
+  assertion(rest == 0, index, max, dim);
+  return counter;
 }
 
 /**
- * Invokes body for each of the 2^d cube corners with the corner and its
- * linearised index.
+ * Calls body(counter) for every point of [0,max)^d, with entry 0 running fastest. As a constexpr
+ * function, it runs on the host or the device like its caller.
  */
 template <typename Functor>
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEachCorner(const Functor& body) {
+INLINE_METHOD constexpr void
+peano4::dForEach(const int max, const Functor& body) {
+  peano4::dForEach(tarch::la::Vector<DIMENSIONS, int>(max), body);
+}
+
+/**
+ * Calls body(counter) for every point of the box whose axis d spans [0,max(d)), with entry 0 running
+ * fastest. As a constexpr function, it runs on the host or the device like its caller.
+ */
+template <typename Functor>
+INLINE_METHOD constexpr void
+peano4::dForEach(const tarch::la::Vector<DIMENSIONS, int>& max, const Functor& body) {
+  tarch::la::Vector<DIMENSIONS, int> counter(0);
+#if DIMENSIONS == 2
+  for (counter(1) = 0; counter(1) < max(1); counter(1)++) {
+    for (counter(0) = 0; counter(0) < max(0); counter(0)++) {
+      body(counter);
+    }
+  }
+#else
+  static_assert(DIMENSIONS == 3, "The build supports 2D and 3D only.");
+  for (counter(2) = 0; counter(2) < max(2); counter(2)++) {
+    for (counter(1) = 0; counter(1) < max(1); counter(1)++) {
+      for (counter(0) = 0; counter(0) < max(0); counter(0)++) {
+        body(counter);
+      }
+    }
+  }
+#endif
+}
+
+/**
+ * Calls body(corner, index) for each of the 2^d corners of the unit cube, where index is the
+ * linearised corner. As a constexpr function, it runs on the host or the device like its caller.
+ */
+template <typename Functor>
+INLINE_METHOD constexpr void
+peano4::dForEachCorner(const Functor& body) {
   int bit0 = 0;
   int bit1 = 0;
 #if DIMENSIONS == 3
@@ -221,27 +139,6 @@ INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEachCorner(const Functor& bod
 #if DIMENSIONS == 3
     bit2 = bit2 or (not bit0 and not bit1 and not bit2);
 #endif
-    body(counter, scalar);
-  }
-}
-
-/**
- * Invokes body for each point of the 3^d stencil in lexicographic order with
- * the point and its linearised index.
- */
-template <typename Functor>
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEachStencil(const Functor& body) {
-  for (int scalar = 0; scalar < peano4::CellsPerNeighbourhood; scalar++) {
-    tarch::la::Vector<DIMENSIONS, int> counter;
-    int                                remainder = scalar;
-    for (int d = DIMENSIONS - 1; d >= 0; d--) {
-      int stride = 1;
-      for (int factor = 0; factor < d; factor++) {
-        stride *= peano4::NeighbourhoodWidth;
-      }
-      counter(d) = remainder / stride;
-      remainder -= counter(d) * stride;
-    }
     body(counter, scalar);
   }
 }

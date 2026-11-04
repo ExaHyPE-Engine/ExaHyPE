@@ -2,121 +2,153 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/plotter/Piece.h"
 #include "peano4/Constants.h"
-#include "peano4/Loop.h"
-#include "peano4/dataview/CellMarker.h"
-#include "peano4/sfc/ActiveCurve.h"
-#include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/la/Vector.h"
-#include "tarch/la/VectorVectorOperations.h"
+#include "tarch/Span.h"
+#include "tarch/plotter/FileWriter.h"
+#include "tarch/plotter/Format.h"
+
+namespace peano4 {
+  class CellConnectivity;
+} // namespace peano4
+
+namespace tarch::accelerator {
+  template <typename T>
+  class ChunkedMemoryPool;
+} // namespace tarch::accelerator
 
 namespace exahype2::plotter {
-  class CellPatchPlotter;
-  class NodalPatchPlotter;
+  struct DataField;
+  class PatchPlotter;
+
+  /**
+   * Lists the corner positions of a quadrangle and a hexahedron in the corner order of VTK.
+   */
+  constexpr std::array<std::array<int, 3>, 8> CellCorners{
+    {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}}
+  };
 } // namespace exahype2::plotter
 
-/**
- * Writes one plot point per node of a patch and connects the neighbouring nodes of a patch to
- * plot cells. Two patches keep two traces of their common boundary, since the plot points of a
- * patch are its own.
- */
-class exahype2::plotter::NodalPatchPlotter final {
-public:
-  NodalPatchPlotter()                                    = default;
-  NodalPatchPlotter(const NodalPatchPlotter&)            = delete;
-  NodalPatchPlotter(NodalPatchPlotter&&)                 = delete;
-  NodalPatchPlotter& operator=(const NodalPatchPlotter&) = delete;
-  NodalPatchPlotter& operator=(NodalPatchPlotter&&)      = delete;
-  ~NodalPatchPlotter()                                   = default;
-
-  template <typename CreateCellDataPlotters>
-  INLINE_METHOD void open(
-    Snapshot&                     snapshot,
-    int                           treeId,
-    const std::vector<DataField>& fields,
-    CreateCellDataPlotters        createCellDataPlotters
-  );
-
-  [[nodiscard]] std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> createCellDataPlotter(
-    const std::string& name,
-    int                components
-  );
-
-  template <
-    int PointsPerAxis,
-    int UnknownsPerPoint,
-    int AlternativePointsPerAxis,
-    typename Precision,
-    typename CellDataPlots>
-  INLINE_METHOD void plotCell(
-    const peano4::dataview::CellMarker&          marker,
-    const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-    const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-    const std::array<double, PointsPerAxis>&     mappingAlongAxis,
-    const Precision*                             patch,
-    bool                                         useAlternativePatch,
-    const std::type_identity_t<Precision>*       alternativePatch,
-    CellDataPlots                                cellDataPlots
-  );
-
-private:
-  struct FieldPlotter final {
-    std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> plotter{};
-    int                                                            components{1};
-    int                                                            offset{0};
-  };
-
-  Piece                                                        _piece{};
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _curvePositionPlotter{};
-  std::vector<FieldPlotter>                                    _fields{};
+struct exahype2::plotter::DataField final {
+  std::string name{};
+  int         components{1};
 };
 
 /**
- * Writes one plot cell per finite volume of a patch and one value per volume and field.
+ * Writes the patches of the grid cells of a rank into the snapshots of one plot series. The function
+ * plotVolumes() writes one plot cell per finite volume and every volume corner once. The function
+ * plotNodes() writes nodal values at the plot points of every patch.
  */
-class exahype2::plotter::CellPatchPlotter final {
+class exahype2::plotter::PatchPlotter final {
 public:
-  CellPatchPlotter()                                   = default;
-  CellPatchPlotter(const CellPatchPlotter&)            = delete;
-  CellPatchPlotter(CellPatchPlotter&&)                 = delete;
-  CellPatchPlotter& operator=(const CellPatchPlotter&) = delete;
-  CellPatchPlotter& operator=(CellPatchPlotter&&)      = delete;
-  ~CellPatchPlotter()                                  = default;
+  PatchPlotter(std::string filename, std::vector<DataField> fields);
+  PatchPlotter(const PatchPlotter& other)            = delete;
+  PatchPlotter(PatchPlotter&& other)                 = delete;
+  PatchPlotter& operator=(const PatchPlotter& other) = delete;
+  PatchPlotter& operator=(PatchPlotter&& other)      = delete;
+  ~PatchPlotter()                                    = default;
 
-  template <typename CreateCellDataPlotters>
-  INLINE_METHOD void open(
-    Snapshot&                     snapshot,
-    int                           treeId,
-    const std::vector<DataField>& fields,
-    CreateCellDataPlotters        createCellDataPlotters
+  template <int VolumesPerAxis, int ValuesPerVolume, typename Precision>
+  INLINE_METHOD void plotVolumes(
+    const peano4::CellConnectivity&                         cellConnectivity,
+    tarch::Span<const int>                                  cells,
+    const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
+    double                                                  timeStamp,
+    tarch::plotter::Format                                  format,
+    const std::string&                                      outputDirectory
   );
 
-  [[nodiscard]] std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> createCellDataPlotter(
-    const std::string& name,
-    int                components
+  template <int NodesPerAxis, int ValuesPerNode, typename Precision>
+  INLINE_METHOD void plotNodes(
+    const peano4::CellConnectivity&                         cellConnectivity,
+    tarch::Span<const int>                                  cells,
+    const tarch::accelerator::ChunkedMemoryPool<Precision>& values,
+    const double*                                           nodePositions,
+    double                                                  timeStamp,
+    tarch::plotter::Format                                  format,
+    const std::string&                                      outputDirectory
   );
 
-  template <int VolumesPerAxis, int UnknownsPerVolume, typename Precision, typename CellDataPlots>
-  INLINE_METHOD void plotCell(
-    const peano4::dataview::CellMarker&          marker,
-    const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-    const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-    const Precision*                             patch,
-    CellDataPlots                                cellDataPlots
+  template <int NodesPerAxis, int ValuesPerNode, int SubcellsPerAxis, typename Precision>
+  INLINE_METHOD void plotNodes(
+    const peano4::CellConnectivity&                                               cellConnectivity,
+    tarch::Span<const int>                                                        cells,
+    const tarch::accelerator::ChunkedMemoryPool<Precision>&                       values,
+    const double*                                                                 nodePositions,
+    const tarch::accelerator::ChunkedMemoryPool<std::type_identity_t<Precision>>* subcellValues,
+    const tarch::accelerator::ChunkedMemoryPool<int>*                             statuses,
+    int                                                                           subcellStatus,
+    double                                                                        timeStamp,
+    tarch::plotter::Format                                                        format,
+    const std::string&                                                            outputDirectory
+  );
+
+  template <int NodesPerAxis, int SubcellsPerAxis>
+  [[nodiscard]] static INLINE_METHOD std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)> containingSubcells(
+    const double* nodePositions
   );
 
 private:
-  struct FieldPlotter final {
-    std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> plotter{};
-    int                                                          components{1};
-    int                                                          offset{0};
+  static constexpr const char* OutputSubdirectory = "patch/";
+
+  static constexpr std::size_t RefinementLevelField = 0;
+  static constexpr std::size_t SubdomainField       = 1;
+  static constexpr std::size_t CurveIndexField      = 2;
+
+  struct PatchCorner final {
+    bool onFace{false};
+    int  index{0};
   };
 
-  Piece                                                        _piece{};
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _curvePositionPlotter{};
-  std::vector<FieldPlotter>                                    _fields{};
+  struct FaceCornerPoints final {
+    std::vector<std::int32_t> pointOfFaceCorner{};
+    std::vector<std::int32_t> firstPointOfPatch{};
+  };
+
+  [[nodiscard]] static std::vector<PatchCorner> classifyCorners(int cornersPerAxis);
+
+  template <int VolumesPerAxis>
+  [[nodiscard]] static INLINE_METHOD FaceCornerPoints numberFaceCorners(
+    const peano4::CellConnectivity& cellConnectivity,
+    tarch::Span<const int>          cells,
+    const std::vector<PatchCorner>& corners
+  );
+
+  [[nodiscard]] static std::uint64_t hashLatticeKey(const std::array<std::int64_t, DIMENSIONS>& key);
+
+  [[nodiscard]] tarch::plotter::Mesh createMesh(
+    int         numberOfPatches,
+    int         cellsPerPatch,
+    std::size_t numberOfPoints,
+    bool        writesPointData,
+    bool        writesStatus
+  ) const;
+
+  void write(
+    const tarch::plotter::Mesh& mesh,
+    double                      timeStamp,
+    tarch::plotter::Format      format,
+    const std::string&          outputDirectory
+  );
+
+  template <int PointsPerAxis, typename PointOfCorner>
+  static INLINE_METHOD void connectPatch(
+    const PointOfCorner&  pointOfCorner,
+    std::size_t           firstCell,
+    tarch::plotter::Mesh& mesh
+  );
+
+  template <typename Precision>
+  INLINE_METHOD void copyState(
+    const Precision*                          state,
+    int                                       valuesPerState,
+    std::size_t                               entity,
+    std::vector<tarch::plotter::Mesh::Field>& fields
+  ) const;
+
+  std::string                                 _filename;
+  std::vector<DataField>                      _fields;
+  std::unique_ptr<tarch::plotter::FileWriter> _fileWriter{};
 };
 
 #include "exahype2/plotter/PatchPlotter.cpph"

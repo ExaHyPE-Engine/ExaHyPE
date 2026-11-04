@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridVertexTest.h"
 
-#include "peano4/Constants.h"
 #include "peano4/grid/GridVertex.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/Request.h"
@@ -12,14 +11,15 @@
 peano4::grid::tests::GridVertexTest::GridVertexTest() :
   TestCase("peano4::grid::tests::GridVertexTest") {}
 
-void peano4::grid::tests::GridVertexTest::run() {
+void
+peano4::grid::tests::GridVertexTest::run() {
   testMethod(testState);
-  testMethod(testRefinedVertices);
   testMethod(testTheByteRepresentationCarriesEveryField);
   testMethod(testSendAndReceiveInARing);
 }
 
-void peano4::grid::tests::GridVertexTest::testState() {
+void
+peano4::grid::tests::GridVertexTest::testState() {
   peano4::grid::GridVertex vertex{};
   validateEquals(static_cast<int>(vertex.getState()), static_cast<int>(peano4::grid::GridVertex::State::Unrefined));
   validateEquals(vertex.level, 0);
@@ -41,32 +41,11 @@ void peano4::grid::tests::GridVertexTest::testState() {
   validateEquals(stream.str(), description);
 }
 
-void peano4::grid::tests::GridVertexTest::testRefinedVertices() {
-  peano4::grid::GridVertex vertices[peano4::VerticesPerCell]{};
-  validateTrue(not peano4::grid::GridVertex::areAllVerticesRefined(vertices));
-  validateTrue(peano4::grid::GridVertex::getRefinedVertices(vertices).none());
-
-  for (auto& vertex : vertices) {
-    vertex.setState(peano4::grid::GridVertex::State::Refined);
-  }
-  validateTrue(peano4::grid::GridVertex::areAllVerticesRefined(vertices));
-  validateEquals(peano4::grid::GridVertex::getRefinedVertices(vertices).count(), peano4::VerticesPerCell);
-
-  vertices[1].setState(peano4::grid::GridVertex::State::HangingVertex);
-  validateTrue(not peano4::grid::GridVertex::areAllVerticesRefined(vertices));
-  validateTrue(not peano4::grid::GridVertex::getRefinedVertices(vertices).test(1));
-  validateEquals(peano4::grid::GridVertex::getRefinedVertices(vertices).count(), peano4::VerticesPerCell - 1);
-
-  vertices[0].setState(peano4::grid::GridVertex::State::Unrefined);
-  validateTrue(not peano4::grid::GridVertex::getRefinedVertices(vertices).test(0));
-  validateEquals(peano4::grid::GridVertex::getRefinedVertices(vertices).count(), peano4::VerticesPerCell - 2);
-}
-
 /**
- * Confirms that raw-byte transport reproduces every declared field. Padding
- * bytes have indeterminate values, so the comparison covers the fields only.
+ * A byte copy of a vertex reproduces every declared field.
  */
-void peano4::grid::tests::GridVertexTest::testTheByteRepresentationCarriesEveryField() {
+void
+peano4::grid::tests::GridVertexTest::testTheByteRepresentationCarriesEveryField() {
   static_assert(std::is_trivially_copyable_v<peano4::grid::GridVertex>);
   static_assert(std::is_standard_layout_v<peano4::grid::GridVertex>);
 
@@ -100,7 +79,8 @@ void peano4::grid::tests::GridVertexTest::testTheByteRepresentationCarriesEveryF
 #endif
 }
 
-void peano4::grid::tests::GridVertexTest::testSendAndReceiveInARing() {
+void
+peano4::grid::tests::GridVertexTest::testSendAndReceiveInARing() {
   constexpr int Tag = 4321;
 
   const auto&    rank          = tarch::mpi::Rank::getInstance();

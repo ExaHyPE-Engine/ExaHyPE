@@ -2,63 +2,54 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/accelerator/CompileTarget.h"
+
 namespace tarch::accelerator {
   class Device;
 
-#if !defined(PEANO_WITH_GPU_BACKEND)
-  // Opaque per-backend team handle. CPU does not need any state on the team:
-  // the team rank is passed to the outer lambda as a plain int.
-  struct CpuTeam {};
+#if not defined(PEANO_WITH_GPU_BACKEND)
+  // One host thread runs a whole team. The scratch is a buffer of TeamScratchBytes of that thread.
+  struct CpuTeam {
+    unsigned char* scratch{nullptr};
+  };
   using TeamHandle = CpuTeam;
+
+  inline constexpr int ThreadsPerWarp        = 1;
+  inline constexpr int DefaultThreadsPerTeam = 1;
+  inline constexpr int TeamScratchBytes      = 16384;
 #endif
 } // namespace tarch::accelerator
 
 /**
- * Device
- *
- * Any accelerator implementation has to provide a singleton Device. Its full
- * qualified name is tarch::accelerator::Device. If no accelerator variant is
- * switched on, Peano provides a default Device implementation that does
- * nothing.
+ * Singleton that every accelerator backend provides. A caller addresses the GPUs of a rank with
+ * the logical numbers 0 to getNumberOfDevices() - 1. A build without a GPU backend provides a
+ * Device without GPUs.
  *
  * @author Tobias Weinzierl
  */
-class tarch::accelerator::Device {
-private:
-  // Is default. We use init() instead.
-  Device() = default;
-
+class tarch::accelerator::Device final {
 public:
+  TARGET_DECLARE
   static constexpr int DefaultDevice = 0;
+  TARGET_DECLARE_END
 
-  // Is default. We use shutdown() instead.
-  ~Device() = default;
+  Device(const Device& other)            = delete;
+  Device(Device&& other)                 = delete;
+  Device& operator=(const Device& other) = delete;
+  Device& operator=(Device&& other)      = delete;
 
-  /**
-   * @return Singleton instance
-   */
   static Device& getInstance();
 
   bool init();
-
-  /**
-   * Shutdown accelerator environment.
-   */
   void shutdown();
+  [[nodiscard]] bool isInitialised() const;
 
-  /**
-   * @return Accelerator environment is up and running. Most accelerator
-   * implementations work properly with the defaults. They just
-   * return true always.
-   */
-  bool isInitialised() const;
+  [[nodiscard]] int getNumberOfDevices() const;
+  [[nodiscard]] int getNumberOfConcurrentThreads() const;
+  [[nodiscard]] std::optional<bool> isMPIGPUAware() const;
+  [[nodiscard]] std::string getIdOfCurrentDevice() const;
 
-  /**
-   * Return the number of GPUs that are available. It is then Peano's policy
-   * that you access these GPUs with numbers from 0 to N. We work with
-   * logical GPU numbers, i.e. they might be mapped onto different numbers
-   * internally. How this mapping is realised however is strongly depending
-   * on the used accelerator implementation.
-   */
-  int getNumberOfDevices() const;
+private:
+  Device()  = default;
+  ~Device() = default;
 };

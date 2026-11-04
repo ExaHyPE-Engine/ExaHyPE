@@ -14,8 +14,7 @@ variable-length payloads between the same ranks use distinct tags so a receive
 cannot match the wrong message. Start a pairwise exchange only when both ranks
 derive the same participants and payload size.
 
-Non-blocking operations use tarch::mpi::Request, tarch::mpi::RequestGroup, or
-the stack communication interface. The communication manager can poll
+Non-blocking operations use tarch::mpi::Request. The communication manager can poll
 registered transfers on the calling thread or on the optional communication
 thread. One MPI request has one poller.
 

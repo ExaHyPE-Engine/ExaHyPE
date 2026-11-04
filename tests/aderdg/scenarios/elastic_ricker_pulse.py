@@ -11,15 +11,12 @@ from equations import Elastic
 
 class ElasticRickerPulse(Scenario):
     """
-    Scenario analogous to Käser, Herrmann & de la Puente https://doi.org/10.1111/j.1365-246X.2008.03781.x (Chapter 2.2, p. 992)
+    Ricker pulse after Käser, Herrmann & de la Puente, https://doi.org/10.1111/j.1365-246X.2008.03781.x,
+    section 2.2, p. 992.
 
-    An analytical solution is available, but the quadrature measures the error inaccurately whenever the
-    signal sits away from the centre of a cell.
-    Time-frequency misfit analysis measures the error accurately (like Käser et al. above).
-    It takes a tracer that records the results at a point in the domain and a misfit computation over
-    that record, for example with ObsPy.
-
-    A tutorial on computing misfits can be found at https://docs.obspy.org/tutorial/code_snippets/time_frequency_misfit.html
+    The quadrature measures the error of the analytical solution inaccurately when the signal lies
+    away from a cell centre. A time-frequency misfit of a tracer record, for example with ObsPy
+    (https://docs.obspy.org/tutorial/code_snippets/time_frequency_misfit.html), measures it accurately.
     """
 
     _offset = 0.0
@@ -33,58 +30,53 @@ class ElasticRickerPulse(Scenario):
 
     def initial_conditions(self):
         return """
-  // Lamé parameters
-  constexpr auto mu     = 1;
-  constexpr auto lambda = 2;
+  constexpr auto ShearModulus       = 1;
+  constexpr auto FirstLameParameter = 2;
 
-  // Constant auxiliary parameters
-  constexpr auto rho  = 1;
-  constexpr auto cp   = 2;
-  constexpr auto cs   = 1;
+  constexpr auto Density    = 1;
+  constexpr auto PWaveSpeed = 2;
+  constexpr auto SWaveSpeed = 1;
 
   // The pulse is centred in the leftmost cell. It reaches the left edge of the
-  // domain, so the periodic boundary places part of it on the right edge.
+  // domain. The periodic boundary places part of it on the right edge.
   const auto tau  = 1.25*std::numbers::pi*(x[0]-h[0]/2);
   const auto tau2 = 1.25*std::numbers::pi*(x[0]-DomainSize[0]-h[0]/2);
   const auto amplitudeX = (1-2*tau*tau)*std::exp(-tau*tau) + (1-2*tau2*tau2)*std::exp(-tau2*tau2);
-  constexpr auto amplitudeY = 0.;
-  // Stresses
-  Q[Shortcuts::sigma+0] = -amplitudeX*(lambda+2*mu)  + amplitudeY*lambda;         //xx
-  Q[Shortcuts::sigma+1] = -amplitudeX*lambda         + amplitudeY*(lambda+2*mu);  //yy
-  Q[Shortcuts::sigma+2] = 0;                         //xy
+  constexpr auto AmplitudeY = 0.;
 
-  // Velocities
-  Q[Shortcuts::v+0] = amplitudeX*cp; //vx
-  Q[Shortcuts::v+1] = amplitudeY*cp; //vy
+  // The stress components are ordered xx, yy, xy.
+  Q[Shortcuts::sigma+0] = -amplitudeX*(FirstLameParameter+2*ShearModulus) + AmplitudeY*FirstLameParameter;
+  Q[Shortcuts::sigma+1] = -amplitudeX*FirstLameParameter + AmplitudeY*(FirstLameParameter+2*ShearModulus);
+  Q[Shortcuts::sigma+2] = 0;
 
-  // Auxiliary variables
-  Q[Shortcuts::rho] = rho;  //rho
-  Q[Shortcuts::cp]  = cp;   //cp
-  Q[Shortcuts::cs]  = cs;   //cs
+  Q[Shortcuts::v+0] = amplitudeX*PWaveSpeed;
+  Q[Shortcuts::v+1] = AmplitudeY*PWaveSpeed;
+
+  Q[Shortcuts::rho] = Density;
+  Q[Shortcuts::cp]  = PWaveSpeed;
+  Q[Shortcuts::cs]  = SWaveSpeed;
 """
 
     def analytical_solution(self):
         return """
-  // Constant auxiliary parameters
-  constexpr auto cp   = 2;
+  constexpr auto PWaveSpeed = 2;
 
   // Width of a cell on the finest level. The pulse starts centred in the leftmost cell.
-  const double h = ::runner::RuntimeParameters::divideBySubdivisionFactorPower(
-    DomainSize[0], ::runner::RuntimeParameters::getInstance().getMaxGridLevels()
-  );
+  double h = DomainSize[0];
+  for (int level = 0; level < RuntimeParameters::getMaxGridLevels(); level++) {
+    h /= peano4::SubdivisionFactor;
+  }
 
-  // The P-wave moves with speed cp, and the periodic image closest to x carries the pulse.
-  auto distance = x[0] - cp*t - h/2;
+  // The P-wave moves with speed PWaveSpeed. The pulse lies in the periodic image closest to x.
+  auto distance = x[0] - PWaveSpeed*t - h/2;
   distance -= DomainSize[0] * std::round(distance / DomainSize[0]);
   const auto tau  = 1.25*std::numbers::pi*(distance);
   const auto amplitudeX = (1-2*tau*tau)*std::exp(-tau*tau);
 
-  // Stresses
   solution[Shortcuts::sigma+0] = Q[Shortcuts::sigma+0];
   solution[Shortcuts::sigma+1] = Q[Shortcuts::sigma+1];
   solution[Shortcuts::sigma+2] = Q[Shortcuts::sigma+2];
 
-  // Velocities
-  solution[Shortcuts::v+0] = amplitudeX*cp; //vx
+  solution[Shortcuts::v+0] = amplitudeX*PWaveSpeed;
   solution[Shortcuts::v+1] = Q[Shortcuts::v+1];
 """

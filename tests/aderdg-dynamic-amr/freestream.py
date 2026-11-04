@@ -18,6 +18,12 @@ def parse_arguments():
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=2)
     parser.add_argument("-lmax", "--max-grid-levels", type=int, default=4)
+    parser.add_argument(
+        "-nl",
+        "--nonlinear",
+        action="store_true",
+        help="Run the linear system through the nonlinear predictor and corrector.",
+    )
     args, _ = parser.parse_known_args()
     if args.grid_levels is not None:
         args.min_grid_levels = args.grid_levels
@@ -65,7 +71,7 @@ refinement_criterion = """
   constexpr double MaxRadius = 5.0;
 #endif
 
-  const double     startRadius = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  const double     startRadius = RuntimeParameters::getMaxAdmissiblePatchSize();
   constexpr double GrowthRate  = 1.5;
   constexpr double BandWidth   = 0.05;
 
@@ -99,7 +105,7 @@ solver = exahype2.dg.ader.Solver(
     unknowns={"p": 1, "u": project.dimensions},
     auxiliary_variables=0,
     time_stepping=exahype2.TimeStepping.Adaptive(0.9),
-    linear=True,
+    linear=not args.nonlinear,
 )
 
 solver.set_pde_terms(

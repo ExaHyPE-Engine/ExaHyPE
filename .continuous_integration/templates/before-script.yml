@@ -2,6 +2,7 @@
   before_script:
     - echo "Running CI with $(nproc) cores"
     - git --version
+    - export APPTAINERENV_OMPI_MCA_btl_sm_backing_directory="$CI_PROJECT_DIR"
     - echo "PROJECT=$CI_PROJECT_DIR COMMIT=$CI_COMMIT_SHA BRANCH=$CI_COMMIT_BRANCH"
     - echo "CONTAINER_BIND=$APPTAINER_BINDDIR CONTAINER_IMAGE_DIR=$APPTAINER_IMAGEDIR"
     - echo "CC=$CC CXX=$CXX"

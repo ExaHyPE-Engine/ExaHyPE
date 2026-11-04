@@ -8,14 +8,15 @@ import tempfile
 
 import postprocessing
 
-# The directory that holds the postprocessing package, so a script of the package runs with -m.
+# The directory that contains the postprocessing package. A script of the package runs from it
+# with -m.
 PACKAGE_PARENT = os.path.dirname(
     os.path.dirname(os.path.abspath(postprocessing.__file__))
 )
 
 
 class TemporaryRepository:
-    """A temporary directory with a clang-format style file, which marks a repository root."""
+    """A temporary directory with a clang-format style file that marks a repository root."""
 
     def __init__(self):
         self._directory = tempfile.TemporaryDirectory()

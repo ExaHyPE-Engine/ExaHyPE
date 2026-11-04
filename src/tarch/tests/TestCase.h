@@ -8,28 +8,29 @@
 namespace tarch::tests {
   class TestCase;
 
+  /**
+   * Units in the last place by which two compilers may round one computation apart.
+   */
+  constexpr int MaxUnitsInTheLastPlace = 16;
+
   std::filesystem::path getWritableTestDirectory();
+  double getToleranceInUnitsInTheLastPlace(const std::vector<double>& reference);
 } // namespace tarch::tests
 
 /**
- * Base class of one test case. A subclass implements run() and checks its
- * assumptions with the validate macros of TestMacros.h.
- *
- * A unit test of a library is registered by that library's own test suite, as
- * the linker drops a test that no translation unit calls.
+ * A subclass implements run() and checks its assumptions with the validate macros of TestMacros.h.
+ * The test suite of a library registers the tests of the library. The linker drops a test that no
+ * translation unit calls.
  *
  * @author Tobias Weinzierl
  */
 class tarch::tests::TestCase {
 public:
   TestCase() = delete;
-
   TestCase(const std::string& testCaseName);
-
   virtual ~TestCase();
 
   int getNumberOfErrors() const;
-
   std::string getTestCaseName() const;
 
   virtual void run() = 0;
@@ -37,13 +38,6 @@ public:
 protected:
   const std::string _testCaseName;
 
-  /**
-   * The validate macros add one per failed check.
-   */
-  int _errors{0};
-
-  /**
-   * The validate macros set this flag when one check fails.
-   */
+  int  _errors{0};
   bool _error{false};
 };

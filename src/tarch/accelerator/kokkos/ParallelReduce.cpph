@@ -3,15 +3,15 @@
 
 namespace tarch::accelerator {
   template <typename T>
-  KOKKOS_INLINE_FUNCTION auto kokkosReducer(const Max<T> reducer) {
+  INLINE_METHOD GPU_CALLABLE_METHOD auto getKokkosReducer(const Max<T> reducer) {
     return Kokkos::Max<T>(reducer.target);
   }
   template <typename T>
-  KOKKOS_INLINE_FUNCTION auto kokkosReducer(const Min<T> reducer) {
+  INLINE_METHOD GPU_CALLABLE_METHOD auto getKokkosReducer(const Min<T> reducer) {
     return Kokkos::Min<T>(reducer.target);
   }
   template <typename T>
-  KOKKOS_INLINE_FUNCTION auto kokkosReducer(const Sum<T> reducer) {
+  INLINE_METHOD GPU_CALLABLE_METHOD auto getKokkosReducer(const Sum<T> reducer) {
     return Kokkos::Sum<T>(reducer.target);
   }
 
@@ -24,50 +24,83 @@ namespace tarch::accelerator {
 
     value_type& target;
 
-    KOKKOS_INLINE_FUNCTION explicit KokkosCustomReducer(value_type& boundTarget) :
+    INLINE_METHOD GPU_CALLABLE_METHOD explicit KokkosCustomReducer(value_type& boundTarget) :
       target(boundTarget) {}
 
-    KOKKOS_INLINE_FUNCTION void join(value_type& destination, const value_type& source) const {
+    INLINE_METHOD GPU_CALLABLE_METHOD void join(value_type& destination, const value_type& source) const {
       destination = Op::combine(destination, source);
     }
-    KOKKOS_INLINE_FUNCTION void             init(value_type& value) const { value = Op::identity(); }
-    KOKKOS_INLINE_FUNCTION value_type&      reference() const { return target; }
-    KOKKOS_INLINE_FUNCTION result_view_type view() const { return result_view_type(&target); }
-    KOKKOS_INLINE_FUNCTION bool             references_scalar() const { return true; }
+    INLINE_METHOD GPU_CALLABLE_METHOD void init(value_type& value) const { value = Op::identity(); }
+    INLINE_METHOD GPU_CALLABLE_METHOD value_type& reference() const { return target; }
+    INLINE_METHOD GPU_CALLABLE_METHOD result_view_type view() const { return result_view_type(&target); }
+    INLINE_METHOD GPU_CALLABLE_METHOD bool references_scalar() const { return true; }
   };
 
   template <typename Op>
-  KOKKOS_INLINE_FUNCTION auto kokkosReducer(const Custom<Op> reducer) {
+  INLINE_METHOD GPU_CALLABLE_METHOD auto getKokkosReducer(const Custom<Op> reducer) {
     return KokkosCustomReducer<Op>(reducer.target);
   }
 
   template <typename Functor, typename ValueType>
+  struct LeagueReduce final {
+    Functor functor{};
+    int     scratchBytes{0};
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
+      const tarch::accelerator::KokkosTeam::MemberType& team,
+      ValueType&                                        accumulator
+    ) const {
+      functor(
+        team.league_rank(),
+        tarch::accelerator::KokkosTeam{team, takeTeamScratch(team, scratchBytes)},
+        accumulator
+      );
+    }
+  };
+
+  template <typename Functor, typename ValueType>
   struct TeamReduce1D final {
-    Functor                     functor;
-    KOKKOS_INLINE_FUNCTION void operator()(const int i, ValueType& accumulator) const { functor(i, accumulator); }
+    Functor functor{};
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int i, ValueType& accumulator) const {
+      functor(i, accumulator);
+    }
   };
 
   template <typename Functor, typename ValueType>
   struct TeamReduce2D final {
-    Functor                     functor;
-    int                         extentY;
-    KOKKOS_INLINE_FUNCTION void operator()(const int index, ValueType& accumulator) const {
+    Functor functor{};
+    int     extentY{0};
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index, ValueType& accumulator) const {
       functor(index / extentY, index % extentY, accumulator);
     }
   };
 
   template <typename Functor, typename ValueType>
   struct TeamReduce3D final {
-    Functor                     functor;
-    int                         extentY;
-    int                         extentZ;
-    KOKKOS_INLINE_FUNCTION void operator()(const int index, ValueType& accumulator) const {
+    Functor functor{};
+    int     extentY{0};
+    int     extentZ{0};
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int index, ValueType& accumulator) const {
       functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ, accumulator);
     }
   };
 
+  /**
+   * Combines the partial value of every thread of the team into the target of the reducer.
+   */
+  template <typename Reducer>
+  INLINE_METHOD GPU_CALLABLE_METHOD void reduceOverTeam(
+    const KokkosTeam&           team,
+    typename Reducer::ValueType threadValue,
+    const Reducer               reducer
+  ) {
+    team.member.team_reduce(tarch::accelerator::getKokkosReducer(Reducer{threadValue}));
+    Kokkos::single(Kokkos::PerTeam(team.member), [&]() {
+      reducer.target = Reducer::combine(reducer.target, threadValue);
+    });
+  }
+
   template <typename Reducer, typename Functor>
-  KOKKOS_INLINE_FUNCTION void parallelReduce(
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelReduce(
     const KokkosTeam& team,
     const Range&      range,
     const Functor     functor,
@@ -78,7 +111,7 @@ namespace tarch::accelerator {
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(team.member, range.n),
       TeamReduce1D<Functor, typename Reducer::ValueType>{functor},
-      tarch::accelerator::kokkosReducer(Reducer{partialResult})
+      tarch::accelerator::getKokkosReducer(Reducer{partialResult})
     );
     Kokkos::single(Kokkos::PerTeam(team.member), [&]() {
       reducer.target = Reducer::combine(reducer.target, partialResult);
@@ -86,7 +119,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  KOKKOS_INLINE_FUNCTION void parallelReduce(
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelReduce(
     const KokkosTeam& team,
     const RangeMD<2>& range,
     const Functor     functor,
@@ -98,7 +131,7 @@ namespace tarch::accelerator {
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(team.member, range.n[0] * range.n[1]),
       TeamReduce2D<Functor, typename Reducer::ValueType>{functor, range.n[1]},
-      tarch::accelerator::kokkosReducer(Reducer{partialResult})
+      tarch::accelerator::getKokkosReducer(Reducer{partialResult})
     );
     Kokkos::single(Kokkos::PerTeam(team.member), [&]() {
       reducer.target = Reducer::combine(reducer.target, partialResult);
@@ -106,7 +139,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  KOKKOS_INLINE_FUNCTION void parallelReduce(
+  INLINE_METHOD GPU_CALLABLE_METHOD void parallelReduce(
     const KokkosTeam& team,
     const RangeMD<3>& range,
     const Functor     functor,
@@ -119,7 +152,7 @@ namespace tarch::accelerator {
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(team.member, range.n[0] * range.n[1] * range.n[2]),
       TeamReduce3D<Functor, typename Reducer::ValueType>{functor, range.n[1], range.n[2]},
-      tarch::accelerator::kokkosReducer(Reducer{partialResult})
+      tarch::accelerator::getKokkosReducer(Reducer{partialResult})
     );
     Kokkos::single(Kokkos::PerTeam(team.member), [&]() {
       reducer.target = Reducer::combine(reducer.target, partialResult);
@@ -127,6 +160,9 @@ namespace tarch::accelerator {
   }
 
   // Kokkos overwrites the reduction output.
+  //
+  // INLINE_METHOD on a redeclared function template fails under nvcc. The reductions that
+  // ParallelReduce.h declares use plain inline.
   template <typename Reducer, typename Functor>
   inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
@@ -138,8 +174,8 @@ namespace tarch::accelerator {
     const Reducer partialReducer{partialResult};
     Kokkos::parallel_reduce(
       Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, range.n),
-      KOKKOS_LAMBDA(const int i, ValueType& accumulator) { functor(i, accumulator); },
-      tarch::accelerator::kokkosReducer(partialReducer)
+      functor,
+      tarch::accelerator::getKokkosReducer(partialReducer)
     );
     reducer.target = Reducer::combine(reducer.target, partialResult);
   }
@@ -156,8 +192,8 @@ namespace tarch::accelerator {
     const Reducer partialReducer{partialResult};
     Kokkos::parallel_reduce(
       Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {range.n[0], range.n[1]}),
-      KOKKOS_LAMBDA(const int x, const int y, ValueType& accumulator) { functor(x, y, accumulator); },
-      tarch::accelerator::kokkosReducer(partialReducer)
+      functor,
+      tarch::accelerator::getKokkosReducer(partialReducer)
     );
     reducer.target = Reducer::combine(reducer.target, partialResult);
   }
@@ -178,8 +214,8 @@ namespace tarch::accelerator {
         {0, 0, 0},
         {range.n[0], range.n[1], range.n[2]}
       ),
-      KOKKOS_LAMBDA(const int x, const int y, const int z, ValueType& accumulator) { functor(x, y, z, accumulator); },
-      tarch::accelerator::kokkosReducer(partialReducer)
+      functor,
+      tarch::accelerator::getKokkosReducer(partialReducer)
     );
     reducer.target = Reducer::combine(reducer.target, partialResult);
   }
@@ -190,16 +226,17 @@ namespace tarch::accelerator {
     if (range.n <= 0) {
       return;
     }
-    using ValueType                                                       = typename Reducer::ValueType;
-    ValueType                                               partialResult = Reducer::identity();
-    const Reducer                                           partialReducer{partialResult};
-    const Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy(range.n, Kokkos::AUTO);
+    using ValueType             = typename Reducer::ValueType;
+    ValueType     partialResult = Reducer::identity();
+    const Reducer partialReducer{partialResult};
+    const int     scratchBytes = tarch::accelerator::getTeamScratchBytes(range.scratchBytes);
+    const tarch::accelerator::KokkosTeamPolicy policy =
+      tarch::accelerator::KokkosTeamPolicy(range.n, tarch::accelerator::getTeamThreads(range.threads))
+        .set_scratch_size(0, Kokkos::PerTeam(scratchBytes));
     Kokkos::parallel_reduce(
       policy,
-      KOKKOS_LAMBDA(const tarch::accelerator::KokkosTeam::MemberType& team, ValueType& accumulator) {
-        functor(team.league_rank(), tarch::accelerator::KokkosTeam{team}, accumulator);
-      },
-      tarch::accelerator::kokkosReducer(partialReducer)
+      LeagueReduce<Functor, ValueType>{functor, scratchBytes},
+      tarch::accelerator::getKokkosReducer(partialReducer)
     );
     reducer.target = Reducer::combine(reducer.target, partialResult);
   }

@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/CompilerSpecificSettings.h"
-
 #include <mpi.h>
 
 namespace tarch::mpi {
@@ -75,17 +73,6 @@ namespace tarch::mpi {
 
   int wait(
     MPI_Request*         request,
-    MPI_Status*          status   = MPI_STATUS_IGNORE,
-    std::source_location location = std::source_location::current()
-  );
-
-  int cancel(MPI_Request* request, std::source_location location = std::source_location::current());
-
-  int iprobe(
-    int                  source,
-    int                  tag,
-    MPI_Comm             communicator,
-    int*                 flag,
     MPI_Status*          status   = MPI_STATUS_IGNORE,
     std::source_location location = std::source_location::current()
   );

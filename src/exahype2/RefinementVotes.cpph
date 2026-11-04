@@ -1,0 +1,249 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+#include "exahype2/Limits.h"
+#include "exahype2/RefinementRequests.h"
+#include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/la/ScalarOperations.h"
+#include "tarch/la/VectorOperations.h"
+
+/**
+ * Votes on every cell of cellConnectivity with a null patch and merges the votes.
+ */
+template <typename Derived, typename StoragePrecision>
+INLINE_METHOD void
+exahype2::RefinementVotes::voteOnGridConstruction(
+  const peano4::CellConnectivity& cellConnectivity,
+  const exahype2::Limits&         limits,
+  exahype2::RefinementRequests&   requests
+) {
+  reserve(cellConnectivity.getNumberOfSlots());
+  int votes = 0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(cellConnectivity.getCells().size),
+    exahype2::VoteOnGridConstruction<Derived, StoragePrecision>{
+      cellConnectivity.onDevice(),
+      _commands.getData(),
+      limits.maxAdmissiblePatchSize,
+      limits.minAdmissiblePatchSize
+    },
+    tarch::accelerator::Sum<int>{votes}
+  );
+  merge(cellConnectivity, votes, cellConnectivity.getCells(), requests);
+}
+
+/**
+ * Returns true when the limits let at least one cell of cellConnectivity refine or erase. A cell
+ * refines only when its width exceeds minAdmissiblePatchSize. It erases only when the width of its
+ * parent stays within maxAdmissiblePatchSize.
+ */
+INLINE_METHOD bool
+exahype2::RefinementVotes::canRefineOrErase(
+  const peano4::CellConnectivity& cellConnectivity,
+  const exahype2::Limits&         limits
+) {
+  if (cellConnectivity.getCells().isEmpty()) {
+    return false;
+  }
+  double largestWidthOfCoarsestCells = 0.0;
+  double largestWidthOfFinestCells   = 0.0;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    largestWidthOfCoarsestCells =
+      std::max(largestWidthOfCoarsestCells, cellConnectivity.getWidthOfLevel(cellConnectivity.getMinimumLevel(), axis));
+    largestWidthOfFinestCells =
+      std::max(largestWidthOfFinestCells, cellConnectivity.getWidthOfLevel(cellConnectivity.getMaximumLevel(), axis));
+  }
+  const bool aCellCanRefine = tarch::la::greater(largestWidthOfCoarsestCells, limits.minAdmissiblePatchSize)
+    or tarch::la::greater(largestWidthOfCoarsestCells, limits.maxAdmissiblePatchSize);
+  const bool aCellCanErase = peano4::SubdivisionFactor * largestWidthOfFinestCells <= limits.maxAdmissiblePatchSize;
+  return aCellCanRefine or aCellCanErase;
+}
+
+/**
+ * Votes on every cell of cellConnectivity from its patch in solution and merges the votes. If the
+ * limits let no cell refine or erase, the function launches no kernel and merges Keep for every cell.
+ */
+template <typename Derived, typename SolutionView>
+INLINE_METHOD void
+exahype2::RefinementVotes::voteOnEveryCell(
+  const peano4::CellConnectivity& cellConnectivity,
+  const SolutionView&             solution,
+  const exahype2::Limits&         limits,
+  const double                    timeStamp,
+  exahype2::RefinementRequests&   requests
+) {
+  reserve(cellConnectivity.getNumberOfSlots());
+  int votes = 0;
+  if (canRefineOrErase(cellConnectivity, limits)) {
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(cellConnectivity.getCells().size),
+      exahype2::VoteOnRefinement<Derived, SolutionView>{
+        cellConnectivity.onDevice(),
+        cellConnectivity.onDevice().getCells(),
+        solution,
+        _commands.getData(),
+        limits.maxAdmissiblePatchSize,
+        limits.minAdmissiblePatchSize,
+        timeStamp
+      },
+      tarch::accelerator::Sum<int>{votes}
+    );
+  }
+  merge(cellConnectivity, votes, cellConnectivity.getCells(), requests);
+}
+
+template <typename Derived, typename SolutionView>
+INLINE_METHOD void
+exahype2::RefinementVotes::voteOnCells(
+  const peano4::CellConnectivity& cellConnectivity,
+  const std::vector<int>&         cells,
+  const SolutionView&             solution,
+  const exahype2::Limits&         limits,
+  const double                    timeStamp,
+  exahype2::RefinementRequests&   requests
+) {
+  reserve(cellConnectivity.getNumberOfSlots());
+  _listedCells.setValues(cells);
+  const tarch::Span<const int> cellsOnDevice{_listedCells.getData(), static_cast<int>(cells.size())};
+  const tarch::Span<const int> cellsOnHost{cells.data(), static_cast<int>(cells.size())};
+  int                          votes = 0;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(cellsOnDevice.size),
+    exahype2::VoteOnRefinement<Derived, SolutionView>{
+      cellConnectivity.onDevice(),
+      cellsOnDevice,
+      solution,
+      _commands.getData(),
+      limits.maxAdmissiblePatchSize,
+      limits.minAdmissiblePatchSize,
+      timeStamp
+    },
+    tarch::accelerator::Sum<int>{votes}
+  );
+  merge(cellConnectivity, votes, cellsOnHost, requests);
+}
+
+INLINE_METHOD void
+exahype2::RefinementVotes::release() {
+  _commands.release();
+  _listedCells.release();
+  _commandsOnHost = std::vector<exahype2::RefinementCommand>{};
+}
+
+INLINE_METHOD tarch::AllocatedBytes
+exahype2::RefinementVotes::getAllocatedBytes() const {
+  return _commands.getAllocatedBytes() + _listedCells.getAllocatedBytes()
+    + tarch::AllocatedBytes::onHost(tarch::getAllocatedBytesOf(_commandsOnHost));
+}
+
+INLINE_METHOD void
+exahype2::RefinementVotes::reserve(const int numberOfSlots) {
+  assertion(numberOfSlots >= 0, numberOfSlots);
+  if (_commands.getSize() < static_cast<std::size_t>(numberOfSlots)) {
+    _commands.allocate(static_cast<std::size_t>(numberOfSlots));
+  }
+}
+
+/**
+ * Merges the commands of the listed cells into requests. The argument votes counts the commands
+ * that differ from Keep. Without such a command, the commands stay on the device.
+ */
+INLINE_METHOD void
+exahype2::RefinementVotes::merge(
+  const peano4::CellConnectivity& cellConnectivity,
+  const int                       votes,
+  const tarch::Span<const int>    cellsOnHost,
+  exahype2::RefinementRequests&   requests
+) {
+  assertion(
+    _commands.getSize() >= static_cast<std::size_t>(cellConnectivity.getNumberOfSlots()),
+    _commands.getSize(),
+    cellConnectivity.getNumberOfSlots()
+  );
+  assertion(votes >= 0 and votes <= cellsOnHost.size, votes, cellsOnHost.size);
+  if (votes == 0) {
+    requests.merge(exahype2::RefinementCommand::Keep, cellsOnHost);
+    return;
+  }
+  const auto numberOfSlots = static_cast<std::size_t>(cellConnectivity.getNumberOfSlots());
+  _commandsOnHost.resize(numberOfSlots);
+  _commands.copyToHost(_commandsOnHost.data(), numberOfSlots);
+  requests.merge(_commandsOnHost, cellsOnHost);
+}
+
+TARGET_DECLARE
+template <typename Derived, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::VoteOnGridConstruction<Derived, StoragePrecision>::operator()(const int entry, int& accumulator) const {
+  const int                                   slot         = cellConnectivity.getCells()[entry];
+  const tarch::la::Vector<DIMENSIONS, double> width        = cellConnectivity.getCellWidth(slot);
+  const double                                largestWidth = tarch::la::max(width);
+  exahype2::RefinementCommand                 command      = exahype2::RefinementCommand::Keep;
+  if (tarch::la::greater(largestWidth, maxAdmissibleSize)) {
+    command = exahype2::RefinementCommand::Refine;
+  } else if (tarch::la::greaterEquals(largestWidth, minAdmissibleSize)) {
+    command = Derived::refinementCriterion(
+      static_cast<const StoragePrecision*>(nullptr),
+      cellConnectivity.getCellCentre(slot),
+      width,
+      0.0
+    );
+  }
+  commands[slot] = command;
+  accumulator += command == exahype2::RefinementCommand::Keep ? 0 : 1;
+}
+
+/**
+ * Returns the vote of Derived on one cell. A cell wider than maxAdmissibleSize refines. A vote of
+ * the refinement criterion that leaves the admissible sizes becomes Keep.
+ */
+template <typename Derived, typename StoragePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand
+exahype2::voteWithinAdmissibleSizes(
+  const StoragePrecision* const                Q,
+  const tarch::la::Vector<DIMENSIONS, double>& centre,
+  const tarch::la::Vector<DIMENSIONS, double>& width,
+  const double                                 maxAdmissibleSize,
+  const double                                 minAdmissibleSize,
+  const double                                 timeStamp
+) {
+  const double                largestWidth = tarch::la::max(width);
+  exahype2::RefinementCommand command      = exahype2::RefinementCommand::Keep;
+  if (tarch::la::greater(largestWidth, maxAdmissibleSize)) {
+    command = exahype2::RefinementCommand::Refine;
+  } else if (
+    tarch::la::greater(largestWidth, minAdmissibleSize) or peano4::SubdivisionFactor * largestWidth <= maxAdmissibleSize
+  ) {
+    command = Derived::refinementCriterion(Q, centre, width, timeStamp);
+    if (command == exahype2::RefinementCommand::Refine and tarch::la::smallerEquals(largestWidth, minAdmissibleSize)) {
+      command = exahype2::RefinementCommand::Keep;
+    } else if (
+      command == exahype2::RefinementCommand::Erase and peano4::SubdivisionFactor * largestWidth > maxAdmissibleSize
+    ) {
+      command = exahype2::RefinementCommand::Keep;
+    }
+  }
+  return command;
+}
+
+template <typename Derived, typename SolutionView>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+exahype2::VoteOnRefinement<Derived, SolutionView>::operator()(const int entry, int& accumulator) const {
+  const int                         slot    = cells[entry];
+  const exahype2::RefinementCommand command = exahype2::voteWithinAdmissibleSizes<Derived>(
+    solution.getChunk(slot),
+    cellConnectivity.getCellCentre(slot),
+    cellConnectivity.getCellWidth(slot),
+    maxAdmissibleSize,
+    minAdmissibleSize,
+    timeStamp
+  );
+  commands[slot] = command;
+  accumulator += command == exahype2::RefinementCommand::Keep ? 0 : 1;
+}
+TARGET_DECLARE_END

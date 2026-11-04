@@ -5,12 +5,13 @@
 #include "tarch/Assertions.h"
 #include "tarch/la/ScalarOperations.h"
 
-tarch::database::GlobalTimeSeriesDatabase::GlobalTimeSeriesDatabase(double timeDelta, bool deltasAreRelative) :
-  SnapshotDatabase(timeDelta, deltasAreRelative) {}
+tarch::database::GlobalTimeSeriesDatabase::GlobalTimeSeriesDatabase(const double timeDelta) :
+  SnapshotDatabase(timeDelta) {}
 
 tarch::database::GlobalTimeSeriesDatabase::~GlobalTimeSeriesDatabase() { clear(); }
 
-void tarch::database::GlobalTimeSeriesDatabase::writeRow(std::ostream& file, const Snapshot& snapshot) const {
+void
+tarch::database::GlobalTimeSeriesDatabase::writeRow(std::ostream& file, const Snapshot& snapshot) const {
   file << snapshot.timestamp;
   for (const double value : snapshot.data) {
     file << ", " << value;
@@ -18,25 +19,29 @@ void tarch::database::GlobalTimeSeriesDatabase::writeRow(std::ostream& file, con
   file << std::endl;
 }
 
-void tarch::database::GlobalTimeSeriesDatabase::prepareOutputStream(std::ostream& file) const {
+void
+tarch::database::GlobalTimeSeriesDatabase::prepareOutputStream(std::ostream& file) const {
   file << std::scientific;
   if (_precision > 0) {
     file.precision(_precision);
   }
 }
 
-void tarch::database::GlobalTimeSeriesDatabase::writeHeader(std::ostream& file) const {
+void
+tarch::database::GlobalTimeSeriesDatabase::writeHeader(std::ostream& file) const {
   file << "t, " << _dataName << std::endl;
 }
 
-bool tarch::database::GlobalTimeSeriesDatabase::hasUnwrittenSnapshots() const {
+bool
+tarch::database::GlobalTimeSeriesDatabase::hasUnwrittenSnapshots() const {
   return static_cast<int>(_data.size()) > _numberOfEntriesWrittenToFile;
 }
 
-void tarch::database::GlobalTimeSeriesDatabase::writeUnwrittenSnapshots(std::ostream& file) {
+void
+tarch::database::GlobalTimeSeriesDatabase::writeUnwrittenSnapshots(std::ostream& file) {
   const int totalSnapshotCount     = static_cast<int>(_data.size());
   const int unwrittenSnapshotCount = totalSnapshotCount - _numberOfEntriesWrittenToFile;
-  // New rows sit at the front of the newest-first list; emit them oldest-first.
+  // The list stores the newest row first. The flush writes the unwritten rows in reverse.
   std::vector<const Snapshot*> unwrittenSnapshots;
   unwrittenSnapshots.reserve(unwrittenSnapshotCount);
   auto snapshot = _data.begin();
@@ -51,22 +56,33 @@ void tarch::database::GlobalTimeSeriesDatabase::writeUnwrittenSnapshots(std::ost
   _numberOfEntriesWrittenToFile = totalSnapshotCount;
 }
 
-void tarch::database::GlobalTimeSeriesDatabase::clearStorage() { _data.clear(); }
+void
+tarch::database::GlobalTimeSeriesDatabase::clearStorage() {
+  _data.clear();
+}
 
-void tarch::database::GlobalTimeSeriesDatabase::resetWriteTracking() { _numberOfEntriesWrittenToFile = 0; }
+void
+tarch::database::GlobalTimeSeriesDatabase::resetWriteTracking() {
+  _numberOfEntriesWrittenToFile = 0;
+}
 
-void tarch::database::GlobalTimeSeriesDatabase::setDataName(const std::string& dataName) { _dataName = dataName; }
+void
+tarch::database::GlobalTimeSeriesDatabase::setDataName(const std::string& dataName) {
+  _dataName = dataName;
+}
 
 /**
- * Determines whether a new measurement is appended as a new time stamp, replaces
- * the newest entry (same time stamp), or is discarded because not enough time
- * has passed.
+ * Returns whether a measurement at timestamp appends a row, replaces the newest row with the same
+ * time stamp, or comes too early and is ignored. Under SnapshotRule::EveryLaterTimestamp only a
+ * later time stamp than the newest row appends a row.
  */
-tarch::database::SnapshotDatabase::AddSnapshotAction tarch::database::GlobalTimeSeriesDatabase::getAction(
-  double timestamp
-) {
+tarch::database::SnapshotDatabase::AddSnapshotAction
+tarch::database::GlobalTimeSeriesDatabase::getAction(const double timestamp) const {
   if (_data.empty()) {
     return AddSnapshotAction::Append;
+  } else if (_snapshotRule == tarch::database::SnapshotRule::EveryLaterTimestamp) {
+    return tarch::la::greater(timestamp, _data.front().timestamp) ? AddSnapshotAction::Append
+                                                                  : AddSnapshotAction::Ignore;
   } else if (tarch::la::equals(_data.front().timestamp, timestamp)) {
     return AddSnapshotAction::Replace;
   } else if (timestamp - _data.front().timestamp >= _timeDelta and _timeDelta >= 0.0) {
@@ -77,15 +93,26 @@ tarch::database::SnapshotDatabase::AddSnapshotAction tarch::database::GlobalTime
 }
 
 /**
- * Adds one measurement while holding the database lock across the decision and
- * mutation. A repeated time stamp replaces the newest row; a later accepted
- * time stamp is prepended. The number of values remains constant across calls.
+ * Returns whether addGlobalSnapshot() appends or replaces a snapshot at timestamp.
  */
-void tarch::database::GlobalTimeSeriesDatabase::addGlobalSnapshot(
-  double        timestamp,
-  int           numberOfDataEntries,
-  const double* data
+bool
+tarch::database::GlobalTimeSeriesDatabase::isSnapshotDue(const double timestamp) {
+  const std::scoped_lock lock(_mutex);
+  return getAction(timestamp) != AddSnapshotAction::Ignore;
+}
+
+/**
+ * Adds one measurement. A repeated time stamp replaces the newest row. A database without an
+ * output file name keeps its rows in memory only.
+ */
+void
+tarch::database::GlobalTimeSeriesDatabase::addGlobalSnapshot(
+  const double        timestamp,
+  const int           numberOfDataEntries,
+  const double* const data
 ) {
+  assertion(data != nullptr);
+  assertion(numberOfDataEntries > 0, numberOfDataEntries);
   {
     const std::scoped_lock lock(_mutex);
     assertion(_numberOfGlobalDataPoints == numberOfDataEntries or _data.empty());
@@ -99,9 +126,15 @@ void tarch::database::GlobalTimeSeriesDatabase::addGlobalSnapshot(
       break;
     case AddSnapshotAction::Replace:
       std::copy_n(data, _numberOfGlobalDataPoints, _data.front().data.begin());
+      if (not hasUnwrittenSnapshots()) {
+        resetWriteTracking();
+        _csvHeaderWritten = false;
+      }
       break;
     }
   }
 
-  dumpCSVFile();
+  if (not _fileName.empty()) {
+    dumpCSVFile();
+  }
 }

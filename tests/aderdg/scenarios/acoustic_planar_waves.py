@@ -30,12 +30,13 @@ class AcousticPlanarWaves(Scenario):
         return (
             """
   // simple translation in positive diagonal direction
-  const double val = cos( - std::numbers::pi*(
-      x[0] + x[1]
+  // tarch::la::sumInOrderOfMagnitude() returns the same bits for every order of the coordinates.
 #if DIMENSIONS==3
-      + x[2]
+  const double sumOfCoordinates = tarch::la::sumInOrderOfMagnitude(x[0], x[1], x[2]);
+#else
+  const double sumOfCoordinates = x[0] + x[1];
 #endif
-  ));
+  const double val = cos( - std::numbers::pi*sumOfCoordinates);
 
   Q[Shortcuts::v+0] = val;
   Q[Shortcuts::v+1] = val;
@@ -65,12 +66,12 @@ class AcousticPlanarWaves(Scenario):
         return (
             """
   const double w = 2*std::sqrt(DIMENSIONS)*M_PI;
-  const double val = cos( w*t - std::numbers::pi*(
-      x[0] + x[1]
 #if DIMENSIONS==3
-    + x[2]
+  const double sumOfCoordinates = tarch::la::sumInOrderOfMagnitude(x[0], x[1], x[2]);
+#else
+  const double sumOfCoordinates = x[0] + x[1];
 #endif
-  ));
+  const double val = cos( w*t - std::numbers::pi*sumOfCoordinates);
 
   solution[Shortcuts::v+0] = val;
   solution[Shortcuts::v+1] = val;

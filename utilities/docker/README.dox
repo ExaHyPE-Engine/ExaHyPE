@@ -56,7 +56,7 @@ jupyter lab --allow-root --port=8888 --no-browser --ip=0.0.0.0
 The next part is mostly relevant for developers of the project or if you want to change or add some additionally dependencies
 to the Docker images yourself. Keep in mind, that building the image takes a significant amount of time and requires root access.
 
-To build the Docker images, make sure to execute the following commands in the Peano root directory.
+To build the Docker images, execute the following commands in the Peano root directory.
 
 ### Building Base Images
 

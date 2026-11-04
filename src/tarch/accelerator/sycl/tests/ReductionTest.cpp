@@ -9,29 +9,32 @@
 #include <sycl/sycl.hpp>
 
 namespace {
-  constexpr int DeviceId     = tarch::accelerator::Device::DefaultDevice;
   constexpr int ElementCount = 1024;
 } // namespace
 
 tarch::accelerator::sycl::tests::ReductionTest::ReductionTest() :
-  TestCase("tarch::accelerator::sycl::tests::ReductionTest") {}
+  tarch::tests::TestCase("tarch::accelerator::sycl::tests::ReductionTest") {}
 
-void tarch::accelerator::sycl::tests::ReductionTest::run() { testMethod(testParallelReduction); }
+void
+tarch::accelerator::sycl::tests::ReductionTest::run() {
+  testMethod(testParallelReduction);
+}
 
-void tarch::accelerator::sycl::tests::ReductionTest::testParallelReduction() {
+void
+tarch::accelerator::sycl::tests::ReductionTest::testParallelReduction() {
   const std::vector<int> host(ElementCount, 1);
   const int              expectedSum = ElementCount;
   const int              zero        = 0;
+  const int              device      = tarch::accelerator::getCurrentDevice();
 
-  ::sycl::queue& queue = *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(DeviceId));
+  ::sycl::queue& queue = *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(device));
 
-  int* deviceInput  = tarch::allocateMemory<int>(ElementCount, tarch::MemoryLocation::Device, DeviceId);
-  int* deviceResult = tarch::allocateMemory<int>(1, tarch::MemoryLocation::Device, DeviceId);
+  int* deviceInput  = tarch::allocateMemory<int>(ElementCount, tarch::MemoryLocation::Device, device);
+  int* deviceResult = tarch::allocateMemory<int>(1, tarch::MemoryLocation::Device, device);
 
-  tarch::copyTo(deviceInput, host.data(), ElementCount, tarch::MemoryLocation::Device, DeviceId);
-  tarch::copyTo(deviceResult, &zero, 1, tarch::MemoryLocation::Device, DeviceId);
+  tarch::copyTo(deviceInput, host.data(), ElementCount, tarch::MemoryLocation::Device, device);
+  tarch::copyTo(deviceResult, &zero, 1, tarch::MemoryLocation::Device, device);
 
-  // Sum deviceInput on the GPU via a SYCL reduction into deviceResult.
   queue
     .submit([&](::sycl::handler& handle) {
       auto sumReduction = ::sycl::reduction(deviceResult, ::sycl::plus<int>());
@@ -42,10 +45,10 @@ void tarch::accelerator::sycl::tests::ReductionTest::testParallelReduction() {
     .wait();
 
   int deviceSum = -1;
-  tarch::copyFrom(deviceResult, &deviceSum, 1, tarch::MemoryLocation::Device, DeviceId);
+  tarch::copyFrom(deviceResult, &deviceSum, 1, tarch::MemoryLocation::Device, device);
 
-  tarch::freeMemory(deviceInput, tarch::MemoryLocation::Device, DeviceId);
-  tarch::freeMemory(deviceResult, tarch::MemoryLocation::Device, DeviceId);
+  tarch::freeMemory(deviceInput, tarch::MemoryLocation::Device, device);
+  tarch::freeMemory(deviceResult, tarch::MemoryLocation::Device, device);
 
   validateEqualsWithParams1(deviceSum, expectedSum, deviceSum);
 }

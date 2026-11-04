@@ -20,7 +20,7 @@ The left and right face values are calculated as
     u^n_{i+\frac{1}{2}} = u^i_n + \frac{1}{2}s_i
 @f}
 
-Updating @f$ u_i^n @f$ with the flux contributions uses these face values instead of the surrounding volumes.
+The update of @f$ u_i^n @f$ with the flux contributions reads these face values.
 @f$
     u^{n + 1}_i = u^n_i + \frac{\Delta t}{\Delta x}(F_{i-\frac{1}{2}} - F_{i+\frac{1}{2}})
 @f$
@@ -28,7 +28,7 @@ Updating @f$ u_i^n @f$ with the flux contributions uses these face values instea
 There are many approaches to solve the Riemann problem, but we use the Rusanov flux.
 
 # The MUSCL-Hancock Scheme
-The MUSCL-Hancock Scheme modifies the standard MUSCL approach to calculated the flux for half a timestep later.
-After the face values are calculated they are updated according to the flux and source term.
+The MUSCL-Hancock scheme modifies the standard MUSCL approach. It computes the flux half a time step later.
+The flux and the source term then update the face values.
 
 */

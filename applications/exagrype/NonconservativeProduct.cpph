@@ -2,11 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 /**
- * Writes B(Q) deltaQ for the first-order CCZ4 system, with deltaQ along normal.
+ * Writes B(Q) deltaQ for the first-order CCZ4 system, with deltaQ along the axis normal.
  * The conformal metric must be positive definite.
  */
 template <class Shortcuts>
-INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::nonconservativeProduct(
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exagrype::nonconservativeProduct(
   const double* const NOALIAS Q,
   const double* const NOALIAS deltaQ,
   const int                   normal,

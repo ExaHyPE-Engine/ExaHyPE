@@ -2,47 +2,55 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/CompileTarget.h"
 
 namespace tarch::accelerator {
   /**
-   * Flat 1-dimensional range [0, n).
-   * Maps to OMP `for (int i=0; i<n; ++i)`, Kokkos::RangePolicy(0,n),
-   * CUDA/HIP grid stride, sycl::range<1>(n).
+   * Covers the work items 0 to n - 1 of a one-dimensional dispatch.
    */
   struct Range {
     int n;
-    GPU_CALLABLE_METHOD constexpr explicit Range(int n_) :
-      n(n_) {}
+    GPU_CALLABLE_METHOD constexpr explicit Range(int size) :
+      n(size) {}
   };
 
   /**
-   * Multi-dimensional range, D in {2, 3}.
-   * Lambda receives D ints (e.g. `[=](int x, int y, int z){...}` for D=3).
+   * Covers a D-dimensional index space. The kernel receives D indices.
    */
   template <int D>
   struct RangeMD {
-    static_assert(D == 2 or D == 3, "RangeMD only supports D=2 or D=3");
+    static_assert(D == 2 or D == 3, "A multidimensional parallel loop supports 2D and 3D only.");
     int n[D];
 
     GPU_CALLABLE_METHOD constexpr RangeMD(int nx, int ny) :
       n{nx, ny} {
-      static_assert(D == 2, "2-arg RangeMD ctor requires D==2");
+      static_assert(D == 2, "Only a 2D parallel loop takes two extents.");
     }
     GPU_CALLABLE_METHOD constexpr RangeMD(int nx, int ny, int nz) :
       n{nx, ny, nz} {
-      static_assert(D == 3, "3-arg RangeMD ctor requires D==3");
+      static_assert(D == 3, "Only a 3D parallel loop takes three extents.");
     }
   };
 
   /**
-   * Outer hierarchical range: `n` independent teams (Kokkos teams / CUDA blocks /
-   * SYCL groups). Inside the lambda you call `tarch::accelerator::parallelFor(team, ...)` or
-   * `tarch::accelerator::parallelReduce(team, ...)` with an inner Range/RangeMD.
+   * Covers n independent teams. A GPU backend maps a team onto a thread block or a work group. The
+   * kernel of a team calls parallelFor() or parallelReduce() with the team and an inner Range or
+   * RangeMD.
    */
   struct TeamRange {
+    static constexpr int BackendDefault = -1;
+
     int n;
-    GPU_CALLABLE_METHOD constexpr explicit TeamRange(int n_) :
-      n(n_) {}
+    int threads;
+    int scratchBytes;
+
+    GPU_CALLABLE_METHOD constexpr explicit TeamRange(int size) :
+      n(size),
+      threads(BackendDefault),
+      scratchBytes(BackendDefault) {}
+    GPU_CALLABLE_METHOD constexpr TeamRange(int size, int threadsPerTeam, int bytesOfTeamScratch) :
+      n(size),
+      threads(threadsPerTeam),
+      scratchBytes(bytesOfTeamScratch) {}
   };
 } // namespace tarch::accelerator

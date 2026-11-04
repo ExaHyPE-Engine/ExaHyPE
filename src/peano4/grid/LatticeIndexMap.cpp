@@ -3,12 +3,11 @@
 #include "LatticeIndexMap.h"
 
 /**
- * Sizes the table for a number of entries and drops everything it held.
- *
- * The table takes twice the requested entries rounded up to a power of two, so
- * a caller that knows how many entries a level holds fills it without a rehash.
+ * Clears the map and sizes it for numberOfEntries entries. That many entries then fit without a
+ * rehash.
  */
-void peano4::grid::LatticeIndexMap::reserve(const std::size_t numberOfEntries) {
+void
+peano4::grid::LatticeIndexMap::reserve(const std::size_t numberOfEntries) {
   std::size_t capacity = SmallestCapacity;
   while (capacity < 2 * numberOfEntries) {
     capacity *= 2;
@@ -20,7 +19,8 @@ void peano4::grid::LatticeIndexMap::reserve(const std::size_t numberOfEntries) {
   _numberOfTombstones = 0;
 }
 
-void peano4::grid::LatticeIndexMap::clear() {
+void
+peano4::grid::LatticeIndexMap::clear() {
   _keys.clear();
   _values.clear();
   _slotMask           = 0;
@@ -31,20 +31,21 @@ void peano4::grid::LatticeIndexMap::clear() {
 /**
  * Doubles the table and reinserts every entry, dropping the tombstones.
  */
-void peano4::grid::LatticeIndexMap::grow() {
-  const auto heldKeys   = std::move(_keys);
-  const auto heldValues = std::move(_values);
+void
+peano4::grid::LatticeIndexMap::grow() {
+  const auto keysBeforeGrowth   = std::move(_keys);
+  const auto valuesBeforeGrowth = std::move(_values);
 
-  const std::size_t capacity = heldKeys.empty() ? SmallestCapacity : 2 * heldKeys.size();
+  const std::size_t capacity = keysBeforeGrowth.empty() ? SmallestCapacity : 2 * keysBeforeGrowth.size();
   _keys.assign(capacity, EmptyKey);
   _values.assign(capacity, NoEntry);
   _slotMask           = capacity - 1;
   _size               = 0;
   _numberOfTombstones = 0;
 
-  for (std::size_t slot = 0; slot < heldKeys.size(); slot++) {
-    if (heldKeys[slot] != EmptyKey and heldKeys[slot] != TombstoneKey) {
-      insert(heldKeys[slot], heldValues[slot]);
+  for (std::size_t slot = 0; slot < keysBeforeGrowth.size(); slot++) {
+    if (keysBeforeGrowth[slot] != EmptyKey and keysBeforeGrowth[slot] != TombstoneKey) {
+      insert(keysBeforeGrowth[slot], valuesBeforeGrowth[slot]);
     }
   }
 }

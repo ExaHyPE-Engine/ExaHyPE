@@ -240,7 +240,7 @@ reconstruction = calculate_pressure + compute_usq + """
 
     // Eq. 16 Käppeli and Mishra: The first-order hydrostatic pressure at either
     // boundary. The second-order pressure-perturbation slope is unstable for
-    // this scenario, so the reconstruction keeps the exact hydrostatic value.
+    // this scenario. The reconstruction keeps the exact hydrostatic value.
     const auto pressureLeftBoundary =
       pressure + 0.5 * density * -GRAVITY * h(normal);
     const auto pressureRightBoundary =
@@ -285,6 +285,9 @@ project = exahype2.Project(
     min_grid_levels=args.grid_levels,
     max_grid_levels=args.grid_levels,
 )
+
+if project.dimensions != 2:
+    raise ValueError("The isothermal stratification test runs in 2D only.")
 
 fv_solver = exahype2.fv.Solver(
     name="FVSolver",

@@ -4,13 +4,15 @@
 
 tarch::instrumentation::FileSink::~FileSink() { close(); }
 
-tarch::instrumentation::FileSink& tarch::instrumentation::FileSink::getInstance() {
-  // Process-lifetime storage keeps logging available during static destruction.
+tarch::instrumentation::FileSink&
+tarch::instrumentation::FileSink::getInstance() {
+  // The sink lives until the process ends. Logging works during static destruction.
   static FileSink& singleton = *new FileSink();
   return singleton;
 }
 
-void tarch::instrumentation::FileSink::reopenOutputStream() {
+void
+tarch::instrumentation::FileSink::reopenOutputStream() {
   if (_outputStream.is_open()) {
     _outputStream.flush();
     _outputStream.close();
@@ -21,7 +23,8 @@ void tarch::instrumentation::FileSink::reopenOutputStream() {
   }
 }
 
-void tarch::instrumentation::FileSink::setOutputFile(const std::string& outputLogFileName) {
+void
+tarch::instrumentation::FileSink::setOutputFile(const std::string& outputLogFileName) {
   const std::scoped_lock lock(_mutex);
   _outputFileName = outputLogFileName;
 
@@ -29,10 +32,11 @@ void tarch::instrumentation::FileSink::setOutputFile(const std::string& outputLo
 }
 
 /**
- * Writes the message and flushes the stream at most once per FlushInterval, so
- * a process that dies loses at most one interval of lines.
+ * Writes the message and flushes the stream at most once per FlushInterval. A process that dies
+ * loses at most one interval of lines.
  */
-void tarch::instrumentation::FileSink::writeAndFlushPeriodically(const std::string_view message) {
+void
+tarch::instrumentation::FileSink::writeAndFlushPeriodically(const std::string_view message) {
   if (not _outputStream.is_open()) {
     return;
   }
@@ -44,12 +48,14 @@ void tarch::instrumentation::FileSink::writeAndFlushPeriodically(const std::stri
   }
 }
 
-void tarch::instrumentation::FileSink::write(const std::string_view message) {
+void
+tarch::instrumentation::FileSink::write(const std::string_view message) {
   const std::scoped_lock lock(_mutex);
   writeAndFlushPeriodically(message);
 }
 
-void tarch::instrumentation::FileSink::write(const std::string_view message, const std::string_view outputLogFileName) {
+void
+tarch::instrumentation::FileSink::write(const std::string_view message, const std::string_view outputLogFileName) {
   const std::scoped_lock lock(_mutex);
 
   if (_outputFileName != outputLogFileName) {
@@ -59,7 +65,8 @@ void tarch::instrumentation::FileSink::write(const std::string_view message, con
   writeAndFlushPeriodically(message);
 }
 
-void tarch::instrumentation::FileSink::close() {
+void
+tarch::instrumentation::FileSink::close() {
   const std::scoped_lock lock(_mutex);
 
   if (_outputStream.is_open()) {

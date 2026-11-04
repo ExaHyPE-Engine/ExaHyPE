@@ -1,0 +1,63 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Writes the stress tensor that loads the fault at x before the rupture. Q is the state of the
+ * fault node at x.
+ */
+template <typename Shortcuts, typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaseis::writeInitialStress(
+  [[maybe_unused]] const Value* const  Q,
+  [[maybe_unused]] const double* const x,
+  Value&                               sxx,
+  Value&                               syy,
+  Value&                               szz,
+  Value&                               sxy,
+  Value&                               sxz,
+  Value&                               syz
+) {
+  {{initialStresses}}
+}
+
+/**
+ * Returns the shear stress that adds to the initial traction along the second tangent at x.
+ */
+template <typename Shortcuts, typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getAdditionalShearStress(
+  [[maybe_unused]] const Value* const  Q,
+  [[maybe_unused]] const double* const x
+) {
+  {{n_yz}}
+}
+
+template <typename Shortcuts, typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getCohesion(
+  [[maybe_unused]] const Value* const  Q,
+  [[maybe_unused]] const double* const x
+) {
+  {{cohesion}}
+}
+
+/**
+ * Returns the time at which the fault at x starts to rupture whatever its stress.
+ */
+template <typename Shortcuts, typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getForcedRuptureTime(
+  [[maybe_unused]] const Value* const  Q,
+  [[maybe_unused]] const double* const x
+) {
+  {{forced_rupture_time}}
+}
+
+/**
+ * Returns the slip at x over which the friction weakens from its static to its dynamic value.
+ */
+template <typename Shortcuts, typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getCriticalSlipDistance(
+  [[maybe_unused]] const Value* const  Q,
+  [[maybe_unused]] const double* const x
+) {
+  {{d_c}}
+}
+TARGET_DECLARE_END

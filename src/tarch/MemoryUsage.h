@@ -5,35 +5,22 @@
 #include "tarch/CompilerSpecificSettings.h"
 
 namespace tarch {
-  enum class MemoryUsageFormat {
-    KiB,
-    MiB,
-    GiB,
-  };
+  enum class MemoryUsageFormat { KiB, MiB, GiB };
 
-  constexpr unsigned long long KiB = 1ull << 10;
-  constexpr unsigned long long MiB = 1ull << 20;
-  constexpr unsigned long long GiB = 1ull << 30;
+  constexpr unsigned long long KiB = 1ULL << 10;
+  constexpr unsigned long long MiB = 1ULL << 20;
+  constexpr unsigned long long GiB = 1ULL << 30;
+
+  template <typename Element>
+  INLINE_METHOD std::size_t getAllocatedBytesOf(const std::vector<Element>& elements);
 
   std::string toString(MemoryUsageFormat format);
-
-  constexpr MemoryUsageFormat chooseMemoryUsageFormat(unsigned long long bytes) noexcept {
-    if (bytes < MiB) {
-      return MemoryUsageFormat::KiB;
-    } else if (bytes < GiB) {
-      return MemoryUsageFormat::MiB;
-    } else {
-      return MemoryUsageFormat::GiB;
-    }
-  }
-
+  INLINE_METHOD constexpr MemoryUsageFormat chooseMemoryUsageFormat(unsigned long long bytes) noexcept;
   double convertMemorySize(unsigned long long bytes, MemoryUsageFormat format);
 
   std::uint64_t getMemoryUsageInBytes();
   std::uint64_t getTotalMemoryInBytes();
-  std::uint64_t getFreeMemoryInBytes();
-
-  double getMemoryUsage(MemoryUsageFormat format);
-  double getTotalMemory(MemoryUsageFormat format);
-  double getFreeMemory(MemoryUsageFormat format);
+  std::uint64_t getAvailableMemoryInBytes();
 } // namespace tarch
+
+#include "tarch/MemoryUsage.cpph"

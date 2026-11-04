@@ -12,41 +12,53 @@ to the faces, solves the face Riemann problems, and corrects the cell solution.
 # Data flow
 
 The predictor uses the cell polynomial to form a space-time approximation. It
-projects the terminal solution and fluxes onto each face. Once both adjacent
-cell projections are available, the Riemann solver produces the interface
-contribution, which the corrector backprojects into the cell.
+writes the time-averaged solution and flux onto the cell's own half of every
+face. Once both halves of a face contain their traces, the Riemann solver
+computes the numerical flux of the face. The corrector adds this flux to the cell.
 
 For a linear PDE, the face contribution can be integrated in time before its
-spatial backprojection. This avoids a space-time face representation in the
+spatial projection. This avoids a space-time face representation in the
 corrector.
 
-# Two-sweep schedule
+# The time step
 
-The standard implementation uses two traversals:
+The solver family exahype2::dg::ader::Solver runs one time step as:
 
-1. The primary sweep runs the predictor from a cell callback and projects its
-   result onto the faces. Rank-boundary and subtree-task interfaces copy
-   their face data after the sweep.
-2. The secondary sweep merges partner face data before the first face touch,
-   solves the Riemann problem, and corrects each cell after its adjacent face
-   results are available.
+1. The predictor dispatch over the owned cells writes the traces into the
+   state and flux pools of the faces.
+2. The halo exchange posts the halves of the exchanged faces. While the
+   messages travel, the local level jumps fill their fine faces from their
+   coarse face and the Riemann dispatch over the local faces writes the
+   numerical flux of both halves.
+3. After the wait, the remote level jumps interpolate and the Riemann dispatch
+   runs over the remote faces.
+4. The level jumps restrict the fluxes of their fine faces onto their coarse
+   face, the flux halves of the exchanged faces travel again while the
+   corrector dispatch adds the face integrals of the local cells, and the
+   remote cells follow after the wait. The corrector reports the wave-speed
+   maxima the next time step size reads.
 
-Solving a face immediately after its last touch is valid only when no partner
-copy still has to arrive. The two-sweep schedule therefore applies uniformly
-to serial, threaded, and MPI runs.
+A solver with a subcell limiter (exahype2::dg::limiting::SubcellLimiter)
+judges every corrected candidate by its physical admissibility and by the
+discrete maximum principle, spreads the troubled status over
+`NumberOfSpreadRings` rings of neighbours and recomputes the limited cells
+with the finite-volume scheme of the limiter on their subgrids.
 
 # Adaptive interfaces
 
-A hanging face couples cells on different levels. The adaptive schedule
-interpolates the coarse representation onto the hanging face, recomputes the
-predictor for adjacent fine cells where required, solves the fine face problem,
-and restricts its result to the persistent coarse face.
+A hanging face couples cells on different levels. The coarse trace is
+interpolated onto the fine faces before the Riemann dispatch, the fine faces
+solve their Riemann problems, and the numerical fluxes of the fine faces
+restrict onto the coarse face before the corrector of the coarse cell reads
+it. No predictor runs twice.
 
-Cells that depend on the restricted coarse-face value are corrected in a third
-sweep. The adaptive implementation therefore trades one extra traversal and
-repeated predictors near refinement boundaries for a consistent fine-grid
-Riemann solve.
+# Coupling two solvers
 
-@ref peano_action_sets describes the callback ordering used by these sweeps.
+Two ADER-DG solvers of one project can own complementary parts of the domain
+through `restrict_to_cells()`, and `project.couple(first, second)` runs both
+with the smaller of their time step sizes; the traces of the faces between
+their cells are copied from the partner's face pools, mapped onto the other
+solver's face nodes and compute precision. `tests/aderdg-coupling` couples a
+double and a single precision solver of the same equation.
 
 */

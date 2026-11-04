@@ -1,0 +1,119 @@
+/**
+
+@page peano_cell_connectivity The cell connectivity
+
+\tableofcontents
+
+peano4::Spacetree owns the tree of one rank. It cuts the tree along the
+space-filling curve into one section per rank and builds the
+peano4::CellConnectivity of the cells the rank owns. It runs every regrid.
+An application reads the cell connectivity of its rank. It stores its data in
+pools that the slots of that cell connectivity index. A phase runs dispatches
+over the spans of the cell connectivity.
+
+@image html documentation/peano4/cell_connectivity.svg
+
+The figure shows from left to right:
+
+- the spacetree cut along the curve into the cells of three ranks,
+- the cells and faces of one cell connectivity with their slots, the faces a
+  neighbour rank stores too and one level jump,
+- the slot moves of one regrid.
+
+# Cells, faces and level jumps
+
+- A cell is an unrefined cell of the tree the rank owns. A cell keeps its
+  slot across every regrid that keeps the cell.
+  peano4::CellConnectivity::getCellLevel(),
+  peano4::CellConnectivity::getCellLattice(),
+  peano4::CellConnectivity::getCellCentre() and
+  peano4::CellConnectivity::getCellWidth() return its level, its integer
+  lattice position on that level and the geometry the kernel derives from them.
+  peano4::CellConnectivity::getCellFace() returns the slot of the face with
+  number `n`. The faces below `DIMENSIONS` are the lower faces along the axes.
+  The faces from `DIMENSIONS` on are the upper ones.
+- Every regrid numbers the faces afresh.
+  peano4::CellConnectivity::getFaceKind() returns peano4::FaceKind::Interior, `Boundary`, `Hanging` (the fine face of
+  a level jump), `Coarse` (the coarse face of a level jump) or
+  `Intermediate` (a face of a chain of level jumps without a cell on either side).
+  peano4::CellConnectivity::getFaceCell() returns the cell on the lower or the
+  upper side of the face. It returns -1 for a side without a cell of this rank.
+- A peano4::LevelJump names a coarse face, the side of its coarse cell and
+  its fine faces in subface order.
+- A face that two ranks store appears in the cell connectivity of both ranks, each
+  with its own cell on one side. peano4::CellConnectivity::getNeighbours()
+  lists the neighbour ranks. peano4::CellConnectivity::getExchangedFaces()
+  lists the faces that this rank and a neighbour store in the canonical order
+  (level, normal, lattice). Both ranks derive that order without a message.
+
+peano4::Spacetree::getCellAt() returns the cell of a level and lattice
+position. An application finds the cell that contains a position with it.
+
+# Spans
+
+The cell connectivity orders every list so that a group an application loops over is
+one contiguous span. peano4::Adjacency::Local names a cell, face or level jump
+that reads the data of this rank only. peano4::Adjacency::Remote names one
+that reads a face half a neighbour rank sends.
+
+- peano4::CellConnectivity::getCells() returns every cell. `getCells(adjacency)`
+  returns the local or the remote cells. `getCells(adjacency, level)` returns
+  those of one level for an application that steps the levels one at a time.
+- peano4::CellConnectivity::getFaces() returns the local or the remote faces of one
+  kind, or of a run of kinds in the order `Interior, Boundary, Hanging,
+  Coarse, Intermediate`.
+- peano4::CellConnectivity::getLevelJumps() returns the local or the remote level
+  jumps, or those whose coarse face lies on one level or on a run of levels.
+
+The remote groups follow the local groups in every list. An application runs
+the local groups while MPI transfers the halo messages and the remote groups
+after peano4::HaloExchange::wait().
+
+# One step
+
+The pseudocode names every call an application needs. `n` runs over the faces
+of a cell. `solution` and `halo` are pools with one chunk per cell slot and per
+face.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+const peano4::CellConnectivity& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+solution.reserve(cellConnectivity.getNumberOfSlots());                // one chunk per cell slot
+halo.reserve(cellConnectivity.getNumberOfFaces());                    // one chunk per face
+haloExchange.rebuild(cellConnectivity);                               // the faces this rank and a neighbour store
+for (cell : cellConnectivity.getCells())                writeFaceHalves(solution[cell], halo[cellConnectivity.getCellFace(cell, n)]);
+for (jump : cellConnectivity.getLevelJumps(Local))      interpolate(halo[jump.coarseFace], halo[jump.fineFaces]);
+haloExchange.post();
+for (cell : cellConnectivity.getCells(Local))           update(solution[cell], halo[cellConnectivity.getCellFace(cell, n)]);
+haloExchange.wait();
+for (jump : cellConnectivity.getLevelJumps(Remote))     interpolate(halo[jump.coarseFace], halo[jump.fineFaces]);
+for (cell : cellConnectivity.getCells(Remote))          update(solution[cell], halo[cellConnectivity.getCellFace(cell, n)]);
+peano4::Regrid regrid;
+if (peano4::Spacetree::getInstance().regrid(requests, regrid)) { migration.migrate(solution, regrid, transfer); }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Memory
+
+The host reads the cell connectivity of
+peano4::Spacetree::getCellConnectivity(). A kernel copies
+peano4::CellConnectivity::onDevice() by value and reads one cell or face
+through the getters that take a slot or a face. In a CPU build both are the
+same object. Every array exists once in each memory from which code reads it.
+
+Every data type of an application is one tarch::accelerator::ChunkedMemoryPool
+per rank. The pool lies in device memory with a GPU backend and in heap memory
+otherwise. `pool.getChunk(slot)` returns the data of the entity at that slot.
+
+# The regrid
+
+peano4::Spacetree::regrid() applies a list of peano4::RefinementRequest
+records, rebuilds the cell connectivity and fills a peano4::Regrid: the prolongations
+(the parent's old slot, the child's new slot and its position), the
+restrictions (the parent's new slot and the children's old slots), the sends
+and receives per neighbour rank in canonical order, the slots the regrid frees
+and the slots it creates. A new slot never reuses a slot that the same regrid
+frees. Every dispatch of the transfer therefore reads and writes disjoint slots
+of one pool. peano4::MigrationExchange::migrate() moves one pool through the
+record. peano4::Spacetree::finishRegrid() closes the regrid after migrate()
+moves the last pool.
+
+*/

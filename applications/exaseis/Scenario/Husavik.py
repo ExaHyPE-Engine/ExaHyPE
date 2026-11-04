@@ -166,7 +166,8 @@ class Husavik(DynamicRuptureScenario):
         {112.823, 111.706},
         {-56.406, -1.106}
       );
-      return -netcdfSampler.samplePiecewiseConstant(
+      // The perturbation moves the plane x = 14.7 onto the fault surface of the file.
+      return netcdfSampler.samplePiecewiseConstant(
         "perturbation",
         {x[2], x[1]}
       );
@@ -228,8 +229,8 @@ class Husavik(DynamicRuptureScenario):
           "cs", {xx, y, z}
         );
 
-        if(Q[Shortcuts::rho]>0.){
-          //We got values from the netcdf files, so no need to use the linear interpolation
+        if (Q[Shortcuts::rho] > 0.0) {
+          // The NetCDF files cover every point with a positive density.
           return;
         }
 
@@ -316,8 +317,8 @@ class Husavik(DynamicRuptureScenario):
       const double sig_zz = 2670.0*0.4*9.8*std::min(-1500.0,z);
 
       // most favorable direction (A4, AM2003)
-      double Phi = std::numbers::pi / 4.0 - 0.5 * atan(mu_s);
-      double SHmax_rad = SH_max * std::numbers::pi / 180.0;
+      double Phi = M_PI / 4.0 - 0.5 * atan(mu_s);
+      double SHmax_rad = SH_max * M_PI / 180.0;
       double s2 = sin(2.0 * Phi);
       double c2 = cos(2.0 * Phi);
       double alpha = (2.0 * s2ratio - 1.0) / 3.0;

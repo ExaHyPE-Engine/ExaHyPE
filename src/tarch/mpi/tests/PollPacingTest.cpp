@@ -5,8 +5,10 @@
 #include "tarch/mpi/PollPacing.h"
 
 namespace {
-  /** Polls the pacing and collects the one-based indices at which it grants a turn. */
-  std::vector<int> collectTurns(const int numberOfPolls) {
+  /**
+   * Polls the pacing and collects the one-based indices at which it grants a turn.
+   */
+  std::vector<int> getTurns(const int numberOfPolls) {
     tarch::mpi::PollPacing pacing;
     std::vector<int>       turns;
     for (int poll = 1; poll <= numberOfPolls; poll++) {
@@ -21,22 +23,26 @@ namespace {
 tarch::mpi::tests::PollPacingTest::PollPacingTest() :
   tarch::tests::TestCase("tarch::mpi::tests::PollPacingTest") {}
 
-void tarch::mpi::tests::PollPacingTest::run() {
+void
+tarch::mpi::tests::PollPacingTest::run() {
   testMethod(testFirstPollReportsProgress);
   testMethod(testTurnsWidenWhileTheWaitLasts);
   testMethod(testStrideSaturatesSoReportingContinues);
   testMethod(testEveryWaitStartsTight);
 }
 
-/** A wait that ends on its first poll still has to report once, so the first poll grants a turn. */
-void tarch::mpi::tests::PollPacingTest::testFirstPollReportsProgress() {
+void
+tarch::mpi::tests::PollPacingTest::testFirstPollReportsProgress() {
   tarch::mpi::PollPacing pacing;
   validate(pacing.reportProgressNow());
 }
 
-/** The gap between two turns doubles, so a long wait spends its polls on the awaited request. */
-void tarch::mpi::tests::PollPacingTest::testTurnsWidenWhileTheWaitLasts() {
-  const auto             turns = collectTurns(100);
+/**
+ * The number of polls between two turns doubles.
+ */
+void
+tarch::mpi::tests::PollPacingTest::testTurnsWidenWhileTheWaitLasts() {
+  const auto             turns = getTurns(100);
   const std::vector<int> expectedTurns{1, 4, 9, 18, 35, 68};
   validateEqualsWithParams1(turns.size(), expectedTurns.size(), turns.size());
   for (std::size_t turn = 0; turn < expectedTurns.size(); turn++) {
@@ -44,10 +50,13 @@ void tarch::mpi::tests::PollPacingTest::testTurnsWidenWhileTheWaitLasts() {
   }
 }
 
-/** The widening is bounded, so a wait of any length keeps checking its timeouts. */
-void tarch::mpi::tests::PollPacingTest::testStrideSaturatesSoReportingContinues() {
+/**
+ * The gap between two turns stops growing at one poll more than the largest stride.
+ */
+void
+tarch::mpi::tests::PollPacingTest::testStrideSaturatesSoReportingContinues() {
   constexpr int NumberOfPolls = 100000;
-  const auto    turns         = collectTurns(NumberOfPolls);
+  const auto    turns         = getTurns(NumberOfPolls);
 
   validateWithParams1(turns.size() > 20, turns.size());
   validateWithParams1(turns.size() < 200, turns.size());
@@ -60,10 +69,13 @@ void tarch::mpi::tests::PollPacingTest::testStrideSaturatesSoReportingContinues(
   validateEqualsWithParams1(largestGap, 1025, largestGap);
 }
 
-/** A fresh instance per wait keeps a short wait's latency, so the pacing cannot leak between waits. */
-void tarch::mpi::tests::PollPacingTest::testEveryWaitStartsTight() {
-  const auto firstWait  = collectTurns(20);
-  const auto secondWait = collectTurns(20);
+/**
+ * Every new instance starts with the shortest gap.
+ */
+void
+tarch::mpi::tests::PollPacingTest::testEveryWaitStartsTight() {
+  const auto firstWait  = getTurns(20);
+  const auto secondWait = getTurns(20);
   validateEquals(firstWait.size(), secondWait.size());
   for (std::size_t turn = 0; turn < firstWait.size(); turn++) {
     validateEqualsWithParams1(firstWait[turn], secondWait[turn], turn);

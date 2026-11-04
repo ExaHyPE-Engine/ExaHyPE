@@ -9,6 +9,16 @@ namespace tarch::la::tests {
 } // namespace tarch::la::tests
 
 class tarch::la::tests::MatrixTest final : public tarch::tests::TestCase {
+public:
+  MatrixTest();
+  MatrixTest(const MatrixTest&)            = delete;
+  MatrixTest(MatrixTest&&)                 = delete;
+  MatrixTest& operator=(const MatrixTest&) = delete;
+  MatrixTest& operator=(MatrixTest&&)      = delete;
+  ~MatrixTest() override                   = default;
+
+  void run() override;
+
 private:
   void testConstruction();
   void testAssignment();
@@ -17,9 +27,6 @@ private:
   void testTransposedMatrix();
   void testSpecialisedMatrixLayouts();
   void testAdditionalMatrixOperations();
-
-public:
-  MatrixTest();
-  ~MatrixTest() override = default;
-  void run() override;
+  void testNaNComparesUnequal();
+  void testComponentProductOfRectangularMatrices();
 };

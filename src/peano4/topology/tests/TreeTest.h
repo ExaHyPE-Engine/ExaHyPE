@@ -32,13 +32,11 @@ private:
   void testRefinementPlanRoundKeepsLevelsWithoutRequests();
   void testRefinementPlanEraseKeepsFlagsBetweenRefinedCells();
   void testVertexBetweenRefinedCellsIsPersistent();
-  void testAppendedDeltaMatchesADirectBuild();
-  void testPlanViewFromDeltaMatchesADirectBuild();
   void testBalancedOwnersFromPlan();
-  void testTheBalancedPartitionKeepsBaseFamiliesWhole();
+  void testTheBalancedPartitionKeepsSiblingLeavesTogether();
   void testRankLoadsOfADeeperOwnershipPlan();
-  void testAPartitionSplittingALeafFamilyIsDetected();
+  void testAPartitionSplittingSiblingLeavesIsDetected();
   void testARankWithoutABlockMaterialisesNothingBelowTheSpawnLevel();
   void testAPartitionedBuildLinksEveryEntityOnce();
-  void testRefinementDeltaAppendsCellsOnTheOwningRankOnly();
+  void testBytesGrowWithTheGrid();
 };

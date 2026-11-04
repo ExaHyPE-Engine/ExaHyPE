@@ -4,49 +4,40 @@
 
 \tableofcontents
 
-ExaHyPE uses Peano's deterministic rank ownership and subtree-task traversal.
-@ref page_peano_domain_decomposition describes the tree, pools, boundary
-exchange, and regrid migration. @ref page_peano_runtime_analysis describes the
-reported balance metrics.
+ExaHyPE uses Peano's deterministic rank ownership and the dispatches over the
+rank-local mesh. @ref page_peano_domain_decomposition describes the tree, the
+mesh, the halo exchange and the migration. @ref page_peano_runtime_analysis
+describes the reported balance metrics.
 
 # Solver data
 
-Each MPI rank owns its solver repository and the rank-local cell, face, and
-vertex pools. Generated observers translate traversal pool slots into solver
-data references. Cells belong to one rank. Faces and vertices on a rank
-boundary have local copies that are merged with the remote frozen state before
-their first consuming event.
-
-Subtree tasks use observer clones and task-local copies of the interface
-entities. The generated merge routines receive `InterRank` or `IntraRank` so a
-data model can apply the appropriate exchange policy.
+Each MPI rank owns its solver repository and the rank-local cell and face
+pools of every solver. Cells belong to one rank. A face on a rank boundary
+exists in the cell connectivity of both ranks; a solver writes the half of its local
+cell and receives the other half through peano4::HaloExchange before the face
+dispatch reads it.
 
 # Solver state
 
-All observer clones on one rank refer to the same persistent solver instances.
-A mutable solver attribute accessed from cell callbacks therefore requires a
-thread-safe update. A scalable reduction lets each observer clone accumulate
-private state and combines it once from `endTraversal()`.
-
-Attributes that must agree across ranks require an explicit MPI collective at
-a point reached by every rank in the same program step. The tarch MPI wrappers
-provide reductions and broadcasts with the runtime's timeout and progress
+A solver keeps one time stamp and one time step size per rank. A dispatch
+reduces its per-cell results, such as the maximum wave speed, through
+tarch::accelerator::parallelReduce, and the solver reduces the result across
+the ranks with one collective at the end of the time step. The tarch MPI
+wrappers provide these reductions with the runtime's timeout and progress
 handling.
 
-ExaHyPE applies this pattern to admissible time-step sizes, mesh-size bounds,
-and other solver-wide values. An override of a solver lifecycle routine calls
-its base implementation so these reductions remain active.
+ExaHyPE applies this pattern to the admissible time step size, the mesh width
+bounds, the troubled-cell count of the limiter and the error measurements.
 
 # Adaptive ownership
 
-ExaHyPE commits cell-based refine and erase events through
-exahype2::RefinementControlService. The service gives every rank the same
-canonical request set. Peano derives the target tree and leaf-weighted rank
-ownership from that set and migrates solver pools as part of the transition.
+ExaHyPE commits cell-based refine and erase requests through
+exahype2::RefinementRequests. Every rank derives the same target tree and the
+same cell-weighted rank ownership from that set, and every solver's
+`regrid()` moves its cell pools through the peano4::Regrid.
 
-The geometric partition uses leaf counts. Particle-heavy cells, limiter work,
+The geometric partition uses cell counts. Particle-heavy cells, limited cells
 or heterogeneous kernels can therefore produce application load imbalance on
-a geometrically balanced mesh. Solver tasking and parallel kernels provide the
-additional concurrency for these cases.
+a geometrically balanced grid.
 
 */

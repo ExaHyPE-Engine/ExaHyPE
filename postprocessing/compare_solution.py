@@ -41,7 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-fields",
         nargs="+",
         default=["Subdomain"],
-        help="Fields to ignore (default: Subdomain, which depends on the domain decomposition)",
+        help="Fields to ignore (default: Subdomain). Subdomain depends on the domain decomposition",
     )
     parser.add_argument(
         "--unordered",
@@ -131,8 +131,8 @@ def compare_snapshots(
     if left.points.shape[1] != right.points.shape[1]:
         return f"Snapshot {index} spatial dimension differs: {left.points.shape[1]} != {right.points.shape[1]}."
     if not unordered and left.points.shape[0] != right.points.shape[0]:
-        # Unordered comparisons work on per-cell signatures, so runs may duplicate
-        # patch-boundary vertices differently and still match.
+        # An unordered comparison pairs per-cell signatures. Two runs may then duplicate
+        # the vertices on patch boundaries differently and still match.
         return f"Snapshot {index} point count differs: {left.points.shape[0]} != {right.points.shape[0]}."
     if left.num_cells != right.num_cells:
         return f"Snapshot {index} cell count differs: {left.num_cells} != {right.num_cells}."
@@ -211,11 +211,10 @@ def _compare_unordered(
     rtol: float,
     atol: float,
 ) -> str | None:
-    # One signature per cell (vertex coordinates + cell-field values + node-field values at the
-    # cell's vertices, with the vertices in canonical order). Cells are paired by a
-    # nearest-neighbour query on (centre, size): Distinct cells are separated by at least one
-    # cell width, far above any storage rounding, so the pairing holds at every mesh scale
-    # where a sorted-signature comparison would misalign rows on rounding noise.
+    # The signature of a cell lists its vertex coordinates, its cell-field values and the
+    # node-field values at its vertices, with the vertices in canonical order. A
+    # nearest-neighbour query on centre and size pairs the cells. Two distinct cells lie at
+    # least one cell width apart. This distance exceeds any storage rounding at every mesh scale.
     left_signatures, left_keys = _cell_signatures(left, selected)
     right_signatures, right_keys = _cell_signatures(right, selected)
     if left_signatures.shape != right_signatures.shape:
@@ -267,12 +266,11 @@ def _cell_signatures(
             vertex_parts.append(values[cells].reshape(count, nodes_per_cell, -1))
     vertex_features = np.concatenate(vertex_parts, axis=2)
 
-    # Canonicalise the local vertex order: Sorting each cell's vertex rows makes the signature
-    # invariant under rotated or reflected connectivity of the same cell. Vertices of one cell
-    # that differ do so by a full cell extent in some axis, while the same coordinate can carry
-    # rounding noise from different writers, so the sort keys are the coordinates quantised to
-    # half the cell's own extent per axis, which is exact at every mesh scale and aspect ratio
-    # and immune to that noise.
+    # The sort of the vertex rows of each cell makes the signature independent of a rotated or
+    # reflected connectivity of the cell. Two vertices of one cell differ by a full cell extent
+    # along some axis. Two writers can round one coordinate differently. The sort keys quantise
+    # the coordinates to half the extent of the cell along each axis. These keys are exact at
+    # every mesh scale and aspect ratio.
     dimensions = np.asarray(snapshot.points, dtype=float).shape[1]
     extent_per_axis = corners.max(axis=1) - corners.min(axis=1)
     quantum = 0.5 * np.where(extent_per_axis > 0.0, extent_per_axis, 1.0)[:, None, :]
@@ -297,8 +295,8 @@ def _cell_signatures(
 def _compare_times(
     left: float | None, right: float | None, index: int, rtol: float, atol: float
 ) -> str | None:
-    # A missing time stamp is encoded as None (XDMF grid without <Time>) or NaN (formats that
-    # derive the time from a filename or step index); treat both as "unknown" and skip the check.
+    # None marks the missing time stamp of an XDMF grid without <Time>. NaN marks the time of a
+    # format that derives it from a file name or a step index. The check skips both.
     left = float("nan") if left is None else left
     right = float("nan") if right is None else right
     if math.isnan(left) or math.isnan(right):

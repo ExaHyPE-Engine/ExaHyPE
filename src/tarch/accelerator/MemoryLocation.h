@@ -2,25 +2,47 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/CompilerSpecificSettings.h"
+
 namespace tarch {
   enum class MemoryLocation {
     /**
-     * Create data on the heap of the host.
-     *
-     * The alignment of this routine can be controlled via the compile
-     * time constant PEANO_WITH_ALIGNMENT. It is typically set (to a default)
-     * within the corresponding compiler-specific header-file in
-     * tarch/compiler.
+     * Places the data on the heap of the host.
      */
     Heap,
 
     /**
-     * Create data on the device.
+     * Places the data on the device. A build without a GPU backend places it on the heap.
      */
     Device,
 
-    Pinned,
+    /**
+     * Places the data in page-locked host memory.
+     */
+    Pinned
   };
 
+  struct AllocatedBytes;
+
   std::string toString(MemoryLocation value);
+
+  [[nodiscard]] INLINE_METHOD bool isGPUMemory(MemoryLocation location);
+
+  INLINE_METHOD AllocatedBytes operator+(const AllocatedBytes& left, const AllocatedBytes& right);
 } // namespace tarch
+
+/**
+ * The bytes an object occupies in host memory and in GPU memory. A build without a GPU backend
+ * places device data in host memory. All its bytes then count as host bytes.
+ */
+struct tarch::AllocatedBytes final {
+  std::size_t host{0};
+  std::size_t device{0};
+
+  [[nodiscard]] static INLINE_METHOD AllocatedBytes in(MemoryLocation location, std::size_t bytes);
+  [[nodiscard]] static INLINE_METHOD AllocatedBytes onHost(std::size_t bytes);
+  [[nodiscard]] INLINE_METHOD std::size_t getTotal() const;
+  INLINE_METHOD AllocatedBytes& operator+=(const AllocatedBytes& other);
+};
+
+#include "tarch/accelerator/MemoryLocation.cpph"

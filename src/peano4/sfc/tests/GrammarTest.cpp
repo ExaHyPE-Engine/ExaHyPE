@@ -11,28 +11,31 @@ namespace {
 peano4::sfc::tests::GrammarTest::GrammarTest() :
   TestCase("peano4::sfc::tests::GrammarTest") {}
 
-void peano4::sfc::tests::GrammarTest::run() {
+void
+peano4::sfc::tests::GrammarTest::run() {
   testMethod(testStepsNameAxisAndDirection);
   testMethod(testProductionSeparatesChildrenAndSteps);
 }
 
-void peano4::sfc::tests::GrammarTest::testStepsNameAxisAndDirection() {
+void
+peano4::sfc::tests::GrammarTest::testStepsNameAxisAndDirection() {
   using Step = peano4::sfc::Grammar::Step;
-  validateEquals(peano4::sfc::Grammar::axisOf(Step::Left), 0);
-  validateEquals(peano4::sfc::Grammar::axisOf(Step::Right), 0);
-  validateEquals(peano4::sfc::Grammar::axisOf(Step::Down), 1);
-  validateEquals(peano4::sfc::Grammar::axisOf(Step::Up), 1);
-  validateEquals(peano4::sfc::Grammar::axisOf(Step::Back), 2);
-  validateEquals(peano4::sfc::Grammar::axisOf(Step::Front), 2);
-  validateEquals(peano4::sfc::Grammar::directionOf(Step::Left), -1);
-  validateEquals(peano4::sfc::Grammar::directionOf(Step::Right), 1);
-  validateEquals(peano4::sfc::Grammar::directionOf(Step::Down), -1);
-  validateEquals(peano4::sfc::Grammar::directionOf(Step::Up), 1);
-  validateEquals(peano4::sfc::Grammar::directionOf(Step::Back), -1);
-  validateEquals(peano4::sfc::Grammar::directionOf(Step::Front), 1);
+  validateEquals(peano4::sfc::Grammar::getAxis(Step::Left), 0);
+  validateEquals(peano4::sfc::Grammar::getAxis(Step::Right), 0);
+  validateEquals(peano4::sfc::Grammar::getAxis(Step::Down), 1);
+  validateEquals(peano4::sfc::Grammar::getAxis(Step::Up), 1);
+  validateEquals(peano4::sfc::Grammar::getAxis(Step::Back), 2);
+  validateEquals(peano4::sfc::Grammar::getAxis(Step::Front), 2);
+  validateEquals(peano4::sfc::Grammar::getDirection(Step::Left), -1);
+  validateEquals(peano4::sfc::Grammar::getDirection(Step::Right), 1);
+  validateEquals(peano4::sfc::Grammar::getDirection(Step::Down), -1);
+  validateEquals(peano4::sfc::Grammar::getDirection(Step::Up), 1);
+  validateEquals(peano4::sfc::Grammar::getDirection(Step::Back), -1);
+  validateEquals(peano4::sfc::Grammar::getDirection(Step::Front), 1);
 }
 
-void peano4::sfc::tests::GrammarTest::testProductionSeparatesChildrenAndSteps() {
+void
+peano4::sfc::tests::GrammarTest::testProductionSeparatesChildrenAndSteps() {
   using Step                    = peano4::sfc::Grammar::Step;
   constexpr auto TestProduction = peano4::sfc::Grammar::production(Third, First, Step::Up, Second, Step::Right, Third);
   static_assert(TestProduction.children.size() == 3);

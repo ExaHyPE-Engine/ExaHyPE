@@ -6,7 +6,7 @@
 
 namespace tarch {
   /**
-   * Please destroy after usage
+   * The caller deletes the returned test case.
    */
   tarch::tests::TestCase* getUnitTests();
 } // namespace tarch

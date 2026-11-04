@@ -2,10 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-namespace applications::exahype2::exaskred::forcing {
-  double coriolisParameterOnSphere(double latitudeInDegrees, double angularVelocity);
+#include "tarch/accelerator/CompileTarget.h"
 
-  double manningFriction(
+namespace applications::exahype2::exaskred::forcing {
+  INLINE_METHOD GPU_CALLABLE_METHOD double getCoriolisParameterOnSphere(
+    double latitudeInDegrees,
+    double angularVelocity
+  );
+
+  INLINE_METHOD GPU_CALLABLE_METHOD double getManningFriction(
     double waterHeight,
     double momentumX,
     double momentumY,
@@ -14,3 +19,5 @@ namespace applications::exahype2::exaskred::forcing {
     double minimumWaterHeight
   );
 } // namespace applications::exahype2::exaskred::forcing
+
+#include "Forcing.cpph"

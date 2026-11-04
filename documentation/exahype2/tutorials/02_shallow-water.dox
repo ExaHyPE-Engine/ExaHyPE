@@ -33,9 +33,9 @@ bathymetry (sea-bed height) \b b. Without bathymetry:
 @f$
 
 with gravity \f$g = 9.81\f$. The eigenvalues in normal direction \f$n\f$ are
-\f$u_n + \sqrt{g h}\f$, \f$u_n\f$ and \f$u_n - \sqrt{g h}\f$, so the maximum by
-magnitude is \f$\max(|u_n + \sqrt{g h}|, |u_n - \sqrt{g h}|)\f$. Recall the base
-unknowns store the momentum \b hu, not the velocity, so \f$u_n = hu_n / h\f$.
+\f$u_n + \sqrt{g h}\f$, \f$u_n\f$ and \f$u_n - \sqrt{g h}\f$. The maximum by
+magnitude is \f$\max(|u_n + \sqrt{g h}|, |u_n - \sqrt{g h}|)\f$. The base
+unknowns store the momentum \b hu. The velocity is then \f$u_n = hu_n / h\f$.
 
 # The Configuration
 
@@ -59,8 +59,8 @@ declares the PDE terms it will use:
         max_eigenvalue       = True,
     )
 
-The project builds even with the stubs in place, so run the build cell once, then
-work through the exercises and rebuild after each change.
+The project builds with the stubs in place. Run the build cell once. Then work
+through the exercises and rebuild after each change.
 
 # Exercise 1 - A Dam Break
 
@@ -78,12 +78,12 @@ generated `Shortcuts` enum (`Shortcuts::h`, `Shortcuts::hu + 0/1`,
 - `flux` - the flux above, keeping the \f$\frac12 g h^2\f$ pressure
   term in the momentum component for now. Leave `nonconservativeProduct` zero.
 
-Rebuild and run. Exercise 1 has no refinement criterion yet, so this is a
-**uniform grid**: Set `-lmin` and `-lmax` to the *same* level. We use level 4 -
-the dam break is a sharp step and this scheme has no limiter (that comes in
-Part 4), so it needs enough resolution to resolve the front; a coarser uniform
-level lets the time step collapse there. The run takes a few minutes; for a
-quick (but visibly coarser) first look, drop both levels to 3.
+Rebuild and run. Exercise 1 keeps the stub of the refinement criterion. The grid stays
+**uniform**. Set `-lmin` and `-lmax` to the *same* level. We use level 4. The dam
+break is a sharp step. This scheme runs without a limiter until Part 4. The front
+needs this resolution. A coarser uniform level lets the time step collapse there.
+The run takes a few minutes. Drop both levels to 3 for a quick, visibly coarser
+first look.
 
     export OMP_NUM_THREADS=4
     ./DamBreak -et 0.5 -ns 20 -lmin 4 -lmax 4
@@ -125,16 +125,16 @@ non-conservative product:
 @f$
 
 - `flux` - remove the \f$\frac12 g h^2\f$ term you added in Exercise 1.
-- `nonconservativeProduct` - implement \f$B(Q)\,\nabla Q\f$. The
-  gradient in the `normal` direction is supplied in `deltaQ`, so the momentum
-  component is `g * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b])`.
+- `nonconservativeProduct` - implement \f$B(Q)\,\nabla Q\f$. The argument
+  `deltaQ` provides the gradient in the `normal` direction. The momentum
+  component is then `g * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b])`.
 - `initialCondition` - a radial setup: \f$h = 1\f$ everywhere and a
   circular bump in the bed, \f$b = 0.1\f$ within distance \f$0.5\f$ of the origin
   (`tarch::la::norm2(cellCentre)`), else \f$0\f$.
 - `refinementCriterion` - return `::exahype2::RefinementCommand::Refine`
   in a fixed disc over the bump (e.g. \f$\|x\|_2 < 0.3\f$), otherwise `Keep`. The
-  criterion looks only at position, so the refined region is **static** - a fine
-  patch over the bump, the coarse base everywhere else.
+  criterion reads the position alone. The refined region then stays **static**:
+  a fine patch over the bump and the coarse base everywhere else.
 
 Now that a refinement criterion is in place, `-lmin` and `-lmax` may differ. Run
 with a coarse level-2 base mesh that ExaHyPE refines to level 3 only inside the

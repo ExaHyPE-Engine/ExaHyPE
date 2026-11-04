@@ -4,13 +4,14 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 
+#include "tarch/CompilerSpecificSettings.h"
+
 #include <sycl/sycl.hpp>
 
 namespace tarch::accelerator {
   /**
-   * Opaque team handle for a SYCL work item. The item stays valid for the enclosing kernel
-   * invocation, so a nested call may copy this handle by value. The scratch is work-group local
-   * memory for custom team reductions.
+   * References the SYCL work item of the running kernel. A nested call may copy this handle by
+   * value. The scratch is work-group local memory for custom team reductions.
    */
   struct SyclTeam final {
     const ::sycl::nd_item<1>& item;
@@ -18,14 +19,16 @@ namespace tarch::accelerator {
   };
   using TeamHandle = SyclTeam;
 
-  inline constexpr int SyclLocalSize        = 256;
-  inline constexpr int SyclTeamScratchBytes = 16384;
+  inline constexpr int SyclLocalSize  = 256;
+  inline constexpr int ThreadsPerWarp = 32;
+  // A team launch runs one work group per team of at most SyclLocalSize work items with at most
+  // TeamScratchBytes of local memory. A launch with TeamRange::BackendDefault runs
+  // DefaultThreadsPerTeam work items.
+  inline constexpr int DefaultThreadsPerTeam = SyclLocalSize;
+  inline constexpr int TeamScratchBytes      = 16384;
 
-  /**
-   * Returns the queue of a logical device index. That index counts the accelerators only and does
-   * not match a physical device number.
-   */
   void* getSYCLQueue(int number);
+  INLINE_METHOD int getTeamScratchWords(int requested);
 } // namespace tarch::accelerator
 
 #endif

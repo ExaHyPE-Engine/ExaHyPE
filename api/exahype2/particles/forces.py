@@ -5,12 +5,23 @@
 class Forces:
     """How a tracer reads the fluid state and moves through it.
 
-    Integration schemes: 0 static, 1 explicit Euler, 2 semi-implicit Euler, 3 velocity Verlet,
-    4 midpoint, 5 RK3, 6 RK4. Interpolation: 0 none, 1 piecewise constant, 2 piecewise linear.
     ``force_method`` is a bit mask: 1 central gravity, 2 buoyancy, 4 Stokes drag, 8 constant
-    gravity. ``fields_to_interpolate`` lists the particle attributes that receive consecutive
-    solver values.
+    gravity. ``fields_to_interpolate`` lists the particle data entries that receive the first
+    unknowns of the solver, in this order. The C++ expressions ``mu``, ``gravity_magnitude``
+    and ``dynamic_viscosity`` are the gravitational parameter of the central gravity, the
+    acceleration of the constant gravity and the buoyancy, and the viscosity of the Stokes drag.
     """
+
+    INTERPOLATION_SCHEMES = {0: "None", 1: "PiecewiseConstant", 2: "PiecewiseLinear"}
+    INTEGRATION_SCHEMES = {
+        0: "Static",
+        1: "ExplicitEuler",
+        2: "SemiImplicitEuler",
+        3: "VelocityVerlet",
+        4: "Midpoint",
+        5: "RungeKutta3",
+        6: "RungeKutta4",
+    }
 
     def __init__(
         self,
@@ -21,28 +32,69 @@ class Forces:
         mu="10.0",
         gravity_magnitude="1",
         dynamic_viscosity="1",
-        update_kernel_arguments=None,
     ):
-        self.interpolation_scheme = interpolation_scheme
-        self.integration_scheme = integration_scheme
-        self.force_method = force_method
-        self.fields_to_interpolate = fields_to_interpolate
-        self.mu = mu
-        self.gravity_magnitude = gravity_magnitude
-        self.dynamic_viscosity = dynamic_viscosity
-        self.update_kernel_arguments = update_kernel_arguments
+        self.interpolation_scheme = int(interpolation_scheme)
+        self.integration_scheme = int(integration_scheme)
+        self.force_method = int(force_method)
+        if self.interpolation_scheme not in self.INTERPOLATION_SCHEMES:
+            raise ValueError(
+                "The particle forces support the interpolation_scheme values {} only.".format(
+                    sorted(self.INTERPOLATION_SCHEMES)
+                )
+            )
+        if self.integration_scheme not in self.INTEGRATION_SCHEMES:
+            raise ValueError(
+                "The particle forces support the integration_scheme values {} only.".format(
+                    sorted(self.INTEGRATION_SCHEMES)
+                )
+            )
+        if self.force_method < 0 or self.force_method > 15:
+            raise ValueError(
+                "The particle forces expect a force_method bit mask from 0 to 15."
+            )
+        self.fields_to_interpolate = self._parse_fields(fields_to_interpolate)
+        self.mu = str(mu)
+        self.gravity_magnitude = str(gravity_magnitude)
+        self.dynamic_viscosity = str(dynamic_viscosity)
 
-    def arguments(self):
-        """Returns the keyword arguments of the tracing action set."""
-        result = {
-            "interpolation_scheme": self.interpolation_scheme,
-            "integration_scheme": self.integration_scheme,
-            "force_method": self.force_method,
-            "fields_to_interpolate": self.fields_to_interpolate,
-            "mu": self.mu,
-            "gravity_magnitude": self.gravity_magnitude,
-            "dynamic_viscosity": self.dynamic_viscosity,
+    @staticmethod
+    def _parse_fields(fields_to_interpolate):
+        if isinstance(fields_to_interpolate, str):
+            entries = [
+                entry.strip()
+                for entry in fields_to_interpolate.split(",")
+                if entry.strip()
+            ]
+        else:
+            entries = list(fields_to_interpolate)
+        fields = []
+        for entry in entries:
+            if isinstance(entry, bool) or int(entry) < 0:
+                raise ValueError(
+                    "The particle forces expect data entry indices in fields_to_interpolate."
+                )
+            fields.append(int(entry))
+        if len(set(fields)) != len(fields):
+            raise ValueError(
+                "The particle forces expect each data entry once in fields_to_interpolate."
+            )
+        return fields
+
+    @property
+    def interpolated_fields(self):
+        """Returns the particle data entries the interpolation scheme writes."""
+        if self.interpolation_scheme == 0:
+            return []
+        return list(self.fields_to_interpolate)
+
+    def dictionary(self):
+        """Returns the template entries of the forces."""
+        return {
+            "INTERPOLATION": self.INTERPOLATION_SCHEMES[self.interpolation_scheme],
+            "INTEGRATION": self.INTEGRATION_SCHEMES[self.integration_scheme],
+            "FORCE_METHOD": self.force_method,
+            "GRAVITATIONAL_PARAMETER": self.mu,
+            "GRAVITY_MAGNITUDE": self.gravity_magnitude,
+            "DYNAMIC_VISCOSITY": self.dynamic_viscosity,
+            "FIELDS": self.interpolated_fields,
         }
-        if self.update_kernel_arguments is not None:
-            result["update_kernel_arguments"] = self.update_kernel_arguments
-        return result

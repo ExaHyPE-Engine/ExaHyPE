@@ -6,30 +6,29 @@ namespace tarch::tasking {
   class Runtime;
 
   int getNumberOfUnmaskedThreads();
-
+  bool oversubscribesNode();
   std::string printUnmaskedThreads();
 } // namespace tarch::tasking
 
 /**
- * One process-wide instance keeps the backend's thread-count decision
- * consistent across task producers.
+ * Stores the thread count of the process. init() fixes it for every caller.
  */
 class tarch::tasking::Runtime final {
 public:
-  Runtime(const Runtime&)            = delete;
-  Runtime(Runtime&&)                 = delete;
-  Runtime& operator=(const Runtime&) = delete;
-  Runtime& operator=(Runtime&&)      = delete;
-  ~Runtime()                         = default;
+  Runtime(const Runtime& other)            = delete;
+  Runtime(Runtime&& other)                 = delete;
+  Runtime& operator=(const Runtime& other) = delete;
+  Runtime& operator=(Runtime&& other)      = delete;
+  ~Runtime()                               = default;
 
   static tarch::tasking::Runtime& getInstance();
 
   bool init();
   void shutdown();
   bool isInitialised() const;
-  int  getNumberOfThreads() const;
-  int  getCoreNumber() const;
-  int  getThreadNumber() const;
+  int getNumberOfThreads() const;
+  int getCoreNumber() const;
+  int getThreadNumber() const;
 
 private:
   Runtime() = default;

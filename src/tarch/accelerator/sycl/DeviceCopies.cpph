@@ -1,0 +1,14 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+namespace tarch::accelerator {
+  // A SYCL kernel can use a static variable of a function only if the variable is constant.
+  template <typename Value>
+  inline ::sycl::ext::oneapi::experimental::device_global<Value> deviceCopyOfValue;
+} // namespace tarch::accelerator
+
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value&
+tarch::accelerator::getDeviceCopy() {
+  return tarch::accelerator::deviceCopyOfValue<Value>.get();
+}

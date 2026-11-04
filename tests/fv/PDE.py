@@ -10,10 +10,12 @@ compute_primitive_variables = r"""
 #endif
 
 #if DIMENSIONS == 3
-  const auto uSq = u0 * u0 + u1 * u1 + u2 * u2;
+  const auto uSq = tarch::la::sumOfSquaresInOrderOfMagnitude(u0, u1, u2);
   const auto u_n = (normal == 0) ? u0 : (normal == 1) ? u1 : u2;
 #else
-  const auto uSq = u0 * u0 + u1 * u1;
+  const auto squareOfU0 = tarch::la::productRoundedOnce(u0, u0);
+  const auto squareOfU1 = tarch::la::productRoundedOnce(u1, u1);
+  const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 #endif
 

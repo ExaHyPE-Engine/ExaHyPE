@@ -10,21 +10,32 @@ namespace tarch::plotter {
   class HDF5FileWriter;
 } // namespace tarch::plotter
 
+/**
+ * Writes one .h5 file and one .xmf file per snapshot. The .xmf file of the series embeds the grids
+ * of all snapshots.
+ */
 class tarch::plotter::HDF5FileWriter final : public tarch::plotter::FileWriter {
 public:
-  explicit HDF5FileWriter(const std::string& outputDirectory);
-  HDF5FileWriter(const HDF5FileWriter&)            = delete;
-  HDF5FileWriter(HDF5FileWriter&&)                 = delete;
-  HDF5FileWriter& operator=(const HDF5FileWriter&) = delete;
-  HDF5FileWriter& operator=(HDF5FileWriter&&)      = delete;
-  ~HDF5FileWriter() override                       = default;
+  HDF5FileWriter()                                       = default;
+  HDF5FileWriter(const HDF5FileWriter& other)            = delete;
+  HDF5FileWriter(HDF5FileWriter&& other)                 = delete;
+  HDF5FileWriter& operator=(const HDF5FileWriter& other) = delete;
+  HDF5FileWriter& operator=(HDF5FileWriter&& other)      = delete;
+  ~HDF5FileWriter() override                             = default;
 
-  bool writeToFile(const std::string& filename, const double time) override;
-
-  std::string getFileExtension() const override;
+  void write(const Mesh& mesh, const std::string& outputDirectory, const std::string& filename, double time) override;
+  [[nodiscard]] Format getFormat() const override;
 
 private:
-  static int toXdmfType(const int vtkType);
+  struct Snapshot final {
+    double      time{0.0};
+    std::string file{};
+    std::string grid{};
+  };
+
+  void writeSeries(const std::filesystem::path& filePath) const;
+
+  std::vector<Snapshot> _snapshots{};
 };
 
 #endif

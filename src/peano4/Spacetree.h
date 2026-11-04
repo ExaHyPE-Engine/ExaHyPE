@@ -1,0 +1,197 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "peano4/CellConnectivity.h"
+#include "peano4/RefinementRequest.h"
+#include "peano4/grid/LatticeIndexMap.h"
+#include "peano4/topology/Tree.h"
+#include "tarch/accelerator/Buffer.h"
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/la/Vector.h"
+
+namespace peano4 {
+  struct Regrid;
+  class Spacetree;
+} // namespace peano4
+
+/**
+ * The adaptive Cartesian grid of the whole domain and the cell connectivity of the cells this rank
+ * owns. Every rank applies the refinement requests of all ranks to one refinement plan, balances the
+ * ranks along the space-filling curve and rebuilds the tree and the cell connectivity from the plan.
+ * A regrid with live data returns the slot moves that a caller applies to its pools before
+ * finishRegrid().
+ */
+class peano4::Spacetree final {
+public:
+  struct Statistics final {
+    int minimumLevel{std::numeric_limits<int>::max()};
+    int maximumLevel{0};
+    int numberOfCells{0};
+    int numberOfRefinedCells{0};
+    int numberOfFaces{0};
+    int numberOfHangingFaces{0};
+    int numberOfExchangedFaces{0};
+    int numberOfStationaryRegrids{0};
+
+    tarch::AllocatedBytes cellConnectivityBytes{};
+    std::size_t           treeBytes{0};
+
+    tarch::la::Vector<DIMENSIONS, double> minimumCellWidth{
+      tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max())
+    };
+  };
+
+  Spacetree(const Spacetree& other)            = delete;
+  Spacetree(Spacetree&& other)                 = delete;
+  Spacetree& operator=(const Spacetree& other) = delete;
+  Spacetree& operator=(Spacetree&& other)      = delete;
+  ~Spacetree()                                 = default;
+
+  static peano4::Spacetree& getInstance();
+
+  void init(
+    const tarch::la::Vector<DIMENSIONS, double>& offset,
+    const tarch::la::Vector<DIMENSIONS, double>& width,
+    const std::bitset<DIMENSIONS>&               periodicBoundaries = std::bitset<DIMENSIONS>()
+  );
+  void shutdown();
+
+  void scheduleRegularGridConstruction(int targetLevel);
+  void markPersistentDataLive();
+  void enableDynamicLoadBalancing(bool enable);
+
+  bool regrid(const std::vector<RefinementRequest>& requests, Regrid& regrid);
+  void finishRegrid();
+  bool requestsChangePlan(const std::vector<RefinementRequest>& requests);
+
+  [[nodiscard]] const CellConnectivity& getCellConnectivity() const noexcept;
+  [[nodiscard]] int getCellAt(int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const;
+  [[nodiscard]] const Statistics& getStatistics() const noexcept;
+  [[nodiscard]] const std::bitset<DIMENSIONS>& getPeriodicBoundaries() const noexcept;
+
+  static int deriveSpawnLevel(int targetLevel, int numberOfRanks);
+
+  static constexpr int RepartitionTolerancePercent = 2;
+
+private:
+  struct CellRecord final {
+    int treeCell{-1};
+    int slot{-1};
+  };
+
+  struct NeighbourFaces final {
+    int                        rank{-1};
+    std::vector<ExchangedFace> faces{};
+  };
+
+  struct CellConnectivityArrays final {
+    int numberOfSlots{0};
+    int numberOfFaces{0};
+    int minimumLevel{0};
+    int maximumLevel{0};
+
+    std::vector<double> widthOfLevel{};
+
+    std::vector<int> cells{};
+    std::vector<int> cellRanges{};
+    std::vector<int> cellLevel{};
+    std::vector<int> cellLattice{};
+    std::vector<int> facesOfCell{};
+    std::vector<int> cellCurveIndex{};
+
+    std::vector<int>       faces{};
+    std::vector<int>       faceRanges{};
+    std::vector<int>       faceLevel{};
+    std::vector<int>       faceNormal{};
+    std::vector<int>       faceLattice{};
+    std::vector<int>       cellsOfFace{};
+    std::vector<FaceKind>  faceKind{};
+    std::vector<Adjacency> faceAdjacency{};
+
+    std::vector<LevelJump> levelJumps{};
+    std::vector<int>       levelJumpRanges{};
+
+    std::vector<Neighbour>      neighbours{};
+    std::vector<ExchangedFace>  exchangedFaces{};
+    std::vector<NeighbourFaces> neighbourFaces{};
+
+    std::vector<int>                           faceOfTreeFace{};
+    std::vector<int>                           levelJumpOfCoarseFace{};
+    std::vector<peano4::grid::LatticeIndexMap> cellSlotOfLattice{};
+
+    std::vector<int> freeSlots{};
+    std::vector<int> slotsFreedByRegrid{};
+  };
+
+  struct DeviceArrays final {
+    tarch::accelerator::Buffer<int>       cells{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<int>       cellLevel{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<int>       cellLattice{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<int>       facesOfCell{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<int>       faces{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<int>       faceLevel{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<int>       faceNormal{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<int>       faceLattice{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<int>       cellsOfFace{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<FaceKind>  faceKind{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<LevelJump> levelJumps{tarch::MemoryLocation::Device};
+    tarch::accelerator::Buffer<double>    widthOfLevel{tarch::MemoryLocation::Device};
+  };
+
+  Spacetree() = default;
+
+  static peano4::Spacetree _singleton;
+
+  int _targetLevel{-1};
+
+  tarch::la::Vector<DIMENSIONS, double> _domainOffset{};
+  tarch::la::Vector<DIMENSIONS, double> _domainWidth{};
+  std::bitset<DIMENSIONS>               _periodicBoundaries{};
+
+  std::unique_ptr<peano4::topology::Tree>              _tree{};
+  std::vector<std::unique_ptr<peano4::topology::Tree>> _spareTrees{};
+  peano4::topology::Tree::RefinementPlan               _refinementPlan{};
+  std::vector<int>                                     _blockOwners{};
+
+  std::vector<RefinementRequest>         _lastEvaluatedRequests{};
+  peano4::topology::Tree::RefinementPlan _lastEvaluatedPlanUpdate{};
+  bool                                   _lastEvaluationChangedPlan{false};
+
+  bool _persistentDataLive{false};
+  bool _persistentDataLiveUniform{false};
+  bool _dynamicLoadBalancing{true};
+  bool _regridPending{false};
+
+  CellConnectivityArrays _arrays{};
+  DeviceArrays           _deviceArrays{};
+  CellConnectivity       _cellConnectivity{};
+  CellConnectivity       _cellConnectivityOnDevice{};
+  Statistics             _statistics{};
+
+  [[nodiscard]] int deriveSpawnLevel() const;
+  std::unique_ptr<peano4::topology::Tree> acquireTree();
+  void buildTree(const peano4::topology::Tree::RefinementPlan& refinementPlan);
+  bool derivePlanUpdate(
+    const std::vector<RefinementRequest>&   requests,
+    peano4::topology::Tree::RefinementPlan& updatedPlan
+  );
+  [[nodiscard]] std::vector<int> deriveOwnersForPlan(const peano4::topology::Tree::RefinementPlan& updatedPlan) const;
+  void votePersistentDataLive();
+  void deriveStatistics();
+
+  void buildCellConnectivity();
+  void rebuildCellConnectivity(const peano4::topology::Tree& previousTree, Regrid& regrid);
+  void collectCells(std::vector<CellRecord>& records) const;
+  void assignSlots(std::vector<CellRecord>& records, bool preserveSlots);
+  void deriveFaces(const std::vector<CellRecord>& records);
+  int registerFace(int treeCell, int faceNumber, FaceKind kind);
+  int registerLevelJump(int refinedTreeCell, int faceNumber, int coarseFace);
+  void addExchangedFace(int rank, int face, int side);
+  void orderLists(const std::vector<CellRecord>& records);
+  void numberCellsAlongCurve(const std::vector<CellRecord>& records);
+  void assembleCellConnectivities();
+  [[nodiscard]] tarch::AllocatedBytes getCellConnectivityBytes() const noexcept;
+  [[nodiscard]] std::size_t getTreeBytes() const noexcept;
+  [[nodiscard]] std::int64_t getLatticeKey(int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const;
+};

@@ -16,8 +16,8 @@ def iterate_lines(filename):
 
 
 def found_path(line, start_string, end_string, replacement_path):
-    # The lookahead pins the end string to a path boundary, so a directory whose
-    # name merely starts with the end string cannot truncate the match early.
+    # The lookahead pins the end string to a path boundary. A directory whose
+    # name starts with the end string then cannot truncate the match early.
     pattern = re.compile(
         rf"{re.escape(start_string)}/.*?{re.escape(end_string)}(?=[/;\"\s]|$)"
     )
@@ -63,7 +63,7 @@ def sanitise_file(original_filename, start_string, end_string, replacement_path)
 
 
 if __name__ == "__main__":
-    start_string = "/dine/data/do009"
+    start_string = os.environ["CI_BUILDS_DIR"]
     end_string = "/Peano"
     replacement_path = peano_path
 

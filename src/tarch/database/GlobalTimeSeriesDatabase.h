@@ -10,11 +10,15 @@ namespace tarch::database {
 
 class tarch::database::GlobalTimeSeriesDatabase final : public tarch::database::SnapshotDatabase {
 public:
-  GlobalTimeSeriesDatabase(double timeDelta = 0.0, bool deltasAreRelative = false);
+  explicit GlobalTimeSeriesDatabase(double timeDelta = 0.0);
+  GlobalTimeSeriesDatabase(const GlobalTimeSeriesDatabase& other)            = delete;
+  GlobalTimeSeriesDatabase(GlobalTimeSeriesDatabase&& other)                 = delete;
+  GlobalTimeSeriesDatabase& operator=(const GlobalTimeSeriesDatabase& other) = delete;
+  GlobalTimeSeriesDatabase& operator=(GlobalTimeSeriesDatabase&& other)      = delete;
   ~GlobalTimeSeriesDatabase() override;
 
   void setDataName(const std::string& dataName);
-
+  [[nodiscard]] bool isSnapshotDue(double timestamp);
   void addGlobalSnapshot(double timestamp, int numberOfDataEntries, const double* data);
 
 protected:
@@ -32,6 +36,6 @@ private:
 
   std::list<Snapshot> _data{};
 
-  void              writeRow(std::ostream& file, const Snapshot& snapshot) const;
-  AddSnapshotAction getAction(double timestamp);
+  void writeRow(std::ostream& file, const Snapshot& snapshot) const;
+  AddSnapshotAction getAction(double timestamp) const;
 };

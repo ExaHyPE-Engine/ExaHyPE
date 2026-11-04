@@ -2,8 +2,21 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
+  /**
+   * Combines the partial value of the thread into the target of the reducer. One host thread
+   * runs a whole team. Its partial value is the result of the team.
+   */
+  template <typename Reducer>
+  INLINE_METHOD void reduceOverTeam(
+    [[maybe_unused]] const CpuTeam&   team,
+    const typename Reducer::ValueType threadValue,
+    const Reducer                     reducer
+  ) {
+    reducer.target = Reducer::combine(reducer.target, threadValue);
+  }
+
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const CpuTeam& team,
     const Range&                    range,
     const Functor                   functor,
@@ -17,7 +30,7 @@ namespace tarch::accelerator {
     reducer.target = Reducer::combine(reducer.target, teamAccumulator);
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const CpuTeam& team,
     const RangeMD<2>&               range,
     const Functor                   functor,
@@ -34,7 +47,7 @@ namespace tarch::accelerator {
     reducer.target = Reducer::combine(reducer.target, teamAccumulator);
   }
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(
+  INLINE_METHOD void parallelReduce(
     [[maybe_unused]] const CpuTeam& team,
     const RangeMD<3>&               range,
     const Functor                   functor,
@@ -54,21 +67,105 @@ namespace tarch::accelerator {
     reducer.target = Reducer::combine(reducer.target, teamAccumulator);
   }
 
-  // The partial values merge in thread order, so the result depends on the thread count alone.
+  /**
+   * Reduces over the range on the host threads. The partial values merge in an order that depends
+   * on the thread count alone. Inside a parallel region the time per item of the previous call with
+   * this functor type sets the number of tasks. An empty range returns at once.
+   */
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     using ValueType = typename Reducer::ValueType;
-    std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());
-#pragma omp parallel default(none) shared(range, functor, partials) if (not omp_in_parallel())
-    {
-      ValueType partial = Reducer::identity();
-#pragma omp for schedule(static) nowait
-      for (int i = 0; i < range.n; ++i) {
-        functor(i, partial);
-      }
-      partials[static_cast<std::size_t>(omp_get_thread_num())] = partial;
+    if (range.n == 0) {
+      return;
     }
+    if (omp_in_parallel()) {
+      static std::atomic<double> secondsPerItem{0.0};
+      const auto                 startTime       = std::chrono::steady_clock::now();
+      const int                  numberOfThreads = omp_get_num_threads();
+      // The blocks fix the merge order of the partial values for every number of tasks.
+      const int numberOfBlocks = std::max(1, std::min(range.n, MaximumHostTasksPerThread * numberOfThreads));
+      const int numberOfTasks =
+        getNumberOfHostTasks(range.n, numberOfThreads, secondsPerItem.load(std::memory_order_relaxed));
+      const int              rangeSize = range.n;
+      std::vector<ValueType> partials(static_cast<std::size_t>(numberOfBlocks), Reducer::identity());
+      ValueType* const       partialValues = partials.data();
+      assertion(numberOfTasks <= numberOfBlocks, numberOfTasks, numberOfBlocks);
+      // GCC and icpx fail to compile a task body that inherits always_inline from the enclosing
+      // function. The tasks start in a lambda.
+      [](
+        const int        numberOfTasks,
+        const int        numberOfBlocks,
+        const int        rangeSize,
+        const Functor&   functor,
+        ValueType* const partialValues
+      ) {
+#if defined(PEANO_OPENMP_TASKLOOP_SUPPORTED)
+        const auto numberOfTaskItems = static_cast<unsigned long>(numberOfTasks);
+#pragma omp taskloop default(none) num_tasks(numberOfTasks) \
+  firstprivate(numberOfTasks, numberOfTaskItems, numberOfBlocks, rangeSize) shared(functor, partialValues)
+        for (unsigned long taskNumber = 0; taskNumber < numberOfTaskItems; taskNumber++) {
+          const auto task       = static_cast<int>(taskNumber);
+          const int  firstBlock = static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * task / numberOfTasks);
+          const int endBlock = static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * (task + 1) / numberOfTasks);
+          for (int block = firstBlock; block < endBlock; block++) {
+            const int begin   = static_cast<int>(static_cast<std::int64_t>(rangeSize) * block / numberOfBlocks);
+            const int end     = static_cast<int>(static_cast<std::int64_t>(rangeSize) * (block + 1) / numberOfBlocks);
+            ValueType partial = Reducer::identity();
+            for (int i = begin; i < end; i++) {
+              functor(i, partial);
+            }
+            partialValues[block] = partial;
+          }
+        }
+#else
+        tarch::accelerator::reportMissingTaskloopSupportOnce();
+        for (int task = 0; task < numberOfTasks; task++) {
+#pragma omp task default(none) firstprivate(task, numberOfTasks, numberOfBlocks, rangeSize) \
+  shared(functor, partialValues)
+          {
+            const int firstBlock = static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * task / numberOfTasks);
+            const int endBlock =
+              static_cast<int>(static_cast<std::int64_t>(numberOfBlocks) * (task + 1) / numberOfTasks);
+            for (int block = firstBlock; block < endBlock; block++) {
+              const int begin   = static_cast<int>(static_cast<std::int64_t>(rangeSize) * block / numberOfBlocks);
+              const int end     = static_cast<int>(static_cast<std::int64_t>(rangeSize) * (block + 1) / numberOfBlocks);
+              ValueType partial = Reducer::identity();
+              for (int i = begin; i < end; i++) {
+                functor(i, partial);
+              }
+              partialValues[block] = partial;
+            }
+          }
+        }
+#pragma omp taskwait
+#endif
+      }(numberOfTasks, numberOfBlocks, rangeSize, functor, partialValues);
+      if (range.n > 0) {
+        const std::chrono::duration<double> elapsed = std::chrono::steady_clock::now() - startTime;
+        secondsPerItem.store(elapsed.count() * numberOfThreads / range.n, std::memory_order_relaxed);
+      }
+      ValueType accumulator = Reducer::identity();
+      for (const ValueType& partial : partials) {
+        accumulator = Reducer::combine(accumulator, partial);
+      }
+      reducer.target = Reducer::combine(reducer.target, accumulator);
+      return;
+    }
+    const int numberOfBlocks = std::max(1, std::min(range.n, MaximumHostTasksPerThread * omp_get_max_threads()));
+    std::vector<ValueType> partials(static_cast<std::size_t>(numberOfBlocks), Reducer::identity());
+    tarch::accelerator::runInParallelRegion([&]() {
+#pragma omp for schedule(static)
+      for (int block = 0; block < numberOfBlocks; ++block) {
+        const int begin   = static_cast<int>(static_cast<std::int64_t>(range.n) * block / numberOfBlocks);
+        const int end     = static_cast<int>(static_cast<std::int64_t>(range.n) * (block + 1) / numberOfBlocks);
+        ValueType partial = Reducer::identity();
+        for (int i = begin; i < end; ++i) {
+          functor(i, partial);
+        }
+        partials[static_cast<std::size_t>(block)] = partial;
+      }
+    });
     ValueType accumulator = Reducer::identity();
     for (const ValueType& partial : partials) {
       accumulator = Reducer::combine(accumulator, partial);
@@ -77,13 +174,12 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     using ValueType = typename Reducer::ValueType;
     std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());
-#pragma omp parallel default(none) shared(range, functor, partials) if (not omp_in_parallel())
-    {
+    tarch::accelerator::runInParallelRegion([&]() {
       ValueType partial = Reducer::identity();
 #pragma omp for collapse(2) schedule(static) nowait
       for (int x = 0; x < range.n[0]; ++x) {
@@ -92,7 +188,7 @@ namespace tarch::accelerator {
         }
       }
       partials[static_cast<std::size_t>(omp_get_thread_num())] = partial;
-    }
+    });
     ValueType accumulator = Reducer::identity();
     for (const ValueType& partial : partials) {
       accumulator = Reducer::combine(accumulator, partial);
@@ -101,14 +197,13 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
     using ValueType = typename Reducer::ValueType;
     std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());
-#pragma omp parallel default(none) shared(range, functor, partials) if (not omp_in_parallel())
-    {
+    tarch::accelerator::runInParallelRegion([&]() {
       ValueType partial = Reducer::identity();
 #pragma omp for collapse(3) schedule(static) nowait
       for (int x = 0; x < range.n[0]; ++x) {
@@ -119,7 +214,7 @@ namespace tarch::accelerator {
         }
       }
       partials[static_cast<std::size_t>(omp_get_thread_num())] = partial;
-    }
+    });
     ValueType accumulator = Reducer::identity();
     for (const ValueType& partial : partials) {
       accumulator = Reducer::combine(accumulator, partial);
@@ -127,24 +222,20 @@ namespace tarch::accelerator {
     reducer.target = Reducer::combine(reducer.target, accumulator);
   }
 
+  /**
+   * Runs every team on one host thread and reduces the partial values of the teams like a range
+   * reduction.
+   */
   template <typename Reducer, typename Functor>
-  inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
+  INLINE_METHOD void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
     using ValueType = typename Reducer::ValueType;
-    std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());
-#pragma omp parallel default(none) shared(range, functor, partials) if (not omp_in_parallel())
-    {
-      ValueType partial = Reducer::identity();
-#pragma omp for schedule(static) nowait
-      for (int i = 0; i < range.n; ++i) {
-        functor(i, tarch::accelerator::CpuTeam{}, partial);
-      }
-      partials[static_cast<std::size_t>(omp_get_thread_num())] = partial;
-    }
-    ValueType accumulator = Reducer::identity();
-    for (const ValueType& partial : partials) {
-      accumulator = Reducer::combine(accumulator, partial);
-    }
-    reducer.target = Reducer::combine(reducer.target, accumulator);
+    tarch::accelerator::parallelReduce(
+      tarch::accelerator::Range(range.n),
+      [&functor](const int team, ValueType& partial) {
+        functor(team, tarch::accelerator::CpuTeam{tarch::accelerator::getTeamScratchOfThread()}, partial);
+      },
+      reducer
+    );
   }
 } // namespace tarch::accelerator

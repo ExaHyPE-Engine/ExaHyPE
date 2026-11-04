@@ -13,7 +13,7 @@ namespace peano4::grid {
  * Describes one cell of the traversal: Its geometry, its level and the state
  * of the space-filling curve within it. The curve state selects the order in
  * which refineState() visits the children. The members run from the widest to
- * the narrowest, so the struct holds the least padding.
+ * the narrowest and leave the least padding.
  */
 struct peano4::grid::AutomatonState {
   tarch::la::Vector<DIMENSIONS, double> x{};
