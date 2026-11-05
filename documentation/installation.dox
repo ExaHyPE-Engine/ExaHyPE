@@ -15,7 +15,7 @@ software and where it is actively used and developed. If you do not
 intend to modify the core code base, you can clone the code
 anonymously.
 
-    git clone https://gitlab.lrz.de/hpcsoftware/Peano.git
+    git clone https://github.com/ExaHyPE-Engine/ExaHyPE.git
 
 We still maintain Peano version 3 in the repository.
 We work with the fourth generation of Peano (p4).

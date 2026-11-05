@@ -414,11 +414,11 @@ You can then reference this page from any other page:
 
 \endverbatim
 
-We can do the same for weblinks, like [this one to the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano):
+We can do the same for weblinks, like [this one to the GitHub repository](https://github.com/ExaHyPE-Engine/ExaHyPE):
 
 \verbatim
 
-[this one to the gitlab](https://gitlab.lrz.de/hpcsoftware/Peano)
+[this one to the GitHub repository](https://github.com/ExaHyPE-Engine/ExaHyPE)
 
 \endverbatim
 

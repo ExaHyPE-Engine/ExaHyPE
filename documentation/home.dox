@@ -2,7 +2,7 @@
 
 @mainpage Peano
 
-@image html documentation/Peano-logo.png
+@image html documentation/logos/ExaHyPE.png
 
 \tableofcontents
 
@@ -46,8 +46,7 @@ The most prominent extension at the moment is ExaHyPE 2.
 
 # Recent Updates
 
-- <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines">Build status (pipelines)</a>
-- <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/network/p4?ref_type=heads">Latest commits (repository graph)</a>
+- <a href="https://github.com/ExaHyPE-Engine/ExaHyPE/commits/main">Latest commits</a>
 
 
 # History

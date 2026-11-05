@@ -20,7 +20,7 @@ Stage: build
 
   . /opt/spack-environment/environment_modifications.sh
   cd /
-  git clone -b muc/exahype https://gitlab.lrz.de/hpcsoftware/Peano.git
+  git clone https://github.com/ExaHyPE-Engine/ExaHyPE.git Peano
   cd Peano
   mkdir build && cd build
   cmake .. \

@@ -77,7 +77,7 @@ authors:
     family-names: Wunderlich
   - given-names: Han
     family-names: Zhang
-repository-code: 'https://gitlab.lrz.de/hpcsoftware/Peano'
+repository-code: 'https://github.com/ExaHyPE-Engine/ExaHyPE'
 url: >-
   https://tobiasweinzierl.webspace.durham.ac.uk/software/peano/
 abstract: >-

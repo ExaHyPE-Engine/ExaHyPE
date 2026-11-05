@@ -76,14 +76,14 @@
 .RunOnAnyBranch:
   rules:
     # GitLab stores the source branch in a different variable for each pipeline entry point.
-    - if: '$CI_COMMIT_BRANCH =~ /^muc\//'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^muc\//'
-    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_MR_SOURCE_BRANCH =~ /^muc\//'
+    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME'
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_MR_SOURCE_BRANCH'
 
 .RunOnlyOnMainBranch:
   rules:
     # The child pipelines of a merge request run these jobs whatever the target branch of the merge request.
-    - if: '$CI_COMMIT_BRANCH == "muc/exahype"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_PIPELINE_SOURCE == "merge_request_event"'
 

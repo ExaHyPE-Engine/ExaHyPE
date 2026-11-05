@@ -20,12 +20,11 @@ class Exahype2(CMakePackage, CudaPackage):
     """
 
     homepage = "www.peano-framework.org"
-    url = "https://gitlab.lrz.de/hpcsoftware/Peano"
-    git = "https://gitlab.lrz.de/hpcsoftware/Peano.git"
+    url = "https://github.com/ExaHyPE-Engine/ExaHyPE"
+    git = "https://github.com/ExaHyPE-Engine/ExaHyPE.git"
 
-    maintainers("hpcsoftware")
 
-    version("muc", branch="muc/exahype")
+    version("main", branch="main")
 
     variant("hdf5", default=True, description="Build with HDF5 support")
     variant("netcdf", default=True, description="Build with NetCDF support")
