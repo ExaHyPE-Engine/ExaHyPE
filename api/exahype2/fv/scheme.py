@@ -24,9 +24,8 @@ class Weighting:
 class SubcellScheme:
     """The C++ description of one finite-volume scheme on a patch or a subgrid.
 
-    ``time_stepping`` is the policy type that advances one volume, or ``None`` for a scheme that
-    advances whole patches. ``subcell_family`` is the class template that advances the subgrids of
-    the DG subcell limiter, declared in ``subcell_family_include``.
+    ``subcell_family`` is the class template that advances the subgrids of the DG subcell
+    limiter, declared in ``subcell_family_include``.
     """
 
     def __init__(
@@ -35,7 +34,6 @@ class SubcellScheme:
         halo_width,
         subcell_family,
         subcell_family_include,
-        time_stepping=None,
         fallback_reconstruction=None,
         fallback_granularity=None,
         includes=None,
@@ -51,7 +49,6 @@ class SubcellScheme:
         ):
             raise ValueError("A subcell scheme needs a positive integer halo width.")
         self._reconstruction = reconstruction
-        self._time_stepping = time_stepping
         self._subcell_family = subcell_family
         self._subcell_family_include = subcell_family_include
         self._halo_width = halo_width
@@ -62,10 +59,6 @@ class SubcellScheme:
     @property
     def reconstruction(self):
         return self._reconstruction
-
-    @property
-    def time_stepping(self):
-        return self._time_stepping
 
     @property
     def halo_width(self):
@@ -110,14 +103,12 @@ class Godunov:
     def subcell_scheme(self):
         return SubcellScheme(
             reconstruction="::exahype2::fv::reconstruction::Constant",
-            time_stepping="::exahype2::fv::singlestep::SingleStep",
             halo_width=self.halo_width,
             subcell_family="::exahype2::fv::singlestep::SubcellStep",
             subcell_family_include="exahype2/fv/singlestep/SubcellStep.h",
             includes=[
                 "exahype2/fv/singlestep/PatchUpdate.h",
                 "exahype2/fv/reconstruction/Constant.h",
-                "exahype2/fv/singlestep/SingleStep.h",
             ],
         )
 
@@ -147,7 +138,6 @@ class MusclHancock:
             reconstruction="::exahype2::fv::reconstruction::LimitedLinear<"
             + self.limiter
             + ">",
-            time_stepping="::exahype2::fv::singlestep::SingleStep",
             halo_width=self.halo_width,
             subcell_family="::exahype2::fv::singlestep::SubcellStep",
             subcell_family_include="exahype2/fv/singlestep/SubcellStep.h",
@@ -155,7 +145,6 @@ class MusclHancock:
                 "exahype2/fv/singlestep/PatchUpdate.h",
                 "exahype2/fv/limiter/SlopeLimiter.h",
                 "exahype2/fv/reconstruction/LimitedLinear.h",
-                "exahype2/fv/singlestep/SingleStep.h",
             ],
         )
 

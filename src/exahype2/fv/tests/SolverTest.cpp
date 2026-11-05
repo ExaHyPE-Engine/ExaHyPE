@@ -9,7 +9,6 @@
 #include "exahype2/fv/Patch.h"
 #include "exahype2/fv/singlestep/Solver.h"
 #include "exahype2/fv/reconstruction/Constant.h"
-#include "exahype2/fv/singlestep/SingleStep.h"
 #include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
@@ -54,8 +53,7 @@ namespace {
     static constexpr int NumberOfUnknowns           = 1;
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
-    using Reconstruction  = exahype2::fv::reconstruction::Constant;
-    using TimeIntegration = exahype2::fv::singlestep::SingleStep;
+    using Reconstruction = exahype2::fv::reconstruction::Constant;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = Rule;
     static constexpr std::array<int, 1>           MeasuredUnknowns{0};
@@ -153,8 +151,7 @@ namespace {
     static constexpr int NumberOfUnknowns           = 1;
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
-    using Reconstruction  = exahype2::fv::reconstruction::Constant;
-    using TimeIntegration = exahype2::fv::singlestep::SingleStep;
+    using Reconstruction = exahype2::fv::reconstruction::Constant;
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Adaptive;
 

@@ -494,8 +494,60 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::computeVolumeU
   StoragePrecision* NOALIAS const              updatedState
 ) {
   assertion(volume >= 0 and volume < VolumesPerPatch, volume, VolumesPerPatch);
-  return Derived::TimeIntegration::template applyToVolume<
-    typename Derived::Reconstruction,
+  assertion(patch != nullptr);
+  assertion(updatedState != nullptr);
+
+  double maxEigenvalueAfterTimeStep = 0.0;
+
+  const tarch::la::Vector<DIMENSIONS, int> volumeIndex = peano4::dDelinearised(volume, PatchSize);
+  const auto                               volumeSize  = exahype2::fv::getVolumeSize(cellSize, PatchSize);
+  const auto volumeCentre = exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, volumeIndex);
+
+  const int                             centreOffset = volume * NumberOfData;
+  const StoragePrecision* NOALIAS const inputState   = &patch[centreOffset];
+  StoragePrecision* NOALIAS const       outputState  = updatedState;
+
+#if defined(PEANO_WITH_GPU_BACKEND)
+  StoragePrecision centreState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  SIMD(aligned(centreState : PEANO_WITH_ALIGNMENT))
+  for (int unknown = 0; unknown < NumberOfData; unknown++) {
+    centreState[unknown] = inputState[unknown];
+  }
+#else
+  const StoragePrecision* NOALIAS const centreState = inputState;
+#endif
+
+  SIMD()
+  for (int unknown = 0; unknown < NumberOfData; unknown++) {
+    outputState[unknown] = centreState[unknown];
+  }
+
+  if constexpr (exahype2::terms::HasSourceTerm<Derived, ComputePrecision>) {
+    using TimeUpdatePrecision = decltype(StoragePrecision{} + ComputePrecision{} * double{});
+    [[maybe_unused]] ComputePrecision centreStateComputeBuffer[NumberOfData]
+      __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    const ComputePrecision* NOALIAS centreStateForCompute;
+    if constexpr (std::is_same_v<StoragePrecision, ComputePrecision>) {
+      centreStateForCompute = centreState;
+    } else {
+      SIMD(aligned(centreStateComputeBuffer : PEANO_WITH_ALIGNMENT))
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        centreStateComputeBuffer[unknown] = static_cast<ComputePrecision>(centreState[unknown]);
+      }
+      centreStateForCompute = centreStateComputeBuffer;
+    }
+    ComputePrecision sources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    Derived::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
+    SIMD(aligned(sources : PEANO_WITH_ALIGNMENT))
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      outputState[unknown] = static_cast<StoragePrecision>(
+        static_cast<TimeUpdatePrecision>(outputState[unknown])
+        + static_cast<TimeUpdatePrecision>(timeStepSize) * static_cast<TimeUpdatePrecision>(sources[unknown])
+      );
+    }
+  }
+
+  Derived::Reconstruction::template accumulateFluxDivergence<
     Derived,
     PatchSize,
     NumberOfUnknowns,
@@ -508,7 +560,23 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::computeVolumeU
     ReportEigenvalues,
     StoragePrecision,
     ComputePrecision
-  >(volume, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces, terms, updatedState);
+  >(patch,
+    faces,
+    volumeIndex,
+    centreOffset,
+    centreState,
+    cellCentre,
+    cellSize,
+    volumeCentre,
+    volumeSize,
+    timeStamp,
+    timeStepSize,
+    boundaryFaces,
+    outputState,
+    maxEigenvalueAfterTimeStep,
+    terms);
+
+  return maxEigenvalueAfterTimeStep;
 }
 
 /**

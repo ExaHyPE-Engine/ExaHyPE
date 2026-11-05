@@ -82,6 +82,5 @@ class Solver(FiniteVolumeSolver):
     def _scheme_constants(self):
         scheme = self.scheme.subcell_scheme()
         return [
-            "using Reconstruction  = {};".format(scheme.reconstruction),
-            "using TimeIntegration = {};".format(scheme.time_stepping),
+            "using Reconstruction = {};".format(scheme.reconstruction),
         ]

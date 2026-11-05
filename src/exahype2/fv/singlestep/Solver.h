@@ -10,9 +10,8 @@ namespace exahype2::fv::singlestep {
 } // namespace exahype2::fv::singlestep
 
 /**
- * The finite-volume solver family whose time integration advances every volume in one step from
- * the volumes around it, such as Godunov and MUSCL-Hancock. Derived::TimeIntegration names the
- * time-stepping policy.
+ * The finite-volume solver family that advances every volume in one step from the volumes around
+ * it, such as Godunov and MUSCL-Hancock.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::fv::singlestep::Solver : public exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision> {

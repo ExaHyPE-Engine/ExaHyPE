@@ -3,7 +3,7 @@
 #pragma once
 
 #include "exahype2/dg/limiting/SubcellScheme.h"
-#include "exahype2/fv/singlestep/SingleStep.h"
+#include "exahype2/fv/singlestep/PatchUpdate.h"
 #include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/Span.h"
@@ -37,14 +37,11 @@ public:
   using Kernel = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
   using Region = exahype2::dg::limiting::SubcellRegion<StoragePrecision, ComputePrecision>;
 
-  /**
-   * The subgrid solver of Derived with the reconstruction Reconstruct, which advances every volume
-   * in one step.
-   */
-  template <typename Reconstruct>
-  struct Subgrid final: Kernel::template SubgridSolver<Reconstruct> {
-    using TimeIntegration = exahype2::fv::singlestep::SingleStep;
-  };
+  // The defaulted parameter defers the lookup in Derived to the use, where Derived is complete.
+  template <typename Reconstruct, typename Generated = Derived>
+  using SubgridUpdate = exahype2::fv::singlestep::PatchUpdate<
+    typename exahype2::dg::limiting::SubcellScheme<Generated, ComputePrecision>::template SubgridSolver<Reconstruct>,
+    ComputePrecision>;
 
   INLINE_METHOD void rebuild(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void release();

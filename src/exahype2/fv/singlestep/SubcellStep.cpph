@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include "exahype2/fv/singlestep/PatchUpdate.h"
 #include "exahype2/dg/Kernels.h"
 #include "exahype2/dg/limiting/LimiterStatus.h"
 #include "exahype2/fv/Kernels.h"
@@ -198,13 +197,11 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
   COMPILE_IF_ON_DEVICE(
     using Reconstruction         = typename Derived::Reconstruction;
     using FallbackReconstruction = typename Derived::FallbackReconstruction;
-    using PrimarySubgrid         = Subgrid<Reconstruction>;
-    using FallbackSubgrid        = Subgrid<FallbackReconstruction>;
     const int thread             = tarch::accelerator::getThreadOfTeam(team);
     const int threads            = tarch::accelerator::getNumberOfThreadsPerTeam(team);
     bool      needsFallback      = false;
     for (int subcell = thread; subcell < Kernel::SubcellsPerCell; subcell += threads) {
-      static_cast<void>(exahype2::fv::singlestep::PatchUpdate<PrimarySubgrid, ComputePrecision>::computeVolumeUpdate(
+      static_cast<void>(SubgridUpdate<Reconstruction>::computeVolumeUpdate(
         subcell,
         subcells,
         haloHalves,
@@ -236,7 +233,7 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
       tarch::accelerator::teamBarrier(team);
       if (needsFallback) {
         for (int subcell = thread; subcell < Kernel::SubcellsPerCell; subcell += threads) {
-          static_cast<void>(exahype2::fv::singlestep::PatchUpdate<FallbackSubgrid, ComputePrecision>::computeVolumeUpdate(
+          static_cast<void>(SubgridUpdate<FallbackReconstruction>::computeVolumeUpdate(
             subcell,
             subcells,
             haloHalves,
@@ -318,7 +315,6 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
   const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
   const double* const                          nodesToSubcells
 ) {
-  using Update                       = exahype2::fv::singlestep::PatchUpdate<Subgrid<Reconstruct>, ComputePrecision>;
   constexpr int GalerkinNodesPerAxis = Kernel::NodesPerAxis;
   constexpr int GalerkinNodesPerFace = exahype2::dg::getNodesPerFace(GalerkinNodesPerAxis);
   const auto    index                = peano4::dDelinearised(volume, Kernel::SubcellsPerAxis);
@@ -329,7 +325,7 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
       continue;
     }
     ComputePrecision ownFlux[Kernel::NumberOfUnknowns];
-    Update::computePatchFaceFlux(
+    SubgridUpdate<Reconstruct>::computePatchFaceFlux(
       volume,
       subcells,
       haloHalves,
@@ -385,18 +381,16 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
     Reconstruct::HaloSize == Kernel::HaloSize,
     "The fallback reconstruction of the limiter needs the halo width of the primary reconstruction."
   );
-  static_cast<void>(
-    exahype2::fv::singlestep::PatchUpdate<Subgrid<Reconstruct>, ComputePrecision>::update(
-      subcells,
-      evolvedSubcells,
-      haloHalves,
-      cellCentre,
-      cellSize,
-      timeStamp,
-      timeStepSize,
-      boundaryFaces
-    )
-  );
+  static_cast<void>(SubgridUpdate<Reconstruct>::update(
+    subcells,
+    evolvedSubcells,
+    haloHalves,
+    cellCentre,
+    cellSize,
+    timeStamp,
+    timeStepSize,
+    boundaryFaces
+  ));
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>

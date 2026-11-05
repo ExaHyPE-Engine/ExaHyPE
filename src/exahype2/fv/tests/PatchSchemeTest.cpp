@@ -11,7 +11,6 @@
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
 #include "exahype2/fv/tests/HaloProfileTestData.h"
-#include "exahype2/fv/singlestep/SingleStep.h"
 #include "peano4/CellConnectivity.h"
 #include "peano4/Constants.h"
 #include "peano4/Loop.h"
@@ -51,8 +50,7 @@ namespace {
     static constexpr int NumberOfUnknowns           = Unknowns;
     static constexpr int NumberOfAuxiliaryVariables = 0;
 
-    using Reconstruction  = Reconstruct;
-    using TimeIntegration = exahype2::fv::singlestep::SingleStep;
+    using Reconstruction = Reconstruct;
   };
 
   template <int PatchSizeOfLayout, int Unknowns, typename Reconstruct, Rule RuleOfScheme>

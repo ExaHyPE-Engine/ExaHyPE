@@ -13,9 +13,7 @@ INLINE_METHOD exahype2::fv::singlestep::Solver<Derived, StoragePrecision, Comput
   std::string                               name,
   std::vector<exahype2::plotter::DataField> plottedFields
 ) :
-  Base(timeStepFactor, std::move(name), std::move(plottedFields)) {
-  static_assert(exahype2::fv::singlestep::TimeSteppingScheme<typename Derived::TimeIntegration>);
-}
+  Base(timeStepFactor, std::move(name), std::move(plottedFields)) {}
 
 /**
  * Advances every patch in place by the time step size the previous step admitted. The local

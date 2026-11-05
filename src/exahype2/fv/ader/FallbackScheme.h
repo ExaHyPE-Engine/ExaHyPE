@@ -7,7 +7,6 @@
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "exahype2/fv/singlestep/PatchUpdate.h"
-#include "exahype2/fv/singlestep/SingleStep.h"
 #include "exahype2/terms/DiffusiveSourceTerm.h"
 #include "exahype2/terms/Flux.h"
 #include "exahype2/terms/MaxEigenvalue.h"
@@ -148,8 +147,7 @@ struct exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::FallbackSo
 
   static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
 
-  using Reconstruction  = Reconstruct;
-  using TimeIntegration = exahype2::fv::singlestep::SingleStep;
+  using Reconstruction = Reconstruct;
 
   template <typename Precision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(

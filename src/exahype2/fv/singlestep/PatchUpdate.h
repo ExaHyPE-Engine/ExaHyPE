@@ -19,11 +19,6 @@ namespace exahype2::fv::singlestep {
   template <typename Derived, typename ComputePrecision>
   class PatchUpdate;
 
-  template <typename TimeSteppingPolicy>
-  concept TimeSteppingScheme = std::is_empty_v<TimeSteppingPolicy> and requires {
-    { TimeSteppingPolicy::NumberOfStages } -> std::convertible_to<int>;
-  };
-
   TARGET_DECLARE
   // SweepStackBytes bounds the ring and scratch of a sweep that stay on the stack of the host
   // thread.
@@ -34,9 +29,10 @@ namespace exahype2::fv::singlestep {
 TARGET_DECLARE
 /**
  * PatchUpdate advances the patch of one cell of the generated solver class Derived by one time
- * step of a scheme that reads the patch and its halo only. The types Derived::Reconstruction and
- * Derived::TimeIntegration form the scheme. The constant Derived::TimeSteppingRule selects whether
- * update() returns wave speeds. It adds the update to the operations of exahype2::fv::Patch.
+ * step of a scheme that reads the patch and its halo only. Every volume adds its source term and
+ * the flux divergence of the reconstruction Derived::Reconstruction to its state. The constant
+ * Derived::TimeSteppingRule selects whether update() returns wave speeds. It adds the update to
+ * the operations of exahype2::fv::Patch.
  */
 template <typename Derived, typename ComputePrecision>
 class exahype2::fv::singlestep::PatchUpdate final : public exahype2::fv::Patch<Derived, ComputePrecision> {
