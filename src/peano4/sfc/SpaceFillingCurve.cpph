@@ -20,7 +20,7 @@ template <class CurveGrammar>
 INLINE_METHOD const typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::ChildSequence&
 peano4::sfc::SpaceFillingCurve<CurveGrammar>::getChildren(const int state) {
   static constexpr ChildOrder Table{deriveChildOrder()};
-  assertion(state >= 0 and state < NumberOfStates, state);
+  ASSERTION(state >= 0 and state < NumberOfStates, state);
   return Table[state];
 }
 

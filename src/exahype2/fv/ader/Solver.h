@@ -51,18 +51,28 @@ public:
     std::vector<exahype2::plotter::DataField> plottedFields
   );
 
-  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity);
-  INLINE_METHOD void performTimeStep(const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests);
+  template <typename RuntimeParameters>
+  INLINE_METHOD void allocate(const peano4::CellConnectivity& cellConnectivity, const RuntimeParameters& parameters);
+  template <typename RuntimeParameters>
+  INLINE_METHOD void performTimeStep(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
+  );
+  template <typename RuntimeParameters>
   INLINE_METHOD void regrid(
-    const peano4::CellConnectivity&      cellConnectivity,
-    const peano4::Regrid&         regrid,
-    exahype2::RefinementRequests& requests
+    const peano4::CellConnectivity& cellConnectivity,
+    const peano4::Regrid&           regrid,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
   );
   INLINE_METHOD void release();
+  template <typename RuntimeParameters>
   INLINE_METHOD void plot(
     const peano4::CellConnectivity& cellConnectivity,
     tarch::plotter::Format          format,
-    const std::string&              outputDirectory
+    const std::string&              outputDirectory,
+    const RuntimeParameters&        parameters
   );
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
@@ -73,30 +83,40 @@ public:
 private:
   INLINE_METHOD void reserveFaces(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void reserveStatuses(int numberOfSlots);
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD double predictPatches(
     const peano4::CellConnectivity& cellConnectivity,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD double solveRiemannProblems(
     const peano4::CellConnectivity& cellConnectivity,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD double correctPatches(
     const peano4::CellConnectivity& cellConnectivity,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD double fixUpPatches(
     const peano4::CellConnectivity& cellConnectivity,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD auto getCorrection(
     const peano4::CellConnectivity& cellConnectivity,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
 
   StatePool _faceStates{Scheme::StateValuesPerFace};

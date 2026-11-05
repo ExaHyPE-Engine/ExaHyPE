@@ -65,7 +65,7 @@ exchange face data alone.
 # Regridding and migration
 
 A changed refinement plan can also change the cell-weighted rank ownership.
-peano4::Regrid names the cell slots that move to another rank in canonical
+peano4::Regrid lists the cell slots that move to another rank in canonical
 order, and peano4::MigrationExchange moves their data before the new faces
 are rebuilt.
 

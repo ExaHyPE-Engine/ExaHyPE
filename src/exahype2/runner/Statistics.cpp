@@ -88,8 +88,8 @@ namespace {
     {"MPI Decomposition", "Rank Boundary Faces"},
     {"Memory", "CPU Grid"},
     {"Memory", "GPU Grid"},
-    {"Memory", "CPU Solver Data"},
-    {"Memory", "GPU Solver Data"},
+    {"Memory", "CPU Solver"},
+    {"Memory", "GPU Solver"},
     {"Memory", "Resident"},
     {"Memory", "Free"},
   }};
@@ -168,15 +168,15 @@ exahype2::runner::GlobalStatistics::addLocalValuesToGlobalReduction(
   const bool                   refreshMemory
 ) {
   const auto& statistics = peano4::Spacetree::getInstance().getStatistics();
-  assertion(statistics.numberOfCells >= 0, statistics.numberOfCells);
-  assertion(statistics.numberOfRefinedCells >= 0, statistics.numberOfRefinedCells);
-  assertion(statistics.numberOfFaces >= 0, statistics.numberOfFaces);
-  assertion(statistics.numberOfHangingFaces >= 0, statistics.numberOfHangingFaces);
-  assertion(statistics.numberOfExchangedFaces >= 0, statistics.numberOfExchangedFaces);
-  assertion(statistics.numberOfExchangedFaces <= statistics.numberOfFaces, statistics.numberOfExchangedFaces);
+  ASSERTION(statistics.numberOfCells >= 0, statistics.numberOfCells);
+  ASSERTION(statistics.numberOfRefinedCells >= 0, statistics.numberOfRefinedCells);
+  ASSERTION(statistics.numberOfFaces >= 0, statistics.numberOfFaces);
+  ASSERTION(statistics.numberOfHangingFaces >= 0, statistics.numberOfHangingFaces);
+  ASSERTION(statistics.numberOfExchangedFaces >= 0, statistics.numberOfExchangedFaces);
+  ASSERTION(statistics.numberOfExchangedFaces <= statistics.numberOfFaces, statistics.numberOfExchangedFaces);
   const auto                  localMinimumCellWidth = tarch::la::max(statistics.minimumCellWidth);
   [[maybe_unused]] const bool localWidthIsFinite    = std::isfinite(localMinimumCellWidth);
-  assertion(localWidthIsFinite and localMinimumCellWidth >= 0.0, statistics.minimumCellWidth);
+  ASSERTION(localWidthIsFinite and localMinimumCellWidth >= 0.0, statistics.minimumCellWidth);
 
   const auto isNodeMaster = tarch::mpi::Rank::getInstance().isNodeMaster();
   const auto now          = std::chrono::steady_clock::now();
@@ -247,8 +247,8 @@ exahype2::runner::GlobalStatistics::readValuesFromGlobalReduction(const tarch::m
   _globalNumberOfInnerUnrefinedCells = getSum(SumOfCells);
   _globalNumberOfInnerRefinedCells   = getSum(SumOfRefinedCells);
   // The ranks on both sides of a rank boundary face count it. The grid contains half of their sum.
-  assertion(getSum(SumOfRankBoundaryFaces) % 2 == 0, getSum(SumOfRankBoundaryFaces));
-  assertion(
+  ASSERTION(getSum(SumOfRankBoundaryFaces) % 2 == 0, getSum(SumOfRankBoundaryFaces));
+  ASSERTION(
     getSum(SumOfRankBoundaryFaces) / 2 <= getSum(SumOfFaces),
     getSum(SumOfRankBoundaryFaces),
     getSum(SumOfFaces)
@@ -459,7 +459,7 @@ exahype2::runner::collectGridSnapshot() {
     "",
     ""
   };
-  entries[GridSnapshot::MemoryCPUSolverData] = {
+  entries[GridSnapshot::MemoryCPUSolver] = {
     exahype2::runner::Format::getMemory(statistics.getGlobalSolverHostBytes()),
     "",
     ""
@@ -470,7 +470,7 @@ exahype2::runner::collectGridSnapshot() {
     "",
     ""
   };
-  entries[GridSnapshot::MemoryGPUSolverData] = {
+  entries[GridSnapshot::MemoryGPUSolver] = {
     exahype2::runner::Format::getMemory(statistics.getGlobalSolverDeviceBytes()),
     "",
     ""

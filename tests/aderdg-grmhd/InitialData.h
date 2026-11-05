@@ -16,6 +16,11 @@ namespace tests::exahype2::aderdg::grmhd {
     double (&gCov)[3][3]
   );
 
+  INLINE_METHOD GPU_CALLABLE_METHOD void setMichelAccretionPrimitives(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double*                                      V
+  );
+
   INLINE_METHOD GPU_CALLABLE_METHOD void setMichelAccretionState(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     double                                       t,

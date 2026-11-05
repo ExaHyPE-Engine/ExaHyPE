@@ -14,10 +14,10 @@ TARGET_DECLARE
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::ErrorSums::add(const double* const errors) {
-  assertion(errors != nullptr);
-  assertion(std::isfinite(errors[0]) and errors[0] >= 0.0, errors[0]);
-  assertion(std::isfinite(errors[1]) and errors[1] >= 0.0, errors[1]);
-  assertion(std::isfinite(errors[2]) and errors[2] >= 0.0, errors[2]);
+  ASSERTION(errors != nullptr);
+  ASSERTION(std::isfinite(errors[0]) and errors[0] >= 0.0, errors[0]);
+  ASSERTION(std::isfinite(errors[1]) and errors[1] >= 0.0, errors[1]);
+  ASSERTION(std::isfinite(errors[2]) and errors[2] >= 0.0, errors[2]);
   summedError.add(errors[0]);
   summedSquaredError.add(errors[1]);
   maxError = maxError < errors[2] ? errors[2] : maxError;
@@ -53,7 +53,7 @@ exahype2::FindLargestErrorsOfCells::operator()(const int cell, LargestErrors& la
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::SumErrorsOfCells::operator()(const int partialSum) const {
-  assertion(partialSum >= 0 and partialSum < numberOfPartialSums, partialSum, numberOfPartialSums);
+  ASSERTION(partialSum >= 0 and partialSum < numberOfPartialSums, partialSum, numberOfPartialSums);
   constexpr int NumberOfNorms = ErrorSums::NumberOfNorms;
   ErrorSums     sums          = emptySums;
   for (int cell = partialSum; cell < numberOfCells; cell += numberOfPartialSums) {
@@ -64,7 +64,7 @@ exahype2::SumErrorsOfCells::operator()(const int partialSum) const {
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::MergeErrorSums::operator()(const int partialSum) const {
-  assertion(stride > 0, stride);
+  ASSERTION(stride > 0, stride);
   if (partialSum % (2 * stride) == 0 and partialSum + stride < numberOfPartialSums) {
     partialSums[partialSum].merge(partialSums[partialSum + stride]);
   }
@@ -79,11 +79,11 @@ exahype2::accumulateError(
   const double                                     weight,
   double (&errors)[ErrorMeasurement::NumberOfNorms]
 ) {
-  assertion(value != nullptr);
-  assertion(exactSolution != nullptr);
-  assertion(weight >= 0.0, weight);
+  ASSERTION(value != nullptr);
+  ASSERTION(exactSolution != nullptr);
+  ASSERTION(weight >= 0.0, weight);
   for (const int unknown : measuredUnknowns) {
-    assertion(unknown >= 0, unknown);
+    ASSERTION(unknown >= 0, unknown);
     const double error = std::abs(static_cast<double>(value[unknown]) - exactSolution[unknown]);
     errors[0] += weight * error;
     errors[1] += weight * error * error;
@@ -106,14 +106,15 @@ exahype2::accumulateSolutionError(
   const double                                     timeStamp,
   const double                                     timeStepSize,
   const double                                     weight,
-  double (&errors)[ErrorMeasurement::NumberOfNorms]
+  double (&errors)[ErrorMeasurement::NumberOfNorms],
+  const typename SolverType::RuntimeParameters& parameters
 ) {
   static_assert(NumberOfUnknowns > 0);
   static_assert(NumberOfAuxiliaryVariables >= 0);
-  assertion(value != nullptr);
-  assertion(timeStepSize >= 0.0, timeStepSize);
+  ASSERTION(value != nullptr);
+  ASSERTION(timeStepSize >= 0.0, timeStepSize);
   for ([[maybe_unused]] const int unknown : measuredUnknowns) {
-    assertion(unknown < NumberOfUnknowns, unknown, NumberOfUnknowns);
+    ASSERTION(unknown < NumberOfUnknowns, unknown, NumberOfUnknowns);
   }
 
   double state[NumberOfUnknowns + NumberOfAuxiliaryVariables];
@@ -121,7 +122,7 @@ exahype2::accumulateSolutionError(
     state[entry] = static_cast<double>(value[entry]);
   }
   double solution[NumberOfUnknowns];
-  SolverType::analyticalSolution(x, timeStamp, timeStepSize, state, solution);
+  SolverType::analyticalSolution(x, timeStamp, timeStepSize, state, solution, parameters);
   accumulateError(measuredUnknowns, value, solution, weight, errors);
 }
 TARGET_DECLARE_END
@@ -132,8 +133,8 @@ TARGET_DECLARE_END
  */
 INLINE_METHOD exahype2::LargestErrors
 exahype2::ErrorMeasurement::getLargestErrorsOfCells(const double* const errorsPerCell, const int numberOfCells) {
-  assertion(numberOfCells >= 0, numberOfCells);
-  assertion(errorsPerCell != nullptr or numberOfCells == 0);
+  ASSERTION(numberOfCells >= 0, numberOfCells);
+  ASSERTION(errorsPerCell != nullptr or numberOfCells == 0);
   LargestErrors largestErrors;
   if (numberOfCells > 0) {
     tarch::accelerator::parallelReduce(
@@ -156,8 +157,8 @@ exahype2::ErrorMeasurement::sumErrorsOfCells(
   const ErrorSums&                       emptySums,
   tarch::accelerator::Buffer<ErrorSums>& partialSums
 ) {
-  assertion(numberOfCells >= 0, numberOfCells);
-  assertion(errorsPerCell != nullptr or numberOfCells == 0);
+  ASSERTION(numberOfCells >= 0, numberOfCells);
+  ASSERTION(errorsPerCell != nullptr or numberOfCells == 0);
   constexpr int MaximumNumberOfPartialSums = 1024;
   const int     numberOfPartialSums        = std::clamp(numberOfCells, 1, MaximumNumberOfPartialSums);
   if (partialSums.getSize() < static_cast<std::size_t>(numberOfPartialSums)) {
@@ -184,7 +185,7 @@ exahype2::ErrorMeasurement::sumErrorsOfCells(
  */
 INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
 exahype2::ErrorMeasurement::record(const int numberOfCells, const double timeStamp) {
-  assertion(
+  ASSERTION(
     _errorsPerCell.getSize() >= static_cast<std::size_t>(numberOfCells) * NumberOfNorms,
     _errorsPerCell.getSize(),
     numberOfCells
@@ -199,7 +200,7 @@ exahype2::ErrorMeasurement::record(const int numberOfCells, const double timeSta
  */
 INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
 exahype2::ErrorMeasurement::record(const std::vector<double>& errorsPerCell, const double timeStamp) {
-  assertion(errorsPerCell.size() % NumberOfNorms == 0, errorsPerCell.size());
+  ASSERTION(errorsPerCell.size() % NumberOfNorms == 0, errorsPerCell.size());
   _errorsPerCell.setValues(errorsPerCell);
   return record(static_cast<int>(errorsPerCell.size() / NumberOfNorms), timeStamp);
 }

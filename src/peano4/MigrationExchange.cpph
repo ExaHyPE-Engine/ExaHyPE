@@ -34,8 +34,8 @@ template <typename Transfer>
 INLINE_METHOD void
 peano4::MigrationExchange<T>::migrate(Pool& pool, const peano4::Regrid& regrid, const Transfer& transfer) {
   static_assert(Transfer::WorkItemsPerChunk > 0 and Transfer::PreparedValuesPerChunk >= 0);
-  assertion(pool.getLocation() == _sendBuffer.getLocation());
-  assertion(pool.getCapacity() >= regrid.newNumberOfSlots, pool.getCapacity(), regrid.newNumberOfSlots);
+  ASSERTION(pool.getLocation() == _sendBuffer.getLocation());
+  ASSERTION(pool.getCapacity() >= regrid.newNumberOfSlots, pool.getCapacity(), regrid.newNumberOfSlots);
   if (_tag == NoTag) {
     _tag = peano4::communication::CommunicationManager::getInstance().reserveTag();
   }
@@ -99,7 +99,7 @@ peano4::MigrationExchange<T>::migrate(Pool& pool, const peano4::Regrid& regrid, 
 template <typename T>
 INLINE_METHOD int
 peano4::MigrationExchange<T>::getNumberOfWorkItems(const std::size_t chunks, const int workItemsPerChunk) {
-  assertion(workItemsPerChunk > 0, workItemsPerChunk);
+  ASSERTION(workItemsPerChunk > 0, workItemsPerChunk);
   const auto largestNumberOfChunks = static_cast<std::size_t>(std::numeric_limits<int>::max() / workItemsPerChunk);
   if (chunks > largestNumberOfChunks) {
     tarch::terminateWithError(
@@ -135,12 +135,12 @@ peano4::MigrationExchange<T>::postTransfers(
   const Transfer&                          transfer,
   double* const                            prepared
 ) {
-  assertion(_requests.empty(), _requests.size());
+  ASSERTION(_requests.empty(), _requests.size());
   _numberOfReceivedChunks = 0;
   std::vector<peano4::TransferredCell> sentCells;
   std::vector<int>                     receivedSlots;
   for (const auto& rankTransfer : transfers) {
-    assertion(rankTransfer.rank >= 0, rankTransfer.rank);
+    ASSERTION(rankTransfer.rank >= 0, rankTransfer.rank);
     sentCells.insert(sentCells.end(), rankTransfer.sentCells.begin(), rankTransfer.sentCells.end());
     receivedSlots.insert(receivedSlots.end(), rankTransfer.receivedSlots.begin(), rankTransfer.receivedSlots.end());
   }

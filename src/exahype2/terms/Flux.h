@@ -10,14 +10,15 @@ namespace exahype2::terms {
    */
   template <typename SolverType, typename Precision>
   concept HasFlux = requires(
-    const Precision* const                       Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
-    Precision* const                             F
+    const Precision* const                        Q,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const double                                  t,
+    const double                                  dt,
+    const int                                     normal,
+    Precision* const                              F,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
-    { SolverType::flux(Q, x, h, t, dt, normal, F) } -> std::same_as<void>;
+    { SolverType::flux(Q, x, h, t, dt, normal, F, parameters) } -> std::same_as<void>;
   };
 } // namespace exahype2::terms

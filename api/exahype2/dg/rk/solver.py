@@ -187,6 +187,4 @@ class Solver(exahype2.solver.Solver):
     def _add_solver_family_entries(self, d):
         d["DG_ORDER"] = self._dg_order
         d["TABLE_PRECISIONS"] = self._table_precisions()
-        d["MAX_ADMISSIBLE_MESH_WIDTH"] = (
-            "parameters.getMaxAdmissiblePatchSize(DomainSize)"
-        )
+        d["MAX_ADMISSIBLE_MESH_WIDTH"] = "parameters.maxAdmissiblePatchSize"

@@ -100,7 +100,7 @@ namespace {
     constexpr int              IdLength = 64;
     std::array<char, IdLength> idOfRank{};
     const auto                 id = tarch::accelerator::Device::getInstance().getIdOfCurrentDevice();
-    assertion(id.size() < IdLength, id);
+    ASSERTION(id.size() < IdLength, id);
     id.copy(idOfRank.data(), IdLength - 1);
 
     const auto& rank             = tarch::mpi::Rank::getInstance();
@@ -119,7 +119,7 @@ namespace {
     const int          numberOfDevices = static_cast<int>(devicesOfNode.size());
     std::array<int, 3> maxima{-numberOfDevices, numberOfDevices, devicesOfNode.contains("") ? 1 : 0};
     tarch::mpi::allreduce(MPI_IN_PLACE, maxima.data(), 3, MPI_INT, MPI_MAX, rank.getCommunicator());
-    assertion(numberOfDevices >= 1 and numberOfDevices <= ranksOfNode, numberOfDevices, ranksOfNode);
+    ASSERTION(numberOfDevices >= 1 and numberOfDevices <= ranksOfNode, numberOfDevices, ranksOfNode);
     if (maxima[2] != 0) {
       return std::nullopt;
     }
@@ -167,8 +167,12 @@ namespace {
    * Returns whether the MPI library sends and receives the device buffers of the GPU backend.
    */
   std::string getGPUAwareMPILabel() {
+#if defined(PEANO_WITH_GPU_BACKEND)
     const auto isGPUAware = tarch::accelerator::Device::getInstance().isMPIGPUAware();
     return isGPUAware.has_value() ? getOnOff(*isGPUAware) : "Unknown";
+#else
+    return "Not Used";
+#endif
   }
 
   std::string renderStatistics(const std::vector<exahype2::runner::SolverStatistic>& statistics) {
@@ -201,7 +205,7 @@ namespace {
    * solvers count any.
    */
   std::string getPerformanceOf(const double cellUpdates, const double dofUpdates, const double seconds) {
-    assertion(seconds > 0.0 and cellUpdates >= 0.0 and dofUpdates >= 0.0, seconds, cellUpdates, dofUpdates);
+    ASSERTION(seconds > 0.0 and cellUpdates >= 0.0 and dofUpdates >= 0.0, seconds, cellUpdates, dofUpdates);
     std::ostringstream performance;
     performance << exahype2::runner::Format::getRate(cellUpdates / seconds, "Cell");
     if (dofUpdates > 0.0) {
@@ -255,7 +259,7 @@ exahype2::runner::Runner::launch(
   // A configuration error stops the process before MPI starts.
   parameters.configure(argc, argv);
 
-  // The runtime and the application parser read one file. A key that neither reads is unrecognised.
+  // The runtime and the application parser read one file. A key outside both parsers is unrecognised.
   auto* const configReader         = parameters.getConfigReader();
   const auto  applicationParserRan = static_cast<bool>(callbacks.loadApplicationParameters);
   if (applicationParserRan) {
@@ -355,8 +359,7 @@ exahype2::runner::Runner::launch(
     // enables its own trap.
     const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
 #pragma omp barrier
-#pragma omp master
-    {
+    if (tarch::tasking::Runtime::getInstance().getThreadNumber() == 0) {
       returnCode = runner.run();
     }
 #pragma omp barrier
@@ -381,13 +384,13 @@ exahype2::runner::Runner::Runner(
   _domainSize(domainSize),
   _periodicBoundaries(periodicBoundaries),
   _callbacks(std::move(callbacks)) {
-  assertion(static_cast<bool>(_callbacks.requestRefinementForGridConstruction));
-  assertion(static_cast<bool>(_callbacks.allocate));
-  assertion(static_cast<bool>(_callbacks.initialise));
-  assertion(static_cast<bool>(_callbacks.performTimeStep));
-  assertion(static_cast<bool>(_callbacks.regrid));
-  assertion(static_cast<bool>(_callbacks.plot));
-  assertion(static_cast<bool>(_callbacks.getRefinementRequests));
+  ASSERTION(static_cast<bool>(_callbacks.requestRefinementForGridConstruction));
+  ASSERTION(static_cast<bool>(_callbacks.allocate));
+  ASSERTION(static_cast<bool>(_callbacks.initialise));
+  ASSERTION(static_cast<bool>(_callbacks.performTimeStep));
+  ASSERTION(static_cast<bool>(_callbacks.regrid));
+  ASSERTION(static_cast<bool>(_callbacks.plot));
+  ASSERTION(static_cast<bool>(_callbacks.getRefinementRequests));
 }
 
 /**
@@ -452,7 +455,7 @@ exahype2::runner::Runner::finishStep(const Step step) {
   // getNonCriticalAssertionRank() returns -1 on a rank without a non-critical assertion. The shifted
   // rank keeps the order of the unsigned maximum.
   const int assertionRank = tarch::getNonCriticalAssertionRank();
-  assertion(assertionRank >= -1, assertionRank);
+  ASSERTION(assertionRank >= -1, assertionRank);
   const int                   shiftedAssertionRank = assertionRank + 1;
   tarch::mpi::ReductionRecord record;
   statistics.addLocalValuesToGlobalReduction(record, step != Step::TimeStep);
@@ -660,7 +663,7 @@ exahype2::runner::Runner::constructGrid() {
       finishConditionSeenLastStep = false;
     }
     // The construction settles when on two consecutive steps the finest cell reaches the coarsest
-    // admissible size and the last regrid changes nothing.
+    // admissible size and the last regrid keeps the grid.
     const bool converged = tarch::la::smallerEquals(currentMinimumPatchSize, coarsestAdmissiblePatchSize)
       and statistics.getGlobalNumberOfStationaryRegrids() >= 1;
     settled                     = converged and finishConditionSeenLastStep;
@@ -730,7 +733,7 @@ exahype2::runner::Runner::hasPendingMeshUpdates() const {
  */
 std::string
 exahype2::runner::Runner::describeMeshUpdates(const MeshUpdates& updates) {
-  assertion(updates.regrids >= 0 and updates.steps >= updates.regrids, updates.regrids, updates.steps);
+  ASSERTION(updates.regrids >= 0 and updates.steps >= updates.regrids, updates.regrids, updates.steps);
   return Format::getWallClock(updates.wallClock) + " · "
     + describeRepetitions(PhaseName::DynamicAMR, updates.steps, updates.regrids);
 }
@@ -741,7 +744,7 @@ exahype2::runner::Runner::describeMeshUpdates(const MeshUpdates& updates) {
  */
 std::string
 exahype2::runner::Runner::describeRepetitions(const std::string& phaseName, const int count, const int regrids) {
-  assertion(count >= 0 and regrids >= 0, count, regrids);
+  ASSERTION(count >= 0 and regrids >= 0, count, regrids);
   const auto getCountOf = [](const int number, const std::string& singular) {
     return Format::getGroupedNumber(static_cast<unsigned long>(number)) + " " + singular + (number == 1 ? "" : "s");
   };
@@ -829,7 +832,7 @@ exahype2::runner::Runner::runMeshUpdateStep(const bool startsRegrid) {
     _meshUpdates.regrids++;
   }
   const double elapsedSeconds = runStep(Step::DynamicAMR);
-  assertion(elapsedSeconds >= 0.0, elapsedSeconds);
+  ASSERTION(elapsedSeconds >= 0.0, elapsedSeconds);
   _meshUpdates.wallClock += elapsedSeconds;
   _meshUpdateMeasurement.setValue(elapsedSeconds);
   _meshUpdates.steps++;
@@ -881,9 +884,9 @@ exahype2::runner::Runner::logTimeStep(
   const unsigned long completedSteps,
   const int           maximumSteps
 ) {
-  assertion(completedSteps > 0 and _stepsSinceReport > 0, completedSteps, _stepsSinceReport);
+  ASSERTION(completedSteps > 0 and _stepsSinceReport > 0, completedSteps, _stepsSinceReport);
   [[maybe_unused]] const bool timeStampIsFinite = std::isfinite(minimumTimeStamp);
-  assertion(timeStampIsFinite and minimumTimeStamp <= maximumTimeStamp, minimumTimeStamp, maximumTimeStamp);
+  ASSERTION(timeStampIsFinite and minimumTimeStamp <= maximumTimeStamp, minimumTimeStamp, maximumTimeStamp);
   reportMeshUpdates();
 
   const bool timeBounded = terminalTime > 0.0 and terminalTime < std::numeric_limits<double>::max() / 10.0;
@@ -969,7 +972,7 @@ exahype2::runner::Runner::logPlot(
   const double wallClockSeconds
 ) {
   [[maybe_unused]] const bool timeStampIsFinite = std::isfinite(timeStamp);
-  assertion(wallClockSeconds >= 0.0 and timeStampIsFinite, wallClockSeconds, timeStamp);
+  ASSERTION(wallClockSeconds >= 0.0 and timeStampIsFinite, wallClockSeconds, timeStamp);
   std::ostringstream label;
   if (snapshot <= 0) {
     label << "Initial Plot";
@@ -1059,7 +1062,7 @@ exahype2::runner::Runner::runTimeLoop() {
       if (not _stoppedAfterNonCriticalAssertion) {
         _stoppedAfterNonCriticalAssertion = true;
         if (isGlobalMaster) {
-          logError("Every rank writes the final snapshot and stops.");
+          LOG_ERROR("Every rank writes the final snapshot and stops.");
         }
         action = Action::Plot;
       } else {
@@ -1072,7 +1075,7 @@ exahype2::runner::Runner::runTimeLoop() {
       nextPlotAtStep += stepPlotInterval;
       if (nextPlotAtStep <= static_cast<double>(completedTimeSteps)) {
         if (isGlobalMaster) {
-          logWarning("The runner writes at most one snapshot per time step.");
+          LOG_WARNING("The runner writes at most one snapshot per time step.");
         }
         nextPlotAtStep = static_cast<double>(completedTimeSteps) + 1.0;
       }
@@ -1089,12 +1092,12 @@ exahype2::runner::Runner::runTimeLoop() {
       nextMaxPlot += snapshotInterval;
       if (nextMinPlot < minStamp) {
         if (isGlobalMaster) {
-          logWarning("The runner writes at most one snapshot per time step.");
+          LOG_WARNING("The runner writes at most one snapshot per time step.");
         }
         nextMinPlot = minStamp + snapshotInterval;
       } else if (nextMaxPlot < maxStamp) {
         if (isGlobalMaster) {
-          logWarning("The runner writes at most one snapshot per time step.");
+          LOG_WARNING("The runner writes at most one snapshot per time step.");
         }
         nextMaxPlot = maxStamp + snapshotInterval;
       }
@@ -1118,7 +1121,7 @@ exahype2::runner::Runner::runTimeLoop() {
       if (_callbacks.recordLastTimeStamp) {
         _callbacks.recordLastTimeStamp();
       }
-      // After a non-critical assertion, the report ends with the final plot and no time step summary.
+      // After a non-critical assertion, the final plot ends the report.
       if (not _stoppedAfterNonCriticalAssertion and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
         logTimeStep(
           _callbacks.getMinTimeStamp(),

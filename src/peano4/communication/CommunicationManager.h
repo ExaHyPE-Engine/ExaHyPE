@@ -29,10 +29,11 @@ public:
   [[nodiscard]] int reserveTag();
 
   void registerInFlightTransfer(std::function<bool()> pollTransfer);
-  bool pollInFlightTransfers();
 
 private:
   CommunicationManager() = default;
+
+  bool pollInFlightTransfers();
 
   struct InFlightTransfer final {
     std::function<bool()> poll{};

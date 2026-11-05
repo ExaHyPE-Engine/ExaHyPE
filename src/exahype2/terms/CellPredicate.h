@@ -6,8 +6,11 @@
 
 namespace exahype2::terms {
   template <typename SolverType>
-  concept HasCellPredicate =
-    requires(const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h) {
-      { SolverType::ownsCell(x, h) } -> std::same_as<bool>;
-    };
+  concept HasCellPredicate = requires(
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const typename SolverType::RuntimeParameters& parameters
+  ) {
+    { SolverType::ownsCell(x, h, parameters) } -> std::same_as<bool>;
+  };
 } // namespace exahype2::terms

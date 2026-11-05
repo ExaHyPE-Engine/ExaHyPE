@@ -6,7 +6,7 @@
 
 Peano expresses dynamic adaptivity as cell requests and realises a structural
 change as one rebuild of the tree and the cell connectivity followed by one data
-transfer. A request names one cell whose neighbourhood refines or whose parent
+transfer. A request selects one cell whose neighbourhood refines or whose parent
 may erase. Refinement wins over erasure wherever the requests conflict, and
 each regrid exposes one additional level on which a criterion can decide again.
 
@@ -34,9 +34,9 @@ containing the two ends of that band. Existing cells in these regions flag
 their unrefined corner vertices. Levels finer than the requesting cell do not
 participate.
 
-An erase request names the parent cell whose children may disappear. The regrid
+An erase request selects the parent cell whose children may disappear. The regrid
 removes a flagged vertex only when every existing adjacent cell asks to erase and
-no refine request protects that region. Finer flagged vertices veto the removal
+every refine request lies outside that region. Finer flagged vertices veto the removal
 of a coarse flag that they still require. The regrid evaluates all removals
 against one snapshot. Every order of the requests then gives the same result.
 
@@ -59,9 +59,9 @@ plans and the same rank-boundary order without a structural exchange.
    through peano4::MigrationExchange, resizes its face pools to the new face
    count and rebuilds them.
 
-During grid construction no solver data exists: a changed plan rebuilds the
+Grid construction runs before the solvers allocate their data. A changed plan rebuilds the
 tree and the cell connectivity directly, and the criterion runs again on the coarser
-cells until no request arrives.
+cells while requests arrive.
 
 # Producing requests
 

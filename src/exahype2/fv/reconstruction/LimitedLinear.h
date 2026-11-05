@@ -18,9 +18,9 @@ namespace exahype2::fv::reconstruction {
 TARGET_DECLARE
 /**
  * MUSCL-Hancock reconstruction with the slope limiter Limiter. The half-step predictor reads
- * neighbours along one axis only and the faces store no diagonal halo volumes. Both volumes at a
- * face pass the centre of the lower volume plus half a volume width along the normal to the solver
- * as the face centre.
+ * neighbours along one axis only. A face stores the halo volumes along its normal only. Both volumes
+ * at a face pass the centre of the lower volume plus half a volume width along the normal to the
+ * solver as the face centre.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 struct exahype2::fv::reconstruction::LimitedLinear final {
@@ -61,16 +61,17 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     Face             upperFace[DIMENSIONS]{};
 
     INLINE_METHOD void evaluate(
-      const StoragePrecision* NOALIAS              patch,
-      const StoragePrecision* NOALIAS const        faces[peano4::FacesPerCell],
-      const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-      int                                          centreOffset,
-      const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-      double                                       timeStamp,
-      double                                       timeStepSize
+      const StoragePrecision* NOALIAS               patch,
+      const StoragePrecision* NOALIAS const         faces[peano4::FacesPerCell],
+      const tarch::la::Vector<DIMENSIONS, int>&     volumeIndex,
+      int                                           centreOffset,
+      const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+      const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+      const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+      const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+      double                                        timeStamp,
+      double                                        timeStepSize,
+      const typename SolverType::RuntimeParameters& parameters
     );
   };
 
@@ -136,21 +137,22 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     typename Terms
   >
   INLINE_METHOD GPU_CALLABLE_METHOD static void accumulateFluxDivergence(
-    const StoragePrecision* NOALIAS              inputPatch,
-    const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
-    const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-    int                                          centreOffset,
-    const StoragePrecision* NOALIAS              centreState,
-    const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          boundaryFaces,
-    StoragePrecision* NOALIAS                    outputState,
-    double&                                      maxEigenvalueAfterTimeStep,
-    Terms&                                       terms
+    const StoragePrecision* NOALIAS               inputPatch,
+    const StoragePrecision* NOALIAS const         faceInputPatches[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, int>&     volumeIndex,
+    int                                           centreOffset,
+    const StoragePrecision* NOALIAS               centreState,
+    const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    int                                           boundaryFaces,
+    StoragePrecision* NOALIAS                     outputState,
+    double&                                       maxEigenvalueAfterTimeStep,
+    Terms&                                        terms,
+    const typename SolverType::RuntimeParameters& parameters
   );
 
   template <
@@ -166,16 +168,17 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     typename ComputePrecision
   >
   INLINE_METHOD GPU_CALLABLE_METHOD static void patchFaceFlux(
-    const StoragePrecision* NOALIAS              inputPatch,
-    const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
-    const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-    int                                          patchFace,
-    const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          boundaryFaces,
-    ComputePrecision* NOALIAS                    flux
+    const StoragePrecision* NOALIAS               inputPatch,
+    const StoragePrecision* NOALIAS const         faceInputPatches[peano4::FacesPerCell],
+    const tarch::la::Vector<DIMENSIONS, int>&     volumeIndex,
+    int                                           patchFace,
+    const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    int                                           boundaryFaces,
+    ComputePrecision* NOALIAS                     flux,
+    const typename SolverType::RuntimeParameters& parameters
   );
 
   template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
@@ -200,28 +203,30 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     typename ComputePrecision
   >
   INLINE_METHOD GPU_CALLABLE_METHOD static void evolveFaceStates(
-    const StoragePrecision* NOALIAS              leftState,
-    const StoragePrecision* NOALIAS              centreState,
-    const StoragePrecision* NOALIAS              rightState,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    int                                          normal,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    ComputePrecision* NOALIAS                    evolvedMinusState,
-    ComputePrecision* NOALIAS                    evolvedPlusState
+    const StoragePrecision* NOALIAS               leftState,
+    const StoragePrecision* NOALIAS               centreState,
+    const StoragePrecision* NOALIAS               rightState,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+    int                                           normal,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    ComputePrecision* NOALIAS                     evolvedMinusState,
+    ComputePrecision* NOALIAS                     evolvedPlusState,
+    const typename SolverType::RuntimeParameters& parameters
   );
 
   template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision rusanovFaceFlux(
-    const ComputePrecision* NOALIAS              leftState,
-    const ComputePrecision* NOALIAS              rightState,
-    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    int                                          normal,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    ComputePrecision* NOALIAS                    faceFlux
+    const ComputePrecision* NOALIAS               leftState,
+    const ComputePrecision* NOALIAS               rightState,
+    const tarch::la::Vector<DIMENSIONS, double>&  faceCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+    int                                           normal,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    ComputePrecision* NOALIAS                     faceFlux,
+    const typename SolverType::RuntimeParameters& parameters
   );
 
   template <
@@ -245,7 +250,8 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     const tarch::la::Vector<DIMENSIONS, int>&                                                             volumeIndex,
     int                                                                                                   side,
     int                                                                                                   boundaryFaces,
-    FaceTerms<NumberOfUnknowns, EvaluateNonconservativeProduct, EvaluateCustomRiemann, ComputePrecision>& face
+    FaceTerms<NumberOfUnknowns, EvaluateNonconservativeProduct, EvaluateCustomRiemann, ComputePrecision>& face,
+    const typename SolverType::RuntimeParameters&                                                         parameters
   );
 };
 TARGET_DECLARE_END

@@ -39,7 +39,7 @@ class HHS1(Scenario):
 
   const auto jacobian = Q[Shortcuts::jacobian];
 
-  assertion(n == 0, n);
+  ASSERTION(n == 0, n);
 
   constexpr double t0 = 0.1;
   constexpr double M0 = 1000.0;

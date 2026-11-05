@@ -20,7 +20,8 @@ void
 tutorials::exahype2::euler::FVSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const RuntimeParameters&                     parameters
 ) {
   const bool   inChord = cellCentre[0] >= 0.0 and cellCentre[0] <= 100.0;
   const double y       = inChord ? airfoilSymmetric(cellCentre[0]) : 0.0;
@@ -36,7 +37,8 @@ tutorials::exahype2::euler::FVSolver::refinementCriterion(
   const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time
+  const double                                 time,
+  const RuntimeParameters&                     parameters
 ) {
   // Q is a null pointer during grid construction. The criterion reads cellCentre only.
   constexpr double RefinementMargin = 3.0;
@@ -61,7 +63,8 @@ tutorials::exahype2::euler::FVSolver::boundaryConditions(
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   if (normal == 0 and faceCentre[0] == DomainOffset[0]) {
     Qoutside[Shortcuts::rho]   = 1.0;
@@ -83,7 +86,8 @@ tutorials::exahype2::euler::FVSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
   const double                                 timeStepSize,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   const double     irho  = 1.0 / Q[Shortcuts::rho];
   constexpr double Gamma = 1.4;
@@ -105,7 +109,8 @@ tutorials::exahype2::euler::FVSolver::flux(
   const double                                 time,
   const double                                 timeStepSize,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  const RuntimeParameters&                     parameters
 ) {
   const double     irho  = 1.0 / Q[Shortcuts::rho];
   constexpr double Gamma = 1.4;

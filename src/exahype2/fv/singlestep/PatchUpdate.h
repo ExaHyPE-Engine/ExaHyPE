@@ -50,6 +50,7 @@ public:
   using Base::ValuesPerPatch;
   using Base::VolumesPerLayer;
   using Base::VolumesPerPatch;
+  using typename Base::RuntimeParameters;
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double update(
@@ -60,7 +61,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          boundaryFaces
+    int                                          boundaryFaces,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -75,7 +77,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          boundaryFaces
+    int                                          boundaryFaces,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -87,7 +90,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          boundaryFaces
+    int                                          boundaryFaces,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -99,7 +103,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          boundaryFaces
+    int                                          boundaryFaces,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -112,7 +117,8 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          boundaryFaces,
-    StoragePrecision* NOALIAS                    updatedState
+    StoragePrecision* NOALIAS                    updatedState,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision, typename Terms>
@@ -126,7 +132,8 @@ public:
     double                                       timeStepSize,
     int                                          boundaryFaces,
     Terms&                                       terms,
-    StoragePrecision* NOALIAS                    updatedState
+    StoragePrecision* NOALIAS                    updatedState,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -140,12 +147,11 @@ public:
     double                                       timeStepSize,
     int                                          boundaryFaces,
     int                                          patchFace,
-    ComputePrecision* NOALIAS                    flux
+    ComputePrecision* NOALIAS                    flux,
+    const RuntimeParameters&                     parameters
   );
 
 private:
-  friend class exahype2::fv::tests::PatchSchemeTest;
-
   /**
    * Names the ring of terms a host sweep with the storage precision keeps. A solver without a
    * reconstruction leaves it uninstantiated.
@@ -208,7 +214,8 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          boundaryFaces
+    int                                          boundaryFaces,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -225,7 +232,8 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          boundaryFaces
+    int                                          boundaryFaces,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision, typename Terms>
@@ -237,7 +245,8 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const RuntimeParameters&                     parameters
   );
 };
 TARGET_DECLARE_END

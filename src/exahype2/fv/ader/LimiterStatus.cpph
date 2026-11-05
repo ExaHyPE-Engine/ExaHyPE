@@ -9,3 +9,16 @@ INLINE_METHOD GPU_CALLABLE_METHOD constexpr bool exahype2::fv::ader::runsFallbac
   return static_cast<int>(status) >= static_cast<int>(exahype2::fv::ader::LimiterStatus::Limited);
 }
 TARGET_DECLARE_END
+
+/**
+ * Writes value into every entry of every chunk that pool reserves.
+ */
+INLINE_METHOD void
+exahype2::fv::ader::fillEveryChunk(tarch::accelerator::ChunkedMemoryPool<int>& pool, const int value) {
+  tarch::accelerator::ChunkedMemoryPool<int>  copyOnHost{pool.getChunkSize(), tarch::MemoryLocation::Heap};
+  tarch::accelerator::ChunkedMemoryPool<int>& onHost = pool.download(copyOnHost);
+  for (int slot = 0; slot < onHost.getCapacity(); slot++) {
+    std::fill_n(onHost.getChunk(slot), onHost.getChunkSize(), value);
+  }
+  pool.upload(onHost);
+}

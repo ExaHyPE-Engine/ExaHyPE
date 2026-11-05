@@ -37,7 +37,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getThreadsPerCell() {
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD int
 exahype2::dg::ader::Predictor<Derived, ComputePrecision>::getNumberOfTeams(const int cells) {
-  assertion(cells >= 0, cells);
+  ASSERTION(cells >= 0, cells);
   const int teamThreads = getTeamThreads();
   const int groups      = teamThreads / getThreadsPerCell();
   return tarch::accelerator::getNumberOfPersistentTeams((cells + groups - 1) / groups, teamThreads);
@@ -71,7 +71,8 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
   ComputePrecision* NOALIAS const              scratch,
   const Tables&                                tables,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   return predictInTeam(
     TeamWorkers{},
@@ -84,14 +85,15 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predict(
     scratch,
     tables,
     timeStamp,
-    timeStepSize
+    timeStepSize,
+    parameters
   );
 }
 
 /**
  * Runs the space-time predictor of one cell on the threads of workers and subtracts the volume
- * integral of the time averages from cellState. scratch is a block of ScratchSize values that no
- * other call reads while this call runs. Returns the outcome of NonlinearPredictor::predict(), or
+ * integral of the time averages from cellState. scratch is a block of ScratchSize values that only
+ * this call reads and writes while it runs. Returns the outcome of NonlinearPredictor::predict(), or
  * zero for a linear Derived and for a thread without a cell.
  */
 template <typename Derived, typename ComputePrecision>
@@ -108,14 +110,15 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
   ComputePrecision* NOALIAS const              scratch,
   const Tables&                                tables,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
-  assertion(timeStamp >= 0.0, timeStamp, cellCentre);
-  assertion(timeStepSize >= 0.0, timeStepSize, cellCentre);
-  assertion(not workers.hasCell or faceStates != nullptr);
-  assertion(not workers.hasCell or faceFluxes != nullptr);
-  assertion(not workers.hasCell or cellState != nullptr);
-  assertion(not workers.hasCell or scratch != nullptr);
+  ASSERTION(timeStamp >= 0.0, timeStamp, cellCentre);
+  ASSERTION(timeStepSize >= 0.0, timeStepSize, cellCentre);
+  ASSERTION(not workers.hasCell or faceStates != nullptr);
+  ASSERTION(not workers.hasCell or faceFluxes != nullptr);
+  ASSERTION(not workers.hasCell or cellState != nullptr);
+  ASSERTION(not workers.hasCell or scratch != nullptr);
 
   if constexpr (Derived::IsLinear) {
     using Scratch = typename Linear::Scratch;
@@ -125,7 +128,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
         Derived::NumberOfPointSources > 0,
         "A solver that evaluates point sources needs at least one point source."
       );
-      assertion(pointSourceLocations != nullptr);
+      ASSERTION(pointSourceLocations != nullptr);
       int       pointSourceIndices[Derived::NumberOfPointSources];
       const int numberOfPointSources =
         Linear::selectPointSources(pointSourceIndices, pointSourceLocations, cellCentre, cellSize);
@@ -142,6 +145,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
         cellSize,
         timeStamp,
         timeStepSize,
+        parameters,
         workers
       );
     } else {
@@ -159,6 +163,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
         cellSize,
         timeStamp,
         timeStepSize,
+        parameters,
         workers
       );
     }
@@ -183,7 +188,8 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
             cellSize,
             timeStamp,
             timeStepSize,
-            values
+            values,
+            parameters
           );
         }
       },
@@ -205,6 +211,7 @@ exahype2::dg::ader::Predictor<Derived, ComputePrecision>::predictInTeam(
       timeStamp,
       timeStepSize,
       Derived::PicardResidualTolerance,
+      parameters,
       workers
     );
     if (not workers.hasCell) {
@@ -311,11 +318,11 @@ exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, Di
   constexpr int StateValuesPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
   constexpr int FluxValuesPerFace  = CellLayout::NodesPerFace * CellLayout::NumberOfUnknowns;
 
-  assertion(numberOfTeams > 0, numberOfTeams);
-  assertion(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
-  assertion(threadsPerCell > 0, threadsPerCell);
-  assertion(cells.size > 0, cells.size);
-  assertion(scratch != nullptr);
+  ASSERTION(numberOfTeams > 0, numberOfTeams);
+  ASSERTION(entry >= 0 and entry < numberOfTeams, entry, numberOfTeams);
+  ASSERTION(threadsPerCell > 0, threadsPerCell);
+  ASSERTION(cells.size > 0, cells.size);
+  ASSERTION(scratch != nullptr);
   TeamWorkers      workers = exahype2::dg::ader::getWorkers(team, threadsPerCell);
   const bool       inGroup = workers.hasCell;
   const int        chunk = tarch::accelerator::getScratchChunk(entry) * workers.groups + (inGroup ? workers.group : 0);
@@ -343,7 +350,8 @@ exahype2::dg::ader::PredictCells<Derived, StoragePrecision, ComputePrecision, Di
       scratch + static_cast<std::ptrdiff_t>(chunk) * Kernel::ScratchSize,
       tables,
       timeStamp,
-      timeStepSize
+      timeStepSize,
+      parameters
     );
     // The threads of a cell see the same outcome. The first thread of the cell records it once.
     if (workers.hasCell and workers.thread == 0) {

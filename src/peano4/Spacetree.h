@@ -55,6 +55,7 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& width,
     const std::bitset<DIMENSIONS>&               periodicBoundaries = std::bitset<DIMENSIONS>()
   );
+
   void shutdown();
 
   void scheduleRegularGridConstruction(int targetLevel);
@@ -69,8 +70,6 @@ public:
   [[nodiscard]] int getCellAt(int level, const tarch::la::Vector<DIMENSIONS, int>& lattice) const;
   [[nodiscard]] const Statistics& getStatistics() const noexcept;
   [[nodiscard]] const std::bitset<DIMENSIONS>& getPeriodicBoundaries() const noexcept;
-
-  static int deriveSpawnLevel(int targetLevel, int numberOfRanks);
 
   static constexpr int RepartitionTolerancePercent = 2;
 
@@ -172,10 +171,12 @@ private:
   [[nodiscard]] int deriveSpawnLevel() const;
   std::unique_ptr<peano4::topology::Tree> acquireTree();
   void buildTree(const peano4::topology::Tree::RefinementPlan& refinementPlan);
+
   bool derivePlanUpdate(
     const std::vector<RefinementRequest>&   requests,
     peano4::topology::Tree::RefinementPlan& updatedPlan
   );
+
   [[nodiscard]] std::vector<int> deriveOwnersForPlan(const peano4::topology::Tree::RefinementPlan& updatedPlan) const;
   void votePersistentDataLive();
   void deriveStatistics();

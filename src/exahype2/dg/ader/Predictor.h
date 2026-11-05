@@ -24,10 +24,6 @@ namespace exahype2::dg::ader {
   struct PredictCells;
 } // namespace exahype2::dg::ader
 
-namespace exahype2::dg::ader::tests {
-  class PredictorTest;
-} // namespace exahype2::dg::ader::tests
-
 TARGET_DECLARE
 /**
  * The predictor phase of one cell of an ADER-DG solver. Derived::IsLinear selects LinearPredictor
@@ -65,7 +61,8 @@ public:
     ComputePrecision* NOALIAS                    scratch,
     const Tables&                                tables,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -80,12 +77,11 @@ public:
     ComputePrecision* NOALIAS                    scratch,
     const Tables&                                tables,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
 private:
-  friend class exahype2::dg::ader::tests::PredictorTest;
-
   template <bool AccumulatesFlux, bool AccumulatesSource, typename StoragePrecision, typename SourceOfNode>
   static INLINE_METHOD GPU_CALLABLE_METHOD void subtractTimeAveragedVolumeIntegral(
     StoragePrecision* NOALIAS cellState,
@@ -142,6 +138,7 @@ struct exahype2::dg::ader::PredictCells final {
   double                                      timeStamp{0.0};
   double                                      timeStepSize{0.0};
   ComputePrecision*                           scratch{nullptr};
+  typename Derived::RuntimeParameters         parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,

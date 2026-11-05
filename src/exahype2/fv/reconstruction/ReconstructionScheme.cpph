@@ -8,14 +8,14 @@
 template <typename Entry, int LookaheadOfRing>
 INLINE_METHOD Entry&
 exahype2::fv::TermRing<Entry, LookaheadOfRing>::at(const int state) {
-  assertion(state >= 0, state);
+  ASSERTION(state >= 0, state);
   return _entries[state & (RingSize - 1)];
 }
 
 template <typename Entry, int LookaheadOfRing>
 INLINE_METHOD const Entry&
 exahype2::fv::TermRing<Entry, LookaheadOfRing>::at(const int state) const {
-  assertion(state >= 0, state);
+  ASSERTION(state >= 0, state);
   return _entries[state & (RingSize - 1)];
 }
 
@@ -23,8 +23,8 @@ TARGET_DECLARE
 template <typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision&
 exahype2::fv::WaveSpeedsOfTeam<ComputePrecision>::at(const int volume, const int normal) const {
-  assertion(volume >= 0 and volume < volumes, volume, volumes);
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(volume >= 0 and volume < volumes, volume, volumes);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
   return waveSpeeds[normal * volumes + volume];
 }
 
@@ -36,22 +36,23 @@ exahype2::fv::WaveSpeedsOfTeam<ComputePrecision>::at(const int volume, const int
 template <typename SolverType, int VolumesPerAxis, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::fv::solveRiemannProblemOnVolumeFace(
-  const ComputePrecision* const                QL,
-  const ComputePrecision* const                QR,
-  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  const tarch::la::Vector<DIMENSIONS, int>&    volume,
-  const int                                    side,
-  const int                                    boundaryFaces,
-  ComputePrecision* const                      FL,
-  ComputePrecision* const                      FR
+  const ComputePrecision* const                 QL,
+  const ComputePrecision* const                 QR,
+  const tarch::la::Vector<DIMENSIONS, double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  const int                                     normal,
+  const tarch::la::Vector<DIMENSIONS, int>&     volume,
+  const int                                     side,
+  const int                                     boundaryFaces,
+  ComputePrecision* const                       FL,
+  ComputePrecision* const                       FR,
+  const typename SolverType::RuntimeParameters& parameters
 ) {
-  assertion(normal >= 0 and normal < DIMENSIONS, normal);
-  assertion(side == 0 or side == 1, side);
-  assertion(volume(normal) >= 0 and volume(normal) < VolumesPerAxis, volume, normal);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+  ASSERTION(side == 0 or side == 1, side);
+  ASSERTION(volume(normal) >= 0 and volume(normal) < VolumesPerAxis, volume, normal);
   const int  patchFace        = side == 0 ? normal : normal + DIMENSIONS;
   const int  volumeOnThatFace = side == 0 ? 0 : VolumesPerAxis - 1;
   const bool isBoundaryFace   = volume(normal) == volumeOnThatFace and (boundaryFaces & (1 << patchFace)) != 0;
@@ -71,7 +72,8 @@ exahype2::fv::solveRiemannProblemOnVolumeFace(
     isBoundaryFace,
     faceIndex,
     FL,
-    FR
+    FR,
+    parameters
   );
 }
 TARGET_DECLARE_END

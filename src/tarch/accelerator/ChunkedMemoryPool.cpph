@@ -8,9 +8,9 @@
 template <typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD T*
 tarch::accelerator::ChunkedMemoryPool<T>::View::getChunk(const int slot) const noexcept {
-  assertion(segments != nullptr);
-  assertion(slot >= 0, slot);
-  assertion(paddedChunkSize > 0, paddedChunkSize);
+  ASSERTION(segments != nullptr);
+  ASSERTION(slot >= 0, slot);
+  ASSERTION(paddedChunkSize > 0, paddedChunkSize);
   return segments[slot >> segmentSizeExponent]
     + static_cast<std::size_t>(slot & slotMask) * static_cast<std::size_t>(paddedChunkSize);
 }
@@ -18,9 +18,9 @@ tarch::accelerator::ChunkedMemoryPool<T>::View::getChunk(const int slot) const n
 template <typename T>
 INLINE_METHOD GPU_CALLABLE_METHOD const T*
 tarch::accelerator::ChunkedMemoryPool<T>::ConstView::getChunk(const int slot) const noexcept {
-  assertion(segments != nullptr);
-  assertion(slot >= 0, slot);
-  assertion(paddedChunkSize > 0, paddedChunkSize);
+  ASSERTION(segments != nullptr);
+  ASSERTION(slot >= 0, slot);
+  ASSERTION(paddedChunkSize > 0, paddedChunkSize);
   return segments[slot >> segmentSizeExponent]
     + static_cast<std::size_t>(slot & slotMask) * static_cast<std::size_t>(paddedChunkSize);
 }
@@ -47,7 +47,7 @@ INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool(
   _paddedChunkSize(getPaddedChunkSizeOf(chunkSize)),
   _segmentTable(location),
   _location(location) {
-  assertion(chunkSize > 0, chunkSize);
+  ASSERTION(chunkSize > 0, chunkSize);
 }
 
 template <typename T>
@@ -94,7 +94,7 @@ INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::ChunkedMemoryPool::~Chun
 template <typename T>
 INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::reserve(const int numberOfSlots) {
-  assertion(numberOfSlots >= 0, numberOfSlots);
+  ASSERTION(numberOfSlots >= 0, numberOfSlots);
   if (numberOfSlots <= getCapacity()) {
     return;
   }
@@ -118,7 +118,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::appendSegment() {
   }
   auto& segment = _segments.emplace_back(_location);
   segment.allocate(static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize));
-  assertion(reinterpret_cast<std::uintptr_t>(segment.getData()) % PEANO_WITH_ALIGNMENT == 0, _segments.size());
+  ASSERTION(reinterpret_cast<std::uintptr_t>(segment.getData()) % PEANO_WITH_ALIGNMENT == 0, _segments.size());
   _segmentBasesOnHost.push_back(segment.getData());
 }
 
@@ -140,32 +140,6 @@ tarch::accelerator::ChunkedMemoryPool<T>::release() noexcept {
   _segmentBasesOnHost = std::vector<T*>{};
   _segmentTable.release();
   _segmentSizeExponent = 0;
-}
-
-/**
- * Resizes target to the padded chunks of every slot of the pool and copies them into it.
- */
-template <typename T>
-INLINE_METHOD void
-tarch::accelerator::ChunkedMemoryPool<T>::copyToHost(std::vector<T>& target) const {
-  const auto valuesPerSegment = static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize);
-  target.resize(_segments.size() * valuesPerSegment);
-  for (std::size_t segment = 0; segment < _segments.size(); segment++) {
-    _segments[segment].copyToHost(target.data() + segment * valuesPerSegment, valuesPerSegment);
-  }
-}
-
-/**
- * Overwrites the padded chunks of every slot of the pool from source in the layout of copyToHost().
- */
-template <typename T>
-INLINE_METHOD void
-tarch::accelerator::ChunkedMemoryPool<T>::copyFromHost(const std::vector<T>& source) {
-  const auto valuesPerSegment = static_cast<std::size_t>(getSegmentSize()) * static_cast<std::size_t>(_paddedChunkSize);
-  assertion(source.size() == _segments.size() * valuesPerSegment, source.size(), _segments.size(), valuesPerSegment);
-  for (std::size_t segment = 0; segment < _segments.size(); segment++) {
-    _segments[segment].copyFromHost(source.data() + segment * valuesPerSegment, valuesPerSegment);
-  }
 }
 
 /**
@@ -198,17 +172,17 @@ tarch::accelerator::ChunkedMemoryPool<T>::download(tarch::accelerator::ChunkedMe
 
 /**
  * Overwrites the chunks of every slot with those of copyOnHost, the pool that download() returns.
- * A pool that host code reads copies nothing.
+ * Returns at once for a pool that host code reads.
  */
 template <typename T>
 INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::upload(const tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost) {
   if (isHostAccessible()) {
-    assertion(&copyOnHost == this);
+    ASSERTION(&copyOnHost == this);
     return;
   }
-  assertion(copyOnHost.isHostAccessible());
-  assertion(
+  ASSERTION(copyOnHost.isHostAccessible());
+  ASSERTION(
     copyOnHost._segmentSizeExponent == _segmentSizeExponent and copyOnHost._segments.size() == _segments.size(),
     copyOnHost._segmentSizeExponent,
     _segmentSizeExponent,
@@ -229,8 +203,8 @@ tarch::accelerator::ChunkedMemoryPool<T>::upload(const tarch::accelerator::Chunk
 template <typename T>
 INLINE_METHOD void
 tarch::accelerator::ChunkedMemoryPool<T>::copySegmentsTo(tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost) const {
-  assertion(copyOnHost.isHostAccessible());
-  assertion(copyOnHost._chunkSize == _chunkSize, copyOnHost._chunkSize, _chunkSize);
+  ASSERTION(copyOnHost.isHostAccessible());
+  ASSERTION(copyOnHost._chunkSize == _chunkSize, copyOnHost._chunkSize, _chunkSize);
   if (copyOnHost._segmentSizeExponent != _segmentSizeExponent or copyOnHost._segments.size() > _segments.size()) {
     copyOnHost.release();
   }
@@ -276,7 +250,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::getView() const noexcept {
 template <typename T>
 INLINE_METHOD T*
 tarch::accelerator::ChunkedMemoryPool<T>::getChunk(const int slot) noexcept {
-  assertion(slot >= 0 and slot < getCapacity(), slot, getCapacity());
+  ASSERTION(slot >= 0 and slot < getCapacity(), slot, getCapacity());
   return _segmentBasesOnHost[static_cast<std::size_t>(slot >> _segmentSizeExponent)]
     + static_cast<std::size_t>(slot & (getSegmentSize() - 1)) * static_cast<std::size_t>(_paddedChunkSize);
 }
@@ -284,7 +258,7 @@ tarch::accelerator::ChunkedMemoryPool<T>::getChunk(const int slot) noexcept {
 template <typename T>
 INLINE_METHOD const T*
 tarch::accelerator::ChunkedMemoryPool<T>::getChunk(const int slot) const noexcept {
-  assertion(slot >= 0 and slot < getCapacity(), slot, getCapacity());
+  ASSERTION(slot >= 0 and slot < getCapacity(), slot, getCapacity());
   return _segmentBasesOnHost[static_cast<std::size_t>(slot >> _segmentSizeExponent)]
     + static_cast<std::size_t>(slot & (getSegmentSize() - 1)) * static_cast<std::size_t>(_paddedChunkSize);
 }
@@ -292,14 +266,14 @@ tarch::accelerator::ChunkedMemoryPool<T>::getChunk(const int slot) const noexcep
 template <typename T>
 INLINE_METHOD tarch::accelerator::Buffer<T>&
 tarch::accelerator::ChunkedMemoryPool<T>::getSegment(const int segmentNumber) noexcept {
-  assertion(segmentNumber >= 0 and segmentNumber < getNumberOfSegments(), segmentNumber, getNumberOfSegments());
+  ASSERTION(segmentNumber >= 0 and segmentNumber < getNumberOfSegments(), segmentNumber, getNumberOfSegments());
   return _segments[static_cast<std::size_t>(segmentNumber)];
 }
 
 template <typename T>
 INLINE_METHOD const tarch::accelerator::Buffer<T>&
 tarch::accelerator::ChunkedMemoryPool<T>::getSegment(const int segmentNumber) const noexcept {
-  assertion(segmentNumber >= 0 and segmentNumber < getNumberOfSegments(), segmentNumber, getNumberOfSegments());
+  ASSERTION(segmentNumber >= 0 and segmentNumber < getNumberOfSegments(), segmentNumber, getNumberOfSegments());
   return _segments[static_cast<std::size_t>(segmentNumber)];
 }
 

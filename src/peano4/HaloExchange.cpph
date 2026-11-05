@@ -19,7 +19,7 @@ INLINE_METHOD peano4::HaloExchange<T>::HaloExchange(Pool& pool) :
   _entries(pool.getLocation()),
   _sendBuffer(pool.getLocation()),
   _receiveBuffer(pool.getLocation()) {
-  assertion(pool.getChunkSize() % 2 == 0, "A face must store an even number of values.", pool.getChunkSize());
+  ASSERTION(pool.getChunkSize() % 2 == 0, "A face must store an even number of values.", pool.getChunkSize());
 }
 
 template <typename T>
@@ -30,23 +30,23 @@ INLINE_METHOD peano4::HaloExchange<T>::HaloExchange(Pool& pool, const peano4::Fa
   _entries(pool.getLocation()),
   _sendBuffer(pool.getLocation()),
   _receiveBuffer(pool.getLocation()) {
-  assertion(pool.getChunkSize() % 2 == 0, "A face must store an even number of values.", pool.getChunkSize());
+  ASSERTION(pool.getChunkSize() % 2 == 0, "A face must store an even number of values.", pool.getChunkSize());
 }
 
 template <typename T>
 INLINE_METHOD peano4::HaloExchange<T>::HaloExchange::~HaloExchange() noexcept {
-  assertion(not _inFlight, "A halo exchange ends only after its last messages arrive.");
+  ASSERTION(not _inFlight, "A halo exchange ends only after its last messages arrive.");
 }
 
 /**
  * Copies the exchanged faces of the cell connectivity into one entry table and sizes the buffers. A
- * caller rebuilds after every build of the cell connectivity while no post is in flight. The first
- * call reserves the tag and every rank makes it in the same order for its exchanges.
+ * caller rebuilds after every build of the cell connectivity and after every post completes. The
+ * first call reserves the tag and every rank makes it in the same order for its exchanges.
  */
 template <typename T>
 INLINE_METHOD void
 peano4::HaloExchange<T>::rebuild(const peano4::CellConnectivity& cellConnectivity) {
-  assertion(not _inFlight);
+  ASSERTION(not _inFlight);
   if (_tag == NoTag) {
     _tag = peano4::communication::CommunicationManager::getInstance().reserveTag();
   }
@@ -55,15 +55,15 @@ peano4::HaloExchange<T>::rebuild(const peano4::CellConnectivity& cellConnectivit
   _messages.clear();
   for (const auto& neighbour : cellConnectivity.getNeighbours()) {
     const auto faces = cellConnectivity.getExchangedFaces(neighbour);
-    assertion(neighbour.rank >= 0 and not faces.isEmpty(), neighbour.rank);
+    ASSERTION(neighbour.rank >= 0 and not faces.isEmpty(), neighbour.rank);
     const int firstEntry = static_cast<int>(entries.size());
     for (const auto& entry : faces) {
-      assertion(
+      ASSERTION(
         entry.face >= 0 and entry.face < cellConnectivity.getNumberOfFaces(),
         entry.face,
         cellConnectivity.getNumberOfFaces()
       );
-      assertion(entry.side == 0 or entry.side == 1, entry.side);
+      ASSERTION(entry.side == 0 or entry.side == 1, entry.side);
       if (not _exchangedFaceKind or cellConnectivity.getFaceKind(entry.face) == *_exchangedFaceKind) {
         entries.push_back(entry);
       }
@@ -95,7 +95,7 @@ peano4::HaloExchange<T>::rebuild(const peano4::CellConnectivity& cellConnectivit
 template <typename T>
 INLINE_METHOD void
 peano4::HaloExchange<T>::release() {
-  assertion(not _inFlight);
+  ASSERTION(not _inFlight);
   _messages        = std::vector<Message>{};
   _requests        = std::vector<MPI_Request>{};
   _numberOfEntries = 0;
@@ -113,11 +113,11 @@ peano4::HaloExchange<T>::release() {
 template <typename T>
 INLINE_METHOD void
 peano4::HaloExchange<T>::post() {
-  assertion(not _inFlight);
-  assertion(_tag != NoTag, "A halo exchange starts only after the grid lists its faces.");
-  assertion(_messagesCompleted.load(std::memory_order_acquire));
-  assertion(_requests.size() == 2 * _messages.size(), _requests.size(), _messages.size());
-  assertion(
+  ASSERTION(not _inFlight);
+  ASSERTION(_tag != NoTag, "A halo exchange starts only after the grid lists its faces.");
+  ASSERTION(_messagesCompleted.load(std::memory_order_acquire));
+  ASSERTION(_requests.size() == 2 * _messages.size(), _requests.size(), _messages.size());
+  ASSERTION(
     _sendBuffer.getSize() == static_cast<std::size_t>(_numberOfEntries) * static_cast<std::size_t>(_halfSize),
     _sendBuffer.getSize()
   );
@@ -158,7 +158,7 @@ peano4::HaloExchange<T>::post() {
 template <typename T>
 INLINE_METHOD void
 peano4::HaloExchange<T>::postMessages() {
-  assertion(not _messagesPosted);
+  ASSERTION(not _messagesPosted);
   const MPI_Comm communicator = peano4::communication::CommunicationManager::getInstance().getCommunicator();
   for (std::size_t messageNumber = 0; messageNumber < _messages.size(); messageNumber++) {
     const Message& message   = _messages[messageNumber];
@@ -193,7 +193,7 @@ peano4::HaloExchange<T>::postMessages() {
 template <typename T>
 INLINE_METHOD void
 peano4::HaloExchange<T>::wait() {
-  assertion(_inFlight);
+  ASSERTION(_inFlight);
 
   auto& progressManager = tarch::mpi::AbstractCommunicationManager::getInstance();
   while (not _messagesCompleted.load(std::memory_order_acquire)) {
@@ -217,8 +217,7 @@ peano4::HaloExchange<T>::wait() {
 
 /**
  * Posts the messages of the post on the first call unless post() posted them, and tests every
- * request once. Only the poller calls this. No other thread touches the requests while a post is in
- * flight.
+ * request once. Only the poller calls this and touches the requests while a post is in flight.
  */
 template <typename T>
 INLINE_METHOD bool

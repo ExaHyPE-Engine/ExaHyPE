@@ -69,22 +69,24 @@ public:
 
     template <typename Precision>
     static INLINE_METHOD GPU_CALLABLE_METHOD void mapDmpObservables(
-      Precision* const NOALIAS       observables,
-      const Precision* const NOALIAS Q
+      Precision* const NOALIAS                     observables,
+      const Precision* const NOALIAS               Q,
+      const typename Generated::RuntimeParameters& parameters
     )
       requires exahype2::terms::HasDmpObservables<Generated, Precision>
     {
-      Generated::mapDmpObservables(observables, Q);
+      Generated::mapDmpObservables(observables, Q, parameters);
     }
 
     template <typename Precision>
     [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD Precision dmpRelaxationParameter(
-      const int       observable,
-      const Precision specifiedRelaxationParameter
+      const int                                    observable,
+      const Precision                              specifiedRelaxationParameter,
+      const typename Generated::RuntimeParameters& parameters
     )
       requires exahype2::terms::HasDmpRelaxationParameter<Generated, Precision>
     {
-      return Generated::dmpRelaxationParameter(observable, specifiedRelaxationParameter);
+      return Generated::dmpRelaxationParameter(observable, specifiedRelaxationParameter, parameters);
     }
   };
   template <typename Generated = Derived>
@@ -94,50 +96,61 @@ public:
   INLINE_METHOD void release();
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
-  template <typename ExchangeHalo>
+  template <typename ExchangeHalo, typename RuntimeParameters>
   INLINE_METHOD void advance(
     const peano4::CellConnectivity& cellConnectivity,
     const Region&                   region,
     const ExchangeHalo&             exchangeHalo,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
 
 private:
+  template <typename RuntimeParameters>
   INLINE_METHOD void predict(
     const peano4::CellConnectivity& cellConnectivity,
     const Region&                   region,
     tarch::Span<const int>          cells,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+  template <typename RuntimeParameters>
   INLINE_METHOD void solveRiemannProblems(
     const peano4::CellConnectivity& cellConnectivity,
     const Region&                   region,
     peano4::Adjacency               adjacency,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+  template <typename RuntimeParameters>
   INLINE_METHOD void correct(
     const peano4::CellConnectivity& cellConnectivity,
     const Region&                   region,
     tarch::Span<const int>          cells,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+  template <typename RuntimeParameters>
   INLINE_METHOD void fixUp(
     const peano4::CellConnectivity& cellConnectivity,
     const Region&                   region,
     tarch::Span<const int>          cells,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD auto getCorrection(
     const peano4::CellConnectivity& cellConnectivity,
     const Region&                   region,
     tarch::Span<const int>          cells,
     double                          timeStamp,
-    double                          timeStepSize
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
 
   StatePool _faceStates{Scheme<>::StateValuesPerFace};
@@ -186,6 +199,7 @@ struct exahype2::fv::ader::SolveSubcellRiemannProblems final {
   double                         timeStamp{0.0};
   double                         timeStepSize{0.0};
   typename HaloPool::ConstView   halo{};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, double& accumulator) const;
 

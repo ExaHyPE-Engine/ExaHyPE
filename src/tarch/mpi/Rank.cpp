@@ -22,7 +22,7 @@ tarch::mpi::Rank tarch::mpi::Rank::_singleton;
  */
 int
 tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName, const int numberOfTags) {
-  assertion(numberOfTags >= 1, fullQualifiedMessageName, numberOfTags);
+  ASSERTION(numberOfTags >= 1, fullQualifiedMessageName, numberOfTags);
   const int firstReservedTag = _nextFreeTag;
   _nextFreeTag += numberOfTags;
 
@@ -42,11 +42,11 @@ tarch::mpi::Rank::isInitialised() const {
  */
 void
 tarch::mpi::Rank::shutdown() {
-  assertion(_rank != -1);
+  ASSERTION(_rank != -1);
 
   const int errorCode = MPI_Finalize();
   if (errorCode != MPI_SUCCESS) {
-    logError("The MPI library cannot shut down: " << tarch::mpi::mpiReturnValueToString(errorCode));
+    LOG_ERROR("The MPI library cannot shut down: " << tarch::mpi::mpiReturnValueToString(errorCode));
   }
 
   _rank         = -1;
@@ -60,7 +60,7 @@ tarch::mpi::Rank::getGlobalMasterRank() {
 
 bool
 tarch::mpi::Rank::isGlobalMaster() const {
-  assertion(_initIsCalled);
+  ASSERTION(_initIsCalled);
   return getRank() == getGlobalMasterRank();
 }
 
@@ -75,7 +75,7 @@ tarch::mpi::Rank::validateReservedTagsAreSupported() {
     return true;
   }
 
-  logWarning(
+  LOG_WARNING(
     "The MPI library provides message tags up to " << _maximumTagValue << " only. The reserved tags reach "
                                                    << highestReservedTag << "."
   );
@@ -174,7 +174,7 @@ tarch::mpi::Rank::getRank() const {
 
 int
 tarch::mpi::Rank::getNumberOfRanks() const {
-  assertion(_initIsCalled);
+  ASSERTION(_initIsCalled);
   return _numberOfRanks;
 }
 
@@ -185,7 +185,7 @@ tarch::mpi::Rank::getInstance() {
 
 MPI_Comm
 tarch::mpi::Rank::getCommunicator() const {
-  assertion(_initIsCalled);
+  ASSERTION(_initIsCalled);
   return _communicator;
 }
 

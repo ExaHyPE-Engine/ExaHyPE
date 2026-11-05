@@ -11,14 +11,14 @@
 void*
 tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
   void* data = Kokkos::kokkos_malloc<Kokkos::DefaultExecutionSpace::memory_space>(sizeInBytes);
-  assertion(data);
+  ASSERTION(data);
   return data;
 }
 
 void*
 tarch::accelerator::allocatePinnedMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
   void* data = Kokkos::kokkos_malloc<Kokkos::SharedHostPinnedSpace>(sizeInBytes);
-  assertion(data);
+  ASSERTION(data);
   return data;
 }
 

@@ -7,10 +7,11 @@
 namespace exahype2::terms {
   template <typename SolverType, typename Precision>
   concept HasReconstructionSupport = requires(
-    const Precision* const                       Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h
+    const Precision* const                        Q,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
-    { SolverType::supportsHighOrderReconstruction(Q, x, h) } -> std::same_as<bool>;
+    { SolverType::supportsHighOrderReconstruction(Q, x, h, parameters) } -> std::same_as<bool>;
   };
 } // namespace exahype2::terms

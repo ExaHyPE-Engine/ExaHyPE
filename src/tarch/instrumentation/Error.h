@@ -4,7 +4,7 @@
 
 #include "tarch/instrumentation/Log.h"
 
-#define logError(logMacroMessageStream) \
+#define LOG_ERROR(logMacroMessageStream) \
   do { \
     std::ostringstream conv; \
     conv << logMacroMessageStream; \

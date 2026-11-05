@@ -108,12 +108,12 @@ max_eigenvalue = euler.max_eigenvalue(gamma)
 limiter_riemann_solver = """
   const double maximumWaveSpeed =
     std::max(
-      maxEigenvalue(QL, x, h, t, dt, normal),
-      maxEigenvalue(QR, x, h, t, dt, normal)
+      maxEigenvalue(QL, x, h, t, dt, normal, parameters),
+      maxEigenvalue(QR, x, h, t, dt, normal, parameters)
     );
 
-  flux(QL, x, h, t, dt, normal, FL);
-  flux(QR, x, h, t, dt, normal, FR);
+  flux(QL, x, h, t, dt, normal, FL, parameters);
+  flux(QR, x, h, t, dt, normal, FR, parameters);
   const auto normalMomentumFluxLeft = FL[Shortcuts::j + normal];
   const auto normalMomentumFluxRight = FR[Shortcuts::j + normal];
 

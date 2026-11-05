@@ -236,8 +236,8 @@ class Project:
 
     def add_runtime_parameter(self, name, parameter_type, default_value):
         """Registers a parameter that the executable reads from config.json and the command line.
-        The generated RuntimeParameters::<name>() returns it in host code and in kernels. The
-        generated RuntimeParameters::set<Name>() overwrites it at run time."""
+        Every PDE term reads it as ``parameters.<name>`` from its last argument. ``startSimulation``
+        may overwrite it."""
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
             raise ValueError(
                 f"The runtime parameter name '{name}' must be a valid C++ identifier."
@@ -300,7 +300,7 @@ class Project:
             "double": "double",
             "int": "int",
             "bool": "bool",
-            "string": "std::string",
+            "string": "std::string_view",
         }[base_type]
         if is_array:
             cpp_type = f"tarch::la::Vector<{array_size}, {scalar_cpp_type}>"
@@ -316,7 +316,6 @@ class Project:
                 )
                 for value in default_value
             )
-            return_type = cpp_type
         else:
             cpp_type = scalar_cpp_type
             if base_type == "double":
@@ -327,7 +326,6 @@ class Project:
                 literal = "true" if default_value else "false"
             else:
                 literal = json.dumps(default_value)
-            return_type = cpp_type
 
         self._runtime_parameters = [
             parameter
@@ -337,9 +335,7 @@ class Project:
         self._runtime_parameters.append(
             {
                 "name": name,
-                "setter": "set" + name[0].upper() + name[1:],
                 "cpp_type": cpp_type,
-                "return_type": return_type,
                 "is_array": is_array,
                 "is_string": base_type == "string",
                 "array_size": array_size,
@@ -386,18 +382,7 @@ class Project:
                 dictionary,
             )
         )
-        self.output.add(
-            exahype2.codegen.TemplatedFile(
-                os.path.join(template_directory, "RuntimeParameters.cpph.jinja2"),
-                None,
-                "RuntimeParameters",
-                self.namespace,
-                "",
-                dictionary,
-            )
-        )
         self.output.makefile.add_h_file("RuntimeParameters.h", generated=True)
-        self.output.makefile.add_h_file("RuntimeParameters.cpph", generated=True)
         self.output.makefile.add_cpp_file("RuntimeParameters.cpp", generated=True)
 
     def _solver_repository_dictionary(self):

@@ -53,7 +53,7 @@ Peano offers user facing logging macros:
     are piped to `cerr` and highlighted in yellow on interactive terminals.
 
 -   **Error**. Should be used for errors. It is piped to `cerr` and
-    highlighted in bold red on interactive terminals. `logError(...)` does not
+    highlighted in bold red on interactive terminals. `LOG_ERROR(...)` does not
     terminate the process.
 
 -   **Debug**. Writes debug data. All debug data is removed
@@ -67,7 +67,7 @@ The logging macros forward information to tarch::instrumentation::Log. Log
 formats each line once and then dispatches it to the configured sinks. The
 tarch::instrumentation::CommandLineSink remains the default terminal sink.
 The same formatted line is forwarded to tarch::instrumentation::FileSink when
-Log::setOutputFile() names a file. File logging is disabled by default.
+Log::setOutputFile() sets a file. File logging is disabled by default.
 The file sink flushes periodically and when it closes.
 
 Warning and Error messages are highlighted only in the terminal sink and only

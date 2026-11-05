@@ -12,10 +12,12 @@ TARGET_DECLARE
 template <std::int64_t MaximumNumberOfTerms>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tarch::la::FixedPointSum<MaximumNumberOfTerms>::clear(const double bound) {
-  assertion(std::isfinite(bound) and bound >= 0.0, bound);
+  ASSERTION(std::isfinite(bound) and bound >= 0.0, bound);
+  int exponent = 0;
+  static_cast<void>(std::frexp(bound, &exponent));
   _bound         = bound;
   _numberOfTerms = 0;
-  _unitExponent  = bound > 0.0 ? std::ilogb(bound) + 2 + TermBits - 126 : -1074;
+  _unitExponent  = bound > 0.0 ? exponent + 1 + TermBits - 126 : -1074;
   _high          = 0;
   _low           = 0;
 }
@@ -27,8 +29,8 @@ tarch::la::FixedPointSum<MaximumNumberOfTerms>::clear(const double bound) {
 template <std::int64_t MaximumNumberOfTerms>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tarch::la::FixedPointSum<MaximumNumberOfTerms>::add(const double term) {
-  assertion(_numberOfTerms < MaximumNumberOfTerms, _numberOfTerms);
-  assertion(std::isfinite(term) and std::abs(term) <= 2.0 * _bound, term, _bound);
+  ASSERTION(_numberOfTerms < MaximumNumberOfTerms, _numberOfTerms);
+  ASSERTION(std::isfinite(term) and std::abs(term) <= 2.0 * _bound, term, _bound);
   _numberOfTerms++;
   const auto    bits           = std::bit_cast<std::uint64_t>(term);
   const auto    biasedExponent = static_cast<int>((bits >> 52) & 0x7FF);
@@ -65,8 +67,8 @@ tarch::la::FixedPointSum<MaximumNumberOfTerms>::add(const double term) {
 template <std::int64_t MaximumNumberOfTerms>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tarch::la::FixedPointSum<MaximumNumberOfTerms>::merge(const FixedPointSum& other) {
-  assertion(_unitExponent == other._unitExponent, _unitExponent, other._unitExponent);
-  assertion(_numberOfTerms <= MaximumNumberOfTerms - other._numberOfTerms, _numberOfTerms, other._numberOfTerms);
+  ASSERTION(_unitExponent == other._unitExponent, _unitExponent, other._unitExponent);
+  ASSERTION(_numberOfTerms <= MaximumNumberOfTerms - other._numberOfTerms, _numberOfTerms, other._numberOfTerms);
   _numberOfTerms += other._numberOfTerms;
   _low += other._low;
   _high += other._high + (_low < other._low ? 1 : 0);
@@ -108,7 +110,7 @@ tarch::la::FixedPointSum<MaximumNumberOfTerms>::roundQuotient() const {
     negate(high, low);
   }
   const int shift = 127 - (high != 0 ? 64 + getBitWidthOf(high) : getBitWidthOf(low));
-  assertion(shift > 0, shift);
+  ASSERTION(shift > 0, shift);
   if (shift >= 64) {
     high = low << (shift - 64);
     low  = 0;
@@ -162,7 +164,7 @@ tarch::la::FixedPointSum<MaximumNumberOfTerms>::getNearestDoubleOf(
   const std::uint64_t low,
   const int           exponent
 ) {
-  assertion((high >> 63) == 0, high);
+  ASSERTION((high >> 63) == 0, high);
   double magnitude = static_cast<double>(low);
   if (high != 0) {
     const int           bitsOfHigh = getBitWidthOf(high);

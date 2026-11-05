@@ -7,12 +7,13 @@
 namespace exahype2::terms {
   template <typename SolverType, typename Precision>
   concept HasPostprocessUpdatedSubcells = requires(
-    Precision* const                             Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt
+    Precision* const                              Q,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const double                                  t,
+    const double                                  dt,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
-    { SolverType::postprocessUpdatedSubcells(Q, x, h, t, dt) } -> std::same_as<void>;
+    { SolverType::postprocessUpdatedSubcells(Q, x, h, t, dt, parameters) } -> std::same_as<void>;
   };
 } // namespace exahype2::terms

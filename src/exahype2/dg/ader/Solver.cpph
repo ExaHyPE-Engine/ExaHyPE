@@ -80,15 +80,17 @@ INLINE_METHOD exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePreci
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::allocate(
-  const peano4::CellConnectivity& cellConnectivity
+  const peano4::CellConnectivity& cellConnectivity,
+  const RuntimeParameters&        parameters
 ) {
-  Base::allocate(cellConnectivity);
+  Base::allocate(cellConnectivity, parameters);
   if constexpr (HasLimiter) {
     _limiter->allocate(cellConnectivity);
   }
-  rebuildCouplingFaces(cellConnectivity);
+  rebuildCouplingFaces(cellConnectivity, parameters);
   reservePredictorScratch(cellConnectivity);
 }
 
@@ -134,19 +136,21 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * initPointSourceLocations() runs after the initial condition.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::initialise(
   const peano4::CellConnectivity& cellConnectivity,
-  exahype2::RefinementRequests&   requests
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
-  Base::initialise(cellConnectivity, requests);
+  Base::initialise(cellConnectivity, requests, parameters);
   if constexpr (Derived::NumberOfPointSources > 0) {
     static_assert(
       exahype2::terms::HasPointSourceLocations<Derived, Derived::NumberOfPointSources>,
       "The point sources of the solver expect their locations."
     );
     double locations[Derived::NumberOfPointSources][DIMENSIONS];
-    Derived::initPointSourceLocations(locations);
+    Derived::initPointSourceLocations(locations, parameters);
     _pointSourceLocations.setValues(
       std::vector<double>(
         &locations[0][0],
@@ -155,7 +159,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     );
   }
   if constexpr (HasLimiter) {
-    _limiter->initialise(cellConnectivity, this->_solution);
+    _limiter->initialise(cellConnectivity, this->_solution, parameters);
   }
 }
 
@@ -165,16 +169,18 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * cells correct. A solver with a coupling partner runs the time steps of both solvers.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::performTimeStep(
   const peano4::CellConnectivity& cellConnectivity,
-  exahype2::RefinementRequests&   requests
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
   if (_drivenByPartner) {
     return;
   }
   if (_coupledTimeStep) {
-    _coupledTimeStep(cellConnectivity, requests);
+    _coupledTimeStep->run(cellConnectivity, requests, parameters);
     return;
   }
   constexpr auto Local        = peano4::Adjacency::Local;
@@ -183,9 +189,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   const double   timeStamp    = this->_timeStepping.getTimeStamp();
 
   if constexpr (HasLimiter) {
-    _limiter->openTimeStep(cellConnectivity, this->_solution);
+    _limiter->openTimeStep(cellConnectivity, this->_solution, parameters);
   }
-  predict(cellConnectivity, Remote, timeStepSize);
+  predict(cellConnectivity, Remote, timeStepSize, parameters);
 
   const typename Base::RestrictFluxes restrictFluxes{
     cellConnectivity.onDevice(),
@@ -196,29 +202,31 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   if constexpr (Predictor::WritesFaceFluxes) {
     this->_fluxExchange.post();
   }
-  predict(cellConnectivity, Local, timeStepSize);
+  predict(cellConnectivity, Local, timeStepSize, parameters);
   interpolatePredictedHalves(cellConnectivity, Local);
-  this->solveRiemannProblems(cellConnectivity, Local, timeStamp, timeStepSize, getAppliedFluxes());
+  this->solveRiemannProblems(cellConnectivity, Local, timeStamp, timeStepSize, parameters, getAppliedFluxes());
   this->_stateExchange.wait();
   if constexpr (Predictor::WritesFaceFluxes) {
     this->_fluxExchange.wait();
   }
   interpolatePredictedHalves(cellConnectivity, Remote);
-  this->solveRiemannProblems(cellConnectivity, Remote, timeStamp, timeStepSize, getAppliedFluxes());
+  this->solveRiemannProblems(cellConnectivity, Remote, timeStamp, timeStepSize, parameters, getAppliedFluxes());
 
   this->restrictFineFaces(cellConnectivity, Remote, restrictFluxes);
   this->_restrictedFluxExchange.post();
   this->restrictFineFaces(cellConnectivity, Local, restrictFluxes);
-  auto statistics = correct(cellConnectivity, Local, timeStepSize);
+  auto statistics = correct(cellConnectivity, Local, timeStepSize, parameters);
   this->_restrictedFluxExchange.wait();
-  statistics =
-    exahype2::dg::MaxEigenvalueStatistics::combine(statistics, correct(cellConnectivity, Remote, timeStepSize));
+  statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+    statistics,
+    correct(cellConnectivity, Remote, timeStepSize, parameters)
+  );
   if constexpr (HasLimiter) {
-    statistics = _limiter->closeTimeStep(cellConnectivity, this->_solution, timeStamp, timeStepSize);
+    statistics = _limiter->closeTimeStep(cellConnectivity, this->_solution, timeStamp, timeStepSize, parameters);
   }
   this->closeTimeStep(timeStepSize, statistics);
-  this->measureError(cellConnectivity);
-  this->voteOnRefinement(cellConnectivity, requests);
+  this->measureError(cellConnectivity, parameters);
+  this->voteOnRefinement(cellConnectivity, requests, parameters);
 }
 
 /**
@@ -253,98 +261,119 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     "Each coupled solver expects its cells through restrict_to_cells."
   );
   static_assert(Partner::NumberOfData == NumberOfData, "Coupled solvers store the same number of values per node.");
-  assertion(not _drivenByPartner and not _coupledTimeStep);
+  ASSERTION(not _drivenByPartner and not _coupledTimeStep);
   setCouplingMatrix(fromPartnerMatrix);
   partner.setCouplingMatrix(toPartnerMatrix);
   partner.leaveTimeStepsToPartner();
-  _coupledTimeStep =
-    [this, &partner](const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests) {
-      constexpr auto Local      = peano4::Adjacency::Local;
-      constexpr auto Remote     = peano4::Adjacency::Remote;
-      const double timeStepSize = std::min(this->_timeStepping.startTimeStep(), partner._timeStepping.startTimeStep());
-      const double timeStamp    = this->_timeStepping.getTimeStamp();
+  _coupledTimeStep      = std::make_unique<CoupledTimeStep>();
+  _coupledTimeStep->run = [this, &partner](
+                            const peano4::CellConnectivity&            cellConnectivity,
+                            exahype2::RefinementRequests&              requests,
+                            const typename Derived::RuntimeParameters& parameters
+                          ) {
+    constexpr auto Local        = peano4::Adjacency::Local;
+    constexpr auto Remote       = peano4::Adjacency::Remote;
+    const double   timeStepSize = std::min(this->_timeStepping.startTimeStep(), partner._timeStepping.startTimeStep());
+    const double   timeStamp    = this->_timeStepping.getTimeStamp();
 
-      if constexpr (HasLimiter) {
-        _limiter->openTimeStep(cellConnectivity, this->_solution);
-      }
-      if constexpr (Partner::HasLimiter) {
-        partner._limiter->openTimeStep(cellConnectivity, partner._solution);
-      }
-      predict(cellConnectivity, Remote, timeStepSize);
-      partner.predict(cellConnectivity, Remote, timeStepSize);
+    if constexpr (HasLimiter) {
+      _limiter->openTimeStep(cellConnectivity, this->_solution, parameters);
+    }
+    if constexpr (Partner::HasLimiter) {
+      partner._limiter->openTimeStep(cellConnectivity, partner._solution, parameters);
+    }
+    predict(cellConnectivity, Remote, timeStepSize, parameters);
+    partner.predict(cellConnectivity, Remote, timeStepSize, parameters);
 
-      const typename Base::RestrictFluxes restrictFluxes{
-        cellConnectivity.onDevice(),
-        this->_faceFluxes.getView(),
-        DGMatrices<double>::WeightedRestrictionMatrix1D
-      };
-      const typename Partner::RestrictFluxes restrictPartnerFluxes{
-        cellConnectivity.onDevice(),
-        partner._faceFluxes.getView(),
-        Partner::template DGMatrices<double>::WeightedRestrictionMatrix1D
-      };
-      const double partnerTimeStamp = partner.getTimeStepping().getTimeStamp();
-
-      this->_stateExchange.post();
-      this->_fluxExchange.post();
-      partner._stateExchange.post();
-      partner._fluxExchange.post();
-      predict(cellConnectivity, Local, timeStepSize);
-      partner.predict(cellConnectivity, Local, timeStepSize);
-      interpolatePredictedHalves(cellConnectivity, Local);
-      partner.interpolatePredictedHalves(cellConnectivity, Local);
-      copyFaceHalvesFromPartner(cellConnectivity, partner, Local);
-      partner.copyFaceHalvesFromPartner(cellConnectivity, *this, Local);
-      this->solveRiemannProblems(cellConnectivity, Local, timeStamp, timeStepSize, getAppliedFluxes());
-      partner.solveRiemannProblems(cellConnectivity, Local, partnerTimeStamp, timeStepSize, partner.getAppliedFluxes());
-      this->_stateExchange.wait();
-      this->_fluxExchange.wait();
-      partner._stateExchange.wait();
-      partner._fluxExchange.wait();
-      interpolatePredictedHalves(cellConnectivity, Remote);
-      partner.interpolatePredictedHalves(cellConnectivity, Remote);
-      copyFaceHalvesFromPartner(cellConnectivity, partner, Remote);
-      partner.copyFaceHalvesFromPartner(cellConnectivity, *this, Remote);
-      this->solveRiemannProblems(cellConnectivity, Remote, timeStamp, timeStepSize, getAppliedFluxes());
-      partner.solveRiemannProblems(cellConnectivity, Remote, partnerTimeStamp, timeStepSize, partner.getAppliedFluxes());
-
-      this->restrictFineFaces(cellConnectivity, Remote, restrictFluxes);
-      partner.restrictFineFaces(cellConnectivity, Remote, restrictPartnerFluxes);
-      this->_restrictedFluxExchange.post();
-      partner._restrictedFluxExchange.post();
-      this->restrictFineFaces(cellConnectivity, Local, restrictFluxes);
-      partner.restrictFineFaces(cellConnectivity, Local, restrictPartnerFluxes);
-      auto statistics        = correct(cellConnectivity, Local, timeStepSize);
-      auto partnerStatistics = partner.correct(cellConnectivity, Local, timeStepSize);
-      this->_restrictedFluxExchange.wait();
-      partner._restrictedFluxExchange.wait();
-      statistics =
-        exahype2::dg::MaxEigenvalueStatistics::combine(statistics, correct(cellConnectivity, Remote, timeStepSize));
-      partnerStatistics = exahype2::dg::MaxEigenvalueStatistics::combine(
-        partnerStatistics,
-        partner.correct(cellConnectivity, Remote, timeStepSize)
-      );
-      if constexpr (HasLimiter) {
-        statistics = _limiter->closeTimeStep(cellConnectivity, this->_solution, timeStamp, timeStepSize);
-      }
-      if constexpr (Partner::HasLimiter) {
-        partnerStatistics = partner._limiter->closeTimeStep(
-          cellConnectivity,
-          partner._solution,
-          partner.getTimeStepping().getTimeStamp(),
-          timeStepSize
-        );
-      }
-      this->closeTimeStep(timeStepSize, statistics);
-      partner.closeTimeStep(timeStepSize, partnerStatistics);
-      if constexpr (requires { partner.traceTracers(cellConnectivity, timeStepSize, false); }) {
-        partner.traceTracers(cellConnectivity, timeStepSize, false);
-      }
-      this->measureError(cellConnectivity);
-      partner.measureError(cellConnectivity);
-      this->voteOnRefinement(cellConnectivity, requests);
-      partner.voteOnRefinement(cellConnectivity, requests);
+    const typename Base::RestrictFluxes restrictFluxes{
+      cellConnectivity.onDevice(),
+      this->_faceFluxes.getView(),
+      DGMatrices<double>::WeightedRestrictionMatrix1D
     };
+    const typename Partner::RestrictFluxes restrictPartnerFluxes{
+      cellConnectivity.onDevice(),
+      partner._faceFluxes.getView(),
+      Partner::template DGMatrices<double>::WeightedRestrictionMatrix1D
+    };
+    const double partnerTimeStamp = partner.getTimeStepping().getTimeStamp();
+
+    this->_stateExchange.post();
+    this->_fluxExchange.post();
+    partner._stateExchange.post();
+    partner._fluxExchange.post();
+    predict(cellConnectivity, Local, timeStepSize, parameters);
+    partner.predict(cellConnectivity, Local, timeStepSize, parameters);
+    interpolatePredictedHalves(cellConnectivity, Local);
+    partner.interpolatePredictedHalves(cellConnectivity, Local);
+    copyFaceHalvesFromPartner(cellConnectivity, partner, Local);
+    partner.copyFaceHalvesFromPartner(cellConnectivity, *this, Local);
+    this->solveRiemannProblems(cellConnectivity, Local, timeStamp, timeStepSize, parameters, getAppliedFluxes());
+    partner.solveRiemannProblems(
+      cellConnectivity,
+      Local,
+      partnerTimeStamp,
+      timeStepSize,
+      parameters,
+      partner.getAppliedFluxes()
+    );
+    this->_stateExchange.wait();
+    this->_fluxExchange.wait();
+    partner._stateExchange.wait();
+    partner._fluxExchange.wait();
+    interpolatePredictedHalves(cellConnectivity, Remote);
+    partner.interpolatePredictedHalves(cellConnectivity, Remote);
+    copyFaceHalvesFromPartner(cellConnectivity, partner, Remote);
+    partner.copyFaceHalvesFromPartner(cellConnectivity, *this, Remote);
+    this->solveRiemannProblems(cellConnectivity, Remote, timeStamp, timeStepSize, parameters, getAppliedFluxes());
+    partner.solveRiemannProblems(
+      cellConnectivity,
+      Remote,
+      partnerTimeStamp,
+      timeStepSize,
+      parameters,
+      partner.getAppliedFluxes()
+    );
+
+    this->restrictFineFaces(cellConnectivity, Remote, restrictFluxes);
+    partner.restrictFineFaces(cellConnectivity, Remote, restrictPartnerFluxes);
+    this->_restrictedFluxExchange.post();
+    partner._restrictedFluxExchange.post();
+    this->restrictFineFaces(cellConnectivity, Local, restrictFluxes);
+    partner.restrictFineFaces(cellConnectivity, Local, restrictPartnerFluxes);
+    auto statistics        = correct(cellConnectivity, Local, timeStepSize, parameters);
+    auto partnerStatistics = partner.correct(cellConnectivity, Local, timeStepSize, parameters);
+    this->_restrictedFluxExchange.wait();
+    partner._restrictedFluxExchange.wait();
+    statistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+      statistics,
+      correct(cellConnectivity, Remote, timeStepSize, parameters)
+    );
+    partnerStatistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+      partnerStatistics,
+      partner.correct(cellConnectivity, Remote, timeStepSize, parameters)
+    );
+    if constexpr (HasLimiter) {
+      statistics = _limiter->closeTimeStep(cellConnectivity, this->_solution, timeStamp, timeStepSize, parameters);
+    }
+    if constexpr (Partner::HasLimiter) {
+      partnerStatistics = partner._limiter->closeTimeStep(
+        cellConnectivity,
+        partner._solution,
+        partner.getTimeStepping().getTimeStamp(),
+        timeStepSize,
+        parameters
+      );
+    }
+    this->closeTimeStep(timeStepSize, statistics);
+    partner.closeTimeStep(timeStepSize, partnerStatistics);
+    if constexpr (requires { partner.traceTracers(cellConnectivity, timeStepSize, false, parameters); }) {
+      partner.traceTracers(cellConnectivity, timeStepSize, false, parameters);
+    }
+    this->measureError(cellConnectivity, parameters);
+    partner.measureError(cellConnectivity, parameters);
+    this->voteOnRefinement(cellConnectivity, requests, parameters);
+    partner.voteOnRefinement(cellConnectivity, requests, parameters);
+  };
 }
 
 /**
@@ -355,7 +384,7 @@ INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::setCouplingMatrix(
   const std::vector<double>& fromPartnerMatrix
 ) {
-  assertion(fromPartnerMatrix.size() % static_cast<std::size_t>(NodesPerAxis) == 0, fromPartnerMatrix.size());
+  ASSERTION(fromPartnerMatrix.size() % static_cast<std::size_t>(NodesPerAxis) == 0, fromPartnerMatrix.size());
   std::vector<ComputePrecision> matrix(fromPartnerMatrix.size());
   for (std::size_t entry = 0; entry < matrix.size(); entry++) {
     matrix[entry] = static_cast<ComputePrecision>(fromPartnerMatrix[entry]);
@@ -366,7 +395,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::leaveTimeStepsToPartner() {
-  assertion(not _coupledTimeStep);
+  ASSERTION(not _coupledTimeStep);
   _drivenByPartner = true;
 }
 
@@ -382,11 +411,11 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   const Partner&                                   partner,
   const peano4::Adjacency                          adjacency
 ) {
-  assertion(
+  ASSERTION(
     _couplingMatrix.getSize() == static_cast<std::size_t>(Partner::NodesPerAxis * NodesPerAxis),
     _couplingMatrix.getSize()
   );
-  assertion(
+  ASSERTION(
     cellConnectivity.getNumberOfFaces() <= partner.getFaceStates().getCapacity(),
     cellConnectivity.getNumberOfFaces()
   );
@@ -413,9 +442,11 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * coupling face on a level jump is a fatal error.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::rebuildCouplingFaces(
-  [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity
+  [[maybe_unused]] const peano4::CellConnectivity& cellConnectivity,
+  [[maybe_unused]] const RuntimeParameters&        parameters
 ) {
   if constexpr (exahype2::terms::HasCellPredicate<Derived>) {
     std::vector<int> couplingFaces;
@@ -433,7 +464,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
           if (slot < 0) {
             continue;
           }
-          if (Derived::ownsCell(cellConnectivity.getCellCentre(slot), cellConnectivity.getCellWidth(slot))) {
+          if (
+            Derived::ownsCell(cellConnectivity.getCellCentre(slot), cellConnectivity.getCellWidth(slot), parameters)
+          ) {
             ownedSide = side;
           } else {
             farSide = side;
@@ -445,7 +478,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
         if (farSide < 0) {
           const tarch::la::Vector<DIMENSIONS, double> centre =
             cellConnectivity.getCellCentreBesideFace(face, 1 - ownedSide);
-          if (Derived::ownsCell(centre, cellConnectivity.getFaceWidth(face))) {
+          if (Derived::ownsCell(centre, cellConnectivity.getFaceWidth(face), parameters)) {
             continue;
           }
         }
@@ -471,17 +504,19 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * Moves the solution and, with a limiter, the statuses and the subgrids through the regrid.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::regrid(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Regrid&           regrid,
-  exahype2::RefinementRequests&   requests
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
   if constexpr (HasLimiter) {
     _limiter->regrid(cellConnectivity, regrid, this->_solution);
   }
-  Base::regrid(cellConnectivity, regrid, requests);
-  rebuildCouplingFaces(cellConnectivity);
+  Base::regrid(cellConnectivity, regrid, requests, parameters);
+  rebuildCouplingFaces(cellConnectivity, parameters);
   reservePredictorScratch(cellConnectivity);
 }
 
@@ -490,11 +525,13 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * every plot point the subcell that contains the point.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::plot(
   const peano4::CellConnectivity& cellConnectivity,
   const tarch::plotter::Format    format,
-  const std::string&              outputDirectory
+  const std::string&              outputDirectory,
+  const RuntimeParameters&        parameters
 ) {
   if constexpr (HasLimiter) {
     this->template plotPolynomial<std::max(2 * NodesPerAxis - 1, 2), Limiter::SubcellScheme::SubcellsPerAxis>(
@@ -507,9 +544,9 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
       static_cast<int>(exahype2::dg::limiting::LimiterStatus::Limited),
       exahype2::dg::limiting::LimiterStatusFieldName
     );
-    this->plotFaces(cellConnectivity, format, outputDirectory);
+    this->plotFaces(cellConnectivity, format, outputDirectory, parameters);
   } else {
-    Base::plot(cellConnectivity, format, outputDirectory);
+    Base::plot(cellConnectivity, format, outputDirectory, parameters);
   }
 }
 
@@ -533,7 +570,7 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD double
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::getFixedTimeStepSize() const {
   const double maxAdmissibleMeshWidth = this->_timeStepping.getLimits().maxAdmissibleMeshWidth;
-  assertion(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
+  ASSERTION(std::isfinite(maxAdmissibleMeshWidth) and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
   return this->_timeStepping.getFactor() * this->_timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth;
 }
 
@@ -577,24 +614,26 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * the last iterate.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::predict(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Adjacency         adjacency,
-  const double                    timeStepSize
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
 ) {
-  assertion(
+  ASSERTION(
     _predictorScratch.getSize()
     >= static_cast<std::size_t>(Predictor::getNumberOfScratchChunks(this->getNumberOfCells(cellConnectivity)))
       * Predictor::ScratchSize
   );
   exahype2::dg::ader::PredictionCounts counts;
   if constexpr (HasLimiter) {
-    counts = predictCells(cellConnectivity, adjacency, timeStepSize, _limiter->getStatuses());
+    counts = predictCells(cellConnectivity, adjacency, timeStepSize, _limiter->getStatuses(), parameters);
   } else {
-    counts = predictCells(cellConnectivity, adjacency, timeStepSize, exahype2::dg::ader::NoLimiter{});
+    counts = predictCells(cellConnectivity, adjacency, timeStepSize, exahype2::dg::ader::NoLimiter{}, parameters);
     if (counts.divergedCells > 0) {
-      assertion(counts.firstDivergedCell >= 0, counts.firstDivergedCell, counts.divergedCells);
+      ASSERTION(counts.firstDivergedCell >= 0, counts.firstDivergedCell, counts.divergedCells);
       std::ostringstream message;
       message << "The space-time predictor diverges at t = " << this->_timeStepping.getTimeStamp()
               << " in the cell with the centre " << toString(cellConnectivity.getCellCentre(counts.firstDivergedCell))
@@ -603,7 +642,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
       tarch::terminateWithError(message.str());
     }
   }
-  assertion(counts.unconvergedCells >= 0, counts.unconvergedCells);
+  ASSERTION(counts.unconvergedCells >= 0, counts.unconvergedCells);
   _unconvergedPredictions += counts.unconvergedCells;
 }
 
@@ -635,7 +674,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
     _limiter->addLocalValuesToGlobalReduction(record);
   }
   if constexpr (not Derived::IsLinear) {
-    assertion(_unconvergedPredictions >= 0, _unconvergedPredictions);
+    ASSERTION(_unconvergedPredictions >= 0, _unconvergedPredictions);
     _unconvergedPredictionsSlot = record.addSum(static_cast<std::uint64_t>(_unconvergedPredictions));
     _unconvergedPredictions     = 0;
   }
@@ -644,7 +683,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
 /**
  * Reads the reduced values of the base solver and of the limiter. The global master warns when the
  * Picard iteration of any cell stopped at its sweep limit since the last reduction. With a limiter,
- * no iteration stops there.
+ * the predictor marks these cells in divergenceMarks and counts zero cells.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
 INLINE_METHOD void
@@ -658,7 +697,7 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
   if constexpr (not Derived::IsLinear) {
     const auto globalPredictions = record.getSum(_unconvergedPredictionsSlot);
     if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logWarning(
+      LOG_WARNING(
         "The Picard iteration of " << globalPredictions
                                    << " cells reaches its sweep limit at t = " << this->_timeStepping.getTimeStamp()
                                    << " before it converges. The cells continue with the last iterate."
@@ -672,13 +711,14 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * With a limiter, the kernel marks these cells in divergenceMarks and returns zero counts.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
-template <typename DivergenceMarks>
+template <typename DivergenceMarks, typename RuntimeParameters>
 INLINE_METHOD exahype2::dg::ader::PredictionCounts
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::predictCells(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Adjacency         adjacency,
   const double                    timeStepSize,
-  const DivergenceMarks&          divergenceMarks
+  const DivergenceMarks&          divergenceMarks,
+  const RuntimeParameters&        parameters
 ) {
   const auto                           cells = this->getCells(cellConnectivity, adjacency);
   exahype2::dg::ader::PredictionCounts counts;
@@ -702,7 +742,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
       _pointSourceLocations.getData(),
       this->_timeStepping.getTimeStamp(),
       timeStepSize,
-      _predictorScratch.getData()
+      _predictorScratch.getData(),
+      parameters
     },
     tarch::accelerator::Custom<exahype2::dg::ader::PredictionCounts>{counts}
   );
@@ -743,11 +784,13 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
  * wave-speed maxima of the updated solution. With a limiter, the maxima are zero.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename Limiter>
+template <typename RuntimeParameters>
 INLINE_METHOD exahype2::dg::MaxEigenvalueStatistics
 exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>::correct(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Adjacency         adjacency,
-  const double                    timeStepSize
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
 ) {
   using Cells                                 = CorrectorCells<UsesAdaptiveTimeStepping and not HasLimiter>;
   const auto                            cells = this->getCells(cellConnectivity, adjacency);
@@ -770,7 +813,8 @@ exahype2::dg::ader::Solver<Derived, StoragePrecision, ComputePrecision, Limiter>
       DGMatrices<ComputePrecision>::BasisFunctionValuesRight1D,
       Quadrature<StoragePrecision>::QuadraturePoints1D,
       this->_timeStepping.getTimeStamp(),
-      timeStepSize
+      timeStepSize,
+      parameters
     },
     tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{statistics}
   );

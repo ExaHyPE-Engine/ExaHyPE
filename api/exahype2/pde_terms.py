@@ -9,6 +9,7 @@ import jinja2
 from .codegen.helper import render_jinja2_template
 
 COORDINATES = "const tarch::la::Vector<DIMENSIONS, double>&"
+RUNTIME_PARAMETERS = "const RuntimeParameters& parameters"
 
 
 def _concept_header(concept):
@@ -40,8 +41,11 @@ def _declared_parameter(declarator):
 
 
 def _parameter_lines(term, precision, dictionary, declaration):
+    """Returns one line per parameter of a term. The runtime parameters are the last parameter of
+    every term that reads them."""
+    parameters = term.parameters + ((RUNTIME_PARAMETERS,) if term.reads_runtime_parameters else ())
     lines = []
-    for position, parameter in enumerate(term.parameters):
+    for position, parameter in enumerate(parameters):
         declarator, separator, comment = _substitute(
             parameter, precision, dictionary
         ).partition(" //")
@@ -49,7 +53,7 @@ def _parameter_lines(term, precision, dictionary, declaration):
             declarator = _declared_parameter(declarator)
         else:
             declarator = "[[maybe_unused]] " + declarator
-        comma = "," if position + 1 < len(term.parameters) else ""
+        comma = "," if position + 1 < len(parameters) else ""
         lines.append("  " + declarator + comma + separator + comment)
     return "\n".join(lines)
 
@@ -115,6 +119,7 @@ class PDETerm:
     default: str = None
     flag: str = None
     concept_arguments: tuple = ("{P}",)
+    reads_runtime_parameters: bool = True
 
 
 def initial_condition():
@@ -393,6 +398,7 @@ def reconstruction_weights():
         precision="storage",
         flag="USE_RECONSTRUCTION_WEIGHTS",
         concept_arguments=(),
+        reads_runtime_parameters=False,
     )
 
 

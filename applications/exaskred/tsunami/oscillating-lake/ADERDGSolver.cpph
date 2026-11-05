@@ -11,12 +11,13 @@ INLINE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   double* const NOALIAS                                         Q,
   const tarch::la::Vector<DIMENSIONS, double>&                  x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
 ) {
   static_assert(NumberOfAuxiliaryVariables == 0, "The oscillating lake expects zero auxiliary variables.");
   const auto radiusSquared = x[0] * x[0] + x[1] * x[1];
   Q[Shortcuts::b]          = -ReferenceDepth * (1.0 - radiusSquared / (LakeRadius * LakeRadius));
-  analyticalSolution(x, 0.0, 0.0, Q, Q);
+  analyticalSolution(x, 0.0, 0.0, Q, Q, parameters);
 }
 
 /**
@@ -28,7 +29,8 @@ applications::exahype2::exaskred::ADERDGSolver::analyticalSolution(
   const double                                 t,
   [[maybe_unused]] const double                dt,
   const double* const                          Q,
-  double* const                                solution
+  double* const                                solution,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   const double bathymetry = Q[Shortcuts::b];
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -55,7 +57,8 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const int                                    normal
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   Qoutside[Shortcuts::h]      = Qinside[Shortcuts::h];
   Qoutside[Shortcuts::hu]     = -Qinside[Shortcuts::hu];
@@ -68,7 +71,8 @@ applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   [[maybe_unused]] const double* const NOALIAS                  Q,
   const tarch::la::Vector<DIMENSIONS, double>&                  x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t
+  [[maybe_unused]] const double                                 t,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   const auto radiusSquared = x[0] * x[0] + x[1] * x[1];
   return radiusSquared <= LakeRadius * LakeRadius ? ::exahype2::RefinementCommand::Refine
@@ -83,7 +87,8 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
     Q,
@@ -104,7 +109,8 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  const int                                    normal
+  const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
     Q,
@@ -127,7 +133,8 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  double* const NOALIAS                        BTimesDeltaQ
+  double* const NOALIAS                        BTimesDeltaQ,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
@@ -155,7 +162,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   const double waveSpeed = applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
     QL,
@@ -172,8 +180,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   );
   double fluxLeft[NumberOfUnknowns];
   double fluxRight[NumberOfUnknowns];
-  flux(QL, x, h, t, dt, normal, fluxLeft);
-  flux(QR, x, h, t, dt, normal, fluxRight);
+  flux(QL, x, h, t, dt, normal, fluxLeft, parameters);
+  flux(QR, x, h, t, dt, normal, fluxRight, parameters);
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     FL[unknown] += fluxLeft[unknown];
     FR[unknown] += fluxRight[unknown];
@@ -186,7 +194,8 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                                   Q,
   const int                                                     numberOfStates,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   return applications::exahype2::exaskred::limiting::isAdmissibleCell<
     Shortcuts,
@@ -207,7 +216,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   const auto maxEigenvalue = [](
                                const double* const NOALIAS                  Q,
@@ -247,7 +257,8 @@ applications::exahype2::exaskred::ADERDGSolver::postprocessUpdatedPatch(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const double                                 dt
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   if constexpr (RemovesFilmMomentum) {
     applications::exahype2::exaskred::limiting::removeFilmMomentum<
@@ -264,7 +275,8 @@ applications::exahype2::exaskred::ADERDGSolver::postprocessUpdatedSubcells(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const double                                 dt
+  [[maybe_unused]] const double                                 dt,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   if constexpr (RemovesFilmMomentum) {
     applications::exahype2::exaskred::limiting::removeFilmMomentum<

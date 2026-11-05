@@ -2,13 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 import CurvilinearElastic
 
-RUNTIME_PARAMETERS = "applications::exahype2::exaseis::RuntimeParameters"
 FAULT_PLANE = (
     "applications::exahype2::exaseis::FaultPlane{"
-    + RUNTIME_PARAMETERS
-    + "::faultNormal(), "
-    + RUNTIME_PARAMETERS
-    + "::faultPosition()}"
+    "parameters.faultNormal, parameters.faultPosition}"
 )
 
 
@@ -67,24 +63,20 @@ def init_grid_step_implementation(scenario_perturbations):
 """
         + scenario_perturbations
         + """
-  """
-        + RUNTIME_PARAMETERS
-        + """::setFaultNormal(faultNormal);
-  """
-        + RUNTIME_PARAMETERS
-        + """::setFaultPosition(faultPosition);
+  parameters.faultNormal   = faultNormal;
+  parameters.faultPosition = faultPosition;
 """
     )
 
 
 def fault_normal():
     """Returns the C++ expression of the axis that the fault plane is orthogonal to."""
-    return RUNTIME_PARAMETERS + "::faultNormal()"
+    return "parameters.faultNormal"
 
 
 def fault_position():
     """Returns the C++ expression of the position of the fault plane along its normal."""
-    return RUNTIME_PARAMETERS + "::faultPosition()"
+    return "parameters.faultPosition"
 
 
 def fault_face_predicate():

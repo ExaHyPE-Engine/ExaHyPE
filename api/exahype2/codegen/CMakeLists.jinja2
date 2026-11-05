@@ -21,6 +21,8 @@ if(NOT DEFINED CMAKE_Fortran_COMPILER)
 endif()
 {% endif -%}
 
+# CMAKE_NOT_USING_CONFIG_FLAGS stops CMake from caching flags for its predefined build types.
+set(CMAKE_NOT_USING_CONFIG_FLAGS TRUE)
 project({{EXECUTABLENAME}}
   LANGUAGES
     C

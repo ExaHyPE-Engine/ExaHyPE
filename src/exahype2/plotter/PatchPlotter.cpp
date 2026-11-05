@@ -5,15 +5,15 @@
 exahype2::plotter::PatchPlotter::PatchPlotter(std::string filename, std::vector<DataField> fields) :
   _filename(std::move(filename)),
   _fields(std::move(fields)) {
-  assertion(not _filename.empty());
+  ASSERTION(not _filename.empty());
   for ([[maybe_unused]] const auto& field : _fields) {
-    assertion(field.components > 0, field.name, field.components);
+    ASSERTION(field.components > 0, field.name, field.components);
   }
 }
 
 std::vector<exahype2::plotter::PatchPlotter::PatchCorner>
 exahype2::plotter::PatchPlotter::classifyCorners(const int cornersPerAxis) {
-  assertion(cornersPerAxis > 1, cornersPerAxis);
+  ASSERTION(cornersPerAxis > 1, cornersPerAxis);
   std::vector<PatchCorner> result(static_cast<std::size_t>(peano4::power(cornersPerAxis, DIMENSIONS)));
   int                      faceCorners     = 0;
   int                      interiorCorners = 0;
@@ -32,7 +32,7 @@ exahype2::plotter::PatchPlotter::classifyCorners(const int cornersPerAxis) {
       interiorCorners++;
     }
   }
-  assertion(interiorCorners == peano4::power(cornersPerAxis - 2, DIMENSIONS), interiorCorners, cornersPerAxis);
+  ASSERTION(interiorCorners == peano4::power(cornersPerAxis - 2, DIMENSIONS), interiorCorners, cornersPerAxis);
   return result;
 }
 
@@ -66,8 +66,8 @@ exahype2::plotter::PatchPlotter::createMesh(
   const char* const statusName
 ) const {
   using Values = tarch::plotter::MeshArray<double>;
-  assertion(numberOfPatches >= 0, numberOfPatches);
-  assertion(cellsPerPatch > 0, cellsPerPatch);
+  ASSERTION(numberOfPatches >= 0, numberOfPatches);
+  ASSERTION(cellsPerPatch > 0, cellsPerPatch);
   const auto numberOfCells = static_cast<std::size_t>(numberOfPatches) * cellsPerPatch;
 
   tarch::plotter::Mesh mesh;
@@ -103,6 +103,6 @@ exahype2::plotter::PatchPlotter::write(
   if (_fileWriter == nullptr) {
     _fileWriter = tarch::plotter::createFileWriter(format);
   }
-  assertion(_fileWriter->getFormat() == format);
+  ASSERTION(_fileWriter->getFormat() == format);
   _fileWriter->write(mesh, outputDirectory + OutputSubdirectory, _filename, timeStamp);
 }

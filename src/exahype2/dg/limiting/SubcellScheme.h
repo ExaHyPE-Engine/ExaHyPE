@@ -62,10 +62,6 @@ namespace exahype2::dg::limiting {
   struct SubcellRegion;
 } // namespace exahype2::dg::limiting
 
-namespace exahype2::dg::limiting::tests {
-  class SubcellSchemeTest;
-} // namespace exahype2::dg::limiting::tests
-
 TARGET_DECLARE
 /**
  * SubcellScheme runs the finite-volume scheme on the subgrid of one cell of Derived with PatchSize
@@ -104,7 +100,8 @@ public:
   static INLINE_METHOD void sampleInitialCondition(
     StoragePrecision* NOALIAS                    subcells,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -153,7 +150,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -166,7 +164,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    StoragePrecision* NOALIAS                    scratch
+    StoragePrecision* NOALIAS                    scratch,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -177,7 +176,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -186,14 +186,12 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename Reconstruct>
   struct SubgridSolver;
-
-private:
-  friend class exahype2::dg::limiting::tests::SubcellSchemeTest;
 
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void projectSubgridOntoFacesWithThreadsOfTeam(
@@ -271,7 +269,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
 
   static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
 
-  using Reconstruction = Reconstruct;
+  using Reconstruction    = Reconstruct;
+  using RuntimeParameters = typename Derived::RuntimeParameters;
 
   template <typename Precision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void boundaryConditions(
@@ -280,7 +279,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
     double                                       t,
-    int                                          normal
+    int                                          normal,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasBoundaryConditions<Derived, Precision>;
 
@@ -292,7 +292,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     double                                       t,
     double                                       dt,
     int                                          normal,
-    Precision*                                   F
+    Precision*                                   F,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasFlux<Derived, Precision>;
 
@@ -305,7 +306,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     double                                       t,
     double                                       dt,
     int                                          normal,
-    Precision*                                   BTimesDeltaQ
+    Precision*                                   BTimesDeltaQ,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasNonconservativeProduct<Derived, Precision>;
 
@@ -316,7 +318,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     const tarch::la::Vector<DIMENSIONS, double>& h,
     double                                       t,
     double                                       dt,
-    Precision*                                   S
+    Precision*                                   S,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasSourceTerm<Derived, Precision>;
 
@@ -328,7 +331,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     const tarch::la::Vector<DIMENSIONS, double>& h,
     double                                       t,
     double                                       dt,
-    Precision*                                   S
+    Precision*                                   S,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasDiffusiveSourceTerm<Derived, Precision>;
 
@@ -339,7 +343,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     const tarch::la::Vector<DIMENSIONS, double>& h,
     double                                       t,
     double                                       dt,
-    int                                          normal
+    int                                          normal,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasMaxEigenvalue<Derived, Precision>;
 
@@ -355,7 +360,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     bool                                         isBoundaryFace,
     int                                          faceIndex,
     Precision*                                   FL,
-    Precision*                                   FR
+    Precision*                                   FR,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasSubcellRiemannSolver<Derived, Precision>;
 
@@ -364,7 +370,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     const Precision*                             Q,
     int                                          numberOfStates,
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasPhysicalAdmissibility<Derived, Precision>;
 
@@ -372,7 +379,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool supportsHighOrderReconstruction(
     const Precision*                             Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasReconstructionSupport<Derived, Precision>;
 
@@ -385,7 +393,8 @@ struct exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>::Subgrid
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
     double                                       t,
-    double                                       dt
+    double                                       dt,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasPostprocessUpdatedSubcells<Derived, Precision>;
 };
@@ -439,14 +448,15 @@ struct exahype2::dg::limiting::ProjectRecomputedSubgrids final {
   using Kernel   = exahype2::dg::limiting::SubcellScheme<Derived, ComputePrecision>;
   using CellPool = tarch::accelerator::ChunkedMemoryPool<StoragePrecision>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  tarch::Span<const int>       cells{};
-  typename CellPool::View      nodes{};
-  typename CellPool::ConstView subcells{};
-  const StoragePrecision*      subcellsToNodes{nullptr};
-  double                       timeStamp{0.0};
-  double                       timeStepSize{0.0};
-  StoragePrecision*            scratch{nullptr};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              cells{};
+  typename CellPool::View             nodes{};
+  typename CellPool::ConstView        subcells{};
+  const StoragePrecision*             subcellsToNodes{nullptr};
+  double                              timeStamp{0.0};
+  double                              timeStepSize{0.0};
+  StoragePrecision*                   scratch{nullptr};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                                    entry,

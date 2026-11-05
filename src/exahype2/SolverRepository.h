@@ -18,15 +18,16 @@ namespace tarch::mpi {
 } // namespace tarch::mpi
 
 namespace exahype2 {
-  template <typename... Solvers>
+  template <typename RuntimeParameters, typename... Solvers>
   class SolverRepository;
 } // namespace exahype2
 
 /**
- * Runs every phase on every solver. Every solver outlives the repository. A phase that votes
- * merges the votes of all solvers into one list of refinement requests.
+ * Runs every phase on every solver and passes the runtime parameters to each. Every solver outlives
+ * the repository. A phase that votes merges the votes of all solvers into one list of refinement
+ * requests.
  */
-template <typename... Solvers>
+template <typename RuntimeParameters, typename... Solvers>
 class exahype2::SolverRepository final {
 public:
   INLINE_METHOD explicit SolverRepository(Solvers&... solvers);
@@ -37,11 +38,15 @@ public:
   SolverRepository& operator=(SolverRepository&&)      = delete;
   ~SolverRepository()                                  = default;
 
+  INLINE_METHOD void setParameters(const RuntimeParameters& parameters);
+
   [[nodiscard]] INLINE_METHOD double getMinTimeStamp() const;
   [[nodiscard]] INLINE_METHOD double getMaxTimeStamp() const;
+
   [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfSolverCells(
     const peano4::CellConnectivity& cellConnectivity
   ) const;
+
   [[nodiscard]] INLINE_METHOD std::uint64_t getNumberOfCellDoFs(const peano4::CellConnectivity& cellConnectivity) const;
 
   INLINE_METHOD void startSimulation();
@@ -52,11 +57,13 @@ public:
   INLINE_METHOD void initialise(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void performTimeStep(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void regrid(const peano4::CellConnectivity& cellConnectivity, const peano4::Regrid& regrid);
+
   INLINE_METHOD void plot(
     const peano4::CellConnectivity& cellConnectivity,
     tarch::plotter::Format          format,
     const std::string&              outputDirectory
   );
+
   INLINE_METHOD void recordLastTimeStamp(const peano4::CellConnectivity& cellConnectivity);
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
@@ -80,6 +87,8 @@ private:
   );
 
   std::tuple<Solvers&...> _solvers;
+
+  RuntimeParameters _parameters{};
 
   RefinementRequests _refinementRequests{};
 

@@ -30,12 +30,19 @@ INLINE_METHOD exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>:
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::requestRefinementForGridConstruction(
   const peano4::CellConnectivity& cellConnectivity,
-  exahype2::RefinementRequests&   requests
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
-  _votes.voteOnGridConstruction<Derived, StoragePrecision>(cellConnectivity, _timeStepping.getLimits(), requests);
+  _votes.voteOnGridConstruction<Derived, StoragePrecision>(
+    cellConnectivity,
+    _timeStepping.getLimits(),
+    requests,
+    parameters
+  );
 }
 
 /**
@@ -43,9 +50,11 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::requestRefine
  * Every rank calls this at the same time. The exchanges of every solver then take the same tags.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(
-  const peano4::CellConnectivity& cellConnectivity
+  const peano4::CellConnectivity&           cellConnectivity,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   _solution.reserve(cellConnectivity.getNumberOfSlots());
   _halo.reserve(cellConnectivity.getNumberOfFaces());
@@ -58,17 +67,24 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(
  * on the refinement.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
   const peano4::CellConnectivity& cellConnectivity,
-  exahype2::RefinementRequests&   requests
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
   Patches    copyOnHost{Patch::ValuesPerPatch, tarch::MemoryLocation::Heap};
   Patches&   patches = _solution.download(copyOnHost);
   const auto cells   = cellConnectivity.getCells();
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int entry) {
     const int slot = cells[entry];
-    Patch::initialise(patches.getChunk(slot), cellConnectivity.getCellCentre(slot), cellConnectivity.getCellWidth(slot));
+    Patch::initialise(
+      patches.getChunk(slot),
+      cellConnectivity.getCellCentre(slot),
+      cellConnectivity.getCellWidth(slot),
+      parameters
+    );
   });
   _solution.upload(patches);
 
@@ -81,13 +97,14 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
     }
   );
   measureMeshWidths(cellConnectivity);
-  measureError(cellConnectivity);
+  measureError(cellConnectivity, parameters);
   _votes.voteOnEveryCell<Derived>(
     cellConnectivity,
     std::as_const(_solution).getView(),
     _timeStepping.getLimits(),
     _timeStepping.getTimeStamp(),
-    requests
+    requests,
+    parameters
   );
 }
 
@@ -97,13 +114,15 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::initialise(
  * in _migration.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   const peano4::CellConnectivity& cellConnectivity,
   const peano4::Regrid&           regrid,
-  exahype2::RefinementRequests&   requests
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
-  assertion(regrid.newNumberOfSlots >= regrid.oldNumberOfSlots, regrid.newNumberOfSlots, regrid.oldNumberOfSlots);
+  ASSERTION(regrid.newNumberOfSlots >= regrid.oldNumberOfSlots, regrid.newNumberOfSlots, regrid.oldNumberOfSlots);
   _solution.reserve(regrid.newNumberOfSlots);
   _migration.migrate(
     _solution,
@@ -125,7 +144,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   measureMeshWidths(cellConnectivity);
   if constexpr (Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive) {
     if (_timeStepping.getTimeStepSizeOfNextStep() > 0.0) {
-      _timeStepping.raiseMaxEigenvalue(measureMaxEigenvalue(cellConnectivity));
+      _timeStepping.raiseMaxEigenvalue(measureMaxEigenvalue(cellConnectivity, parameters));
     }
   }
   _meshChangedSinceLastTimeStep = true;
@@ -135,7 +154,8 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
     std::as_const(_solution).getView(),
     _timeStepping.getLimits(),
     _timeStepping.getTimeStamp(),
-    requests
+    requests,
+    parameters
   );
 }
 
@@ -147,11 +167,13 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
  * the same time. In a build with a GPU backend the plot reads host copies of the solution and halo.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
-  const peano4::CellConnectivity& cellConnectivity,
-  const tarch::plotter::Format    format,
-  const std::string&              outputDirectory
+  const peano4::CellConnectivity&           cellConnectivity,
+  const tarch::plotter::Format              format,
+  const std::string&                        outputDirectory,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   constexpr int PatchSize       = Derived::PatchSize;
   constexpr int ExtendedPerAxis = PatchSize + 2;
@@ -162,7 +184,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
   }
   pointPositions.back() = 1.0;
 
-  fillHalo(cellConnectivity);
+  fillHalo(cellConnectivity, parameters);
   const Patches& solution = std::as_const(_solution).download(_solutionOnHost);
   const Faces&   halo     = std::as_const(_halo).download(_haloOnHost);
   plotPatch<1, ExtendedPerAxis>(
@@ -282,17 +304,18 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::evaluateVolum
  * by volume, then by point. A fresh halo precedes the plot. Every rank calls this at the same time.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-template <int PointsPerAxis, typename EvaluatePatch>
+template <int PointsPerAxis, typename EvaluatePatch, typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plotReconstruction(
   const peano4::CellConnectivity&                         cellConnectivity,
   const tarch::plotter::Format                            format,
   const std::string&                                      outputDirectory,
   const EvaluatePatch&                                    evaluatePatch,
+  const RuntimeParameters&                                parameters,
   const tarch::accelerator::ChunkedMemoryPool<int>* const volumeStatuses,
   const char* const                                       statusName
 ) {
-  fillHalo(cellConnectivity);
+  fillHalo(cellConnectivity, parameters);
   const Patches& solution = std::as_const(_solution).download(_solutionOnHost);
   const Faces&   halo     = std::as_const(_halo).download(_haloOnHost);
   plotPatch<Derived::PatchSize, PointsPerAxis>(
@@ -315,12 +338,14 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plotReconstru
  * Fills the halo for a reconstruction outside a time step as performTimeStep() does.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::fillHalo(
-  const peano4::CellConnectivity& cellConnectivity
+  const peano4::CellConnectivity& cellConnectivity,
+  const RuntimeParameters&        parameters
 ) {
   _haloExchange.post();
-  applyBoundaryConditions(cellConnectivity);
+  applyBoundaryConditions(cellConnectivity, parameters);
   interpolateCoarseHalos(cellConnectivity, peano4::Adjacency::Local);
   _haloExchange.wait();
   interpolateCoarseHalos(cellConnectivity, peano4::Adjacency::Remote);
@@ -344,7 +369,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plotPatch(
   const double* const                                     pointPositions
 ) {
   constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
-  assertion(volumeStatuses == nullptr or volumeStatuses->isHostAccessible());
+  ASSERTION(volumeStatuses == nullptr or volumeStatuses->isHostAccessible());
   if (volumeStatuses == nullptr) {
     _plotter.template plotPatch<ElementsPerAxis, PointsPerAxis, NumberOfData>(
       cellConnectivity,
@@ -373,7 +398,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::plotPatch(
 }
 
 /**
- * Frees the pools, the exchanges and every device buffer. No allocation outlives the runtime.
+ * Frees the pools, the exchanges and every device buffer.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
@@ -412,12 +437,14 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::openErrorMeas
  * last time step.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::recordLastTimeStamp(
-  const peano4::CellConnectivity& cellConnectivity
+  const peano4::CellConnectivity& cellConnectivity,
+  const RuntimeParameters&        parameters
 ) {
   _errorMeasurement.setSnapshotRule(tarch::database::SnapshotRule::EveryLaterTimestamp);
-  measureError(cellConnectivity);
+  measureError(cellConnectivity, parameters);
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -454,9 +481,11 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getNumberOfDo
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::applyBoundaryConditions(
-  const peano4::CellConnectivity& cellConnectivity
+  const peano4::CellConnectivity& cellConnectivity,
+  const RuntimeParameters&        parameters
 ) {
   const auto boundaryFaces = cellConnectivity.onDevice().getFaces(peano4::Adjacency::Local, peano4::FaceKind::Boundary);
   tarch::accelerator::parallelFor(
@@ -465,7 +494,8 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::applyBoundary
       cellConnectivity.onDevice(),
       boundaryFaces,
       _halo.getView(),
-      _timeStepping.getTimeStamp()
+      _timeStepping.getTimeStamp(),
+      parameters
     }
   );
 }
@@ -497,7 +527,7 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::interpolateCoarseHalos(
   const peano4::CellConnectivity& cellConnectivity,
-  const peano4::Adjacency  adjacency
+  const peano4::Adjacency         adjacency
 ) {
   exahype2::interpolateCoarseFaces(
     cellConnectivity,
@@ -515,12 +545,14 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::interpolateCo
  * maxEigenvalue, the largest wave speed of the step, and votes on the refinement.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::closeTimeStep(
-  const peano4::CellConnectivity&      cellConnectivity,
-  const double                  timeStepSize,
-  const double                  maxEigenvalue,
-  exahype2::RefinementRequests& requests
+  const peano4::CellConnectivity& cellConnectivity,
+  const double                    timeStepSize,
+  const double                    maxEigenvalue,
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
   projectOntoFaces(cellConnectivity);
   exahype2::restrictFineFaces(
@@ -530,7 +562,7 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::closeTimeStep
 
   _timeStepping.advanceTimeStamp(timeStepSize);
   proposeTimeStepSize(maxEigenvalue);
-  measureError(cellConnectivity);
+  measureError(cellConnectivity, parameters);
   if (_meshChangedSinceLastTimeStep) {
     _meshChangedSinceLastTimeStep = false;
   } else {
@@ -539,19 +571,22 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::closeTimeStep
       std::as_const(_solution).getView(),
       _timeStepping.getLimits(),
       _timeStepping.getTimeStamp(),
-      requests
+      requests,
+      parameters
     );
   }
 }
 
 /**
- * Returns the largest wave speed over the volumes of the solution. Returns zero when no wave speed
+ * Returns the largest wave speed over the volumes of the solution. Returns zero unless a wave speed
  * feeds the time step size.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD double
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureMaxEigenvalue(
-  const peano4::CellConnectivity& cellConnectivity
+  const peano4::CellConnectivity&           cellConnectivity,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   if constexpr (
     Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive
@@ -563,7 +598,8 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureMaxEig
       exahype2::fv::MeasurePatchEigenvalues<Derived, StoragePrecision, ComputePrecision>{
         cellConnectivity.onDevice(),
         std::as_const(_solution).getView(),
-        _timeStepping.getTimeStamp()
+        _timeStepping.getTimeStamp(),
+        parameters
       },
       tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
     );
@@ -574,9 +610,11 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureMaxEig
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureError(
-  const peano4::CellConnectivity& cellConnectivity
+  const peano4::CellConnectivity&           cellConnectivity,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   if constexpr (exahype2::terms::HasMeasuredUnknowns<Derived>) {
     const double timeStamp = _timeStepping.getTimeStamp();
@@ -591,7 +629,8 @@ exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::measureError(
         std::as_const(_solution).getView(),
         _errorMeasurement.getErrorsPerCell(numberOfCells),
         timeStamp,
-        _timeStepping.getTimeStepSizeOfLastStep()
+        _timeStepping.getTimeStepSizeOfLastStep(),
+        parameters
       }
     );
     _errorMeasurement.record(numberOfCells, timeStamp);
@@ -657,7 +696,7 @@ INLINE_METHOD double
 exahype2::fv::Solver<Derived, StoragePrecision, ComputePrecision>::getFixedTimeStepSize() const {
   const double                maxAdmissibleMeshWidth = _timeStepping.getLimits().maxAdmissibleMeshWidth;
   [[maybe_unused]] const bool meshWidthIsFinite      = std::isfinite(maxAdmissibleMeshWidth);
-  assertion(meshWidthIsFinite and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
+  ASSERTION(meshWidthIsFinite and maxAdmissibleMeshWidth > 0.0, maxAdmissibleMeshWidth);
   return _timeStepping.getFactor() * _timeStepping.getMinMeshWidth() / maxAdmissibleMeshWidth;
 }
 

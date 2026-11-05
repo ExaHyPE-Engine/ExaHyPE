@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/ChunkedMemoryPool.h"
 #include "tarch/accelerator/CompileTarget.h"
 
 namespace exahype2::fv::ader {
@@ -55,5 +56,9 @@ namespace exahype2::fv::ader {
   INLINE_METHOD GPU_CALLABLE_METHOD constexpr bool runsFallbackScheme(LimiterStatus status);
 } // namespace exahype2::fv::ader
 TARGET_DECLARE_END
+
+namespace exahype2::fv::ader {
+  INLINE_METHOD void fillEveryChunk(tarch::accelerator::ChunkedMemoryPool<int>& pool, int value);
+} // namespace exahype2::fv::ader
 
 #include "exahype2/fv/ader/LimiterStatus.cpph"

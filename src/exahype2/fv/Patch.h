@@ -58,10 +58,6 @@ namespace exahype2::fv {
   TARGET_DECLARE_END
 } // namespace exahype2::fv
 
-namespace exahype2::fv::tests {
-  class PatchSchemeTest;
-} // namespace exahype2::fv::tests
-
 TARGET_DECLARE
 /**
  * Patch holds the operations of the generated solver class Derived on the patch of one cell that
@@ -84,11 +80,14 @@ public:
   static constexpr int  ValuesPerFace              = 2 * ValuesPerHalfFace;
   static constexpr bool ReportEigenvalues = Derived::TimeSteppingRule == exahype2::TimeStepping::Rule::Adaptive;
 
+  using RuntimeParameters = typename Derived::RuntimeParameters;
+
   template <typename StoragePrecision>
   static INLINE_METHOD void initialise(
     StoragePrecision* NOALIAS                    patch,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -98,7 +97,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     int                                          faceNumber,
-    int                                          tangentialVolume
+    int                                          tangentialVolume,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -161,7 +161,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -169,7 +170,8 @@ public:
     const StoragePrecision* NOALIAS              patch,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStamp
+    double                                       timeStamp,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -179,7 +181,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const RuntimeParameters&                     parameters
   );
 
   template <typename StoragePrecision>
@@ -189,7 +192,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    double* NOALIAS                              errors
+    double* NOALIAS                              errors,
+    const RuntimeParameters&                     parameters
   );
 
   [[nodiscard]] static INLINE_METHOD int getTeamThreads();
@@ -203,12 +207,11 @@ protected:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const RuntimeParameters&                     parameters
   );
 
 private:
-  friend class exahype2::fv::tests::PatchSchemeTest;
-
   template <typename StoragePrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void projectOntoFacesWithThreadsOfTeam(
     tarch::accelerator::TeamHandle  team,

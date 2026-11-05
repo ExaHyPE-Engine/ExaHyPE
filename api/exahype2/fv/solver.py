@@ -133,6 +133,4 @@ class Solver(exahype2.solver.Solver):
         ]
 
     def _add_solver_family_entries(self, d):
-        d["MAX_ADMISSIBLE_MESH_WIDTH"] = (
-            "parameters.getMaxAdmissibleCellSize(DomainSize, PatchSize)"
-        )
+        d["MAX_ADMISSIBLE_MESH_WIDTH"] = "parameters.maxAdmissiblePatchSize / PatchSize"

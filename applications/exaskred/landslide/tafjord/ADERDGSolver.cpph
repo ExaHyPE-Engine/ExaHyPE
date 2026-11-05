@@ -33,25 +33,26 @@ INLINE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   double* const NOALIAS                                         Q,
   const tarch::la::Vector<DIMENSIONS, double>&                  x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const RuntimeParameters&                                      parameters
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
 
-  const auto bathymetrySize   = applications::exahype2::exaskred::RuntimeParameters::bathymetrySize();
-  const auto bathymetryOffset = applications::exahype2::exaskred::RuntimeParameters::bathymetryOffset();
+  const auto&                                       bathymetrySize   = parameters.bathymetrySize;
+  const auto&                                       bathymetryOffset = parameters.bathymetryOffset;
   static const tarch::reader::NetCDFFieldSampler<2> bathymetrySampler(
-    {{"bathymetry", applications::exahype2::exaskred::RuntimeParameters::bathymetryFile(), "Band1", {"x", "y"}}},
+    {{"bathymetry", std::string(parameters.bathymetryFile), "Band1", {"x", "y"}}},
     {bathymetrySize(0), bathymetrySize(1)},
     {bathymetryOffset(0), bathymetryOffset(1)}
   );
 
-  const auto displacementSize     = applications::exahype2::exaskred::RuntimeParameters::displacementSize();
-  const auto displacementOffset   = applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
-  const auto displacementPosition = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
+  const auto&                                       displacementSize     = parameters.displacementSize;
+  const auto&                                       displacementOffset   = parameters.displacementOffset;
+  const auto&                                       displacementPosition = parameters.displacementPosition;
   static const tarch::reader::NetCDFFieldSampler<2> displacementSampler(
-    {{"displacement", applications::exahype2::exaskred::RuntimeParameters::displacementFile(), "Band1", {"x", "y"}}},
+    {{"displacement", std::string(parameters.displacementFile), "Band1", {"x", "y"}}},
     {displacementSize(0), displacementSize(1)},
     {displacementOffset(0), displacementOffset(1)}
   );
@@ -63,8 +64,8 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
 
   if (not bathymetrySampler.covers("bathymetry", {x(0), x(1)})) {
     tarch::terminateWithError(
-      "The bathymetry file '" + applications::exahype2::exaskred::RuntimeParameters::bathymetryFile()
-      + "' has to cover the point (" + std::to_string(x(0)) + ", " + std::to_string(x(1)) + ") of the domain."
+      "The bathymetry file '" + std::string(parameters.bathymetryFile) + "' has to cover the point ("
+      + std::to_string(x(0)) + ", " + std::to_string(x(1)) + ") of the domain."
     );
   }
 
@@ -79,7 +80,8 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const int                                    normal
+  [[maybe_unused]] const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];
@@ -88,22 +90,23 @@ applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
 
 /**
  * Refines a cell that overlaps the region of the displacement file. Every other cell keeps its
- * level. No cell receives interpolated bathymetry or slide material after the initialisation.
+ * level. The initial condition writes the bathymetry and the slide material of every cell.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   [[maybe_unused]] const double* const NOALIAS Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                t
+  [[maybe_unused]] const double                t,
+  const RuntimeParameters&                     parameters
 ) {
-  assertion(h(0) > 0.0 and h(1) > 0.0, h);
-  const auto displacementSize     = applications::exahype2::exaskred::RuntimeParameters::displacementSize();
-  const auto displacementOffset   = applications::exahype2::exaskred::RuntimeParameters::displacementOffset();
-  const auto displacementPosition = applications::exahype2::exaskred::RuntimeParameters::displacementPosition();
-  bool       overlapsDisplacement = true;
+  ASSERTION(h(0) > 0.0 and h(1) > 0.0, h);
+  const auto& displacementSize     = parameters.displacementSize;
+  const auto& displacementOffset   = parameters.displacementOffset;
+  const auto& displacementPosition = parameters.displacementPosition;
+  bool        overlapsDisplacement = true;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    assertion(displacementSize(axis) >= 0.0, axis, displacementSize(axis));
+    ASSERTION(displacementSize(axis) >= 0.0, axis, displacementSize(axis));
     const double lower   = displacementOffset(axis) + displacementPosition(axis);
     const double upper   = lower + displacementSize(axis);
     overlapsDisplacement = overlapsDisplacement and x(axis) + 0.5 * h(axis) > lower and x(axis) - 0.5 * h(axis) < upper;
@@ -119,7 +122,8 @@ applications::exahype2::exaskred::ADERDGSolver::flux(
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   applications::exahype2::exaskred::landslide::flux<Shortcuts, NumberOfUnknowns>(
     Q,
@@ -140,7 +144,8 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  const int                                    normal
+  const int                                    normal,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   return applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue<Shortcuts>(
     Q,
@@ -163,7 +168,8 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
   const double                                 t,
   const double                                 dt,
   const int                                    normal,
-  double* const NOALIAS                        BTimesDeltaQ
+  double* const NOALIAS                        BTimesDeltaQ,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   applications::exahype2::exaskred::landslide::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
     Q,
@@ -186,7 +192,8 @@ applications::exahype2::exaskred::ADERDGSolver::diffusiveSourceTerm(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   const double                                 t,
   const double                                 dt,
-  double* const NOALIAS                        S
+  double* const NOALIAS                        S,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   applications::exahype2::exaskred::landslide::diffusiveSourceTerm<
     Shortcuts,
@@ -211,7 +218,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   constexpr int NumberOfFaceNodes = DGOrder + 1;
   constexpr int NumberOfData      = NumberOfUnknowns + NumberOfAuxiliaryVariables;
@@ -278,7 +286,8 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex,
   double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR
+  double* const NOALIAS                        FR,
+  [[maybe_unused]] const RuntimeParameters&    parameters
 ) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   double        sanitisedQL[NumberOfData];
@@ -321,7 +330,8 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                                   Q,
   const int                                                     numberOfStates,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>&                  h
+  const tarch::la::Vector<DIMENSIONS, double>&                  h,
+  [[maybe_unused]] const RuntimeParameters&                     parameters
 ) {
   if (not applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
         Shortcuts,
@@ -330,7 +340,7 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
       >(Q, numberOfStates, h, getLandslidePhysics(), maxFrictionStiffnessRatio)) {
     return false;
   }
-  const int nodesPerAxis = static_cast<int>(std::lround(std::sqrt(static_cast<double>(numberOfStates))));
+  const int nodesPerAxis = static_cast<int>(std::sqrt(static_cast<double>(numberOfStates)) + 0.5);
   if (numberOfStates > 1 and nodesPerAxis * nodesPerAxis == numberOfStates) {
     return applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<
       Shortcuts,
@@ -343,16 +353,18 @@ applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
-  double* const NOALIAS       observables,
-  const double* const NOALIAS Q
+  double* const NOALIAS                     observables,
+  const double* const NOALIAS               Q,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables<Shortcuts>(observables, Q);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
-  const int    observable,
-  const double specifiedRelaxationParameter
+  const int                                 observable,
+  const double                              specifiedRelaxationParameter,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   return applications::exahype2::exaskred::landslide::getGranularLayerDMPRelaxationParameter(
     observable,

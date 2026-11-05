@@ -37,17 +37,18 @@ public:
 
   template <typename Derived>
   [[nodiscard]] INLINE_METHOD exahype2::fv::ader::PredictionStatistics predict(
-    const peano4::CellConnectivity&     cellConnectivity,
-    tarch::Span<const int>       cells,
-    typename CellPool::View      solution,
-    typename FacePool::ConstView halo,
-    typename StatePool::View     faceStates,
-    typename StatePool::View     faceFluxes,
-    double                       timeStamp,
-    double                       timeStepSize,
-    typename CellPool::View      previousSolution = {},
-    tarch::accelerator::ChunkedMemoryPool<int>::View statuses = {},
-    typename StatePool::View     interiorUpdates = {},
+    const peano4::CellConnectivity&                       cellConnectivity,
+    tarch::Span<const int>                                cells,
+    typename CellPool::View                               solution,
+    typename FacePool::ConstView                          halo,
+    typename StatePool::View                              faceStates,
+    typename StatePool::View                              faceFluxes,
+    double                                                timeStamp,
+    double                                                timeStepSize,
+    const typename Derived::RuntimeParameters&            parameters,
+    typename CellPool::View                               previousSolution    = {},
+    tarch::accelerator::ChunkedMemoryPool<int>::View      statuses            = {},
+    typename StatePool::View                              interiorUpdates     = {},
     tarch::accelerator::ChunkedMemoryPool<int>::ConstView limiterFaceStatuses = {}
   );
 

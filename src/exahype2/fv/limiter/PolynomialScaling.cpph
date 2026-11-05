@@ -15,7 +15,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::limiter::PolynomialScaling<
   const int                             point,
   ComputePrecision* NOALIAS const       values
 ) {
-  assertion(point >= 0 and point < Points, point);
+  ASSERTION(point >= 0 and point < Points, point);
   if (point < NodesPerCell) {
     for (int entry = 0; entry < NumberOfData; entry++) {
       values[entry] = nodalState[point * NumberOfData + entry];
@@ -64,11 +64,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::limiter::PolynomialScaling<
  */
 template <typename Basis>
 template <typename Derived, int NumberOfData, typename StoragePrecision, typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::PolynomialScaling<Basis>::limit(
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
+exahype2::fv::limiter::PolynomialScaling<Basis>::limit(
   const StoragePrecision* NOALIAS const        average,
   ComputePrecision* NOALIAS const              nodalState,
   const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeSize
+  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   StoragePrecision sample[NumberOfData];
   ComputePrecision values[NumberOfData];
@@ -76,12 +78,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Polyno
     for (int entry = 0; entry < NumberOfData; entry++) {
       sample[entry] = static_cast<StoragePrecision>(average[entry] + theta * (values[entry] - average[entry]));
     }
-    return Derived::isPhysicallyAdmissible(sample, 1, volumeCentre, volumeSize);
+    return Derived::isPhysicallyAdmissible(sample, 1, volumeCentre, volumeSize, parameters);
   };
 
-  ComputePrecision theta = Derived::isPhysicallyAdmissible(average, 1, volumeCentre, volumeSize)
-                           ? ComputePrecision(1)
-                           : ComputePrecision(0);
+  ComputePrecision theta = Derived::isPhysicallyAdmissible(average, 1, volumeCentre, volumeSize, parameters)
+    ? ComputePrecision(1)
+    : ComputePrecision(0);
   for (int point = 0; point < Points and theta > ComputePrecision(0); point++) {
     evaluate<NumberOfData>(nodalState, point, values);
     if (not isAdmissible(theta)) {

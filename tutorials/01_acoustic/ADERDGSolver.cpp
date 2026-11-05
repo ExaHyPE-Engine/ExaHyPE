@@ -12,7 +12,8 @@ void
 tutorials::exahype2::acoustic::ADERDGSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const RuntimeParameters&                     parameters
 ) {
   Q[Shortcuts::p]     = 0.0;
   Q[Shortcuts::v + 0] = 0.0;
@@ -26,7 +27,8 @@ tutorials::exahype2::acoustic::ADERDGSolver::boundaryConditions(
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   Qoutside[Shortcuts::p]     = 0.0;
   Qoutside[Shortcuts::v + 0] = 0.0;
@@ -40,7 +42,8 @@ tutorials::exahype2::acoustic::ADERDGSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
   const double                                 timeStepSize,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   return C;
 }
@@ -53,7 +56,8 @@ tutorials::exahype2::acoustic::ADERDGSolver::flux(
   const double                                 time,
   const double                                 timeStepSize,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  const RuntimeParameters&                     parameters
 ) {
   F[Shortcuts::p]          = K0 * Q[Shortcuts::v + normal];
   F[Shortcuts::v + 0]      = 0.0;
@@ -68,7 +72,8 @@ tutorials::exahype2::acoustic::ADERDGSolver::pointSource(
   const double                t,
   const double                dt,
   double* const NOALIAS       forceVector,
-  const int                   n
+  const int                   n,
+  const RuntimeParameters&    parameters
 ) {
   forceVector[Shortcuts::p]     = 0.0;
   forceVector[Shortcuts::v + 0] = 0.0;
@@ -83,7 +88,8 @@ tutorials::exahype2::acoustic::ADERDGSolver::pointSource(
 
 void
 tutorials::exahype2::acoustic::ADERDGSolver::initPointSourceLocations(
-  double location[NumberOfPointSources][DIMENSIONS]
+  double                   location[NumberOfPointSources][DIMENSIONS],
+  const RuntimeParameters& parameters
 ) {
   location[0][0] = -0.7;
   location[0][1] = -0.7;

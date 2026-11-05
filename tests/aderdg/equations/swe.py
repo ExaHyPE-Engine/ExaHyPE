@@ -45,8 +45,8 @@ class SWE_W_Bathymetry(Equation):
   double smax = 0;
   constexpr auto Gravity = 9.81;
   for (int xy = 0; xy < DGOrder + 1; xy++) {
-    smax = std::max(smax, maxEigenvalue(QL + static_cast<std::ptrdiff_t>(xy) * 4, x, h, t, dt, normal));
-    smax = std::max(smax, maxEigenvalue(QR + static_cast<std::ptrdiff_t>(xy) * 4, x, h, t, dt, normal));
+    smax = std::max(smax, maxEigenvalue(QL + static_cast<std::ptrdiff_t>(xy) * 4, x, h, t, dt, normal, parameters));
+    smax = std::max(smax, maxEigenvalue(QR + static_cast<std::ptrdiff_t>(xy) * 4, x, h, t, dt, normal, parameters));
   }
 
   for (int xy = 0; xy < DGOrder + 1; xy++) {

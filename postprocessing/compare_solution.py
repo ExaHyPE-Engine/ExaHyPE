@@ -139,7 +139,7 @@ def compare_snapshots(
 
     # Select the comparison scope first: Only the selected fields have to exist and agree on
     # both sides. A skipped field present on one side only (e.g. a decomposition-dependent
-    # Subdomain marker) or an unselected extra field under --field is no mismatch.
+    # Subdomain marker) or an unselected extra field under --field is not a mismatch.
     left_fields, right_fields = set(left.variables), set(right.variables)
     if field is not None:
         if field not in left_fields or field not in right_fields:

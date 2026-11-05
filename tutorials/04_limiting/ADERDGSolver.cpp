@@ -29,7 +29,8 @@ void
 tutorials::exahype2::limiting::ADERDGSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const RuntimeParameters&                     parameters
 ) {
   const bool   inLowPressureCorner = cellCentre[0] < -ShockPosition and cellCentre[1] < -ShockPosition;
   const double pressure            = inLowPressureCorner ? 0.1 : 1.0;
@@ -47,7 +48,8 @@ tutorials::exahype2::limiting::ADERDGSolver::boundaryConditions(
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   // The outside state is the initial state at faceCentre for all times.
   const bool   inLowPressureCorner = faceCentre[0] < -ShockPosition and faceCentre[1] < -ShockPosition;
@@ -67,7 +69,8 @@ tutorials::exahype2::limiting::ADERDGSolver::flux(
   const double                                 time,
   const double                                 timeStepSize,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  const RuntimeParameters&                     parameters
 ) {
   const double inverseDensity = 1.0 / std::max(Q[Shortcuts::rho], DensityFloor);
   const double pressure       = (Gamma - 1.0) * (Q[Shortcuts::E] - 0.5 * inverseDensity * momentumSquared(Q));
@@ -88,7 +91,8 @@ tutorials::exahype2::limiting::ADERDGSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
   const double                                 timeStepSize,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   const double inverseDensity = 1.0 / std::max(Q[Shortcuts::rho], DensityFloor);
   const double pressure       = (Gamma - 1.0) * (Q[Shortcuts::E] - 0.5 * inverseDensity * momentumSquared(Q));

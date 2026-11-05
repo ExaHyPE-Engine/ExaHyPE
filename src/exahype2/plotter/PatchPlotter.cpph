@@ -36,13 +36,13 @@ exahype2::plotter::PatchPlotter::plotVolumes(
   constexpr int CornersPerPatch         = peano4::power(CornersPerAxis, DIMENSIONS);
   constexpr int InteriorCornersPerPatch = peano4::power(VolumesPerAxis - 1, DIMENSIONS);
   constexpr int FaceCornersPerPatch     = CornersPerPatch - InteriorCornersPerPatch;
-  assertion(
+  ASSERTION(
     cells.size >= 0 and cells.size <= cellConnectivity.getNumberOfSlots(),
     cells.size,
     cellConnectivity.getNumberOfSlots()
   );
-  assertion(values.isHostAccessible());
-  assertion(values.getChunkSize() >= CellsPerPatch * ValuesPerVolume, values.getChunkSize());
+  ASSERTION(values.isHostAccessible());
+  ASSERTION(values.getChunkSize() >= CellsPerPatch * ValuesPerVolume, values.getChunkSize());
 
   const auto             corners          = classifyCorners(CornersPerAxis);
   const FaceCornerPoints faceCornerPoints = numberFaceCorners<VolumesPerAxis>(cellConnectivity, cells, corners);
@@ -50,8 +50,8 @@ exahype2::plotter::PatchPlotter::plotVolumes(
   const auto             facePoints       = static_cast<std::size_t>(faceCornerPoints.firstPointOfPatch.back());
   tarch::plotter::Mesh   mesh =
     createMesh(cells.size, CellsPerPatch, interiorCorners + facePoints, false, volumeStatuses != nullptr ? statusName : nullptr);
-  assertion(volumeStatuses == nullptr or volumeStatuses->isHostAccessible());
-  assertion(volumeStatuses == nullptr or statusName != nullptr);
+  ASSERTION(volumeStatuses == nullptr or volumeStatuses->isHostAccessible());
+  ASSERTION(volumeStatuses == nullptr or statusName != nullptr);
   const double           rank = static_cast<double>(tarch::mpi::Rank::getInstance().getRank());
 
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
@@ -76,7 +76,7 @@ exahype2::plotter::PatchPlotter::plotVolumes(
         return;
       }
       const std::size_t point = pointOfCorner(patchCorner);
-      assertion(point * 3 < mesh.pointsXYZ.size(), point, mesh.pointsXYZ.size());
+      ASSERTION(point * 3 < mesh.pointsXYZ.size(), point, mesh.pointsXYZ.size());
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         const double fraction            = static_cast<double>(cornerIndex(axis)) / VolumesPerAxis;
         mesh.pointsXYZ[point * 3 + axis] = centre(axis) - 0.5 * width(axis) + fraction * width(axis);
@@ -172,17 +172,17 @@ exahype2::plotter::PatchPlotter::plotNodes(
   constexpr int PointsPerAxis  = std::max(NodesPerAxis, 2);
   constexpr int PointsPerPatch = peano4::power(PointsPerAxis, DIMENSIONS);
   constexpr int CellsPerPatch  = peano4::power(PointsPerAxis - 1, DIMENSIONS);
-  assertion(
+  ASSERTION(
     cells.size >= 0 and cells.size <= cellConnectivity.getNumberOfSlots(),
     cells.size,
     cellConnectivity.getNumberOfSlots()
   );
-  assertion(values.isHostAccessible());
-  assertion(values.getChunkSize() >= peano4::power(NodesPerAxis, DIMENSIONS) * ValuesPerNode, values.getChunkSize());
-  assertion(nodePositions != nullptr);
-  assertion(statuses == nullptr or (statuses->isHostAccessible() and subcellValues != nullptr));
-  assertion(statuses == nullptr or subcellValues->isHostAccessible());
-  assertion(
+  ASSERTION(values.isHostAccessible());
+  ASSERTION(values.getChunkSize() >= peano4::power(NodesPerAxis, DIMENSIONS) * ValuesPerNode, values.getChunkSize());
+  ASSERTION(nodePositions != nullptr);
+  ASSERTION(statuses == nullptr or (statuses->isHostAccessible() and subcellValues != nullptr));
+  ASSERTION(statuses == nullptr or subcellValues->isHostAccessible());
+  ASSERTION(
     statuses == nullptr or subcellValues->getChunkSize() >= peano4::power(SubcellsPerAxis, DIMENSIONS) * ValuesPerNode,
     subcellValues->getChunkSize()
   );
@@ -267,7 +267,7 @@ exahype2::plotter::PatchPlotter::plotPatch(
   constexpr int  CellsPerElement   = peano4::power(PointsPerAxis - 1, DIMENSIONS);
   constexpr int  PointsPerPatch    = ElementsPerPatch * PointsPerElement;
   constexpr int  CellsPerPatch     = ElementsPerPatch * CellsPerElement;
-  assertion(
+  ASSERTION(
     cells.size >= 0 and cells.size <= cellConnectivity.getNumberOfSlots(),
     cells.size,
     cellConnectivity.getNumberOfSlots()
@@ -346,7 +346,7 @@ INLINE_METHOD std::vector<double>
 exahype2::plotter::PatchPlotter::getTensorProductMatrix(const double* const matrix1D) {
   constexpr int PointsPerPatch = peano4::power(PointsPerAxis, DIMENSIONS);
   constexpr int NodesPerPatch  = peano4::power(NodesPerAxis, DIMENSIONS);
-  assertion(matrix1D != nullptr);
+  ASSERTION(matrix1D != nullptr);
   std::vector<double> result(static_cast<std::size_t>(PointsPerPatch) * NodesPerPatch);
   peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& pointIndex) {
     const int point = peano4::dLinearised(pointIndex, PointsPerAxis);
@@ -374,7 +374,7 @@ exahype2::plotter::PatchPlotter::evaluateNodes(
 ) {
   constexpr int PointsPerPatch = peano4::power(PointsPerAxis, DIMENSIONS);
   constexpr int NodesPerPatch  = peano4::power(NodesPerAxis, DIMENSIONS);
-  assertion(tensorProductMatrix.size() == static_cast<std::size_t>(PointsPerPatch) * NodesPerPatch);
+  ASSERTION(tensorProductMatrix.size() == static_cast<std::size_t>(PointsPerPatch) * NodesPerPatch);
   for (int point = 0; point < PointsPerPatch; point++) {
     const double* const weights = tensorProductMatrix.data() + static_cast<std::size_t>(point) * NodesPerPatch;
     double* const       result  = pointValues + static_cast<std::ptrdiff_t>(point) * Values;
@@ -397,14 +397,14 @@ INLINE_METHOD std::array<int, peano4::power(NodesPerAxis, DIMENSIONS)>
 exahype2::plotter::PatchPlotter::containingSubcells(const double* const nodePositions) {
   static_assert(NodesPerAxis > 0 and SubcellsPerAxis > 0);
   constexpr int NodesPerPatch = peano4::power(NodesPerAxis, DIMENSIONS);
-  assertion(nodePositions != nullptr);
+  ASSERTION(nodePositions != nullptr);
   std::array<int, NodesPerPatch> result{};
   peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
     const int                          node = peano4::dLinearised(nodeIndex, NodesPerAxis);
     tarch::la::Vector<DIMENSIONS, int> subcell;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       const double position = nodePositions[nodeIndex(axis)];
-      assertion(position >= 0.0 and position <= 1.0, node, axis, position);
+      ASSERTION(position >= 0.0 and position <= 1.0, node, axis, position);
       subcell(axis) = std::clamp(static_cast<int>(position * SubcellsPerAxis), 0, SubcellsPerAxis - 1);
     }
     result[static_cast<std::size_t>(node)] = peano4::dLinearised(subcell, SubcellsPerAxis);
@@ -429,14 +429,14 @@ exahype2::plotter::PatchPlotter::numberFaceCorners(
   constexpr int          FaceCornersPerPatch = CornersPerPatch - peano4::power(VolumesPerAxis - 1, DIMENSIONS);
   constexpr std::int32_t EmptySlot           = std::numeric_limits<std::int32_t>::max();
   constexpr std::size_t  SlotsPerTask        = std::size_t{1} << 16;
-  assertion(corners.size() == static_cast<std::size_t>(CornersPerPatch), corners.size());
-  assertion(static_cast<std::int64_t>(cells.size) * FaceCornersPerPatch < EmptySlot, cells.size);
+  ASSERTION(corners.size() == static_cast<std::size_t>(CornersPerPatch), corners.size());
+  ASSERTION(static_cast<std::int64_t>(cells.size) * FaceCornersPerPatch < EmptySlot, cells.size);
 
   std::array<int, FaceCornersPerPatch> cornerOfFaceCorner{};
   for (int corner = 0; corner < CornersPerPatch; corner++) {
     const PatchCorner& patchCorner = corners[static_cast<std::size_t>(corner)];
     if (patchCorner.onFace) {
-      assertion(patchCorner.index >= 0 and patchCorner.index < FaceCornersPerPatch, corner, patchCorner.index);
+      ASSERTION(patchCorner.index >= 0 and patchCorner.index < FaceCornersPerPatch, corner, patchCorner.index);
       cornerOfFaceCorner[static_cast<std::size_t>(patchCorner.index)] = corner;
     }
   }
@@ -527,14 +527,14 @@ exahype2::plotter::PatchPlotter::numberFaceCorners(
         point++;
       }
     }
-    assertion(point == result.firstPointOfPatch[static_cast<std::size_t>(patch) + 1], patch, point);
+    ASSERTION(point == result.firstPointOfPatch[static_cast<std::size_t>(patch) + 1], patch, point);
   });
   tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(cells.size), [&](const int patch) {
     for (int faceIndex = 0; faceIndex < FaceCornersPerPatch; faceIndex++) {
       const std::int32_t faceCorner = patch * FaceCornersPerPatch + faceIndex;
       const std::int32_t owner      = ownerOfSlot[slotOfFaceCorner[static_cast<std::size_t>(faceCorner)]];
       if (owner != faceCorner) {
-        assertion(owner < faceCorner, owner, faceCorner);
+        ASSERTION(owner < faceCorner, owner, faceCorner);
         result.pointOfFaceCorner[static_cast<std::size_t>(faceCorner)] =
           result.pointOfFaceCorner[static_cast<std::size_t>(owner)];
       }
@@ -560,7 +560,7 @@ exahype2::plotter::PatchPlotter::connectPatch(
   constexpr int  CornersPerCell = peano4::VerticesPerCell;
   constexpr auto CellType =
     DIMENSIONS == 2 ? tarch::plotter::CellType::Quadrangle : tarch::plotter::CellType::Hexahedron;
-  assertion(firstCell + peano4::power(CellsPerAxis, DIMENSIONS) <= mesh.types.size(), firstCell, mesh.types.size());
+  ASSERTION(firstCell + peano4::power(CellsPerAxis, DIMENSIONS) <= mesh.types.size(), firstCell, mesh.types.size());
   peano4::dForEach(CellsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& cellIndex) {
     const int cell = peano4::dLinearised(cellIndex, CellsPerAxis);
     for (int corner = 0; corner < CornersPerCell; corner++) {
@@ -588,8 +588,8 @@ exahype2::plotter::PatchPlotter::copyState(
   const std::size_t                         entity,
   std::vector<tarch::plotter::Mesh::Field>& fields
 ) const {
-  assertion(state != nullptr);
-  assertion(fields.size() >= _fields.size(), fields.size(), _fields.size());
+  ASSERTION(state != nullptr);
+  ASSERTION(fields.size() >= _fields.size(), fields.size(), _fields.size());
   int firstComponent = 0;
   for (std::size_t field = 0; field < _fields.size(); field++) {
     const int components = _fields[field].components;
@@ -598,5 +598,5 @@ exahype2::plotter::PatchPlotter::copyState(
     }
     firstComponent += components;
   }
-  assertion(firstComponent <= valuesPerState, firstComponent, valuesPerState);
+  ASSERTION(firstComponent <= valuesPerState, firstComponent, valuesPerState);
 }

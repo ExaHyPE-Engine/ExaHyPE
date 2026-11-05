@@ -67,7 +67,8 @@ public:
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isPhysicallyAdmissible(
     const StoragePrecision* NOALIAS              candidate,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -75,15 +76,17 @@ public:
     int                                          volume,
     const StoragePrecision* NOALIAS              candidate,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& cellSize
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isAdmissible(
-    int                             volume,
-    const StoragePrecision* NOALIAS candidate,
-    const StoragePrecision* NOALIAS previous,
-    const StoragePrecision* const   halo[peano4::FacesPerCell]
+    int                                        volume,
+    const StoragePrecision* NOALIAS            candidate,
+    const StoragePrecision* NOALIAS            previous,
+    const StoragePrecision* const              halo[peano4::FacesPerCell],
+    const typename Derived::RuntimeParameters& parameters
   );
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getStatusOnFace(int volume, int face);
@@ -106,10 +109,11 @@ private:
 
   template <typename StoragePrecision>
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool satisfiesMaximumPrinciple(
-    int                             volume,
-    const StoragePrecision* NOALIAS candidate,
-    const StoragePrecision* NOALIAS previous,
-    const StoragePrecision* const   halo[peano4::FacesPerCell]
+    int                                        volume,
+    const StoragePrecision* NOALIAS            candidate,
+    const StoragePrecision* NOALIAS            previous,
+    const StoragePrecision* const              halo[peano4::FacesPerCell],
+    const typename Derived::RuntimeParameters& parameters
   );
 };
 TARGET_DECLARE_END

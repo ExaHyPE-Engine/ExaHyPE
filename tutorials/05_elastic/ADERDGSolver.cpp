@@ -15,7 +15,8 @@ void
 tutorials::exahype2::elastic::ADERDGSolver::initialCondition(
   double* const NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const RuntimeParameters&                     parameters
 ) {
   for (int i = 0; i < NumberOfUnknowns; i++) {
     Q[i] = 0.0;
@@ -35,7 +36,8 @@ tutorials::exahype2::elastic::ADERDGSolver::boundaryConditions(
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   for (int i = 0; i < NumberOfUnknowns; i++) {
     Qoutside[i] = 0.0;
@@ -49,7 +51,8 @@ tutorials::exahype2::elastic::ADERDGSolver::maxEigenvalue(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 time,
   const double                                 timeStepSize,
-  const int                                    normal
+  const int                                    normal,
+  const RuntimeParameters&                     parameters
 ) {
   return Cp;
 }
@@ -62,7 +65,8 @@ tutorials::exahype2::elastic::ADERDGSolver::flux(
   const double                                 time,
   const double                                 timeStepSize,
   const int                                    normal,
-  double* const NOALIAS                        F
+  double* const NOALIAS                        F,
+  const RuntimeParameters&                     parameters
 ) {
   for (int i = 0; i < NumberOfUnknowns; i++) {
     F[i] = 0.0;

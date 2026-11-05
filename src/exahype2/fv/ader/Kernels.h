@@ -112,6 +112,7 @@ struct exahype2::fv::ader::PredictPatches final {
   typename StatusPool::View                   statuses{};
   typename StatePool::View                    interiorUpdates{};
   typename StatusPool::ConstView              limiterFaceStatuses{};
+  typename Derived::RuntimeParameters                parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,
@@ -134,6 +135,7 @@ struct exahype2::fv::ader::SolveRiemannProblems final {
   typename StatePool::View faceFluxes{};
   double                   timeStamp{0.0};
   double                   timeStepSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, double& accumulator) const;
 };
@@ -178,6 +180,7 @@ struct exahype2::fv::ader::CorrectPatches final {
   typename StatusPool::ConstView limiterFaceStatuses{};
   typename StatePool::ConstView  interiorUpdates{};
   typename StatusPool::View      volumeStatuses{};
+  typename Derived::RuntimeParameters   parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,

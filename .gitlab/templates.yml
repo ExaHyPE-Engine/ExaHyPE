@@ -1,0 +1,111 @@
+.Variables:
+  variables:
+    CI_DEBUG_TRACE: "false"
+    GIT_DEPTH: 1
+    GIT_STRATEGY: clone
+    GIT_FETCH_EXTRA_FLAGS: "--no-tags"
+    GIT_LFS_SKIP_SMUDGE: "1"
+    # CMake reads the branch name from this variable in the image.
+    APPTAINERENV_CI_COMMIT_REF_NAME: "$CI_COMMIT_REF_NAME"
+    GET_SOURCES_ATTEMPTS: "3"
+    ARTIFACT_DOWNLOAD_ATTEMPTS: "3"
+    RESTORE_CACHE_ATTEMPTS: "3"
+    IMAGE_BASE: "base.sif"
+    IMAGE_GCC: "gcc.sif"
+    IMAGE_INTEL: "intel.sif"
+    IMAGE_LLVM: "llvm.sif"
+    IMAGE_NVIDIA: "nvidia.sif"
+    IMAGE_AMD: "amd.sif"
+    MPI_RANKS: "4"
+    OMP_THREADS: "4"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
+    MIN_GRID_LEVELS_PEANO: "2"
+    MAX_GRID_LEVELS_PEANO: "4"
+    MIN_GRID_LEVELS_HILBERT: "3"
+    MAX_GRID_LEVELS_HILBERT: "5"
+    NUMBER_OF_TIME_STEPS: "500"
+    NUMBER_OF_SNAPSHOTS: "2"
+    # A pipeline whose RUN_UNIT_TESTS is false builds the unit tests without running them. A pipeline
+    # whose RUN_SIMULATIONS is false builds the executables of its tests, tutorials and applications
+    # without running them.
+    RUN_UNIT_TESTS: "true"
+    RUN_SIMULATIONS: "true"
+    SANITIZER: "none"
+    GPU_BACKEND: "none"
+    GPU_ARCH: "none"
+    EXTRA_CONFIGURATION_OPTIONS: ""
+    CONFIGURATION_OPTIONS: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
+                            -DPEANO_WITH_FPE=ON \
+                            -DPEANO_WITH_HDF5=ON \
+                            -DPEANO_WITH_NETCDF=ON"
+
+.Tags:
+  tags:
+    - "peano-dine-runner"
+
+# The shell executor runs before_script and script in one shell. The script lines call these functions.
+.BeforeScript:
+  before_script:
+    - in_image() { apptainer exec -e --bind "$APPTAINER_BINDDIR" "$APPTAINER_IMAGEDIR/$IMAGE_TAG" bash -c "$1"; }
+    - generate() { in_image "cd $1 && PYTHONPATH=$CI_PROJECT_DIR/api python3 $2"; }
+    - launch() { if [ "$RUN_SIMULATIONS" = "true" ]; then in_image "cd $1 && $PARALLEL_LAUNCH $2"; else echo "The pipeline builds $1 without running it."; fi; }
+    - check_error_norms() { if [ "$RUN_SIMULATIONS" = "true" ]; then in_image "cd $1 && PYTHONPATH=$CI_PROJECT_DIR python3 -m postprocessing.check_error_norms $2 $3"; fi; }
+    - if [ "$BUILD_MODE" != "Asserts" ]; then SANITIZER="none"; fi
+    - export APPTAINERENV_OMPI_MCA_btl_sm_backing_directory="$CI_PROJECT_DIR"
+    - echo -e "\e[0Ksection_start:$(date +%s):environment[collapsed=true]\r\e[0KEnvironment"
+    - echo "Running CI with $(nproc) cores"
+    - git --version
+    - echo "PROJECT=$CI_PROJECT_DIR COMMIT=$CI_COMMIT_SHA BRANCH=$CI_COMMIT_BRANCH"
+    - echo "CONTAINER_BIND=$APPTAINER_BINDDIR CONTAINER_IMAGE_DIR=$APPTAINER_IMAGEDIR"
+    - echo "CC=$CC CXX=$CXX"
+    - echo "CFLAGS=$CFLAGS"
+    - echo "CXXFLAGS=$CXXFLAGS"
+    - echo "LDFLAGS=$LDFLAGS"
+    - echo "CMAKE_OPTIONS=${CONFIGURATION_OPTIONS} ${EXTRA_CONFIGURATION_OPTIONS}"
+    - echo "GPU_BACKEND=$GPU_BACKEND GPU_ARCH=$GPU_ARCH BUILD_MODE=$BUILD_MODE SPACE_FILLING_CURVE=$SPACE_FILLING_CURVE SANITIZER=$SANITIZER"
+    - echo "RUN_UNIT_TESTS=$RUN_UNIT_TESTS RUN_SIMULATIONS=$RUN_SIMULATIONS"
+    - echo "NUMBER_OF_TIME_STEPS=$NUMBER_OF_TIME_STEPS NUMBER_OF_SNAPSHOTS=$NUMBER_OF_SNAPSHOTS MIN_GRID_LEVELS=$MIN_GRID_LEVELS MAX_GRID_LEVELS=$MAX_GRID_LEVELS"
+    - echo "PARALLEL_LAUNCH=$PARALLEL_LAUNCH"
+    - echo -e "\e[0Ksection_end:$(date +%s):environment\r\e[0K"
+
+.BeforeScriptSanitiser:
+  before_script:
+    - !reference [".BeforeScript", "before_script"]
+    - python3 .gitlab/sanitise_path.py install/PeanoTargets.cmake
+
+.RunOnAnyBranch:
+  rules:
+    # GitLab stores the source branch in a different variable for each pipeline entry point.
+    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME'
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_MR_SOURCE_BRANCH'
+
+.RunOnlyOnMainBranch:
+  rules:
+    # The child pipelines of a merge request run these jobs whatever the target branch of the merge request.
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_PIPELINE_SOURCE == "merge_request_event"'
+
+# Every combination of the matrix of a CPU or GPU job starts one child pipeline from pipeline.yml.
+.ChildPipeline:
+  extends: .Variables
+  trigger:
+    include:
+      - local: .gitlab/pipeline.yml
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
+
+.Peano:
+  parallel:
+    matrix:
+      - BUILD_MODE: ["Release", "Debug", "Asserts"]
+        SPACE_FILLING_CURVE: ["Peano"]
+
+.Hilbert:
+  parallel:
+    matrix:
+      - BUILD_MODE: ["Release", "Debug", "Asserts"]
+        SPACE_FILLING_CURVE: ["Hilbert"]

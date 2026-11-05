@@ -138,8 +138,8 @@ struct exahype2::runner::GridSnapshot {
     MPIRankBoundaryFaces,
     MemoryCPUGrid,
     MemoryGPUGrid,
-    MemoryCPUSolverData,
-    MemoryGPUSolverData,
+    MemoryCPUSolver,
+    MemoryGPUSolver,
     MemoryResident,
     MemoryFree,
     RowCount

@@ -58,24 +58,25 @@ template <typename StoragePrecision, typename ComputePrecision>
 template <typename Derived>
 INLINE_METHOD exahype2::fv::ader::PredictionStatistics
 exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
-  const peano4::CellConnectivity&           cellConnectivity,
-  const tarch::Span<const int>       cells,
-  const typename CellPool::View      solution,
-  const typename FacePool::ConstView halo,
-  const typename StatePool::View     faceStates,
-  const typename StatePool::View     faceFluxes,
-  const double                       timeStamp,
-  const double                       timeStepSize,
-  const typename CellPool::View      previousSolution,
-  const tarch::accelerator::ChunkedMemoryPool<int>::View statuses,
-  const typename StatePool::View     interiorUpdates,
+  const peano4::CellConnectivity&                             cellConnectivity,
+  const tarch::Span<const int>                                cells,
+  const typename CellPool::View                               solution,
+  const typename FacePool::ConstView                          halo,
+  const typename StatePool::View                              faceStates,
+  const typename StatePool::View                              faceFluxes,
+  const double                                                timeStamp,
+  const double                                                timeStepSize,
+  const typename Derived::RuntimeParameters&                  parameters,
+  const typename CellPool::View                               previousSolution,
+  const tarch::accelerator::ChunkedMemoryPool<int>::View      statuses,
+  const typename StatePool::View                              interiorUpdates,
   const tarch::accelerator::ChunkedMemoryPool<int>::ConstView limiterFaceStatuses
 ) {
   exahype2::fv::ader::PredictionStatistics statistics;
   if (cells.size == 0) {
     return statistics;
   }
-  assertion(not _scratch.isEmpty() and not _tables.isEmpty());
+  ASSERTION(not _scratch.isEmpty() and not _tables.isEmpty());
   const int numberOfTeams      = getNumberOfTeams<Derived>(cells.size);
   const int threadsPerTeam     = getTeamThreads<Derived>();
   const int scratchSizePerTeam = getScratchSizePerTeam<Derived>();
@@ -103,7 +104,8 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::predict(
       timeStepSize,
       statuses,
       interiorUpdates,
-      limiterFaceStatuses
+      limiterFaceStatuses,
+      parameters
     },
     tarch::accelerator::Custom<exahype2::fv::ader::PredictionStatistics>{statistics}
   );

@@ -51,8 +51,8 @@ struct peano4::RankTransfer final {
 };
 
 /**
- * The slot moves of one regrid. A prolongation, a restriction or a receive fills every new slot that
- * no kept cell occupies. No new slot reuses a slot freed in the same regrid.
+ * The slot moves of one regrid. A prolongation, a restriction or a receive fills every new slot
+ * outside the slots of the kept cells. A new slot never reuses a slot freed in the same regrid.
  */
 struct peano4::Regrid final {
   int                       oldNumberOfSlots{0};

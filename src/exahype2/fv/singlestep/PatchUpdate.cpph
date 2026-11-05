@@ -39,12 +39,28 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::update(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    boundaryFaces
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
 ) {
-  COMPILE_IF_ON_HOST(return sweep(patch, updated, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces);)
-  COMPILE_IF_ON_DEVICE(
-    return updateEveryVolume(patch, updated, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces);
+  double maxEigenvalue = 0.0;
+  COMPILE_IF_ON_HOST(
+    maxEigenvalue =
+      sweep(patch, updated, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces, parameters);
   )
+  COMPILE_IF_ON_DEVICE(
+    maxEigenvalue = updateEveryVolume(
+      patch,
+      updated,
+      faces,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces,
+      parameters
+    );
+  )
+  return maxEigenvalue;
 }
 
 /**
@@ -63,12 +79,28 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateInTeam(
   const tarch::la::Vector<DIMENSIONS, double>&          cellSize,
   const double                                          timeStamp,
   const double                                          timeStepSize,
-  const int                                             boundaryFaces
+  const int                                             boundaryFaces,
+  const RuntimeParameters&                              parameters
 ) {
-  COMPILE_IF_ON_HOST(return update(patch, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces);)
-  COMPILE_IF_ON_DEVICE(
-    return updateWithThreadsOfTeam(team, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces);
+  double maxEigenvalue = 0.0;
+  COMPILE_IF_ON_HOST(
+    maxEigenvalue =
+      update(patch, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, boundaryFaces, parameters);
   )
+  COMPILE_IF_ON_DEVICE(
+    maxEigenvalue = updateWithThreadsOfTeam(
+      team,
+      patch,
+      faces,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      boundaryFaces,
+      parameters
+    );
+  )
+  return maxEigenvalue;
 }
 
 /**
@@ -90,7 +122,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateWithThre
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    boundaryFaces
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
 ) {
   using Storage                              = TeamStorage<StoragePrecision>;
   constexpr bool          PostprocessesPatch = exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>;
@@ -108,7 +141,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateWithThre
       terms.waveSpeeds = reinterpret_cast<ComputePrecision*>(scratch + Storage::WaveSpeedsOffset);
       terms.volumes    = VolumesPerPatch;
       for (int volume = thread; volume < VolumesPerPatch; volume += threads) {
-        const auto waveSpeeds = getWaveSpeedsOfVolume(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize);
+        const auto waveSpeeds =
+          getWaveSpeedsOfVolume(volume, patch, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
         for (int normal = 0; normal < DIMENSIONS; normal++) {
           terms.at(volume, normal) = waveSpeeds(normal);
         }
@@ -129,13 +163,22 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateWithThre
           timeStepSize,
           boundaryFaces,
           terms,
-          updatedState
+          updatedState,
+          parameters
         )
       );
       if constexpr (not PostprocessesPatch) {
         partial = exahype2::MaxEigenvalueReduction::combine(
           partial,
-          getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+          getMaxEigenvalueOfVolume(
+            volume,
+            patch,
+            cellCentre,
+            cellSize,
+            timeStamp + timeStepSize,
+            timeStepSize,
+            parameters
+          )
         );
       }
     }
@@ -148,7 +191,7 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateWithThre
     constexpr int Threads = std::min(tarch::accelerator::DefaultThreadsPerTeam, VolumesPerPatch);
     constexpr int Delay   = (Reach + Threads - 1) / Threads;
     const int     rounds  = (VolumesPerPatch + threads - 1) / threads;
-    assertion(threads >= Threads, threads, Threads);
+    ASSERTION(threads >= Threads, threads, Threads);
     StoragePrecision delayedStates[Delay][NumberOfData]{};
     for (int round = 0; round < rounds + Delay; round++) {
       StoragePrecision computedState[NumberOfData]{};
@@ -167,7 +210,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateWithThre
               timeStepSize,
               boundaryFaces,
               terms,
-              computedState
+              computedState,
+              parameters
             )
           );
         }
@@ -182,7 +226,15 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateWithThre
         if constexpr (not PostprocessesPatch) {
           partial = exahype2::MaxEigenvalueReduction::combine(
             partial,
-            getMaxEigenvalueOfVolume(writtenVolume, patch, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+            getMaxEigenvalueOfVolume(
+              writtenVolume,
+              patch,
+              cellCentre,
+              cellSize,
+              timeStamp + timeStepSize,
+              timeStepSize,
+              parameters
+            )
           );
         }
       }
@@ -229,7 +281,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::sweep(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    boundaryFaces
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
 ) {
   using Terms             = typename SweepStorage<StoragePrecision>::Terms;
   constexpr int Lookahead = peano4::power(PatchSize, DIMENSIONS - 1);
@@ -254,7 +307,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::sweep(
       cellSize,
       timeStamp,
       timeStepSize,
-      boundaryFaces
+      boundaryFaces,
+      parameters
     );
   } else {
     struct FreesHeapMemory final {
@@ -274,7 +328,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::sweep(
       cellSize,
       timeStamp,
       timeStepSize,
-      boundaryFaces
+      boundaryFaces,
+      parameters
     );
   }
 }
@@ -296,15 +351,16 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::sweepWithStora
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    boundaryFaces
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
 ) {
-  assertion(patch != nullptr);
-  assertion(updated != nullptr);
-  assertion(scratch != nullptr);
+  ASSERTION(patch != nullptr);
+  ASSERTION(updated != nullptr);
+  ASSERTION(scratch != nullptr);
   StoragePrecision* NOALIAS const written = updated == patch ? scratch : updated;
   if constexpr (Terms::Lookahead > 0) {
     for (int state = 0; state < Terms::Lookahead and state < VolumesPerPatch; state++) {
-      evaluateTermsOfState(terms, state, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize);
+      evaluateTermsOfState(terms, state, patch, faces, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
     }
   }
 
@@ -320,7 +376,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::sweepWithStora
           cellCentre,
           cellSize,
           timeStamp,
-          timeStepSize
+          timeStepSize,
+          parameters
         );
       }
     }
@@ -336,15 +393,24 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::sweepWithStora
         timeStepSize,
         boundaryFaces,
         terms,
-        written + static_cast<std::ptrdiff_t>(volume) * NumberOfData
+        written + static_cast<std::ptrdiff_t>(volume) * NumberOfData,
+        parameters
       )
     );
   }
-  postprocessUpdatedPatch(written, cellCentre, cellSize, timeStamp, timeStepSize);
+  postprocessUpdatedPatch(written, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
   for (int volume = 0; volume < VolumesPerPatch; volume++) {
     maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
       maxEigenvalue,
-      getMaxEigenvalueOfVolume(volume, written, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+      getMaxEigenvalueOfVolume(
+        volume,
+        written,
+        cellCentre,
+        cellSize,
+        timeStamp + timeStepSize,
+        timeStepSize,
+        parameters
+      )
     );
   }
   if (written != updated) {
@@ -371,9 +437,10 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::evaluateTermsO
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const RuntimeParameters&                     parameters
 ) {
-  assertion(state >= 0 and state < VolumesPerPatch, state, VolumesPerPatch);
+  ASSERTION(state >= 0 and state < VolumesPerPatch, state, VolumesPerPatch);
   const tarch::la::Vector<DIMENSIONS, int> volumeIndex = peano4::dDelinearised(state, PatchSize);
   terms.at(state).evaluate(
     patch,
@@ -385,7 +452,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::evaluateTermsO
     exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, volumeIndex),
     exahype2::fv::getVolumeSize(cellSize, PatchSize),
     timeStamp,
-    timeStepSize
+    timeStepSize,
+    parameters
   );
 }
 
@@ -404,11 +472,12 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateEveryVol
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    boundaryFaces
+  const int                                    boundaryFaces,
+  const RuntimeParameters&                     parameters
 ) {
-  assertion(patch != nullptr);
-  assertion(updated != nullptr);
-  assertion(updated != patch);
+  ASSERTION(patch != nullptr);
+  ASSERTION(updated != nullptr);
+  ASSERTION(updated != patch);
   double maxEigenvalue = 0.0;
   for (int volume = 0; volume < VolumesPerPatch; volume++) {
     maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
@@ -422,15 +491,24 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::updateEveryVol
         timeStamp,
         timeStepSize,
         boundaryFaces,
-        updated + static_cast<std::ptrdiff_t>(volume) * NumberOfData
+        updated + static_cast<std::ptrdiff_t>(volume) * NumberOfData,
+        parameters
       )
     );
   }
-  postprocessUpdatedPatch(updated, cellCentre, cellSize, timeStamp, timeStepSize);
+  postprocessUpdatedPatch(updated, cellCentre, cellSize, timeStamp, timeStepSize, parameters);
   for (int volume = 0; volume < VolumesPerPatch; volume++) {
     maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
       maxEigenvalue,
-      getMaxEigenvalueOfVolume(volume, updated, cellCentre, cellSize, timeStamp + timeStepSize, timeStepSize)
+      getMaxEigenvalueOfVolume(
+        volume,
+        updated,
+        cellCentre,
+        cellSize,
+        timeStamp + timeStepSize,
+        timeStepSize,
+        parameters
+      )
     );
   }
   return maxEigenvalue;
@@ -454,7 +532,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::computeVolumeU
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const int                                    boundaryFaces,
-  StoragePrecision* NOALIAS const              updatedState
+  StoragePrecision* NOALIAS const              updatedState,
+  const RuntimeParameters&                     parameters
 ) {
   exahype2::fv::NoTermRing terms;
   return computeVolumeUpdate(
@@ -467,7 +546,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::computeVolumeU
     timeStepSize,
     boundaryFaces,
     terms,
-    updatedState
+    updatedState,
+    parameters
   );
 }
 
@@ -491,11 +571,12 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::computeVolumeU
   const double                                 timeStepSize,
   const int                                    boundaryFaces,
   Terms&                                       terms,
-  StoragePrecision* NOALIAS const              updatedState
+  StoragePrecision* NOALIAS const              updatedState,
+  const RuntimeParameters&                     parameters
 ) {
-  assertion(volume >= 0 and volume < VolumesPerPatch, volume, VolumesPerPatch);
-  assertion(patch != nullptr);
-  assertion(updatedState != nullptr);
+  ASSERTION(volume >= 0 and volume < VolumesPerPatch, volume, VolumesPerPatch);
+  ASSERTION(patch != nullptr);
+  ASSERTION(updatedState != nullptr);
 
   double maxEigenvalueAfterTimeStep = 0.0;
 
@@ -537,7 +618,7 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::computeVolumeU
       centreStateForCompute = centreStateComputeBuffer;
     }
     ComputePrecision sources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    Derived::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
+    Derived::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources, parameters);
     SIMD(aligned(sources : PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       outputState[unknown] = static_cast<StoragePrecision>(
@@ -574,7 +655,8 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::computeVolumeU
     boundaryFaces,
     outputState,
     maxEigenvalueAfterTimeStep,
-    terms);
+    terms,
+    parameters);
 
   return maxEigenvalueAfterTimeStep;
 }
@@ -596,10 +678,11 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::computePatchFa
   const double                                 timeStepSize,
   const int                                    boundaryFaces,
   const int                                    patchFace,
-  ComputePrecision* NOALIAS const              flux
+  ComputePrecision* NOALIAS const              flux,
+  const RuntimeParameters&                     parameters
 ) {
-  assertion(volume >= 0 and volume < VolumesPerPatch, volume, VolumesPerPatch);
-  assertion(patchFace >= 0 and patchFace < peano4::FacesPerCell, patchFace);
+  ASSERTION(volume >= 0 and volume < VolumesPerPatch, volume, VolumesPerPatch);
+  ASSERTION(patchFace >= 0 and patchFace < peano4::FacesPerCell, patchFace);
   Derived::Reconstruction::template patchFaceFlux<
     Derived,
     PatchSize,
@@ -620,6 +703,7 @@ exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>::computePatchFa
     timeStamp,
     timeStepSize,
     boundaryFaces,
-    flux);
+    flux,
+    parameters);
 }
 TARGET_DECLARE_END

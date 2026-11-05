@@ -39,16 +39,15 @@ exahype2::RefinementCommand::Erase.
 
 # Decision semantics
 
-`Refine` names the current cell and requests one finer neighbourhood around
-it. The configured maximum level suppresses requests from cells that are
-already sufficiently fine. `Keep` emits no structural request. `Erase`
+`Refine` requests one finer neighbourhood around the current cell. The configured maximum level suppresses requests from cells that are
+already sufficiently fine. `Keep` leaves the grid structure as it is. `Erase`
 contributes one vote towards removing the current cell's sibling group.
 
 Erasure requires agreement from all children of the parent and all
 participating solvers. exahype2::RefinementRequests promotes a complete
 sibling vote to the parent cell. Peano then removes the associated plan flags
-only when the whole adjacent parent-cell ring agrees and no refine request
-protects it.
+only when the whole adjacent parent-cell ring agrees and every refine request
+lies outside it.
 
 # Distributed requests
 
@@ -67,7 +66,7 @@ consensus required for coarsening.
 The time loop runs the dynamic-AMR phase after a step commits requests. The
 spacetree adopts the plan, rebuilds the cell connectivity, and every solver's
 `regrid()` moves its data through the peano4::Regrid. The phase repeats
-until no request arrives.
+while requests arrive.
 
 A criterion can evaluate only cells that exist. Refinement through several
 additional levels therefore requires a new decision after each level appears.

@@ -28,23 +28,13 @@ CPP_SUFFIXES = (
 PYTHON_SUFFIXES = (".py",)
 STYLE_FILE = ".clang-format"
 
-# The agent bundle and the version control data are no sources of the repository.
-EXCLUDED_DIRECTORIES = frozenset(
-    {
-        ".claude",
-        ".git",
-        ".ipynb_checkpoints",
-        ".ruff_cache",
-        "CMakeFiles",
-        "__pycache__",
-        "node_modules",
-        "submodules",
-    }
-)
-GENERATED_DIRECTORY = re.compile(r"^(build|install)(-.+)?$|\.(build|generated|output)$")
+SOURCE_HIDDEN_DIRECTORIES = frozenset({".gitlab"})
+CACHE_DIRECTORIES = frozenset({"CMakeFiles", "__pycache__"})
+EXTERNAL_DIRECTORIES = frozenset({"node_modules", "submodules"})
+BUILD_DIRECTORY = re.compile(r"^(build|install)(-.+)?$")
+APPLICATION_OUTPUT_DIRECTORY = re.compile(r"\.(build|generated|output)$")
+VIRTUAL_ENVIRONMENT_MARKER = "pyvenv.cfg"
 
-# A compilation database entry reads the precompiled header of the build compiler. A
-# clang-tidy of another version cannot load this header.
 PRECOMPILED_HEADER_ARGUMENTS = ("-Winvalid-pch", "-Werror")
 
 
@@ -83,26 +73,30 @@ def find_repository_root(start: str) -> str:
 
 
 def is_excluded_directory(path: str) -> bool:
-    """Returns whether a directory contains build trees, generated code, caches or a virtual environment."""
-    name = os.path.basename(os.path.normpath(path))
+    """Returns whether a directory contains tool state, build output, external code or a virtual environment."""
+    name = os.path.basename(os.path.abspath(path))
+    if name.startswith("."):
+        return name not in SOURCE_HIDDEN_DIRECTORIES
     return (
-        name in EXCLUDED_DIRECTORIES
-        or GENERATED_DIRECTORY.search(name) is not None
-        or os.path.isfile(os.path.join(path, "pyvenv.cfg"))
+        name in CACHE_DIRECTORIES
+        or name in EXTERNAL_DIRECTORIES
+        or BUILD_DIRECTORY.match(name) is not None
+        or APPLICATION_OUTPUT_DIRECTORY.search(name) is not None
+        or os.path.isfile(os.path.join(path, VIRTUAL_ENVIRONMENT_MARKER))
     )
 
 
 def is_source_path(root: str, path: str) -> bool:
     """Returns whether a path lies below root and outside every excluded directory."""
-    relative = os.path.relpath(os.path.abspath(path), os.path.abspath(root))
+    root_directory = os.path.abspath(root)
+    relative = os.path.relpath(os.path.abspath(path), root_directory)
     if relative == os.curdir or relative.startswith(os.pardir):
         return False
-    directory = os.path.abspath(root)
-    for name in relative.split(os.sep)[:-1]:
-        directory = os.path.join(directory, name)
-        if is_excluded_directory(directory):
-            return False
-    return True
+    parents = relative.split(os.sep)[:-1]
+    return not any(
+        is_excluded_directory(os.path.join(root_directory, *parents[: depth + 1]))
+        for depth in range(len(parents))
+    )
 
 
 def source_files(root: str, suffixes: tuple[str, ...]) -> list[str]:

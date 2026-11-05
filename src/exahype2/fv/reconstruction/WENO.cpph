@@ -78,7 +78,7 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::volumeState(
   const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>& volumeIndex
 ) {
-  assertion(volumeIsAvailable<NumberOfVolumesPerAxis>(volumeIndex));
+  ASSERTION(volumeIsAvailable<NumberOfVolumesPerAxis>(volumeIndex));
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
     if (volumeIndex(axis) < 0) {
@@ -159,11 +159,11 @@ exahype2::fv::reconstruction::WENO<Order, Weighting, Limiter>::reconstructAlongL
       linearWeights[numberOfStencils++] = static_cast<ComputePrecision>(Tables::linearWeight(stencil));
     }
   }
-  assertion(numberOfStencils > 0);
+  ASSERTION(numberOfStencils > 0);
 
   for (int entry = 0; entry < NumberOfData; entry++) {
     const int weightSource = WeightSource::reconstructionWeightsOf(entry);
-    assertion(weightSource >= 0 and weightSource < NumberOfData, entry, weightSource);
+    ASSERTION(weightSource >= 0 and weightSource < NumberOfData, entry, weightSource);
 
     ComputePrecision candidates[Stencils][Nodes];
     ComputePrecision sourceCandidates[Stencils][Nodes];

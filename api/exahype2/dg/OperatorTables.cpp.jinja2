@@ -19,7 +19,7 @@ namespace {
 template <typename Precision>
 void {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }}<Precision>::initialise() {
 {%- for table in TABLES %}
-  assertion({{ table.name }} == nullptr);
+  ASSERTION({{ table.name }} == nullptr);
   {{ table.name }} = copyToDevice(get{{ table.name }}());
 {%- endfor %}
 }

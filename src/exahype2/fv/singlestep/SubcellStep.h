@@ -47,15 +47,17 @@ public:
   INLINE_METHOD void release();
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
 
-  template <typename ExchangeHalo>
+  template <typename ExchangeHalo, typename RuntimeParameters>
   INLINE_METHOD void advance(
     const peano4::CellConnectivity& cellConnectivity,
-    const Region&            region,
-    const ExchangeHalo&      exchangeHalo,
-    double                   timeStamp,
-    double                   timeStepSize
+    const Region&                   region,
+    const ExchangeHalo&             exchangeHalo,
+    double                          timeStamp,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
 
+  template <typename RuntimeParameters>
   static INLINE_METHOD GPU_CALLABLE_METHOD void advanceSubgrid(
     StoragePrecision* NOALIAS                    subcells,
     StoragePrecision* NOALIAS                    evolvedSubcells,
@@ -66,9 +68,11 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
-    const double*                                nodesToSubcells
+    const double*                                nodesToSubcells,
+    const RuntimeParameters&                     parameters
   );
 
+  template <typename RuntimeParameters>
   static INLINE_METHOD GPU_CALLABLE_METHOD void advanceSubgridInTeam(
     tarch::accelerator::TeamHandle               team,
     StoragePrecision* NOALIAS                    subcells,
@@ -80,12 +84,11 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
-    const double*                                nodesToSubcells
+    const double*                                nodesToSubcells,
+    const RuntimeParameters&                     parameters
   );
 
-private:
-  friend class exahype2::dg::limiting::tests::SubcellSchemeTest;
-
+  template <typename RuntimeParameters>
   static INLINE_METHOD GPU_CALLABLE_METHOD void advanceSubgridWithThreadsOfTeam(
     tarch::accelerator::TeamHandle               team,
     StoragePrecision* NOALIAS                    subcells,
@@ -97,9 +100,12 @@ private:
     double                                       timeStamp,
     double                                       timeStepSize,
     const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
-    const double*                                nodesToSubcells
+    const double*                                nodesToSubcells,
+    const RuntimeParameters&                     parameters
   );
 
+private:
+  template <typename RuntimeParameters>
   static INLINE_METHOD GPU_CALLABLE_METHOD void imposeAppliedFluxes(
     int                                          volume,
     const StoragePrecision* NOALIAS              subcells,
@@ -111,7 +117,8 @@ private:
     double                                       timeStamp,
     double                                       timeStepSize,
     const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
-    const double*                                nodesToSubcells
+    const double*                                nodesToSubcells,
+    const RuntimeParameters&                     parameters
   );
 
   /**
@@ -141,6 +148,7 @@ struct exahype2::fv::singlestep::AdvanceSubgrids final {
   StoragePrecision*              scratch{nullptr};
   double                       timeStamp{0.0};
   double                       timeStepSize{0.0};
+  typename Derived::RuntimeParameters   parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry, tarch::accelerator::TeamHandle team) const;
 };

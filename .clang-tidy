@@ -66,7 +66,7 @@ ExcludeHeaderFilterRegex: '(^|.*/)(build|external|third[-_]party)/.*'
 FormatStyle: file
 CheckOptions:
   - key: bugprone-assert-side-effect.AssertMacros
-    value: 'assert,assertion'
+    value: 'assert,ASSERTION'
   - key: bugprone-assert-side-effect.CheckFunctionCalls
     value: 'true'
   - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor

@@ -91,7 +91,7 @@ def _load_csv(path: Path) -> dict[str, np.ndarray]:
 
     measurements = [row for row in rows if any(field.strip() for field in row)]
     if not measurements:
-        raise SystemExit(f"ERROR: CSV file contains no data rows: {path}")
+        raise SystemExit(f"ERROR: The CSV file {path} needs at least one data row.")
     if any(len(row) != len(COLUMNS) for row in measurements):
         raise SystemExit(f"ERROR: CSV file contains malformed rows: {path}")
 
@@ -201,7 +201,7 @@ def _configure_pgf():
             return
 
     raise SystemExit(
-        "ERROR: PGF export requested, but no supported TeX engine was found. "
+        "ERROR: The PGF export needs a supported TeX engine. "
         "Install one of xelatex, lualatex, or pdflatex."
     )
 

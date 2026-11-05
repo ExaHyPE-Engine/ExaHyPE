@@ -31,10 +31,6 @@ namespace exahype2::dg::rk {
   struct CombineStages;
 } // namespace exahype2::dg::rk
 
-namespace exahype2::dg::rk::tests {
-  class StagesTest;
-} // namespace exahype2::dg::rk::tests
-
 TARGET_DECLARE
 /**
  * The Butcher tableau of the explicit Runge-Kutta scheme of one order. Order one is the explicit
@@ -113,7 +109,8 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       stageTimeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void addFaceIntegrals(
@@ -137,12 +134,11 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
 private:
-  friend class exahype2::dg::rk::tests::StagesTest;
-
   template <typename StoragePrecision, typename TargetPrecision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void combineEstimates(
     const Weights&                  weights,
@@ -160,7 +156,8 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void projectOntoFaces(
@@ -175,8 +172,8 @@ private:
 
 /**
  * Adds the face integrals of the stage before to its estimate and opens the stage on every listed
- * cell. No cell writes a flux half that another cell reads. scratch stores one stage state per
- * scratch chunk of the dispatch.
+ * cell. The flux halves that one cell writes and those that the other cells read are disjoint.
+ * scratch stores one stage state per scratch chunk of the dispatch.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::dg::rk::OpenStage final {
@@ -188,23 +185,24 @@ struct exahype2::dg::rk::OpenStage final {
   using StatePool    = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using FluxPool     = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  tarch::Span<const int>       cells{};
-  typename CellPool::ConstView solution{};
-  typename EstimatePool::View  estimates{};
-  typename StatePool::View     faceStates{};
-  typename FluxPool::View      faceFluxes{};
-  typename Kernel::Weights     weights{};
-  const ComputePrecision*      quadratureNodes{nullptr};
-  const ComputePrecision*      derivativeOperator{nullptr};
-  const ComputePrecision*      faceQuadratureWeights{nullptr};
-  const ComputePrecision*      inverseCellQuadratureWeights{nullptr};
-  const ComputePrecision*      leftFaceCoefficients{nullptr};
-  const ComputePrecision*      rightFaceCoefficients{nullptr};
-  int                          stage{0};
-  double                       stageTimeStamp{0.0};
-  double                       timeStepSize{0.0};
-  ComputePrecision*            scratch{nullptr};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              cells{};
+  typename CellPool::ConstView        solution{};
+  typename EstimatePool::View         estimates{};
+  typename StatePool::View            faceStates{};
+  typename FluxPool::View             faceFluxes{};
+  typename Kernel::Weights            weights{};
+  const ComputePrecision*             quadratureNodes{nullptr};
+  const ComputePrecision*             derivativeOperator{nullptr};
+  const ComputePrecision*             faceQuadratureWeights{nullptr};
+  const ComputePrecision*             inverseCellQuadratureWeights{nullptr};
+  const ComputePrecision*             leftFaceCoefficients{nullptr};
+  const ComputePrecision*             rightFaceCoefficients{nullptr};
+  int                                 stage{0};
+  double                              stageTimeStamp{0.0};
+  double                              timeStepSize{0.0};
+  ComputePrecision*                   scratch{nullptr};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(int entry) const;
 };
@@ -225,19 +223,20 @@ struct exahype2::dg::rk::CombineStages final {
   using EstimatePool = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using FluxPool     = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
 
-  peano4::CellConnectivity     cellConnectivity{};
-  tarch::Span<const int>       cells{};
-  typename CellPool::View      solution{};
-  typename EstimatePool::View  estimates{};
-  typename FluxPool::ConstView faceFluxes{};
-  typename Kernel::Weights     weights{};
-  const ComputePrecision*      faceQuadratureWeights{nullptr};
-  const ComputePrecision*      inverseCellQuadratureWeights{nullptr};
-  const ComputePrecision*      leftFaceCoefficients{nullptr};
-  const ComputePrecision*      rightFaceCoefficients{nullptr};
-  const StoragePrecision*      stateQuadraturePoints{nullptr};
-  double                       timeStamp{0.0};
-  double                       timeStepSize{0.0};
+  peano4::CellConnectivity            cellConnectivity{};
+  tarch::Span<const int>              cells{};
+  typename CellPool::View             solution{};
+  typename EstimatePool::View         estimates{};
+  typename FluxPool::ConstView        faceFluxes{};
+  typename Kernel::Weights            weights{};
+  const ComputePrecision*             faceQuadratureWeights{nullptr};
+  const ComputePrecision*             inverseCellQuadratureWeights{nullptr};
+  const ComputePrecision*             leftFaceCoefficients{nullptr};
+  const ComputePrecision*             rightFaceCoefficients{nullptr};
+  const StoragePrecision*             stateQuadraturePoints{nullptr};
+  double                              timeStamp{0.0};
+  double                              timeStepSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                                    entry,

@@ -7,16 +7,17 @@
 namespace exahype2::terms {
   template <typename SolverType, typename Precision>
   concept HasReconstruction = requires(
-    const Precision* const                       QL,
-    const Precision* const                       Q,
-    const Precision* const                       QR,
-    const Precision* const                       limitedDifferences,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    const int                                    normal,
-    const int                                    unknown,
-    Precision&                                   reconstructedMinus,
-    Precision&                                   reconstructedPlus
+    const Precision* const                        QL,
+    const Precision* const                        Q,
+    const Precision* const                        QR,
+    const Precision* const                        limitedDifferences,
+    const tarch::la::Vector<DIMENSIONS, double>&  x,
+    const tarch::la::Vector<DIMENSIONS, double>&  h,
+    const int                                     normal,
+    const int                                     unknown,
+    Precision&                                    reconstructedMinus,
+    Precision&                                    reconstructedPlus,
+    const typename SolverType::RuntimeParameters& parameters
   ) {
     {
       SolverType::reconstruct(
@@ -29,7 +30,8 @@ namespace exahype2::terms {
         normal,
         unknown,
         reconstructedMinus,
-        reconstructedPlus
+        reconstructedPlus,
+        parameters
       )
     } -> std::same_as<void>;
   };

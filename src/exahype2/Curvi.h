@@ -11,9 +11,9 @@ namespace exahype2 {
 
 /**
  * Maps a cartesian domain onto a curvilinear domain with the same cell connections and back.
- * applyPerturbation() moves a domain face along its normal, split() moves an interior cell
- * boundary, and both stretch the cells along that axis linearly. Each axis takes at most one of
- * these transformations.
+ * applyPerturbation() moves a domain face along its normal and split() moves an interior cell
+ * boundary. Both stretch the cells along that axis linearly. Each axis takes at most one of these
+ * transformations.
  */
 class exahype2::Curvi final {
 public:
@@ -21,7 +21,7 @@ public:
   using Mapping      = std::function<Point(Point)>;
   using Perturbation = std::function<double(Point)>;
 
-  INLINE_METHOD Curvi(const Point& domainOffset, const Point& domainSize, const Point& minCellSize);
+  INLINE_METHOD Curvi(const Point& domainOffset, const Point& domainSize, const Point& cellSize);
 
   Curvi(const Curvi&)            = delete;
   Curvi(Curvi&&)                 = delete;
@@ -43,7 +43,7 @@ private:
 
   const Point _domainOffset;
   const Point _domainSize;
-  const Point _minCellSize;
+  const Point _cellSize;
 
   bool _axisIsTransformed[DIMENSIONS]{};
 

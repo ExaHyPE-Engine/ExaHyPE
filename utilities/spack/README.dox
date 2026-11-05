@@ -12,7 +12,7 @@ you can try different versions and flavours of them.
 
 We provide Spack scripts for various of Peano's extensions:
 
-- [ExaHyPE 2](https://gitlab.lrz.de/hpcsoftware/Peano/-/blob/p4/utilities/spack/packages/exahype2/package.py?ref_type=heads)
+- [ExaHyPE 2](https://github.com/ExaHyPE-Engine/ExaHyPE/blob/main/utilities/spack/packages/exahype2/package.py)
 
 ## Prerequisites
 

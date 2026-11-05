@@ -38,6 +38,7 @@ struct exahype2::fv::singlestep::UpdatePatches final {
   typename FacePool::ConstView halo{};
   double                       timeStamp{0.0};
   double                       timeStepSize{0.0};
+  typename Derived::RuntimeParameters parameters{};
 
   INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
     int                            entry,
@@ -54,7 +55,8 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       stepStart,
     double                                       stepSize,
-    double&                                      accumulator
+    double&                                      accumulator,
+    const typename Derived::RuntimeParameters&   parameters
   ) const;
 };
 TARGET_DECLARE_END

@@ -12,12 +12,13 @@
 template <typename SolverType, int NumberOfData>
 INLINE_METHOD std::array<double, exahype2::ErrorMeasurement::NumberOfNorms>
 exahype2::particles::measurePositionErrors(
-  ParticleSet<NumberOfData>& particles,
-  const double               timeStamp,
-  const double               timeStepSize,
-  ErrorMeasurement&          measurement
+  ParticleSet<NumberOfData>&                    particles,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  ErrorMeasurement&                             measurement,
+  const typename SolverType::RuntimeParameters& parameters
 ) {
-  assertion(measurement.isSnapshotDue(timeStamp), timeStamp);
+  ASSERTION(measurement.isSnapshotDue(timeStamp), timeStamp);
   constexpr int  NumberOfNorms   = ErrorMeasurement::NumberOfNorms;
   constexpr auto PositionEntries = []() {
     std::array<int, DIMENSIONS> entries{};
@@ -37,7 +38,7 @@ exahype2::particles::measurePositionErrors(
     std::copy_n(particles.getData(index), NumberOfData, values + DIMENSIONS);
     const Particle particle{values, NumberOfData};
     double         solution[DIMENSIONS + NumberOfData]{};
-    SolverType::analyticalSolution(&particle, timeStamp, timeStepSize, solution);
+    SolverType::analyticalSolution(&particle, timeStamp, timeStepSize, solution, parameters);
     double errors[NumberOfNorms]{0.0, 0.0, 0.0};
     accumulateError(PositionEntries, values, solution, 1.0, errors);
     std::copy_n(errors, NumberOfNorms, errorsPerParticle.data() + static_cast<std::ptrdiff_t>(index) * NumberOfNorms);

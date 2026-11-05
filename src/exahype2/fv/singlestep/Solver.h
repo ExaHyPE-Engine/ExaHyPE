@@ -24,18 +24,27 @@ public:
     std::vector<exahype2::plotter::DataField> plottedFields
   );
 
-  INLINE_METHOD void performTimeStep(const peano4::CellConnectivity& cellConnectivity, exahype2::RefinementRequests& requests);
+  template <typename RuntimeParameters>
+  INLINE_METHOD void performTimeStep(
+    const peano4::CellConnectivity& cellConnectivity,
+    exahype2::RefinementRequests&   requests,
+    const RuntimeParameters&        parameters
+  );
+  template <typename RuntimeParameters>
   INLINE_METHOD void plot(
     const peano4::CellConnectivity& cellConnectivity,
     tarch::plotter::Format          format,
-    const std::string&              outputDirectory
+    const std::string&              outputDirectory,
+    const RuntimeParameters&        parameters
   );
 
 private:
+  template <typename RuntimeParameters>
   [[nodiscard]] INLINE_METHOD double updatePatches(
     const peano4::CellConnectivity& cellConnectivity,
-    peano4::Adjacency        adjacency,
-    double                   timeStepSize
+    peano4::Adjacency               adjacency,
+    double                          timeStepSize,
+    const RuntimeParameters&        parameters
   );
 };
 

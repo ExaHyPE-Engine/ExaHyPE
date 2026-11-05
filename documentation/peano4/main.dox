@@ -22,7 +22,7 @@ result.migrate         = ::project::migrate;
 result.plot            = ::project::plot;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The record also names the parameter loading, the help text, the memory
+The record also lists the parameter loading, the help text, the memory
 accounting, the refinement votes and the statistics getters of the solvers.
 
 # Launch
@@ -64,7 +64,7 @@ uses MPI or mesh data runs inside a solver phase and keeps that order.
 
 The Python API emits the solver classes, the solver repository, the runtime
 parameters and the main routine from the project description. Application
-code adds PDE terms, hooks and tracers to the solvers; there is no generated
-step list to extend.
+code adds PDE terms, hooks and tracers to the solvers. The steps of a run stay
+in the generated code.
 
 */

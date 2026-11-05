@@ -8,7 +8,7 @@
 template <class Shortcuts>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exagrype::sourceTerm(const double* const NOALIAS Q, double* const NOALIAS S) {
-  assertion(Q != nullptr and S != nullptr);
+  ASSERTION(Q != nullptr and S != nullptr);
   const double alpha = std::fmax(1e-4, Q[Shortcuts::alpha]);
 
   double fa  = 1.0;
@@ -28,7 +28,7 @@ applications::exahype2::exagrype::sourceTerm(const double* const NOALIAS Q, doub
     - Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 5]
     + 2 * Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 4]
     - Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 3];
-  assertion(std::isfinite(det) and det > 0.0, det);
+  ASSERTION(std::isfinite(det) and det > 0.0, det);
   const double invdet = 1. / det;
 
   const double g_contr[3][3] = {

@@ -37,11 +37,12 @@ exahype2::fv::reconstruction::Constant::StateTerms<
     const tarch::la::Vector<DIMENSIONS, double>&                  volumeCentre,
     const tarch::la::Vector<DIMENSIONS, double>&                  volumeSize,
     const double                                                  timeStamp,
-    const double                                                  timeStepSize
+    const double                                                  timeStepSize,
+    const typename SolverType::RuntimeParameters&                 parameters
   ) {
   constexpr int                         NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   const StoragePrecision* NOALIAS const state        = patch + centreOffset;
-  // The compiler unrolls the copy of the state into registers. No flux below writes into them. The
+  // The compiler unrolls the copy of the state into registers. The fluxes below only read them. The
   // compiler then evaluates every expression of the state that does not depend on the normal once.
   ComputePrecision stateForCompute[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   for (int unknown = 0; unknown < NumberOfData; unknown++) {
@@ -49,10 +50,19 @@ exahype2::fv::reconstruction::Constant::StateTerms<
   }
   for (int normal = 0; normal < DIMENSIONS; normal++) {
     if constexpr (EvaluateFlux) {
-      SolverType::flux(stateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, flux[normal]);
+      SolverType::flux(
+        stateForCompute,
+        volumeCentre,
+        volumeSize,
+        timeStamp,
+        timeStepSize,
+        normal,
+        flux[normal],
+        parameters
+      );
     }
     maxEigenvalue[normal] =
-      SolverType::maxEigenvalue(stateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+      SolverType::maxEigenvalue(stateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, parameters);
   }
 }
 
@@ -64,18 +74,19 @@ exahype2::fv::reconstruction::Constant::StateTerms<
 template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename Terms, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD const ComputePrecision*
 exahype2::fv::reconstruction::Constant::getFluxAndMaxEigenvalue(
-  [[maybe_unused]] const Terms&                terms,
-  [[maybe_unused]] const int                   volume,
-  const ComputePrecision* NOALIAS const        state,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  ComputePrecision* NOALIAS const              fluxBuffer,
-  ComputePrecision&                            maxEigenvalue
+  [[maybe_unused]] const Terms&                 terms,
+  [[maybe_unused]] const int                    volume,
+  const ComputePrecision* NOALIAS const         state,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  const int                                     normal,
+  ComputePrecision* NOALIAS const               fluxBuffer,
+  ComputePrecision&                             maxEigenvalue,
+  const typename SolverType::RuntimeParameters& parameters
 ) {
-  assertion(volume >= -1, volume);
+  ASSERTION(volume >= -1, volume);
   if constexpr (Terms::Lookahead > 0) {
     if (volume >= 0) {
       const auto& entry = terms.at(volume);
@@ -84,31 +95,41 @@ exahype2::fv::reconstruction::Constant::getFluxAndMaxEigenvalue(
     }
   }
   if constexpr (EvaluateFlux) {
-    SolverType::flux(state, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, fluxBuffer);
+    SolverType::flux(state, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, fluxBuffer, parameters);
   }
-  maxEigenvalue =
-    getMaxEigenvalue<SolverType>(terms, volume, state, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+  maxEigenvalue = getMaxEigenvalue<SolverType>(
+    terms,
+    volume,
+    state,
+    volumeCentre,
+    volumeSize,
+    timeStamp,
+    timeStepSize,
+    normal,
+    parameters
+  );
   return fluxBuffer;
 }
 
 /**
  * Returns the largest wave speed of state along normal from the entry of volume in the terms. The
  * call evaluates the wave speed of a halo state and every wave speed with a NoTermRing. The volume
- * -1 names a halo state.
+ * -1 marks a halo state.
  */
 template <typename SolverType, typename Terms, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision
 exahype2::fv::reconstruction::Constant::getMaxEigenvalue(
-  [[maybe_unused]] const Terms&                terms,
-  [[maybe_unused]] const int                   volume,
-  const ComputePrecision* NOALIAS const        state,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  const int                                    normal
+  [[maybe_unused]] const Terms&                 terms,
+  [[maybe_unused]] const int                    volume,
+  const ComputePrecision* NOALIAS const         state,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  const int                                     normal,
+  const typename SolverType::RuntimeParameters& parameters
 ) {
-  assertion(volume >= -1, volume);
+  ASSERTION(volume >= -1, volume);
   if constexpr (Terms::Lookahead > 0) {
     if (volume >= 0) {
       return terms.at(volume).maxEigenvalue[normal];
@@ -118,7 +139,7 @@ exahype2::fv::reconstruction::Constant::getMaxEigenvalue(
       return terms.at(volume, normal);
     }
   }
-  return SolverType::maxEigenvalue(state, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+  return SolverType::maxEigenvalue(state, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, parameters);
 }
 
 /**
@@ -143,21 +164,22 @@ template <
 >
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
-  const StoragePrecision* NOALIAS const        inputPatch,
-  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-  const int                                    centreOffset,
-  const StoragePrecision* NOALIAS const        centreState,
-  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  [[maybe_unused]] const int                   boundaryFaces,
-  StoragePrecision* NOALIAS const              outputState,
-  double&                                      maxEigenvalueAfterTimeStep,
-  [[maybe_unused]] const Terms&                terms
+  const StoragePrecision* NOALIAS const         inputPatch,
+  const StoragePrecision* NOALIAS const         faceInputPatches[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, int>&     volumeIndex,
+  const int                                     centreOffset,
+  const StoragePrecision* NOALIAS const         centreState,
+  const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  [[maybe_unused]] const int                    boundaryFaces,
+  StoragePrecision* NOALIAS const               outputState,
+  double&                                       maxEigenvalueAfterTimeStep,
+  [[maybe_unused]] const Terms&                 terms,
+  const typename SolverType::RuntimeParameters& parameters
 ) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   const int     volume       = centreOffset / NumberOfData;
@@ -217,7 +239,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
       volumeSize,
       timeStamp,
       timeStepSize,
-      diffusiveSources
+      diffusiveSources,
+      parameters
     );
     SIMD(aligned(diffusiveSources : PEANO_WITH_ALIGNMENT))
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -303,8 +326,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
       leftState  = leftStateComputeBuffer;
       rightState = rightStateComputeBuffer;
     }
-    assertion(leftState);
-    assertion(rightState);
+    ASSERTION(leftState);
+    ASSERTION(rightState);
 #endif
 
     if constexpr (EvaluateCustomRiemann) {
@@ -333,7 +356,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
           0,
           boundaryFaces,
           leftGoingFluxLeftFace,
-          rightGoingFluxLeftFace
+          rightGoingFluxLeftFace,
+          parameters
         ));
       const auto maxWaveSpeedRight =
         static_cast<ComputePrecision>(exahype2::fv::solveRiemannProblemOnVolumeFace<SolverType, NumberOfVolumesPerAxis>(
@@ -348,7 +372,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
           1,
           boundaryFaces,
           leftGoingFluxRightFace,
-          rightGoingFluxRightFace
+          rightGoingFluxRightFace,
+          parameters
         ));
       // A solver that defines solveRiemannProblem need not define maxEigenvalue. The wave speed
       // the Riemann solver returns is the only eigenvalue this branch reads.
@@ -387,7 +412,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
         timeStepSize,
         normal,
         leftFluxBuffer,
-        leftMaxEigenvalue
+        leftMaxEigenvalue,
+        parameters
       );
       const ComputePrecision* const rightFluxes = getFluxAndMaxEigenvalue<SolverType, NumberOfUnknowns, EvaluateFlux>(
         terms,
@@ -399,7 +425,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
         timeStepSize,
         normal,
         rightFluxBuffer,
-        rightMaxEigenvalue
+        rightMaxEigenvalue,
+        parameters
       );
 
       ComputePrecision centreNonconservativeProduct[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -429,7 +456,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
           timeStamp,
           timeStepSize,
           normal,
-          centreNonconservativeProduct
+          centreNonconservativeProduct,
+          parameters
         );
         SolverType::nonconservativeProduct(
           leftAverageState,
@@ -439,7 +467,8 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
           timeStamp,
           timeStepSize,
           normal,
-          leftNonconservativeProduct
+          leftNonconservativeProduct,
+          parameters
         );
       }
 
@@ -451,21 +480,22 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
         volumeSize,
         timeStamp,
         timeStepSize,
-        normal
+        normal,
+        parameters
       );
-      assertion(
+      ASSERTION(
         exahype2::MaxEigenvalueReduction::isPhysicalValue(leftMaxEigenvalue),
         leftMaxEigenvalue,
         volume,
         normal
       );
-      assertion(
+      ASSERTION(
         exahype2::MaxEigenvalueReduction::isPhysicalValue(centreMaxEigenvalue),
         centreMaxEigenvalue,
         volume,
         normal
       );
-      assertion(
+      ASSERTION(
         exahype2::MaxEigenvalueReduction::isPhysicalValue(rightMaxEigenvalue),
         rightMaxEigenvalue,
         volume,
@@ -500,8 +530,21 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
     }
   }
 
+  // A SIMD loop over fewer unknowns than PEANO_WITH_SIMDLEN cannot vectorise. The SIMD loop adds the
+  // unknowns of whole vectors. The second loop adds the remaining unknowns.
+  constexpr int UnknownsInVectors = NumberOfUnknowns - NumberOfUnknowns % PEANO_WITH_SIMDLEN;
   SIMD()
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+  for (int unknown = 0; unknown < UnknownsInVectors; unknown++) {
+#if DIMENSIONS == 2
+    const StateUpdatePrecision update = axisUpdates[0][unknown] + axisUpdates[1][unknown];
+#else
+    const StateUpdatePrecision update =
+      tarch::la::sumInOrderOfValue(axisUpdates[0][unknown], axisUpdates[1][unknown], axisUpdates[2][unknown]);
+#endif
+    outputState[unknown] =
+      static_cast<StoragePrecision>(static_cast<StateUpdatePrecision>(outputState[unknown]) + update);
+  }
+  for (int unknown = UnknownsInVectors; unknown < NumberOfUnknowns; unknown++) {
 #if DIMENSIONS == 2
     const StateUpdatePrecision update = axisUpdates[0][unknown] + axisUpdates[1][unknown];
 #else
@@ -513,7 +556,7 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
   }
   // The assertion stays out of the SIMD loop. The body of that loop must not emit diagnostics.
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    assertion(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
+    ASSERTION(std::isfinite(outputState[unknown]), unknown, outputState[unknown]);
   }
 }
 /**
@@ -536,16 +579,17 @@ template <
 >
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::Constant::patchFaceFlux(
-  const StoragePrecision* NOALIAS const        inputPatch,
-  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-  const int                                    patchFace,
-  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  const int                                    boundaryFaces,
-  ComputePrecision* NOALIAS const              flux
+  const StoragePrecision* NOALIAS const         inputPatch,
+  const StoragePrecision* NOALIAS const         faceInputPatches[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, int>&     volumeIndex,
+  const int                                     patchFace,
+  const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  const int                                     boundaryFaces,
+  ComputePrecision* NOALIAS const               flux,
+  const typename SolverType::RuntimeParameters& parameters
 ) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   const int     normal       = patchFace % DIMENSIONS;
@@ -573,7 +617,17 @@ exahype2::fv::reconstruction::Constant::patchFaceFlux(
     EvaluateNonconservativeProduct,
     EvaluateCustomRiemann,
     ComputePrecision
-  >(centre, outside, volumeIndex, patchFace, patchCentre, patchSize, timeStamp, timeStepSize, boundaryFaces, flux);
+  >(centre,
+    outside,
+    volumeIndex,
+    patchFace,
+    patchCentre,
+    patchSize,
+    timeStamp,
+    timeStepSize,
+    boundaryFaces,
+    flux,
+    parameters);
 }
 
 /**
@@ -594,16 +648,17 @@ template <
 >
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::reconstruction::Constant::volumeFaceFlux(
-  const ComputePrecision* NOALIAS const        centre,
-  const ComputePrecision* NOALIAS const        outside,
-  const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-  const int                                    face,
-  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  [[maybe_unused]] const int                   boundaryFaces,
-  ComputePrecision* NOALIAS const              flux
+  const ComputePrecision* NOALIAS const         centre,
+  const ComputePrecision* NOALIAS const         outside,
+  const tarch::la::Vector<DIMENSIONS, int>&     volumeIndex,
+  const int                                     face,
+  const tarch::la::Vector<DIMENSIONS, double>&  patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  patchSize,
+  const double                                  timeStamp,
+  const double                                  timeStepSize,
+  [[maybe_unused]] const int                    boundaryFaces,
+  ComputePrecision* NOALIAS const               flux,
+  const typename SolverType::RuntimeParameters& parameters
 ) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   const int     normal       = face % DIMENSIONS;
@@ -634,7 +689,8 @@ exahype2::fv::reconstruction::Constant::volumeFaceFlux(
       side,
       boundaryFaces,
       leftGoingFlux,
-      rightGoingFlux
+      rightGoingFlux,
+      parameters
     ));
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       flux[unknown] = side == 0 ? rightGoingFlux[unknown] : leftGoingFlux[unknown];
@@ -643,13 +699,13 @@ exahype2::fv::reconstruction::Constant::volumeFaceFlux(
     ComputePrecision centreFlux[NumberOfUnknowns]{};
     ComputePrecision outsideFlux[NumberOfUnknowns]{};
     if constexpr (EvaluateFlux) {
-      SolverType::flux(centre, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, centreFlux);
-      SolverType::flux(outside, outsideCentre, volumeSize, timeStamp, timeStepSize, normal, outsideFlux);
+      SolverType::flux(centre, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, centreFlux, parameters);
+      SolverType::flux(outside, outsideCentre, volumeSize, timeStamp, timeStepSize, normal, outsideFlux, parameters);
     }
     const ComputePrecision centreMaxEigenvalue =
-      SolverType::maxEigenvalue(centre, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+      SolverType::maxEigenvalue(centre, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, parameters);
     const ComputePrecision outsideMaxEigenvalue =
-      SolverType::maxEigenvalue(outside, outsideCentre, volumeSize, timeStamp, timeStepSize, normal);
+      SolverType::maxEigenvalue(outside, outsideCentre, volumeSize, timeStamp, timeStepSize, normal, parameters);
     const ComputePrecision maxEigenvalue =
       centreMaxEigenvalue > outsideMaxEigenvalue ? centreMaxEigenvalue : outsideMaxEigenvalue;
     const auto half = static_cast<ComputePrecision>(0.5);
@@ -673,7 +729,8 @@ exahype2::fv::reconstruction::Constant::volumeFaceFlux(
         timeStamp,
         timeStepSize,
         normal,
-        product
+        product,
+        parameters
       );
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         flux[unknown] += side == 0 ? -half * product[unknown] : half * product[unknown];

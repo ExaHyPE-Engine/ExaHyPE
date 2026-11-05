@@ -21,10 +21,6 @@ namespace exahype2::dg::ader {
   class NonlinearPredictor;
 } // namespace exahype2::dg::ader
 
-namespace exahype2::dg::ader::tests {
-  class NonlinearPredictorTest;
-} // namespace exahype2::dg::ader::tests
-
 TARGET_DECLARE
 /**
  * The space-time predictor of one cell of a nonlinear ADER-DG solver Derived. predict() iterates
@@ -103,14 +99,13 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     double                                       picardTolerance,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD int getTeamScratchBytes(int teamThreads);
 
 private:
-  friend class exahype2::dg::ader::tests::NonlinearPredictorTest;
-
   static constexpr int ValuesPerNodeResidual = CellLayout::NodesPerAxis * CellLayout::NumberOfUnknowns;
 
   /**
@@ -131,9 +126,11 @@ private:
     const ComputePrecision* NOALIAS nodeResiduals,
     const TeamWorkers&              workers
   );
+
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double sumNodeResiduals(
     const ComputePrecision* NOALIAS nodeResiduals
   );
+
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD double getLargestOfCell(
     double             value,
     const TeamWorkers& workers
@@ -172,6 +169,7 @@ private:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          timeNode,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 
@@ -222,6 +220,7 @@ private:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          timeNode,
+    const typename Derived::RuntimeParameters&   parameters,
     const TeamWorkers&                           workers = TeamWorkers{}
   );
 

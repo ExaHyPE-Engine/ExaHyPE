@@ -26,7 +26,7 @@ exahype2::fv::getBoundaryFaceMask(const peano4::CellConnectivity& cellConnectivi
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecision>::operator()(const int entry) const {
-  assertion(entry >= 0 and entry < boundaryFaces.size * Kernel::VolumesPerLayer, entry, boundaryFaces.size);
+  ASSERTION(entry >= 0 and entry < boundaryFaces.size * Kernel::VolumesPerLayer, entry, boundaryFaces.size);
   const int face      = boundaryFaces[entry / Kernel::VolumesPerLayer];
   const int lowerCell = cellConnectivity.getFaceCell(face, 0);
   const int slot      = lowerCell >= 0 ? lowerCell : cellConnectivity.getFaceCell(face, 1);
@@ -39,7 +39,8 @@ exahype2::fv::ApplyBoundaryConditions<Derived, StoragePrecision, ComputePrecisio
     cellConnectivity.getCellWidth(slot),
     timeStamp,
     faceNumber,
-    entry % Kernel::VolumesPerLayer
+    entry % Kernel::VolumesPerLayer,
+    parameters
   );
 }
 
@@ -107,7 +108,8 @@ exahype2::fv::MeasurePatchEigenvalues<Derived, StoragePrecision, ComputePrecisio
       solution.getChunk(slot),
       cellConnectivity.getCellCentre(slot),
       cellConnectivity.getCellWidth(slot),
-      timeStamp
+      timeStamp,
+      parameters
     )
   );
 }
@@ -122,7 +124,8 @@ exahype2::fv::MeasurePatchErrors<Derived, StoragePrecision, ComputePrecision>::o
     cellConnectivity.getCellWidth(slot),
     timeStamp,
     timeStepSize,
-    errorsPerCell + static_cast<std::ptrdiff_t>(entry) * NumberOfNorms
+    errorsPerCell + static_cast<std::ptrdiff_t>(entry) * NumberOfNorms,
+    parameters
   );
 }
 
@@ -133,7 +136,7 @@ exahype2::fv::PatchTransfer<Derived, StoragePrecision, ComputePrecision>::copy(
   StoragePrecision* const target,
   const int               itemOfChunk
 ) const {
-  assertion(itemOfChunk >= 0 and itemOfChunk < WorkItemsPerChunk, itemOfChunk);
+  ASSERTION(itemOfChunk >= 0 and itemOfChunk < WorkItemsPerChunk, itemOfChunk);
   const StoragePrecision* const kept = source.getChunk(slot);
   for (int value = itemOfChunk * Kernel::NumberOfData; value < (itemOfChunk + 1) * Kernel::NumberOfData; value++) {
     target[value] = kept[value];

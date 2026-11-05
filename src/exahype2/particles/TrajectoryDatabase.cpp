@@ -177,7 +177,7 @@ exahype2::particles::TrajectoryDatabase::prepareSnapshot(
     _maxPositionDelta = std::max(tarch::la::norm2(snapshots.front().x - x), _maxPositionDelta);
   }
   if (action == AddSnapshotAction::Replace) {
-    logWarning(
+    LOG_WARNING(
       "Particle " << number.first << "x" << number.second << " must stay at one location per time stamp (got " << x
                   << " and " << snapshots.front().x << " at time " << timestamp << ")."
     );
@@ -250,7 +250,7 @@ exahype2::particles::TrajectoryDatabase::addParticleSnapshot(
               << " data entries per particle (got " << numberOfDataEntries << ").";
       tarch::terminateWithError(message.str());
     }
-    assertion(_numberOfDataPointsPerParticle == numberOfDataEntries or _data.empty());
+    ASSERTION(_numberOfDataPointsPerParticle == numberOfDataEntries or _data.empty());
     _numberOfDataPointsPerParticle = std::max(_numberOfDataPointsPerParticle, numberOfDataEntries);
 
     if (_rank < 0) {

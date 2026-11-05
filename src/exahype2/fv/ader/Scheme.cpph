@@ -54,7 +54,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::getInteriorSideOffset(
   const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
   const int                                 face
 ) {
-  assertion(not isOnPatchFace(volumeIndex, face), volumeIndex, face);
+  ASSERTION(not isOnPatchFace(volumeIndex, face), volumeIndex, face);
   const int  axis      = face % DIMENSIONS;
   const bool upperFace = face >= DIMENSIONS;
   const int  interface = volumeIndex(axis) + (upperFace ? 0 : -1) + (PatchSize - 1) * getTangentialIndex(volumeIndex, axis);
@@ -94,6 +94,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::reconstructPatch(
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   ComputePrecision* NOALIAS const              patchScratch,
   const exahype2::dg::ader::TeamWorkers&       workers,
+  const typename Derived::RuntimeParameters&   parameters,
   const StoragePrecision* const*               cornerHalos
 ) {
   using WeightSource = std::conditional_t<
@@ -128,9 +129,10 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::reconstructPatch(
             : Reconstruction::template cornerState<PatchSize, NumberOfData>(cornerHalos, neighbourIndex);
         supported = neighbour == nullptr
           or Derived::supportsHighOrderReconstruction(
-            neighbour,
-            exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, neighbourIndex),
-            volumeSize
+                      neighbour,
+                      exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, neighbourIndex),
+                      volumeSize,
+                      parameters
           );
       }
       if (not supported) {
@@ -156,7 +158,8 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::reconstructPatch(
         patch + static_cast<std::ptrdiff_t>(volume) * NumberOfData,
         patchScratch + NodalStatesOffset + static_cast<std::ptrdiff_t>(volume) * NodalStateSize,
         exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, peano4::dDelinearised(volume, PatchSize)),
-        exahype2::fv::getVolumeSize(cellSize, PatchSize)
+        exahype2::fv::getVolumeSize(cellSize, PatchSize),
+        parameters
       );
     }
     exahype2::dg::ader::teamBarrier(workers);
@@ -185,13 +188,14 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictVolume(
   ComputePrecision* const                            stateHalves[peano4::FacesPerCell],
   ComputePrecision* const                            fluxHalves[peano4::FacesPerCell],
   const exahype2::dg::ader::TeamWorkers&             workers,
+  const typename Derived::RuntimeParameters&         parameters,
   const bool                                         unconvergedWritesNaN
 ) {
   using Layout          = typename Predictor::CellLayout;
   using PredictorBlock  = typename Predictor::Scratch;
   using UpdatePrecision = std::common_type_t<ComputePrecision, double>;
   constexpr ComputePrecision NaN = std::numeric_limits<ComputePrecision>::quiet_NaN();
-  assertion(volume >= 0 and volume < VolumesPerPatch, volume);
+  ASSERTION(volume >= 0 and volume < VolumesPerPatch, volume);
 
   const auto                    index            = peano4::dDelinearised(volume, PatchSize);
   ComputePrecision* const       predictorScratch = volumeScratch;
@@ -214,6 +218,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::predictVolume(
     timeStamp,
     timeStepSize,
     PicardResidualTolerance,
+    parameters,
     workers
   );
   const bool diverged = outcome == exahype2::dg::ader::DivergedPicardIteration
@@ -273,6 +278,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::updateVolumeInsidePatch(
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const ComputePrecision* NOALIAS const        scratch,
+  const typename Derived::RuntimeParameters&   parameters,
   ComputePrecision* NOALIAS const              interiorUpdates
 ) {
   using UpdatePrecision = std::common_type_t<StoragePrecision, ComputePrecision, double>;
@@ -345,7 +351,8 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::updateVolumeInsidePatch(
         false,
         axis,
         fluxLeft,
-        fluxRight
+        fluxRight,
+        parameters
       );
       if constexpr (ReportEigenvalues) {
         maximum = exahype2::MaxEigenvalueReduction::combine(maximum, eigenvalue);
@@ -380,19 +387,20 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::updateVolumeInsidePatch(
 template <typename Derived, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 exahype2::fv::ader::Scheme<Derived, ComputePrecision>::solveRiemannProblemAtNode(
-  const ComputePrecision* NOALIAS const        left,
-  const ComputePrecision* NOALIAS const        right,
+  const ComputePrecision* NOALIAS const                  left,
+  const ComputePrecision* NOALIAS const                  right,
   [[maybe_unused]] const ComputePrecision* NOALIAS const leftFlux,
   [[maybe_unused]] const ComputePrecision* NOALIAS const rightFlux,
-  const tarch::la::Vector<DIMENSIONS, double>& position,
-  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  [[maybe_unused]] const bool                  isBoundaryFace,
-  [[maybe_unused]] const int                   faceIndex,
-  ComputePrecision* NOALIAS const              fluxLeft,
-  ComputePrecision* NOALIAS const              fluxRight
+  const tarch::la::Vector<DIMENSIONS, double>&           position,
+  const tarch::la::Vector<DIMENSIONS, double>&           volumeSize,
+  const double                                           timeStamp,
+  const double                                           timeStepSize,
+  const int                                              normal,
+  [[maybe_unused]] const bool                            isBoundaryFace,
+  [[maybe_unused]] const int                             faceIndex,
+  ComputePrecision* NOALIAS const                        fluxLeft,
+  ComputePrecision* NOALIAS const                        fluxRight,
+  const typename Derived::RuntimeParameters&             parameters
 ) {
   const double halfTime = timeStamp + 0.5 * timeStepSize;
   if constexpr (exahype2::terms::HasRiemannSolver<Derived, ComputePrecision>) {
@@ -407,12 +415,13 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::solveRiemannProblemAtNode
       isBoundaryFace,
       faceIndex,
       fluxLeft,
-      fluxRight
+      fluxRight,
+      parameters
     );
   } else {
     const double eigenvalue = exahype2::MaxEigenvalueReduction::combine(
-      Derived::maxEigenvalue(left, position, volumeSize, halfTime, timeStepSize, normal),
-      Derived::maxEigenvalue(right, position, volumeSize, halfTime, timeStepSize, normal)
+      Derived::maxEigenvalue(left, position, volumeSize, halfTime, timeStepSize, normal, parameters),
+      Derived::maxEigenvalue(right, position, volumeSize, halfTime, timeStepSize, normal, parameters)
     );
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       ComputePrecision flux =
@@ -430,7 +439,17 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::solveRiemannProblemAtNode
         average[entry] = ComputePrecision(0.5) * (left[entry] + right[entry]);
         jump[entry]    = right[entry] - left[entry];
       }
-      Derived::nonconservativeProduct(average, jump, position, volumeSize, halfTime, timeStepSize, normal, fluctuation);
+      Derived::nonconservativeProduct(
+        average,
+        jump,
+        position,
+        volumeSize,
+        halfTime,
+        timeStepSize,
+        normal,
+        fluctuation,
+        parameters
+      );
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxLeft[unknown] += ComputePrecision(0.5) * fluctuation[unknown];
         fluxRight[unknown] -= ComputePrecision(0.5) * fluctuation[unknown];
@@ -455,10 +474,11 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::applyBoundaryConditionsAt
   const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
   const double                                 timeStamp,
   const double                                 timeStepSize,
-  const int                                    normal
+  const int                                    normal,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   if constexpr (not exahype2::terms::HasBoundaryConditions<Derived, StoragePrecision>) {
-    assertion(false, "A solver without boundary conditions needs a domain periodic along every axis.", normal);
+    ASSERTION(false, "A solver without boundary conditions needs a domain periodic along every axis.", normal);
   } else {
     const double halfTime = timeStamp + 0.5 * timeStepSize;
     StoragePrecision insideState[NumberOfData];
@@ -467,12 +487,12 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::applyBoundaryConditionsAt
       insideState[entry]  = static_cast<StoragePrecision>(inside[entry]);
       outsideState[entry] = insideState[entry];
     }
-    Derived::boundaryConditions(insideState, outsideState, position, volumeSize, halfTime, normal);
+    Derived::boundaryConditions(insideState, outsideState, position, volumeSize, halfTime, normal, parameters);
     for (int entry = 0; entry < NumberOfData; entry++) {
       outside[entry] = static_cast<ComputePrecision>(outsideState[entry]);
     }
     if constexpr (exahype2::terms::HasFlux<Derived, ComputePrecision>) {
-      Derived::flux(outside, position, volumeSize, halfTime, timeStepSize, normal, outsideFlux);
+      Derived::flux(outside, position, volumeSize, halfTime, timeStepSize, normal, outsideFlux, parameters);
     } else {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         outsideFlux[unknown] = ComputePrecision(0);
@@ -499,7 +519,8 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::solveRiemannProblemsOnFac
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const int                                    normal,
-  const int                                    boundaryFaceNumber
+  const int                                    boundaryFaceNumber,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   constexpr auto Nodes          = Basis::nodes();
   const bool     isBoundaryFace = boundaryFaceNumber >= 0;
@@ -545,7 +566,8 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::solveRiemannProblemsOnFac
           volumeSize,
           timeStamp,
           timeStepSize,
-          normal
+          normal,
+          parameters
         );
       }
       const bool lowerIsBoundary = isBoundaryFace and insideHalf == 1;
@@ -566,7 +588,8 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::solveRiemannProblemsOnFac
         isBoundaryFace,
         isBoundaryFace ? boundaryFaceNumber : normal,
         fluxLeft,
-        fluxRight
+        fluxRight,
+        parameters
       );
       if constexpr (ReportEigenvalues) {
         maximum = exahype2::MaxEigenvalueReduction::combine(maximum, eigenvalue);
@@ -592,7 +615,8 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::correctVolume(
   StoragePrecision* const                      patch,
   const ComputePrecision* const                fluxHalves[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 timeStepSize
+  const double                                 timeStepSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   using UpdatePrecision   = std::common_type_t<StoragePrecision, ComputePrecision, double>;
   const auto index        = peano4::dDelinearised(volume, PatchSize);
@@ -638,7 +662,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::ader::Scheme<Derived, Compu
   double* const                 flux
 ) {
   const auto index = peano4::dDelinearised(volume, PatchSize);
-  assertion(isOnPatchFace(index, face), volume, face);
+  ASSERTION(isOnPatchFace(index, face), volume, face);
   const ComputePrecision* const nodes =
     fluxHalf + static_cast<std::ptrdiff_t>(getTangentialIndex(index, face % DIMENSIONS)) * FluxEntries;
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -667,7 +691,7 @@ exahype2::fv::ader::Scheme<Derived, ComputePrecision>::interpolateFaceHalf(
   constexpr FaceTransferTables<Basis> Tables{};
   constexpr int                       Thirds   = peano4::SubdivisionFactor;
   constexpr int                       Tangents = DIMENSIONS - 1;
-  assertion(subface >= 0 and subface < peano4::SubfacesPerFace, subface);
+  ASSERTION(subface >= 0 and subface < peano4::SubfacesPerFace, subface);
 
   int subfacePosition[Tangents];
   int remainder = subface;

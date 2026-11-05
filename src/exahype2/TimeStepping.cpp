@@ -52,15 +52,15 @@ exahype2::TimeStepping::TimeStepping(const Rule rule, const double factor, const
   _rule(rule),
   _factor(factor),
   _stability(stability) {
-  assertion(std::isfinite(factor) and factor > 0.0, factor);
+  ASSERTION(std::isfinite(factor) and factor > 0.0, factor);
 }
 
 void
 exahype2::TimeStepping::setLimits(const exahype2::Limits& limits) {
-  assertion(limits.terminalTime >= 0.0, limits.terminalTime);
-  assertion(limits.minAdmissiblePatchSize >= 0.0, limits.minAdmissiblePatchSize);
-  assertion(limits.maxAdmissiblePatchSize > 0.0, limits.maxAdmissiblePatchSize);
-  assertion(limits.maxAdmissibleMeshWidth > 0.0, limits.maxAdmissibleMeshWidth);
+  ASSERTION(limits.terminalTime >= 0.0, limits.terminalTime);
+  ASSERTION(limits.minAdmissiblePatchSize >= 0.0, limits.minAdmissiblePatchSize);
+  ASSERTION(limits.maxAdmissiblePatchSize > 0.0, limits.maxAdmissiblePatchSize);
+  ASSERTION(limits.maxAdmissibleMeshWidth > 0.0, limits.maxAdmissibleMeshWidth);
   _limits = limits;
 }
 
@@ -92,8 +92,8 @@ exahype2::TimeStepping::raiseMaxScaledEigenvalue(const double eigenvalue) {
  */
 void
 exahype2::TimeStepping::setLocalMeshWidths(const double localMinimum, const double localMaximum) {
-  assertion(localMinimum > 0.0, localMinimum);
-  assertion(localMaximum >= 0.0, localMaximum);
+  ASSERTION(localMinimum > 0.0, localMinimum);
+  ASSERTION(localMaximum >= 0.0, localMaximum);
   _localMinMeshWidth  = localMinimum;
   _localMaxMeshWidth  = localMaximum;
   _localMeshWidthsSet = true;
@@ -138,8 +138,8 @@ exahype2::TimeStepping::readValuesFromGlobalReduction(const tarch::mpi::Reductio
   if (_hasNewMeshWidths) {
     _minMeshWidth = record.getMinimumOfDouble(_minMeshWidthSlot);
     _maxMeshWidth = record.getMaximumOfDouble(_maxMeshWidthSlot);
-    assertion(std::isfinite(_minMeshWidth) and _minMeshWidth > 0.0, _minMeshWidth, _maxMeshWidth);
-    assertion(_maxMeshWidth >= _minMeshWidth, _minMeshWidth, _maxMeshWidth);
+    ASSERTION(std::isfinite(_minMeshWidth) and _minMeshWidth > 0.0, _minMeshWidth, _maxMeshWidth);
+    ASSERTION(_maxMeshWidth >= _minMeshWidth, _minMeshWidth, _maxMeshWidth);
   }
   if (not _hasNewMaxEigenvalues) {
     return;
@@ -169,7 +169,7 @@ exahype2::TimeStepping::hasPositiveStabilityEigenvalue() const {
 
 void
 exahype2::TimeStepping::advanceTimeStamp(const double timeStepSize) {
-  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, _timeStamp);
+  ASSERTION(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, _timeStamp);
   _timeStamp += timeStepSize;
   _timeStepSizeOfLastStep = timeStepSize;
 }
@@ -180,7 +180,7 @@ exahype2::TimeStepping::advanceTimeStamp(const double timeStepSize) {
  */
 void
 exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromCFL) {
-  assertion(_rule == Rule::Adaptive);
+  ASSERTION(_rule == Rule::Adaptive);
   _admissibleTimeStepSizeOfNextStep = timeStepSizeFromCFL;
   if (not std::isfinite(timeStepSizeFromCFL) or timeStepSizeFromCFL <= NumericalZero) {
     tarch::triggerNonCriticalAssertion(
@@ -192,9 +192,9 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
     return;
   }
   const double timeStepSizeToTerminalTime = _limits.terminalTime - _timeStamp;
-  assertion(std::isfinite(timeStepSizeToTerminalTime), timeStepSizeToTerminalTime, _timeStamp);
-  // A step size within rounding of the remaining time grows to the remaining time. No step of a few
-  // machine epsilons follows.
+  ASSERTION(std::isfinite(timeStepSizeToTerminalTime), timeStepSizeToTerminalTime, _timeStamp);
+  // A step size within rounding of the remaining time grows to the remaining time. This step ends
+  // the run at the terminal time.
   const double terminalTimeTolerance = NumericalZero * std::max(1.0, std::abs(_limits.terminalTime));
   if (timeStepSizeToTerminalTime - timeStepSizeFromCFL <= terminalTimeTolerance) {
     _admissibleTimeStepSizeOfNextStep = timeStepSizeToTerminalTime;
@@ -203,7 +203,7 @@ exahype2::TimeStepping::setAdmissibleTimeStepSize(const double timeStepSizeFromC
 
 void
 exahype2::TimeStepping::setFixedTimeStepSize(const double timeStepSize) {
-  assertion(_rule == Rule::Fixed);
+  ASSERTION(_rule == Rule::Fixed);
   _timeStepSize = timeStepSize;
   if (not std::isfinite(timeStepSize) or timeStepSize <= 0.0) {
     tarch::triggerNonCriticalAssertion(

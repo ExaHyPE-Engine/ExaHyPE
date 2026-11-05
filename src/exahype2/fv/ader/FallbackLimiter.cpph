@@ -12,10 +12,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::fv::ader::FallbackLimiter<Derived, ComputePrecision>::isPhysicallyAdmissible(
   const StoragePrecision* NOALIAS const        candidate,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>) {
-    return Derived::isPhysicallyAdmissible(candidate, VolumesPerPatch, cellCentre, cellSize);
+    return Derived::isPhysicallyAdmissible(candidate, VolumesPerPatch, cellCentre, cellSize, parameters);
   } else {
     return true;
   }
@@ -32,14 +33,16 @@ exahype2::fv::ader::FallbackLimiter<Derived, ComputePrecision>::isPhysicallyAdmi
   const int                                    volume,
   const StoragePrecision* NOALIAS const        candidate,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   if constexpr (exahype2::terms::HasPhysicalAdmissibility<Derived, StoragePrecision>) {
     return Derived::isPhysicallyAdmissible(
       candidate + static_cast<std::ptrdiff_t>(volume) * NumberOfData,
       1,
       exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, peano4::dDelinearised(volume, PatchSize)),
-      exahype2::fv::getVolumeSize(cellSize, PatchSize)
+      exahype2::fv::getVolumeSize(cellSize, PatchSize),
+      parameters
     );
   } else {
     return true;
@@ -54,10 +57,11 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::fv::ader::FallbackLimiter<Derived, ComputePrecision>::isAdmissible(
-  const int                                    volume,
-  const StoragePrecision* NOALIAS const        candidate,
-  const StoragePrecision* NOALIAS const        previous,
-  const StoragePrecision* const                halo[peano4::FacesPerCell]
+  const int                                  volume,
+  const StoragePrecision* NOALIAS const      candidate,
+  const StoragePrecision* NOALIAS const      previous,
+  const StoragePrecision* const              halo[peano4::FacesPerCell],
+  const typename Derived::RuntimeParameters& parameters
 ) {
   const StoragePrecision* const state = candidate + static_cast<std::ptrdiff_t>(volume) * NumberOfData;
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -66,7 +70,7 @@ exahype2::fv::ader::FallbackLimiter<Derived, ComputePrecision>::isAdmissible(
     }
   }
   if constexpr (NumberOfObservables > 0) {
-    return satisfiesMaximumPrinciple(volume, candidate, previous, halo);
+    return satisfiesMaximumPrinciple(volume, candidate, previous, halo, parameters);
   } else {
     return true;
   }
@@ -141,10 +145,11 @@ template <typename Derived, typename ComputePrecision>
 template <typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 exahype2::fv::ader::FallbackLimiter<Derived, ComputePrecision>::satisfiesMaximumPrinciple(
-  const int                             volume,
-  const StoragePrecision* NOALIAS const candidate,
-  const StoragePrecision* NOALIAS const previous,
-  const StoragePrecision* const         halo[peano4::FacesPerCell]
+  const int                                  volume,
+  const StoragePrecision* NOALIAS const      candidate,
+  const StoragePrecision* NOALIAS const      previous,
+  const StoragePrecision* const              halo[peano4::FacesPerCell],
+  const typename Derived::RuntimeParameters& parameters
 ) {
   static_assert(exahype2::terms::HasDmpObservables<Derived, StoragePrecision>);
   StoragePrecision minimum[NumberOfObservables];
@@ -164,17 +169,17 @@ exahype2::fv::ader::FallbackLimiter<Derived, ComputePrecision>::satisfiesMaximum
     if (state == nullptr) {
       continue;
     }
-    Derived::mapDmpObservables(observables, state);
+    Derived::mapDmpObservables(observables, state, parameters);
     for (int observable = 0; observable < NumberOfObservables; observable++) {
       minimum[observable] = std::fmin(minimum[observable], observables[observable]);
       maximum[observable] = std::fmax(maximum[observable], observables[observable]);
     }
   }
-  Derived::mapDmpObservables(observables, candidate + static_cast<std::ptrdiff_t>(volume) * NumberOfData);
+  Derived::mapDmpObservables(observables, candidate + static_cast<std::ptrdiff_t>(volume) * NumberOfData, parameters);
   for (int observable = 0; observable < NumberOfObservables; observable++) {
     StoragePrecision relaxation = static_cast<StoragePrecision>(Derived::DmpRelaxationParameter);
     if constexpr (exahype2::terms::HasDmpRelaxationParameter<Derived, StoragePrecision>) {
-      relaxation = Derived::dmpRelaxationParameter(observable, relaxation);
+      relaxation = Derived::dmpRelaxationParameter(observable, relaxation, parameters);
     }
     const StoragePrecision widening = std::fmax(
       relaxation,

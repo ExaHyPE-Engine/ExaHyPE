@@ -33,7 +33,8 @@ exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::recomputeVolume(
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const int                                    boundaryFaces,
-  StoragePrecision* NOALIAS const              patch
+  StoragePrecision* NOALIAS const              patch,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   const StoragePrecision* fallbackHalo[peano4::FacesPerCell];
   getFallbackHalo(halo, fallbackHalo);
@@ -46,7 +47,8 @@ exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::recomputeVolume(
     timeStamp,
     timeStepSize,
     boundaryFaces,
-    patch + static_cast<std::ptrdiff_t>(volume) * NumberOfData
+    patch + static_cast<std::ptrdiff_t>(volume) * NumberOfData,
+    parameters
   ));
 }
 
@@ -70,9 +72,10 @@ exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::swapFaceFlux(
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const int                                    boundaryFaces,
-  StoragePrecision* NOALIAS const              patch
+  StoragePrecision* NOALIAS const              patch,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
-  assertion(isOnPatchFace(volume, face), volume, face);
+  ASSERTION(isOnPatchFace(volume, face), volume, face);
   const StoragePrecision* fallbackHalo[peano4::FacesPerCell];
   getFallbackHalo(halo, fallbackHalo);
   ComputePrecision fallbackFlux[NumberOfUnknowns];
@@ -86,7 +89,8 @@ exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::swapFaceFlux(
     timeStepSize,
     boundaryFaces,
     face,
-    fallbackFlux
+    fallbackFlux,
+    parameters
   );
   double appliedFlux[NumberOfUnknowns];
   Scheme::getAppliedFaceFlux(volume, fluxHalf, face, appliedFlux);
@@ -121,11 +125,12 @@ exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::swapInteriorFlux(
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const int                                    boundaryFaces,
-  StoragePrecision* NOALIAS const              patch
+  StoragePrecision* NOALIAS const              patch,
+  const typename Derived::RuntimeParameters&   parameters
 ) {
   using Reconstruction = typename Solver::Reconstruction;
   static_assert(std::is_same_v<Reconstruction, exahype2::fv::reconstruction::Constant>, "The fallback is Godunov.");
-  assertion(not isOnPatchFace(volume, face), volume, face);
+  ASSERTION(not isOnPatchFace(volume, face), volume, face);
   ComputePrecision              centre[NumberOfData];
   ComputePrecision              outside[NumberOfData];
   const StoragePrecision* const centreState  = previous + static_cast<std::ptrdiff_t>(volume) * NumberOfData;
@@ -153,7 +158,8 @@ exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::swapInteriorFlux(
     timeStamp,
     timeStepSize,
     boundaryFaces,
-    fallbackFlux);
+    fallbackFlux,
+    parameters);
 
   const int                     normal = face % DIMENSIONS;
   const double                  scale  = (face < DIMENSIONS ? 1.0 : -1.0) * timeStepSize

@@ -35,11 +35,11 @@ exahype2::plotter::FacePlotter::plot(
   constexpr int  CellsPerFace   = peano4::power(NodesPerAxis - 1, DIMENSIONS - 1);
   constexpr int  CornersPerCell = peano4::VerticesPerCell / 2;
   constexpr auto CellType = DIMENSIONS == 2 ? tarch::plotter::CellType::Line : tarch::plotter::CellType::Quadrangle;
-  assertion(values.isHostAccessible());
-  assertion(values.getChunkSize() >= 2 * NodesPerFace * ValuesPerNode, values.getChunkSize());
-  assertion(quadratureNodes != nullptr);
+  ASSERTION(values.isHostAccessible());
+  ASSERTION(values.getChunkSize() >= 2 * NodesPerFace * ValuesPerNode, values.getChunkSize());
+  ASSERTION(quadratureNodes != nullptr);
   for ([[maybe_unused]] const auto& field : _fields) {
-    assertion(field.components > 0, field.name, field.components);
+    ASSERTION(field.components > 0, field.name, field.components);
   }
 
   std::vector<int> faces;
@@ -70,7 +70,7 @@ exahype2::plotter::FacePlotter::plot(
     mesh.pointFields.push_back({field.name + "R", field.components, Values(numberOfPoints * field.components)});
     plottedValues += field.components;
   }
-  assertion(plottedValues <= ValuesPerNode, plottedValues, ValuesPerNode);
+  ASSERTION(plottedValues <= ValuesPerNode, plottedValues, ValuesPerNode);
   mesh.cellFields.push_back({"RefinementLevel", 1, Values(numberOfCells)});
   mesh.cellFields.push_back({"Subdomain", 1, Values(numberOfCells, static_cast<double>(rank))});
 
@@ -130,6 +130,6 @@ exahype2::plotter::FacePlotter::plot(
   if (_fileWriter == nullptr) {
     _fileWriter = tarch::plotter::createFileWriter(format);
   }
-  assertion(_fileWriter->getFormat() == format);
+  ASSERTION(_fileWriter->getFormat() == format);
   _fileWriter->write(mesh, outputDirectory + OutputSubdirectory, _filename, timeStamp);
 }

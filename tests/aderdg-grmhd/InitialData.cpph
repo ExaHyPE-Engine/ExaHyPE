@@ -54,31 +54,31 @@ tests::exahype2::aderdg::grmhd::evaluateKerrSchildMetric(
 }
 
 /**
- * Writes the state of the Michel accretion test into Q, the spherical accretion onto a stationary
- * black hole after https://doi.org/10.1016/j.cpc.2020.107251 and http://dx.doi.org/10.1007/BF00649949.
+ * Writes the primitive variables of the Michel accretion test into V, the spherical accretion onto a
+ * stationary black hole after https://doi.org/10.1016/j.cpc.2020.107251 and
+ * http://dx.doi.org/10.1007/BF00649949. V stores the pressure in the slot of E.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
-tests::exahype2::aderdg::grmhd::setMichelAccretionState(
+tests::exahype2::aderdg::grmhd::setMichelAccretionPrimitives(
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const double                t,
-  double* const                                Q
+  double* const                                V
 ) {
   constexpr double AdiabaticIndex          = 4.0 / 3.0;
   constexpr int    MaximumNewtonIterations = 50;
-  constexpr int    NumberOfVariables       = Shortcuts::gij + 6;
   constexpr double CriticalDensity         = 0.0625;
   constexpr double CriticalRadius          = 8.0;
   constexpr double PolytropicIndex         = 1.0 / (AdiabaticIndex - 1.0);
+
+  ASSERTION(V != nullptr);
 
   double lapse           = 0.0;
   double rootDeterminant = 0.0;
   double shift[3];
   double gCov[3][3];
-  evaluateKerrSchildMetric(x, &lapse, &rootDeterminant, shift, gCov);
+  tests::exahype2::aderdg::grmhd::evaluateKerrSchildMetric(x, &lapse, &rootDeterminant, shift, gCov);
 
   const double r = tarch::la::norm2(x);
 
-  double V[NumberOfVariables];
   if (r < 0.8) {
     // A placeholder state near the centre avoids a division by zero. The evolution and the boundary
     // conditions never read it.
@@ -101,9 +101,6 @@ tests::exahype2::aderdg::grmhd::setMichelAccretionState(
     V[Shortcuts::gij + 3]   = 1.;
     V[Shortcuts::gij + 4]   = 0.;
     V[Shortcuts::gij + 5]   = 1.;
-
-    tests::exahype2::aderdg::grmhd::convertPrimitiveToConserved(Q, V);
-
     return;
   }
 
@@ -188,7 +185,20 @@ tests::exahype2::aderdg::grmhd::setMichelAccretionState(
   V[Shortcuts::gij + 3]   = spatialMetric[3];
   V[Shortcuts::gij + 4]   = spatialMetric[4];
   V[Shortcuts::gij + 5]   = spatialMetric[5];
+}
 
+INLINE_METHOD GPU_CALLABLE_METHOD void
+tests::exahype2::aderdg::grmhd::setMichelAccretionState(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const double                t,
+  double* const                                Q
+) {
+  constexpr int NumberOfVariables = Shortcuts::gij + 6;
+
+  ASSERTION(Q != nullptr);
+
+  double V[NumberOfVariables];
+  tests::exahype2::aderdg::grmhd::setMichelAccretionPrimitives(x, V);
   tests::exahype2::aderdg::grmhd::convertPrimitiveToConserved(Q, V);
 }
 

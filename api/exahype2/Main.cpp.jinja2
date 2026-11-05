@@ -24,9 +24,7 @@ namespace {
     result.getCopyrightBanner = []() { return std::string("ExaHyPE 2 (C) www.exahype.org"); };
 
     result.printApplicationHelp      = ::{{ project_namespace }}::RuntimeParameters::printUsage;
-    result.loadApplicationParameters = [](tarch::reader::JSONReader* const reader, int& argc, char** const argv) {
-      ::{{ project_namespace }}::RuntimeParameters::load(reader, argc, argv);
-    };
+    result.loadApplicationParameters = ::{{ project_namespace }}::loadRuntimeParameters;
 
     result.startSimulation  = ::{{ project_namespace }}::startSimulation;
     result.finishSimulation = ::{{ project_namespace }}::finishSimulation;

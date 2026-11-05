@@ -23,7 +23,7 @@ def make_grid_snapshot(
     """Builds a unit-square grid whose cells are written row by row along x.
 
     Every cell is its own patch with its position in the file as curve index unless
-    curve_indices names the curve index of every cell.
+    curve_indices sets the curve index of every cell.
     """
     axis = np.linspace(0.0, 1.0, cells_per_axis + 1)
     points = np.asarray([[x, y] for y in axis for x in axis])

@@ -29,6 +29,8 @@ struct exahype2::fv::ader::PredictorTerms {
 
   static constexpr bool DifferentiatesTimeAveragedFlux = false;
 
+  using RuntimeParameters = typename SolverType::RuntimeParameters;
+
   template <typename P>
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
     const P*                                     q,
@@ -37,11 +39,12 @@ struct exahype2::fv::ader::PredictorTerms {
     double                                       t,
     double                                       dt,
     int                                          normal,
-    P*                                           f
+    P*                                           f,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasFlux<SolverType, P>
   {
-    SolverType::flux(q, x, h, t, dt, normal, f);
+    SolverType::flux(q, x, h, t, dt, normal, f, parameters);
   }
 
   template <typename P>
@@ -51,11 +54,12 @@ struct exahype2::fv::ader::PredictorTerms {
     const tarch::la::Vector<DIMENSIONS, double>& h,
     double                                       t,
     double                                       dt,
-    P*                                           s
+    P*                                           s,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasSourceTerm<SolverType, P>
   {
-    SolverType::sourceTerm(q, x, h, t, dt, s);
+    SolverType::sourceTerm(q, x, h, t, dt, s, parameters);
   }
 
   template <typename P>
@@ -67,11 +71,12 @@ struct exahype2::fv::ader::PredictorTerms {
     double                                       t,
     double                                       dt,
     int                                          normal,
-    P*                                           b
+    P*                                           b,
+    const RuntimeParameters&                     parameters
   )
     requires exahype2::terms::HasNonconservativeProduct<SolverType, P>
   {
-    SolverType::nonconservativeProduct(q, dq, x, h, t, dt, normal, b);
+    SolverType::nonconservativeProduct(q, dq, x, h, t, dt, normal, b, parameters);
   }
 };
 TARGET_DECLARE_END

@@ -8,7 +8,7 @@ namespace tarch::mpi {
 
 /**
  * Runs the pollers that complete the outstanding communication of a rank. A blocking MPI call is
- * no task scheduling point. Work that a remote rank waits for registers a poller here.
+ * not a task scheduling point. Work that a remote rank waits for registers a poller here.
  */
 class tarch::mpi::AbstractCommunicationManager {
 public:

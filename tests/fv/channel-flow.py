@@ -42,14 +42,22 @@ boundary_conditions = """
     Qoutside[i] = Qinside[i];
   }
 
-  // The inlet lies at x[0] = 0.
-  const double maxAdmissiblePatchSize = RuntimeParameters::getMaxAdmissiblePatchSize();
-  if (tarch::la::smallerEquals(x[0], maxAdmissiblePatchSize)) {
-    Qoutside[Shortcuts::rhoU + 0] = 1.0;
+  // The inlet at x[0] = 0 prescribes the momentum along the first axis and keeps the interior pressure.
+  if (normal == 0 and tarch::la::smallerEquals(x[0], parameters.maxAdmissiblePatchSize)) {
+    auto kineticEnergyOf = [](const double* const NOALIAS Q) {
+      double momentumSquared = 0.0;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        momentumSquared += Q[Shortcuts::rhoU + axis] * Q[Shortcuts::rhoU + axis];
+      }
+      return 0.5 * momentumSquared / Q[Shortcuts::rho];
+    };
+    const double internalEnergyInside = Qinside[Shortcuts::rhoE] - kineticEnergyOf(Qinside);
+    Qoutside[Shortcuts::rhoU + 0]     = 1.0;
+    Qoutside[Shortcuts::rhoE]         = internalEnergyInside + kineticEnergyOf(Qoutside);
   }
 
   // The outlet lies at x[0] = DomainSize[0].
-  if (tarch::la::greaterEquals(x[0], DomainSize[0] - maxAdmissiblePatchSize)) {
+  if (tarch::la::greaterEquals(x[0], DomainSize[0] - parameters.maxAdmissiblePatchSize)) {
     Qoutside[Shortcuts::rhoU + 0] = Qinside[Shortcuts::rhoU + 0];
   }
 """

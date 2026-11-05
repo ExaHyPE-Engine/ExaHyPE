@@ -116,8 +116,8 @@ tarch::plotter::VTKHDFFileWriter::write(
     const hid_t   datasetCreationProperties = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_chunk(datasetCreationProperties, numberOfDimensions, chunkDimensions);
     if (compress) {
-      // The slabs of the ranks write every element of a compressed dataset. HDF5 writes no fill
-      // value into its chunks.
+      // The slabs of the ranks write every element of a compressed dataset. HDF5 skips the fill
+      // value of its chunks.
       H5Pset_fill_time(datasetCreationProperties, H5D_FILL_TIME_NEVER);
       H5Pset_shuffle(datasetCreationProperties);
       H5Pset_deflate(datasetCreationProperties, 1);
@@ -286,7 +286,7 @@ tarch::plotter::VTKHDFFileWriter::write(
   // array values itself if the file stores doubles and written equals components.
   const auto getStoredValues = [&](const MeshArray<double>& values, const int components, const int written) {
     const std::size_t tuples = values.size() / static_cast<std::size_t>(components);
-    assertion(tuples * static_cast<std::size_t>(written) * realBytes <= scratch.size(), tuples, written);
+    ASSERTION(tuples * static_cast<std::size_t>(written) * realBytes <= scratch.size(), tuples, written);
     if (writeDouble and components == written) {
       return static_cast<const void*>(values.data());
     }

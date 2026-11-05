@@ -21,25 +21,27 @@ INLINE_METHOD exahype2::fv::singlestep::Solver<Derived, StoragePrecision, Comput
  * boundary update once the halves of the neighbour ranks arrive.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::performTimeStep(
-  const peano4::CellConnectivity&      cellConnectivity,
-  exahype2::RefinementRequests& requests
+  const peano4::CellConnectivity& cellConnectivity,
+  exahype2::RefinementRequests&   requests,
+  const RuntimeParameters&        parameters
 ) {
   const double timeStepSize = this->_timeStepping.startTimeStep();
 
   this->_haloExchange.post();
-  this->applyBoundaryConditions(cellConnectivity);
+  this->applyBoundaryConditions(cellConnectivity, parameters);
   this->interpolateCoarseHalos(cellConnectivity, peano4::Adjacency::Local);
-  double maxEigenvalue = updatePatches(cellConnectivity, peano4::Adjacency::Local, timeStepSize);
+  double maxEigenvalue = updatePatches(cellConnectivity, peano4::Adjacency::Local, timeStepSize, parameters);
   this->_haloExchange.wait();
   this->interpolateCoarseHalos(cellConnectivity, peano4::Adjacency::Remote);
   maxEigenvalue = exahype2::MaxEigenvalueReduction::combine(
     maxEigenvalue,
-    updatePatches(cellConnectivity, peano4::Adjacency::Remote, timeStepSize)
+    updatePatches(cellConnectivity, peano4::Adjacency::Remote, timeStepSize, parameters)
   );
 
-  this->closeTimeStep(cellConnectivity, timeStepSize, maxEigenvalue, requests);
+  this->closeTimeStep(cellConnectivity, timeStepSize, maxEigenvalue, requests, parameters);
 }
 
 /**
@@ -48,11 +50,13 @@ exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::p
  * order of the cells.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD double
 exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::updatePatches(
   const peano4::CellConnectivity& cellConnectivity,
-  const peano4::Adjacency  adjacency,
-  const double             timeStepSize
+  const peano4::Adjacency         adjacency,
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
 ) {
   using Kernel             = exahype2::fv::singlestep::PatchUpdate<Derived, ComputePrecision>;
   const auto cells         = cellConnectivity.onDevice().getCells(adjacency);
@@ -69,7 +73,8 @@ exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::u
       this->_solution.getView(),
       std::as_const(this->_halo).getView(),
       this->_timeStepping.getTimeStamp(),
-      timeStepSize
+      timeStepSize,
+      parameters
     },
     tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
   );
@@ -83,14 +88,16 @@ exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::u
  * meet at it.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
   const peano4::CellConnectivity& cellConnectivity,
   const tarch::plotter::Format    format,
-  const std::string&              outputDirectory
+  const std::string&              outputDirectory,
+  const RuntimeParameters&        parameters
 ) {
   if constexpr (std::is_same_v<typename Derived::Reconstruction, exahype2::fv::reconstruction::Constant>) {
-    Base::plot(cellConnectivity, format, outputDirectory);
+    Base::plot(cellConnectivity, format, outputDirectory, parameters);
   } else {
     constexpr int PatchSize    = Derived::PatchSize;
     constexpr int NumberOfData = Derived::NumberOfUnknowns + Derived::NumberOfAuxiliaryVariables;
@@ -133,7 +140,8 @@ exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::p
             exahype2::fv::getVolumeCentre(cellCentre, cellSize, PatchSize, volumeIndex),
             volumeSize,
             timeStamp,
-            0.0
+            0.0,
+            parameters
           );
           const StoragePrecision* const average = patch + volume * NumberOfData;
           for (int corner = 0; corner < Corners; corner++) {
@@ -148,7 +156,8 @@ exahype2::fv::singlestep::Solver<Derived, StoragePrecision, ComputePrecision>::p
             }
           }
         }
-      }
+      },
+      parameters
     );
   }
 }

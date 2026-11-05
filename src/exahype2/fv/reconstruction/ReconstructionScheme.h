@@ -33,18 +33,19 @@ namespace exahype2::fv {
   TARGET_DECLARE
   template <typename SolverType, int VolumesPerAxis, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblemOnVolumeFace(
-    const ComputePrecision*                      QL,
-    const ComputePrecision*                      QR,
-    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    double                                       timeStamp,
-    double                                       timeStepSize,
-    int                                          normal,
-    const tarch::la::Vector<DIMENSIONS, int>&    volume,
-    int                                          side,
-    int                                          boundaryFaces,
-    ComputePrecision*                            FL,
-    ComputePrecision*                            FR
+    const ComputePrecision*                       QL,
+    const ComputePrecision*                       QR,
+    const tarch::la::Vector<DIMENSIONS, double>&  faceCentre,
+    const tarch::la::Vector<DIMENSIONS, double>&  volumeSize,
+    double                                        timeStamp,
+    double                                        timeStepSize,
+    int                                           normal,
+    const tarch::la::Vector<DIMENSIONS, int>&     volume,
+    int                                           side,
+    int                                           boundaryFaces,
+    ComputePrecision*                             FL,
+    ComputePrecision*                             FR,
+    const typename SolverType::RuntimeParameters& parameters
   );
 
   TARGET_DECLARE_END

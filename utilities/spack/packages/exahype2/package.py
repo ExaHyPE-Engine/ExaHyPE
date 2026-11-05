@@ -20,12 +20,11 @@ class Exahype2(CMakePackage, CudaPackage):
     """
 
     homepage = "www.peano-framework.org"
-    url = "https://gitlab.lrz.de/hpcsoftware/Peano"
-    git = "https://gitlab.lrz.de/hpcsoftware/Peano.git"
+    url = "https://github.com/ExaHyPE-Engine/ExaHyPE"
+    git = "https://github.com/ExaHyPE-Engine/ExaHyPE.git"
 
-    maintainers("hpcsoftware")
 
-    version("muc", branch="muc/exahype")
+    version("main", branch="main")
 
     variant("hdf5", default=True, description="Build with HDF5 support")
     variant("netcdf", default=True, description="Build with NetCDF support")
@@ -33,16 +32,13 @@ class Exahype2(CMakePackage, CudaPackage):
     depends_on("python")
     depends_on("py-pip")
 
-    depends_on("gsl@2.8")
-
     depends_on("mpi")
 
     depends_on(
         "hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl", when="+hdf5"
     )
 
-    depends_on("netcdf-c@4.9.2 +shared +mpi", when="+netcdf")
-    depends_on("netcdf-cxx4@4.3.1 +shared +pic", when="+netcdf")
+    depends_on("netcdf-c@4.9.3 +shared +mpi", when="+netcdf")
 
     depends_on("cuda@11:", when="+cuda")
 

@@ -65,15 +65,15 @@ public:
 
   INLINE_METHOD void reserve(int numberOfSlots);
   INLINE_METHOD void release() noexcept;
-  INLINE_METHOD void copyToHost(std::vector<T>& target) const;
-  INLINE_METHOD void copyFromHost(const std::vector<T>& source);
 
   [[nodiscard]] INLINE_METHOD const tarch::accelerator::ChunkedMemoryPool<T>& download(
     tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost
   ) const;
+
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>& download(
     tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost
   );
+
   INLINE_METHOD void upload(const tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost);
 
   [[nodiscard]] INLINE_METHOD tarch::accelerator::ChunkedMemoryPool<T>::View getView() noexcept;
@@ -85,7 +85,6 @@ public:
   [[nodiscard]] INLINE_METHOD tarch::accelerator::Buffer<T>& getSegment(int segmentNumber) noexcept;
   [[nodiscard]] INLINE_METHOD const tarch::accelerator::Buffer<T>& getSegment(int segmentNumber) const noexcept;
 
-  [[nodiscard]] static INLINE_METHOD int getPaddedChunkSizeOf(int chunkSize) noexcept;
   [[nodiscard]] INLINE_METHOD int getChunkSize() const noexcept;
   [[nodiscard]] INLINE_METHOD int getPaddedChunkSize() const noexcept;
   [[nodiscard]] INLINE_METHOD int getCapacity() const noexcept;
@@ -96,6 +95,7 @@ public:
   [[nodiscard]] INLINE_METHOD bool isHostAccessible() const noexcept;
 
 private:
+  [[nodiscard]] static INLINE_METHOD int getPaddedChunkSizeOf(int chunkSize) noexcept;
   INLINE_METHOD void appendSegment();
   INLINE_METHOD void uploadSegmentTable();
   INLINE_METHOD void copySegmentsTo(tarch::accelerator::ChunkedMemoryPool<T>& copyOnHost) const;

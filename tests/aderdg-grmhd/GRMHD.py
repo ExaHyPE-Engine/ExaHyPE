@@ -7,7 +7,8 @@ max_eigenvalue = r"""
   constexpr double AdiabaticIndex = 4.0 / 3.0;
 
   double primitives[NumberOfUnknowns];
-  tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives);
+  double gContr[3][3];
+  tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives, gContr);
 
   const double rho       = primitives[Shortcuts::rho];
   const double vCov[3]   = {primitives[Shortcuts::vel + 0], primitives[Shortcuts::vel + 1], primitives[Shortcuts::vel + 2]};
@@ -21,9 +22,6 @@ max_eigenvalue = r"""
     {primitives[Shortcuts::gij + 1], primitives[Shortcuts::gij + 3], primitives[Shortcuts::gij + 4]},
     {primitives[Shortcuts::gij + 2], primitives[Shortcuts::gij + 4], primitives[Shortcuts::gij + 5]}
   };
-
-  double gContr[3][3];
-  tests::exahype2::aderdg::grmhd::invertMatrix3x3(gCov, gContr);
 
   double vContr[3];
   tests::exahype2::aderdg::grmhd::multiplyMatrixVector(gContr, vCov, vContr);
@@ -72,8 +70,9 @@ flux = r"""
 
   std::fill_n(F, NumberOfUnknowns, 0.0);
 
-  double primitives[NumberOfUnknowns];
-  tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives);
+  double       primitives[NumberOfUnknowns];
+  double       gContr[3][3];
+  const double determinant = tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives, gContr);
 
   const double rho                 = primitives[Shortcuts::rho];
   const double vCov[3]             = {primitives[Shortcuts::vel + 0], primitives[Shortcuts::vel + 1], primitives[Shortcuts::vel + 2]};
@@ -89,8 +88,7 @@ flux = r"""
     {primitives[Shortcuts::gij + 2], primitives[Shortcuts::gij + 4], primitives[Shortcuts::gij + 5]}
   };
 
-  double       gContr[3][3];
-  const double rootDeterminant        = std::sqrt(tests::exahype2::aderdg::grmhd::invertMatrix3x3(gCov, gContr));
+  const double rootDeterminant        = std::sqrt(determinant);
   const double inverseRootDeterminant = 1. / rootDeterminant;
 
   double vContr[3];
@@ -163,7 +161,7 @@ flux = r"""
       F[Shortcuts::B + 2]   = inductionFlux[2][2];
       break;
     default:
-      assertion(false, normal);
+      ASSERTION(false, normal);
   }
 
   // Q stores the fluid values multiplied by the root of the metric determinant.
@@ -187,12 +185,12 @@ ncp = r"""
     {Q[Shortcuts::gij + 2], Q[Shortcuts::gij + 4], Q[Shortcuts::gij + 5]}
   };
 
+  double       primitives[NumberOfUnknowns];
   double       gContr[3][3];
-  const double rootDeterminant        = std::sqrt(tests::exahype2::aderdg::grmhd::invertMatrix3x3(gCov, gContr));
-  const double inverseRootDeterminant = 1. / rootDeterminant;
+  const double determinant = tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives, gContr);
 
-  double primitives[NumberOfUnknowns];
-  tests::exahype2::aderdg::grmhd::convertConservedToPrimitive(Q, primitives);
+  const double rootDeterminant        = std::sqrt(determinant);
+  const double inverseRootDeterminant = 1. / rootDeterminant;
 
   const double enthalpyFactor = AdiabaticIndex / (AdiabaticIndex - 1.);
 
@@ -231,22 +229,25 @@ ncp = r"""
     {0., 0., 1.}
   };
 
-  // The ten terms of the momentum along normal and of the energy add in fixed point. A permutation
-  // of the axes then adds the same terms in another order and returns the same bits.
-  constexpr int NumberOfTerms = 10;
-  double        momentumTerms[NumberOfTerms];
-  double        energyTerms[NumberOfTerms];
-  int           term = 0;
+  // A permutation of the axes permutes the three shift terms, the three diagonal metric terms and the
+  // three off-diagonal metric terms within their groups. Each group adds in order of magnitude. The
+  // groups and the lapse term add in a fixed order. A permutation of the axes keeps both sums bitwise.
+  double momentumShiftTerms[3];
+  double energyShiftTerms[3];
   for (int i = 0; i < 3; i++) {
     const double stressMixed = scaledEnthalpy * vCov[i] * vContr[normal] - vCrossBCov[i] * vCrossBContr[normal]
                              - bCov[i] * bContr[normal] + (p + electromagneticEnergy) * kroneckerDelta[i][normal];
-    momentumTerms[term] = -Q[Shortcuts::vel + i] * deltaQ[Shortcuts::shift + i];
-    energyTerms[term]   = -rootDeterminant * stressMixed * deltaQ[Shortcuts::shift + i];
-    term++;
+    momentumShiftTerms[i] = -Q[Shortcuts::vel + i] * deltaQ[Shortcuts::shift + i];
+    energyShiftTerms[i]   = -rootDeterminant * stressMixed * deltaQ[Shortcuts::shift + i];
   }
 
   // The stress terms run over the six components of the symmetric metric in the order of gij.
-  int metricIndex = 0;
+  double momentumDiagonalTerms[3];
+  double energyDiagonalTerms[3];
+  double momentumOffDiagonalTerms[3];
+  double energyOffDiagonalTerms[3];
+  int    metricIndex = 0;
+  int    offDiagonal = 0;
   for (int i = 0; i < 3; i++) {
     for (int j = i; j < 3; j++) {
       double stressContr = tarch::la::productInOrderOfMagnitude(scaledEnthalpy, vContr[i], vContr[j])
@@ -255,18 +256,29 @@ ncp = r"""
       if (i != j) {
         stressContr = 2.0 * stressContr;
       }
-      momentumTerms[term] = -0.5 * rootDeterminant * lapse * stressContr * deltaQ[Shortcuts::gij + metricIndex];
-      energyTerms[term]   = -0.5 * rootDeterminant * stressContr * shift[normal] * deltaQ[Shortcuts::gij + metricIndex];
-      term++;
+      const double momentumTerm = -0.5 * rootDeterminant * lapse * stressContr * deltaQ[Shortcuts::gij + metricIndex];
+      const double energyTerm   = -0.5 * rootDeterminant * stressContr * shift[normal] * deltaQ[Shortcuts::gij + metricIndex];
+      if (i == j) {
+        momentumDiagonalTerms[i] = momentumTerm;
+        energyDiagonalTerms[i]   = energyTerm;
+      } else {
+        momentumOffDiagonalTerms[offDiagonal] = momentumTerm;
+        energyOffDiagonalTerms[offDiagonal]   = energyTerm;
+        offDiagonal++;
+      }
       metricIndex++;
     }
   }
 
-  momentumTerms[term] = (Q[Shortcuts::E] + Q[Shortcuts::rho]) * deltaQ[Shortcuts::lapse];
-  energyTerms[term]   = sContr[normal] * deltaQ[Shortcuts::lapse];
-  assertion(term + 1 == NumberOfTerms, term);
-  BTimesDeltaQ[Shortcuts::vel + normal] = tarch::la::sumInFixedPoint(momentumTerms, NumberOfTerms);
-  BTimesDeltaQ[Shortcuts::E]            = tarch::la::sumInFixedPoint(energyTerms, NumberOfTerms);
+  const auto sumOfGroup = [](const double (&terms)[3]) {
+    return tarch::la::sumInOrderOfMagnitude(terms[0], terms[1], terms[2]);
+  };
+  BTimesDeltaQ[Shortcuts::vel + normal] =
+    ((sumOfGroup(momentumShiftTerms) + sumOfGroup(momentumDiagonalTerms)) + sumOfGroup(momentumOffDiagonalTerms))
+    + (Q[Shortcuts::E] + Q[Shortcuts::rho]) * deltaQ[Shortcuts::lapse];
+  BTimesDeltaQ[Shortcuts::E] =
+    ((sumOfGroup(energyShiftTerms) + sumOfGroup(energyDiagonalTerms)) + sumOfGroup(energyOffDiagonalTerms))
+    + sContr[normal] * deltaQ[Shortcuts::lapse];
   BTimesDeltaQ[Shortcuts::B + 0] = lapse * rootDeterminant * gContr[0][normal] * deltaQ[Shortcuts::psi]
                                  - Q[Shortcuts::shift + 0] * deltaQ[Shortcuts::B + normal];
   BTimesDeltaQ[Shortcuts::B + 1] = lapse * rootDeterminant * gContr[1][normal] * deltaQ[Shortcuts::psi]

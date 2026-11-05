@@ -35,11 +35,19 @@ exahype2::fv::singlestep::UpdatePatches<Derived, StoragePrecision, ComputePrecis
   const double                                stepSize      = timeStepSize;
 
   const double partial =
-    Kernel::updateInTeam(team, patch, faces, cellCentre, cellSize, stepStart, stepSize, boundaryFaces);
+    Kernel::updateInTeam(team, patch, faces, cellCentre, cellSize, stepStart, stepSize, boundaryFaces, parameters);
   COMPILE_IF_ON_HOST(accumulator = exahype2::MaxEigenvalueReduction::combine(accumulator, partial);)
-  COMPILE_IF_ON_DEVICE(
-    reduceWaveSpeedsWithThreadsOfTeam(team, partial, patch, cellCentre, cellSize, stepStart, stepSize, accumulator);
-  )
+  COMPILE_IF_ON_DEVICE(reduceWaveSpeedsWithThreadsOfTeam(
+                         team,
+                         partial,
+                         patch,
+                         cellCentre,
+                         cellSize,
+                         stepStart,
+                         stepSize,
+                         accumulator,
+                         parameters
+  );)
 }
 
 /**
@@ -57,14 +65,15 @@ exahype2::fv::singlestep::UpdatePatches<Derived, StoragePrecision, ComputePrecis
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
   const double                                 stepStart,
   const double                                 stepSize,
-  double&                                      accumulator
+  double&                                      accumulator,
+  const typename Derived::RuntimeParameters&   parameters
 ) const {
   const tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction> reducer{accumulator};
   tarch::accelerator::reduceOverTeam(team, partial, reducer);
   if constexpr (exahype2::terms::HasPostprocessUpdatedPatch<Derived, StoragePrecision>) {
     tarch::accelerator::teamBarrier(team);
     tarch::accelerator::parallelFor(team, tarch::accelerator::Range(1), [=]([[maybe_unused]] const int single) {
-      Kernel::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
+      Kernel::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize, parameters);
     });
     tarch::accelerator::teamBarrier(team);
     tarch::accelerator::parallelReduce(
@@ -73,7 +82,15 @@ exahype2::fv::singlestep::UpdatePatches<Derived, StoragePrecision, ComputePrecis
       [=](const int volume, double& eigenvalue) {
         eigenvalue = exahype2::MaxEigenvalueReduction::combine(
           eigenvalue,
-          Kernel::getMaxEigenvalueOfVolume(volume, patch, cellCentre, cellSize, stepStart + stepSize, stepSize)
+          Kernel::getMaxEigenvalueOfVolume(
+            volume,
+            patch,
+            cellCentre,
+            cellSize,
+            stepStart + stepSize,
+            stepSize,
+            parameters
+          )
         );
       },
       reducer

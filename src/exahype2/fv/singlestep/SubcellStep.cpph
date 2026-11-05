@@ -31,38 +31,42 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
  * halo of the subgrids and calls work for the local and then for the remote cells.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
-template <typename ExchangeHalo>
+template <typename ExchangeHalo, typename RuntimeParameters>
 INLINE_METHOD void
 exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecision>::advance(
   const peano4::CellConnectivity& cellConnectivity,
-  const Region&            region,
-  const ExchangeHalo&      exchangeHalo,
-  const double             timeStamp,
-  const double             timeStepSize
+  const Region&                   region,
+  const ExchangeHalo&             exchangeHalo,
+  const double                    timeStamp,
+  const double                    timeStepSize,
+  const RuntimeParameters&        parameters
 ) {
   const auto scratchValues = static_cast<std::size_t>(tarch::accelerator::getNumberOfScratchChunks(region.cells.size))
                            * Kernel::SubcellValuesPerCell;
   if (_scratch.getSize() < scratchValues) {
     _scratch.allocate(scratchValues);
   }
-  exchangeHalo([this, &cellConnectivity, &region, timeStamp, timeStepSize](const peano4::Adjacency adjacency) {
-    const auto cells = region.getCells(adjacency);
-    tarch::accelerator::parallelFor(
-      tarch::accelerator::TeamRange(cells.size),
-      exahype2::fv::singlestep::AdvanceSubgrids<Derived, StoragePrecision, ComputePrecision>{
-        cellConnectivity.onDevice(),
-        cells,
-        region.subcells,
-        region.halo,
-        region.faceStatuses,
-        region.appliedFluxes,
-        Derived::template SubcellProjection<double>::NodesToSubcells1D,
-        _scratch.getData(),
-        timeStamp,
-        timeStepSize
-      }
-    );
-  });
+  exchangeHalo(
+    [this, &cellConnectivity, &region, timeStamp, timeStepSize, &parameters](const peano4::Adjacency adjacency) {
+      const auto cells = region.getCells(adjacency);
+      tarch::accelerator::parallelFor(
+        tarch::accelerator::TeamRange(cells.size),
+        exahype2::fv::singlestep::AdvanceSubgrids<Derived, StoragePrecision, ComputePrecision>{
+          cellConnectivity.onDevice(),
+          cells,
+          region.subcells,
+          region.halo,
+          region.faceStatuses,
+          region.appliedFluxes,
+          Derived::template SubcellProjection<double>::NodesToSubcells1D,
+          _scratch.getData(),
+          timeStamp,
+          timeStepSize,
+          parameters
+        }
+      );
+    }
+  );
 }
 
 TARGET_DECLARE
@@ -72,6 +76,7 @@ TARGET_DECLARE
  * where the cell keeps the flux of its own update.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecision>::advanceSubgrid(
   StoragePrecision* NOALIAS const              subcells,
@@ -83,7 +88,8 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
-  const double* const                          nodesToSubcells
+  const double* const                          nodesToSubcells,
+  const RuntimeParameters&                     parameters
 ) {
   static_cast<void>(SubgridUpdate<>::update(
     subcells,
@@ -93,7 +99,8 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
     cellSize,
     timeStamp,
     timeStepSize,
-    boundaryFaces
+    boundaryFaces,
+    parameters
   ));
   for (int volume = 0; volume < Kernel::SubcellsPerCell; volume++) {
     imposeAppliedFluxes(
@@ -107,7 +114,8 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
       timeStamp,
       timeStepSize,
       appliedHalves,
-      nodesToSubcells
+      nodesToSubcells,
+      parameters
     );
   }
   for (int value = 0; value < Kernel::SubcellValuesPerCell; value++) {
@@ -119,6 +127,7 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
  * Runs advanceSubgrid() on a host thread and advanceSubgridWithThreadsOfTeam() on a device.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecision>::advanceSubgridInTeam(
   [[maybe_unused]] const tarch::accelerator::TeamHandle team,
@@ -131,32 +140,35 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
   const double                                          timeStamp,
   const double                                          timeStepSize,
   const ComputePrecision* const                         appliedHalves[peano4::FacesPerCell],
-  const double* const                                   nodesToSubcells
+  const double* const                                   nodesToSubcells,
+  const RuntimeParameters&                              parameters
 ) {
   COMPILE_IF_ON_HOST(advanceSubgrid(
-    subcells,
-    evolvedSubcells,
-    haloHalves,
-    cellCentre,
-    cellSize,
-    boundaryFaces,
-    timeStamp,
-    timeStepSize,
-    appliedHalves,
-    nodesToSubcells
+                       subcells,
+                       evolvedSubcells,
+                       haloHalves,
+                       cellCentre,
+                       cellSize,
+                       boundaryFaces,
+                       timeStamp,
+                       timeStepSize,
+                       appliedHalves,
+                       nodesToSubcells,
+                       parameters
   );)
   COMPILE_IF_ON_DEVICE(advanceSubgridWithThreadsOfTeam(
-    team,
-    subcells,
-    evolvedSubcells,
-    haloHalves,
-    cellCentre,
-    cellSize,
-    boundaryFaces,
-    timeStamp,
-    timeStepSize,
-    appliedHalves,
-    nodesToSubcells
+                         team,
+                         subcells,
+                         evolvedSubcells,
+                         haloHalves,
+                         cellCentre,
+                         cellSize,
+                         boundaryFaces,
+                         timeStamp,
+                         timeStepSize,
+                         appliedHalves,
+                         nodesToSubcells,
+                         parameters
   );)
 }
 
@@ -167,19 +179,21 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
  * copies them back once every thread has imposed its fluxes.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecision>::advanceSubgridWithThreadsOfTeam(
-  const tarch::accelerator::TeamHandle                  team,
-  StoragePrecision* NOALIAS const                       subcells,
-  StoragePrecision* NOALIAS const                       evolvedSubcells,
-  const StoragePrecision* const                         haloHalves[peano4::FacesPerCell],
-  const tarch::la::Vector<DIMENSIONS, double>&          cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>&          cellSize,
-  const int                                             boundaryFaces,
-  const double                                          timeStamp,
-  const double                                          timeStepSize,
-  const ComputePrecision* const                         appliedHalves[peano4::FacesPerCell],
-  const double* const                                   nodesToSubcells
+  const tarch::accelerator::TeamHandle         team,
+  StoragePrecision* NOALIAS const              subcells,
+  StoragePrecision* NOALIAS const              evolvedSubcells,
+  const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const int                                    boundaryFaces,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
+  const double* const                          nodesToSubcells,
+  const RuntimeParameters&                     parameters
 ) {
   const int thread  = tarch::accelerator::getThreadOfTeam(team);
   const int threads = tarch::accelerator::getNumberOfThreadsPerTeam(team);
@@ -193,7 +207,8 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
       timeStamp,
       timeStepSize,
       boundaryFaces,
-      evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * Kernel::NumberOfData
+      evolvedSubcells + static_cast<std::ptrdiff_t>(subcell) * Kernel::NumberOfData,
+      parameters
     ));
   }
   tarch::accelerator::teamBarrier(team);
@@ -209,7 +224,8 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
       timeStamp,
       timeStepSize,
       appliedHalves,
-      nodesToSubcells
+      nodesToSubcells,
+      parameters
     );
   }
   // The corrections read the subcells that the copy overwrites.
@@ -231,6 +247,7 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
  * the Galerkin basis function galerkinNode over a subcell along one tangential axis.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
+template <typename RuntimeParameters>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecision>::imposeAppliedFluxes(
   const int                                    volume,
@@ -243,7 +260,8 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
   const double                                 timeStamp,
   const double                                 timeStepSize,
   const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
-  const double* const                          nodesToSubcells
+  const double* const                          nodesToSubcells,
+  const RuntimeParameters&                     parameters
 ) {
   constexpr int GalerkinNodesPerAxis = Kernel::NodesPerAxis;
   constexpr int GalerkinNodesPerFace = exahype2::dg::getNodesPerFace(GalerkinNodesPerAxis);
@@ -265,7 +283,8 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
       timeStepSize,
       boundaryFaces,
       face,
-      ownFlux
+      ownFlux,
+      parameters
     );
     double average[Kernel::NumberOfUnknowns]{};
     for (int galerkinNode = 0; galerkinNode < GalerkinNodesPerFace; galerkinNode++) {
@@ -330,7 +349,8 @@ exahype2::fv::singlestep::AdvanceSubgrids<Derived, StoragePrecision, ComputePrec
     timeStamp,
     timeStepSize,
     appliedHalves,
-    nodesToSubcells
+    nodesToSubcells,
+    parameters
   );
 }
 TARGET_DECLARE_END

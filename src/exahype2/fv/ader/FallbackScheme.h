@@ -96,7 +96,8 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          boundaryFaces,
-    StoragePrecision* NOALIAS                    patch
+    StoragePrecision* NOALIAS                    patch,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -112,7 +113,8 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          boundaryFaces,
-    StoragePrecision* NOALIAS                    patch
+    StoragePrecision* NOALIAS                    patch,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -126,7 +128,8 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          boundaryFaces,
-    StoragePrecision* NOALIAS                    patch
+    StoragePrecision* NOALIAS                    patch,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD bool isOnPatchFace(int volume, int face);
@@ -147,7 +150,8 @@ struct exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::FallbackSo
 
   static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
 
-  using Reconstruction = Reconstruct;
+  using Reconstruction    = Reconstruct;
+  using RuntimeParameters = typename Derived::RuntimeParameters;
 
   template <typename Precision>
   static INLINE_METHOD GPU_CALLABLE_METHOD void flux(
@@ -157,11 +161,12 @@ struct exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::FallbackSo
     const double                                 t,
     const double                                 dt,
     const int                                    normal,
-    Precision*                                   F
+    Precision*                                   F,
+    const typename Derived::RuntimeParameters&   parameters
   )
     requires exahype2::terms::HasFlux<Derived, Precision>
   {
-    Derived::flux(Q, x, h, t, dt, normal, F);
+    Derived::flux(Q, x, h, t, dt, normal, F, parameters);
   }
 
   template <typename Precision>
@@ -173,11 +178,12 @@ struct exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::FallbackSo
     const double                                 t,
     const double                                 dt,
     const int                                    normal,
-    Precision*                                   BTimesDeltaQ
+    Precision*                                   BTimesDeltaQ,
+    const typename Derived::RuntimeParameters&   parameters
   )
     requires exahype2::terms::HasNonconservativeProduct<Derived, Precision>
   {
-    Derived::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
+    Derived::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ, parameters);
   }
 
   template <typename Precision>
@@ -187,11 +193,12 @@ struct exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::FallbackSo
     const tarch::la::Vector<DIMENSIONS, double>& h,
     const double                                 t,
     const double                                 dt,
-    Precision*                                   S
+    Precision*                                   S,
+    const typename Derived::RuntimeParameters&   parameters
   )
     requires exahype2::terms::HasSourceTerm<Derived, Precision>
   {
-    Derived::sourceTerm(Q, x, h, t, dt, S);
+    Derived::sourceTerm(Q, x, h, t, dt, S, parameters);
   }
 
   template <typename Precision>
@@ -202,11 +209,12 @@ struct exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::FallbackSo
     const tarch::la::Vector<DIMENSIONS, double>& h,
     const double                                 t,
     const double                                 dt,
-    Precision*                                   S
+    Precision*                                   S,
+    const typename Derived::RuntimeParameters&   parameters
   )
     requires exahype2::terms::HasDiffusiveSourceTerm<Derived, Precision>
   {
-    Derived::diffusiveSourceTerm(Q, deltaQ, x, h, t, dt, S);
+    Derived::diffusiveSourceTerm(Q, deltaQ, x, h, t, dt, S, parameters);
   }
 
   template <typename Precision>
@@ -216,11 +224,12 @@ struct exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::FallbackSo
     const tarch::la::Vector<DIMENSIONS, double>& h,
     const double                                 t,
     const double                                 dt,
-    const int                                    normal
+    const int                                    normal,
+    const typename Derived::RuntimeParameters&   parameters
   )
     requires exahype2::terms::HasMaxEigenvalue<Derived, Precision>
   {
-    return Derived::maxEigenvalue(Q, x, h, t, dt, normal);
+    return Derived::maxEigenvalue(Q, x, h, t, dt, normal, parameters);
   }
 
   template <typename Precision>
@@ -235,11 +244,12 @@ struct exahype2::fv::ader::FallbackScheme<Derived, ComputePrecision>::FallbackSo
     const bool                                   isBoundaryFace,
     const int                                    faceIndex,
     Precision*                                   FL,
-    Precision*                                   FR
+    Precision*                                   FR,
+    const typename Derived::RuntimeParameters&   parameters
   )
     requires exahype2::terms::HasRiemannSolver<Derived, Precision>
   {
-    return Derived::solveRiemannProblem(QL, QR, x, h, t, dt, normal, isBoundaryFace, faceIndex, FL, FR);
+    return Derived::solveRiemannProblem(QL, QR, x, h, t, dt, normal, isBoundaryFace, faceIndex, FL, FR, parameters);
   }
 };
 TARGET_DECLARE_END

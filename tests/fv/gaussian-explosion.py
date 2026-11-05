@@ -36,7 +36,7 @@ initial_conditions = """
 
   // The standard deviation of the Gaussian is the largest admissible patch size. The coarsest grid
   // then resolves the Gaussian smoothly.
-  const double peakDeviation = RuntimeParameters::getMaxAdmissiblePatchSize();
+  const double peakDeviation = parameters.maxAdmissiblePatchSize;
   const double distance = tarch::la::norm2(x - circleCentre);
   const double exponent = -(distance * distance) / 2.0 / peakDeviation / peakDeviation;
 

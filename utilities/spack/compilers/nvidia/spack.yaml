@@ -1,25 +1,21 @@
 spack:
   specs:
-    - nvhpc@25.7
-    - python@3.14.0
-    - py-pip@25.1.1
-    - cuda@13.0.2
-    - hwloc@2.12.2 +cuda
-    - ucx@1.19.0 +cuda
-    - openmpi@5.0.8 +cuda fabrics=ucx
-    - memkind@1.14.0
-    - papi@7.2.0
-    - likwid@5.4.1
-    - metis@5.1.0
-    - parmetis@4.0.3
-    - boost@1.88.0 +filesystem +fiber +context
-    - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp
+    - nvhpc@26.9 +mpi
+    - python@3.14.5
+    - py-pip@26.2.1
+    - cuda@13.4.1
     - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
-    - netcdf-c@4.9.2 +mpi +shared
-    - parallel-netcdf@1.14.1 +cxx -fortran +pic +shared
+    - netcdf-c@4.9.3 +mpi +shared
   packages:
     all:
       target: [x86_64]
+    # HDF5 and NetCDF use the HPC-X Open MPI of the NVIDIA SDK.
+    mpi:
+      require: nvhpc
+  repos:
+    builtin::
+      git: https://github.com/spack/spack-packages.git
+      commit: 093bed090925a0c327ba4fd927f1f1d5e36f2b3e
   concretizer:
     unify: true
     reuse: true
@@ -27,3 +23,7 @@ spack:
     install_tree:
       root: /opt/software
   view: /opt/views/view
+  # The MPI wrappers of the NVIDIA SDK use the MPI in this folder.
+  env_vars:
+    set:
+      NVCOMPILER_COMM_LIBS_HOME: /opt/views/view/Linux_x86_64/26.9/comm_libs/13.3

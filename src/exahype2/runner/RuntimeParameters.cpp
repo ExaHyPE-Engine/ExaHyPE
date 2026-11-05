@@ -9,6 +9,57 @@
 #include "tarch/reader/JSONReader.h"
 
 namespace {
+  std::string formatDefault(const double value) {
+    std::ostringstream result;
+    result << value;
+    return result.str();
+  }
+
+  std::string formatDefault(const int value) { return std::to_string(value); }
+
+  std::string formatDefault(const std::string& value) { return value.empty() ? "<none>" : value; }
+
+  /**
+   * Returns the width of a cell exponent levels below a cell of width value.
+   */
+  double divideBySubdivisionFactorPower(double value, const int exponent) {
+    ASSERTION(exponent >= 0, exponent);
+    for (int level = 0; level < exponent; ++level) {
+      value /= peano4::SubdivisionFactor;
+    }
+    return value;
+  }
+
+  int parseInteger(const std::string& value, const std::string& key) {
+    const char* const end    = value.data() + value.size();
+    auto              result = 0;
+    const auto        parsed = std::from_chars(value.data(), end, result);
+    if (parsed.ec != std::errc{} or parsed.ptr != end) {
+      tarch::terminateWithError("Runtime parameter \"" + key + "\" expects an integer (got \"" + value + "\").");
+    }
+    return result;
+  }
+
+  double parseDouble(const std::string& value, const std::string& key) {
+    const char* const end    = value.data() + value.size();
+    auto              result = 0.0;
+    const auto        parsed = std::from_chars(value.data(), end, result);
+    if (parsed.ec != std::errc{} or parsed.ptr != end) {
+      tarch::terminateWithError(
+        "Runtime parameter \"" + key + "\" expects a floating-point number (got \"" + value + "\")."
+      );
+    }
+    return result;
+  }
+
+  std::string consumeValue(int& index, const int argc, char** const argv, const std::string& argument) {
+    if (index + 1 >= argc) {
+      tarch::terminateWithError("Command line argument \"" + argument + "\" expects a value.");
+    }
+    ++index;
+    return argv[index];
+  }
+
   template <typename Scalar>
   std::string getTypeName() {
     if constexpr (std::is_same_v<Scalar, double>) {
@@ -27,7 +78,7 @@ namespace {
     if constexpr (std::is_same_v<Scalar, bool>) {
       return value ? "true" : "false";
     } else {
-      return exahype2::runner::RuntimeParameters::formatDefault(value);
+      return formatDefault(value);
     }
   }
 
@@ -56,9 +107,9 @@ namespace {
   template <typename Scalar>
   Scalar parse(const std::string& value, const std::string& key) {
     if constexpr (std::is_same_v<Scalar, double>) {
-      return exahype2::runner::RuntimeParameters::parseDouble(value, key);
+      return parseDouble(value, key);
     } else if constexpr (std::is_same_v<Scalar, int>) {
-      return exahype2::runner::RuntimeParameters::parseInteger(value, key);
+      return parseInteger(value, key);
     } else if constexpr (std::is_same_v<Scalar, bool>) {
       return parseBoolean(value, key);
     } else {
@@ -145,7 +196,7 @@ namespace {
  */
 void
 exahype2::runner::ParameterTable::add(const std::string& name, const Values values) {
-  assertion(not name.empty());
+  ASSERTION(not name.empty());
   _entries.push_back(
     {name, values, 1, false, std::visit([](const auto* const pointer) { return format(*pointer); }, values)}
   );
@@ -153,8 +204,8 @@ exahype2::runner::ParameterTable::add(const std::string& name, const Values valu
 
 void
 exahype2::runner::ParameterTable::addArray(const std::string& name, const Values values, const int size) {
-  assertion(not name.empty());
-  assertion(size > 0, name, size);
+  ASSERTION(not name.empty());
+  ASSERTION(size > 0, name, size);
   _entries.push_back(
     {name, values, size, true, std::visit([size](const auto* const pointer) { return format(pointer, size); }, values)}
   );
@@ -176,8 +227,8 @@ exahype2::runner::ParameterTable::load(const tarch::reader::JSONReader* const re
 }
 
 /**
- * Arguments that match no entry stay in argv in their order. The parser of the caller reads them
- * afterwards.
+ * Reads every argument that matches an entry and moves the other arguments to the front of argv in
+ * their order. The parser of the caller reads them afterwards.
  */
 void
 exahype2::runner::ParameterTable::load(
@@ -185,7 +236,7 @@ exahype2::runner::ParameterTable::load(
   int&                                   argc,
   char** const                           argv
 ) const {
-  assertion(argc >= 1 and argv != nullptr, argc);
+  ASSERTION(argc >= 1 and argv != nullptr, argc);
   load(reader);
   int writeIndex = 1;
   for (int readIndex = 1; readIndex < argc; readIndex++) {
@@ -198,7 +249,7 @@ exahype2::runner::ParameterTable::load(
       writeIndex++;
       continue;
     }
-    const std::string value = RuntimeParameters::consumeValue(readIndex, argc, argv, argument);
+    const std::string value = consumeValue(readIndex, argc, argv, argument);
     std::visit(
       [&](auto* const values) { readFromCommandLine(value, argument, values, entry->size, entry->isArray); },
       entry->values
@@ -246,61 +297,8 @@ exahype2::runner::RuntimeParameters::getInstance() {
 }
 
 std::string
-exahype2::runner::RuntimeParameters::formatDefault(const double value) {
-  std::ostringstream result;
-  result << value;
-  return result.str();
-}
-
-std::string
-exahype2::runner::RuntimeParameters::formatDefault(const int value) {
-  return std::to_string(value);
-}
-
-std::string
-exahype2::runner::RuntimeParameters::formatDefault(const std::string& value) {
-  return value.empty() ? "<none>" : value;
-}
-
-std::string
 exahype2::runner::RuntimeParameters::formatTerminalTime(const double value) {
   return value < std::numeric_limits<double>::max() / 10.0 ? formatDefault(value) : "Unbounded";
-}
-
-/**
- * Returns the width of a cell exponent levels below a cell of width value.
- */
-double
-exahype2::runner::RuntimeParameters::divideBySubdivisionFactorPower(double value, const int exponent) {
-  assertion(exponent >= 0, exponent);
-  for (int level = 0; level < exponent; ++level) {
-    value /= peano4::SubdivisionFactor;
-  }
-  return value;
-}
-
-int
-exahype2::runner::RuntimeParameters::parseInteger(const std::string& value, const std::string& key) {
-  const char* const end    = value.data() + value.size();
-  auto              result = 0;
-  const auto        parsed = std::from_chars(value.data(), end, result);
-  if (parsed.ec != std::errc{} or parsed.ptr != end) {
-    tarch::terminateWithError("Runtime parameter \"" + key + "\" expects an integer (got \"" + value + "\").");
-  }
-  return result;
-}
-
-double
-exahype2::runner::RuntimeParameters::parseDouble(const std::string& value, const std::string& key) {
-  const char* const end    = value.data() + value.size();
-  auto              result = 0.0;
-  const auto        parsed = std::from_chars(value.data(), end, result);
-  if (parsed.ec != std::errc{} or parsed.ptr != end) {
-    tarch::terminateWithError(
-      "Runtime parameter \"" + key + "\" expects a floating-point number (got \"" + value + "\")."
-    );
-  }
-  return result;
 }
 
 std::string
@@ -311,20 +309,6 @@ exahype2::runner::RuntimeParameters::normaliseOutputPath(const std::string& path
   return path.back() == '/' ? path : path + "/";
 }
 
-std::string
-exahype2::runner::RuntimeParameters::consumeValue(
-  int&               index,
-  const int          argc,
-  char**             argv,
-  const std::string& argument
-) {
-  if (index + 1 >= argc) {
-    tarch::terminateWithError("Command line argument \"" + argument + "\" expects a value.");
-  }
-  ++index;
-  return argv[index];
-}
-
 void
 exahype2::runner::RuntimeParameters::printUsage(const std::string& executableName) const {
   std::vector<std::pair<std::string, std::string>> options;
@@ -332,7 +316,10 @@ exahype2::runner::RuntimeParameters::printUsage(const std::string& executableNam
     options.emplace_back(argument, description);
   };
   addOption("-cf, --configFile <path>", "Read runtime settings from JSON (default: auto-detect ./config.json).");
-  addOption("-et, --endTime <t>", "Advance the whole domain to time t; no upper cap (default: not set).");
+  addOption(
+    "-et, --endTime <t>",
+    "Advance the whole domain to time t and remove the maximum terminal time (default: not set)."
+  );
   addOption(
     "-tmin, --minTerminalTime <t>",
     "Minimum terminal time (default: " + formatDefault(_minTerminalTime) + ")."
@@ -375,8 +362,8 @@ exahype2::runner::RuntimeParameters::printUsage(const std::string& executableNam
   addOption(
     "--timeoutWarning <seconds>",
     "Warn after this many seconds waiting for MPI progress; fractional values such as 0.1 are "
-    "allowed, 0 disables. Setting it also records the origin, partner and tag of every request, so "
-    "the warning names the one that hangs (default: "
+    "allowed, 0 disables. Setting it also records the origin, partner and tag of every request, and "
+    "the warning prints them for the request that hangs (default: "
       + formatDefault(_MPITimeoutWarning) + ")."
   );
   addOption(
@@ -387,9 +374,9 @@ exahype2::runner::RuntimeParameters::printUsage(const std::string& executableNam
   );
   addOption(
     "-ct, --communicationThread",
-    "Drive the outstanding MPI communication on a thread of its own. The thread needs a CPU that no "
-    "OpenMP thread uses. Set OMP_NUM_THREADS below the number of CPUs of a rank. The thread only "
-    "runs where a job has more than one rank (default: Off)."
+    "Drive the outstanding MPI communication on a thread of its own. The thread needs a CPU of its own. "
+    "Set OMP_NUM_THREADS below the number of CPUs of a rank. The thread only runs where a job has more "
+    "than one rank (default: Off)."
   );
   addOption(
     "-dlb, --disableLoadBalancing",
@@ -434,8 +421,8 @@ exahype2::runner::RuntimeParameters::normaliseGridLevels() {
 }
 
 /**
- * Lowers the maximum terminal time to PEANO_MAX_TERMINAL_TIME if it is set. Lowers the minimum
- * terminal time to the maximum one.
+ * Lowers the maximum terminal time to PEANO_MAX_TERMINAL_TIME if the environment defines it. Lowers
+ * the minimum terminal time to the maximum one.
  */
 void
 exahype2::runner::RuntimeParameters::boundTerminalTimes() {
@@ -484,7 +471,7 @@ exahype2::runner::RuntimeParameters::validateParameterRanges() const {
 }
 
 void
-exahype2::runner::RuntimeParameters::extractConfigFileFromCommandLine(const int argc, char** argv) {
+exahype2::runner::RuntimeParameters::extractConfigFileFromCommandLine(const int argc, char** const argv) {
   for (int index = 1; index < argc; ++index) {
     const auto argument = std::string(argv[index]);
     if (argument == "--configFile" or argument == "-cf") {
@@ -552,8 +539,8 @@ exahype2::runner::RuntimeParameters::readJSONConfiguration() {
 }
 
 void
-exahype2::runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** argv) {
-  assertion(argc >= 1 and argv != nullptr, argc);
+exahype2::runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** const argv) {
+  ASSERTION(argc >= 1 and argv != nullptr, argc);
   int writeIndex = 1;
   for (int readIndex = 1; readIndex < argc; ++readIndex) {
     const auto argument = std::string(argv[readIndex]);
@@ -648,7 +635,7 @@ exahype2::runner::RuntimeParameters::setGeneratedDefaults(
 }
 
 void
-exahype2::runner::RuntimeParameters::configure(int& argc, char** argv) {
+exahype2::runner::RuntimeParameters::configure(int& argc, char** const argv) {
   if (argc > 0) {
     _executableName = std::filesystem::path(argv[0]).filename().string();
   }
@@ -725,6 +712,16 @@ exahype2::runner::RuntimeParameters::getMaxTerminalTime() const {
   return _maxTerminalTime;
 }
 
+/**
+ * Returns the terminal time to which every solver clips its last time step. With a positive
+ * _numberOfTimeSteps the function returns the largest double.
+ */
+double
+exahype2::runner::RuntimeParameters::getSolverTerminalTime() const {
+  ASSERTION(std::isfinite(_minTerminalTime) and _minTerminalTime >= 0.0, _minTerminalTime);
+  return _numberOfTimeSteps > 0 ? std::numeric_limits<double>::max() : _minTerminalTime;
+}
+
 int
 exahype2::runner::RuntimeParameters::getNumberOfTimeSteps() const {
   return _numberOfTimeSteps;
@@ -793,13 +790,4 @@ exahype2::runner::RuntimeParameters::getMinAdmissiblePatchSize(
   const tarch::la::Vector<DIMENSIONS, double>& domainSize
 ) const {
   return divideBySubdivisionFactorPower(1.1 * tarch::la::max(domainSize), _maxGridLevels);
-}
-
-double
-exahype2::runner::RuntimeParameters::getMaxAdmissibleCellSize(
-  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-  const int                                    cellsPerPatchPerAxis
-) const {
-  assertion(cellsPerPatchPerAxis > 0, cellsPerPatchPerAxis);
-  return getMaxAdmissiblePatchSize(domainSize) / cellsPerPatchPerAxis;
 }

@@ -141,6 +141,7 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     ComputePrecision* NOALIAS                    patchScratch,
     const exahype2::dg::ader::TeamWorkers&       workers,
+    const typename Derived::RuntimeParameters&   parameters,
     const StoragePrecision* const*               cornerHalos = nullptr
   );
 
@@ -156,6 +157,7 @@ public:
     ComputePrecision* const                            stateHalves[peano4::FacesPerCell],
     ComputePrecision* const                            fluxHalves[peano4::FacesPerCell],
     const exahype2::dg::ader::TeamWorkers&             workers,
+    const typename Derived::RuntimeParameters&         parameters,
     bool                                               unconvergedWritesNaN = false
   );
 
@@ -168,6 +170,7 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     const ComputePrecision* NOALIAS              scratch,
+    const typename Derived::RuntimeParameters&   parameters,
     ComputePrecision* NOALIAS                    interiorUpdates = nullptr
   );
 
@@ -180,7 +183,8 @@ public:
     double                                       timeStamp,
     double                                       timeStepSize,
     int                                          normal,
-    int                                          boundaryFaceNumber
+    int                                          boundaryFaceNumber,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -189,7 +193,8 @@ public:
     StoragePrecision*                            patch,
     const ComputePrecision* const                fluxHalves[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   static INLINE_METHOD GPU_CALLABLE_METHOD void getAppliedFaceFlux(
@@ -243,7 +248,8 @@ private:
     bool                                         isBoundaryFace,
     int                                          faceIndex,
     ComputePrecision* NOALIAS                    fluxLeft,
-    ComputePrecision* NOALIAS                    fluxRight
+    ComputePrecision* NOALIAS                    fluxRight,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <typename StoragePrecision>
@@ -255,7 +261,8 @@ private:
     const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
     double                                       timeStamp,
     double                                       timeStepSize,
-    int                                          normal
+    int                                          normal,
+    const typename Derived::RuntimeParameters&   parameters
   );
 };
 TARGET_DECLARE_END

@@ -38,7 +38,8 @@ struct exahype2::fv::limiter::PolynomialScaling final {
     const StoragePrecision* NOALIAS const        average,
     ComputePrecision* NOALIAS const              nodalState,
     const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize
+    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+    const typename Derived::RuntimeParameters&   parameters
   );
 
   template <int NumberOfData, typename ComputePrecision>

@@ -8,8 +8,8 @@
 template <class Shortcuts>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exagrype::maxEigenvalue(const double* const NOALIAS Q, const int normal) {
-  assertion(Q != nullptr);
-  assertion(normal >= 0 and normal < 3, normal);
+  ASSERTION(Q != nullptr);
+  ASSERTION(normal >= 0 and normal < 3, normal);
   const auto* const metric       = Q + Shortcuts::gamma_tilde;
   const double      cofactors[3] = {
     metric[3] * metric[5] - metric[4] * metric[4],
@@ -18,11 +18,11 @@ applications::exahype2::exagrype::maxEigenvalue(const double* const NOALIAS Q, c
   };
   const double determinant = metric[0] * cofactors[0] - metric[1] * (metric[1] * metric[5] - metric[2] * metric[4])
     + metric[2] * (metric[1] * metric[4] - metric[2] * metric[3]);
-  assertion(std::isfinite(determinant) and determinant > 0.0, determinant);
-  assertion(metric[0] > 0.0 and cofactors[2] > 0.0, metric[0], cofactors[2]);
-  assertion(std::isfinite(Q[Shortcuts::alpha]) and Q[Shortcuts::alpha] > 0.0);
-  assertion(std::isfinite(Q[Shortcuts::phi]) and Q[Shortcuts::phi] > 0.0);
-  assertion(std::isfinite(Q[Shortcuts::beta + normal]));
+  ASSERTION(std::isfinite(determinant) and determinant > 0.0, determinant);
+  ASSERTION(metric[0] > 0.0 and cofactors[2] > 0.0, metric[0], cofactors[2]);
+  ASSERTION(std::isfinite(Q[Shortcuts::alpha]) and Q[Shortcuts::alpha] > 0.0);
+  ASSERTION(std::isfinite(Q[Shortcuts::phi]) and Q[Shortcuts::phi] > 0.0);
+  ASSERTION(std::isfinite(Q[Shortcuts::beta + normal]));
 
   const double alpha = std::fmax(1.0, Q[Shortcuts::alpha]) * std::fmax(1.0, Q[Shortcuts::phi])
     * std::sqrt(cofactors[normal] / determinant);

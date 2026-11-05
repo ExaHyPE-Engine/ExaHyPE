@@ -60,7 +60,7 @@ namespace tarch::accelerator {
 
 #if defined(__CUDACC__)
   // The parameter reducer deduces Reducer for the non-deduced type of blockResults. Its target is a
-  // host reference that no device thread dereferences.
+  // host reference that only host code dereferences.
   template <typename Reducer, typename Functor>
   __global__ void teamReduceKernel(
     const Functor                      functor,
@@ -217,7 +217,7 @@ namespace tarch::accelerator {
   // ParallelReduce.h declares use plain inline.
   template <typename Reducer, typename Functor>
   inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -245,7 +245,7 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename Functor>
   inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n >= 0, range.n);
+    ASSERTION(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -269,8 +269,8 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename Functor>
   inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
     const int extentY = range.n[1];
     tarch::accelerator::parallelReduce(
       Range(range.n[0] * range.n[1]),
@@ -282,9 +282,9 @@ namespace tarch::accelerator {
   }
   template <typename Reducer, typename Functor>
   inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
-    assertion(range.n[0] >= 0, range.n[0]);
-    assertion(range.n[1] >= 0, range.n[1]);
-    assertion(range.n[2] >= 0, range.n[2]);
+    ASSERTION(range.n[0] >= 0, range.n[0]);
+    ASSERTION(range.n[1] >= 0, range.n[1]);
+    ASSERTION(range.n[2] >= 0, range.n[2]);
     const int extentY = range.n[1];
     const int extentZ = range.n[2];
     tarch::accelerator::parallelReduce(

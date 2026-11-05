@@ -49,9 +49,9 @@ namespace {
    * VTK.
    */
   void compressInBlocks(const std::byte* const data, AppendedArray& array) {
-    assertion(array.bytes == 0 or data != nullptr, array.name, array.bytes);
+    ASSERTION(array.bytes == 0 or data != nullptr, array.name, array.bytes);
     const std::size_t numberOfBlocks = (array.bytes + BlockBytes - 1) / BlockBytes;
-    assertion(numberOfBlocks <= static_cast<std::size_t>(std::numeric_limits<int>::max()), numberOfBlocks);
+    ASSERTION(numberOfBlocks <= static_cast<std::size_t>(std::numeric_limits<int>::max()), numberOfBlocks);
     array.compressedBlocks.resize(numberOfBlocks);
     tarch::accelerator::parallelForOnHost(
       tarch::accelerator::Range(static_cast<int>(numberOfBlocks)),
@@ -131,7 +131,7 @@ tarch::plotter::VTUFileWriter::writeVTU(const Mesh& mesh, const std::filesystem:
   std::vector<AppendedArray> arrays;
   std::size_t                scratchBytes = 0;
   const auto addRealArray = [&](const std::string& name, const int components, const MeshArray<double>& values) {
-    assertion(values.size() % static_cast<std::size_t>(components) == 0, name, values.size(), components);
+    ASSERTION(values.size() % static_cast<std::size_t>(components) == 0, name, values.size(), components);
     const int         written = classifyField(components).writtenComponents;
     const std::size_t tuples  = values.size() / static_cast<std::size_t>(components);
     const std::size_t bytes   = tuples * static_cast<std::size_t>(written) * realBytes;
@@ -171,7 +171,7 @@ tarch::plotter::VTUFileWriter::writeVTU(const Mesh& mesh, const std::filesystem:
     if (writeDouble and array.sourceComponents == array.writtenComponents) {
       return reinterpret_cast<const std::byte*>(array.values);
     }
-    assertion(array.bytes <= scratch.size(), array.name, array.bytes, scratch.size());
+    ASSERTION(array.bytes <= scratch.size(), array.name, array.bytes, scratch.size());
     if (writeDouble) {
       copyTuples(
         array.values,
@@ -217,7 +217,7 @@ tarch::plotter::VTUFileWriter::writeVTU(const Mesh& mesh, const std::filesystem:
     appendedOffset += getAppendedBytes(array);
   };
   const std::size_t numberOfPointFields = mesh.pointFields.size();
-  assertion(arrays.size() == numberOfPointFields + mesh.cellFields.size() + 4, arrays.size(), numberOfPointFields);
+  ASSERTION(arrays.size() == numberOfPointFields + mesh.cellFields.size() + 4, arrays.size(), numberOfPointFields);
 
   out << "<?xml version=\"1.0\"?>\n";
   out << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"" << ByteOrder << "\" header_type=\"UInt64\""
