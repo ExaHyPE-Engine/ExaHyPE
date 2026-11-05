@@ -5,7 +5,8 @@
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/Predictor.h"
 #include "exahype2/fv/Patch.h"
-#include "exahype2/fv/ader/Fallback.h"
+#include "exahype2/fv/ader/FallbackLimiter.h"
+#include "exahype2/fv/ader/FallbackScheme.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "peano4/CellConnectivity.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -31,10 +32,10 @@ namespace exahype2::fv::ader {
   template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct SolveRiemannProblems;
 
-  template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived = void>
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct CorrectPatches;
 
-  template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
+  template <typename Derived, typename StoragePrecision, typename ComputePrecision>
   struct FixUpPatches;
 
   template <typename Derived, typename ComputePrecision>
@@ -59,8 +60,8 @@ struct exahype2::fv::ader::PredictionStatistics final {
 };
 
 /**
- * The largest wave speed of the corrected volumes and the number of patches, or of volumes with a
- * fallback per volume, that repeat their step with the fallback scheme.
+ * The largest wave speed of the corrected volumes and the number of troubled patches, or of
+ * troubled volumes with a fallback per volume.
  */
 struct exahype2::fv::ader::CorrectionStatistics final {
   using ValueType = exahype2::fv::ader::CorrectionStatistics;
@@ -79,7 +80,7 @@ struct exahype2::fv::ader::CorrectionStatistics final {
  * iteration diverged or stopped at its sweep limit. Team entry advances the cells entry,
  * entry + numberOfTeams and so on. All its threads reconstruct the patch together and then predict
  * groups of volumes at once, threadsPerVolume threads per volume. With statuses, a cell with such a
- * volume writes FallbackStatus::FailedPrediction into its status and the volume writes NaN, as a
+ * volume marks StatusEntry::PredictorDiverged in its status chunk and the volume writes NaN, as a
  * diverged one does, so a neighbour that reads its face halves falls back as well. The team keeps the
  * reconstruction and the predictions inside the patch and the
  * work of its volumes in its chunk of scratchSizePerTeam values in scratch. With interiorUpdates,
@@ -142,17 +143,18 @@ struct exahype2::fv::ader::SolveRiemannProblems final {
  * largest wave speed of the updated volumes. One team corrects one cell, with one thread per volume
  * on a device and with one thread on the host.
  *
- * With a FallbackDerived, every patch then judges its corrected volumes with
- * exahype2::fv::ader::Fallback. A troubled patch or a patch with a failed prediction repeats its step from
- * previousSolution and the halo with FallbackDerived, keeping the ADER-WENO flux on the faces where
+ * With a limiter in Derived, every patch then judges its corrected volumes with
+ * exahype2::fv::ader::FallbackLimiter. A troubled patch, which includes a patch whose predictor
+ * diverged, repeats its step from previousSolution and the halo with
+ * exahype2::fv::ader::FallbackScheme, keeping the ADER-WENO flux on the faces where
  * it does not share the fallback flux with its neighbour: the faces of a level jump and, with
- * limiterFaceStatuses, the faces to a cell off the subcell scheme. Every patch writes its status
- * into statuses and into its own half of faceStatuses, and the VolumeStatus of each volume into
- * volumeStatuses. With a fallback per volume, only the troubled volumes repeat their step, a kept
+ * limiterFaceStatuses, the faces to a cell off the subcell scheme. Every patch writes its
+ * LimiterStatus into statuses and into its own half of faceStatuses, and the VolumeStatus of each
+ * volume into volumeStatuses. With a fallback per volume, only the troubled volumes repeat their step, a kept
  * volume takes the fallback flux on its faces to them inside the patch from its update in
  * interiorUpdates, and every volume on a patch face writes its own status into its half of the face.
  */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ader::CorrectPatches final {
   using Scheme     = exahype2::fv::ader::Scheme<Derived, ComputePrecision>;
   using Patch      = exahype2::fv::Patch<Derived, ComputePrecision>;
@@ -161,7 +163,7 @@ struct exahype2::fv::ader::CorrectPatches final {
   using StatePool  = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  static constexpr bool FallsBack = not std::is_void_v<FallbackDerived>;
+  static constexpr bool HasLimiter = exahype2::fv::ader::hasLimiter<Derived>();
 
   peano4::CellConnectivity              cellConnectivity{};
   tarch::Span<const int>         cells{};
@@ -189,12 +191,13 @@ struct exahype2::fv::ader::CorrectPatches final {
 /**
  * Swaps, in every listed patch that keeps its corrected step, the ADER-WENO flux for the fallback
  * flux on every face whose other side repeats its step with the fallback scheme and shares that
- * flux, and reduces the largest wave speed of the patches it changes. One team fixes one cell. With
- * a fallback per volume, this holds for each kept volume on a face and the volume behind it.
+ * flux, marks such a patch as LimiterStatus::Halo, and reduces the largest wave speed of the patches
+ * it changes. One team fixes one cell. With a fallback per volume, this holds for each kept volume
+ * on a face and the volume behind it.
  */
-template <typename Derived, typename StoragePrecision, typename ComputePrecision, typename FallbackDerived>
+template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 struct exahype2::fv::ader::FixUpPatches final {
-  using Correct    = exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, FallbackDerived>;
+  using Correct    = exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision>;
   using Patch      = typename Correct::Patch;
   using CellPool   = typename Correct::CellPool;
   using FacePool   = typename Correct::FacePool;

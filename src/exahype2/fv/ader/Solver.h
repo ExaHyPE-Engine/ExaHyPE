@@ -3,7 +3,8 @@
 #pragma once
 
 #include "exahype2/fv/Solver.h"
-#include "exahype2/fv/ader/Fallback.h"
+#include "exahype2/fv/ader/FallbackLimiter.h"
+#include "exahype2/fv/ader/FallbackScheme.h"
 #include "exahype2/fv/ader/PatchPredictor.h"
 #include "exahype2/fv/ader/Scheme.h"
 #include "peano4/HaloExchange.h"
@@ -28,8 +29,8 @@ namespace exahype2::fv::ader {
  * global master warns about the volumes whose Picard iteration stopped at its sweep limit.
  *
  * With a fallback reconstruction in Derived, every patch keeps its previous solution, judges its
- * corrected volumes with exahype2::fv::ader::Fallback and repeats a troubled step with the
- * fallback scheme (see CorrectPatches). The ranks exchange the statuses on the faces while the
+ * corrected volumes with exahype2::fv::ader::FallbackLimiter and repeats a troubled step with
+ * exahype2::fv::ader::FallbackScheme (see CorrectPatches). The ranks exchange the statuses on the faces while the
  * local patches beside a repeating patch take its fallback flux (see FixUpPatches), and then the
  * remote ones do. A diverged prediction then leaves NaN in its patch, which repeats its step.
  */
@@ -42,14 +43,7 @@ public:
   using FluxPool   = tarch::accelerator::ChunkedMemoryPool<ComputePrecision>;
   using StatusPool = tarch::accelerator::ChunkedMemoryPool<int>;
 
-  // The defaulted parameter defers the lookup in Derived to the use, where Derived is complete.
-  template <typename Generated = Derived>
-  using FallbackSolver = std::conditional_t<
-    exahype2::fv::ader::fallsBack<Generated>(),
-    exahype2::fv::ader::FallbackSolver<Generated, typename exahype2::fv::ader::FallbackReconstructionOf<Generated>::Type>,
-    void>;
-
-  static constexpr bool HasLimiter = exahype2::fv::ader::fallsBack<Derived>();
+  static constexpr bool HasLimiter = exahype2::fv::ader::hasLimiter<Derived>();
 
   INLINE_METHOD Solver(
     double                                    timeStepFactor,
@@ -74,11 +68,11 @@ public:
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
   [[nodiscard]] INLINE_METHOD int getNumberOfTroubledCells() const
-    requires(exahype2::fv::ader::fallsBack<Derived>());
+    requires(exahype2::fv::ader::hasLimiter<Derived>());
 
 private:
   INLINE_METHOD void reserveFaces(const peano4::CellConnectivity& cellConnectivity);
-  INLINE_METHOD void reserveVolumeStatuses(int numberOfSlots);
+  INLINE_METHOD void reserveStatuses(int numberOfSlots);
   [[nodiscard]] INLINE_METHOD double predictPatches(
     const peano4::CellConnectivity& cellConnectivity,
     peano4::Adjacency        adjacency,
@@ -122,8 +116,8 @@ private:
   int _unconvergedPredictionsSlot{0};
 
   typename Base::Patches    _previousSolution{Base::Patch::ValuesPerPatch};
-  StatusPool                _statuses{1};
-  StatusPool                _faceStatuses{2 * exahype2::fv::ader::getFallbackStatusesPerHalf<Derived>()};
+  StatusPool                _statuses{exahype2::fv::ader::NumberOfStatusEntries};
+  StatusPool                _faceStatuses{2 * exahype2::fv::ader::getLimiterStatusesPerHalf<Derived>()};
   peano4::HaloExchange<int> _statusExchange{_faceStatuses};
   StatusPool                _volumeStatuses{Scheme::VolumesPerPatch};
   StatePool                 _interiorUpdates{Scheme::InteriorUpdateValues};

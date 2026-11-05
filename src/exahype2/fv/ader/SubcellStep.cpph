@@ -12,7 +12,8 @@
 #include "tarch/accelerator/Reducer.h"
 
 /**
- * Reserves the predicted face halves of every face and builds their exchanges. Every rank calls
+ * Reserves the predicted face halves of every face and builds their exchanges, and with a limiter
+ * the statuses of the cells, every one Regular without a diverged prediction. Every rank calls
  * this at the same time. The exchanges of every solver then take the same tags.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -26,9 +27,13 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::re
   _fluxExchange.rebuild(cellConnectivity);
   _restrictedFluxExchange.rebuild(cellConnectivity);
   _predictor.template allocate<Subgrid<>>();
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (exahype2::fv::ader::hasLimiter<Derived>()) {
     _previousSubcells.reserve(cellConnectivity.getNumberOfSlots());
     _statuses.reserve(cellConnectivity.getNumberOfSlots());
+    _statuses.copyFromHost(std::vector<int>(
+      static_cast<std::size_t>(_statuses.getNumberOfSegments()) * _statuses.getSegmentSize() * _statuses.getPaddedChunkSize(),
+      static_cast<int>(exahype2::fv::ader::LimiterStatus::Regular)
+    ));
     _faceStatuses.reserve(cellConnectivity.getNumberOfFaces());
     _statusExchange.rebuild(cellConnectivity);
     _volumeStatuses.reserve(cellConnectivity.getNumberOfSlots());
@@ -116,7 +121,7 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::ad
   _restrictedFluxExchange.wait();
   correct(cellConnectivity, region, region.getCells(Remote), timeStamp, timeStepSize);
 
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (exahype2::fv::ader::hasLimiter<Derived>()) {
     _statusExchange.post();
     fixUp(cellConnectivity, region, region.getCells(Local), timeStamp, timeStepSize);
     _statusExchange.wait();
@@ -142,8 +147,8 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::pr
     _faceFluxes.getView(),
     timeStamp,
     timeStepSize,
-    exahype2::fv::ader::fallsBack<Derived>() ? _previousSubcells.getView() : typename CellPool::View{},
-    exahype2::fv::ader::fallsBack<Derived>() ? _statuses.getView() : decltype(_statuses.getView()){},
+    exahype2::fv::ader::hasLimiter<Derived>() ? _previousSubcells.getView() : typename CellPool::View{},
+    exahype2::fv::ader::hasLimiter<Derived>() ? _statuses.getView() : decltype(_statuses.getView()){},
     exahype2::fv::ader::fallsBackPerVolume<Derived>() ? _interiorUpdates.getView() : decltype(_interiorUpdates.getView()){},
     region.faceStatuses
   ));
@@ -193,7 +198,7 @@ INLINE_METHOD auto exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, Co
   const double                 timeStamp,
   const double                 timeStepSize
 ) {
-  exahype2::fv::ader::CorrectPatches<Subgrid<>, StoragePrecision, ComputePrecision, FallbackSubgrid<>> correction{
+  exahype2::fv::ader::CorrectPatches<Subgrid<>, StoragePrecision, ComputePrecision> correction{
     cellConnectivity.onDevice(),
     cells,
     region.subcells,
@@ -201,7 +206,7 @@ INLINE_METHOD auto exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, Co
     timeStamp,
     timeStepSize
   };
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (exahype2::fv::ader::hasLimiter<Derived>()) {
     correction.previousSolution    = std::as_const(_previousSubcells).getView();
     correction.halo                = region.halo;
     correction.statuses            = _statuses.getView();
@@ -243,11 +248,11 @@ exahype2::fv::ader::SubcellStep<Derived, StoragePrecision, ComputePrecision>::fi
   const double                 timeStamp,
   const double                 timeStepSize
 ) {
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (exahype2::fv::ader::hasLimiter<Derived>()) {
     double maxEigenvalue = 0.0;
     tarch::accelerator::parallelReduce(
       tarch::accelerator::TeamRange(cells.size),
-      exahype2::fv::ader::FixUpPatches<Subgrid<>, StoragePrecision, ComputePrecision, FallbackSubgrid<>>{
+      exahype2::fv::ader::FixUpPatches<Subgrid<>, StoragePrecision, ComputePrecision>{
         getCorrection(cellConnectivity, region, cells, timeStamp, timeStepSize)
       },
       tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}

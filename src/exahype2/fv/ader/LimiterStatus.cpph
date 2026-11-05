@@ -1,0 +1,11 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Returns whether a patch or a volume of this status repeats its step with the fallback scheme.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr bool exahype2::fv::ader::runsFallbackScheme(const LimiterStatus status) {
+  return static_cast<int>(status) >= static_cast<int>(exahype2::fv::ader::LimiterStatus::Limited);
+}
+TARGET_DECLARE_END

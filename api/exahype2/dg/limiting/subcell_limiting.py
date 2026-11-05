@@ -163,6 +163,12 @@ class SubcellLimiting:
             "static constexpr int  NumberOfObservables        = {};".format(
                 self._subcell_limiter_number_of_dmp_observables
             ),
+            "static constexpr double DmpRelaxationParameter = {};".format(
+                repr(float(self._subcell_limiter_dmp_relaxation_parameter))
+            ),
+            "static constexpr double DmpDifferencesScaling  = {};".format(
+                repr(float(self._subcell_limiter_dmp_differences_scaling))
+            ),
             "using Reconstruction         = {};".format(scheme.reconstruction),
             "using FallbackReconstruction = {};".format(
                 scheme.fallback_reconstruction or "void"

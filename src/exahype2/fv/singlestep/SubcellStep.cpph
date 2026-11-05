@@ -198,13 +198,13 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
   COMPILE_IF_ON_DEVICE(
     using Reconstruction         = typename Derived::Reconstruction;
     using FallbackReconstruction = typename Derived::FallbackReconstruction;
-    using Subgrid                = typename Kernel::template SubgridSolver<Reconstruction>;
-    using FallbackSubgrid        = typename Kernel::template SubgridSolver<FallbackReconstruction>;
+    using PrimarySubgrid         = Subgrid<Reconstruction>;
+    using FallbackSubgrid        = Subgrid<FallbackReconstruction>;
     const int thread             = tarch::accelerator::getThreadOfTeam(team);
     const int threads            = tarch::accelerator::getNumberOfThreadsPerTeam(team);
     bool      needsFallback      = false;
     for (int subcell = thread; subcell < Kernel::SubcellsPerCell; subcell += threads) {
-      static_cast<void>(exahype2::fv::singlestep::PatchUpdate<Subgrid, ComputePrecision>::computeVolumeUpdate(
+      static_cast<void>(exahype2::fv::singlestep::PatchUpdate<PrimarySubgrid, ComputePrecision>::computeVolumeUpdate(
         subcell,
         subcells,
         haloHalves,
@@ -318,7 +318,7 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
   const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
   const double* const                          nodesToSubcells
 ) {
-  using Update                       = exahype2::fv::singlestep::PatchUpdate<typename Kernel::template SubgridSolver<Reconstruct>, ComputePrecision>;
+  using Update                       = exahype2::fv::singlestep::PatchUpdate<Subgrid<Reconstruct>, ComputePrecision>;
   constexpr int GalerkinNodesPerAxis = Kernel::NodesPerAxis;
   constexpr int GalerkinNodesPerFace = exahype2::dg::getNodesPerFace(GalerkinNodesPerAxis);
   const auto    index                = peano4::dDelinearised(volume, Kernel::SubcellsPerAxis);
@@ -386,7 +386,7 @@ exahype2::fv::singlestep::SubcellStep<Derived, StoragePrecision, ComputePrecisio
     "The fallback reconstruction of the limiter needs the halo width of the primary reconstruction."
   );
   static_cast<void>(
-    exahype2::fv::singlestep::PatchUpdate<typename Kernel::template SubgridSolver<Reconstruct>, ComputePrecision>::update(
+    exahype2::fv::singlestep::PatchUpdate<Subgrid<Reconstruct>, ComputePrecision>::update(
       subcells,
       evolvedSubcells,
       haloHalves,

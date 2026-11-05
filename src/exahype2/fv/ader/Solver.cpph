@@ -34,22 +34,27 @@ template <typename Derived, typename StoragePrecision, typename ComputePrecision
 INLINE_METHOD void
 exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::allocate(const peano4::CellConnectivity& cellConnectivity) {
   Base::allocate(cellConnectivity);
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (HasLimiter) {
     _previousSolution.reserve(cellConnectivity.getNumberOfSlots());
-    _statuses.reserve(cellConnectivity.getNumberOfSlots());
-    reserveVolumeStatuses(cellConnectivity.getNumberOfSlots());
+    reserveStatuses(cellConnectivity.getNumberOfSlots());
   }
   reserveFaces(cellConnectivity);
   _predictor.template allocate<Derived>();
 }
 
 /**
- * Reserves the statuses of the volumes, every one Accepted, and with a fallback per volume the
- * updates through the faces inside the patches.
+ * Reserves the statuses of the patches, every one Regular without a diverged prediction, the
+ * statuses of the volumes, every one Accepted, and with a fallback per volume the updates through
+ * the faces inside the patches.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD void
-exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::reserveVolumeStatuses(const int numberOfSlots) {
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::reserveStatuses(const int numberOfSlots) {
+  _statuses.reserve(numberOfSlots);
+  _statuses.copyFromHost(std::vector<int>(
+    static_cast<std::size_t>(_statuses.getNumberOfSegments()) * _statuses.getSegmentSize() * _statuses.getPaddedChunkSize(),
+    static_cast<int>(exahype2::fv::ader::LimiterStatus::Regular)
+  ));
   _volumeStatuses.reserve(numberOfSlots);
   _volumeStatuses.copyFromHost(std::vector<int>(
     static_cast<std::size_t>(_volumeStatuses.getNumberOfSegments()) * _volumeStatuses.getSegmentSize()
@@ -71,7 +76,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::reserve
   _stateExchange.rebuild(cellConnectivity);
   _fluxExchange.rebuild(cellConnectivity);
   _restrictedFluxExchange.rebuild(cellConnectivity);
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (HasLimiter) {
     _faceStatuses.reserve(cellConnectivity.getNumberOfFaces());
     _statusExchange.rebuild(cellConnectivity);
   }
@@ -130,7 +135,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::perform
   finalMaxEigenvalue =
     exahype2::MaxEigenvalueReduction::combine(finalMaxEigenvalue, correctPatches(cellConnectivity, Remote, timeStepSize));
 
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (HasLimiter) {
     _statusExchange.post();
     finalMaxEigenvalue =
       exahype2::MaxEigenvalueReduction::combine(finalMaxEigenvalue, fixUpPatches(cellConnectivity, Local, timeStepSize));
@@ -152,10 +157,9 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::regrid(
   exahype2::RefinementRequests& requests
 ) {
   Base::regrid(cellConnectivity, regrid, requests);
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (HasLimiter) {
     _previousSolution.reserve(regrid.newNumberOfSlots);
-    _statuses.reserve(regrid.newNumberOfSlots);
-    reserveVolumeStatuses(regrid.newNumberOfSlots);
+    reserveStatuses(regrid.newNumberOfSlots);
   }
   reserveFaces(cellConnectivity);
 }
@@ -195,7 +199,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::addLoca
   assertion(_unconvergedPredictions >= 0, _unconvergedPredictions);
   _unconvergedPredictionsSlot = record.addSum(static_cast<std::uint64_t>(_unconvergedPredictions));
   _unconvergedPredictions     = 0;
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (HasLimiter) {
     _troubledCellsSlot  = record.addSum(static_cast<std::uint64_t>(_localTroubledCells));
     _localTroubledCells = 0;
   }
@@ -211,7 +215,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::readVal
   const tarch::mpi::ReductionRecord& record
 ) {
   Base::readValuesFromGlobalReduction(record);
-  if constexpr (not exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (not HasLimiter) {
     const auto globalPredictions = record.getSum(_unconvergedPredictionsSlot);
     if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       logWarning(
@@ -221,7 +225,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::readVal
       );
     }
   }
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (HasLimiter) {
     const auto globalTroubledCells = record.getSum(_troubledCellsSlot);
     assertion(globalTroubledCells <= static_cast<std::uint64_t>(std::numeric_limits<int>::max()), globalTroubledCells);
     _globalTroubledCells = static_cast<int>(globalTroubledCells);
@@ -236,7 +240,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::readVal
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD int
 exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getNumberOfTroubledCells() const
-  requires(exahype2::fv::ader::fallsBack<Derived>())
+  requires(exahype2::fv::ader::hasLimiter<Derived>())
 {
   return _globalTroubledCells;
 }
@@ -301,7 +305,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::plot(
       );
     }
   };
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (HasLimiter) {
     this->template plotReconstruction<PointsPerAxis>(
       cellConnectivity,
       format,
@@ -337,11 +341,11 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::predict
     _faceFluxes.getView(),
     this->_timeStepping.getTimeStamp(),
     timeStepSize,
-    exahype2::fv::ader::fallsBack<Derived>() ? _previousSolution.getView() : typename Base::Patches::View{},
-    exahype2::fv::ader::fallsBack<Derived>() ? _statuses.getView() : decltype(_statuses.getView()){},
+    HasLimiter ? _previousSolution.getView() : typename Base::Patches::View{},
+    HasLimiter ? _statuses.getView() : decltype(_statuses.getView()){},
     exahype2::fv::ader::fallsBackPerVolume<Derived>() ? _interiorUpdates.getView() : decltype(_interiorUpdates.getView()){}
   );
-  if constexpr (not exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (not HasLimiter) {
     if (statistics.counts.divergedCells > 0) {
       tarch::terminateWithError(
         "The space-time predictor diverges in " + std::to_string(statistics.counts.divergedCells) + " volumes."
@@ -390,7 +394,7 @@ INLINE_METHOD auto exahype2::fv::ader::Solver<Derived, StoragePrecision, Compute
   const peano4::Adjacency  adjacency,
   const double             timeStepSize
 ) {
-  exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, FallbackSolver<>> correction{
+  exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision> correction{
     cellConnectivity.onDevice(),
     cellConnectivity.onDevice().getCells(adjacency),
     this->_solution.getView(),
@@ -398,7 +402,7 @@ INLINE_METHOD auto exahype2::fv::ader::Solver<Derived, StoragePrecision, Compute
     this->_timeStepping.getTimeStamp(),
     timeStepSize
   };
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (HasLimiter) {
     correction.previousSolution = std::as_const(_previousSolution).getView();
     correction.halo             = std::as_const(this->_halo).getView();
     correction.statuses         = _statuses.getView();
@@ -444,11 +448,11 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::fixUpPa
   const double             timeStepSize
 ) {
   double maxEigenvalue = 0.0;
-  if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
+  if constexpr (HasLimiter) {
     const auto correction = getCorrection(cellConnectivity, adjacency, timeStepSize);
     tarch::accelerator::parallelReduce(
       tarch::accelerator::TeamRange(correction.cells.size),
-      exahype2::fv::ader::FixUpPatches<Derived, StoragePrecision, ComputePrecision, FallbackSolver<>>{correction},
+      exahype2::fv::ader::FixUpPatches<Derived, StoragePrecision, ComputePrecision>{correction},
       tarch::accelerator::Custom<exahype2::MaxEigenvalueReduction>{maxEigenvalue}
     );
   }

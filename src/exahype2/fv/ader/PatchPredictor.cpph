@@ -51,7 +51,7 @@ exahype2::fv::ader::PatchPredictor<StoragePrecision, ComputePrecision>::getAlloc
  * Predicts the listed cells and returns the largest wave speed of the faces inside their patches
  * and the numbers of the diverged and the unconverged volumes. A diverged volume writes NaN. With a
  * previousSolution, every cell first copies its patch there. With statuses, a cell with a diverged or
- * an unconverged volume writes FallbackStatus::FailedPrediction into its status. With
+ * an unconverged volume marks StatusEntry::PredictorDiverged in its status chunk. With
  * interiorUpdates, every cell keeps the updates of its volumes through the faces inside its patch.
  */
 template <typename StoragePrecision, typename ComputePrecision>
