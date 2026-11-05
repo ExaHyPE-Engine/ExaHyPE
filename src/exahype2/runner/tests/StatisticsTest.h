@@ -23,7 +23,6 @@ private:
   struct PlainSolver;
   struct LimitedSolver;
   struct UnlimitedSolver;
-  struct FallbackSolver;
 
   void testTheGlobalViewSumsAndBoundsTheRankStatistics();
   void testSnapshotFillsTheMemoryRowsOfTheBuild();
@@ -34,6 +33,5 @@ private:
   void testASolverWithoutEigenvalueReportsStepAndMeshWidth();
   void testASolverWithEigenvalueAndTroubledCellsAppendsBoth();
   void testASolverWithoutLimiterReportsNoTroubledCells();
-  void testASolverWithFallbackAppendsFallbackCells();
   void testAdditionalStatisticsFollowTheMeshWidth();
 };

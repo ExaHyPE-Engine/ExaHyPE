@@ -34,7 +34,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD exahype2::fv::ader::CorrectionStatistics
 exahype2::fv::ader::CorrectionStatistics::combine(const ValueType left, const ValueType right) {
   return ValueType{
     exahype2::MaxEigenvalueReduction::combine(left.maxEigenvalue, right.maxEigenvalue),
-    left.fallbackCells + right.fallbackCells
+    left.troubledCells + right.troubledCells
   };
 }
 
@@ -372,7 +372,7 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
       for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
         if (fallBackVolume(volume)) {
           anyFallsBack = true;
-          accumulator.fallbackCells++;
+          accumulator.troubledCells++;
         }
       }
       if (anyFallsBack) {
@@ -399,7 +399,7 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
           recomputeVolume(volume);
         }
         Patch::postprocessUpdatedPatch(patch, cellCentre, cellSize, stepStart, stepSize);
-        accumulator.fallbackCells++;
+        accumulator.troubledCells++;
         for (int volume = 0; volume < Scheme::VolumesPerPatch; volume++) {
           if (volumeStatusesOfCell[volume] == static_cast<int>(VolumeStatus::Accepted)) {
             volumeStatusesOfCell[volume] = static_cast<int>(VolumeStatus::Patch);
@@ -460,7 +460,7 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
       for (int volume = thread; volume < Scheme::VolumesPerPatch; volume += threads) {
         if (fallBackVolume(volume)) {
           fallsBackHere = true;
-          partial.fallbackCells++;
+          partial.troubledCells++;
         }
       }
       const bool anyFallsBack = isAnyMarked(fallsBackHere);
@@ -506,7 +506,7 @@ exahype2::fv::ader::CorrectPatches<Derived, StoragePrecision, ComputePrecision, 
         }
       }
       if (thread == 0) {
-        partial.fallbackCells = fallsBack ? 1 : 0;
+        partial.troubledCells = fallsBack ? 1 : 0;
         writeStatus(fallsBack);
       }
     }

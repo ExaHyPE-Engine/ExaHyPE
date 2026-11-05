@@ -178,8 +178,8 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::release
   _interiorUpdates.release();
   _volumeStatusesOnHost.release();
   _unconvergedPredictions = 0;
-  _fallbackCells          = 0;
-  _globalFallbackCells    = 0;
+  _localTroubledCells     = 0;
+  _globalTroubledCells    = 0;
 }
 
 /**
@@ -196,8 +196,8 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::addLoca
   _unconvergedPredictionsSlot = record.addSum(static_cast<std::uint64_t>(_unconvergedPredictions));
   _unconvergedPredictions     = 0;
   if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
-    _fallbackCellsSlot = record.addSum(static_cast<std::uint64_t>(_fallbackCells));
-    _fallbackCells     = 0;
+    _troubledCellsSlot  = record.addSum(static_cast<std::uint64_t>(_localTroubledCells));
+    _localTroubledCells = 0;
   }
 }
 
@@ -222,22 +222,23 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::readVal
     }
   }
   if constexpr (exahype2::fv::ader::fallsBack<Derived>()) {
-    const auto globalFallbackCells = record.getSum(_fallbackCellsSlot);
-    assertion(globalFallbackCells <= static_cast<std::uint64_t>(std::numeric_limits<int>::max()), globalFallbackCells);
-    _globalFallbackCells = static_cast<int>(globalFallbackCells);
+    const auto globalTroubledCells = record.getSum(_troubledCellsSlot);
+    assertion(globalTroubledCells <= static_cast<std::uint64_t>(std::numeric_limits<int>::max()), globalTroubledCells);
+    _globalTroubledCells = static_cast<int>(globalTroubledCells);
   }
 }
 
 /**
- * Returns the number of patches, or of volumes with a fallback per volume, on all ranks that
- * repeated their step with the fallback scheme in the time step of the last read reduction.
+ * Returns the number of troubled patches, or of troubled volumes with a fallback per volume, on all
+ * ranks that repeated their step with the fallback scheme in the time step of the last read
+ * reduction.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 INLINE_METHOD int
-exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getNumberOfFallbackCells() const
+exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::getNumberOfTroubledCells() const
   requires(exahype2::fv::ader::fallsBack<Derived>())
 {
-  return _globalFallbackCells;
+  return _globalTroubledCells;
 }
 
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
@@ -427,7 +428,7 @@ exahype2::fv::ader::Solver<Derived, StoragePrecision, ComputePrecision>::correct
     correction,
     tarch::accelerator::Custom<exahype2::fv::ader::CorrectionStatistics>{statistics}
   );
-  _fallbackCells += statistics.fallbackCells;
+  _localTroubledCells += statistics.troubledCells;
   return statistics.maxEigenvalue;
 }
 

@@ -66,7 +66,7 @@ struct exahype2::fv::ader::CorrectionStatistics final {
   using ValueType = exahype2::fv::ader::CorrectionStatistics;
 
   double maxEigenvalue{0.0};
-  int    fallbackCells{0};
+  int    troubledCells{0};
 
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType identity();
   [[nodiscard]] static INLINE_METHOD GPU_CALLABLE_METHOD ValueType combine(ValueType left, ValueType right);

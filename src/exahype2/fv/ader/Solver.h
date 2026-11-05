@@ -49,6 +49,8 @@ public:
     exahype2::fv::ader::FallbackSolver<Generated, typename exahype2::fv::ader::FallbackReconstructionOf<Generated>::Type>,
     void>;
 
+  static constexpr bool HasLimiter = exahype2::fv::ader::fallsBack<Derived>();
+
   INLINE_METHOD Solver(
     double                                    timeStepFactor,
     std::string                               name,
@@ -71,7 +73,7 @@ public:
   INLINE_METHOD void addLocalValuesToGlobalReduction(tarch::mpi::ReductionRecord& record);
   INLINE_METHOD void readValuesFromGlobalReduction(const tarch::mpi::ReductionRecord& record);
   [[nodiscard]] INLINE_METHOD tarch::AllocatedBytes getAllocatedBytes() const;
-  [[nodiscard]] INLINE_METHOD int getNumberOfFallbackCells() const
+  [[nodiscard]] INLINE_METHOD int getNumberOfTroubledCells() const
     requires(exahype2::fv::ader::fallsBack<Derived>());
 
 private:
@@ -128,12 +130,13 @@ private:
   StatusPool                _volumeStatusesOnHost{Scheme::VolumesPerPatch, tarch::MemoryLocation::Heap};
 
   /**
-   * The patches or volumes of this rank that repeated their step with the fallback scheme since the
-   * last reduction, and those of all ranks in the time step of the last read reduction.
+   * The troubled patches or volumes of this rank that repeated their step with the fallback scheme
+   * since the last reduction, the reduction slot of their sum, and those of all ranks in the time
+   * step of the last read reduction.
    */
-  int _fallbackCells{0};
-  int _fallbackCellsSlot{0};
-  int _globalFallbackCells{0};
+  int _localTroubledCells{0};
+  int _troubledCellsSlot{0};
+  int _globalTroubledCells{0};
 };
 
 #include "exahype2/fv/ader/Solver.cpph"
