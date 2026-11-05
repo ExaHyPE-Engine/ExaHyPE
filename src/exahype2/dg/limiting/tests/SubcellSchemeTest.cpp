@@ -131,42 +131,39 @@ namespace {
   }
 
   TARGET_DECLARE
-  struct RecomputeSubgridOfCell final {
+  struct ProjectRecomputedSubgridOfCell final {
     double*       nodes{nullptr};
-    double*       subcells{nullptr};
-    double*       scratch{nullptr};
-    const double* halo{nullptr};
+    const double* subcells{nullptr};
     const double* subcellsToNodes{nullptr};
     const double* cellCentres{nullptr};
     const double* cellSizes{nullptr};
+    double*       scratch{nullptr};
 
     INLINE_METHOD GPU_CALLABLE_METHOD void operator()(
       const int                              cell,
+      const tarch::accelerator::TeamHandle   team,
       exahype2::dg::MaxEigenvalueStatistics& accumulator
     ) const {
-      const double* haloHalves[peano4::FacesPerCell];
-      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-        haloHalves[faceNumber] =
-          halo + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloValuesPerFace;
-      }
       const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
-      const tarch::la::Vector<DIMENSIONS, double> cellCentre(cellCentres + coordinateOffset);
-      const tarch::la::Vector<DIMENSIONS, double> cellSize(cellSizes + coordinateOffset);
-      accumulator = exahype2::dg::MaxEigenvalueStatistics::combine(
-        accumulator,
-        recomputeSubgrid<exahype2::dg::limiting::tests::StubSolver>(
-          nodes + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
-          subcells + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
-          scratch + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
-          haloHalves,
-          subcellsToNodes,
-          cellCentre,
-          cellSize,
-          0,
-          Layout::TimeStamp,
-          Layout::TimeStepSize
-        )
+      const exahype2::dg::MaxEigenvalueStatistics statistics       = Scheme::projectRecomputedSubgridInTeam(
+        team,
+        nodes + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
+        subcells + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
+        subcellsToNodes,
+        tarch::la::Vector<DIMENSIONS, double>(cellCentres + coordinateOffset),
+        tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
+        Layout::TimeStamp,
+        Layout::TimeStepSize,
+        scratch + static_cast<std::ptrdiff_t>(cell) * Scheme::ProjectionScratchValues
       );
+      COMPILE_IF_ON_HOST(accumulator = exahype2::dg::MaxEigenvalueStatistics::combine(accumulator, statistics);)
+      COMPILE_IF_ON_DEVICE(
+        tarch::accelerator::reduceOverTeam(
+          team,
+          statistics,
+          tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{accumulator}
+        );
+      )
     }
   };
 
@@ -196,47 +193,107 @@ namespace {
       );
     }
   };
+
+  using Step = exahype2::fv::singlestep::SubcellStep<exahype2::dg::limiting::tests::StubSolver, double, double>;
+
+  constexpr int AppliedValuesPerHalf = Scheme::AppliedFluxValuesPerFace / 2;
+  constexpr int AppliedValuesPerCell = peano4::FacesPerCell * AppliedValuesPerHalf;
+
+  /**
+   * Points haloHalves and appliedHalves at the halo and the applied fluxes of cell. Every face with
+   * an even number applies a Galerkin flux and every other face keeps the flux of the subgrid.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD void getHalvesOfCell(
+    const int           cell,
+    const double* const halo,
+    const double* const appliedFluxes,
+    const double*       haloHalves[peano4::FacesPerCell],
+    const double*       appliedHalves[peano4::FacesPerCell]
+  ) {
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      const std::ptrdiff_t face = static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber;
+      haloHalves[faceNumber]    = halo + face * HaloValuesPerFace;
+      appliedHalves[faceNumber] = faceNumber % 2 == 0 ? appliedFluxes + face * AppliedValuesPerHalf : nullptr;
+    }
+  }
+
+  /**
+   * Advances the subgrid of one cell with a team, as exahype2::fv::singlestep::AdvanceSubgrids does.
+   */
+  struct AdvanceSubgridOfCell final {
+    double*       subcells{nullptr};
+    double*       scratch{nullptr};
+    const double* halo{nullptr};
+    const double* appliedFluxes{nullptr};
+    const double* nodesToSubcells{nullptr};
+    const double* cellCentres{nullptr};
+    const double* cellSizes{nullptr};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int cell, const tarch::accelerator::TeamHandle team) const {
+      const double* haloHalves[peano4::FacesPerCell];
+      const double* appliedHalves[peano4::FacesPerCell];
+      getHalvesOfCell(cell, halo, appliedFluxes, haloHalves, appliedHalves);
+      const std::ptrdiff_t coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
+      Step::advanceSubgridInTeam(
+        team,
+        subcells + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
+        scratch + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
+        haloHalves,
+        tarch::la::Vector<DIMENSIONS, double>(cellCentres + coordinateOffset),
+        tarch::la::Vector<DIMENSIONS, double>(cellSizes + coordinateOffset),
+        0,
+        Layout::TimeStamp,
+        Layout::TimeStepSize,
+        appliedHalves,
+        nodesToSubcells
+      );
+    }
+  };
   TARGET_DECLARE_END
 
-  exahype2::dg::MaxEigenvalueStatistics recomputeOnDevice(
-    const exahype2::dg::limiting::tests::SubcellProjections& tables,
-    const exahype2::dg::tests::CellChain&                    geometry,
-    std::vector<double>&                                     nodes,
-    std::vector<double>&                                     subcells,
-    const std::vector<double>&                               halo
-  ) {
-    const std::vector<double> scratch(
+  /**
+   * The subgrids, halos and applied fluxes of the cells of the cell chain.
+   */
+  struct SubgridSteps final {
+    const exahype2::dg::limiting::tests::SubcellProjections tables{};
+    const exahype2::dg::tests::CellChain                    geometry{};
+    const std::vector<double>                               subcells = exahype2::dg::tests::getRamp(
       static_cast<std::size_t>(Setup::NumberOfCells) * Layout::SubcellValuesPerCell,
-      0.0
+      1.0,
+      0.002
     );
+    const std::vector<double> halo =
+      exahype2::dg::tests::getRamp(static_cast<std::size_t>(Setup::NumberOfCells) * HaloValuesPerCell, 1.5, 0.003);
+    const std::vector<double> appliedFluxes =
+      exahype2::dg::tests::getRamp(static_cast<std::size_t>(Setup::NumberOfCells) * AppliedValuesPerCell, 0.4, 0.01);
 
-    const exahype2::dg::tests::DeviceBuffer<double> deviceNodes(nodes);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceSubcells(subcells);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceScratch(scratch);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceHalo(halo);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceSubcellsToNodes(tables.subcellsToNodes);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
-    const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
-
-    exahype2::dg::MaxEigenvalueStatistics statistics;
-    tarch::accelerator::parallelReduce(
-      tarch::accelerator::Range(Setup::NumberOfCells),
-      RecomputeSubgridOfCell{
-        deviceNodes.getData(),
-        deviceSubcells.getData(),
-        deviceScratch.getData(),
-        deviceHalo.getData(),
-        deviceSubcellsToNodes.getData(),
-        deviceCellCentres.getData(),
-        deviceCellSizes.getData()
-      },
-      tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{statistics}
-    );
-
-    deviceNodes.copyBack(nodes);
-    deviceSubcells.copyBack(subcells);
-    return statistics;
-  }
+    /**
+     * Returns the subgrids after every cell advanced its subgrid with advanceSubgrid() on the host.
+     */
+    std::vector<double> advanceOnTheHost() const {
+      std::vector<double> result = subcells;
+      std::vector<double> evolved(Layout::SubcellValuesPerCell, 0.0);
+      for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
+        const double* haloHalves[peano4::FacesPerCell];
+        const double* appliedHalves[peano4::FacesPerCell];
+        getHalvesOfCell(cell, halo.data(), appliedFluxes.data(), haloHalves, appliedHalves);
+        const std::ptrdiff_t coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
+        Step::advanceSubgrid(
+          result.data() + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
+          evolved.data(),
+          haloHalves,
+          tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),
+          tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
+          0,
+          Layout::TimeStamp,
+          Layout::TimeStepSize,
+          appliedHalves,
+          tables.nodesToSubcells.data()
+        );
+      }
+      return result;
+    }
+  };
 } // namespace
 
 exahype2::dg::limiting::tests::SubcellSchemeTest::SubcellSchemeTest() :
@@ -253,11 +310,13 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::run() {
   testMethod(testAConstantSubgridRecomputesToTheConstantAndReportsItsWaveSpeed);
   testMethod(testAFixedRuleReportsNoWaveSpeeds);
   testMethod(testAGalerkinCellProjectsItsPreviousSolutionOntoTheSubgridAndTheFaces);
-  testMethod(testEveryCellOfADeviceRangeRecomputesLikeTheHost);
+  testMethod(testEveryTeamOfADeviceProjectsTheRecomputedSubgridLikeTheHost);
   testMethod(testEverySplitOfTheStagesProjectsLikeTheWholeCell);
   testMethod(testEverySplitOfTheStagesProjectsTheNodesLikeTheWholeCell);
   testMethod(testEveryTeamOfADeviceProjectsTheSubgridOntoTheFacesLikeTheHost);
   testMethod(testListedGalerkinCellsProjectTheirNodesOntoTheirSubgrids);
+  testMethod(testEveryTeamOfADeviceAdvancesTheSubgridLikeTheHost);
+  testMethod(testTheThreadsOfATeamAdvanceTheSubgridLikeOneHostThread);
 }
 
 void
@@ -788,8 +847,12 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::
   validateNumericalBuffersEquals(subcells, getConstantSubgrid(5.0, 0.125));
 }
 
+/**
+ * A team per cell projects its recomputed subgrid onto its nodes and reduces the wave speeds as
+ * projectRecomputedSubgrid() does on the host.
+ */
 void
-exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryCellOfADeviceRangeRecomputesLikeTheHost() {
+exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryTeamOfADeviceProjectsTheRecomputedSubgridLikeTheHost() {
   const exahype2::dg::limiting::tests::SubcellProjections tables;
   const exahype2::dg::tests::CellChain                    geometry;
   const std::vector<double>                               subcells = exahype2::dg::tests::getRamp(
@@ -797,46 +860,123 @@ exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryCellOfADeviceRangeRec
     1.0,
     0.002
   );
-  const std::vector<double> halo =
-    exahype2::dg::tests::getRamp(static_cast<std::size_t>(Setup::NumberOfCells) * HaloValuesPerCell, 1.5, 0.003);
   const std::vector<double> nodes(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::ValuesPerCell, 0.0);
 
-  std::vector<double> deviceNodes      = nodes;
-  std::vector<double> deviceSubcells   = subcells;
-  const auto          deviceStatistics = recomputeOnDevice(tables, geometry, deviceNodes, deviceSubcells, halo);
-
-  std::vector<double>                   hostNodes    = nodes;
-  std::vector<double>                   hostSubcells = subcells;
-  std::vector<double>                   evolved(Layout::SubcellValuesPerCell, 0.0);
+  std::vector<double>                   hostNodes = nodes;
   exahype2::dg::MaxEigenvalueStatistics hostStatistics;
   for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
-    const double* haloHalves[peano4::FacesPerCell];
-    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
-      haloHalves[faceNumber] =
-        halo.data() + (static_cast<std::ptrdiff_t>(cell) * peano4::FacesPerCell + faceNumber) * HaloValuesPerFace;
-    }
-    const std::ptrdiff_t                        coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
-    const tarch::la::Vector<DIMENSIONS, double> cellCentre(geometry.cellCentres.data() + coordinateOffset);
-    const tarch::la::Vector<DIMENSIONS, double> cellSize(geometry.cellSizes.data() + coordinateOffset);
-    hostStatistics = exahype2::dg::MaxEigenvalueStatistics::combine(
+    const std::ptrdiff_t coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
+    hostStatistics                        = exahype2::dg::MaxEigenvalueStatistics::combine(
       hostStatistics,
-      recomputeSubgrid<exahype2::dg::limiting::tests::StubSolver>(
+      Scheme::projectRecomputedSubgrid(
         hostNodes.data() + static_cast<std::ptrdiff_t>(cell) * Layout::ValuesPerCell,
-        hostSubcells.data() + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
-        evolved.data(),
-        haloHalves,
+        subcells.data() + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
         tables.subcellsToNodes.data(),
-        cellCentre,
-        cellSize,
-        0,
+        tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),
+        tarch::la::Vector<DIMENSIONS, double>(geometry.cellSizes.data() + coordinateOffset),
         Layout::TimeStamp,
         Layout::TimeStepSize
       )
     );
   }
 
-  validateNumericalBuffersEquals(deviceSubcells, hostSubcells);
+  std::vector<double>       deviceNodes = nodes;
+  const std::vector<double> scratch(static_cast<std::size_t>(Setup::NumberOfCells) * Scheme::ProjectionScratchValues, 0.0);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceNodesBuffer(deviceNodes);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceSubcells(subcells);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceSubcellsToNodes(tables.subcellsToNodes);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(geometry.cellCentres);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(geometry.cellSizes);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceScratch(scratch);
+  exahype2::dg::MaxEigenvalueStatistics           deviceStatistics;
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(Setup::NumberOfCells, Scheme::getTeamThreads(), 0),
+    ProjectRecomputedSubgridOfCell{
+      deviceNodesBuffer.getData(),
+      deviceSubcells.getData(),
+      deviceSubcellsToNodes.getData(),
+      deviceCellCentres.getData(),
+      deviceCellSizes.getData(),
+      deviceScratch.getData()
+    },
+    tarch::accelerator::Custom<exahype2::dg::MaxEigenvalueStatistics>{deviceStatistics}
+  );
+  deviceNodesBuffer.copyBack(deviceNodes);
+
   validateNumericalBuffersEquals(deviceNodes, hostNodes);
   validateNumericalEquals(deviceStatistics.maxPhysicalEigenvalue, hostStatistics.maxPhysicalEigenvalue);
   validateNumericalEquals(deviceStatistics.maxScaledEigenvalue, hostStatistics.maxScaledEigenvalue);
+}
+
+/**
+ * A team per cell advances the subgrid of advanceSubgridInTeam() as advanceSubgrid() does on the
+ * host, with the applied Galerkin flux on half of the faces.
+ */
+void
+exahype2::dg::limiting::tests::SubcellSchemeTest::testEveryTeamOfADeviceAdvancesTheSubgridLikeTheHost() {
+  const SubgridSteps        steps;
+  const std::vector<double> hostSubcells = steps.advanceOnTheHost();
+
+  std::vector<double>       deviceSubcells = steps.subcells;
+  const std::vector<double> scratch(static_cast<std::size_t>(Setup::NumberOfCells) * Layout::SubcellValuesPerCell, 0.0);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceSubcellsBuffer(deviceSubcells);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceScratch(scratch);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceHalo(steps.halo);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceAppliedFluxes(steps.appliedFluxes);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceNodesToSubcells(steps.tables.nodesToSubcells);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceCellCentres(steps.geometry.cellCentres);
+  const exahype2::dg::tests::DeviceBuffer<double> deviceCellSizes(steps.geometry.cellSizes);
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::TeamRange(Setup::NumberOfCells),
+    AdvanceSubgridOfCell{
+      deviceSubcellsBuffer.getData(),
+      deviceScratch.getData(),
+      deviceHalo.getData(),
+      deviceAppliedFluxes.getData(),
+      deviceNodesToSubcells.getData(),
+      deviceCellCentres.getData(),
+      deviceCellSizes.getData()
+    }
+  );
+  deviceSubcellsBuffer.copyBack(deviceSubcells);
+
+  validateNumericalBuffersEquals(deviceSubcells, hostSubcells);
+}
+
+/**
+ * advanceSubgridWithThreadsOfTeam() advances the subgrid as advanceSubgrid() does when one host
+ * thread runs the team. A build with a GPU backend has no host team and runs the team kernel in
+ * testEveryTeamOfADeviceAdvancesTheSubgridLikeTheHost() instead.
+ */
+void
+exahype2::dg::limiting::tests::SubcellSchemeTest::testTheThreadsOfATeamAdvanceTheSubgridLikeOneHostThread() {
+#if not defined(PEANO_WITH_GPU_BACKEND)
+  const SubgridSteps         steps;
+  const std::vector<double>  hostSubcells = steps.advanceOnTheHost();
+  std::vector<double>        teamSubcells = steps.subcells;
+  std::vector<double>        evolved(Layout::SubcellValuesPerCell, 0.0);
+  std::vector<unsigned char> teamScratch(tarch::accelerator::TeamScratchBytes);
+  const tarch::accelerator::TeamHandle team{teamScratch.data()};
+  for (int cell = 0; cell < Setup::NumberOfCells; cell++) {
+    const double* haloHalves[peano4::FacesPerCell];
+    const double* appliedHalves[peano4::FacesPerCell];
+    getHalvesOfCell(cell, steps.halo.data(), steps.appliedFluxes.data(), haloHalves, appliedHalves);
+    const std::ptrdiff_t coordinateOffset = static_cast<std::ptrdiff_t>(cell) * DIMENSIONS;
+    Step::advanceSubgridWithThreadsOfTeam(
+      team,
+      teamSubcells.data() + static_cast<std::ptrdiff_t>(cell) * Layout::SubcellValuesPerCell,
+      evolved.data(),
+      haloHalves,
+      tarch::la::Vector<DIMENSIONS, double>(steps.geometry.cellCentres.data() + coordinateOffset),
+      tarch::la::Vector<DIMENSIONS, double>(steps.geometry.cellSizes.data() + coordinateOffset),
+      0,
+      Layout::TimeStamp,
+      Layout::TimeStepSize,
+      appliedHalves,
+      steps.tables.nodesToSubcells.data()
+    );
+  }
+
+  validateNumericalBuffersEquals(teamSubcells, hostSubcells);
+#endif
 }

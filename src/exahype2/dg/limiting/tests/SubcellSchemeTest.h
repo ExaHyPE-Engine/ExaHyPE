@@ -29,9 +29,11 @@ private:
   void testAConstantSubgridRecomputesToTheConstantAndReportsItsWaveSpeed();
   void testAFixedRuleReportsNoWaveSpeeds();
   void testAGalerkinCellProjectsItsPreviousSolutionOntoTheSubgridAndTheFaces();
-  void testEveryCellOfADeviceRangeRecomputesLikeTheHost();
+  void testEveryTeamOfADeviceProjectsTheRecomputedSubgridLikeTheHost();
   void testEverySplitOfTheStagesProjectsLikeTheWholeCell();
   void testEverySplitOfTheStagesProjectsTheNodesLikeTheWholeCell();
   void testEveryTeamOfADeviceProjectsTheSubgridOntoTheFacesLikeTheHost();
   void testListedGalerkinCellsProjectTheirNodesOntoTheirSubgrids();
+  void testEveryTeamOfADeviceAdvancesTheSubgridLikeTheHost();
+  void testTheThreadsOfATeamAdvanceTheSubgridLikeOneHostThread();
 };

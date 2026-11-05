@@ -26,10 +26,9 @@ TARGET_DECLARE
  * The step of the subcell limiter of the ADER-DG solver Derived with a finite-volume scheme that
  * advances every volume in one step from the volumes around it, such as Godunov and MUSCL-Hancock.
  * Every recomputing cell advances its subgrid from its subcells and its halo, the local cells while
- * the ranks exchange the halo of the remote cells. A solver with a fallback reconstruction repeats
- * the step of a cell with it when an evolved subcell fails the physical admissibility test. On a
- * face with one recomputing side, the volumes of that side apply the numerical flux of the Galerkin
- * step instead of their own, averaged over each volume face.
+ * the ranks exchange the halo of the remote cells. On a face with one recomputing side, the volumes
+ * of that side apply the numerical flux of the Galerkin step instead of their own, averaged over
+ * each volume face.
  */
 template <typename Derived, typename StoragePrecision, typename ComputePrecision>
 class exahype2::fv::singlestep::SubcellStep final {
@@ -38,9 +37,10 @@ public:
   using Region = exahype2::dg::limiting::SubcellRegion<StoragePrecision, ComputePrecision>;
 
   // The defaulted parameter defers the lookup in Derived to the use, where Derived is complete.
-  template <typename Reconstruct, typename Generated = Derived>
+  template <typename Generated = Derived>
   using SubgridUpdate = exahype2::fv::singlestep::PatchUpdate<
-    typename exahype2::dg::limiting::SubcellScheme<Generated, ComputePrecision>::template SubgridSolver<Reconstruct>,
+    typename exahype2::dg::limiting::SubcellScheme<Generated, ComputePrecision>::template SubgridSolver<
+      typename Generated::Reconstruction>,
     ComputePrecision>;
 
   INLINE_METHOD void rebuild(const peano4::CellConnectivity& cellConnectivity);
@@ -84,19 +84,22 @@ public:
   );
 
 private:
-  template <typename Reconstruct>
-  static INLINE_METHOD GPU_CALLABLE_METHOD void advanceSubgridWith(
-    const StoragePrecision* NOALIAS              subcells,
+  friend class exahype2::dg::limiting::tests::SubcellSchemeTest;
+
+  static INLINE_METHOD GPU_CALLABLE_METHOD void advanceSubgridWithThreadsOfTeam(
+    tarch::accelerator::TeamHandle               team,
+    StoragePrecision* NOALIAS                    subcells,
     StoragePrecision* NOALIAS                    evolvedSubcells,
     const StoragePrecision* const                haloHalves[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     int                                          boundaryFaces,
     double                                       timeStamp,
-    double                                       timeStepSize
+    double                                       timeStepSize,
+    const ComputePrecision* const                appliedHalves[peano4::FacesPerCell],
+    const double*                                nodesToSubcells
   );
 
-  template <typename Reconstruct>
   static INLINE_METHOD GPU_CALLABLE_METHOD void imposeAppliedFluxes(
     int                                          volume,
     const StoragePrecision* NOALIAS              subcells,
