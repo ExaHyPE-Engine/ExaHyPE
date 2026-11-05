@@ -1,11 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include <cstdint>
-#include <limits>
-#include <string>
-#include <utility>
-
 #include "exahype2/LevelJumps.h"
 #include "exahype2/fv/ader/Kernels.h"
 #include "tarch/Assertions.h"

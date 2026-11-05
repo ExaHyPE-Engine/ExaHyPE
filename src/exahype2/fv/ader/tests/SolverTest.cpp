@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SolverTest.h"
 
-#include <bitset>
-#include <cmath>
-
 #include "exahype2/Limits.h"
 #include "exahype2/RefinementCommand.h"
 #include "exahype2/RefinementRequests.h"

@@ -1,8 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include <utility>
-
 #include "exahype2/LevelJumps.h"
 #include "exahype2/dg/Kernels.h"
 #include "exahype2/dg/limiting/LimiterStatus.h"

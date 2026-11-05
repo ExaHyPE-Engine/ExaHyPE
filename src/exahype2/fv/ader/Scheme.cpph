@@ -1,10 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include <cmath>
-#include <limits>
-#include <type_traits>
-
 #include "exahype2/fv/limiter/PolynomialScaling.h"
 #include "exahype2/fv/reconstruction/weno/NonlinearWeights.h"
 #include "exahype2/terms/BoundaryConditions.h"

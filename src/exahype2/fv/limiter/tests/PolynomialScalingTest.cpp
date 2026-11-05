@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PolynomialScalingTest.h"
 
-#include <algorithm>
-#include <array>
-
 #include "exahype2/fv/GaussLegendreBasis.h"
 #include "exahype2/fv/limiter/PolynomialScaling.h"
 

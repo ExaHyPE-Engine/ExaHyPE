@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <type_traits>
-
 #include "exahype2/dg/Basis.h"
 #include "exahype2/dg/ader/Predictor.h"
 #include "exahype2/fv/Patch.h"

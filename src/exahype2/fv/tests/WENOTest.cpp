@@ -7,9 +7,6 @@
 #include "exahype2/fv/reconstruction/weno/NonlinearWeights.h"
 #include "peano4/Constants.h"
 
-#include <cmath>
-#include <vector>
-
 namespace {
   constexpr int NumberOfData = 3;
 

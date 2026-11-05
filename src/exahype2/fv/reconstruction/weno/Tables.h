@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <array>
-
 #include "exahype2/fv/GaussLegendreBasis.h"
 
 namespace exahype2::fv::reconstruction::weno {

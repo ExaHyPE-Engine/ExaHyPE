@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <cstddef>
-
 #include "exahype2/fv/Patch.h"
 #include "exahype2/fv/reconstruction/ReconstructionScheme.h"
 #include "exahype2/terms/DiffusiveSourceTerm.h"

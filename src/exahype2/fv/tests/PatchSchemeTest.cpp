@@ -23,9 +23,6 @@
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/la/Vector.h"
 
-#include <cmath>
-#include <limits>
-
 namespace {
   using Rule  = exahype2::TimeStepping::Rule;
   using Setup = exahype2::fv::tests::HaloProfileSetup;

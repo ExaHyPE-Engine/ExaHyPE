@@ -7,8 +7,6 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include <array>
-
 namespace exahype2::fv::ader {
   template <typename Basis, typename Precision>
   struct PredictorTables;

@@ -1,9 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include <cmath>
-#include <limits>
-
 TARGET_DECLARE
 /**
  * Points every face of fallbackHalo at the layers of the face of halo that the fallback reads. A

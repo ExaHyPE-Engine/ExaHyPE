@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <type_traits>
-
 #include "exahype2/TimeStepping.h"
 #include "exahype2/fv/Patch.h"
 #include "exahype2/fv/reconstruction/Constant.h"

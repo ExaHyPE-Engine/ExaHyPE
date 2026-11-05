@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <array>
-
 #include "exahype2/TimeStepping.h"
 #include "exahype2/dg/ader/NonlinearPredictor.h"
 #include "exahype2/dg/ader/TeamWorkers.h"

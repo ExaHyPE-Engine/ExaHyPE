@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <type_traits>
-
 #include "exahype2/fv/Solver.h"
 #include "exahype2/fv/ader/Fallback.h"
 #include "exahype2/fv/ader/PatchPredictor.h"
