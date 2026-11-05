@@ -68,7 +68,7 @@ Then clone, build and launch:
 
 \verbatim
 # GIT_LFS_SKIP_SMUDGE=1 lets the clone succeed even without git-lfs installed
-GIT_LFS_SKIP_SMUDGE=1 git clone -b muc/exahype https://gitlab.lrz.de/hpcsoftware/Peano.git exahype2 --depth 1
+GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/ExaHyPE-Engine/ExaHyPE.git exahype2 --depth 1
 cd exahype2
 
 # 1. Build the ExaHyPE 2 libraries (multithreading, MPI and HDF5 are on by default)

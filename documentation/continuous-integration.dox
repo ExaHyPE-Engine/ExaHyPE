@@ -45,14 +45,14 @@ follows:
 ## How do I run the pipeline?
 
 Every child pipeline builds the libraries and the unit tests. A CPU child pipeline also runs the unit tests. The jobs that
-extend `.RunOnAnyBranch` run on every branch whose name starts with `muc/`. The jobs that extend `.RunOnlyOnMainBranch` run on `muc/exahype` and in merge requests.
+extend `.RunOnAnyBranch` run on every branch. The jobs that extend `.RunOnlyOnMainBranch` run on `main` and in merge requests.
 
 `gitlab-runner` runs as Slurm jobs on COSMA. One permanent runner runs on the node ga004 of the partition `cosma8-shm2`. When
 all job slots of the permanent runner are busy, it submits the on-demand runners on the DINE nodes of the partition
 `bluefield1`. `runners.txt` lists the node, the partition and the mode of every runner. Every runner keeps its configuration,
 its build directories and the container images in one runner directory `<runner-dir>` on `/cosma/apps`. Every runner node
 mounts `/cosma/apps`. A developer pushes to a branch and checks on the
-[pipelines page](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines) that the code builds with every compiler toolchain.
+pipelines page of the GitLab project that the code builds with every compiler toolchain.
 
 When the Slurm job of a runner ends during a pipeline, the jobs of this runner hang until they time out. The developer then
 restarts the pipeline on the pipelines page.
@@ -87,8 +87,8 @@ command inside the container of the job:
 
 In a pipeline whose `RUN_SIMULATIONS` is `false`, `launch` and `check_error_norms` skip the run and the check. The job only
 builds the executable. A tutorial runs the cells of its notebook up to the build (`extract_build_cells.py`).
-`.RunOnAnyBranch` runs the job on every branch whose name starts with `muc/`. `.RunOnlyOnMainBranch` runs the job on
-`muc/exahype` and in merge requests.
+`.RunOnAnyBranch` runs the job on every branch. `.RunOnlyOnMainBranch` runs the job on
+`main` and in merge requests.
 
 ## How do I add new runners to the project?
 

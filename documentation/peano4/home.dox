@@ -2,7 +2,7 @@
 
 @page page_peano4_home Peano 4
 
-@image html documentation/Peano-logo.png
+@image html documentation/logos/ExaHyPE.png
 
 Peano is a framework for generating dynamically adaptive grids for a wide range
 of scientific applications.
