@@ -8,99 +8,63 @@ def initial():
     return """
   // LOH1 places a slower layer between y = 0 and y = 1.
   const bool upperLayer = x(1) <= 1.0;
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    Q[unknown] = 0.0;
-  }
-  Q[Shortcuts::rho] = upperLayer ? 2.6 : 2.7;
-  Q[Shortcuts::cp]  = upperLayer ? 4.0 : 6.0;
-  Q[Shortcuts::cs]  = upperLayer ? 2.0 : 3.464;
+  Q                     = {};
+  Q.rho                 = upperLayer ? 2.6 : 2.7;
+  Q.cp                  = upperLayer ? 4.0 : 6.0;
+  Q.cs                  = upperLayer ? 2.0 : 3.464;
 """
 
 
 def boundary():
     return """
-  // The stresses sigma + 0 to sigma + 5 are xx, yy, zz, xy, xz and yz.
   switch (normal) {
   case 0:
-    Qoutside[Shortcuts::sigma + 0] = 0.0;
-    Qoutside[Shortcuts::sigma + 3] = 0.0;
-    Qoutside[Shortcuts::sigma + 4] = 0.0;
-    Qoutside[Shortcuts::v + 0]     = 0.0;
-    Qoutside[Shortcuts::v + 1]     = 0.0;
-    Qoutside[Shortcuts::v + 2]     = 0.0;
+    Qoutside.sigma(0, 0) = 0.0;
+    Qoutside.sigma(0, 1) = 0.0;
+    Qoutside.sigma(0, 2) = 0.0;
+    Qoutside.v           = 0.0;
     break;
   case 1:
     // A free surface negates the traction on the face and copies the velocities.
-    Qoutside[Shortcuts::sigma + 1] = -Qinside[Shortcuts::sigma + 1];
-    Qoutside[Shortcuts::sigma + 3] = -Qinside[Shortcuts::sigma + 3];
-    Qoutside[Shortcuts::sigma + 5] = -Qinside[Shortcuts::sigma + 5];
-    Qoutside[Shortcuts::v + 0]     = Qinside[Shortcuts::v + 0];
-    Qoutside[Shortcuts::v + 1]     = Qinside[Shortcuts::v + 1];
-    Qoutside[Shortcuts::v + 2]     = Qinside[Shortcuts::v + 2];
+    Qoutside.sigma(1, 1) = -Qinside.sigma(1, 1);
+    Qoutside.sigma(0, 1) = -Qinside.sigma(0, 1);
+    Qoutside.sigma(1, 2) = -Qinside.sigma(1, 2);
+    Qoutside.v           = Qinside.v;
     break;
   default:
-    Qoutside[Shortcuts::sigma + 2] = 0.0;
-    Qoutside[Shortcuts::sigma + 4] = 0.0;
-    Qoutside[Shortcuts::sigma + 5] = 0.0;
-    Qoutside[Shortcuts::v + 0]     = 0.0;
-    Qoutside[Shortcuts::v + 1]     = 0.0;
-    Qoutside[Shortcuts::v + 2]     = 0.0;
+    Qoutside.sigma(2, 2) = 0.0;
+    Qoutside.sigma(0, 2) = 0.0;
+    Qoutside.sigma(1, 2) = 0.0;
+    Qoutside.v           = 0.0;
     break;
   }
-  Qoutside[Shortcuts::rho] = Qinside[Shortcuts::rho];
-  Qoutside[Shortcuts::cp]  = Qinside[Shortcuts::cp];
-  Qoutside[Shortcuts::cs]  = Qinside[Shortcuts::cs];
+  Qoutside.rho = Qinside.rho;
+  Qoutside.cp  = Qinside.cp;
+  Qoutside.cs  = Qinside.cs;
 """
 
 
 def eigenvalue():
     return """
-  return static_cast<double>(Q[Shortcuts::cp]);
+  return static_cast<double>(Q.cp);
 """
 
 
 def flux():
     return """
-  const auto shearModulus           = Q[Shortcuts::rho] * Q[Shortcuts::cs] * Q[Shortcuts::cs];
-  const auto firstLameParameter     = Q[Shortcuts::rho] * Q[Shortcuts::cp] * Q[Shortcuts::cp] - 2 * shearModulus;
-  const auto negativeInverseDensity = -1 / Q[Shortcuts::rho];
+  const auto shearModulus           = Q.rho * Q.cs * Q.cs;
+  const auto firstLameParameter     = Q.rho * Q.cp * Q.cp - 2 * shearModulus;
+  const auto negativeInverseDensity = -1 / Q.rho;
 
-  // The stresses sigma + 0 to sigma + 5 are xx, yy, zz, xy, xz and yz.
-  switch (normal) {
-  case 0:
-    F[Shortcuts::v + 0]     = negativeInverseDensity * Q[Shortcuts::sigma + 0];
-    F[Shortcuts::v + 1]     = negativeInverseDensity * Q[Shortcuts::sigma + 3];
-    F[Shortcuts::v + 2]     = negativeInverseDensity * Q[Shortcuts::sigma + 4];
-    F[Shortcuts::sigma + 0] = -(firstLameParameter + 2 * shearModulus) * Q[Shortcuts::v + 0];
-    F[Shortcuts::sigma + 1] = -firstLameParameter * Q[Shortcuts::v + 0];
-    F[Shortcuts::sigma + 2] = -firstLameParameter * Q[Shortcuts::v + 0];
-    F[Shortcuts::sigma + 3] = -shearModulus * Q[Shortcuts::v + 1];
-    F[Shortcuts::sigma + 4] = -shearModulus * Q[Shortcuts::v + 2];
-    F[Shortcuts::sigma + 5] = 0;
-    break;
-  case 1:
-    F[Shortcuts::v + 0]     = negativeInverseDensity * Q[Shortcuts::sigma + 3];
-    F[Shortcuts::v + 1]     = negativeInverseDensity * Q[Shortcuts::sigma + 1];
-    F[Shortcuts::v + 2]     = negativeInverseDensity * Q[Shortcuts::sigma + 5];
-    F[Shortcuts::sigma + 0] = -firstLameParameter * Q[Shortcuts::v + 1];
-    F[Shortcuts::sigma + 1] = -(firstLameParameter + 2 * shearModulus) * Q[Shortcuts::v + 1];
-    F[Shortcuts::sigma + 2] = -firstLameParameter * Q[Shortcuts::v + 1];
-    F[Shortcuts::sigma + 3] = -shearModulus * Q[Shortcuts::v + 0];
-    F[Shortcuts::sigma + 4] = 0;
-    F[Shortcuts::sigma + 5] = -shearModulus * Q[Shortcuts::v + 2];
-    break;
-  default:
-    F[Shortcuts::v + 0]     = negativeInverseDensity * Q[Shortcuts::sigma + 4];
-    F[Shortcuts::v + 1]     = negativeInverseDensity * Q[Shortcuts::sigma + 5];
-    F[Shortcuts::v + 2]     = negativeInverseDensity * Q[Shortcuts::sigma + 2];
-    F[Shortcuts::sigma + 0] = -firstLameParameter * Q[Shortcuts::v + 2];
-    F[Shortcuts::sigma + 1] = -firstLameParameter * Q[Shortcuts::v + 2];
-    F[Shortcuts::sigma + 2] = -(firstLameParameter + 2 * shearModulus) * Q[Shortcuts::v + 2];
-    F[Shortcuts::sigma + 3] = 0;
-    F[Shortcuts::sigma + 4] = -shearModulus * Q[Shortcuts::v + 0];
-    F[Shortcuts::sigma + 5] = -shearModulus * Q[Shortcuts::v + 1];
-    break;
+  F = {};
+  for (int axis = 0; axis < 3; axis++) {
+    F.v(axis)           = negativeInverseDensity * Q.sigma(normal, axis);
+    F.sigma(axis, axis) = -firstLameParameter * Q.v(normal);
+    if (axis != normal) {
+      F.sigma(normal, axis) = -shearModulus * Q.v(axis);
+    }
   }
+  F.sigma(normal, normal) = -(firstLameParameter + 2 * shearModulus) * Q.v(normal);
 """
 
 
@@ -118,28 +82,26 @@ def point_source():
     return """
   constexpr double OnsetTime       = 0.1;
   constexpr double MomentMagnitude = 10.0;
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    forceVector[unknown] = 0.0;
-  }
-  forceVector[Shortcuts::sigma + 4] = MomentMagnitude * t / (OnsetTime * OnsetTime) * std::exp(-t / OnsetTime);
+  forceVector                      = {};
+  forceVector.sigma(0, 2)          = MomentMagnitude * t / (OnsetTime * OnsetTime) * std::exp(-t / OnsetTime);
 """
 
 
 def init_point_source():
     return """
-  location[0][0] = {};
-  location[0][1] = {};
-  location[0][2] = {};
+  location[0] = {{{}, {}, {}}};
 """.format(*POINT_SOURCE_LOCATION)
 
 
 def riemann_solver():
     return """
-  return applications::exahype2::exaseis::solveElasticRiemannProblem<
-    Shortcuts,
-    {{COMPUTE_PRECISION}},
-    DGOrder + 1,
-    NumberOfUnknowns,
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
-    1>(QL, QR, normal, isBoundaryFace, faceIndex, FL, FR);
+  return applications::exahype2::exaseis::solveElasticRiemannProblem<{{COMPUTE_PRECISION}}, 1>(
+    QL,
+    QR,
+    normal,
+    isBoundaryFace,
+    faceIndex,
+    FL,
+    FR
+  );
 """

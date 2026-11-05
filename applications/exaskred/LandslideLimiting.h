@@ -7,38 +7,31 @@
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::exaskred::landslide {
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD bool isAdmissibleGranularLayerState(
-    const T* const NOALIAS Q,
-    const Physics&         physics
-  );
+  template <auto Height, auto Momentum, typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isAdmissibleGranularLayerState(const State& Q, const Physics& physics);
 
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  template <auto Height, auto Momentum, typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD bool isAdmissibleGranularLayerCell(
-    const T* const NOALIAS                       Q,
-    const int                                    numberOfStates,
+    std::span<const State>                       Q,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     const Physics&                               physics,
-    const double                                 maxFrictionToWaveSpeedRatio
+    double                                       maxFrictionToWaveSpeedRatio
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  template <auto Height, typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD bool hasAdmissibleGranularLayerHeightCurvature2D(
-    const T* const NOALIAS Q,
-    const int              nodesPerAxis,
+    std::span<const State> Q,
+    int                    nodesPerAxis,
     const Physics&         physics,
-    const double           maxCurvatureRatio
+    double                 maxCurvatureRatio
   );
 
-  template <class Shortcuts, typename ObservableT, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD void mapGranularLayerDmpObservables(
-    ObservableT* const NOALIAS observables,
-    const T* const NOALIAS     Q
-  );
+  template <typename State, typename Observables>
+  INLINE_METHOD GPU_CALLABLE_METHOD void mapGranularLayerDmpObservables(Observables& observables, const State& Q);
 
   INLINE_METHOD GPU_CALLABLE_METHOD double getGranularLayerDMPRelaxationParameter(
-    const int      observable,
-    const double   specifiedRelaxationParameter,
+    int            observable,
+    double         specifiedRelaxationParameter,
     const Physics& physics
   );
 } // namespace applications::exahype2::exaskred::landslide

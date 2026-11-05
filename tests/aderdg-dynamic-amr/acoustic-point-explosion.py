@@ -57,17 +57,11 @@ solver = exahype2.dg.ader.Solver(
 # permutation symmetry. The detail criterion refines the radiated ring.
 solver.set_pde_terms(
     initial_condition="""
-  Q[Shortcuts::p] = 0.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::u + d] = 0.0;
-  }
+  Q = {};
 """,
     boundary_conditions="""
-  Qoutside[Shortcuts::p] = Qinside[Shortcuts::p];
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Qoutside[Shortcuts::u + d] = Qinside[Shortcuts::u + d];
-  }
-  Qoutside[Shortcuts::u + normal] = -Qinside[Shortcuts::u + normal];
+  Qoutside           = Qinside;
+  Qoutside.u(normal) = -Qinside.u(normal);
 """,
     refinement_criterion="""
   // The state is zero before the source fires. The neighbourhood of the source refines explicitly
@@ -82,13 +76,11 @@ solver.set_pde_terms(
   return ::exahype2::refineOnDetail(
     Q,
     Quadrature<double>::getQuadraturePoints1D(),
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
-    [](const double* const values) {
-      const double velocitySquared =
-        tarch::la::norm2Squared(tarch::la::Vector<DIMENSIONS, double>(values + Shortcuts::u));
+    [](const auto& state) { return 1.0 + state.p; },
+    [](const auto& state) {
+      const double velocitySquared = tarch::la::norm2Squared(state.u);
       return 1.0 + RHO * WAVE_SPEED * std::sqrt(velocitySquared);
     }
   );
@@ -97,28 +89,20 @@ solver.set_pde_terms(
     flux="""
   static constexpr double K0 = RHO * WAVE_SPEED * WAVE_SPEED;
 
-  F[Shortcuts::p] = K0 * Q[Shortcuts::u + normal];
-  for (int d = 0; d < DIMENSIONS; d++) {
-    F[Shortcuts::u + d] = 0.0;
-  }
-  F[Shortcuts::u + normal] = (1.0 / RHO) * Q[Shortcuts::p];
+  F.p         = K0 * Q.u(normal);
+  F.u         = 0.0;
+  F.u(normal) = (1.0 / RHO) * Q.p;
 """,
     point_source="""
-  forceVector[Shortcuts::p] = 0.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    forceVector[Shortcuts::u + d] = 0.0;
-  }
-
   constexpr double SourcePeakTime   = 0.1;
   constexpr double SourcePulseWidth = 0.03;
-  forceVector[Shortcuts::p] = std::exp(
+  forceVector   = {};
+  forceVector.p = std::exp(
     -(t - SourcePeakTime) * (t - SourcePeakTime) / (2.0 * SourcePulseWidth * SourcePulseWidth)
   );
 """,
     point_source_locations="""
-  for (int d = 0; d < DIMENSIONS; d++) {
-    location[0][d] = -0.7;
-  }
+  location[0] = -0.7;
 """,
 )
 

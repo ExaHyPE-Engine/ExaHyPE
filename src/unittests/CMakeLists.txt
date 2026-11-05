@@ -23,6 +23,7 @@ set(TARCH_TEST_SOURCES
   tarch/la/MatrixTest.cpp
   tarch/la/MatrixVectorTest.cpp
   tarch/la/ScalarTest.cpp
+  tarch/la/SymmetricMatrixTest.cpp
   tarch/la/VectorTest.cpp
 
   tarch/mpi/CommunicationManagerTest.cpp

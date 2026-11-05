@@ -1,0 +1,102 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+{%- macro assign(members, pattern) -%}
+{%- for member in members %}
+{%- if member.blocks %}
+  for (int block = 0; block < {{member.blocks}}; block++) {
+    {{ pattern | replace("@", member.name ~ "(block)") }}
+  }
+{%- else %}
+  {{ pattern | replace("@", member.name) }}
+{%- endif %}
+{%- endfor %}
+{%- endmacro %}
+{%- macro forEachValue(members, pattern) -%}
+{%- for member in members %}
+{%- if member.scalar %}
+  {{ pattern | replace("@", member.name) }}
+{%- elif member.blocks %}
+  for (int block = 0; block < {{member.blocks}}; block++) {
+    for (int entry = 0; entry < {{member.block_entries}}; entry++) {
+      {{ pattern | replace("@", member.name ~ "(block).getData()[entry]") }}
+    }
+  }
+{%- else %}
+  for (int entry = 0; entry < {{member.entries}}; entry++) {
+    {{ pattern | replace("@", member.name ~ ".getData()[entry]") }}
+  }
+{%- endif %}
+{%- endfor %}
+{%- endmacro %}
+
+TARGET_DECLARE
+{%- for type in ["Unknowns", "State"] %}
+{%- set name = FULL_QUALIFIED_NAMESPACE ~ "::" ~ SOLVER_NAME ~ type %}
+{%- set members = STATE_UNKNOWN_MEMBERS if type == "Unknowns" else STATE_UNKNOWN_MEMBERS + STATE_AUXILIARY_MEMBERS %}
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> {{FULL_QUALIFIED_NAMESPACE}}::operator+(
+  const {{name}}<Value>& left,
+  const {{name}}<Value>& right
+) {
+  {{name}}<Value> result;
+{{- assign(members, "result.@ = left.@ + right.@;") }}
+  return result;
+}
+
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> {{FULL_QUALIFIED_NAMESPACE}}::operator-(
+  const {{name}}<Value>& left,
+  const {{name}}<Value>& right
+) {
+  {{name}}<Value> result;
+{{- assign(members, "result.@ = left.@ - right.@;") }}
+  return result;
+}
+
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> {{FULL_QUALIFIED_NAMESPACE}}::operator*(
+  const std::type_identity_t<Value> scalar,
+  const {{name}}<Value>& value
+) {
+  {{name}}<Value> result;
+{{- assign(members, "result.@ = scalar * value.@;") }}
+  return result;
+}
+
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> {{FULL_QUALIFIED_NAMESPACE}}::operator*(
+  const {{name}}<Value>& value,
+  const std::type_identity_t<Value> scalar
+) {
+  {{name}}<Value> result;
+{{- assign(members, "result.@ = value.@ * scalar;") }}
+  return result;
+}
+
+/**
+ * Returns the values of function applied to the matching values of left and right.
+ */
+template <typename Value, typename Function>
+INLINE_METHOD GPU_CALLABLE_METHOD {{name}}<Value> {{FULL_QUALIFIED_NAMESPACE}}::transform(
+  const {{name}}<Value>& left,
+  const {{name}}<Value>& right,
+  const Function& function
+) {
+  {{name}}<Value> result;
+{{- forEachValue(members, "result.@ = function(left.@, right.@);") }}
+  return result;
+}
+
+template <typename Value, typename Predicate>
+INLINE_METHOD GPU_CALLABLE_METHOD bool {{FULL_QUALIFIED_NAMESPACE}}::allOf(
+  const {{name}}<Value>& value,
+  const Predicate& predicate
+) {
+  bool result = true;
+{{- forEachValue(members, "result = result and predicate(value.@);") }}
+  return result;
+}
+{%- if not loop.last %}
+{% endif %}
+{%- endfor %}
+TARGET_DECLARE_END

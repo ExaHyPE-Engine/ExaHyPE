@@ -514,13 +514,22 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
       peano4::dDelinearised(cellNode, NodesPerAxis),
       quadraturePoints
     );
-    const ComputePrecision* NOALIAS const nodeState = spaceTimeState + spaceTimeNode * CellLayout::PaddedNumberOfData;
+    ComputePrecision nodeState[CellLayout::NumberOfData];
+    for (int value = 0; value < CellLayout::NumberOfData; value++) {
+      nodeState[value] = spaceTimeState[spaceTimeNode * CellLayout::PaddedNumberOfData + value];
+    }
 
+    [[maybe_unused]] ComputePrecision
+      nodeGradient[EvaluateDiffusiveFlux ? DIMENSIONS * CellLayout::NumberOfUnknowns : 1];
     [[maybe_unused]] const ComputePrecision* NOALIAS nodeGradients[DIMENSIONS];
     if constexpr (EvaluateDiffusiveFlux) {
       UNROLL(DIMENSIONS)
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        nodeGradients[axis] = stateGradient + FluxStride * cellNode + axis * GradientAxisStride;
+        for (int unknown = 0; unknown < CellLayout::NumberOfUnknowns; unknown++) {
+          nodeGradient[axis * CellLayout::NumberOfUnknowns + unknown] =
+            stateGradient[FluxStride * cellNode + axis * GradientAxisStride + unknown];
+        }
+        nodeGradients[axis] = nodeGradient + axis * CellLayout::NumberOfUnknowns;
       }
     }
 
@@ -778,7 +787,10 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
       peano4::dDelinearised(cellNode, NodesPerAxis),
       quadraturePoints
     );
-    const ComputePrecision* NOALIAS const nodeState = spaceTimeState + spaceTimeNode * CellLayout::PaddedNumberOfData;
+    ComputePrecision nodeState[CellLayout::NumberOfData];
+    for (int value = 0; value < CellLayout::NumberOfData; value++) {
+      nodeState[value] = spaceTimeState[spaceTimeNode * CellLayout::PaddedNumberOfData + value];
+    }
 
     if constexpr (EvaluateDiffusiveSource) {
       for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -833,9 +845,13 @@ exahype2::dg::ader::NonlinearPredictor<Derived, ComputePrecision>::evaluateSpace
         for (int unknown = 0; unknown < SourceStride; unknown++) {
           axisProducts[axis][unknown] = static_cast<ComputePrecision>(0);
         }
+        ComputePrecision nodeDifference[NumberOfUnknowns];
+        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+          nodeDifference[unknown] = stateGradient[SourceStride * cellNode + axis * GradientAxisStride + unknown];
+        }
         Derived::nonconservativeProduct(
           nodeState,
-          stateGradient + SourceStride * cellNode + axis * GradientAxisStride,
+          nodeDifference,
           nodePosition,
           cellSize,
           timePosition,

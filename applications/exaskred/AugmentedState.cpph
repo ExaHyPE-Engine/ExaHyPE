@@ -1,896 +1,895 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
-namespace applications::exahype2::exaskred::riemann {
-  namespace {
-    constexpr int    NewtonIterations     = 1;
-    constexpr double NewtonTolerance      = 1e-5;
-    constexpr double ConvergenceTolerance = 1e-5;
-    constexpr double ZeroTolerance        = 1e-5;
-
-    enum class WetDryState {
-      // Both cells are dry.
-      DryDry,
-      // Both cells are wet.
-      WetWet,
-      // The wet first cell lies higher than the dry second cell.
-      WetDryInundation,
-      // The wet first cell lies lower than the dry second cell, and its momentum cannot overcome the difference.
-      WetDryWall,
-      // The wet first cell lies lower than the dry second cell, and its momentum overcomes the difference.
-      WetDryWallInundation,
-      // The dry first cell lies lower than the wet second cell.
-      DryWetInundation,
-      // The dry first cell lies higher than the wet second cell, whose momentum cannot overcome the difference.
-      DryWetWall,
-      // The dry first cell lies higher than the wet second cell, whose momentum overcomes the difference.
-      DryWetWallInundation
-    };
-
-    /// The wave structure of the homogeneous Riemann problem.
-    enum class RiemannStructure {
-      DrySingleRarefaction,  // Contact discontinuity in the first wave family, rarefaction in the second.
-      SingleRarefactionDry,  // Rarefaction in the first wave family, contact discontinuity in the second.
-      ShockShock,            // Shocks in both wave families.
-      ShockRarefaction,      // Shock in the first wave family, rarefaction in the second.
-      RarefactionShock,      // Rarefaction in the first wave family, shock in the second.
-      RarefactionRarefaction // Rarefactions in both wave families.
-    };
-
-    /**
-     * Returns the wave structure of the Riemann problem between the two states.
-     */
-    template <class T>
-    INLINE_METHOD GPU_CALLABLE_METHOD RiemannStructure determineRiemannStructure(
-      const T& hLeft,
-      const T& hRight,
-      const T& uLeft,
-      const T& uRight,
-      const T& g,
-      const T& hThreshold
-    ) {
-      const T hMin = std::fmin(hLeft, hRight);
-      const T hMax = std::fmax(hLeft, hRight);
-
-      const T uDiff = uRight - uLeft;
-
-      // A dry side leaves only the single rarefaction that arises from the
-      // other side's characteristic field.
-      if (hLeft <= hThreshold) {
-        return RiemannStructure::DrySingleRarefaction;
-      }
-      if (hRight <= hThreshold) {
-        return RiemannStructure::SingleRarefactionDry;
-      }
-
-      const T phiMin = uDiff + static_cast<T>(2.0) * (std::sqrt(g * hMin) - std::sqrt(g * hMax));
-      const T phiMax = uDiff + (hMax - hMin) * (std::sqrt(static_cast<T>(0.5) * g * (hMax + hMin) / (hMax * hMin)));
-
-      if (phiMin > T{}) {
-        return RiemannStructure::RarefactionRarefaction;
-      } else if (phiMax <= T{}) {
-        return RiemannStructure::ShockShock;
-      } else {
-        if (hLeft > hRight) {
-          return RiemannStructure::RarefactionShock;
-        } else {
-          return RiemannStructure::ShockRarefaction;
-        }
-      }
-    }
-
-    /**
-     * Solves the three-by-three linear system with Cramer's rule, following the Clawpack implementation.
-     */
-    template <class T>
-    INLINE_METHOD GPU_CALLABLE_METHOD void solveLinearEquation(
-      const T matrix[3][3],
-      const T rightHandSide[3],
-      T       solution[3]
-    ) {
-      T determinantOne   = matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]);
-      T determinantTwo   = matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0]);
-      T determinantThree = matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]);
-      T determinant      = determinantOne - determinantTwo + determinantThree;
-      T modifiedMatrix[3][3];
-      for (int component = 0; component < 3; ++component) {
-        for (int column = 0; column < 3; ++column) {
-          modifiedMatrix[0][column] = matrix[0][column];
-          modifiedMatrix[1][column] = matrix[1][column];
-          modifiedMatrix[2][column] = matrix[2][column];
-        }
-        modifiedMatrix[0][component] = rightHandSide[0];
-        modifiedMatrix[1][component] = rightHandSide[1];
-        modifiedMatrix[2][component] = rightHandSide[2];
-        determinantOne               = modifiedMatrix[0][0]
-          * (modifiedMatrix[1][1] * modifiedMatrix[2][2] - modifiedMatrix[1][2] * modifiedMatrix[2][1]);
-        determinantTwo = modifiedMatrix[0][1]
-          * (modifiedMatrix[1][0] * modifiedMatrix[2][2] - modifiedMatrix[1][2] * modifiedMatrix[2][0]);
-        determinantThree = modifiedMatrix[0][2]
-          * (modifiedMatrix[1][0] * modifiedMatrix[2][1] - modifiedMatrix[1][1] * modifiedMatrix[2][0]);
-        solution[component] = (determinantOne - determinantTwo + determinantThree) / determinant;
-      }
-    }
-
-    /**
-     * Returns the middle-state height estimate of the homogeneous Riemann problem and fills the middle wave speeds.
-     */
-    template <class T>
-    INLINE_METHOD GPU_CALLABLE_METHOD T computeMiddleState(
-      const T&          hLeft,
-      const T&          hRight,
-      const T&          uLeft,
-      const T&          uRight,
-      RiemannStructure& riemannStructure,
-      T*                middleSpeeds,
-      const T&          g,
-      const T&          hThreshold
-    ) {
-      T       hMiddle = 0;
-      const T hMin    = std::min(hLeft, hRight);
-      const T hMax    = std::max(hLeft, hRight);
-      const T uDiff   = uRight - uLeft;
-
-      riemannStructure = determineRiemannStructure(hLeft, hRight, uLeft, uRight, g, hThreshold);
-
-      // A dry-state Riemann problem contains only a single rarefaction and its middle-state height is zero.
-      if (hLeft <= hThreshold or hRight <= hThreshold) {
-        hMiddle = 0;
-        middleSpeeds[0] =
-          uRight + uLeft - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(2.0) * std::sqrt(g * hLeft);
-        middleSpeeds[1] = middleSpeeds[0];
-        return 0;
-      }
-
-      const T phiMax = uDiff + (hMax - hMin) * (std::sqrt(static_cast<T>(0.5) * g * (hMax + hMin) / (hMax * hMin)));
-
-      T hZero             = 0;
-      T gLeft             = 0;
-      T gRight            = 0;
-      T phiZero           = 0;
-      T phiZeroDerivative = 0;
-      T slope             = 0;
-
-      if (riemannStructure == RiemannStructure::RarefactionRarefaction) {
-        hMiddle = std::max(T{}, uLeft - uRight + static_cast<T>(2.0) * (std::sqrt(g * hLeft) + std::sqrt(g * hRight)));
-        hMiddle = static_cast<T>(1.0) / (static_cast<T>(16.0) * g) * hMiddle * hMiddle;
-        middleSpeeds[0] =
-          uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - static_cast<T>(3.0) * std::sqrt(g * hMiddle);
-        middleSpeeds[1] =
-          uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(3.0) * std::sqrt(g * hMiddle);
-        return hMiddle;
-      } else if (riemannStructure == RiemannStructure::ShockShock) {
-        // Newton's method finds the root of the all-shock function phi_ss (\cite[ch. 13.7]{LeVeque2002}).
-        hZero = hMax;
-        for (int i = 0; i < NewtonIterations; ++i) {
-          gLeft   = std::sqrt(static_cast<T>(0.5) * g * (T{1} / hZero + T{1} / hLeft));
-          gRight  = std::sqrt(static_cast<T>(0.5) * g * (T{1} / hZero + T{1} / hRight));
-          phiZero = uDiff + (hZero - hLeft) * gLeft + (hZero - hRight) * gRight;
-          if (std::abs(phiZero) < static_cast<T>(NewtonTolerance)) {
-            break;
-          }
-          phiZeroDerivative = gLeft - g * (hZero - hLeft) / (static_cast<T>(4.0) * (hZero * hZero) * gLeft) + gRight
-            - g * (hZero - hRight) / (static_cast<T>(4.0) * (hZero * hZero) * gRight);
-          slope = static_cast<T>(2.0) * std::sqrt(hZero) * phiZeroDerivative;
-          hZero = std::pow((std::sqrt(hZero) - phiZero / slope), 2);
-        }
-        hMiddle = hZero;
-        const T uOneMiddle =
-          uLeft - (hMiddle - hLeft) * std::sqrt((static_cast<T>(0.5) * g) * (T{1} / hMiddle + T{1} / hLeft));
-        const T uTwoMiddle =
-          uRight + (hMiddle - hRight) * std::sqrt((static_cast<T>(0.5) * g) * (T{1} / hMiddle + T{1} / hRight));
-        middleSpeeds[0] = uOneMiddle - std::sqrt(g * hMiddle);
-        middleSpeeds[1] = uTwoMiddle + std::sqrt(g * hMiddle);
-        return hMiddle;
-      } else if (
-        riemannStructure == RiemannStructure::ShockRarefaction or riemannStructure == RiemannStructure::RarefactionShock
-      ) {
-        // Newton's method with a secant slope finds the root of the shock-rarefaction function phi_sr.
-        hZero = hMin;
-        for (int i = 0; i < NewtonIterations; ++i) {
-          phiZero = uDiff + static_cast<T>(2.0) * (std::sqrt(g * hZero) - std::sqrt(g * hMax))
-            + (hZero - hMin) * std::sqrt(static_cast<T>(0.5) * g * (T{1} / hZero + T{1} / hMin));
-          slope = (phiMax - phiZero) / (hMax - hMin);
-          hZero = hZero - phiZero / slope;
-        }
-
-        hMiddle = hZero;
-
-        if (hLeft > hRight) {
-          middleSpeeds[0] =
-            uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - static_cast<T>(3.0) * std::sqrt(g * hMiddle);
-          middleSpeeds[1] = uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - std::sqrt(g * hMiddle);
-        } else {
-          middleSpeeds[1] =
-            uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(3.0) * std::sqrt(g * hMiddle);
-          middleSpeeds[0] = uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + std::sqrt(g * hMiddle);
-        }
-        return hMiddle;
-      }
-      return hMiddle;
-    }
-
-    /**
-     * Classifies the wet-dry configuration of the interface. A wall configuration overwrites the dry
-     * side with the mirrored wet state.
-     */
-    template <class T>
-    INLINE_METHOD GPU_CALLABLE_METHOD WetDryState determineWetDryState(
-      T&                hLeft,
-      T&                huLeft,
-      T&                hvLeft,
-      T&                uLeft,
-      T&                vLeft,
-      T&                bLeft,
-      T&                hRight,
-      T&                huRight,
-      T&                hvRight,
-      T&                uRight,
-      T&                vRight,
-      T&                bRight,
-      T&                hMiddle,
-      RiemannStructure& riemannStructure,
-      T*                middleSpeeds,
-      const T&          g,
-      const T&          hThreshold
-    ) {
-      WetDryState wetDryState;
-      if (hLeft > hThreshold and hRight > hThreshold) {
-        wetDryState = WetDryState::WetWet;
-      } else if (hLeft <= hThreshold and hRight <= hThreshold) {
-        wetDryState = WetDryState::DryDry;
-      }
-
-      // A shoreline whose dry cell lies lower than the wet cell is a simple inundation.
-      else if (hLeft <= hThreshold and hRight + bRight > bLeft) {
-        wetDryState = WetDryState::DryWetInundation;
-      } else if (hRight <= hThreshold and hLeft + bLeft > bRight) {
-        wetDryState = WetDryState::WetDryInundation;
-      }
-
-      // Where the dry cell lies higher, the middle state of a wall-boundary
-      // Riemann problem decides whether the momentum overcomes the step
-      // (\cite[ch. 6.8.2]{George2006}, \cite[ch. 5.2]{George2008}).
-      else if (hLeft <= hThreshold and (hRight + bRight <= bLeft)) {
-        hMiddle = computeMiddleState(hRight, hRight, -uRight, uRight, riemannStructure, middleSpeeds, g, hThreshold);
-        if (hMiddle + bRight > bLeft) {
-          wetDryState = WetDryState::DryWetWallInundation;
-        } else {
-          // The momentum is too small to flood the dry side. The dry side mirrors the wet state as a wall.
-          hLeft  = hRight;
-          uLeft  = -uRight;
-          huLeft = -huRight;
-          bLeft = bRight = 0.0;
-          vLeft          = vRight;
-          wetDryState    = WetDryState::DryWetWall;
-        }
-      } else {
-        // The only remaining configuration is a dry right cell above the wet left one.
-        hMiddle = computeMiddleState(hLeft, hLeft, uLeft, -uLeft, riemannStructure, middleSpeeds, g, hThreshold);
-        if (hMiddle + bLeft > bRight) {
-          wetDryState = WetDryState::WetDryWallInundation;
-        } else {
-          // The momentum is too small to flood the dry side. The dry side mirrors the wet state as a wall.
-          hRight  = hLeft;
-          uRight  = -uLeft;
-          huRight = -huLeft;
-          bRight = bLeft = 0.0;
-          vRight         = vLeft;
-          wetDryState    = WetDryState::WetDryWall;
-        }
-      }
-
-      // A wall limits the effect of the source term
-      // (\cite[end of ch. 5.2]{George2008}, \cite[rpn2ez_fast_geo.f]{LeVeque2011}).
-      if (wetDryState == WetDryState::DryWetWallInundation) {
-        bLeft = hRight + bRight;
-      } else if (wetDryState == WetDryState::WetDryWallInundation) {
-        bRight = hLeft + bLeft;
-      }
-      return wetDryState;
-    }
-
-    /**
-     * Decomposes the interface jump into the three f-waves of the augmented method and fills their speeds.
-     */
-    template <class T>
-    INLINE_METHOD GPU_CALLABLE_METHOD void computeWaveDecomposition(
-      T&                hLeft,
-      T&                huLeft,
-      T&                uLeft,
-      T&                vLeft,
-      T&                bLeft,
-      T&                hRight,
-      T&                huRight,
-      T&                uRight,
-      T&                vRight,
-      T&                bRight,
-      T&                hMiddle,
-      const T&          sqrtGhLeft,
-      const T&          sqrtGhRight,
-      const T&          sqrthLeft,
-      const T&          sqrthRight,
-      const WetDryState wetDryState,
-      RiemannStructure& riemannStructure,
-      T                 fWaves[3][3],
-      T                 waveSpeeds[3],
-      T*                middleSpeeds,
-      const T&          g,
-      const T&          hThreshold
-    ) {
-      T characteristicSpeeds[2];
-      characteristicSpeeds[0] = uLeft - sqrtGhLeft;
-      characteristicSpeeds[1] = uRight + sqrtGhRight;
-
-      const T hRoe = static_cast<T>(0.5) * (hRight + hLeft);
-      T       uRoe = uLeft * sqrthLeft + uRight * sqrthRight;
-      uRoe /= (sqrthLeft + sqrthRight);
-
-      T       roeSpeeds[2];
-      const T sqrtGhRoe = std::sqrt(g * hRoe);
-      roeSpeeds[0]      = uRoe - sqrtGhRoe;
-      roeSpeeds[1]      = uRoe + sqrtGhRoe;
-
-      // The wall cases already computed their middle state during the wet-dry classification.
-      if (wetDryState != WetDryState::WetDryWall and wetDryState != WetDryState::DryWetWall) {
-        hMiddle = computeMiddleState(hLeft, hRight, uLeft, uRight, riemannStructure, middleSpeeds, g, hThreshold);
-      }
-
-      // The extended Einfeldt speeds combine the Einfeldt speeds with the middle-state speeds
-      // (\cite[ch. 5.2]{George2008}, \cite[ch. 6.8]{George2006}). The middle-state speeds come from
-      // computeMiddleState, as in both reference implementations, and differ from the paper.
-      T lambdaStarHStarMinus = middleSpeeds[0];
-      T lambdaStarHStarPlus  = middleSpeeds[1];
-
-      // The bound on the side of a dry state omits the characteristic speed of that state.
-      T extEinfeldtSpeeds[2] = {0, 0};
-      if (hLeft > hThreshold and hRight > hThreshold) {
-        extEinfeldtSpeeds[0] = std::min(characteristicSpeeds[0], roeSpeeds[0]);
-        extEinfeldtSpeeds[0] = std::min(extEinfeldtSpeeds[0], lambdaStarHStarPlus);
-        extEinfeldtSpeeds[1] = std::max(characteristicSpeeds[1], roeSpeeds[1]);
-        extEinfeldtSpeeds[1] = std::max(extEinfeldtSpeeds[1], lambdaStarHStarMinus);
-      } else if (hLeft <= hThreshold) {
-        extEinfeldtSpeeds[0] = std::min(roeSpeeds[0], lambdaStarHStarPlus);
-        extEinfeldtSpeeds[1] = std::max(characteristicSpeeds[1], roeSpeeds[1]);
-      } else if (hRight <= hThreshold) {
-        extEinfeldtSpeeds[0] = std::min(characteristicSpeeds[0], roeSpeeds[0]);
-        extEinfeldtSpeeds[1] = std::max(roeSpeeds[1], lambdaStarHStarMinus);
-      }
-
-      // The HLL middle state (\cite[theorem 3.1]{George2006}, \cite[ch. 4.1]{George2008}).
-      T hLLMiddleHeight = huLeft - huRight + extEinfeldtSpeeds[1] * hRight - extEinfeldtSpeeds[0] * hLeft;
-      hLLMiddleHeight /= (extEinfeldtSpeeds[1] - extEinfeldtSpeeds[0]);
-      hLLMiddleHeight = std::max(hLLMiddleHeight, T{});
-
-      // The second eigenvalue belongs to the corrector wave and is set below.
-      T eigenValues[3];
-      eigenValues[0] = extEinfeldtSpeeds[0];
-      eigenValues[2] = extEinfeldtSpeeds[1];
-
-      // The first and third eigenvectors follow the characteristic fields of the two-dimensional
-      // shallow water equations.
-      T eigenVectors[3][3];
-      eigenVectors[0][0] = 1;
-      eigenVectors[0][2] = 1;
-
-      eigenVectors[1][0] = eigenValues[0];
-      eigenVectors[1][2] = eigenValues[2];
-
-      eigenVectors[2][0] = eigenValues[0] * eigenValues[0];
-      eigenVectors[2][2] = eigenValues[2] * eigenValues[2];
-
-      // The second wave is the rarefaction corrector wave (\cite[ch. 6.7.2]{George2006},
-      // \cite[ch. 5.1]{George2008}). A middle height above the dry threshold keeps the depth non-negative.
-      bool strongRarefaction = false;
-      if (
-        (riemannStructure == RiemannStructure::ShockRarefaction
-         or riemannStructure == RiemannStructure::RarefactionShock
-         or riemannStructure == RiemannStructure::RarefactionRarefaction)
-        and hMiddle > hThreshold
-      ) {
-        // The barriers come from GeoClaw.
-        T rareBarrier[2] = {static_cast<T>(0.5), static_cast<T>(0.9)};
-
-        // A transonic rarefaction in either wave family lowers the barrier.
-        if (
-          (riemannStructure == RiemannStructure::RarefactionShock
-           or riemannStructure == RiemannStructure::RarefactionRarefaction)
-          and eigenValues[0] * lambdaStarHStarMinus < T{}
-        ) {
-          rareBarrier[0] = static_cast<T>(0.2);
-        } else if (
-          (riemannStructure == RiemannStructure::ShockRarefaction
-           or riemannStructure == RiemannStructure::RarefactionRarefaction)
-          and eigenValues[2] * lambdaStarHStarPlus < T{}
-        ) {
-          rareBarrier[0] = static_cast<T>(0.2);
-        }
-
-        const T sqrtGhMiddle = std::sqrt(g * hMiddle);
-        // The maximal rarefaction size is the distance between head and tail.
-        T rareFactionSize[2];
-        rareFactionSize[0] = static_cast<T>(3.0) * (sqrtGhLeft - sqrtGhMiddle);
-        rareFactionSize[1] = static_cast<T>(3.0) * (sqrtGhRight - sqrtGhMiddle);
-
-        T maxRareFactionSize = std::max(rareFactionSize[0], rareFactionSize[1]);
-
-        // A rarefaction between the barriers is strong and sets the corrector wave's eigenvalue.
-        if (
-          maxRareFactionSize > rareBarrier[0] * (eigenValues[2] - eigenValues[0])
-          and maxRareFactionSize < rareBarrier[1] * (eigenValues[2] - eigenValues[0])
-        ) {
-          strongRarefaction = true;
-          if (rareFactionSize[0] > rareFactionSize[1]) {
-            eigenValues[1] = lambdaStarHStarMinus;
-          } else if (rareFactionSize[1] > rareFactionSize[0]) {
-            eigenValues[1] = lambdaStarHStarPlus;
-          } else {
-            eigenValues[1] = static_cast<T>(0.5) * (lambdaStarHStarMinus + lambdaStarHStarPlus);
-          }
-        }
-      }
-      // A shallow HLL middle state suppresses the corrector wave, following Clawpack.
-      if (hLLMiddleHeight < (std::min(hLeft, hRight) / static_cast<T>(5.0))) {
-        strongRarefaction = false;
-      }
-
-      if (not strongRarefaction) {
-        eigenValues[1]     = static_cast<T>(0.5) * (eigenValues[0] + eigenValues[2]);
-        eigenVectors[0][1] = 0.0;
-        eigenVectors[1][1] = 0.0;
-        eigenVectors[2][1] = 1.0;
-      } else {
-        eigenVectors[0][1] = 1.0;
-        eigenVectors[1][1] = eigenValues[1];
-        eigenVectors[2][1] = eigenValues[1] * eigenValues[1];
-      }
-
-      // The right-hand side is the jump in height, momentum and momentum flux.
-      T rightHandSide[3];
-      rightHandSide[0] = hRight - hLeft;
-      rightHandSide[1] = huRight - huLeft;
-      rightHandSide[2] = (huRight * uRight + static_cast<T>(0.5) * g * hRight * hRight)
-        - (huLeft * uLeft + static_cast<T>(0.5) * g * hLeft * hLeft);
-
-      // The steady-state wave is the zeroth wave
-      // (\cite[ch. 4.2.1 \& app. A]{George2008}, \cite[ch. 6.2 \& ch. 4.4]{George2006}).
-      T steadyStateWave[2] = {0, 0};
-
-      T hBar = (hLeft + hRight) * static_cast<T>(0.5);
-      // The decomposition coefficients, called alpha in the paper.
-      T beta[3];
-
-      T eigenvalueAvgBar   = 0;
-      T eigenvalueAvgTilde = 0;
-
-      steadyStateWave[0] = -(bRight - bLeft);
-      steadyStateWave[1] = -g * static_cast<T>(0.5) * (hRight + hLeft) * (bRight - bLeft);
-
-      // One iteration of the Clawpack formulation keeps the steady-state wave stable.
-      T hLeftIter   = hLeft;
-      T hRightIter  = hRight;
-      T uLeftIter   = uLeft;
-      T uRightIter  = uRight;
-      T huLeftIter  = uLeftIter * hLeftIter;
-      T huRightIter = uRightIter * hRightIter;
-      T deltaNorm   = rightHandSide[0] * rightHandSide[0] + rightHandSide[2] * rightHandSide[2];
-
-      bool sonicFlow = false;
-      for (int i = 0; i < NewtonIterations; ++i) {
-        // A drying iterate falls back from the strong-rarefaction corrector to the simple second wave.
-        if (std::min(hLeftIter, hRightIter) < hThreshold and strongRarefaction) {
-          strongRarefaction  = false;
-          hLeftIter          = hLeft;
-          hRightIter         = hRight;
-          uLeftIter          = uLeft;
-          uRightIter         = uRight;
-          huLeftIter         = uLeftIter * hLeftIter;
-          huRightIter        = uRightIter * hRightIter;
-          eigenValues[1]     = static_cast<T>(0.5) * (eigenValues[0] + eigenValues[2]);
-          eigenVectors[0][1] = 0.0;
-          eigenVectors[1][1] = 0.0;
-          eigenVectors[2][1] = 1.0;
-        }
-        hBar               = std::max(T{}, static_cast<T>(0.5) * (hLeftIter + hRightIter));
-        eigenvalueAvgBar   = (uLeftIter + uRightIter) * (uLeftIter + uRightIter) * static_cast<T>(0.25) - g * hBar;
-        eigenvalueAvgTilde = std::max(T{}, uRightIter * uLeftIter) - g * hBar;
-
-        // A sonic flow suppresses the eigenvalue-based steady-state wave below.
-        if (
-          (std::abs(eigenvalueAvgBar) <= static_cast<T>(ZeroTolerance))
-          or (eigenvalueAvgBar * eigenvalueAvgTilde <= static_cast<T>(ZeroTolerance))
-          or (eigenvalueAvgBar * eigenValues[0] * eigenValues[2] <= static_cast<T>(ZeroTolerance))
-          or (std::min(std::abs(eigenValues[0]), std::abs(eigenValues[2])) < static_cast<T>(ZeroTolerance))
-          or (eigenValues[0] < T{} and lambdaStarHStarMinus > T{})
-          or (eigenValues[2] > T{} and lambdaStarHStarPlus < T{})
-          or ((uLeft + std::sqrt(g * hLeft)) * (uRight + std::sqrt(g * hRight)) < T{})
-          or ((uLeft - std::sqrt(g * hLeft)) * (uRight - std::sqrt(g * hRight)) < T{})
-        ) {
-          sonicFlow = true;
-        }
-
-        // The bounds of the steady-state wave follow George2008 and Clawpack.
-        if (sonicFlow) {
-          steadyStateWave[0] = -(bRight - bLeft);
-        } else {
-          steadyStateWave[0] = (bRight - bLeft) * g * hBar / eigenvalueAvgBar;
-        }
-
-        if (
-          eigenValues[0] < -static_cast<T>(ZeroTolerance) and eigenValues[2] > static_cast<T>(ZeroTolerance)
-        ) { // Subsonic
-          steadyStateWave[0] =
-            std::min(steadyStateWave[0], hLLMiddleHeight * (eigenValues[2] - eigenValues[0]) / eigenValues[2]);
-          steadyStateWave[0] =
-            std::max(steadyStateWave[0], hLLMiddleHeight * (eigenValues[2] - eigenValues[0]) / eigenValues[0]);
-        } else if (eigenValues[0] >= static_cast<T>(ZeroTolerance)) { // Supersonic right
-          steadyStateWave[0] =
-            std::min(steadyStateWave[0], hLLMiddleHeight * (eigenValues[2] - eigenValues[0]) / eigenValues[0]);
-          steadyStateWave[0] = std::max(steadyStateWave[0], -hLeft);
-        } else if (eigenValues[2] <= -static_cast<T>(ZeroTolerance)) { // Supersonic left
-          steadyStateWave[0] = std::min(steadyStateWave[0], hRight);
-          steadyStateWave[0] =
-            std::max(steadyStateWave[0], hLLMiddleHeight * (eigenValues[2] - eigenValues[0]) / eigenValues[2]);
-        }
-        if (sonicFlow) {
-          steadyStateWave[1] = -g * hBar * (bRight - bLeft);
-        } else {
-          steadyStateWave[1] = -(bRight - bLeft) * g * hBar * eigenvalueAvgTilde / eigenvalueAvgBar;
-        }
-
-        steadyStateWave[1] =
-          std::min(steadyStateWave[1], g * std::max(-hLeftIter * (bRight - bLeft), -hRightIter * (bRight - bLeft)));
-        steadyStateWave[1] =
-          std::max(steadyStateWave[1], g * std::min(-hLeftIter * (bRight - bLeft), -hRightIter * (bRight - bLeft)));
-
-        // Only the jumps in height and momentum flux contain the steady-state wave (George2008).
-        rightHandSide[0] -= steadyStateWave[0];
-        rightHandSide[2] -= steadyStateWave[1];
-
-        solveLinearEquation(eigenVectors, rightHandSide, beta);
-
-        if (
-          std::abs(rightHandSide[0] * rightHandSide[0] + rightHandSide[2] * rightHandSide[2] - deltaNorm)
-          < static_cast<T>(ConvergenceTolerance)
-        ) {
-          break;
-        }
-
-        deltaNorm = rightHandSide[0] * rightHandSide[0] + rightHandSide[2] * rightHandSide[2];
-
-        hLeftIter   = hLeft;
-        hRightIter  = hRight;
-        uLeftIter   = uLeft;
-        uRightIter  = uRight;
-        huLeftIter  = uLeftIter * hLeftIter;
-        huRightIter = uRightIter * hRightIter;
-
-        // The next iterate applies the current waves to the sides they travel to, following Clawpack.
-        for (int waveNumber = 0; waveNumber < 3; ++waveNumber) {
-          if (eigenValues[waveNumber] < T{}) {
-            hLeftIter  = hLeftIter + beta[waveNumber] * eigenVectors[0][waveNumber];
-            huLeftIter = huLeftIter + beta[waveNumber] * eigenVectors[1][waveNumber];
-          }
-        }
-        for (int waveNumber = 2; waveNumber > 0; --waveNumber) {
-          if (eigenValues[waveNumber] > T{}) {
-            hRightIter  = hRightIter - beta[waveNumber] * eigenVectors[0][waveNumber];
-            huRightIter = huRightIter - beta[waveNumber] * eigenVectors[1][waveNumber];
-          }
-        }
-
-        if (hLeftIter > hThreshold) {
-          uLeftIter = huLeftIter / hLeftIter;
-        } else {
-          hLeftIter = std::max(hLeftIter, T{});
-          uLeftIter = 0.0;
-        }
-        if (hRightIter > hThreshold) {
-          uRightIter = huRightIter / hRightIter;
-        } else {
-          hRightIter = std::max(hRightIter, T{});
-          uRightIter = 0.0;
-        }
-      }
-
-      // The flux waves follow George2008, extended as in Clawpack by the flux updates of the transverse component.
-      if (wetDryState == WetDryState::WetDryWall) {
-        // A wall boundary sends zero ghost updates. Only the left-going wave contributes.
-        fWaves[0][0] = beta[0] * eigenVectors[1][0];
-        fWaves[1][0] = beta[0] * eigenVectors[2][0];
-        fWaves[2][0] = beta[0] * eigenVectors[1][0];
-        fWaves[2][0] = fWaves[2][0] * vLeft;
-
-        fWaves[0][1] = fWaves[1][1] = fWaves[2][1] = 0.0;
-        fWaves[0][2] = fWaves[1][2] = fWaves[2][2] = 0.0;
-
-        waveSpeeds[0] = eigenValues[0];
-        waveSpeeds[1] = waveSpeeds[2] = 0.0;
-      } else if (wetDryState == WetDryState::DryWetWall) {
-        // A wall boundary sends zero ghost updates. Only the right-going wave contributes.
-        fWaves[0][2] = beta[2] * eigenVectors[1][2];
-        fWaves[1][2] = beta[2] * eigenVectors[2][2];
-        fWaves[2][2] = beta[2] * eigenVectors[1][2];
-        fWaves[2][2] = fWaves[2][2] * vRight;
-
-        fWaves[0][0] = fWaves[1][0] = fWaves[2][0] = 0.0;
-        fWaves[0][1] = fWaves[1][1] = fWaves[2][1] = 0.0;
-
-        waveSpeeds[2] = eigenValues[2];
-        waveSpeeds[0] = waveSpeeds[1] = 0.0;
-      } else {
-        waveSpeeds[0] = eigenValues[0];
-        waveSpeeds[1] = eigenValues[1];
-        waveSpeeds[2] = eigenValues[2];
-
-        // The second and third eigenvector components form the f-waves.
-        for (int waveNumber = 0; waveNumber < 3; waveNumber++) {
-          fWaves[0][waveNumber] = beta[waveNumber] * eigenVectors[1][waveNumber];
-          fWaves[1][waveNumber] = beta[waveNumber] * eigenVectors[2][waveNumber];
-          fWaves[2][waveNumber] = beta[waveNumber] * eigenVectors[1][waveNumber];
-        }
-
-        // The third row is the flux of the transverse momentum huv, as in Clawpack.
-        fWaves[2][0] = fWaves[2][0] * vLeft;
-        fWaves[2][2] = fWaves[2][2] * vRight;
-        fWaves[2][1] = hRight * uRight * vRight - hLeft * uLeft * vLeft - fWaves[2][0] - fWaves[2][2];
-      }
-    }
-
-    template <typename T>
-    INLINE_METHOD GPU_CALLABLE_METHOD void capDryReceiverMomentum(
-      const bool dryReceiver,
-      const T    receiverHeightBeforeUpdate,
-      const T    incomingWater,
-      const T    velocityScale,
-      const T    cfl,
-      const T    minimumWaterHeight,
-      T&         incomingMomentumNormal,
-      T&         incomingMomentumTransverse
-    ) {
-      if (not dryReceiver) {
-        return;
-      }
-
-      const auto admissibleWater      = std::fmax(incomingWater, T{});
-      const auto receiverDepthDeficit = std::fmax(minimumWaterHeight - std::fmax(receiverHeightBeforeUpdate, T{}), T{});
-      const auto waterAboveDryThreshold = std::isfinite(cfl) and cfl > T{}
-        ? std::fmax(cfl * admissibleWater - receiverDepthDeficit, T{}) / cfl
-        : admissibleWater;
-      const auto admissibleMomentum     = waterAboveDryThreshold * std::fmax(velocityScale, T{});
-      const auto momentumNorm           = std::sqrt(
-        incomingMomentumNormal * incomingMomentumNormal + incomingMomentumTransverse * incomingMomentumTransverse
-      );
-
-      if (not std::isfinite(momentumNorm) or momentumNorm <= admissibleMomentum) {
-        return;
-      }
-      if (admissibleMomentum <= T{}) {
-        incomingMomentumNormal     = T{};
-        incomingMomentumTransverse = T{};
-        return;
-      }
-
-      const auto factor = admissibleMomentum / momentumNorm;
-      incomingMomentumNormal *= factor;
-      incomingMomentumTransverse *= factor;
-    }
-  } // namespace
-
-  /**
-   * Solves a wet-dry shallow-water interface over variable bathymetry with
-   * George's augmented-state Riemann method and writes the left- and right-going
-   * fluctuations.
-   *
-   * @return The largest absolute wave speed.
-   * @see https://doi.org/10.1016/j.jcp.2007.10.027
-   */
-  template <class Shortcuts, int BathymetryIndex, bool BathymetryIsUnknown, class T>
-  INLINE_METHOD GPU_CALLABLE_METHOD T augmentedState(
-    const T* const NOALIAS                                        QL,
-    const T* const NOALIAS                                        QR,
-    [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>&                  h,
-    [[maybe_unused]] const double                                 t,
-    const double                                                  dt,
-    const int                                                     normal,
-    const double                                                  gravity,
-    const double                                                  minimumWaterHeight,
-    T* const NOALIAS                                              FL,
-    T* const NOALIAS                                              FR
-  ) {
-    const auto g          = static_cast<T>(std::fmax(gravity, 0.0));
-    const auto hThreshold = static_cast<T>(std::fmax(minimumWaterHeight, 0.0));
-
-    T hLeft  = QL[Shortcuts::h];
-    T hRight = QR[Shortcuts::h];
-    // The solver works in the frame of the face normal. hu is the momentum component along that
-    // normal and hv the transverse one.
-    T       huLeft         = QL[Shortcuts::hu + normal];
-    T       huRight        = QR[Shortcuts::hu + normal];
-    T       hvLeft         = QL[Shortcuts::hu + 1 - normal];
-    T       hvRight        = QR[Shortcuts::hu + 1 - normal];
-    T       bLeft          = QL[BathymetryIndex];
-    T       bRight         = QR[BathymetryIndex];
-    const T originalHLeft  = hLeft;
-    const T originalHRight = hRight;
-    T       uLeft          = 0;
-    T       uRight         = 0;
-    T       vLeft          = 0;
-    T       vRight         = 0;
-
-    T hMiddle = 0;
-
-    RiemannStructure riemannStructure;
-
-    T middleSpeeds[2];
-
-    for (int unknown = 0; unknown < 3; unknown++) {
-      FL[unknown] = 0;
-      FR[unknown] = 0;
-    }
-    if constexpr (BathymetryIsUnknown) {
-      FL[BathymetryIndex] = T{};
-      FR[BathymetryIndex] = T{};
-    }
-
-    // A dry side adds its residual depth to the bed and stays at rest. A wet side derives its velocities.
-    if (hLeft > hThreshold) {
-      uLeft = huLeft / hLeft;
-      vLeft = hvLeft / hLeft;
-    } else {
-      bLeft += std::fmax(hLeft, T{});
-      hLeft = huLeft = uLeft = 0;
-      hvLeft = vLeft = 0;
-    }
-
-    if (hRight > hThreshold) {
-      uRight = huRight / hRight;
-      vRight = hvRight / hRight;
-    } else {
-      bRight += std::fmax(hRight, T{});
-      hRight = huRight = uRight = 0;
-      hvRight = vRight = 0;
-    }
-
-    const auto wetDryState = determineWetDryState(
-      hLeft,
-      huLeft,
-      hvLeft,
-      uLeft,
-      vLeft,
-      bLeft,
-      hRight,
-      huRight,
-      hvRight,
-      uRight,
-      vRight,
-      bRight,
-      hMiddle,
-      riemannStructure,
-      middleSpeeds,
-      g,
-      hThreshold
-    );
-
-    if (wetDryState == WetDryState::DryDry) {
-      return 0;
-    }
-
-    const T sqrtG      = std::sqrt(g);
-    const T sqrthLeft  = std::sqrt(hLeft);
-    const T sqrthRight = std::sqrt(hRight);
-
-    const T sqrtGhLeft  = sqrtG * sqrthLeft;
-    const T sqrtGhRight = sqrtG * sqrthRight;
-
-    // A row of fWaves is one component of the f-waves, a column one wave.
-    T fWaves[3][3];
-    T waveSpeeds[3];
-
-    computeWaveDecomposition(
-      hLeft,
-      huLeft,
-      uLeft,
-      vLeft,
-      bLeft,
-      hRight,
-      huRight,
-      uRight,
-      vRight,
-      bRight,
-      hMiddle,
-      sqrtGhLeft,
-      sqrtGhRight,
-      sqrthLeft,
-      sqrthRight,
-      wetDryState,
-      riemannStructure,
-      fWaves,
-      waveSpeeds,
-      middleSpeeds,
-      g,
-      hThreshold
-    );
-
-    // The waves form the left- and right-going fluctuations, and a standing wave adds half to each side.
-    for (int waveNumber = 0; waveNumber < 3; waveNumber++) {
-      if (waveSpeeds[waveNumber] < T{}) {
-        FL[Shortcuts::h] += fWaves[0][waveNumber];
-        FL[Shortcuts::hu + normal] += fWaves[1][waveNumber];
-        FL[Shortcuts::hu + 1 - normal] += fWaves[2][waveNumber];
-      } else if (waveSpeeds[waveNumber] > T{}) {
-        FR[Shortcuts::h] -= fWaves[0][waveNumber];
-        FR[Shortcuts::hu + normal] -= fWaves[1][waveNumber];
-        FR[Shortcuts::hu + 1 - normal] -= fWaves[2][waveNumber];
-      } else {
-        FL[Shortcuts::h] += static_cast<T>(0.5) * fWaves[0][waveNumber];
-        FL[Shortcuts::hu + normal] += static_cast<T>(0.5) * fWaves[1][waveNumber];
-        FL[Shortcuts::hu + 1 - normal] += static_cast<T>(0.5) * fWaves[2][waveNumber];
-        FR[Shortcuts::h] -= static_cast<T>(0.5) * fWaves[0][waveNumber];
-        FR[Shortcuts::hu + normal] -= static_cast<T>(0.5) * fWaves[1][waveNumber];
-        FR[Shortcuts::hu + 1 - normal] -= static_cast<T>(0.5) * fWaves[2][waveNumber];
-      }
-    }
-
-    const auto cfl = dt > 0.0 and h(normal) > 0.0 ? static_cast<T>(dt / h(normal)) : T{};
-    if (std::isfinite(cfl) and cfl > T{}) {
-      constexpr auto PerFaceFraction = static_cast<T>(1.0 / (2.0 * DIMENSIONS));
-
-      const auto leftDrain  = std::fmax(FL[Shortcuts::h], T{});
-      const auto leftBudget = PerFaceFraction * std::fmax(hLeft, T{});
-      if (leftDrain > T{} and cfl * leftDrain > leftBudget) {
-        const auto factor = leftBudget / (cfl * leftDrain);
-        FL[Shortcuts::h] *= factor;
-        FL[Shortcuts::hu + normal] *= factor;
-        FL[Shortcuts::hu + 1 - normal] *= factor;
-      }
-
-      const auto rightDrain  = std::fmax(-FR[Shortcuts::h], T{});
-      const auto rightBudget = PerFaceFraction * std::fmax(hRight, T{});
-      if (rightDrain > T{} and cfl * rightDrain > rightBudget) {
-        const auto factor = rightBudget / (cfl * rightDrain);
-        FR[Shortcuts::h] *= factor;
-        FR[Shortcuts::hu + normal] *= factor;
-        FR[Shortcuts::hu + 1 - normal] *= factor;
-      }
-    }
-
-    const auto leftVelocityScale =
-      std::sqrt(uLeft * uLeft + vLeft * vLeft) + std::sqrt(g * std::fmax(hLeft, hThreshold));
-    const auto rightVelocityScale =
-      std::sqrt(uRight * uRight + vRight * vRight) + std::sqrt(g * std::fmax(hRight, hThreshold));
-
-    auto leftIncomingMomentumNormal     = -FL[Shortcuts::hu + normal];
-    auto leftIncomingMomentumTransverse = -FL[Shortcuts::hu + 1 - normal];
-    capDryReceiverMomentum(
-      originalHLeft <= hThreshold,
-      originalHLeft,
-      -FL[Shortcuts::h],
-      rightVelocityScale,
-      cfl,
-      hThreshold,
-      leftIncomingMomentumNormal,
-      leftIncomingMomentumTransverse
-    );
-    FL[Shortcuts::hu + normal]     = -leftIncomingMomentumNormal;
-    FL[Shortcuts::hu + 1 - normal] = -leftIncomingMomentumTransverse;
-
-    auto rightIncomingMomentumNormal     = FR[Shortcuts::hu + normal];
-    auto rightIncomingMomentumTransverse = FR[Shortcuts::hu + 1 - normal];
-    capDryReceiverMomentum(
-      originalHRight <= hThreshold,
-      originalHRight,
-      FR[Shortcuts::h],
-      leftVelocityScale,
-      cfl,
-      hThreshold,
-      rightIncomingMomentumNormal,
-      rightIncomingMomentumTransverse
-    );
-    FR[Shortcuts::hu + normal]     = rightIncomingMomentumNormal;
-    FR[Shortcuts::hu + 1 - normal] = rightIncomingMomentumTransverse;
-
-    return std::max(std::abs(waveSpeeds[0]), std::max(std::abs(waveSpeeds[1]), std::abs(waveSpeeds[2])));
+#include "tarch/Assertions.h"
+
+/**
+ * The wet-dry configuration of the two cells at an interface.
+ */
+enum class applications::exahype2::exaskred::riemann::WetDryState {
+  // Both cells are dry.
+  DryDry,
+  // Both cells are wet.
+  WetWet,
+  // The wet first cell lies higher than the dry second cell.
+  WetDryInundation,
+  // The momentum of the wet first cell cannot lift its water onto the higher dry second cell.
+  WetDryWall,
+  // The momentum of the wet first cell lifts its water onto the higher dry second cell.
+  WetDryWallInundation,
+  // The dry first cell lies lower than the wet second cell.
+  DryWetInundation,
+  // The momentum of the wet second cell cannot lift its water onto the higher dry first cell.
+  DryWetWall,
+  // The momentum of the wet second cell lifts its water onto the higher dry first cell.
+  DryWetWallInundation
+};
+
+/**
+ * The wave structure of the homogeneous Riemann problem.
+ */
+enum class applications::exahype2::exaskred::riemann::RiemannStructure {
+  DrySingleRarefaction,  // Contact discontinuity in the first wave family, rarefaction in the second.
+  SingleRarefactionDry,  // Rarefaction in the first wave family, contact discontinuity in the second.
+  ShockShock,            // Shocks in both wave families.
+  ShockRarefaction,      // Shock in the first wave family, rarefaction in the second.
+  RarefactionShock,      // Rarefaction in the first wave family, shock in the second.
+  RarefactionRarefaction // Rarefactions in both wave families.
+};
+
+/**
+ * Returns the wave structure of the Riemann problem between the two states.
+ */
+template <class T>
+INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaskred::riemann::RiemannStructure
+applications::exahype2::exaskred::riemann::determineRiemannStructure(
+  const T& hLeft,
+  const T& hRight,
+  const T& uLeft,
+  const T& uRight,
+  const T& g,
+  const T& hThreshold
+) {
+  const T hMin = std::fmin(hLeft, hRight);
+  const T hMax = std::fmax(hLeft, hRight);
+
+  const T uDiff = uRight - uLeft;
+
+  // A dry side leaves only the single rarefaction that arises from the
+  // other side's characteristic field.
+  if (hLeft <= hThreshold) {
+    return RiemannStructure::DrySingleRarefaction;
   }
-} // namespace applications::exahype2::exaskred::riemann
+  if (hRight <= hThreshold) {
+    return RiemannStructure::SingleRarefactionDry;
+  }
+
+  const T phiMin = uDiff + static_cast<T>(2.0) * (std::sqrt(g * hMin) - std::sqrt(g * hMax));
+  const T phiMax = uDiff + (hMax - hMin) * (std::sqrt(static_cast<T>(0.5) * g * (hMax + hMin) / (hMax * hMin)));
+
+  if (phiMin > T{}) {
+    return RiemannStructure::RarefactionRarefaction;
+  } else if (phiMax <= T{}) {
+    return RiemannStructure::ShockShock;
+  } else {
+    if (hLeft > hRight) {
+      return RiemannStructure::RarefactionShock;
+    } else {
+      return RiemannStructure::ShockRarefaction;
+    }
+  }
+}
+
+/**
+ * Solves the three-by-three linear system with Cramer's rule. The operation order matches the
+ * Clawpack implementation.
+ */
+template <class T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::riemann::solveLinearEquation(
+  const T matrix[3][3],
+  const T rightHandSide[3],
+  T       solution[3]
+) {
+  T       determinantOne   = matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]);
+  T       determinantTwo   = matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0]);
+  T       determinantThree = matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]);
+  const T determinant      = determinantOne - determinantTwo + determinantThree;
+  T       modifiedMatrix[3][3];
+  for (int component = 0; component < 3; ++component) {
+    for (int column = 0; column < 3; ++column) {
+      modifiedMatrix[0][column] = matrix[0][column];
+      modifiedMatrix[1][column] = matrix[1][column];
+      modifiedMatrix[2][column] = matrix[2][column];
+    }
+    modifiedMatrix[0][component] = rightHandSide[0];
+    modifiedMatrix[1][component] = rightHandSide[1];
+    modifiedMatrix[2][component] = rightHandSide[2];
+    determinantOne               = modifiedMatrix[0][0]
+      * (modifiedMatrix[1][1] * modifiedMatrix[2][2] - modifiedMatrix[1][2] * modifiedMatrix[2][1]);
+    determinantTwo = modifiedMatrix[0][1]
+      * (modifiedMatrix[1][0] * modifiedMatrix[2][2] - modifiedMatrix[1][2] * modifiedMatrix[2][0]);
+    determinantThree = modifiedMatrix[0][2]
+      * (modifiedMatrix[1][0] * modifiedMatrix[2][1] - modifiedMatrix[1][1] * modifiedMatrix[2][0]);
+    solution[component] = (determinantOne - determinantTwo + determinantThree) / determinant;
+  }
+}
+
+/**
+ * Returns the middle-state height estimate of the homogeneous Riemann problem. Writes the middle wave
+ * speeds into middleSpeeds.
+ */
+template <class T>
+INLINE_METHOD GPU_CALLABLE_METHOD T
+applications::exahype2::exaskred::riemann::computeMiddleState(
+  const T&          hLeft,
+  const T&          hRight,
+  const T&          uLeft,
+  const T&          uRight,
+  RiemannStructure& riemannStructure,
+  T*                middleSpeeds,
+  const T&          g,
+  const T&          hThreshold
+) {
+  T       hMiddle = 0;
+  const T hMin    = std::min(hLeft, hRight);
+  const T hMax    = std::max(hLeft, hRight);
+  const T uDiff   = uRight - uLeft;
+
+  riemannStructure = determineRiemannStructure(hLeft, hRight, uLeft, uRight, g, hThreshold);
+
+  // A dry side yields a single rarefaction with a middle-state height of zero.
+  if (hLeft <= hThreshold or hRight <= hThreshold) {
+    hMiddle = 0;
+    middleSpeeds[0] =
+      uRight + uLeft - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(2.0) * std::sqrt(g * hLeft);
+    middleSpeeds[1] = middleSpeeds[0];
+    return 0;
+  }
+
+  const T phiMax = uDiff + (hMax - hMin) * (std::sqrt(static_cast<T>(0.5) * g * (hMax + hMin) / (hMax * hMin)));
+
+  T hZero             = 0;
+  T gLeft             = 0;
+  T gRight            = 0;
+  T phiZero           = 0;
+  T phiZeroDerivative = 0;
+  T slope             = 0;
+
+  if (riemannStructure == RiemannStructure::RarefactionRarefaction) {
+    hMiddle = std::max(T{}, uLeft - uRight + static_cast<T>(2.0) * (std::sqrt(g * hLeft) + std::sqrt(g * hRight)));
+    hMiddle = static_cast<T>(1.0) / (static_cast<T>(16.0) * g) * hMiddle * hMiddle;
+    middleSpeeds[0] = uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - static_cast<T>(3.0) * std::sqrt(g * hMiddle);
+    middleSpeeds[1] =
+      uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(3.0) * std::sqrt(g * hMiddle);
+    return hMiddle;
+  } else if (riemannStructure == RiemannStructure::ShockShock) {
+    // Newton's method finds the root of the all-shock function phi_ss (\cite[ch. 13.7]{LeVeque2002}).
+    hZero = hMax;
+    for (int i = 0; i < NewtonIterations; ++i) {
+      gLeft   = std::sqrt(static_cast<T>(0.5) * g * (T{1} / hZero + T{1} / hLeft));
+      gRight  = std::sqrt(static_cast<T>(0.5) * g * (T{1} / hZero + T{1} / hRight));
+      phiZero = uDiff + (hZero - hLeft) * gLeft + (hZero - hRight) * gRight;
+      if (std::abs(phiZero) < static_cast<T>(NewtonTolerance)) {
+        break;
+      }
+      phiZeroDerivative = gLeft - g * (hZero - hLeft) / (static_cast<T>(4.0) * (hZero * hZero) * gLeft) + gRight
+        - g * (hZero - hRight) / (static_cast<T>(4.0) * (hZero * hZero) * gRight);
+      slope = static_cast<T>(2.0) * std::sqrt(hZero) * phiZeroDerivative;
+      hZero = std::pow((std::sqrt(hZero) - phiZero / slope), 2);
+    }
+    hMiddle = hZero;
+    const T uOneMiddle =
+      uLeft - (hMiddle - hLeft) * std::sqrt((static_cast<T>(0.5) * g) * (T{1} / hMiddle + T{1} / hLeft));
+    const T uTwoMiddle =
+      uRight + (hMiddle - hRight) * std::sqrt((static_cast<T>(0.5) * g) * (T{1} / hMiddle + T{1} / hRight));
+    middleSpeeds[0] = uOneMiddle - std::sqrt(g * hMiddle);
+    middleSpeeds[1] = uTwoMiddle + std::sqrt(g * hMiddle);
+    return hMiddle;
+  } else if (
+    riemannStructure == RiemannStructure::ShockRarefaction or riemannStructure == RiemannStructure::RarefactionShock
+  ) {
+    // Newton's method with a secant slope finds the root of the shock-rarefaction function phi_sr.
+    hZero = hMin;
+    for (int i = 0; i < NewtonIterations; ++i) {
+      phiZero = uDiff + static_cast<T>(2.0) * (std::sqrt(g * hZero) - std::sqrt(g * hMax))
+        + (hZero - hMin) * std::sqrt(static_cast<T>(0.5) * g * (T{1} / hZero + T{1} / hMin));
+      slope = (phiMax - phiZero) / (hMax - hMin);
+      hZero = hZero - phiZero / slope;
+    }
+
+    hMiddle = hZero;
+
+    if (hLeft > hRight) {
+      middleSpeeds[0] =
+        uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - static_cast<T>(3.0) * std::sqrt(g * hMiddle);
+      middleSpeeds[1] = uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - std::sqrt(g * hMiddle);
+    } else {
+      middleSpeeds[1] =
+        uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(3.0) * std::sqrt(g * hMiddle);
+      middleSpeeds[0] = uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + std::sqrt(g * hMiddle);
+    }
+    return hMiddle;
+  }
+  return hMiddle;
+}
+
+/**
+ * Classifies the wet-dry configuration of the interface. A wall configuration overwrites the dry
+ * side with the mirrored wet state.
+ */
+template <class T>
+INLINE_METHOD GPU_CALLABLE_METHOD applications::exahype2::exaskred::riemann::WetDryState
+applications::exahype2::exaskred::riemann::determineWetDryState(
+  T&                hLeft,
+  T&                huLeft,
+  T&                hvLeft,
+  T&                uLeft,
+  T&                vLeft,
+  T&                bLeft,
+  T&                hRight,
+  T&                huRight,
+  T&                hvRight,
+  T&                uRight,
+  T&                vRight,
+  T&                bRight,
+  T&                hMiddle,
+  RiemannStructure& riemannStructure,
+  T*                middleSpeeds,
+  const T&          g,
+  const T&          hThreshold
+) {
+  WetDryState wetDryState;
+  if (hLeft > hThreshold and hRight > hThreshold) {
+    wetDryState = WetDryState::WetWet;
+  } else if (hLeft <= hThreshold and hRight <= hThreshold) {
+    wetDryState = WetDryState::DryDry;
+  }
+
+  // A shoreline whose dry cell lies lower than the wet cell is a simple inundation.
+  else if (hLeft <= hThreshold and hRight + bRight > bLeft) {
+    wetDryState = WetDryState::DryWetInundation;
+  } else if (hRight <= hThreshold and hLeft + bLeft > bRight) {
+    wetDryState = WetDryState::WetDryInundation;
+  }
+
+  // The middle state of a wall-boundary Riemann problem decides whether the momentum lifts the water
+  // onto a higher dry cell (\cite[ch. 6.8.2]{George2006}, \cite[ch. 5.2]{George2008}).
+  else if (hLeft <= hThreshold and (hRight + bRight <= bLeft)) {
+    hMiddle = computeMiddleState(hRight, hRight, -uRight, uRight, riemannStructure, middleSpeeds, g, hThreshold);
+    if (hMiddle + bRight > bLeft) {
+      wetDryState = WetDryState::DryWetWallInundation;
+    } else {
+      // The momentum cannot lift the water over the step. The dry side mirrors the wet state as a wall.
+      hLeft  = hRight;
+      uLeft  = -uRight;
+      huLeft = -huRight;
+      bLeft = bRight = 0.0;
+      vLeft          = vRight;
+      wetDryState    = WetDryState::DryWetWall;
+    }
+  } else {
+    // The only remaining configuration is a dry right cell above the wet left one.
+    hMiddle = computeMiddleState(hLeft, hLeft, uLeft, -uLeft, riemannStructure, middleSpeeds, g, hThreshold);
+    if (hMiddle + bLeft > bRight) {
+      wetDryState = WetDryState::WetDryWallInundation;
+    } else {
+      // The momentum cannot lift the water over the step. The dry side mirrors the wet state as a wall.
+      hRight  = hLeft;
+      uRight  = -uLeft;
+      huRight = -huLeft;
+      bRight = bLeft = 0.0;
+      vRight         = vLeft;
+      wetDryState    = WetDryState::WetDryWall;
+    }
+  }
+
+  // A wall limits the effect of the source term
+  // (\cite[end of ch. 5.2]{George2008}, \cite[rpn2ez_fast_geo.f]{LeVeque2011}).
+  if (wetDryState == WetDryState::DryWetWallInundation) {
+    bLeft = hRight + bRight;
+  } else if (wetDryState == WetDryState::WetDryWallInundation) {
+    bRight = hLeft + bLeft;
+  }
+  return wetDryState;
+}
+
+/**
+ * Decomposes the interface jump into the three f-waves of the augmented method. Writes their speeds
+ * into waveSpeeds.
+ */
+template <class T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::riemann::computeWaveDecomposition(
+  T&                hLeft,
+  T&                huLeft,
+  T&                uLeft,
+  T&                vLeft,
+  T&                bLeft,
+  T&                hRight,
+  T&                huRight,
+  T&                uRight,
+  T&                vRight,
+  T&                bRight,
+  T&                hMiddle,
+  const T&          sqrtGhLeft,
+  const T&          sqrtGhRight,
+  const T&          sqrthLeft,
+  const T&          sqrthRight,
+  const WetDryState wetDryState,
+  RiemannStructure& riemannStructure,
+  T                 fWaves[3][3],
+  T                 waveSpeeds[3],
+  T*                middleSpeeds,
+  const T&          g,
+  const T&          hThreshold
+) {
+  T characteristicSpeeds[2];
+  characteristicSpeeds[0] = uLeft - sqrtGhLeft;
+  characteristicSpeeds[1] = uRight + sqrtGhRight;
+
+  const T hRoe = static_cast<T>(0.5) * (hRight + hLeft);
+  T       uRoe = uLeft * sqrthLeft + uRight * sqrthRight;
+  uRoe /= (sqrthLeft + sqrthRight);
+
+  T       roeSpeeds[2];
+  const T sqrtGhRoe = std::sqrt(g * hRoe);
+  roeSpeeds[0]      = uRoe - sqrtGhRoe;
+  roeSpeeds[1]      = uRoe + sqrtGhRoe;
+
+  // The wet-dry classification computes the middle state of the wall cases.
+  if (wetDryState != WetDryState::WetDryWall and wetDryState != WetDryState::DryWetWall) {
+    hMiddle = computeMiddleState(hLeft, hRight, uLeft, uRight, riemannStructure, middleSpeeds, g, hThreshold);
+  }
+
+  // The extended Einfeldt speeds combine the Einfeldt speeds with the middle-state speeds
+  // (\cite[ch. 5.2]{George2008}, \cite[ch. 6.8]{George2006}). computeMiddleState() returns the
+  // middle-state speeds of both reference implementations. These speeds differ from the paper.
+  const T lambdaStarHStarMinus = middleSpeeds[0];
+  const T lambdaStarHStarPlus  = middleSpeeds[1];
+
+  // The bound of a dry side takes the Roe and middle-state speeds only.
+  T extEinfeldtSpeeds[2] = {0, 0};
+  if (hLeft > hThreshold and hRight > hThreshold) {
+    extEinfeldtSpeeds[0] = std::min(characteristicSpeeds[0], roeSpeeds[0]);
+    extEinfeldtSpeeds[0] = std::min(extEinfeldtSpeeds[0], lambdaStarHStarPlus);
+    extEinfeldtSpeeds[1] = std::max(characteristicSpeeds[1], roeSpeeds[1]);
+    extEinfeldtSpeeds[1] = std::max(extEinfeldtSpeeds[1], lambdaStarHStarMinus);
+  } else if (hLeft <= hThreshold) {
+    extEinfeldtSpeeds[0] = std::min(roeSpeeds[0], lambdaStarHStarPlus);
+    extEinfeldtSpeeds[1] = std::max(characteristicSpeeds[1], roeSpeeds[1]);
+  } else if (hRight <= hThreshold) {
+    extEinfeldtSpeeds[0] = std::min(characteristicSpeeds[0], roeSpeeds[0]);
+    extEinfeldtSpeeds[1] = std::max(roeSpeeds[1], lambdaStarHStarMinus);
+  }
+
+  // The HLL middle state (\cite[theorem 3.1]{George2006}, \cite[ch. 4.1]{George2008}).
+  T hLLMiddleHeight = huLeft - huRight + extEinfeldtSpeeds[1] * hRight - extEinfeldtSpeeds[0] * hLeft;
+  hLLMiddleHeight /= (extEinfeldtSpeeds[1] - extEinfeldtSpeeds[0]);
+  hLLMiddleHeight = std::max(hLLMiddleHeight, T{});
+
+  // The corrector wave below sets the second eigenvalue.
+  T eigenValues[3];
+  eigenValues[0] = extEinfeldtSpeeds[0];
+  eigenValues[2] = extEinfeldtSpeeds[1];
+
+  // The first and third eigenvectors follow the characteristic fields of the 2D shallow water
+  // equations.
+  T eigenVectors[3][3];
+  eigenVectors[0][0] = 1;
+  eigenVectors[0][2] = 1;
+
+  eigenVectors[1][0] = eigenValues[0];
+  eigenVectors[1][2] = eigenValues[2];
+
+  eigenVectors[2][0] = eigenValues[0] * eigenValues[0];
+  eigenVectors[2][2] = eigenValues[2] * eigenValues[2];
+
+  // The second wave is the rarefaction corrector wave (\cite[ch. 6.7.2]{George2006},
+  // \cite[ch. 5.1]{George2008}). A middle height above the dry threshold keeps the depth non-negative.
+  bool strongRarefaction = false;
+  if (
+    (riemannStructure == RiemannStructure::ShockRarefaction or riemannStructure == RiemannStructure::RarefactionShock
+     or riemannStructure == RiemannStructure::RarefactionRarefaction)
+    and hMiddle > hThreshold
+  ) {
+    // The barriers come from GeoClaw.
+    T rareBarrier[2] = {static_cast<T>(0.5), static_cast<T>(0.9)};
+
+    // A transonic rarefaction in either wave family lowers the barrier.
+    if (
+      (riemannStructure == RiemannStructure::RarefactionShock
+       or riemannStructure == RiemannStructure::RarefactionRarefaction)
+      and eigenValues[0] * lambdaStarHStarMinus < T{}
+    ) {
+      rareBarrier[0] = static_cast<T>(0.2);
+    } else if (
+      (riemannStructure == RiemannStructure::ShockRarefaction
+       or riemannStructure == RiemannStructure::RarefactionRarefaction)
+      and eigenValues[2] * lambdaStarHStarPlus < T{}
+    ) {
+      rareBarrier[0] = static_cast<T>(0.2);
+    }
+
+    const T sqrtGhMiddle = std::sqrt(g * hMiddle);
+    // The maximal rarefaction size is the distance between head and tail.
+    T rareFactionSize[2];
+    rareFactionSize[0] = static_cast<T>(3.0) * (sqrtGhLeft - sqrtGhMiddle);
+    rareFactionSize[1] = static_cast<T>(3.0) * (sqrtGhRight - sqrtGhMiddle);
+
+    const T maxRareFactionSize = std::max(rareFactionSize[0], rareFactionSize[1]);
+
+    // A strong rarefaction between the barriers sets the eigenvalue of the corrector wave.
+    if (
+      maxRareFactionSize > rareBarrier[0] * (eigenValues[2] - eigenValues[0])
+      and maxRareFactionSize < rareBarrier[1] * (eigenValues[2] - eigenValues[0])
+    ) {
+      strongRarefaction = true;
+      if (rareFactionSize[0] > rareFactionSize[1]) {
+        eigenValues[1] = lambdaStarHStarMinus;
+      } else if (rareFactionSize[1] > rareFactionSize[0]) {
+        eigenValues[1] = lambdaStarHStarPlus;
+      } else {
+        eigenValues[1] = static_cast<T>(0.5) * (lambdaStarHStarMinus + lambdaStarHStarPlus);
+      }
+    }
+  }
+  // A shallow HLL middle state suppresses the corrector wave as in Clawpack.
+  if (hLLMiddleHeight < (std::min(hLeft, hRight) / static_cast<T>(5.0))) {
+    strongRarefaction = false;
+  }
+
+  if (not strongRarefaction) {
+    eigenValues[1]     = static_cast<T>(0.5) * (eigenValues[0] + eigenValues[2]);
+    eigenVectors[0][1] = 0.0;
+    eigenVectors[1][1] = 0.0;
+    eigenVectors[2][1] = 1.0;
+  } else {
+    eigenVectors[0][1] = 1.0;
+    eigenVectors[1][1] = eigenValues[1];
+    eigenVectors[2][1] = eigenValues[1] * eigenValues[1];
+  }
+
+  // The right-hand side is the jump in height, momentum and momentum flux.
+  T rightHandSide[3];
+  rightHandSide[0] = hRight - hLeft;
+  rightHandSide[1] = huRight - huLeft;
+  rightHandSide[2] = (huRight * uRight + static_cast<T>(0.5) * g * hRight * hRight)
+    - (huLeft * uLeft + static_cast<T>(0.5) * g * hLeft * hLeft);
+
+  // The steady-state wave is the zeroth wave
+  // (\cite[ch. 4.2.1 \& app. A]{George2008}, \cite[ch. 6.2 \& ch. 4.4]{George2006}).
+  T steadyStateWave[2] = {0, 0};
+
+  T hBar = (hLeft + hRight) * static_cast<T>(0.5);
+  // The paper calls the decomposition coefficients alpha.
+  T beta[3];
+
+  T eigenvalueAvgBar   = 0;
+  T eigenvalueAvgTilde = 0;
+
+  steadyStateWave[0] = -(bRight - bLeft);
+  steadyStateWave[1] = -g * static_cast<T>(0.5) * (hRight + hLeft) * (bRight - bLeft);
+
+  // One iteration of the Clawpack formulation keeps the steady-state wave stable.
+  T hLeftIter   = hLeft;
+  T hRightIter  = hRight;
+  T uLeftIter   = uLeft;
+  T uRightIter  = uRight;
+  T huLeftIter  = uLeftIter * hLeftIter;
+  T huRightIter = uRightIter * hRightIter;
+  T deltaNorm   = rightHandSide[0] * rightHandSide[0] + rightHandSide[2] * rightHandSide[2];
+
+  bool sonicFlow = false;
+  for (int i = 0; i < NewtonIterations; ++i) {
+    // A drying iterate replaces the strong-rarefaction corrector by the simple second wave.
+    if (std::min(hLeftIter, hRightIter) < hThreshold and strongRarefaction) {
+      strongRarefaction  = false;
+      hLeftIter          = hLeft;
+      hRightIter         = hRight;
+      uLeftIter          = uLeft;
+      uRightIter         = uRight;
+      huLeftIter         = uLeftIter * hLeftIter;
+      huRightIter        = uRightIter * hRightIter;
+      eigenValues[1]     = static_cast<T>(0.5) * (eigenValues[0] + eigenValues[2]);
+      eigenVectors[0][1] = 0.0;
+      eigenVectors[1][1] = 0.0;
+      eigenVectors[2][1] = 1.0;
+    }
+    hBar               = std::max(T{}, static_cast<T>(0.5) * (hLeftIter + hRightIter));
+    eigenvalueAvgBar   = (uLeftIter + uRightIter) * (uLeftIter + uRightIter) * static_cast<T>(0.25) - g * hBar;
+    eigenvalueAvgTilde = std::max(T{}, uRightIter * uLeftIter) - g * hBar;
+
+    // A sonic flow suppresses the eigenvalue-based steady-state wave below.
+    if (
+      (std::abs(eigenvalueAvgBar) <= static_cast<T>(ZeroTolerance))
+      or (eigenvalueAvgBar * eigenvalueAvgTilde <= static_cast<T>(ZeroTolerance))
+      or (eigenvalueAvgBar * eigenValues[0] * eigenValues[2] <= static_cast<T>(ZeroTolerance))
+      or (std::min(std::abs(eigenValues[0]), std::abs(eigenValues[2])) < static_cast<T>(ZeroTolerance))
+      or (eigenValues[0] < T{} and lambdaStarHStarMinus > T{}) or (eigenValues[2] > T{} and lambdaStarHStarPlus < T{})
+      or ((uLeft + std::sqrt(g * hLeft)) * (uRight + std::sqrt(g * hRight)) < T{})
+      or ((uLeft - std::sqrt(g * hLeft)) * (uRight - std::sqrt(g * hRight)) < T{})
+    ) {
+      sonicFlow = true;
+    }
+
+    // The bounds of the steady-state wave follow George2008 and Clawpack.
+    if (sonicFlow) {
+      steadyStateWave[0] = -(bRight - bLeft);
+    } else {
+      steadyStateWave[0] = (bRight - bLeft) * g * hBar / eigenvalueAvgBar;
+    }
+
+    if (
+      eigenValues[0] < -static_cast<T>(ZeroTolerance) and eigenValues[2] > static_cast<T>(ZeroTolerance)
+    ) { // Subsonic
+      steadyStateWave[0] =
+        std::min(steadyStateWave[0], hLLMiddleHeight * (eigenValues[2] - eigenValues[0]) / eigenValues[2]);
+      steadyStateWave[0] =
+        std::max(steadyStateWave[0], hLLMiddleHeight * (eigenValues[2] - eigenValues[0]) / eigenValues[0]);
+    } else if (eigenValues[0] >= static_cast<T>(ZeroTolerance)) { // Supersonic right
+      steadyStateWave[0] =
+        std::min(steadyStateWave[0], hLLMiddleHeight * (eigenValues[2] - eigenValues[0]) / eigenValues[0]);
+      steadyStateWave[0] = std::max(steadyStateWave[0], -hLeft);
+    } else if (eigenValues[2] <= -static_cast<T>(ZeroTolerance)) { // Supersonic left
+      steadyStateWave[0] = std::min(steadyStateWave[0], hRight);
+      steadyStateWave[0] =
+        std::max(steadyStateWave[0], hLLMiddleHeight * (eigenValues[2] - eigenValues[0]) / eigenValues[2]);
+    }
+    if (sonicFlow) {
+      steadyStateWave[1] = -g * hBar * (bRight - bLeft);
+    } else {
+      steadyStateWave[1] = -(bRight - bLeft) * g * hBar * eigenvalueAvgTilde / eigenvalueAvgBar;
+    }
+
+    steadyStateWave[1] =
+      std::min(steadyStateWave[1], g * std::max(-hLeftIter * (bRight - bLeft), -hRightIter * (bRight - bLeft)));
+    steadyStateWave[1] =
+      std::max(steadyStateWave[1], g * std::min(-hLeftIter * (bRight - bLeft), -hRightIter * (bRight - bLeft)));
+
+    // Only the jumps in height and momentum flux contain the steady-state wave (George2008).
+    rightHandSide[0] -= steadyStateWave[0];
+    rightHandSide[2] -= steadyStateWave[1];
+
+    solveLinearEquation(eigenVectors, rightHandSide, beta);
+
+    if (
+      std::abs(rightHandSide[0] * rightHandSide[0] + rightHandSide[2] * rightHandSide[2] - deltaNorm)
+      < static_cast<T>(ConvergenceTolerance)
+    ) {
+      break;
+    }
+
+    deltaNorm = rightHandSide[0] * rightHandSide[0] + rightHandSide[2] * rightHandSide[2];
+
+    hLeftIter   = hLeft;
+    hRightIter  = hRight;
+    uLeftIter   = uLeft;
+    uRightIter  = uRight;
+    huLeftIter  = uLeftIter * hLeftIter;
+    huRightIter = uRightIter * hRightIter;
+
+    // The next iterate adds the current waves to the sides they travel to as in Clawpack.
+    for (int waveNumber = 0; waveNumber < 3; ++waveNumber) {
+      if (eigenValues[waveNumber] < T{}) {
+        hLeftIter  = hLeftIter + beta[waveNumber] * eigenVectors[0][waveNumber];
+        huLeftIter = huLeftIter + beta[waveNumber] * eigenVectors[1][waveNumber];
+      }
+    }
+    for (int waveNumber = 2; waveNumber > 0; --waveNumber) {
+      if (eigenValues[waveNumber] > T{}) {
+        hRightIter  = hRightIter - beta[waveNumber] * eigenVectors[0][waveNumber];
+        huRightIter = huRightIter - beta[waveNumber] * eigenVectors[1][waveNumber];
+      }
+    }
+
+    if (hLeftIter > hThreshold) {
+      uLeftIter = huLeftIter / hLeftIter;
+    } else {
+      hLeftIter = std::max(hLeftIter, T{});
+      uLeftIter = 0.0;
+    }
+    if (hRightIter > hThreshold) {
+      uRightIter = huRightIter / hRightIter;
+    } else {
+      hRightIter = std::max(hRightIter, T{});
+      uRightIter = 0.0;
+    }
+  }
+
+  // The flux waves follow George2008. The flux updates of the transverse component follow Clawpack.
+  if (wetDryState == WetDryState::WetDryWall) {
+    // A wall boundary sends zero ghost updates. Only the left-going wave contributes.
+    fWaves[0][0] = beta[0] * eigenVectors[1][0];
+    fWaves[1][0] = beta[0] * eigenVectors[2][0];
+    fWaves[2][0] = beta[0] * eigenVectors[1][0];
+    fWaves[2][0] = fWaves[2][0] * vLeft;
+
+    fWaves[0][1] = fWaves[1][1] = fWaves[2][1] = 0.0;
+    fWaves[0][2] = fWaves[1][2] = fWaves[2][2] = 0.0;
+
+    waveSpeeds[0] = eigenValues[0];
+    waveSpeeds[1] = waveSpeeds[2] = 0.0;
+  } else if (wetDryState == WetDryState::DryWetWall) {
+    // A wall boundary sends zero ghost updates. Only the right-going wave contributes.
+    fWaves[0][2] = beta[2] * eigenVectors[1][2];
+    fWaves[1][2] = beta[2] * eigenVectors[2][2];
+    fWaves[2][2] = beta[2] * eigenVectors[1][2];
+    fWaves[2][2] = fWaves[2][2] * vRight;
+
+    fWaves[0][0] = fWaves[1][0] = fWaves[2][0] = 0.0;
+    fWaves[0][1] = fWaves[1][1] = fWaves[2][1] = 0.0;
+
+    waveSpeeds[2] = eigenValues[2];
+    waveSpeeds[0] = waveSpeeds[1] = 0.0;
+  } else {
+    waveSpeeds[0] = eigenValues[0];
+    waveSpeeds[1] = eigenValues[1];
+    waveSpeeds[2] = eigenValues[2];
+
+    // The second and third eigenvector components form the f-waves.
+    for (int waveNumber = 0; waveNumber < 3; waveNumber++) {
+      fWaves[0][waveNumber] = beta[waveNumber] * eigenVectors[1][waveNumber];
+      fWaves[1][waveNumber] = beta[waveNumber] * eigenVectors[2][waveNumber];
+      fWaves[2][waveNumber] = beta[waveNumber] * eigenVectors[1][waveNumber];
+    }
+
+    // The third row contains the flux of the transverse momentum huv as in Clawpack.
+    fWaves[2][0] = fWaves[2][0] * vLeft;
+    fWaves[2][2] = fWaves[2][2] * vRight;
+    fWaves[2][1] = hRight * uRight * vRight - hLeft * uLeft * vLeft - fWaves[2][0] - fWaves[2][2];
+  }
+}
+
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+applications::exahype2::exaskred::riemann::capDryReceiverMomentum(
+  const bool dryReceiver,
+  const T    receiverHeightBeforeUpdate,
+  const T    incomingWater,
+  const T    velocityScale,
+  const T    cfl,
+  const T    minimumWaterHeight,
+  T&         incomingMomentumNormal,
+  T&         incomingMomentumTransverse
+) {
+  if (not dryReceiver) {
+    return;
+  }
+
+  const auto admissibleWater        = std::fmax(incomingWater, T{});
+  const auto receiverDepthDeficit   = std::fmax(minimumWaterHeight - std::fmax(receiverHeightBeforeUpdate, T{}), T{});
+  const auto waterAboveDryThreshold = std::isfinite(cfl) and cfl > T{}
+    ? std::fmax(cfl * admissibleWater - receiverDepthDeficit, T{}) / cfl
+    : admissibleWater;
+  const auto admissibleMomentum     = waterAboveDryThreshold * std::fmax(velocityScale, T{});
+  const auto momentumNorm           = std::sqrt(
+    incomingMomentumNormal * incomingMomentumNormal + incomingMomentumTransverse * incomingMomentumTransverse
+  );
+
+  if (not std::isfinite(momentumNorm) or momentumNorm <= admissibleMomentum) {
+    return;
+  }
+  if (admissibleMomentum <= T{}) {
+    incomingMomentumNormal     = T{};
+    incomingMomentumTransverse = T{};
+    return;
+  }
+
+  const auto factor = admissibleMomentum / momentumNorm;
+  incomingMomentumNormal *= factor;
+  incomingMomentumTransverse *= factor;
+}
+
+/**
+ * Solves a wet-dry shallow-water interface over the variable bed Bathymetry with George's
+ * augmented-state Riemann method. Writes the left- and right-going fluctuations into FL and FR.
+ *
+ * @return The largest absolute wave speed.
+ * @see https://doi.org/10.1016/j.jcp.2007.10.027
+ */
+template <auto Bathymetry, typename State, typename Flux>
+INLINE_METHOD GPU_CALLABLE_METHOD double
+applications::exahype2::exaskred::riemann::augmentedState(
+  const State&                                                  QL,
+  const State&                                                  QR,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>&                  h,
+  [[maybe_unused]] const double                                 t,
+  const double                                                  dt,
+  const int                                                     normal,
+  const double                                                  gravity,
+  const double                                                  minimumWaterHeight,
+  Flux&                                                         FL,
+  Flux&                                                         FR
+) {
+  static_assert(DIMENSIONS == 2, "The augmented-state Riemann solver supports 2D only.");
+  using Value = decltype(QL.h);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+
+  const auto g          = static_cast<Value>(std::fmax(gravity, 0.0));
+  const auto hThreshold = static_cast<Value>(std::fmax(minimumWaterHeight, 0.0));
+
+  Value hLeft  = QL.h;
+  Value hRight = QR.h;
+  // huLeft and huRight contain the momentum along the face normal. hvLeft and hvRight contain the
+  // transverse momentum.
+  Value       huLeft         = QL.hu(normal);
+  Value       huRight        = QR.hu(normal);
+  Value       hvLeft         = QL.hu(1 - normal);
+  Value       hvRight        = QR.hu(1 - normal);
+  Value       bLeft          = QL.*Bathymetry;
+  Value       bRight         = QR.*Bathymetry;
+  const Value originalHLeft  = hLeft;
+  const Value originalHRight = hRight;
+  Value       uLeft          = 0;
+  Value       uRight         = 0;
+  Value       vLeft          = 0;
+  Value       vRight         = 0;
+
+  Value hMiddle = 0;
+
+  RiemannStructure riemannStructure;
+
+  Value middleSpeeds[2];
+
+  FL = {};
+  FR = {};
+
+  // A dry side adds its residual depth to the bed and stays at rest. A wet side derives its velocities.
+  if (hLeft > hThreshold) {
+    uLeft = huLeft / hLeft;
+    vLeft = hvLeft / hLeft;
+  } else {
+    bLeft += std::fmax(hLeft, Value{});
+    hLeft = huLeft = uLeft = 0;
+    hvLeft = vLeft = 0;
+  }
+
+  if (hRight > hThreshold) {
+    uRight = huRight / hRight;
+    vRight = hvRight / hRight;
+  } else {
+    bRight += std::fmax(hRight, Value{});
+    hRight = huRight = uRight = 0;
+    hvRight = vRight = 0;
+  }
+
+  const auto wetDryState = determineWetDryState(
+    hLeft,
+    huLeft,
+    hvLeft,
+    uLeft,
+    vLeft,
+    bLeft,
+    hRight,
+    huRight,
+    hvRight,
+    uRight,
+    vRight,
+    bRight,
+    hMiddle,
+    riemannStructure,
+    middleSpeeds,
+    g,
+    hThreshold
+  );
+
+  if (wetDryState == WetDryState::DryDry) {
+    return 0.0;
+  }
+
+  const Value sqrtG      = std::sqrt(g);
+  const Value sqrthLeft  = std::sqrt(hLeft);
+  const Value sqrthRight = std::sqrt(hRight);
+
+  const Value sqrtGhLeft  = sqrtG * sqrthLeft;
+  const Value sqrtGhRight = sqrtG * sqrthRight;
+
+  // A row of fWaves contains one component of the f-waves. A column contains one wave.
+  Value fWaves[3][3];
+  Value waveSpeeds[3];
+
+  computeWaveDecomposition(
+    hLeft,
+    huLeft,
+    uLeft,
+    vLeft,
+    bLeft,
+    hRight,
+    huRight,
+    uRight,
+    vRight,
+    bRight,
+    hMiddle,
+    sqrtGhLeft,
+    sqrtGhRight,
+    sqrthLeft,
+    sqrthRight,
+    wetDryState,
+    riemannStructure,
+    fWaves,
+    waveSpeeds,
+    middleSpeeds,
+    g,
+    hThreshold
+  );
+
+  // The waves form the left- and right-going fluctuations. A standing wave adds half to each side.
+  for (int waveNumber = 0; waveNumber < 3; waveNumber++) {
+    if (waveSpeeds[waveNumber] < Value{}) {
+      FL.h += fWaves[0][waveNumber];
+      FL.hu(normal) += fWaves[1][waveNumber];
+      FL.hu(1 - normal) += fWaves[2][waveNumber];
+    } else if (waveSpeeds[waveNumber] > Value{}) {
+      FR.h -= fWaves[0][waveNumber];
+      FR.hu(normal) -= fWaves[1][waveNumber];
+      FR.hu(1 - normal) -= fWaves[2][waveNumber];
+    } else {
+      FL.h += static_cast<Value>(0.5) * fWaves[0][waveNumber];
+      FL.hu(normal) += static_cast<Value>(0.5) * fWaves[1][waveNumber];
+      FL.hu(1 - normal) += static_cast<Value>(0.5) * fWaves[2][waveNumber];
+      FR.h -= static_cast<Value>(0.5) * fWaves[0][waveNumber];
+      FR.hu(normal) -= static_cast<Value>(0.5) * fWaves[1][waveNumber];
+      FR.hu(1 - normal) -= static_cast<Value>(0.5) * fWaves[2][waveNumber];
+    }
+  }
+
+  const auto cfl = dt > 0.0 and h(normal) > 0.0 ? static_cast<Value>(dt / h(normal)) : Value{};
+  if (std::isfinite(cfl) and cfl > Value{}) {
+    constexpr auto PerFaceFraction = static_cast<Value>(1.0 / (2.0 * DIMENSIONS));
+
+    const auto leftDrain  = std::fmax(FL.h, Value{});
+    const auto leftBudget = PerFaceFraction * std::fmax(hLeft, Value{});
+    if (leftDrain > Value{} and cfl * leftDrain > leftBudget) {
+      const auto factor = leftBudget / (cfl * leftDrain);
+      FL.h *= factor;
+      FL.hu(normal) *= factor;
+      FL.hu(1 - normal) *= factor;
+    }
+
+    const auto rightDrain  = std::fmax(-FR.h, Value{});
+    const auto rightBudget = PerFaceFraction * std::fmax(hRight, Value{});
+    if (rightDrain > Value{} and cfl * rightDrain > rightBudget) {
+      const auto factor = rightBudget / (cfl * rightDrain);
+      FR.h *= factor;
+      FR.hu(normal) *= factor;
+      FR.hu(1 - normal) *= factor;
+    }
+  }
+
+  const auto leftVelocityScale = std::sqrt(uLeft * uLeft + vLeft * vLeft) + std::sqrt(g * std::fmax(hLeft, hThreshold));
+  const auto rightVelocityScale =
+    std::sqrt(uRight * uRight + vRight * vRight) + std::sqrt(g * std::fmax(hRight, hThreshold));
+
+  auto leftIncomingMomentumNormal     = -FL.hu(normal);
+  auto leftIncomingMomentumTransverse = -FL.hu(1 - normal);
+  capDryReceiverMomentum(
+    originalHLeft <= hThreshold,
+    originalHLeft,
+    -FL.h,
+    rightVelocityScale,
+    cfl,
+    hThreshold,
+    leftIncomingMomentumNormal,
+    leftIncomingMomentumTransverse
+  );
+  FL.hu(normal)     = -leftIncomingMomentumNormal;
+  FL.hu(1 - normal) = -leftIncomingMomentumTransverse;
+
+  auto rightIncomingMomentumNormal     = FR.hu(normal);
+  auto rightIncomingMomentumTransverse = FR.hu(1 - normal);
+  capDryReceiverMomentum(
+    originalHRight <= hThreshold,
+    originalHRight,
+    FR.h,
+    leftVelocityScale,
+    cfl,
+    hThreshold,
+    rightIncomingMomentumNormal,
+    rightIncomingMomentumTransverse
+  );
+  FR.hu(normal)     = rightIncomingMomentumNormal;
+  FR.hu(1 - normal) = rightIncomingMomentumTransverse;
+
+  return std::max(std::abs(waveSpeeds[0]), std::max(std::abs(waveSpeeds[1]), std::abs(waveSpeeds[2])));
+}

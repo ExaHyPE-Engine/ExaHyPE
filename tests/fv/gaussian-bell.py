@@ -28,18 +28,13 @@ def parse_arguments():
 args = parse_arguments()
 
 initial_conditions = """
-  Q[Shortcuts::rho] = 0.02 * (1.0 + std::exp(-0.5 * tarch::la::norm2(x) * tarch::la::norm2(x) / 0.01));
+  Q.rho  = 0.02 * (1.0 + std::exp(-0.5 * tarch::la::norm2(x) * tarch::la::norm2(x) / 0.01));
+  Q.rhoU = 1.0 * Q.rho;
 
-  Q[Shortcuts::rhoU + 0] = 1.0 * Q[Shortcuts::rho];
-  Q[Shortcuts::rhoU + 1] = 1.0 * Q[Shortcuts::rho];
-#if DIMENSIONS == 3
-  Q[Shortcuts::rhoU + 2] = 1.0 * Q[Shortcuts::rho];
-#endif
-
-  const tarch::la::Vector<DIMENSIONS, double> momenta(1.0 * Q[Shortcuts::rho]);
+  const tarch::la::Vector<DIMENSIONS, double> momenta(1.0 * Q.rho);
 
   // The energy keeps the pressure constant over the domain.
-  Q[Shortcuts::rhoE] = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / Q[Shortcuts::rho];
+  Q.rhoE = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / Q.rho;
 """
 
 analytical_solution = """
@@ -54,17 +49,13 @@ analytical_solution = """
                                                 (x[2] - t) + (int)(t + .5 - x[2]) };
 #endif
 
-  solution[Shortcuts::rho] = 0.02 * (1.0 + std::exp(-0.5 * tarch::la::norm2(pos) * tarch::la::norm2(pos) / 0.01));
-  solution[Shortcuts::rhoU + 0] = 1.0 * solution[Shortcuts::rho];
-  solution[Shortcuts::rhoU + 1] = 1.0 * solution[Shortcuts::rho];
-#if DIMENSIONS == 3
-  solution[Shortcuts::rhoU + 2] = 1.0 * solution[Shortcuts::rho];
-#endif
+  solution.rho  = 0.02 * (1.0 + std::exp(-0.5 * tarch::la::norm2(pos) * tarch::la::norm2(pos) / 0.01));
+  solution.rhoU = 1.0 * solution.rho;
 
-  const tarch::la::Vector<DIMENSIONS, double> momenta(1.0 * solution[Shortcuts::rho]);
+  const tarch::la::Vector<DIMENSIONS, double> momenta(1.0 * solution.rho);
 
   // The energy keeps the pressure constant over the domain.
-  solution[Shortcuts::rhoE] = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / solution[Shortcuts::rho];
+  solution.rhoE = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / solution.rho;
 """
 
 project = exahype2.Project(

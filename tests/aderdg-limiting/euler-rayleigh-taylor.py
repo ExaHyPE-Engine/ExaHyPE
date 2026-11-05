@@ -52,34 +52,28 @@ initial_conditions = f"""
       -100.0 * relativeInterfaceDistance * relativeInterfaceDistance
     );
 
-  Q[Shortcuts::rho] = density;
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    Q[Shortcuts::j + dimension] = 0.0;
-  }}
-  Q[Shortcuts::j + Vertical] = density * verticalVelocity;
-  Q[Shortcuts::rhoE] =
+  Q.rho         = density;
+  Q.j           = 0.0;
+  Q.j(Vertical) = density * verticalVelocity;
+  Q.rhoE =
     pressure / (Gamma - 1.0)
     + 0.5 * density * verticalVelocity * verticalVelocity;
 """
 
 boundary_conditions = """
   constexpr int Vertical = 1;
-  for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
-    Qoutside[unknown] = Qinside[unknown];
-  }
+  Qoutside = Qinside;
   if (normal == Vertical) {
-    Qoutside[Shortcuts::j + Vertical] = -Qinside[Shortcuts::j + Vertical];
+    Qoutside.j(Vertical) = -Qinside.j(Vertical);
   }
 """
 
 source_term = """
   constexpr double Gravity = 1.0;
   constexpr int Vertical = 1;
-  for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
-    S[unknown] = 0.0;
-  }
-  S[Shortcuts::j + Vertical] = -Gravity * Q[Shortcuts::rho];
-  S[Shortcuts::rhoE] = -Gravity * Q[Shortcuts::j + Vertical];
+  S             = {};
+  S.j(Vertical) = -Gravity * Q.rho;
+  S.rhoE        = -Gravity * Q.j(Vertical);
 """
 
 refinement_criterion = """

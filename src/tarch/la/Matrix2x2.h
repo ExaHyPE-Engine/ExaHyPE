@@ -4,7 +4,7 @@
 
 TARGET_DECLARE
 template <typename Scalar>
-struct alignas(8) tarch::la::Matrix<2, 2, Scalar> {
+struct tarch::la::Matrix<2, 2, Scalar> {
 public:
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix();
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix(const Scalar& value);

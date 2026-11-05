@@ -40,23 +40,16 @@ initial_conditions = """
   const double distance = tarch::la::norm2(x - circleCentre);
   const double exponent = -(distance * distance) / 2.0 / peakDeviation / peakDeviation;
 
-  Q[Shortcuts::rho] = 0.1;
-  Q[Shortcuts::rhoU + 0] = 0.0;
-  Q[Shortcuts::rhoU + 1] = 0.0;
-#if DIMENSIONS == 3
-  Q[Shortcuts::rhoU + 2] = 0.0;
-#endif
-  Q[Shortcuts::rhoE] = 1.0 + std::exp(exponent);
+  Q.rho  = 0.1;
+  Q.rhoU = 0.0;
+  Q.rhoE = 1.0 + std::exp(exponent);
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
-  Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
-  Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
-#if DIMENSIONS == 3
-  Qoutside[Shortcuts::rhoU + 2] = -Qinside[Shortcuts::rhoU + 2];
-#endif
-  Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
+  Qoutside = Qinside;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    Qoutside.rhoU(axis) = -Qinside.rhoU(axis);
+  }
 """
 
 project = exahype2.Project(

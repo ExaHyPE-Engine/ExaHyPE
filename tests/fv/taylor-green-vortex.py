@@ -32,15 +32,13 @@ initial_conditions = """
   constexpr double VelocityAmplitude = 1.0;
   constexpr double ReferencePressure = 100 / GAMMA;
 
-  Q[Shortcuts::rho]      = 1.0;
-  Q[Shortcuts::rhoU + 0] = VelocityAmplitude * std::sin(x(0)) * std::cos(x(1));
-  Q[Shortcuts::rhoU + 1] = -VelocityAmplitude * std::cos(x(0)) * std::sin(x(1));
-#if DIMENSIONS == 3
-  Q[Shortcuts::rhoU + 2] = 0.0;
-#endif
+  Q.rho     = 1.0;
+  Q.rhoU    = 0.0;
+  Q.rhoU(0) = VelocityAmplitude * std::sin(x(0)) * std::cos(x(1));
+  Q.rhoU(1) = -VelocityAmplitude * std::cos(x(0)) * std::sin(x(1));
 
-  const double pressure = ReferencePressure + Q[Shortcuts::rho] * VelocityAmplitude * VelocityAmplitude / 4.0 * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)));
-  Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5 * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]);
+  const double pressure = ReferencePressure + Q.rho * VelocityAmplitude * VelocityAmplitude / 4.0 * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)));
+  Q.rhoE = pressure / (GAMMA - 1.0) + 0.5 * (Q.rhoU(0) * Q.rhoU(0) + Q.rhoU(1) * Q.rhoU(1));
 """
 
 analytical_solution = """
@@ -48,15 +46,13 @@ analytical_solution = """
   constexpr double VelocityAmplitude = 1.0;
   constexpr double ReferencePressure = 100 / GAMMA;
 
-  solution[Shortcuts::rho]      = 1.0;
-  solution[Shortcuts::rhoU + 0] = VelocityAmplitude * std::sin(x(0)) * std::cos(x(1));
-  solution[Shortcuts::rhoU + 1] = -VelocityAmplitude * std::cos(x(0)) * std::sin(x(1));
-#if DIMENSIONS == 3
-  solution[Shortcuts::rhoU + 2] = 0.0;
-#endif
+  solution.rho     = 1.0;
+  solution.rhoU    = 0.0;
+  solution.rhoU(0) = VelocityAmplitude * std::sin(x(0)) * std::cos(x(1));
+  solution.rhoU(1) = -VelocityAmplitude * std::cos(x(0)) * std::sin(x(1));
 
-  const double pressure = ReferencePressure + solution[Shortcuts::rho] * VelocityAmplitude * VelocityAmplitude / 4.0 * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)));
-  solution[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5 * (solution[Shortcuts::rhoU + 0] * solution[Shortcuts::rhoU + 0] + solution[Shortcuts::rhoU + 1] * solution[Shortcuts::rhoU + 1]);
+  const double pressure = ReferencePressure + solution.rho * VelocityAmplitude * VelocityAmplitude / 4.0 * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)));
+  solution.rhoE = pressure / (GAMMA - 1.0) + 0.5 * (solution.rhoU(0) * solution.rhoU(0) + solution.rhoU(1) * solution.rhoU(1));
 """
 
 project = exahype2.Project(

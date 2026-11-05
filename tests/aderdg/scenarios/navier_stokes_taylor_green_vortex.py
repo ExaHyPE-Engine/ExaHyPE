@@ -50,24 +50,24 @@ class NavierStokesTaylorGreenVortex(Scenario):
     const double decayFactor = std::exp(-2 * ReferenceViscosity * t);
 
     const double rho = 1;
-    solution[Shortcuts::rho] = rho;
-    solution[Shortcuts::j+0] = std::sin(x[0]) * std::cos(x[1]) * decayFactor;
-    solution[Shortcuts::j+1] = -1 * std::cos(x[0]) * std::sin(x[1]) * decayFactor;
+    solution.rho  = rho;
+    solution.j(0) = std::sin(x[0]) * std::cos(x[1]) * decayFactor;
+    solution.j(1) = -1 * std::cos(x[0]) * std::sin(x[1]) * decayFactor;
 
     const double meanPressure = 100. / AdiabaticIndex;
     const double pressure =
       meanPressure + ((rho * decayFactor * decayFactor) / 4) * (std::cos(2 * x[0]) + std::cos(2 * x[1]));
-    const auto* const j = &solution[Shortcuts::j];
+    const auto& j = solution.j;
     const auto Z = 0;
     """
             + self._equation.evaluate_energy()
             + """
-    solution[Shortcuts::E] = E;
+    solution.E = E;
 """
         )
 
     def initial_conditions(self):
         return """
     const double t = 0.;
-    auto* const solution = Q;
+    auto& solution = Q;
 """ + self.analytical_solution()

@@ -1,162 +1,108 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "tarch/Assertions.h"
 
 /**
- * Normalises each node's conformal metric and removes the traces of A_tilde and D_kij.
+ * Normalises the conformal metric of Q and removes the traces of A_tilde and D_kij.
  * Clamps the lapse and the conformal factor to positive values.
  * The conformal metric must be positive definite.
  */
-template <class Shortcuts>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD void
-applications::exahype2::exagrype::enforceCCZ4Constraints(
-  double* const NOALIAS Q,
-  const int             numberOfDofs,
-  const int             strideBetweenDofs
-) {
-  ASSERTION(Q != nullptr);
-  ASSERTION(numberOfDofs >= 0, numberOfDofs);
-  ASSERTION(strideBetweenDofs >= Shortcuts::grad_phi + 3, strideBetweenDofs);
-  for (int dof = 0; dof < numberOfDofs; dof++) {
-    double* const NOALIAS luh = Q + dof * strideBetweenDofs;
+applications::exahype2::exagrype::enforceCCZ4Constraints(State& Q) {
+  double gCov[3][3] = {
+    {Q.gamma_tilde(0, 0), Q.gamma_tilde(0, 1), Q.gamma_tilde(0, 2)},
+    {Q.gamma_tilde(1, 0), Q.gamma_tilde(1, 1), Q.gamma_tilde(1, 2)},
+    {Q.gamma_tilde(2, 0), Q.gamma_tilde(2, 1), Q.gamma_tilde(2, 2)}
+  };
+  const double det = gCov[0][0] * gCov[1][1] * gCov[2][2] - gCov[0][0] * gCov[1][2] * gCov[1][2]
+    - gCov[0][1] * gCov[0][1] * gCov[2][2] + 2 * gCov[0][1] * gCov[0][2] * gCov[1][2]
+    - gCov[0][2] * gCov[0][2] * gCov[1][1];
 
-    double g_cov[3][3] = {
-      {luh[Shortcuts::gamma_tilde + 0], luh[Shortcuts::gamma_tilde + 1], luh[Shortcuts::gamma_tilde + 2]},
-      {luh[Shortcuts::gamma_tilde + 1], luh[Shortcuts::gamma_tilde + 3], luh[Shortcuts::gamma_tilde + 4]},
-      {luh[Shortcuts::gamma_tilde + 2], luh[Shortcuts::gamma_tilde + 4], luh[Shortcuts::gamma_tilde + 5]}
-    };
-    const double det =
-      luh[Shortcuts::gamma_tilde + 0] * luh[Shortcuts::gamma_tilde + 3] * luh[Shortcuts::gamma_tilde + 5]
-      - luh[Shortcuts::gamma_tilde + 0] * luh[Shortcuts::gamma_tilde + 4] * luh[Shortcuts::gamma_tilde + 4]
-      - luh[Shortcuts::gamma_tilde + 1] * luh[Shortcuts::gamma_tilde + 1] * luh[Shortcuts::gamma_tilde + 5]
-      + 2 * luh[Shortcuts::gamma_tilde + 1] * luh[Shortcuts::gamma_tilde + 2] * luh[Shortcuts::gamma_tilde + 4]
-      - luh[Shortcuts::gamma_tilde + 2] * luh[Shortcuts::gamma_tilde + 2] * luh[Shortcuts::gamma_tilde + 3];
+  ASSERTION(std::isfinite(det) and det > 0.0, det);
+  const double phisq = 1. / std::cbrt(det);
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      gCov[i][j] *= phisq;
+    }
+  }
 
-    ASSERTION(std::isfinite(det) and det > 0.0, det);
-    const double phisq = 1. / std::cbrt(det);
+  const double det2 = gCov[0][0] * gCov[1][1] * gCov[2][2] - gCov[0][0] * gCov[1][2] * gCov[2][1]
+    - gCov[1][0] * gCov[0][1] * gCov[2][2] + gCov[1][0] * gCov[0][2] * gCov[2][1] + gCov[2][0] * gCov[0][1] * gCov[1][2]
+    - gCov[2][0] * gCov[0][2] * gCov[1][1];
+
+  ASSERTION(std::isfinite(det2) and det2 > 0.0, det2);
+  const double invdet       = 1. / det2;
+  const double gContr[3][3] = {
+    {(gCov[1][1] * gCov[2][2] - gCov[1][2] * gCov[2][1]) * invdet,
+     -(gCov[0][1] * gCov[2][2] - gCov[0][2] * gCov[2][1]) * invdet,
+     -(-gCov[0][1] * gCov[1][2] + gCov[0][2] * gCov[1][1]) * invdet},
+    {-(gCov[1][0] * gCov[2][2] - gCov[1][2] * gCov[2][0]) * invdet,
+     (gCov[0][0] * gCov[2][2] - gCov[0][2] * gCov[2][0]) * invdet,
+     -(gCov[0][0] * gCov[1][2] - gCov[0][2] * gCov[1][0]) * invdet},
+    {-(-gCov[1][0] * gCov[2][1] + gCov[1][1] * gCov[2][0]) * invdet,
+     -(gCov[0][0] * gCov[2][1] - gCov[0][1] * gCov[2][0]) * invdet,
+     (gCov[0][0] * gCov[1][1] - gCov[0][1] * gCov[1][0]) * invdet}
+  };
+
+  double aEx[3][3] = {
+    {Q.A_tilde(0, 0), Q.A_tilde(0, 1), Q.A_tilde(0, 2)},
+    {Q.A_tilde(1, 0), Q.A_tilde(1, 1), Q.A_tilde(1, 2)},
+    {Q.A_tilde(2, 0), Q.A_tilde(2, 1), Q.A_tilde(2, 2)}
+  };
+
+  double traceA = 0;
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      traceA += gContr[i][j] * aEx[i][j];
+    }
+  }
+
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      aEx[i][j] -= 1. / 3. * traceA * gCov[i][j];
+    }
+  }
+
+  for (int i = 0; i < 3; i++) {
+    for (int j = i; j < 3; j++) {
+      Q.gamma_tilde(i, j) = gCov[i][j];
+      Q.A_tilde(i, j)     = aEx[i][j];
+    }
+  }
+
+  Q.alpha = std::fmax(1e-16, Q.alpha);
+  Q.phi   = std::fmax(1e-16, Q.phi);
+
+  double dd[3][3][3];
+  for (int k = 0; k < 3; k++) {
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
-        g_cov[i][j] *= phisq;
+        dd[k][i][j] = Q.grad_gamma_tilde(k)(i, j);
       }
     }
+  }
 
-    const double det2 = g_cov[0][0] * g_cov[1][1] * g_cov[2][2] - g_cov[0][0] * g_cov[1][2] * g_cov[2][1]
-      - g_cov[1][0] * g_cov[0][1] * g_cov[2][2] + g_cov[1][0] * g_cov[0][2] * g_cov[2][1]
-      + g_cov[2][0] * g_cov[0][1] * g_cov[1][2] - g_cov[2][0] * g_cov[0][2] * g_cov[1][1];
-
-    ASSERTION(std::isfinite(det2) and det2 > 0.0, det2);
-    const double invdet        = 1. / det2;
-    const double g_contr[3][3] = {
-      {(g_cov[1][1] * g_cov[2][2] - g_cov[1][2] * g_cov[2][1]) * invdet,
-       -(g_cov[0][1] * g_cov[2][2] - g_cov[0][2] * g_cov[2][1]) * invdet,
-       -(-g_cov[0][1] * g_cov[1][2] + g_cov[0][2] * g_cov[1][1]) * invdet},
-      {-(g_cov[1][0] * g_cov[2][2] - g_cov[1][2] * g_cov[2][0]) * invdet,
-       (g_cov[0][0] * g_cov[2][2] - g_cov[0][2] * g_cov[2][0]) * invdet,
-       -(g_cov[0][0] * g_cov[1][2] - g_cov[0][2] * g_cov[1][0]) * invdet},
-      {-(-g_cov[1][0] * g_cov[2][1] + g_cov[1][1] * g_cov[2][0]) * invdet,
-       -(g_cov[0][0] * g_cov[2][1] - g_cov[0][1] * g_cov[2][0]) * invdet,
-       (g_cov[0][0] * g_cov[1][1] - g_cov[0][1] * g_cov[1][0]) * invdet}
-    };
-
-    double aEx[3][3] = {
-      {luh[Shortcuts::A_tilde + 0], luh[Shortcuts::A_tilde + 1], luh[Shortcuts::A_tilde + 2]},
-      {luh[Shortcuts::A_tilde + 1], luh[Shortcuts::A_tilde + 3], luh[Shortcuts::A_tilde + 4]},
-      {luh[Shortcuts::A_tilde + 2], luh[Shortcuts::A_tilde + 4], luh[Shortcuts::A_tilde + 5]}
-    };
-
-    double traceA = 0;
+  for (int l = 0; l < 3; l++) {
+    double traceDk = 0;
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
-        traceA += g_contr[i][j] * aEx[i][j];
+        traceDk += gContr[i][j] * dd[l][i][j];
       }
     }
 
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
-        aEx[i][j] -= 1. / 3. * traceA * g_cov[i][j];
+        dd[l][i][j] -= 1. / 3 * gCov[i][j] * traceDk;
       }
     }
+  }
 
-    luh[Shortcuts::gamma_tilde + 0] = g_cov[0][0];
-    luh[Shortcuts::gamma_tilde + 1] = g_cov[0][1];
-    luh[Shortcuts::gamma_tilde + 2] = g_cov[0][2];
-    luh[Shortcuts::gamma_tilde + 3] = g_cov[1][1];
-    luh[Shortcuts::gamma_tilde + 4] = g_cov[1][2];
-    luh[Shortcuts::gamma_tilde + 5] = g_cov[2][2];
-
-    luh[Shortcuts::A_tilde + 0] = aEx[0][0];
-    luh[Shortcuts::A_tilde + 1] = aEx[0][1];
-    luh[Shortcuts::A_tilde + 2] = aEx[0][2];
-    luh[Shortcuts::A_tilde + 3] = aEx[1][1];
-    luh[Shortcuts::A_tilde + 4] = aEx[1][2];
-    luh[Shortcuts::A_tilde + 5] = aEx[2][2];
-
-    luh[Shortcuts::alpha] = std::fmax(1e-16, luh[Shortcuts::alpha]);
-    luh[Shortcuts::phi]   = std::fmax(1e-16, luh[Shortcuts::phi]);
-
-    double dd[3][3][3] = {
-      {{luh[Shortcuts::grad_gamma_tilde + 0],
-        luh[Shortcuts::grad_gamma_tilde + 1],
-        luh[Shortcuts::grad_gamma_tilde + 2]},
-       {luh[Shortcuts::grad_gamma_tilde + 1],
-        luh[Shortcuts::grad_gamma_tilde + 3],
-        luh[Shortcuts::grad_gamma_tilde + 4]},
-       {luh[Shortcuts::grad_gamma_tilde + 2],
-        luh[Shortcuts::grad_gamma_tilde + 4],
-        luh[Shortcuts::grad_gamma_tilde + 5]}},
-      {{luh[Shortcuts::grad_gamma_tilde + 6],
-        luh[Shortcuts::grad_gamma_tilde + 7],
-        luh[Shortcuts::grad_gamma_tilde + 8]},
-       {luh[Shortcuts::grad_gamma_tilde + 7],
-        luh[Shortcuts::grad_gamma_tilde + 9],
-        luh[Shortcuts::grad_gamma_tilde + 10]},
-       {luh[Shortcuts::grad_gamma_tilde + 8],
-        luh[Shortcuts::grad_gamma_tilde + 10],
-        luh[Shortcuts::grad_gamma_tilde + 11]}},
-      {{luh[Shortcuts::grad_gamma_tilde + 12],
-        luh[Shortcuts::grad_gamma_tilde + 13],
-        luh[Shortcuts::grad_gamma_tilde + 14]},
-       {luh[Shortcuts::grad_gamma_tilde + 13],
-        luh[Shortcuts::grad_gamma_tilde + 15],
-        luh[Shortcuts::grad_gamma_tilde + 16]},
-       {luh[Shortcuts::grad_gamma_tilde + 14],
-        luh[Shortcuts::grad_gamma_tilde + 16],
-        luh[Shortcuts::grad_gamma_tilde + 17]}}
-    };
-
-    for (int l = 0; l < 3; l++) {
-      double traceDk = 0;
-      for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-          traceDk += g_contr[i][j] * dd[l][i][j];
-        }
-      }
-
-      for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-          dd[l][i][j] -= 1. / 3 * g_cov[i][j] * traceDk;
-        }
+  for (int k = 0; k < 3; k++) {
+    for (int i = 0; i < 3; i++) {
+      for (int j = i; j < 3; j++) {
+        Q.grad_gamma_tilde(k)(i, j) = dd[k][i][j];
       }
     }
-
-    luh[Shortcuts::grad_gamma_tilde + 0] = dd[0][0][0];
-    luh[Shortcuts::grad_gamma_tilde + 1] = dd[0][0][1];
-    luh[Shortcuts::grad_gamma_tilde + 2] = dd[0][0][2];
-    luh[Shortcuts::grad_gamma_tilde + 3] = dd[0][1][1];
-    luh[Shortcuts::grad_gamma_tilde + 4] = dd[0][1][2];
-    luh[Shortcuts::grad_gamma_tilde + 5] = dd[0][2][2];
-
-    luh[Shortcuts::grad_gamma_tilde + 6]  = dd[1][0][0];
-    luh[Shortcuts::grad_gamma_tilde + 7]  = dd[1][0][1];
-    luh[Shortcuts::grad_gamma_tilde + 8]  = dd[1][0][2];
-    luh[Shortcuts::grad_gamma_tilde + 9]  = dd[1][1][1];
-    luh[Shortcuts::grad_gamma_tilde + 10] = dd[1][1][2];
-    luh[Shortcuts::grad_gamma_tilde + 11] = dd[1][2][2];
-
-    luh[Shortcuts::grad_gamma_tilde + 12] = dd[2][0][0];
-    luh[Shortcuts::grad_gamma_tilde + 13] = dd[2][0][1];
-    luh[Shortcuts::grad_gamma_tilde + 14] = dd[2][0][2];
-    luh[Shortcuts::grad_gamma_tilde + 15] = dd[2][1][1];
-    luh[Shortcuts::grad_gamma_tilde + 16] = dd[2][1][2];
-    luh[Shortcuts::grad_gamma_tilde + 17] = dd[2][2][2];
   }
 }

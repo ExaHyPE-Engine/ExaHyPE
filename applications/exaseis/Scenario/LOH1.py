@@ -39,41 +39,29 @@ class LOH1(Scenario):
     def initial_conditions(self):
         return """
       if (x[1] <= (1.0 + 1.0e-6) and cellCentre[1] < 1.0) {
-        Q[Shortcuts::rho] = 2.6;
-        Q[Shortcuts::cp ] = 4.0;
-        Q[Shortcuts::cs ] = 2.0;
+        Q.rho = 2.6;
+        Q.cp  = 4.0;
+        Q.cs  = 2.0;
       } else if (x[1] >= (1.0 - 1.0e-6) and cellCentre[1] > 1.0) {
-        Q[Shortcuts::rho] = 2.7;
-        Q[Shortcuts::cp ] = 6.0;
-        Q[Shortcuts::cs ] = 3.464;
+        Q.rho = 2.7;
+        Q.cp  = 6.0;
+        Q.cs  = 3.464;
       }
 """
 
     def point_source(self):
         return """
-  std::fill_n(forceVector, 9, 0.);
-
-  const auto jacobian = Q[Shortcuts::jacobian];
-
   ASSERTION(n == 0, n);
+  constexpr double t0                 = 0.1;
+  constexpr double M0                 = 1000.0;
+  const double     sourceTimeFunction = M0 * t / (t0 * t0) * std::exp(-t / t0);
 
-  constexpr double t0 = 0.1;
-  constexpr double M0 = 1000.0;
-
-  const double sourceTimeFunction = M0*t/(t0*t0)*std::exp(-t/t0);
-
-  forceVector[Shortcuts::sigma + 4] = sourceTimeFunction;
-
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    forceVector[i] = forceVector[i] / jacobian;
-  }
+  forceVector             = {};
+  forceVector.sigma(0, 2) = sourceTimeFunction;
+  forceVector.sigma(0, 2) /= Q.jacobian;
 """
 
     def init_point_source(self):
         return """
-  const tarch::la::Vector<DIMENSIONS, double> sourceLocation = _curvi->invertProjection({0., 2., 0.});
-
-  location[0][0] = sourceLocation[0];
-  location[0][1] = sourceLocation[1];
-  location[0][2] = sourceLocation[2];
+  location[0] = _curvi->invertProjection({0., 2., 0.});
 """

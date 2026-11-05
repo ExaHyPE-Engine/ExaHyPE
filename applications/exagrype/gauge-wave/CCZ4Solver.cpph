@@ -1,10 +1,10 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
 #include "applications/exagrype/EnforceCCZ4Constraints.h"
 #include "applications/exagrype/MaxEigenvalue.h"
 #include "applications/exagrype/NonconservativeProduct.h"
 #include "applications/exagrype/SourceTerm.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Scalar.h"
 
 TARGET_DECLARE
@@ -14,14 +14,13 @@ TARGET_DECLARE
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exagrype::CCZ4Solver::analyticalSolution(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const double                                 t,
-  [[maybe_unused]] const double                dt,
-  [[maybe_unused]] const double* const         Q,
-  double* const                                solution,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const Coordinates&                        x,
+  const double                              t,
+  [[maybe_unused]] const double             dt,
+  [[maybe_unused]] const State&             Q,
+  Solution&                                 solution,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  ASSERTION(solution != nullptr);
   ASSERTION(std::isfinite(t) and std::isfinite(x[0]), t, x);
 
   constexpr double NumberOfPeaks = 2.0;
@@ -37,36 +36,32 @@ applications::exahype2::exagrype::CCZ4Solver::analyticalSolution(
   const double curvatureX = 0.5 * dxH / lapse;
   const double traceK     = curvatureX / h;
 
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    solution[unknown] = 0.0;
-  }
-  solution[Shortcuts::gamma_tilde + 0]      = phiSquared * h;
-  solution[Shortcuts::gamma_tilde + 3]      = phiSquared;
-  solution[Shortcuts::gamma_tilde + 5]      = phiSquared;
-  solution[Shortcuts::A_tilde + 0]          = phiSquared * (curvatureX - 1.0 / 3.0 * traceK * h);
-  solution[Shortcuts::A_tilde + 3]          = phiSquared * (-1.0 / 3.0 * traceK);
-  solution[Shortcuts::A_tilde + 5]          = phiSquared * (-1.0 / 3.0 * traceK);
-  solution[Shortcuts::gamma_hat + 0]        = 2.0 * dxH / (3.0 * phiSquared * h * h);
-  solution[Shortcuts::alpha]                = lapse;
-  solution[Shortcuts::grad_alpha + 0]       = 0.5 * dxH / lapse;
-  solution[Shortcuts::grad_gamma_tilde + 0] = phiSquared * dxH / 3.0;
-  solution[Shortcuts::grad_gamma_tilde + 3] = phi * dxPhi;
-  solution[Shortcuts::grad_gamma_tilde + 5] = phi * dxPhi;
-  solution[Shortcuts::K]                    = traceK;
-  solution[Shortcuts::phi]                  = phi;
-  solution[Shortcuts::grad_phi + 0]         = dxPhi;
+  solution                           = {};
+  solution.gamma_tilde(0, 0)         = phiSquared * h;
+  solution.gamma_tilde(1, 1)         = phiSquared;
+  solution.gamma_tilde(2, 2)         = phiSquared;
+  solution.A_tilde(0, 0)             = phiSquared * (curvatureX - 1.0 / 3.0 * traceK * h);
+  solution.A_tilde(1, 1)             = phiSquared * (-1.0 / 3.0 * traceK);
+  solution.A_tilde(2, 2)             = phiSquared * (-1.0 / 3.0 * traceK);
+  solution.gamma_hat(0)              = 2.0 * dxH / (3.0 * phiSquared * h * h);
+  solution.alpha                     = lapse;
+  solution.grad_alpha(0)             = 0.5 * dxH / lapse;
+  solution.grad_gamma_tilde(0)(0, 0) = phiSquared * dxH / 3.0;
+  solution.grad_gamma_tilde(0)(1, 1) = phi * dxPhi;
+  solution.grad_gamma_tilde(0)(2, 2) = phi * dxPhi;
+  solution.K                         = traceK;
+  solution.phi                       = phi;
+  solution.grad_phi(0)               = dxPhi;
 
-  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-    ASSERTION(std::isfinite(solution[unknown]), x, t, unknown);
-  }
+  ASSERTION(allOf(solution, [](const double value) { return std::isfinite(value); }), x, t);
 }
 
 INLINE_METHOD void
 applications::exahype2::exagrype::CCZ4Solver::initialCondition(
-  double* const NOALIAS                                         Q,
-  const tarch::la::Vector<DIMENSIONS, double>&                  x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  const RuntimeParameters&                                      parameters
+  State&                              Q,
+  const Coordinates&                  x,
+  [[maybe_unused]] const Coordinates& h,
+  const RuntimeParameters&            parameters
 ) {
   static_assert(NumberOfAuxiliaryVariables == 0, "The gauge wave expects zero auxiliary variables.");
   analyticalSolution(x, 0.0, 0.0, Q, Q, parameters);
@@ -74,54 +69,54 @@ applications::exahype2::exagrype::CCZ4Solver::initialCondition(
 
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exagrype::CCZ4Solver::refinementCriterion(
-  [[maybe_unused]] const double* const NOALIAS                  Q,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  [[maybe_unused]] const CellStates*        Q,
+  [[maybe_unused]] const Coordinates&       x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const double             t,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   return ::exahype2::RefinementCommand::Keep;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exagrype::CCZ4Solver::maxEigenvalue(
-  const double* const NOALIAS                                   Q,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const double                                 dt,
-  const int                                                     normal,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  const State&                              Q,
+  [[maybe_unused]] const Coordinates&       x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const double             t,
+  [[maybe_unused]] const double             dt,
+  const int                                 normal,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  return applications::exahype2::exagrype::maxEigenvalue<Shortcuts>(Q, normal);
+  return applications::exahype2::exagrype::maxEigenvalue(Q, normal);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exagrype::CCZ4Solver::nonconservativeProduct(
-  const double* const NOALIAS                                   Q,
-  const double* const NOALIAS                                   deltaQ,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const double                                 dt,
-  const int                                                     normal,
-  double* const NOALIAS                                         BTimesDeltaQ,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  const State&                              Q,
+  const Difference&                         deltaQ,
+  [[maybe_unused]] const Coordinates&       x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const double             t,
+  [[maybe_unused]] const double             dt,
+  const int                                 normal,
+  NonconservativeProduct&                   BTimesDeltaQ,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  applications::exahype2::exagrype::nonconservativeProduct<Shortcuts>(Q, deltaQ, normal, BTimesDeltaQ);
+  applications::exahype2::exagrype::nonconservativeProduct(Q, deltaQ, normal, BTimesDeltaQ);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exagrype::CCZ4Solver::sourceTerm(
-  const double* const NOALIAS                                   Q,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const double                                 dt,
-  double* const NOALIAS                                         S,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  const State&                              Q,
+  [[maybe_unused]] const Coordinates&       x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const double             t,
+  [[maybe_unused]] const double             dt,
+  Source&                                   S,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  applications::exahype2::exagrype::sourceTerm<Shortcuts>(Q, S);
+  applications::exahype2::exagrype::sourceTerm(Q, S);
 }
 
 /**
@@ -129,13 +124,15 @@ applications::exahype2::exagrype::CCZ4Solver::sourceTerm(
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exagrype::CCZ4Solver::postprocessUpdatedPatch(
-  double* const NOALIAS                                         Q,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const double                                 dt,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  CellStates&                               Q,
+  [[maybe_unused]] const Coordinates&       x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const double             t,
+  [[maybe_unused]] const double             dt,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  applications::exahype2::exagrype::enforceCCZ4Constraints<Shortcuts>(Q, PointsPerCell, NumberOfData);
+  for (State& point : Q) {
+    applications::exahype2::exagrype::enforceCCZ4Constraints(point);
+  }
 }
 TARGET_DECLARE_END

@@ -12,7 +12,7 @@ from equations import NavierStokes
 class NavierStokesBubbles(Scenario):
     """
     Cloud formations of the compressible Navier-Stokes equations after
-    doi.org/10.1007/978-3-030-43229-4_27. The note on mapQuantities() explains the visualisation.
+    doi.org/10.1007/978-3-030-43229-4_27.
     """
 
     _dimensions = 2
@@ -81,7 +81,7 @@ class NavierStokesBubbles(Scenario):
 
   const auto potentialTemperature = BackgroundPotentialTemperature + perturbation;
 
-  std::fill_n(Q, NumberOfUnknowns+NumberOfAuxiliaryVariables, 0);
+  Q = {};
 
   // The state with the perturbation of the potential temperature. """
             + (self.evaluate_hydrostatic_pressure())
@@ -92,24 +92,24 @@ class NavierStokesBubbles(Scenario):
 
   const auto rho = pressure / (GasConstant * temperature);
   const auto height = x[DIMENSIONS-1] - DomainOffset[DIMENSIONS-1];
-  Q[Shortcuts::rho] = rho;
-  Q[Shortcuts::height] = height;
+  Q.rho    = rho;
+  Q.height = height;
 
-  const auto* const j = &Q[Shortcuts::j];
+  const auto& j = Q.j;
   const auto Z = perturbation;
   """
             + self._equation.evaluate_energy()
             + """
 
-  Q[Shortcuts::E] = E;
+  Q.E = E;
 
   // The background state without the perturbation of the potential temperature.
   const auto backgroundTemperature = BackgroundPotentialTemperature *
     std::pow((pressure / ReferencePressure), GasConstant / IsobaricHeatCapacity
   );
   const auto backgroundRho = pressure / (GasConstant * backgroundTemperature);
-  Q[Shortcuts::backgroundstate+0] = backgroundRho;
-  Q[Shortcuts::backgroundstate+1] = pressure;
+  Q.backgroundstate(0) = backgroundRho;
+  Q.backgroundstate(1) = pressure;
 """
         )
 
@@ -128,12 +128,10 @@ class NavierStokesBubbles(Scenario):
   constexpr auto Gravity = 9.81;
   constexpr auto HeatRelease = 0;
 
-  for (int value = 0; value < NumberOfUnknowns + NumberOfAuxiliaryVariables; value++) {
-    Qoutside[value] = Qinside[value];
-  }
+  Qoutside = Qinside;
 
   // The mirrored normal momentum gives a zero normal velocity at the wall.
-  Qoutside[Shortcuts::j+normal] = -Qinside[Shortcuts::j+normal];
+  Qoutside.j(normal) = -Qinside.j(normal);
 
   // The hydrostatic background state. """
             + (self.evaluate_hydrostatic_pressure())
@@ -142,63 +140,18 @@ class NavierStokesBubbles(Scenario):
     std::pow((pressure / ReferencePressure), GasConstant / IsobaricHeatCapacity);
 
   const auto rho = pressure / (GasConstant * temperature);
-  const auto height = Qoutside[Shortcuts::height];
-  const auto* const j = &Qoutside[Shortcuts::j];
+  const auto height = Qoutside.height;
+  const auto& j = Qoutside.j;
 
-  Qoutside[Shortcuts::rho] = rho;
-  Qoutside[Shortcuts::backgroundstate+0] = Qoutside[Shortcuts::rho];
-  Qoutside[Shortcuts::backgroundstate+1] = pressure;
+  Qoutside.rho                = rho;
+  Qoutside.backgroundstate(0) = Qoutside.rho;
+  Qoutside.backgroundstate(1) = pressure;
 
   const auto Z = 0;
   """
             + self._equation.evaluate_energy()
             + """
-  Qoutside[Shortcuts::E] = E;
-"""
-        )
-
-    # Returns the C++ code of a mapping from the conserved variables to the density, the velocities,
-    # the pressure and the potential temperature. The potential temperature shows the bubbles, whose
-    # variation in the conserved variables is small against the reference pressure.
-    def mapQuantities(self):
-        return (
-            """
-void tests::exahype2::aderdg::ADERDGSolver::mapQuantities(
-  [[maybe_unused]] const double* const NOALIAS  Q, // Q[4+3]
-  [[maybe_unused]] double* const NOALIAS  outputQuantities // Q[4+3]
-){
-  constexpr auto AdiabaticIndex = 1.4;
-  constexpr auto GasConstant = 287.058;
-  constexpr auto IsobaricHeatCapacity = AdiabaticIndex / (AdiabaticIndex - 1) * GasConstant;
-  constexpr auto ReferencePressure = """
-            + str(self._reference_pressure)
-            + """;
-  constexpr auto Gravity = 9.81;
-  constexpr auto HeatRelease = 0;
-
-  const auto* const j = &Q[Shortcuts::j];
-  const auto E = Q[Shortcuts::E];
-  const auto rho = Q[Shortcuts::rho];
-  const auto height = Q[Shortcuts::height];
-
-  const auto Z = 0;
-  """
-            + self._equation.evaluate_pressure()
-            + """
-
-  outputQuantities[Shortcuts::rho] = rho;
-  outputQuantities[Shortcuts::j+0] = Q[Shortcuts::j+0]/rho;
-  outputQuantities[Shortcuts::j+1] = Q[Shortcuts::j+1]/rho;
-#if DIMENSIONS == 3
-  outputQuantities[Shortcuts::j+2] = Q[Shortcuts::j+2]/rho;
-#endif
-  outputQuantities[Shortcuts::E] = pressure;
-
-  const auto temperature = pressure/(GasConstant * rho);
-  const auto potentialTemperature = temperature / std::pow((pressure / ReferencePressure), (GasConstant / IsobaricHeatCapacity));
-
-  outputQuantities[Shortcuts::height] = potentialTemperature;
-}
+  Qoutside.E = E;
 """
         )
 

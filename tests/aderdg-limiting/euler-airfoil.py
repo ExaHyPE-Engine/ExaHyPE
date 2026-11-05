@@ -34,12 +34,10 @@ initial_conditions = """
   constexpr double Thickness = 0.12;
   constexpr int NumberOfSamples = 50;
 
-  Q[Shortcuts::rho] = 1.0;
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
-    Q[Shortcuts::j + dimension] = 0.0;
-  }
-  Q[Shortcuts::j] = 0.1;
-  Q[Shortcuts::rhoE] = 1.0;
+  Q.rho  = 1.0;
+  Q.j    = 0.0;
+  Q.j(0) = 0.1;
+  Q.rhoE = 1.0;
 
   const double lowerCellBoundary = x[1] - 0.5 * h[1];
   const double upperCellBoundary = x[1] + 0.5 * h[1];
@@ -69,24 +67,19 @@ initial_conditions = """
     );
     solidFraction += overlap / h[1] / NumberOfSamples;
   }
-  Q[Shortcuts::volumeFraction] =
-    std::max(0.0, std::min(1.0, 1.0 - solidFraction));
+  Q.volumeFraction = std::max(0.0, std::min(1.0, 1.0 - solidFraction));
 """
 
 boundary_conditions = """
   if (normal == 0 and tarch::la::equals(x[0], DomainOffset[0])) {
-    Qoutside[Shortcuts::rho] = 1.0;
-    for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
-      Qoutside[Shortcuts::j + dimension] = 0.0;
-    }
-    Qoutside[Shortcuts::j] = 0.1;
-    Qoutside[Shortcuts::rhoE] = 1.0;
+    Qoutside.rho  = 1.0;
+    Qoutside.j    = 0.0;
+    Qoutside.j(0) = 0.1;
+    Qoutside.rhoE = 1.0;
   } else {
-    for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
-      Qoutside[unknown] = Qinside[unknown];
-    }
+    Qoutside = Qinside;
   }
-  Qoutside[Shortcuts::volumeFraction] = 1.0;
+  Qoutside.volumeFraction = 1.0;
 """
 
 refinement_criterion = """
@@ -114,37 +107,32 @@ limiter_riemann_solver = """
 
   flux(QL, x, h, t, dt, normal, FL, parameters);
   flux(QR, x, h, t, dt, normal, FR, parameters);
-  const auto normalMomentumFluxLeft = FL[Shortcuts::j + normal];
-  const auto normalMomentumFluxRight = FR[Shortcuts::j + normal];
+  const auto normalMomentumFluxLeft = FL.j(normal);
+  const auto normalMomentumFluxRight = FR.j(normal);
 
-  const double volumeFractionLeft  = QL[Shortcuts::volumeFraction];
-  const double volumeFractionRight = QR[Shortcuts::volumeFraction];
+  const double volumeFractionLeft  = QL.volumeFraction;
+  const double volumeFractionRight = QR.volumeFraction;
   // The opposing cell's fluid fraction transmits the Rusanov flux. Its solid
   // remainder acts as a wall and reflects the interior normal-momentum flux.
   // Both products of a wall flux round on their own. The fluxes of mirrored
   // faces then add the same rounded products with and without fused multiply-adds.
-  for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
-    const double rusanovFlux =
-      0.5
-      * (
-        FL[unknown] + FR[unknown]
-        + maximumWaveSpeed * (QL[unknown] - QR[unknown])
-      );
-    FL[unknown] = tarch::la::productRoundedOnce(volumeFractionRight, rusanovFlux);
-    FR[unknown] = tarch::la::productRoundedOnce(volumeFractionLeft, rusanovFlux);
-  }
-  FL[Shortcuts::j + normal] += tarch::la::productRoundedOnce(
-    1.0 - volumeFractionRight, normalMomentumFluxLeft
-  );
-  FR[Shortcuts::j + normal] += tarch::la::productRoundedOnce(
-    1.0 - volumeFractionLeft, normalMomentumFluxRight
-  );
+  const Flux sumOfFluxes = FL + FR;
+  const Flux jumpOfState = QL - QR;
+  const auto wallFlux    = [&](const double volumeFraction) {
+    return transform(sumOfFluxes, jumpOfState, [&](const double sum, const double jump) {
+      return tarch::la::productRoundedOnce(volumeFraction, 0.5 * (sum + maximumWaveSpeed * jump));
+    });
+  };
+  FL = wallFlux(volumeFractionRight);
+  FR = wallFlux(volumeFractionLeft);
+  FL.j(normal) += tarch::la::productRoundedOnce(1.0 - volumeFractionRight, normalMomentumFluxLeft);
+  FR.j(normal) += tarch::la::productRoundedOnce(1.0 - volumeFractionLeft, normalMomentumFluxRight);
   return maximumWaveSpeed;
 """
 
 static_geometry_admissibility = euler.physical_admissibility(
     gamma,
-    "numberOfStates == 1 or values[Shortcuts::volumeFraction] >= 1.0 - 1.0e-12",
+    "Q.size() == 1 or state.volumeFraction >= 1.0 - 1.0e-12",
 )
 limiter_scheme = euler.subcell_scheme(arguments.limiter_solver)
 
@@ -185,9 +173,7 @@ else:
     if arguments.limiter_mode == "all-accepted":
         admissibility_criterion = "return true;"
     elif arguments.limiter_mode == "all-limited":
-        admissibility_criterion = euler.physical_admissibility(
-            gamma, "numberOfStates == 1"
-        )
+        admissibility_criterion = euler.physical_admissibility(gamma, "Q.size() == 1")
     else:
         admissibility_criterion = static_geometry_admissibility
     solver.set_pde_terms(

@@ -25,38 +25,29 @@ class EulerGaussianBell(Scenario):
 
     def initial_conditions(self):
         return """
-  Q[Shortcuts::rho] = 0.02*(1+std::exp(-0.5*tarch::la::norm2(x)*tarch::la::norm2(x)/0.01));
-
-  Q[Shortcuts::v+0] = Q[Shortcuts::rho];
-  Q[Shortcuts::v+1] = Q[Shortcuts::rho];
+  Q.rho = 0.02*(1+std::exp(-0.5*tarch::la::norm2(x)*tarch::la::norm2(x)/0.01));
+  Q.v   = Q.rho;
 
   constexpr auto gamma = 1.4;
   constexpr auto p = 1;
 
-  //Should lead to a constant p over the domain given the initial conditions
-  Q[Shortcuts::E] = p/(gamma-1) + 0.5*(Q[Shortcuts::v+0]*Q[Shortcuts::v+0]+Q[Shortcuts::v+1]*Q[Shortcuts::v+1]) / Q[Shortcuts::rho];
+  // The energy keeps the pressure constant over the domain.
+  Q.E = p/(gamma-1) + 0.5*(Q.v(0)*Q.v(0)+Q.v(1)*Q.v(1)) / Q.rho;
 """
 
     def analytical_solution(self):
         return """
-  /*
-    The initial condition is transported without deformation in a periodic
-    domain [-.5, +.5], i.e. the value at a given point is the value at the
-    position x - v*t but accounting for periodicity.
-    Therefore we find the point x - v*t, and then shift this by instances
-    of 1.0 until we find the point within the domain.
-  */
+  // The initial condition moves unchanged with velocity 1 along every axis. The solution at x
+  // is the initial value at x - t, wrapped into the periodic domain.
   tarch::la::Vector<DIMENSIONS,double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
                                                (x[1] - t) + (int)(t + .5 - x[1]) };
 
-  solution[Shortcuts::rho] = 0.02*(1+std::exp(-0.5*tarch::la::norm2(pos)*tarch::la::norm2(pos)/0.01));
-
-  solution[Shortcuts::v+0] = solution[Shortcuts::rho];
-  solution[Shortcuts::v+1] = solution[Shortcuts::rho];
+  solution.rho = 0.02*(1+std::exp(-0.5*tarch::la::norm2(pos)*tarch::la::norm2(pos)/0.01));
+  solution.v   = solution.rho;
 
   constexpr auto gamma = 1.4;
   constexpr auto p = 1;
 
-  //Should lead to a constant p over the domain given the initial conditions
-  solution[Shortcuts::E] = p/(gamma-1) + 0.5*(solution[Shortcuts::v+0]*solution[Shortcuts::v+0]+solution[Shortcuts::v+1]*solution[Shortcuts::v+1]) / solution[Shortcuts::rho];
+  // The energy keeps the pressure constant over the domain.
+  solution.E = p/(gamma-1) + 0.5*(solution.v(0)*solution.v(0)+solution.v(1)*solution.v(1)) / solution.rho;
 """

@@ -29,11 +29,9 @@ initial_conditions = f"""
     x[0] < ShockPosition and x[1] < ShockPosition;
   const double pressure = lowState ? 0.1 : 1.0;
 
-  Q[Shortcuts::rho] = lowState ? 0.125 : 1.0;
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    Q[Shortcuts::j + dimension] = 0.0;
-  }}
-  Q[Shortcuts::rhoE] = pressure / (Gamma - 1.0);
+  Q.rho  = lowState ? 0.125 : 1.0;
+  Q.j    = 0.0;
+  Q.rhoE = pressure / (Gamma - 1.0);
 """
 
 boundary_conditions = f"""
@@ -43,11 +41,9 @@ boundary_conditions = f"""
     x[0] < ShockPosition and x[1] < ShockPosition;
   const double pressure = lowState ? 0.1 : 1.0;
 
-  Qoutside[Shortcuts::rho] = lowState ? 0.125 : 1.0;
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    Qoutside[Shortcuts::j + dimension] = 0.0;
-  }}
-  Qoutside[Shortcuts::rhoE] = pressure / (Gamma - 1.0);
+  Qoutside.rho  = lowState ? 0.125 : 1.0;
+  Qoutside.j    = 0.0;
+  Qoutside.rhoE = pressure / (Gamma - 1.0);
 """
 
 refinement_criterion = """

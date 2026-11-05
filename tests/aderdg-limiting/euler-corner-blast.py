@@ -29,12 +29,9 @@ initial_conditions = f"""
   constexpr double LowPressure = 1.0;
   const bool highState = x[0] < CornerExtent and x[1] < CornerExtent;
 
-  Q[Shortcuts::rho] = highState ? 1.0 : 0.5;
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    Q[Shortcuts::j + dimension] = 0.0;
-  }}
-  Q[Shortcuts::rhoE] =
-    (highState ? HighPressure : LowPressure) / (Gamma - 1.0);
+  Q.rho  = highState ? 1.0 : 0.5;
+  Q.j    = 0.0;
+  Q.rhoE = (highState ? HighPressure : LowPressure) / (Gamma - 1.0);
 """
 
 boundary_conditions = f"""
@@ -42,18 +39,12 @@ boundary_conditions = f"""
   constexpr double LowPressure = 1.0;
   const bool isReflectiveWall = (normal == 0 and x[0] < DomainOffset[0] + h[0]) or (normal == 1 and x[1] < DomainOffset[1] + h[1]);
   if (isReflectiveWall) {{
-    Qoutside[Shortcuts::rho] = Qinside[Shortcuts::rho];
-    for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-      Qoutside[Shortcuts::j + dimension] = Qinside[Shortcuts::j + dimension];
-    }}
-    Qoutside[Shortcuts::j + normal] = -Qinside[Shortcuts::j + normal];
-    Qoutside[Shortcuts::rhoE] = Qinside[Shortcuts::rhoE];
+    Qoutside           = Qinside;
+    Qoutside.j(normal) = -Qinside.j(normal);
   }} else {{
-    Qoutside[Shortcuts::rho] = 0.5;
-    for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-      Qoutside[Shortcuts::j + dimension] = 0.0;
-    }}
-    Qoutside[Shortcuts::rhoE] = LowPressure / (Gamma - 1.0);
+    Qoutside.rho  = 0.5;
+    Qoutside.j    = 0.0;
+    Qoutside.rhoE = LowPressure / (Gamma - 1.0);
   }}
 """
 

@@ -37,16 +37,14 @@ class SWERadialDamBreak(Scenario):
     0.0
   };
 
-  Q[Shortcuts::h]   = 2; // h
-  Q[Shortcuts::hv+0] = 0; // v_x
-  Q[Shortcuts::hv+1] = 0; // v_y
-  Q[Shortcuts::b]   = (tarch::la::norm2(x - damBreakCenter) < 0.2 ? 0.5 : 0); // b
+  Q.h  = 2;
+  Q.hv = 0.0;
+  Q.b  = (tarch::la::norm2(x - damBreakCenter) < 0.2 ? 0.5 : 0);
 """
 
     def boundary_conditions(self):
         return """
-  Qoutside[Shortcuts::h]    = 2; // h
-  Qoutside[Shortcuts::hv+0]  = 0; // v_x
-  Qoutside[Shortcuts::hv+1]  = 0; // v_y
-  Qoutside[Shortcuts::b]    = 0; // b
+  Qoutside.h  = 2;
+  Qoutside.hv = 0.0;
+  Qoutside.b  = 0;
 """

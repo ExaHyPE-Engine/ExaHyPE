@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/accelerator/CompileTarget.h"
+#include "tarch/la/Vector.h"
 
 namespace applications::exahype2::exaseis {
   template <typename Value>
@@ -11,26 +12,22 @@ namespace applications::exahype2::exaseis {
   template <typename Value>
   struct InterfaceValues;
 
-  template <typename Shortcuts>
-  concept HasMetricDerivatives = requires { Shortcuts::metricDerivative; };
+  template <typename State>
+  concept HasMetricDerivatives = requires(const State& state) { state.metricDerivative; };
 
-  template <typename Shortcuts>
-  concept HasPerfectlyMatchedLayer = requires {
-    Shortcuts::pml;
-    Shortcuts::pmlDamping;
-  };
+  template <typename Unknowns>
+  concept HasPerfectlyMatchedLayer = requires(const Unknowns& unknowns) { unknowns.pml; };
 
-  template <typename Shortcuts>
-  concept HasDisplacement = requires { Shortcuts::u; };
+  template <typename Unknowns>
+  concept HasDisplacement = requires(const Unknowns& unknowns) { unknowns.u; };
 
-  template <typename Shortcuts, typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD FaceNodeSide<Value> getFaceNodeSide(const Value* Q, int normal);
+  template <typename Value, typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD FaceNodeSide<Value> getFaceNodeSide(const State& Q, int normal);
 
   template <typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD void rotateIntoLocalBasis(
-    const FaceNodeSide<Value>& side,
-    const Value*               physicalVector,
-    Value*                     localVector
+  INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Value> rotateIntoLocalBasis(
+    const FaceNodeSide<Value>&         side,
+    const tarch::la::Vector<3, Value>& physicalVector
   );
 
   template <typename Value>
@@ -48,79 +45,66 @@ namespace applications::exahype2::exaseis {
     Value                      reflection
   );
 
-  template <typename Shortcuts, typename Value>
+  template <typename Value, typename Flux>
   INLINE_METHOD GPU_CALLABLE_METHOD void writeFluxFluctuation(
     const FaceNodeSide<Value>&    side,
     const InterfaceValues<Value>& interface,
     bool                          isLeftSide,
-    Value*                        flux
+    Flux&                         flux
   );
 
-  template <
-    typename Shortcuts,
-    typename Value,
-    int NodesPerAxis,
-    int NumberOfUnknowns,
-    int NumberOfData,
-    typename SolveInterface
-  >
+  template <typename Value, typename FaceStates, typename FaceFluxes, typename SolveInterface>
   INLINE_METHOD GPU_CALLABLE_METHOD double solveRiemannProblemOnFaceNodes(
-    const Value*          QL,
-    const Value*          QR,
+    const FaceStates&     QL,
+    const FaceStates&     QR,
     int                   normal,
     const SolveInterface& solveInterface,
-    Value*                FL,
-    Value*                FR
+    FaceFluxes&           FL,
+    FaceFluxes&           FR
   );
 
-  template <
-    typename Shortcuts,
-    typename Value,
-    int NodesPerAxis,
-    int NumberOfUnknowns,
-    int NumberOfData,
-    int FreeSurfaceFace
-  >
+  template <typename Value, int FreeSurfaceFace, typename FaceStates, typename FaceFluxes>
   INLINE_METHOD GPU_CALLABLE_METHOD double solveElasticRiemannProblem(
-    const Value* QL,
-    const Value* QR,
-    int          normal,
-    bool         isBoundaryFace,
-    int          faceIndex,
-    Value*       FL,
-    Value*       FR
+    const FaceStates& QL,
+    const FaceStates& QR,
+    int               normal,
+    bool              isBoundaryFace,
+    int               faceIndex,
+    FaceFluxes&       FL,
+    FaceFluxes&       FR
   );
 } // namespace applications::exahype2::exaseis
 
 /**
- * The material and the state on one side of a face node. The velocity and the traction are in the
- * local basis of normal, firstTangent and secondTangent.
+ * FaceNodeSide stores the material and the state on one side of a face node. The velocity and the
+ * traction lie in the local basis of normal, firstTangent and secondTangent.
  */
 template <typename Value>
 struct applications::exahype2::exaseis::FaceNodeSide final {
-  Value density{};
-  Value pressureWaveSpeed{};
-  Value shearWaveSpeed{};
-  Value shearModulus{};
-  Value firstLameParameter{};
-  Value pressureImpedance{};
-  Value shearImpedance{};
-  Value metricNorm{};
-  Value normal[3]{};
-  Value firstTangent[3]{};
-  Value secondTangent[3]{};
-  Value velocity[3]{};
-  Value traction[3]{};
-  Value pmlDamping[3]{};
+  Value                       density{};
+  Value                       pressureWaveSpeed{};
+  Value                       shearWaveSpeed{};
+  Value                       shearModulus{};
+  Value                       firstLameParameter{};
+  Value                       pressureImpedance{};
+  Value                       shearImpedance{};
+  Value                       metricNorm{};
+  tarch::la::Vector<3, Value> normal{};
+  tarch::la::Vector<3, Value> firstTangent{};
+  tarch::la::Vector<3, Value> secondTangent{};
+  tarch::la::Vector<3, Value> velocity{};
+  tarch::la::Vector<3, Value> traction{};
+  tarch::la::Vector<3, Value> pmlDamping{};
 };
 
 /**
- * The velocity and the traction the interface imposes on one side, in the local basis.
+ * InterfaceValues stores the velocity and the traction that the interface imposes on one side in the
+ * local basis.
  */
 template <typename Value>
 struct applications::exahype2::exaseis::InterfaceValues final {
-  Value velocity[3]{};
-  Value traction[3]{};
+  tarch::la::Vector<3, Value> velocity{};
+  tarch::la::Vector<3, Value> traction{};
 };
 
 #include "ElasticRiemannSolver.cpph"

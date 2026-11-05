@@ -6,16 +6,16 @@ TARGET_DECLARE
  * Writes the stress tensor that loads the fault at x before the rupture. Q is the state of the
  * fault node at x.
  */
-template <typename Shortcuts, typename Value>
+template <typename Value, typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaseis::writeInitialStress(
-  [[maybe_unused]] const Value* const  Q,
-  [[maybe_unused]] const double* const x,
-  Value&                               sxx,
-  Value&                               syy,
-  Value&                               szz,
-  Value&                               sxy,
-  Value&                               sxz,
-  Value&                               syz
+  [[maybe_unused]] const State&                                 Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  Value&                                                        sxx,
+  Value&                                                        syy,
+  Value&                                                        szz,
+  Value&                                                        sxy,
+  Value&                                                        sxz,
+  Value&                                                        syz
 ) {
   {{initialStresses}}
 }
@@ -23,18 +23,18 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaseis::writeIni
 /**
  * Returns the shear stress that adds to the initial traction along the second tangent at x.
  */
-template <typename Shortcuts, typename Value>
+template <typename Value, typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getAdditionalShearStress(
-  [[maybe_unused]] const Value* const  Q,
-  [[maybe_unused]] const double* const x
+  [[maybe_unused]] const State&                                 Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x
 ) {
   {{n_yz}}
 }
 
-template <typename Shortcuts, typename Value>
+template <typename Value, typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getCohesion(
-  [[maybe_unused]] const Value* const  Q,
-  [[maybe_unused]] const double* const x
+  [[maybe_unused]] const State&                                 Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x
 ) {
   {{cohesion}}
 }
@@ -42,10 +42,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getCohe
 /**
  * Returns the time at which the fault at x starts to rupture whatever its stress.
  */
-template <typename Shortcuts, typename Value>
+template <typename Value, typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getForcedRuptureTime(
-  [[maybe_unused]] const Value* const  Q,
-  [[maybe_unused]] const double* const x
+  [[maybe_unused]] const State&                                 Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x
 ) {
   {{forced_rupture_time}}
 }
@@ -53,10 +53,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getForc
 /**
  * Returns the slip at x over which the friction weakens from its static to its dynamic value.
  */
-template <typename Shortcuts, typename Value>
+template <typename Value, typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD Value applications::exahype2::exaseis::getCriticalSlipDistance(
-  [[maybe_unused]] const Value* const  Q,
-  [[maybe_unused]] const double* const x
+  [[maybe_unused]] const State&                                 Q,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x
 ) {
   {{d_c}}
 }

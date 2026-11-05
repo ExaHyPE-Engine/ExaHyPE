@@ -10,27 +10,22 @@
 namespace tests::exahype2::aderdg::grmhd {
   INLINE_METHOD GPU_CALLABLE_METHOD void evaluateKerrSchildMetric(
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    double*                                      lapse,
-    double*                                      rootDeterminant,
-    double*                                      shift,
-    double (&gCov)[3][3]
-  );
-
-  INLINE_METHOD GPU_CALLABLE_METHOD void setMichelAccretionPrimitives(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double*                                      V
+    double&                                      lapse,
+    double&                                      rootDeterminant,
+    Vector3&                                     shift,
+    Matrix3x3&                                   gCov
   );
 
   INLINE_METHOD GPU_CALLABLE_METHOD void setMichelAccretionState(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     double                                       t,
-    double*                                      Q
+    Unknowns&                                    Q
   );
 
   INLINE_METHOD GPU_CALLABLE_METHOD void setAlfvenWaveState(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     double                                       t,
-    double*                                      Q
+    Unknowns&                                    Q
   );
 } // namespace tests::exahype2::aderdg::grmhd
 

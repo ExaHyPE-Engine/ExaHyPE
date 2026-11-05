@@ -36,14 +36,12 @@ applications::exahype2::exaskred::getWaterAdmissibilityPhysics() {
 
 INLINE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
-  double* const NOALIAS                                         Q,
-  const tarch::la::Vector<DIMENSIONS, double>&                  x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  State&                                    Q,
+  const Coordinates&                        x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Q[i] = 0.0;
-  }
+  Q = {};
 
   constexpr double SlideCentreX     = 4.0;
   constexpr double SlideCentreY     = 30.0;
@@ -51,77 +49,67 @@ applications::exahype2::exaskred::ADERDGSolver::initialCondition(
   constexpr double SlideHeight      = 8.0;
   constexpr double ReservoirSurface = 5.0;
 
-  const tarch::la::Vector<DIMENSIONS, double> slideCentre = {SlideCentreX, SlideCentreY};
-  Q[Shortcuts::z]                                         = std::max(20.0 - x[0], 1.0);
-  Q[Shortcuts::lsh] = tarch::la::norm2(x - slideCentre) < SlideRadius ? SlideHeight : 0.0;
-  Q[Shortcuts::h]   = std::max(ReservoirSurface - Q[Shortcuts::z] - Q[Shortcuts::lsh], 0.0);
+  const Coordinates slideCentre = {SlideCentreX, SlideCentreY};
+  Q.z                           = std::max(20.0 - x[0], 1.0);
+  Q.lsh                         = tarch::la::norm2(x - slideCentre) < SlideRadius ? SlideHeight : 0.0;
+  Q.h                           = std::max(ReservoirSurface - Q.z - Q.lsh, 0.0);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
-  const double* const NOALIAS                                   Qinside,
-  double* const NOALIAS                                         Qoutside,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  const State&                              Qinside,
+  State&                                    Qoutside,
+  [[maybe_unused]] const Coordinates&       x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const double             t,
+  [[maybe_unused]] const int                normal,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  Qoutside[Shortcuts::h]        = Qinside[Shortcuts::h];
-  Qoutside[Shortcuts::hu]       = -Qinside[Shortcuts::hu];
-  Qoutside[Shortcuts::hu + 1]   = -Qinside[Shortcuts::hu + 1];
-  Qoutside[Shortcuts::lsh]      = 0.0;
-  Qoutside[Shortcuts::lshu]     = 0.0;
-  Qoutside[Shortcuts::lshu + 1] = 0.0;
-  Qoutside[Shortcuts::z]        = Qinside[Shortcuts::z];
+  Qoutside.h = Qinside.h;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    Qoutside.hu(axis) = -Qinside.hu(axis);
+  }
+  Qoutside.lsh  = 0.0;
+  Qoutside.lshu = 0.0;
+  Qoutside.z    = Qinside.z;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
-  [[maybe_unused]] const double* const NOALIAS                  Q,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  [[maybe_unused]] const CellStates*        Q,
+  [[maybe_unused]] const Coordinates&       x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const double             t,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   return ::exahype2::RefinementCommand::Keep;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::flux(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  double* const NOALIAS                        F,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              Q,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  Flux&                                     F,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  applications::exahype2::exaskred::coupled::flux<Shortcuts, NumberOfUnknowns>(
-    Q,
-    x,
-    h,
-    t,
-    dt,
-    normal,
-    getSlidePhysics(),
-    hThresholdWater,
-    F
-  );
+  applications::exahype2::exaskred::coupled::flux(Q, x, h, t, dt, normal, getSlidePhysics(), hThresholdWater, F);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              Q,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  return applications::exahype2::exaskred::coupled::maxEigenvalue<Shortcuts>(
+  return applications::exahype2::exaskred::coupled::maxEigenvalue(
     Q,
     x,
     h,
@@ -136,17 +124,17 @@ applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
-  const double* const NOALIAS                  Q,
-  const double* const NOALIAS                  deltaQ,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  double* const NOALIAS                        BTimesDeltaQ,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              Q,
+  const Difference&                         deltaQ,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  NonconservativeProduct&                   BTimesDeltaQ,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  applications::exahype2::exaskred::coupled::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::coupled::nonconservativeProduct(
     Q,
     deltaQ,
     x,
@@ -162,65 +150,86 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::diffusiveSourceTerm(
-  const double* const NOALIAS                  Q,
-  const double* const NOALIAS                  deltaQ,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  double* const NOALIAS                        S,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              Q,
+  const Gradient&                           deltaQ,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  Source&                                   S,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  applications::exahype2::exaskred::coupled::diffusiveSourceTerm<
-    Shortcuts,
-    NumberOfUnknowns,
-    NumberOfAuxiliaryVariables
-  >(Q, deltaQ, x, h, t, dt, getSlidePhysics(), hThresholdWater, S);
+  applications::exahype2::exaskred::coupled::diffusiveSourceTerm(
+    Q,
+    deltaQ,
+    x,
+    h,
+    t,
+    dt,
+    getSlidePhysics(),
+    hThresholdWater,
+    S
+  );
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
-  const double* const NOALIAS                  QL,
-  const double* const NOALIAS                  QR,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  [[maybe_unused]] const bool                  isBoundaryFace,
-  [[maybe_unused]] const int                   faceIndex,
-  double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const FaceStates&                         QL,
+  const FaceStates&                         QR,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  [[maybe_unused]] const bool               isBoundaryFace,
+  [[maybe_unused]] const int                faceIndex,
+  FaceFluxes&                               FL,
+  FaceFluxes&                               FR,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  return applications::exahype2::exaskred::coupled::solveRiemannProblem<
-    Shortcuts,
-    NumberOfUnknowns,
-    NumberOfAuxiliaryVariables,
-    DGOrder
-  >(QL, QR, x, h, t, dt, normal, getSlidePhysics(), hThresholdWater, FL, FR);
+  return applications::exahype2::exaskred::coupled::solveRiemannProblem(
+    QL,
+    QR,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    getSlidePhysics(),
+    hThresholdWater,
+    FL,
+    FR
+  );
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
-  const double* const NOALIAS                  QL,
-  const double* const NOALIAS                  QR,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  [[maybe_unused]] const bool                  isBoundaryFace,
-  [[maybe_unused]] const int                   faceIndex,
-  double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              QL,
+  const State&                              QR,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  [[maybe_unused]] const bool               isBoundaryFace,
+  [[maybe_unused]] const int                faceIndex,
+  Flux&                                     FL,
+  Flux&                                     FR,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  return applications::exahype2::exaskred::coupled::solveSubcellRiemannProblem<
-    Shortcuts,
-    NumberOfUnknowns,
-    NumberOfAuxiliaryVariables
-  >(QL, QR, x, h, t, dt, normal, getSlidePhysics(), hThresholdWater, FL, FR);
+  return applications::exahype2::exaskred::coupled::solveSubcellRiemannProblem(
+    QL,
+    QR,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    getSlidePhysics(),
+    hThresholdWater,
+    FL,
+    FR
+  );
 }
 
 /**
@@ -229,51 +238,53 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
  */
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
-  const double* const NOALIAS                                   Q,
-  const int                                                     numberOfStates,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>&                  h,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  const States                              Q,
+  [[maybe_unused]] const Coordinates&       x,
+  const Coordinates&                        h,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  using SlideLayer = applications::exahype2::exaskred::coupled::SlideLayer<Shortcuts>;
-  if (not applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
-        Shortcuts,
-        NumberOfUnknowns,
-        NumberOfAuxiliaryVariables
-      >(Q, numberOfStates, h, getWaterAdmissibilityPhysics(), 0.0)) {
+  if (not applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<&State::h, &State::hu>(
+        Q,
+        h,
+        getWaterAdmissibilityPhysics(),
+        0.0
+      )) {
     return false;
   }
-  if (not applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<
-        SlideLayer,
-        NumberOfUnknowns,
-        NumberOfAuxiliaryVariables
-      >(Q, numberOfStates, h, getSlidePhysics(), maxFrictionStiffnessRatio)) {
+  if (not applications::exahype2::exaskred::landslide::isAdmissibleGranularLayerCell<&State::lsh, &State::lshu>(
+        Q,
+        h,
+        getSlidePhysics(),
+        maxFrictionStiffnessRatio
+      )) {
     return false;
   }
-  const int nodesPerAxis = static_cast<int>(std::sqrt(static_cast<double>(numberOfStates)) + 0.5);
+  const int numberOfStates = static_cast<int>(Q.size());
+  const int nodesPerAxis   = static_cast<int>(std::sqrt(static_cast<double>(numberOfStates)) + 0.5);
   if (numberOfStates > 1 and nodesPerAxis * nodesPerAxis == numberOfStates) {
-    return applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<
-      SlideLayer,
-      NumberOfUnknowns,
-      NumberOfAuxiliaryVariables
-    >(Q, nodesPerAxis, getSlidePhysics(), maxHeightCurvatureRatio);
+    return applications::exahype2::exaskred::landslide::hasAdmissibleGranularLayerHeightCurvature2D<&State::lsh>(
+      Q,
+      nodesPerAxis,
+      getSlidePhysics(),
+      maxHeightCurvatureRatio
+    );
   }
   return true;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
-  double* const NOALIAS                     observables,
-  const double* const NOALIAS               Q,
+  Observables&                              observables,
+  const State&                              Q,
   [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  static_assert(
-    NumberOfObservables <= NumberOfUnknowns,
-    "ExaSkred supports a number_of_dmp_observables up to the number of unknowns only."
-  );
-  for (int observable = 0; observable < NumberOfObservables; observable++) {
-    observables[observable] = Q[observable];
-  }
+  static_assert(NumberOfObservables == 6, "The impulse-wave scenario expects number_of_dmp_observables = 6.");
+  observables(0) = Q.h;
+  observables(1) = Q.hu(0);
+  observables(2) = Q.hu(1);
+  observables(3) = Q.lsh;
+  observables(4) = Q.lshu(0);
+  observables(5) = Q.lshu(1);
 }
 
 /**

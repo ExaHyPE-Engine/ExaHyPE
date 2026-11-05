@@ -39,8 +39,16 @@ fv_solver.set_pde_terms(
     flux=nothing,
     ncp=nothing,
     source=nothing,
-    riemann_solver=zero,
-    limited_difference=zero,
+    riemann_solver="""
+  FL = 0.5 * (QL - QR);
+  FR = FL * 2.0;
+  return 0.0;
+""",
+    limited_difference="""
+  limitedDifferences = transform(QR - Q, Q - QL, [](const auto forward, const auto backward) {
+    return forward < backward ? forward : backward;
+  });
+""",
     reconstruction=nothing,
     analytical_solution=nothing,
 )
@@ -50,7 +58,13 @@ project.add_solver(fv_solver)
 godunov_solver = exahype2.fv.Solver(
     name="AllPDETermsGodunovFV",
     patch_size=4,
-    unknowns={"rho": 1, "v": 2},
+    unknowns={
+        "rho": 1,
+        "v": 2,
+        "sigma": exahype2.SymmetricMatrix(2),
+        "m": (2, 2),
+        "D": (2, exahype2.SymmetricMatrix(2)),
+    },
     auxiliary_variables={"material": 1},
     time_stepping=exahype2.TimeStepping.Fixed(0.1),
     scheme=exahype2.fv.Godunov(),
@@ -61,7 +75,13 @@ godunov_solver.set_pde_terms(
     boundary_conditions=True,
     refinement_criterion=keep,
     max_eigenvalue=one,
-    flux=nothing,
+    flux="""
+  F            = 0.5 * Q;
+  F.m          = Q.m + Q.m;
+  F.sigma      = Q.sigma - Q.sigma;
+  F.D          = Q.D + Q.D;
+  F.D(1)(0, 1) = Q.D(0)(1, 0);
+""",
     source=nothing,
     diffusive_source=nothing,
     particle_analytical_solution=nothing,
@@ -135,6 +155,7 @@ rk_solver = exahype2.dg.rk.Solver(
     unknowns=2,
     auxiliary_variables=1,
     time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    precision="float",
 )
 rk_solver.set_pde_terms(
     initial_condition=nothing,

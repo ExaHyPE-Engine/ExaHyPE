@@ -61,7 +61,7 @@ solver_interface_plane = (
 hpSolver = exahype2.dg.ader.Solver(
     name="hpElastic",
     order=order,
-    unknowns={"v": 3, "sigma": 6},
+    unknowns={"v": 3, "sigma": exahype2.SymmetricMatrix(3)},
     auxiliary_variables={"rho": 1, "cp": 1, "cs": 1},
     time_stepping=exahype2.TimeStepping.Adaptive(0.9),
     linear=True,
@@ -73,7 +73,7 @@ hpSolver.restrict_to_cells("x(1) < " + solver_interface_plane)
 lpSolver = exahype2.dg.ader.Solver(
     name="lpElastic",
     order=order,
-    unknowns={"v": 3, "sigma": 6},
+    unknowns={"v": 3, "sigma": exahype2.SymmetricMatrix(3)},
     auxiliary_variables={"rho": 1, "cp": 1, "cs": 1},
     time_stepping=exahype2.TimeStepping.Adaptive(0.9),
     linear=True,

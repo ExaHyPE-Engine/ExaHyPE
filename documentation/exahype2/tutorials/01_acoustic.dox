@@ -13,7 +13,7 @@ and the C++ implementation lives next to it in `ADERDGSolver.cpp`.
 
 # The Acoustic Equations
 
-We solve the two-dimensional acoustic equations for the pressure \f$p\f$ and the
+We solve the 2D acoustic equations for the pressure \f$p\f$ and the
 velocity \f$\mathbf{v} = (v_1, v_2)\f$, with a source on the pressure equation:
 
 @f$
@@ -101,7 +101,7 @@ Finally we register our implementation file and generate and compile the solver:
 # The Implementation File
 
 `ADERDGSolver.cpp` provides the PDE terms. The code addresses the conserved variables
-through the generated `Shortcuts` enum (`Shortcuts::p`, `Shortcuts::v + 0/1`).
+by their names (`Q.p`, `Q.v`).
 `maxEigenvalue` returns the sound speed \f$c\f$. `flux` writes every entry of the
 flux for the requested `normal` direction. `initialCondition` sets a quiescent state.
 The waves come from the source alone. `boundaryConditions` prescribes a zero exterior

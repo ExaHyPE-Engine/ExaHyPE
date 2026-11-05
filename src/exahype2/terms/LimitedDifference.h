@@ -13,9 +13,9 @@ namespace exahype2::terms {
     const tarch::la::Vector<DIMENSIONS, double>&  x,
     const tarch::la::Vector<DIMENSIONS, double>&  h,
     const int                                     normal,
-    const int                                     unknown,
+    Precision* const                              limitedDifferences,
     const typename SolverType::RuntimeParameters& parameters
   ) {
-    { SolverType::limitedDifference(QL, Q, QR, x, h, normal, unknown, parameters) } -> std::same_as<Precision>;
+    { SolverType::limitedDifference(QL, Q, QR, x, h, normal, limitedDifferences, parameters) } -> std::same_as<void>;
   };
 } // namespace exahype2::terms

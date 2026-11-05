@@ -71,21 +71,15 @@ if project.dimensions != 2:
     raise ValueError("The one-body tracer test runs in 2D only.")
 
 initial_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Q[i] = 0.0;
-  }
+  Q = {};
 """
 
 boundary_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = Qinside[i];
-  }
+  Qoutside = Qinside;
 """
 
 flux = """
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    F[i] = 0.0;
-  }
+  F = {};
 """
 
 max_eigenvalue = """
@@ -94,7 +88,7 @@ max_eigenvalue = """
 
 analytical_solution = """
   // A circular orbit around a fixed central mass.
-  constexpr double GravitationalParameter = 10.0; // G*M
+  constexpr double GravitationalParameter = 10.0;
 
   constexpr double CentreX = 1.5;
   constexpr double CentreY = 1.5;
@@ -109,19 +103,18 @@ analytical_solution = """
 
   const double angle = atan2(StartY - CentreY, StartX - CentreX) + omega * t;
 
-  solution[0] = CentreX + r * cos(angle); // x
-  solution[1] = CentreY + r * sin(angle); // y
+  solution.position = {CentreX + r * cos(angle), CentreY + r * sin(angle)};
 
-  solution[5] = -r * omega * sin(angle); // vx
-  solution[6] =  r * omega * cos(angle); // vy
+  solution.u = -r * omega * sin(angle);
+  solution.v =  r * omega * cos(angle);
 
-  solution[7] = -GravitationalParameter / (r * r * r) * (solution[0] - CentreX); // ax
-  solution[8] = -GravitationalParameter / (r * r * r) * (solution[1] - CentreY); // ay
+  solution.a_x = -GravitationalParameter / (r * r * r) * (solution.position(0) - CentreX);
+  solution.a_y = -GravitationalParameter / (r * r * r) * (solution.position(1) - CentreY);
 
-  solution[2] = 0.0;  // rho
-  solution[3] = 0.0;  // fluid_u
-  solution[4] = 0.0;  // fluid_v
-  solution[9] = mass; // m
+  solution.rho     = 0.0;
+  solution.fluid_u = 0.0;
+  solution.fluid_v = 0.0;
+  solution.m       = mass;
 """
 
 fv_solver = exahype2.fv.Solver(

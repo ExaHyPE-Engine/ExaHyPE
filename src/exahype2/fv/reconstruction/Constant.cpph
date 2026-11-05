@@ -48,6 +48,7 @@ exahype2::fv::reconstruction::Constant::StateTerms<
   for (int unknown = 0; unknown < NumberOfData; unknown++) {
     stateForCompute[unknown] = static_cast<ComputePrecision>(state[unknown]);
   }
+  UNROLL(DIMENSIONS)
   for (int normal = 0; normal < DIMENSIONS; normal++) {
     if constexpr (EvaluateFlux) {
       SolverType::flux(
@@ -202,6 +203,7 @@ exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
 
   if constexpr (EvaluateDiffusiveSource) {
     ComputePrecision stateGradient[DIMENSIONS * NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    UNROLL(DIMENSIONS)
     for (int normal = 0; normal < DIMENSIONS; normal++) {
       int strideAlongNormal = NumberOfData;
       for (int dimension = 0; dimension < normal; dimension++) {

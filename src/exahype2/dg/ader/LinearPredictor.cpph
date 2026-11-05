@@ -481,10 +481,14 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::evaluateFlux(
   constexpr int AxisStride = CellLayout::NodesPerCell * FluxStride;
 
   for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
+    ComputePrecision nodeState[CellLayout::NumberOfData];
+    for (int value = 0; value < CellLayout::NumberOfData; value++) {
+      nodeState[value] = state[cellNode * CellLayout::PaddedNumberOfData + value];
+    }
     UNROLL(DIMENSIONS)
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       Derived::flux(
-        state + cellNode * CellLayout::PaddedNumberOfData,
+        nodeState,
         cellCentre,
         cellSize,
         timeStamp,
@@ -586,10 +590,14 @@ exahype2::dg::ader::LinearPredictor<Derived, ComputePrecision>::applyMaterialPar
   constexpr int AxisStride = CellLayout::NodesPerCell * CellLayout::PaddedNumberOfUnknowns;
 
   for (int cellNode = workers.thread; cellNode < CellLayout::NodesPerCell; cellNode += workers.threads) {
+    ComputePrecision nodeState[CellLayout::NumberOfData];
+    for (int value = 0; value < CellLayout::NumberOfData; value++) {
+      nodeState[value] = state[cellNode * CellLayout::PaddedNumberOfData + value];
+    }
     UNROLL(DIMENSIONS)
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       Derived::multiplyMaterialParameterMatrix(
-        state + cellNode * CellLayout::PaddedNumberOfData,
+        nodeState,
         cellCentre,
         cellSize,
         timeStamp,

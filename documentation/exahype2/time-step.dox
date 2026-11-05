@@ -205,8 +205,9 @@ exahype2::dg::rk::Solver::performTimeStep():
    1. exahype2::dg::rk::Solver::openStage() runs exahype2::dg::rk::OpenStage on the listed cells.
    2. exahype2::dg::rk::OpenStage calls exahype2::dg::rk::Stage::open().
    3. exahype2::dg::rk::Stage::combineEstimates() writes the stage state.
-   4. exahype2::dg::rk::Stage::volumeIntegral() calls `Derived::flux()`, `Derived::nonconservativeProduct()` and `Derived::sourceTerm()`.
-   5. exahype2::dg::rk::Stage::projectOntoFaces() writes the stage state and its flux into the own face halves.
+   4. exahype2::dg::computeNodalFluxes() calls `Derived::flux()` once per node and direction.
+   5. exahype2::dg::rk::Stage::volumeIntegral() differentiates these fluxes and calls `Derived::nonconservativeProduct()` and `Derived::sourceTerm()`.
+   6. exahype2::dg::extrapolateStateToFaces() and exahype2::dg::extrapolateFluxToFaces() write the stage state and its flux into the own face halves.
 3. exahype2::dg::rk::Solver::combineFinalState() runs exahype2::dg::rk::CombineStages on every cell.
 4. exahype2::dg::rk::CombineStages calls exahype2::dg::rk::Stage::close().
 5. exahype2::dg::rk::Stage::close() calls exahype2::dg::rk::Stage::combineEstimates() and exahype2::dg::finishCell().

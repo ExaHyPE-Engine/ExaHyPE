@@ -11,7 +11,7 @@ from equations import SWE_W_Bathymetry
 
 class SWESteadyVortex(Scenario):
     """
-    Steady state vortex with varying bathimetry, from Clain & Figueiredo
+    Steady state vortex with varying bathymetry, from Clain & Figueiredo
     (https://doi.org/10.1016/j.compfluid.2016.11.013, section 4.4), used
     also in e.g. https://arxiv.org/pdf/2508.20596
     """
@@ -26,13 +26,13 @@ class SWESteadyVortex(Scenario):
     def _initial_conditions(self, Q):
         d = {"VARIABLE": Q}
         return jinja2.Template("""
-    constexpr double inv_g_quarter = 1/(4*9.81); // 1/(4*g)
-    const double r = (1-x[0]*x[0]-x[1]*x[1]); // 1 - (x^2 + y^2)
+    constexpr double inv_g_quarter = 1/(4*9.81);
+    const double r = (1-x[0]*x[0]-x[1]*x[1]);
 
-    {{VARIABLE}}[Shortcuts::b]    = std::exp(r/2)/5;
-    {{VARIABLE}}[Shortcuts::h]    = 1 - inv_g_quarter*std::exp(2*r) - {{VARIABLE}}[Shortcuts::b];
-    {{VARIABLE}}[Shortcuts::hv+0]  =  x[1]*std::exp(r)*{{VARIABLE}}[Shortcuts::h];
-    {{VARIABLE}}[Shortcuts::hv+1]  = -x[0]*std::exp(r)*{{VARIABLE}}[Shortcuts::h];
+    {{VARIABLE}}.b     = std::exp(r/2)/5;
+    {{VARIABLE}}.h     = 1 - inv_g_quarter*std::exp(2*r) - {{VARIABLE}}.b;
+    {{VARIABLE}}.hv(0) =  x[1]*std::exp(r)*{{VARIABLE}}.h;
+    {{VARIABLE}}.hv(1) = -x[0]*std::exp(r)*{{VARIABLE}}.h;
 """).render(**d)
 
     def initial_conditions(self):

@@ -5,6 +5,7 @@ import exahype2.solver
 
 from exahype2.dg.basis import GaussLegendreBasis
 from exahype2.dg.basis import GaussLobattoBasis
+from exahype2.dg.node_arrays import get_node_array_aliases
 from exahype2.dg.tracing import render_tracer_update
 
 from .generate_kernels import generate_kernels
@@ -17,16 +18,14 @@ def _pde_terms():
     return {
         "initial_condition": exahype2.pde_terms.initial_condition(),
         "boundary_conditions": exahype2.pde_terms.boundary_conditions("compute"),
-        "refinement_criterion": exahype2.pde_terms.refinement_criterion(
-            "[PointsPerCell * ({N} + {A})]"
-        ),
+        "refinement_criterion": exahype2.pde_terms.refinement_criterion(),
         "max_eigenvalue": exahype2.pde_terms.max_eigenvalue(),
         "flux": exahype2.pde_terms.flux(),
         "diffusive_flux": exahype2.pde_terms.diffusive_flux(),
         "ncp": exahype2.pde_terms.ncp(),
         "source": exahype2.pde_terms.source(),
         "material_parameters": exahype2.pde_terms.material_parameters(),
-        "riemann_solver": exahype2.pde_terms.riemann_solver(points="NodesPerFace"),
+        "riemann_solver": exahype2.pde_terms.riemann_solver(face_nodes=True),
         "analytical_solution": exahype2.pde_terms.analytical_solution(),
         "particle_analytical_solution": exahype2.pde_terms.particle_analytical_solution(),
     }
@@ -135,6 +134,9 @@ class Solver(exahype2.solver.Solver):
     def _table_class(self, table):
         """Returns the fully qualified name of a generated table class of this solver."""
         return "::" + "::".join(self._namespace + [self._name + table])
+
+    def _solver_family_state_aliases(self, prefix, precision):
+        return get_node_array_aliases(prefix, self._dg_order + 1, self._dimensions)
 
     def _solver_family_includes(self):
         includes = [

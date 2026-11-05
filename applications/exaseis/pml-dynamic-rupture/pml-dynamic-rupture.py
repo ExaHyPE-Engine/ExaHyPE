@@ -73,22 +73,20 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 if project.dimensions != 3:
-    raise ValueError(
-        "The PML dynamic rupture ExaSeis application is three-dimensional."
-    )
+    raise ValueError("The PML dynamic rupture ExaSeis application runs in 3D only.")
 DynamicRuptureElastic.add_runtime_parameters(project)
 
 theSolver = exahype2.dg.ader.Solver(
     name="ElasticSolver",
     order=order,
-    unknowns={"v": 3, "sigma": 6, "u": 3, "pml": 27},
+    unknowns={"v": 3, "sigma": exahype2.SymmetricMatrix(3), "u": 3, "pml": (3, 9)},
     auxiliary_variables={
         "rho": 1,
         "cp": 1,
         "cs": 1,
         "pmlDamping": 3,
         "jacobian": 1,
-        "metricDerivative": 9,
+        "metricDerivative": (3, 3),
         "curveGrid": 3,
         **my_scenario.auxiliary_variables,
     },
@@ -132,7 +130,7 @@ filename = args.scenario + "-o" + str(order) + "-" + str(args.precision)
 recorded_unknowns = 12
 recorded_fields = ",".join(str(field) for field in range(recorded_unknowns))
 
-# The tracers record the velocity, the stress and the displacement, and skip the PML unknowns.
+# The tracers record the velocity, the stress and the displacement. They skip the PML unknowns.
 tracer_particles = project.add_tracer(
     name="Tracer", particle_attributes=recorded_unknowns
 )

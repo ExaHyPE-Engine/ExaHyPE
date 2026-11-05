@@ -105,12 +105,23 @@ class SubcellLimiting:
         ] + list(self._subcell_limiter_scheme.subcell_scheme().includes)
 
     def _subcell_limiter_cpp_type(self):
-        """Returns the C++ limiter type of this solver, or ``void`` without a limiter."""
+        """Returns the C++ limiter type of this solver. Returns ``void`` without a limiter."""
         if not self.subcell_limiter_is_enabled:
             return "void"
         return "::exahype2::dg::limiting::SubcellLimiter<{}, {}, {}>".format(
             self._solver_type(), self.precision.storage, self.precision.compute
         )
+
+    def _subcell_limiter_state_aliases(self, prefix, precision):
+        """Returns the type alias of the DMP observables of one state for ``precision``. Returns an
+        empty list without a limiter or without observables."""
+        if not self.subcell_limiter_is_enabled or not self._subcell_limiter_uses_dmp:
+            return []
+        return [
+            "using {}Observables = tarch::la::Vector<NumberOfObservables, {}>;".format(
+                prefix, precision
+            )
+        ]
 
     def _subcell_limiter_constants(self):
         """Returns the C++ constants and type aliases of the subcell layout and the scheme, or

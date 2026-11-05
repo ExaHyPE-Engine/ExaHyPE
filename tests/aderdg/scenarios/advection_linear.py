@@ -23,18 +23,14 @@ class AdvectionLinear(Scenario):
 
     def initial_conditions(self):
         return """
-  Q[Shortcuts::v+0] = x[0];
-  Q[Shortcuts::v+1] = x[1];
-#if DIMENSIONS==3
-  Q[Shortcuts::v+2] = x[2];
-#endif
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    Q.v(axis) = x[axis];
+  }
 """
 
     def boundary_conditions(self):
         return """
-  Qoutside[Shortcuts::v+0] = x[0] - t;
-  Qoutside[Shortcuts::v+1] = x[1] - t;
-#if DIMENSIONS==3
-  Qoutside[Shortcuts::v+2] = x[2] - t;
-#endif
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    Qoutside.v(axis) = x[axis] - t;
+  }
 """

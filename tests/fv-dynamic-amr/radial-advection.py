@@ -46,20 +46,18 @@ project = exahype2.Project(
 initial_conditions = """
   const tarch::la::Vector<DIMENSIONS, double> centre(0.0);
   constexpr double Radius = 0.15;
-  Q[Shortcuts::rho] = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 1.0 : 0.0;
+  Q.rho = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 1.0 : 0.0;
 """
 
 boundary_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = Qinside[i];
-  }
+  Qoutside = Qinside;
 """
 
 flux = """
   const tarch::la::Vector<DIMENSIONS, double> centre(0.0);
   const tarch::la::Vector<DIMENSIONS, double> radialOffset = x - centre;
   const double radius = tarch::la::norm2(radialOffset);
-  F[Shortcuts::rho] = (radius > 0.0 ? radialOffset(normal) / radius : 0.0) * Q[Shortcuts::rho];
+  F.rho = (radius > 0.0 ? radialOffset(normal) / radius : 0.0) * Q.rho;
 """
 
 # The unit offset bounds the relative detail where the density is zero.
@@ -67,10 +65,9 @@ refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
     ::exahype2::getVolumeCentresInUnitInterval<PatchSize>(),
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    [](const double* const values) { return 1.0 + values[Shortcuts::rho]; }
+    [](const auto& state) { return 1.0 + state.rho; }
   );
 """
 

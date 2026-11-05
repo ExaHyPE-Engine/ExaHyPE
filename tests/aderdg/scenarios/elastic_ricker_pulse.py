@@ -44,24 +44,24 @@ class ElasticRickerPulse(Scenario):
   const auto amplitudeX = (1-2*tau*tau)*std::exp(-tau*tau) + (1-2*tau2*tau2)*std::exp(-tau2*tau2);
   constexpr auto AmplitudeY = 0.;
 
-  // The stress components are ordered xx, yy, xy.
-  Q[Shortcuts::sigma+0] = -amplitudeX*(FirstLameParameter+2*ShearModulus) + AmplitudeY*FirstLameParameter;
-  Q[Shortcuts::sigma+1] = -amplitudeX*FirstLameParameter + AmplitudeY*(FirstLameParameter+2*ShearModulus);
-  Q[Shortcuts::sigma+2] = 0;
+  Q.sigma(0, 0) = -amplitudeX*(FirstLameParameter+2*ShearModulus) + AmplitudeY*FirstLameParameter;
+  Q.sigma(1, 1) = -amplitudeX*FirstLameParameter + AmplitudeY*(FirstLameParameter+2*ShearModulus);
+  Q.sigma(0, 1) = 0;
 
-  Q[Shortcuts::v+0] = amplitudeX*PWaveSpeed;
-  Q[Shortcuts::v+1] = AmplitudeY*PWaveSpeed;
+  Q.v(0) = amplitudeX*PWaveSpeed;
+  Q.v(1) = AmplitudeY*PWaveSpeed;
 
-  Q[Shortcuts::rho] = Density;
-  Q[Shortcuts::cp]  = PWaveSpeed;
-  Q[Shortcuts::cs]  = SWaveSpeed;
+  Q.rho = Density;
+  Q.cp  = PWaveSpeed;
+  Q.cs  = SWaveSpeed;
 """
 
     def analytical_solution(self):
         return """
   constexpr auto PWaveSpeed = 2;
 
-  // Width of a cell on the finest level. The pulse starts centred in the leftmost cell.
+  // The loop divides h down to the width of a cell on the finest level. The pulse starts at the
+  // centre of the leftmost cell.
   double h = DomainSize[0];
   for (int level = 0; level < parameters.maxGridLevels; level++) {
     h /= peano4::SubdivisionFactor;
@@ -73,10 +73,7 @@ class ElasticRickerPulse(Scenario):
   const auto tau  = 1.25*std::numbers::pi*(distance);
   const auto amplitudeX = (1-2*tau*tau)*std::exp(-tau*tau);
 
-  solution[Shortcuts::sigma+0] = Q[Shortcuts::sigma+0];
-  solution[Shortcuts::sigma+1] = Q[Shortcuts::sigma+1];
-  solution[Shortcuts::sigma+2] = Q[Shortcuts::sigma+2];
-
-  solution[Shortcuts::v+0] = amplitudeX*PWaveSpeed;
-  solution[Shortcuts::v+1] = Q[Shortcuts::v+1];
+  solution.sigma = Q.sigma;
+  solution.v(0)  = amplitudeX*PWaveSpeed;
+  solution.v(1)  = Q.v(1);
 """

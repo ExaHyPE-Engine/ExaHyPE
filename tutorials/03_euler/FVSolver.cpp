@@ -18,27 +18,26 @@ namespace {
 
 void
 tutorials::exahype2::euler::FVSolver::initialCondition(
-  double* const NOALIAS                        Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const RuntimeParameters&                     parameters
+  State&                   Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const RuntimeParameters& parameters
 ) {
   const bool   inChord = cellCentre[0] >= 0.0 and cellCentre[0] <= 100.0;
   const double y       = inChord ? airfoilSymmetric(cellCentre[0]) : 0.0;
 
-  Q[Shortcuts::rho]   = (inChord and y > cellCentre[1] and -y < cellCentre[1]) ? 1000.0 : 1.0;
-  Q[Shortcuts::j + 0] = 1.0;
-  Q[Shortcuts::j + 1] = 0.0;
-  Q[Shortcuts::E]     = 2.5;
+  Q.rho = (inChord and y > cellCentre[1] and -y < cellCentre[1]) ? 1000.0 : 1.0;
+  Q.j   = {1.0, 0.0};
+  Q.E   = 2.5;
 }
 
 ::exahype2::RefinementCommand
 tutorials::exahype2::euler::FVSolver::refinementCriterion(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const RuntimeParameters&                     parameters
+  const CellStates*        Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const RuntimeParameters& parameters
 ) {
   // Q is a null pointer during grid construction. The criterion reads cellCentre only.
   constexpr double RefinementMargin = 3.0;
@@ -58,70 +57,61 @@ tutorials::exahype2::euler::FVSolver::refinementCriterion(
 
 void
 tutorials::exahype2::euler::FVSolver::boundaryConditions(
-  const double* const NOALIAS                  Qinside,
-  double* const NOALIAS                        Qoutside,
-  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const int                                    normal,
-  const RuntimeParameters&                     parameters
+  const State&             Qinside,
+  State&                   Qoutside,
+  const Coordinates&       faceCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const int                normal,
+  const RuntimeParameters& parameters
 ) {
   if (normal == 0 and faceCentre[0] == DomainOffset[0]) {
-    Qoutside[Shortcuts::rho]   = 1.0;
-    Qoutside[Shortcuts::j + 0] = 1.0;
-    Qoutside[Shortcuts::j + 1] = 0.0;
-    Qoutside[Shortcuts::E]     = 2.5;
+    Qoutside.rho = 1.0;
+    Qoutside.j   = {1.0, 0.0};
+    Qoutside.E   = 2.5;
   } else {
-    Qoutside[Shortcuts::rho]   = Qinside[Shortcuts::rho];
-    Qoutside[Shortcuts::j + 0] = Qinside[Shortcuts::j + 0];
-    Qoutside[Shortcuts::j + 1] = Qinside[Shortcuts::j + 1];
-    Qoutside[Shortcuts::E]     = Qinside[Shortcuts::E];
+    Qoutside = Qinside;
   }
 }
 
 double
 tutorials::exahype2::euler::FVSolver::maxEigenvalue(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  const RuntimeParameters&                     parameters
+  const State&             Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const double             timeStepSize,
+  const int                normal,
+  const RuntimeParameters& parameters
 ) {
-  const double     irho  = 1.0 / Q[Shortcuts::rho];
+  const double     irho  = 1.0 / Q.rho;
   constexpr double Gamma = 1.4;
-  const double     p     = (Gamma - 1)
-    * (Q[Shortcuts::E]
-       - 0.5 * irho * (Q[Shortcuts::j + 0] * Q[Shortcuts::j + 0] + Q[Shortcuts::j + 1] * Q[Shortcuts::j + 1]));
+  const double     p     = (Gamma - 1) * (Q.E - 0.5 * irho * (Q.j(0) * Q.j(0) + Q.j(1) * Q.j(1)));
 
   const double c = std::sqrt(Gamma * p * irho);
-  const double u = Q[Shortcuts::j + normal] * irho;
+  const double u = Q.j(normal) * irho;
 
   return std::max(std::abs(u - c), std::abs(u + c));
 }
 
 void
 tutorials::exahype2::euler::FVSolver::flux(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  double* const NOALIAS                        F,
-  const RuntimeParameters&                     parameters
+  const State&             Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const double             timeStepSize,
+  const int                normal,
+  Flux&                    F,
+  const RuntimeParameters& parameters
 ) {
-  const double     irho  = 1.0 / Q[Shortcuts::rho];
+  const double     irho  = 1.0 / Q.rho;
   constexpr double Gamma = 1.4;
-  const double     p     = (Gamma - 1)
-    * (Q[Shortcuts::E]
-       - 0.5 * irho * (Q[Shortcuts::j + 0] * Q[Shortcuts::j + 0] + Q[Shortcuts::j + 1] * Q[Shortcuts::j + 1]));
+  const double     p     = (Gamma - 1) * (Q.E - 0.5 * irho * (Q.j(0) * Q.j(0) + Q.j(1) * Q.j(1)));
 
-  F[Shortcuts::rho]   = Q[Shortcuts::j + normal];
-  F[Shortcuts::j + 0] = Q[Shortcuts::j + normal] * Q[Shortcuts::j + 0] * irho;
-  F[Shortcuts::j + 1] = Q[Shortcuts::j + normal] * Q[Shortcuts::j + 1] * irho;
-  F[Shortcuts::E]     = Q[Shortcuts::j + normal] * irho * (Q[Shortcuts::E] + p);
+  F.rho = Q.j(normal);
+  F.j   = Q.j(normal) * Q.j * irho;
+  F.E   = Q.j(normal) * irho * (Q.E + p);
 
-  F[Shortcuts::j + normal] += p;
+  F.j(normal) += p;
 }

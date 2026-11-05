@@ -53,22 +53,22 @@ class NavierStokesABCFlow(Scenario):
             decayFactor * decayFactor;
 
     const double rho = 1;
-    solution[Shortcuts::rho] = rho;
-    solution[Shortcuts::j+0] = (std::sin(x[2]) + std::cos(x[1])) * decayFactor;
-    solution[Shortcuts::j+1] = (std::sin(x[0]) + std::cos(x[2])) * decayFactor;
-    solution[Shortcuts::j+2] = (std::sin(x[1]) + std::cos(x[0])) * decayFactor;
+    solution.rho  = rho;
+    solution.j(0) = (std::sin(x[2]) + std::cos(x[1])) * decayFactor;
+    solution.j(1) = (std::sin(x[0]) + std::cos(x[2])) * decayFactor;
+    solution.j(2) = (std::sin(x[1]) + std::cos(x[0])) * decayFactor;
 
-    const auto* const j = &solution[Shortcuts::j];
+    const auto& j = solution.j;
     const auto Z = 0;
     """
             + self._equation.evaluate_energy()
             + """
-    solution[Shortcuts::E] = E;
+    solution.E = E;
 """
         )
 
     def initial_conditions(self):
         return """
     const double t = 0.;
-    auto* const solution = Q;
+    auto& solution = Q;
 """ + self.analytical_solution()

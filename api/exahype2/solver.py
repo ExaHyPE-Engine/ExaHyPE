@@ -10,10 +10,13 @@ from .codegen.helper import KeepUndefined
 from .codegen.helper import render_jinja2_template
 from .log import log
 from .pde_terms import PDETerms
+from .pde_terms import View
+from .pde_terms import get_alias_prefix
 from .pde_terms import get_inline_attributes
 from .pde_terms import postprocess_updated_patch
 from .pde_terms import render_declaration
 from .pde_terms import render_definition
+from .pde_terms import render_pointer_overload
 from .pde_terms import render_stub_definition
 from .precision import Precision
 from .state import State
@@ -125,7 +128,7 @@ class Solver:
             or every < 0
         ):
             raise ValueError(
-                "The solver {} expects a finite non-negative time for every (got {!r}).".format(
+                "The solver {} expects a finite non-negative interval 'every' of the error measurement (got {!r}).".format(
                     self._name, every
                 )
             )
@@ -199,15 +202,16 @@ class Solver:
         return self
 
     def add_includes(self, *headers):
-        """Adds headers to ``<Name>Base.h``, so the PDE terms see them. A header path is
-        relative to ``src`` or to the generated directory."""
+        """Adds headers to ``<Name>Base.h`` for the PDE terms. A header path is relative to
+        ``src`` or to the generated directory."""
         self._includes += headers
         return self
 
-    def _solver_includes(self, variable_shortcuts):
+    def _solver_includes(self):
         headers = [
             "Constants.h",
             "RuntimeParameters.h",
+            self._name + "State.h",
             "exahype2/MultiresolutionDetail.h",
             "exahype2/RefinementCommand.h",
             "exahype2/runner/RuntimeParameters.h",
@@ -215,8 +219,6 @@ class Solver:
             "tarch/la/Vector.h",
             self.SOLVER_FAMILY_INCLUDE,
         ]
-        if variable_shortcuts:
-            headers.append(self._name + "VariableShortcuts.h")
         if self._tracers or self.pde_terms.is_set("particle_analytical_solution"):
             headers.append("exahype2/particles/ParticleSet.h")
         if self._tracers:
@@ -259,7 +261,7 @@ class Solver:
 
     @property
     def dictionary(self):
-        """Returns the template entries of the solver, which ``build`` creates."""
+        """Returns the template entries of the solver that ``build`` creates."""
         if self._dictionary is None:
             raise RuntimeError(
                 "The project must build the solver {} first.".format(self._name)
@@ -267,8 +269,79 @@ class Solver:
         return self._dictionary
 
     def _solver_type(self):
-        """Returns the fully qualified C++ type of the solver."""
-        return "::" + "::".join(self._namespace + [self._name])
+        """Returns the fully qualified C++ type whose terms the kernels call."""
+        return "::" + "::".join(self._namespace + [self._name + "PDETerms"])
+
+    def _solver_family_state_aliases(self, prefix, precision):
+        """Returns the type aliases of the solver family for ``precision``. Their names start with
+        ``prefix``."""
+        return []
+
+    def _solver_family_aliases(self):
+        """Returns the type aliases of the solver family that are independent of the precision."""
+        return []
+
+    def _state_aliases(self, d):
+        """Returns the type aliases through which the PDE terms name states, fluxes and points.
+        Every precision of a term gets one set, named after its prefix."""
+        state_type = "::" + "::".join(self._namespace + [self._name])
+        precisions = list(d["COMPUTATION_PRECISIONS"])
+        if self.pde_terms.uses_double_aliases(d):
+            precisions.append("double")
+        lines = [
+            "using Coordinates = tarch::la::Vector<DIMENSIONS, double>;"
+        ] + self._solver_family_aliases()
+        for precision in precisions:
+            prefix = get_alias_prefix(precision, d)
+            lines += [
+                "using {}Unknowns = {}Unknowns<{}>;".format(
+                    prefix, state_type, precision
+                ),
+                "using {}State = {}State<{}>;".format(prefix, state_type, precision),
+                "using {}States = std::span<const {}State>;".format(prefix, prefix),
+                "using {}Flux = {}Unknowns;".format(prefix, prefix),
+                "using {}Source = {}Unknowns;".format(prefix, prefix),
+                "using {}NonconservativeProduct = {}Unknowns;".format(prefix, prefix),
+                "using {}Difference = {}Unknowns;".format(prefix, prefix),
+                "using {}Solution = {}Unknowns;".format(prefix, prefix),
+                "using {}Gradient = {}Unknowns[DIMENSIONS];".format(prefix, prefix),
+            ] + self._solver_family_state_aliases(prefix, precision)
+        return lines
+
+    def _tracer_solution(self, d):
+        """Returns the struct through which the particle analytical solution writes the exact
+        position and the data of one particle. Returns an empty list for a solver without that
+        term."""
+        measured = [tracers for tracers in self._tracers if tracers.error_measurement]
+        if (
+            not self.pde_terms.is_declared("particle_analytical_solution")
+            or not measured
+        ):
+            return []
+        attributes = measured[0].attributes or {"unknowns": measured[0].number_of_data}
+        members = ["  Coordinates position{};"] + [
+            (
+                "  double {}{{}};".format(name)
+                if count == 1
+                else "  tarch::la::Vector<{}, double> {}{{}};".format(count, name)
+            )
+            for name, count in attributes.items()
+            if count > 0
+        ]
+        return (
+            ["struct __attribute__((may_alias)) TracerSolution final {"]
+            + members
+            + [
+                "};",
+                "",
+                "static_assert(",
+                "  sizeof(TracerSolution) == (DIMENSIONS + {}) * sizeof(double),".format(
+                    d["NUMBER_OF_UNKNOWNS_PARTICLE"]
+                ),
+                '  "The solution of one particle occupies consecutive values."',
+                ");",
+            ]
+        )
 
     def _add_solver_family_entries(self, d):
         """Adds the template entries of a solver family to ``d``."""
@@ -286,12 +359,12 @@ class Solver:
 
     def _user_terms_inline(self):
         """Returns whether the application registered ``<Name>.cpph``. This file defines the
-        user-defined terms and hooks inline, so the device calls them."""
+        user-defined terms and hooks inline for the device."""
         return self._name + ".cpph" in self._project.output.makefile.hfiles
 
     def _user_terms_in_cpp(self):
-        """Returns whether the application registered ``<Name>.cpp``, which defines the
-        user-defined terms and hooks."""
+        """Returns whether the application registered ``<Name>.cpp`` with the user-defined terms
+        and hooks."""
         return self._name + ".cpp" in self._project.output.makefile.cppfiles
 
     def _render_tracer_update(self, tracer, d):
@@ -309,7 +382,7 @@ class Solver:
         )
         return 'static_assert(\n  {}<{}{}>,\n  "The solver {} must define every PDE term and constant of its solver family."\n);'.format(
             self.SOLVER_FAMILY_CONCEPT,
-            d["FULL_QUALIFIED_SOLVER_NAME"],
+            d["FULL_QUALIFIED_PDE_TERMS_NAME"],
             arguments,
             d["SOLVER_NAME"],
         )
@@ -323,6 +396,9 @@ class Solver:
         d["FULL_QUALIFIED_NAMESPACE"] = "::".join(self._namespace)
         d["SOLVER_NAME"] = self._name
         d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(self._namespace + [self._name])
+        d["FULL_QUALIFIED_PDE_TERMS_NAME"] = "::".join(
+            self._namespace + [self._name + "PDETerms"]
+        )
         d["NUMBER_OF_UNKNOWNS"] = self.state.unknowns
         d["NUMBER_OF_AUXILIARY_VARIABLES"] = self.state.auxiliary_variables
         d["NUMBER_OF_DATA"] = self.state.number_of_values
@@ -330,6 +406,7 @@ class Solver:
         d["STORAGE_PRECISION"] = self.precision.storage
         d["COMPUTE_PRECISION"] = self.precision.compute
         d["COMPUTATION_PRECISIONS"] = self.precision.types
+        d["STATE_ALIASES"] = self._state_aliases(d)
 
         d["SOLVER_FAMILY"] = self.SOLVER_FAMILY
         d["SOLVER_FAMILY_CLASS"] = self._solver_family_class()
@@ -360,6 +437,7 @@ class Solver:
         ]
         measured = [tracers for tracers in self._tracers if tracers.error_measurement]
         d["NUMBER_OF_UNKNOWNS_PARTICLE"] = measured[0].number_of_data if measured else 0
+        d["TRACER_SOLUTION"] = self._tracer_solution(d)
         for tracer in d["TRACERS"]:
             tracer["UPDATE_CALL"] = self._render_tracer_update(tracer, d)
         d["TRACERS_RECORD"] = any(
@@ -379,7 +457,7 @@ class Solver:
             )
 
         d["PERIODIC_BOUNDARIES"] = self._project.periodic_boundaries_mask
-        includes = self._solver_includes(self.state.has_names)
+        includes = self._solver_includes()
         d["SOLVER_INCLUDES_WITHOUT_PATH"] = [
             header for header in includes if "/" not in header
         ]
@@ -428,6 +506,25 @@ class Solver:
             )
             for term, body in hooks
         )
+        for on_device, key in (
+            (True, "SOLVER_PDE_TERM_POINTER_OVERLOADS"),
+            (False, "SOLVER_HOST_PDE_TERM_POINTER_OVERLOADS"),
+        ):
+            d[key] = "\n\n".join(
+                block
+                for block in [self.pde_terms.render_pointer_overloads(d, on_device)]
+                + [
+                    render_pointer_overload(
+                        term, precision, d, get_inline_attributes(term.gpu)
+                    )
+                    for term, body in hooks
+                    if term.gpu == on_device
+                    and any(
+                        isinstance(parameter, View) for parameter in term.parameters
+                    )
+                ]
+                if block
+            )
         d["SOLVER_INLINE_DEFINITIONS"] = "\n\n".join(
             [self.pde_terms.render_definitions(d, True)]
             + [
@@ -541,7 +638,7 @@ class Solver:
         self._fill_dictionary(dictionary)
         self._dictionary = dictionary
 
-        self.state.generate_shortcuts(dictionary, self._namespace, output)
+        self.state.generate_state(dictionary, self._namespace, output)
         self._generate_solver_family_files(output, dictionary)
 
         template_directory = os.path.dirname(os.path.realpath(__file__))

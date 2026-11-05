@@ -114,7 +114,7 @@ solver = exahype2.dg.ader.Solver(
         "psi": 1,
         "lapse": 1,
         "shift": 3,
-        "gij": 6,
+        "gij": exahype2.SymmetricMatrix(3),
     },
     auxiliary_variables=0,
     time_stepping=exahype2.TimeStepping.Adaptive(0.9),

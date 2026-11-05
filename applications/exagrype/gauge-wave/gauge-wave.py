@@ -80,19 +80,19 @@ project = exahype2.Project(
     max_grid_levels=args.max_grid_levels,
 )
 if project.dimensions != 3:
-    raise ValueError("The gauge-wave application is three-dimensional.")
+    raise ValueError("The gauge-wave application runs in 3D only.")
 
 unknowns = {
-    "gamma_tilde": 6,
-    "A_tilde": 6,
+    "gamma_tilde": exahype2.SymmetricMatrix(3),
+    "A_tilde": exahype2.SymmetricMatrix(3),
     "theta": 1,
     "gamma_hat": 3,
     "alpha": 1,
     "beta": 3,
     "b": 3,
     "grad_alpha": 3,
-    "grad_beta": 9,
-    "grad_gamma_tilde": 18,
+    "grad_beta": (3, 3),
+    "grad_gamma_tilde": (3, exahype2.SymmetricMatrix(3)),
     "K": 1,
     "phi": 1,
     "grad_phi": 3,

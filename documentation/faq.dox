@@ -288,8 +288,7 @@ Parallelisation
     code. That includes any potential
     auxiliary variables. We usually use
 
-    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++)
-      Q[i] = 0.0;
+    Q = {};
 
     as a first step within `initialCondition()`. This initialises every
     entry of the data. Further to that,

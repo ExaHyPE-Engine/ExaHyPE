@@ -17,10 +17,8 @@ def add_runtime_parameters(project):
 
 def algebraic_source():
     return """
-  std::fill_n(S, NumberOfUnknowns, 0);
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    S[Shortcuts::u + axis] = Q[Shortcuts::v + axis];
-  }
+  S   = {};
+  S.u = Q.v;
 """
 
 
@@ -30,13 +28,17 @@ def riemann_solver():
   const bool isFaultFace = """
         + fault_face_predicate()
         + """;
-  return applications::exahype2::exaseis::solveDynamicRuptureRiemannProblem<
-    Shortcuts,
-    {{COMPUTE_PRECISION}},
-    DGOrder + 1,
-    NumberOfUnknowns,
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
-    1>(QL, QR, t, normal, isBoundaryFace, isFaultFace, faceIndex, FL, FR);
+  return applications::exahype2::exaseis::solveDynamicRuptureRiemannProblem<{{COMPUTE_PRECISION}}, 1>(
+    QL,
+    QR,
+    t,
+    normal,
+    isBoundaryFace,
+    isFaultFace,
+    faceIndex,
+    FL,
+    FR
+  );
 """
     )
 

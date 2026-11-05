@@ -30,44 +30,34 @@ initial_conditions = f"""
   const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
   const bool highState = tarch::la::norm2(x - centre) <= Radius;
 
-  Q[Shortcuts::rho] = 1.0;
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-    Q[Shortcuts::j + dimension] = 0.0;
-  }}
-  Q[Shortcuts::rhoE] =
-    (highState ? HighPressure : LowPressure) / (Gamma - 1.0);
+  Q.rho  = 1.0;
+  Q.j    = 0.0;
+  Q.rhoE = (highState ? HighPressure : LowPressure) / (Gamma - 1.0);
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::rho] = Qinside[Shortcuts::rho];
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
-    Qoutside[Shortcuts::j + dimension] = Qinside[Shortcuts::j + dimension];
-  }
-  Qoutside[Shortcuts::j + normal] = -Qinside[Shortcuts::j + normal];
-  Qoutside[Shortcuts::rhoE] = Qinside[Shortcuts::rhoE];
+  Qoutside           = Qinside;
+  Qoutside.j(normal) = -Qinside.j(normal);
 """
 
 refinement_criterion = f"""
   return ::exahype2::refineOnDetail(
     Q,
     Quadrature<double>::getQuadraturePoints1D(),
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
     2.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    [](const double* const values) {{ return values[Shortcuts::rho]; }},
-    [](const double* const values) {{
+    [](const auto& state) {{ return state.rho; }},
+    [](const auto& state) {{
       constexpr double Gamma = {gamma};
       constexpr double DensityFloor = 1.0e-12;
-      const double density = std::max(values[Shortcuts::rho], DensityFloor);
+      const double density = std::max(state.rho, DensityFloor);
       double momentumSquared = 0.0;
       for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {{
-        momentumSquared +=
-          values[Shortcuts::j + dimension]
-          * values[Shortcuts::j + dimension];
+        momentumSquared += state.j(dimension) * state.j(dimension);
       }}
       return std::max(
         (Gamma - 1.0)
-          * (values[Shortcuts::rhoE] - 0.5 * momentumSquared / density),
+          * (state.rhoE - 0.5 * momentumSquared / density),
         DensityFloor
       );
     }}

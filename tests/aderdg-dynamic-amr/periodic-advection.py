@@ -48,12 +48,12 @@ initial_conditions = """
   constexpr double BumpRadius = 0.3;
   const auto scaledRadiusSquared =
     tarch::la::norm2Squared(x - centre) / (BumpRadius * BumpRadius);
-  Q[Shortcuts::q] = 0.0;
+  Q.q = 0.0;
   if (scaledRadiusSquared < 1.0) {
     const auto exponent = 1.0 - 1.0 / (1.0 - scaledRadiusSquared);
     const auto minimumNormalExponent = std::log(std::numeric_limits<double>::min());
     if (exponent >= minimumNormalExponent) {
-      Q[Shortcuts::q] = std::exp(exponent);
+      Q.q = std::exp(exponent);
     }
   }
 """
@@ -64,15 +64,14 @@ refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
     Quadrature<double>::getQuadraturePoints1D(),
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    [](const double* const values) { return 1.0 + values[Shortcuts::q]; }
+    [](const auto& state) { return 1.0 + state.q; }
   );
 """
 
 flux = """
-  F[Shortcuts::q] = Q[Shortcuts::q];
+  F.q = Q.q;
 """
 
 solver = exahype2.dg.ader.Solver(

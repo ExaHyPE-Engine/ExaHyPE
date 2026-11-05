@@ -588,6 +588,29 @@ UNIT_TEST("On a grid with level jumps the cell centre beside every face returns 
   }
 }
 
+UNIT_TEST("On the periodic grid the cell centre beside every face returns the bits of the centre of its cell") {
+  GIVEN("The regular test grid periodic along every axis") {
+    std::bitset<DIMENSIONS> periodic;
+    periodic.set();
+    peano4::unittests::buildRegularGrid(Depth, periodic);
+    const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+
+    THEN("The centre beside every side of a face with a cell has the bits of the centre of that cell") {
+      for (int face = 0; face < cellConnectivity.getNumberOfFaces(); face++) {
+        for (int side = 0; side < 2; side++) {
+          const int cell = cellConnectivity.getFaceCell(face, side);
+          if (cell >= 0) {
+            const tarch::la::Vector<DIMENSIONS, double> centre = cellConnectivity.getCellCentreBesideFace(face, side);
+            for (int axis = 0; axis < DIMENSIONS; axis++) {
+              VALIDATE_EQUALS(centre(axis), cellConnectivity.getCellCentre(cell, axis), face, side, axis);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 UNIT_TEST("Every span contains only entries of its adjacency and its level or kind and the spans cover every list") {
   GIVEN("The test grid with the block refined around its centre") {
     peano4::unittests::buildRegularGrid(Depth);

@@ -60,23 +60,14 @@ class TPV28(DynamicRuptureScenario):
   faultPosition = _curvi->split(
     faultNormal,
     20.0,
-    [](tarch::la::Vector<DIMENSIONS, double> x) {
-
-      // distance from center of first hill
-      double r1 = sqrt(
-          (x[1]-7.5)*(x[1]-7.5)
-        + (x[2]-9.5)*(x[2]-9.5)
-      );
-      // distance from center of second hill
-      double r2 = sqrt(
-          (x[1]- 7.5)*(x[1]- 7.5)
-        + (x[2]-30.5)*(x[2]-30.5)
-      );
-      if(r1<=3.){
-        return -0.3*(1.0 + cos( 3.14159265359 * r1/3.0));
+    [](const tarch::la::Vector<DIMENSIONS, double> x) {
+      const double firstHillDistance  = std::sqrt((x[1] - 7.5) * (x[1] - 7.5) + (x[2] - 9.5) * (x[2] - 9.5));
+      const double secondHillDistance = std::sqrt((x[1] - 7.5) * (x[1] - 7.5) + (x[2] - 30.5) * (x[2] - 30.5));
+      if (firstHillDistance <= 3.) {
+        return -0.3 * (1.0 + std::cos(3.14159265359 * firstHillDistance / 3.0));
       }
-      else if(r2<=3.){
-        return -0.3*(1.0 + cos( 3.14159265359 * r2/3.0));
+      if (secondHillDistance <= 3.) {
+        return -0.3 * (1.0 + std::cos(3.14159265359 * secondHillDistance / 3.0));
       }
       return 0.;
     }
@@ -85,9 +76,9 @@ class TPV28(DynamicRuptureScenario):
 
     def initial_conditions(self):
         return """
-      Q[Shortcuts::rho] = 2.67;
-      Q[Shortcuts::cp ] = 6.0;
-      Q[Shortcuts::cs ] = 3.464;
+      Q.rho = 2.67;
+      Q.cp  = 6.0;
+      Q.cs  = 3.464;
 """
 
     dynamicRuptureDictionary = {
@@ -100,12 +91,12 @@ class TPV28(DynamicRuptureScenario):
       syz = 0;
     """,
         "n_yz": """
-      double r = sqrt((x[1]-7.5)*(x[1]-7.5)+(x[2]-20.0)*(x[2]-20.0));
-      if (r <= 1.4) {
-         return 11.60;
+      const double distance = std::sqrt((x[1] - 7.5) * (x[1] - 7.5) + (x[2] - 20.0) * (x[2] - 20.0));
+      if (distance <= 1.4) {
+        return 11.60;
       }
-      if (1.4 <= r && r <= 2.0){
-         return 5.8 * (1.0 + cos(3.14159265359 * (r-1.4)/0.6));
+      if (1.4 <= distance and distance <= 2.0) {
+        return 5.8 * (1.0 + std::cos(3.14159265359 * (distance - 1.4) / 0.6));
       }
       return 0.0;""",
         "cohesion": "return 0;",

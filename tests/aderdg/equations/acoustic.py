@@ -34,13 +34,8 @@ class Acoustic(Equation):
             + str(self.rho)
             + """;
 
-  F[Shortcuts::p] = K0 * Q[Shortcuts::v + normal];
-  F[Shortcuts::v + 0] = 0;
-  F[Shortcuts::v + 1] = 0;
-#if DIMENSIONS==3
-  F[Shortcuts::v + 2] = 0;
-#endif
-
-  F[Shortcuts::v + normal] = inv_rho * Q[Shortcuts::p];
+  F.p         = K0 * Q.v(normal);
+  F.v         = 0.0;
+  F.v(normal) = inv_rho * Q.p;
 """
         )

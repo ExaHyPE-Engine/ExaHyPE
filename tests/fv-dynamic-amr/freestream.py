@@ -44,17 +44,13 @@ project = exahype2.Project(
 )
 
 initial_conditions = """
-  Q[Shortcuts::p] = 1.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::u + d] = 0.0;
-  }
+  Q.p = 1.0;
+  Q.u = 0.0;
 """
 
 boundary_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = 0.0;
-  }
-  Qoutside[Shortcuts::p] = 1.0;
+  Qoutside   = {};
+  Qoutside.p = 1.0;
 """
 
 refinement_criterion = """
@@ -86,11 +82,9 @@ refinement_criterion = """
 """
 
 flux = """
-  F[Shortcuts::p] = Q[Shortcuts::u + normal];
-  for (int d = 0; d < DIMENSIONS; d++) {
-    F[Shortcuts::u + d] = 0.0;
-  }
-  F[Shortcuts::u + normal] = Q[Shortcuts::p];
+  F.p         = Q.u(normal);
+  F.u         = 0.0;
+  F.u(normal) = Q.p;
 """
 
 solver = exahype2.fv.Solver(
@@ -109,10 +103,8 @@ solver.set_pde_terms(
     max_eigenvalue="return 1.0;",
     flux=flux,
     analytical_solution="""
-  solution[Shortcuts::p] = 1.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    solution[Shortcuts::u + d] = 0.0;
-  }
+  solution.p = 1.0;
+  solution.u = 0.0;
 """,
 )
 

@@ -9,10 +9,10 @@ TARGET_DECLARE
 INLINE_METHOD GPU_CALLABLE_METHOD void
 tests::exahype2::aderdg::grmhd::evaluateKerrSchildMetric(
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  double* const                                lapse,
-  double* const                                rootDeterminant,
-  double* const                                shift,
-  double (&gCov)[3][3]
+  double&                                      lapse,
+  double&                                      rootDeterminant,
+  Vector3&                                     shift,
+  Matrix3x3&                                   gCov
 ) {
   constexpr double SpinParameter = 0.0;
   constexpr double BlackHoleMass = 1.0;
@@ -33,35 +33,35 @@ tests::exahype2::aderdg::grmhd::evaluateKerrSchildMetric(
   const double ly = (r * x[1] - SpinParameter * x[0]) / (r2 + spinSquared);
   const double lz = r * x[2] / r2;
 
-  lapse[0] = 1.0 / std::sqrt(determinant);
-  shift[0] = 2.0 * kerrSchildFunction / determinant * lx;
-  shift[1] = 2.0 * kerrSchildFunction / determinant * ly;
-  shift[2] = 2.0 * kerrSchildFunction / determinant * lz;
+  lapse    = 1.0 / std::sqrt(determinant);
+  shift(0) = 2.0 * kerrSchildFunction / determinant * lx;
+  shift(1) = 2.0 * kerrSchildFunction / determinant * ly;
+  shift(2) = 2.0 * kerrSchildFunction / determinant * lz;
 
-  gCov[0][0] = 1.0 + 2.0 * kerrSchildFunction * lx * lx;
-  gCov[0][1] = 2.0 * kerrSchildFunction * (lx * ly);
-  gCov[0][2] = 2.0 * kerrSchildFunction * (lx * lz);
+  gCov(0, 0) = 1.0 + 2.0 * kerrSchildFunction * lx * lx;
+  gCov(0, 1) = 2.0 * kerrSchildFunction * (lx * ly);
+  gCov(0, 2) = 2.0 * kerrSchildFunction * (lx * lz);
 
-  gCov[1][0] = 2.0 * kerrSchildFunction * (lx * ly);
-  gCov[1][1] = 1.0 + 2.0 * kerrSchildFunction * ly * ly;
-  gCov[1][2] = 2.0 * kerrSchildFunction * (ly * lz);
+  gCov(1, 0) = 2.0 * kerrSchildFunction * (lx * ly);
+  gCov(1, 1) = 1.0 + 2.0 * kerrSchildFunction * ly * ly;
+  gCov(1, 2) = 2.0 * kerrSchildFunction * (ly * lz);
 
-  gCov[2][0] = 2.0 * kerrSchildFunction * (lx * lz);
-  gCov[2][1] = 2.0 * kerrSchildFunction * (ly * lz);
-  gCov[2][2] = 1.0 + 2.0 * kerrSchildFunction * lz * lz;
+  gCov(2, 0) = 2.0 * kerrSchildFunction * (lx * lz);
+  gCov(2, 1) = 2.0 * kerrSchildFunction * (ly * lz);
+  gCov(2, 2) = 1.0 + 2.0 * kerrSchildFunction * lz * lz;
 
-  rootDeterminant[0] = std::sqrt(determinant);
+  rootDeterminant = std::sqrt(determinant);
 }
 
 /**
- * Writes the primitive variables of the Michel accretion test into V, the spherical accretion onto a
- * stationary black hole after https://doi.org/10.1016/j.cpc.2020.107251 and
- * http://dx.doi.org/10.1007/BF00649949. V stores the pressure in the slot of E.
+ * Writes the state of the Michel accretion test into Q, the spherical accretion onto a stationary
+ * black hole after https://doi.org/10.1016/j.cpc.2020.107251 and http://dx.doi.org/10.1007/BF00649949.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD void
-tests::exahype2::aderdg::grmhd::setMichelAccretionPrimitives(
+tests::exahype2::aderdg::grmhd::setMichelAccretionState(
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  double* const                                V
+  [[maybe_unused]] const double                t,
+  Unknowns&                                    Q
 ) {
   constexpr double AdiabaticIndex          = 4.0 / 3.0;
   constexpr int    MaximumNewtonIterations = 50;
@@ -69,38 +69,28 @@ tests::exahype2::aderdg::grmhd::setMichelAccretionPrimitives(
   constexpr double CriticalRadius          = 8.0;
   constexpr double PolytropicIndex         = 1.0 / (AdiabaticIndex - 1.0);
 
-  ASSERTION(V != nullptr);
-
-  double lapse           = 0.0;
-  double rootDeterminant = 0.0;
-  double shift[3];
-  double gCov[3][3];
-  tests::exahype2::aderdg::grmhd::evaluateKerrSchildMetric(x, &lapse, &rootDeterminant, shift, gCov);
+  double    lapse           = 0.0;
+  double    rootDeterminant = 0.0;
+  Vector3   shift;
+  Matrix3x3 gCov;
+  evaluateKerrSchildMetric(x, lapse, rootDeterminant, shift, gCov);
 
   const double r = tarch::la::norm2(x);
 
+  Unknowns V;
   if (r < 0.8) {
     // A placeholder state near the centre avoids a division by zero. The evolution and the boundary
     // conditions never read it.
-    V[Shortcuts::rho]       = 1;
-    V[Shortcuts::vel + 0]   = 0.;
-    V[Shortcuts::vel + 1]   = 0.;
-    V[Shortcuts::vel + 2]   = 0.;
-    V[Shortcuts::E]         = 1.;
-    V[Shortcuts::B + 0]     = 0.;
-    V[Shortcuts::B + 1]     = 0.;
-    V[Shortcuts::B + 2]     = 0.;
-    V[Shortcuts::psi]       = 0.;
-    V[Shortcuts::lapse]     = 1.;
-    V[Shortcuts::shift + 0] = 0.;
-    V[Shortcuts::shift + 1] = 0.;
-    V[Shortcuts::shift + 2] = 0.;
-    V[Shortcuts::gij + 0]   = 1.;
-    V[Shortcuts::gij + 1]   = 0.;
-    V[Shortcuts::gij + 2]   = 0.;
-    V[Shortcuts::gij + 3]   = 1.;
-    V[Shortcuts::gij + 4]   = 0.;
-    V[Shortcuts::gij + 5]   = 1.;
+    V.rho   = 1;
+    V.vel   = 0.;
+    V.E     = 1.;
+    V.B     = 0.;
+    V.psi   = 0.;
+    V.lapse = 1.;
+    V.shift = 0.;
+    V.gij   = {1., 1., 1., 0., 0., 0.};
+
+    Q = getConservedVariablesOf(V);
     return;
   }
 
@@ -144,62 +134,30 @@ tests::exahype2::aderdg::grmhd::setMichelAccretionPrimitives(
   const double eulerianRadialVelocity = (radialVelocity / lorentzFactor + radialShift / lapse);
 
   // The velocity points along x / r. A permutation of the axes then permutes the velocity bitwise.
-  const double vContr[3] = {
+  const Vector3 vContr = {
     x[0] / r * eulerianRadialVelocity,
     x[1] / r * eulerianRadialVelocity,
     x[2] / r * eulerianRadialVelocity
   };
 
-  double vCov[3];
-  tests::exahype2::aderdg::grmhd::multiplyMatrixVector(gCov, vContr, vCov);
-
   const double rho = CriticalDensity * std::pow(temperature / criticalTemperature, PolytropicIndex);
   const double p   = rho * temperature;
 
-  const double spatialMetric[6] = {gCov[0][0], gCov[0][1], gCov[0][2], gCov[1][1], gCov[1][2], gCov[2][2]};
-
   // A magnetic field strength B0 of zero gives the hydrodynamic Michel accretion.
-  constexpr double B0        = 0;
-  const double     bContr[3] = {
-    B0 * x[0] / (std::sqrt(rootDeterminant) * r * r * r),
-    B0 * x[1] / (std::sqrt(rootDeterminant) * r * r * r),
-    B0 * x[2] / (std::sqrt(rootDeterminant) * r * r * r)
-  };
+  constexpr double B0 = 0;
+  for (int axis = 0; axis < 3; axis++) {
+    V.B(axis) = B0 * x[axis] / (std::sqrt(rootDeterminant) * r * r * r);
+  }
 
-  V[Shortcuts::rho]       = rho;
-  V[Shortcuts::vel + 0]   = vCov[0];
-  V[Shortcuts::vel + 1]   = vCov[1];
-  V[Shortcuts::vel + 2]   = vCov[2];
-  V[Shortcuts::E]         = p;
-  V[Shortcuts::B + 0]     = bContr[0];
-  V[Shortcuts::B + 1]     = bContr[1];
-  V[Shortcuts::B + 2]     = bContr[2];
-  V[Shortcuts::psi]       = 0.;
-  V[Shortcuts::lapse]     = lapse;
-  V[Shortcuts::shift + 0] = shift[0];
-  V[Shortcuts::shift + 1] = shift[1];
-  V[Shortcuts::shift + 2] = shift[2];
-  V[Shortcuts::gij + 0]   = spatialMetric[0];
-  V[Shortcuts::gij + 1]   = spatialMetric[1];
-  V[Shortcuts::gij + 2]   = spatialMetric[2];
-  V[Shortcuts::gij + 3]   = spatialMetric[3];
-  V[Shortcuts::gij + 4]   = spatialMetric[4];
-  V[Shortcuts::gij + 5]   = spatialMetric[5];
-}
+  V.rho   = rho;
+  V.vel   = multiplyMatrixVector(gCov, vContr);
+  V.E     = p;
+  V.psi   = 0.;
+  V.lapse = lapse;
+  V.shift = shift;
+  V.gij   = {gCov(0, 0), gCov(1, 1), gCov(2, 2), gCov(0, 1), gCov(0, 2), gCov(1, 2)};
 
-INLINE_METHOD GPU_CALLABLE_METHOD void
-tests::exahype2::aderdg::grmhd::setMichelAccretionState(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const double                t,
-  double* const                                Q
-) {
-  constexpr int NumberOfVariables = Shortcuts::gij + 6;
-
-  ASSERTION(Q != nullptr);
-
-  double V[NumberOfVariables];
-  tests::exahype2::aderdg::grmhd::setMichelAccretionPrimitives(x, V);
-  tests::exahype2::aderdg::grmhd::convertPrimitiveToConserved(Q, V);
+  Q = getConservedVariablesOf(V);
 }
 
 /**
@@ -209,14 +167,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD void
 tests::exahype2::aderdg::grmhd::setAlfvenWaveState(
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const double                                 t,
-  double* const                                Q
+  Unknowns&                                    Q
 ) {
-  constexpr double AdiabaticIndex    = 4.0 / 3.0;
-  constexpr int    NumberOfVariables = Shortcuts::gij + 6;
-  constexpr double Density           = 1.;
-  constexpr double Pressure          = 1.;
-  constexpr double WaveAmplitude     = 1.;
-  constexpr double B0                = 1.;
+  constexpr double AdiabaticIndex = 4.0 / 3.0;
+  constexpr double Density        = 1.;
+  constexpr double Pressure       = 1.;
+  constexpr double WaveAmplitude  = 1.;
+  constexpr double B0             = 1.;
 
   const double specificEnthalpy = 1.0 + AdiabaticIndex / (AdiabaticIndex - 1.) * Pressure / Density;
   const double denominator      = Density * specificEnthalpy + B0 * B0 * (1.0 + WaveAmplitude * WaveAmplitude);
@@ -226,32 +183,23 @@ tests::exahype2::aderdg::grmhd::setAlfvenWaveState(
   const double alfvenSpeedSquared = B0 * B0 / (denominator * speedFactor);
   const double alfvenSpeed        = std::sqrt(alfvenSpeedSquared);
 
-  double V[NumberOfVariables];
+  Unknowns V;
+  V.rho = Density;
 
-  V[Shortcuts::rho] = Density;
+  V.B(0) = B0;
+  V.B(1) = WaveAmplitude * B0 * std::cos(x[0] - alfvenSpeed * t);
+  V.B(2) = WaveAmplitude * B0 * std::sin(x[0] - alfvenSpeed * t);
 
-  V[Shortcuts::B + 0] = B0;
-  V[Shortcuts::B + 1] = WaveAmplitude * B0 * std::cos(x[0] - alfvenSpeed * t);
-  V[Shortcuts::B + 2] = WaveAmplitude * B0 * std::sin(x[0] - alfvenSpeed * t);
+  V.vel(0) = 0.0;
+  V.vel(1) = -alfvenSpeed * V.B(1) / B0;
+  V.vel(2) = -alfvenSpeed * V.B(2) / B0;
+  V.E      = Pressure;
 
-  V[Shortcuts::vel + 0] = 0.0;
-  V[Shortcuts::vel + 1] = -alfvenSpeed * V[Shortcuts::B + 1] / B0;
-  V[Shortcuts::vel + 2] = -alfvenSpeed * V[Shortcuts::B + 2] / B0;
-  V[Shortcuts::E]       = Pressure;
+  V.psi   = 0.;
+  V.lapse = 1.0;
+  V.shift = 0.;
+  V.gij   = {1., 1., 1., 0., 0., 0.};
 
-  V[Shortcuts::psi]       = 0.;
-  V[Shortcuts::lapse]     = 1.0;
-  V[Shortcuts::shift + 0] = 0.;
-  V[Shortcuts::shift + 1] = 0.;
-  V[Shortcuts::shift + 2] = 0.;
-
-  V[Shortcuts::gij + 0] = 1.;
-  V[Shortcuts::gij + 1] = 0.;
-  V[Shortcuts::gij + 2] = 0.;
-  V[Shortcuts::gij + 3] = 1.;
-  V[Shortcuts::gij + 4] = 0.;
-  V[Shortcuts::gij + 5] = 1.;
-
-  tests::exahype2::aderdg::grmhd::convertPrimitiveToConserved(Q, V);
+  Q = getConservedVariablesOf(V);
 }
 TARGET_DECLARE_END

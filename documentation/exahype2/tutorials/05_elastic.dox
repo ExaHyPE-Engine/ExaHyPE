@@ -41,7 +41,8 @@ P-waves. We expect a clean expanding spherical shell.
 A \f$3 \times 3 \times 3\f$ cube centred on the origin with non-periodic walls. The
 only change from the 2D tutorials is `dimensions = 3` and the three-component
 `size`/`offset`/`periodic_bc`. The solver is an ADER-DG scheme of order 4 whose
-unknowns are a velocity of multiplicity 3 and a stress of multiplicity 6:
+unknowns are a velocity of multiplicity 3 and a symmetric \f$3 \times 3\f$ stress
+tensor:
 
     my_project = exahype2.Project(
         namespace    = ["tutorials", "exahype2", "elastic"],
@@ -56,7 +57,7 @@ unknowns are a velocity of multiplicity 3 and a stress of multiplicity 6:
     aderdg_solver = exahype2.dg.ader.Solver(
         name                 = "ADERDGSolver",
         order                = 4,
-        unknowns             = {"v": 3, "sigma": 6},
+        unknowns             = {"v": 3, "sigma": exahype2.SymmetricMatrix(3)},
         auxiliary_variables  = {},
         time_stepping        = exahype2.TimeStepping.Adaptive(0.9),
         linear               = True,
@@ -71,12 +72,12 @@ unknowns are a velocity of multiplicity 3 and a stress of multiplicity 6:
 
 # The Implementation File
 
-`ADERDGSolver.cpp` contains the PDE terms. The code addresses the unknowns through the
-generated `Shortcuts` enum (`Shortcuts::v + 0..2`, `Shortcuts::sigma + 0..5`).
+`ADERDGSolver.cpp` contains the PDE terms. The code addresses the unknowns by their names
+(`Q.v(axis)`, `Q.sigma(row, column)`).
 `initialCondition` sets the Gaussian explosion (equal diagonal stresses, at rest);
 `boundaryConditions` gives a quiescent exterior to reflect off; `maxEigenvalue`
-returns the P-wave speed \f$c_p\f$; and `flux` is the velocity-stress flux, written
-out per direction with the Lamé parameters recovered from \f$\rho, c_p, c_s\f$.
+returns the P-wave speed \f$c_p\f$; and `flux` is the velocity-stress flux in the
+direction `normal`, with the Lamé parameters recovered from \f$\rho, c_p, c_s\f$.
 
 @include tutorials/05_elastic/ADERDGSolver.cpp
 
@@ -143,13 +144,13 @@ a four-lobed **quadrupole**.
 In `ADERDGSolver.cpp`, inside `initialCondition`, replace the three diagonal-stress
 lines
 
-    Q[Shortcuts::sigma + 0] = bump;   // sigma_xx
-    Q[Shortcuts::sigma + 1] = bump;   // sigma_yy
-    Q[Shortcuts::sigma + 2] = bump;   // sigma_zz
+    Q.sigma(0, 0) = bump; // sigma_xx
+    Q.sigma(1, 1) = bump; // sigma_yy
+    Q.sigma(2, 2) = bump; // sigma_zz
 
 with a single off-diagonal (shear) component:
 
-    Q[Shortcuts::sigma + 3] = bump;   // sigma_xy (shear) -> launches an S-wave
+    Q.sigma(0, 1) = bump; // sigma_xy (shear) -> launches an S-wave
 
 Rebuild and re-run, then view the velocity field sliced through the cube's
 mid-plane (slice axis `z`, middle slice position). In place of the P-wave's ring

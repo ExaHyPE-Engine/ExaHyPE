@@ -28,24 +28,17 @@ def parse_arguments():
 args = parse_arguments()
 
 initial_conditions = """
-  Q[Shortcuts::rho] = 0.1;
-  Q[Shortcuts::rhoU + 0] = 0.0;
-  Q[Shortcuts::rhoU + 1] = 0.0;
-#if DIMENSIONS == 3
-  Q[Shortcuts::rhoU + 2] = 0.0;
-#endif
-  Q[Shortcuts::rhoE] = ((x(0) < 0.5) ? (1.01) : (1.0));
+  Q.rho  = 0.1;
+  Q.rhoU = 0.0;
+  Q.rhoE = ((x(0) < 0.5) ? (1.01) : (1.0));
 """
 
 boundary_conditions = """
   // Reflective boundary conditions
-  Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
-  Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
-  Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
-#if DIMENSIONS == 3
-  Qoutside[Shortcuts::rhoU + 2] = -Qinside[Shortcuts::rhoU + 2];
-#endif
-  Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
+  Qoutside = Qinside;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    Qoutside.rhoU(axis) = -Qinside.rhoU(axis);
+  }
 """
 
 project = exahype2.Project(

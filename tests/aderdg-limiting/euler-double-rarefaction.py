@@ -32,21 +32,15 @@ initial_conditions = f"""
   const double velocity =
     x[0] < InterfacePosition ? -VelocityMagnitude : VelocityMagnitude;
 
-  Q[Shortcuts::rho] = Density;
-  Q[Shortcuts::j] = Density * velocity;
-  for (int dimension = 1; dimension < DIMENSIONS; ++dimension) {{
-    Q[Shortcuts::j + dimension] = 0.0;
-  }}
-  Q[Shortcuts::rhoE] =
+  Q.rho  = Density;
+  Q.j    = 0.0;
+  Q.j(0) = Density * velocity;
+  Q.rhoE =
     Pressure / (Gamma - 1.0) + 0.5 * Density * velocity * velocity;
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::rho] = Qinside[Shortcuts::rho];
-  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
-    Qoutside[Shortcuts::j + dimension] = Qinside[Shortcuts::j + dimension];
-  }
-  Qoutside[Shortcuts::rhoE] = Qinside[Shortcuts::rhoE];
+  Qoutside = Qinside;
 """
 
 analytical_solution = f"""
@@ -56,9 +50,8 @@ analytical_solution = f"""
   constexpr double Pressure = 0.4;
   constexpr double VelocityMagnitude = 4.0;
   const double soundSpeed = std::sqrt(Gamma * Pressure / Density);
-  // The fan head runs at |u| + c. Its inner tail runs at
-  // |u| - 2 c / (Gamma - 1), whose positive speed leaves vacuum between the
-  // mirrored fans.
+  // The fan head runs at |u| + c. Its inner tail runs at |u| - 2 c / (Gamma - 1).
+  // A positive tail speed leaves vacuum between the mirrored fans.
   const double head = VelocityMagnitude + soundSpeed;
   const double vacuumFront =
     VelocityMagnitude - 2.0 * soundSpeed / (Gamma - 1.0);
@@ -95,12 +88,10 @@ analytical_solution = f"""
     pressure = 0.0;
   }}
 
-  solution[Shortcuts::rho] = density;
-  solution[Shortcuts::j] = side * density * velocity;
-  for (int dimension = 1; dimension < DIMENSIONS; ++dimension) {{
-    solution[Shortcuts::j + dimension] = 0.0;
-  }}
-  solution[Shortcuts::rhoE] =
+  solution.rho  = density;
+  solution.j    = 0.0;
+  solution.j(0) = side * density * velocity;
+  solution.rhoE =
     pressure / (Gamma - 1.0) + 0.5 * density * velocity * velocity;
 """
 

@@ -346,7 +346,7 @@ tarch::la::sum(const tarch::la::Matrix<4, 4, Scalar>& matrix) {
 
 template <int Rows, int Cols, typename Scalar>
 INLINE_METHOD std::ostream&
-operator<<(std::ostream& os, const tarch::la::Matrix<Rows, Cols, Scalar>& matrix) {
+tarch::la::operator<<(std::ostream& os, const Matrix<Rows, Cols, Scalar>& matrix) {
   os << matrix.toString();
   return os;
 }

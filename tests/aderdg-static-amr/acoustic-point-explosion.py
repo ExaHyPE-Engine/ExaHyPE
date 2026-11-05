@@ -66,48 +66,34 @@ refinement_criterion = """
 """
 
 point_source = """
-  forceVector[Shortcuts::p] = 0.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    forceVector[Shortcuts::u + d] = 0.0;
-  }
-
   constexpr double PeakTime   = 0.1;
   constexpr double PulseWidth = 0.03;
-  forceVector[Shortcuts::p] = std::exp(-(t - PeakTime) * (t - PeakTime) / (2.0 * PulseWidth * PulseWidth));
+  forceVector   = {};
+  forceVector.p = std::exp(-(t - PeakTime) * (t - PeakTime) / (2.0 * PulseWidth * PulseWidth));
 """
 
 flux = """
   static constexpr double K0 = RHO * WAVE_SPEED * WAVE_SPEED;
 
-  F[Shortcuts::p] = K0 * Q[Shortcuts::u + normal];
-  for (int d = 0; d < DIMENSIONS; d++) {
-    F[Shortcuts::u + d] = 0.0;
-  }
-  F[Shortcuts::u + normal] = (1.0 / RHO) * Q[Shortcuts::p];
+  F.p         = K0 * Q.u(normal);
+  F.u         = 0.0;
+  F.u(normal) = (1.0 / RHO) * Q.p;
 """
 
 solver.set_pde_terms(
     initial_condition="""
-  Q[Shortcuts::p] = 0.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Q[Shortcuts::u + d] = 0.0;
-  }
+  Q = {};
 """,
     boundary_conditions="""
-  Qoutside[Shortcuts::p] = Qinside[Shortcuts::p];
-  for (int d = 0; d < DIMENSIONS; d++) {
-    Qoutside[Shortcuts::u + d] = Qinside[Shortcuts::u + d];
-  }
-  Qoutside[Shortcuts::u + normal] = -Qinside[Shortcuts::u + normal];
+  Qoutside           = Qinside;
+  Qoutside.u(normal) = -Qinside.u(normal);
 """,
     refinement_criterion=refinement_criterion,
     max_eigenvalue="return WAVE_SPEED;",
     flux=flux,
     point_source=point_source,
     point_source_locations="""
-  for (int d = 0; d < DIMENSIONS; d++) {
-    location[0][d] = -0.7;
-  }
+  location[0] = -0.7;
 """,
 )
 

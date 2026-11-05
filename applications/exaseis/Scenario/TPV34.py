@@ -131,49 +131,33 @@ class TPV34(DynamicRuptureScenario):
   faultPosition = _curvi->split(
     faultNormal,
     20.0,
-    [](tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
+    []([[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double> x) { return 0; }
   );
 """
 
     def initial_conditions(self):
         return """
-        static tarch::reader::NetCDFFieldSampler<3> materialSampler(
-          {
-            {"rho", "tpv34-material.nc", "rho", {"x", "y", "z"}},
-            {"cp",  "tpv34-material.nc", "cp",  {"x", "y", "z"}},
-            {"cs",  "tpv34-material.nc", "cs",  {"x", "y", "z"}}
-          },
-          {DomainSize[0], DomainSize[1], DomainSize[2]},
-          {DomainOffset[0], DomainOffset[1], DomainOffset[2]}
-        );
+      static tarch::reader::NetCDFFieldSampler<3> materialSampler(
+        {
+          {"rho", "tpv34-material.nc", "rho", {"x", "y", "z"}},
+          {"cp", "tpv34-material.nc", "cp", {"x", "y", "z"}},
+          {"cs", "tpv34-material.nc", "cs", {"x", "y", "z"}}
+        },
+        {DomainSize[0], DomainSize[1], DomainSize[2]},
+        {DomainOffset[0], DomainOffset[1], DomainOffset[2]}
+      );
+      Q.rho = materialSampler.samplePiecewiseConstant("rho", {x[0], x[1], x[2]});
+      Q.cp  = materialSampler.samplePiecewiseConstant("cp", {x[0], x[1], x[2]});
+      Q.cs  = materialSampler.samplePiecewiseConstant("cs", {x[0], x[1], x[2]});
 
-        Q[Shortcuts::rho] = materialSampler.samplePiecewiseConstant(
-          "rho",
-          {x[0], x[1], x[2]}
-        );
-
-        Q[Shortcuts::cp]  = materialSampler.samplePiecewiseConstant(
-          "cp",
-          {x[0], x[1], x[2]}
-        );
-
-        Q[Shortcuts::cs]  = materialSampler.samplePiecewiseConstant(
-          "cs",
-          {x[0], x[1], x[2]}
-        );
-
-        static tarch::reader::NetCDFFieldSampler<2> faultSampler(
-          {
-            {"stress", "tpv34-mu.nc", "stress"}
-          },
-          {DomainSize[2], DomainSize[1]},
-          {DomainOffset[2], DomainOffset[1]}
-        );
-
-        Q[Shortcuts::faultShearModulus] = faultSampler.samplePiecewiseConstant(
-          "stress",
-          {x[2], x[1]}
-        );
+      static tarch::reader::NetCDFFieldSampler<2> faultSampler(
+        {
+          {"stress", "tpv34-mu.nc", "stress"}
+        },
+        {DomainSize[2], DomainSize[1]},
+        {DomainOffset[2], DomainOffset[1]}
+      );
+      Q.faultShearModulus = faultSampler.samplePiecewiseConstant("stress", {x[2], x[1]});
 """
 
     def generate_required_files(self):
@@ -192,32 +176,32 @@ class TPV34(DynamicRuptureScenario):
 
         return
 
-    mu_compute = """
-  const Value mu = Q[Shortcuts::faultShearModulus];
+    shear_modulus = """
+  const Value shearModulus = Q.faultShearModulus;
     """
 
     dynamicRuptureDictionary = {
-        "initialStresses": mu_compute
+        "initialStresses": shear_modulus
         + """
-  sxx = -60.0 * mu;
+  sxx = -60.0 * shearModulus;
   syy = 0;
   szz = 0;
   sxy = 0;
-  sxz = 30.0 * mu;
+  sxz = 30.0 * shearModulus;
   syz = 0;
     """,
-        "n_yz": mu_compute
+        "n_yz": shear_modulus
         + """
-  double r = sqrt((x[1]-7.5)*(x[1]-7.5)+(x[2]-20.)*(x[2]-20.));
-  if (r <= 1.4) {
-    return 4.95 * mu;
+  const double distance = std::sqrt((x[1] - 7.5) * (x[1] - 7.5) + (x[2] - 20.) * (x[2] - 20.));
+  if (distance <= 1.4) {
+    return 4.95 * shearModulus;
   }
-  if (1.4 <= r && r <= 2.0){
-    return 2.475 * (1.0 + cos(std::numbers::pi * (r-1.4)/0.6)) * mu;
+  if (1.4 <= distance and distance <= 2.0) {
+    return 2.475 * (1.0 + std::cos(std::numbers::pi * (distance - 1.4) / 0.6)) * shearModulus;
   }
   return 0.0;""",
         "cohesion": """
-  if(x[1] < 2.4) {
+  if (x[1] < 2.4) {
     return 0.425 * (2.4 - x[1]);
   }
   return 0;

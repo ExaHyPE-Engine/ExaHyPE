@@ -96,23 +96,21 @@ if project.dimensions != 2:
     raise ValueError("The vertical plume tracer test runs in 2D only.")
 
 initial_conditions = """
-  Q[Shortcuts::rho]       = 1.0;
-  Q[Shortcuts::rhoU + 0]  = 0.0;
-  Q[Shortcuts::rhoU + 1]  = 0.5 * x(1);
-  Q[Shortcuts::rhoE]      = 1.0;
+  Q.rho     = 1.0;
+  Q.rhoU(0) = 0.0;
+  Q.rhoU(1) = 0.5 * x(1);
+  Q.rhoE    = 1.0;
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
-  Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
-  Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
-  Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
+  Qoutside = Qinside;
+  for (int axis = 0; axis < 2; axis++) {
+    Qoutside.rhoU(axis) = -Qinside.rhoU(axis);
+  }
 """
 
 flux = """
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    F[i] = 0.0;
-  }
+  F = {};
 """
 
 max_eigenvalue = """
@@ -120,24 +118,22 @@ max_eigenvalue = """
 """
 
 analytical_solution = """
-  // The tracers move in the fluid velocity field (0, VelocityGradient * y). The entries of solution
-  // are the position and the tracer data of tracer_attributes, with zero mass and acceleration for
-  // a tracer.
+  // The tracers move in the fluid velocity field (0, VelocityGradient * y). The solution sets the
+  // mass and the acceleration of a tracer to zero.
   constexpr double VelocityGradient = 0.5;
 
-  const double initialX = particle->getData(1);
-  const double initialY = particle->getData(2);
+  const double initialX = particle.getData(1);
+  const double initialY = particle.getData(2);
 
-  solution[0] = initialX;
-  solution[1] = initialY * std::exp(VelocityGradient * t);
-  solution[2] = 1.0;
-  solution[3] = initialX;
-  solution[4] = initialY;
-  solution[5] = 0.0;
-  solution[6] = VelocityGradient * solution[1];
-  solution[7] = 0.0;
-  solution[8] = 0.0;
-  solution[9] = 0.0;
+  solution.position = {initialX, initialY * std::exp(VelocityGradient * t)};
+  solution.rho      = 1.0;
+  solution.init_x   = initialX;
+  solution.init_y   = initialY;
+  solution.u        = 0.0;
+  solution.v        = VelocityGradient * solution.position(1);
+  solution.a_x      = 0.0;
+  solution.a_y      = 0.0;
+  solution.mass     = 0.0;
 """
 
 fv_solver = exahype2.fv.Solver(

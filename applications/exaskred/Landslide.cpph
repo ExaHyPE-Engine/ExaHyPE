@@ -1,33 +1,28 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "tarch/Assertions.h"
 
 /**
  * Copies a state and zeroes the depth and momenta of a layer that is dry or not finite. The
  * bathymetry keeps its value.
  */
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::landslide::sanitiseDryState(
-  const T* const NOALIAS                                      QIn,
-  T* const NOALIAS                                            QOut,
+  const State&                                                QIn,
+  State&                                                      QOut,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    QOut[i] = QIn[i];
-  }
-
-  if (
-    not std::isfinite(static_cast<double>(QIn[Shortcuts::h]))
-    or QIn[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
-  ) {
-    QOut[Shortcuts::h]      = T{};
-    QOut[Shortcuts::hu]     = T{};
-    QOut[Shortcuts::hu + 1] = T{};
+  using Value = decltype(State::h);
+  QOut        = QIn;
+  if (not std::isfinite(static_cast<double>(QIn.h)) or QIn.h <= static_cast<Value>(physics.dryHeightThreshold)) {
+    QOut.h  = Value{};
+    QOut.hu = Value{};
   }
 }
 
 /**
- * Returns the gravity of a fully submerged slide, reduced by buoyancy.
+ * Returns the buoyancy-reduced gravity of a fully submerged slide.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getSubmergedGravity(
@@ -38,83 +33,81 @@ applications::exahype2::exaskred::landslide::getSubmergedGravity(
   return physics.gravity * buoyancyFactor;
 }
 
-template <class Shortcuts, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::landslide::isSubmergedByBathymetry(
-  const T* const NOALIAS                                      Q,
+  const State&                                                Q,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  return std::isfinite(static_cast<double>(Q[Shortcuts::z])) and Q[Shortcuts::z] < static_cast<T>(physics.waterLevel);
+  using Value = decltype(State::z);
+  return std::isfinite(static_cast<double>(Q.z)) and Q.z < static_cast<Value>(physics.waterLevel);
 }
 
-template <class Shortcuts, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getEffectiveGravity(
-  const T* const NOALIAS                                      Q,
+  const State&                                                Q,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  return isSubmergedByBathymetry<Shortcuts>(Q, physics) ? getSubmergedGravity(physics) : physics.gravity;
+  return isSubmergedByBathymetry(Q, physics) ? getSubmergedGravity(physics) : physics.gravity;
 }
 
 /**
- * Returns the submerged gravity if the states on both sides of a face are submerged, and the full
+ * Returns the submerged gravity if the states on both sides of a face are submerged. Returns the full
  * gravity otherwise.
  */
-template <class Shortcuts, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getInterfaceEffectiveGravity(
-  const T* const NOALIAS                                      QL,
-  const T* const NOALIAS                                      QR,
+  const State&                                                QL,
+  const State&                                                QR,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  return isSubmergedByBathymetry<Shortcuts>(QL, physics) and isSubmergedByBathymetry<Shortcuts>(QR, physics)
-    ? getSubmergedGravity(physics)
-    : physics.gravity;
+  return isSubmergedByBathymetry(QL, physics) and isSubmergedByBathymetry(QR, physics) ? getSubmergedGravity(physics)
+                                                                                       : physics.gravity;
 }
 
 /**
  * Returns the stiffness rate of the free-surface friction drag of Kim et al. (2019). The rate
  * bounds the admissible time step of a submerged, moving state.
  */
-template <class Shortcuts, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getWaterFrictionDragSourceSpeed(
-  const T* const NOALIAS                                      Q,
+  const State&                                                Q,
   const applications::exahype2::exaskred::landslide::Physics& physics,
   const bool                                                  submerged
 ) {
+  using Value = decltype(State::h);
   if (
-    not submerged or not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
-    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold) or physics.slideDensity <= 0.0
-    or physics.waterFrictionDragCoefficient <= 0.0
+    not submerged or not std::isfinite(static_cast<double>(Q.h)) or not std::isfinite(static_cast<double>(Q.hu(0)))
+    or not std::isfinite(static_cast<double>(Q.hu(1))) or Q.h <= static_cast<Value>(physics.dryHeightThreshold)
+    or physics.slideDensity <= 0.0 or physics.waterFrictionDragCoefficient <= 0.0
   ) {
     return 0.0;
   }
 
-  const double momentum =
-    std::sqrt(static_cast<double>(Q[Shortcuts::hu] * Q[Shortcuts::hu] + Q[Shortcuts::hu + 1] * Q[Shortcuts::hu + 1]));
+  const double momentum = std::sqrt(static_cast<double>(Q.hu(0) * Q.hu(0) + Q.hu(1) * Q.hu(1)));
   return physics.waterFrictionDragCoefficient * physics.waterDensity * momentum
-    / (physics.slideDensity * static_cast<double>(Q[Shortcuts::h] * Q[Shortcuts::h]));
+    / (physics.slideDensity * static_cast<double>(Q.h * Q.h));
 }
 
-template <class Shortcuts, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getWaterFrictionDragSourceSpeed(
-  const T* const NOALIAS                                      Q,
+  const State&                                                Q,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  return getWaterFrictionDragSourceSpeed<Shortcuts>(Q, physics, isSubmergedByBathymetry<Shortcuts>(Q, physics));
+  return getWaterFrictionDragSourceSpeed(Q, physics, isSubmergedByBathymetry(Q, physics));
 }
 
 /**
  * Writes the advective and pressure fluxes of the granular layer for the given gravity.
  */
-template <class Shortcuts, int NumberOfUnknowns, typename T>
+template <typename State, typename Flux>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::landslide::flux(
-  const T* const NOALIAS                                        Q,
+  const State&                                                  Q,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
@@ -122,48 +115,47 @@ applications::exahype2::exaskred::landslide::flux(
   const int                                                     normal,
   const applications::exahype2::exaskred::landslide::Physics&   physics,
   const double                                                  gravity,
-  T* const NOALIAS                                              F
+  Flux&                                                         F
 ) {
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    F[i] = T{};
-  }
+  using Value = decltype(State::h);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
 
+  F = {};
   if (
-    not std::isfinite(static_cast<double>(Q[Shortcuts::h])) or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+    not std::isfinite(static_cast<double>(Q.h)) or not std::isfinite(static_cast<double>(Q.hu(0)))
+    or not std::isfinite(static_cast<double>(Q.hu(1))) or Q.h <= static_cast<Value>(physics.dryHeightThreshold)
   ) {
     return;
   }
 
-  const T slideHeight    = Q[Shortcuts::h];
-  const T normalVelocity = Q[Shortcuts::hu + normal] / slideHeight;
+  const Value slideHeight    = Q.h;
+  const Value normalVelocity = Q.hu(normal) / slideHeight;
 
-  F[Shortcuts::h]      = Q[Shortcuts::hu + normal];
-  F[Shortcuts::hu]     = normalVelocity * Q[Shortcuts::hu];
-  F[Shortcuts::hu + 1] = normalVelocity * Q[Shortcuts::hu + 1];
-  F[Shortcuts::hu + normal] += static_cast<T>(0.5) * static_cast<T>(gravity) * slideHeight * slideHeight;
+  F.h     = Q.hu(normal);
+  F.hu(0) = normalVelocity * Q.hu(0);
+  F.hu(1) = normalVelocity * Q.hu(1);
+  F.hu(normal) += static_cast<Value>(0.5) * static_cast<Value>(gravity) * slideHeight * slideHeight;
 }
 
-template <class Shortcuts, int NumberOfUnknowns, typename T>
+template <typename State, typename Flux>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::landslide::flux(
-  const T* const NOALIAS                                      Q,
+  const State&                                                Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
   const double                                                t,
   const double                                                dt,
   const int                                                   normal,
   const applications::exahype2::exaskred::landslide::Physics& physics,
-  T* const NOALIAS                                            F
+  Flux&                                                       F
 ) {
-  flux<Shortcuts, NumberOfUnknowns>(Q, x, h, t, dt, normal, physics, getEffectiveGravity<Shortcuts>(Q, physics), F);
+  flux(Q, x, h, t, dt, normal, physics, getEffectiveGravity(Q, physics), F);
 }
 
-template <class Shortcuts, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getFluxEigenvalue(
-  const T* const NOALIAS                                        Q,
+  const State&                                                  Q,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
@@ -172,23 +164,25 @@ applications::exahype2::exaskred::landslide::getFluxEigenvalue(
   const applications::exahype2::exaskred::landslide::Physics&   physics,
   const double                                                  gravity
 ) {
+  using Value = decltype(State::h);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
+
   if (
-    not std::isfinite(static_cast<double>(Q[Shortcuts::h])) or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+    not std::isfinite(static_cast<double>(Q.h)) or not std::isfinite(static_cast<double>(Q.hu(0)))
+    or not std::isfinite(static_cast<double>(Q.hu(1))) or Q.h <= static_cast<Value>(physics.dryHeightThreshold)
   ) {
     return 0.0;
   }
 
-  const double normalVelocity = static_cast<double>(Q[Shortcuts::hu + normal] / Q[Shortcuts::h]);
-  const double waveSpeed      = std::sqrt(gravity * static_cast<double>(Q[Shortcuts::h]));
+  const double normalVelocity = static_cast<double>(Q.hu(normal) / Q.h);
+  const double waveSpeed      = std::sqrt(gravity * static_cast<double>(Q.h));
   return std::fmax(std::abs(normalVelocity + waveSpeed), std::abs(normalVelocity - waveSpeed));
 }
 
-template <class Shortcuts, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getFluxEigenvalue(
-  const T* const NOALIAS                                      Q,
+  const State&                                                Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
   const double                                                t,
@@ -196,7 +190,7 @@ applications::exahype2::exaskred::landslide::getFluxEigenvalue(
   const int                                                   normal,
   const applications::exahype2::exaskred::landslide::Physics& physics
 ) {
-  return getFluxEigenvalue<Shortcuts>(Q, x, h, t, dt, normal, physics, getEffectiveGravity<Shortcuts>(Q, physics));
+  return getFluxEigenvalue(Q, x, h, t, dt, normal, physics, getEffectiveGravity(Q, physics));
 }
 
 /**
@@ -204,10 +198,10 @@ applications::exahype2::exaskred::landslide::getFluxEigenvalue(
  * Voellmy-Salm drag stiffens as the layer thins. The flux eigenvalue alone can then allow an
  * unstable friction update.
  */
-template <class Shortcuts, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue(
-  const T* const NOALIAS                                      Q,
+  const State&                                                Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
   const double                                                t,
@@ -218,29 +212,28 @@ applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue(
   const bool                                                  submerged,
   const double                                                sourceEigenvalueScaling
 ) {
-  const double fluxSpeed = getFluxEigenvalue<Shortcuts>(Q, x, h, t, dt, normal, physics, gravity);
+  using Value            = decltype(State::h);
+  const double fluxSpeed = getFluxEigenvalue(Q, x, h, t, dt, normal, physics, gravity);
 
   if (
-    not std::isfinite(static_cast<double>(Q[Shortcuts::h])) or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+    not std::isfinite(static_cast<double>(Q.h)) or not std::isfinite(static_cast<double>(Q.hu(0)))
+    or not std::isfinite(static_cast<double>(Q.hu(1))) or Q.h <= static_cast<Value>(physics.dryHeightThreshold)
   ) {
     return fluxSpeed;
   }
 
-  const double momentum =
-    std::sqrt(static_cast<double>(Q[Shortcuts::hu] * Q[Shortcuts::hu] + Q[Shortcuts::hu + 1] * Q[Shortcuts::hu + 1]));
-  const double sourceSpeed = 2.0 * gravity * momentum * physics.inverseTurbulentFrictionLength
-      / static_cast<double>(Q[Shortcuts::h] * Q[Shortcuts::h])
-    + getWaterFrictionDragSourceSpeed<Shortcuts>(Q, physics, submerged);
+  const double momentum = std::sqrt(static_cast<double>(Q.hu(0) * Q.hu(0) + Q.hu(1) * Q.hu(1)));
+  const double sourceSpeed =
+    2.0 * gravity * momentum * physics.inverseTurbulentFrictionLength / static_cast<double>(Q.h * Q.h)
+    + getWaterFrictionDragSourceSpeed(Q, physics, submerged);
 
   return std::fmax(fluxSpeed, h[normal] * sourceEigenvalueScaling * sourceSpeed);
 }
 
-template <class Shortcuts, typename T>
+template <typename State>
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue(
-  const T* const NOALIAS                                      Q,
+  const State&                                                Q,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
   const double                                                t,
@@ -249,7 +242,7 @@ applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue(
   const applications::exahype2::exaskred::landslide::Physics& physics,
   const double                                                sourceEigenvalueScaling
 ) {
-  return getEffectiveMaxEigenvalue<Shortcuts>(
+  return getEffectiveMaxEigenvalue(
     Q,
     x,
     h,
@@ -257,8 +250,8 @@ applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue(
     dt,
     normal,
     physics,
-    getEffectiveGravity<Shortcuts>(Q, physics),
-    isSubmergedByBathymetry<Shortcuts>(Q, physics),
+    getEffectiveGravity(Q, physics),
+    isSubmergedByBathymetry(Q, physics),
     sourceEigenvalueScaling
   );
 }
@@ -266,11 +259,11 @@ applications::exahype2::exaskred::landslide::getEffectiveMaxEigenvalue(
 /**
  * Writes the bathymetry-slope pressure term of the granular layer.
  */
-template <class Shortcuts, int NumberOfUnknowns, typename T>
+template <typename State, typename Difference, typename NonconservativeProduct>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::landslide::nonconservativeProduct(
-  const T* const NOALIAS                                        Q,
-  const T* const NOALIAS                                        deltaQ,
+  const State&                                                  Q,
+  const Difference&                                             deltaQ,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
@@ -278,48 +271,36 @@ applications::exahype2::exaskred::landslide::nonconservativeProduct(
   const int                                                     normal,
   const applications::exahype2::exaskred::landslide::Physics&   physics,
   const double                                                  gravity,
-  T* const NOALIAS                                              BTimesDeltaQ
+  NonconservativeProduct&                                       BTimesDeltaQ
 ) {
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    BTimesDeltaQ[i] = T{};
-  }
+  using Value = decltype(State::h);
+  ASSERTION(normal >= 0 and normal < DIMENSIONS, normal);
 
+  BTimesDeltaQ = {};
   if (
-    not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
-    or not std::isfinite(static_cast<double>(deltaQ[Shortcuts::z]))
-    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+    not std::isfinite(static_cast<double>(Q.h)) or not std::isfinite(static_cast<double>(deltaQ.z))
+    or Q.h <= static_cast<Value>(physics.dryHeightThreshold)
   ) {
     return;
   }
 
-  BTimesDeltaQ[Shortcuts::hu + normal] = static_cast<T>(gravity) * Q[Shortcuts::h] * deltaQ[Shortcuts::z];
+  BTimesDeltaQ.hu(normal) = static_cast<Value>(gravity) * Q.h * deltaQ.z;
 }
 
-template <class Shortcuts, int NumberOfUnknowns, typename T>
+template <typename State, typename Difference, typename NonconservativeProduct>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::landslide::nonconservativeProduct(
-  const T* const NOALIAS                                      Q,
-  const T* const NOALIAS                                      deltaQ,
+  const State&                                                Q,
+  const Difference&                                           deltaQ,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
   const double                                                t,
   const double                                                dt,
   const int                                                   normal,
   const applications::exahype2::exaskred::landslide::Physics& physics,
-  T* const NOALIAS                                            BTimesDeltaQ
+  NonconservativeProduct&                                     BTimesDeltaQ
 ) {
-  nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
-    Q,
-    deltaQ,
-    x,
-    h,
-    t,
-    dt,
-    normal,
-    physics,
-    getEffectiveGravity<Shortcuts>(Q, physics),
-    BTimesDeltaQ
-  );
+  nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, physics, getEffectiveGravity(Q, physics), BTimesDeltaQ);
 }
 
 /**
@@ -327,11 +308,11 @@ applications::exahype2::exaskred::landslide::nonconservativeProduct(
  * (2019) as a source. The resistance never exceeds the momentum divided by dt. One time step then
  * cannot reverse the momentum.
  */
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+template <typename State, typename Gradient, typename Source>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::landslide::diffusiveSourceTerm(
-  const T* const NOALIAS                                        Q,
-  const T* const NOALIAS                                        deltaQ,
+  const State&                                                  Q,
+  const Gradient&                                               deltaQ,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
@@ -339,78 +320,75 @@ applications::exahype2::exaskred::landslide::diffusiveSourceTerm(
   const applications::exahype2::exaskred::landslide::Physics&   physics,
   const double                                                  gravity,
   const bool                                                    submerged,
-  T* const NOALIAS                                              S
+  Source&                                                       S
 ) {
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    S[i] = T{};
-  }
+  using Value = decltype(State::h);
 
+  S = {};
   if (
-    not std::isfinite(static_cast<double>(Q[Shortcuts::h])) or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+    not std::isfinite(static_cast<double>(Q.h)) or not std::isfinite(static_cast<double>(Q.hu(0)))
+    or not std::isfinite(static_cast<double>(Q.hu(1))) or Q.h <= static_cast<Value>(physics.dryHeightThreshold)
   ) {
     return;
   }
 
-  constexpr int Stride      = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  const T       dhx         = deltaQ[Shortcuts::h];
-  const T       dhy         = deltaQ[Shortcuts::h + Stride];
-  const T       dzx         = deltaQ[Shortcuts::z];
-  const T       dzy         = deltaQ[Shortcuts::z + Stride];
-  const T       slopeFactor = static_cast<T>(1.0) / std::sqrt(static_cast<T>(1.0) + dzx * dzx + dzy * dzy);
+  const Value dhx         = deltaQ[0].h;
+  const Value dhy         = deltaQ[1].h;
+  const Value dzx         = deltaQ[0].z;
+  const Value dzy         = deltaQ[1].z;
+  const Value slopeFactor = static_cast<Value>(1.0) / std::sqrt(static_cast<Value>(1.0) + dzx * dzx + dzy * dzy);
 
-  const T momentumSquared = Q[Shortcuts::hu] * Q[Shortcuts::hu] + Q[Shortcuts::hu + 1] * Q[Shortcuts::hu + 1];
-  const T momentum        = std::sqrt(momentumSquared);
-  if (momentum > T{}) {
-    const T friction = static_cast<T>(physics.coulombFriction) * slopeFactor * Q[Shortcuts::h]
-      + momentumSquared * static_cast<T>(physics.inverseTurbulentFrictionLength) / (Q[Shortcuts::h] * Q[Shortcuts::h]);
+  const Value momentumSquared = Q.hu(0) * Q.hu(0) + Q.hu(1) * Q.hu(1);
+  const Value momentum        = std::sqrt(momentumSquared);
+  if (momentum > Value{}) {
+    const Value friction = static_cast<Value>(physics.coulombFriction) * slopeFactor * Q.h
+      + momentumSquared * static_cast<Value>(physics.inverseTurbulentFrictionLength) / (Q.h * Q.h);
 
-    T resistanceMagnitude = static_cast<T>(gravity) * friction;
+    Value resistanceMagnitude = static_cast<Value>(gravity) * friction;
     if (
       submerged and physics.slideDensity > 0.0
       and (physics.waterFrictionDragCoefficient > 0.0 or physics.waterPressureDragCoefficient > 0.0)
     ) {
-      const T densityRatio      = static_cast<T>(physics.waterDensity / physics.slideDensity);
-      const T invSlideHeight    = static_cast<T>(1.0) / Q[Shortcuts::h];
-      const T velocity0         = Q[Shortcuts::hu] * invSlideHeight;
-      const T velocity1         = Q[Shortcuts::hu + 1] * invSlideHeight;
-      const T velocityMagnitude = momentum * invSlideHeight;
+      const Value densityRatio      = static_cast<Value>(physics.waterDensity / physics.slideDensity);
+      const Value invSlideHeight    = static_cast<Value>(1.0) / Q.h;
+      const Value velocity0         = Q.hu(0) * invSlideHeight;
+      const Value velocity1         = Q.hu(1) * invSlideHeight;
+      const Value velocityMagnitude = momentum * invSlideHeight;
 
-      T waterDragMagnitude = static_cast<T>(0.5) * static_cast<T>(physics.waterFrictionDragCoefficient) * densityRatio
-        * velocityMagnitude * velocityMagnitude;
+      Value waterDragMagnitude = static_cast<Value>(0.5) * static_cast<Value>(physics.waterFrictionDragCoefficient)
+        * densityRatio * velocityMagnitude * velocityMagnitude;
 
-      const T pressureExposure = -(velocity0 * dhx + velocity1 * dhy);
-      if (std::isfinite(static_cast<double>(pressureExposure)) and pressureExposure > T{}) {
-        waterDragMagnitude += static_cast<T>(0.5) * static_cast<T>(physics.waterPressureDragCoefficient) * densityRatio
-          * pressureExposure * velocityMagnitude;
+      const Value pressureExposure = -(velocity0 * dhx + velocity1 * dhy);
+      if (std::isfinite(static_cast<double>(pressureExposure)) and pressureExposure > Value{}) {
+        waterDragMagnitude += static_cast<Value>(0.5) * static_cast<Value>(physics.waterPressureDragCoefficient)
+          * densityRatio * pressureExposure * velocityMagnitude;
       }
 
       resistanceMagnitude += waterDragMagnitude;
     }
 
-    const T cappedResistanceMagnitude = std::isfinite(dt) and dt > 0.0
-      ? std::min(resistanceMagnitude, momentum / static_cast<T>(dt))
+    const Value cappedResistanceMagnitude = std::isfinite(dt) and dt > 0.0
+      ? std::min(resistanceMagnitude, momentum / static_cast<Value>(dt))
       : resistanceMagnitude;
-    const T frictionTerm              = -cappedResistanceMagnitude / momentum;
-    S[Shortcuts::hu]                  = Q[Shortcuts::hu] * frictionTerm;
-    S[Shortcuts::hu + 1]              = Q[Shortcuts::hu + 1] * frictionTerm;
+    const Value frictionTerm              = -cappedResistanceMagnitude / momentum;
+    S.hu(0)                               = Q.hu(0) * frictionTerm;
+    S.hu(1)                               = Q.hu(1) * frictionTerm;
   }
 }
 
-template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+template <typename State, typename Gradient, typename Source>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::landslide::diffusiveSourceTerm(
-  const T* const NOALIAS                                      Q,
-  const T* const NOALIAS                                      deltaQ,
+  const State&                                                Q,
+  const Gradient&                                             deltaQ,
   const tarch::la::Vector<DIMENSIONS, double>&                x,
   const tarch::la::Vector<DIMENSIONS, double>&                h,
   const double                                                t,
   const double                                                dt,
   const applications::exahype2::exaskred::landslide::Physics& physics,
-  T* const NOALIAS                                            S
+  Source&                                                     S
 ) {
-  diffusiveSourceTerm<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
+  diffusiveSourceTerm(
     Q,
     deltaQ,
     x,
@@ -418,8 +396,8 @@ applications::exahype2::exaskred::landslide::diffusiveSourceTerm(
     t,
     dt,
     physics,
-    getEffectiveGravity<Shortcuts>(Q, physics),
-    isSubmergedByBathymetry<Shortcuts>(Q, physics),
+    getEffectiveGravity(Q, physics),
+    isSubmergedByBathymetry(Q, physics),
     S
   );
 }

@@ -1,24 +1,26 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "Constants.h"
+
+#include "tarch/Assertions.h"
 
 /**
- * Writes B(Q) deltaQ for the first-order CCZ4 system, with deltaQ along the axis normal.
+ * Writes B(Q) deltaQ for the first-order CCZ4 system. deltaQ is the difference along the axis normal.
  * The conformal metric must be positive definite.
  */
-template <class Shortcuts>
+template <typename State, typename Difference, typename NonconservativeProduct>
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exagrype::nonconservativeProduct(
-  const double* const NOALIAS Q,
-  const double* const NOALIAS deltaQ,
-  const int                   normal,
-  double* const NOALIAS       BTimesDeltaQ
+  const State&            Q,
+  const Difference&       deltaQ,
+  const int               normal,
+  NonconservativeProduct& BTimesDeltaQ
 ) {
-  ASSERTION(Q != nullptr and deltaQ != nullptr and BTimesDeltaQ != nullptr);
   ASSERTION(normal >= 0 and normal < 3, normal);
   constexpr double Advection          = 1.0;
   constexpr double AuxiliaryAdvection = 1.0;
 
-  const double alpha  = std::fmax(1e-4, Q[Shortcuts::alpha]);
+  const double alpha  = std::fmax(1e-4, Q.alpha);
   const double alpha2 = alpha * alpha;
 
   double fa = 1.0;
@@ -26,53 +28,34 @@ applications::exahype2::exagrype::nonconservativeProduct(
     fa = 2. / alpha;
   }
 
-  const double g_cov[3][3] = {
-    {Q[Shortcuts::gamma_tilde + 0], Q[Shortcuts::gamma_tilde + 1], Q[Shortcuts::gamma_tilde + 2]},
-    {Q[Shortcuts::gamma_tilde + 1], Q[Shortcuts::gamma_tilde + 3], Q[Shortcuts::gamma_tilde + 4]},
-    {Q[Shortcuts::gamma_tilde + 2], Q[Shortcuts::gamma_tilde + 4], Q[Shortcuts::gamma_tilde + 5]}
+  const auto&  metric     = Q.gamma_tilde;
+  const double gCov[3][3] = {
+    {metric(0, 0), metric(0, 1), metric(0, 2)},
+    {metric(1, 0), metric(1, 1), metric(1, 2)},
+    {metric(2, 0), metric(2, 1), metric(2, 2)}
   };
   const double invdet = 1.
-    / (Q[Shortcuts::gamma_tilde + 0] * Q[Shortcuts::gamma_tilde + 3] * Q[Shortcuts::gamma_tilde + 5]
-       - Q[Shortcuts::gamma_tilde + 0] * Q[Shortcuts::gamma_tilde + 4] * Q[Shortcuts::gamma_tilde + 4]
-       - Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 5]
-       + 2 * Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 4]
-       - Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 3]);
+    / (gCov[0][0] * gCov[1][1] * gCov[2][2] - gCov[0][0] * gCov[1][2] * gCov[1][2]
+       - gCov[0][1] * gCov[0][1] * gCov[2][2] + 2 * gCov[0][1] * gCov[0][2] * gCov[1][2]
+       - gCov[0][2] * gCov[0][2] * gCov[1][1]);
 
-  const double g_contr[3][3] = {
-    {(Q[Shortcuts::gamma_tilde + 3] * Q[Shortcuts::gamma_tilde + 5]
-      - Q[Shortcuts::gamma_tilde + 4] * Q[Shortcuts::gamma_tilde + 4])
-       * invdet,
-     -(Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 5]
-       - Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 4])
-       * invdet,
-     -(-Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 4]
-       + Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 3])
-       * invdet},
-    {-(Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 5]
-       - Q[Shortcuts::gamma_tilde + 4] * Q[Shortcuts::gamma_tilde + 2])
-       * invdet,
-     (Q[Shortcuts::gamma_tilde + 0] * Q[Shortcuts::gamma_tilde + 5]
-      - Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 2])
-       * invdet,
-     -(Q[Shortcuts::gamma_tilde + 0] * Q[Shortcuts::gamma_tilde + 4]
-       - Q[Shortcuts::gamma_tilde + 2] * Q[Shortcuts::gamma_tilde + 1])
-       * invdet},
-    {-(-Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 4]
-       + Q[Shortcuts::gamma_tilde + 3] * Q[Shortcuts::gamma_tilde + 2])
-       * invdet,
-     -(Q[Shortcuts::gamma_tilde + 0] * Q[Shortcuts::gamma_tilde + 4]
-       - Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 2])
-       * invdet,
-     (Q[Shortcuts::gamma_tilde + 0] * Q[Shortcuts::gamma_tilde + 3]
-      - Q[Shortcuts::gamma_tilde + 1] * Q[Shortcuts::gamma_tilde + 1])
-       * invdet}
+  const double gContr[3][3] = {
+    {(gCov[1][1] * gCov[2][2] - gCov[1][2] * gCov[1][2]) * invdet,
+     -(gCov[0][1] * gCov[2][2] - gCov[0][2] * gCov[1][2]) * invdet,
+     -(-gCov[0][1] * gCov[1][2] + gCov[0][2] * gCov[1][1]) * invdet},
+    {-(gCov[0][1] * gCov[2][2] - gCov[1][2] * gCov[0][2]) * invdet,
+     (gCov[0][0] * gCov[2][2] - gCov[0][2] * gCov[0][2]) * invdet,
+     -(gCov[0][0] * gCov[1][2] - gCov[0][2] * gCov[0][1]) * invdet},
+    {-(-gCov[0][1] * gCov[1][2] + gCov[1][1] * gCov[0][2]) * invdet,
+     -(gCov[0][0] * gCov[1][2] - gCov[0][1] * gCov[0][2]) * invdet,
+     (gCov[0][0] * gCov[1][1] - gCov[0][1] * gCov[0][1]) * invdet}
   };
 
   ASSERTION(std::isfinite(invdet) and invdet > 0.0, invdet);
-  const double phi  = std::fmax(1e-2, Q[Shortcuts::phi]);
+  const double phi  = std::fmax(1e-2, Q.phi);
   const double phi2 = phi * phi;
 
-  const double beta[3] = {Q[Shortcuts::beta + 0], Q[Shortcuts::beta + 1], Q[Shortcuts::beta + 2]};
+  const double beta[3] = {Q.beta(0), Q.beta(1), Q.beta(2)};
 
   double dPP[3][3]       = {};
   double dAA[3][3]       = {};
@@ -85,23 +68,21 @@ applications::exahype2::exagrype::nonconservativeProduct(
   double dDD[3][3][3][3] = {};
 
   for (int i = 0; i < 3; i++) {
-    dPP[normal][i]   = deltaQ[Shortcuts::grad_phi + i];
-    dAA[normal][i]   = deltaQ[Shortcuts::grad_alpha + i];
-    dGhat[normal][i] = deltaQ[Shortcuts::gamma_hat + i];
-    dBeta[normal][i] = deltaQ[Shortcuts::b + i];
+    dPP[normal][i]   = deltaQ.grad_phi(i);
+    dAA[normal][i]   = deltaQ.grad_alpha(i);
+    dGhat[normal][i] = deltaQ.gamma_hat(i);
+    dBeta[normal][i] = deltaQ.b(i);
   }
-  dTraceK[normal] = deltaQ[Shortcuts::K];
-  dTheta[normal]  = deltaQ[Shortcuts::theta];
+  dTraceK[normal] = deltaQ.K;
+  dTheta[normal]  = deltaQ.theta;
 
-  constexpr int SymmetricEntry[3][3] = {{0, 1, 2}, {1, 3, 4}, {2, 4, 5}};
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      const int entry      = SymmetricEntry[i][j];
-      dAex[normal][i][j]   = deltaQ[Shortcuts::A_tilde + entry];
-      dBB[normal][i][j]    = CCZ4Sk * deltaQ[Shortcuts::grad_beta + 3 * i + j];
-      dDD[normal][0][i][j] = deltaQ[Shortcuts::grad_gamma_tilde + 0 + entry];
-      dDD[normal][1][i][j] = deltaQ[Shortcuts::grad_gamma_tilde + 6 + entry];
-      dDD[normal][2][i][j] = deltaQ[Shortcuts::grad_gamma_tilde + 12 + entry];
+      dAex[normal][i][j]   = deltaQ.A_tilde(i, j);
+      dBB[normal][i][j]    = CCZ4Sk * deltaQ.grad_beta(i, j);
+      dDD[normal][0][i][j] = deltaQ.grad_gamma_tilde(0)(i, j);
+      dDD[normal][1][i][j] = deltaQ.grad_gamma_tilde(1)(i, j);
+      dDD[normal][2][i][j] = deltaQ.grad_gamma_tilde(2)(i, j);
     }
   }
 
@@ -110,10 +91,10 @@ applications::exahype2::exagrype::nonconservativeProduct(
     for (int j = 0; j < 3; j++) {
       ricciPlusNablaZNcp[i][j] += 0.5 * (dPP[i][j] + dPP[j][i]) / phi;
       for (int k = 0; k < 3; k++) {
-        ricciPlusNablaZNcp[i][j] += 0.5 * (g_cov[k][i] * dGhat[j][k] + g_cov[k][j] * dGhat[i][k]);
+        ricciPlusNablaZNcp[i][j] += 0.5 * (gCov[k][i] * dGhat[j][k] + gCov[k][j] * dGhat[i][k]);
         for (int l = 0; l < 3; l++) {
-          ricciPlusNablaZNcp[i][j] -= 0.5 * g_contr[k][l] * (dDD[k][l][i][j] + dDD[l][k][i][j]);
-          ricciPlusNablaZNcp[i][j] += 0.5 * g_cov[i][j] * g_contr[k][l] * (dPP[k][l] + dPP[l][k]) / phi;
+          ricciPlusNablaZNcp[i][j] -= 0.5 * gContr[k][l] * (dDD[k][l][i][j] + dDD[l][k][i][j]);
+          ricciPlusNablaZNcp[i][j] += 0.5 * gCov[i][j] * gContr[k][l] * (dPP[k][l] + dPP[l][k]) / phi;
         }
       }
     }
@@ -122,7 +103,7 @@ applications::exahype2::exagrype::nonconservativeProduct(
   double rPlusTwoNablaZNcp = 0;
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      rPlusTwoNablaZNcp += g_contr[i][j] * ricciPlusNablaZNcp[i][j];
+      rPlusTwoNablaZNcp += gContr[i][j] * ricciPlusNablaZNcp[i][j];
     }
   }
   rPlusTwoNablaZNcp *= phi2;
@@ -137,7 +118,7 @@ applications::exahype2::exagrype::nonconservativeProduct(
   double nablanablaalphaNCP = 0;
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      nablanablaalphaNCP += g_contr[i][j] * nablaijalphaNCP[i][j];
+      nablanablaalphaNCP += gContr[i][j] * nablaijalphaNCP[i][j];
     }
   }
   nablanablaalphaNCP *= phi2;
@@ -152,13 +133,13 @@ applications::exahype2::exagrype::nonconservativeProduct(
   double traceNCP = 0;
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      traceNCP += g_contr[i][j] * secondOrderTermsNcp[i][j];
+      traceNCP += gContr[i][j] * secondOrderTermsNcp[i][j];
     }
   }
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      secondOrderTermsNcp[i][j] -= 1. / 3 * traceNCP * g_cov[i][j];
+      secondOrderTermsNcp[i][j] -= 1. / 3 * traceNCP * gCov[i][j];
     }
   }
 
@@ -180,15 +161,15 @@ applications::exahype2::exagrype::nonconservativeProduct(
   for (int i = 0; i < 3; i++) {
     double temp = 0, temp2 = 0;
     for (int j = 0; j < 3; j++) {
-      temp += g_contr[i][j] * dTraceK[j];
-      temp2 += g_contr[j][i] * dTheta[j];
+      temp += gContr[i][j] * dTraceK[j];
+      temp2 += gContr[j][i] * dTheta[j];
     }
     dtGhat[i] = -4. / 3. * alpha * temp + 2 * alpha * temp2
       + Advection * (beta[0] * dGhat[0][i] + beta[1] * dGhat[1][i] + beta[2] * dGhat[2][i]);
     for (int l = 0; l < 3; l++) {
       for (int k = 0; k < 3; k++) {
-        dtGhat[i] += g_contr[k][l] * 0.5 * (dBB[k][l][i] + dBB[l][k][i])
-          + 1. / 3. * g_contr[i][k] * 0.5 * (dBB[k][l][l] + dBB[l][k][l]);
+        dtGhat[i] += gContr[k][l] * 0.5 * (dBB[k][l][i] + dBB[l][k][i])
+          + 1. / 3. * gContr[i][k] * 0.5 * (dBB[k][l][l] + dBB[l][k][l]);
       }
     }
   }
@@ -198,14 +179,14 @@ applications::exahype2::exagrype::nonconservativeProduct(
   for (int k = 0; k < 3; k++) {
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
-        curvatureDerivativeTrace[k] += g_contr[i][j] * dAex[k][i][j];
+        curvatureDerivativeTrace[k] += gContr[i][j] * dAex[k][i][j];
       }
     }
     ov[k] = 2 * alpha * curvatureDerivativeTrace[k];
   }
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      dtGhat[i] += CCZ4Sk * g_contr[i][j] * ov[j];
+      dtGhat[i] += CCZ4Sk * gContr[i][j] * ov[j];
     }
   }
 
@@ -235,10 +216,10 @@ applications::exahype2::exagrype::nonconservativeProduct(
   for (int i = 0; i < 3; i++) {
     for (int k = 0; k < 3; k++) {
       for (int j = 0; j < 3; j++) {
-        dtB[k][i] += CCZ4Mu * alpha2 * g_contr[i][j] * (dPP[k][j] - dPP[j][k]) / phi;
+        dtB[k][i] += CCZ4Mu * alpha2 * gContr[i][j] * (dPP[k][j] - dPP[j][k]) / phi;
         for (int n = 0; n < 3; n++) {
           for (int l = 0; l < 3; l++) {
-            dtB[k][i] -= CCZ4Mu * alpha2 * g_contr[i][j] * g_contr[n][l] * (dDD[k][l][j][n] - dDD[l][k][j][n]);
+            dtB[k][i] -= CCZ4Mu * alpha2 * gContr[i][j] * gContr[n][l] * (dDD[k][l][j][n] - dDD[l][k][j][n]);
           }
         }
       }
@@ -265,10 +246,10 @@ applications::exahype2::exagrype::nonconservativeProduct(
       for (int k = 0; k < 3; k++) {
         for (int m = 0; m < 3; m++) {
           dtD[k][i][j] +=
-            0.25 * (g_cov[m][i] * (dBB[k][j][m] + dBB[j][k][m]) + g_cov[m][j] * (dBB[k][i][m] + dBB[i][k][m]))
-            - 1. / 6. * g_cov[i][j] * (dBB[k][m][m] + dBB[m][k][m]);
+            0.25 * (gCov[m][i] * (dBB[k][j][m] + dBB[j][k][m]) + gCov[m][j] * (dBB[k][i][m] + dBB[i][k][m]))
+            - 1. / 6. * gCov[i][j] * (dBB[k][m][m] + dBB[m][k][m]);
           for (int n = 0; n < 3; n++) {
-            dtD[k][i][j] += 1. / 3 * alpha * g_cov[i][j] * g_contr[n][m] * dAex[k][n][m];
+            dtD[k][i][j] += 1. / 3 * alpha * gCov[i][j] * gContr[n][m] * dAex[k][n][m];
           }
         }
       }
@@ -296,65 +277,22 @@ applications::exahype2::exagrype::nonconservativeProduct(
   }
 
   // The source term computes advection of the metric, lapse, shift and conformal factor.
-  BTimesDeltaQ[Shortcuts::gamma_tilde + 0] = 0.0;
-  BTimesDeltaQ[Shortcuts::gamma_tilde + 1] = 0.0;
-  BTimesDeltaQ[Shortcuts::gamma_tilde + 2] = 0.0;
-  BTimesDeltaQ[Shortcuts::gamma_tilde + 3] = 0.0;
-  BTimesDeltaQ[Shortcuts::gamma_tilde + 4] = 0.0;
-  BTimesDeltaQ[Shortcuts::gamma_tilde + 5] = 0.0;
-  BTimesDeltaQ[Shortcuts::A_tilde + 0]     = -dtK[0][0];
-  BTimesDeltaQ[Shortcuts::A_tilde + 1]     = -dtK[0][1];
-  BTimesDeltaQ[Shortcuts::A_tilde + 2]     = -dtK[0][2];
-  BTimesDeltaQ[Shortcuts::A_tilde + 3]     = -dtK[1][1];
-  BTimesDeltaQ[Shortcuts::A_tilde + 4]     = -dtK[1][2];
-  BTimesDeltaQ[Shortcuts::A_tilde + 5]     = -dtK[2][2];
-  BTimesDeltaQ[Shortcuts::theta]           = -dtTheta;
+  BTimesDeltaQ       = {};
+  BTimesDeltaQ.theta = -dtTheta;
+  BTimesDeltaQ.K     = -dtTraceK;
   for (int i = 0; i < 3; i++) {
-    BTimesDeltaQ[Shortcuts::gamma_hat + i] = -dtGhat[i];
-  }
-  BTimesDeltaQ[Shortcuts::alpha] = 0.0;
-  for (int i = 0; i < 3; i++) {
-    BTimesDeltaQ[Shortcuts::beta + i] = 0.0;
-  }
-  for (int i = 0; i < 3; i++) {
-    BTimesDeltaQ[Shortcuts::b + i] = -dtbb[i];
-  }
-  for (int i = 0; i < 3; i++) {
-    BTimesDeltaQ[Shortcuts::grad_alpha + i] = -dtA[i];
-  }
-  BTimesDeltaQ[Shortcuts::grad_beta + 0] = -dtB[0][0];
-  BTimesDeltaQ[Shortcuts::grad_beta + 1] = -dtB[0][1];
-  BTimesDeltaQ[Shortcuts::grad_beta + 2] = -dtB[0][2];
-  BTimesDeltaQ[Shortcuts::grad_beta + 3] = -dtB[1][0];
-  BTimesDeltaQ[Shortcuts::grad_beta + 4] = -dtB[1][1];
-  BTimesDeltaQ[Shortcuts::grad_beta + 5] = -dtB[1][2];
-  BTimesDeltaQ[Shortcuts::grad_beta + 6] = -dtB[2][0];
-  BTimesDeltaQ[Shortcuts::grad_beta + 7] = -dtB[2][1];
-  BTimesDeltaQ[Shortcuts::grad_beta + 8] = -dtB[2][2];
-
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 0] = -dtD[0][0][0];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 1] = -dtD[0][0][1];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 2] = -dtD[0][0][2];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 3] = -dtD[0][1][1];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 4] = -dtD[0][1][2];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 5] = -dtD[0][2][2];
-
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 6]  = -dtD[1][0][0];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 7]  = -dtD[1][0][1];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 8]  = -dtD[1][0][2];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 9]  = -dtD[1][1][1];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 10] = -dtD[1][1][2];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 11] = -dtD[1][2][2];
-
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 12] = -dtD[2][0][0];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 13] = -dtD[2][0][1];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 14] = -dtD[2][0][2];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 15] = -dtD[2][1][1];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 16] = -dtD[2][1][2];
-  BTimesDeltaQ[Shortcuts::grad_gamma_tilde + 17] = -dtD[2][2][2];
-  BTimesDeltaQ[Shortcuts::K]                     = -dtTraceK;
-  BTimesDeltaQ[Shortcuts::phi]                   = 0.0;
-  for (int i = 0; i < 3; i++) {
-    BTimesDeltaQ[Shortcuts::grad_phi + i] = -dtP[i];
+    BTimesDeltaQ.gamma_hat(i)  = -dtGhat[i];
+    BTimesDeltaQ.b(i)          = -dtbb[i];
+    BTimesDeltaQ.grad_alpha(i) = -dtA[i];
+    BTimesDeltaQ.grad_phi(i)   = -dtP[i];
+    for (int j = 0; j < 3; j++) {
+      BTimesDeltaQ.grad_beta(i, j) = -dtB[i][j];
+    }
+    for (int j = i; j < 3; j++) {
+      BTimesDeltaQ.A_tilde(i, j) = -dtK[i][j];
+      for (int k = 0; k < 3; k++) {
+        BTimesDeltaQ.grad_gamma_tilde(k)(i, j) = -dtD[k][i][j];
+      }
+    }
   }
 }

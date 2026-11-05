@@ -111,23 +111,20 @@ initial_conditions = """
   const double radiusSquared = tarch::la::productRoundedOnce(offsetX, offsetX)
                              + tarch::la::productRoundedOnce(offsetY, offsetY) + Epsilon * Epsilon;
 
-  Q[Shortcuts::rho] = 1.0;
-  Q[Shortcuts::u]   = offsetX / radiusSquared;
-  Q[Shortcuts::v]   = offsetY / radiusSquared;
-  Q[Shortcuts::e]   = 1.0;
+  Q.rho = 1.0;
+  Q.u   = offsetX / radiusSquared;
+  Q.v   = offsetY / radiusSquared;
+  Q.e   = 1.0;
 """
 
 boundary_conditions = """
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = -Qinside[1];
-  Qoutside[2] = -Qinside[2];
-  Qoutside[3] = Qinside[3];
+  Qoutside   = Qinside;
+  Qoutside.u = -Qinside.u;
+  Qoutside.v = -Qinside.v;
 """
 
 flux = """
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    F[i] = 0.0;
-  }
+  F = {};
 """
 
 max_eigenvalue = """
@@ -136,30 +133,28 @@ max_eigenvalue = """
 
 analytical_solution = """
   // A tracer in the velocity field (x - CentreX, y - CentreY) / r^2 moves along its ray with
-  // r(t)^2 = r(0)^2 + 2t. The entries of solution are the position and the tracer data of
-  // tracer_attributes, with zero mass and acceleration for a tracer.
+  // r(t)^2 = r(0)^2 + 2t. The solution sets the mass and the acceleration of a tracer to zero.
   constexpr double Epsilon = 1e-3;
   constexpr double CentreX = 0.0;
   constexpr double CentreY = 0.0;
 
-  const double initialX             = particle->getData(1);
-  const double initialY             = particle->getData(2);
+  const double initialX             = particle.getData(1);
+  const double initialY             = particle.getData(2);
   const double initialOffsetX       = initialX - CentreX;
   const double initialOffsetY       = initialY - CentreY;
   const double initialRadiusSquared = initialOffsetX * initialOffsetX + initialOffsetY * initialOffsetY + Epsilon * Epsilon;
   const double radiusSquared        = initialRadiusSquared + 2.0 * t;
   const double scale                = std::sqrt(radiusSquared / initialRadiusSquared);
 
-  solution[0] = CentreX + initialOffsetX * scale;
-  solution[1] = CentreY + initialOffsetY * scale;
-  solution[2] = 1.0;
-  solution[3] = initialX;
-  solution[4] = initialY;
-  solution[5] = initialOffsetX * scale / radiusSquared;
-  solution[6] = initialOffsetY * scale / radiusSquared;
-  solution[7] = 0.0;
-  solution[8] = 0.0;
-  solution[9] = 0.0;
+  solution.position = {CentreX + initialOffsetX * scale, CentreY + initialOffsetY * scale};
+  solution.rho      = 1.0;
+  solution.init_x   = initialX;
+  solution.init_y   = initialY;
+  solution.u        = initialOffsetX * scale / radiusSquared;
+  solution.v        = initialOffsetY * scale / radiusSquared;
+  solution.a_x      = 0.0;
+  solution.a_y      = 0.0;
+  solution.mass     = 0.0;
 """
 
 fv_solver = exahype2.fv.Solver(

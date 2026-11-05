@@ -4,11 +4,9 @@
 
 def algebraic_source():
     return """
-  // The "phd" tag of ExaSeis adds this term in PMLSlipWeakening.cpp, line 468, and its Zenodo release
+  // The "phd" tag of ExaSeis adds this term in line 468 of PMLSlipWeakening.cpp. Its Zenodo release
   // omits it.
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    S[Shortcuts::u + axis] = Q[Shortcuts::v + axis];
-  }
+  S.u = Q.v;
 """
 
 

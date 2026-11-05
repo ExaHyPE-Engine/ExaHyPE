@@ -7,48 +7,44 @@
 
 namespace applications::exahype2::exaskred::shallowwater {
   template <typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD T regularisedVelocity(
-    const T      waterHeight,
-    const T      momentum,
-    const double minimumWaterHeight
-  );
+  INLINE_METHOD GPU_CALLABLE_METHOD T regularisedVelocity(T waterHeight, T momentum, double minimumWaterHeight);
 
-  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  template <typename State, typename Flux>
   INLINE_METHOD GPU_CALLABLE_METHOD void flux(
-    const T* const NOALIAS                       Q,
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
-    const double                                 minimumWaterHeight,
-    T* const NOALIAS                             F
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double                                       minimumWaterHeight,
+    Flux&                                        F
   );
 
-  template <class Shortcuts, typename T>
-  INLINE_METHOD GPU_CALLABLE_METHOD T maxEigenvalue(
-    const T* const NOALIAS                       Q,
+  template <typename State>
+  INLINE_METHOD GPU_CALLABLE_METHOD double maxEigenvalue(
+    const State&                                 Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
-    const double                                 gravity,
-    const double                                 minimumWaterHeight
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double                                       gravity,
+    double                                       minimumWaterHeight
   );
 
-  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  template <typename State, typename Difference, typename NonconservativeProduct>
   INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
-    const T* const NOALIAS                       Q,
-    const T* const NOALIAS                       deltaQ,
+    const State&                                 Q,
+    const Difference&                            deltaQ,
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    const double                                 t,
-    const double                                 dt,
-    const int                                    normal,
-    const double                                 gravity,
-    const double                                 minimumWaterHeight,
-    T* const NOALIAS                             BTimesDeltaQ
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double                                       gravity,
+    double                                       minimumWaterHeight,
+    NonconservativeProduct&                      BTimesDeltaQ
   );
 } // namespace applications::exahype2::exaskred::shallowwater
 

@@ -23,7 +23,6 @@ class Exahype2(CMakePackage, CudaPackage):
     url = "https://github.com/ExaHyPE-Engine/ExaHyPE"
     git = "https://github.com/ExaHyPE-Engine/ExaHyPE.git"
 
-
     version("main", branch="main")
 
     variant("hdf5", default=True, description="Build with HDF5 support")

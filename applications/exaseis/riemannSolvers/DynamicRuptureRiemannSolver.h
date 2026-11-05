@@ -2,8 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "ElasticRiemannSolver.h"
-
+#include "applications/exaseis/riemannSolvers/ElasticRiemannSolver.h"
 #include "tarch/accelerator/CompileTarget.h"
 #include "tarch/la/Vector.h"
 
@@ -13,19 +12,19 @@ namespace applications::exahype2::exaseis {
   template <typename Value>
   INLINE_METHOD GPU_CALLABLE_METHOD Value getBoxcar(double coordinate, Value halfWidth);
 
-  template <typename Shortcuts, typename Value>
+  template <typename Value, typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD Value getFrictionalStrength(
-    Value         normalStress,
-    Value         slip,
-    const Value*  Q,
-    const double* x,
-    double        t
+    Value                                        normalStress,
+    Value                                        slip,
+    const State&                                 Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       t
   );
 
-  template <typename Shortcuts, typename Value>
+  template <typename Value, typename State>
   INLINE_METHOD GPU_CALLABLE_METHOD void solveFaultInterface(
-    const Value*               leftData,
-    const Value*               rightData,
+    const State&               leftState,
+    const State&               rightState,
     const FaceNodeSide<Value>& left,
     const FaceNodeSide<Value>& right,
     double                     t,
@@ -33,29 +32,23 @@ namespace applications::exahype2::exaseis {
     InterfaceValues<Value>&    rightInterface
   );
 
-  template <
-    typename Shortcuts,
-    typename Value,
-    int NodesPerAxis,
-    int NumberOfUnknowns,
-    int NumberOfData,
-    int FreeSurfaceFace
-  >
+  template <typename Value, int FreeSurfaceFace, typename FaceStates, typename FaceFluxes>
   INLINE_METHOD GPU_CALLABLE_METHOD double solveDynamicRuptureRiemannProblem(
-    const Value* QL,
-    const Value* QR,
-    double       t,
-    int          normal,
-    bool         isBoundaryFace,
-    bool         isFaultFace,
-    int          faceIndex,
-    Value*       FL,
-    Value*       FR
+    const FaceStates& QL,
+    const FaceStates& QR,
+    double            t,
+    int               normal,
+    bool              isBoundaryFace,
+    bool              isFaultFace,
+    int               faceIndex,
+    FaceFluxes&       FL,
+    FaceFluxes&       FR
   );
 } // namespace applications::exahype2::exaseis
 
 /**
- * The fault lies orthogonal to the axis normal at position along that axis, in mesh coordinates.
+ * FaultPlane describes the fault orthogonal to the axis normal at position along that axis in mesh
+ * coordinates.
  */
 struct applications::exahype2::exaseis::FaultPlane final {
   int    normal{0};

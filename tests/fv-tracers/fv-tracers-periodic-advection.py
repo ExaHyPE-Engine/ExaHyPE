@@ -48,14 +48,12 @@ if project.dimensions != 2:
     raise ValueError("The periodic advection tracer test runs in 2D only.")
 
 initial_conditions = """
-  Q[0] = 1.0;
-  Q[1] = 0.5;
+  Q.v(0) = 1.0;
+  Q.v(1) = 0.5;
 """
 
 boundary_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = Qinside[i];
-  }
+  Qoutside = Qinside;
 """
 
 fv_solver = exahype2.fv.Solver(
@@ -72,10 +70,8 @@ fv_solver.set_pde_terms(
     initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     flux="""
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    F[i] = 0.0;
-  }
-  F[normal] = Q[normal];
+  F           = {};
+  F.v(normal) = Q.v(normal);
 """,
     max_eigenvalue="return 1.0;",
 )

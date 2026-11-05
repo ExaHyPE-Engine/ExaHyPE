@@ -2,63 +2,66 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "ADERDGSolverState.h"
+
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/CompileTarget.h"
+#include "tarch/la/Matrix.h"
+#include "tarch/la/SymmetricMatrix.h"
+#include "tarch/la/Vector.h"
 
 namespace tests::exahype2::aderdg::grmhd {
-  using Shortcuts = tests::exahype2::aderdg::ADERDGSolverVariableShortcuts;
+  using Unknowns  = tests::exahype2::aderdg::ADERDGSolverUnknowns<double>;
+  using Vector3   = tarch::la::Vector<3, double>;
+  using Matrix3x3 = tarch::la::Matrix<3, 3, double>;
 
-  INLINE_METHOD GPU_CALLABLE_METHOD double dotProduct(const double* first, const double* second);
+  INLINE_METHOD GPU_CALLABLE_METHOD double getScalarProductOf(const Vector3& left, const Vector3& right);
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void crossProduct(
-    const double* first,
-    const double* second,
-    double        scale,
-    double*       result
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector3 getScaledCrossProductOf(
+    const Vector3& first,
+    const Vector3& second,
+    double         scale
   );
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void multiplyMatrixVector(
-    const double (&matrix)[3][3],
-    const double* vector,
-    double*       result
-  );
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector3 multiplyMatrixVector(const Matrix3x3& matrix, const Vector3& vector);
 
-  INLINE_METHOD GPU_CALLABLE_METHOD double invertMatrix3x3(const double (&matrix)[3][3], double (&inverse)[3][3]);
+  INLINE_METHOD GPU_CALLABLE_METHOD double invertMatrix3x3(const Matrix3x3& matrix, Matrix3x3& inverse);
+
+  INLINE_METHOD GPU_CALLABLE_METHOD Matrix3x3 getSpatialMetricOf(const tarch::la::SymmetricMatrix<3, double>& gij);
 
   INLINE_METHOD GPU_CALLABLE_METHOD void evaluateRecoveryFunction(
     double  squaredVelocity,
-    double* residual,
-    double* residualDerivative,
+    double& residual,
+    double& residualDerivative,
     double  gam,
     double  d,
     double  e,
     double  s2,
     double  b2,
     double  sb2,
-    double* w
+    double& w
   );
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void findSquaredVelocity(
-    double*       v2,
-    const double* lowerStart,
-    const double* upperStart,
-    const double* tolerance,
-    double*       w,
-    double        gam,
-    double        d,
-    double        e,
-    double        s2,
-    double        b2,
-    double        sb2,
-    bool*         failed
+  INLINE_METHOD GPU_CALLABLE_METHOD double findSquaredVelocity(
+    double  lowerStart,
+    double  upperStart,
+    double  tolerance,
+    double& w,
+    double  gam,
+    double  d,
+    double  e,
+    double  s2,
+    double  b2,
+    double  sb2,
+    bool&   failed
   );
 
-  INLINE_METHOD GPU_CALLABLE_METHOD void convertPrimitiveToConserved(double* Q, const double* V);
+  INLINE_METHOD GPU_CALLABLE_METHOD Unknowns getConservedVariablesOf(const Unknowns& V);
 
-  INLINE_METHOD GPU_CALLABLE_METHOD double convertConservedToPrimitive(
-    const double* Q,
-    double*       V,
-    double (&gContr)[3][3]
+  INLINE_METHOD GPU_CALLABLE_METHOD Unknowns getPrimitiveVariablesOf(
+    const Unknowns& Q,
+    Matrix3x3&      gContr,
+    double&         determinant
   );
 } // namespace tests::exahype2::aderdg::grmhd
 

@@ -74,22 +74,16 @@ if project.dimensions != 2:
     raise ValueError("The drag force tracer test runs in 2D only.")
 
 initial_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Q[i] = 0.0;
-  }
-  Q[0] = 1.0;
+  Q     = {};
+  Q.rho = 1.0;
 """
 
 boundary_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = Qinside[i];
-  }
+  Qoutside = Qinside;
 """
 
 flux = """
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    F[i] = 0.0;
-  }
+  F = {};
 """
 
 max_eigenvalue = """
@@ -97,16 +91,15 @@ max_eigenvalue = """
 """
 
 analytical_solution = """
-  // A sphere sinks under gravity, buoyancy and Stokes drag through the resting fluid. The entries
-  // of solution are the position and the tracer data of tracer_attributes.
+  // A sphere sinks under gravity, buoyancy and Stokes drag through the resting fluid.
   constexpr double GravitationalAcceleration = 1.0;
   constexpr double DynamicViscosity          = 1.0;
   constexpr double FluidDensity              = 1.0;
 
-  const double mass     = particle->getData(7);
-  const double radius   = particle->getData(8);
-  const double initialX = particle->getData(9);
-  const double initialY = particle->getData(10);
+  const double mass     = particle.getData(7);
+  const double radius   = particle.getData(8);
+  const double initialX = particle.getData(9);
+  const double initialY = particle.getData(10);
 
   const double volume          = (4.0 / 3.0) * tarch::la::PI * radius * radius * radius;
   const double particleDensity = mass / volume;
@@ -115,25 +108,24 @@ analytical_solution = """
   const double terminalSpeed   = acceleration * relaxationTime;
   const double decay           = std::exp(-t / relaxationTime);
 
-  solution[0]  = initialX;
-  solution[1]  = initialY + (-terminalSpeed * t + terminalSpeed * relaxationTime * (1.0 - decay));
-  solution[2]  = FluidDensity;
-  solution[3]  = 0.0;
-  solution[4]  = 0.0;
-  solution[5]  = 0.0;
-  solution[6]  = -terminalSpeed * (1.0 - decay);
-  solution[7]  = 0.0;
-  solution[8]  = -acceleration * decay;
-  solution[9]  = mass;
-  solution[10] = radius;
-  solution[11] = initialX;
-  solution[12] = initialY;
+  solution.position  = {initialX, initialY + (-terminalSpeed * t + terminalSpeed * relaxationTime * (1.0 - decay))};
+  solution.rho       = FluidDensity;
+  solution.fluid_u   = 0.0;
+  solution.fluid_v   = 0.0;
+  solution.u         = 0.0;
+  solution.v         = -terminalSpeed * (1.0 - decay);
+  solution.a_x       = 0.0;
+  solution.a_y       = -acceleration * decay;
+  solution.mass      = mass;
+  solution.radius    = radius;
+  solution.initial_x = initialX;
+  solution.initial_y = initialY;
 """
 
 fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
-    unknowns=3,
+    unknowns={"rho": 1, "u": 2},
     auxiliary_variables=0,
     # The time step stays below the drag relaxation time of the lightest
     # particle on grid level 1 with the default patch size.

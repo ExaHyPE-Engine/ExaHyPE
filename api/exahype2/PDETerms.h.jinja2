@@ -7,8 +7,34 @@
 #include "{{include}}"
 {%- endfor %}
 
+namespace {{NAMESPACE | join("::")}} {
+  class {{CLASSNAME}};
+} // namespace {{NAMESPACE | join("::")}}
+
+/**
+ * The kernels call the PDE terms of {{SOLVER_NAME}} through the overloads of this class. Each
+ * overload takes pointers into the solution arrays.
+ */
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public {{NAMESPACE | join("::")}}::{{SOLVER_NAME}} {
+public:
+{%- if SOLVER_PDE_TERM_POINTER_OVERLOADS %}
+  TARGET_DECLARE
+  {{SOLVER_PDE_TERM_POINTER_OVERLOADS | indent(2)}}
+  TARGET_DECLARE_END
+{%- endif %}
+{%- if SOLVER_HOST_PDE_TERM_POINTER_OVERLOADS %}
+{%- if SOLVER_PDE_TERM_POINTER_OVERLOADS %}
+{% endif %}
+  {{SOLVER_HOST_PDE_TERM_POINTER_OVERLOADS | indent(2)}}
+{%- endif %}
+};
+
 {{SOLVER_CONCEPT_ASSERTION}}
 {%- if SOLVER_PDE_TERM_ASSERTIONS %}
 
 {{SOLVER_PDE_TERM_ASSERTIONS}}
+{%- endif %}
+{%- if SOLVER_INLINE_DEFINITIONS or SOLVER_HOST_INLINE_DEFINITIONS or USER_TERMS_INLINE %}
+
+#include "{{SOLVER_NAME}}.cpph"
 {%- endif %}

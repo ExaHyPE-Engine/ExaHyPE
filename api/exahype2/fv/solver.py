@@ -11,9 +11,7 @@ def _pde_terms():
     return {
         "initial_condition": exahype2.pde_terms.initial_condition(),
         "boundary_conditions": exahype2.pde_terms.boundary_conditions("storage"),
-        "refinement_criterion": exahype2.pde_terms.refinement_criterion(
-            "[PatchSize^DIMENSIONS * ({N} + {A})]"
-        ),
+        "refinement_criterion": exahype2.pde_terms.refinement_criterion(),
         "max_eigenvalue": exahype2.pde_terms.max_eigenvalue(),
         "flux": exahype2.pde_terms.flux(),
         "ncp": exahype2.pde_terms.ncp(),
@@ -21,23 +19,7 @@ def _pde_terms():
         "diffusive_source": exahype2.pde_terms.diffusive_source(),
         "riemann_solver": exahype2.pde_terms.riemann_solver(),
         "limited_difference": exahype2.pde_terms.limited_difference(),
-        "reconstruction": exahype2.pde_terms.PDETerm(
-            cpp="reconstruct",
-            concept="HasReconstruction",
-            parameters=(
-                "const {P}* const NOALIAS QL // [{N} + {A}]",
-                "const {P}* const NOALIAS Q // [{N} + {A}]",
-                "const {P}* const NOALIAS QR // [{N} + {A}]",
-                "const {P}* const NOALIAS limitedDifferences // [{N}]",
-                "const tarch::la::Vector<DIMENSIONS, double>& x",
-                "const tarch::la::Vector<DIMENSIONS, double>& h",
-                "const int normal",
-                "const int unknown",
-                "{P}& reconstructedMinus",
-                "{P}& reconstructedPlus",
-            ),
-            flag="USE_RECONSTRUCTION",
-        ),
+        "reconstruction": exahype2.pde_terms.reconstruction(),
         "analytical_solution": exahype2.pde_terms.analytical_solution(),
         "particle_analytical_solution": exahype2.pde_terms.particle_analytical_solution(),
     }
@@ -109,6 +91,13 @@ class Solver(exahype2.solver.Solver):
             raise ValueError(
                 "The MUSCL-Hancock scheme cannot add diffusive source terms."
             )
+
+    def _solver_family_state_aliases(self, prefix, precision):
+        return [
+            "using {}CellStates = {}State[{}];".format(
+                prefix, prefix, self._patch_size**self._dimensions
+            )
+        ]
 
     def _solver_family_includes(self):
         includes = list(self.scheme.subcell_scheme().includes)

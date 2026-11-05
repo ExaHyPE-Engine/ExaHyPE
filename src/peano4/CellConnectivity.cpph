@@ -283,20 +283,26 @@ peano4::CellConnectivity::getFaceCell(const int face, const int side) const noex
 /**
  * Returns the centre of a cell beside face at the level of face. side 0 selects the cell below face
  * along its normal and side 1 the cell above it. getCellCentre() returns the same bits for that
- * cell on every rank that stores it.
+ * cell on every rank that stores it. The cell beside a face on a periodic domain boundary lies at
+ * the opposite end of the domain.
  */
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double>
 peano4::CellConnectivity::getCellCentreBesideFace(const int face, const int side) const noexcept {
   ASSERTION(face >= 0 and face < _numberOfFaces, face, _numberOfFaces);
   ASSERTION(side == 0 or side == 1, side);
+  const int    level        = getFaceLevel(face);
+  const double cellsPerAxis = static_cast<double>(peano4::power(peano4::SubdivisionFactor, level));
+
   tarch::la::Vector<DIMENSIONS, double> result(0.0);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    const double shift = (axis == _faceNormal[face] and side == 0) ? -0.5 : 0.5;
-    result(axis)       = getPositionOfLatticeCoordinate(
-      static_cast<double>(_faceLattice[face * DIMENSIONS + axis]) + shift,
-      getFaceLevel(face),
-      axis
-    );
+    const double shift             = (axis == _faceNormal[face] and side == 0) ? -0.5 : 0.5;
+    double       latticeCoordinate = static_cast<double>(_faceLattice[face * DIMENSIONS + axis]) + shift;
+    if (latticeCoordinate < 0.0) {
+      latticeCoordinate += cellsPerAxis;
+    } else if (latticeCoordinate > cellsPerAxis) {
+      latticeCoordinate -= cellsPerAxis;
+    }
+    result(axis) = getPositionOfLatticeCoordinate(latticeCoordinate, level, axis);
   }
   return result;
 }

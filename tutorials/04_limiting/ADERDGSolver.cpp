@@ -4,8 +4,7 @@
 // The functions implement the compressible Euler equations for a 2D Riemann problem. The subcell
 // scheme of a troubled cell evaluates the same functions.
 //
-// Q stores the density at Shortcuts::rho, the momentum at Shortcuts::j + 0 and Shortcuts::j + 1,
-// and the total energy at Shortcuts::E.
+// Q.rho contains the density, Q.j the momentum and Q.E the total energy.
 #include "ADERDGSolver.h"
 
 namespace {
@@ -15,11 +14,10 @@ namespace {
   // rejects every density up to DensityFloor.
   constexpr double DensityFloor = 1.0e-12;
 
-  double momentumSquared(const double* const Q) {
-    using Shortcuts = tutorials::exahype2::limiting::ADERDGSolver::Shortcuts;
-    double result   = 0.0;
+  double momentumSquared(const tutorials::exahype2::limiting::ADERDGSolver::Unknowns& Q) {
+    double result = 0.0;
     for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-      result += Q[Shortcuts::j + dimension] * Q[Shortcuts::j + dimension];
+      result += Q.j(dimension) * Q.j(dimension);
     }
     return result;
   }
@@ -27,79 +25,76 @@ namespace {
 
 void
 tutorials::exahype2::limiting::ADERDGSolver::initialCondition(
-  double* const NOALIAS                        Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const RuntimeParameters&                     parameters
+  State&                   Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const RuntimeParameters& parameters
 ) {
   const bool   inLowPressureCorner = cellCentre[0] < -ShockPosition and cellCentre[1] < -ShockPosition;
   const double pressure            = inLowPressureCorner ? 0.1 : 1.0;
 
-  Q[Shortcuts::rho]   = inLowPressureCorner ? 0.125 : 1.0;
-  Q[Shortcuts::j + 0] = 0.0;
-  Q[Shortcuts::j + 1] = 0.0;
-  Q[Shortcuts::E]     = pressure / (Gamma - 1.0);
+  Q.rho = inLowPressureCorner ? 0.125 : 1.0;
+  Q.j   = 0.0;
+  Q.E   = pressure / (Gamma - 1.0);
 }
 
 void
 tutorials::exahype2::limiting::ADERDGSolver::boundaryConditions(
-  const double* const NOALIAS                  Qinside,
-  double* const NOALIAS                        Qoutside,
-  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const int                                    normal,
-  const RuntimeParameters&                     parameters
+  const State&             Qinside,
+  State&                   Qoutside,
+  const Coordinates&       faceCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const int                normal,
+  const RuntimeParameters& parameters
 ) {
   // The outside state is the initial state at faceCentre for all times.
   const bool   inLowPressureCorner = faceCentre[0] < -ShockPosition and faceCentre[1] < -ShockPosition;
   const double pressure            = inLowPressureCorner ? 0.1 : 1.0;
 
-  Qoutside[Shortcuts::rho]   = inLowPressureCorner ? 0.125 : 1.0;
-  Qoutside[Shortcuts::j + 0] = 0.0;
-  Qoutside[Shortcuts::j + 1] = 0.0;
-  Qoutside[Shortcuts::E]     = pressure / (Gamma - 1.0);
+  Qoutside.rho = inLowPressureCorner ? 0.125 : 1.0;
+  Qoutside.j   = 0.0;
+  Qoutside.E   = pressure / (Gamma - 1.0);
 }
 
 void
 tutorials::exahype2::limiting::ADERDGSolver::flux(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  double* const NOALIAS                        F,
-  const RuntimeParameters&                     parameters
+  const State&             Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const double             timeStepSize,
+  const int                normal,
+  Flux&                    F,
+  const RuntimeParameters& parameters
 ) {
-  const double inverseDensity = 1.0 / std::max(Q[Shortcuts::rho], DensityFloor);
-  const double pressure       = (Gamma - 1.0) * (Q[Shortcuts::E] - 0.5 * inverseDensity * momentumSquared(Q));
-  const double normalMomentum = Q[Shortcuts::j + normal];
+  const double inverseDensity = 1.0 / std::max(Q.rho, DensityFloor);
+  const double pressure       = (Gamma - 1.0) * (Q.E - 0.5 * inverseDensity * momentumSquared(Q));
+  const double normalMomentum = Q.j(normal);
 
-  F[Shortcuts::rho]   = normalMomentum;
-  F[Shortcuts::j + 0] = normalMomentum * Q[Shortcuts::j + 0] * inverseDensity;
-  F[Shortcuts::j + 1] = normalMomentum * Q[Shortcuts::j + 1] * inverseDensity;
-  F[Shortcuts::E]     = normalMomentum * inverseDensity * (Q[Shortcuts::E] + pressure);
+  F.rho = normalMomentum;
+  F.j   = normalMomentum * Q.j * inverseDensity;
+  F.E   = normalMomentum * inverseDensity * (Q.E + pressure);
 
-  F[Shortcuts::j + normal] += pressure;
+  F.j(normal) += pressure;
 }
 
 double
 tutorials::exahype2::limiting::ADERDGSolver::maxEigenvalue(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 time,
-  const double                                 timeStepSize,
-  const int                                    normal,
-  const RuntimeParameters&                     parameters
+  const State&             Q,
+  const Coordinates&       cellCentre,
+  const Coordinates&       cellSize,
+  const double             time,
+  const double             timeStepSize,
+  const int                normal,
+  const RuntimeParameters& parameters
 ) {
-  const double inverseDensity = 1.0 / std::max(Q[Shortcuts::rho], DensityFloor);
-  const double pressure       = (Gamma - 1.0) * (Q[Shortcuts::E] - 0.5 * inverseDensity * momentumSquared(Q));
+  const double inverseDensity = 1.0 / std::max(Q.rho, DensityFloor);
+  const double pressure       = (Gamma - 1.0) * (Q.E - 0.5 * inverseDensity * momentumSquared(Q));
   // The solver computes the time step size before the limiter checks the cell. The eigenvalue of a
   // candidate with negative pressure has to stay finite.
   const double soundSpeed     = std::sqrt(std::abs(Gamma * pressure * inverseDensity));
-  const double normalVelocity = Q[Shortcuts::j + normal] * inverseDensity;
+  const double normalVelocity = Q.j(normal) * inverseDensity;
 
   return std::abs(normalVelocity) + soundSpeed;
 }

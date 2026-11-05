@@ -13,15 +13,16 @@ def generate_random_particles(
     file_path, num_particles=10, domain_min=0.1, domain_max=0.9
 ):
     """
-    Generates a .dat file with random x- and y-positions,
-    rounding positions to two decimal places.
+    Writes num_particles pseudo-random positions with two decimal places into file_path.
+    A fixed seed makes every generation write the same positions.
     """
     particles = []
     import random
 
+    generator = random.Random(0)
     for _ in range(num_particles):
-        x = round(random.uniform(domain_min, domain_max), 2)
-        y = round(random.uniform(domain_min, domain_max), 2)
+        x = round(generator.uniform(domain_min, domain_max), 2)
+        y = round(generator.uniform(domain_min, domain_max), 2)
         particles.append((x, y))
 
     particles.sort(key=lambda p: p[0])
@@ -100,30 +101,29 @@ if project.dimensions != 2:
     raise ValueError("The circular bubble tracer test runs in 2D only.")
 
 initial_conditions = """
-  Q[Shortcuts::rho]  = 1.0;
-  Q[Shortcuts::rhoU] = 0.0;
-  Q[Shortcuts::rhoV] = 0.0;
-  Q[Shortcuts::rhoE] = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.1) : (1.0));
+  Q.rho  = 1.0;
+  Q.rhoU = 0.0;
+  Q.rhoE = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.1) : (1.0));
 """
 
 boundary_conditions = """
-  Qoutside[Shortcuts::rho]  = Qinside[Shortcuts::rho];
-  Qoutside[Shortcuts::rhoU] = -Qinside[Shortcuts::rhoU];
-  Qoutside[Shortcuts::rhoV] = -Qinside[Shortcuts::rhoV];
-  Qoutside[Shortcuts::rhoE] = Qinside[Shortcuts::rhoE];
+  Qoutside = Qinside;
+  for (int axis = 0; axis < 2; axis++) {
+    Qoutside.rhoU(axis) = -Qinside.rhoU(axis);
+  }
 """
 
 compute_primitive_variables = r"""
-  const auto irho = 1.0 / Q[Shortcuts::rho];
-  const auto u0 = Q[Shortcuts::rhoU] * irho;
-  const auto u1 = Q[Shortcuts::rhoV] * irho;
+  const auto irho = 1.0 / Q.rho;
+  const auto u0 = Q.rhoU(0) * irho;
+  const auto u1 = Q.rhoU(1) * irho;
 
   const auto squareOfU0 = tarch::la::productRoundedOnce(u0, u0);
   const auto squareOfU1 = tarch::la::productRoundedOnce(u1, u1);
   const auto uSq        = squareOfU0 + squareOfU1;
   const auto u_n = (normal == 0) ? u0 : u1;
 
-  const auto internalE = Q[Shortcuts::rhoE] - 0.5 * Q[Shortcuts::rho] * uSq;
+  const auto internalE = Q.rhoE - 0.5 * Q.rho * uSq;
   const auto p = (GAMMA - 1.0) * internalE;
 """
 
@@ -138,20 +138,16 @@ max_eigenvalue = r"""
 flux = r"""
   {compute_primitive_variables}
 
-  F[Shortcuts::rho] = Q[Shortcuts::rhoU + normal];
-
-  F[Shortcuts::rhoU] = Q[Shortcuts::rhoU] * u_n;
-  F[Shortcuts::rhoV] = Q[Shortcuts::rhoV] * u_n;
-
-  F[Shortcuts::rhoU + normal] += p;
-
-  F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + p) * u_n;
+  F.rho  = Q.rhoU(normal);
+  F.rhoU = Q.rhoU * u_n;
+  F.rhoU(normal) += p;
+  F.rhoE = (Q.rhoE + p) * u_n;
 """.format(compute_primitive_variables=compute_primitive_variables)
 
 fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
-    unknowns={"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1},
+    unknowns={"rho": 1, "rhoU": 2, "rhoE": 1},
     auxiliary_variables=0,
     time_stepping=exahype2.TimeStepping.Adaptive(0.5),
     scheme=exahype2.fv.Godunov(),

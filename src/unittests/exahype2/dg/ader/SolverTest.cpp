@@ -233,7 +233,7 @@ namespace {
 
   struct FixedRuleADERDGSolver;
   struct AdaptiveADERDGSolver;
-  template <int Side>
+  template <int Side, bool Periodic = false>
   struct HalfSolver;
 
   /**
@@ -469,6 +469,7 @@ namespace {
     }
   };
 
+  TARGET_DECLARE
   /**
    * A solver with a fixed time step rule whose initial condition lies Increment below the linear
    * profile of LinearTerms. Its postprocessing adds Increment to every node of a cell.
@@ -520,18 +521,21 @@ namespace {
    * The plane between the cells the two coupled solvers own.
    */
   constexpr double Interface = CoarseWidth;
+  TARGET_DECLARE_END
 
   /**
    * A solver that owns the cells left of the interface for Side 0 and the cells right of it for
-   * Side 1.
+   * Side 1. Periodic makes the domain periodic along the first axis.
    */
-  template <int Side>
-  struct HalfSolver final : exahype2::dg::ader::Solver<HalfSolver<Side>, double, double, void>, LinearTerms {
+  template <int Side, bool Periodic>
+  struct HalfSolver final : exahype2::dg::ader::Solver<HalfSolver<Side, Periodic>, double, double, void>, LinearTerms {
     static constexpr int  DGOrder                    = ::Order;
     static constexpr int  NumberOfUnknowns           = 1;
     static constexpr int  NumberOfAuxiliaryVariables = 0;
     static constexpr bool IsLinear                   = false;
     static constexpr int  NumberOfPointSources       = 0;
+
+    static constexpr std::bitset<DIMENSIONS> PeriodicBoundaries{Periodic ? 1ULL : 0ULL};
 
     static constexpr exahype2::TimeStepping::Rule TimeSteppingRule = exahype2::TimeStepping::Rule::Fixed;
 
@@ -699,6 +703,17 @@ namespace {
       and cellConnectivity.getFaceKind(face) == peano4::FaceKind::Interior;
   }
 
+  /**
+   * Returns whether the face is an interior face with normal 0 on the boundary of the unit domain.
+   */
+  GPU_CALLABLE_METHOD bool isPeriodicFace(const peano4::CellConnectivity& cellConnectivity, const int face) {
+    const double position = cellConnectivity.getFaceCentre(face, 0);
+    return cellConnectivity.getFaceNormal(face) == 0
+      and (std::abs(position) <= tarch::testing::NumericalTolerance
+           or std::abs(position - 1.0) <= tarch::testing::NumericalTolerance)
+      and cellConnectivity.getFaceKind(face) == peano4::FaceKind::Interior;
+  }
+
   TARGET_DECLARE
   /**
    * Increments the accumulator for an interface face with a cell on its lower side.
@@ -747,6 +762,61 @@ namespace {
             mean += copied[node] / NodesPerFace;
           }
           if (not equal or std::abs(mean - LinearTerms::getProfile(centre)) > tarch::testing::NumericalTolerance) {
+            accumulator++;
+          }
+        }
+      }
+    }
+  };
+
+  /**
+   * Increments the accumulator for every side of a face on the periodic boundary with a cell on this
+   * rank.
+   */
+  struct CountPeriodicFaceSides final {
+    peano4::CellConnectivity cellConnectivity{};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
+      if (not isPeriodicFace(cellConnectivity, face)) {
+        return;
+      }
+      for (int side = 0; side < 2; side++) {
+        if (cellConnectivity.getFaceCell(face, side) >= 0) {
+          accumulator++;
+        }
+      }
+    }
+  };
+
+  /**
+   * Increments the accumulator for every side of a face on the periodic boundary whose solver stores
+   * a partner half that differs from the half of the partner.
+   */
+  struct CountPeriodicFaceMismatches final {
+    static constexpr int NodesPerFace = exahype2::dg::getNodesPerFace(NodesPerAxis);
+
+    peano4::CellConnectivity                  cellConnectivity{};
+    HalfSolver<0, true>::StatePool::ConstView leftStates{};
+    HalfSolver<1, true>::StatePool::ConstView rightStates{};
+
+    INLINE_METHOD GPU_CALLABLE_METHOD void operator()(const int face, int& accumulator) const {
+      if (not isPeriodicFace(cellConnectivity, face)) {
+        return;
+      }
+      for (int side = 0; side < 2; side++) {
+        const int slot = cellConnectivity.getFaceCell(face, side);
+        if (slot >= 0) {
+          const bool          leftOwnsCell  = cellConnectivity.getCellCentre(slot, 0) < Interface;
+          const auto          partnerOffset = static_cast<std::ptrdiff_t>(1 - side) * NodesPerFace;
+          const double* const copied =
+            (leftOwnsCell ? leftStates.getChunk(face) : rightStates.getChunk(face)) + partnerOffset;
+          const double* const partner =
+            (leftOwnsCell ? rightStates.getChunk(face) : leftStates.getChunk(face)) + partnerOffset;
+          bool equal = true;
+          for (int node = 0; node < NodesPerFace; node++) {
+            equal = equal and copied[node] == partner[node];
+          }
+          if (not equal) {
             accumulator++;
           }
         }
@@ -1322,6 +1392,58 @@ UNIT_TEST("Two coupled solvers split the cells, exchange their traces and advanc
           left.getNumberOfCells(cellConnectivity) + right.getNumberOfCells(cellConnectivity),
           cellConnectivity.getCells().size
         );
+      }
+    }
+  }
+}
+
+UNIT_TEST("Two coupled solvers on a periodic domain exchange their traces across the periodic boundary") {
+  GIVEN("A left and a right solver coupled through identity matrices on a grid periodic along the first axis") {
+    peano4::unittests::buildRegularGrid(Depth, std::bitset<DIMENSIONS>{1});
+    const auto& cellConnectivity = peano4::Spacetree::getInstance().getCellConnectivity();
+
+    HalfSolver<0, true> left;
+    HalfSolver<1, true> right;
+    left.coupleWith(right, getIdentityOperator(), getIdentityOperator());
+    exahype2::RefinementRequests requests;
+    left.setLimits(getLimitsOfTheDomain());
+    right.setLimits(getLimitsOfTheDomain());
+    left.allocate(cellConnectivity, RuntimeParameters{});
+    right.allocate(cellConnectivity, RuntimeParameters{});
+    const ReleaseOnReturn releaseLeft(left);
+    const ReleaseOnReturn releaseRight(right);
+    requests.clear(cellConnectivity.getNumberOfSlots());
+    left.initialise(cellConnectivity, requests, RuntimeParameters{});
+    right.initialise(cellConnectivity, requests, RuntimeParameters{});
+    finishStep(left, right);
+
+    WHEN("Both solvers perform one time step and the left solver drives it") {
+      requests.clear(cellConnectivity.getNumberOfSlots());
+      left.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
+      right.performTimeStep(cellConnectivity, requests, RuntimeParameters{});
+      finishStep(left, right);
+      int periodicFaceSides = 0;
+      int mismatches        = 0;
+      tarch::accelerator::parallelReduce(
+        tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
+        CountPeriodicFaceSides{cellConnectivity.onDevice()},
+        tarch::accelerator::Sum<int>{periodicFaceSides}
+      );
+      tarch::accelerator::parallelReduce(
+        tarch::accelerator::Range(cellConnectivity.getNumberOfFaces()),
+        CountPeriodicFaceMismatches{
+          cellConnectivity.onDevice(),
+          left.getFaceStates().getView(),
+          right.getFaceStates().getView()
+        },
+        tarch::accelerator::Sum<int>{mismatches}
+      );
+      const int globalPeriodicFaceSides = peano4::unittests::getGlobalSumOf(periodicFaceSides);
+      const int globalMismatches        = peano4::unittests::getGlobalSumOf(mismatches);
+
+      THEN("Every rank stores the partner's half on both sides of every face on the periodic boundary") {
+        VALIDATE_EQUALS(globalPeriodicFaceSides, 2 * peano4::power(CellsPerAxis, DIMENSIONS - 1));
+        VALIDATE_EQUALS(globalMismatches, 0);
       }
     }
   }

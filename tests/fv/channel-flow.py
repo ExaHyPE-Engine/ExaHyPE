@@ -28,37 +28,31 @@ def parse_arguments():
 args = parse_arguments()
 
 initial_conditions = """
-  Q[Shortcuts::rho]      = 1.0;
-  Q[Shortcuts::rhoU + 0] = 0.0;
-  Q[Shortcuts::rhoU + 1] = 0.0;
-#if DIMENSIONS == 3
-  Q[Shortcuts::rhoU + 2] = 0.0;
-#endif
-  Q[Shortcuts::rhoE] = 1.0 / (GAMMA - 1.0) + 0.5 * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]) / Q[Shortcuts::rho];
+  Q.rho  = 1.0;
+  Q.rhoU = 0.0;
+  Q.rhoE = 1.0 / (GAMMA - 1.0) + 0.5 * (Q.rhoU * Q.rhoU) / Q.rho;
 """
 
 boundary_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = Qinside[i];
-  }
+  Qoutside = Qinside;
 
   // The inlet at x[0] = 0 prescribes the momentum along the first axis and keeps the interior pressure.
   if (normal == 0 and tarch::la::smallerEquals(x[0], parameters.maxAdmissiblePatchSize)) {
-    auto kineticEnergyOf = [](const double* const NOALIAS Q) {
+    auto kineticEnergyOf = [](const auto& state) {
       double momentumSquared = 0.0;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        momentumSquared += Q[Shortcuts::rhoU + axis] * Q[Shortcuts::rhoU + axis];
+        momentumSquared += state.rhoU(axis) * state.rhoU(axis);
       }
-      return 0.5 * momentumSquared / Q[Shortcuts::rho];
+      return 0.5 * momentumSquared / state.rho;
     };
-    const double internalEnergyInside = Qinside[Shortcuts::rhoE] - kineticEnergyOf(Qinside);
-    Qoutside[Shortcuts::rhoU + 0]     = 1.0;
-    Qoutside[Shortcuts::rhoE]         = internalEnergyInside + kineticEnergyOf(Qoutside);
+    const double internalEnergyInside = Qinside.rhoE - kineticEnergyOf(Qinside);
+    Qoutside.rhoU(0)                  = 1.0;
+    Qoutside.rhoE                     = internalEnergyInside + kineticEnergyOf(Qoutside);
   }
 
   // The outlet lies at x[0] = DomainSize[0].
   if (tarch::la::greaterEquals(x[0], DomainSize[0] - parameters.maxAdmissiblePatchSize)) {
-    Qoutside[Shortcuts::rhoU + 0] = Qinside[Shortcuts::rhoU + 0];
+    Qoutside.rhoU(0) = Qinside.rhoU(0);
   }
 """
 

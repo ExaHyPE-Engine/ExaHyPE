@@ -26,44 +26,41 @@ applications::exahype2::exaskred::getBathymetryOfChannel(const tarch::la::Vector
  */
 INLINE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::initialCondition(
-  double* const NOALIAS                                         Q,
-  const tarch::la::Vector<DIMENSIONS, double>&                  x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  State&                                    Q,
+  const Coordinates&                        x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  for (int variable = 0; variable < NumberOfUnknowns + NumberOfAuxiliaryVariables; variable++) {
-    Q[variable] = 0.0;
-  }
+  Q = {};
 
   constexpr double EdgeTolerance    = 1e-8;
   constexpr double WaterHeightOfDam = 0.9;
-  Q[Shortcuts::h]                   = x[0] <= 5.0 + EdgeTolerance ? WaterHeightOfDam : 0.0;
-  Q[Shortcuts::b]                   = applications::exahype2::exaskred::getBathymetryOfChannel(x);
+  Q.h                               = x[0] <= 5.0 + EdgeTolerance ? WaterHeightOfDam : 0.0;
+  Q.b                               = applications::exahype2::exaskred::getBathymetryOfChannel(x);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
-  const double* const NOALIAS                                   Qinside,
-  double* const NOALIAS                                         Qoutside,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const int                                    normal,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  const State&                              Qinside,
+  State&                                    Qoutside,
+  [[maybe_unused]] const Coordinates&       x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const double             t,
+  [[maybe_unused]] const int                normal,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  Qoutside[Shortcuts::h]      = Qinside[Shortcuts::h];
-  Qoutside[Shortcuts::hu]     = 0.0;
-  Qoutside[Shortcuts::hu + 1] = 0.0;
-  Qoutside[Shortcuts::b]      = Qinside[Shortcuts::b];
+  Qoutside.h  = Qinside.h;
+  Qoutside.hu = 0.0;
+  Qoutside.b  = Qinside.b;
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD ::exahype2::RefinementCommand
 applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
-  [[maybe_unused]] const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>&                  x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const double                                 t,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  [[maybe_unused]] const CellStates*        Q,
+  const Coordinates&                        x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const double             t,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   return applications::exahype2::exaskred::getBathymetryOfChannel(x) > 0.0 ? ::exahype2::RefinementCommand::Refine
                                                                            : ::exahype2::RefinementCommand::Keep;
@@ -71,62 +68,44 @@ applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::flux(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  double* const NOALIAS                        F,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              Q,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  Flux&                                     F,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  applications::exahype2::exaskred::shallowwater::flux<Shortcuts, NumberOfUnknowns>(
-    Q,
-    x,
-    h,
-    t,
-    dt,
-    normal,
-    hThreshold,
-    F
-  );
+  applications::exahype2::exaskred::shallowwater::flux(Q, x, h, t, dt, normal, hThreshold, F);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::maxEigenvalue(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              Q,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
-    Q,
-    x,
-    h,
-    t,
-    dt,
-    normal,
-    g,
-    hThreshold
-  );
+  return applications::exahype2::exaskred::shallowwater::maxEigenvalue(Q, x, h, t, dt, normal, g, hThreshold);
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD void
 applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
-  const double* const NOALIAS                  Q,
-  const double* const NOALIAS                  deltaQ,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  double* const NOALIAS                        BTimesDeltaQ,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              Q,
+  const Difference&                         deltaQ,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  NonconservativeProduct&                   BTimesDeltaQ,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  applications::exahype2::exaskred::shallowwater::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
+  applications::exahype2::exaskred::shallowwater::nonconservativeProduct(
     Q,
     deltaQ,
     x,
@@ -142,20 +121,20 @@ applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
-  const double* const NOALIAS                  QL,
-  const double* const NOALIAS                  QR,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  [[maybe_unused]] const bool                  isBoundaryFace,
-  [[maybe_unused]] const int                   faceIndex,
-  double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              QL,
+  const State&                              QR,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  [[maybe_unused]] const bool               isBoundaryFace,
+  [[maybe_unused]] const int                faceIndex,
+  Flux&                                     FL,
+  Flux&                                     FR,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  return applications::exahype2::exaskred::riemann::augmentedState<Shortcuts, Shortcuts::b, true>(
+  return applications::exahype2::exaskred::riemann::augmentedState<&State::b>(
     QL,
     QR,
     x,
@@ -172,70 +151,70 @@ applications::exahype2::exaskred::ADERDGSolver::solveSubcellRiemannProblem(
 
 INLINE_METHOD GPU_CALLABLE_METHOD bool
 applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
-  const double* const NOALIAS                                   Q,
-  const int                                                     numberOfStates,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
-  [[maybe_unused]] const RuntimeParameters&                     parameters
+  const States                              Q,
+  [[maybe_unused]] const Coordinates&       x,
+  [[maybe_unused]] const Coordinates&       h,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  if (numberOfStates == 1) {
-    return applications::exahype2::exaskred::limiting::isAdmissibleState<
-      Shortcuts,
-      NumberOfUnknowns,
-      NumberOfAuxiliaryVariables
-    >(Q, 0.0);
+  if (Q.size() == 1) {
+    return applications::exahype2::exaskred::limiting::isAdmissibleState(Q[0], 0.0);
   }
-  return applications::exahype2::exaskred::limiting::hasBoundedDepthVariation<
-    Shortcuts,
-    NumberOfUnknowns,
-    NumberOfAuxiliaryVariables
-  >(Q, numberOfStates, std::max(100.0 * hThreshold, 0.045), 0.35);
+  return applications::exahype2::exaskred::limiting::hasBoundedDepthVariation(
+    Q,
+    std::max(100.0 * hThreshold, 0.045),
+    0.35
+  );
 }
 
 INLINE_METHOD GPU_CALLABLE_METHOD double
 applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
-  const double* const NOALIAS                  QL,
-  const double* const NOALIAS                  QR,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  [[maybe_unused]] const bool                  isBoundaryFace,
-  [[maybe_unused]] const int                   faceIndex,
-  double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const FaceStates&                         QL,
+  const FaceStates&                         QR,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  [[maybe_unused]] const bool               isBoundaryFace,
+  [[maybe_unused]] const int                faceIndex,
+  FaceFluxes&                               FL,
+  FaceFluxes&                               FR,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
-  const auto maxEigenvalue = [](
-                               const double* const NOALIAS                  Q,
-                               const tarch::la::Vector<DIMENSIONS, double>& facePosition,
-                               const tarch::la::Vector<DIMENSIONS, double>& faceSize,
-                               const double                                 time,
-                               const double                                 timeStepSize,
-                               const int                                    normal
-                             ) {
-    return applications::exahype2::exaskred::shallowwater::maxEigenvalue<Shortcuts>(
+  const auto waterEigenvalue = [](
+                                 const State&       Q,
+                                 const Coordinates& facePosition,
+                                 const Coordinates& faceSize,
+                                 const double       time,
+                                 const double       timeStepSize,
+                                 const int          direction
+                               ) {
+    return applications::exahype2::exaskred::shallowwater::maxEigenvalue(
       Q,
       facePosition,
       faceSize,
       time,
       timeStepSize,
-      normal,
+      direction,
       g,
       hThreshold
     );
   };
-  const auto interfaceGravity =
-    []([[maybe_unused]] const double* const NOALIAS QLeft, [[maybe_unused]] const double* const NOALIAS QRight) {
-      return g;
-    };
-  return applications::exahype2::exaskred::riemann::wellBalancedRusanov<
-    Shortcuts,
-    Shortcuts::b,
-    NumberOfUnknowns,
-    NumberOfAuxiliaryVariables,
-    DGOrder
-  >(QL, QR, x, h, t, dt, normal, maxEigenvalue, interfaceGravity, FL, FR);
+  const auto interfaceGravity = []([[maybe_unused]] const State& QLeft, [[maybe_unused]] const State& QRight) {
+    return g;
+  };
+  return applications::exahype2::exaskred::riemann::wellBalancedRusanov<&State::b>(
+    QL,
+    QR,
+    x,
+    h,
+    t,
+    dt,
+    normal,
+    waterEigenvalue,
+    interfaceGravity,
+    FL,
+    FR
+  );
 }
 TARGET_DECLARE_END

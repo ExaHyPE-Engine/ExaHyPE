@@ -12,7 +12,6 @@ class Adaptivecpp(CMakePackage):
     url = "https://github.com/AdaptiveCpp/AdaptiveCpp/archive/refs/tags/v25.10.0.tar.gz"
     git = "https://github.com/AdaptiveCpp/AdaptiveCpp.git"
 
-
     license("BSD-2-Clause")
 
     version(

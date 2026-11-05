@@ -24,14 +24,9 @@ class Advection(Equation):
     def flux(self):
         return (
             """
-    F[Shortcuts::v + 0] = 0;
-    F[Shortcuts::v + 1] = 0;
-#if DIMENSIONS == 3
-    F[Shortcuts::v + 2] = 0;
-#endif
-
-    F[Shortcuts::v + normal] = """
+  F.v         = 0.0;
+  F.v(normal) = """
             + str(self.adv_speed)
-            + """ * Q[normal];
+            + """ * Q.v(normal);
 """
         )

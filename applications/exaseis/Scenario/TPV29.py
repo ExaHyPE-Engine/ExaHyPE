@@ -101,41 +101,29 @@ class TPV29(DynamicRuptureScenario):
     def domain_perturbations(self):
         return """
   faultNormal   = 0;
-
   faultPosition = _curvi->split(
     faultNormal,
     20.0,
-    [](tarch::la::Vector<DIMENSIONS, double> x) {
-      static tarch::reader::NetCDFFieldSampler netcdfSampler(
+    [](const tarch::la::Vector<DIMENSIONS, double> x) {
+      // The file extends the perturbation beyond the edges of the fault. The extension smooths the
+      // gradients at the edges.
+      static tarch::reader::NetCDFFieldSampler perturbationSampler(
         {
           {"perturbation", "tpv29-fault.nc"}
         },
         {50., 40.},
         {-5., -5.}
       );
-
-  // The NetCDF file contains extended boundaries which serve to smooth out gradients caused by the edges of the fault,
-  // these can be disabled by uncommenting the corresponding sections of code
-
-//      if(x[0]>0. && x[0]<40. && x[1]<20.){
-        return 0.001*netcdfSampler.samplePiecewiseConstant(
-          "perturbation",
-          {x[2], x[1]}
-        );
-//      }
-//      else{
-//        return 0.;
-//      }
-
+      return 0.001 * perturbationSampler.samplePiecewiseConstant("perturbation", {x[2], x[1]});
     }
   );
 """
 
     def initial_conditions(self):
         return """
-      Q[Shortcuts::rho] = 2.67;
-      Q[Shortcuts::cp ] = 6.0;
-      Q[Shortcuts::cs ] = 3.464;
+      Q.rho = 2.67;
+      Q.cp  = 6.0;
+      Q.cs  = 3.464;
 """
 
     def generate_required_files(self):
@@ -150,35 +138,38 @@ class TPV29(DynamicRuptureScenario):
 
     dynamicRuptureDictionary = {
         "initialStresses": """
-  double Omega = 0.;
-  if(x[1]<=17.){
-    Omega=1.;
+  double depthTaper = 0.;
+  if (x[1] <= 17.) {
+    depthTaper = 1.;
+  } else if (x[1] <= 22.) {
+    depthTaper = (22. - x[1]) / 5.;
   }
-  else if(x[1]<=22.){
-    Omega = (22.-x[1])/5.;
-  }
-  const double s_zz0  = -2.670 * 9.8 * x[1];
-  const double Pf     =  1.000 * 9.8 * x[1];
+  const double verticalStress = -2.670 * 9.8 * x[1];
+  const double porePressure   = 1.000 * 9.8 * x[1];
 
-  constexpr double b_11 = 1.025837;
-  constexpr double b_13 = -0.158649;
-  constexpr double b_33 = 0.974162;
+  constexpr double B11 = 1.025837;
+  constexpr double B13 = -0.158649;
+  constexpr double B33 = 0.974162;
 
-  sxx = Omega*(b_33*(s_zz0+Pf)-Pf)+(1.0-Omega)*s_zz0 + Pf;
-  syy = s_zz0 + Pf;
-  szz = Omega*(b_11*(s_zz0+Pf)-Pf)+(1.0-Omega)*s_zz0 + Pf;
+  sxx = depthTaper * (B33 * (verticalStress + porePressure) - porePressure)
+      + (1.0 - depthTaper) * verticalStress + porePressure;
+  syy = verticalStress + porePressure;
+  szz = depthTaper * (B11 * (verticalStress + porePressure) - porePressure)
+      + (1.0 - depthTaper) * verticalStress + porePressure;
   sxy = 0;
-  sxz = Omega*(b_13*(s_zz0+Pf));
+  sxz = depthTaper * (B13 * (verticalStress + porePressure));
   syz = 0;
     """,
         "n_yz": "return 0;",
-        "cohesion": "return 0.40 + 0.2 * std::fmax(4.0 - x[1],0);",
+        "cohesion": "return 0.40 + 0.2 * std::fmax(4.0 - x[1], 0);",
         "forced_rupture_time": """
-      double r = std::sqrt(std::pow(x[2]-15.0, 2.0) + pow(x[1]-10.0, 2.0));
-      double r_crit = 4.0;
-      double Vs = 3.4640;
-      if (r <= r_crit) {
-        return r/(0.7*Vs) + (0.081*r_crit/(0.7*Vs)) * (1.0/(1.0-(r/r_crit)*(r/r_crit))-1.0);
+      const double     distance         = std::sqrt(std::pow(x[2] - 15.0, 2.0) + std::pow(x[1] - 10.0, 2.0));
+      constexpr double CriticalDistance = 4.0;
+      constexpr double ShearWaveSpeed   = 3.4640;
+      if (distance <= CriticalDistance) {
+        return distance / (0.7 * ShearWaveSpeed)
+             + (0.081 * CriticalDistance / (0.7 * ShearWaveSpeed))
+                 * (1.0 / (1.0 - (distance / CriticalDistance) * (distance / CriticalDistance)) - 1.0);
       }
       return 100000000.0;""",
         "d_c": "return 0.3;",

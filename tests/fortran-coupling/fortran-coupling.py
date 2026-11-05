@@ -27,17 +27,15 @@ args = parse_arguments()
 
 initial_conditions = """
   const double r = std::sqrt(x(0) * x(0) + x(1) * x(1));
-  Q[0] = r < 0.5 ? 2.0 : 1.0; // Water depth h
-  Q[1] = 0.0;                 // Momentum h * u
-  Q[2] = 0.0;                 // Momentum h * v
-  Q[3] = 0.0;                 // Flat bathymetry b
+  Q.h  = r < 0.5 ? 2.0 : 1.0;
+  Q.hu = 0.0;
+  Q.b  = 0.0;
 """
 
 boundary_conditions = """
-  Qoutside[0] = 1.0;
-  Qoutside[1] = 0.0;
-  Qoutside[2] = 0.0;
-  Qoutside[3] = 0.0;
+  Qoutside.h  = 1.0;
+  Qoutside.hu = 0.0;
+  Qoutside.b  = 0.0;
 """
 
 project = exahype2.Project(

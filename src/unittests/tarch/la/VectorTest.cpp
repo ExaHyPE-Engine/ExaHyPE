@@ -797,7 +797,8 @@ UNIT_TEST("The vectors of one to four entries store their entries in compact lay
       static_assert(std::is_trivially_copyable_v<tarch::la::Vector<1, double>>);
       static_assert(std::is_trivially_copyable_v<tarch::la::Vector<2, double>>);
       static_assert(sizeof(tarch::la::Vector<2, int>) == 8);
-      static_assert(alignof(tarch::la::Vector<2, int>) == 8);
+      static_assert(alignof(tarch::la::Vector<2, int>) == alignof(int));
+      static_assert(alignof(tarch::la::Vector<2, float>) == alignof(float));
       static_assert(std::is_standard_layout_v<tarch::la::Vector<2, int>>);
       static_assert(sizeof(tarch::la::Vector<2, double>) == 16);
       static_assert(sizeof(tarch::la::Vector<3, int>) == 12);
@@ -805,7 +806,8 @@ UNIT_TEST("The vectors of one to four entries store their entries in compact lay
       static_assert(std::is_standard_layout_v<tarch::la::Vector<3, int>>);
       static_assert(sizeof(tarch::la::Vector<3, double>) == 24);
       static_assert(sizeof(tarch::la::Vector<4, int>) == 16);
-      static_assert(alignof(tarch::la::Vector<4, int>) == 16);
+      static_assert(alignof(tarch::la::Vector<4, int>) == alignof(int));
+      static_assert(alignof(tarch::la::Vector<4, double>) == alignof(double));
       static_assert(std::is_standard_layout_v<tarch::la::Vector<4, int>>);
       static_assert(sizeof(tarch::la::Vector<4, double>) == 32);
       static_assert(std::is_trivially_copyable_v<tarch::la::Vector<3, double>>);

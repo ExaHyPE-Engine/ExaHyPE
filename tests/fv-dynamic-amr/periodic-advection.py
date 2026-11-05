@@ -46,22 +46,21 @@ project = exahype2.Project(
 initial_conditions = """
   const tarch::la::Vector<DIMENSIONS, double> centre(0.5);
   constexpr double Radius = 0.3;
-  Q[Shortcuts::q] = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 1.0 : 0.0;
+  Q.q = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 1.0 : 0.0;
 """
 
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
     ::exahype2::getVolumeCentresInUnitInterval<PatchSize>(),
-    NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    [](const double* const values) { return 1.0 + values[Shortcuts::q]; }
+    [](const auto& state) { return 1.0 + state.q; }
   );
 """
 
 flux = """
-  F[Shortcuts::q] = Q[Shortcuts::q];
+  F.q = Q.q;
 """
 
 solver = exahype2.fv.Solver(

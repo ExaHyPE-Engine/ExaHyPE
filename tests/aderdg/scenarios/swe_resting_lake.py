@@ -37,22 +37,19 @@ class SWERestingLake(Scenario):
         d = {"VARIABLE": Q}
         return {
             "bilinear": jinja2.Template("""
-    {{VARIABLE}}[Shortcuts::hv+0]  = 0;
-    {{VARIABLE}}[Shortcuts::hv+1]  = 0;
-    {{VARIABLE}}[Shortcuts::b]    = 1 - std::abs(x[0]) - std::abs(x[Shortcuts::hv+0]);
-    {{VARIABLE}}[Shortcuts::h]    = 2 - {{VARIABLE}}[Shortcuts::b];
+    {{VARIABLE}}.hv = 0.0;
+    {{VARIABLE}}.b  = 1 - std::abs(x[0]) - std::abs(x[1]);
+    {{VARIABLE}}.h  = 2 - {{VARIABLE}}.b;
 """).render(**d),
             "sinusoidal": jinja2.Template("""
-    {{VARIABLE}}[Shortcuts::hv+0]  = 0;
-    {{VARIABLE}}[Shortcuts::hv+1]  = 0;
-    {{VARIABLE}}[Shortcuts::b]    = sin( 2*M_PI * (x[0]+x[Shortcuts::hv+0]) );
-    {{VARIABLE}}[Shortcuts::h]    = 2 - {{VARIABLE}}[Shortcuts::b];
+    {{VARIABLE}}.hv = 0.0;
+    {{VARIABLE}}.b  = sin( 2*M_PI * (x[0]+x[1]) );
+    {{VARIABLE}}.h  = 2 - {{VARIABLE}}.b;
 """).render(**d),
             "constant": jinja2.Template("""
-    {{VARIABLE}}[Shortcuts::hv+0]  = 0;
-    {{VARIABLE}}[Shortcuts::hv+1]  = 0;
-    {{VARIABLE}}[Shortcuts::b]    = 1;
-    {{VARIABLE}}[Shortcuts::h]    = 2 - {{VARIABLE}}[Shortcuts::b];
+    {{VARIABLE}}.hv = 0.0;
+    {{VARIABLE}}.b  = 1;
+    {{VARIABLE}}.h  = 2 - {{VARIABLE}}.b;
 """).render(**d),
         }
 

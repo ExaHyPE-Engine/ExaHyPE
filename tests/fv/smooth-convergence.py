@@ -28,24 +28,15 @@ def parse_arguments():
 args = parse_arguments()
 
 initial_conditions = """
-  Q[Shortcuts::rho] = 1.0 + 0.2 * std::cos(2.0 * tarch::la::PI * x[0]);
-  Q[Shortcuts::rhoU + 0] = 1.0;
-  Q[Shortcuts::rhoU + 1] = 0.0;
-#if DIMENSIONS == 3
-  Q[Shortcuts::rhoU + 2] = 0.0;
-#endif
-  Q[Shortcuts::rhoE] = PRESSURE / (GAMMA - 1) + 0.5 / Q[Shortcuts::rho] * (Q[Shortcuts::rhoU] * Q[Shortcuts::rhoU]);
+  Q.rho     = 1.0 + 0.2 * std::cos(2.0 * tarch::la::PI * x[0]);
+  Q.rhoU    = 0.0;
+  Q.rhoU(0) = 1.0;
+  Q.rhoE    = PRESSURE / (GAMMA - 1) + 0.5 / Q.rho * (Q.rhoU * Q.rhoU);
 """
 
 boundary_conditions = """
   // Outflow boundary conditions
-  Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
-  Qoutside[Shortcuts::rhoU + 0] = Qinside[Shortcuts::rhoU + 0];
-  Qoutside[Shortcuts::rhoU + 1] = Qinside[Shortcuts::rhoU + 1];
-#if DIMENSIONS == 3
-  Qoutside[Shortcuts::rhoU + 2] = Qinside[Shortcuts::rhoU + 2];
-#endif
-  Qoutside[Shortcuts::rhoE]     = Qinside[Shortcuts::rhoE];
+  Qoutside = Qinside;
 """
 
 project = exahype2.Project(

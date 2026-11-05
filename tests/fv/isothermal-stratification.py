@@ -34,16 +34,12 @@ initial_conditions = """
   const auto exponentialDistribution =
     tarch::la::pow(tarch::la::E, -x(1) / scaleHeight);
 
-  Q[Shortcuts::rho]       = GROUND_DENSITY * exponentialDistribution;
-  Q[Shortcuts::rhoU + 0]  = 0.0;
-  Q[Shortcuts::rhoU + 1]  = 0.0;
-#if DIMENSIONS == 3
-  Q[Shortcuts::rhoU + 2]  = 0.0;
-#endif
+  Q.rho  = GROUND_DENSITY * exponentialDistribution;
+  Q.rhoU = 0.0;
 
   const auto pressure =
-    Q[Shortcuts::rho] * GAS_CONSTANT * TEMPERATURE / MEAN_MOLECULAR_MASS;
-  Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0);
+    Q.rho * GAS_CONSTANT * TEMPERATURE / MEAN_MOLECULAR_MASS;
+  Q.rhoE = pressure / (GAMMA - 1.0);
 """
 
 boundary_conditions = """
@@ -58,18 +54,18 @@ boundary_conditions = """
     );
 
     const auto densityOutside =
-      Qinside[Shortcuts::rho] * exponentialDistribution;
+      Qinside.rho * exponentialDistribution;
     const auto pressureOutside =
       densityOutside * GAS_CONSTANT * TEMPERATURE / MEAN_MOLECULAR_MASS;
 
-    Qoutside[Shortcuts::rho] = densityOutside;
+    Qoutside.rho = densityOutside;
     const auto horizontalVelocity =
-      Qinside[Shortcuts::rhoU + 0] / Qinside[Shortcuts::rho];
+      Qinside.rhoU(0) / Qinside.rho;
     const auto verticalVelocity =
-      Qinside[Shortcuts::rhoU + 1] / Qinside[Shortcuts::rho];
+      Qinside.rhoU(1) / Qinside.rho;
 #if DIMENSIONS == 3
     const auto depthVelocity =
-      Qinside[Shortcuts::rhoU + 2] / Qinside[Shortcuts::rho];
+      Qinside.rhoU(2) / Qinside.rho;
     const auto velocitySquared =
       horizontalVelocity * horizontalVelocity
       + verticalVelocity * verticalVelocity
@@ -80,40 +76,35 @@ boundary_conditions = """
       + verticalVelocity * verticalVelocity;
 #endif
 
-    Qoutside[Shortcuts::rhoE] =
+    Qoutside.rhoE =
       pressureOutside / (GAMMA - 1.0)
       + 0.5 * densityOutside * velocitySquared;
 
-    Qoutside[Shortcuts::rhoU + 0] = horizontalVelocity * densityOutside;
+    Qoutside.rhoU(0) = horizontalVelocity * densityOutside;
 #if DIMENSIONS == 3
-    Qoutside[Shortcuts::rhoU + 2] = depthVelocity * densityOutside;
+    Qoutside.rhoU(2) = depthVelocity * densityOutside;
 #endif
 
     if (isUpperBoundary) {
-      Qoutside[Shortcuts::rhoU + 1] = verticalVelocity * densityOutside;
+      Qoutside.rhoU(1) = verticalVelocity * densityOutside;
     } else {
       // The lower wall prevents atmosphere leaving through the surface.
-      Qoutside[Shortcuts::rhoU + 1] = -verticalVelocity * densityOutside;
+      Qoutside.rhoU(1) = -verticalVelocity * densityOutside;
     }
   } else {
-    for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
-      Qoutside[unknown] = Qinside[unknown];
-    }
+    Qoutside = Qinside;
   }
 """
 
 compute_usq = """
   auto computeVelocitySquared = [](
-    const {{COMPUTE_PRECISION}}* const NOALIAS state,
+    const auto& state,
     {{COMPUTE_PRECISION}}& velocitySquared
   ) {
-    constexpr int ShortcutRho = 0;
-    constexpr int ShortcutRhoU = 1;
-
-    const auto horizontalVelocity = state[ShortcutRhoU + 0] / state[ShortcutRho];
-    const auto verticalVelocity = state[ShortcutRhoU + 1] / state[ShortcutRho];
+    const auto horizontalVelocity = state.rhoU(0) / state.rho;
+    const auto verticalVelocity = state.rhoU(1) / state.rho;
 #if DIMENSIONS == 3
-    const auto depthVelocity = state[ShortcutRhoU + 2] / state[ShortcutRho];
+    const auto depthVelocity = state.rhoU(2) / state.rho;
     velocitySquared =
       horizontalVelocity * horizontalVelocity
       + verticalVelocity * verticalVelocity
@@ -129,13 +120,10 @@ compute_usq = """
 calculate_pressure = (
     """
   auto calculatePressure = [](
-    const {{COMPUTE_PRECISION}}* const NOALIAS state,
+    const auto& state,
     {{COMPUTE_PRECISION}}& pressure,
     {{COMPUTE_PRECISION}}& velocitySquared
   ) {
-    constexpr int ShortcutRho = 0;
-    constexpr int ShortcutRhoE = DIMENSIONS + 1;
-
     """
     + compute_usq
     + """
@@ -144,8 +132,8 @@ calculate_pressure = (
     pressure =
       (GAMMA - 1.0)
       * (
-        state[ShortcutRhoE]
-        - 0.5 * state[ShortcutRho] * velocitySquared
+        state.rhoE
+        - 0.5 * state.rho * velocitySquared
       );
   };
 """
@@ -154,9 +142,9 @@ calculate_pressure = (
 calculate_pressure_perturbations = (
     """
   auto pressurePerturbations = [](
-    const {{COMPUTE_PRECISION}}* const NOALIAS leftState,
-    const {{COMPUTE_PRECISION}}* const NOALIAS state,
-    const {{COMPUTE_PRECISION}}* const NOALIAS rightState,
+    const auto& leftState,
+    const auto& state,
+    const auto& rightState,
     const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
     const int normal,
     {{COMPUTE_PRECISION}}& pressurePerturbationLeft,
@@ -164,9 +152,9 @@ calculate_pressure_perturbations = (
   ) {
     // Equations 25–26 of Käppeli and Mishra define perturbations against
     // the local hydrostatic pressure reconstruction.
-    const auto densityLeft = leftState[0];
-    const auto density = state[0];
-    const auto densityRight = rightState[0];
+    const auto densityLeft = leftState.rho;
+    const auto density = state.rho;
+    const auto densityRight = rightState.rho;
 
     """
     + calculate_pressure
@@ -197,10 +185,27 @@ calculate_pressure_perturbations = (
 """
 )
 
+# The energy limits the perturbations of the hydrostatic pressure along the vertical axis.
 limiter = calculate_pressure_perturbations + """
-  {{COMPUTE_PRECISION}} rightDifference;
-  {{COMPUTE_PRECISION}} leftDifference;
-  if (unknown == DIMENSIONS + 1 and normal == 1) {
+  const auto limit = [](
+    const {{COMPUTE_PRECISION}} rightDifference,
+    const {{COMPUTE_PRECISION}} leftDifference
+  ) -> {{COMPUTE_PRECISION}} {
+    if (rightDifference * leftDifference <= 0.0) {
+      return 0.0;
+    }
+    return tarch::la::smaller(
+      tarch::la::abs(rightDifference),
+      tarch::la::abs(leftDifference)
+    )
+      ? rightDifference
+      : leftDifference;
+  };
+
+  limitedDifferences = transform(QR - Q, Q - QL, limit);
+  if (normal == 1) {
+    {{COMPUTE_PRECISION}} rightDifference;
+    {{COMPUTE_PRECISION}} leftDifference;
     pressurePerturbations(
       QL,
       Q,
@@ -210,33 +215,25 @@ limiter = calculate_pressure_perturbations + """
       leftDifference,
       rightDifference
     );
-  } else {
-    rightDifference = QR[unknown] - Q[unknown];
-    leftDifference = Q[unknown] - QL[unknown];
+    limitedDifferences.rhoE = limit(rightDifference, leftDifference);
   }
-
-  if (rightDifference * leftDifference <= 0.0) {
-    return 0.0;
-  }
-  return tarch::la::smaller(
-    tarch::la::abs(rightDifference),
-    tarch::la::abs(leftDifference)
-  )
-    ? rightDifference
-    : leftDifference;
 """
 
 # The Riemann solver reads the hydrostatically reconstructed face states.
 reconstruction = calculate_pressure + compute_usq + """
-  constexpr int ShortcutRho = 0;
-  constexpr int ShortcutE = DIMENSIONS + 1;
+  reconstructedMinus = transform(Q, limitedDifferences, [](const auto value, const auto difference) {
+    return value - 0.5 * difference;
+  });
+  reconstructedPlus = transform(Q, limitedDifferences, [](const auto value, const auto difference) {
+    return value + 0.5 * difference;
+  });
 
-  if (unknown == ShortcutE and normal == 1) {
+  if (normal == 1) {
     {{COMPUTE_PRECISION}} pressure;
     {{COMPUTE_PRECISION}} velocitySquared;
     calculatePressure(Q, pressure, velocitySquared);
 
-    const {{COMPUTE_PRECISION}} density = Q[ShortcutRho];
+    const {{COMPUTE_PRECISION}} density = Q.rho;
 
     // Eq. 16 Käppeli and Mishra: The first-order hydrostatic pressure at either
     // boundary. The second-order pressure-perturbation slope is unstable for
@@ -246,30 +243,19 @@ reconstruction = calculate_pressure + compute_usq + """
     const auto pressureRightBoundary =
       pressure - 0.5 * density * -GRAVITY * h(normal);
 
-    {{COMPUTE_PRECISION}} extrapolatedMinus[{{NUMBER_OF_UNKNOWNS}}];
-    {{COMPUTE_PRECISION}} extrapolatedPlus[{{NUMBER_OF_UNKNOWNS}}];
-    for (int component = 0; component < {{NUMBER_OF_UNKNOWNS}}; component++) {
-      extrapolatedMinus[component] = Q[component] - 0.5 * limitedDifferences[component];
-      extrapolatedPlus[component] =
-        Q[component] + 0.5 * limitedDifferences[component];
-    }
-
     {{COMPUTE_PRECISION}} velocitySquaredLeftBoundary;
     {{COMPUTE_PRECISION}} velocitySquaredRightBoundary;
-    computeVelocitySquared(extrapolatedMinus, velocitySquaredLeftBoundary);
-    computeVelocitySquared(extrapolatedPlus, velocitySquaredRightBoundary);
+    computeVelocitySquared(reconstructedMinus, velocitySquaredLeftBoundary);
+    computeVelocitySquared(reconstructedPlus, velocitySquaredRightBoundary);
 
-    reconstructedMinus =
+    reconstructedMinus.rhoE =
       pressureLeftBoundary / (GAMMA - 1.0)
-      + 0.5 * extrapolatedMinus[ShortcutRho]
+      + 0.5 * reconstructedMinus.rho
         * velocitySquaredLeftBoundary;
-    reconstructedPlus =
+    reconstructedPlus.rhoE =
       pressureRightBoundary / (GAMMA - 1.0)
-      + 0.5 * extrapolatedPlus[ShortcutRho]
+      + 0.5 * reconstructedPlus.rho
         * velocitySquaredRightBoundary;
-  } else {
-    reconstructedMinus = Q[unknown] - 0.5 * limitedDifferences[unknown];
-    reconstructedPlus  = Q[unknown] + 0.5 * limitedDifferences[unknown];
   }
 """
 

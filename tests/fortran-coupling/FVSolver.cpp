@@ -4,17 +4,17 @@
 
 double
 tests::exahype2::fortran::FVSolver::maxEigenvalue(
-  const double* const NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              Q,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   static constexpr double Gravity    = 9.81;
-  const double            velocity   = Q[0] > 1e-5 ? Q[1 + normal] / Q[0] : 0.0;
-  const double            soundSpeed = Q[0] > 1e-5 ? std::sqrt(Gravity * Q[0]) : 0.0;
+  const double            velocity   = Q.h > 1e-5 ? Q.hu(normal) / Q.h : 0.0;
+  const double            soundSpeed = Q.h > 1e-5 ? std::sqrt(Gravity * Q.h) : 0.0;
   return std::max(std::abs(velocity - soundSpeed), std::abs(velocity + soundSpeed));
 }
 
@@ -30,44 +30,57 @@ double rpn2_augmented_wrapper(
 
 double
 tests::exahype2::fortran::FVSolver::solveRiemannProblem(
-  const double* const NOALIAS                  QL,
-  const double* const NOALIAS                  QR,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  const double                                 t,
-  const double                                 dt,
-  const int                                    normal,
-  [[maybe_unused]] const bool                  isBoundaryFace,
-  [[maybe_unused]] const int                   faceIndex,
-  double* const NOALIAS                        FL,
-  double* const NOALIAS                        FR,
-  [[maybe_unused]] const RuntimeParameters&    parameters
+  const State&                              QL,
+  const State&                              QR,
+  const Coordinates&                        x,
+  const Coordinates&                        h,
+  const double                              t,
+  const double                              dt,
+  const int                                 normal,
+  [[maybe_unused]] const bool               isBoundaryFace,
+  [[maybe_unused]] const int                faceIndex,
+  Flux&                                     FL,
+  Flux&                                     FR,
+  [[maybe_unused]] const RuntimeParameters& parameters
 ) {
   // The Fortran solver rounds a reflected problem differently. Each Clawpack fluctuation averages the
   // solutions of the problem and of the reflected problem. A reflected face then receives the
   // reflected fluctuations bitwise.
-  double reflectedLeftState[4]    = {QR[0], QR[1], QR[2], QR[3]};
-  double reflectedRightState[4]   = {QL[0], QL[1], QL[2], QL[3]};
-  reflectedLeftState[1 + normal]  = -reflectedLeftState[1 + normal];
-  reflectedRightState[1 + normal] = -reflectedRightState[1 + normal];
+  State reflectedLeftState       = QR;
+  State reflectedRightState      = QL;
+  reflectedLeftState.hu(normal)  = -reflectedLeftState.hu(normal);
+  reflectedRightState.hu(normal) = -reflectedRightState.hu(normal);
 
-  double       leftGoing[3];
-  double       rightGoing[3];
-  double       reflectedLeftGoing[3];
-  double       reflectedRightGoing[3];
-  const double maxWaveSpeed = rpn2_augmented_wrapper(QL, QR, leftGoing, rightGoing, &normal);
-  const double reflectedMaxWaveSpeed =
-    rpn2_augmented_wrapper(reflectedLeftState, reflectedRightState, reflectedLeftGoing, reflectedRightGoing, &normal);
+  Flux         leftGoing;
+  Flux         rightGoing;
+  Flux         reflectedLeftGoing;
+  Flux         reflectedRightGoing;
+  const double maxWaveSpeed = rpn2_augmented_wrapper(
+    reinterpret_cast<const double*>(&QL),
+    reinterpret_cast<const double*>(&QR),
+    reinterpret_cast<double*>(&leftGoing),
+    reinterpret_cast<double*>(&rightGoing),
+    &normal
+  );
+  const double reflectedMaxWaveSpeed = rpn2_augmented_wrapper(
+    reinterpret_cast<const double*>(&reflectedLeftState),
+    reinterpret_cast<const double*>(&reflectedRightState),
+    reinterpret_cast<double*>(&reflectedLeftGoing),
+    reinterpret_cast<double*>(&reflectedRightGoing),
+    &normal
+  );
 
   // The Godunov kernel adds dt/h * FR to the right cell. The right cell needs -dt/h * A^+dQ. FR
   // therefore receives the negated right-going fluctuation.
-  for (int unknown = 0; unknown < 3; unknown++) {
-    const double reflection = unknown == 1 + normal ? -1.0 : 1.0;
-    FL[unknown]             = 0.5 * (leftGoing[unknown] + reflection * reflectedRightGoing[unknown]);
-    FR[unknown]             = -0.5 * (rightGoing[unknown] + reflection * reflectedLeftGoing[unknown]);
+  FL.h = 0.5 * (leftGoing.h + reflectedRightGoing.h);
+  FR.h = -0.5 * (rightGoing.h + reflectedLeftGoing.h);
+  for (int axis = 0; axis < 2; axis++) {
+    const double reflection = axis == normal ? -1.0 : 1.0;
+    FL.hu(axis)             = 0.5 * (leftGoing.hu(axis) + reflection * reflectedRightGoing.hu(axis));
+    FR.hu(axis)             = -0.5 * (rightGoing.hu(axis) + reflection * reflectedLeftGoing.hu(axis));
   }
-  FL[3] = 0.0;
-  FR[3] = 0.0;
+  FL.b = 0.0;
+  FR.b = 0.0;
 
   return std::max(maxWaveSpeed, reflectedMaxWaveSpeed);
 }

@@ -121,6 +121,17 @@ ADERDG Coupling:
   extends: .RunOnlyOnMainBranch
   needs: [Build and Unit Tests]
 
+ADERDG Fused Coupling:
+  stage: Test
+  parallel:
+    matrix:
+      - scenario: [AcousticPlanarWaves, AdvectionLinear, ElasticPlanarWaves, EulerGaussianBell, EulerIsentropicVortex, SWERadialDamBreak, SWERestingLake]
+  script:
+    - generate tests/aderdg-coupling "fuseADERSolvers.py -s $scenario --build-mode $BUILD_MODE"
+    - launch tests/aderdg-coupling "./$scenario -nt ${NUMBER_OF_TIME_STEPS} -ns ${NUMBER_OF_SNAPSHOTS} -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
+  extends: .RunOnlyOnMainBranch
+  needs: [Build and Unit Tests]
+
 RKDG:
   stage: Test
   parallel:

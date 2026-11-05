@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
-{% for include in [SOLVER_NAME ~ ".h", "Constants.h"] | sort(case_sensitive=true) %}
+{% for include in [SOLVER_NAME ~ "PDETerms.h", "Constants.h"] | sort(case_sensitive=true) %}
 #include "{{include}}"
 {%- endfor %}
 
@@ -246,7 +246,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::traceTracers(
 {%- endif %}
 {%- if tracer.ERROR %}
   if (_{{tracer.NAME}}ErrorMeasurement.isSnapshotDue(timeStamp)) {
-    ::exahype2::particles::measurePositionErrors<{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}>(
+    ::exahype2::particles::measurePositionErrors<{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}PDETerms>(
       _{{tracer.NAME}},
       timeStamp,
       timeStepSize,
@@ -291,7 +291,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::recordLastTimeStamp(
 {%- endif %}
 {%- if tracer.ERROR %}
   if (_{{tracer.NAME}}ErrorMeasurement.isSnapshotDue(timeStamp)) {
-    ::exahype2::particles::measurePositionErrors<{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}>(
+    ::exahype2::particles::measurePositionErrors<{{NAMESPACE | join("::")}}::{{SOLVER_NAME}}PDETerms>(
       _{{tracer.NAME}},
       timeStamp,
       getTimeStepping().getTimeStepSizeOfLastStep(),

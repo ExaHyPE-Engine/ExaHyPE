@@ -87,10 +87,10 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar elementMax(const Matrix<3, 3, Scalar>& matrix);
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar elementMax(const Matrix<4, 4, Scalar>& matrix);
-} // namespace tarch::la
 
-template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD std::ostream& operator<<(std::ostream& os, const tarch::la::Matrix<Rows, Cols, Scalar>& matrix);
+  template <int Rows, int Cols, typename Scalar>
+  INLINE_METHOD std::ostream& operator<<(std::ostream& os, const Matrix<Rows, Cols, Scalar>& matrix);
+} // namespace tarch::la
 TARGET_DECLARE_END
 
 #include "tarch/la/MatrixOperations.cpph"
